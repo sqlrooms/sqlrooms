@@ -16,6 +16,9 @@ import {
 import {
   BaseRoomStoreState,
   createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
+  unregisterCommandsForOwner,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
@@ -23,6 +26,8 @@ import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
+
+const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 
 function isDuckDbPlaceholderViewColumn(
   columnName: string,
@@ -282,6 +287,11 @@ export function createDuckDbSlice({
           initialize: async () => {
             await get().db.connector.initialize();
             await get().db.refreshTableSchemas();
+            registerCommandsForOwner(
+              store,
+              DUCKDB_COMMAND_OWNER,
+              createDuckDbCommands(),
+            );
           },
 
           getConnector: async () => {
@@ -290,6 +300,7 @@ export function createDuckDbSlice({
           },
 
           destroy: async () => {
+            unregisterCommandsForOwner(store, DUCKDB_COMMAND_OWNER);
             try {
               if (get().db.connector) {
                 await get().db.connector.destroy();
@@ -695,6 +706,24 @@ export function createDuckDbSlice({
       };
     },
   );
+}
+
+type DuckDbCommandStoreState = BaseRoomStoreState & DuckDbSliceState;
+
+function createDuckDbCommands(): RoomCommand<DuckDbCommandStoreState>[] {
+  return [
+    {
+      id: 'db.refresh-table-schemas',
+      name: 'Refresh table schemas',
+      description: 'Reload table and schema metadata from DuckDB',
+      group: 'Database',
+      keywords: ['duckdb', 'database', 'refresh', 'tables', 'schemas'],
+      isEnabled: ({getState}) => !getState().db.isRefreshingTableSchemas,
+      execute: async ({getState}) => {
+        await getState().db.refreshTableSchemas();
+      },
+    },
+  ];
 }
 
 /**

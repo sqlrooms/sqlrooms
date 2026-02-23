@@ -14,6 +14,7 @@ import {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
+import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
 
 export function RoomShellBase({
@@ -133,4 +134,5 @@ export const RoomShell = Object.assign(RoomShellBase, {
   SidebarButtons: RoomShellSidebarButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
+  CommandPalette: RoomShellCommandPalette,
 });

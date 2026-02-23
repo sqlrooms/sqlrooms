@@ -6,7 +6,11 @@ import {
   createDefaultAiConfig,
 } from '@sqlrooms/ai-config';
 import {
+  BaseRoomStoreState,
   createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
+  unregisterCommandsForOwner,
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
@@ -47,8 +51,12 @@ import {
 } from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
+const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
+
 export type AiSliceState = {
   ai: {
+    initialize?: () => Promise<void>;
+    destroy?: () => Promise<void>;
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
@@ -265,6 +273,16 @@ export function createAiSlice(
 
     return {
       ai: {
+        initialize: async () => {
+          registerCommandsForOwner(
+            store,
+            AI_COMMAND_OWNER,
+            createAiCommands(),
+          );
+        },
+        destroy: async () => {
+          unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
+        },
         config: baseConfig,
         promptSuggestionsVisible: true,
         apiKeyErrors: {},
@@ -1139,6 +1157,41 @@ function getCurrentSessionFromState(
 ): AnalysisSessionSchema | undefined {
   const {currentSessionId, sessions} = state.ai.config;
   return sessions.find((session) => session.id === currentSessionId);
+}
+
+type AiCommandStoreState = BaseRoomStoreState & AiSliceState;
+
+function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
+  return [
+    {
+      id: 'ai.create-session',
+      name: 'Create AI session',
+      description: 'Start a new AI chat session',
+      group: 'AI',
+      keywords: ['ai', 'chat', 'session', 'new'],
+      execute: ({getState}) => {
+        getState().ai.createSession();
+      },
+    },
+    {
+      id: 'ai.cancel-current-analysis',
+      name: 'Cancel current AI analysis',
+      description: 'Stop the currently running AI response',
+      group: 'AI',
+      keywords: ['ai', 'chat', 'cancel', 'stop', 'analysis'],
+      isEnabled: ({getState}) => {
+        const currentSession = getState().ai.getCurrentSession();
+        return Boolean(currentSession?.isRunning);
+      },
+      execute: ({getState}) => {
+        const currentSession = getState().ai.getCurrentSession();
+        if (!currentSession) {
+          return;
+        }
+        getState().ai.cancelAnalysis(currentSession.id);
+      },
+    },
+  ];
 }
 
 export function useStoreWithAi<T>(selector: (state: AiSliceState) => T): T {

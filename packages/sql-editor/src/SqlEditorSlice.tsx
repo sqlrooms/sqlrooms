@@ -9,8 +9,11 @@ import {
 import {
   BaseRoomStoreState,
   createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
   RoomShellSliceState,
   StateCreator,
+  unregisterCommandsForOwner,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
 import {
@@ -22,6 +25,8 @@ import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
+
+const SQL_EDITOR_COMMAND_OWNER = '@sqlrooms/sql-editor';
 
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
@@ -57,6 +62,8 @@ export function isQueryWithResult(
 
 export type SqlEditorSliceState = {
   sqlEditor: {
+    initialize?: () => Promise<void>;
+    destroy?: () => Promise<void>;
     config: SqlEditorSliceConfig;
     // Runtime state
     /**
@@ -183,6 +190,16 @@ export function createSqlEditorSlice({
   >((set, get) => {
     return {
       sqlEditor: {
+        initialize: async () => {
+          registerCommandsForOwner(
+            store,
+            SQL_EDITOR_COMMAND_OWNER,
+            createSqlEditorCommands(),
+          );
+        },
+        destroy: async () => {
+          unregisterCommandsForOwner(store, SQL_EDITOR_COMMAND_OWNER);
+        },
         config,
         // Initialize runtime state
         queryResultsById: {},
@@ -571,6 +588,74 @@ export function createSqlEditorSlice({
 }
 
 type RoomStateWithSqlEditor = RoomShellSliceState & SqlEditorSliceState;
+
+type SqlEditorCommandStoreState = BaseRoomStoreState &
+  DuckDbSliceState &
+  SqlEditorSliceState;
+
+function createSqlEditorCommands(): RoomCommand<SqlEditorCommandStoreState>[] {
+  return [
+    {
+      id: 'sql-editor.run-current-query',
+      name: 'Run current query',
+      description: 'Execute the selected SQL query tab',
+      group: 'SQL Editor',
+      keywords: ['sql', 'run', 'execute', 'query'],
+      shortcut: 'Mod+Enter',
+      isEnabled: ({getState}) => {
+        const state = getState();
+        const selectedQueryId = state.sqlEditor.config.selectedQueryId;
+        const queryResult = state.sqlEditor.queryResultsById[selectedQueryId];
+        return (
+          queryResult?.status !== 'loading' &&
+          state.sqlEditor.getCurrentQuery().trim().length > 0
+        );
+      },
+      execute: async ({getState}) => {
+        await getState().sqlEditor.parseAndRunCurrentQuery();
+      },
+    },
+    {
+      id: 'sql-editor.abort-current-query',
+      name: 'Abort current query',
+      description: 'Cancel the currently running SQL query',
+      group: 'SQL Editor',
+      keywords: ['sql', 'abort', 'cancel', 'query'],
+      isEnabled: ({getState}) => {
+        const state = getState();
+        const selectedQueryId = state.sqlEditor.config.selectedQueryId;
+        return (
+          state.sqlEditor.queryResultsById[selectedQueryId]?.status === 'loading'
+        );
+      },
+      execute: ({getState}) => {
+        getState().sqlEditor.abortCurrentQuery();
+      },
+    },
+    {
+      id: 'sql-editor.create-query-tab',
+      name: 'Create query tab',
+      description: 'Open a new SQL query tab',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'new', 'query'],
+      execute: ({getState}) => {
+        getState().sqlEditor.createQueryTab();
+      },
+    },
+    {
+      id: 'sql-editor.clear-query-results',
+      name: 'Clear query results',
+      description: 'Clear all cached SQL query results',
+      group: 'SQL Editor',
+      keywords: ['sql', 'clear', 'results'],
+      isEnabled: ({getState}) =>
+        Object.keys(getState().sqlEditor.queryResultsById).length > 0,
+      execute: ({getState}) => {
+        getState().sqlEditor.clearQueryResults();
+      },
+    },
+  ];
+}
 
 export function useStoreWithSqlEditor<T>(
   selector: (state: RoomStateWithSqlEditor) => T,

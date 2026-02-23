@@ -25,8 +25,10 @@ import {
 } from '@sqlrooms/room-config';
 import {
   BaseRoomStoreState,
+  CommandSliceState,
   CreateBaseRoomSliceProps,
   createBaseRoomSlice,
+  createCommandSlice,
   isRoomSliceWithInitialize,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
@@ -149,7 +151,8 @@ export type RoomShellSliceState = {
     ) => Promise<void>;
   };
 } & DuckDbSliceState &
-  LayoutSliceState;
+  LayoutSliceState &
+  CommandSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
@@ -201,6 +204,7 @@ export function createRoomShellSlice(
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
+      ...createCommandSlice()(set, get, store),
       room: {
         ...roomSliceState.room,
         config: {

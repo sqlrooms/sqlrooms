@@ -4,12 +4,21 @@ import {
   MAIN_VIEW,
   isMosaicLayoutParent,
 } from '@sqlrooms/layout-config';
-import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
+import {
+  BaseRoomStoreState,
+  createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
+  unregisterCommandsForOwner,
+  useBaseRoomStore,
+} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import React from 'react';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
+
+const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
 
 export type RoomPanelInfo = {
   title?: string;
@@ -28,6 +37,8 @@ export function createDefaultLayoutConfig(): LayoutSliceConfig {
 
 export type LayoutSliceState = {
   layout: {
+    initialize?: () => Promise<void>;
+    destroy?: () => Promise<void>;
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
     setConfig(layout: LayoutConfig): void;
@@ -47,100 +58,147 @@ export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
-  return createSlice<LayoutSliceState>((set, get) => ({
-    layout: {
-      config: initialConfig,
-      panels,
-      setConfig: (config) =>
-        set((state) =>
-          produce(state, (draft) => {
-            draft.layout.config = config;
-          }),
-        ),
-      setLayout: (layout) => get().layout.setConfig(layout),
-      togglePanel: (panel, show) => {
-        if (get().layout.config?.nodes === panel) {
-          // don't hide the view if it's the only one
-          return;
-        }
-        const result = removeMosaicNodeByKey(get().layout.config?.nodes, panel);
-        const isShown = result.success;
-        if (isShown) {
-          if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
-            return;
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.layout.config;
-              layout.nodes = result.nextTree;
-              if (layout.pinned?.includes(panel)) {
-                layout.pinned = layout.pinned.filter(
-                  (p: string) => p !== panel,
-                );
-              }
-            }),
-          );
-        } else {
-          if (show === false) {
-            return;
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.layout.config;
-              const root = layout.nodes;
-              const placement = draft.layout.panels[panel]?.placement;
-              const side = placement === 'sidebar' ? 'first' : 'second';
-              const toReplace = isMosaicLayoutParent(root)
-                ? root[side]
-                : undefined;
-              if (
-                toReplace &&
-                isMosaicLayoutParent(root) &&
-                !isMosaicLayoutParent(toReplace) &&
-                toReplace !== MAIN_VIEW &&
-                !layout.fixed?.includes(toReplace) &&
-                !layout.pinned?.includes(toReplace)
-              ) {
-                // replace first un-pinned leaf
-                root[side] = panel;
-              } else {
-                const panelNode = {node: panel, weight: 1};
-                const restNode = {
-                  node: draft.layout.config?.nodes,
-                  weight: 3,
-                };
-                // add to to the left
-                layout.nodes = makeMosaicStack(
-                  placement === 'sidebar-bottom' ? 'column' : 'row',
-                  side === 'first'
-                    ? [panelNode, restNode]
-                    : [restNode, panelNode],
-                );
-              }
-            }),
-          );
-        }
-      },
+  return createSlice<LayoutSliceState, BaseRoomStoreState & LayoutSliceState>(
+    (set, get, store) => {
+      let unsubscribePanelChanges: (() => void) | undefined;
+      const registerPanelCommands = () => {
+        const panelCommands = createLayoutPanelCommands(get().layout.panels);
+        registerCommandsForOwner(store, LAYOUT_COMMAND_OWNER, panelCommands);
+      };
 
-      /**
-       * Toggle the pin state of a panel.
-       * @param panel - The panel to toggle the pin state of.
-       */
-      togglePanelPin: (panel: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const layout = draft.layout.config;
-            const pinned = layout.pinned ?? [];
-            if (pinned.includes(panel)) {
-              layout.pinned = pinned.filter((p: string) => p !== panel);
-            } else {
-              layout.pinned = [...pinned, panel];
+      return {
+        layout: {
+          initialize: async () => {
+            registerPanelCommands();
+            unsubscribePanelChanges?.();
+            unsubscribePanelChanges = store.subscribe((state, prevState) => {
+              if (state.layout.panels !== prevState.layout.panels) {
+                registerPanelCommands();
+              }
+            });
+          },
+          destroy: async () => {
+            unsubscribePanelChanges?.();
+            unsubscribePanelChanges = undefined;
+            unregisterCommandsForOwner(store, LAYOUT_COMMAND_OWNER);
+          },
+          config: initialConfig,
+          panels,
+          setConfig: (config) =>
+            set((state) =>
+              produce(state, (draft) => {
+                draft.layout.config = config;
+              }),
+            ),
+          setLayout: (layout) => get().layout.setConfig(layout),
+          togglePanel: (panel, show) => {
+            if (get().layout.config?.nodes === panel) {
+              // don't hide the view if it's the only one
+              return;
             }
-          }),
-        );
-      },
+            const result = removeMosaicNodeByKey(get().layout.config?.nodes, panel);
+            const isShown = result.success;
+            if (isShown) {
+              if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
+                return;
+              }
+              set((state) =>
+                produce(state, (draft) => {
+                  const layout = draft.layout.config;
+                  layout.nodes = result.nextTree;
+                  if (layout.pinned?.includes(panel)) {
+                    layout.pinned = layout.pinned.filter(
+                      (p: string) => p !== panel,
+                    );
+                  }
+                }),
+              );
+            } else {
+              if (show === false) {
+                return;
+              }
+              set((state) =>
+                produce(state, (draft) => {
+                  const layout = draft.layout.config;
+                  const root = layout.nodes;
+                  const placement = draft.layout.panels[panel]?.placement;
+                  const side = placement === 'sidebar' ? 'first' : 'second';
+                  const toReplace = isMosaicLayoutParent(root)
+                    ? root[side]
+                    : undefined;
+                  if (
+                    toReplace &&
+                    isMosaicLayoutParent(root) &&
+                    !isMosaicLayoutParent(toReplace) &&
+                    toReplace !== MAIN_VIEW &&
+                    !layout.fixed?.includes(toReplace) &&
+                    !layout.pinned?.includes(toReplace)
+                  ) {
+                    // replace first un-pinned leaf
+                    root[side] = panel;
+                  } else {
+                    const panelNode = {node: panel, weight: 1};
+                    const restNode = {
+                      node: draft.layout.config?.nodes,
+                      weight: 3,
+                    };
+                    // add to to the left
+                    layout.nodes = makeMosaicStack(
+                      placement === 'sidebar-bottom' ? 'column' : 'row',
+                      side === 'first'
+                        ? [panelNode, restNode]
+                        : [restNode, panelNode],
+                    );
+                  }
+                }),
+              );
+            }
+          },
+
+          /**
+           * Toggle the pin state of a panel.
+           * @param panel - The panel to toggle the pin state of.
+           */
+          togglePanelPin: (panel: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const layout = draft.layout.config;
+                const pinned = layout.pinned ?? [];
+                if (pinned.includes(panel)) {
+                  layout.pinned = pinned.filter((p: string) => p !== panel);
+                } else {
+                  layout.pinned = [...pinned, panel];
+                }
+              }),
+            );
+          },
+        },
+      };
     },
-  }));
+  );
+}
+
+type LayoutCommandStoreState = BaseRoomStoreState & LayoutSliceState;
+
+function createLayoutPanelCommands(
+  panels: Record<string, RoomPanelInfo>,
+): RoomCommand<LayoutCommandStoreState>[] {
+  return Object.entries(panels).map(([panelId, panelInfo]) => {
+    const title = panelInfo.title ?? panelId;
+    const keywords = [panelId, panelInfo.title, panelInfo.placement].filter(
+      (value): value is string => Boolean(value),
+    );
+    return {
+      id: `layout.panel.toggle.${panelId}`,
+      name: `Toggle panel: ${title}`,
+      description: `Show or hide the ${title} panel`,
+      group: 'Layout',
+      keywords,
+      execute: ({getState}) => {
+        getState().layout.togglePanel(panelId);
+      },
+    };
+  });
 }
 
 export function useStoreWithLayout<T>(

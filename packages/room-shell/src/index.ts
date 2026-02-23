@@ -4,6 +4,8 @@
  */
 
 export {RoomShell} from './RoomShell';
+export {RoomShellCommandPalette} from './RoomShellCommandPalette';
+export type {RoomShellCommandPaletteProps} from './RoomShellCommandPalette';
 
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
@@ -35,23 +37,33 @@ export type {RoomPanelInfo} from '@sqlrooms/layout';
 export {
   createBaseRoomSlice,
   createBaseSlice,
+  createCommandSlice,
   createPersistHelpers,
+  createRoomCommandExecutionContext,
   createRoomSlice,
   createRoomStore,
   createRoomStoreCreator,
   createSlice,
+  hasCommandSliceState,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
   persistSliceConfigs,
+  registerCommandsForOwner,
   RoomStateContext,
   RoomStateProvider,
+  unregisterCommandsForOwner,
   useBaseRoomStore,
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 export type {
   BaseRoomStore,
   BaseRoomStoreState,
+  CommandSliceState,
   CreateBaseRoomSliceProps,
+  RegisteredRoomCommand,
+  RoomCommand,
+  RoomCommandExecutionContext,
+  RoomCommandPredicate,
   RoomStateProviderProps,
   UseRoomStore,
 } from '@sqlrooms/room-store';
