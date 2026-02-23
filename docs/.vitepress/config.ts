@@ -43,12 +43,20 @@ export default defineConfig({
         // Keep package-level API docs in llms.txt, but omit symbol-level API pages
         // (functions/types/variables/etc.) to reduce repetitive long link lists.
         ignoreFiles: [
+          // Keep llms.txt focused on package-level docs.
+          // Drop symbol pages and deeply nested API internals.
           'api/**/classes/**',
           'api/**/functions/**',
           'api/**/interfaces/**',
           'api/**/type-aliases/**',
           'api/**/variables/**',
           'api/**/enumerations/**',
+          'api/**/namespaces/**',
+          'api/**/_media/**',
+          // Also omit non-package top-level pages from llms.txt TOC buckets.
+          'custom-slice.md',
+          'join-slack.md',
+          'packages.md',
         ],
         customLLMsTxtTemplate: `# {title}
 
