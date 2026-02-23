@@ -45,6 +45,8 @@
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "test": "jest",
+    "test:watch": "jest --watch"
   }
 }

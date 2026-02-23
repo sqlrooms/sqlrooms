@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@cosmos.gl/graph": "^2.6.4",
+    "@cosmograph/cosmos": "2.0.0-beta.26",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
@@ -36,6 +36,8 @@
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "test": "jest",
+    "test:watch": "jest --watch"
   }
 }
