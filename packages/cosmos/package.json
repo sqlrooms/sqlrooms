@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@cosmograph/cosmos": "2.0.0-beta.26",
+    "@cosmos.gl/graph": "^2.6.4",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",

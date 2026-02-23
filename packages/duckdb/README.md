@@ -207,18 +207,31 @@ function DatabaseManager() {
 
 ```tsx
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
 
-// Support for database.schema.table naming
-const qualifiedTable = makeQualifiedTableName({
-  database: 'mydb',
-  schema: 'public',
-  table: 'users',
-});
+function QualifiedTableOps() {
+  const createTableFromQuery = useRoomStore(
+    (state) => state.db.createTableFromQuery,
+  );
+  const dropTable = useRoomStore((state) => state.db.dropTable);
+  const checkTableExists = useRoomStore((state) => state.db.checkTableExists);
 
-// Use with table operations
-await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
-await dropTable(qualifiedTable);
-const tableExists = await checkTableExists(qualifiedTable);
+  const run = async () => {
+    // Support for database.schema.table naming
+    const qualifiedTable = makeQualifiedTableName({
+      database: 'mydb',
+      schema: 'public',
+      table: 'users',
+    });
+
+    await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
+    const tableExists = await checkTableExists(qualifiedTable);
+    console.log('Table exists after create:', tableExists);
+    await dropTable(qualifiedTable);
+  };
+
+  return <button onClick={() => void run()}>Run qualified table ops</button>;
+}
 ```
 
 ## Loading Data from Files
@@ -279,20 +292,28 @@ import * as arrow from 'apache-arrow';
 import {useRoomStore} from './store';
 
 function AdvancedDataLoader() {
-  const connector = useRoomStore((state) => state.db.connector);
+  const getConnector = useRoomStore((state) => state.db.getConnector);
 
   const handleFileUpload = async (file: File) => {
-    // Load file directly using the connector
-    await connector.loadFile(file, 'uploaded_data', {
-      method: 'auto', // Auto-detect file type
-      replace: true,
-      temp: false,
-    });
+    try {
+      const connector = await getConnector();
+      await connector.loadFile(file, 'uploaded_data', {
+        method: 'auto', // Auto-detect file type
+        replace: true,
+        temp: false,
+      });
+    } catch (error) {
+      console.error('Failed to load uploaded file:', error);
+    }
   };
 
   const handleLoadArrowTable = async (arrowTable: arrow.Table) => {
-    // Load Arrow table directly
-    await connector.loadArrow(arrowTable, 'arrow_data');
+    try {
+      const connector = await getConnector();
+      await connector.loadArrow(arrowTable, 'arrow_data');
+    } catch (error) {
+      console.error('Failed to load Arrow table:', error);
+    }
   };
 
   return (
@@ -300,7 +321,9 @@ function AdvancedDataLoader() {
       type="file"
       accept=".csv,.json,.parquet"
       onChange={(e) => {
-        if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+        if (e.target.files?.[0]) {
+          void handleFileUpload(e.target.files[0]);
+        }
       }}
     />
   );

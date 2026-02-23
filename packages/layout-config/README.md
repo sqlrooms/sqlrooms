@@ -36,12 +36,16 @@ const twoPaneLayout: MosaicLayoutConfig = {
   },
 };
 
+const validatedMinimal: LayoutConfig = LayoutConfig.parse(minimalLayout);
 const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
 ```
 
 ## Typical integration
 
 ```ts
+import {createRoomShellSlice} from '@sqlrooms/room-shell';
+// `DataPanel` and `MainPanel` are app-level React components in your project.
+
 createRoomShellSlice({
   layout: {
     config: twoPaneLayout,

@@ -40,7 +40,7 @@ export function RevenueChart({
 }) {
   return (
     <ChartContainer
-      className="h-64 w-full"
+      className="min-h-[16rem] w-full"
       config={{
         revenue: {
           label: 'Revenue',
@@ -48,7 +48,7 @@ export function RevenueChart({
         },
       }}
     >
-      <BarChart data={rows}>
+      <BarChart data={rows} accessibilityLayer={true}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="month" />
         <YAxis />
@@ -64,6 +64,7 @@ export function RevenueChart({
 
 ```tsx
 import {useSql} from '@sqlrooms/duckdb';
+import {RevenueChart} from './RevenueChart';
 
 function RevenueChartFromSql() {
   const {data} = useSql<{month: string; revenue: number}>({

@@ -26,8 +26,8 @@ truncate('This is a long sentence', 10); // "This is..."
 
 formatBytes(1048576); // "1 MB"
 formatNumber(1234567.89); // "1,234,568"
-formatDate(new Date()); // "YYYY-MM-DD"
-formatDateTime(new Date()); // "Wed YYYY-MM-DD HH:MM AM/PM"
+formatDate(new Date()); // "2026-02-23"
+formatDateTime(new Date()); // "Mon 2026-02-23 02:15 PM"
 formatTimeRelative(Date.now() - 60_000); // "a minute ago"
 ```
 

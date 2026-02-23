@@ -32,7 +32,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
 ```tsx
 import {CosmosGraph, CosmosGraphControls, CosmosSimulationControls} from '@sqlrooms/cosmos';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
+import {GraphConfigInterface} from '@cosmos.gl/graph';
 
 const config: GraphConfigInterface = {
   backgroundColor: 'transparent',

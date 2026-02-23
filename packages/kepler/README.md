@@ -65,6 +65,8 @@ function MapPanel() {
     });
   }, [isTableReady, mapId, addTableToMap]);
 
+  if (!mapId) return null;
+
   return <KeplerMapContainer mapId={mapId} />;
 }
 

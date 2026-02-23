@@ -48,18 +48,22 @@ const initialSpec: VisualizationSpec = {
   },
 };
 
-<VegaLiteChart.Container
-  spec={initialSpec}
-  sqlQuery="SELECT date, value FROM metrics"
-  editable
-  onSpecChange={(spec) => console.log('next spec', spec)}
-  onSqlChange={(sql) => console.log('next sql', sql)}
->
-  <VegaLiteChart.Actions />
-  <VegaLiteChart.Chart />
-  <VegaLiteChart.SpecEditor />
-  <VegaLiteChart.SqlEditor />
-</VegaLiteChart.Container>;
+export function CompoundVegaChart() {
+  return (
+    <VegaLiteChart.Container
+      spec={initialSpec}
+      sqlQuery="SELECT date, value FROM metrics"
+      editable
+      onSpecChange={(spec) => console.log('next spec', spec)}
+      onSqlChange={(sql) => console.log('next sql', sql)}
+    >
+      <VegaLiteChart.Actions />
+      <VegaLiteChart.Chart />
+      <VegaLiteChart.SpecEditor />
+      <VegaLiteChart.SqlEditor />
+    </VegaLiteChart.Container>
+  );
+}
 ```
 
 ## AI integration (`createVegaChartTool`)
@@ -85,11 +89,20 @@ createAiSlice({
 })(set, get, store);
 ```
 
-`createVegaChartTool` parameters:
+`createVegaChartTool` constructor options:
+
+- `editable`: whether users can edit SQL/spec in the chart UI
+- `editorMode`: which editors to render (`'none' | 'sql' | 'vega' | 'both'`)
+
+### LLM invocation / Zod schema fields
+
+At runtime, the tool call payload is validated by a Zod schema.  
+These fields are supplied by the LLM when invoking the tool (not passed into
+`createVegaChartTool(...)`):
 
 - `sqlQuery`: SQL used to fetch chart data
 - `vegaLiteSpec`: Vega-Lite JSON string
-- `reasoning`: chart rationale shown to users
+- `reasoning`: explanation shown to users for why this chart/spec was chosen
 
 ## Example apps
 

@@ -57,7 +57,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     ...createCanvasSlice({
       ai: {
         getApiKey: () => '',
-        defaultModel: 'gpt-4.1-mini',
+        // Keep this aligned with your app's recommended low-latency model.
+        defaultModel: 'gpt-5.2-mini',
       },
     })(set, get, store),
   }),

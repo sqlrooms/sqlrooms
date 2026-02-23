@@ -123,7 +123,8 @@ createAiSlice({
 If you want server-side model calls, set `chatEndPoint` and optional `chatHeaders`:
 
 ```tsx
-createAiSlice({
+// inside createRoomStore(...):
+...createAiSlice({
   tools: {
     ...createDefaultAiTools(store),
   },
@@ -132,7 +133,7 @@ createAiSlice({
   chatHeaders: {
     'x-app-name': 'my-sqlrooms-app',
   },
-});
+})(set, get, store),
 ```
 
 ## Related packages

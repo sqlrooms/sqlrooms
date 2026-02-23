@@ -11,6 +11,11 @@ npm install @sqlrooms/kepler-config
 - `KeplerMapSchema`
 - `KeplerSliceConfig`
 
+`KeplerSliceConfig` is the top-level container schema for persisted Kepler state
+(including multiple maps). Use `KeplerMapSchema` when constructing or validating
+each individual map object inside that container (for example: layers,
+datasource bindings, and viewport settings).
+
 ## Usage
 
 Use these schemas when validating or persisting Kepler state:

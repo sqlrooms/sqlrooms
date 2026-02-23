@@ -5,7 +5,7 @@ Use this package to add comments/replies linked to data points or UI anchors.
 ## Installation
 
 ```bash
-npm install @sqlrooms/discuss @sqlrooms/room-shell @sqlrooms/ui
+npm install @sqlrooms/discuss @sqlrooms/room-shell @sqlrooms/ui @sqlrooms/utils
 ```
 
 ## Store setup
@@ -45,6 +45,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     }),
   ),
 );
+```
+
+## Initialization
+
+Call `room.initialize()` after store creation so slice lifecycle hooks run:
+
+```tsx
+import {useEffect} from 'react';
+import {roomStore} from './store';
+
+function App() {
+  useEffect(() => {
+    void roomStore.getState().room.initialize();
+  }, []);
+
+  return null;
+}
 ```
 
 ## Render discussions
@@ -89,7 +106,7 @@ function DiscussionActions() {
 
   return (
     <div className="flex gap-2">
-      <button onClick={() => addDiscussion('Initial note', 'airport-LAX')}>
+      <button onClick={() => addDiscussion('Initial note', 'data-point-id')}>
         Add discussion
       </button>
       <button onClick={() => setReplyToItem({discussionId: 'some-id'})}>

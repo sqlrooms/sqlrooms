@@ -6,8 +6,11 @@ For most apps, use the higher-level `@sqlrooms/ai` package.
 ## Installation
 
 ```bash
-npm install @sqlrooms/ai-core @sqlrooms/room-store @sqlrooms/ui
+npm install @sqlrooms/ai-core @sqlrooms/room-store @sqlrooms/ui zod
 ```
+
+`@sqlrooms/ui` is a peer dependency used for Chat UI rendering/styling.  
+You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui` must be installed for the visual components to work.
 
 ## Store setup (core mode)
 
