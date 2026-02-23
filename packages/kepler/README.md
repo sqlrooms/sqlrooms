@@ -1,5 +1,3 @@
-# @sqlrooms/kepler
-
 Kepler.gl integration for SQLRooms.
 
 Use this package when you want a **map-first analytics experience** in a SQLRooms app, backed by DuckDB tables and SQL.

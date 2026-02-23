@@ -1,5 +1,3 @@
-# @sqlrooms/utils
-
 Shared utility functions used across SQLRooms packages and apps.
 
 ## Installation

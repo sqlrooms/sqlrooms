@@ -1,5 +1,3 @@
-# @sqlrooms/layout
-
 Layout slice and mosaic utilities for SQLRooms panel-based UIs.
 
 This package uses `react-mosaic` to compose resizable panel layouts.

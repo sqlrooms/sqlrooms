@@ -1,5 +1,3 @@
-# @sqlrooms/ai-core
-
 Core AI slice, chat UI primitives, and tool-streaming utilities for SQLRooms.
 
 Use `@sqlrooms/ai-core` when you want lower-level control over AI state/transport/UI.  
@@ -59,6 +57,9 @@ export function AiPanel() {
     <Chat>
       <Chat.Sessions />
       <Chat.Messages />
+      <Chat.PromptSuggestions>
+        <Chat.PromptSuggestions.Item text="What trends should I investigate first?" />
+      </Chat.PromptSuggestions>
       <Chat.Composer placeholder="Ask a question" />
     </Chat>
   );

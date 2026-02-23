@@ -1,5 +1,3 @@
-# @sqlrooms/sql-editor
-
 SQL editor UI and state slice for SQLRooms apps.
 
 This package provides:

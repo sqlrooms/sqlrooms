@@ -1,5 +1,3 @@
-# @sqlrooms/layout-config
-
 Zod schemas and types for SQLRooms layout configuration (Mosaic layout).
 
 ## Installation

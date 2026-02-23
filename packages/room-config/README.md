@@ -1,5 +1,3 @@
-# @sqlrooms/room-config
-
 Core Zod schemas and types for persisted Room configuration.
 
 Use this package when you need to validate, type, or serialize the persisted configuration portion of a SQLRooms app.

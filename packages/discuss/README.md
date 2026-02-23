@@ -1,5 +1,3 @@
-# @sqlrooms/discuss
-
 Threaded discussion slice and UI components for SQLRooms.
 
 Use this package to add comments/replies linked to data points or UI anchors.

@@ -1,5 +1,3 @@
-# @sqlrooms/cosmos
-
 GPU-accelerated graph visualization components and slice for SQLRooms (powered by Cosmograph Cosmos).
 
 ## Installation

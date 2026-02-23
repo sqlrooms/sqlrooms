@@ -1,5 +1,3 @@
-# @sqlrooms/canvas
-
 React Flow-based canvas for building SQL + Vega node DAGs in SQLRooms apps.
 
 This package includes:

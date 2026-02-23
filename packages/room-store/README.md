@@ -1,5 +1,3 @@
-# @sqlrooms/room-store
-
 Low-level state management primitives for SQLRooms, built on Zustand.
 
 Use this package when you want to build custom room state from scratch.  

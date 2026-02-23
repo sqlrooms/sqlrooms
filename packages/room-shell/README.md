@@ -1,5 +1,3 @@
-# @sqlrooms/room-shell
-
 Main SQLRooms application shell and default Room slice composition.
 
 `@sqlrooms/room-shell` bundles:

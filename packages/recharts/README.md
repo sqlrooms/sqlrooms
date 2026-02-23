@@ -1,5 +1,3 @@
-# @sqlrooms/recharts
-
 Recharts integration for SQLRooms with a theme-aware chart container and tooltip/legend helpers.
 
 This package re-exports the full `recharts` API and adds SQLRooms-friendly wrappers:

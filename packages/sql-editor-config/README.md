@@ -1,5 +1,3 @@
-# @sqlrooms/sql-editor-config
-
 Zod schema and defaults for persisted SQL editor state.
 
 ## Installation

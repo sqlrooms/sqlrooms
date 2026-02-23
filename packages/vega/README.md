@@ -1,5 +1,3 @@
-# @sqlrooms/vega
-
 Vega-Lite chart components and AI chart tool integration for SQLRooms.
 
 ## Installation

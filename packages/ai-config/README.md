@@ -1,5 +1,3 @@
-# @sqlrooms/ai-config
-
 Zod schemas and default config helpers for SQLRooms AI slices.
 
 Use this package to validate persisted AI state and to bootstrap AI/AI-settings configuration safely.

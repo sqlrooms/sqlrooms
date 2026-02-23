@@ -1,5 +1,3 @@
-# @sqlrooms/kepler-config
-
 Zod schemas for persisted Kepler slice state used by `@sqlrooms/kepler`.
 
 ## Installation

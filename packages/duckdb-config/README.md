@@ -1,5 +1,3 @@
-# @sqlrooms/duckdb-config
-
 Status: **reserved / placeholder package name**.
 
 At the moment, SQLRooms does not publish a separate DuckDB config-schema package from this directory.

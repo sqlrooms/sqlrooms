@@ -1,5 +1,3 @@
-# @sqlrooms/ai-settings
-
 AI provider/model settings state and UI components for SQLRooms.
 
 This package gives you:

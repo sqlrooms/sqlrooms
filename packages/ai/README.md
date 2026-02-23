@@ -1,5 +1,3 @@
-# @sqlrooms/ai
-
 High-level AI package for SQLRooms.
 
 This package combines:
@@ -76,6 +74,9 @@ function AiPanel() {
     <Chat>
       <Chat.Sessions />
       <Chat.Messages />
+      <Chat.PromptSuggestions>
+        <Chat.PromptSuggestions.Item text="Summarize the available tables" />
+      </Chat.PromptSuggestions>
       <Chat.Composer placeholder="Ask a question about your data">
         <Chat.InlineApiKeyInput
           onSaveApiKey={(provider, apiKey) => {

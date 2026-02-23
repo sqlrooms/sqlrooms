@@ -1,5 +1,3 @@
-# @sqlrooms/motherduck
-
 MotherDuck connector for SQLRooms.
 
 `@sqlrooms/motherduck` exposes a DuckDB connector implementation backed by [`@motherduck/wasm-client`](https://motherduck.com/docs/sql-reference/wasm-client/), so SQLRooms apps can query MotherDuck from the browser.

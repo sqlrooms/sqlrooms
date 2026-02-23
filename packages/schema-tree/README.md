@@ -1,5 +1,3 @@
-# @sqlrooms/schema-tree
-
 React components for rendering DuckDB database/schema/table/column trees in SQLRooms apps.
 
 ## Installation
