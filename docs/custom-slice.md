@@ -1,4 +1,4 @@
-# How Create a Custom Slice
+# How to Create a Custom Slice
 
 A custom module typically bundles **state** (via a slice) with **UI** (via one or more panels) so it can be plugged into any room.
 
