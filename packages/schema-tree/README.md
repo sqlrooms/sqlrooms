@@ -1,19 +1,60 @@
-This package is part of the SQLRooms framework.
+# @sqlrooms/schema-tree
 
-# DuckDB schema tree
+React components for rendering DuckDB database/schema/table/column trees in SQLRooms apps.
 
-A React component library for rendering DuckDB schema trees in a hierarchical view. It provides components to display database schemas, tables, and columns in an interactive tree structure with features like:
+## Installation
 
-- Expandable/collapsible tree nodes
-- Column type badges
-- Context menus for actions (e.g. copying column names)
-- Customizable node rendering
-- Hover states and visual feedback
+```bash
+npm install @sqlrooms/schema-tree @sqlrooms/duckdb @sqlrooms/ui
+```
 
-The main components are:
+## What this package provides
 
-- `TableSchemaTree`: The root tree component that renders the full schema hierarchy
-- `ColumnTreeNode`: Specialized node for displaying column information
-- `TreeNodeActionsMenu`: Reusable menu component for node actions
+- `TableSchemaTree` for rendering full schema hierarchies
+- node components (`DatabaseTreeNode`, `SchemaTreeNode`, `TableTreeNode`, `ColumnTreeNode`)
+- `TreeNodeActionsMenu` for context-style node actions
+- `defaultRenderTableSchemaNode` for quick customization
 
-This package is used by SQLRooms to provide schema browsing capabilities in the database explorer interface.
+## Basic usage
+
+```tsx
+import {TableSchemaTree} from '@sqlrooms/schema-tree';
+import {useRoomStore} from './store';
+
+export function SchemaExplorer() {
+  const schemaTrees = useRoomStore((state) => state.db.schemaTrees ?? []);
+
+  if (!schemaTrees.length) {
+    return <div className="p-2 text-sm">No schema loaded yet.</div>;
+  }
+
+  return (
+    <TableSchemaTree
+      className="h-full"
+      schemaTrees={schemaTrees}
+      skipSingleDatabaseOrSchema
+    />
+  );
+}
+```
+
+## Custom node rendering
+
+```tsx
+import {DbSchemaNode} from '@sqlrooms/duckdb';
+import {defaultRenderTableSchemaNode, TableSchemaTree} from '@sqlrooms/schema-tree';
+
+const renderNode = (node: DbSchemaNode, isOpen: boolean) => (
+  <div className={isOpen ? 'opacity-100' : 'opacity-90'}>
+    {defaultRenderTableSchemaNode(node)}
+  </div>
+);
+
+<TableSchemaTree schemaTrees={schemaTrees} renderNode={renderNode} />;
+```
+
+## Notes
+
+- `schemaTrees` comes from the DuckDB slice (`state.db.schemaTrees`).
+- Call `state.db.refreshTableSchemas()` after table changes to keep the tree up to date.
+- This package is used by SQLRooms SQL editor table-structure panels.
