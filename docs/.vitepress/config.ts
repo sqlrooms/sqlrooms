@@ -39,6 +39,9 @@ export default defineConfig({
     plugins: [
       // @ts-ignore
       llmstxt({
+        // We provide a curated static /llms.txt in docs/public/llms.txt.
+        // Keep plugin-generated llms-full.txt, but disable the default link-only llms.txt.
+        generateLLMsTxt: false,
         // generateLLMsFullTxt: true,
         // ignoreFiles: ['sponsors/*'],
         // customLLMsTxtTemplate: `# {title}\n\n{foo}`,
