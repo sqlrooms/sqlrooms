@@ -1,7 +1,6 @@
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import type {CellsRootState} from './cellsSlice';
 import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
 import {
   findSqlDependencies,
@@ -12,6 +11,7 @@ import {
   isInputCell,
   isSqlCell,
   type CellResultData,
+  type CellsRootState,
   type SqlCellData,
   type SqlCellStatus,
 } from './types';
