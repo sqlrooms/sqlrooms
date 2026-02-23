@@ -190,7 +190,9 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
       setFocusedPoint: (index) => {
         const {graph} = get().cosmos;
         if (!graph) return;
-        graph.setFocusedPointByIndex(index);
+        graph.setConfig({
+          focusedPointIndex: index,
+        });
       },
 
       setZoomLevel: (level) => {
