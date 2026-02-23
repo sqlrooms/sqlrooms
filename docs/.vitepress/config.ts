@@ -40,6 +40,16 @@ export default defineConfig({
       // @ts-ignore
       llmstxt({
         domain: 'https://sqlrooms.org',
+        // Keep package-level API docs in llms.txt, but omit symbol-level API pages
+        // (functions/types/variables/etc.) to reduce repetitive long link lists.
+        ignoreFiles: [
+          'api/**/classes/**',
+          'api/**/functions/**',
+          'api/**/interfaces/**',
+          'api/**/type-aliases/**',
+          'api/**/variables/**',
+          'api/**/enumerations/**',
+        ],
         customLLMsTxtTemplate: `# {title}
 
 {description}
