@@ -54,7 +54,6 @@ export default defineConfig({
           'api/**/namespaces/**',
           'api/**/_media/**',
           // Also omit non-package top-level pages from llms.txt TOC buckets.
-          'custom-slice.md',
           'join-slack.md',
           'packages.md',
         ],
@@ -171,10 +170,6 @@ Canonical package combos:
             text: 'State Management',
             link: '/state-management',
           },
-          // {
-          //   text: 'How Create a Custom Slice',
-          //   link: '/custom-slice',
-          // },
           {
             text: 'Query Cancellation',
             link: '/query-cancellation',
