@@ -35,7 +35,7 @@ export function RoomShellCommandPalette({
   isOpen: controlledOpen,
   defaultOpen = false,
   onOpenChange,
-  placeholder = 'Type a command or search…',
+  placeholder = 'Type a command or search...',
   emptyMessage = 'No commands found.',
   enableKeyboardShortcut = true,
 }: RoomShellCommandPaletteProps) {
@@ -43,7 +43,9 @@ export function RoomShellCommandPalette({
   const isOpen = controlledOpen ?? uncontrolledOpen;
   const isOpenRef = useRef(isOpen);
   const roomStore = useRoomStoreApi<RoomShellSliceState>();
-  const commandRegistry = useBaseRoomShellStore((state) => state.commands.registry);
+  const commandRegistry = useBaseRoomShellStore(
+    (state) => state.commands.registry,
+  );
 
   const commandContext = useMemo(
     () => createRoomCommandExecutionContext(roomStore),
