@@ -3,7 +3,7 @@ import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import type {BaseRoomStoreState, StoreApi} from '@sqlrooms/room-shell';
 import {createQueryTool} from './query/queryTool';
 import type {QueryToolOptions} from './query/queryTool';
-import {OpenAssistantToolSet} from '@openassistant/utils';
+import type {OpenAssistantToolSet} from '@openassistant/utils';
 import {createCommandTools} from './commandTools';
 import type {CommandToolsOptions} from './commandTools';
 

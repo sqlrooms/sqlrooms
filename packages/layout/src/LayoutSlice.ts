@@ -34,6 +34,11 @@ type ToggleLayoutPanelCommandInput = z.infer<
   typeof ToggleLayoutPanelCommandInput
 >;
 
+const ToggleLayoutPanelPinInput = z.object({
+  panelId: z.string().describe('ID of the panel to pin/unpin.'),
+});
+type ToggleLayoutPanelPinInput = z.infer<typeof ToggleLayoutPanelPinInput>;
+
 export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
@@ -209,6 +214,11 @@ function createLayoutPanelCommands(
     inputSchema: ToggleLayoutPanelCommandInput,
     inputDescription:
       'Provide panelId and optional show. If show is omitted, the panel visibility is toggled.',
+    metadata: {
+      readOnly: false,
+      idempotent: true,
+      riskLevel: 'low',
+    },
     validateInput: (input, {getState}) => {
       const {panelId} = input as ToggleLayoutPanelCommandInput;
       if (!getState().layout.panels[panelId]) {
@@ -218,6 +228,41 @@ function createLayoutPanelCommands(
     execute: ({getState}, input) => {
       const {panelId, show} = input as ToggleLayoutPanelCommandInput;
       getState().layout.togglePanel(panelId, show);
+      return {
+        success: true,
+        commandId: 'layout.panel.toggle',
+        message: `Toggled panel "${panelId}".`,
+      };
+    },
+  };
+
+  const pinByIdCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.panel.toggle-pin',
+    name: 'Toggle panel pin by ID',
+    description: 'Pin or unpin a panel by its ID',
+    group: 'Layout',
+    keywords: ['layout', 'panel', 'pin', 'unpin', 'id'],
+    inputSchema: ToggleLayoutPanelPinInput,
+    inputDescription: 'Provide panelId to toggle pin state.',
+    metadata: {
+      readOnly: false,
+      idempotent: true,
+      riskLevel: 'low',
+    },
+    validateInput: (input, {getState}) => {
+      const {panelId} = input as ToggleLayoutPanelPinInput;
+      if (!getState().layout.panels[panelId]) {
+        throw new Error(`Unknown panel ID "${panelId}".`);
+      }
+    },
+    execute: ({getState}, input) => {
+      const {panelId} = input as ToggleLayoutPanelPinInput;
+      getState().layout.togglePanelPin(panelId);
+      return {
+        success: true,
+        commandId: 'layout.panel.toggle-pin',
+        message: `Toggled pin state for panel "${panelId}".`,
+      };
     },
   };
 
@@ -233,13 +278,23 @@ function createLayoutPanelCommands(
         description: `Show or hide the ${title} panel`,
         group: 'Layout',
         keywords,
+        metadata: {
+          readOnly: false,
+          idempotent: true,
+          riskLevel: 'low',
+        },
         execute: ({getState}) => {
           getState().layout.togglePanel(panelId);
+          return {
+            success: true,
+            commandId: `layout.panel.toggle.${panelId}`,
+            message: `Toggled panel "${panelId}".`,
+          };
         },
       };
     });
 
-  return [byIdCommand, ...panelShortcutCommands];
+  return [byIdCommand, pinByIdCommand, ...panelShortcutCommands];
 }
 
 export function useStoreWithLayout<T>(

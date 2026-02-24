@@ -1,13 +1,8 @@
 import type {OpenAssistantToolSet} from '@openassistant/utils';
-import {
-  createRoomCommandExecutionContext,
-  doesCommandRequireInput,
-  hasCommandSliceState,
-} from '@sqlrooms/room-shell';
+import {hasCommandSliceState} from '@sqlrooms/room-shell';
 import type {
   BaseRoomStoreState,
-  RegisteredRoomCommand,
-  RoomCommandExecutionContext,
+  RoomCommandDescriptor,
   StoreApi,
 } from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -20,22 +15,27 @@ export const ListCommandsToolParameters = z.object({
     .describe(
       'Whether to include commands hidden from user-facing UIs (default: false).',
     ),
+  includeDisabled: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe(
+      'Whether to include currently disabled commands (default: true).',
+    ),
+  includeInputSchema: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe(
+      'Whether to include portable input schemas in the listed command descriptors.',
+    ),
 });
 
 export type ListCommandsToolParameters = z.infer<
   typeof ListCommandsToolParameters
 >;
 
-export type CommandToolDescriptor = {
-  id: string;
-  name: string;
-  description?: string;
-  group?: string;
-  keywords?: string[];
-  enabled: boolean;
-  requiresInput: boolean;
-  inputDescription?: string;
-};
+export type CommandToolDescriptor = RoomCommandDescriptor;
 
 export type ListCommandsToolLlmResult = {
   success: boolean;
@@ -61,6 +61,11 @@ export type ExecuteCommandToolLlmResult = {
   commandId?: string;
   details?: string;
   errorMessage?: string;
+  result?: {
+    code?: string;
+    message?: string;
+    data?: unknown;
+  };
 };
 
 export type CommandToolsOptions = {
@@ -91,10 +96,24 @@ export function createCommandTools<RS extends BaseRoomStoreState>(
 Use this before executing commands so you can pick a valid command ID and understand input expectations.`,
       parameters: ListCommandsToolParameters,
       execute: async (params: ListCommandsToolParameters) => {
-        const descriptors = getCommandDescriptors(store, {
+        const state = store.getState();
+        if (!hasCommandSliceState(state)) {
+          return {
+            llmResult: {
+              success: false,
+              errorMessage: 'Command registry is not available in this room.',
+            } satisfies ListCommandsToolLlmResult,
+          };
+        }
+
+        const descriptors = state.commands.listCommands({
+          surface: 'ai',
           includeInvisible: params.includeInvisible ?? includeInvisibleDefault,
-          includeDisabled: includeDisabledCommandsInList,
+          includeDisabled:
+            params.includeDisabled ?? includeDisabledCommandsInList,
+          includeInputSchema: params.includeInputSchema ?? true,
         });
+
         return {
           llmResult: {
             success: true,
@@ -121,7 +140,7 @@ Call list_commands first to discover valid command IDs and input requirements.`,
           };
         }
 
-        if (!state.commands.registry[commandId]) {
+        if (!state.commands.getCommand(commandId)) {
           return {
             llmResult: {
               success: false,
@@ -131,101 +150,35 @@ Call list_commands first to discover valid command IDs and input requirements.`,
           };
         }
 
-        try {
-          await state.commands.executeCommand(commandId, input);
+        const result = await state.commands.invokeCommand(commandId, input, {
+          surface: 'ai',
+        });
+        if (result.success) {
           return {
             llmResult: {
               success: true,
               commandId,
               details: `Executed command "${commandId}".`,
-            } satisfies ExecuteCommandToolLlmResult,
-          };
-        } catch (error) {
-          return {
-            llmResult: {
-              success: false,
-              commandId,
-              errorMessage: toErrorMessage(error),
+              result: {
+                code: result.code,
+                message: result.message,
+                data: result.data,
+              },
             } satisfies ExecuteCommandToolLlmResult,
           };
         }
+        return {
+          llmResult: {
+            success: false,
+            commandId,
+            errorMessage: result.error ?? 'Command execution failed.',
+            result: {
+              code: result.code,
+              message: result.message,
+            },
+          } satisfies ExecuteCommandToolLlmResult,
+        };
       },
     },
   };
-}
-
-function getCommandDescriptors<RS extends BaseRoomStoreState>(
-  store: StoreApi<RS>,
-  options: {
-    includeInvisible: boolean;
-    includeDisabled: boolean;
-  },
-): CommandToolDescriptor[] {
-  const state = store.getState();
-  if (!hasCommandSliceState(state)) {
-    return [];
-  }
-
-  const context = createRoomCommandExecutionContext(store);
-  const commands = Object.values(state.commands.registry)
-    .filter((command) => {
-      if (options.includeInvisible) {
-        return true;
-      }
-      return isCommandVisible(command, context);
-    })
-    .map((command) => {
-      const enabled = isCommandEnabled(command, context);
-      return {
-        id: command.id,
-        name: command.name,
-        description: command.description,
-        group: command.group,
-        keywords: command.keywords,
-        enabled,
-        requiresInput: doesCommandRequireInput(command),
-        inputDescription: command.inputDescription,
-      } satisfies CommandToolDescriptor;
-    })
-    .filter((command) => (options.includeDisabled ? true : command.enabled));
-
-  commands.sort((first, second) => first.name.localeCompare(second.name));
-  return commands;
-}
-
-function isCommandVisible<RS extends BaseRoomStoreState>(
-  command: RegisteredRoomCommand<RS>,
-  context: RoomCommandExecutionContext<RS>,
-): boolean {
-  if (!command.isVisible) {
-    return true;
-  }
-  try {
-    return command.isVisible(context);
-  } catch (error) {
-    context.getState().room.captureException(error);
-    return false;
-  }
-}
-
-function isCommandEnabled<RS extends BaseRoomStoreState>(
-  command: RegisteredRoomCommand<RS>,
-  context: RoomCommandExecutionContext<RS>,
-): boolean {
-  if (!command.isEnabled) {
-    return true;
-  }
-  try {
-    return command.isEnabled(context);
-  } catch (error) {
-    context.getState().room.captureException(error);
-    return false;
-  }
-}
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
 }

@@ -1,6 +1,8 @@
 import {
   createRoomCommandExecutionContext,
   doesCommandRequireInput,
+  getCommandInputComponent,
+  getCommandShortcut,
   RegisteredRoomCommand,
   RoomCommandExecutionContext,
   useRoomStoreApi,
@@ -97,7 +99,7 @@ function RoomShellCommandPaletteBase({
   );
 
   const commandContext = useMemo(
-    () => createRoomCommandExecutionContext(roomStore),
+    () => createRoomCommandExecutionContext(roomStore, {surface: 'palette'}),
     [roomStore],
   );
 
@@ -146,7 +148,9 @@ function RoomShellCommandPaletteBase({
     }
     return commands.find((command) => command.id === activeInputCommandId);
   }, [activeInputCommandId, commands]);
-  const ActiveInputComponent = activeInputCommand?.inputComponent;
+  const ActiveInputComponent = activeInputCommand
+    ? getCommandInputComponent(activeInputCommand)
+    : undefined;
 
   const setPaletteOpen = useCallback(
     (nextOpen: boolean) => {
@@ -163,7 +167,10 @@ function RoomShellCommandPaletteBase({
       if (!command.enabled) {
         return;
       }
-      if (command.inputComponent || doesCommandRequireInput(command)) {
+      if (
+        getCommandInputComponent(command) ||
+        doesCommandRequireInput(command)
+      ) {
         setPaletteOpen(false);
         setActiveInputCommandId(command.id);
         setInputJsonValue('{}');
@@ -172,7 +179,11 @@ function RoomShellCommandPaletteBase({
       }
       setPaletteOpen(false);
       try {
-        await roomStore.getState().commands.executeCommand(command.id);
+        await roomStore
+          .getState()
+          .commands.executeCommand(command.id, undefined, {
+            surface: 'palette',
+          });
       } catch {
         // Errors are already captured by room.captureException.
       }
@@ -199,7 +210,9 @@ function RoomShellCommandPaletteBase({
       try {
         await roomStore
           .getState()
-          .commands.executeCommand(activeInputCommand.id, input);
+          .commands.executeCommand(activeInputCommand.id, input, {
+            surface: 'palette',
+          });
         setActiveInputCommandId(undefined);
       } catch (error) {
         setInputError(getErrorMessage(error));
@@ -297,8 +310,10 @@ function RoomShellCommandPaletteBase({
                       </span>
                     ) : null}
                   </div>
-                  {command.shortcut ? (
-                    <CommandShortcut>{command.shortcut}</CommandShortcut>
+                  {getCommandShortcut(command) ? (
+                    <CommandShortcut>
+                      {getCommandShortcut(command)}
+                    </CommandShortcut>
                   ) : null}
                 </CommandItem>
               ))}
@@ -434,6 +449,9 @@ function resolveCommandVisibility(
   command: RegisteredRoomCommand,
   context: RoomCommandExecutionContext,
 ): boolean {
+  if (command.ui?.hidden) {
+    return false;
+  }
   if (!command.isVisible) {
     return true;
   }
@@ -465,6 +483,7 @@ function getCommandSearchValue(command: RegisteredRoomCommand): string {
     command.name,
     command.description,
     command.inputDescription,
+    getCommandShortcut(command),
     command.id,
     ...(command.keywords ?? []),
   ]

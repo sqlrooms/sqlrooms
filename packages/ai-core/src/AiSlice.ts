@@ -50,6 +50,7 @@ import {
   fixIncompleteToolCalls,
 } from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import {z} from 'zod';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -274,11 +275,7 @@ export function createAiSlice(
     return {
       ai: {
         initialize: async () => {
-          registerCommandsForOwner(
-            store,
-            AI_COMMAND_OWNER,
-            createAiCommands(),
-          );
+          registerCommandsForOwner(store, AI_COMMAND_OWNER, createAiCommands());
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
@@ -1161,7 +1158,34 @@ function getCurrentSessionFromState(
 
 type AiCommandStoreState = BaseRoomStoreState & AiSliceState;
 
+const AiCreateSessionInput = z.object({
+  name: z.string().optional().describe('Optional session name.'),
+  modelProvider: z.string().optional().describe('Optional model provider ID.'),
+  model: z.string().optional().describe('Optional model ID.'),
+});
+type AiCreateSessionInput = z.infer<typeof AiCreateSessionInput>;
+
+const AiSessionIdInput = z.object({
+  sessionId: z.string().describe('Target AI session ID.'),
+});
+type AiSessionIdInput = z.infer<typeof AiSessionIdInput>;
+
+const AiRenameSessionInput = z.object({
+  sessionId: z.string().describe('Target AI session ID.'),
+  name: z.string().min(1).describe('New session name.'),
+});
+type AiRenameSessionInput = z.infer<typeof AiRenameSessionInput>;
+
 function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
+  const ensureSessionExists = (
+    state: AiCommandStoreState,
+    sessionId: string,
+  ) => {
+    if (!state.ai.config.sessions.some((session) => session.id === sessionId)) {
+      throw new Error(`Unknown AI session "${sessionId}".`);
+    }
+  };
+
   return [
     {
       id: 'ai.create-session',
@@ -1169,8 +1193,110 @@ function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
       description: 'Start a new AI chat session',
       group: 'AI',
       keywords: ['ai', 'chat', 'session', 'new'],
-      execute: ({getState}) => {
-        getState().ai.createSession();
+      inputSchema: AiCreateSessionInput,
+      inputDescription:
+        'Optionally provide name, modelProvider, and model for the new session.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {name, modelProvider, model} =
+          (input as AiCreateSessionInput | undefined) ?? {};
+        getState().ai.createSession(name, modelProvider, model);
+        return {
+          success: true,
+          commandId: 'ai.create-session',
+          message: 'Created AI session.',
+        };
+      },
+    },
+    {
+      id: 'ai.switch-session',
+      name: 'Switch AI session',
+      description: 'Switch current AI session by ID',
+      group: 'AI',
+      keywords: ['ai', 'chat', 'session', 'switch'],
+      inputSchema: AiSessionIdInput,
+      inputDescription: 'Provide sessionId to activate.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        ensureSessionExists(getState(), (input as AiSessionIdInput).sessionId);
+      },
+      execute: ({getState}, input) => {
+        const {sessionId} = input as AiSessionIdInput;
+        getState().ai.switchSession(sessionId);
+        return {
+          success: true,
+          commandId: 'ai.switch-session',
+          message: `Switched to AI session "${sessionId}".`,
+        };
+      },
+    },
+    {
+      id: 'ai.rename-session',
+      name: 'Rename AI session',
+      description: 'Rename AI session by ID',
+      group: 'AI',
+      keywords: ['ai', 'chat', 'session', 'rename'],
+      inputSchema: AiRenameSessionInput,
+      inputDescription: 'Provide sessionId and new name.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        ensureSessionExists(
+          getState(),
+          (input as AiRenameSessionInput).sessionId,
+        );
+      },
+      execute: ({getState}, input) => {
+        const {sessionId, name} = input as AiRenameSessionInput;
+        getState().ai.renameSession(sessionId, name);
+        return {
+          success: true,
+          commandId: 'ai.rename-session',
+          message: `Renamed AI session "${sessionId}".`,
+        };
+      },
+    },
+    {
+      id: 'ai.delete-session',
+      name: 'Delete AI session',
+      description: 'Delete AI session by ID',
+      group: 'AI',
+      keywords: ['ai', 'chat', 'session', 'delete'],
+      inputSchema: AiSessionIdInput,
+      inputDescription: 'Provide sessionId to delete.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'medium',
+        requiresConfirmation: true,
+      },
+      validateInput: (input, {getState}) => {
+        const state = getState();
+        const {sessionId} = input as AiSessionIdInput;
+        ensureSessionExists(state, sessionId);
+        if (state.ai.config.sessions.length <= 1) {
+          throw new Error('Cannot delete the last remaining AI session.');
+        }
+      },
+      execute: ({getState}, input) => {
+        const {sessionId} = input as AiSessionIdInput;
+        getState().ai.deleteSession(sessionId);
+        return {
+          success: true,
+          commandId: 'ai.delete-session',
+          message: `Deleted AI session "${sessionId}".`,
+        };
       },
     },
     {
@@ -1179,6 +1305,11 @@ function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
       description: 'Stop the currently running AI response',
       group: 'AI',
       keywords: ['ai', 'chat', 'cancel', 'stop', 'analysis'],
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
       isEnabled: ({getState}) => {
         const currentSession = getState().ai.getCurrentSession();
         return Boolean(currentSession?.isRunning);
@@ -1189,6 +1320,11 @@ function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
           return;
         }
         getState().ai.cancelAnalysis(currentSession.id);
+        return {
+          success: true,
+          commandId: 'ai.cancel-current-analysis',
+          message: `Cancelled analysis for session "${currentSession.id}".`,
+        };
       },
     },
   ];
