@@ -342,7 +342,7 @@ function RoomShellCommandPaletteBase({
             ) : null}
           </DialogHeader>
 
-          {ActiveInputComponent ? (
+          {ActiveInputComponent && activeInputCommand ? (
             <ActiveInputComponent
               commandId={activeInputCommand.id}
               commandName={activeInputCommand.name}
