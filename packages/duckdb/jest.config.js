@@ -4,8 +4,8 @@ import nodeConfig from '@sqlrooms/preset-jest/node.js';
 export default {
   ...nodeConfig,
   moduleNameMapper: {
-    ...nodeConfig.moduleNameMapper,
-    '^\\./connectors/createDuckDbConnector$':
+    '^\\./connectors/createDuckDbConnector(\\.js)?$':
       '<rootDir>/test/__mocks__/createDuckDbConnector.ts',
+    ...nodeConfig.moduleNameMapper,
   },
 };
