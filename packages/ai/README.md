@@ -63,12 +63,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 ## Render chat UI
 
 ```tsx
-import {Chat, useStoreWithAiSettings} from '@sqlrooms/ai';
+import {Chat} from '@sqlrooms/ai';
+import {useRoomStore} from './store';
 
 function AiPanel() {
-  const updateProvider = useStoreWithAiSettings(
-    (state) => state.aiSettings.updateProvider,
-  );
+  const updateProvider = useRoomStore((state) => state.aiSettings.updateProvider);
 
   return (
     <Chat>

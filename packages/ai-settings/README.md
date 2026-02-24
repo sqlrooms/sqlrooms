@@ -4,7 +4,7 @@ This package gives you:
 
 - `createAiSettingsSlice()` to manage providers, models, custom models, and model parameters
 - settings UI components (`AiSettingsPanel`, `AiProvidersSettings`, `AiModelsSettings`, etc.)
-- a typed hook `useStoreWithAiSettings()` for settings actions/selectors
+- settings actions/selectors accessible from your app's `useRoomStore`
 
 ## Installation
 
@@ -79,13 +79,13 @@ export function SettingsView() {
 ## Update settings programmatically
 
 ```tsx
-import {useStoreWithAiSettings} from '@sqlrooms/ai-settings';
+import {useRoomStore} from './store';
 
 function MaxStepsControl() {
-  const maxSteps = useStoreWithAiSettings(
+  const maxSteps = useRoomStore(
     (state) => state.aiSettings.config.modelParameters.maxSteps,
   );
-  const setMaxSteps = useStoreWithAiSettings(
+  const setMaxSteps = useRoomStore(
     (state) => state.aiSettings.setMaxSteps,
   );
 
