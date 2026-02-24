@@ -1,6 +1,9 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
-import {createDuckDbSlice, DuckDbSliceState} from '@sqlrooms/duckdb';
+import {
+  createDuckDbSlice,
+  DuckDbSliceState,
+} from '../../duckdb/src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import {
   createSqlEditorSlice,
@@ -309,13 +312,14 @@ describe('SqlEditorSlice', () => {
 
   describe('parseAndRunQuery', () => {
     it('should execute a simple SELECT query', async () => {
-      const query = store.getState().sqlEditor.createQueryTab('SELECT 1 as num');
+      const query = store
+        .getState()
+        .sqlEditor.createQueryTab('SELECT 1 as num');
       store.getState().sqlEditor.setSelectedQueryId(query.id);
 
       await store.getState().sqlEditor.parseAndRunCurrentQuery();
 
-      const result =
-        store.getState().sqlEditor.queryResultsById[query.id];
+      const result = store.getState().sqlEditor.queryResultsById[query.id];
       expect(result?.status).toBe('success');
       if (result?.status === 'success') {
         expect(result.type).toBe('select');
@@ -349,8 +353,7 @@ describe('SqlEditorSlice', () => {
 
       await store.getState().sqlEditor.parseAndRunCurrentQuery();
 
-      const result =
-        store.getState().sqlEditor.queryResultsById[query.id];
+      const result = store.getState().sqlEditor.queryResultsById[query.id];
       expect(result?.status).toBe('error');
     });
   });
