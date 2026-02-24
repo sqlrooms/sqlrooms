@@ -24,8 +24,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests"
   },
   "dependencies": {
     "@sqlrooms/data-table": "workspace:*",
