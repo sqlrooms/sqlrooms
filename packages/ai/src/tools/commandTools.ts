@@ -83,6 +83,7 @@ export function createCommandTools<RS extends BaseRoomStoreState>(
   options?: CommandToolsOptions,
 ): OpenAssistantToolSet {
   const listToolName = options?.listToolName ?? DEFAULT_LIST_TOOL_NAME;
+  const listToolNameForDescription = options?.listToolName || 'list_commands';
   const executeToolName = options?.executeToolName ?? DEFAULT_EXECUTE_TOOL_NAME;
   const includeInvisibleDefault =
     options?.includeInvisibleCommandsByDefault ?? false;
@@ -126,7 +127,7 @@ Use this before executing commands so you can pick a valid command ID and unders
     [executeToolName]: {
       name: executeToolName,
       description: `Execute a room command by ID.
-Call list_commands first to discover valid command IDs and input requirements.`,
+Call ${listToolNameForDescription} first to discover valid command IDs and input requirements.`,
       parameters: ExecuteCommandToolParameters,
       execute: async ({commandId, input}: ExecuteCommandToolParameters) => {
         const state = store.getState();

@@ -1317,7 +1317,12 @@ function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
       execute: ({getState}) => {
         const currentSession = getState().ai.getCurrentSession();
         if (!currentSession) {
-          return;
+          return {
+            success: false,
+            commandId: 'ai.cancel-current-analysis',
+            message: 'No active session.',
+            error: 'no active session',
+          };
         }
         getState().ai.cancelAnalysis(currentSession.id);
         return {

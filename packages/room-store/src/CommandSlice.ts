@@ -1,7 +1,7 @@
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
-import {StoreApi} from 'zustand';
 import {z, ZodType} from 'zod';
+import {StoreApi} from 'zustand';
 import {BaseRoomStoreState, createSlice, StateCreator} from './BaseRoomStore';
 
 const DEFAULT_COMMAND_OWNER = 'global';
@@ -571,7 +571,8 @@ function isRoomCommandResult(value: unknown): value is RoomCommandResult {
     typeof value === 'object' &&
     value !== null &&
     'success' in value &&
-    typeof value.success === 'boolean'
+    typeof value.success === 'boolean' &&
+    'commandId' in value
   );
 }
 
