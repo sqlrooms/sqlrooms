@@ -22,7 +22,6 @@ import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {StateCreator} from 'zustand';
-import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
 function isDuckDbPlaceholderViewColumn(
   columnName: string,
@@ -250,17 +249,23 @@ type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
 };
 
+async function createDefaultWasmConnector(): Promise<DuckDbConnector> {
+  const {createWasmDuckDbConnector} =
+    await import('./connectors/createDuckDbConnector');
+  return createWasmDuckDbConnector();
+}
+
 /**
  * Create a DuckDB slice for managing the connector
  */
 export function createDuckDbSlice({
-  connector = createWasmDuckDbConnector(),
+  connector,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get) => {
       return {
         db: {
-          connector, // Will be initialized during init
+          connector: connector as DuckDbConnector, // Initialized lazily if not provided
           schema: 'main', // TODO: remove schema, we should not limit the schema to a single one.
           currentSchema: undefined,
           currentDatabase: undefined,
@@ -280,13 +285,31 @@ export function createDuckDbSlice({
           },
 
           initialize: async () => {
-            await get().db.connector.initialize();
+            let connector = get().db.connector as DuckDbConnector | undefined;
+            if (!connector) {
+              connector = await createDefaultWasmConnector();
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.db.connector = connector;
+                }),
+              );
+            }
+            await connector.initialize();
             await get().db.refreshTableSchemas();
           },
 
           getConnector: async () => {
-            await get().db.connector.initialize();
-            return get().db.connector;
+            let connector = get().db.connector as DuckDbConnector | undefined;
+            if (!connector) {
+              connector = await createDefaultWasmConnector();
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.db.connector = connector;
+                }),
+              );
+            }
+            await connector.initialize();
+            return connector;
           },
 
           destroy: async () => {
@@ -555,11 +578,12 @@ export function createDuckDbSlice({
               : makeQualifiedTableName({table: tableName});
 
             const {db} = get();
+            const connector = await db.getConnector();
             if (data instanceof arrow.Table) {
               // TODO: make sure the table is replaced
-              await db.connector.loadArrow(data, qualifiedName.toString());
+              await connector.loadArrow(data, qualifiedName.toString());
             } else {
-              await db.connector.loadObjects(data, qualifiedName.toString(), {
+              await connector.loadObjects(data, qualifiedName.toString(), {
                 replace: true,
               });
             }
