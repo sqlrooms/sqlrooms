@@ -1,4 +1,5 @@
 import {createStore} from 'zustand';
+import {jest} from '@jest/globals';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
