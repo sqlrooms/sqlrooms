@@ -1,11 +1,7 @@
 import {createStore} from 'zustand';
-import {
-  createAiSlice,
-  AiSliceState,
-  AiSliceOptions,
-} from '../src/AiSlice';
+import {createAiSlice, AiSliceState, AiSliceOptions} from '../src/AiSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
-import {OpenAssistantToolSet} from '@openassistant/utils';
+import type {OpenAssistantToolSet} from '@openassistant/utils';
 
 type TestStoreState = BaseRoomStoreState & AiSliceState;
 
@@ -314,9 +310,15 @@ describe('AiSlice', () => {
       if (session?.id) {
         store
           .getState()
-          .ai.setOpenSessionTabs([session.id, 'non-existent-1', 'non-existent-2']);
+          .ai.setOpenSessionTabs([
+            session.id,
+            'non-existent-1',
+            'non-existent-2',
+          ]);
 
-        expect(store.getState().ai.config.openSessionTabs).toEqual([session.id]);
+        expect(store.getState().ai.config.openSessionTabs).toEqual([
+          session.id,
+        ]);
       }
     });
   });
