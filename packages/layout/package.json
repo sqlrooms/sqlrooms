@@ -41,5 +41,8 @@
     "typedoc": "typedoc",
     "test": "jest",
     "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "ts-jest": "^29.4.4"
   }
 }
