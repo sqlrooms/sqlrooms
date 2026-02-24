@@ -1,7 +1,10 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
 import {createDuckDbSlice, DuckDbSliceState} from '../src/DuckDbSlice';
-import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
+import {
+  createBaseRoomSlice,
+  BaseRoomStoreState,
+} from '../../room-store/src/BaseRoomStore';
 import * as arrow from 'apache-arrow';
 
 type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
