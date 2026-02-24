@@ -2876,6 +2876,9 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../duckdb-core
       '@sqlrooms/duckdb-node':
         specifier: workspace:*
         version: link:../duckdb-node
