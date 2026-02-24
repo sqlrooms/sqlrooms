@@ -25,7 +25,6 @@ const PACKAGE_CATEGORIES = {
     'mosaic',
     'motherduck',
     'recharts',
-    's3-browser',
     'schema-tree',
     'sql-editor',
     'vega',
@@ -138,16 +137,16 @@ Canonical package combos:
             link: '/overview',
           },
           {
-            text: 'Deployment Scenarios',
-            link: '/deployment-scenarios',
-          },
-          {
             text: 'Key Concepts',
             link: '/key-concepts',
           },
           {
             text: 'Modular Architecture',
             link: '/modular-architecture',
+          },
+          {
+            text: 'Deployment Scenarios',
+            link: '/deployment-scenarios',
           },
           {
             text: "What's New",
