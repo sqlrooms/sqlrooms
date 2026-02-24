@@ -34,7 +34,7 @@ import {
   TOOL_CALL_CANCELLED,
 } from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
-import {OpenAssistantToolSet} from '@openassistant/utils';
+import type {OpenAssistantToolSet} from '@openassistant/utils';
 import type {
   AddToolResult,
   AiChatSendMessage,
