@@ -1,4 +1,4 @@
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfigInterface} from '@cosmograph/cosmos';
 import {cn, useRelativeCoordinates} from '@sqlrooms/ui';
 import {FC, useEffect, useRef} from 'react';
 import {useStoreWithCosmos} from './CosmosSlice';

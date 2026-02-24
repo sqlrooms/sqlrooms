@@ -3,7 +3,8 @@
  * This module provides state management and control functions for the Cosmos graph visualization.
  */
 
-import {Graph, GraphConfigInterface} from '@cosmos.gl/graph';
+import {Graph} from '@cosmograph/cosmos';
+import type {GraphConfigInterface} from '@cosmograph/cosmos';
 import {
   createSlice,
   useBaseRoomShellStore,

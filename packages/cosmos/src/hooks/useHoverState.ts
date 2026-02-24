@@ -1,7 +1,7 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
 import {useState, useCallback, useMemo} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfigInterface} from '@cosmograph/cosmos';
 
 /**
  * Represents the state of a hovered point in the graph.
