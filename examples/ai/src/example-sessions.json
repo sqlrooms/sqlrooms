@@ -4,7 +4,7 @@
       "id": "xefziloqhpwqlj8kb31szv1q",
       "name": "Time series of earthquakes",
       "modelProvider": "openai",
-      "model": "gpt-4.1",
+      "model": "gpt-5.2",
       "analysisResults": [
         {
           "id": "hq9x8r95oennvhst8o6ollpm",
@@ -656,7 +656,7 @@
       "id": "wz49jbb35umuwi7gom6cnk5g",
       "name": "Magnitude vs Depth Binned Heatmap",
       "modelProvider": "openai",
-      "model": "gpt-4o-mini",
+      "model": "gpt-5.2",
       "analysisResults": [
         {
           "id": "g3lsikbsc9civ04ge6hl27t3",
@@ -1068,7 +1068,7 @@
       "id": "qejzk4rjeofiaby238nhdxnb",
       "name": "Custom tool",
       "modelProvider": "openai",
-      "model": "gpt-4o-mini",
+      "model": "gpt-5.2",
       "analysisResults": [
         {
           "id": "h6dip19ytufv9q5n95sb8rl9",

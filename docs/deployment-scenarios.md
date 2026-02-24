@@ -30,7 +30,7 @@ Use this scenario when teams need shared writable datasets with stronger governa
 - **How it works:** Browser clients query and update shared datasets via a managed DuckDB backend (for example MotherDuck) or catalog-managed table formats such as Iceberg.
 - **Data storage:** MotherDuck-managed DuckDB storage, or Iceberg tables in object storage with a catalog layer.
 - **App state storage:** Browser local state and optionally backend metadata storage.
-- **Platform choice:** See [Backend platform options](#backend-platform-options-for-scenarios-2-and-3) for trade-offs between MotherDuck, Modal, Cloudflare, and Plane.
+- **Platform choice:** See [Backend platform options](#backend-platform-options-for-scenarios-2-and-3) for trade-offs between MotherDuck, Modal, Daytona, Cloudflare, and Plane.
 - **Best fit:** Teams that need managed table lifecycle, concurrent writes, and shared editable data assets.
 - **At a glance:** Moderate infra complexity; medium collaboration through shared writable tables; limited offline.
 
@@ -54,7 +54,7 @@ Use server-backed sessions when many users need to see and edit the same analyti
 - **Best fit:** Team collaboration in a shared room, coordinated analysis, and synchronized state.
 - **At a glance:** Highest collaboration; backend required; low offline for shared sessions.
 
-A common deployment pattern is session-per-room on demand (for example, containerized workers). One practical option is [Cloudflare Containers](https://developers.cloudflare.com/containers/), which can spin up container instances on demand and route requests per session. As an open-source alternative, [Plane](https://plane.dev/) can run stateful WebSocket backends with per-session process isolation. Another option is [Modal Sandbox](https://modal.com/docs/guide/sandboxes), which can run isolated compute environments for data workloads.
+A common deployment pattern is session-per-room on demand (for example, containerized workers). One practical option is [Cloudflare Containers](https://developers.cloudflare.com/containers/), which can spin up container instances on demand and route requests per session. Another option is [Daytona](https://www.daytona.io/), which provides API-driven isolated sandboxes suitable for per-room runtime isolation and agent/tool execution workflows. [Plane](https://plane.dev/) is another self-hostable option that can run stateful WebSocket backends with per-session process isolation. [Modal Sandbox](https://modal.com/docs/guide/sandboxes) is also a strong fit for isolated compute environments, especially when paired with bursty heavier jobs.
 
 Examples and references:
 
@@ -65,12 +65,13 @@ Examples and references:
 
 ## Backend platform options for Scenarios 2 and 3
 
-In practice, teams can choose between managed data persistence (MotherDuck) and per-room compute runtimes (Modal/Cloudflare/Plane), or combine them.
+In practice, teams can choose between managed data persistence (MotherDuck) and per-room compute runtimes (Modal/Daytona/Cloudflare/Plane), or combine them.
 
 - **Use MotherDuck when:** You have a business/enterprise budget and want managed DuckDB persistence, sharing, and operational simplicity. It is best as the durable data layer rather than the room runtime itself.
 - **Use Modal when:** You want fast developer velocity for per-room isolated environments with persistent volumes and straightforward programmatic provisioning.
+- **Use Daytona when:** You want API-driven per-room isolated sandboxes, strong runtime isolation for untrusted code or agent tools, and workspace-style execution environments.
 - **Use Cloudflare Containers when:** You prioritize low baseline cost and edge proximity, and are comfortable implementing extra persistence orchestration (for example with R2) for sleeping/ephemeral instances.
-- **Use Plane when:** You want an open-source, self-hostable system for stateful per-session WebSocket backends with full control over infrastructure behavior.
+- **Use Plane when:** You want a self-hostable system for stateful per-session WebSocket backends with full control over infrastructure behavior.
 
 Pricing and limits can change frequently, so treat platform economics as a regularly reviewed decision input.
 

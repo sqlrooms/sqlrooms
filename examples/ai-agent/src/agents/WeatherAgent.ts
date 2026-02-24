@@ -18,7 +18,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
       const state = store.getState();
       const currentSession = state.ai.getCurrentSession();
       const provider = currentSession?.modelProvider || 'openai';
-      const modelId = currentSession?.model || 'gpt-4.1';
+      const modelId = currentSession?.model || 'gpt-5.2';
 
       const model = createOpenAICompatible({
         apiKey: state.ai.getApiKeyFromSettings(),

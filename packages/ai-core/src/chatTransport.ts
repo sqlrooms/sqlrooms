@@ -41,8 +41,8 @@ export type ChatTransportConfig = {
   getInstructions: () => string;
   /**
    * Optional: supply a pre-configured custom model.
-   * e.g. import {xai} from "@ai-sdk/xai";
-   * getCustomModel: () => xai('grok-4')
+   * e.g. import {anthropic} from "@ai-sdk/anthropic";
+   * getCustomModel: () => anthropic('claude-sonnet-4-5')
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;

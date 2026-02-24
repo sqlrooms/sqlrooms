@@ -30,6 +30,7 @@ yarn add @sqlrooms/s3-browser
 import {useState} from 'react';
 import {S3FileBrowser, S3CredentialsForm, S3State} from '@sqlrooms/s3-browser';
 import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3-utils';
+import {Button} from '@sqlrooms/ui';
 
 type S3BrowserProps = {
   listS3Files: (args: {
@@ -115,9 +116,9 @@ export const S3Browser = ({
             }}
             onCanConfirmChange={() => {}}
           />
-          <button disabled={!selectedFiles.length} onClick={handleLoadFiles}>
+          <Button disabled={!selectedFiles.length} onClick={handleLoadFiles}>
             Add Selected
-          </button>
+          </Button>
         </div>
       )}
     </div>
