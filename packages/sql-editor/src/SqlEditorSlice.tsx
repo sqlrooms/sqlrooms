@@ -242,7 +242,9 @@ export function createSqlEditorSlice({
 
           const wasSelected = sqlEditorConfig.selectedQueryId === queryId;
           const deletingOpenIndex = openTabs.indexOf(queryId);
-          const filteredQueries = queries.filter((q) => q.id !== queryId);
+          const filteredQueries = queries
+            .filter((q) => q.id !== queryId)
+            .map((q) => ({...q}));
 
           set((state) =>
             produce(state, (draft) => {
