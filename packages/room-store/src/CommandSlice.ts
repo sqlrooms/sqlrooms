@@ -786,16 +786,14 @@ function toPortableSchema(schema: ZodType<unknown>): RoomCommandPortableSchema {
 
   if (schemaType === 'default') {
     const innerType = definition?.innerType as ZodType<unknown> | undefined;
-    const defaultValueGetter = definition?.defaultValue as
-      | (() => unknown)
-      | undefined;
+    const defaultValue = definition?.defaultValue as unknown;
     const innerSchema = innerType
       ? toPortableSchema(innerType)
       : {type: 'unknown'};
     return {
       ...base,
       ...innerSchema,
-      default: defaultValueGetter ? defaultValueGetter() : undefined,
+      default: resolveDefaultValue(defaultValue),
     };
   }
 
@@ -810,4 +808,16 @@ function toErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function resolveDefaultValue(defaultValue: unknown): unknown {
+  if (typeof defaultValue !== 'function') {
+    return defaultValue;
+  }
+
+  try {
+    return defaultValue();
+  } catch {
+    return undefined;
+  }
 }
