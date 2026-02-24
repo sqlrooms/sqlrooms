@@ -2,7 +2,7 @@ import {createStore} from 'zustand';
 import {Graph} from '@cosmograph/cosmos';
 import {jest} from '@jest/globals';
 import {createCosmosSlice, CosmosSliceState} from '../src/CosmosSlice';
-import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-shell';
+import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 
 type TestStoreState = BaseRoomStoreState & CosmosSliceState;
 
