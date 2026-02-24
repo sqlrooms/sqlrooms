@@ -1,29 +1,14 @@
 import {createStore} from 'zustand';
 import {Graph} from '@cosmograph/cosmos';
-import {
-  createCosmosSlice,
-  CosmosSliceState,
-  useStoreWithCosmos,
-} from '../src/CosmosSlice';
-import {
-  createBaseRoomSlice,
-  createLayoutSlice,
-  createCommandSlice,
-  BaseRoomStoreState,
-  LayoutSliceState,
-  CommandSliceState,
-} from '@sqlrooms/room-shell';
+import {jest} from '@jest/globals';
+import {createCosmosSlice, CosmosSliceState} from '../src/CosmosSlice';
+import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-shell';
 
-type TestStoreState = BaseRoomStoreState &
-  LayoutSliceState &
-  CommandSliceState &
-  CosmosSliceState;
+type TestStoreState = BaseRoomStoreState & CosmosSliceState;
 
 function createTestStore() {
   return createStore<TestStoreState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createLayoutSlice()(...args),
-    ...createCommandSlice()(...args),
     ...createCosmosSlice()(...args),
   }));
 }
@@ -42,7 +27,6 @@ jest.mock('@cosmograph/cosmos', () => ({
     setPointSizes: jest.fn(),
     setLinks: jest.fn(),
     setLinkColors: jest.fn(),
-    setFocusedPointByIndex: jest.fn(),
     setZoomLevel: jest.fn(),
     render: jest.fn(),
     isSimulationRunning: false,
@@ -222,7 +206,9 @@ describe('CosmosSlice', () => {
 
       store.getState().cosmos.updateGraphData(data);
 
-      expect(graph?.setPointPositions).toHaveBeenCalledWith(data.pointPositions);
+      expect(graph?.setPointPositions).toHaveBeenCalledWith(
+        data.pointPositions,
+      );
       expect(graph?.setPointColors).toHaveBeenCalledWith(data.pointColors);
       expect(graph?.setPointSizes).toHaveBeenCalledWith(data.pointSizes);
       expect(graph?.setLinks).toHaveBeenCalledWith(data.linkIndexes);
@@ -238,7 +224,7 @@ describe('CosmosSlice', () => {
 
       store.getState().cosmos.setFocusedPoint(5);
 
-      expect(graph?.setFocusedPointByIndex).toHaveBeenCalledWith(5);
+      expect(graph?.setConfig).toHaveBeenCalledWith({focusedPointIndex: 5});
     });
 
     it('should accept undefined to clear focus', () => {
@@ -247,7 +233,9 @@ describe('CosmosSlice', () => {
 
       store.getState().cosmos.setFocusedPoint(undefined);
 
-      expect(graph?.setFocusedPointByIndex).toHaveBeenCalledWith(undefined);
+      expect(graph?.setConfig).toHaveBeenCalledWith({
+        focusedPointIndex: undefined,
+      });
     });
   });
 

@@ -1,12 +1,11 @@
 import {renderHook, act} from '@testing-library/react';
+import {jest} from '@jest/globals';
 import {useHoverState} from '../src/hooks/useHoverState';
 
 describe('useHoverState', () => {
   const mockCalcRelativeCoordinates = jest.fn(
-    (clientX: number, clientY: number) => [clientX + 10, clientY + 20] as [
-      number,
-      number,
-    ],
+    (clientX: number, clientY: number) =>
+      [clientX + 10, clientY + 20] as [number, number],
   );
 
   beforeEach(() => {
@@ -38,11 +37,10 @@ describe('useHoverState', () => {
     );
 
     act(() => {
-      result.current.eventHandlers.onPointMouseOver(
-        5,
-        [100, 200],
-        {clientX: 150, clientY: 250} as MouseEvent,
-      );
+      result.current.eventHandlers.onPointMouseOver(5, [100, 200], {
+        clientX: 150,
+        clientY: 250,
+      } as MouseEvent);
     });
 
     expect(result.current.hoveredPoint).toEqual({
@@ -76,11 +74,10 @@ describe('useHoverState', () => {
 
     // First set hover state
     act(() => {
-      result.current.eventHandlers.onPointMouseOver(
-        5,
-        [100, 200],
-        {clientX: 150, clientY: 250} as MouseEvent,
-      );
+      result.current.eventHandlers.onPointMouseOver(5, [100, 200], {
+        clientX: 150,
+        clientY: 250,
+      } as MouseEvent);
     });
 
     expect(result.current.hoveredPoint).not.toBeNull();
@@ -99,11 +96,10 @@ describe('useHoverState', () => {
     );
 
     act(() => {
-      result.current.eventHandlers.onPointMouseOver(
-        5,
-        [100, 200],
-        {clientX: 150, clientY: 250} as MouseEvent,
-      );
+      result.current.eventHandlers.onPointMouseOver(5, [100, 200], {
+        clientX: 150,
+        clientY: 250,
+      } as MouseEvent);
     });
 
     expect(result.current.hoveredPoint).not.toBeNull();
@@ -121,11 +117,10 @@ describe('useHoverState', () => {
     );
 
     act(() => {
-      result.current.eventHandlers.onPointMouseOver(
-        5,
-        [100, 200],
-        {clientX: 150, clientY: 250} as MouseEvent,
-      );
+      result.current.eventHandlers.onPointMouseOver(5, [100, 200], {
+        clientX: 150,
+        clientY: 250,
+      } as MouseEvent);
     });
 
     expect(result.current.hoveredPoint).not.toBeNull();
@@ -143,11 +138,10 @@ describe('useHoverState', () => {
     );
 
     act(() => {
-      result.current.eventHandlers.onPointMouseOver(
-        1,
-        [50, 60],
-        {clientX: 100, clientY: 120} as MouseEvent,
-      );
+      result.current.eventHandlers.onPointMouseOver(1, [50, 60], {
+        clientX: 100,
+        clientY: 120,
+      } as MouseEvent);
     });
 
     expect(result.current.hoveredPoint).toEqual({
@@ -156,11 +150,10 @@ describe('useHoverState', () => {
     });
 
     act(() => {
-      result.current.eventHandlers.onPointMouseOver(
-        2,
-        [70, 80],
-        {clientX: 200, clientY: 220} as MouseEvent,
-      );
+      result.current.eventHandlers.onPointMouseOver(2, [70, 80], {
+        clientX: 200,
+        clientY: 220,
+      } as MouseEvent);
     });
 
     expect(result.current.hoveredPoint).toEqual({

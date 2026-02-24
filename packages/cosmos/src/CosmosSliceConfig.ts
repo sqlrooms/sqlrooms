@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfigInterface} from '@cosmograph/cosmos';
 
 /**
  * Default configuration values for the Cosmos graph visualization.
@@ -193,5 +193,5 @@ export const CosmosSliceConfig = z.object({
 export type CosmosSliceConfig = z.infer<typeof CosmosSliceConfig>;
 
 export function createDefaultCosmosConfig(): CosmosSliceConfig {
-  return DEFAULT_COSMOS_CONFIG;
+  return {...DEFAULT_COSMOS_CONFIG};
 }

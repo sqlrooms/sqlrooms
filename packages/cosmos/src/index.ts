@@ -26,4 +26,4 @@ export {
   createDefaultCosmosConfig,
 } from './CosmosSliceConfig';
 
-export type {GraphConfigInterface} from '@cosmos.gl/graph';
+export type {GraphConfigInterface} from '@cosmograph/cosmos';
