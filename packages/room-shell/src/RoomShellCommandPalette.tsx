@@ -1,3 +1,4 @@
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   createRoomCommandExecutionContext,
   doesCommandRequireInput,
@@ -9,7 +10,6 @@ import {
   RoomCommandPortableSchema,
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
   cn,
@@ -37,8 +37,8 @@ import {
   ComponentType,
   useCallback,
   useEffect,
-  useRef,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {RoomShellSliceState, useBaseRoomShellStore} from './RoomShellSlice';
@@ -420,25 +420,29 @@ function RoomShellCommandPaletteBase({
                 {activeInputCommand?.inputDescription ??
                   'Provide command input as a JSON value. Example: {"panelId":"sql-editor"}'}
               </DialogDescription>
-              <JsonMonacoEditor
-                className="h-56 overflow-hidden rounded-md border"
-                schema={activeInputCommandJsonSchema}
-                value={inputJsonValue}
-                path={activeInputEditorPath}
-                readOnly={isSubmittingInput}
-                onChange={(value) => {
-                  setInputJsonValue(value ?? '');
-                  setInputError(undefined);
-                }}
-                onValidate={handleJsonEditorValidate}
-                options={{
-                  lineNumbers: 'off',
-                  glyphMargin: false,
-                  folding: false,
-                  wordWrap: 'on',
-                  tabSize: 2,
-                }}
-              />
+              <div className="relative h-56 w-full rounded-md border">
+                <JsonMonacoEditor
+                  className="absolute inset-0 h-full w-full"
+                  schema={activeInputCommandJsonSchema}
+                  value={inputJsonValue}
+                  path={activeInputEditorPath}
+                  readOnly={isSubmittingInput}
+                  onChange={(value) => {
+                    setInputJsonValue(value ?? '');
+                    setInputError(undefined);
+                  }}
+                  onValidate={handleJsonEditorValidate}
+                  options={{
+                    lineNumbers: 'off',
+                    glyphMargin: false,
+                    folding: false,
+                    wordWrap: 'on',
+                    tabSize: 2,
+                    fixedOverflowWidgets: false,
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
               {hasJsonValidationErrors ? (
                 <p className="text-destructive text-sm">
                   JSON input has syntax or schema validation errors.
