@@ -37,7 +37,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "NODE_OPTIONS='' jest",
+    "test:watch": "NODE_OPTIONS='' jest --watch"
   }
 }
