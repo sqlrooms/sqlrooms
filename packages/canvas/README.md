@@ -68,6 +68,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 ## Programmatic canvas actions
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function CanvasActions() {
   const addNode = useRoomStore((state) => state.canvas.addNode);
   const executeSqlNodeQuery = useRoomStore(
@@ -79,7 +81,7 @@ function CanvasActions() {
     await executeSqlNodeQuery(nodeId);
   };
 
-  return <button onClick={() => void addAndRun()}>Add SQL node</button>;
+  return <Button onClick={() => void addAndRun()}>Add SQL node</Button>;
 }
 ```
 

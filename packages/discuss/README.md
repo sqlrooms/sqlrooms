@@ -98,6 +98,7 @@ export function DiscussionPanel() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function DiscussionActions() {
   const addDiscussion = useRoomStore((state) => state.discuss.addDiscussion);
@@ -106,13 +107,13 @@ function DiscussionActions() {
 
   return (
     <div className="flex gap-2">
-      <button onClick={() => addDiscussion('Initial note', 'data-point-id')}>
+      <Button onClick={() => addDiscussion('Initial note', 'data-point-id')}>
         Add discussion
-      </button>
-      <button onClick={() => setReplyToItem({discussionId: 'some-id'})}>
+      </Button>
+      <Button onClick={() => setReplyToItem({discussionId: 'some-id'})}>
         Reply mode
-      </button>
-      <button onClick={() => submitEdit('Reply text')}>Submit</button>
+      </Button>
+      <Button onClick={() => submitEdit('Reply text')}>Submit</Button>
     </div>
   );
 }

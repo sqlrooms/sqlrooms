@@ -94,6 +94,7 @@ export function App() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function RoomActions() {
   const setRoomTitle = useRoomStore((state) => state.room.setRoomTitle);
@@ -103,8 +104,8 @@ function RoomActions() {
 
   return (
     <div className="flex gap-2">
-      <button onClick={() => setRoomTitle('Updated title')}>Rename room</button>
-      <button
+      <Button onClick={() => setRoomTitle('Updated title')}>Rename room</Button>
+      <Button
         onClick={() =>
           void addDataSource({
             type: 'sql',
@@ -115,11 +116,11 @@ function RoomActions() {
         }
       >
         Add SQL data source
-      </button>
-      <button onClick={() => void removeDataSource('top_quakes')}>
+      </Button>
+      <Button onClick={() => void removeDataSource('top_quakes')}>
         Remove SQL data source
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={async () => {
           const file = new File(['id,name\n1,Alice'], 'people.csv', {
             type: 'text/csv',
@@ -128,7 +129,7 @@ function RoomActions() {
         }}
       >
         Add file
-      </button>
+      </Button>
     </div>
   );
 }

@@ -79,6 +79,7 @@ export function GraphView() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function SimulationButtons() {
   const toggleSimulation = useRoomStore((state) => state.cosmos.toggleSimulation);
@@ -89,11 +90,11 @@ function SimulationButtons() {
 
   return (
     <div className="flex gap-2">
-      <button onClick={toggleSimulation}>Toggle simulation</button>
-      <button onClick={fitView}>Fit view</button>
-      <button onClick={() => updateSimulationConfig({simulationRepulsion: 1.5})}>
+      <Button onClick={toggleSimulation}>Toggle simulation</Button>
+      <Button onClick={fitView}>Fit view</Button>
+      <Button onClick={() => updateSimulationConfig({simulationRepulsion: 1.5})}>
         Stronger repulsion
-      </button>
+      </Button>
     </div>
   );
 }

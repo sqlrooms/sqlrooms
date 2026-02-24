@@ -148,6 +148,7 @@ function ArrowTableSchemaExample() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function DatabaseManager() {
   const createTableFromQuery = useRoomStore(
@@ -185,10 +186,10 @@ function DatabaseManager() {
 
   return (
     <div>
-      <button onClick={handleCreateTable}>Create Filtered Users Table</button>
-      <button onClick={handleAddTable}>Add New Users Table</button>
-      <button onClick={handleDropTable}>Drop Old Table</button>
-      <button onClick={refreshTableSchemas}>Refresh Schemas</button>
+      <Button onClick={handleCreateTable}>Create Filtered Users Table</Button>
+      <Button onClick={handleAddTable}>Add New Users Table</Button>
+      <Button onClick={handleDropTable}>Drop Old Table</Button>
+      <Button onClick={refreshTableSchemas}>Refresh Schemas</Button>
 
       <h3>Available Tables:</h3>
       <ul>
@@ -208,6 +209,7 @@ function DatabaseManager() {
 ```tsx
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function QualifiedTableOps() {
   const createTableFromQuery = useRoomStore(
@@ -230,7 +232,7 @@ function QualifiedTableOps() {
     await dropTable(qualifiedTable);
   };
 
-  return <button onClick={() => void run()}>Run qualified table ops</button>;
+  return <Button onClick={() => void run()}>Run qualified table ops</Button>;
 }
 ```
 
@@ -241,6 +243,7 @@ function QualifiedTableOps() {
 ```tsx
 import {loadCSV, loadJSON, loadParquet, loadObjects} from '@sqlrooms/duckdb';
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function DataLoader() {
   const getConnector = useRoomStore((state) => state.db.getConnector);
@@ -279,7 +282,7 @@ function DataLoader() {
           if (e.target.files?.[0]) handleLoadCSV(e.target.files[0]);
         }}
       />
-      <button onClick={handleLoadObjects}>Load Sample Data</button>
+      <Button onClick={handleLoadObjects}>Load Sample Data</Button>
     </div>
   );
 }
@@ -334,6 +337,7 @@ function AdvancedDataLoader() {
 
 ```tsx
 import {useExportToCsv} from '@sqlrooms/duckdb';
+import {Button} from '@sqlrooms/ui';
 
 function ExportButton() {
   const {exportToCsv} = useExportToCsv();
@@ -342,7 +346,7 @@ function ExportButton() {
     await exportToCsv('SELECT * FROM users ORDER BY name', 'users_export.csv');
   };
 
-  return <button onClick={handleExport}>Export to CSV</button>;
+  return <Button onClick={handleExport}>Export to CSV</Button>;
 }
 ```
 
@@ -391,6 +395,8 @@ async function cancelExample() {
 ### Advanced operations with the Zustand store
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function AdvancedOperations() {
   const executeSql = useRoomStore((s) => s.db.executeSql);
   const sqlSelectToJson = useRoomStore((s) => s.db.sqlSelectToJson);
@@ -413,7 +419,7 @@ function AdvancedOperations() {
     console.log('Table exists:', exists);
   };
 
-  return <button onClick={handleAdvancedQuery}>Run Advanced Operations</button>;
+  return <Button onClick={handleAdvancedQuery}>Run Advanced Operations</Button>;
 }
 ```
 

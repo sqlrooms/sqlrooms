@@ -78,14 +78,16 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
 ## Programmatic panel visibility
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function PanelButtons() {
   const togglePanel = useRoomStore((state) => state.layout.togglePanel);
   const togglePanelPin = useRoomStore((state) => state.layout.togglePanelPin);
 
   return (
     <div className="flex gap-2">
-      <button onClick={() => togglePanel('data')}>Toggle Data Panel</button>
-      <button onClick={() => togglePanelPin('data')}>Pin/Unpin Data Panel</button>
+      <Button onClick={() => togglePanel('data')}>Toggle Data Panel</Button>
+      <Button onClick={() => togglePanelPin('data')}>Pin/Unpin Data Panel</Button>
     </div>
   );
 }

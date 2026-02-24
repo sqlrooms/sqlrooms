@@ -76,6 +76,7 @@ export function App() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function RunQueryButton() {
   const parseAndRunQuery = useRoomStore((state) => state.sqlEditor.parseAndRunQuery);
@@ -86,7 +87,7 @@ function RunQueryButton() {
     await parseAndRunQuery('SELECT COUNT(*) AS total FROM earthquakes');
   };
 
-  return <button onClick={() => void run()}>Run query</button>;
+  return <Button onClick={() => void run()}>Run query</Button>;
 }
 ```
 

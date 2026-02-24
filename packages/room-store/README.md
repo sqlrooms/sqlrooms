@@ -77,12 +77,13 @@ export function App() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function Dashboard() {
   const value = useRoomStore((state) => state.counter.value);
   const increment = useRoomStore((state) => state.counter.increment);
 
-  return <button onClick={increment}>Count: {value}</button>;
+  return <Button onClick={increment}>Count: {value}</Button>;
 }
 ```
 
@@ -104,11 +105,12 @@ Inside components, `useRoomStoreApi()` gives you the raw store API:
 
 ```tsx
 import {useRoomStoreApi} from '@sqlrooms/room-store';
+import {Button} from '@sqlrooms/ui';
 
 function ResetButton() {
   const store = useRoomStoreApi();
   return (
-    <button
+    <Button
       onClick={() => {
         // Example: imperative read from store
         const current = store.getState().room.initialized;
@@ -116,7 +118,7 @@ function ResetButton() {
       }}
     >
       Inspect store
-    </button>
+    </Button>
   );
 }
 ```

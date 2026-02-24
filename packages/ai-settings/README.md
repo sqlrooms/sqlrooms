@@ -80,6 +80,7 @@ export function SettingsView() {
 
 ```tsx
 import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function MaxStepsControl() {
   const maxSteps = useRoomStore(
@@ -90,9 +91,9 @@ function MaxStepsControl() {
   );
 
   return (
-    <button onClick={() => setMaxSteps(maxSteps + 5)}>
+    <Button onClick={() => setMaxSteps(maxSteps + 5)}>
       Increase max steps ({maxSteps})
-    </button>
+    </Button>
   );
 }
 ```
