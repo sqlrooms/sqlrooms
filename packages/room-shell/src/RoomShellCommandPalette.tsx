@@ -1,12 +1,15 @@
 import {
   createRoomCommandExecutionContext,
   doesCommandRequireInput,
+  exportCommandInputSchema,
   getCommandInputComponent,
   getCommandShortcut,
   RegisteredRoomCommand,
   RoomCommandExecutionContext,
+  RoomCommandPortableSchema,
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
   cn,
@@ -23,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Textarea,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -35,8 +37,8 @@ import {
   ComponentType,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
+  useMemo,
   useState,
 } from 'react';
 import {RoomShellSliceState, useBaseRoomShellStore} from './RoomShellSlice';
@@ -55,6 +57,24 @@ export type RoomShellCommandPaletteProps = {
 type PaletteCommand = RegisteredRoomCommand & {
   enabled: boolean;
 };
+type JsonSchema = {
+  $schema?: string;
+  title?: string;
+  description?: string;
+  type?: string | string[];
+  enum?: unknown[];
+  const?: unknown;
+  default?: unknown;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  items?: JsonSchema;
+  anyOf?: JsonSchema[];
+};
+type MonacoMarker = {
+  severity: number;
+};
+
+const MONACO_MARKER_SEVERITY_ERROR = 8;
 
 type CommandPaletteControlAction = 'open' | 'close' | 'toggle';
 type CommandPaletteControlListener = (
@@ -90,9 +110,13 @@ function RoomShellCommandPaletteBase({
   const [activeInputCommandId, setActiveInputCommandId] = useState<string>();
   const [inputJsonValue, setInputJsonValue] = useState('{}');
   const [inputError, setInputError] = useState<string>();
+  const [hasJsonValidationErrors, setHasJsonValidationErrors] = useState(false);
   const [isSubmittingInput, setIsSubmittingInput] = useState(false);
   const isOpen = controlledOpen ?? uncontrolledOpen;
   const isOpenRef = useRef(isOpen);
+  const commandInputEditorPathPrefixRef = useRef(
+    `inmemory://sqlrooms/command-input/${Math.random().toString(36).slice(2)}`,
+  );
   const roomStore = useRoomStoreApi<RoomShellSliceState>();
   const commandRegistry = useBaseRoomShellStore(
     (state) => state.commands.registry,
@@ -151,6 +175,29 @@ function RoomShellCommandPaletteBase({
   const ActiveInputComponent = activeInputCommand
     ? getCommandInputComponent(activeInputCommand)
     : undefined;
+  const activeInputCommandJsonSchema = useMemo(() => {
+    if (!activeInputCommand?.inputSchema) {
+      return undefined;
+    }
+    const portableInputSchema = exportCommandInputSchema(
+      activeInputCommand.inputSchema,
+    );
+    const jsonSchema = toJsonSchema(portableInputSchema);
+    if (!jsonSchema) {
+      return undefined;
+    }
+    return {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      title: activeInputCommand.name,
+      ...jsonSchema,
+    } satisfies JsonSchema;
+  }, [activeInputCommand]);
+  const activeInputEditorPath = useMemo(() => {
+    if (!activeInputCommand) {
+      return undefined;
+    }
+    return `${commandInputEditorPathPrefixRef.current}/${encodeURIComponent(activeInputCommand.id)}.json`;
+  }, [activeInputCommand]);
 
   const setPaletteOpen = useCallback(
     (nextOpen: boolean) => {
@@ -173,8 +220,9 @@ function RoomShellCommandPaletteBase({
       ) {
         setPaletteOpen(false);
         setActiveInputCommandId(command.id);
-        setInputJsonValue('{}');
+        setInputJsonValue(createDefaultJsonInputValue(command));
         setInputError(undefined);
+        setHasJsonValidationErrors(false);
         return;
       }
       setPaletteOpen(false);
@@ -197,6 +245,7 @@ function RoomShellCommandPaletteBase({
     }
     setActiveInputCommandId(undefined);
     setInputError(undefined);
+    setHasJsonValidationErrors(false);
   }, [isSubmittingInput]);
 
   const submitCommandInput = useCallback(
@@ -224,6 +273,11 @@ function RoomShellCommandPaletteBase({
   );
 
   const submitJsonCommandInput = useCallback(async () => {
+    if (hasJsonValidationErrors) {
+      setInputError('Fix JSON validation errors before running the command.');
+      return;
+    }
+
     const trimmedInput = inputJsonValue.trim();
     if (!trimmedInput) {
       await submitCommandInput(undefined);
@@ -235,7 +289,14 @@ function RoomShellCommandPaletteBase({
     } catch (error) {
       setInputError(getErrorMessage(error));
     }
-  }, [inputJsonValue, submitCommandInput]);
+  }, [hasJsonValidationErrors, inputJsonValue, submitCommandInput]);
+
+  const handleJsonEditorValidate = useCallback((markers: MonacoMarker[]) => {
+    const hasErrors = markers.some(
+      (marker) => marker.severity === MONACO_MARKER_SEVERITY_ERROR,
+    );
+    setHasJsonValidationErrors(hasErrors);
+  }, []);
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -359,12 +420,30 @@ function RoomShellCommandPaletteBase({
                 {activeInputCommand?.inputDescription ??
                   'Provide command input as a JSON value. Example: {"panelId":"sql-editor"}'}
               </DialogDescription>
-              <Textarea
-                className="min-h-32 font-mono text-xs"
+              <JsonMonacoEditor
+                className="h-56 overflow-hidden rounded-md border"
+                schema={activeInputCommandJsonSchema}
                 value={inputJsonValue}
-                onChange={(event) => setInputJsonValue(event.target.value)}
-                disabled={isSubmittingInput}
+                path={activeInputEditorPath}
+                readOnly={isSubmittingInput}
+                onChange={(value) => {
+                  setInputJsonValue(value ?? '');
+                  setInputError(undefined);
+                }}
+                onValidate={handleJsonEditorValidate}
+                options={{
+                  lineNumbers: 'off',
+                  glyphMargin: false,
+                  folding: false,
+                  wordWrap: 'on',
+                  tabSize: 2,
+                }}
               />
+              {hasJsonValidationErrors ? (
+                <p className="text-destructive text-sm">
+                  JSON input has syntax or schema validation errors.
+                </p>
+              ) : null}
               {inputError ? (
                 <p className="text-destructive text-sm">{inputError}</p>
               ) : null}
@@ -380,7 +459,7 @@ function RoomShellCommandPaletteBase({
                   onClick={() => {
                     void submitJsonCommandInput();
                   }}
-                  disabled={isSubmittingInput}
+                  disabled={isSubmittingInput || hasJsonValidationErrors}
                 >
                   Run command
                 </Button>
@@ -496,4 +575,158 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function createDefaultJsonInputValue(command: RegisteredRoomCommand): string {
+  const portableInputSchema = exportCommandInputSchema(command.inputSchema);
+  const jsonSchema = toJsonSchema(portableInputSchema);
+  const inputTemplate = createInputTemplateFromSchema(jsonSchema);
+  return safeStringifyJsonValue(inputTemplate ?? {});
+}
+
+function toJsonSchema(
+  portableSchema?: RoomCommandPortableSchema,
+): JsonSchema | undefined {
+  if (!portableSchema) {
+    return undefined;
+  }
+  const schema: JsonSchema = {};
+
+  if (portableSchema.description) {
+    schema.description = portableSchema.description;
+  }
+  if (portableSchema.enum) {
+    schema.enum = [...portableSchema.enum];
+  }
+  if (portableSchema.const !== undefined) {
+    schema.const = portableSchema.const;
+  }
+  if (portableSchema.default !== undefined) {
+    schema.default = portableSchema.default;
+  }
+  if (portableSchema.items) {
+    schema.items = toJsonSchema(portableSchema.items);
+  }
+  if (portableSchema.properties) {
+    schema.properties = Object.fromEntries(
+      Object.entries(portableSchema.properties).map(
+        ([propertyName, property]) => [
+          propertyName,
+          toJsonSchema(property) ?? {},
+        ],
+      ),
+    );
+  }
+  if (portableSchema.required?.length) {
+    schema.required = [...portableSchema.required];
+  }
+  if (portableSchema.anyOf?.length) {
+    schema.anyOf = portableSchema.anyOf
+      .map((variant) => toJsonSchema(variant))
+      .filter((variant): variant is JsonSchema => Boolean(variant));
+  }
+
+  const schemaType =
+    portableSchema.type && portableSchema.type !== 'unknown'
+      ? portableSchema.type
+      : undefined;
+  if (schemaType) {
+    if (portableSchema.nullable) {
+      schema.type = [schemaType, 'null'];
+    } else {
+      schema.type = schemaType;
+    }
+  } else if (portableSchema.nullable) {
+    schema.type = 'null';
+  }
+
+  return schema;
+}
+
+function createInputTemplateFromSchema(schema?: JsonSchema): unknown {
+  if (!schema) {
+    return {};
+  }
+  if (schema.default !== undefined) {
+    return schema.default;
+  }
+  if (schema.const !== undefined) {
+    return schema.const;
+  }
+  if (schema.enum && schema.enum.length > 0) {
+    return schema.enum[0];
+  }
+  if (schema.anyOf && schema.anyOf.length > 0) {
+    for (const variant of schema.anyOf) {
+      const value = createInputTemplateFromSchema(variant);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+  }
+
+  const schemaType = resolveSchemaType(schema.type);
+  switch (schemaType) {
+    case 'object': {
+      const properties = schema.properties ?? {};
+      const requiredPropertyNames = new Set(schema.required ?? []);
+      const propertyEntries = Object.entries(properties);
+      const objectValue: Record<string, unknown> = {};
+
+      for (const [propertyName, propertySchema] of propertyEntries) {
+        if (
+          requiredPropertyNames.size > 0 &&
+          !requiredPropertyNames.has(propertyName)
+        ) {
+          continue;
+        }
+        objectValue[propertyName] =
+          createInputTemplateFromSchema(propertySchema);
+      }
+
+      // If there are no required keys, include the first optional key as a hint.
+      if (
+        Object.keys(objectValue).length === 0 &&
+        requiredPropertyNames.size === 0 &&
+        propertyEntries.length > 0
+      ) {
+        const firstProperty = propertyEntries[0];
+        if (firstProperty) {
+          const [firstPropertyName, firstPropertySchema] = firstProperty;
+          objectValue[firstPropertyName] =
+            createInputTemplateFromSchema(firstPropertySchema);
+        }
+      }
+
+      return objectValue;
+    }
+    case 'array':
+      return [];
+    case 'string':
+      return '';
+    case 'number':
+    case 'integer':
+      return 0;
+    case 'boolean':
+      return false;
+    case 'null':
+      return null;
+    default:
+      return {};
+  }
+}
+
+function resolveSchemaType(type: JsonSchema['type']): string | undefined {
+  if (Array.isArray(type)) {
+    return type.find((variant) => variant !== 'null') ?? type[0];
+  }
+  return type;
+}
+
+function safeStringifyJsonValue(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return '{}';
+  }
 }

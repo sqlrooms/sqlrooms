@@ -2626,6 +2626,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../monaco-editor
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
