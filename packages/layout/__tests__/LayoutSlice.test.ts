@@ -298,21 +298,17 @@ describe('LayoutSlice', () => {
   });
 
   describe('lifecycle behavior', () => {
-    it('should initialize safely without command slice integration', async () => {
+    it('should initialize safely without command slice integration', () => {
       const testStore = createTestStore();
 
-      await expect(
-        testStore.getState().layout.initialize?.(),
-      ).resolves.toBeUndefined();
+      expect(() => testStore.getState().layout.initialize?.()).not.toThrow();
     });
 
-    it('should destroy safely without command slice integration', async () => {
+    it('should destroy safely without command slice integration', () => {
       const testStore = createTestStore();
-      await testStore.getState().layout.initialize?.();
+      testStore.getState().layout.initialize?.();
 
-      await expect(
-        testStore.getState().layout.destroy?.(),
-      ).resolves.toBeUndefined();
+      expect(() => testStore.getState().layout.destroy?.()).not.toThrow();
     });
   });
 
