@@ -1,164 +1,124 @@
-This package provides the core state management for SQLRooms using [Zustand](https://github.com/pmndrs/zustand). It is designed to be extensible, allowing you to build custom room experiences by creating and composing state "slices".
+Low-level state management primitives for SQLRooms, built on Zustand.
+
+Use this package when you want to build custom room state from scratch.  
+If you want DuckDB + layout + room shell out of the box, use `@sqlrooms/room-shell`.
 
 ## Installation
 
 ```bash
-npm install @sqlrooms/room-store @sqlrooms/room-config zod zustand
+npm install @sqlrooms/room-store
 ```
 
-## Core Concepts
+## What this package provides
 
-### RoomStore
+- `createRoomStore()` and `createRoomStoreCreator()`
+- base lifecycle slice: `createBaseRoomSlice()`
+- generic slice helper: `createSlice()`
+- React context/hooks: `RoomStateProvider`, `useBaseRoomStore`, `useRoomStoreApi`
+- persistence helpers: `persistSliceConfigs()`, `createPersistHelpers()`
 
-The `RoomStore` is a Zustand store that holds the entire state of a room. It is created by calling `createRoomStore` with a function that composes one or more slice creators.
+## Quick start
 
-### RoomState
-
-The `RoomState` is the object that defines the shape of the store. It includes state from the base room shell slice and any additional slices you add:
-
-- `room.config`: This holds the configuration of the room that is persisted. This is defined by a `zod` schema, often extending the `BaseRoomConfig` from `@sqlrooms/room-config`.
-- `room`: This holds the client-side state of the room, such as task progress, and provides actions for interacting with the room.
-- `db`: DuckDB database state and methods
-- `layout`: Layout configuration and panel definitions
-
-### Slices
-
-A slice is a piece of the room's state and its associated actions. You can create your own slices to add custom functionality to your room. The framework provides `createRoomShellSlice` to create the base slice with core room functionality. You combine this with your own slices inside the `createRoomStore` composer function.
-
-## Basic Usage
-
-Here's an example of how to create a room store with a custom feature slice.
-
-```typescript
+```tsx
 import {
+  BaseRoomStoreState,
+  createBaseRoomSlice,
   createRoomStore,
-  createRoomShellSlice,
-  RoomShellSliceState,
+  createSlice,
+  type StateCreator,
 } from '@sqlrooms/room-store';
-import {StateCreator} from 'zustand';
 
-// 1. Define the state and actions for your custom feature slice.
-export interface MyFeatureSlice {
-  activeChartId: string | null;
-  setActiveChartId: (id: string | null) => void;
+type CounterSliceState = {
+  counter: {
+    value: number;
+    increment: () => void;
+  };
+};
+
+function createCounterSlice(): StateCreator<CounterSliceState> {
+  return createSlice<CounterSliceState>((set, get) => ({
+    counter: {
+      value: 0,
+      increment: () =>
+        set((state) => ({
+          counter: {
+            ...state.counter,
+            value: get().counter.value + 1,
+          },
+        })),
+    },
+  }));
 }
 
-// 2. Create your custom slice.
-export const createMyFeatureSlice: StateCreator<MyFeatureSlice> = (set) => ({
-  activeChartId: null,
-  setActiveChartId: (id) => set({activeChartId: id}),
-});
+type RoomState = BaseRoomStoreState & CounterSliceState;
 
-// 3. Define the full state of your room, combining the base RoomShellSliceState
-// with your custom slice's state.
-export type MyRoomState = RoomShellSliceState & MyFeatureSlice;
-
-// 4. Create the room store by composing the base slice and your custom slice.
-export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice({
-      config: {
-        // You can provide initial values for your config here
-        title: 'My First Room',
-        dataSources: [],
-      },
-      layout: {
-        config: {
-          // Layout configuration
-        },
-        panels: {
-          // Panel definitions
-        },
-      },
-    })(set, get, store),
-
-    // Add your custom slice to the store
-    ...createMyFeatureSlice(set, get, store),
+    ...createBaseRoomSlice()(set, get, store),
+    ...createCounterSlice()(set, get, store),
   }),
 );
-
-export {roomStore, useRoomStore};
 ```
 
-## Providing the Store
-
-To make the store available to your React components, you need to use the `RoomStateProvider` component at the root of your application.
+## React integration
 
 ```tsx
 import {RoomStateProvider} from '@sqlrooms/room-store';
-import {roomStore} from './my-room-store';
+import {roomStore} from './store';
 
-function App() {
+export function App() {
   return (
     <RoomStateProvider roomStore={roomStore}>
-      {/* Your room components go here */}
+      <Dashboard />
     </RoomStateProvider>
   );
 }
 ```
 
-## Accessing the Store in Components
-
-You can use the `useRoomStore` hook returned by `createRoomStore` to access the room's state and actions from any component.
-
 ```tsx
-import {useRoomStore} from './my-room-store';
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
-function RoomTitle() {
-  const title = useRoomStore((state) => state.room.config.title);
-  const activeChartId = useRoomStore((state) => state.activeChartId);
-  const setActiveChartId = useRoomStore((state) => state.setActiveChartId);
+function Dashboard() {
+  const value = useRoomStore((state) => state.counter.value);
+  const increment = useRoomStore((state) => state.counter.increment);
 
-  return (
-    <div>
-      <h1>{title}</h1>
-      <p>Active Chart: {activeChartId || 'None'}</p>
-      <button onClick={() => setActiveChartId('chart-123')}>
-        Activate Chart
-      </button>
-    </div>
-  );
+  return <Button onClick={increment}>Count: {value}</Button>;
 }
 ```
 
-## Imperative Access
+## Imperative access
 
-Use selectors in render paths, and use store API methods for event handlers, timers, and other imperative code.
+Use `roomStore.getState()` for non-reactive code (events, timers, async jobs).
 
-`useRoomStoreApi()` is non-reactive. It returns the raw `StoreApi` from context and does not subscribe to state changes, so components using it will not rerender on every store update. For reactive reads that should drive rerenders, use `useRoomStore((state) => ...)` selectors.
+```ts
+import {roomStore} from './store';
 
-### Module-level imperative access
-
-```tsx
-import {roomStore, useRoomStore} from './my-room-store';
-
-async function runAnalysis() {
-  const sessionId = roomStore.getState().ai.config.currentSessionId;
-  if (sessionId) {
-    await useRoomStore.getState().ai.startAnalysis(sessionId);
-  }
+export function incrementLater() {
+  setTimeout(() => {
+    roomStore.getState().counter.increment();
+  }, 500);
 }
 ```
 
-### Context-based imperative access inside components
+Inside components, `useRoomStoreApi()` gives you the raw store API:
 
 ```tsx
 import {useRoomStoreApi} from '@sqlrooms/room-store';
+import {Button} from '@sqlrooms/ui';
 
-function StartButton() {
+function ResetButton() {
   const store = useRoomStoreApi();
-
   return (
-    <button
-      onClick={async () => {
-        const sessionId = store.getState().ai.config.currentSessionId;
-        if (sessionId) {
-          await store.getState().ai.startAnalysis(sessionId);
-        }
+    <Button
+      onClick={() => {
+        // Example: imperative read from store
+        const current = store.getState().room.initialized;
+        console.log('initialized', current);
       }}
     >
-      Start
-    </button>
+      Inspect store
+    </Button>
   );
 }
 ```

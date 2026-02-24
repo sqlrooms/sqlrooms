@@ -8,6 +8,7 @@ This example shows how to set up and use the RAG (Retrieval Augmented Generation
 import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice, EmbeddingResult} from '@sqlrooms/ai-rag';
+import {Button} from '@sqlrooms/ui';
 
 // 1. Create store with RAG slice
 const store = createRoomStore({
@@ -121,9 +122,9 @@ function DocumentSearch() {
         onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         placeholder="Search documentation..."
       />
-      <button onClick={handleSearch} disabled={loading}>
+      <Button onClick={handleSearch} disabled={loading}>
         {loading ? 'Searching...' : 'Search'}
-      </button>
+      </Button>
       {results.length > 0 && <SearchResults results={results} />}
     </div>
   );

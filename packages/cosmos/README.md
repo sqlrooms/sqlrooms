@@ -1,168 +1,105 @@
-A powerful graph visualization package for SQLRooms applications. This package provides React components and hooks for creating interactive graph visualizations using a WebGL-based graph rendering engine, with state management through Zustand.
-
-This package is built on top of the [Cosmos library](https://github.com/cosmograph-org/cosmos), a GPU-accelerated force graph layout and rendering library.
-
-## Features
-
-- 🌐 **Interactive Graphs**: Create dynamic, interactive graph visualizations
-- 🚀 **WebGL Rendering**: High-performance rendering for large graphs
-- 🧩 **React Components**: Ready-to-use components for graph visualization
-- 🔄 **State Management**: Zustand-based state management for graph state
-- 🎛️ **Simulation Controls**: Fine-grained control over physics simulation
-- 🎨 **Customizable Styling**: Extensive options for visual customization
+GPU-accelerated graph visualization components and slice for SQLRooms (powered by Cosmograph Cosmos).
 
 ## Installation
 
 ```bash
-npm install @sqlrooms/cosmos
+npm install @sqlrooms/cosmos @sqlrooms/room-shell @sqlrooms/ui
 ```
 
-## Basic Usage
-
-### Simple Graph Visualization
+## Store setup
 
 ```tsx
+import {CosmosSliceState, createCosmosSlice} from '@sqlrooms/cosmos';
 import {
-  CosmosGraph,
-  CosmosGraphControls,
-  createDefaultCosmosConfig,
-} from '@sqlrooms/cosmos';
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
 
-function MyGraph() {
-  const graphData = {
-    nodes: [
-      {id: 'node1', label: 'Node 1'},
-      {id: 'node2', label: 'Node 2'},
-      {id: 'node3', label: 'Node 3'},
-    ],
-    links: [
-      {source: 'node1', target: 'node2'},
-      {source: 'node2', target: 'node3'},
-      {source: 'node3', target: 'node1'},
-    ],
-  };
+type RoomState = RoomShellSliceState & CosmosSliceState;
 
-  return (
-    <div style={{width: '800px', height: '600px'}}>
-      <CosmosGraph config={createDefaultCosmosConfig()} data={graphData}>
-        <CosmosGraphControls />
-      </CosmosGraph>
-    </div>
-  );
-}
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice({
+      config: {title: 'Cosmos Demo', dataSources: []},
+    })(set, get, store),
+    ...createCosmosSlice()(set, get, store),
+  }),
+);
 ```
 
-### With Simulation Controls
+## Render a graph
 
 ```tsx
-import {
-  CosmosGraph,
-  CosmosGraphControls,
-  CosmosSimulationControls,
-  createDefaultCosmosConfig,
-} from '@sqlrooms/cosmos';
+import {CosmosGraph, CosmosGraphControls, CosmosSimulationControls} from '@sqlrooms/cosmos';
+import {GraphConfigInterface} from '@cosmos.gl/graph';
 
-function AdvancedGraph() {
-  return (
-    <div style={{width: '800px', height: '600px', position: 'relative'}}>
-      <CosmosGraph config={createDefaultCosmosConfig()} data={graphData}>
-        <CosmosGraphControls />
-        <CosmosSimulationControls className="absolute bottom-4 left-4" />
-      </CosmosGraph>
-    </div>
-  );
-}
-```
-
-### Using with Zustand Store
-
-```tsx
-import {
-  createCosmosSlice,
-  useStoreWithCosmos,
-  createDefaultCosmosConfig,
-} from '@sqlrooms/cosmos';
-import {createRoomStore} from '@sqlrooms/room-shell';
-
-// Create a room store with cosmos capabilities
-const useStore = createRoomStore({
-  cosmos: createCosmosSlice(createDefaultCosmosConfig()),
-});
-
-function GraphWithState() {
-  const {setGraphData, toggleSimulation, isSimulationRunning, zoomToFit} =
-    useStoreWithCosmos(useStore);
-
-  // Load graph data
-  useEffect(() => {
-    setGraphData(myGraphData);
-  }, []);
-
-  return (
-    <div>
-      <button onClick={toggleSimulation}>
-        {isSimulationRunning ? 'Pause' : 'Resume'} Simulation
-      </button>
-      <button onClick={zoomToFit}>Zoom to Fit</button>
-
-      <CosmosGraph store={useStore}>
-        <CosmosGraphControls />
-      </CosmosGraph>
-    </div>
-  );
-}
-```
-
-## Configuration
-
-The Cosmos graph visualization system provides extensive configuration options for both visual appearance and physics simulation.
-
-### Visual Configuration
-
-```tsx
-const config = {
-  pointSizeScale: 1.2, // Base scale for node sizes
-  scalePointsOnZoom: true, // Dynamic node sizing with zoom
-  renderLinks: true, // Toggle link visibility
-  linkArrows: true, // Show directional arrows
-  curvedLinks: true, // Use curved links
-  linkWidth: 1.5, // Width of links
-  linkOpacity: 0.8, // Opacity of links
-  // ... other visual options
+const config: GraphConfigInterface = {
+  backgroundColor: 'transparent',
+  simulationGravity: 0.2,
+  simulationRepulsion: 1,
+  simulationLinkSpring: 1,
+  simulationLinkDistance: 10,
 };
+
+const pointPositions = new Float32Array([
+  0, 0, // node 0
+  1, 0, // node 1
+  0.5, 1, // node 2
+]);
+const pointSizes = new Float32Array([5, 5, 5]);
+const pointColors = new Float32Array([
+  1, 0, 0, 1,
+  0, 1, 0, 1,
+  0, 0, 1, 1,
+]);
+const linkIndexes = new Float32Array([
+  0, 1,
+  1, 2,
+]);
+
+export function GraphView() {
+  return (
+    <CosmosGraph
+      config={config}
+      pointPositions={pointPositions}
+      pointSizes={pointSizes}
+      pointColors={pointColors}
+      linkIndexes={linkIndexes}
+      renderPointTooltip={(index) => `Node ${index}`}
+    >
+      <CosmosGraphControls />
+      <CosmosSimulationControls className="absolute right-2 top-2" />
+    </CosmosGraph>
+  );
+}
 ```
 
-### Physics Simulation Configuration
+## Update simulation programmatically
 
 ```tsx
-const config = {
-  simulationGravity: 0.2, // Center attraction strength
-  simulationRepulsion: 1.0, // Node repulsion strength
-  simulationLinkSpring: 1.2, // Link elasticity
-  simulationLinkDistance: 15, // Preferred link distance
-  simulationFriction: 0.85, // Movement damping
-  simulationDecay: 1000, // Simulation cooling rate
-  // ... other physics options
-};
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
+
+function SimulationButtons() {
+  const toggleSimulation = useRoomStore((state) => state.cosmos.toggleSimulation);
+  const fitView = useRoomStore((state) => state.cosmos.fitView);
+  const updateSimulationConfig = useRoomStore(
+    (state) => state.cosmos.updateSimulationConfig,
+  );
+
+  return (
+    <div className="flex gap-2">
+      <Button onClick={toggleSimulation}>Toggle simulation</Button>
+      <Button onClick={fitView}>Fit view</Button>
+      <Button onClick={() => updateSimulationConfig({simulationRepulsion: 1.5})}>
+        Stronger repulsion
+      </Button>
+    </div>
+  );
+}
 ```
 
-## Advanced Features
+## Example app
 
-- **Custom Node Rendering**: Define custom renderers for nodes
-- **Interactive Events**: Handle click, hover, and drag events
-- **Data Binding**: Connect graph data to your application state
-- **Layout Algorithms**: Apply different layout algorithms
-- **Performance Optimization**: Options for handling large graphs
-
-For more information, visit the SQLRooms documentation.
-
-## About Cosmograph Cosmos
-
-This package is built on top of [Cosmograph Cosmos](https://github.com/cosmograph-org/cosmos), a GPU-accelerated force graph layout and rendering library. Cosmograph Cosmos offers:
-
-- **GPU Acceleration**: All computations and rendering happen on the GPU in fragment and vertex shaders
-- **High Performance**: Capable of rendering hundreds of thousands of nodes and links in real-time
-- **WebGL-based**: Utilizes WebGL for efficient graph visualization
-- **Advanced Physics**: Sophisticated force-directed layout algorithms
-
-For more information about the underlying library, visit the [Cosmograph Cosmos GitHub repository](https://github.com/cosmograph-org/cosmos) or the [official documentation](https://cosmograph-org.github.io/cosmos/).
+- https://github.com/sqlrooms/examples/tree/main/cosmos
