@@ -1,22 +1,18 @@
 import {
-  createRemoveUpdate,
-  MosaicDirection,
-  MosaicNode,
-  MosaicPath,
-  updateTree,
-} from 'react-mosaic-component';
-import {
+  MosaicLayoutDirection,
   MosaicLayoutNode,
   isMosaicLayoutParent,
   DEFAULT_MOSAIC_LAYOUT,
 } from '@sqlrooms/layout-config';
 
+type MosaicPath = Array<'first' | 'second'>;
+
 export function makeMosaicStack(
-  direction: MosaicDirection,
-  children: {node: string | MosaicNode<string> | null; weight: number}[],
-): MosaicNode<string> | null {
+  direction: MosaicLayoutDirection,
+  children: {node: string | MosaicLayoutNode | null; weight: number}[],
+): MosaicLayoutNode | null {
   const childrenWithoutEmpty = children.filter(({node}) => node !== null) as {
-    node: string | MosaicNode<string>;
+    node: string | MosaicLayoutNode;
     weight: number;
   }[];
   if (!childrenWithoutEmpty?.length) {
@@ -93,17 +89,47 @@ export function removeMosaicNodeByKey(
   key: string,
 ): {success: true; nextTree: MosaicLayoutNode} | {success: false} {
   const path = findMosaicNodePathByKey(root, key);
-  if (!root || !path) return {success: false};
-  try {
-    return {
-      success: true,
-      nextTree: updateTree<string>(root, [
-        createRemoveUpdate<string>(root, path),
-      ]),
-    };
-  } catch (err) {
-    console.error(err);
-    // might happen when removing main view
+  if (!root || !path || path.length === 0) {
+    // path.length===0 means attempting to remove the root-only node (e.g. main view)
     return {success: false};
   }
+  const nextTree = removeNodeAtPath(root, path);
+  if (!nextTree) {
+    return {success: false};
+  }
+  return {success: true, nextTree};
+}
+
+function removeNodeAtPath(
+  root: MosaicLayoutNode,
+  path: MosaicPath,
+): MosaicLayoutNode | null {
+  if (path.length === 0 || !isMosaicLayoutParent(root)) {
+    return null;
+  }
+
+  const [head, ...tail] = path;
+  if (!head) {
+    return null;
+  }
+
+  if (head === 'first') {
+    if (tail.length === 0) {
+      return root.second;
+    }
+    const nextFirst = removeNodeAtPath(root.first, tail);
+    if (!nextFirst) {
+      return root.second;
+    }
+    return {...root, first: nextFirst};
+  }
+
+  if (tail.length === 0) {
+    return root.first;
+  }
+  const nextSecond = removeNodeAtPath(root.second, tail);
+  if (!nextSecond) {
+    return root.first;
+  }
+  return {...root, second: nextSecond};
 }

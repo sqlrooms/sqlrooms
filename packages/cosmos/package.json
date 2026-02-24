@@ -19,8 +19,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@cosmos.gl/graph": "^2.6.4",
-    "@sqlrooms/room-shell": "workspace:*",
+    "@cosmograph/cosmos": "2.0.0-beta.26",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
@@ -36,6 +36,14 @@
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "test": "NODE_OPTIONS='' jest",
+    "test:watch": "NODE_OPTIONS='' jest --watch"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@testing-library/react": "^16.3.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "ts-jest": "^29.4.4"
   }
 }

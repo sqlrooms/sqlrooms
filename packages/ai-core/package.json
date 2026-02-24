@@ -45,6 +45,12 @@
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "ts-jest": "^29.4.4",
+    "zustand": "^5.0.8"
   }
 }

@@ -9,7 +9,7 @@ import {produce} from 'immer';
 import React from 'react';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
-import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
+import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic/mosaic-utils';
 
 export type RoomPanelInfo = {
   title?: string;

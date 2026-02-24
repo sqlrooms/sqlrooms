@@ -3,6 +3,7 @@ export default {
   preset: 'ts-jest',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: {
+    '^@sqlrooms/(.*)$': '<rootDir>/../$1/src',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {

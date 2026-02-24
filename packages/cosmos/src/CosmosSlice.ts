@@ -3,12 +3,13 @@
  * This module provides state management and control functions for the Cosmos graph visualization.
  */
 
-import {Graph, GraphConfigInterface} from '@cosmos.gl/graph';
+import {Graph} from '@cosmograph/cosmos';
+import type {GraphConfigInterface} from '@cosmograph/cosmos';
 import {
+  type BaseRoomStoreState,
   createSlice,
-  useBaseRoomShellStore,
-  type RoomShellSliceState,
-} from '@sqlrooms/room-shell';
+  useBaseRoomStore,
+} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import type {StateCreator} from 'zustand';
 import {
@@ -225,7 +226,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
  * Combined type representing the full room state including Cosmos functionality.
  * Merges the base room state with Cosmos-specific state and configuration.
  */
-export type RoomStateWithCosmos = RoomShellSliceState & CosmosSliceState;
+export type RoomStateWithCosmos = BaseRoomStoreState & CosmosSliceState;
 
 /**
  * Hook to access the Cosmos store with proper typing.
@@ -244,7 +245,7 @@ export type RoomStateWithCosmos = RoomShellSliceState & CosmosSliceState;
 export function useStoreWithCosmos<T>(
   selector: (state: RoomStateWithCosmos) => T,
 ): T {
-  return useBaseRoomShellStore<RoomStateWithCosmos, T>((state) =>
+  return useBaseRoomStore<RoomStateWithCosmos, T>((state) =>
     selector(state as RoomStateWithCosmos),
   );
 }

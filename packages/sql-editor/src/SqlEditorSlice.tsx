@@ -9,10 +9,10 @@ import {
 import {
   BaseRoomStoreState,
   createSlice,
-  RoomShellSliceState,
   StateCreator,
-  useBaseRoomShellStore,
-} from '@sqlrooms/room-shell';
+  useBaseRoomStore,
+} from '@sqlrooms/room-store';
+import type {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   SqlEditorSliceConfig,
@@ -242,7 +242,9 @@ export function createSqlEditorSlice({
 
           const wasSelected = sqlEditorConfig.selectedQueryId === queryId;
           const deletingOpenIndex = openTabs.indexOf(queryId);
-          const filteredQueries = queries.filter((q) => q.id !== queryId);
+          const filteredQueries = queries
+            .filter((q) => q.id !== queryId)
+            .map((q) => ({...q}));
 
           set((state) =>
             produce(state, (draft) => {
@@ -575,7 +577,7 @@ type RoomStateWithSqlEditor = RoomShellSliceState & SqlEditorSliceState;
 export function useStoreWithSqlEditor<T>(
   selector: (state: RoomStateWithSqlEditor) => T,
 ): T {
-  return useBaseRoomShellStore<RoomShellSliceState, T>((state) =>
+  return useBaseRoomStore<RoomStateWithSqlEditor, T>((state) =>
     selector(state as unknown as RoomStateWithSqlEditor),
   );
 }

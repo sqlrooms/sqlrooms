@@ -23,7 +23,9 @@
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests"
   },
   "dependencies": {
     "@sqlrooms/data-table": "workspace:*",
@@ -42,5 +44,9 @@
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "jest-environment-jsdom": "^30.2.0",
+    "ts-jest": "^29.4.4"
   }
 }
