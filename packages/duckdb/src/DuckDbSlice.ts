@@ -287,12 +287,13 @@ export function createDuckDbSlice({
           initialize: async () => {
             let connector = get().db.connector as DuckDbConnector | undefined;
             if (!connector) {
-              connector = await createDefaultWasmConnector();
+              const createdConnector = await createDefaultWasmConnector();
               set((state) =>
                 produce(state, (draft) => {
-                  draft.db.connector = connector;
+                  draft.db.connector = createdConnector;
                 }),
               );
+              connector = createdConnector;
             }
             await connector.initialize();
             await get().db.refreshTableSchemas();
@@ -301,12 +302,13 @@ export function createDuckDbSlice({
           getConnector: async () => {
             let connector = get().db.connector as DuckDbConnector | undefined;
             if (!connector) {
-              connector = await createDefaultWasmConnector();
+              const createdConnector = await createDefaultWasmConnector();
               set((state) =>
                 produce(state, (draft) => {
-                  draft.db.connector = connector;
+                  draft.db.connector = createdConnector;
                 }),
               );
+              connector = createdConnector;
             }
             await connector.initialize();
             return connector;
@@ -462,6 +464,7 @@ export function createDuckDbSlice({
           async loadTableSchemas(
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
+            const connector = await get().db.getConnector();
             const {schema, database, table} = filter || {};
             const sql = `WITH tables_and_views AS (
               FROM duckdb_tables() SELECT
