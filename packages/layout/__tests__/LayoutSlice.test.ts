@@ -275,7 +275,9 @@ describe('LayoutSlice', () => {
 
       const testStore = createTestStore({noIcon: panel});
 
-      expect(testStore.getState().layout.panels['noIcon']?.icon).toBeUndefined();
+      expect(
+        testStore.getState().layout.panels['noIcon']?.icon,
+      ).toBeUndefined();
     });
 
     it('should support panels with icons', () => {
@@ -295,30 +297,22 @@ describe('LayoutSlice', () => {
     });
   });
 
-  describe('commands registration', () => {
-    it('should register panel toggle commands on initialize', async () => {
+  describe('lifecycle behavior', () => {
+    it('should initialize safely without command slice integration', async () => {
       const testStore = createTestStore();
-      await testStore.getState().layout.initialize?.();
 
-      const commands = testStore.getState().commands?.registry;
-      expect(commands).toBeDefined();
+      await expect(
+        testStore.getState().layout.initialize?.(),
+      ).resolves.toBeUndefined();
     });
 
-    it('should unregister commands on destroy', async () => {
+    it('should destroy safely without command slice integration', async () => {
       const testStore = createTestStore();
       await testStore.getState().layout.initialize?.();
 
-      const commandsBefore = Object.keys(
-        testStore.getState().commands?.registry || {},
-      ).length;
-
-      await testStore.getState().layout.destroy?.();
-
-      const commandsAfter = Object.keys(
-        testStore.getState().commands?.registry || {},
-      ).length;
-
-      expect(commandsAfter).toBeLessThanOrEqual(commandsBefore);
+      await expect(
+        testStore.getState().layout.destroy?.(),
+      ).resolves.toBeUndefined();
     });
   });
 
