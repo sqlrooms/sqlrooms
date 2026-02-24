@@ -221,8 +221,8 @@ function createLayoutPanelCommands(
     },
   };
 
-  const panelShortcutCommands = Object.entries(panels).map(
-    ([panelId, panelInfo]) => {
+  const panelShortcutCommands: RoomCommand<LayoutCommandStoreState>[] =
+    Object.entries(panels).map(([panelId, panelInfo]) => {
       const title = panelInfo.title ?? panelId;
       const keywords = [panelId, panelInfo.title, panelInfo.placement].filter(
         (value): value is string => Boolean(value),
@@ -237,8 +237,7 @@ function createLayoutPanelCommands(
           getState().layout.togglePanel(panelId);
         },
       };
-    },
-  );
+    });
 
   return [byIdCommand, ...panelShortcutCommands];
 }
