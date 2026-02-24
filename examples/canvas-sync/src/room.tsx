@@ -1,10 +1,10 @@
 import {RoomShell, RoomShellSidebarButtons} from '@sqlrooms/room-shell';
 import {
+  ThemeSwitch,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  ThemeSwitch,
 } from '@sqlrooms/ui';
 import {Zap, ZapOff} from 'lucide-react';
 import {InputApiKey} from './InputApiKey';
@@ -59,6 +59,7 @@ export function Room() {
       </div>
       <RoomShell.LayoutComposer tileClassName="p-0" />
       {/* <RoomShell.LoadingProgress /> */}
+      <RoomShell.CommandPalette />
       <InputApiKey className="absolute top-5 right-15 z-10" />
     </RoomShell>
   );

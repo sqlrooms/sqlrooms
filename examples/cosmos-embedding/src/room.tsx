@@ -19,6 +19,7 @@ export const Room = () => {
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
       <SqlEditorModal
         isOpen={sqlEditorDisclosure.isOpen}
         onClose={sqlEditorDisclosure.onClose}

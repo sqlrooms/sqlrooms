@@ -29,6 +29,7 @@ export const Room = () => {
       </div>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
       <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
       <RagSearchDialog isOpen={ragTest.isOpen} onClose={ragTest.onClose} />
     </RoomShell>
