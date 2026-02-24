@@ -3,4 +3,8 @@ import nodeConfig from '@sqlrooms/preset-jest/node.js';
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
   ...nodeConfig,
+  moduleNameMapper: {
+    ...nodeConfig.moduleNameMapper,
+    '^@paralleldrive/cuid2$': '<rootDir>/test/__mocks__/cuid2.ts',
+  },
 };
