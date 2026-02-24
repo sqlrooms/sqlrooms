@@ -147,13 +147,22 @@ describe('SqlEditorSlice', () => {
       const query = store.getState().sqlEditor.createQueryTab();
 
       // Set some results
-      store.getState().sqlEditor.queryResultsById[query.id] = {
-        status: 'success',
-        type: 'select',
-        result: undefined,
-        query: 'SELECT 1',
-        lastQueryStatement: 'SELECT 1',
-      };
+      store.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [query.id]: {
+              status: 'success',
+              type: 'select',
+              result: undefined,
+              query: 'SELECT 1',
+              lastQueryStatement: 'SELECT 1',
+            },
+          },
+        },
+      }));
 
       store.getState().sqlEditor.deleteQueryTab(query.id);
 
@@ -224,7 +233,7 @@ describe('SqlEditorSlice', () => {
     });
 
     it('should return empty string if no query selected', () => {
-      store.getState().sqlEditor.config.selectedQueryId = 'non-existent';
+      store.getState().sqlEditor.setSelectedQueryId('non-existent');
 
       expect(store.getState().sqlEditor.getCurrentQuery()).toBe('');
     });
@@ -286,13 +295,22 @@ describe('SqlEditorSlice', () => {
     it('should clear all query results', () => {
       const query = store.getState().sqlEditor.createQueryTab();
 
-      store.getState().sqlEditor.queryResultsById[query.id] = {
-        status: 'success',
-        type: 'select',
-        result: undefined,
-        query: 'SELECT 1',
-        lastQueryStatement: 'SELECT 1',
-      };
+      store.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [query.id]: {
+              status: 'success',
+              type: 'select',
+              result: undefined,
+              query: 'SELECT 1',
+              lastQueryStatement: 'SELECT 1',
+            },
+          },
+        },
+      }));
 
       store.getState().sqlEditor.clearQueryResults();
 
@@ -331,10 +349,19 @@ describe('SqlEditorSlice', () => {
       store.getState().sqlEditor.setSelectedQueryId(query.id);
 
       // Set loading state
-      store.getState().sqlEditor.queryResultsById[query.id] = {
-        status: 'loading',
-        controller: new AbortController(),
-      };
+      store.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [query.id]: {
+              status: 'loading',
+              controller: new AbortController(),
+            },
+          },
+        },
+      }));
 
       await expect(
         store.getState().sqlEditor.parseAndRunQuery('SELECT 1'),
@@ -364,10 +391,19 @@ describe('SqlEditorSlice', () => {
       store.getState().sqlEditor.setSelectedQueryId(query.id);
 
       const controller = new AbortController();
-      store.getState().sqlEditor.queryResultsById[query.id] = {
-        status: 'loading',
-        controller,
-      };
+      store.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [query.id]: {
+              status: 'loading',
+              controller,
+            },
+          },
+        },
+      }));
 
       store.getState().sqlEditor.abortCurrentQuery();
 
