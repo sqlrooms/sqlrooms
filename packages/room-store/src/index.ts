@@ -37,14 +37,18 @@ export type {StateCreator, StoreApi} from 'zustand';
 export {
   createCommandSlice,
   createRoomCommandExecutionContext,
+  doesCommandRequireInput,
   hasCommandSliceState,
   registerCommandsForOwner,
   unregisterCommandsForOwner,
+  validateCommandInput,
 } from './CommandSlice';
 export type {
   CommandSliceState,
   RegisteredRoomCommand,
   RoomCommand,
+  RoomCommandInputComponent,
+  RoomCommandInputComponentProps,
   RoomCommandExecutionContext,
   RoomCommandPredicate,
 } from './CommandSlice';

@@ -19,6 +19,20 @@ import {StateCreator} from 'zustand';
 import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
+const ToggleLayoutPanelCommandInput = z.object({
+  panelId: z
+    .string()
+    .describe('ID of the panel to show/hide, e.g. "sql-editor".'),
+  show: z
+    .boolean()
+    .optional()
+    .describe(
+      'Optional explicit visibility. True shows, false hides, omitted toggles.',
+    ),
+});
+type ToggleLayoutPanelCommandInput = z.infer<
+  typeof ToggleLayoutPanelCommandInput
+>;
 
 export type RoomPanelInfo = {
   title?: string;
@@ -96,7 +110,10 @@ export function createLayoutSlice({
               // don't hide the view if it's the only one
               return;
             }
-            const result = removeMosaicNodeByKey(get().layout.config?.nodes, panel);
+            const result = removeMosaicNodeByKey(
+              get().layout.config?.nodes,
+              panel,
+            );
             const isShown = result.success;
             if (isShown) {
               if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
@@ -183,22 +200,47 @@ type LayoutCommandStoreState = BaseRoomStoreState & LayoutSliceState;
 function createLayoutPanelCommands(
   panels: Record<string, RoomPanelInfo>,
 ): RoomCommand<LayoutCommandStoreState>[] {
-  return Object.entries(panels).map(([panelId, panelInfo]) => {
-    const title = panelInfo.title ?? panelId;
-    const keywords = [panelId, panelInfo.title, panelInfo.placement].filter(
-      (value): value is string => Boolean(value),
-    );
-    return {
-      id: `layout.panel.toggle.${panelId}`,
-      name: `Toggle panel: ${title}`,
-      description: `Show or hide the ${title} panel`,
-      group: 'Layout',
-      keywords,
-      execute: ({getState}) => {
-        getState().layout.togglePanel(panelId);
-      },
-    };
-  });
+  const byIdCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.panel.toggle',
+    name: 'Toggle panel by ID',
+    description: 'Show or hide a panel by its ID',
+    group: 'Layout',
+    keywords: ['layout', 'panel', 'toggle', 'show', 'hide', 'id'],
+    inputSchema: ToggleLayoutPanelCommandInput,
+    inputDescription:
+      'Provide panelId and optional show. If show is omitted, the panel visibility is toggled.',
+    validateInput: (input, {getState}) => {
+      const {panelId} = input as ToggleLayoutPanelCommandInput;
+      if (!getState().layout.panels[panelId]) {
+        throw new Error(`Unknown panel ID "${panelId}".`);
+      }
+    },
+    execute: ({getState}, input) => {
+      const {panelId, show} = input as ToggleLayoutPanelCommandInput;
+      getState().layout.togglePanel(panelId, show);
+    },
+  };
+
+  const panelShortcutCommands = Object.entries(panels).map(
+    ([panelId, panelInfo]) => {
+      const title = panelInfo.title ?? panelId;
+      const keywords = [panelId, panelInfo.title, panelInfo.placement].filter(
+        (value): value is string => Boolean(value),
+      );
+      return {
+        id: `layout.panel.toggle.${panelId}`,
+        name: `Toggle panel: ${title}`,
+        description: `Show or hide the ${title} panel`,
+        group: 'Layout',
+        keywords,
+        execute: ({getState}) => {
+          getState().layout.togglePanel(panelId);
+        },
+      };
+    },
+  );
+
+  return [byIdCommand, ...panelShortcutCommands];
 }
 
 export function useStoreWithLayout<T>(

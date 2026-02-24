@@ -1,5 +1,7 @@
 import {produce} from 'immer';
+import type {ComponentType} from 'react';
 import {StoreApi} from 'zustand';
+import {z, ZodType} from 'zod';
 import {BaseRoomStoreState, createSlice, StateCreator} from './BaseRoomStore';
 
 const DEFAULT_COMMAND_OWNER = 'global';
@@ -14,6 +16,18 @@ export type RoomCommandExecutionContext<
 export type RoomCommandPredicate<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
 > = (context: RoomCommandExecutionContext<RS>) => boolean;
+
+export type RoomCommandInputComponentProps = {
+  commandId: string;
+  commandName: string;
+  isSubmitting: boolean;
+  error?: string;
+  onSubmit: (input: unknown) => void | Promise<void>;
+  onCancel: () => void;
+};
+
+export type RoomCommandInputComponent =
+  ComponentType<RoomCommandInputComponentProps>;
 
 export type RoomCommand<RS extends BaseRoomStoreState = BaseRoomStoreState> = {
   /**
@@ -41,10 +55,30 @@ export type RoomCommand<RS extends BaseRoomStoreState = BaseRoomStoreState> = {
    */
   shortcut?: string;
   /**
+   * Optional Zod schema used to validate/parse command input.
+   */
+  inputSchema?: ZodType<unknown>;
+  /**
+   * Optional human-readable input guidance (useful for AI/tooling UIs).
+   */
+  inputDescription?: string;
+  /**
+   * Optional custom UI for providing command input.
+   */
+  inputComponent?: RoomCommandInputComponent;
+  /**
+   * Optional custom validation hook (e.g. existence checks).
+   */
+  validateInput?: (
+    input: unknown,
+    context: RoomCommandExecutionContext<RS>,
+  ) => void | Promise<void>;
+  /**
    * Command implementation.
    */
   execute: (
     context: RoomCommandExecutionContext<RS>,
+    input?: unknown,
   ) => void | Promise<void>;
   /**
    * Whether this command should be shown in command UIs.
@@ -72,7 +106,7 @@ export type CommandSliceState<
     registerCommands: (owner: string, commands: RoomCommand<RS>[]) => void;
     unregisterCommand: (commandId: string) => void;
     unregisterCommands: (owner: string) => void;
-    executeCommand: (commandId: string) => Promise<void>;
+    executeCommand: (commandId: string, input?: unknown) => Promise<void>;
   };
 };
 
@@ -103,7 +137,10 @@ export function createCommandSlice<
                 }
 
                 const existingCommand = draft.commands.registry[command.id];
-                if (existingCommand && existingCommand.owner !== normalizedOwner) {
+                if (
+                  existingCommand &&
+                  existingCommand.owner !== normalizedOwner
+                ) {
                   removeCommandIdFromOwner(
                     draft.commands.ownerToCommandIds,
                     existingCommand.owner,
@@ -157,7 +194,7 @@ export function createCommandSlice<
             }),
           );
         },
-        executeCommand: async (commandId) => {
+        executeCommand: async (commandId, input) => {
           const command = get().commands.registry[commandId];
           if (!command) {
             return;
@@ -166,7 +203,17 @@ export function createCommandSlice<
             store as StoreApi<RS>,
           );
           try {
-            await command.execute(executionContext);
+            if (!resolveCommandEnabled(command, executionContext)) {
+              throw new Error(
+                `Command "${command.name}" is currently disabled.`,
+              );
+            }
+            const validatedInput = await validateCommandInput(
+              command,
+              input,
+              executionContext,
+            );
+            await command.execute(executionContext, validatedInput);
           } catch (error) {
             get().room.captureException(error);
             throw error;
@@ -234,6 +281,30 @@ export function unregisterCommandsForOwner<RS extends BaseRoomStoreState>(
   state.commands.unregisterCommands(owner);
 }
 
+export async function validateCommandInput<RS extends BaseRoomStoreState>(
+  command: RoomCommand<RS>,
+  input: unknown,
+  context: RoomCommandExecutionContext<RS>,
+): Promise<unknown> {
+  const parsedInput = command.inputSchema
+    ? parseCommandInput(command.inputSchema, input)
+    : input;
+
+  if (command.validateInput) {
+    await command.validateInput(parsedInput, context);
+  }
+  return parsedInput;
+}
+
+export function doesCommandRequireInput(
+  command: Pick<RoomCommand, 'inputSchema'>,
+): boolean {
+  if (!command.inputSchema) {
+    return false;
+  }
+  return !command.inputSchema.safeParse(undefined).success;
+}
+
 function removeCommandIdFromOwner(
   ownerToCommandIds: Record<string, string[]>,
   owner: string,
@@ -258,4 +329,35 @@ function normalizeOwner(owner: string): string {
     return trimmed;
   }
   return DEFAULT_COMMAND_OWNER;
+}
+
+function resolveCommandEnabled<RS extends BaseRoomStoreState>(
+  command: RoomCommand<RS>,
+  context: RoomCommandExecutionContext<RS>,
+): boolean {
+  if (!command.isEnabled) {
+    return true;
+  }
+  return command.isEnabled(context);
+}
+
+function parseCommandInput(schema: ZodType<unknown>, input: unknown): unknown {
+  const parsedResult = schema.safeParse(input);
+  if (parsedResult.success) {
+    return parsedResult.data;
+  }
+
+  throw new Error(formatCommandInputValidationError(parsedResult.error));
+}
+
+function formatCommandInputValidationError(error: z.ZodError): string {
+  const message = error.issues
+    .map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join('.') : 'input';
+      return `${path}: ${issue.message}`;
+    })
+    .join('; ');
+  return message.length > 0
+    ? `Invalid command input: ${message}`
+    : 'Invalid command input.';
 }

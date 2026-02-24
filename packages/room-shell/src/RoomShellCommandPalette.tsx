@@ -1,5 +1,6 @@
 import {
   createRoomCommandExecutionContext,
+  doesCommandRequireInput,
   RegisteredRoomCommand,
   RoomCommandExecutionContext,
   useRoomStoreApi,
@@ -14,6 +15,13 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Textarea,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -77,6 +85,10 @@ function RoomShellCommandPaletteBase({
   enableKeyboardShortcut = true,
 }: RoomShellCommandPaletteProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const [activeInputCommandId, setActiveInputCommandId] = useState<string>();
+  const [inputJsonValue, setInputJsonValue] = useState('{}');
+  const [inputError, setInputError] = useState<string>();
+  const [isSubmittingInput, setIsSubmittingInput] = useState(false);
   const isOpen = controlledOpen ?? uncontrolledOpen;
   const isOpenRef = useRef(isOpen);
   const roomStore = useRoomStoreApi<RoomShellSliceState>();
@@ -128,6 +140,14 @@ function RoomShellCommandPaletteBase({
     });
   }, [commands]);
 
+  const activeInputCommand = useMemo(() => {
+    if (!activeInputCommandId) {
+      return undefined;
+    }
+    return commands.find((command) => command.id === activeInputCommandId);
+  }, [activeInputCommandId, commands]);
+  const ActiveInputComponent = activeInputCommand?.inputComponent;
+
   const setPaletteOpen = useCallback(
     (nextOpen: boolean) => {
       if (controlledOpen === undefined) {
@@ -143,6 +163,13 @@ function RoomShellCommandPaletteBase({
       if (!command.enabled) {
         return;
       }
+      if (command.inputComponent || doesCommandRequireInput(command)) {
+        setPaletteOpen(false);
+        setActiveInputCommandId(command.id);
+        setInputJsonValue('{}');
+        setInputError(undefined);
+        return;
+      }
       setPaletteOpen(false);
       try {
         await roomStore.getState().commands.executeCommand(command.id);
@@ -152,6 +179,50 @@ function RoomShellCommandPaletteBase({
     },
     [roomStore, setPaletteOpen],
   );
+
+  const closeCommandInputDialog = useCallback(() => {
+    if (isSubmittingInput) {
+      return;
+    }
+    setActiveInputCommandId(undefined);
+    setInputError(undefined);
+  }, [isSubmittingInput]);
+
+  const submitCommandInput = useCallback(
+    async (input: unknown) => {
+      if (!activeInputCommand) {
+        return;
+      }
+
+      setInputError(undefined);
+      setIsSubmittingInput(true);
+      try {
+        await roomStore
+          .getState()
+          .commands.executeCommand(activeInputCommand.id, input);
+        setActiveInputCommandId(undefined);
+      } catch (error) {
+        setInputError(getErrorMessage(error));
+      } finally {
+        setIsSubmittingInput(false);
+      }
+    },
+    [activeInputCommand, roomStore],
+  );
+
+  const submitJsonCommandInput = useCallback(async () => {
+    const trimmedInput = inputJsonValue.trim();
+    if (!trimmedInput) {
+      await submitCommandInput(undefined);
+      return;
+    }
+
+    try {
+      await submitCommandInput(JSON.parse(trimmedInput));
+    } catch (error) {
+      setInputError(getErrorMessage(error));
+    }
+  }, [inputJsonValue, submitCommandInput]);
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -194,39 +265,116 @@ function RoomShellCommandPaletteBase({
     });
   }, [setPaletteOpen]);
 
+  useEffect(() => {
+    if (activeInputCommandId && !activeInputCommand && !isSubmittingInput) {
+      setActiveInputCommandId(undefined);
+      setInputError(undefined);
+    }
+  }, [activeInputCommand, activeInputCommandId, isSubmittingInput]);
+
   return (
-    <CommandDialog open={isOpen} onOpenChange={setPaletteOpen}>
-      <CommandInput placeholder={placeholder} />
-      <CommandList>
-        <CommandEmpty>{emptyMessage}</CommandEmpty>
-        {groupedCommands.map(([groupName, groupCommands]) => (
-          <CommandGroup key={groupName} heading={groupName}>
-            {groupCommands.map((command) => (
-              <CommandItem
-                key={command.id}
-                value={getCommandSearchValue(command)}
-                disabled={!command.enabled}
-                onSelect={() => {
-                  void onSelectCommand(command);
-                }}
-              >
-                <div className="flex flex-col">
-                  <span>{command.name}</span>
-                  {command.description ? (
-                    <span className="text-muted-foreground text-xs">
-                      {command.description}
-                    </span>
+    <>
+      <CommandDialog open={isOpen} onOpenChange={setPaletteOpen}>
+        <CommandInput placeholder={placeholder} />
+        <CommandList>
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+          {groupedCommands.map(([groupName, groupCommands]) => (
+            <CommandGroup key={groupName} heading={groupName}>
+              {groupCommands.map((command) => (
+                <CommandItem
+                  key={command.id}
+                  value={getCommandSearchValue(command)}
+                  disabled={!command.enabled}
+                  onSelect={() => {
+                    void onSelectCommand(command);
+                  }}
+                >
+                  <div className="flex flex-col">
+                    <span>{command.name}</span>
+                    {command.description ? (
+                      <span className="text-muted-foreground text-xs">
+                        {command.description}
+                      </span>
+                    ) : null}
+                  </div>
+                  {command.shortcut ? (
+                    <CommandShortcut>{command.shortcut}</CommandShortcut>
                   ) : null}
-                </div>
-                {command.shortcut ? (
-                  <CommandShortcut>{command.shortcut}</CommandShortcut>
-                ) : null}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ))}
-      </CommandList>
-    </CommandDialog>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+        </CommandList>
+      </CommandDialog>
+
+      <Dialog
+        open={Boolean(activeInputCommand)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeCommandInputDialog();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {activeInputCommand?.name ?? 'Command input'}
+            </DialogTitle>
+            {activeInputCommand?.description ? (
+              <DialogDescription>
+                {activeInputCommand.description}
+              </DialogDescription>
+            ) : null}
+          </DialogHeader>
+
+          {ActiveInputComponent ? (
+            <ActiveInputComponent
+              commandId={activeInputCommand.id}
+              commandName={activeInputCommand.name}
+              isSubmitting={isSubmittingInput}
+              error={inputError}
+              onSubmit={(input) => {
+                void submitCommandInput(input);
+              }}
+              onCancel={closeCommandInputDialog}
+            />
+          ) : (
+            <>
+              <DialogDescription>
+                {activeInputCommand?.inputDescription ??
+                  'Provide command input as a JSON value. Example: {"panelId":"sql-editor"}'}
+              </DialogDescription>
+              <Textarea
+                className="min-h-32 font-mono text-xs"
+                value={inputJsonValue}
+                onChange={(event) => setInputJsonValue(event.target.value)}
+                disabled={isSubmittingInput}
+              />
+              {inputError ? (
+                <p className="text-destructive text-sm">{inputError}</p>
+              ) : null}
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={closeCommandInputDialog}
+                  disabled={isSubmittingInput}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    void submitJsonCommandInput();
+                  }}
+                  disabled={isSubmittingInput}
+                >
+                  Run command
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -316,9 +464,17 @@ function getCommandSearchValue(command: RegisteredRoomCommand): string {
   return [
     command.name,
     command.description,
+    command.inputDescription,
     command.id,
     ...(command.keywords ?? []),
   ]
     .filter((value): value is string => Boolean(value))
     .join(' ');
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }

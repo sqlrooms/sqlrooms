@@ -47,6 +47,7 @@ export {
   createRoomStore,
   createRoomStoreCreator,
   createSlice,
+  doesCommandRequireInput,
   hasCommandSliceState,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
@@ -56,6 +57,7 @@ export {
   RoomStateProvider,
   unregisterCommandsForOwner,
   useBaseRoomStore,
+  validateCommandInput,
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 export type {
@@ -65,6 +67,8 @@ export type {
   CreateBaseRoomSliceProps,
   RegisteredRoomCommand,
   RoomCommand,
+  RoomCommandInputComponent,
+  RoomCommandInputComponentProps,
   RoomCommandExecutionContext,
   RoomCommandPredicate,
   RoomStateProviderProps,
