@@ -15,22 +15,36 @@ function createTestStore() {
 
 // Mock the Graph class
 jest.mock('@cosmograph/cosmos', () => ({
-  Graph: jest.fn().mockImplementation(() => ({
-    setConfig: jest.fn(),
-    start: jest.fn(),
-    pause: jest.fn(),
-    restart: jest.fn(),
-    destroy: jest.fn(),
-    fitView: jest.fn(),
-    setPointPositions: jest.fn(),
-    setPointColors: jest.fn(),
-    setPointSizes: jest.fn(),
-    setLinks: jest.fn(),
-    setLinkColors: jest.fn(),
-    setZoomLevel: jest.fn(),
-    render: jest.fn(),
-    isSimulationRunning: false,
-  })),
+  Graph: jest.fn().mockImplementation(() => {
+    let simulationRunning = true;
+    return {
+      setConfig: jest.fn(),
+      start: jest.fn(() => {
+        simulationRunning = true;
+      }),
+      pause: jest.fn(() => {
+        simulationRunning = false;
+      }),
+      restart: jest.fn(() => {
+        simulationRunning = true;
+      }),
+      destroy: jest.fn(),
+      fitView: jest.fn(),
+      setPointPositions: jest.fn(),
+      setPointColors: jest.fn(),
+      setPointSizes: jest.fn(),
+      setLinks: jest.fn(),
+      setLinkColors: jest.fn(),
+      setZoomLevel: jest.fn(),
+      render: jest.fn(),
+      get isSimulationRunning() {
+        return simulationRunning;
+      },
+      store: {
+        div: document.createElement('div'),
+      },
+    };
+  }),
 }));
 
 describe('CosmosSlice', () => {
@@ -91,9 +105,6 @@ describe('CosmosSlice', () => {
 
     it('should pause simulation when running', () => {
       const graph = store.getState().cosmos.graph;
-      if (graph) {
-        (graph as any).isSimulationRunning = true;
-      }
 
       store.getState().cosmos.toggleSimulation();
 
@@ -103,9 +114,7 @@ describe('CosmosSlice', () => {
 
     it('should restart simulation when paused', () => {
       const graph = store.getState().cosmos.graph;
-      if (graph) {
-        (graph as any).isSimulationRunning = false;
-      }
+      graph?.pause();
 
       store.getState().cosmos.toggleSimulation();
 
