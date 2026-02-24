@@ -135,9 +135,11 @@ export function RoomShellCommandPalette({
       setPaletteOpen(!isOpenRef.current);
     };
 
-    window.addEventListener('keydown', onKeyDown);
+    // Use capture so this still works when focused widgets (e.g. Monaco)
+    // stop propagation during the bubble phase.
+    window.addEventListener('keydown', onKeyDown, true);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, true);
     };
   }, [enableKeyboardShortcut, setPaletteOpen]);
 

@@ -10,6 +10,7 @@ export const App = () => {
           <ThemeSwitch />
         </RoomShell.Sidebar>
         <RoomShell.LayoutComposer />
+        <RoomShell.CommandPalette />
       </RoomShell>
     </ThemeProvider>
   );
