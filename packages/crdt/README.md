@@ -1,5 +1,3 @@
-# @sqlrooms/crdt
-
 CRDT utilities for SQLRooms built on top of Loro Mirror. The package exposes `createCrdtSlice`, a Zustand slice helper that mirrors selected parts of your store into a Loro CRDT document, plus a small set of persistence and sync helpers.
 
 ## Installation

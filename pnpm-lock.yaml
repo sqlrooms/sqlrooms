@@ -786,9 +786,6 @@ importers:
 
   examples/cosmos:
     dependencies:
-      '@cosmograph/cosmos':
-        specifier: 2.0.0-beta.22
-        version: 2.0.0-beta.22
       '@sqlrooms/cosmos':
         specifier: workspace:*
         version: link:../../packages/cosmos
@@ -865,9 +862,6 @@ importers:
 
   examples/cosmos-embedding:
     dependencies:
-      '@cosmograph/cosmos':
-        specifier: 2.0.0-beta.22
-        version: 2.0.0-beta.22
       '@sqlrooms/cosmos':
         specifier: workspace:*
         version: link:../../packages/cosmos
@@ -2079,9 +2073,9 @@ importers:
 
   packages/cosmos:
     dependencies:
-      '@cosmograph/cosmos':
-        specifier: 2.0.0-beta.26
-        version: 2.0.0-beta.26
+      '@cosmos.gl/graph':
+        specifier: ^2.6.4
+        version: 2.6.4
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../room-shell
@@ -4051,15 +4045,9 @@ packages:
       conventional-commits-parser:
         optional: true
 
-  '@cosmograph/cosmos@2.0.0-beta.22':
-    resolution: {integrity: sha512-DzPk2m30nJyhwoVeNeTK+zzAmIpC/BQgHW5fBCmlbimrfbgWhXyOu6UEcrmjC32CVCyvgA+EEg2pUU7a/+UtEA==}
+  '@cosmos.gl/graph@2.6.4':
+    resolution: {integrity: sha512-i+N9lSpAjGLTUPelo/bKNbQnKPDqt3k2UnRlfIWe2Lrambc4J3QFgOfpR8AalQ/1tgLRoeNtVBZ1GPpsNqae5w==}
     engines: {node: '>=12.2.0', npm: '>=7.0.0'}
-    deprecated: This package has been moved to @cosmos.gl/graph. If you're using version >2, please update
-
-  '@cosmograph/cosmos@2.0.0-beta.26':
-    resolution: {integrity: sha512-NWBaEoyKoT8ue32CZHZCFZZHgbdSrQTk30Sf24aZw79N9K5GxuznPNvGe1I0TpAbqWNJoCYiWhYG7p0e+Ub9rQ==}
-    engines: {node: '>=12.2.0', npm: '>=7.0.0'}
-    deprecated: This package has been moved to @cosmos.gl/graph. If you're using version >2, please update
 
   '@csstools/color-helpers@5.1.0':
     resolution: {integrity: sha512-S11EXWJyy0Mz5SYvRmY8nJYTFFd1LCNV+7cXyAgQtOOuzb4EsgfqDufL+9esx72/eLhsRdGZwaldu/h+E4t4BA==}
@@ -16407,7 +16395,7 @@ snapshots:
       conventional-commits-filter: 5.0.0
       conventional-commits-parser: 6.2.1
 
-  '@cosmograph/cosmos@2.0.0-beta.22':
+  '@cosmos.gl/graph@2.6.4':
     dependencies:
       d3-array: 3.2.4
       d3-color: 3.1.0
@@ -16417,21 +16405,7 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
       d3-zoom: 3.0.0
-      gl-bench: 1.0.42
-      gl-matrix: 3.4.4
-      random: 4.1.0
-      regl: 2.1.1
-
-  '@cosmograph/cosmos@2.0.0-beta.26':
-    dependencies:
-      d3-array: 3.2.4
-      d3-color: 3.1.0
-      d3-drag: 3.0.0
-      d3-ease: 3.0.1
-      d3-scale: 4.0.2
-      d3-selection: 3.0.0
-      d3-transition: 3.0.1(d3-selection@3.0.0)
-      d3-zoom: 3.0.0
+      dompurify: 3.2.7
       gl-bench: 1.0.42
       gl-matrix: 3.4.4
       random: 4.1.0

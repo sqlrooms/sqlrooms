@@ -11,7 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@cosmograph/cosmos": "2.0.0-beta.22",
     "@sqlrooms/cosmos": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",

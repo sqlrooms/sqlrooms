@@ -1,5 +1,5 @@
 import {Chat} from '@sqlrooms/ai-core';
-import {AiSettingsPanel, useStoreWithAiSettings} from '@sqlrooms/ai-settings';
+import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
@@ -10,9 +10,7 @@ export const MainView: React.FC = () => {
   );
 
   const settingsPanelOpen = useDisclosure();
-  const updateProvider = useStoreWithAiSettings(
-    (s) => s.aiSettings.updateProvider,
-  );
+  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
