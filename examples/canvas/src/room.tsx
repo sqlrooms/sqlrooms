@@ -7,6 +7,7 @@ export function Room() {
   return (
     <RoomShell className="h-screen w-screen" roomStore={roomStore}>
       <RoomShell.Sidebar>
+        <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer tileClassName="p-0" />

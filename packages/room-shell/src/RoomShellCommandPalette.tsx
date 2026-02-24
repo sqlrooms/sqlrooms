@@ -5,6 +5,8 @@ import {
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 import {
+  Button,
+  cn,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -12,8 +14,21 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {isMacOS} from '@sqlrooms/utils';
+import {CommandIcon} from 'lucide-react';
+import {
+  ComponentProps,
+  ComponentType,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {RoomShellSliceState, useBaseRoomShellStore} from './RoomShellSlice';
 
 const GENERAL_COMMAND_GROUP = 'General';
@@ -31,7 +46,29 @@ type PaletteCommand = RegisteredRoomCommand & {
   enabled: boolean;
 };
 
-export function RoomShellCommandPalette({
+type CommandPaletteControlAction = 'open' | 'close' | 'toggle';
+type CommandPaletteControlListener = (
+  action: CommandPaletteControlAction,
+) => void;
+
+const commandPaletteControlListeners = new Set<CommandPaletteControlListener>();
+
+function subscribeToCommandPaletteControl(
+  listener: CommandPaletteControlListener,
+) {
+  commandPaletteControlListeners.add(listener);
+  return () => {
+    commandPaletteControlListeners.delete(listener);
+  };
+}
+
+function requestCommandPaletteControl(action: CommandPaletteControlAction) {
+  for (const listener of commandPaletteControlListeners) {
+    listener(action);
+  }
+}
+
+function RoomShellCommandPaletteBase({
   isOpen: controlledOpen,
   defaultOpen = false,
   onOpenChange,
@@ -143,6 +180,20 @@ export function RoomShellCommandPalette({
     };
   }, [enableKeyboardShortcut, setPaletteOpen]);
 
+  useEffect(() => {
+    return subscribeToCommandPaletteControl((action) => {
+      if (action === 'open') {
+        setPaletteOpen(true);
+        return;
+      }
+      if (action === 'close') {
+        setPaletteOpen(false);
+        return;
+      }
+      setPaletteOpen(!isOpenRef.current);
+    });
+  }, [setPaletteOpen]);
+
   return (
     <CommandDialog open={isOpen} onOpenChange={setPaletteOpen}>
       <CommandInput placeholder={placeholder} />
@@ -178,6 +229,58 @@ export function RoomShellCommandPalette({
     </CommandDialog>
   );
 }
+
+export type RoomShellCommandPaletteButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  'children'
+> & {
+  icon?: ComponentType<{className?: string}>;
+  iconClassName?: string;
+  tooltip?: string;
+};
+
+function RoomShellCommandPaletteButton({
+  className,
+  icon: Icon = CommandIcon,
+  iconClassName,
+  tooltip,
+  variant = 'ghost',
+  size = 'icon',
+  onClick,
+  ...buttonProps
+}: RoomShellCommandPaletteButtonProps) {
+  const shortcutText = isMacOS() ? 'Cmd+K' : 'Ctrl+K';
+  const tooltipText = tooltip ?? `Open command palette (${shortcutText})`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant={variant}
+          size={size}
+          className={cn(className)}
+          onClick={(event) => {
+            requestCommandPaletteControl('open');
+            onClick?.(event);
+          }}
+          aria-label="Open command palette"
+          {...buttonProps}
+        >
+          <Icon className={cn('h-5 w-5', iconClassName)} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right">{tooltipText}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+export const RoomShellCommandPalette = Object.assign(
+  RoomShellCommandPaletteBase,
+  {
+    Button: RoomShellCommandPaletteButton,
+  },
+);
 
 function resolveCommandVisibility(
   command: RegisteredRoomCommand,

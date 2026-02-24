@@ -5,7 +5,10 @@
 
 export {RoomShell} from './RoomShell';
 export {RoomShellCommandPalette} from './RoomShellCommandPalette';
-export type {RoomShellCommandPaletteProps} from './RoomShellCommandPalette';
+export type {
+  RoomShellCommandPaletteButtonProps,
+  RoomShellCommandPaletteProps,
+} from './RoomShellCommandPalette';
 
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';

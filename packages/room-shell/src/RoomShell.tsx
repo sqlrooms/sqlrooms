@@ -10,11 +10,11 @@ import {
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
+import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
 
 export function RoomShellBase({
@@ -46,7 +46,7 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
   return (
     <div
       className={cn(
-        'bg-muted/70 flex h-full w-12 flex-col items-center px-1 py-4',
+        'bg-muted/70 flex h-full w-12 flex-col items-center gap-2 px-1 py-4',
         className,
       )}
     >

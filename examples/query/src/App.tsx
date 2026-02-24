@@ -7,6 +7,7 @@ export const App = () => {
     <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>
         <RoomShell.Sidebar>
+          <RoomShell.CommandPalette.Button />
           <ThemeSwitch />
         </RoomShell.Sidebar>
         <RoomShell.LayoutComposer />

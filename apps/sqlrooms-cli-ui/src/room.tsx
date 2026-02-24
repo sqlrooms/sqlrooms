@@ -1,7 +1,6 @@
-import {ThemeProvider} from '@sqlrooms/ui';
 import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
-import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
+import {ThemeProvider, ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 import {roomStore} from './store';
 
@@ -17,6 +16,7 @@ export const Room = () => {
             isSelected={false}
             icon={TerminalIcon}
           />
+          <RoomShell.CommandPalette.Button />
           <ThemeSwitch />
         </RoomShell.Sidebar>
         <RoomShell.LayoutComposer />

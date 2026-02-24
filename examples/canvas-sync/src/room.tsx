@@ -54,6 +54,7 @@ export function Room() {
         <ConnectionStatusIndicator />
         <RoomShellSidebarButtons />
         <div className="flex items-center justify-between gap-3 pr-2">
+          <RoomShell.CommandPalette.Button />
           <ThemeSwitch />
         </div>
       </div>

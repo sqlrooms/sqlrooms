@@ -25,6 +25,7 @@ export const Room = () => {
           isSelected={false}
           icon={TerminalIcon}
         />
+        <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
       </div>
       <RoomShell.LayoutComposer />
