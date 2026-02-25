@@ -1,11 +1,11 @@
-import {useParams, Link} from '@tanstack/react-router';
-import {useEffect, useRef, useState} from 'react';
+import {QueryDataTable} from '@sqlrooms/data-table';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {RoomShell} from '@sqlrooms/room-shell';
-import {QueryDataTable} from '@sqlrooms/data-table';
-import {Spinner, Button} from '@sqlrooms/ui';
+import {Button, Spinner} from '@sqlrooms/ui';
+import {Link, useParams} from '@tanstack/react-router';
+import {useEffect, useRef, useState} from 'react';
+import {createRoomStore, RoomState, useRoomStore} from './room-store';
 import {getRoom} from './rooms-list';
-import {createRoomStore, useRoomStore, RoomState} from './room-store';
 
 export function RoomPage() {
   const {id} = useParams({from: '/room/$id'});
@@ -14,7 +14,7 @@ export function RoomPage() {
 
 function RoomLoader({roomId}: {roomId: string}) {
   const roomConfig = getRoom(roomId);
-  const storeRef = useRef<StoreApi<RoomState>>();
+  const storeRef = useRef<StoreApi<RoomState>>(null);
 
   if (!storeRef.current && roomConfig) {
     storeRef.current = createRoomStore(roomId, roomConfig.defaultDataSources, {
@@ -69,7 +69,7 @@ function TableBrowser() {
 
   useEffect(() => {
     if (initialized && tables.length > 0 && !selectedTable) {
-      setSelectedTable(tables[0].tableName);
+      setSelectedTable(tables[0].table.table);
     }
   }, [initialized, tables, selectedTable]);
 
@@ -102,14 +102,16 @@ function TableBrowser() {
         </h3>
         <ul className="space-y-1">
           {tables.map((t) => (
-            <li key={t.tableName}>
+            <li key={t.table.table}>
               <Button
-                variant={selectedTable === t.tableName ? 'secondary' : 'ghost'}
+                variant={
+                  selectedTable === t.table.table ? 'secondary' : 'ghost'
+                }
                 size="sm"
                 className="w-full justify-start text-xs"
-                onClick={() => setSelectedTable(t.tableName)}
+                onClick={() => setSelectedTable(t.table.table)}
               >
-                {t.tableName}
+                {t.table.table}
                 <span className="text-muted-foreground ml-auto text-[10px]">
                   {t.columns.length} cols
                 </span>
