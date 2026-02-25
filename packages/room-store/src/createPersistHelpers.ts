@@ -33,8 +33,8 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
   sliceConfigs: T,
 ) {
   return {
-    partialize: (state: any) => {
-      const result: Record<string, any> = {};
+    partialize: (state: unknown) => {
+      const result: Record<string, unknown> = {};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
         try {
           result[key] = schema.parse(state[key]?.config);
@@ -47,7 +47,7 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
       return result;
     },
 
-    merge: (persistedState: any, currentState: any) => {
+    merge: (persistedState: unknown, currentState: unknown) => {
       const merged = {...currentState};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
         try {

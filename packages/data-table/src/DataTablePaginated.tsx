@@ -47,7 +47,7 @@ export type DataTablePaginatedProps<Data extends object> = {
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
   fontSize?: string;
   data?: ArrayLike<Data> | undefined;
-  columns?: ColumnDef<Data, any>[] | undefined;
+  columns?: ColumnDef<Data, unknown>[] | undefined;
   pageCount?: number | undefined;
   numRows?: number | undefined;
   isFetching?: boolean;
@@ -145,7 +145,7 @@ export default function DataTablePaginated<Data extends object>({
   // TanStack's table hook returns non-memoizable functions by design.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
-    data: (data ?? defaultData) as any[],
+    data: (data ?? defaultData) as unknown[],
     columns: columns ?? [],
     pageCount: pageCount ?? 0,
     getSortedRowModel: getSortedRowModel(),

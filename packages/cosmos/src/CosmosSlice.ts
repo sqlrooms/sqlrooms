@@ -205,8 +205,8 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
         const {graph} = get().cosmos;
         if (!graph) return;
         // TODO: this should be happening in cosmos
-        if ((graph as any).store.div?.firstChild) {
-          (graph as any).store.div.innerHTML = '';
+        if ((graph as unknown).store.div?.firstChild) {
+          (graph as unknown).store.div.innerHTML = '';
         }
         graph.pause();
         graph.destroy();

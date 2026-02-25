@@ -19,7 +19,7 @@ interface StyledFilterHeaderProps extends StyledPanelHeaderProps {
   $labelRCGColorValues: RGBColor[];
 }
 
-export const StyledFilterHeader: any = styled(
+export const StyledFilterHeader: unknown = styled(
   StyledPanelHeader,
 )<StyledFilterHeaderProps>`
   cursor: pointer;

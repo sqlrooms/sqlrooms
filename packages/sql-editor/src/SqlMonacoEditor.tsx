@@ -72,7 +72,9 @@ function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
   if (sqlLanguageConfigured) return;
   sqlLanguageConfigured = true;
 
-  if (!monaco.languages.getLanguages().some((lang: any) => lang.id === 'sql')) {
+  if (
+    !monaco.languages.getLanguages().some((lang: unknown) => lang.id === 'sql')
+  ) {
     monaco.languages.register({id: 'sql'});
   }
 
@@ -82,7 +84,7 @@ function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
     ...SQL_LANGUAGE_CONFIGURATION,
     keywords: DUCKDB_KEYWORDS,
     builtinFunctions: DUCKDB_FUNCTIONS,
-  } as any);
+  } as unknown);
 }
 
 function ensureSqlCompletionProvider(monaco: MonacoInstance) {
@@ -91,7 +93,7 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
   sqlCompletionProviderDisposable =
     monaco.languages.registerCompletionItemProvider('sql', {
       triggerCharacters: [' ', '.', ',', '(', '='],
-      provideCompletionItems: async (model: any, position: any) => {
+      provideCompletionItems: async (model: unknown, position: unknown) => {
         try {
           const ctx = sqlCompletionContextByModel.get(model) ?? {
             connector: undefined,
@@ -277,7 +279,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   options,
   ...restProps
 }) => {
-  const modelRef = useRef<any>(null);
+  const modelRef = useRef<unknown>(null);
 
   // Update per-model context when props change
   useEffect(() => {

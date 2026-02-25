@@ -3,7 +3,7 @@ import {LoroDoc} from 'loro-crdt';
 
 import {createWebSocketSyncConnector} from '../src';
 
-type Listener = (event: any) => void;
+type Listener = (event: unknown) => void;
 
 class FakeWebSocket {
   readyState = 0;
@@ -34,11 +34,11 @@ class FakeWebSocket {
     this.emit('open', {});
   }
 
-  message(data: any) {
+  message(data: unknown) {
     this.emit('message', {data});
   }
 
-  private emit(type: string, event: any) {
+  private emit(type: string, event: unknown) {
     const set = this.listeners.get(type);
     if (!set) return;
     for (const listener of Array.from(set)) listener(event);

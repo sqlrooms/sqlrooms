@@ -35,7 +35,7 @@ const useDndEffects: (
       const newActiveEffect = effects.find((effect) => effect.id === active.id);
       if (newActiveEffect) {
         setActiveEffect(newActiveEffect);
-        if ((newActiveEffect as any).isConfigActive) {
+        if ((newActiveEffect as unknown).isConfigActive) {
           dispatch(
             mapId,
             updateEffect(newActiveEffect.id, {isConfigActive: false}),

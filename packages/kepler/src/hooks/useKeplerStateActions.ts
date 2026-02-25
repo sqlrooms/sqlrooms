@@ -5,11 +5,11 @@ import {KeplerGlState} from '@kepler.gl/reducers';
 
 const keplerActionSelector = makeGetActionCreators();
 export type KeplerActions = {
-  visStateActions: any;
-  mapStateActions: any;
-  mapStyleActions: any;
-  uiStateActions: any;
-  providerActions: any;
+  visStateActions: unknown;
+  mapStateActions: unknown;
+  mapStyleActions: unknown;
+  uiStateActions: unknown;
+  providerActions: unknown;
   dispatch: (action: KeplerAction) => void;
 };
 export function useKeplerStateActions({mapId}: {mapId: string}): {

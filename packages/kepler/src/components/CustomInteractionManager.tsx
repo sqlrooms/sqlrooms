@@ -9,9 +9,9 @@ import {CustomTooltipConfig} from './CustomTooltipConfig';
 
 const SimpleInteractionPanel: React.FC<{
   configId: string;
-  config: any;
+  config: unknown;
   label: string;
-  onConfigChange: (configId: string, newConfig: any) => void;
+  onConfigChange: (configId: string, newConfig: unknown) => void;
 }> = ({configId, config, label, onConfigChange}) => {
   const toggleEnableConfig = useCallback(() => {
     onConfigChange(configId, {
@@ -32,13 +32,13 @@ const SimpleInteractionPanel: React.FC<{
 };
 
 const TooltipPanel: React.FC<{
-  tooltipConfig: any;
-  coordinateConfig: any;
-  datasets: any;
+  tooltipConfig: unknown;
+  coordinateConfig: unknown;
+  datasets: unknown;
   isDark: boolean;
-  handleConfigChange: (configId: string, newConfig: any) => void;
+  handleConfigChange: (configId: string, newConfig: unknown) => void;
   handleCoordinateToggle: () => void;
-  setColumnDisplayFormat: (format: any) => void;
+  setColumnDisplayFormat: (format: unknown) => void;
 }> = ({
   tooltipConfig,
   coordinateConfig,
@@ -49,7 +49,7 @@ const TooltipPanel: React.FC<{
   setColumnDisplayFormat,
 }) => {
   const handleTooltipConfigChange = useCallback(
-    (newConfig: any) => {
+    (newConfig: unknown) => {
       handleConfigChange('tooltip', {config: newConfig});
     },
     [handleConfigChange],
@@ -111,7 +111,7 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
     keplerActions.visStateActions;
 
   const handleConfigChange = useCallback(
-    (configId: string, newConfig: any) => {
+    (configId: string, newConfig: unknown) => {
       const currentConfig =
         interactionConfig[configId as keyof InteractionConfig];
       if (currentConfig && typeof currentConfig === 'object') {

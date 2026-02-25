@@ -12,7 +12,7 @@ export interface MonacoLoaderOptions extends LoaderConfig {
   /**
    * Pass the Monaco instance to bundle the editor instead of using a CDN
    */
-  monaco?: any;
+  monaco?: unknown;
   /**
    * Provide worker constructors mapped by label to automatically set
    * `self.MonacoEnvironment.getWorker`
@@ -57,9 +57,9 @@ export function configureMonacoLoader(options: MonacoLoaderOptions) {
     self.MonacoEnvironment = {
       getWorker(_: unknown, label: string) {
         const WorkerCtor = workers[label] || workers.default || undefined;
-        return WorkerCtor ? new WorkerCtor() : (undefined as any);
+        return WorkerCtor ? new WorkerCtor() : (undefined as unknown);
       },
-    } as any;
+    } as unknown;
   }
 
   configured = true;

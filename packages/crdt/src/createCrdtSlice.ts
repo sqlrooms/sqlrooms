@@ -83,7 +83,7 @@ export type CreateCrdtSliceOptions<S, TSchema extends SchemaType> = {
    *
    * Each entry becomes one `loro-mirror` `Mirror` instance on a shared `LoroDoc`.
    */
-  mirrors: Record<string, CrdtMirror<S, any>>;
+  mirrors: Record<string, CrdtMirror<S, unknown>>;
   doc?: LoroDoc;
   createDoc?: () => LoroDoc;
   storage?: CrdtDocStorage;
@@ -118,12 +118,12 @@ export type CrdtSliceState = {
  * The returned state creator is intended to be composed into a larger Zustand store.
  */
 export function createCrdtSlice<
-  S extends Record<string, any>,
+  S extends Record<string, unknown>,
   TSchema extends SchemaType = SchemaType,
 >(options: CreateCrdtSliceOptions<S, TSchema>): StateCreator<CrdtSliceState> {
   return createSlice<CrdtSliceState, S & CrdtSliceState>((set, get, store) => {
     let doc: LoroDoc | undefined;
-    let mirrors: Mirror<any>[] = [];
+    let mirrors: Mirror<unknown>[] = [];
     let mirrorKeys: string[] = [];
     let unsubStore: (() => void) | undefined;
     let unsubMirrors: Array<() => void> = [];
@@ -151,7 +151,7 @@ export function createCrdtSlice<
         const cfg = options.mirrors[key];
         if (!cfg) continue;
 
-        const value = cfg.select ? cfg.select(state) : (state as any)[key];
+        const value = cfg.select ? cfg.select(state) : (state as unknown)[key];
 
         const lastOutbound = lastOutboundByKey.get(key);
         if (lastOutbound === value) continue;
@@ -159,7 +159,7 @@ export function createCrdtSlice<
         lastOutboundByKey.set(key, value);
 
         mirror.setState(
-          (draft: any) => {
+          (draft: unknown) => {
             draft[key] = value;
           },
           {tags: ['from-store']},
@@ -170,8 +170,8 @@ export function createCrdtSlice<
 
     const applyMirrorToStore = (
       key: string,
-      cfg: CrdtMirror<S, any>,
-      mirrorState: any,
+      cfg: CrdtMirror<S, unknown>,
+      mirrorState: unknown,
       tags?: string[],
     ) => {
       if (tags?.includes('from-store')) return;
@@ -181,7 +181,7 @@ export function createCrdtSlice<
         if (cfg.apply) {
           cfg.apply(value, set, get);
         } else {
-          set({[key]: value} as any);
+          set({[key]: value} as unknown);
         }
       } finally {
         suppressStoreToMirror = false;
@@ -220,14 +220,16 @@ export function createCrdtSlice<
               throw new Error(`[crdt] Missing mirror config for "${key}".`);
 
             // Wrap per-mirror schema/value under its root key.
-            const rootSchema = schema({[key]: cfg.schema as any} as any);
+            const rootSchema = schema({
+              [key]: cfg.schema as unknown,
+            } as unknown);
             const initialState = cfg.initialState
-              ? ({[key]: cfg.initialState} as any)
+              ? ({[key]: cfg.initialState} as unknown)
               : undefined;
 
-            return new Mirror<any>({
+            return new Mirror<unknown>({
               doc: activeDoc,
-              schema: rootSchema as any,
+              schema: rootSchema as unknown,
               initialState,
               ...(cfg.mirrorOptions ?? options.mirrorOptions ?? {}),
             });
@@ -243,7 +245,7 @@ export function createCrdtSlice<
             if (!key) return () => {};
             const cfg = options.mirrors[key];
             if (!cfg) return () => {};
-            return m.subscribe((state: any, meta: any) =>
+            return m.subscribe((state: unknown, meta: unknown) =>
               applyMirrorToStore(key, cfg, state, meta?.tags),
             );
           });
@@ -256,7 +258,7 @@ export function createCrdtSlice<
             if (!m || !key) continue;
             const cfg = options.mirrors[key];
             if (!cfg) continue;
-            applyMirrorToStore(key, cfg, m.getState() as any, []);
+            applyMirrorToStore(key, cfg, m.getState() as unknown, []);
           }
           // Now subscribe store->mirror for local changes.
           unsubStore = store.subscribe((state) => {
@@ -280,7 +282,7 @@ export function createCrdtSlice<
               destroy: prevCrdt?.destroy ?? destroy,
             },
           } as Partial<S & CrdtSliceState>);
-        } catch (error: any) {
+        } catch (error: unknown) {
           options.onError?.(error);
           const prevCrdt = get().crdt;
           set({

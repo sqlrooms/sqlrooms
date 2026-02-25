@@ -121,7 +121,7 @@ export function createWasmDuckDbConnector(
       }
     },
 
-    async executeQueryInternal<T extends arrow.TypeMap = any>(
+    async executeQueryInternal<T extends arrow.TypeMap = unknown>(
       query: string,
       signal: AbortSignal,
     ): Promise<arrow.Table<T>> {
@@ -167,7 +167,7 @@ export function createWasmDuckDbConnector(
       } catch (e) {
         // Some errors are returned as JSON, so we try to parse them
         if (e instanceof Error) {
-          const parsed: any = safeJsonParse(e.message);
+          const parsed: unknown = safeJsonParse(e.message);
           if (
             parsed !== null &&
             typeof parsed === 'object' &&

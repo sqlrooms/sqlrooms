@@ -33,8 +33,8 @@ const DEFAULT_ACCEPTED_FORMATS = [
 const LoadTileSet = getKeplerFactory(LoadTileSetFactory);
 
 export type LoadTileSet = (args: {
-  tileset: {name: string; type: string; metadata: Record<string, any>};
-  metadata?: Record<string, any>;
+  tileset: {name: string; type: string; metadata: Record<string, unknown>};
+  metadata?: Record<string, unknown>;
 }) => void;
 
 function LoadTileSetContent({
@@ -47,8 +47,8 @@ function LoadTileSetContent({
   const intl = useIntl();
   const onTilesetAdded = useCallback(
     (
-      tileset: {name: string; type: string; metadata: Record<string, any>},
-      metadata?: Record<string, any>,
+      tileset: {name: string; type: string; metadata: Record<string, unknown>},
+      metadata?: Record<string, unknown>,
     ) => {
       loadTileSet({tileset, metadata});
       onClose?.();

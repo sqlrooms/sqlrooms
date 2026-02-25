@@ -99,7 +99,7 @@ function useCustomMapActions(keplerActions: KeplerActions) {
 const MapStyleDropdown: React.FC<{
   mapStyle: MapStyle;
   onChange: (styleType: string) => void;
-  customMapStylesActions?: any;
+  customMapStylesActions?: unknown;
 }> = ({mapStyle, onChange, customMapStylesActions}) => {
   const {mapStyles, styleType} = mapStyle;
   const currentStyle = mapStyles[styleType];
@@ -124,7 +124,7 @@ const MapStyleDropdown: React.FC<{
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="max-h-64 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto bg-white dark:bg-gray-700">
-          {Object.values(mapStyles).map((style: any) => (
+          {Object.values(mapStyles).map((style: unknown) => (
             <DropdownMenuCheckboxItem
               key={style.id}
               onClick={() => handleStyleSelect(style.id)}
@@ -143,7 +143,7 @@ const MapStyleDropdown: React.FC<{
                   className="flex items-center"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {customMapStylesActions[style.id].map((action: any) => (
+                  {customMapStylesActions[style.id].map((action: unknown) => (
                     <button
                       key={action.id}
                       onClick={(e) => {
@@ -176,10 +176,10 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({mapId}) => {
 
   // Custom map styles actions (for delete functionality)
   const customMapStylesActions = useMemo(() => {
-    const actionsPerCustomStyle: any = {};
+    const actionsPerCustomStyle: unknown = {};
     Object.values(keplerState?.mapStyle.mapStyles || {})
-      .filter((style: any) => Boolean(style.custom))
-      .forEach((style: any) => {
+      .filter((style: unknown) => Boolean(style.custom))
+      .forEach((style: unknown) => {
         actionsPerCustomStyle[style.id] = [
           {
             id: `remove-map-style-${style.id}`,
@@ -197,7 +197,7 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({mapId}) => {
 
   const {mapStyle} = keplerState;
   const currentStyle = mapStyle.mapStyles[mapStyle.styleType] || {};
-  const editableLayers = (currentStyle as any).layerGroups || [];
+  const editableLayers = (currentStyle as unknown).layerGroups || [];
 
   return (
     <CustomMapManagerContainer>

@@ -36,17 +36,17 @@ export const DEV_HMR = (() => {
   // Only initialize in development mode
   const registry =
     typeof window !== 'undefined'
-      ? ((window as any).__SQLROOMS_STORE_REGISTRY__ ??= new Map<
+      ? ((window as unknown).__SQLROOMS_STORE_REGISTRY__ ??= new Map<
           string,
-          StoreApi<any>
+          StoreApi<unknown>
         >())
-      : new Map<string, StoreApi<any>>();
+      : new Map<string, StoreApi<unknown>>();
   let idCounter = 0;
 
   return {
     nextId: () => `store_${idCounter++}`,
     get: (id: string) => registry.get(id),
-    set: (id: string, store: StoreApi<any>) => registry.set(id, store),
+    set: (id: string, store: StoreApi<unknown>) => registry.set(id, store),
     delete: (id: string) => registry.delete(id),
   };
 })();

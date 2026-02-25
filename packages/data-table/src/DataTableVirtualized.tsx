@@ -23,15 +23,15 @@ import {useVirtual} from 'react-virtual';
 
 export type DataTableVirtualizedProps<Data extends object> = {
   data?: ArrayLike<Data>;
-  columns?: ColumnDef<Data, any>[];
+  columns?: ColumnDef<Data, unknown>[];
   isFetching?: boolean;
-  error?: any;
+  error?: unknown;
   isPreview?: boolean;
 };
 
 export type DataTableProps<Data extends object> = {
   data: ArrayLike<Data>;
-  columns: ColumnDef<Data, any>[];
+  columns: ColumnDef<Data, unknown>[];
   isPreview?: boolean;
 };
 
@@ -79,7 +79,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
                     className={`bg-background sticky top-0 left-0 z-20 w-auto border-r py-2 text-center whitespace-nowrap`}
                   />
                   {headerGroup.headers.map((header) => {
-                    const meta = header.column.columnDef.meta as any;
+                    const meta = header.column.columnDef.meta as unknown;
                     return (
                       <TableHead
                         key={header.id}
@@ -131,7 +131,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
                       {virtualRow.index + 1}
                     </TableCell>
                     {row.getVisibleCells().map((cell) => {
-                      const meta = cell.column.columnDef.meta as any;
+                      const meta = cell.column.columnDef.meta as unknown;
                       return (
                         <TableCell
                           key={cell.id}
@@ -178,7 +178,7 @@ export default function DataTableWithLoader<Data extends object>(
   ) : data && columns ? (
     <DataTableVirtualized
       data={data}
-      columns={columns as any}
+      columns={columns as unknown}
       isPreview={isPreview}
     />
   ) : null;

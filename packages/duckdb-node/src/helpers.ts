@@ -73,7 +73,7 @@ export function objectsToCreateTableSql(
  * TODO: Remove this once duckdb-node-neo supports Arrow tables directly.
  * @see https://github.com/duckdb/duckdb-node-neo/issues/45
  */
-export async function queryToArrowTable<T extends arrow.TypeMap = any>(
+export async function queryToArrowTable<T extends arrow.TypeMap = unknown>(
   conn: DuckDBConnection,
   sql: string,
 ): Promise<arrow.Table<T>> {

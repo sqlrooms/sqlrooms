@@ -15,14 +15,14 @@ export type MirrorSchema<T extends SchemaType = SchemaType> = T;
  */
 export type StripCidDeep<T> = T extends (infer U)[]
   ? StripCidDeep<U>[]
-  : T extends Record<string, any>
-    ? T extends {$cid: any}
+  : T extends Record<string, unknown>
+    ? T extends {$cid: unknown}
       ? Omit<{[K in keyof T]: StripCidDeep<T[K]>}, '$cid'>
       : {[K in keyof T]: StripCidDeep<T[K]>}
     : T;
 
 export type InferredState<TSchema extends SchemaType> =
-  InferType<TSchema> extends Record<string, any>
+  InferType<TSchema> extends Record<string, unknown>
     ? InferType<TSchema>
     : Record<string, never>;
 

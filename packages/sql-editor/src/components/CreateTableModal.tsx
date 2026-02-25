@@ -298,7 +298,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
   }, [tables, currentSchema, currentDatabase]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema as any),
+    resolver: zodResolver(formSchema as unknown),
     defaultValues: {
       tableName: editDataSource?.tableName ?? initialValues?.tableName ?? '',
       query: editDataSource?.sqlQuery ?? query.trim(),

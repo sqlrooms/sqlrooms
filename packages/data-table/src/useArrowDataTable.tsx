@@ -18,8 +18,8 @@ const columnHelper = createColumnHelper();
 // TODO: support fetch the result chunks lazily https://github.com/duckdb/duckdb-wasm/tree/master/packages/duckdb-wasm#query-execution
 
 type UseArrowDataTableResult = {
-  data: ArrayLike<any>;
-  columns: ColumnDef<any, any>[];
+  data: ArrayLike<unknown>;
+  columns: ColumnDef<unknown, unknown>[];
 };
 
 export type ArrowColumnMeta = {
@@ -37,7 +37,7 @@ function valueToString(type: arrow.DataType, value: unknown): string {
 
   // --- DECIMAL ---
   if (arrow.DataType.isDecimal(type)) {
-    const scale = (type as any).scale ?? 0;
+    const scale = (type as unknown).scale ?? 0;
 
     if (value instanceof Uint32Array) {
       // Use Apache Arrow–style helper to convert Decimal128 buffer to string
@@ -153,7 +153,7 @@ export default function useArrowDataTable(
   const data = useMemo(() => ({length: table?.numRows ?? 0}), [table]);
   const columns = useMemo(() => {
     if (!table) return undefined;
-    const columns: ColumnDef<any, any>[] = [];
+    const columns: ColumnDef<unknown, unknown>[] = [];
     for (const field of table.schema.fields) {
       columns.push(
         columnHelper.accessor((_row, i) => table.getChild(field.name)?.get(i), {
@@ -197,7 +197,7 @@ export default function useArrowDataTable(
                     <div className="max-h-[300px] min-h-[100px] overflow-auto">
                       {isJsonValue && parsedJson ? (
                         <JsonMonacoEditor
-                          value={parsedJson as any}
+                          value={parsedJson as unknown}
                           readOnly={true}
                           options={{
                             lineNumbers: 'off',

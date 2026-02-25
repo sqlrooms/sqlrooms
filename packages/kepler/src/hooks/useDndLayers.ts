@@ -33,7 +33,7 @@ const useDndLayers: (
   ] = useState();
 
   const onDragStart = useCallback(
-    (event: any) => {
+    (event: unknown) => {
       const {active} = event;
       const newActiveLayer = layers.find((layer) => layer.id === active.id);
       if (newActiveLayer) {
@@ -50,7 +50,7 @@ const useDndLayers: (
   );
 
   const onDragEnd = useCallback(
-    (event: any) => {
+    (event: unknown) => {
       const {active, over} = event;
 
       const {id: activeLayerId} = active;

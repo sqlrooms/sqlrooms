@@ -28,7 +28,7 @@ export interface WebSocketDuckDbConnectorOptions {
   initializationQuery?: string;
 
   /** Optional handler for server notifications `{ type: 'notify', payload }` */
-  onNotification?: (payload: any) => void;
+  onNotification?: (payload: unknown) => void;
 
   /** Optional list of channels to subscribe to upon (re)connect */
   subscribeChannels?: string[];
@@ -75,8 +75,8 @@ export function createWebSocketDuckDbConnector(
   const pending = new Map<
     string,
     {
-      resolve: (table: arrow.Table<any>) => void;
-      reject: (err: any) => void;
+      resolve: (table: arrow.Table<unknown>) => void;
+      reject: (err: unknown) => void;
     }
   >();
 
@@ -135,7 +135,7 @@ export function createWebSocketDuckDbConnector(
         ws.onmessage = (event: MessageEvent) => {
           (async () => {
             if (typeof event.data === 'string') {
-              let parsed: any;
+              let parsed: unknown;
               try {
                 parsed = JSON.parse(event.data);
               } catch {
@@ -212,7 +212,7 @@ export function createWebSocketDuckDbConnector(
               buffer.slice(headerStart, headerEnd),
             );
             const headerStr = new TextDecoder().decode(headerBytes);
-            let header: any;
+            let header: unknown;
             try {
               header = JSON.parse(headerStr);
             } catch {
@@ -284,7 +284,7 @@ export function createWebSocketDuckDbConnector(
       socket = null;
     },
 
-    async executeQueryInternal<T extends arrow.TypeMap = any>(
+    async executeQueryInternal<T extends arrow.TypeMap = unknown>(
       query: string,
       signal: AbortSignal,
       queryId?: string,

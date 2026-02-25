@@ -32,7 +32,7 @@ const RenameSqlQueryModal: React.FC<{
   onRename: (newName: string) => void;
 }> = ({isOpen, onClose, initialName, onRename}) => {
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema as any),
+    resolver: zodResolver(formSchema as unknown),
     defaultValues: {
       queryName: initialName,
     },

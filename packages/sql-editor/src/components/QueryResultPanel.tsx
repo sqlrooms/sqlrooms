@@ -24,7 +24,7 @@ import {QueryResultLimitSelect} from './QueryResultLimitSelect';
  * Prefer the `explain_value` column (DuckDB default); otherwise fall back
  * to the first column and join all rows with newlines.
  */
-function arrowTableToExplainText(result: any): string {
+function arrowTableToExplainText(result: unknown): string {
   if (!result) return '';
 
   const numRows: number = result.numRows ?? 0;
@@ -57,14 +57,14 @@ export interface QueryResultPanelProps {
    * Called when a row in the results table is clicked.
    */
   onRowClick?: (args: {
-    row: Row<any>;
+    row: Row<unknown>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
   /**
    * Called when a row in the results table is double-clicked.
    */
   onRowDoubleClick?: (args: {
-    row: Row<any>;
+    row: Row<unknown>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
   /** Custom content to render in the error state (e.g., QueryResultPanel.AskAi) */

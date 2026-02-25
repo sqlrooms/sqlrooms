@@ -9,7 +9,7 @@ import {
   type CrdtSliceState,
 } from '../src';
 
-type Listener = (event: any) => void;
+type Listener = (event: unknown) => void;
 
 class FakeWebSocket {
   readyState = 0;
@@ -40,11 +40,11 @@ class FakeWebSocket {
     this.emit('open', {});
   }
 
-  message(data: any) {
+  message(data: unknown) {
     this.emit('message', {data});
   }
 
-  private emit(type: string, event: any) {
+  private emit(type: string, event: unknown) {
     const set = this.listeners.get(type);
     if (!set) return;
     for (const listener of Array.from(set)) listener(event);
@@ -83,12 +83,12 @@ describe('CRDT slice + WebSocket sync', () => {
           mirrors: {
             shared: {
               schema: sharedValueSchema,
-              select: (s) => ({counter: s.counter}) as any,
-              apply: (value) => set({counter: (value as any).counter}),
+              select: (s) => ({counter: s.counter}) as unknown,
+              apply: (value) => set({counter: (value as unknown).counter}),
             },
           },
           sync: connector,
-        })(set as any, get as any, api as any),
+        })(set as unknown, get as unknown, api as unknown),
       ),
     );
 

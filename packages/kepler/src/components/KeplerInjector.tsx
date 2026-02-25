@@ -32,7 +32,7 @@ export const CustomPanelTitleFactory = () => {
   return PanelTitle;
 };
 
-export type KeplerFactory<TReturn = unknown> = (..._args: any[]) => TReturn;
+export type KeplerFactory<TReturn = unknown> = (..._args: unknown[]) => TReturn;
 export type KeplerFactoryRecipe = [KeplerFactory, KeplerFactory];
 export type KeplerFactoryRecipeMode = 'append' | 'replace';
 

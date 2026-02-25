@@ -103,7 +103,7 @@ export function createNodeDuckDbConnector(
       await new Promise((resolve) => setTimeout(resolve, 0));
     },
 
-    async executeQueryInternal<T extends arrow.TypeMap = any>(
+    async executeQueryInternal<T extends arrow.TypeMap = unknown>(
       sql: string,
       signal: AbortSignal,
     ): Promise<arrow.Table<T>> {

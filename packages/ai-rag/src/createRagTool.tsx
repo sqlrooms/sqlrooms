@@ -76,7 +76,7 @@ function RagResultItem({
       </Button>
 
       {isExpanded && (
-        <p className="text-muted-foreground/50 whitespace-pre-wrap p-5 font-mono text-xs">
+        <p className="text-muted-foreground/50 p-5 font-mono text-xs whitespace-pre-wrap">
           {result.text}
         </p>
       )}
@@ -156,7 +156,7 @@ The search uses vector embeddings to find semantically similar content, not just
     execute: async (params: RagToolParameters) => {
       const {query, database, topK = 5} = params;
       // Get the store instance
-      const store = (globalThis as any).__ROOM_STORE__;
+      const store = (globalThis as unknown).__ROOM_STORE__;
       if (!store) {
         return {
           llmResult: {

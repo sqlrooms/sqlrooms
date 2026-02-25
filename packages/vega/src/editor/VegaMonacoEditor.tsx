@@ -28,7 +28,7 @@ export const VegaMonacoEditor: React.FC<VegaMonacoEditorProps> = ({
   options,
   ...props
 }) => {
-  const monacoRef = useRef<any>(null);
+  const monacoRef = useRef<unknown>(null);
   const schemaConfiguredRef = useRef(false);
 
   // Load and configure schema
@@ -94,7 +94,7 @@ export const VegaMonacoEditor: React.FC<VegaMonacoEditorProps> = ({
 /**
  * Configure Monaco JSON schema validation for Vega-Lite
  */
-function configureJsonSchema(monaco: any, schema: object) {
+function configureJsonSchema(monaco: unknown, schema: object) {
   monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
     validate: true,
     schemas: [

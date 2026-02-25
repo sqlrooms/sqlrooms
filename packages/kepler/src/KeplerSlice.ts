@@ -60,7 +60,7 @@ const KeplerGLSchemaManager = new KeplerGLSchemaClass();
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
     // Default validator accepts only string timestamps
-    return (d: any) => d;
+    return (d: unknown) => d;
   };
 }
 
@@ -151,7 +151,7 @@ export type KeplerSliceState = {
         type: string;
         metadata: VectorTileDatasetMetadata;
       },
-      tileMetadata: Record<string, any>,
+      tileMetadata: Record<string, unknown>,
       autoCreateLayers: boolean,
     ) => void;
     addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
@@ -510,7 +510,7 @@ export function createKeplerSlice({
           );
         },
 
-        addDataToMap: (mapId: string, data: any) => {
+        addDataToMap: (mapId: string, data: unknown) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
@@ -560,7 +560,7 @@ export function createKeplerSlice({
           );
         },
 
-        addConfigToMap: (mapId: string, config: any) => {
+        addConfigToMap: (mapId: string, config: unknown) => {
           // if map not registered, register it
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
@@ -631,7 +631,7 @@ export function createKeplerSlice({
                 if (mapToSave && state.kepler.map?.[mapId]) {
                   mapToSave.config = KeplerGLSchemaManager.getConfigToSave(
                     state.kepler.map[mapId],
-                  ) as any;
+                  ) as unknown;
                 }
               }),
             );
@@ -699,7 +699,7 @@ export function createKeplerSlice({
       /** Adapted from  applyMiddleware in redux */
       let wrapDispatch: (
         action: KeplerAction,
-        ...args: any
+        ...args: unknown
       ) => KeplerAction = () => {
         throw new Error(
           'Dispatching while constructing your middleware is not allowed. ' +
@@ -707,9 +707,9 @@ export function createKeplerSlice({
         );
       };
       const wrapToMap = wrapTo(mapId);
-      const middlewareAPI: MiddlewareAPI<any, any> = {
+      const middlewareAPI: MiddlewareAPI<unknown, unknown> = {
         getState: get,
-        dispatch: (action: Action, ...args: any) => {
+        dispatch: (action: Action, ...args: unknown) => {
           // need to forward here as well
           return wrapDispatch(wrapToMap(action), ...args);
         },

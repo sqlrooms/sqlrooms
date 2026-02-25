@@ -159,7 +159,7 @@ export const AiModelUsage: FC<AiModelUsageProps> = ({
                       tickFormatter={(value) => `$${value.toFixed(3)}`}
                     />
                     <ChartTooltip
-                      content={({active, payload}: any) => {
+                      content={({active, payload}: unknown) => {
                         if (active && payload && payload.length && payload[0]) {
                           const data = payload[0].payload;
                           return (
