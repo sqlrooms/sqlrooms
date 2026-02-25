@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](https://github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](https://github.com/sqlrooms/sqlrooms/commit/1e53f051828a36f8625af1c9576a820568951d42))
+
 # [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
 
 **Note:** Version bump only for package @sqlrooms/room-store

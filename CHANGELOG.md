@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](/github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](github.com/sqlrooms/sqlrooms/commits/1e53f051828a36f8625af1c9576a820568951d42))
+* Cosmos.gl upgrade ([#379](/github.com/sqlrooms/sqlrooms/issues/379)) ([92b3299](github.com/sqlrooms/sqlrooms/commits/92b3299f515aeb7b7bc1c5d5967827cb5a11ee55))
+
 # [0.28.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
 
 ### Bug Fixes
