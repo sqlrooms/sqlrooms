@@ -155,10 +155,11 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     () => processContent(content),
     [content],
   );
-  const footerActions = hasTextContent ? (
+  const headerActions = hasTextContent ? (
     <CopyButton
       text={copyableText}
       tooltipLabel={isAnswer ? 'Copy response' : 'Copy message'}
+      className="border-muted border"
     />
   ) : null;
 
@@ -196,7 +197,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       isSuccess={true}
       type={isAnswer ? 'answer' : 'thinking'}
       content={{content, isAnswer}}
-      footerActions={footerActions}
+      headerActions={headerActions}
     >
       <div className="prose dark:prose-invert max-w-none text-sm">
         <Markdown

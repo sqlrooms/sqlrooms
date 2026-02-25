@@ -10,6 +10,8 @@ type MessageContainerProps = {
   children: React.ReactNode;
   footerActions?: React.ReactNode;
   footerActionsClassName?: string;
+  headerActions?: React.ReactNode;
+  headerActionsClassName?: string;
 };
 
 export const MessageContainer: React.FC<MessageContainerProps> = ({
@@ -20,6 +22,8 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
   children,
   footerActions,
   footerActionsClassName,
+  headerActions,
+  headerActionsClassName,
 }) => {
   return (
     <div
@@ -35,7 +39,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
         <Badge
           variant="secondary"
           className={cn(
-            'absolute left-2 top-[-12px] flex items-center gap-1 border text-xs',
+            'absolute top-[-12px] left-2 flex items-center gap-1 border text-xs',
             'border-destructive bg-background',
             // isSuccess ? borderColor : 'border-red-500',
           )}
@@ -50,6 +54,16 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
       )}
 
       <div className="flex flex-col gap-5">{children}</div>
+      {headerActions && (
+        <div
+          className={cn(
+            'absolute right-2 bottom-2 flex items-center justify-end gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
+            headerActionsClassName,
+          )}
+        >
+          {headerActions}
+        </div>
+      )}
       {footerActions && (
         <div
           className={cn(
