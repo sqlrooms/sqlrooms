@@ -124,7 +124,7 @@ export function createVegaChartTool({
         try {
           const compiled = compile(parsedVegaLiteSpec);
           // vega-lite's compile() may expose warnings at runtime, but types don't include it
-          vegaWarnings = (compiled as unknown).warnings ?? [];
+          vegaWarnings = (compiled as any).warnings ?? [];
           // This will throw if the compiled Vega spec is invalid
           vegaParse(compiled.spec);
         } catch (e) {

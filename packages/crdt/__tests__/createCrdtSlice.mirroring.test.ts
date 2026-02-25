@@ -39,12 +39,12 @@ describe('createCrdtSlice mirroring', () => {
               select: (s) => ({counter: s.counter, title: s.title}),
               apply: (value) =>
                 set({
-                  counter: (value as unknown).counter,
-                  title: (value as unknown).title,
+                  counter: (value as any).counter,
+                  title: (value as any).title,
                 }),
             },
           },
-        })(set as unknown, get as unknown, api as unknown),
+        })(set as any, get as any, api as any),
       ),
     );
 
@@ -79,12 +79,12 @@ describe('createCrdtSlice mirroring', () => {
               select: (s) => ({counter: s.counter, title: s.title}),
               apply: (value) =>
                 set({
-                  counter: (value as unknown).counter,
-                  title: (value as unknown).title,
+                  counter: (value as any).counter,
+                  title: (value as any).title,
                 }),
             },
           },
-        })(set as unknown, get as unknown, api as unknown),
+        })(set as any, get as any, api as any),
       ),
     );
 

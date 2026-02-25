@@ -35,11 +35,11 @@ describe('createCrdtSlice.initialize', () => {
           shared: {
             schema: sharedValueSchema,
             select: (s) => ({counter: s.counter}),
-            apply: (value) => set({counter: (value as unknown).counter}),
+            apply: (value) => set({counter: (value as any).counter}),
           },
         },
         sync,
-      })(set as unknown, get as unknown, api as unknown);
+      })(set as any, get as any, api as any);
 
       return Object.assign(base, crdt) as AppState;
     });
@@ -74,11 +74,11 @@ describe('createCrdtSlice.initialize', () => {
           shared: {
             schema: sharedValueSchema,
             select: (s) => ({counter: s.counter}),
-            apply: (value) => set({counter: (value as unknown).counter}),
+            apply: (value) => set({counter: (value as any).counter}),
           },
         },
         sync,
-      })(set as unknown, get as unknown, api as unknown);
+      })(set as any, get as any, api as any);
 
       return Object.assign(base, crdt) as AppState;
     });

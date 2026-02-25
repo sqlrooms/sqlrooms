@@ -5,13 +5,10 @@ type WebSocketLike = {
   readyState: number;
   send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void;
   close: () => void;
-  addEventListener: (
-    type: string,
-    listener: (...args: unknown[]) => void,
-  ) => void;
+  addEventListener: (type: string, listener: (...args: any[]) => void) => void;
   removeEventListener: (
     type: string,
-    listener: (...args: unknown[]) => void,
+    listener: (...args: any[]) => void,
   ) => void;
 };
 
@@ -20,11 +17,11 @@ const WS_CONNECTING = 0;
 
 const getOrCreateClientId = (storageKey: string) => {
   try {
-    const ss = (globalThis as unknown).sessionStorage as Storage | undefined;
+    const ss = (globalThis as any).sessionStorage as Storage | undefined;
     if (ss) {
       const existing = ss.getItem(storageKey);
       if (existing) return existing;
-      const created = (globalThis as unknown).crypto?.randomUUID?.() as
+      const created = (globalThis as any).crypto?.randomUUID?.() as
         | string
         | undefined;
       const id = created ?? `client-${Math.random().toString(16).slice(2)}`;
@@ -34,14 +31,14 @@ const getOrCreateClientId = (storageKey: string) => {
   } catch {
     // ignore
   }
-  const created = (globalThis as unknown).crypto?.randomUUID?.() as
+  const created = (globalThis as any).crypto?.randomUUID?.() as
     | string
     | undefined;
   return created ?? `client-${Math.random().toString(16).slice(2)}`;
 };
 
 const toBase64 = (bytes: Uint8Array) => {
-  const buf = (globalThis as unknown).Buffer as
+  const buf = (globalThis as any).Buffer as
     | {from: (input: Uint8Array) => {toString: (enc: string) => string}}
     | undefined;
   if (buf) {
@@ -55,7 +52,7 @@ const toBase64 = (bytes: Uint8Array) => {
 };
 
 const fromBase64 = (value: string) => {
-  const buf = (globalThis as unknown).Buffer as
+  const buf = (globalThis as any).Buffer as
     | {from: (input: string, encoding: string) => Uint8Array}
     | undefined;
   if (buf) {
@@ -244,7 +241,7 @@ export function createWebSocketSyncConnector(
     }, delay);
     // Avoid keeping the Node.js event loop alive in tests/SSR environments.
     // No-op in browsers.
-    (reconnectTimer as unknown)?.unref?.();
+    (reconnectTimer as any)?.unref?.();
   };
 
   const getEmptySnapshotLen = () => {
@@ -265,13 +262,13 @@ export function createWebSocketSyncConnector(
       // Ensure browser websockets deliver binary frames as ArrayBuffer (not Blob)
       if ('binaryType' in ws) {
         try {
-          (ws as unknown).binaryType = 'arraybuffer';
+          (ws as any).binaryType = 'arraybuffer';
         } catch (error) {
           console.warn('Failed to set binaryType on CRDT websocket', error);
         }
       }
 
-      const handleMessage = (event: unknown) => {
+      const handleMessage = (event: any) => {
         // Use the currently connected doc reference (not the doc that created the socket),
         // so a later connect(doc) call can rebind without needing a new WebSocket.
         const activeDoc = subscribedDoc ?? doc;
@@ -325,7 +322,7 @@ export function createWebSocketSyncConnector(
                   if (update) ws.send(update);
                 }
               }, 2000);
-              (snapshotWaitTimer as unknown)?.unref?.();
+              (snapshotWaitTimer as any)?.unref?.();
               return;
             }
             if (parsed?.type === 'crdt-snapshot' && parsed.data) {
@@ -462,16 +459,16 @@ export function createWebSocketSyncConnector(
           }
         };
       } else {
-        (ws as unknown).onmessage = handleMessage;
-        (ws as unknown).onopen = handleOpen;
-        (ws as unknown).onclose = handleClose;
-        (ws as unknown).onerror = handleError;
+        (ws as any).onmessage = handleMessage;
+        (ws as any).onopen = handleOpen;
+        (ws as any).onclose = handleClose;
+        (ws as any).onerror = handleError;
         detachSocketListeners = () => {
           try {
-            (ws as unknown).onmessage = null;
-            (ws as unknown).onopen = null;
-            (ws as unknown).onclose = null;
-            (ws as unknown).onerror = null;
+            (ws as any).onmessage = null;
+            (ws as any).onopen = null;
+            (ws as any).onclose = null;
+            (ws as any).onerror = null;
           } catch (error) {
             console.warn('[crdt] failed to clear socket handlers', error);
           }
@@ -492,7 +489,7 @@ export function createWebSocketSyncConnector(
       }, 3000);
       // Avoid keeping the Node.js event loop alive in tests/SSR environments.
       // No-op in browsers.
-      (connectingTimeout as unknown)?.unref?.();
+      (connectingTimeout as any)?.unref?.();
     };
 
     if (
@@ -563,7 +560,7 @@ export function createWebSocketSyncConnector(
     connect,
     disconnect,
     setStatusListener: (listener) => {
-      statusListener = listener as unknown;
+      statusListener = listener as any;
     },
   };
 }

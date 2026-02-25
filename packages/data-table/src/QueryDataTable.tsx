@@ -13,7 +13,7 @@ import {makePagedQuery} from './utils';
 export type QueryDataTableProps = {
   className?: string;
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
-  fontSize?: DataTablePaginatedProps<unknown>['fontSize'];
+  fontSize?: DataTablePaginatedProps<any>['fontSize'];
   query: string;
   queryKeyComponents?: unknown[];
   renderActions?: (query: string) => React.ReactNode;

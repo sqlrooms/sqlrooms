@@ -18,8 +18,8 @@ import {useIntl} from 'react-intl';
 const LoadTileSet = getKeplerFactory(LoadTileSetFactory);
 
 export type LoadTileSet = (args: {
-  tileset: {name: string; type: string; metadata: Record<string, unknown>};
-  metadata?: Record<string, unknown>;
+  tileset: {name: string; type: string; metadata: Record<string, any>};
+  metadata?: Record<string, any>;
 }) => Promise<void>;
 
 function LoadTileSetContent({
@@ -32,8 +32,8 @@ function LoadTileSetContent({
   const intl = useIntl();
   const onTilesetAdded = useCallback(
     (
-      tileset: {name: string; type: string; metadata: Record<string, unknown>},
-      metadata?: Record<string, unknown>,
+      tileset: {name: string; type: string; metadata: Record<string, any>},
+      metadata?: Record<string, any>,
     ) => {
       loadTileSet({tileset, metadata});
       onClose?.();

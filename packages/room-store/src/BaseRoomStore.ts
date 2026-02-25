@@ -40,7 +40,7 @@ export type CreateRoomStoreOptions = {
   storeKey?: string;
 };
 
-type CreateRoomStoreArgs<TFactory extends (...args: unknown[]) => unknown> = [
+type CreateRoomStoreArgs<TFactory extends (...args: any[]) => any> = [
   ...Parameters<TFactory>,
   CreateRoomStoreOptions?,
 ];
@@ -131,7 +131,7 @@ export function createRoomStore<RS extends BaseRoomStoreState>(
  * createRoomStore('project-a', {storeKey: 'project-a'});
  */
 export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
-  return function <TFactory extends (...args: unknown[]) => StateCreator<RS>>(
+  return function <TFactory extends (...args: any[]) => StateCreator<RS>>(
     stateCreatorFactory: TFactory,
   ): {
     createRoomStore: (...args: CreateRoomStoreArgs<TFactory>) => StoreApi<RS>;

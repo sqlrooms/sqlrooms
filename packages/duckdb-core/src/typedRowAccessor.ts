@@ -14,7 +14,7 @@ export interface TypedRowAccessor<T> extends Iterable<T> {
 /**
  * Creates a row accessor wrapper around an Arrow table that provides typed row access.
  */
-export function createTypedRowAccessor<T extends arrow.TypeMap = unknown>({
+export function createTypedRowAccessor<T extends arrow.TypeMap = any>({
   arrowTable,
   validate,
 }: {

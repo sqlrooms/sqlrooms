@@ -31,8 +31,8 @@ export function CustomDndContextFactory(
     layer,
     datasets,
   }: {
-    layer: unknown;
-    datasets: unknown;
+    layer: any;
+    datasets: any;
   }) => {
     const color =
       layer.config.dataId && datasets[layer.config.dataId]
@@ -63,7 +63,7 @@ export function CustomDndContextFactory(
   const DndContext = ({children, visState}: DndContextProps) => {
     // Get the current map ID from the store
     const mapId = useStoreWithKepler(
-      (state: unknown) => state.kepler.config.currentMapId,
+      (state: any) => state.kepler.config.currentMapId,
     );
     const {datasets, layerOrder, layers, splitMaps, effects, effectOrder} =
       visState || {};
@@ -85,7 +85,7 @@ export function CustomDndContextFactory(
     );
 
     const onDragStart = useCallback(
-      (event: unknown) => {
+      (event: any) => {
         const activeType = event.active.data?.current?.type;
         switch (activeType) {
           case SORTABLE_LAYER_TYPE:
@@ -102,7 +102,7 @@ export function CustomDndContextFactory(
     );
 
     const onDragEnd = useCallback(
-      (event: unknown) => {
+      (event: any) => {
         const activeType = event.active.data?.current?.type;
         switch (activeType) {
           case SORTABLE_LAYER_TYPE:

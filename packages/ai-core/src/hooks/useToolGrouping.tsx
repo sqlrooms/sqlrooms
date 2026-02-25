@@ -174,7 +174,7 @@ export function useToolGrouping(
  */
 function getToolName(part: UIMessagePart): string {
   if (typeof part.type === 'string' && part.type === 'dynamic-tool') {
-    return ((part as unknown).toolName || 'unknown') as string;
+    return ((part as any).toolName || 'unknown') as string;
   }
   if (isToolPart(part)) {
     return typeof part.type === 'string'
@@ -220,7 +220,7 @@ function generateToolGroupTitle(
 
   // Check if all tools in this group are completed
   const allCompleted = actualToolParts.every((p) => {
-    const state = (p as unknown).state;
+    const state = (p as any).state;
     return state === 'output-available' || state === 'output-error';
   });
 
@@ -268,7 +268,7 @@ function generateToolGroupTitle(
     // For active thinking, show reasoning text if available
     const lastToolPart = actualToolParts[actualToolParts.length - 1];
     const reasoning = lastToolPart
-      ? ((lastToolPart as unknown).input?.reasoning as string | undefined)
+      ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
     const baseTitle =

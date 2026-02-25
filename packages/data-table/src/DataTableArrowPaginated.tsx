@@ -11,8 +11,8 @@ import {PaginationState} from '@tanstack/react-table';
 export type DataTableArrowPaginatedProps = {
   className?: string;
   table: arrow.Table | undefined;
-  fontSize?: DataTablePaginatedProps<unknown>['fontSize'];
-  footerActions?: DataTablePaginatedProps<unknown>['footerActions'];
+  fontSize?: DataTablePaginatedProps<any>['fontSize'];
+  footerActions?: DataTablePaginatedProps<any>['footerActions'];
   pageSize?: number;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;

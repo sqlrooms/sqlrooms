@@ -54,7 +54,7 @@ export const Canvas: React.FC = () => {
         <ReactFlow
           minZoom={0.1}
           colorMode={colorMode}
-          nodes={nodes as unknown}
+          nodes={nodes as any}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={applyNodeChanges}

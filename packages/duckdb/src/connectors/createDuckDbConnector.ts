@@ -43,5 +43,5 @@ export type {WasmDuckDbConnector};
 export function isWasmDuckDbConnector(
   connector: DuckDbConnector,
 ): connector is WasmDuckDbConnector {
-  return (connector as unknown).type === 'wasm';
+  return (connector as any).type === 'wasm';
 }

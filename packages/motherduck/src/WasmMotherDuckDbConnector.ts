@@ -16,7 +16,7 @@ export type MotherDuckDbConnectorOptions = {
 export function isWasmMotherDuckDbConnector(
   connector: DuckDbConnector,
 ): connector is WasmMotherDuckDbConnector {
-  return (connector as unknown).type === 'wasm-motherduck';
+  return (connector as any).type === 'wasm-motherduck';
 }
 
 export interface WasmMotherDuckDbConnectorOptions extends MDConnectionParams {
@@ -64,7 +64,7 @@ export function createWasmMotherDuckDbConnector(
       // Not using evaluateQueuedQuery which supports cancellation
       // because it doesn't provide arrow results
       const result = await connection.evaluateStreamingQuery(query);
-      const batches = new Array<RecordBatch<unknown>>();
+      const batches = new Array<RecordBatch<any>>();
 
       for await (const batch of result.arrowStream) {
         // Check for cancellation before processing each batch

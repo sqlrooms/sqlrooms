@@ -35,7 +35,7 @@ const getFunctionSuggestionsImpl = async (
           parameters,
           parameter_types,
           description,
-        }: Record<string, unknown>) => {
+        }: Record<string, any>) => {
           return {
             name: function_name,
             type: function_type,

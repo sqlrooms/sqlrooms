@@ -328,7 +328,7 @@ export function createRagSlice({
             const vectorRows = vectorResult.toArray();
 
             const vectorResults: EmbeddingResult[] = vectorRows.map(
-              (row: unknown) => ({
+              (row: any) => ({
                 nodeId: row.node_id as string,
                 text: row.text as string,
                 score: row.similarity as number,
@@ -426,7 +426,7 @@ export function createRagSlice({
             const vectorRows = vectorResult.toArray();
 
             const vectorResults: EmbeddingResult[] = vectorRows.map(
-              (row: unknown) => ({
+              (row: any) => ({
                 nodeId: row.node_id as string,
                 text: row.text as string,
                 score: row.similarity as number,
@@ -465,7 +465,7 @@ export function createRagSlice({
               const ftsResult = await connector.query(ftsQuery);
               const ftsRows = ftsResult.toArray();
 
-              ftsResults = ftsRows.map((row: unknown) => ({
+              ftsResults = ftsRows.map((row: any) => ({
                 nodeId: row.node_id as string,
                 text: row.text as string,
                 score: row.bm25_score as number,

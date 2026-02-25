@@ -9,8 +9,8 @@ type ToolData = {
   toolCallId: string;
   toolName?: string;
   name?: string;
-  args?: unknown;
-  input?: unknown;
+  args?: any;
+  input?: any;
   state?:
     | 'call'
     | 'result'
@@ -19,10 +19,10 @@ type ToolData = {
     | 'input-available'
     | 'output-available'
     | 'output-error';
-  result?: unknown;
-  output?: unknown;
+  result?: any;
+  output?: any;
   errorText?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 export const ToolResult: React.FC<ToolData> = ({

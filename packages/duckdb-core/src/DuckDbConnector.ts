@@ -58,7 +58,7 @@ export interface QueryOptions {
  * ]);
  * ```
  */
-export type QueryHandle<T = unknown> = PromiseLike<T> & {
+export type QueryHandle<T = any> = PromiseLike<T> & {
   /** Promise that resolves with query results */
   result: Promise<T>;
 
@@ -259,7 +259,7 @@ export interface DuckDbConnector {
    * }
    * ```
    */
-  query<T extends TypeMap = unknown>(
+  query<T extends TypeMap = any>(
     query: string,
     options?: QueryOptions,
   ): QueryHandle<arrow.Table<T>>;
@@ -299,7 +299,7 @@ export interface DuckDbConnector {
    * });
    * ```
    */
-  queryJson<T = Record<string, unknown>>(
+  queryJson<T = Record<string, any>>(
     query: string,
     options?: QueryOptions,
   ): QueryHandle<Iterable<T>>;

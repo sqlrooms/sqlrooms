@@ -1,3 +1,3 @@
 declare module 'react-palm/tasks' {
-  export const taskMiddleware: unknown;
+  export const taskMiddleware: any;
 }

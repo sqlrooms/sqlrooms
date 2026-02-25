@@ -290,7 +290,7 @@ export function getMenuColors(isDarkTheme: boolean): Record<string, string> {
  * @param isDarkTheme Whether the current theme is dark or light
  * @returns A complete Monaco editor theme data object for JSON editing
  */
-export function getJsonEditorTheme(isDarkTheme: boolean): unknown {
+export function getJsonEditorTheme(isDarkTheme: boolean): any {
   // Predefined pastel colors for syntax highlighting
   // Light theme colors
   const lightThemeColors = {

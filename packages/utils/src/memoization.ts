@@ -40,7 +40,7 @@ export function memoizeOnce<TArgs extends readonly unknown[], TReturn>(
     }
 
     // Call the function with the correct context and cache the result
-    lastResult = fn.apply(this, args as unknown as unknown[]);
+    lastResult = fn.apply(this, args as unknown as any[]);
     lastArgs = args;
     hasResult = true;
 

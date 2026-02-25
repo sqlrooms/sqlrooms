@@ -16,7 +16,7 @@ export interface BaseDuckDbConnectorOptions {
 export interface BaseDuckDbConnectorImpl {
   initializeInternal?(): Promise<void>;
   destroyInternal?(): Promise<void>;
-  executeQueryInternal<T extends arrow.TypeMap = unknown>(
+  executeQueryInternal<T extends arrow.TypeMap = any>(
     query: string,
     signal: AbortSignal,
     queryId?: string,
@@ -138,7 +138,7 @@ export function createBaseDuckDbConnector(
       options,
     );
 
-  const query = <T extends arrow.TypeMap = unknown>(
+  const query = <T extends arrow.TypeMap = any>(
     queryStr: string,
     options?: QueryOptions,
   ): QueryHandle<arrow.Table<T>> =>
@@ -147,7 +147,7 @@ export function createBaseDuckDbConnector(
       options,
     );
 
-  const queryJson = <T = Record<string, unknown>>(
+  const queryJson = <T = Record<string, any>>(
     queryStr: string,
     options?: QueryOptions,
   ): QueryHandle<Iterable<T>> =>

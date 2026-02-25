@@ -46,7 +46,7 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
           {
             uri: 'http://myserver/schema.json',
             fileMatch: ['*'],
-            schema: schema as unknown,
+            schema: schema as any,
           },
         ],
       });
@@ -63,9 +63,9 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       (e: Monaco.editor.IModelContentChangedEvent) => {
         // Skip programmatic changes, undo/redo, and full model replacements to avoid unnecessary triggers.
         if (
-          (e as unknown).isFlush ||
-          (e as unknown).isUndoing ||
-          (e as unknown).isRedoing
+          (e as any).isFlush ||
+          (e as any).isUndoing ||
+          (e as any).isRedoing
         ) {
           return;
         }
@@ -113,14 +113,10 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       options={{
         formatOnPaste: true,
         formatOnType: true,
-        wordBasedSuggestions: 'currentDocument' as unknown,
+        wordBasedSuggestions: 'currentDocument' as any,
         wordBasedSuggestionsOnlySameLanguage: true,
-        suggest: {showWords: true} as unknown,
-        quickSuggestions: {
-          other: true,
-          comments: false,
-          strings: true,
-        } as unknown,
+        suggest: {showWords: true} as any,
+        quickSuggestions: {other: true, comments: false, strings: true} as any,
         suggestOnTriggerCharacters: true,
         ...userOptions,
       }}

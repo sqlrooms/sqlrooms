@@ -164,7 +164,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(
-    (thinkBlock: unknown) => {
+    (thinkBlock: any) => {
       try {
         const index = parseInt(thinkBlock.props?.['data-index'] || '0', 10);
         const thinkContent = thinkContents[index];

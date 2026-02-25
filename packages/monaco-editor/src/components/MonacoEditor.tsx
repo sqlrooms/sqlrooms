@@ -151,7 +151,7 @@ const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions
     fixedOverflowWidgets: true,
     // Prevent an initial top "reserved" area that can appear briefly while Monaco
     // computes sticky scroll layout (shows up as a blank/white rectangle above text).
-    stickyScroll: {enabled: false} as unknown,
+    stickyScroll: {enabled: false} as any,
   };
 /**
  * A wrapper around the Monaco Editor component
@@ -203,7 +203,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
         ? 'sqlrooms-dark'
         : 'sqlrooms-light';
 
-  const editorRef = useRef<unknown>(null);
+  const editorRef = useRef<any>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
 
   const handleBeforeMount: NonNullable<EditorProps['beforeMount']> = (

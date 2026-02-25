@@ -6,7 +6,7 @@ import type {EmbeddingProvider} from './RagSlice';
  * This is an interface with an embedding method for v2 models.
  */
 export interface AiProvider {
-  embedding(modelId: string, settings?: {dimensions?: number}): unknown;
+  embedding(modelId: string, settings?: {dimensions?: number}): any;
 }
 
 /**
