@@ -7,6 +7,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolGrouping} from '../hooks/useToolGrouping';
+import {isTextPart, isReasoningPart} from '../utils';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
@@ -59,13 +60,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   // Collect all text content from message parts for copy button
   const allTextContent = uiMessageParts
-    .filter((part) => part.type === 'text' || part.type === 'reasoning')
-    .map((part) => {
-      if (part.type === 'text' || part.type === 'reasoning') {
-        return (part as any).text;
-      }
-      return '';
-    })
+    .filter((part) => isTextPart(part) || isReasoningPart(part))
+    .map((part) => part.text)
     .join('\n\n');
   const hasTextContent = allTextContent.trim().length > 0;
 
