@@ -3,11 +3,10 @@
 
 @import '@sqlrooms/ui/tailwind-preset.css';
 
-@source './**/*.{ts,tsx,js,jsx,mdx}';
-@source '../components/**/*.{ts,tsx,js,jsx,mdx}';
+@source '../index.html';
+@source 'src/**/*.{ts,tsx}';
 @source '../../../packages/*/src/**/*.{ts,tsx}';
-@source '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.{js,mjs}';
-@source '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.{js,mjs}';
+@source '../node_modules/@sqlrooms/*/dist/';
 
 :root {
   --radius: 0.625rem;
