@@ -59,8 +59,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   // Collect all text content from message parts for copy button
   const allTextContent = uiMessageParts
-    .filter((part) => part.type === 'text')
-    .map((part) => part.text)
+    .filter((part) => part.type === 'text' || part.type === 'reasoning')
+    .map((part) => (part as any).text)
     .join('\n\n');
   const hasTextContent = allTextContent.trim().length > 0;
 
@@ -135,10 +135,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
           ))}
         {hasTextContent && (
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-start">
             <CopyButton
               text={allTextContent}
               tooltipLabel="Copy entire response"
+              tooltipSide="right"
               className="border-muted border"
             />
           </div>

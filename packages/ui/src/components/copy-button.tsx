@@ -12,6 +12,7 @@ export interface CopyButtonProps {
   size?: ButtonProps['size'];
   className?: string;
   tooltipLabel?: string;
+  tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
   ariaLabel?: string;
   durationMs?: number;
   disabled?: boolean;
@@ -24,6 +25,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   size = 'icon',
   className,
   tooltipLabel = 'Copy to clipboard',
+  tooltipSide = 'top',
   ariaLabel: ariaLabelProp,
   durationMs = 1500,
   disabled = false,
@@ -85,7 +87,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
           </span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{tooltipLabel}</TooltipContent>
+      <TooltipContent side={tooltipSide}>{tooltipLabel}</TooltipContent>
     </Tooltip>
   );
 };
