@@ -72,7 +72,6 @@ export function topoSortAll(nodes: DagNode[], edges: DagEdge[]): string[] {
     const remaining = nodes
       .map((n) => n.id)
       .filter((id) => !order.includes(id));
-    // eslint-disable-next-line no-console
     console.warn(
       '[dag.topoSortAll] Cycle detected; appending remaining nodes arbitrarily:',
       remaining,
@@ -135,7 +134,6 @@ export function topoSortDownstream(
   }
   if (order.length < reachable.size) {
     const remaining = Array.from(reachable).filter((id) => !order.includes(id));
-    // eslint-disable-next-line no-console
     console.warn(
       '[dag.topoSortDownstream] Cycle detected in downstream graph:',
       remaining,

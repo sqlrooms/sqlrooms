@@ -142,6 +142,8 @@ export default function DataTablePaginated<Data extends object>({
       ? Math.ceil(numRows / pagination.pageSize)
       : undefined;
 
+  // TanStack's table hook returns non-memoizable functions by design.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: (data ?? defaultData) as any[],
     columns: columns ?? [],

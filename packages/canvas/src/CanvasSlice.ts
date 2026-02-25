@@ -410,7 +410,6 @@ export function createCanvasSlice(props: {
               await connector.query(`DROP TABLE IF EXISTS ${tableToDrop}`);
               await get().db.refreshTableSchemas();
             } catch (e) {
-              // eslint-disable-next-line no-console
               console.warn(
                 '[canvas.deleteNode] Failed to drop table for node',
                 nodeId,

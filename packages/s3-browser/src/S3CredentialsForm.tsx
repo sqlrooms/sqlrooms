@@ -205,7 +205,7 @@ export function S3CredentialsForm({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadS3Credentials]);
 
   const resolver = zodResolver(formSchema);
   const form = useForm<FormData>({

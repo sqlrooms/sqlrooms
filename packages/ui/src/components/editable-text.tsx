@@ -106,7 +106,7 @@ export const EditableText: FC<{
       }
     }
     return undefined;
-  }, [isEditing, isInternalEditing]);
+  }, [isEditing, isInternalEditing, selectOnFocus]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetValue = useCallback(
@@ -192,9 +192,9 @@ export const EditableText: FC<{
     <Input
       ref={inputRef}
       className={cn(
-        'disabled:opacity-1 w-full rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-hidden focus:ring-blue-500 disabled:cursor-text',
+        'w-full rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:ring-blue-500 focus:outline-hidden disabled:cursor-text disabled:opacity-1',
         {
-          'select-none bg-transparent': !isInternalEditing,
+          'bg-transparent select-none': !isInternalEditing,
           truncate: !isInternalEditing,
         },
         className,
