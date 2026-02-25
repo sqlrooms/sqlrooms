@@ -57,6 +57,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     analysisResult.id,
   );
 
+  // Collect all text content from message parts for copy button
+  const allTextContent = uiMessageParts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join('\n\n');
+  const hasTextContent = allTextContent.trim().length > 0;
+
   // Measure div width using ResizeObserver
   useEffect(() => {
     const element = divRef.current;
@@ -90,7 +97,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   );
 
   return (
-    <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
+    <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
         <div className="group/prompt bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
@@ -127,6 +134,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           ) : (
             <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
           ))}
+        {hasTextContent && (
+          <div className="flex justify-end pt-2">
+            <CopyButton
+              text={allTextContent}
+              tooltipLabel="Copy entire response"
+              className="border-muted border"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
