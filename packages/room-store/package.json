@@ -37,6 +37,7 @@
     "typedoc": "typedoc"
   },
   "devDependencies": {
+    "@sqlrooms/preset-jest": "workspace:*",
     "ts-jest": "^29.4.4"
   }
 }

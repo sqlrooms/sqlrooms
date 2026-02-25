@@ -1158,11 +1158,16 @@ function getCurrentSessionFromState(
 
 type AiCommandStoreState = BaseRoomStoreState & AiSliceState;
 
-const AiCreateSessionInput = z.object({
-  name: z.string().optional().describe('Optional session name.'),
-  modelProvider: z.string().optional().describe('Optional model provider ID.'),
-  model: z.string().optional().describe('Optional model ID.'),
-});
+const AiCreateSessionInput = z
+  .object({
+    name: z.string().optional().describe('Optional session name.'),
+    modelProvider: z
+      .string()
+      .optional()
+      .describe('Optional model provider ID.'),
+    model: z.string().optional().describe('Optional model ID.'),
+  })
+  .default({});
 type AiCreateSessionInput = z.infer<typeof AiCreateSessionInput>;
 
 const AiSessionIdInput = z.object({

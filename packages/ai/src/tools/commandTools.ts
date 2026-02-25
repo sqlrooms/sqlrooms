@@ -83,12 +83,7 @@ export function createCommandTools<RS extends BaseRoomStoreState>(
   options?: CommandToolsOptions,
 ): OpenAssistantToolSet {
   const listToolName = options?.listToolName ?? DEFAULT_LIST_TOOL_NAME;
-  const listToolNameForDescription = options?.listToolName || 'list_commands';
   const executeToolName = options?.executeToolName ?? DEFAULT_EXECUTE_TOOL_NAME;
-  const includeInvisibleDefault =
-    options?.includeInvisibleCommandsByDefault ?? false;
-  const includeDisabledCommandsInList =
-    options?.includeDisabledCommandsInList ?? true;
 
   return {
     [listToolName]: {
@@ -109,10 +104,9 @@ Use this before executing commands so you can pick a valid command ID and unders
 
         const descriptors = state.commands.listCommands({
           surface: 'ai',
-          includeInvisible: params.includeInvisible ?? includeInvisibleDefault,
-          includeDisabled:
-            params.includeDisabled ?? includeDisabledCommandsInList,
-          includeInputSchema: params.includeInputSchema ?? true,
+          includeInvisible: params.includeInvisible,
+          includeDisabled: params.includeDisabled,
+          includeInputSchema: params.includeInputSchema,
         });
 
         return {
@@ -127,7 +121,7 @@ Use this before executing commands so you can pick a valid command ID and unders
     [executeToolName]: {
       name: executeToolName,
       description: `Execute a room command by ID.
-Call ${listToolNameForDescription} first to discover valid command IDs and input requirements.`,
+Call ${listToolName} first to discover valid command IDs and input requirements.`,
       parameters: ExecuteCommandToolParameters,
       execute: async ({commandId, input}: ExecuteCommandToolParameters) => {
         const state = store.getState();
