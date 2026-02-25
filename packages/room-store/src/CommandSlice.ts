@@ -80,16 +80,19 @@ export type RoomCommandExecuteOutput<TData = unknown> =
 
 export type RoomCommandPortableSchema = {
   type?: string;
+  $schema?: string;
+  title?: string;
   description?: string;
   enum?: unknown[];
   const?: unknown;
   default?: unknown;
-  nullable?: boolean;
-  optional?: boolean;
+  format?: string;
   properties?: Record<string, RoomCommandPortableSchema>;
   required?: string[];
   items?: RoomCommandPortableSchema;
   anyOf?: RoomCommandPortableSchema[];
+  additionalProperties?: boolean | RoomCommandPortableSchema;
+  [key: string]: unknown;
 };
 
 export type RoomCommand<RS extends BaseRoomStoreState = BaseRoomStoreState> = {

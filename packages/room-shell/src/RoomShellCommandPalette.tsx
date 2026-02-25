@@ -594,57 +594,7 @@ function toJsonSchema(
   if (!portableSchema) {
     return undefined;
   }
-  const schema: JsonSchema = {};
-
-  if (portableSchema.description) {
-    schema.description = portableSchema.description;
-  }
-  if (portableSchema.enum) {
-    schema.enum = [...portableSchema.enum];
-  }
-  if (portableSchema.const !== undefined) {
-    schema.const = portableSchema.const;
-  }
-  if (portableSchema.default !== undefined) {
-    schema.default = portableSchema.default;
-  }
-  if (portableSchema.items) {
-    schema.items = toJsonSchema(portableSchema.items);
-  }
-  if (portableSchema.properties) {
-    schema.properties = Object.fromEntries(
-      Object.entries(portableSchema.properties).map(
-        ([propertyName, property]) => [
-          propertyName,
-          toJsonSchema(property) ?? {},
-        ],
-      ),
-    );
-  }
-  if (portableSchema.required?.length) {
-    schema.required = [...portableSchema.required];
-  }
-  if (portableSchema.anyOf?.length) {
-    schema.anyOf = portableSchema.anyOf
-      .map((variant) => toJsonSchema(variant))
-      .filter((variant): variant is JsonSchema => Boolean(variant));
-  }
-
-  const schemaType =
-    portableSchema.type && portableSchema.type !== 'unknown'
-      ? portableSchema.type
-      : undefined;
-  if (schemaType) {
-    if (portableSchema.nullable) {
-      schema.type = [schemaType, 'null'];
-    } else {
-      schema.type = schemaType;
-    }
-  } else if (portableSchema.nullable) {
-    schema.type = 'null';
-  }
-
-  return schema;
+  return portableSchema as JsonSchema;
 }
 
 function createInputTemplateFromSchema(schema?: JsonSchema): unknown {
