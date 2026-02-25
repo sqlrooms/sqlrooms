@@ -29,7 +29,6 @@ export function load(
   defaults: Record<string, unknown> = {},
 ): string {
   const {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     method: _method, // Remove from options
     schema,
     select = ['*'],
