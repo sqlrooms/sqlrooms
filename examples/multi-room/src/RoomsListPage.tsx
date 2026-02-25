@@ -2,64 +2,57 @@ import {useCallback, useEffect, useState} from 'react';
 import {useNavigate} from '@tanstack/react-router';
 import {Button, Input} from '@sqlrooms/ui';
 import {
-  RoomRecord,
-  getAllRooms,
-  putRoom,
-  deleteRoom as deleteRoomFromDb,
-} from './rooms-db';
+  RoomListEntry,
+  getRoomsList,
+  addRoom,
+  renameRoom,
+  deleteRoom,
+} from './rooms-list';
 
 export function RoomsListPage() {
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState<RoomRecord[]>([]);
+  const [rooms, setRooms] = useState<RoomListEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
-  const loadRooms = useCallback(async () => {
-    setRooms(await getAllRooms());
-  }, []);
+  const loadRooms = useCallback(() => setRooms(getRoomsList()), []);
+  useEffect(loadRooms, [loadRooms]);
 
-  useEffect(() => {
-    loadRooms();
-  }, [loadRooms]);
-
-  const addRoom = async () => {
-    const room: RoomRecord = {
+  const handleAdd = () => {
+    const room: RoomListEntry = {
       id: crypto.randomUUID(),
       name: 'New Room',
-      dataSources: [],
-      createdAt: Date.now(),
+      defaultDataSources: [],
     };
-    await putRoom(room);
-    await loadRooms();
+    addRoom(room);
+    loadRooms();
     setEditingId(room.id);
     setEditName(room.name);
   };
 
-  const startRename = (room: RoomRecord) => {
+  const startRename = (room: RoomListEntry) => {
     setEditingId(room.id);
     setEditName(room.name);
   };
 
-  const confirmRename = async () => {
-    if (!editingId) return;
-    const room = rooms.find((r) => r.id === editingId);
-    if (room && editName.trim()) {
-      await putRoom({...room, name: editName.trim()});
-      await loadRooms();
+  const confirmRename = () => {
+    if (editingId && editName.trim()) {
+      renameRoom(editingId, editName.trim());
+      loadRooms();
     }
     setEditingId(null);
   };
 
-  const handleDeleteRoom = async (id: string) => {
-    await deleteRoomFromDb(id);
-    await loadRooms();
+  const handleDelete = (id: string) => {
+    deleteRoom(id);
+    loadRooms();
   };
 
   return (
     <div className="mx-auto max-w-2xl p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Rooms</h1>
-        <Button onClick={addRoom} size="sm">
+        <Button onClick={handleAdd} size="sm">
           + New Room
         </Button>
       </div>
@@ -104,8 +97,8 @@ export function RoomsListPage() {
                     {room.name}
                   </button>
                   <span className="text-muted-foreground text-xs">
-                    {room.dataSources.length} source
-                    {room.dataSources.length !== 1 ? 's' : ''}
+                    {room.defaultDataSources.length} source
+                    {room.defaultDataSources.length !== 1 ? 's' : ''}
                   </span>
                   <Button
                     size="sm"
@@ -118,7 +111,7 @@ export function RoomsListPage() {
                     size="sm"
                     variant="ghost"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteRoom(room.id)}
+                    onClick={() => handleDelete(room.id)}
                   >
                     Delete
                   </Button>

@@ -11,7 +11,7 @@ import {
 import {Toaster} from '@sqlrooms/ui';
 import {RoomsListPage} from './RoomsListPage';
 import {RoomPage} from './RoomPage';
-import {seedDefaultRooms} from './rooms-db';
+import {seedDefaultRooms} from './rooms-list';
 import './index.css';
 
 const rootRoute = createRootRoute({
@@ -44,7 +44,6 @@ const roomRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([indexRoute, roomRoute]);
-
 const router = createRouter({routeTree});
 
 declare module '@tanstack/react-router' {
@@ -53,10 +52,10 @@ declare module '@tanstack/react-router' {
   }
 }
 
-seedDefaultRooms().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <RouterProvider router={router} />
-    </StrictMode>,
-  );
-});
+seedDefaultRooms();
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>,
+);

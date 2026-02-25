@@ -11,15 +11,11 @@
   },
   "dependencies": {
     "@sqlrooms/data-table": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@tanstack/react-router": "^1.120.3",
-    "immer": "^10.1.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "zustand": "^5.0.5"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
