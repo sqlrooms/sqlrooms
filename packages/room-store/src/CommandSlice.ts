@@ -3,7 +3,10 @@ import type {ComponentType} from 'react';
 import {z, ZodType} from 'zod';
 import {StoreApi} from 'zustand';
 import {BaseRoomStoreState, createSlice, StateCreator} from './BaseRoomStore';
+import type {RoomCommandPortableSchema} from './RoomCommandPortableSchema';
 import {toPortableSchema} from './toPortableSchema';
+
+export type {RoomCommandPortableSchema} from './RoomCommandPortableSchema';
 
 const DEFAULT_COMMAND_OWNER = 'global';
 const DEFAULT_COMMAND_SURFACE: RoomCommandSurface = 'unknown';
@@ -77,23 +80,6 @@ export type RoomCommandExecuteOutput<TData = unknown> =
   | RoomCommandResult<TData>
   | TData
   | void;
-
-export type RoomCommandPortableSchema = {
-  type?: string;
-  $schema?: string;
-  title?: string;
-  description?: string;
-  enum?: unknown[];
-  const?: unknown;
-  default?: unknown;
-  format?: string;
-  properties?: Record<string, RoomCommandPortableSchema>;
-  required?: string[];
-  items?: RoomCommandPortableSchema;
-  anyOf?: RoomCommandPortableSchema[];
-  additionalProperties?: boolean | RoomCommandPortableSchema;
-  [key: string]: unknown;
-};
 
 export type RoomCommand<RS extends BaseRoomStoreState = BaseRoomStoreState> = {
   id: string;

@@ -1,5 +1,5 @@
 import {z, ZodType} from 'zod';
-import type {RoomCommandPortableSchema} from './CommandSlice';
+import type {RoomCommandPortableSchema} from './RoomCommandPortableSchema';
 
 /**
  * Converts a Zod schema into a JSON Schema-compatible structure used by command
