@@ -428,6 +428,7 @@ This release focuses on standardizing terminology across the codebase and improv
   <RoomShell.Sidebar />
   <RoomShell.LayoutComposer />
   <RoomShell.LoadingProgress />
+  <RoomShell.CommandPalette />
 </RoomShell>
 ```
 

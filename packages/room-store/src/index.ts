@@ -34,6 +34,53 @@ export {
 } from './createPersistHelpers';
 export type {StateCreator, StoreApi} from 'zustand';
 
+export {
+  createCommandSlice,
+  createRoomCommandExecutionContext,
+  doesCommandRequireInput,
+  exportCommandInputSchema,
+  getCommandInputComponent,
+  getCommandShortcut,
+  hasCommandSliceState,
+  invokeCommandFromStore,
+  listCommandsFromStore,
+  registerCommandsForOwner,
+  resolveCommandPolicyMetadata,
+  unregisterCommandsForOwner,
+  validateCommandInput,
+} from './CommandSlice';
+export type {
+  CommandSliceState,
+  RoomCommandDescriptor,
+  RoomCommandExecuteOutput,
+  RoomCommandInvocation,
+  RoomCommandInvocationOptions,
+  RegisteredRoomCommand,
+  RoomCommand,
+  RoomCommandInputComponent,
+  RoomCommandInputComponentProps,
+  RoomCommandListOptions,
+  RoomCommandPolicyMetadata,
+  RoomCommandPortableSchema,
+  RoomCommandResult,
+  RoomCommandRiskLevel,
+  RoomCommandSurface,
+  RoomCommandUiMetadata,
+  RoomCommandExecutionContext,
+  RoomCommandPredicate,
+} from './CommandSlice';
+export {
+  createCommandCliAdapter,
+  createCommandMcpAdapter,
+} from './CommandAdapters';
+export type {
+  CommandCliAdapter,
+  CommandCliAdapterOptions,
+  CommandMcpAdapter,
+  CommandMcpAdapterOptions,
+  CommandMcpToolDescriptor,
+} from './CommandAdapters';
+
 // Re-export from @sqlrooms/room-config
 // Values also export their corresponding types automatically (Zod pattern)
 export {

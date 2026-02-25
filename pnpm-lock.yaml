@@ -2626,6 +2626,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../monaco-editor
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
@@ -2656,6 +2659,9 @@ importers:
       react-mosaic-component:
         specifier: ^6.1.1
         version: 6.1.1(@types/hoist-non-react-statics@3.3.7(@types/react@19.2.7))(@types/node@24.10.13)(@types/react@19.2.7)(dnd-core@16.0.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
@@ -2677,6 +2683,13 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+    devDependencies:
+      '@sqlrooms/preset-jest':
+        specifier: workspace:*
+        version: link:../preset-jest
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.6(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
 
   packages/s3-browser:
     dependencies:
@@ -7198,7 +7211,8 @@ packages:
   '@sqlrooms/ui@0.16.4':
     resolution: {integrity: sha512-pzG/qXS7eLrWSS/tNiHljHsZQgT3Xijbc2NQgMAxmssjc34K/65ZvB7JFJLFrTkTnHla1xSvr58zT6V4aZ8bdA==}
     peerDependencies:
-      tailwindcss: ^4.1.18
+      autoprefixer: ^10.4.20
+      tailwindcss: ^3.4.17
 
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}

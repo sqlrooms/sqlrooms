@@ -30,8 +30,14 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
+  },
+  "devDependencies": {
+    "@sqlrooms/preset-jest": "workspace:*",
+    "ts-jest": "^29.4.4"
   }
 }

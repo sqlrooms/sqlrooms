@@ -85,6 +85,7 @@ export function App() {
       <RoomShell.Sidebar />
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
     </RoomShell>
   );
 }

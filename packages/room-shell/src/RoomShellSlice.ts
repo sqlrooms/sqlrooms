@@ -25,9 +25,14 @@ import {
 } from '@sqlrooms/room-config';
 import {
   BaseRoomStoreState,
+  CommandSliceState,
   CreateBaseRoomSliceProps,
   createBaseRoomSlice,
+  createCommandSlice,
   isRoomSliceWithInitialize,
+  registerCommandsForOwner,
+  RoomCommand,
+  unregisterCommandsForOwner,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {ErrorBoundary} from '@sqlrooms/ui';
@@ -39,6 +44,7 @@ import {
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {ReactNode} from 'react';
+import {z} from 'zod';
 import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
@@ -149,7 +155,8 @@ export type RoomShellSliceState = {
     ) => Promise<void>;
   };
 } & DuckDbSliceState &
-  LayoutSliceState;
+  LayoutSliceState &
+  CommandSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
@@ -172,6 +179,46 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
+const ROOM_SHELL_COMMAND_OWNER = '@sqlrooms/room-shell';
+
+const RoomSetTitleCommandInput = z.object({
+  title: z.string().min(1).describe('Room title.'),
+});
+type RoomSetTitleCommandInput = z.infer<typeof RoomSetTitleCommandInput>;
+
+const RoomSetDescriptionCommandInput = z.object({
+  description: z.string().describe('Room description.'),
+});
+type RoomSetDescriptionCommandInput = z.infer<
+  typeof RoomSetDescriptionCommandInput
+>;
+
+const RoomRemoveDataSourceInput = z.object({
+  tableName: z.string().describe('Table name of the data source to remove.'),
+});
+type RoomRemoveDataSourceInput = z.infer<typeof RoomRemoveDataSourceInput>;
+
+const RoomAddUrlDataSourceInput = z.object({
+  url: z.string().url().describe('URL of the source file to load.'),
+  tableName: z
+    .string()
+    .describe('Target table name where the URL data should be loaded.'),
+  httpMethod: z
+    .string()
+    .optional()
+    .describe('Optional HTTP method for URL fetch.'),
+  headers: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe('Optional HTTP headers for URL fetch.'),
+});
+type RoomAddUrlDataSourceInput = z.infer<typeof RoomAddUrlDataSourceInput>;
+
+const RoomAddSqlDataSourceInput = z.object({
+  query: z.string().describe('SQL query that defines the derived table.'),
+  tableName: z.string().describe('Target table name for query result.'),
+});
+type RoomAddSqlDataSourceInput = z.infer<typeof RoomAddSqlDataSourceInput>;
 
 export function createRoomShellSlice(
   props: CreateRoomShellSliceProps,
@@ -201,6 +248,7 @@ export function createRoomShellSlice(
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
+      ...createCommandSlice()(set, get, store),
       room: {
         ...roomSliceState.room,
         config: {
@@ -224,6 +272,11 @@ export function createRoomShellSlice(
         },
 
         async initialize() {
+          registerCommandsForOwner(
+            store,
+            ROOM_SHELL_COMMAND_OWNER,
+            createRoomShellCommands(),
+          );
           const {setTaskProgress} = get().room;
           setTaskProgress(INIT_DB_TASK, {
             message: 'Initializing database…',
@@ -257,6 +310,11 @@ export function createRoomShellSlice(
           }
 
           setTaskProgress(INIT_ROOM_TASK, undefined);
+        },
+
+        async destroy() {
+          unregisterCommandsForOwner(store, ROOM_SHELL_COMMAND_OWNER);
+          await roomSliceState.room.destroy();
         },
 
         /** Returns the progress of the last task */
@@ -714,6 +772,154 @@ export function createRoomShellSlice(
   };
 
   return slice;
+}
+
+type RoomShellCommandStoreState = RoomShellSliceState;
+
+function createRoomShellCommands(): RoomCommand<RoomShellCommandStoreState>[] {
+  return [
+    {
+      id: 'room.set-title',
+      name: 'Set room title',
+      description: 'Update the room title',
+      group: 'Room',
+      keywords: ['room', 'title', 'name'],
+      inputSchema: RoomSetTitleCommandInput,
+      inputDescription: 'Provide a non-empty room title.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {title} = input as RoomSetTitleCommandInput;
+        getState().room.setRoomTitle(title);
+        return {
+          success: true,
+          commandId: 'room.set-title',
+          message: `Updated room title to "${title}".`,
+        };
+      },
+    },
+    {
+      id: 'room.set-description',
+      name: 'Set room description',
+      description: 'Update the room description',
+      group: 'Room',
+      keywords: ['room', 'description'],
+      inputSchema: RoomSetDescriptionCommandInput,
+      inputDescription: 'Provide room description text.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {description} = input as RoomSetDescriptionCommandInput;
+        getState().room.setDescription(description);
+        return {
+          success: true,
+          commandId: 'room.set-description',
+          message: 'Updated room description.',
+        };
+      },
+    },
+    {
+      id: 'room.remove-data-source',
+      name: 'Remove data source',
+      description: 'Remove a data source by table name',
+      group: 'Room',
+      keywords: ['room', 'data source', 'remove', 'table'],
+      inputSchema: RoomRemoveDataSourceInput,
+      inputDescription: 'Provide tableName of the data source to remove.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'high',
+        requiresConfirmation: true,
+      },
+      validateInput: (input, {getState}) => {
+        const {tableName} = input as RoomRemoveDataSourceInput;
+        const dataSource = getState().room.config.dataSources.find(
+          (source) => source.tableName === tableName,
+        );
+        if (!dataSource) {
+          throw new Error(
+            `Data source for table "${tableName}" was not found.`,
+          );
+        }
+      },
+      execute: async ({getState}, input) => {
+        const {tableName} = input as RoomRemoveDataSourceInput;
+        await getState().room.removeDataSource(tableName);
+        return {
+          success: true,
+          commandId: 'room.remove-data-source',
+          message: `Removed data source "${tableName}".`,
+        };
+      },
+    },
+    {
+      id: 'room.add-url-data-source',
+      name: 'Add URL data source',
+      description: 'Add a URL data source and start loading it',
+      group: 'Room',
+      keywords: ['room', 'data source', 'url', 'add'],
+      inputSchema: RoomAddUrlDataSourceInput,
+      inputDescription:
+        'Provide url and tableName, with optional httpMethod and headers.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      execute: async ({getState}, input) => {
+        const {url, tableName, httpMethod, headers} =
+          input as RoomAddUrlDataSourceInput;
+        await getState().room.addDataSource({
+          type: DataSourceTypes.enum.url,
+          url,
+          tableName,
+          ...(httpMethod ? {httpMethod} : {}),
+          ...(headers ? {headers} : {}),
+        });
+        return {
+          success: true,
+          commandId: 'room.add-url-data-source',
+          message: `Added URL data source "${tableName}".`,
+        };
+      },
+    },
+    {
+      id: 'room.add-sql-data-source',
+      name: 'Add SQL data source',
+      description: 'Create a data source from a SQL query',
+      group: 'Room',
+      keywords: ['room', 'data source', 'sql', 'query', 'add'],
+      inputSchema: RoomAddSqlDataSourceInput,
+      inputDescription: 'Provide query and tableName.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      validateInput: (input) => {
+        const {query} = input as RoomAddSqlDataSourceInput;
+        if (!query.trim()) {
+          throw new Error('Query cannot be empty.');
+        }
+      },
+      execute: async ({getState}, input) => {
+        const {query, tableName} = input as RoomAddSqlDataSourceInput;
+        await getState().room.addOrUpdateSqlQueryDataSource(tableName, query);
+        return {
+          success: true,
+          commandId: 'room.add-sql-data-source',
+          message: `Added SQL data source "${tableName}".`,
+        };
+      },
+    },
+  ];
 }
 
 export function useBaseRoomShellStore<RS extends RoomShellSliceState, T>(
