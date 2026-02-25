@@ -155,13 +155,6 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     () => processContent(content),
     [content],
   );
-  const headerActions = hasTextContent ? (
-    <CopyButton
-      text={copyableText}
-      tooltipLabel={isAnswer ? 'Copy response' : 'Copy message'}
-      className="border-muted border"
-    />
-  ) : null;
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(
@@ -197,7 +190,6 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       isSuccess={true}
       type={isAnswer ? 'answer' : 'thinking'}
       content={{content, isAnswer}}
-      headerActions={headerActions}
     >
       <div className="prose dark:prose-invert max-w-none text-sm">
         <Markdown

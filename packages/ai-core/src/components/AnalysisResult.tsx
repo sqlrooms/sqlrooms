@@ -1,5 +1,4 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {CopyButton} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
 import {SquareTerminalIcon} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
@@ -90,18 +89,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   );
 
   return (
-    <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
+    <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
         <div className="group/prompt bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
           <div className="flex-1">{analysisResult.prompt}</div>
-          <div className="flex gap-2 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
-            <CopyButton
-              text={analysisResult.prompt}
-              tooltipLabel="Copy message"
-            />
-          </div>
         </div>
       </div>
       <div ref={divRef} className="flex w-full flex-col gap-4">
