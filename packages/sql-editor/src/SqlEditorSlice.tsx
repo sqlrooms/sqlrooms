@@ -611,7 +611,7 @@ export function createSqlEditorSlice({
 type RoomStateWithSqlEditor = RoomShellSliceState & SqlEditorSliceState;
 
 type SqlEditorCommandStoreState = BaseRoomStoreState &
-  DuckDbSliceState &
+  DbSliceState &
   SqlEditorSliceState;
 
 const SqlEditorRunQueryCommandInput = z.object({

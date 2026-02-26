@@ -14,5 +14,8 @@
     "prerelease": "pnpm run build:ui && uv run pytest && uv run ruff check && uv run ruff format --check",
     "release": "pnpm run build && uvx twine upload --skip-existing ./dist/sqlrooms_cli*",
     "test": "uv run pytest -s --log-cli-level=DEBUG"
+  },
+  "dependencies": {
+    "sqlrooms-cli-app": "workspace:*"
   }
 }

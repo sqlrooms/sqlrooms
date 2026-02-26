@@ -11,7 +11,11 @@ import {spawnSync} from 'node:child_process';
  * Any extra args are forwarded to Turbo (for example `--dry`).
  */
 const [target, ...restArgs] = process.argv.slice(2);
-const filter = target ? `${target}...` : '@sqlrooms/*';
+const targetAliases = {
+  cli: 'sqlrooms-cli-python',
+};
+const resolvedTarget = targetAliases[target] ?? target;
+const filter = resolvedTarget ? `${resolvedTarget}...` : '@sqlrooms/*';
 
 const turboArgs = [
   'exec',
