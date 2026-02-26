@@ -7,6 +7,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolGrouping} from '../hooks/useToolGrouping';
+import {isTextPart, isReasoningPart} from '../utils';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
@@ -105,7 +106,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <div className="flex-1">{analysisResult.prompt}</div>
         </div>
       </div>
-      <div ref={divRef} className="flex w-full flex-col gap-4">
+      <div ref={divRef} className="flex w-full flex-col gap-2">
         {enableReasoningBox ? (
           <GroupedMessageParts
             groupedParts={groupedParts}
