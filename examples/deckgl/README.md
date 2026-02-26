@@ -1,7 +1,7 @@
 ### [Deck.gl Geospatial Visualization](https://sqlrooms-deckgl.netlify.app/)
 
 [Try live](https://sqlrooms-deckgl.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/deckgl)
+| [GitHub repo](https://github.com/sqlrooms/examples/tree/main/deckgl)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/deckgl?embed=1&file=src/app.tsx)
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/b507fcea-e5ec-4822-988d-77857944cf48/deploy-status)](https://app.netlify.com/projects/sqlrooms-deckgl/deploys)

@@ -1,7 +1,7 @@
 ### Multi-Room
 
 [Try live](https://sqlrooms-multi-room.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/multi-room)
+| [GitHub repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/multi-room)
 
 <video src="/media/examples/multi-room.mp4" alt="SQLRooms Multi-Room example" width="450" controls loop muted></video>
 

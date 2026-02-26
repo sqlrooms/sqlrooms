@@ -1,6 +1,6 @@
 ### [AI App Builder](https://sqlrooms-ai.netlify.app/)
 
-[Github repo](https://github.com/sqlrooms/examples/tree/main/app-builder)
+[GitHub repo](https://github.com/sqlrooms/examples/tree/main/app-builder)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/app-builder?embed=1&file=src/main.tsx)
 
 <video src="/media/examples/sqlrooms-ai-app-builder-2x.mp4" alt="SQLRooms AI App builder" width="450"  controls loop muted></video>
