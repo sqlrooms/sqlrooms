@@ -60,8 +60,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   // Collect all text content from message parts for copy button
   const allTextContent = uiMessageParts
-    .filter((part) => isTextPart(part) || isReasoningPart(part))
-    .map((part) => part.text)
+    .flatMap((part) =>
+      isTextPart(part) || isReasoningPart(part) ? [part.text] : [],
+    )
     .join('\n\n');
   const hasTextContent = allTextContent.trim().length > 0;
 
