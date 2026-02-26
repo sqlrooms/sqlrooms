@@ -12,19 +12,24 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ### Tailwind v3 to v4
 
-Tailwind is now upgraded from v3 to v4. The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
-
-You can also run the official migration tool directly in your repository: `npx @tailwindcss/upgrade`.
+Tailwind in SQLRooms is now upgraded from v3 to v4. 
 
 For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
 
+You can use the official migration tool directly in your repository: 
+```sh
+npx @tailwindcss/upgrade
+```
 
-Steps:
 
-1. Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+#### Manual steps
 
 
-```css
+The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
+
+##### Step 1
+Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+ ```css
 /* index.css */
 
 @import 'tailwindcss';
@@ -34,13 +39,13 @@ Steps:
 @source '../index.html';
 @source 'src/**/*.{ts,tsx}';
 @source '../node_modules/@sqlrooms/*/dist/';
-
-/* styles */
 ```
 
-1. Remove `tailwind.config.js`
+##### Step 2
+Remove `tailwind.config.js`
 
-2. Remove `@layer base { ... }` from `index.css`
+##### Step 3
+Remove `@layer base { ... }` from `index.css`
 
 Before:
 
@@ -80,7 +85,7 @@ After:
 }
 ```
 
-4. For Vite projects:
+##### Step 4: For Vite projects
 
 - Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
 
@@ -104,7 +109,9 @@ export default defineConfig({
 - Remove `autoprefixer` and `postcss`
 - Remove `postcss.config.js`
 
-5. For NextJS projects update `postcss.config.js`
+##### Step 4: For NextJS projects
+
+Update `postcss.config.js`
 
 Before:
 
