@@ -6,6 +6,14 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
+## 0.28.0
+
+- **Tailwind v4**: SQLRooms now uses Tailwind v4, including the new CSS-first setup that simplifies project styling and configuration ([#324](https://github.com/sqlrooms/sqlrooms/pull/324)).  For Tailwind migration details, jump to the [upgrade guide](/upgrade-guide#tailwind-v3-to-v4).
+- **Cosmos.gl upgrade**: updates the [Cosmos.gl](https://cosmos.gl) integration to include the latest improvements in this powerful graph visualization library  ([#379](https://github.com/sqlrooms/sqlrooms/pull/379))
+- **Command system implementation**: Command Palette UI added to shells (toggle with `Ctrl/Cmd+K`, sidebar button, searchable/grouped commands, per-command shortcuts, JSON input editor, and programmatic open/close controls). A global command system and tooling is also introduced to register, list, validate, and execute commands, with adapters for CLI/MCP and AI tool integrations, plus DB and editor command sets ([#382](https://github.com/sqlrooms/sqlrooms/pull/382))
+
+<video src="/media/whats-new/commands.mp4" alt="SQLRooms command system and command palette" width="450" loop muted controls autoplay></video>
+
 ## 0.27.0
 
 ### `@sqlrooms/data-table`: RowSelection API

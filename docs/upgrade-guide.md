@@ -8,38 +8,31 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
-## 0.28.0-rc.0
+## 0.28.0
 
-- Tailwind upgraded from v3 to v4
+### Tailwind v3 to v4
 
-1. Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+Tailwind in SQLRooms is now upgraded from v3 to v4. 
 
-Before:
+For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
 
-```javascript
-// tailwind.config.js
-import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
-import type {Config} from 'tailwindcss';
-
-const config = {
-  presets: [sqlroomsTailwindPreset()],
-  content: [
-    'src/**/*.{ts,tsx}',
-    '../packages/*/src/**/*.{ts,tsx}',
-    // If you make a precise list of packages used, instead of @sqlrooms/*,
-    // it would help Vite start faster in dev mode
-    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
-    '{./,../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
-  ],
-} satisfies Config;
-
-export default config;
+You can use the official migration tool directly in your repository: 
+```sh
+npx @tailwindcss/upgrade
 ```
 
-After:
 
-```css
+#### Manual steps
+
+
+The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
+
+##### Step 1
+Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+ ```css
 /* index.css */
+
+@import 'tailwindcss';
 
 @import '@sqlrooms/ui/tailwind-preset.css';
 
@@ -50,9 +43,11 @@ After:
 /* styles */
 ```
 
-2. Remove `tailwind.config.js`
+##### Step 2
+Remove `tailwind.config.js`
 
-3. Remove `@layer base { ... }` from `index.css`
+##### Step 3
+Remove `@layer base { ... }` from `index.css`
 
 Before:
 
@@ -92,7 +87,7 @@ After:
 }
 ```
 
-4. For Vite projects:
+##### Step 4: For Vite projects
 
 - Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
 
@@ -116,7 +111,9 @@ export default defineConfig({
 - Remove `autoprefixer` and `postcss`
 - Remove `postcss.config.js`
 
-5. For NextJS projects update `postcss.config.js`
+##### Step 4: For NextJS projects
+
+Update `postcss.config.js`
 
 Before:
 
