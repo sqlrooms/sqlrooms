@@ -44,10 +44,8 @@ After:
 @import '@sqlrooms/ui/tailwind-preset.css';
 
 @source '../index.html';
-@source 'src/**/*.{ts,tsx}';
-@source '../../../packages/*/src/**/*.{ts,tsx}';
-@source '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.js';
-@source '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js';
+@source './**/*.{ts,tsx}';
+@source '../node_modules/@sqlrooms/*/dist/';
 
 /* styles */
 ```

@@ -6,7 +6,7 @@ import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 
-const AppShell = () => {
+const Room = () => {
   const sqlEditor = useDisclosure();
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
@@ -26,4 +26,4 @@ const AppShell = () => {
   );
 };
 
-export default AppShell;
+export default Room;
