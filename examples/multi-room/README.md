@@ -1,10 +1,11 @@
 ### Multi-Room
 
-[Github repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/multi-room)
+[Try live](https://sqlrooms-multi-room.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/multi-room)
 
 <video src="/media/examples/multi-room.mp4" alt="SQLRooms Multi-Room example" width="450" controls loop muted></video>
 
-A multi-room application demonstrating how to manage multiple independent data workspaces with proper DuckDB lifecycle management. Features include:
+A multi-room application demonstrating how to manage multiple independent data workspaces with proper room store lifecycle management. Features include:
 
 - TanStack Router with room list (`/`) and room detail (`/room/:id`) pages
 - Pre-seeded with two sample rooms: Earthquakes and BIXI bike locations

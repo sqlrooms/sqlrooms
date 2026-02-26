@@ -8,53 +8,39 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
-## 0.28.0-rc.0
+## 0.28.0
 
-- Tailwind upgraded from v3 to v4
+### Tailwind v3 to v4
+
+Tailwind is now upgraded from v3 to v4. The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
+
+You can also run the official migration tool directly in your repository: `npx @tailwindcss/upgrade`.
+
+For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
+
+
+Steps:
 
 1. Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
 
-Before:
-
-```javascript
-// tailwind.config.js
-import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
-import type {Config} from 'tailwindcss';
-
-const config = {
-  presets: [sqlroomsTailwindPreset()],
-  content: [
-    'src/**/*.{ts,tsx}',
-    '../packages/*/src/**/*.{ts,tsx}',
-    // If you make a precise list of packages used, instead of @sqlrooms/*,
-    // it would help Vite start faster in dev mode
-    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
-    '{./,../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
-  ],
-} satisfies Config;
-
-export default config;
-```
-
-After:
 
 ```css
 /* index.css */
+
+@import 'tailwindcss';
 
 @import '@sqlrooms/ui/tailwind-preset.css';
 
 @source '../index.html';
 @source 'src/**/*.{ts,tsx}';
-@source '../../../packages/*/src/**/*.{ts,tsx}';
-@source '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.js';
-@source '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js';
+@source '../node_modules/@sqlrooms/*/dist/';
 
 /* styles */
 ```
 
-2. Remove `tailwind.config.js`
+1. Remove `tailwind.config.js`
 
-3. Remove `@layer base { ... }` from `index.css`
+2. Remove `@layer base { ... }` from `index.css`
 
 Before:
 
