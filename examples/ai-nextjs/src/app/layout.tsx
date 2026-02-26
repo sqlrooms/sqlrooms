@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
-import './globals.css';
+import '../globals.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SQLRooms Next.js demo app',
-  description: 'SQLRooms Next.js demo app',
+  title: 'SQLRooms AI Next.js demo app',
+  description: 'Demonstrates the use of the AI module with Next.js',
 };
 
 export default function RootLayout({

@@ -37,8 +37,10 @@ Move content paths from `tailwind.config.js` to global css `index.css`. Also, ad
 @import '@sqlrooms/ui/tailwind-preset.css';
 
 @source '../index.html';
-@source 'src/**/*.{ts,tsx}';
+@source './**/*.{ts,tsx}';
 @source '../node_modules/@sqlrooms/*/dist/';
+
+/* styles */
 ```
 
 ##### Step 2
