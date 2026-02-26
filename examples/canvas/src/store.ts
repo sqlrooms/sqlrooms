@@ -97,7 +97,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createCanvasSlice({
         ai: {
           getApiKey: () => get().app.config.apiKey,
-          defaultModel: 'gpt-4.1-mini',
+          defaultModel: 'gpt-5.2',
         },
       })(set, get, store),
 

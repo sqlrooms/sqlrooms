@@ -1,6 +1,6 @@
 ### AI RAG Example (Retrieval Augmented Generation)
 
-[Github repo](https://github.com/sqlrooms/examples/tree/main/ai-rag)
+[GitHub repo](https://github.com/sqlrooms/examples/tree/main/ai-rag)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/ai-rag?embed=1&file=src/app.tsx)
 
 <img src="/media/examples/rag.webp" alt="SQLRooms AI RAG example" width=450>

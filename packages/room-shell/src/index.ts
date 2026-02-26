@@ -4,6 +4,11 @@
  */
 
 export {RoomShell} from './RoomShell';
+export {RoomShellCommandPalette} from './RoomShellCommandPalette';
+export type {
+  RoomShellCommandPaletteButtonProps,
+  RoomShellCommandPaletteProps,
+} from './RoomShellCommandPalette';
 
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
@@ -35,23 +40,61 @@ export type {RoomPanelInfo} from '@sqlrooms/layout';
 export {
   createBaseRoomSlice,
   createBaseSlice,
+  createCommandSlice,
+  createCommandCliAdapter,
+  createCommandMcpAdapter,
   createPersistHelpers,
+  createRoomCommandExecutionContext,
   createRoomSlice,
   createRoomStore,
   createRoomStoreCreator,
   createSlice,
+  doesCommandRequireInput,
+  exportCommandInputSchema,
+  getCommandInputComponent,
+  getCommandShortcut,
+  hasCommandSliceState,
+  invokeCommandFromStore,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
+  listCommandsFromStore,
   persistSliceConfigs,
+  registerCommandsForOwner,
+  resolveCommandPolicyMetadata,
   RoomStateContext,
   RoomStateProvider,
+  unregisterCommandsForOwner,
   useBaseRoomStore,
+  validateCommandInput,
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 export type {
   BaseRoomStore,
   BaseRoomStoreState,
+  CommandCliAdapter,
+  CommandCliAdapterOptions,
+  CommandMcpAdapter,
+  CommandMcpAdapterOptions,
+  CommandMcpToolDescriptor,
+  CommandSliceState,
   CreateBaseRoomSliceProps,
+  RoomCommandDescriptor,
+  RoomCommandExecuteOutput,
+  RoomCommandInvocation,
+  RoomCommandInvocationOptions,
+  RegisteredRoomCommand,
+  RoomCommand,
+  RoomCommandInputComponent,
+  RoomCommandInputComponentProps,
+  RoomCommandListOptions,
+  RoomCommandPolicyMetadata,
+  RoomCommandPortableSchema,
+  RoomCommandResult,
+  RoomCommandRiskLevel,
+  RoomCommandSurface,
+  RoomCommandUiMetadata,
+  RoomCommandExecutionContext,
+  RoomCommandPredicate,
   RoomStateProviderProps,
   UseRoomStore,
 } from '@sqlrooms/room-store';

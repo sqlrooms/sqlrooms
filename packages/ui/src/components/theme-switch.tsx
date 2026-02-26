@@ -1,11 +1,10 @@
 'use client';
 
-import * as React from 'react';
-import {useTheme} from '../theme/theme-provider';
 import * as SwitchPrimitives from '@radix-ui/react-switch';
-import {SunIcon, MoonIcon} from 'lucide-react';
-import {cn} from '../lib/utils';
+import {MoonIcon, SunIcon} from 'lucide-react';
 import {FC} from 'react';
+import {cn} from '../lib/utils';
+import {useTheme} from '../theme/theme-provider';
 
 /**
  * A theme toggle switch component that allows users to switch between light and dark themes.

@@ -30,10 +30,24 @@ jobs:
         with:
           lfs: true # Enable Git LFS for this checkout
 
-      - name: Setup Git LFS
+      - name: Verify Git LFS media
         run: |
-          git lfs install
-          git lfs pull
+          git lfs ls-files | wc -l
+          du -sh docs/media
+
+      - name: Free disk space on runner
+        run: |
+          echo "Before cleanup:"
+          df -h
+          df -i
+          du -sh /usr/share/dotnet /opt/ghc /usr/local/lib/android 2>/dev/null || true
+
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android || true
+
+          echo "After cleanup:"
+          df -h
+          df -i
+          du -sh /usr/share/dotnet /opt/ghc /usr/local/lib/android 2>/dev/null || true
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -58,11 +72,20 @@ jobs:
 
       - name: List files in packages/duckdb/src
         run: ls -l packages/duckdb/src
-      - name: Build packages
+      - name: Build packages (required for TypeDoc module resolution)
         run: pnpm build
 
-      - name: Build docs
-        run: pnpm docs:build
+      - name: Build API docs (TypeDoc)
+        run: pnpm run docs:clean && pnpm run docs:build:typedoc
+
+      - name: Reclaim disk before VitePress build
+        run: |
+          pnpm run clean
+          df -h
+          df -i
+
+      - name: Build docs site (VitePress)
+        run: pnpm run docs:build:vitepress
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v5

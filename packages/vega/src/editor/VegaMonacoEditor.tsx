@@ -28,7 +28,6 @@ export const VegaMonacoEditor: React.FC<VegaMonacoEditorProps> = ({
   options,
   ...props
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const monacoRef = useRef<any>(null);
   const schemaConfiguredRef = useRef(false);
 
@@ -95,7 +94,6 @@ export const VegaMonacoEditor: React.FC<VegaMonacoEditorProps> = ({
 /**
  * Configure Monaco JSON schema validation for Vega-Lite
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function configureJsonSchema(monaco: any, schema: object) {
   monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
     validate: true,

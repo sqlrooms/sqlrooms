@@ -3,7 +3,7 @@
  * This module provides state management and control functions for the Cosmos graph visualization.
  */
 
-import {Graph, GraphConfigInterface} from '@cosmograph/cosmos';
+import {Graph, GraphConfigInterface} from '@cosmos.gl/graph';
 import {
   createSlice,
   useBaseRoomShellStore,
@@ -190,7 +190,9 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
       setFocusedPoint: (index) => {
         const {graph} = get().cosmos;
         if (!graph) return;
-        graph.setFocusedPointByIndex(index);
+        graph.setConfig({
+          focusedPointIndex: index,
+        });
       },
 
       setZoomLevel: (level) => {

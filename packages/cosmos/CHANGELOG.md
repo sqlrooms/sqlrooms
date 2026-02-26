@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Cosmos.gl upgrade ([#379](https://github.com/sqlrooms/sqlrooms/issues/379)) ([92b3299](https://github.com/sqlrooms/sqlrooms/commit/92b3299f515aeb7b7bc1c5d5967827cb5a11ee55))
+
 # [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
 
 **Note:** Version bump only for package @sqlrooms/cosmos

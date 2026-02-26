@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
+import {GraphConfigInterface} from '@cosmos.gl/graph';
 
 /**
  * Default configuration values for the Cosmos graph visualization.

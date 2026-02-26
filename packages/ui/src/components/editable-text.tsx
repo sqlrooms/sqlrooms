@@ -111,7 +111,7 @@ export const EditableText: FC<{
       }
     }
     return undefined;
-  }, [isEditing, isInternalEditing]);
+  }, [isEditing, isInternalEditing, selectOnFocus]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetValue = useCallback(

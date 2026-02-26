@@ -1,7 +1,7 @@
 ### [Next.js + Recharts Example](https://sqlrooms-nextjs.netlify.app/)
 
 [Try live](https://sqlrooms-nextjs.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
+| [GitHub repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/3b7e32f9-b8f0-4da1-8ae7-6fa7c0fd9589/deploy-status)](https://app.netlify.com/projects/sqlrooms-nextjs/deploys)

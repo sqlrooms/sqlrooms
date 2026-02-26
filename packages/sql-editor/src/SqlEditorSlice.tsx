@@ -9,8 +9,11 @@ import {
 import {
   BaseRoomStoreState,
   createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
   RoomShellSliceState,
   StateCreator,
+  unregisterCommandsForOwner,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
 import {
@@ -22,6 +25,9 @@ import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
+import {z} from 'zod';
+
+const SQL_EDITOR_COMMAND_OWNER = '@sqlrooms/sql-editor';
 
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
@@ -57,6 +63,8 @@ export function isQueryWithResult(
 
 export type SqlEditorSliceState = {
   sqlEditor: {
+    initialize?: () => Promise<void>;
+    destroy?: () => Promise<void>;
     config: SqlEditorSliceConfig;
     // Runtime state
     /**
@@ -180,9 +188,19 @@ export function createSqlEditorSlice({
   return createSlice<
     SqlEditorSliceState,
     BaseRoomStoreState & DbSliceState & SqlEditorSliceState
-  >((set, get) => {
+  >((set, get, store) => {
     return {
       sqlEditor: {
+        initialize: async () => {
+          registerCommandsForOwner(
+            store,
+            SQL_EDITOR_COMMAND_OWNER,
+            createSqlEditorCommands(),
+          );
+        },
+        destroy: async () => {
+          unregisterCommandsForOwner(store, SQL_EDITOR_COMMAND_OWNER);
+        },
         config,
         // Initialize runtime state
         queryResultsById: {},
@@ -591,6 +609,287 @@ export function createSqlEditorSlice({
 }
 
 type RoomStateWithSqlEditor = RoomShellSliceState & SqlEditorSliceState;
+
+type SqlEditorCommandStoreState = BaseRoomStoreState &
+  DuckDbSliceState &
+  SqlEditorSliceState;
+
+const SqlEditorRunQueryCommandInput = z.object({
+  query: z.string().describe('SQL query text to run.'),
+});
+type SqlEditorRunQueryCommandInput = z.infer<
+  typeof SqlEditorRunQueryCommandInput
+>;
+
+const SqlEditorTabIdInput = z.object({
+  queryId: z.string().describe('ID of the query tab.'),
+});
+type SqlEditorTabIdInput = z.infer<typeof SqlEditorTabIdInput>;
+
+const SqlEditorRenameTabInput = z.object({
+  queryId: z.string().describe('ID of the query tab to rename.'),
+  name: z.string().min(1).describe('New tab name.'),
+});
+type SqlEditorRenameTabInput = z.infer<typeof SqlEditorRenameTabInput>;
+
+const SqlEditorResultLimitInput = z.object({
+  limit: z.number().int().positive().describe('Row limit for query results.'),
+});
+type SqlEditorResultLimitInput = z.infer<typeof SqlEditorResultLimitInput>;
+
+function createSqlEditorCommands(): RoomCommand<SqlEditorCommandStoreState>[] {
+  const ensureQueryTabExists = (
+    state: SqlEditorCommandStoreState,
+    queryId: string,
+  ) => {
+    if (!state.sqlEditor.config.queries.some((query) => query.id === queryId)) {
+      throw new Error(`Unknown query tab "${queryId}".`);
+    }
+  };
+
+  return [
+    {
+      id: 'sql-editor.run-current-query',
+      name: 'Run current query',
+      description: 'Execute the selected SQL query tab',
+      group: 'SQL Editor',
+      keywords: ['sql', 'run', 'execute', 'query'],
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      ui: {
+        shortcut: 'Mod+Enter',
+      },
+      isEnabled: ({getState}) => {
+        const state = getState();
+        const selectedQueryId = state.sqlEditor.config.selectedQueryId;
+        const queryResult = state.sqlEditor.queryResultsById[selectedQueryId];
+        return (
+          queryResult?.status !== 'loading' &&
+          state.sqlEditor.getCurrentQuery().trim().length > 0
+        );
+      },
+      execute: async ({getState}) => {
+        await getState().sqlEditor.parseAndRunCurrentQuery();
+        return {
+          success: true,
+          commandId: 'sql-editor.run-current-query',
+          message: 'Executed current query.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.run-query',
+      name: 'Run query text',
+      description: 'Execute an explicitly provided SQL query',
+      group: 'SQL Editor',
+      keywords: ['sql', 'run', 'execute', 'query', 'text'],
+      inputSchema: SqlEditorRunQueryCommandInput,
+      inputDescription: 'Provide query SQL to execute.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      execute: async ({getState}, input) => {
+        const {query} = input as SqlEditorRunQueryCommandInput;
+        await getState().sqlEditor.parseAndRunQuery(query);
+        return {
+          success: true,
+          commandId: 'sql-editor.run-query',
+          message: 'Executed SQL query.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.abort-current-query',
+      name: 'Abort current query',
+      description: 'Cancel the currently running SQL query',
+      group: 'SQL Editor',
+      keywords: ['sql', 'abort', 'cancel', 'query'],
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      isEnabled: ({getState}) => {
+        const state = getState();
+        const selectedQueryId = state.sqlEditor.config.selectedQueryId;
+        return (
+          state.sqlEditor.queryResultsById[selectedQueryId]?.status ===
+          'loading'
+        );
+      },
+      execute: ({getState}) => {
+        getState().sqlEditor.abortCurrentQuery();
+        return {
+          success: true,
+          commandId: 'sql-editor.abort-current-query',
+          message: 'Abort signal sent to current query.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.create-query-tab',
+      name: 'Create query tab',
+      description: 'Open a new SQL query tab',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'new', 'query'],
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'low',
+      },
+      execute: ({getState}) => {
+        const newTab = getState().sqlEditor.createQueryTab();
+        return {
+          success: true,
+          commandId: 'sql-editor.create-query-tab',
+          message: `Created query tab "${newTab.name}".`,
+          data: {
+            queryId: newTab.id,
+          },
+        };
+      },
+    },
+    {
+      id: 'sql-editor.select-query-tab',
+      name: 'Select query tab',
+      description: 'Switch active SQL query tab by ID',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'select', 'switch'],
+      inputSchema: SqlEditorTabIdInput,
+      inputDescription: 'Provide queryId to activate.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        ensureQueryTabExists(
+          getState(),
+          (input as SqlEditorTabIdInput).queryId,
+        );
+      },
+      execute: ({getState}, input) => {
+        const {queryId} = input as SqlEditorTabIdInput;
+        getState().sqlEditor.setSelectedQueryId(queryId);
+        return {
+          success: true,
+          commandId: 'sql-editor.select-query-tab',
+          message: `Selected query tab "${queryId}".`,
+        };
+      },
+    },
+    {
+      id: 'sql-editor.rename-query-tab',
+      name: 'Rename query tab',
+      description: 'Rename a SQL query tab by ID',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'rename'],
+      inputSchema: SqlEditorRenameTabInput,
+      inputDescription: 'Provide queryId and name.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        ensureQueryTabExists(
+          getState(),
+          (input as SqlEditorRenameTabInput).queryId,
+        );
+      },
+      execute: ({getState}, input) => {
+        const {queryId, name} = input as SqlEditorRenameTabInput;
+        getState().sqlEditor.renameQueryTab(queryId, name);
+        return {
+          success: true,
+          commandId: 'sql-editor.rename-query-tab',
+          message: `Renamed query tab "${queryId}".`,
+        };
+      },
+    },
+    {
+      id: 'sql-editor.delete-query-tab',
+      name: 'Delete query tab',
+      description: 'Delete a SQL query tab by ID',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'delete', 'remove'],
+      inputSchema: SqlEditorTabIdInput,
+      inputDescription: 'Provide queryId to delete.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'medium',
+        requiresConfirmation: true,
+      },
+      validateInput: (input, {getState}) => {
+        const state = getState();
+        ensureQueryTabExists(state, (input as SqlEditorTabIdInput).queryId);
+        if (state.sqlEditor.config.queries.length <= 1) {
+          throw new Error('Cannot delete the last remaining query tab.');
+        }
+      },
+      execute: ({getState}, input) => {
+        const {queryId} = input as SqlEditorTabIdInput;
+        getState().sqlEditor.deleteQueryTab(queryId);
+        return {
+          success: true,
+          commandId: 'sql-editor.delete-query-tab',
+          message: `Deleted query tab "${queryId}".`,
+        };
+      },
+    },
+    {
+      id: 'sql-editor.clear-query-results',
+      name: 'Clear query results',
+      description: 'Clear all cached SQL query results',
+      group: 'SQL Editor',
+      keywords: ['sql', 'clear', 'results'],
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      isEnabled: ({getState}) =>
+        Object.keys(getState().sqlEditor.queryResultsById).length > 0,
+      execute: ({getState}) => {
+        getState().sqlEditor.clearQueryResults();
+        return {
+          success: true,
+          commandId: 'sql-editor.clear-query-results',
+          message: 'Cleared query results.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.set-result-limit',
+      name: 'Set query result limit',
+      description: 'Set max rows returned for query result previews',
+      group: 'SQL Editor',
+      keywords: ['sql', 'limit', 'rows', 'result'],
+      inputSchema: SqlEditorResultLimitInput,
+      inputDescription: 'Provide positive integer limit.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {limit} = input as SqlEditorResultLimitInput;
+        getState().sqlEditor.setQueryResultLimit(limit);
+        return {
+          success: true,
+          commandId: 'sql-editor.set-result-limit',
+          message: `Set query result limit to ${limit}.`,
+        };
+      },
+    },
+  ];
+}
 
 export function useStoreWithSqlEditor<T>(
   selector: (state: RoomStateWithSqlEditor) => T,

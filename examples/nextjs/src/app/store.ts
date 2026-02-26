@@ -11,7 +11,7 @@ import {MapIcon} from 'lucide-react';
 /**
  * Room state
  */
-export type RoomState = RoomShellSliceState & SqlEditorSliceState;
+type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 /**
  * Create a customized room store
