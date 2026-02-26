@@ -8,6 +8,26 @@
     "start": "next start",
     "lint": "next lint"
   },
+  "knip": {
+    "entry": [
+      "src/app/page.tsx",
+      "src/app/store.ts",
+      "src/components/app-shell-client.tsx",
+      "src/components/room.tsx",
+      "src/components/main-view.tsx",
+      "postcss.config.mjs"
+    ],
+    "ignoreDependencies": [
+      "@sqlrooms/duckdb",
+      "@sqlrooms/recharts",
+      "@sqlrooms/room-shell",
+      "@sqlrooms/sql-editor",
+      "@sqlrooms/ui"
+    ],
+    "ignore": [
+      "src/globals.css"
+    ]
+  },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/recharts": "workspace:*",

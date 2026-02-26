@@ -65,12 +65,12 @@
     },
     "examples/*nextjs*": {
       "entry": [
-        "app/page.tsx",
-        "app/api/**/*.ts",
+        "src/app/page.tsx",
+        "src/app/api/**/*.ts",
         "postcss.config.mjs"
       ],
       "ignore": [
-        "app/globals.css"
+        "src/globals.css"
       ]
     },
     "examples/canvas": {
