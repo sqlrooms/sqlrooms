@@ -72,8 +72,20 @@ jobs:
 
       - name: List files in packages/duckdb/src
         run: ls -l packages/duckdb/src
-      - name: Build docs
-        run: pnpm docs:build
+      - name: Build packages (required for TypeDoc module resolution)
+        run: pnpm build
+
+      - name: Build API docs (TypeDoc)
+        run: pnpm run docs:clean && pnpm run docs:build:typedoc
+
+      - name: Reclaim disk before VitePress build
+        run: |
+          pnpm run clean
+          df -h
+          df -i
+
+      - name: Build docs site (VitePress)
+        run: pnpm run docs:build:vitepress
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v5
