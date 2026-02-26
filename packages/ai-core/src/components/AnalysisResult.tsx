@@ -1,4 +1,5 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
+import {CopyButton} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
 import {SquareTerminalIcon} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
@@ -55,6 +56,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     uiMessages,
     analysisResult.id,
   );
+
+  // Collect all text content from message parts for copy button
+  const allTextContent = uiMessageParts
+    .filter((part) => isTextPart(part) || isReasoningPart(part))
+    .map((part) => part.text)
+    .join('\n\n');
+  const hasTextContent = allTextContent.trim().length > 0;
 
   // Measure div width using ResizeObserver
   useEffect(() => {
@@ -120,6 +128,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           ) : (
             <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
           ))}
+        {hasTextContent && (
+          <div className="flex justify-start">
+            <CopyButton
+              text={allTextContent}
+              tooltipLabel="Copy entire response"
+              className="border-muted border"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
