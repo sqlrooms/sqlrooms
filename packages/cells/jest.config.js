@@ -9,5 +9,10 @@ export default {
     '^@sqlrooms/sql-editor$': '<rootDir>/__tests__/mocks/sql-editor.js',
     '^@openassistant/utils$':
       '<rootDir>/__tests__/mocks/openassistant-utils.js',
+    '^react-mosaic-component$':
+      '<rootDir>/__tests__/mocks/react-mosaic-component.js',
+    '^rdndmb-html5-to-touch$':
+      '<rootDir>/__tests__/mocks/rdndmb-html5-to-touch.js',
+    '\\.(css|less|sass|scss)$': '<rootDir>/__tests__/mocks/style.js',
   },
 };
