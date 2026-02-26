@@ -1,10 +1,10 @@
 'use client';
 
-import {RoomStateProvider} from '@sqlrooms/room-store';
 import {roomStore} from '@/app/store';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 import {MainView} from './main-view';
 
-const AppShell = () => {
+const Room = () => {
   return (
     <RoomStateProvider roomStore={roomStore}>
       <MainView />
@@ -12,4 +12,4 @@ const AppShell = () => {
   );
 };
 
-export default AppShell;
+export default Room;
