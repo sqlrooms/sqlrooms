@@ -291,7 +291,8 @@ export {
 export {Tree, type TreeNodeData} from './components/tree';
 
 // Hooks
-export {useToast, toast, reducer} from './hooks/use-toast';
+export {useToast, toast as legacyToast, reducer} from './hooks/use-toast';
+export {toast, type ExternalToast} from 'sonner';
 
 export {
   useAspectRatioDimensions,
