@@ -25,7 +25,7 @@ import {CornerDownRightIcon} from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
+import type {CellContainerProps, SqlCell} from '../types';
 import {getEffectiveResultName, isValidSqlIdentifier} from '../utils';
 import {SqlCellRunButton} from './SqlCellRunButton';
 
@@ -85,7 +85,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
       updateCell(id, (c) =>
         produce(c, (draft) => {
           if (draft.type === 'sql') {
-            (draft.data as SqlCellData).connectorId = connectorId || undefined;
+            draft.data.connectorId = connectorId || undefined;
           }
         }),
       );
@@ -130,7 +130,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   );
 
   const effectiveResultName = getEffectiveResultName(
-    cell.data as SqlCellData,
+    cell.data,
     convertToValidColumnOrTableName,
   );
   const explicitResultName = cell.data.resultName || '';
@@ -160,10 +160,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
         const downstreamCell = cellsData[cellId];
         return {
           id: cellId,
-          label:
-            (
-              downstreamCell?.data as {title?: string} | undefined
-            )?.title?.trim() || 'Untitled',
+          label: downstreamCell?.data?.title?.trim() || 'Untitled',
         };
       }),
     [cellsData, downstreamCellIds],
