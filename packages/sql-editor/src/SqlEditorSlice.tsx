@@ -640,7 +640,7 @@ function createSqlEditorCommands(): RoomCommand<SqlEditorCommandStoreState>[] {
         riskLevel: 'medium',
       },
       ui: {
-        shortcut: 'Mod+Enter',
+        keystrokes: 'Mod+Enter',
       },
       isEnabled: ({getState}) => {
         const state = getState();
