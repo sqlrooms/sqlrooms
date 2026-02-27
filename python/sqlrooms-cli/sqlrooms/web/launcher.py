@@ -9,13 +9,12 @@ import threading
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict
-import base64
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from diskcache import Cache
@@ -359,8 +358,9 @@ class SqlroomsHttpServer:
                 with pa.ipc.new_stream(sink, table.schema) as writer:
                     writer.write_table(table)
                 raw = sink.getvalue().to_pybytes()
-                # JSON-safe transport for now; frontend bridge may decode when needed.
-                return {"arrowBase64": base64.b64encode(raw).decode("ascii")}
+                return Response(
+                    content=raw, media_type="application/vnd.apache.arrow.stream"
+                )
             except Exception as exc:
                 return JSONResponse({"error": str(exc)}, status_code=500)
 
