@@ -133,7 +133,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         canvas: CanvasSliceConfig,
-        webcontainer: WebContainerSliceConfig,
+        webContainer: WebContainerSliceConfig,
         appProject: AppBuilderProjectConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
