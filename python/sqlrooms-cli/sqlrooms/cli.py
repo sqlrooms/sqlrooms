@@ -47,7 +47,6 @@ def export_project(
     """
     out = Path(out_dir).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
-    out_resolved = out.resolve()
     con = duckdb.connect(db_path)
     try:
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", meta_namespace):
@@ -84,15 +83,10 @@ def export_project(
         config = app_project.get("config") or {}
         apps_by_sheet = config.get("appsBySheetId") or {}
         exported = 0
-        for sheet_id, app in apps_by_sheet.items():
-            files = (app or {}).get("files") or {}
+        for sheet_id, sheet_app in apps_by_sheet.items():
+            files = (sheet_app or {}).get("files") or {}
             if not isinstance(files, dict) or len(files) == 0:
                 continue
-            name = str((app or {}).get("name") or sheet_id)
-            safe_name = "".join(
-                ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
-            ).strip()
-            safe_name = safe_name.replace(" ", "-") or sheet_id
             safe_sheet_id = "".join(
                 ch for ch in str(sheet_id) if ch.isalnum() or ch in ("-", "_")
             )
@@ -100,23 +94,28 @@ def export_project(
                 safe_sheet_id = hashlib.sha1(
                     str(sheet_id).encode("utf-8")
                 ).hexdigest()[:8]
+            name = str((sheet_app or {}).get("name") or sheet_id)
+            safe_name = "".join(
+                ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
+            ).strip()
+            safe_name = safe_name.replace(" ", "-") or safe_sheet_id
             root = out / f"{safe_name}-{safe_sheet_id[:8]}"
-            root.mkdir(parents=True, exist_ok=True)
             root_resolved = root.resolve()
             try:
-                root_resolved.relative_to(out_resolved)
+                root_resolved.relative_to(out)
             except ValueError:
                 typer.echo(
                     f"Unsafe export root path resolved outside output dir: {root_resolved}",
                     err=True,
                 )
                 raise typer.Exit(code=1)
+            root.mkdir(parents=True, exist_ok=True)
             meta = {
                 "sheetId": sheet_id,
                 "name": name,
-                "prompt": (app or {}).get("prompt", ""),
-                "template": (app or {}).get("template", ""),
-                "updatedAt": (app or {}).get("updatedAt"),
+                "prompt": (sheet_app or {}).get("prompt", ""),
+                "template": (sheet_app or {}).get("template", ""),
+                "updatedAt": (sheet_app or {}).get("updatedAt"),
             }
             (root / "app.json").write_text(
                 json.dumps(meta, indent=2), encoding="utf-8"

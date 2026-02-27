@@ -74,8 +74,7 @@ def _is_select_only_sql(sql: str) -> bool:
     # One statement only.
     if ";" in normalized:
         return False
-    lower = normalized.lower()
-    return lower.startswith("select ") or lower.startswith("with ")
+    return bool(re.match(r"^(select|with)\s", normalized, re.IGNORECASE))
 
 
 def _references_internal_namespace(sql: str, namespace: str) -> bool:
@@ -406,14 +405,8 @@ class SqlroomsHttpServer:
             try:
                 data = await db_async.run_db_task(_run)
             except Exception as exc:
-                return JSONResponse(
-                    {
-                        "type": "json",
-                        "data": {"error": "query_error", "message": str(exc)},
-                    },
-                    status_code=400,
-                )
-            return {"type": "json", "data": data}
+                return JSONResponse({"error": str(exc)}, status_code=400)
+            return data
 
         if self.static_dir.exists():
             app.mount(

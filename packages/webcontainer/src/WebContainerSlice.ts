@@ -548,7 +548,7 @@ export function createWebContainerSlice(props?: {
           nextActiveFromRequest ??
           nextActiveFromPrev ??
           preservedOpened[0]?.path ??
-          '/src/App.jsx';
+          getFirstFilePathFromTree(filesTree);
 
         set((s) =>
           produce(s, (draft) => {
@@ -560,13 +560,19 @@ export function createWebContainerSlice(props?: {
 
         if (instance) {
           await instance.mount(filesTree);
-          if (pathExistsInTree(nextActive)) {
+          if (nextActive && pathExistsInTree(nextActive)) {
             await get().webContainer.openFile(nextActive);
           }
           return;
         }
       },
 
+      /**
+       * Execute a command in the resolved project root.
+       *
+       * Note: WebContainer process output is currently treated as a single merged stream,
+       * so `stderr` is not captured separately and is returned as an empty string.
+       */
       async runCommand(command, args = [], opts) {
         const instance = get().webContainer.instance;
         if (!instance) {
@@ -576,7 +582,7 @@ export function createWebContainerSlice(props?: {
 
         const startedAt = Date.now();
         let stdout = '';
-        const stderr = ''; // TODO: Implement stderr capture
+        const stderr = '';
         const captureOutput = opts?.captureOutput !== false;
 
         set((state) =>

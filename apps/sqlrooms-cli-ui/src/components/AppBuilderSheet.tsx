@@ -319,16 +319,5 @@ export default function App() {
   const files = ensureRunnableViteScaffold([
     {path: '/src/App.jsx', content: appFile},
   ]).files;
-  const required = new Set(files.map((f) => f.path));
-  const missing = [
-    '/index.html',
-    '/src/main.jsx',
-    '/src/App.jsx',
-    '/package.json',
-  ].filter((p) => !required.has(p));
-  if (missing.length === 0) {
-    return {status: 'ok', attempts, errors, files};
-  }
-  errors.push(...missing.map((m) => `missing required file: ${m}`));
-  return {status: 'error', attempts, errors, files};
+  return {status: 'ok', attempts, errors, files};
 }
