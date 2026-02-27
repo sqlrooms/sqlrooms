@@ -147,6 +147,9 @@ function ArrowTableSchemaExample() {
 ### Using the Store for Direct Database Operations
 
 ```tsx
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
+
 function DatabaseManager() {
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
@@ -183,10 +186,10 @@ function DatabaseManager() {
 
   return (
     <div>
-      <button onClick={handleCreateTable}>Create Filtered Users Table</button>
-      <button onClick={handleAddTable}>Add New Users Table</button>
-      <button onClick={handleDropTable}>Drop Old Table</button>
-      <button onClick={refreshTableSchemas}>Refresh Schemas</button>
+      <Button onClick={handleCreateTable}>Create Filtered Users Table</Button>
+      <Button onClick={handleAddTable}>Add New Users Table</Button>
+      <Button onClick={handleDropTable}>Drop Old Table</Button>
+      <Button onClick={refreshTableSchemas}>Refresh Schemas</Button>
 
       <h3>Available Tables:</h3>
       <ul>
@@ -205,18 +208,32 @@ function DatabaseManager() {
 
 ```tsx
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
-// Support for database.schema.table naming
-const qualifiedTable = makeQualifiedTableName({
-  database: 'mydb',
-  schema: 'public',
-  table: 'users',
-});
+function QualifiedTableOps() {
+  const createTableFromQuery = useRoomStore(
+    (state) => state.db.createTableFromQuery,
+  );
+  const dropTable = useRoomStore((state) => state.db.dropTable);
+  const checkTableExists = useRoomStore((state) => state.db.checkTableExists);
 
-// Use with table operations
-await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
-await dropTable(qualifiedTable);
-const tableExists = await checkTableExists(qualifiedTable);
+  const run = async () => {
+    // Support for database.schema.table naming
+    const qualifiedTable = makeQualifiedTableName({
+      database: 'mydb',
+      schema: 'public',
+      table: 'users',
+    });
+
+    await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
+    const tableExists = await checkTableExists(qualifiedTable);
+    console.log('Table exists after create:', tableExists);
+    await dropTable(qualifiedTable);
+  };
+
+  return <Button onClick={() => void run()}>Run qualified table ops</Button>;
+}
 ```
 
 ## Loading Data from Files
@@ -225,6 +242,8 @@ const tableExists = await checkTableExists(qualifiedTable);
 
 ```tsx
 import {loadCSV, loadJSON, loadParquet, loadObjects} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function DataLoader() {
   const getConnector = useRoomStore((state) => state.db.getConnector);
@@ -263,7 +282,7 @@ function DataLoader() {
           if (e.target.files?.[0]) handleLoadCSV(e.target.files[0]);
         }}
       />
-      <button onClick={handleLoadObjects}>Load Sample Data</button>
+      <Button onClick={handleLoadObjects}>Load Sample Data</Button>
     </div>
   );
 }
@@ -272,21 +291,32 @@ function DataLoader() {
 ### Using the Connector Directly
 
 ```tsx
+import * as arrow from 'apache-arrow';
+import {useRoomStore} from './store';
+
 function AdvancedDataLoader() {
-  const connector = useRoomStore((state) => state.db.connector);
+  const getConnector = useRoomStore((state) => state.db.getConnector);
 
   const handleFileUpload = async (file: File) => {
-    // Load file directly using the connector
-    await connector.loadFile(file, 'uploaded_data', {
-      method: 'auto', // Auto-detect file type
-      replace: true,
-      temp: false,
-    });
+    try {
+      const connector = await getConnector();
+      await connector.loadFile(file, 'uploaded_data', {
+        method: 'auto', // Auto-detect file type
+        replace: true,
+        temp: false,
+      });
+    } catch (error) {
+      console.error('Failed to load uploaded file:', error);
+    }
   };
 
   const handleLoadArrowTable = async (arrowTable: arrow.Table) => {
-    // Load Arrow table directly
-    await connector.loadArrow(arrowTable, 'arrow_data');
+    try {
+      const connector = await getConnector();
+      await connector.loadArrow(arrowTable, 'arrow_data');
+    } catch (error) {
+      console.error('Failed to load Arrow table:', error);
+    }
   };
 
   return (
@@ -294,7 +324,9 @@ function AdvancedDataLoader() {
       type="file"
       accept=".csv,.json,.parquet"
       onChange={(e) => {
-        if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+        if (e.target.files?.[0]) {
+          void handleFileUpload(e.target.files[0]);
+        }
       }}
     />
   );
@@ -305,6 +337,7 @@ function AdvancedDataLoader() {
 
 ```tsx
 import {useExportToCsv} from '@sqlrooms/duckdb';
+import {Button} from '@sqlrooms/ui';
 
 function ExportButton() {
   const {exportToCsv} = useExportToCsv();
@@ -313,7 +346,7 @@ function ExportButton() {
     await exportToCsv('SELECT * FROM users ORDER BY name', 'users_export.csv');
   };
 
-  return <button onClick={handleExport}>Export to CSV</button>;
+  return <Button onClick={handleExport}>Export to CSV</Button>;
 }
 ```
 
@@ -322,9 +355,11 @@ function ExportButton() {
 ### Basic direct usage
 
 ```tsx
+import {roomStore} from './store';
+
 async function executeCustomQuery() {
-  // Grab the connector directly (no React hook necessary inside plain TS)
-  const connector = useRoomStore((state) => state.db.connector);
+  // Plain TS/JS usage: read connector from the store API directly.
+  const connector = roomStore.getState().db.connector;
 
   // QueryHandle is promise-like – await it directly
   const result = await connector.query('SELECT COUNT(*) AS count FROM users');
@@ -338,12 +373,14 @@ async function executeCustomQuery() {
 ### Cancellation examples
 
 ```tsx
+import {roomStore} from './store';
+
 async function cancelExample() {
-  const connector = useRoomStore((state) => state.db.connector);
+  const connector = roomStore.getState().db.connector;
 
   // 1. Manual cancel via the handle
   const query = connector.query('SELECT * FROM large_table');
-  setTimeout(() => h.cancel(), 2000); // cancel after 2 s
+  setTimeout(() => query.cancel(), 2000); // cancel after 2 s
   await query; // throws if cancelled
 
   // 2. Composable cancellation – many queries, one controller
@@ -358,6 +395,8 @@ async function cancelExample() {
 ### Advanced operations with the Zustand store
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function AdvancedOperations() {
   const executeSql = useRoomStore((s) => s.db.executeSql);
   const sqlSelectToJson = useRoomStore((s) => s.db.sqlSelectToJson);
@@ -380,7 +419,7 @@ function AdvancedOperations() {
     console.log('Table exists:', exists);
   };
 
-  return <button onClick={handleAdvancedQuery}>Run Advanced Operations</button>;
+  return <Button onClick={handleAdvancedQuery}>Run Advanced Operations</Button>;
 }
 ```
 

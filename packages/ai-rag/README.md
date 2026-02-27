@@ -63,6 +63,46 @@ const results = await store
 console.log(results);
 ```
 
+## RAG Tool Usage (AI Integration)
+
+Use `createRagTool()` to expose semantic search as an AI tool in your `createAiSlice()` configuration.
+
+```typescript
+import {createRagSlice, createRagTool} from '@sqlrooms/ai-rag';
+import {createAiSlice, createDefaultAiTools} from '@sqlrooms/ai';
+import {createOpenAIEmbeddingProvider} from './embeddings';
+
+// Create RAG slice (same store)
+...createRagSlice({
+  embeddingsDatabases: [
+    {
+      databaseFilePathOrUrl:
+        window.location.origin + '/rag/duckdb_docs_openai.duckdb',
+      databaseName: 'duckdb_docs',
+      embeddingProvider: createOpenAIEmbeddingProvider(
+        'text-embedding-3-small',
+        1536,
+        () => get().aiSettings.config.providers?.['openai']?.apiKey,
+      ),
+      embeddingDimensions: 1536,
+    },
+  ],
+})(set, get, store),
+
+// Register RAG tool in AI tools map
+...createAiSlice({
+  tools: {
+    ...createDefaultAiTools(store, {query: {}}),
+    search_documentation: createRagTool(),
+  },
+})(set, get, store),
+
+// Make store available globally for rag tool execution
+(globalThis as any).__ROOM_STORE__ = roomStore;
+```
+
+This is the same pattern used in `examples/ai-rag/src/store.ts`.
+
 ## API Reference
 
 ### `createRagSlice(options)`

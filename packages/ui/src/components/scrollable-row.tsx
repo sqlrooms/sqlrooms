@@ -28,15 +28,6 @@ export function ScrollableRow({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const updateScrollState = () => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const {scrollLeft, scrollWidth, clientWidth} = container;
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-  };
-
   const scrollBy = (direction: 'left' | 'right') => {
     const container = containerRef.current;
     if (!container) return;
@@ -48,6 +39,15 @@ export function ScrollableRow({
   };
 
   useEffect(() => {
+    const updateScrollState = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const {scrollLeft, scrollWidth, clientWidth} = container;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
+    };
+
     const container = containerRef.current;
     if (!container) return;
 

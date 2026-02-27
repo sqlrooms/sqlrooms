@@ -16,6 +16,7 @@ export const Room = ({mdToken}: RoomProps) => {
   return (
     <RoomShell className="h-screen" roomStore={roomStoreRef.current}>
       <RoomShell.Sidebar>
+        <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />

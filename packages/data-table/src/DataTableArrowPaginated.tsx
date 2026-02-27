@@ -3,7 +3,9 @@ import {FC, useMemo, useState} from 'react';
 import DataTablePaginated, {
   DataTablePaginatedProps,
 } from './DataTablePaginated';
-import useArrowDataTable, {ArrowDataTableValueFormatter} from './useArrowDataTable';
+import useArrowDataTable, {
+  ArrowDataTableValueFormatter,
+} from './useArrowDataTable';
 import {PaginationState} from '@tanstack/react-table';
 
 export type DataTableArrowPaginatedProps = {

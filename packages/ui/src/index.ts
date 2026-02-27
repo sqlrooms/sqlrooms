@@ -291,7 +291,8 @@ export {
 export {Tree, type TreeNodeData} from './components/tree';
 
 // Hooks
-export {useToast, toast, reducer} from './hooks/use-toast';
+export {useToast, toast as legacyToast, reducer} from './hooks/use-toast';
+export {toast, type ExternalToast} from 'sonner';
 
 export {
   useAspectRatioDimensions,
@@ -309,9 +310,6 @@ export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 // Utilities
 export {cn} from './lib/utils';
 export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
-
-// Tailwind preset
-export {sqlroomsTailwindPreset} from './tailwind-preset';
 
 // Theme
 export {ThemeProvider, useTheme} from './theme/theme-provider';

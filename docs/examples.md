@@ -10,7 +10,7 @@ All example applications are available in our [Examples Repository](https://gith
 
 ### [Getting Started](https://github.com/sqlrooms/examples/tree/main/get-started)
 
-[Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
+[GitHub repo](https://github.com/sqlrooms/examples/tree/main/get-started)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
 
 <!-- <img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450> -->
@@ -29,6 +29,8 @@ npx giget gh:sqlrooms/examples/get-started my-new-app/
 ```
 
 <!--@include: ../examples/query/README.md-->
+
+<!--@include: ../examples/multi-room/README.md-->
 
 ## AI Assistant
 

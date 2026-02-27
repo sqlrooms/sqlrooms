@@ -1,10 +1,6 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {
-  createTypedRowAccessor,
-  DuckDbConnector,
-  escapeVal,
-} from '@sqlrooms/duckdb';
+import {createTypedRowAccessor, DuckDbConnector, escapeVal} from '@sqlrooms/db';
 import {memoizeOnce} from '@sqlrooms/utils';
 
 const getFunctionSuggestionsImpl = async (

@@ -1,4 +1,4 @@
-import {AiSettingsPanel, Chat, useStoreWithAiSettings} from '@sqlrooms/ai';
+import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
 import {
   Button,
   Dialog,
@@ -23,9 +23,7 @@ export const MainView: React.FC = () => {
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const settingsPanelOpen = useDisclosure();
-  const updateProvider = useStoreWithAiSettings(
-    (s) => s.aiSettings.updateProvider,
-  );
+  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -46,7 +44,7 @@ export const MainView: React.FC = () => {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  className="flex items-center justify-center transition-colors hover:bg-accent"
+                  className="hover:bg-accent flex items-center justify-center transition-colors"
                   title="Configuration"
                   size="sm"
                 >
@@ -61,7 +59,7 @@ export const MainView: React.FC = () => {
                   defaultValue="providers"
                   className="flex min-h-0 flex-1 flex-col"
                 >
-                  <TabsList className="grid w-full flex-shrink-0 grid-cols-3">
+                  <TabsList className="grid w-full shrink-0 grid-cols-3">
                     <TabsTrigger value="providers">Providers</TabsTrigger>
                     <TabsTrigger value="models">Models</TabsTrigger>
                     <TabsTrigger value="parameters">Parameters</TabsTrigger>
@@ -90,7 +88,7 @@ export const MainView: React.FC = () => {
           )}
         </div>
 
-        <div className="print-container flex-grow overflow-auto">
+        <div className="print-container grow overflow-auto">
           {isDataAvailable ? (
             <Chat.Messages
               key={currentSessionId} // will prevent scrolling to bottom after changing current session
@@ -98,7 +96,7 @@ export const MainView: React.FC = () => {
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">
               <SkeletonPane className="p-4" />
-              <p className="mt-4 text-muted-foreground">Loading database...</p>
+              <p className="text-muted-foreground mt-4">Loading database...</p>
             </div>
           )}
         </div>

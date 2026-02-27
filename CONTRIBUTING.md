@@ -5,7 +5,7 @@ We want to make contributing to this project as easy and transparent as possible
 ## Code of Conduct
 
 SQLRooms has a Code of Conduct that we expect project participants to adhere
-to. Please read [the full text](https://github.com/sqlrooms/sqlrooms/CODE_OF_CONDUCT.md) so that you can understand
+to. Please read [the full text](https://github.com/sqlrooms/sqlrooms/blob/HEAD/CODE_OF_CONDUCT.md) so that you can understand
 what actions will and will not be tolerated.
 
 ## Our Development Process

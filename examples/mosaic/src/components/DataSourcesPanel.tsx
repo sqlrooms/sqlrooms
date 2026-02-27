@@ -35,7 +35,7 @@ const DataSourcesPanel: FC = () => {
                     <h3 className="ml-1 text-xs uppercase">Files</h3>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-[5px] pb-5 pt-1">
+                <AccordionContent className="px-1.25 pt-1 pb-5">
                   <FileDataSourcesPanel />
                 </AccordionContent>
               </AccordionItem>
@@ -47,7 +47,7 @@ const DataSourcesPanel: FC = () => {
                     <h3 className="ml-1 text-xs uppercase">Tables</h3>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-[5px] pb-5 pt-1">
+                <AccordionContent className="px-1.25 pt-1 pb-5">
                   <TablesListPanel />
                 </AccordionContent>
               </AccordionItem>

@@ -39,6 +39,8 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
   Data extends object,
 >({data, columns, isPreview}: DataTableProps<Data>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  // TanStack's table hook returns non-memoizable functions by design.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns,
     data: data as Data[],
@@ -74,14 +76,14 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   <TableHead
-                    className={`bg-background sticky left-0 top-0 z-20 w-auto whitespace-nowrap border-r py-2 text-center`}
+                    className={`bg-background sticky top-0 left-0 z-20 w-auto border-r py-2 text-center whitespace-nowrap`}
                   />
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta as any;
                     return (
                       <TableHead
                         key={header.id}
-                        className={`bg-background hover:bg-muted/80 sticky top-0 z-10 cursor-pointer whitespace-nowrap border-r px-7 py-2 font-mono ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
+                        className={`bg-background hover:bg-muted/80 sticky top-0 z-10 cursor-pointer border-r px-7 py-2 font-mono whitespace-nowrap ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <div
@@ -133,7 +135,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
                       return (
                         <TableCell
                           key={cell.id}
-                          className={`max-w-[500px] overflow-hidden truncate border-r px-7 text-xs ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
+                          className={`max-w-[500px] truncate overflow-hidden border-r px-7 text-xs ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
                         >
                           {flexRender(
                             cell.column.columnDef.cell,

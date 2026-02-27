@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {Switch, Checkbox, useTheme} from '@sqlrooms/ui';
 
 import {InteractionConfig} from '@kepler.gl/types';
@@ -65,7 +65,7 @@ const TooltipPanel: React.FC<{
         onConfigChange={handleConfigChange}
       />
       {tooltipConfig.enabled && (
-        <div className="pl-4 pr-2">
+        <div className="pr-2 pl-4">
           <div className="flex items-center space-x-2 py-2">
             <Checkbox
               checked={coordinateConfig?.enabled || false}
@@ -101,8 +101,11 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
     (theme === 'system' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  const interactionConfig: Partial<InteractionConfig> =
-    keplerState?.visState.interactionConfig || {};
+  const rawInteractionConfig = keplerState?.visState.interactionConfig;
+  const interactionConfig = useMemo<Partial<InteractionConfig>>(
+    () => rawInteractionConfig ?? {},
+    [rawInteractionConfig],
+  );
   const datasets = keplerState?.visState.datasets || {};
   const {interactionConfigChange, setColumnDisplayFormat} =
     keplerActions.visStateActions;

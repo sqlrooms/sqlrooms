@@ -33,11 +33,11 @@ import {
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
 import {createId} from '@paralleldrive/cuid2';
-import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
   BaseRoomStoreState,
   createSlice,
+  DbSliceState,
   RoomShellSliceState,
   useBaseRoomShellStore,
   type StateCreator,
@@ -225,7 +225,7 @@ export function createKeplerSlice({
   };
   return createSlice<
     KeplerSliceState,
-    BaseRoomStoreState & KeplerSliceState & DuckDbSliceState
+    BaseRoomStoreState & KeplerSliceState & DbSliceState
   >((set, get) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
     const middlewares: Middleware[] = [

@@ -1,3 +1,4 @@
+import {ToolErrorMessage} from '@sqlrooms/ai';
 import {useSql} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 import React from 'react';
@@ -76,13 +77,14 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   // Show error state
   if (sqlQuery && !arrowTable && sqlResult.error) {
     return (
-      <div
-        className={cn(
-          'flex items-center justify-center text-red-500',
-          className,
-        )}
-      >
-        <span className="text-sm">Error: {sqlResult.error.message}</span>
+      <div className={className}>
+        <ToolErrorMessage
+          error={sqlResult.error}
+          triggerLabel="SQL query failed"
+          title="Query error"
+          align="start"
+          details={sqlQuery}
+        />
       </div>
     );
   }

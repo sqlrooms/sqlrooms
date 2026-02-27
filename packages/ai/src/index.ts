@@ -13,6 +13,17 @@ export {
   type QueryToolAdditionalData,
   type QueryToolOptions,
 } from './tools/query/queryTool';
+export {
+  createCommandTools,
+  ExecuteCommandToolParameters,
+  ListCommandsToolParameters,
+} from './tools/commandTools';
+export type {
+  CommandToolDescriptor,
+  CommandToolsOptions,
+  ExecuteCommandToolLlmResult,
+  ListCommandsToolLlmResult,
+} from './tools/commandTools';
 export {createDefaultAiTools} from './tools/defaultTools';
 export type {DefaultToolsOptions} from './tools/defaultTools';
 export {

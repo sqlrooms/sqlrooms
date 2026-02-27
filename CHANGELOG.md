@@ -3,6 +3,55 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Bug Fixes
+
+* Examples tailwind paths ([#387](/github.com/sqlrooms/sqlrooms/issues/387)) ([1cbae5b](github.com/sqlrooms/sqlrooms/commits/1cbae5b65191d082c9970a31e732724c660a82fa))
+* move copy button ([#390](/github.com/sqlrooms/sqlrooms/issues/390)) ([a7ba4f2](github.com/sqlrooms/sqlrooms/commits/a7ba4f247c66240e86c98cc1173a0091bb81cd44))
+* move copy button in the message container ([#388](/github.com/sqlrooms/sqlrooms/issues/388)) ([7c57d70](github.com/sqlrooms/sqlrooms/commits/7c57d7008af40efdefc87a98b00dd46bfdbc61fb))
+
+### Features
+
+* Commands system enhancements ([#396](/github.com/sqlrooms/sqlrooms/issues/396)) ([4585f80](github.com/sqlrooms/sqlrooms/commits/4585f80440eb070711005b857e73d58971754344))
+* Sonner toast integration ([#397](/github.com/sqlrooms/sqlrooms/issues/397)) ([487861d](github.com/sqlrooms/sqlrooms/commits/487861df81f0824d077bdeb0bb517a054586279b))
+* Tanstack multi-room example ([#385](/github.com/sqlrooms/sqlrooms/issues/385)) ([45ef14f](github.com/sqlrooms/sqlrooms/commits/45ef14ff9cb99528d7fefb372a98843006269e93))
+
+# [0.28.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](/github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](github.com/sqlrooms/sqlrooms/commits/1e53f051828a36f8625af1c9576a820568951d42))
+* Cosmos.gl upgrade ([#379](/github.com/sqlrooms/sqlrooms/issues/379)) ([92b3299](github.com/sqlrooms/sqlrooms/commits/92b3299f515aeb7b7bc1c5d5967827cb5a11ee55))
+
+# [0.28.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Bug Fixes
+
+* update custom map legend panel when exporting image ([#372](/github.com/sqlrooms/sqlrooms/issues/372)) ([144741e](github.com/sqlrooms/sqlrooms/commits/144741e8e5d1cfef942756809010d162a58e8c8f))
+
+### Features
+
+* tailwind v4 ([#324](/github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](github.com/sqlrooms/sqlrooms/commits/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Bug Fixes
+
+* fix vega chart sizing ([#365](/github.com/sqlrooms/sqlrooms/issues/365)) ([c9ed288](github.com/sqlrooms/sqlrooms/commits/c9ed28845aeae3739070ef3615e843076090f7f7))
+* improve sql error display in vega charts ([#369](/github.com/sqlrooms/sqlrooms/issues/369)) ([0d26265](github.com/sqlrooms/sqlrooms/commits/0d2626512d98d9c4b983d0e8c640a64c20cb08e8))
+
+### Features
+
+* AI output copy to clipboard ([#368](/github.com/sqlrooms/sqlrooms/issues/368)) ([bcc10c1](github.com/sqlrooms/sqlrooms/commits/bcc10c12cac3219f762406fb18e4a4ee04546ada))
+* Data table row selection ([#358](/github.com/sqlrooms/sqlrooms/issues/358)) ([3c63689](github.com/sqlrooms/sqlrooms/commits/3c636899dae81d13b24d501e9752257bced89e30))
+
+# [0.27.0-rc.5](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+### Features
+
+* room-store: expose bound useRoomStore API and add useRoomStoreApi hook ([#360](/github.com/sqlrooms/sqlrooms/issues/360)) ([c5b68a3](github.com/sqlrooms/sqlrooms/commits/c5b68a329c7134c1937927b53a7c39b0ac4f06ea))
+
 # [0.27.0-rc.4](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
 
 ### Bug Fixes

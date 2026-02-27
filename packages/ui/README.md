@@ -51,18 +51,15 @@ function LoginForm() {
 ### Using Hooks
 
 ```tsx
-import {useToast, useDisclosure} from '@sqlrooms/ui';
+import {toast, useDisclosure} from '@sqlrooms/ui';
 
 function MyComponent() {
-  const {toast} = useToast();
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleAction = () => {
     // Perform some action
-    toast({
-      title: 'Success!',
+    toast.success('Success!', {
       description: 'Your action was completed successfully.',
-      variant: 'success',
     });
     onClose();
   };

@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Features
+
+* Commands system enhancements ([#396](https://github.com/sqlrooms/sqlrooms/issues/396)) ([4585f80](https://github.com/sqlrooms/sqlrooms/commit/4585f80440eb070711005b857e73d58971754344))
+
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](https://github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](https://github.com/sqlrooms/sqlrooms/commit/1e53f051828a36f8625af1c9576a820568951d42))
+
+# [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Features
+
+* tailwind v4 ([#324](https://github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](https://github.com/sqlrooms/sqlrooms/commit/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Features
+
+* Data table row selection ([#358](https://github.com/sqlrooms/sqlrooms/issues/358)) ([3c63689](https://github.com/sqlrooms/sqlrooms/commit/3c636899dae81d13b24d501e9752257bced89e30))
+
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
 # [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
 
 **Note:** Version bump only for package @sqlrooms/sql-editor

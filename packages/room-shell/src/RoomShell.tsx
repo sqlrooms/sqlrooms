@@ -10,6 +10,7 @@ import {
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
+import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
   RoomShellSidebarButtons,
   SidebarButton,
@@ -45,7 +46,7 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
   return (
     <div
       className={cn(
-        'bg-muted/70 flex h-full w-12 flex-col items-center px-1 py-4',
+        'bg-muted/70 flex h-full w-12 flex-col items-center gap-2 px-1 py-4',
         className,
       )}
     >
@@ -95,7 +96,7 @@ export const LayoutComposer: FC<{
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-grow flex-col items-stretch',
+        'flex h-full w-full grow flex-col items-stretch',
         className,
       )}
     >
@@ -133,4 +134,5 @@ export const RoomShell = Object.assign(RoomShellBase, {
   SidebarButtons: RoomShellSidebarButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
+  CommandPalette: RoomShellCommandPalette,
 });

@@ -191,7 +191,7 @@ export const MapView: FC<{features: AirportFeature[] | undefined}> = ({
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Add a comment..."
-                className="w-full min-w-[200px] rounded border border-gray-300 p-2 text-sm"
+                className="w-full min-w-50 rounded border border-gray-300 p-2 text-sm"
                 rows={2}
               />
               <button
@@ -224,7 +224,7 @@ export const MapView: FC<{features: AirportFeature[] | undefined}> = ({
         >
           <div
             className={cn(
-              'duration-50 rounded bg-white p-2 transition-all hover:bg-blue-200',
+              'rounded bg-white p-2 transition-all duration-50 hover:bg-blue-200',
               highlightedDiscussion?.anchorId === airport.featureId &&
                 'border-2 border-blue-500',
             )}
@@ -235,7 +235,7 @@ export const MapView: FC<{features: AirportFeature[] | undefined}> = ({
           >
             <div className="text-sm font-medium">{airport.name}</div>
             {airport.rootDiscussionText && (
-              <div className="mt-1 max-w-[200px] truncate text-sm text-gray-600">
+              <div className="mt-1 max-w-50 truncate text-sm text-gray-600">
                 {airport.rootDiscussionText}
               </div>
             )}
