@@ -12,6 +12,7 @@ import {
   qualifySheetLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
+import {renameResultRelation} from './resultRelationPolicy';
 import type {
   Cell,
   CellRegistry,
@@ -72,7 +73,8 @@ export function createDefaultCellRegistry(): CellRegistry {
         if (!cell || cell.type !== 'sql') return;
         const status = state.cells.status[id];
         const previousRelationType =
-          status?.type === 'sql' ? status.resultRelationType : undefined;
+          (status?.type === 'sql' ? status.resultRelationType : undefined) ??
+          'view';
 
         const sheetId = findSheetIdForCell(state, id);
         const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
@@ -132,23 +134,13 @@ export function createDefaultCellRegistry(): CellRegistry {
 
         // Rename must preserve whichever mode execution selected (view/table).
         // We clear any stale object at the destination name first.
-        await connector.query(`DROP VIEW IF EXISTS ${newTableName}`);
-        await connector.query(`DROP TABLE IF EXISTS ${newTableName}`);
-        if (previousRelationType === 'table') {
-          // Keep materialized semantics by copying old relation data.
-          await connector.query(
-            `CREATE TABLE ${newTableName} AS SELECT * FROM ${oldResultView}`,
-          );
-          await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
-          await connector.query(`DROP TABLE IF EXISTS ${oldResultView}`);
-        } else {
-          // Keep logical semantics by recreating the view definition.
-          await connector.query(
-            `CREATE VIEW ${newTableName} AS ${rewrittenSql}`,
-          );
-          await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
-          await connector.query(`DROP TABLE IF EXISTS ${oldResultView}`);
-        }
+        await renameResultRelation({
+          connector,
+          oldRelationName: oldResultView,
+          newRelationName: newTableName,
+          relationType: previousRelationType,
+          viewSql: rewrittenSql,
+        });
 
         // Update status with new view name
         set((s) =>
@@ -157,7 +149,7 @@ export function createDefaultCellRegistry(): CellRegistry {
             if (status?.type === 'sql') {
               status.resultName = newTableName;
               status.resultView = newTableName;
-              status.resultRelationType = previousRelationType ?? 'view';
+              status.resultRelationType = previousRelationType;
             }
           }),
         );

@@ -13,6 +13,11 @@ import {
   renderSqlWithInputs,
 } from './sqlHelpers';
 import {
+  chooseAdaptiveRelationType,
+  createOrReplaceResultRelation,
+  type ResultRelationType,
+} from './resultRelationPolicy';
+import {
   isInputCell,
   isSqlCell,
   type CellResultData,
@@ -116,7 +121,7 @@ export async function executeSqlCell(
     );
     const selectedConnectorId = (cell.data as SqlCellData).connectorId;
     let tableName = '';
-    let relationType: 'view' | 'table' = 'view';
+    let relationType: ResultRelationType = 'view';
     const connector = await db.getConnector();
     if (
       selectedConnectorId &&
@@ -163,24 +168,20 @@ export async function executeSqlCell(
       const hasDownstream =
         Boolean(sheetId) &&
         getState().cells.getDownstream(sheetId as string, cellId).length > 0;
-      relationType =
-        previousStatus?.resultRelationType ??
-        (hasDownstream ? 'table' : 'view');
+      relationType = chooseAdaptiveRelationType({
+        previousRelationType: previousStatus?.resultRelationType,
+        hasDownstream,
+      });
 
       if (signal?.aborted) throw new Error('Query cancelled');
 
-      if (relationType === 'table') {
-        await connector.query(
-          `CREATE OR REPLACE TABLE ${tableName} AS ${sql}`,
-          {
-            signal,
-          },
-        );
-      } else {
-        await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
-          signal,
-        });
-      }
+      await createOrReplaceResultRelation({
+        connector,
+        relationName: tableName,
+        relationType,
+        sql,
+        signal,
+      });
     }
 
     // Find dependencies for referenced tables

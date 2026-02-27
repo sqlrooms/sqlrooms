@@ -20,6 +20,7 @@ import {
   normalizeCellsConfigStructure,
   resolveDependencies,
 } from './helpers';
+import {dropResultRelation} from './resultRelationPolicy';
 import type {
   Cell,
   CellResultData,
@@ -84,13 +85,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
   const cellResultCache = new Map<string, CellResultData>();
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
     const dropSqlResultRelation = async (resultName?: string) => {
-      if (!resultName) return;
       try {
-        // Adaptive mode can create either a view or a table, so cleanup drops
-        // both variants defensively.
         const connector = await get().db.getConnector();
-        await connector.query(`DROP VIEW IF EXISTS ${resultName}`);
-        await connector.query(`DROP TABLE IF EXISTS ${resultName}`);
+        await dropResultRelation({connector, relationName: resultName});
       } catch {
         // Best-effort cleanup: relation might already be gone or connector
         // might be unavailable during teardown.
