@@ -171,6 +171,83 @@ describe('CommandSlice', () => {
     });
   });
 
+  it('fires invoke failure callback when command returns unsuccessful result', async () => {
+    const onCommandInvokeSuccess = jest.fn();
+    const onCommandInvokeFailure = jest.fn();
+    const onCommandInvokeError = jest.fn();
+
+    const {store} = createTestCommandStore({
+      onCommandInvokeSuccess,
+      onCommandInvokeFailure,
+      onCommandInvokeError,
+    });
+
+    store.getState().commands.registerCommand('test-owner', {
+      id: 'test.failure-result',
+      name: 'Failure result',
+      execute: () => ({
+        success: false,
+        commandId: 'test.failure-result',
+        code: 'not-allowed',
+        error: 'not allowed',
+      }),
+    });
+
+    const result = await store
+      .getState()
+      .commands.invokeCommand('test.failure-result');
+
+    expect(result).toMatchObject({
+      success: false,
+      commandId: 'test.failure-result',
+      code: 'not-allowed',
+    });
+    expect(onCommandInvokeFailure).toHaveBeenCalledTimes(1);
+    expect(onCommandInvokeFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: expect.objectContaining({id: 'test.failure-result'}),
+        result: expect.objectContaining({success: false}),
+        durationMs: expect.any(Number),
+      }),
+    );
+    expect(onCommandInvokeSuccess).not.toHaveBeenCalled();
+    expect(onCommandInvokeError).not.toHaveBeenCalled();
+  });
+
+  it('rejects middleware that calls next() multiple times', async () => {
+    const executeSpy = jest.fn(() => ({
+      success: true,
+      commandId: 'test.next-once',
+    }));
+
+    const {store} = createTestCommandStore({
+      middleware: [
+        async (_command, _input, _context, next) => {
+          await next();
+          return await next();
+        },
+      ],
+    });
+
+    store.getState().commands.registerCommand('test-owner', {
+      id: 'test.next-once',
+      name: 'Next once',
+      execute: executeSpy,
+    });
+
+    const result = await store
+      .getState()
+      .commands.invokeCommand('test.next-once');
+
+    expect(executeSpy).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      success: false,
+      commandId: 'test.next-once',
+      code: 'command-execution-error',
+      error: 'Command middleware next() called multiple times.',
+    });
+  });
+
   it('fires command invoke telemetry callbacks for success and failure', async () => {
     const onCommandInvokeStart = jest.fn();
     const onCommandInvokeSuccess = jest.fn();

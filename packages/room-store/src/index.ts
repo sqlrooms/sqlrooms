@@ -57,6 +57,7 @@ export type {
   RoomCommandExecuteOutput,
   RoomCommandKeystrokes,
   RoomCommandInvocation,
+  RoomCommandInvokeFailureEvent,
   RoomCommandInvokeErrorEvent,
   RoomCommandInvocationOptions,
   RoomCommandInvokeStartEvent,

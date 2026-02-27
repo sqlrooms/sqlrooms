@@ -108,6 +108,13 @@ export type RoomCommandInvokeSuccessEvent<
   durationMs: number;
 };
 
+export type RoomCommandInvokeFailureEvent<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+> = RoomCommandInvokeStartEvent<RS> & {
+  result: RoomCommandResult;
+  durationMs: number;
+};
+
 export type RoomCommandInvokeErrorEvent<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
 > = RoomCommandInvokeStartEvent<RS> & {
@@ -121,6 +128,7 @@ export type CreateCommandSliceProps<
   middleware?: RoomCommandMiddleware<RS>[];
   onCommandInvokeStart?: (event: RoomCommandInvokeStartEvent<RS>) => void;
   onCommandInvokeSuccess?: (event: RoomCommandInvokeSuccessEvent<RS>) => void;
+  onCommandInvokeFailure?: (event: RoomCommandInvokeFailureEvent<RS>) => void;
   onCommandInvokeError?: (event: RoomCommandInvokeErrorEvent<RS>) => void;
 };
 
@@ -390,17 +398,26 @@ export function createCommandSlice<
               command.id,
               rawResult,
             );
-            invokeCommandSliceCallback(
-              props?.onCommandInvokeSuccess,
-              {
-                command,
-                input: validatedInput,
-                context: executionContext,
-                result: normalizedResult,
-                durationMs: Date.now() - invocationStartedAt,
-              },
-              get().room.captureException,
-            );
+            const invocationResultEvent = {
+              command,
+              input: validatedInput,
+              context: executionContext,
+              result: normalizedResult,
+              durationMs: Date.now() - invocationStartedAt,
+            };
+            if (normalizedResult.success) {
+              invokeCommandSliceCallback(
+                props?.onCommandInvokeSuccess,
+                invocationResultEvent,
+                get().room.captureException,
+              );
+            } else {
+              invokeCommandSliceCallback(
+                props?.onCommandInvokeFailure,
+                invocationResultEvent,
+                get().room.captureException,
+              );
+            }
             return normalizedResult;
           } catch (error) {
             get().room.captureException(error);
@@ -684,12 +701,19 @@ async function runCommandExecutionMiddleware<
   input: unknown,
   context: RoomCommandExecutionContext<RS>,
 ): Promise<RoomCommandExecuteOutput> {
-  const invokeMiddleware = async (index: number): Promise<RoomCommandExecuteOutput> => {
+  const invokeMiddleware = async (
+    index: number,
+  ): Promise<RoomCommandExecuteOutput> => {
     const currentMiddleware = middleware[index];
     if (!currentMiddleware) {
       return await command.execute(context, input);
     }
+    let called = false;
     return await currentMiddleware(command, input, context, async () => {
+      if (called) {
+        throw new Error('Command middleware next() called multiple times.');
+      }
+      called = true;
       return await invokeMiddleware(index + 1);
     });
   };

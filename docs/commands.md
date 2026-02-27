@@ -60,7 +60,7 @@ roomStore.getState().commands.registerCommand('app', {
 Middleware signature:
 
 ```typescript
-(command, input, context, next) => {
+async (command, input, context, next) => {
   // before
   const result = await next();
   // after
@@ -102,6 +102,12 @@ const createCommandProps = {
     telemetry.track('command_success', {
       commandId: command.id,
       durationMs,
+    });
+  },
+  onCommandInvokeFailure: ({command, result}) => {
+    telemetry.track('command_failure', {
+      commandId: command.id,
+      code: result.code,
     });
   },
   onCommandInvokeError: ({command, error}) => {
