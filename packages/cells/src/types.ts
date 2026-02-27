@@ -220,6 +220,7 @@ export const SqlCellStatus = z.object({
   referencedTables: z.array(z.string()).default([]),
   resultName: z.string().optional(),
   resultView: z.string().optional(),
+  resultRelationType: z.enum(['view', 'table']).optional(),
   lastRunTime: z.number().optional(),
 });
 export type SqlCellStatus = z.infer<typeof SqlCellStatus>;

@@ -70,6 +70,9 @@ export function createDefaultCellRegistry(): CellRegistry {
         const state = get();
         const cell = state.cells.config.data[id];
         if (!cell || cell.type !== 'sql') return;
+        const status = state.cells.status[id];
+        const previousRelationType =
+          status?.type === 'sql' ? status.resultRelationType : undefined;
 
         const sheetId = findSheetIdForCell(state, id);
         const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
@@ -89,7 +92,8 @@ export function createDefaultCellRegistry(): CellRegistry {
           return;
         }
 
-        // Create new view from same SQL, drop old view
+        // Re-create the relation under the new name. For materialized results
+        // keep table semantics, otherwise keep view semantics.
         const connector = await state.db.getConnector();
         const sql = (cell.data as SqlCellData).sql;
         const scopedCellIds =
@@ -126,10 +130,25 @@ export function createDefaultCellRegistry(): CellRegistry {
           },
         });
 
-        await connector.query(
-          `CREATE OR REPLACE VIEW ${newTableName} AS ${rewrittenSql}`,
-        );
-        await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
+        // Rename must preserve whichever mode execution selected (view/table).
+        // We clear any stale object at the destination name first.
+        await connector.query(`DROP VIEW IF EXISTS ${newTableName}`);
+        await connector.query(`DROP TABLE IF EXISTS ${newTableName}`);
+        if (previousRelationType === 'table') {
+          // Keep materialized semantics by copying old relation data.
+          await connector.query(
+            `CREATE TABLE ${newTableName} AS SELECT * FROM ${oldResultView}`,
+          );
+          await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
+          await connector.query(`DROP TABLE IF EXISTS ${oldResultView}`);
+        } else {
+          // Keep logical semantics by recreating the view definition.
+          await connector.query(
+            `CREATE VIEW ${newTableName} AS ${rewrittenSql}`,
+          );
+          await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
+          await connector.query(`DROP TABLE IF EXISTS ${oldResultView}`);
+        }
 
         // Update status with new view name
         set((s) =>
@@ -138,6 +157,7 @@ export function createDefaultCellRegistry(): CellRegistry {
             if (status?.type === 'sql') {
               status.resultName = newTableName;
               status.resultView = newTableName;
+              status.resultRelationType = previousRelationType ?? 'view';
             }
           }),
         );

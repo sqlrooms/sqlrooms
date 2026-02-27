@@ -83,6 +83,20 @@ export function createCellsSlice(props: CellsSliceOptions) {
   // Keep result data outside Immer drafts, but scoped per slice instance.
   const cellResultCache = new Map<string, CellResultData>();
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
+    const dropSqlResultRelation = async (resultName?: string) => {
+      if (!resultName) return;
+      try {
+        // Adaptive mode can create either a view or a table, so cleanup drops
+        // both variants defensively.
+        const connector = await get().db.getConnector();
+        await connector.query(`DROP VIEW IF EXISTS ${resultName}`);
+        await connector.query(`DROP TABLE IF EXISTS ${resultName}`);
+      } catch {
+        // Best-effort cleanup: relation might already be gone or connector
+        // might be unavailable during teardown.
+      }
+    };
+
     return {
       cells: {
         cellRegistry,
@@ -193,6 +207,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
         },
 
         removeCell: (id: string) => {
+          const previousStatus = get().cells.status[id];
           cellResultCache.delete(id);
           set((state) =>
             produce(state, (draft) => {
@@ -216,6 +231,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
               }
             }),
           );
+          if (previousStatus?.type === 'sql') {
+            void dropSqlResultRelation(previousStatus.resultView);
+          }
         },
 
         updateCell: async (
@@ -375,6 +393,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const sheet = get().cells.config.sheets[sheetId];
           if (!sheet) return;
           const ownedCellIds = [...sheet.cellIds];
+          const relationNamesToDrop = ownedCellIds.flatMap((cellId) => {
+            const status = get().cells.status[cellId];
+            return status?.type === 'sql' && status.resultView
+              ? [status.resultView]
+              : [];
+          });
           set((state) =>
             produce(state, (draft) => {
               for (const cellId of ownedCellIds) {
@@ -415,6 +439,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
               }
             }),
           );
+          for (const relationName of relationNamesToDrop) {
+            void dropSqlResultRelation(relationName);
+          }
         },
 
         closeSheet: (sheetId: string) => {

@@ -43,6 +43,10 @@ export async function executeSqlCell(
   const state = getState();
   const cell = state.cells.config.data[cellId];
   if (!cell || cell.type !== 'sql') return;
+  const previousStatus =
+    state.cells.status[cellId]?.type === 'sql'
+      ? state.cells.status[cellId]
+      : undefined;
 
   const {schemaName, cascade = true, signal, setCellResult} = options;
   const sqlRaw = cell.data.sql || '';
@@ -93,6 +97,7 @@ export async function executeSqlCell(
         // a fresh query is running.
         resultName: previousStatus?.resultName,
         resultView: previousStatus?.resultView,
+        resultRelationType: previousStatus?.resultRelationType,
         lastRunTime: previousStatus?.lastRunTime,
         referencedTables: previousStatus?.referencedTables || [],
       };
@@ -111,12 +116,15 @@ export async function executeSqlCell(
     );
     const selectedConnectorId = (cell.data as SqlCellData).connectorId;
     let tableName = '';
+    let relationType: 'view' | 'table' = 'view';
     const connector = await db.getConnector();
     if (
       selectedConnectorId &&
       !isCoreDuckDbConnection(selectedConnectorId) &&
       dbConnectors?.runQuery
     ) {
+      // External connectors already return materialized relations, so treat
+      // them as table-backed results.
       const routed = await dbConnectors.runQuery({
         connectionId: selectedConnectorId,
         sql,
@@ -129,6 +137,7 @@ export async function executeSqlCell(
         throw new Error('External query did not return materialized relation');
       }
       tableName = routed.relationName;
+      relationType = 'table';
     } else {
       const parsed = await db.sqlSelectToJson(sql);
       if (parsed.error) {
@@ -147,12 +156,31 @@ export async function executeSqlCell(
         schema: finalSchemaName,
         database: db.currentDatabase,
       }).toString();
+      // Adaptive policy:
+      // - first run: choose table when there are downstream dependents,
+      //   otherwise keep a lightweight view.
+      // - subsequent runs: preserve the previously selected relation type.
+      const hasDownstream =
+        Boolean(sheetId) &&
+        getState().cells.getDownstream(sheetId as string, cellId).length > 0;
+      relationType =
+        previousStatus?.resultRelationType ??
+        (hasDownstream ? 'table' : 'view');
 
       if (signal?.aborted) throw new Error('Query cancelled');
 
-      await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
-        signal,
-      });
+      if (relationType === 'table') {
+        await connector.query(
+          `CREATE OR REPLACE TABLE ${tableName} AS ${sql}`,
+          {
+            signal,
+          },
+        );
+      } else {
+        await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
+          signal,
+        });
+      }
     }
 
     // Find dependencies for referenced tables
@@ -185,6 +213,7 @@ export async function executeSqlCell(
           status: 'success',
           resultName: tableName,
           resultView: tableName,
+          resultRelationType: relationType,
           referencedTables: referenced,
           lastRunTime: Date.now(),
         };
