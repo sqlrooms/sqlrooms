@@ -3329,6 +3329,16 @@ importers:
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
 
+  python/sqlrooms-cli:
+    dependencies:
+      sqlrooms-cli-app:
+        specifier: workspace:*
+        version: link:../../apps/sqlrooms-cli-ui
+
+  python/sqlrooms-rag: {}
+
+  python/sqlrooms-server: {}
+
 packages:
 
   '@adobe/css-tools@4.4.4':
