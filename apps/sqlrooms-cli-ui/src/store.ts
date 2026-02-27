@@ -156,12 +156,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       ...createNotebookSlice()(set, get, store),
 
-      ...createCanvasSlice({
-        ai: {
-          getApiKey: () => runtimeConfig.apiKey || '',
-          defaultModel: runtimeConfig.llmModel || 'gpt-4o-mini',
-        },
-      })(set, get, store),
+      ...createCanvasSlice({})(set, get, store),
 
       ...createAiSettingsSlice({
         config: {providers: {} as AiSettingsSliceConfig['providers']},

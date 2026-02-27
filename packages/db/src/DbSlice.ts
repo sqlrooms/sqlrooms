@@ -3,6 +3,11 @@ import {makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import {produce} from 'immer';
+import {
+  createDefaultDbConfig,
+  isDuplicateAttachError,
+  isRuntimeCompatible,
+} from './helpers';
 import type {
   CatalogEntry,
   DbBridge,
@@ -13,41 +18,7 @@ import type {
   DbSliceState,
   QueryExecutionRequest,
   QueryExecutionResult,
-  RuntimeSupport,
 } from './types';
-
-function createDefaultDbConfig(config?: Partial<DbSliceConfig>): DbSliceConfig {
-  const coreConnectionId = config?.coreConnectionId ?? 'duckdb-core';
-  const runtime: RuntimeSupport = config?.currentRuntime ?? 'both';
-  return {
-    currentRuntime: runtime,
-    coreConnectionId,
-    coreMaterialization: {
-      strategy: 'attached_ephemeral',
-      schemaName: '__sqlrooms_external',
-      attachedDatabaseName: '__sqlrooms_external_ephemeral',
-      ...config?.coreMaterialization,
-    },
-    connections: {
-      [coreConnectionId]: {
-        id: coreConnectionId,
-        engineId: 'duckdb',
-        title: 'Core DuckDB',
-        runtimeSupport: 'both',
-        requiresBridge: false,
-        isCore: true,
-      },
-      ...(config?.connections ?? {}),
-    },
-  };
-}
-
-function isRuntimeCompatible(
-  current: RuntimeSupport,
-  support: RuntimeSupport,
-): boolean {
-  return support === 'both' || current === support;
-}
 
 export function createDbSlice(props?: {
   duckDb?: CreateDuckDbSliceProps;
@@ -86,8 +57,10 @@ export function createDbSlice(props?: {
       // in-memory database scoped to runtime process.
       try {
         await core.query(`ATTACH ':memory:' AS "${attachedName}"`);
-      } catch {
-        // Ignore duplicate attach errors in steady-state.
+      } catch (err) {
+        if (!isDuplicateAttachError(err, attachedName)) {
+          throw err;
+        }
       }
       const qualified = makeQualifiedTableName({
         database: attachedName,
