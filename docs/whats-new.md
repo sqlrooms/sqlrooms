@@ -6,6 +6,16 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
+## 0.29.0 (upcoming)
+
+### Command system enhancements
+
+- **Command keystrokes**: Commands can now declare `ui.keystrokes` (single key combo or array). Keystrokes are shown in the command palette and can trigger commands directly when the palette is mounted.
+- **Middleware pipeline**: `createCommandSlice` now supports command middleware via `createCommandProps` (`(command, input, context, next)`), enabling clean telemetry, feature-flag, and confirmation layers without modifying `invokeCommand`.
+- **Telemetry hooks**: `createCommandProps` supports invocation lifecycle callbacks (`onCommandInvokeStart`, `onCommandInvokeSuccess`, `onCommandInvokeFailure`, `onCommandInvokeError`) for centralized instrumentation.
+- **Room shell wiring**: `createRoomShellSlice` now accepts `createCommandProps` and passes it to `createCommandSlice`, so shell-based apps can configure command middleware/telemetry from one place.
+- **Coverage + docs**: Added expanded unit tests for command execution/middleware behavior and a new Developer Guide page: [Commands](/commands).
+
 ## 0.28.0
 
 - **Tailwind v4**: SQLRooms now uses Tailwind v4, including the new CSS-first setup that simplifies project styling and configuration ([#324](https://github.com/sqlrooms/sqlrooms/pull/324)).  For Tailwind migration details, jump to the [upgrade guide](/upgrade-guide#tailwind-v3-to-v4).
