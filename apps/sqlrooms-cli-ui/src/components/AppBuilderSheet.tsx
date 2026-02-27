@@ -28,9 +28,9 @@ export const AppBuilderSheet: React.FC = () => {
   const updateSheetAppFiles = useRoomStore(
     (s) => s.appProject.updateSheetAppFiles,
   );
-  const applyFilesTree = useRoomStore((s) => s.webcontainer.applyFilesTree);
-  const initializeWebcontainer = useRoomStore((s) => s.webcontainer.initialize);
-  const webcontainerStatus = useRoomStore((s) => s.webcontainer.serverStatus);
+  const applyFilesTree = useRoomStore((s) => s.webContainer.applyFilesTree);
+  const initializeWebcontainer = useRoomStore((s) => s.webContainer.initialize);
+  const webContainerStatus = useRoomStore((s) => s.webContainer.serverStatus);
 
   const [prompt, setPrompt] = React.useState('');
   const [template, setTemplate] = React.useState('mosaic-dashboard');
@@ -127,9 +127,9 @@ export const AppBuilderSheet: React.FC = () => {
         <div className="min-h-0 flex-1">
           <WebContainer.Workbench />
         </div>
-        {webcontainerStatus.type !== 'ready' ? (
+        {webContainerStatus.type !== 'ready' ? (
           <p className="text-muted-foreground text-xs">
-            Runtime status: {webcontainerStatus.type}
+            Runtime status: {webContainerStatus.type}
           </p>
         ) : null}
       </div>
