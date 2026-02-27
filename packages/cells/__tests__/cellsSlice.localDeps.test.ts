@@ -5,6 +5,31 @@ import {createCellsSlice} from '../src/cellsSlice';
 import {findSqlDependenciesFromAst} from '../src/sqlHelpers';
 import type {Cell, CellRegistry, CellsRootState, SqlCell} from '../src/types';
 
+const mockSqlSelectToJson: NonNullable<
+  CellsRootState['db']['sqlSelectToJson']
+> = async (sql: string) => {
+  const fromMatch = sql.match(/from\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+  const table = fromMatch?.[1];
+  return {
+    error: false,
+    statements: table
+      ? [
+          {
+            node: {
+              from_table: {
+                alias: '',
+                show_type: '',
+                table_name: table,
+              },
+              select_list: [],
+              type: 'select_node',
+            },
+          },
+        ]
+      : [],
+  };
+};
+
 function createTestCellRegistry(): CellRegistry {
   return {
     sql: {
@@ -30,20 +55,13 @@ function createTestStore() {
   return createStore<CellsRootState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     db: {
-      sqlSelectToJson: async (sql: string) => {
-        const fromMatch = sql.match(/from\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
-        const table = fromMatch?.[1];
-        return {
-          error: false,
-          statements: table ? [{node: {table_name: table}}] : [{node: {}}],
-        };
-      },
+      sqlSelectToJson: mockSqlSelectToJson,
       getConnector: async () => {
         throw new Error('Not needed in this test');
       },
-      refreshTableSchemas: async () => {},
+      refreshTableSchemas: async () => [],
       currentDatabase: 'main',
-    },
+    } as unknown as CellsRootState['db'],
     ...createCellsSlice({cellRegistry: createTestCellRegistry()})(...args),
   }));
 }
@@ -84,13 +102,13 @@ describe('cells slice local dependency policy', () => {
     const store = createStore<CellsRootState>()((...args) => ({
       ...createBaseRoomSlice()(...args),
       db: {
-        sqlSelectToJson: async () => ({error: false, statements: [{node: {}}]}),
+        sqlSelectToJson: async () => ({error: false, statements: []}),
         getConnector: async () => {
           throw new Error('Not needed in this test');
         },
-        refreshTableSchemas: async () => {},
+        refreshTableSchemas: async () => [],
         currentDatabase: 'main',
-      },
+      } as unknown as CellsRootState['db'],
       ...createCellsSlice({cellRegistry: createTestCellRegistry()})(...args),
     }));
     const state = store.getState();
