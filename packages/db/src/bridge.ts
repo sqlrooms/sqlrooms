@@ -60,19 +60,21 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
         body: JSON.stringify({connectionId}),
       });
     },
-    executeQuery: async ({connectionId, sql, queryType}) => {
+    executeQuery: async ({connectionId, sql, queryType, signal}) => {
       return request('/api/db/execute-query', {
         method: 'POST',
         body: JSON.stringify({connectionId, sql, queryType}),
+        signal,
       });
     },
-    fetchArrow: async ({connectionId, sql}) => {
+    fetchArrow: async ({connectionId, sql, signal}) => {
       const res = await fetch(
         `${baseUrl.replace(/\/$/, '')}/api/db/fetch-arrow`,
         {
           method: 'POST',
           headers: {'Content-Type': 'application/json', ...headers},
           body: JSON.stringify({connectionId, sql}),
+          signal,
         },
       );
       if (!res.ok) {
