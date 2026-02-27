@@ -277,25 +277,37 @@ export function createWebContainerSlice(props?: {
             draft.webcontainer.serverStatus = {type: 'starting-dev'};
           }),
         );
-
-        // Wait for `server-ready` event
-        instance.on('server-ready', (port, url) => {
-          console.log(`Server ready on port ${port} at ${url}`);
-          setCachedWebContainerServerUrl(url);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.webcontainer.serverStatus = {type: 'ready', url};
-            }),
-          );
-        });
-
-        instance.on('error', (error) => {
-          console.error('Server error', error);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.webcontainer.serverStatus = {type: 'error', error};
-            }),
-          );
+        return new Promise<void>((resolve, reject) => {
+          let settled = false;
+          let offReady: (() => void) | undefined = undefined;
+          let offError: (() => void) | undefined = undefined;
+          const cleanup = () => {
+            offReady?.();
+            offError?.();
+          };
+          offReady = instance.on('server-ready', (_port, url) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            setCachedWebContainerServerUrl(url);
+            set((state) =>
+              produce(state, (draft) => {
+                draft.webcontainer.serverStatus = {type: 'ready', url};
+              }),
+            );
+            resolve();
+          });
+          offError = instance.on('error', (error) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            set((state) =>
+              produce(state, (draft) => {
+                draft.webcontainer.serverStatus = {type: 'error', error};
+              }),
+            );
+            reject(error);
+          });
         });
       },
 
@@ -433,9 +445,7 @@ export function createWebContainerSlice(props?: {
         try {
           if (instance) {
             const data = await instance.fs.readFile(path, 'utf-8');
-            return typeof data === 'string'
-              ? data
-              : new TextDecoder().decode(data as Uint8Array);
+            return data;
           }
         } catch (_e) {
           // Swallow and return empty string

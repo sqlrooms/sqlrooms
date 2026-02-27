@@ -34,12 +34,7 @@ export function createListFilesTool(
   return {
     name: 'listFiles',
     description: 'List project files',
-    parameters: z.object({
-      basePath: z
-        .string()
-        .describe('Optional base path to list files from')
-        .default('/'),
-    }),
+    parameters: ListFilesToolParameters,
     execute: async ({basePath = '/'}: ListFilesToolParameters) => {
       return {
         llmResult: {

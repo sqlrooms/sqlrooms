@@ -4,7 +4,7 @@ import {FileSystemTree} from '@webcontainer/api';
  * Normalize a POSIX path by removing a leading slash and collapsing empties.
  */
 export function normalizePath(path: string): string {
-  return (path.startsWith('/') ? path.slice(1) : path).replace(/\\+/g, '/');
+  return (path.startsWith('/') ? path.slice(1) : path).replace(/\/+/g, '/');
 }
 
 /**
@@ -39,6 +39,7 @@ export function setFileContentInTree(
 
   const update = (subtree: FileSystemTree, index: number): FileSystemTree => {
     const segment = segments[index];
+    // Defensive check: pathToSegments filters empties and segments.length === 0 is handled above.
     if (!segment) {
       return subtree;
     }
