@@ -57,6 +57,10 @@ export async function executeSqlCell(
   const sheetId = findSheetIdForCell(state, cellId);
   const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
   const finalSchemaName = sheet ? resolveSheetSchemaName(sheet) : schemaName;
+  const finalDatabaseName =
+    state.db.config.coreMaterialization.strategy === 'attached_ephemeral'
+      ? state.db.config.coreMaterialization.attachedDatabaseName
+      : undefined;
   const sheetCellIds = sheet?.cellIds ?? [];
 
   // 1. Gather inputs for SQL rendering
@@ -76,6 +80,7 @@ export async function executeSqlCell(
   const sql = qualifySheetLocalResultNames({
     sql: renderedSql,
     sheetSchema: finalSchemaName,
+    sheetDatabase: finalDatabaseName,
     sheetCellIds,
     cells: state.cells.config.data,
     getSqlResultName: (id) => {
@@ -130,6 +135,7 @@ export async function executeSqlCell(
         materialize: true,
         materializedName: effectiveResultName,
         materializedSchema: finalSchemaName,
+        materializedDatabase: finalDatabaseName,
         signal,
       });
       if (!routed.relationName) {

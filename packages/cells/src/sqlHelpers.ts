@@ -235,11 +235,19 @@ export async function findSqlDependenciesFromAst(opts: {
 export function qualifySheetLocalResultNames(opts: {
   sql: string;
   sheetSchema: string;
+  sheetDatabase?: string;
   sheetCellIds: string[];
   cells: Record<string, Cell>;
   getSqlResultName: (cellId: string) => string | undefined;
 }): string {
-  const {sql, sheetSchema, sheetCellIds, cells, getSqlResultName} = opts;
+  const {
+    sql,
+    sheetSchema,
+    sheetDatabase,
+    sheetCellIds,
+    cells,
+    getSqlResultName,
+  } = opts;
   let rewritten = sql;
 
   const names = Array.from(
@@ -257,7 +265,9 @@ export function qualifySheetLocalResultNames(opts: {
   ).sort((a, b) => b.length - a.length);
 
   for (const name of names) {
-    const qualified = `${sheetSchema}.${name}`;
+    const qualified = sheetDatabase
+      ? `${sheetDatabase}.${sheetSchema}.${name}`
+      : `${sheetSchema}.${name}`;
     const pattern = new RegExp(
       `(?<![a-zA-Z0-9_.])${escapeRegExp(name)}(?![a-zA-Z0-9_])`,
       'g',
