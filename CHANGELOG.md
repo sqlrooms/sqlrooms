@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Bug Fixes
+
+* Examples tailwind paths ([#387](/github.com/sqlrooms/sqlrooms/issues/387)) ([1cbae5b](github.com/sqlrooms/sqlrooms/commits/1cbae5b65191d082c9970a31e732724c660a82fa))
+* move copy button ([#390](/github.com/sqlrooms/sqlrooms/issues/390)) ([a7ba4f2](github.com/sqlrooms/sqlrooms/commits/a7ba4f247c66240e86c98cc1173a0091bb81cd44))
+* move copy button in the message container ([#388](/github.com/sqlrooms/sqlrooms/issues/388)) ([7c57d70](github.com/sqlrooms/sqlrooms/commits/7c57d7008af40efdefc87a98b00dd46bfdbc61fb))
+
+### Features
+
+* Commands system enhancements ([#396](/github.com/sqlrooms/sqlrooms/issues/396)) ([4585f80](github.com/sqlrooms/sqlrooms/commits/4585f80440eb070711005b857e73d58971754344))
+* Sonner toast integration ([#397](/github.com/sqlrooms/sqlrooms/issues/397)) ([487861d](github.com/sqlrooms/sqlrooms/commits/487861df81f0824d077bdeb0bb517a054586279b))
+* Tanstack multi-room example ([#385](/github.com/sqlrooms/sqlrooms/issues/385)) ([45ef14f](github.com/sqlrooms/sqlrooms/commits/45ef14ff9cb99528d7fefb372a98843006269e93))
+
 # [0.28.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
 
 ### Features

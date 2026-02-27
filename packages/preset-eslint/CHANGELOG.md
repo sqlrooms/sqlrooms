@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+**Note:** Version bump only for package @sqlrooms/preset-eslint
+
 # [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
 
 **Note:** Version bump only for package @sqlrooms/preset-eslint

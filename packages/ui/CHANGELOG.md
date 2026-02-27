@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Features
+
+* Sonner toast integration ([#397](https://github.com/sqlrooms/sqlrooms/issues/397)) ([487861d](https://github.com/sqlrooms/sqlrooms/commit/487861df81f0824d077bdeb0bb517a054586279b))
+
 # [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
 
 ### Features
