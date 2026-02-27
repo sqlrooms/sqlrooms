@@ -1,7 +1,30 @@
+import React from 'react';
 import {createStore} from 'zustand';
 import {createBaseRoomSlice} from '@sqlrooms/room-store';
 import {createCellsSlice} from '../src/cellsSlice';
-import type {Cell, CellsRootState} from '../src/types';
+import {findSqlDependenciesFromAst} from '../src/sqlHelpers';
+import type {Cell, CellRegistry, CellsRootState, SqlCell} from '../src/types';
+
+function createTestCellRegistry(): CellRegistry {
+  return {
+    sql: {
+      type: 'sql',
+      title: 'SQL Query',
+      createCell: (id: string): SqlCell => ({
+        id,
+        type: 'sql',
+        data: {title: id, sql: ''},
+      }),
+      renderCell: () => React.createElement('div'),
+      findDependencies: async ({cell, cells, sqlSelectToJson}) =>
+        findSqlDependenciesFromAst({
+          sql: (cell as SqlCell).data.sql,
+          cells,
+          sqlSelectToJson,
+        }),
+    },
+  };
+}
 
 function createTestStore() {
   return createStore<CellsRootState>()((...args) => ({
@@ -21,7 +44,7 @@ function createTestStore() {
       refreshTableSchemas: async () => {},
       currentDatabase: 'main',
     },
-    ...createCellsSlice()(...args),
+    ...createCellsSlice({cellRegistry: createTestCellRegistry()})(...args),
   }));
 }
 
@@ -68,7 +91,7 @@ describe('cells slice local dependency policy', () => {
         refreshTableSchemas: async () => {},
         currentDatabase: 'main',
       },
-      ...createCellsSlice()(...args),
+      ...createCellsSlice({cellRegistry: createTestCellRegistry()})(...args),
     }));
     const state = store.getState();
     const sheetId = state.cells.config.currentSheetId as string;

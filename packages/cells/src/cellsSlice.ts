@@ -14,7 +14,6 @@ import {
   replaceCellDependenciesInCache,
   topologicalOrder,
 } from './dagUtils';
-import {createDefaultCellRegistry} from './defaultCellRegistry';
 import {getRequiredSqlSelectToJson, resolveDependencies} from './helpers';
 import type {
   Cell,
@@ -67,11 +66,8 @@ function createDefaultCellsConfig(
 
 // --- Slice Implementation ---
 
-export function createCellsSlice(props?: CellsSliceOptions) {
-  const {
-    cellRegistry = createDefaultCellRegistry(),
-    supportedSheetTypes = ['notebook', 'canvas'],
-  } = props ?? {};
+export function createCellsSlice(props: CellsSliceOptions) {
+  const {cellRegistry, supportedSheetTypes = ['notebook', 'canvas']} = props;
   const initialConfig = createDefaultCellsConfig(props?.config);
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
     return {
