@@ -177,6 +177,9 @@ importers:
       '@sqlrooms/webcontainer':
         specifier: workspace:*
         version: link:../../packages/webcontainer
+      '@webcontainer/api':
+        specifier: ^1.6.1
+        version: 1.6.1
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -588,15 +591,9 @@ importers:
       '@sqlrooms/ai-settings':
         specifier: workspace:*
         version: link:../../packages/ai-settings
-      '@sqlrooms/monaco-editor':
-        specifier: workspace:*
-        version: link:../../packages/monaco-editor
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../../packages/room-store
-      '@sqlrooms/schema-tree':
-        specifier: workspace:*
-        version: link:../../packages/schema-tree
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -606,9 +603,6 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.1
-      '@xterm/xterm':
-        specifier: ^5.5.0
-        version: 5.5.0
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -8762,9 +8756,6 @@ packages:
 
   '@wojtekmaj/date-utils@1.5.1':
     resolution: {integrity: sha512-+i7+JmNiE/3c9FKxzWFi2IjRJ+KzZl1QPu6QNrsgaa2MuBgXvUy4gA1TVzf/JMdIIloB76xSKikTWuyYAIVLww==}
-
-  '@xterm/xterm@5.5.0':
-    resolution: {integrity: sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==}
 
   '@xyflow/react@12.10.0':
     resolution: {integrity: sha512-eOtz3whDMWrB4KWVatIBrKuxECHqip6PfA8fTpaS2RUGVpiEAe+nqDKsLqkViVWxDGreq0lWX71Xth/SPAzXiw==}
@@ -23314,8 +23305,6 @@ snapshots:
   '@webcontainer/api@1.6.1': {}
 
   '@wojtekmaj/date-utils@1.5.1': {}
-
-  '@xterm/xterm@5.5.0': {}
 
   '@xyflow/react@12.10.0(@types/react@19.2.7)(immer@11.0.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
