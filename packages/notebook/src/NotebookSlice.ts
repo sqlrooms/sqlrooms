@@ -85,8 +85,6 @@ export function createNotebookSlice(props?: {
                   id,
                   meta: {
                     cellOrder: [],
-                    inputBarOrder: [],
-                    showInputBar: true,
                   },
                 };
               }),
@@ -111,15 +109,6 @@ export function createNotebookSlice(props?: {
             );
           },
 
-          toggleShowInputBar: (id) => {
-            set((state) =>
-              produce(state, (draft) => {
-                const sheet = getSheet(draft.notebook.config, id);
-                if (sheet) sheet.meta.showInputBar = !sheet.meta.showInputBar;
-              }),
-            );
-          },
-
           initializeSheet: (id) => {
             set((state) =>
               produce(state, (draft) => {
@@ -128,8 +117,6 @@ export function createNotebookSlice(props?: {
                     id,
                     meta: {
                       cellOrder: [],
-                      inputBarOrder: [],
-                      showInputBar: true,
                     },
                   };
                 }
@@ -190,8 +177,6 @@ export function createNotebookSlice(props?: {
                     id: tabId,
                     meta: {
                       cellOrder: [],
-                      inputBarOrder: [],
-                      showInputBar: true,
                     },
                   };
                   draft.notebook.config.sheets[tabId] = sheet;
@@ -200,11 +185,6 @@ export function createNotebookSlice(props?: {
                 // cellOrder
                 const newIndex = index ?? sheet.meta.cellOrder.length;
                 sheet.meta.cellOrder.splice(newIndex, 0, id);
-
-                // inputBarOrder
-                if (type === 'input') {
-                  sheet.meta.inputBarOrder.splice(newIndex, 0, id);
-                }
 
                 draft.notebook.config.currentCellId = id;
               }),
@@ -244,9 +224,6 @@ export function createNotebookSlice(props?: {
                 if (!sheet) return;
 
                 sheet.meta.cellOrder = sheet.meta.cellOrder.filter(
-                  (id) => id !== cellId,
-                );
-                sheet.meta.inputBarOrder = sheet.meta.inputBarOrder.filter(
                   (id) => id !== cellId,
                 );
               }),

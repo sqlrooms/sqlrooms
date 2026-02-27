@@ -12,7 +12,6 @@ export type NotebookSliceState = {
     renameTab: (id: string, title: string) => void;
     setCurrentTab: (id: string) => void;
     removeTab: (id: string) => void;
-    toggleShowInputBar: (id: string) => void;
     initializeSheet: (id: string) => void;
 
     // Cell actions (delegate to cells, keep display order here)

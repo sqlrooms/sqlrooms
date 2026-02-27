@@ -4,7 +4,6 @@ import React, {useEffect, useMemo} from 'react';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
 import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
 import {CellView} from './cells/CellView';
-import {InputBar, ShowInputBarToggle} from './cells/InputBar';
 import {useStoreWithNotebook} from './useStoreWithNotebook';
 
 export const Notebook: React.FC = () => {
@@ -36,8 +35,6 @@ export const Notebook: React.FC = () => {
     if (!cellsSheet) return undefined;
     const meta = sheet?.meta || {
       cellOrder: [],
-      inputBarOrder: [],
-      showInputBar: true,
     };
     return {id: cellsSheet.id, ...meta, name: cellsSheet.title, cellOrder};
   }, [sheet, cellsSheet, cellOrder]);
@@ -90,10 +87,7 @@ export const Notebook: React.FC = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="ml-auto mr-0 flex items-center gap-1 px-4 pt-2">
-        {tab.inputBarOrder.length > 0 ? (
-          <ShowInputBarToggle inputBarOrder={tab.inputBarOrder} />
-        ) : null}
+      <div className="mr-0 ml-auto flex items-center gap-1 px-4 pt-2">
         <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
         <Button
           size="xs"
@@ -104,10 +98,6 @@ export const Notebook: React.FC = () => {
           Run all
         </Button>
       </div>
-      <InputBar
-        inputBarOrder={tab.inputBarOrder}
-        showInputBar={tab.showInputBar}
-      />
 
       <div className="tab-scrollable-content flex flex-1 flex-col gap-1 overflow-auto px-6">
         {tab.cellOrder.map((id: string, index: number) => (

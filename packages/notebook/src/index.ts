@@ -21,7 +21,4 @@ export {
   NotebookCell,
   NotebookSheet,
   NotebookSheetMeta,
-  SqlCell,
-  TextCell,
-  VegaCell,
 } from './cellSchemas';
