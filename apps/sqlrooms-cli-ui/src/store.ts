@@ -19,6 +19,7 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
+import {createHttpDbBridge, type DbConnection} from '@sqlrooms/db';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createNotebookSlice,
@@ -80,6 +81,43 @@ connector.loadFile = async (file, desiredTableName, options) => {
   }
   return baseLoadFile(file, desiredTableName, options);
 };
+
+function getRuntimeBridgeConfig():
+  | {
+      id: string;
+      connections: Array<{
+        id: string;
+        engineId: string;
+        title: string;
+        runtimeSupport?: 'browser' | 'server' | 'both';
+        requiresBridge?: boolean;
+        bridgeId?: string;
+        isCore?: boolean;
+      }>;
+    }
+  | undefined {
+  if (runtimeConfig.dbBridge?.connections?.length) {
+    return runtimeConfig.dbBridge;
+  }
+  // Legacy server fallback: only a Postgres bridge toggle was exposed.
+  if (runtimeConfig.postgresBridgeEnabled) {
+    return {
+      id: 'sqlrooms-cli-http-bridge',
+      connections: [
+        {
+          id: 'postgres-default',
+          engineId: 'postgres',
+          title: 'Postgres',
+          runtimeSupport: 'server',
+          requiresBridge: true,
+          bridgeId: 'sqlrooms-cli-http-bridge',
+          isCore: false,
+        },
+      ],
+    };
+  }
+  return undefined;
+}
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
@@ -177,3 +215,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     }),
   ),
 );
+
+const bridgeConfig = getRuntimeBridgeConfig();
+if (bridgeConfig?.connections.length) {
+  const bridge = createHttpDbBridge({
+    id: bridgeConfig.id,
+    baseUrl: runtimeConfig.apiBaseUrl || '',
+  });
+  const state = roomStore.getState();
+  state.db.connectors.registerBridge(bridge);
+  for (const connection of bridgeConfig.connections) {
+    const normalizedConnection: DbConnection = {
+      id: connection.id,
+      engineId: connection.engineId,
+      title: connection.title || connection.id,
+      runtimeSupport: connection.runtimeSupport || 'server',
+      requiresBridge: connection.requiresBridge ?? true,
+      bridgeId: connection.bridgeId || bridgeConfig.id,
+      isCore: connection.isCore ?? false,
+    };
+    state.db.connectors.registerConnection(normalizedConnection);
+  }
+}

@@ -6,6 +6,20 @@ export type RuntimeConfig = {
   apiKey?: string;
   dbPath?: string;
   metaNamespace?: string;
+  dbBridge?: {
+    id: string;
+    connections: Array<{
+      id: string;
+      engineId: string;
+      title: string;
+      runtimeSupport?: 'browser' | 'server' | 'both';
+      requiresBridge?: boolean;
+      bridgeId?: string;
+      isCore?: boolean;
+    }>;
+  };
+  // Backward-compatible fallback for older server versions.
+  postgresBridgeEnabled?: boolean;
 };
 
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {

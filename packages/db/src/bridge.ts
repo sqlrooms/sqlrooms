@@ -28,9 +28,36 @@ function decodeBase64ToBytes(value: string): Uint8Array {
 
 export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
   const {id, baseUrl, runtimeSupport = 'both', headers = {}} = options;
+  const bridgeBaseUrl = baseUrl.replace(/\/$/, '');
+
+  const getErrorDetails = async (res: Response): Promise<string> => {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      try {
+        const payload = (await res.json()) as {
+          error?: unknown;
+          message?: unknown;
+        };
+        if (typeof payload.error === 'string' && payload.error) {
+          return payload.error;
+        }
+        if (typeof payload.message === 'string' && payload.message) {
+          return payload.message;
+        }
+      } catch {
+        return '';
+      }
+      return '';
+    }
+    try {
+      return (await res.text()).trim();
+    } catch {
+      return '';
+    }
+  };
 
   const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-    const res = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+    const res = await fetch(`${bridgeBaseUrl}${path}`, {
       ...init,
       headers: {
         'Content-Type': 'application/json',
@@ -39,7 +66,10 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
       },
     });
     if (!res.ok) {
-      throw new Error(`Bridge request failed (${res.status}) for ${path}`);
+      const details = await getErrorDetails(res);
+      throw new Error(
+        `Bridge request failed (${res.status}) for ${path}${details ? `: ${details}` : ''}`,
+      );
     }
     return (await res.json()) as T;
   };
@@ -68,17 +98,17 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
       });
     },
     fetchArrow: async ({connectionId, sql, signal}) => {
-      const res = await fetch(
-        `${baseUrl.replace(/\/$/, '')}/api/db/fetch-arrow`,
-        {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json', ...headers},
-          body: JSON.stringify({connectionId, sql}),
-          signal,
-        },
-      );
+      const res = await fetch(`${bridgeBaseUrl}/api/db/fetch-arrow`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', ...headers},
+        body: JSON.stringify({connectionId, sql}),
+        signal,
+      });
       if (!res.ok) {
-        throw new Error(`Bridge fetchArrow failed (${res.status})`);
+        const details = await getErrorDetails(res);
+        throw new Error(
+          `Bridge fetchArrow failed (${res.status})${details ? `: ${details}` : ''}`,
+        );
       }
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {

@@ -34,6 +34,10 @@ What happens:
 - `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
+- `--postgres-dsn`: Enables a Postgres backend connector bridge (also via `SQLROOMS_POSTGRES_DSN`).
+- `--snowflake-account` + `--snowflake-user`: Enables a Snowflake backend connector bridge (supports env vars `SNOWFLAKE_*` for credentials/settings).
+- `--postgres-connection-id` / `--snowflake-connection-id`: Connector ids exposed to `DbSlice` and notebook SQL cells.
+- `--postgres-title` / `--snowflake-title`: Labels shown in the SQL cell connector picker.
 
 ## Data persistence
 
@@ -54,10 +58,12 @@ uvx sqlrooms-server --db-path ./sqlrooms.db --port 4000
 
 `sqlrooms-server` is also available as an alias console script.
 
-## Backend connector test (Postgres bridge)
+## Backend connectors (DbSlice bridge)
 
-Use this to validate backend connector flow where query results are fetched from
-Postgres and then materialized into the core DuckDB runtime.
+Use these modes to run remote queries through backend connectors and materialize
+results into core DuckDB for downstream notebook cells.
+
+### Postgres
 
 ```bash
 uvx sqlrooms \
@@ -67,16 +73,33 @@ uvx sqlrooms \
   --postgres-dsn "postgresql://postgres:postgres@localhost:5432/postgres"
 ```
 
+### Snowflake
+
+```bash
+uvx sqlrooms \
+  ./sqlrooms.db \
+  --ws-port 4000 \
+  --port 4173 \
+  --snowflake-account "<account>" \
+  --snowflake-user "<user>" \
+  --snowflake-password "<password>" \
+  --snowflake-warehouse "<warehouse>" \
+  --snowflake-database "<database>" \
+  --snowflake-schema "<schema>"
+```
+
 What this enables:
 
-- `sqlrooms-cli` exposes bridge endpoints under `/api/db/*`.
-- Postgres catalog/query calls can be exercised through that bridge.
-- Arrow payloads can be materialized into DuckDB and queried downstream in the same session.
+- `sqlrooms-cli` exposes connector bridge endpoints under `/api/db/*`.
+- Runtime connector metadata is exposed via `/api/config`, so frontend `DbSlice` auto-registers available backend connections.
+- Notebook SQL cells can select Postgres/Snowflake connectors from the connector dropdown.
+- Arrow payloads are materialized into DuckDB and can be queried downstream in the same session.
 
 Notes:
 
 - `--postgres-dsn` can also be provided via `SQLROOMS_POSTGRES_DSN`.
-- Requires Python dependencies for Postgres/Arrow bridge execution (`psycopg`, `pyarrow`).
+- Snowflake can be configured via `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_SCHEMA`, `SNOWFLAKE_ROLE`, and `SNOWFLAKE_AUTHENTICATOR`.
+- Requires Python connector libraries at runtime (`psycopg` for Postgres, `snowflake-connector-python` for Snowflake).
 
 ## Developer setup
 

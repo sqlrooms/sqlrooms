@@ -6,6 +6,7 @@ import sys
 
 import typer
 
+from .web.db_bridge import SnowflakeConnectorSettings
 from .web.launcher import SqlroomsHttpServer
 
 logging.basicConfig(
@@ -54,11 +55,83 @@ def main(
         envvar="SQLROOMS_API_KEY",
         help="API key for the chosen LLM provider.",
     ),
-    postgres_dsn: str = typer.Option(
+    postgres_dsn: str | None = typer.Option(
         None,
         "--postgres-dsn",
         envvar="SQLROOMS_POSTGRES_DSN",
         help="Optional Postgres DSN to enable backend connector bridge testing in CLI mode.",
+    ),
+    postgres_connection_id: str = typer.Option(
+        "postgres-default",
+        "--postgres-connection-id",
+        envvar="SQLROOMS_POSTGRES_CONNECTION_ID",
+        help="Connection id exposed to DbSlice for the Postgres bridge.",
+    ),
+    postgres_title: str = typer.Option(
+        "Postgres",
+        "--postgres-title",
+        envvar="SQLROOMS_POSTGRES_TITLE",
+        help="Human-friendly connection title exposed in SQL cell connector picker.",
+    ),
+    snowflake_account: str | None = typer.Option(
+        None,
+        "--snowflake-account",
+        envvar="SNOWFLAKE_ACCOUNT",
+        help="Snowflake account identifier (enables Snowflake bridge when used with --snowflake-user).",
+    ),
+    snowflake_user: str | None = typer.Option(
+        None,
+        "--snowflake-user",
+        envvar="SNOWFLAKE_USER",
+        help="Snowflake username.",
+    ),
+    snowflake_password: str | None = typer.Option(
+        None,
+        "--snowflake-password",
+        envvar="SNOWFLAKE_PASSWORD",
+        help="Snowflake password.",
+    ),
+    snowflake_warehouse: str | None = typer.Option(
+        None,
+        "--snowflake-warehouse",
+        envvar="SNOWFLAKE_WAREHOUSE",
+        help="Default Snowflake warehouse.",
+    ),
+    snowflake_database: str | None = typer.Option(
+        None,
+        "--snowflake-database",
+        envvar="SNOWFLAKE_DATABASE",
+        help="Default Snowflake database.",
+    ),
+    snowflake_schema: str | None = typer.Option(
+        None,
+        "--snowflake-schema",
+        envvar="SNOWFLAKE_SCHEMA",
+        help="Default Snowflake schema.",
+    ),
+    snowflake_role: str | None = typer.Option(
+        None,
+        "--snowflake-role",
+        envvar="SNOWFLAKE_ROLE",
+        help="Optional Snowflake role.",
+    ),
+    snowflake_authenticator: str | None = typer.Option(
+        None,
+        "--snowflake-authenticator",
+        envvar="SNOWFLAKE_AUTHENTICATOR",
+        help="Optional Snowflake authenticator (for example, externalbrowser).",
+    ),
+    snowflake_connection_id: str = typer.Option(
+        "snowflake-default",
+        "--snowflake-connection-id",
+        envvar="SQLROOMS_SNOWFLAKE_CONNECTION_ID",
+        help="Connection id exposed to DbSlice for the Snowflake bridge.",
+    ),
+    snowflake_title: str = typer.Option(
+        "Snowflake",
+        "--snowflake-title",
+        envvar="SQLROOMS_SNOWFLAKE_TITLE",
+        help="Human-friendly title exposed for the Snowflake connection.",
     ),
     no_open_browser: bool = typer.Option(
         False, "--no-open-browser", help="Skip automatically opening the browser."
@@ -90,6 +163,18 @@ def main(
     - Serves the AI example UI with persisted state stored in DuckDB.
     """
     resolved_db_path = db_path if db_path is not None else db_path_option
+    snowflake_settings = SnowflakeConnectorSettings(
+        account=snowflake_account,
+        user=snowflake_user,
+        password=snowflake_password,
+        warehouse=snowflake_warehouse,
+        database=snowflake_database,
+        schema=snowflake_schema,
+        role=snowflake_role,
+        authenticator=snowflake_authenticator,
+        connection_id=snowflake_connection_id,
+        title=snowflake_title,
+    )
     server = SqlroomsHttpServer(
         db_path=resolved_db_path,
         host=host,
@@ -102,6 +187,9 @@ def main(
         llm_model=llm_model,
         api_key=api_key,
         postgres_dsn=postgres_dsn,
+        postgres_connection_id=postgres_connection_id,
+        postgres_title=postgres_title,
+        snowflake_settings=snowflake_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
     )
