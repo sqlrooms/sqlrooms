@@ -306,12 +306,15 @@ export {
 
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 
+export {useDetermineTheme} from './hooks/useDetermineTheme';
+
 // Utilities
 export {cn} from './lib/utils';
 export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
 
 // Theme
 export {ThemeProvider, useTheme} from './theme/theme-provider';
+export type {Theme} from './theme/theme-provider';
 
 // Re-export from Radix
 export {Slot} from '@radix-ui/react-slot';

@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/monaco-editor",
+  "name": "@sqlrooms/codemirror-editor",
   "version": "0.28.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,10 +19,23 @@
     "access": "public"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/commands": "^6.7.0",
+    "@codemirror/lang-javascript": "^6.2.0",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/lang-sql": "^6.8.0",
+    "@codemirror/language": "^6.10.0",
+    "@codemirror/lint": "^6.8.0",
+    "@codemirror/search": "^6.5.0",
+    "@codemirror/state": "^6.4.0",
+    "@codemirror/view": "^6.33.0",
+    "@lezer/common": "^1.2.0",
+    "@lezer/highlight": "^1.2.0",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "monaco-editor": "^0.55.0"
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "jsonc-parser": "^3.3.0"
   },
   "peerDependencies": {
     "react": ">=18",
