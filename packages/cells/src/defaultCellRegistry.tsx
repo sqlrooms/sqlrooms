@@ -22,11 +22,7 @@ import type {
   VegaCell,
 } from './types';
 import {isInputCell} from './types';
-import {getEffectiveResultName} from './utils';
-
-function isDefined<T>(value: T | undefined): value is T {
-  return value !== undefined;
-}
+import {getEffectiveResultName, isDefined} from './utils';
 
 export function createDefaultCellRegistry(): CellRegistry {
   return {
@@ -88,6 +84,10 @@ export function createDefaultCellRegistry(): CellRegistry {
           schema: schemaName,
           database: state.db.currentDatabase,
         }).toString();
+
+        if (newTableName === oldResultView) {
+          return;
+        }
 
         // Create new view from same SQL, drop old view
         const connector = await state.db.getConnector();

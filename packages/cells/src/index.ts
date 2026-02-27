@@ -6,7 +6,8 @@
 import {SqlCellContent as SqlCellContentComponent} from './components/SqlCellContent';
 import {SqlCellRunButton as SqlCellRunButtonComponent} from './components/SqlCellRunButton';
 
-export {createCellsSlice, type CellsRootState} from './cellsSlice';
+export {createCellsSlice} from './cellsSlice';
+export type {CellsRootState} from './types';
 export {initializeInput} from './components/Input/helpers';
 export {InputCellContent} from './components/InputCellContent';
 export {SheetsTabBar} from './components/SheetsTabBar';

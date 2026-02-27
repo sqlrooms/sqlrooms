@@ -14,7 +14,12 @@ import {
   replaceCellDependenciesInCache,
   topologicalOrder,
 } from './dagUtils';
-import {getRequiredSqlSelectToJson, resolveDependencies} from './helpers';
+import {
+  findSheetIdForCell,
+  getRequiredSqlSelectToJson,
+  normalizeCellsConfigStructure,
+  resolveDependencies,
+} from './helpers';
 import type {
   Cell,
   CellResultData,
@@ -26,22 +31,13 @@ import type {
   SheetType,
 } from './types';
 import {isInputCell, isSqlCell} from './types';
-import {getSheetSchemaName} from './utils';
-
-export type {CellsRootState} from './types';
-
-/** Module-level cache for Arrow result data (outside Immer to avoid freezing) */
-const cellResultCache = new Map<string, CellResultData>();
-
-function isDefined<T>(value: T | undefined): value is T {
-  return value !== undefined;
-}
+import {getSheetSchemaName, isDefined} from './utils';
 
 function createDefaultCellsConfig(
   config: Partial<CellsSliceConfig> | undefined,
 ): CellsSliceConfig {
   const sheetId = createId();
-  return {
+  const defaultConfig: CellsSliceConfig = {
     data: {},
     sheets: {
       [sheetId]: {
@@ -60,7 +56,22 @@ function createDefaultCellsConfig(
     },
     sheetOrder: [sheetId],
     currentSheetId: sheetId,
+  };
+
+  if (!config) {
+    return defaultConfig;
+  }
+  const {sheets, sheetOrder, currentSheetId} = normalizeCellsConfigStructure(
+    config,
+    defaultConfig,
+  );
+
+  return {
+    ...defaultConfig,
     ...config,
+    sheets,
+    sheetOrder,
+    currentSheetId,
   };
 }
 
@@ -69,6 +80,8 @@ function createDefaultCellsConfig(
 export function createCellsSlice(props: CellsSliceOptions) {
   const {cellRegistry, supportedSheetTypes = ['notebook', 'canvas']} = props;
   const initialConfig = createDefaultCellsConfig(props?.config);
+  // Keep result data outside Immer drafts, but scoped per slice instance.
+  const cellResultCache = new Map<string, CellResultData>();
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
     return {
       cells: {
@@ -156,6 +169,11 @@ export function createCellsSlice(props: CellsSliceOptions) {
               sheet.cellIds.splice(newIndex, 0, cell.id);
 
               // Add edges from pre-computed dependencies
+              sheet.edges = sheet.edges.filter(
+                (edge) =>
+                  edge.target !== cell.id &&
+                  edge.id !== `${edge.source}-${cell.id}`,
+              );
               const localCellIds = new Set(sheet.cellIds);
               for (const depId of deps) {
                 if (!localCellIds.has(depId) || depId === cell.id) continue;
@@ -207,9 +225,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
         ) => {
           const cell = get().cells.config.data[id];
           if (!cell) return;
-          const ownerSheetId = Object.entries(get().cells.config.sheets).find(
-            ([, sheet]) => sheet.cellIds.includes(id),
-          )?.[0];
+          const ownerSheetId = findSheetIdForCell(get(), id);
           const scopedCells = Object.fromEntries(
             (
               (ownerSheetId &&
@@ -712,7 +728,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
           const order = topologicalOrder(roots, dependencies, dependents);
           for (const cellId of order) {
-            await get().cells.runCell(cellId, {cascade: false});
+            try {
+              await get().cells.runCell(cellId, {cascade: false});
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              set((state) =>
+                produce(state, (draft) => {
+                  const status = draft.cells.status[cellId];
+                  if (status?.type === 'sql') {
+                    status.status = 'error';
+                    status.lastError = message;
+                  }
+                }),
+              );
+            }
           }
         },
         runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
@@ -748,7 +778,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
             reachable,
           );
           for (const cellId of order) {
-            await get().cells.runCell(cellId, {cascade: false});
+            try {
+              await get().cells.runCell(cellId, {cascade: false});
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              set((state) =>
+                produce(state, (draft) => {
+                  const status = draft.cells.status[cellId];
+                  if (status?.type === 'sql') {
+                    status.status = 'error';
+                    status.lastError = message;
+                  }
+                }),
+              );
+            }
           }
         },
       },

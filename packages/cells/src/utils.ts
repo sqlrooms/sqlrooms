@@ -1,5 +1,9 @@
 import type {SqlCellData} from './types';
 
+export function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
+
 /**
  * Validates that a string is a valid SQL identifier.
  * Must start with a letter or underscore, followed by letters, digits, or underscores.

@@ -2,7 +2,11 @@ import {isCoreDuckDbConnection} from '@sqlrooms/db';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
+import {
+  findSheetIdForCell,
+  getUnqualifiedSqlIdentifier,
+  resolveSheetSchemaName,
+} from './helpers';
 import {
   findSqlDependencies,
   qualifySheetLocalResultNames,
@@ -16,13 +20,9 @@ import {
   type SqlCellData,
   type SqlCellStatus,
 } from './types';
-import {getEffectiveResultName} from './utils';
+import {getEffectiveResultName, isDefined} from './utils';
 
 const DEFAULT_PAGE_SIZE = 10;
-
-function isDefined<T>(value: T | undefined): value is T {
-  return value !== undefined;
-}
 
 export type ExecuteSqlCellOptions = {
   schemaName: string;
@@ -37,6 +37,9 @@ export async function executeSqlCell(
   set: (updater: (state: CellsRootState) => CellsRootState) => void,
   options: ExecuteSqlCellOptions,
 ) {
+  // Intentionally snapshot state/cell at trigger time so this run is stable.
+  // Later store mutations do not alter this execution; re-read with getState()
+  // explicitly if you need live data after awaits.
   const state = getState();
   const cell = state.cells.config.data[cellId];
   if (!cell || cell.type !== 'sql') return;
@@ -136,6 +139,7 @@ export async function executeSqlCell(
 
       await connector.query(
         `CREATE SCHEMA IF NOT EXISTS ${escapeId(finalSchemaName)}`,
+        {signal},
       );
 
       tableName = makeQualifiedTableName({
@@ -146,9 +150,10 @@ export async function executeSqlCell(
 
       if (signal?.aborted) throw new Error('Query cancelled');
 
-      await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
-        signal,
-      });
+      await connector.query(
+        `CREATE OR REPLACE TEMPORARY TABLE ${tableName} AS ${sql}`,
+        {signal},
+      );
     }
 
     // Find dependencies for referenced tables
@@ -160,7 +165,16 @@ export async function executeSqlCell(
         isInputCell(c) ? c.data.input.varName : undefined,
       getSqlResultName: (id) => {
         const s = getState().cells.status[id];
-        return s?.type === 'sql' ? s.resultName : undefined;
+        if (s?.type !== 'sql') return undefined;
+        const fromStatus = getUnqualifiedSqlIdentifier(s.resultName);
+        if (fromStatus) return fromStatus;
+
+        const currentCell = getState().cells.config.data[id];
+        if (currentCell?.type !== 'sql') return undefined;
+        return getEffectiveResultName(
+          currentCell.data as SqlCellData,
+          convertToValidColumnOrTableName,
+        );
       },
     });
 
@@ -184,6 +198,7 @@ export async function executeSqlCell(
 
       const countResult = await connector.query(
         `SELECT COUNT(*)::int AS count FROM ${tableName}`,
+        {signal},
       );
       const totalRows = countResult.toArray()[0]?.count ?? 0;
 
@@ -191,6 +206,7 @@ export async function executeSqlCell(
 
       const pageResult = await connector.query(
         `SELECT * FROM ${tableName} LIMIT ${DEFAULT_PAGE_SIZE}`,
+        {signal},
       );
 
       setCellResult(cellId, {arrowTable: pageResult, totalRows});

@@ -36,4 +36,5 @@ if (typeof result.status === 'number') {
   process.exit(result.status);
 }
 
+console.error('Failed to launch turbo dev command via pnpm.', result.error);
 process.exit(1);

@@ -7,15 +7,12 @@ import type {
   SheetGraphCache,
   SqlSelectToJsonFn,
 } from './types';
+import {isDefined} from './utils';
 
 export type DependencyGraph = {
   dependencies: Record<string, string[]>;
   dependents: Record<string, string[]>;
 };
-
-function isDefined<T>(value: T | undefined): value is T {
-  return value !== undefined;
-}
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values));

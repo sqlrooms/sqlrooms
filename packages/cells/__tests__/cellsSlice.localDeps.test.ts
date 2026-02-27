@@ -51,11 +51,15 @@ function createTestCellRegistry(): CellRegistry {
   };
 }
 
-function createTestStore() {
+function createTestStore(
+  sqlSelectToJson: NonNullable<
+    CellsRootState['db']['sqlSelectToJson']
+  > = mockSqlSelectToJson,
+) {
   return createStore<CellsRootState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     db: {
-      sqlSelectToJson: mockSqlSelectToJson,
+      sqlSelectToJson,
       getConnector: async () => {
         throw new Error('Not needed in this test');
       },
@@ -99,18 +103,7 @@ describe('cells slice local dependency policy', () => {
   });
 
   it('does not use text fallback when AST parsing returns no table refs', async () => {
-    const store = createStore<CellsRootState>()((...args) => ({
-      ...createBaseRoomSlice()(...args),
-      db: {
-        sqlSelectToJson: async () => ({error: false, statements: []}),
-        getConnector: async () => {
-          throw new Error('Not needed in this test');
-        },
-        refreshTableSchemas: async () => [],
-        currentDatabase: 'main',
-      } as unknown as CellsRootState['db'],
-      ...createCellsSlice({cellRegistry: createTestCellRegistry()})(...args),
-    }));
+    const store = createTestStore(async () => ({error: false, statements: []}));
     const state = store.getState();
     const sheetId = state.cells.config.currentSheetId as string;
 

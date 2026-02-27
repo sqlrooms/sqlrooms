@@ -20,12 +20,12 @@ import {
 } from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import type {PaginationState, SortingState} from '@tanstack/react-table';
-import {produce} from 'immer';
+import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, SqlCell} from '../types';
+import type {CellContainerProps, CellsRootState, SqlCell} from '../types';
 import {getEffectiveResultName, isValidSqlIdentifier} from '../utils';
 import {SqlCellRunButton} from './SqlCellRunButton';
 
@@ -40,7 +40,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   cell,
   renderContainer,
 }) => {
-  const storeApi = useRoomStoreApi();
+  const storeApi = useRoomStoreApi<CellsRootState>();
   const updateCell = useCellsStore((s) => s.cells.updateCell);
   const runCell = useCellsStore((s) => s.cells.runCell);
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
@@ -147,8 +147,12 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     }));
   }, [dbConnections]);
   const [dependentsMenuOpen, setDependentsMenuOpen] = useState(false);
+  const closeDependentsMenuTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const [isResultNameInvalid, setIsResultNameInvalid] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const downstreamCellIds = useMemo(() => {
     if (!currentSheetId) return [];
     return getDownstream(currentSheetId, id);
@@ -203,6 +207,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   // Fetch new page when pagination or sorting changes (not on initial render
   // since executeSqlCell already fetches the first page)
   const isFirstRender = useRef(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -211,7 +216,33 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     if (resultName) {
       fetchCellResultPage(id, pagination, sorting);
     }
-  }, [pagination, sorting, id, resultName, fetchCellResultPage]);
+  }, [pagination, sorting, id, fetchCellResultPage]);
+
+  const clearDependentsCloseTimer = useCallback(() => {
+    if (closeDependentsMenuTimerRef.current) {
+      clearTimeout(closeDependentsMenuTimerRef.current);
+      closeDependentsMenuTimerRef.current = null;
+    }
+  }, []);
+
+  const openDependentsMenu = useCallback(() => {
+    clearDependentsCloseTimer();
+    setDependentsMenuOpen(true);
+  }, [clearDependentsCloseTimer]);
+
+  const scheduleCloseDependentsMenu = useCallback(() => {
+    clearDependentsCloseTimer();
+    closeDependentsMenuTimerRef.current = setTimeout(() => {
+      setDependentsMenuOpen(false);
+      closeDependentsMenuTimerRef.current = null;
+    }, 120);
+  }, [clearDependentsCloseTimer]);
+
+  useEffect(() => {
+    return () => {
+      clearDependentsCloseTimer();
+    };
+  }, [clearDependentsCloseTimer]);
 
   // Reset pagination when a new result arrives (new run)
   const prevResultVersion = useRef(resultVersion);
@@ -247,7 +278,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           // synchronous call, bypassing the async updateCell path.
           const currentSql = editor.getValue();
           storeApi.setState(
-            produce(storeApi.getState(), (draft: any) => {
+            produce(storeApi.getState(), (draft: Draft<CellsRootState>) => {
               const c = draft.cells?.config?.data?.[id];
               if (c && c.type === 'sql') {
                 c.data.sql = currentSql;
@@ -330,7 +361,8 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
               size="xs"
               variant="secondary"
               aria-label={`${downstreamCells.length} dependent cells`}
-              onMouseEnter={() => setDependentsMenuOpen(true)}
+              onMouseEnter={openDependentsMenu}
+              onMouseLeave={scheduleCloseDependentsMenu}
             >
               {downstreamCells.length}
             </Button>
@@ -338,7 +370,8 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           <DropdownMenuContent
             align="start"
             onCloseAutoFocus={(e) => e.preventDefault()}
-            onMouseLeave={() => setDependentsMenuOpen(false)}
+            onMouseEnter={openDependentsMenu}
+            onMouseLeave={scheduleCloseDependentsMenu}
           >
             <DropdownMenuLabel className="text-xs">
               Referenced in
