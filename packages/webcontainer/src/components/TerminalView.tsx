@@ -15,6 +15,8 @@ export function TerminalView({className}: {className?: string}) {
   const terminalRef = useRef<Terminal | null>(null);
   const lastIndexRef = useRef<number>(0);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Intentional stale closure: initialize terminal once on mount.
   useEffect(() => {
     if (!containerRef.current || terminalRef.current) {
       return;

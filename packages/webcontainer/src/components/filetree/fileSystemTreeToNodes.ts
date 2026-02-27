@@ -11,6 +11,12 @@ function isDirectory(value: FileSystemTree[string]): value is DirectoryNode {
   return 'directory' in value && value.directory !== undefined;
 }
 
+function joinPath(base: string, name: string): string {
+  if (base === '/') return `/${name}`;
+  const normalizedBase = base.replace(/\/+$/, '');
+  return `${normalizedBase}/${name}`;
+}
+
 export function fileSystemTreeToNodes(
   tree: FileSystemTree,
   basePath: string,
@@ -28,8 +34,7 @@ export function fileSystemTreeToNodes(
       return a[0].localeCompare(b[0]);
     });
     return entries.map(([name, value]) => {
-      const path =
-        currentBasePath === '/' ? `/${name}` : `${currentBasePath}/${name}`;
+      const path = joinPath(currentBasePath, name);
       if (isDirectory(value)) {
         return {
           key: path,

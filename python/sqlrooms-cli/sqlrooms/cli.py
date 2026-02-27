@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import json
 import re
@@ -46,6 +47,7 @@ def export_project(
     """
     out = Path(out_dir).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
+    out_resolved = out.resolve()
     con = duckdb.connect(db_path)
     try:
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", meta_namespace):
@@ -71,6 +73,12 @@ def export_project(
                     err=True,
                 )
                 raise typer.Exit(code=1) from exc
+        if not isinstance(payload, dict):
+            typer.echo(
+                "Invalid payload_json format: expected a JSON object.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
 
         app_project = (payload or {}).get("appProject") or {}
         config = app_project.get("config") or {}
@@ -85,9 +93,24 @@ def export_project(
                 ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
             ).strip()
             safe_name = safe_name.replace(" ", "-") or sheet_id
-            root = out / f"{safe_name}-{sheet_id[:8]}"
+            safe_sheet_id = "".join(
+                ch for ch in str(sheet_id) if ch.isalnum() or ch in ("-", "_")
+            )
+            if not safe_sheet_id:
+                safe_sheet_id = hashlib.sha1(
+                    str(sheet_id).encode("utf-8")
+                ).hexdigest()[:8]
+            root = out / f"{safe_name}-{safe_sheet_id[:8]}"
             root.mkdir(parents=True, exist_ok=True)
             root_resolved = root.resolve()
+            try:
+                root_resolved.relative_to(out_resolved)
+            except ValueError:
+                typer.echo(
+                    f"Unsafe export root path resolved outside output dir: {root_resolved}",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
             meta = {
                 "sheetId": sheet_id,
                 "name": name,

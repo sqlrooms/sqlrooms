@@ -107,10 +107,19 @@ export const AppBuilderSheet: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() =>
-                currentSheetId &&
-                loadArtifactRuntime(currentSheetId, appState.files || {})
-              }
+              onClick={async () => {
+                if (!currentSheetId) return;
+                try {
+                  await loadArtifactRuntime(
+                    currentSheetId,
+                    appState.files || {},
+                  );
+                } catch (error) {
+                  setStatus(
+                    error instanceof Error ? error.message : String(error),
+                  );
+                }
+              }}
             >
               Run app
             </Button>
@@ -301,8 +310,8 @@ export default function App() {
   return (
     <main style={{padding: 16}}>
       <h1>${appTitle}</h1>
-      <p>Prompt: ${input.prompt.replace(/</g, '&lt;')}</p>
-      <p>Template: ${input.template}</p>
+      <p>Prompt: {${JSON.stringify(input.prompt)}}</p>
+      <p>Template: {${JSON.stringify(input.template)}}</p>
     </main>
   );
 }

@@ -403,7 +403,16 @@ class SqlroomsHttpServer:
                     "truncated": truncated,
                 }
 
-            data = await db_async.run_db_task(_run)
+            try:
+                data = await db_async.run_db_task(_run)
+            except Exception as exc:
+                return JSONResponse(
+                    {
+                        "type": "json",
+                        "data": {"error": "query_error", "message": str(exc)},
+                    },
+                    status_code=400,
+                )
             return {"type": "json", "data": data}
 
         if self.static_dir.exists():

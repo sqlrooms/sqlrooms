@@ -59,7 +59,6 @@ export default function scaffoldsPlugin(): Plugin {
               '[sqlrooms-cli-scaffolds] failed to regenerate scaffolds',
               err,
             );
-            throw err;
           });
         }, 150);
       };

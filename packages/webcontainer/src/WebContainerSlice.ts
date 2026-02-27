@@ -196,17 +196,29 @@ export function createWebContainerSlice(props?: {
             draft.webContainer.serverStatus = {type: 'initializing'};
           }),
         );
-        const instance = await bootWebContainer();
-        await instance.mount(get().webContainer.config.filesTree);
-        set((state) =>
-          produce(state, (draft) => {
-            draft.webContainer.instance = instance;
-          }),
-        );
+        try {
+          const instance = await bootWebContainer();
+          await instance.mount(get().webContainer.config.filesTree);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.instance = instance;
+            }),
+          );
 
-        const activeFilePath = get().webContainer.config.activeFilePath;
-        if (activeFilePath) {
-          await get().webContainer.openFile(activeFilePath);
+          const activeFilePath = get().webContainer.config.activeFilePath;
+          if (activeFilePath) {
+            await get().webContainer.openFile(activeFilePath);
+          }
+        } catch (error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.instance = null;
+              draft.webContainer.serverStatus = {type: 'error', error};
+            }),
+          );
+          throw new Error(
+            `WebContainer initialization failed during boot/mount: ${String(error)}`,
+          );
         }
 
         try {
@@ -215,6 +227,11 @@ export function createWebContainerSlice(props?: {
             throw new Error('Installation failed');
           }
         } catch (error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.serverStatus = {type: 'error', error};
+            }),
+          );
           throw new Error(
             `WebContainer initialization failed during dependency installation: ${String(error)}`,
           );
@@ -223,6 +240,11 @@ export function createWebContainerSlice(props?: {
         try {
           await get().webContainer.startDevServer();
         } catch (error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.serverStatus = {type: 'error', error};
+            }),
+          );
           throw new Error(
             `WebContainer initialization failed while starting dev server: ${String(error)}`,
           );
@@ -264,18 +286,20 @@ export function createWebContainerSlice(props?: {
         }
         const cwd = await get().webContainer.resolveProjectRoot();
         let started = false;
+        let devProcess: {exit: Promise<number>} | null = null;
         // Run `npm run dev` to start the Vite dev server
         for (const manager of ['npm', 'pnpm', 'yarn']) {
           try {
             const args = manager === 'yarn' ? ['dev'] : ['run', 'dev'];
-            await instance.spawn(manager, args, {cwd});
+            const process = await instance.spawn(manager, args, {cwd});
+            devProcess = process;
             started = true;
             break;
           } catch (_e) {
             // Try next package manager.
           }
         }
-        if (!started) {
+        if (!started || !devProcess) {
           throw new Error(
             'Unable to start dev server: no supported package manager found',
           );
@@ -316,6 +340,32 @@ export function createWebContainerSlice(props?: {
             );
             reject(error);
           });
+          void devProcess.exit
+            .then((exitCode) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              const error = new Error(
+                `Dev server process exited before ready (code ${exitCode})`,
+              );
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.webContainer.serverStatus = {type: 'error', error};
+                }),
+              );
+              reject(error);
+            })
+            .catch((error) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.webContainer.serverStatus = {type: 'error', error};
+                }),
+              );
+              reject(error);
+            });
         });
       },
 
