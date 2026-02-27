@@ -8,10 +8,11 @@ def test_cli_help():
     assert result.exit_code == 0
     assert "Start the SQLRooms local experience" in result.stdout
 
-def test_cli_version():
-    # `--version` is not configured; assert expected command registration instead.
-    command_names = [command.name for command in app.registered_commands]
-    assert "export" in command_names
+def test_cli_export_help():
+    result = runner.invoke(app, ["export", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.stdout
+    assert "export" in result.stdout
     
 # Since the main function in cli.py starts an asyncio loop and a server, 
 # unit testing it without mocks is hard. We'll skip deep integration tests 

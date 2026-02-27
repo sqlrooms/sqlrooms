@@ -48,11 +48,17 @@ async function buildTreeForScaffold(baseDir: string): Promise<{
   editable: {editableFilePath: string; editableFileContents: string};
 }> {
   const tree = await buildDirectoryNode(baseDir);
-  const editableRel = 'src/App.jsx';
-  const editableContents = await fs.readFile(
-    path.join(baseDir, editableRel),
-    'utf-8',
-  );
+  const editableRel =
+    (await resolveEditablePath(baseDir, tree)) ?? 'src/App.jsx';
+  let editableContents = '';
+  try {
+    editableContents = await fs.readFile(
+      path.join(baseDir, editableRel),
+      'utf-8',
+    );
+  } catch {
+    editableContents = '';
+  }
   return {
     tree,
     editable: {
@@ -62,18 +68,77 @@ async function buildTreeForScaffold(baseDir: string): Promise<{
   };
 }
 
-async function buildDirectoryNode(dir: string): Promise<unknown> {
+type ScaffoldFileNode = {
+  file: {contents: string; encoding?: 'utf-8' | 'base64'};
+};
+type ScaffoldDirectoryNode = {directory: DirectoryTree};
+type ScaffoldTreeNode = ScaffoldFileNode | ScaffoldDirectoryNode;
+type DirectoryTree = Record<string, ScaffoldTreeNode>;
+
+async function resolveEditablePath(
+  baseDir: string,
+  tree: DirectoryTree,
+): Promise<string | null> {
+  const preferred = [
+    'src/App.jsx',
+    'src/App.tsx',
+    'src/main.jsx',
+    'src/main.tsx',
+  ];
+  for (const rel of preferred) {
+    try {
+      await fs.stat(path.join(baseDir, rel));
+      return rel;
+    } catch {
+      // Keep looking for a fallback.
+    }
+  }
+
+  return findFirstTextFile(tree);
+}
+
+function findFirstTextFile(tree: DirectoryTree, prefix = ''): string | null {
+  const entries = Object.entries(tree);
+  for (const [name, entry] of entries) {
+    if ('file' in entry) {
+      if (entry.file.encoding !== 'base64') {
+        return `${prefix}${name}`;
+      }
+      continue;
+    }
+    const nested = findFirstTextFile(entry.directory, `${prefix}${name}/`);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+function looksBinary(data: Buffer): boolean {
+  if (data.length === 0) return false;
+  for (const byte of data) {
+    if (byte === 0) return true;
+  }
+  return false;
+}
+
+async function buildDirectoryNode(dir: string): Promise<DirectoryTree> {
   const entries = await fs.readdir(dir, {withFileTypes: true});
   entries.sort((a, b) => a.name.localeCompare(b.name));
-  const result: Record<string, unknown> = {};
+  const result: DirectoryTree = {};
   for (const entry of entries) {
     const abs = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       result[entry.name] = {directory: await buildDirectoryNode(abs)};
     } else if (entry.isFile()) {
-      result[entry.name] = {
-        file: {contents: await fs.readFile(abs, 'utf-8')},
-      };
+      const raw = await fs.readFile(abs);
+      if (looksBinary(raw)) {
+        result[entry.name] = {
+          file: {contents: raw.toString('base64'), encoding: 'base64'},
+        };
+      } else {
+        result[entry.name] = {
+          file: {contents: raw.toString('utf-8'), encoding: 'utf-8'},
+        };
+      }
     }
   }
   return result;

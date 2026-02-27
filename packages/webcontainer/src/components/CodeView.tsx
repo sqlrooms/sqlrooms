@@ -3,6 +3,28 @@ import {Button, cn, TabStrip} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useStoreWithWebContainer} from '../WebContainerSlice';
 
+function getLanguageFromPath(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'js':
+    case 'jsx':
+      return 'javascript';
+    case 'ts':
+    case 'tsx':
+      return 'typescript';
+    case 'json':
+      return 'json';
+    case 'css':
+      return 'css';
+    case 'html':
+      return 'html';
+    case 'md':
+      return 'markdown';
+    default:
+      return 'plaintext';
+  }
+}
+
 export function CodeView({className}: {className?: string}) {
   const openedFiles = useStoreWithWebContainer(
     (s) => s.webContainer.config.openedFiles,
@@ -20,8 +42,9 @@ export function CodeView({className}: {className?: string}) {
   const saveAll = useStoreWithWebContainer(
     (s) => s.webContainer.saveAllOpenFiles,
   );
-  const hasDirty = useStoreWithWebContainer((s) =>
-    s.webContainer.hasDirtyFiles(),
+  const hasDirty = useMemo(
+    () => openedFiles.some((file) => file.dirty),
+    [openedFiles],
   );
 
   const activeFile = useMemo(
@@ -67,16 +90,18 @@ export function CodeView({className}: {className?: string}) {
             size="sm"
             variant="default"
             onClick={saveAll}
-            disabled={!activeFile?.dirty}
+            disabled={!hasDirty}
           >
-            {activeFile?.dirty ? 'Save all' : 'Saved'}
+            {hasDirty ? 'Save all' : 'Saved'}
           </Button>
         ) : null}
       </div>
       <div className="flex-1">
         <MonacoEditor
           className="h-full w-full"
-          language="javascript"
+          language={
+            activeFilePath ? getLanguageFromPath(activeFilePath) : 'plaintext'
+          }
           value={activeFile?.content ?? ''}
           onChange={(v) => {
             if (activeFilePath) {

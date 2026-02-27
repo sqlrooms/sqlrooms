@@ -59,6 +59,14 @@ def _normalize_sql_for_policy(sql: str) -> str:
     return normalized
 
 
+def _redact_sql_literals(sql: str) -> str:
+    # Redact quoted strings and numeric literals before logging user SQL.
+    redacted = re.sub(r"'(?:''|[^'])*'", "'***'", sql)
+    redacted = re.sub(r'"(?:""|[^"])*"', '"***"', redacted)
+    redacted = re.sub(r"\b\d+(?:\.\d+)?\b", "?", redacted)
+    return redacted
+
+
 def _is_select_only_sql(sql: str) -> bool:
     normalized = _normalize_sql_for_policy(sql)
     if not normalized:
@@ -71,7 +79,11 @@ def _is_select_only_sql(sql: str) -> bool:
 
 
 def _references_internal_namespace(sql: str, namespace: str) -> bool:
-    pattern = re.compile(rf"(^|[^A-Za-z0-9_]){re.escape(namespace)}\s*\.", re.IGNORECASE)
+    escaped = re.escape(namespace)
+    pattern = re.compile(
+        rf"(^|[^A-Za-z0-9_])(?:{escaped}|\"{escaped}\"|`{escaped}`|\[{escaped}\])\s*\.",
+        re.IGNORECASE,
+    )
     return bool(pattern.search(sql))
 
 
@@ -373,17 +385,22 @@ class SqlroomsHttpServer:
                     status_code=403,
                 )
 
-            logger.info("project_query sql=%s", _normalize_sql_for_policy(sql)[:2000])
+            logger.debug(
+                "project_query sql=%s",
+                _redact_sql_literals(_normalize_sql_for_policy(sql))[:2000],
+            )
 
             def _run(cur):
-                rows = cur.execute(sql).fetchall()
+                cur.execute(sql)
                 columns = [d[0] for d in (cur.description or [])]
-                limited = rows[:5000]
+                fetched = cur.fetchmany(5001)
+                truncated = len(fetched) > 5000
+                limited = fetched[:5000]
                 return {
                     "columns": columns,
                     "rows": [dict(zip(columns, row)) for row in limited],
                     "rowCount": len(limited),
-                    "truncated": len(rows) > len(limited),
+                    "truncated": truncated,
                 }
 
             data = await db_async.run_db_task(_run)

@@ -15,19 +15,53 @@ export default function scaffoldsPlugin(): Plugin {
       scaffoldsRootDir: scaffoldsRoot,
       outputFile,
     });
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let isRunning = false;
+  let rerunRequested = false;
+
+  const runGenerateSerial = async () => {
+    if (isRunning) {
+      rerunRequested = true;
+      return;
+    }
+    isRunning = true;
+    try {
+      do {
+        rerunRequested = false;
+        await runGenerate();
+      } while (rerunRequested);
+    } finally {
+      isRunning = false;
+    }
+  };
 
   return {
     name: 'sqlrooms-cli-scaffolds',
     async buildStart() {
-      await runGenerate();
+      try {
+        await runGenerate();
+      } catch (err) {
+        this.error(err instanceof Error ? err.message : String(err));
+      }
     },
     configureServer(server) {
       const watcher = server.watcher;
       watcher.add(scaffoldsRoot);
-      const onFsEvent = async (changedPath: string) => {
+      const onFsEvent = (changedPath: string) => {
         if (!changedPath.startsWith(scaffoldsRoot)) return;
         if (changedPath === outputFile) return;
-        await runGenerate();
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+        debounceTimer = setTimeout(() => {
+          void runGenerateSerial().catch((err) => {
+            console.error(
+              '[sqlrooms-cli-scaffolds] failed to regenerate scaffolds',
+              err,
+            );
+            throw err;
+          });
+        }, 150);
       };
       watcher.on('add', onFsEvent);
       watcher.on('change', onFsEvent);

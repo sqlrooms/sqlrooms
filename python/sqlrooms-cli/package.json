@@ -15,8 +15,5 @@
   },
   "dependencies": {
     "sqlrooms-cli-app": "workspace:*"
-  },
-  "dependencies": {
-    "sqlrooms-cli-app": "workspace:*"
   }
 }

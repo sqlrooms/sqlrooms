@@ -20,9 +20,13 @@ export function fileSystemTreeToNodes(
     subtree: FileSystemTree,
     currentBasePath: string,
   ): TreeNodeData<FileNodeObject>[] => {
-    const entries = Object.entries(subtree).sort((a, b) =>
-      isDirectory(a[1]) ? -1 : a[0].localeCompare(b[0]),
-    );
+    const entries = Object.entries(subtree).sort((a, b) => {
+      const aIsDirectory = isDirectory(a[1]);
+      const bIsDirectory = isDirectory(b[1]);
+      if (aIsDirectory && !bIsDirectory) return -1;
+      if (!aIsDirectory && bIsDirectory) return 1;
+      return a[0].localeCompare(b[0]);
+    });
     return entries.map(([name, value]) => {
       const path =
         currentBasePath === '/' ? `/${name}` : `${currentBasePath}/${name}`;

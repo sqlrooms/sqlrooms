@@ -241,7 +241,7 @@ export function createWebContainerSlice(props?: {
             draft.webContainer.serverStatus = {type: 'install-deps'};
           }),
         );
-        const installProcess = await instance.spawn('npm', ['install']);
+        const installProcess = await instance.spawn('npm', ['install'], {cwd});
         installProcess.output.pipeTo(
           new WritableStream({
             write(data) {
@@ -547,12 +547,11 @@ export function createWebContainerSlice(props?: {
               write(data) {
                 const text = String(data ?? '');
                 stdout += text;
-                set((state) => ({
-                  webContainer: {
-                    ...state.webContainer,
-                    output: state.webContainer.output + text,
-                  },
-                }));
+                set((state) =>
+                  produce(state, (draft) => {
+                    draft.webContainer.output += text;
+                  }),
+                );
               },
             }),
           );

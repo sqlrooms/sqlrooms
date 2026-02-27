@@ -60,12 +60,7 @@ export const AppBuilderSheet: React.FC = () => {
   React.useEffect(() => {
     if (!currentSheetId || !appState?.files) return;
     void loadArtifactRuntime(currentSheetId, appState.files);
-  }, [
-    currentSheetId,
-    appState?.updatedAt,
-    appState?.files,
-    loadArtifactRuntime,
-  ]);
+  }, [currentSheetId, appState?.updatedAt, loadArtifactRuntime]);
 
   if (!currentSheetId) return null;
 
@@ -180,20 +175,27 @@ export const AppBuilderSheet: React.FC = () => {
 function toFileSystemTree(
   files: Array<{path: string; content: string}>,
 ): FileSystemTree {
-  const root: any = {};
+  type MutableTreeNode = {file: {contents: string}} | {directory: MutableTree};
+  type MutableTree = Record<string, MutableTreeNode>;
+
+  const root: MutableTree = {};
   for (const file of files) {
     const clean = file.path.replace(/^\/+/, '');
     if (!clean) continue;
     const parts = clean.split('/').filter(Boolean);
-    let cursor = root;
+    let cursor: MutableTree = root;
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       const isLeaf = i === parts.length - 1;
+      if (!part) continue;
       if (isLeaf) {
         cursor[part] = {file: {contents: file.content}};
       } else {
-        cursor[part] = cursor[part] || {directory: {}};
-        cursor = cursor[part].directory;
+        const existing = cursor[part];
+        if (!existing || !('directory' in existing)) {
+          cursor[part] = {directory: {}};
+        }
+        cursor = (cursor[part] as {directory: MutableTree}).directory;
       }
     }
   }
@@ -288,15 +290,12 @@ function generateAppFromPromptLocal(input: {
   files: Array<{path: string; content: string}>;
 } {
   const errors: string[] = [];
-  let attempts = 0;
-  let files: Array<{path: string; content: string}> = [];
-  while (attempts < 3) {
-    attempts += 1;
-    const appTitle =
-      input.template === 'basic-dashboard'
-        ? 'Analytics App'
-        : 'Mosaic Analytics App';
-    const appFile = `import React from 'react';
+  const attempts = 1;
+  const appTitle =
+    input.template === 'basic-dashboard'
+      ? 'Analytics App'
+      : 'Mosaic Analytics App';
+  const appFile = `import React from 'react';
 
 export default function App() {
   return (
@@ -308,20 +307,19 @@ export default function App() {
   );
 }
 `;
-    files = ensureRunnableViteScaffold([
-      {path: '/src/App.jsx', content: appFile},
-    ]).files;
-    const required = new Set(files.map((f) => f.path));
-    const missing = [
-      '/index.html',
-      '/src/main.jsx',
-      '/src/App.jsx',
-      '/package.json',
-    ].filter((p) => !required.has(p));
-    if (missing.length === 0) {
-      return {status: 'ok', attempts, errors, files};
-    }
-    errors.push(...missing.map((m) => `missing required file: ${m}`));
+  const files = ensureRunnableViteScaffold([
+    {path: '/src/App.jsx', content: appFile},
+  ]).files;
+  const required = new Set(files.map((f) => f.path));
+  const missing = [
+    '/index.html',
+    '/src/main.jsx',
+    '/src/App.jsx',
+    '/package.json',
+  ].filter((p) => !required.has(p));
+  if (missing.length === 0) {
+    return {status: 'ok', attempts, errors, files};
   }
+  errors.push(...missing.map((m) => `missing required file: ${m}`));
   return {status: 'error', attempts, errors, files};
 }

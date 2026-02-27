@@ -4,7 +4,7 @@ import {FileSystemTree} from '@webcontainer/api';
  * Normalize a POSIX path by removing a leading slash and collapsing empties.
  */
 export function normalizePath(path: string): string {
-  return (path.startsWith('/') ? path.slice(1) : path).replace(/\/+/g, '/');
+  return path.replace(/^\/+/, '').replace(/\/+/g, '/');
 }
 
 /**

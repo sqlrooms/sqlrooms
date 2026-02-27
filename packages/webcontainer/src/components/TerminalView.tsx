@@ -39,7 +39,7 @@ export function TerminalView({className}: {className?: string}) {
       terminalRef.current = null;
       lastIndexRef.current = 0;
     };
-  }, [output]);
+  }, []);
 
   useEffect(() => {
     const term = terminalRef.current;

@@ -47,12 +47,13 @@ import {
   WebContainerSliceConfig,
   WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
+import {produce} from 'immer';
 import {DatabaseIcon} from 'lucide-react';
 import {createElement, Suspense} from 'react';
 import {z} from 'zod';
-import {scaffolds} from '../app-scaffolds/scaffolds.generated.json';
 
 import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {getDefaultScaffoldTree} from './helpers';
 import {MainView} from './components/MainView';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
@@ -144,42 +145,37 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       appProject: {
         config: AppBuilderProjectConfig.parse({}),
         upsertSheetApp: (sheetId, app) => {
-          set((state) => ({
-            appProject: {
-              ...state.appProject,
-              config: {
-                ...state.appProject.config,
-                appsBySheetId: {
-                  ...state.appProject.config.appsBySheetId,
-                  [sheetId]: {
-                    ...state.appProject.config.appsBySheetId[sheetId],
-                    ...app,
-                    updatedAt: Date.now(),
-                  },
-                },
-              },
-            },
-          }));
+          set(
+            produce((draft: RoomState) => {
+              const current = draft.appProject.config.appsBySheetId[
+                sheetId
+              ] ?? {
+                name: app.name,
+                prompt: '',
+                template: 'mosaic-dashboard',
+                files: {},
+                updatedAt: 0,
+              };
+              draft.appProject.config.appsBySheetId[sheetId] = {
+                ...current,
+                ...app,
+                updatedAt: Date.now(),
+              };
+            }),
+          );
         },
         updateSheetAppFiles: (sheetId, files) => {
-          const current = get().appProject.config.appsBySheetId[sheetId];
-          if (!current) return;
-          set((state) => ({
-            appProject: {
-              ...state.appProject,
-              config: {
-                ...state.appProject.config,
-                appsBySheetId: {
-                  ...state.appProject.config.appsBySheetId,
-                  [sheetId]: {
-                    ...current,
-                    files,
-                    updatedAt: Date.now(),
-                  },
-                },
-              },
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              const current = draft.appProject.config.appsBySheetId[sheetId];
+              if (!current) return;
+              draft.appProject.config.appsBySheetId[sheetId] = {
+                ...current,
+                files,
+                updatedAt: Date.now(),
+              };
+            }),
+          );
         },
         getSheetApp: (sheetId) =>
           get().appProject.config.appsBySheetId[sheetId],
@@ -245,7 +241,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createWebContainerSlice({
         autoInitialize: false,
         config: {
-          filesTree: (scaffolds as Record<string, any>)['get-started'] ?? {},
+          filesTree: getDefaultScaffoldTree(),
           activeFilePath: '/src/App.jsx',
         },
       })(set, get, store),

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -47,6 +48,12 @@ def export_project(
     out.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(db_path)
     try:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", meta_namespace):
+            typer.echo(
+                f"Invalid --meta-namespace value: {meta_namespace!r}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
         ui_ref = f'"{meta_namespace}"."ui_state"'
         row = con.execute(
             f"SELECT payload_json FROM {ui_ref} WHERE key = 'default' LIMIT 1"
@@ -56,7 +63,14 @@ def export_project(
             return
         payload = row[0]
         if isinstance(payload, str):
-            payload = json.loads(payload)
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError as exc:
+                typer.echo(
+                    f"Failed to parse payload_json from {ui_ref}: {exc}",
+                    err=True,
+                )
+                raise typer.Exit(code=1) from exc
 
         app_project = (payload or {}).get("appProject") or {}
         config = app_project.get("config") or {}
@@ -73,6 +87,7 @@ def export_project(
             safe_name = safe_name.replace(" ", "-") or sheet_id
             root = out / f"{safe_name}-{sheet_id[:8]}"
             root.mkdir(parents=True, exist_ok=True)
+            root_resolved = root.resolve()
             meta = {
                 "sheetId": sheet_id,
                 "name": name,
@@ -85,7 +100,15 @@ def export_project(
             )
             for path, content in files.items():
                 rel = Path(str(path).lstrip("/"))
-                target = root / rel
+                target = (root / rel).resolve()
+                try:
+                    target.relative_to(root_resolved)
+                except ValueError:
+                    typer.echo(
+                        f"Skipping unsafe export path outside target directory: {path!r}",
+                        err=True,
+                    )
+                    continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(str(content), encoding="utf-8")
             exported += 1
