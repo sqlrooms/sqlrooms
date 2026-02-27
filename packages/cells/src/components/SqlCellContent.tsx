@@ -3,6 +3,7 @@ import {
   QueryDataTableActionsMenu,
   useArrowDataTable,
 } from '@sqlrooms/data-table';
+import {getCoreDuckDbConnectionId, type DbConnection} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {
@@ -27,7 +28,6 @@ import {useCellsStore} from '../hooks';
 import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
 import {getEffectiveResultName, isValidSqlIdentifier} from '../utils';
 import {SqlCellRunButton} from './SqlCellRunButton';
-import type {DbConnection} from '@sqlrooms/db';
 
 export type SqlCellContentProps = {
   id: string;
@@ -133,13 +133,13 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     cell.data as SqlCellData,
     convertToValidColumnOrTableName,
   );
-  const explicitResultName = (cell.data as SqlCellData).resultName || '';
+  const explicitResultName = cell.data.resultName || '';
   const selectedConnectorId =
-    (cell.data as SqlCellData).connectorId || 'duckdb-core';
+    cell.data.connectorId || getCoreDuckDbConnectionId();
   const connectionOptions = useMemo(() => {
     const entries = Object.values(dbConnections);
     if (!entries.length) {
-      return [{id: 'duckdb-core', title: 'Core DuckDB'}];
+      return [{id: getCoreDuckDbConnectionId(), title: 'Core DuckDB'}];
     }
     return entries.map((conn: DbConnection) => ({
       id: conn.id,
@@ -285,7 +285,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
       </div>
       {status?.state === 'error' ? (
         <div className="relative max-h-[400px] overflow-auto p-4">
-          <span className="whitespace-pre-wrap font-mono text-xs text-red-600">
+          <span className="font-mono text-xs whitespace-pre-wrap text-red-600">
             {status.message}
           </span>
         </div>

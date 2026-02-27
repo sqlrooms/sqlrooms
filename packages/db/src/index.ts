@@ -4,11 +4,9 @@
  */
 
 export {createHttpDbBridge} from './bridge';
-export {
-  createCoreDuckDbConnection,
-  isCoreDuckDbConnection,
-} from './connectors/duckdb';
+export {createCoreDuckDbConnection} from './connectors/duckdb';
 export {createDbSlice, useStoreWithDb} from './DbSlice';
+export {getCoreDuckDbConnectionId, isCoreDuckDbConnection} from './helpers';
 export type {
   CatalogColumn,
   CatalogDatabase,

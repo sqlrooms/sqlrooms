@@ -1,9 +1,19 @@
+import {CORE_DUCKDB_CONNECTION_ID} from './connectors/duckdb';
 import type {DbSliceConfig, RuntimeSupport} from './types';
+
+export function isCoreDuckDbConnection(connectionId: string): boolean {
+  return connectionId === CORE_DUCKDB_CONNECTION_ID;
+}
+
+export function getCoreDuckDbConnectionId(): string {
+  return CORE_DUCKDB_CONNECTION_ID;
+}
 
 export function createDefaultDbConfig(
   config?: Partial<DbSliceConfig>,
 ): DbSliceConfig {
-  const coreConnectionId = config?.coreConnectionId ?? 'duckdb-core';
+  const coreConnectionId =
+    config?.coreConnectionId ?? CORE_DUCKDB_CONNECTION_ID;
   const runtime: RuntimeSupport = config?.currentRuntime ?? 'both';
   return {
     currentRuntime: runtime,

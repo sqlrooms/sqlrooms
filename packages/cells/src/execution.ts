@@ -1,3 +1,4 @@
+import {isCoreDuckDbConnection} from '@sqlrooms/db';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -8,10 +9,10 @@ import {
   renderSqlWithInputs,
 } from './sqlHelpers';
 import {
-  type CellsRootState,
   isInputCell,
   isSqlCell,
   type CellResultData,
+  type CellsRootState,
   type SqlCellData,
   type SqlCellStatus,
 } from './types';
@@ -110,7 +111,7 @@ export async function executeSqlCell(
     const connector = await db.getConnector();
     if (
       selectedConnectorId &&
-      selectedConnectorId !== 'duckdb-core' &&
+      !isCoreDuckDbConnection(selectedConnectorId) &&
       dbConnectors?.runQuery
     ) {
       const routed = await dbConnectors.runQuery({
