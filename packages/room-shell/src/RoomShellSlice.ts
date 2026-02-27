@@ -173,7 +173,7 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   layout?: CreateLayoutSliceProps;
   fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
   CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
-  createCommandProps?: CreateCommandSliceProps<RoomShellSliceState>;
+  createCommandProps?: CreateCommandSliceProps;
   /** @deprecated Use direct props instead e.g. layout.panels */
   room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
