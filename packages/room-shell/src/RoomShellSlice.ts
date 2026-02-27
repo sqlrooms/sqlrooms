@@ -789,6 +789,9 @@ function createRoomShellCommands(): RoomCommand<RoomShellCommandStoreState>[] {
       keywords: ['room', 'title', 'name'],
       inputSchema: RoomSetTitleCommandInput,
       inputDescription: 'Provide a non-empty room title.',
+      ui: {
+        keystrokes: 'Mod+Alt+Shift+T',
+      },
       metadata: {
         readOnly: false,
         idempotent: true,
