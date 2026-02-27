@@ -8,28 +8,74 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.29.0 (upcoming)
+
+### `@sqlrooms/ui`: `toast` export now uses Sonner (breaking)
+
+The top-level `toast` export from `@sqlrooms/ui` now points to Sonner's API.
+
+- **Before**: `toast({...})` used SQLRooms' legacy Radix-based object API.
+- **After**: `toast.success(...)`, `toast.error(...)`, etc. use Sonner.
+
+If you still need the old API temporarily, import `legacyToast` from `@sqlrooms/ui`.
+
+#### Before
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
+#### After (Sonner)
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast.success('Table created', {
+  description: 'File loaded',
+});
+```
+
+#### Temporary compatibility option
+
+```tsx
+import {legacyToast} from '@sqlrooms/ui';
+
+legacyToast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
 ## 0.28.0
 
 ### Tailwind v3 to v4
 
-Tailwind in SQLRooms is now upgraded from v3 to v4. 
+Tailwind in SQLRooms is now upgraded from v3 to v4.
 
 For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
 
-You can use the official migration tool directly in your repository: 
+You can use the official migration tool directly in your repository:
+
 ```sh
 npx @tailwindcss/upgrade
 ```
 
-
 #### Manual steps
-
 
 The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
 
 ##### Step 1
+
 Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
- ```css
+
+```css
 /* index.css */
 
 @import 'tailwindcss';
@@ -44,9 +90,11 @@ Move content paths from `tailwind.config.js` to global css `index.css`. Also, ad
 ```
 
 ##### Step 2
+
 Remove `tailwind.config.js`
 
 ##### Step 3
+
 Remove `@layer base { ... }` from `index.css`
 
 Before:
