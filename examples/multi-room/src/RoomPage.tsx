@@ -15,7 +15,10 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
   Spinner,
 } from '@sqlrooms/ui';
@@ -77,28 +80,32 @@ function RoomContent({roomId, roomName}: {roomId: string; roomName: string}) {
 
   return (
     <SidebarProvider className="h-full">
-      <Sidebar collapsible="icon" className="border-border">
-        <SidebarHeader className="border-border border-b p-3">
-          <p className="text-muted-foreground px-1 text-xs font-semibold uppercase tracking-wide">
+      <Sidebar collapsible="offcanvas">
+        <SidebarHeader className="border-sidebar-border border-b">
+          <p className="text-sidebar-foreground/70 px-2 text-xs font-semibold uppercase tracking-wide">
             Project
           </p>
-          <Select
-            value={roomId}
-            onValueChange={(nextRoomId) =>
-              navigate({to: '/room/$id', params: {id: nextRoomId}})
-            }
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue placeholder="Select project" />
-            </SelectTrigger>
-            <SelectContent>
-              {roomOptions.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Select
+                value={roomId}
+                onValueChange={(nextRoomId) =>
+                  navigate({to: '/room/$id', params: {id: nextRoomId}})
+                }
+              >
+                <SelectTrigger className="bg-sidebar h-8 w-full shadow-none">
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roomOptions.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="p-0">
@@ -130,6 +137,7 @@ function RoomContent({roomId, roomName}: {roomId: string; roomName: string}) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarRail />
       </Sidebar>
       <SidebarInset>
         <div className="border-border flex items-center gap-3 border-b px-4 py-2">

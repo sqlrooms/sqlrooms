@@ -237,14 +237,21 @@ export {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarInput,
   SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarSeparator,
@@ -326,6 +333,7 @@ export {
 } from './hooks/useDisclosure';
 
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
+export {useIsMobile} from './hooks/use-mobile';
 
 // Utilities
 export {cn} from './lib/utils';
