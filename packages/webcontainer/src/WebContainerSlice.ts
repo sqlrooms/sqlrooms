@@ -34,6 +34,41 @@ export function createDefaultWebContainerSliceConfig(
   };
 }
 
+function isDirectoryEntry(entry: unknown): entry is {
+  directory: FileSystemTree;
+} {
+  return (
+    typeof entry === 'object' &&
+    entry !== null &&
+    'directory' in entry &&
+    typeof (entry as {directory?: unknown}).directory === 'object' &&
+    (entry as {directory?: unknown}).directory !== null
+  );
+}
+
+function isFileEntry(entry: unknown): entry is {file: unknown} {
+  return typeof entry === 'object' && entry !== null && 'file' in entry;
+}
+
+function getFirstFilePathFromTree(
+  tree: FileSystemTree,
+  currentPath = '',
+): string | null {
+  for (const [name, entry] of Object.entries(tree)) {
+    const nextPath = `${currentPath}/${name}`;
+    if (isFileEntry(entry)) {
+      return nextPath;
+    }
+    if (isDirectoryEntry(entry)) {
+      const nestedPath = getFirstFilePathFromTree(entry.directory, nextPath);
+      if (nestedPath) {
+        return nestedPath;
+      }
+    }
+  }
+  return null;
+}
+
 export type WebContainerSliceState = {
   webcontainer: {
     config: WebContainerSliceConfig;
@@ -96,7 +131,12 @@ export function createWebContainerSlice(props?: {
               };
             }),
           );
-          await get().webcontainer.openFile('/src/App.jsx');
+          const state = get().webcontainer.config;
+          const filePathToOpen =
+            state.activeFilePath ?? getFirstFilePathFromTree(state.filesTree);
+          if (filePathToOpen) {
+            await get().webcontainer.openFile(filePathToOpen);
+          }
           return;
         }
 
@@ -118,12 +158,24 @@ export function createWebContainerSlice(props?: {
           await get().webcontainer.openFile(activeFilePath);
         }
 
-        const exitCode = await get().webcontainer.installDependencies();
-        if (exitCode !== 0) {
-          throw new Error('Installation failed');
+        try {
+          const exitCode = await get().webcontainer.installDependencies();
+          if (exitCode !== 0) {
+            throw new Error('Installation failed');
+          }
+        } catch (error) {
+          throw new Error(
+            `WebContainer initialization failed during dependency installation: ${String(error)}`,
+          );
         }
 
-        get().webcontainer.startDevServer();
+        try {
+          await get().webcontainer.startDevServer();
+        } catch (error) {
+          throw new Error(
+            `WebContainer initialization failed while starting dev server: ${String(error)}`,
+          );
+        }
       },
 
       async installDependencies() {
@@ -141,12 +193,11 @@ export function createWebContainerSlice(props?: {
         installProcess.output.pipeTo(
           new WritableStream({
             write(data) {
-              set((state) => ({
-                webcontainer: {
-                  ...state.webcontainer,
-                  output: state.webcontainer.output + data,
-                },
-              }));
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.webcontainer.output += data;
+                }),
+              );
             },
           }),
         );

@@ -1,8 +1,8 @@
 import type {OpenAssistantTool} from '@openassistant/utils';
+import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
 import {TreeNodeData} from '@sqlrooms/ui';
 import z from 'zod';
 import {StoreApi} from 'zustand';
-import type {WebContainerSliceState} from '../../../../../packages/webcontainer/dist';
 import {
   FileNodeObject,
   fileSystemTreeToNodes,
