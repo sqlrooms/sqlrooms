@@ -150,10 +150,9 @@ export async function executeSqlCell(
 
       if (signal?.aborted) throw new Error('Query cancelled');
 
-      await connector.query(
-        `CREATE OR REPLACE TEMPORARY TABLE ${tableName} AS ${sql}`,
-        {signal},
-      );
+      await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
+        signal,
+      });
     }
 
     // Find dependencies for referenced tables
