@@ -66,8 +66,7 @@
     },
     "examples/*nextjs*": {
       "entry": [
-        "src/app/page.tsx",
-        "src/app/api/**/*.ts",
+        "src/app/**/{page.tsx,api/**/*.ts}",
         "postcss.config.mjs"
       ],
       "ignore": [

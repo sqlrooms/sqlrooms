@@ -211,6 +211,9 @@ importers:
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
