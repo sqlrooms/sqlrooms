@@ -53,6 +53,7 @@ export type RoomCommandInputComponent =
   ComponentType<RoomCommandInputComponentProps>;
 
 export type RoomCommandRiskLevel = 'low' | 'medium' | 'high';
+export type RoomCommandKeystrokes = string | string[];
 
 export type RoomCommandPolicyMetadata = {
   readOnly?: boolean;
@@ -63,6 +64,7 @@ export type RoomCommandPolicyMetadata = {
 
 export type RoomCommandUiMetadata = {
   shortcut?: string;
+  keystrokes?: RoomCommandKeystrokes;
   inputComponent?: RoomCommandInputComponent;
   hidden?: boolean;
 };
@@ -80,6 +82,47 @@ export type RoomCommandExecuteOutput<TData = unknown> =
   | RoomCommandResult<TData>
   | TData
   | void;
+
+export type RoomCommandMiddlewareNext = () => Promise<RoomCommandExecuteOutput>;
+export type RoomCommandMiddleware<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+> = (
+  command: RegisteredRoomCommand<RS>,
+  input: unknown,
+  context: RoomCommandExecutionContext<RS>,
+  next: RoomCommandMiddlewareNext,
+) => RoomCommandExecuteOutput | Promise<RoomCommandExecuteOutput>;
+
+export type RoomCommandInvokeStartEvent<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+> = {
+  command: RegisteredRoomCommand<RS>;
+  input: unknown;
+  context: RoomCommandExecutionContext<RS>;
+};
+
+export type RoomCommandInvokeSuccessEvent<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+> = RoomCommandInvokeStartEvent<RS> & {
+  result: RoomCommandResult;
+  durationMs: number;
+};
+
+export type RoomCommandInvokeErrorEvent<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+> = RoomCommandInvokeStartEvent<RS> & {
+  error: unknown;
+  durationMs: number;
+};
+
+export type CreateCommandSliceProps<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+> = {
+  middleware?: RoomCommandMiddleware<RS>[];
+  onCommandInvokeStart?: (event: RoomCommandInvokeStartEvent<RS>) => void;
+  onCommandInvokeSuccess?: (event: RoomCommandInvokeSuccessEvent<RS>) => void;
+  onCommandInvokeError?: (event: RoomCommandInvokeErrorEvent<RS>) => void;
+};
 
 export type RoomCommand<RS extends BaseRoomStoreState = BaseRoomStoreState> = {
   id: string;
@@ -101,6 +144,8 @@ export type RoomCommand<RS extends BaseRoomStoreState = BaseRoomStoreState> = {
   isEnabled?: RoomCommandPredicate<RS>;
   metadata?: RoomCommandPolicyMetadata;
   ui?: RoomCommandUiMetadata;
+  /** @deprecated Use ui?.keystrokes */
+  keystrokes?: RoomCommandKeystrokes;
   /** @deprecated Use ui?.shortcut */
   shortcut?: string;
   /** @deprecated Use ui?.inputComponent */
@@ -133,6 +178,7 @@ export type RoomCommandDescriptor = {
   requiresInput: boolean;
   inputDescription?: string;
   inputSchema?: RoomCommandPortableSchema;
+  keystrokes: string[];
   shortcut?: string;
   readOnly: boolean;
   idempotent: boolean;
@@ -173,7 +219,10 @@ export type CommandSliceState<
 
 export function createCommandSlice<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
->(): StateCreator<CommandSliceState<RS>> {
+>(
+  props?: CreateCommandSliceProps<RS>,
+): StateCreator<CommandSliceState<RS>> {
+  const middleware = props?.middleware ?? [];
   return createSlice<CommandSliceState<RS>, RS & CommandSliceState<RS>>(
     (set, get, store) => ({
       commands: {
@@ -313,19 +362,57 @@ export function createCommandSlice<
             };
           }
 
+          const invocationStartEvent: RoomCommandInvokeStartEvent<RS> = {
+            command,
+            input,
+            context: executionContext,
+          };
+          const invocationStartedAt = Date.now();
+          invokeCommandSliceCallback(
+            props?.onCommandInvokeStart,
+            invocationStartEvent,
+            get().room.captureException,
+          );
+
           try {
             const validatedInput = await validateCommandInput(
               command,
               input,
               executionContext,
             );
-            const rawResult = await command.execute(
-              executionContext,
+            const rawResult = await runCommandExecutionMiddleware(
+              middleware,
+              command,
               validatedInput,
+              executionContext,
             );
-            return normalizeCommandExecuteResult(command.id, rawResult);
+            const normalizedResult = normalizeCommandExecuteResult(
+              command.id,
+              rawResult,
+            );
+            invokeCommandSliceCallback(
+              props?.onCommandInvokeSuccess,
+              {
+                command,
+                input: validatedInput,
+                context: executionContext,
+                result: normalizedResult,
+                durationMs: Date.now() - invocationStartedAt,
+              },
+              get().room.captureException,
+            );
+            return normalizedResult;
           } catch (error) {
             get().room.captureException(error);
+            invokeCommandSliceCallback(
+              props?.onCommandInvokeError,
+              {
+                ...invocationStartEvent,
+                error,
+                durationMs: Date.now() - invocationStartedAt,
+              },
+              get().room.captureException,
+            );
             return {
               success: false,
               commandId: command.id,
@@ -472,9 +559,30 @@ export function doesCommandRequireInput(
 }
 
 export function getCommandShortcut(
-  command: Pick<RoomCommand, 'ui' | 'shortcut'>,
+  command: Pick<RoomCommand, 'ui' | 'shortcut' | 'keystrokes'>,
 ): string | undefined {
-  return command.ui?.shortcut ?? command.shortcut;
+  return getCommandKeystrokes(command)[0];
+}
+
+export function getCommandKeystrokes(
+  command: Pick<RoomCommand, 'ui' | 'shortcut' | 'keystrokes'>,
+): string[] {
+  const keystrokes = [
+    ...toCommandKeystrokeArray(command.ui?.keystrokes),
+    ...toCommandKeystrokeArray(command.keystrokes),
+    ...toCommandKeystrokeArray(command.ui?.shortcut),
+    ...toCommandKeystrokeArray(command.shortcut),
+  ];
+
+  const deduplicated = new Set<string>();
+  for (const keystroke of keystrokes) {
+    const trimmed = keystroke.trim();
+    if (!trimmed) {
+      continue;
+    }
+    deduplicated.add(trimmed);
+  }
+  return Array.from(deduplicated);
 }
 
 export function getCommandInputComponent(
@@ -519,6 +627,7 @@ function createCommandDescriptor<RS extends BaseRoomStoreState>(
   includeInputSchema: boolean,
 ): RoomCommandDescriptor {
   const metadata = resolveCommandPolicyMetadata(command);
+  const keystrokes = getCommandKeystrokes(command);
   return {
     id: command.id,
     owner: command.owner,
@@ -533,7 +642,8 @@ function createCommandDescriptor<RS extends BaseRoomStoreState>(
     inputSchema: includeInputSchema
       ? exportCommandInputSchema(command.inputSchema)
       : undefined,
-    shortcut: getCommandShortcut(command),
+    keystrokes,
+    shortcut: keystrokes[0],
     ...metadata,
   };
 }
@@ -564,6 +674,51 @@ function isRoomCommandResult(value: unknown): value is RoomCommandResult {
     typeof value.success === 'boolean' &&
     'commandId' in value
   );
+}
+
+async function runCommandExecutionMiddleware<
+  RS extends BaseRoomStoreState = BaseRoomStoreState,
+>(
+  middleware: RoomCommandMiddleware<RS>[],
+  command: RegisteredRoomCommand<RS>,
+  input: unknown,
+  context: RoomCommandExecutionContext<RS>,
+): Promise<RoomCommandExecuteOutput> {
+  const invokeMiddleware = async (index: number): Promise<RoomCommandExecuteOutput> => {
+    const currentMiddleware = middleware[index];
+    if (!currentMiddleware) {
+      return await command.execute(context, input);
+    }
+    return await currentMiddleware(command, input, context, async () => {
+      return await invokeMiddleware(index + 1);
+    });
+  };
+
+  return await invokeMiddleware(0);
+}
+
+function invokeCommandSliceCallback<TEvent>(
+  callback: ((event: TEvent) => void) | undefined,
+  event: TEvent,
+  captureException: BaseRoomStoreState['room']['captureException'],
+): void {
+  if (!callback) {
+    return;
+  }
+  try {
+    callback(event);
+  } catch (error) {
+    captureException(error);
+  }
+}
+
+function toCommandKeystrokeArray(
+  keystrokes?: RoomCommandKeystrokes,
+): string[] {
+  if (!keystrokes) {
+    return [];
+  }
+  return Array.isArray(keystrokes) ? keystrokes : [keystrokes];
 }
 
 function removeCommandIdFromOwner(

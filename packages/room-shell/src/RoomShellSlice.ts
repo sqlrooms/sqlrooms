@@ -26,6 +26,7 @@ import {
 import {
   BaseRoomStoreState,
   CommandSliceState,
+  CreateCommandSliceProps,
   CreateBaseRoomSliceProps,
   createBaseRoomSlice,
   createCommandSlice,
@@ -172,6 +173,7 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   layout?: CreateLayoutSliceProps;
   fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
   CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
+  createCommandProps?: CreateCommandSliceProps<RoomShellSliceState>;
   /** @deprecated Use direct props instead e.g. layout.panels */
   room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
@@ -231,6 +233,7 @@ export function createRoomShellSlice(
       room: deprecatedRoomProps,
       fileDataSourceLoader,
       CustomErrorBoundary = ErrorBoundary,
+      createCommandProps,
       captureException = (exception) => console.error(exception),
       ...restProps
     } = props;
@@ -248,7 +251,7 @@ export function createRoomShellSlice(
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
-      ...createCommandSlice()(set, get, store),
+      ...createCommandSlice(createCommandProps)(set, get, store),
       room: {
         ...roomSliceState.room,
         config: {
