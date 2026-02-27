@@ -8,6 +8,7 @@ import threading
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict
+import base64
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
@@ -63,6 +64,7 @@ class SqlroomsHttpServer:
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
+        postgres_dsn: str | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
     ):
@@ -88,6 +90,7 @@ class SqlroomsHttpServer:
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.api_key = api_key
+        self.postgres_dsn = postgres_dsn
         self.open_browser = open_browser
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -164,6 +167,7 @@ class SqlroomsHttpServer:
             "apiKey": self.api_key or "",
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
+            "postgresBridgeEnabled": bool(self.postgres_dsn),
         }
 
     def _build_app(self) -> FastAPI:
@@ -192,6 +196,132 @@ class SqlroomsHttpServer:
             with open(target, "wb") as f:
                 f.write(content)
             return {"path": str(target)}
+
+        @app.post("/api/db/test-connection")
+        async def test_connection(payload: Dict[str, Any]):
+            _ = payload.get("connectionId")
+            if not self.postgres_dsn:
+                return {"ok": False, "error": "postgres bridge is not configured"}
+            try:
+                import psycopg  # type: ignore
+
+                with psycopg.connect(self.postgres_dsn) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT 1")
+                        cur.fetchone()
+                return {"ok": True}
+            except Exception as exc:
+                return {"ok": False, "error": str(exc)}
+
+        @app.post("/api/db/list-catalog")
+        async def list_catalog(payload: Dict[str, Any]):
+            _ = payload.get("connectionId")
+            if not self.postgres_dsn:
+                return {
+                    "databases": [],
+                    "schemas": [],
+                    "tables": [],
+                    "error": "postgres bridge is not configured",
+                }
+            try:
+                import psycopg  # type: ignore
+
+                with psycopg.connect(self.postgres_dsn) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT current_database()")
+                        db = cur.fetchone()[0]
+                        cur.execute(
+                            """
+                            SELECT schema_name
+                            FROM information_schema.schemata
+                            ORDER BY schema_name
+                            """
+                        )
+                        schemas = [{"database": db, "schema": r[0]} for r in cur.fetchall()]
+                        cur.execute(
+                            """
+                            SELECT table_schema, table_name, table_type
+                            FROM information_schema.tables
+                            WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+                            ORDER BY table_schema, table_name
+                            """
+                        )
+                        tables = [
+                            {
+                                "database": db,
+                                "schema": r[0],
+                                "table": r[1],
+                                "isView": str(r[2]).upper().endswith("VIEW"),
+                            }
+                            for r in cur.fetchall()
+                        ]
+                return {"databases": [{"database": db}], "schemas": schemas, "tables": tables}
+            except Exception as exc:
+                return {
+                    "databases": [],
+                    "schemas": [],
+                    "tables": [],
+                    "error": str(exc),
+                }
+
+        @app.post("/api/db/execute-query")
+        async def execute_query(payload: Dict[str, Any]):
+            if not self.postgres_dsn:
+                return {"error": "postgres bridge is not configured"}
+            sql = payload.get("sql", "")
+            query_type = payload.get("queryType", "json")
+            if not isinstance(sql, str) or not sql.strip():
+                return {"error": "sql is required"}
+            try:
+                import psycopg  # type: ignore
+
+                with psycopg.connect(self.postgres_dsn) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(sql)
+                        if query_type == "exec":
+                            return {"ok": True}
+                        rows = cur.fetchall()
+                        columns = [d.name for d in cur.description or []]
+                        json_data = [dict(zip(columns, row)) for row in rows]
+                        return {"jsonData": json_data}
+            except Exception as exc:
+                return {"error": str(exc)}
+
+        @app.post("/api/db/fetch-arrow")
+        async def fetch_arrow(payload: Dict[str, Any]):
+            if not self.postgres_dsn:
+                return JSONResponse(
+                    {"error": "postgres bridge is not configured"},
+                    status_code=400,
+                )
+            sql = payload.get("sql", "")
+            if not isinstance(sql, str) or not sql.strip():
+                return JSONResponse({"error": "sql is required"}, status_code=400)
+            try:
+                import pyarrow as pa
+                import psycopg  # type: ignore
+
+                with psycopg.connect(self.postgres_dsn) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(sql)
+                        rows = cur.fetchall()
+                        columns = [d.name for d in cur.description or []]
+                as_dicts = [dict(zip(columns, row)) for row in rows]
+                table = pa.Table.from_pylist(as_dicts)
+                sink = pa.BufferOutputStream()
+                with pa.ipc.new_stream(sink, table.schema) as writer:
+                    writer.write_table(table)
+                raw = sink.getvalue().to_pybytes()
+                # JSON-safe transport for now; frontend bridge may decode when needed.
+                return {"arrowBase64": base64.b64encode(raw).decode("ascii")}
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=500)
+
+        @app.post("/api/db/cancel-query")
+        async def cancel_query(payload: Dict[str, Any]):
+            _ = payload.get("queryId")
+            # Not implemented yet for Postgres bridge in CLI mode.
+            return {"cancelled": False}
 
         if self.static_dir.exists():
             app.mount(

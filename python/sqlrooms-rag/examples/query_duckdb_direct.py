@@ -73,7 +73,7 @@ def query_embeddings_db(
             if isinstance(metadata, str):
                 try:
                     metadata = json.loads(metadata)
-                except:
+                except Exception:
                     pass
             if isinstance(metadata, dict) and 'file_name' in metadata:
                 print(f"   Source: {metadata['file_name']}")
@@ -254,7 +254,7 @@ def hybrid_query_direct(
             if isinstance(metadata, str):
                 try:
                     metadata = json.loads(metadata)
-                except:
+                except Exception:
                     metadata = {}
             
             print(f"{i}. RRF Score: {rrf_score:.4f}")
@@ -306,7 +306,7 @@ def get_source_document(
         if isinstance(metadata, str):
             try:
                 metadata = json.loads(metadata)
-            except:
+            except Exception:
                 metadata = {}
         
         print("\n" + "=" * 80)
@@ -370,7 +370,7 @@ def compare_search_methods(
         if isinstance(metadata, str):
             try:
                 metadata = json.loads(metadata)
-            except:
+            except Exception:
                 metadata = {}
         source = metadata.get('file_name', 'Unknown') if isinstance(metadata, dict) else 'Unknown'
         print(f"{i}. [{score:.4f}] {source}")
@@ -419,7 +419,7 @@ def compare_search_methods(
                 if isinstance(metadata, str):
                     try:
                         metadata = json.loads(metadata)
-                    except:
+                    except Exception:
                         metadata = {}
                 source = metadata.get('file_name', 'Unknown') if isinstance(metadata, dict) else 'Unknown'
                 print(f"{i}. [RRF: {rrf_score:.4f}] {source}")
@@ -491,7 +491,7 @@ def batch_query(
             if isinstance(metadata, str):
                 try:
                     metadata = json.loads(metadata)
-                except:
+                except Exception:
                     metadata = None
             source = metadata.get('file_name', 'Unknown') if metadata and isinstance(metadata, dict) else 'Unknown'
             print(f"{i}. [{similarity:.4f}] {source}: {text[:150]}...")

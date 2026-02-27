@@ -56,4 +56,4 @@ jobs:
         run: pnpm typecheck:examples
 
       - name: Test
-        run: pnpm test
+        run: pnpm test --filter='!./python/*'

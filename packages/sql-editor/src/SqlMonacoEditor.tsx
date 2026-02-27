@@ -1,15 +1,15 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
-import {MonacoEditor} from '@sqlrooms/monaco-editor';
-import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import type {OnMount} from '@monaco-editor/react';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/db';
+import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
+import {MonacoEditor} from '@sqlrooms/monaco-editor';
+import {cn} from '@sqlrooms/ui';
 import type * as Monaco from 'monaco-editor';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {
-  DUCKDB_KEYWORDS,
   DUCKDB_FUNCTIONS,
+  DUCKDB_KEYWORDS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
-import {cn} from '@sqlrooms/ui';
 import {getFunctionSuggestions} from './constants/functionSuggestions';
 export interface SqlMonacoEditorProps extends Omit<
   MonacoEditorProps,
@@ -49,6 +49,10 @@ const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
   formatOnPaste: true,
   formatOnType: true,
   wordWrap: 'on',
+  scrollBeyondLastLine: false,
+  scrollbar: {
+    alwaysConsumeMouseWheel: false,
+  },
 };
 
 type MonacoInstance = typeof Monaco;

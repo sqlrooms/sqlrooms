@@ -1,5 +1,5 @@
 import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
-import {makeLimitQuery, separateLastStatement, useSql} from '@sqlrooms/duckdb';
+import {makeLimitQuery, separateLastStatement, useSql} from '@sqlrooms/db';
 import {cn} from '@sqlrooms/ui';
 import {AlertCircle} from 'lucide-react';
 import React, {useMemo, useState} from 'react';

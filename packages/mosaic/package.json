@@ -21,7 +21,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@uwdata/mosaic-core": "^0.21.0",
     "@uwdata/mosaic-spec": "^0.21.0",
     "@uwdata/mosaic-sql": "^0.21.0",

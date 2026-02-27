@@ -4,3 +4,4 @@ packages:
   - '!packages/kepler.gl'
   - 'packages/kepler.gl/src/*'
   - 'apps/*'
+  - 'python/*'
