@@ -2,10 +2,9 @@ import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {useRoomStore, RoomPanelTypes} from '../store';
-import {useToast} from '@sqlrooms/ui';
+import {toast} from '@sqlrooms/ui';
 
 export const DataPanel = () => {
-  const {toast} = useToast();
   const addFile = useRoomStore((state) => state.addFile);
   return (
     <RoomPanel type={RoomPanelTypes.enum['data']}>
@@ -22,15 +21,11 @@ export const DataPanel = () => {
           for (const file of files) {
             try {
               const addedTable = await addFile(file);
-              toast({
-                variant: 'default',
-                title: 'Table created',
+              toast.success('Table created', {
                 description: `File ${file.name} loaded as ${addedTable}`,
               });
             } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Error',
+              toast.error('Error', {
                 description: `Error loading file ${file.name}: ${error}`,
               });
             }
