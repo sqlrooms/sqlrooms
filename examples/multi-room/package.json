@@ -12,6 +12,7 @@
   "dependencies": {
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@tanstack/react-router": "^1.120.3",
     "react": "^19.2.0",

@@ -1,11 +1,28 @@
 import {QueryDataTable} from '@sqlrooms/data-table';
+import {TableSchemaTree} from '@sqlrooms/schema-tree';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {RoomShell} from '@sqlrooms/room-shell';
-import {Button, Spinner} from '@sqlrooms/ui';
-import {Link, useParams} from '@tanstack/react-router';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+  Spinner,
+} from '@sqlrooms/ui';
+import {Link, useNavigate, useParams} from '@tanstack/react-router';
 import {useEffect, useRef, useState} from 'react';
 import {createRoomStore, RoomState, useRoomStore} from './room-store';
-import {getRoom} from './rooms-list';
+import {getRoom, getRoomsList} from './rooms-list';
 
 export function RoomPage() {
   const {id} = useParams({from: '/room/$id'});
@@ -37,28 +54,100 @@ function RoomLoader({roomId}: {roomId: string}) {
 
   return (
     <RoomShell roomStore={storeRef.current} className="h-full">
-      <RoomContent roomName={roomConfig.name} />
+      <RoomContent roomId={roomId} roomName={roomConfig.name} />
     </RoomShell>
   );
 }
 
-function RoomContent({roomName}: {roomName: string}) {
+function RoomContent({roomId, roomName}: {roomId: string; roomName: string}) {
+  const navigate = useNavigate();
+  const rooms = getRoomsList();
+  const initialized = useRoomStore((s) => s.room.initialized);
+  const schemaTrees = useRoomStore((s) => s.db.schemaTrees);
+  const isRefreshing = useRoomStore((s) => s.db.isRefreshingTableSchemas);
+  const refreshTableSchemas = useRoomStore((s) => s.db.refreshTableSchemas);
+
+  useEffect(() => {
+    if (!initialized) return;
+    void refreshTableSchemas();
+  }, [initialized, refreshTableSchemas, roomId]);
+
+  const roomOptions =
+    rooms.length > 0 ? rooms : [{id: roomId, name: roomName, defaultDataSources: []}];
+
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="border-border flex items-center gap-3 border-b px-4 py-2">
-        <Link
-          to="/"
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
-          ← Rooms
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="text-sm font-medium">{roomName}</span>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <TableBrowser />
-      </div>
-    </div>
+    <SidebarProvider className="h-full">
+      <Sidebar collapsible="icon" className="border-border">
+        <SidebarHeader className="border-border border-b p-3">
+          <p className="text-muted-foreground px-1 text-xs font-semibold uppercase tracking-wide">
+            Project
+          </p>
+          <Select
+            value={roomId}
+            onValueChange={(nextRoomId) =>
+              navigate({to: '/room/$id', params: {id: nextRoomId}})
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select project" />
+            </SelectTrigger>
+            <SelectContent>
+              {roomOptions.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  {room.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup className="p-0">
+            <SidebarGroupLabel>Schema</SidebarGroupLabel>
+            <SidebarGroupContent>
+              {!initialized ? (
+                <div className="flex items-center gap-2 px-2 py-1">
+                  <Spinner />
+                  <span className="text-muted-foreground text-xs">
+                    Loading schema…
+                  </span>
+                </div>
+              ) : schemaTrees && schemaTrees.length > 0 ? (
+                <TableSchemaTree
+                  schemaTrees={schemaTrees}
+                  skipSingleDatabaseOrSchema
+                  className="text-xs"
+                />
+              ) : (
+                <p className="text-muted-foreground px-2 text-xs">
+                  No tables loaded in this room.
+                </p>
+              )}
+              {initialized && isRefreshing && (
+                <p className="text-muted-foreground px-2 pt-2 text-[11px]">
+                  Refreshing schema…
+                </p>
+              )}
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <div className="border-border flex items-center gap-3 border-b px-4 py-2">
+          <SidebarTrigger />
+          <Link
+            to="/"
+            className="text-muted-foreground hover:text-foreground text-sm"
+          >
+            ← Rooms
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-sm font-medium">{roomName}</span>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <TableBrowser />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
@@ -68,7 +157,12 @@ function TableBrowser() {
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialized && tables.length > 0 && !selectedTable) {
+    if (!initialized) return;
+    if (tables.length === 0) {
+      setSelectedTable(null);
+      return;
+    }
+    if (!selectedTable || !tables.some((table) => table.table.table === selectedTable)) {
       setSelectedTable(tables[0].table.table);
     }
   }, [initialized, tables, selectedTable]);
@@ -95,31 +189,24 @@ function TableBrowser() {
   }
 
   return (
-    <div className="flex h-full">
-      <aside className="border-border w-56 shrink-0 overflow-y-auto border-r p-3">
-        <h3 className="text-muted-foreground mb-2 text-xs font-semibold uppercase">
-          Tables
-        </h3>
-        <ul className="space-y-1">
-          {tables.map((t) => (
-            <li key={t.table.table}>
-              <Button
-                variant={
-                  selectedTable === t.table.table ? 'secondary' : 'ghost'
-                }
-                size="sm"
-                className="w-full justify-start text-xs"
-                onClick={() => setSelectedTable(t.table.table)}
-              >
+    <div className="flex h-full flex-col">
+      <div className="border-border flex items-center justify-end gap-2 border-b px-4 py-2">
+        <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+          Preview table
+        </span>
+        <Select value={selectedTable ?? undefined} onValueChange={setSelectedTable}>
+          <SelectTrigger className="h-8 w-[260px]">
+            <SelectValue placeholder="Select table" />
+          </SelectTrigger>
+          <SelectContent>
+            {tables.map((t) => (
+              <SelectItem key={t.table.table} value={t.table.table}>
                 {t.table.table}
-                <span className="text-muted-foreground ml-auto text-[10px]">
-                  {t.columns.length} cols
-                </span>
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </aside>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="flex-1 overflow-hidden">
         {selectedTable ? (
           <QueryDataTable
