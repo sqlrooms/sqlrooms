@@ -51,6 +51,18 @@ describe('CommandSlice', () => {
     expect(getCommandShortcut(command)).toBe('Mod+Shift+T');
   });
 
+  it('ignores malformed non-string keystrokes at runtime', () => {
+    const command = {
+      ui: {
+        keystrokes: ['  Mod+S  ', 42, '', 'Ctrl+S'],
+      },
+      keystrokes: [null, '  ', 'Alt+S'],
+    } as any;
+
+    expect(getCommandKeystrokes(command)).toEqual(['Mod+S', 'Ctrl+S', 'Alt+S']);
+    expect(getCommandShortcut(command)).toBe('Mod+S');
+  });
+
   it('includes keystrokes and shortcut in command descriptors', () => {
     const {store} = createTestCommandStore();
 

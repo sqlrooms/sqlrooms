@@ -593,6 +593,9 @@ export function getCommandKeystrokes(
 
   const deduplicated = new Set<string>();
   for (const keystroke of keystrokes) {
+    if (typeof keystroke !== 'string') {
+      continue;
+    }
     const trimmed = keystroke.trim();
     if (!trimmed) {
       continue;
