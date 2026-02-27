@@ -3,7 +3,7 @@ import {useStoreWithWebContainer} from '../WebContainerSlice';
 
 export function BrowserView({className}: {className?: string}) {
   const serverStatus = useStoreWithWebContainer(
-    (s) => s.webcontainer.serverStatus,
+    (s) => s.webContainer.serverStatus,
   );
   return (
     <div className={cn('bg-background h-full w-full', className)}>

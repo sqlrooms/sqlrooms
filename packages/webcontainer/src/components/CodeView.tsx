@@ -5,23 +5,23 @@ import {useStoreWithWebContainer} from '../WebContainerSlice';
 
 export function CodeView({className}: {className?: string}) {
   const openedFiles = useStoreWithWebContainer(
-    (s) => s.webcontainer.config.openedFiles,
+    (s) => s.webContainer.config.openedFiles,
   );
   const activeFilePath = useStoreWithWebContainer(
-    (s) => s.webcontainer.config.activeFilePath,
+    (s) => s.webContainer.config.activeFilePath,
   );
   const setActiveFile = useStoreWithWebContainer(
-    (s) => s.webcontainer.setActiveFile,
+    (s) => s.webContainer.setActiveFile,
   );
-  const closeFile = useStoreWithWebContainer((s) => s.webcontainer.closeFile);
+  const closeFile = useStoreWithWebContainer((s) => s.webContainer.closeFile);
   const updateFileContent = useStoreWithWebContainer(
-    (s) => s.webcontainer.updateFileContent,
+    (s) => s.webContainer.updateFileContent,
   );
   const saveAll = useStoreWithWebContainer(
-    (s) => s.webcontainer.saveAllOpenFiles,
+    (s) => s.webContainer.saveAllOpenFiles,
   );
   const hasDirty = useStoreWithWebContainer((s) =>
-    s.webcontainer.hasDirtyFiles(),
+    s.webContainer.hasDirtyFiles(),
   );
 
   const activeFile = useMemo(

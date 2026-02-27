@@ -1,6 +1,6 @@
 import type {OpenAssistantTool} from '@openassistant/utils';
-import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
 import {TreeNodeData} from '@sqlrooms/ui';
+import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
 import z from 'zod';
 import {StoreApi} from 'zustand';
 import {
@@ -40,7 +40,7 @@ export function createListFilesTool(
         llmResult: {
           success: true,
           details: fileSystemTreeToNodes(
-            store.getState().webcontainer.config.filesTree,
+            store.getState().webContainer.config.filesTree,
             basePath,
           ),
         },

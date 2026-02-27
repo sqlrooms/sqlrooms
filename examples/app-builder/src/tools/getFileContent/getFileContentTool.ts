@@ -35,7 +35,7 @@ export function createGetFileContentTool(
     description: 'Get the content of a file',
     parameters: GetFileContentToolParameters,
     execute: async ({path}: GetFileContentToolParameters) => {
-      const content = await store.getState().webcontainer.getFileContent(path);
+      const content = await store.getState().webContainer.getFileContent(path);
       return {
         llmResult: {
           success: true,

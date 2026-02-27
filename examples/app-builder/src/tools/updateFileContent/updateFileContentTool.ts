@@ -33,8 +33,8 @@ export function createUpdateFileContentTool(
     description: 'Modify the content of a file',
     parameters: UpdateFileContentToolParameters,
     execute: async ({path, content}: UpdateFileContentToolParameters) => {
-      store.getState().webcontainer.updateFileContent(path, content);
-      await store.getState().webcontainer.saveAllOpenFiles();
+      store.getState().webContainer.updateFileContent(path, content);
+      await store.getState().webContainer.saveAllOpenFiles();
       return {
         llmResult: {
           success: true,

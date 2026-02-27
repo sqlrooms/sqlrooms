@@ -42,9 +42,9 @@ export const FileTreeView: FC<{
   ) => ReactNode;
 }> = ({className, renderNode}) => {
   const filesTree = useStoreWithWebContainer(
-    (s) => s.webcontainer.config.filesTree,
+    (s) => s.webContainer.config.filesTree,
   );
-  const openFile = useStoreWithWebContainer((s) => s.webcontainer.openFile);
+  const openFile = useStoreWithWebContainer((s) => s.webContainer.openFile);
   const rootNode = useMemo(
     () => fileSystemTreeToNodes(filesTree, '/'),
     [filesTree],

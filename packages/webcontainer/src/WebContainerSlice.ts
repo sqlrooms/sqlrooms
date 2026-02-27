@@ -74,7 +74,7 @@ function getFirstFilePathFromTree(
 }
 
 export type WebContainerSliceState = {
-  webcontainer: {
+  webContainer: {
     config: WebContainerSliceConfig;
     instance: WebContainer | null;
     output: string;
@@ -148,7 +148,7 @@ export function createWebContainerSlice(props?: {
   config?: Partial<WebContainerSliceConfig>;
 }): StateCreator<WebContainerSliceState> {
   return createSlice<WebContainerSliceState>((set, get) => ({
-    webcontainer: {
+    webContainer: {
       config: createDefaultWebContainerSliceConfig(props?.config),
       instance: null,
       output: '',
@@ -157,7 +157,7 @@ export function createWebContainerSlice(props?: {
       lastCommandStatus: {type: 'idle'},
       serverStatus: {type: 'not-initialized'},
       initialize: async () => {
-        if (get().webcontainer.serverStatus.type !== 'not-initialized') {
+        if (get().webContainer.serverStatus.type !== 'not-initialized') {
           return;
         }
 
@@ -167,42 +167,42 @@ export function createWebContainerSlice(props?: {
         if (cachedInstance && cachedUrl) {
           set((state) =>
             produce(state, (draft) => {
-              draft.webcontainer.instance = cachedInstance;
-              draft.webcontainer.serverStatus = {
+              draft.webContainer.instance = cachedInstance;
+              draft.webContainer.serverStatus = {
                 type: 'ready',
                 url: cachedUrl,
               };
             }),
           );
-          const state = get().webcontainer.config;
+          const state = get().webContainer.config;
           const filePathToOpen =
             state.activeFilePath ?? getFirstFilePathFromTree(state.filesTree);
           if (filePathToOpen) {
-            await get().webcontainer.openFile(filePathToOpen);
+            await get().webContainer.openFile(filePathToOpen);
           }
           return;
         }
 
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.serverStatus = {type: 'initializing'};
+            draft.webContainer.serverStatus = {type: 'initializing'};
           }),
         );
         const instance = await bootWebContainer();
-        await instance.mount(get().webcontainer.config.filesTree);
+        await instance.mount(get().webContainer.config.filesTree);
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.instance = instance;
+            draft.webContainer.instance = instance;
           }),
         );
 
-        const activeFilePath = get().webcontainer.config.activeFilePath;
+        const activeFilePath = get().webContainer.config.activeFilePath;
         if (activeFilePath) {
-          await get().webcontainer.openFile(activeFilePath);
+          await get().webContainer.openFile(activeFilePath);
         }
 
         try {
-          const exitCode = await get().webcontainer.installDependencies();
+          const exitCode = await get().webContainer.installDependencies();
           if (exitCode !== 0) {
             throw new Error('Installation failed');
           }
@@ -213,7 +213,7 @@ export function createWebContainerSlice(props?: {
         }
 
         try {
-          await get().webcontainer.startDevServer();
+          await get().webContainer.startDevServer();
         } catch (error) {
           throw new Error(
             `WebContainer initialization failed while starting dev server: ${String(error)}`,
@@ -222,15 +222,15 @@ export function createWebContainerSlice(props?: {
       },
 
       async installDependencies() {
-        const instance = get().webcontainer.instance;
+        const instance = get().webContainer.instance;
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
-        const cwd = await get().webcontainer.resolveProjectRoot();
+        const cwd = await get().webContainer.resolveProjectRoot();
         // Install dependencies
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.serverStatus = {type: 'install-deps'};
+            draft.webContainer.serverStatus = {type: 'install-deps'};
           }),
         );
         const installProcess = await instance.spawn('npm', ['install']);
@@ -239,7 +239,7 @@ export function createWebContainerSlice(props?: {
             write(data) {
               set((state) =>
                 produce(state, (draft) => {
-                  draft.webcontainer.output += data;
+                  draft.webContainer.output += data;
                 }),
               );
             },
@@ -250,11 +250,11 @@ export function createWebContainerSlice(props?: {
       },
 
       async startDevServer() {
-        const instance = get().webcontainer.instance;
+        const instance = get().webContainer.instance;
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
-        const cwd = await get().webcontainer.resolveProjectRoot();
+        const cwd = await get().webContainer.resolveProjectRoot();
         let started = false;
         // Run `npm run dev` to start the Vite dev server
         for (const manager of ['npm', 'pnpm', 'yarn']) {
@@ -274,7 +274,7 @@ export function createWebContainerSlice(props?: {
         }
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.serverStatus = {type: 'starting-dev'};
+            draft.webContainer.serverStatus = {type: 'starting-dev'};
           }),
         );
         return new Promise<void>((resolve, reject) => {
@@ -292,7 +292,7 @@ export function createWebContainerSlice(props?: {
             setCachedWebContainerServerUrl(url);
             set((state) =>
               produce(state, (draft) => {
-                draft.webcontainer.serverStatus = {type: 'ready', url};
+                draft.webContainer.serverStatus = {type: 'ready', url};
               }),
             );
             resolve();
@@ -303,7 +303,7 @@ export function createWebContainerSlice(props?: {
             cleanup();
             set((state) =>
               produce(state, (draft) => {
-                draft.webcontainer.serverStatus = {type: 'error', error};
+                draft.webContainer.serverStatus = {type: 'error', error};
               }),
             );
             reject(error);
@@ -312,7 +312,7 @@ export function createWebContainerSlice(props?: {
       },
 
       async resolveProjectRoot() {
-        const instance = get().webcontainer.instance;
+        const instance = get().webContainer.instance;
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
@@ -332,36 +332,36 @@ export function createWebContainerSlice(props?: {
 
       async openFile(path, content) {
         const state = get();
-        const existing = state.webcontainer.config.openedFiles.find(
+        const existing = state.webContainer.config.openedFiles.find(
           (f) => f.path === path,
         );
         if (existing) {
           set((s) =>
             produce(s, (draft) => {
-              draft.webcontainer.config.activeFilePath = path;
+              draft.webContainer.config.activeFilePath = path;
             }),
           );
           return;
         }
         let fileContent = content;
         if (fileContent === undefined) {
-          fileContent = await get().webcontainer.getFileContent(path);
+          fileContent = await get().webContainer.getFileContent(path);
         }
         set((s) =>
           produce(s, (draft) => {
             // Guard against async races: the file may have been opened while
             // content was being loaded.
-            const alreadyOpen = draft.webcontainer.config.openedFiles.some(
+            const alreadyOpen = draft.webContainer.config.openedFiles.some(
               (f) => f.path === path,
             );
             if (!alreadyOpen) {
-              draft.webcontainer.config.openedFiles.push({
+              draft.webContainer.config.openedFiles.push({
                 path,
                 content: fileContent ?? '',
                 dirty: false,
               });
             }
-            draft.webcontainer.config.activeFilePath = path;
+            draft.webContainer.config.activeFilePath = path;
           }),
         );
       },
@@ -369,14 +369,14 @@ export function createWebContainerSlice(props?: {
       closeFile(path) {
         set((s) =>
           produce(s, (draft) => {
-            const wasActive = draft.webcontainer.config.activeFilePath === path;
-            draft.webcontainer.config.openedFiles =
-              draft.webcontainer.config.openedFiles.filter(
+            const wasActive = draft.webContainer.config.activeFilePath === path;
+            draft.webContainer.config.openedFiles =
+              draft.webContainer.config.openedFiles.filter(
                 (f) => f.path !== path,
               );
             if (wasActive) {
-              const lastOpened = draft.webcontainer.config.openedFiles.at(-1);
-              draft.webcontainer.config.activeFilePath =
+              const lastOpened = draft.webContainer.config.openedFiles.at(-1);
+              draft.webContainer.config.activeFilePath =
                 lastOpened?.path ?? null;
             }
           }),
@@ -386,7 +386,7 @@ export function createWebContainerSlice(props?: {
       setActiveFile(path) {
         set((s) =>
           produce(s, (draft) => {
-            draft.webcontainer.config.activeFilePath = path;
+            draft.webContainer.config.activeFilePath = path;
           }),
         );
       },
@@ -394,7 +394,7 @@ export function createWebContainerSlice(props?: {
       updateFileContent(path, content) {
         set((s) =>
           produce(s, (draft) => {
-            const file = draft.webcontainer.config.openedFiles.find(
+            const file = draft.webContainer.config.openedFiles.find(
               (f) => f.path === path,
             );
             if (file) {
@@ -402,8 +402,8 @@ export function createWebContainerSlice(props?: {
               file.dirty = true;
             }
             // Keep the in-memory FileSystemTree in sync (immutably)
-            draft.webcontainer.config.filesTree = setFileContentInTree(
-              draft.webcontainer.config.filesTree,
+            draft.webContainer.config.filesTree = setFileContentInTree(
+              draft.webContainer.config.filesTree,
               path,
               content,
             );
@@ -412,21 +412,21 @@ export function createWebContainerSlice(props?: {
       },
 
       hasDirtyFiles() {
-        return get().webcontainer.config.openedFiles.some((f) => f.dirty);
+        return get().webContainer.config.openedFiles.some((f) => f.dirty);
       },
 
       async saveAllOpenFiles() {
-        const instance = get().webcontainer.instance;
+        const instance = get().webContainer.instance;
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
-        const files = get().webcontainer.config.openedFiles;
+        const files = get().webContainer.config.openedFiles;
         for (const f of files) {
           await instance.fs.writeFile(f.path, f.content);
         }
         set((s) =>
           produce(s, (draft) => {
-            for (const f of draft.webcontainer.config.openedFiles) {
+            for (const f of draft.webContainer.config.openedFiles) {
               f.dirty = false;
             }
           }),
@@ -437,11 +437,11 @@ export function createWebContainerSlice(props?: {
       // Returns empty string on error or if instance is not available
       async getFileContent(path) {
         const state = get();
-        const opened = state.webcontainer.config.openedFiles.find(
+        const opened = state.webContainer.config.openedFiles.find(
           (f) => f.path === path,
         );
         if (opened) return opened.content;
-        const instance = state.webcontainer.instance;
+        const instance = state.webContainer.instance;
         try {
           if (instance) {
             const data = await instance.fs.readFile(path, 'utf-8');
@@ -454,7 +454,7 @@ export function createWebContainerSlice(props?: {
       },
 
       async applyFilesTree({filesTree, activeFilePath}) {
-        const instance = get().webcontainer.instance;
+        const instance = get().webContainer.instance;
         const pathExistsInTree = (path: string): boolean => {
           const clean = path.replace(/^\/+/, '');
           if (!clean) return false;
@@ -474,7 +474,7 @@ export function createWebContainerSlice(props?: {
           return false;
         };
 
-        const prev = get().webcontainer.config;
+        const prev = get().webContainer.config;
         const preservedOpened = prev.openedFiles.filter((f) =>
           pathExistsInTree(f.path),
         );
@@ -494,27 +494,27 @@ export function createWebContainerSlice(props?: {
 
         set((s) =>
           produce(s, (draft) => {
-            draft.webcontainer.config.filesTree = filesTree;
-            draft.webcontainer.config.openedFiles = preservedOpened;
-            draft.webcontainer.config.activeFilePath = nextActive;
+            draft.webContainer.config.filesTree = filesTree;
+            draft.webContainer.config.openedFiles = preservedOpened;
+            draft.webContainer.config.activeFilePath = nextActive;
           }),
         );
 
         if (instance) {
           await instance.mount(filesTree);
           if (pathExistsInTree(nextActive)) {
-            await get().webcontainer.openFile(nextActive);
+            await get().webContainer.openFile(nextActive);
           }
           return;
         }
       },
 
       async runCommand(command, args = [], opts) {
-        const instance = get().webcontainer.instance;
+        const instance = get().webContainer.instance;
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
-        const cwd = await get().webcontainer.resolveProjectRoot();
+        const cwd = await get().webContainer.resolveProjectRoot();
 
         const startedAt = Date.now();
         let stdout = '';
@@ -523,7 +523,7 @@ export function createWebContainerSlice(props?: {
 
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.lastCommandStatus = {
+            draft.webContainer.lastCommandStatus = {
               type: 'running',
               command,
               args,
@@ -540,9 +540,9 @@ export function createWebContainerSlice(props?: {
                 const text = String(data ?? '');
                 stdout += text;
                 set((state) => ({
-                  webcontainer: {
-                    ...state.webcontainer,
-                    output: state.webcontainer.output + text,
+                  webContainer: {
+                    ...state.webContainer,
+                    output: state.webContainer.output + text,
                   },
                 }));
               },
@@ -554,16 +554,16 @@ export function createWebContainerSlice(props?: {
         const durationMs = Date.now() - startedAt;
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.commandHistory.unshift({
+            draft.webContainer.commandHistory.unshift({
               command,
               args,
               startedAt,
               durationMs,
               exitCode,
             });
-            draft.webcontainer.commandHistory =
-              draft.webcontainer.commandHistory.slice(0, 50);
-            draft.webcontainer.lastCommandStatus = {
+            draft.webContainer.commandHistory =
+              draft.webContainer.commandHistory.slice(0, 50);
+            draft.webContainer.lastCommandStatus = {
               type: 'finished',
               command,
               args,
@@ -581,7 +581,7 @@ export function createWebContainerSlice(props?: {
         const availability: Record<string, boolean> = {};
         for (const cmd of commands) {
           try {
-            const result = await get().webcontainer.runCommand(
+            const result = await get().webContainer.runCommand(
               cmd,
               ['--version'],
               {
@@ -595,7 +595,7 @@ export function createWebContainerSlice(props?: {
         }
         set((state) =>
           produce(state, (draft) => {
-            draft.webcontainer.capabilities = availability;
+            draft.webContainer.capabilities = availability;
           }),
         );
         return availability;

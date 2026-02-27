@@ -7,9 +7,9 @@ import {useStoreWithWebContainer} from '../WebContainerSlice';
 
 export function TerminalView({className}: {className?: string}) {
   const serverStatus = useStoreWithWebContainer(
-    (s) => s.webcontainer.serverStatus,
+    (s) => s.webContainer.serverStatus,
   );
-  const output = useStoreWithWebContainer((s) => s.webcontainer.output);
+  const output = useStoreWithWebContainer((s) => s.webContainer.output);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);

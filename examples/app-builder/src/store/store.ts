@@ -38,7 +38,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         ai: AiSliceConfig,
         aiSettings: AiSettingsSliceConfig,
-        webcontainer: WebContainerSliceConfig,
+        webContainer: WebContainerSliceConfig,
       },
     },
     (set, get, store) => ({
@@ -61,7 +61,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         getInstructions: () => {
           const instructions = `${LLM_INSTRUCTIONS} 
             <file_list>
-            ${JSON.stringify(fileSystemTreeToNodes(get().webcontainer.config.filesTree, '/'), null, 2)}
+            ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
           return instructions;
         },
