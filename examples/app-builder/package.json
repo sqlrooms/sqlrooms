@@ -19,6 +19,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
+    "@xterm/xterm": "^6.0.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",
