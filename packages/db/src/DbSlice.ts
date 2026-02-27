@@ -28,6 +28,25 @@ export function createDbSlice(props?: {
   const initialConfig = createDefaultDbConfig(props?.config);
   return createSlice<DbSliceState, DbRootState>((set, get, store) => {
     const duckDbSlice = createDuckDbSlice(props?.duckDb)(set, get, store);
+    const isUnsupportedArrowUploadError = (error: unknown): boolean => {
+      if (!error || typeof error !== 'object') {
+        return false;
+      }
+      const message =
+        'message' in error && typeof error.message === 'string'
+          ? error.message.toLowerCase()
+          : '';
+      return message.includes(
+        'arrow buffer upload is not supported over websocket backend',
+      );
+    };
+    const toObjectRows = (table: arrow.Table): Record<string, unknown>[] => {
+      return table
+        .toArray()
+        .map((row) =>
+          Object.fromEntries(Object.entries(row as Record<string, unknown>)),
+        );
+    };
     const ensureSchemaExists = async (args: {
       core: Awaited<ReturnType<DbSliceState['db']['getConnector']>>;
       schema?: string;
@@ -106,7 +125,16 @@ export function createDbSlice(props?: {
         schema,
         database,
       });
-      await core.loadArrow(table, qualified);
+      try {
+        await core.loadArrow(table, qualified);
+      } catch (error) {
+        if (!isUnsupportedArrowUploadError(error)) {
+          throw error;
+        }
+        // WS connectors cannot upload Arrow buffers; degrade gracefully to SQL
+        // object ingestion so materialization still succeeds.
+        await core.loadObjects(toObjectRows(table), qualified, {replace: true});
+      }
       return qualified;
     };
 

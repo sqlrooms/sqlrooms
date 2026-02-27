@@ -1,9 +1,10 @@
+import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
-import {FileDropzone} from '@sqlrooms/dropzone';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {useToast} from '@sqlrooms/ui';
-import {useRoomStore, RoomPanelTypes} from '../store';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {RoomPanelTypes} from '../layout';
+import {useRoomStore} from '../store';
 
 export const DataSourcesPanel = () => {
   const connector = useRoomStore((state) => state.db.connector);

@@ -19,6 +19,7 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
+import {createHttpDbBridge} from '@sqlrooms/db';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createNotebookSlice,
@@ -30,8 +31,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -40,7 +39,6 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {SpinnerPane} from '@sqlrooms/ui';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
@@ -48,18 +46,12 @@ import {
   WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
-import {DatabaseIcon} from 'lucide-react';
-import {createElement, Suspense} from 'react';
 import {z} from 'zod';
 
-import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {getDefaultScaffoldTree} from './helpers';
-import {MainView} from './components/MainView';
+import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-
-export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
-export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const AppBuilderProjectConfig = z.object({
   appsBySheetId: z
@@ -188,43 +180,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         connector,
         config: {dataSources: []},
-        layout: {
-          config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: 'main',
-              splitPercentage: 20,
-            },
-          },
-          panels: {
-            [RoomPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
-              icon: DatabaseIcon,
-              component: DataSourcesPanel,
-              placement: 'sidebar',
-            },
-            // [RoomPanelTypes.enum.assistant]: {
-            //   title: 'Assistant',
-            //   icon: () => null,
-            //   component: AssistantPanel,
-            //   placement: 'sidebar',
-            // },
-            main: {
-              title: 'Main view',
-              icon: () => null,
-              component: () =>
-                createElement(Suspense, {
-                  fallback: createElement(SpinnerPane, {
-                    className: 'h-full w-full',
-                  }),
-                  children: createElement(MainView),
-                }),
-              placement: 'main',
-            },
-          },
-        },
+        layout: LAYOUT,
       })(set, get, store),
 
       ...createSqlEditorSlice()(set, get, store),
@@ -265,3 +221,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     }),
   ),
 );
+
+if (runtimeConfig.postgresBridgeEnabled) {
+  const postgresBridgeId = 'postgres-http-bridge';
+  roomStore.getState().db.connectors.registerBridge(
+    createHttpDbBridge({
+      id: postgresBridgeId,
+      baseUrl: runtimeConfig.apiBaseUrl || '',
+      runtimeSupport: 'server',
+    }),
+  );
+  roomStore.getState().db.connectors.registerConnection({
+    id: 'postgres',
+    engineId: 'postgres',
+    title: 'Postgres',
+    runtimeSupport: 'server',
+    requiresBridge: true,
+    bridgeId: postgresBridgeId,
+    isCore: false,
+  });
+}
