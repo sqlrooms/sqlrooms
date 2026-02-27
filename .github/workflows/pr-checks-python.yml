@@ -1,14 +1,17 @@
 name: Python PR Checks
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'python/**'
+      - '.github/workflows/pr-checks-python.yml'
   pull_request:
     types: [opened, edited, synchronize, reopened]
     paths:
       - 'python/**'
+      - '.github/workflows/pr-checks-python.yml'
 
 jobs:
   build-and-test:
