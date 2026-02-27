@@ -78,6 +78,19 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
         },
       );
       if (!res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          let parsedError: string | undefined;
+          try {
+            const body = (await res.json()) as {error?: string};
+            parsedError = body.error;
+          } catch {
+            parsedError = undefined;
+          }
+          if (parsedError) {
+            throw new Error(parsedError);
+          }
+        }
         throw new Error(`Bridge fetchArrow failed (${res.status})`);
       }
       const contentType = res.headers.get('content-type') || '';
