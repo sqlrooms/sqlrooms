@@ -1,3 +1,5 @@
+import type {QualifiedTableName} from '@sqlrooms/duckdb';
+
 /**
  * Centralized policy for persisting SQL cell query results.
  *
@@ -12,6 +14,7 @@
  * migrations may have created either form for the same logical result name.
  */
 export type ResultRelationType = 'view' | 'table';
+export type ResultRelationName = string | QualifiedTableName;
 
 type SqlConnectorLike = {
   query: (
@@ -19,6 +22,10 @@ type SqlConnectorLike = {
     options?: {signal?: AbortSignal},
   ) => PromiseLike<unknown>;
 };
+
+function toRelationSqlName(relationName: ResultRelationName): string {
+  return relationName.toString();
+}
 
 /**
  * Chooses whether a SQL cell result should be stored as a logical view or a
@@ -45,19 +52,23 @@ export function chooseAdaptiveRelationType(args: {
  */
 export async function createOrReplaceResultRelation(args: {
   connector: SqlConnectorLike;
-  relationName: string;
+  relationName: ResultRelationName;
   relationType: ResultRelationType;
   sql: string;
   signal?: AbortSignal;
 }) {
   const {connector, relationName, relationType, sql, signal} = args;
+  const relationSqlName = toRelationSqlName(relationName);
   if (relationType === 'table') {
-    await connector.query(`CREATE OR REPLACE TABLE ${relationName} AS ${sql}`, {
-      signal,
-    });
+    await connector.query(
+      `CREATE OR REPLACE TABLE ${relationSqlName} AS ${sql}`,
+      {
+        signal,
+      },
+    );
     return;
   }
-  await connector.query(`CREATE OR REPLACE VIEW ${relationName} AS ${sql}`, {
+  await connector.query(`CREATE OR REPLACE VIEW ${relationSqlName} AS ${sql}`, {
     signal,
   });
 }
@@ -70,12 +81,13 @@ export async function createOrReplaceResultRelation(args: {
  */
 export async function dropResultRelation(args: {
   connector: SqlConnectorLike;
-  relationName?: string;
+  relationName?: ResultRelationName;
 }) {
   const {connector, relationName} = args;
   if (!relationName) return;
-  await connector.query(`DROP VIEW IF EXISTS ${relationName}`);
-  await connector.query(`DROP TABLE IF EXISTS ${relationName}`);
+  const relationSqlName = toRelationSqlName(relationName);
+  await connector.query(`DROP VIEW IF EXISTS ${relationSqlName}`);
+  await connector.query(`DROP TABLE IF EXISTS ${relationSqlName}`);
 }
 
 /**
@@ -89,24 +101,26 @@ export async function dropResultRelation(args: {
  */
 export async function renameResultRelation(args: {
   connector: SqlConnectorLike;
-  oldRelationName: string;
-  newRelationName: string;
+  oldRelationName: ResultRelationName;
+  newRelationName: ResultRelationName;
   relationType: ResultRelationType;
   viewSql: string;
 }) {
   const {connector, oldRelationName, newRelationName, relationType, viewSql} =
     args;
+  const oldRelationSqlName = toRelationSqlName(oldRelationName);
+  const newRelationSqlName = toRelationSqlName(newRelationName);
 
   // Clear destination first in case a stale object exists.
-  await dropResultRelation({connector, relationName: newRelationName});
+  await dropResultRelation({connector, relationName: newRelationSqlName});
 
   if (relationType === 'table') {
     await connector.query(
-      `CREATE TABLE ${newRelationName} AS SELECT * FROM ${oldRelationName}`,
+      `CREATE TABLE ${newRelationSqlName} AS SELECT * FROM ${oldRelationSqlName}`,
     );
   } else {
-    await connector.query(`CREATE VIEW ${newRelationName} AS ${viewSql}`);
+    await connector.query(`CREATE VIEW ${newRelationSqlName} AS ${viewSql}`);
   }
 
-  await dropResultRelation({connector, relationName: oldRelationName});
+  await dropResultRelation({connector, relationName: oldRelationSqlName});
 }
