@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "uv run sqlrooms --ws-port 4000 --port 4173 --no-open-browser --db-path /tmp/sqlrooms-cli.db",
+    "dev": "uv run sqlrooms --ws-port 4000 --port 4173 --no-open-browser --db-path /tmp/sqlrooms-cli.db --postgres-dsn postgresql://postgres:postgres@localhost:5432/postgres",
     "dev:sync": "pnpm run dev --sync",
     "build:ui": "pnpm --filter sqlrooms-cli-app build && node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','..','apps','sqlrooms-cli-ui','dist');const dst=path.resolve('sqlrooms','web','static');fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.cpSync(src,dst,{recursive:true});console.log('Copied UI bundle to',dst);\"",
     "build": "pnpm run build:ui && uv build",

@@ -195,6 +195,18 @@ export type QueryExecutionRequest = {
    */
   materializedName?: string;
   /**
+   * Optional schema override for materialized relations.
+   *
+   * When omitted, routing falls back to `coreMaterialization` defaults.
+   */
+  materializedSchema?: string;
+  /**
+   * Optional database/catalog override for materialized relations.
+   *
+   * When omitted, routing falls back to `coreMaterialization` defaults.
+   */
+  materializedDatabase?: string;
+  /**
    * Abort signal for cancellation.
    */
   signal?: AbortSignal;

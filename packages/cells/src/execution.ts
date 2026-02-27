@@ -1,4 +1,3 @@
-import {isCoreDuckDbConnection} from '@sqlrooms/db';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -123,23 +122,18 @@ export async function executeSqlCell(
     let tableName = '';
     let relationType: ResultRelationType = 'view';
     const connector = await db.getConnector();
-    if (
-      selectedConnectorId &&
-      !isCoreDuckDbConnection(selectedConnectorId) &&
-      dbConnectors?.runQuery
-    ) {
-      // External connectors already return materialized relations, so treat
-      // them as table-backed results.
+    if (dbConnectors?.runQuery) {
       const routed = await dbConnectors.runQuery({
         connectionId: selectedConnectorId,
         sql,
         queryType: 'arrow',
         materialize: true,
         materializedName: effectiveResultName,
+        materializedSchema: finalSchemaName,
         signal,
       });
       if (!routed.relationName) {
-        throw new Error('External query did not return materialized relation');
+        throw new Error('Query did not return a materialized relation');
       }
       tableName = routed.relationName;
       relationType = 'table';
