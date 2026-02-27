@@ -5,6 +5,7 @@ import type * as arrow from 'apache-arrow';
 import {produce} from 'immer';
 import {
   createDefaultDbConfig,
+  hasLoadArrow,
   isDuplicateAttachError,
   isRuntimeCompatible,
 } from './helpers';
@@ -33,7 +34,7 @@ export function createDbSlice(props?: {
     }): Promise<string> => {
       const {table, relationName} = args;
       const core = await get().db.getConnector();
-      if (!('loadArrow' in core) || typeof core.loadArrow !== 'function') {
+      if (!hasLoadArrow(core)) {
         throw new Error(
           'Core DuckDB connector does not support Arrow materialization',
         );
