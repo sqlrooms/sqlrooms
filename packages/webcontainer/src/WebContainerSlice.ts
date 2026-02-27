@@ -85,7 +85,7 @@ export type WebContainerSliceState = {
       | {type: 'install-deps'}
       | {type: 'ready'; url: string}
       | {type: 'error'; error: unknown};
-    initialize: () => Promise<void>;
+    initialize: (opts?: {force?: boolean}) => Promise<void>;
     /**
      * @returns The exit code of the install command
      */
@@ -146,6 +146,11 @@ export type WebContainerSliceState = {
 
 export function createWebContainerSlice(props?: {
   config?: Partial<WebContainerSliceConfig>;
+  /**
+   * Whether room-level slice initialization should eagerly boot WebContainer.
+   * Disable this when runtime startup should happen only on explicit user action.
+   */
+  autoInitialize?: boolean;
 }): StateCreator<WebContainerSliceState> {
   return createSlice<WebContainerSliceState>((set, get) => ({
     webContainer: {
@@ -156,7 +161,10 @@ export function createWebContainerSlice(props?: {
       commandHistory: [],
       lastCommandStatus: {type: 'idle'},
       serverStatus: {type: 'not-initialized'},
-      initialize: async () => {
+      initialize: async (opts) => {
+        if (!opts?.force && props?.autoInitialize === false) {
+          return;
+        }
         if (get().webContainer.serverStatus.type !== 'not-initialized') {
           return;
         }

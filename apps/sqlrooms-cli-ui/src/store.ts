@@ -243,6 +243,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createCanvasSlice()(set, get, store),
 
       ...createWebContainerSlice({
+        autoInitialize: false,
         config: {
           filesTree: (scaffolds as Record<string, any>)['get-started'] ?? {},
           activeFilePath: '/src/App.jsx',

@@ -29,7 +29,7 @@ export const AppBuilderSheet: React.FC = () => {
     (s) => s.appProject.updateSheetAppFiles,
   );
   const applyFilesTree = useRoomStore((s) => s.webContainer.applyFilesTree);
-  const initializeWebcontainer = useRoomStore((s) => s.webContainer.initialize);
+  const initializeWebContainer = useRoomStore((s) => s.webContainer.initialize);
   const webContainerStatus = useRoomStore((s) => s.webContainer.serverStatus);
 
   const [prompt, setPrompt] = React.useState('');
@@ -51,10 +51,10 @@ export const AppBuilderSheet: React.FC = () => {
         updateSheetAppFiles(sheetId, merged);
       }
       const tree = toFileSystemTree(files);
-      await applyFilesTree({filesTree: tree, activeFilePath: '/src/App.jsx'});
-      await initializeWebcontainer();
+      await applyFilesTree({filesTree: tree});
+      await initializeWebContainer({force: true});
     },
-    [applyFilesTree, initializeWebcontainer, updateSheetAppFiles],
+    [applyFilesTree, initializeWebContainer, updateSheetAppFiles],
   );
 
   React.useEffect(() => {
