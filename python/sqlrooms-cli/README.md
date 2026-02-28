@@ -63,6 +63,16 @@ uvx sqlrooms-server --db-path ./sqlrooms.db --port 4000
 Use these modes to run remote queries through backend connectors and materialize
 results into core DuckDB for downstream notebook cells.
 
+Install optional connector dependencies first:
+
+```bash
+# From python/sqlrooms-cli
+uv sync --extra connectors
+# or install just one connector:
+uv sync --extra postgres
+uv sync --extra snowflake
+```
+
 ### Postgres
 
 ```bash
@@ -99,7 +109,7 @@ Notes:
 
 - `--postgres-dsn` can also be provided via `SQLROOMS_POSTGRES_DSN`.
 - Snowflake can be configured via `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_SCHEMA`, `SNOWFLAKE_ROLE`, and `SNOWFLAKE_AUTHENTICATOR`.
-- Requires Python connector libraries at runtime (`psycopg` for Postgres, `snowflake-connector-python` for Snowflake).
+- Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
 
 ## Developer setup
 
