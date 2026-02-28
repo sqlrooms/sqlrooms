@@ -250,6 +250,56 @@ export function cleanupPendingAnalysisResults(
 }
 
 /**
+ * Sanitizes UIMessages before sending to LLM APIs to prevent errors from malformed content.
+ *
+ * This handles issues that can occur when conversations are interrupted mid-stream:
+ * - Empty text parts (causes Bedrock error: "text field in ContentBlock is blank")
+ * - Assistant messages with no meaningful content after cleanup
+ *
+ * @param messages - The messages to sanitize
+ * @returns Sanitized messages safe to send to LLM APIs
+ */
+export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
+  return messages
+    .map((message) => {
+      if (!message.parts || message.parts.length === 0) {
+        return message;
+      }
+
+      // Filter out empty text parts and empty reasoning parts
+      const sanitizedParts = message.parts.filter((part) => {
+        if (part.type === 'text') {
+          const textPart = part as {type: 'text'; text: string};
+          return textPart.text && textPart.text.trim().length > 0;
+        }
+        if (part.type === 'reasoning') {
+          const reasoningPart = part as {type: 'reasoning'; text: string};
+          return reasoningPart.text && reasoningPart.text.trim().length > 0;
+        }
+        return true;
+      });
+
+      // If all parts were filtered out, add a placeholder for assistant messages
+      // to maintain conversation structure (user messages should always have content)
+      if (sanitizedParts.length === 0 && message.role === 'assistant') {
+        return {
+          ...message,
+          parts: [{type: 'text' as const, text: '[Response interrupted]'}],
+        };
+      }
+
+      return {
+        ...message,
+        parts: sanitizedParts,
+      };
+    })
+    .filter((message) => {
+      // Remove messages that have no parts (shouldn't happen after above logic, but safety check)
+      return message.parts && message.parts.length > 0;
+    });
+}
+
+/**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
  * Assumes sequential tool execution (only one tool runs at a time).
