@@ -26,6 +26,10 @@ class DbBridgeConnector(Protocol):
 
     def fetch_arrow_bytes(self, sql: str) -> bytes: ...
 
+    def stream_arrow_batches(
+        self, sql: str, chunk_rows: int = 5000, query_id: str | None = None
+    ) -> Iterable[bytes]: ...
+
     def cancel_query(self, query_id: str) -> bool: ...
 
 
@@ -113,6 +117,18 @@ class DbBridgeRegistry:
 
     def fetch_arrow_bytes(self, connection_id: str, sql: str) -> bytes:
         return self._get_connector(connection_id).fetch_arrow_bytes(sql)
+
+    def stream_arrow_batches(
+        self,
+        connection_id: str,
+        sql: str,
+        *,
+        chunk_rows: int = 5000,
+        query_id: str | None = None,
+    ) -> Iterable[bytes]:
+        return self._get_connector(connection_id).stream_arrow_batches(
+            sql, chunk_rows=chunk_rows, query_id=query_id
+        )
 
     def cancel_query(self, connection_id: str, query_id: str) -> bool:
         return self._get_connector(connection_id).cancel_query(query_id)
@@ -204,6 +220,20 @@ class PostgresBridgeConnector:
                 rows = cur.fetchall()
                 columns = _cursor_columns(cur)
                 return _rows_to_arrow_bytes(rows, columns)
+
+    def stream_arrow_batches(
+        self, sql: str, chunk_rows: int = 5000, query_id: str | None = None
+    ) -> Iterable[bytes]:
+        _ = query_id
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                columns = _cursor_columns(cur)
+                while True:
+                    rows = cur.fetchmany(max(1, int(chunk_rows)))
+                    if not rows:
+                        break
+                    yield _rows_to_arrow_bytes(rows, columns)
 
     def cancel_query(self, query_id: str) -> bool:
         _ = query_id
@@ -351,6 +381,20 @@ class SnowflakeBridgeConnector:
                 rows = cur.fetchall()
                 columns = _cursor_columns(cur)
                 return _rows_to_arrow_bytes(rows, columns)
+
+    def stream_arrow_batches(
+        self, sql: str, chunk_rows: int = 5000, query_id: str | None = None
+    ) -> Iterable[bytes]:
+        _ = query_id
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                columns = _cursor_columns(cur)
+                while True:
+                    rows = cur.fetchmany(max(1, int(chunk_rows)))
+                    if not rows:
+                        break
+                    yield _rows_to_arrow_bytes(rows, columns)
 
     def cancel_query(self, query_id: str) -> bool:
         _ = query_id

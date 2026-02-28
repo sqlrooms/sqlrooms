@@ -7,6 +7,7 @@ import socket
 import tempfile
 import threading
 import webbrowser
+import json
 from pathlib import Path
 from typing import Any, Dict
 
@@ -14,7 +15,7 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from diskcache import Cache
@@ -90,6 +91,24 @@ def _references_internal_namespace(sql: str, namespace: str) -> bool:
         re.IGNORECASE,
     )
     return bool(pattern.search(sql))
+
+
+def _encode_stream_frame(
+    frame_type: str,
+    *,
+    query_id: str,
+    payload: bytes = b"",
+    error: str | None = None,
+) -> bytes:
+    header = {
+        "type": frame_type,
+        "queryId": query_id,
+        "payloadLength": len(payload),
+    }
+    if error:
+        header["error"] = error
+    header_bytes = json.dumps(header).encode("utf-8")
+    return len(header_bytes).to_bytes(4, byteorder="big") + header_bytes + payload
 
 
 class SqlroomsHttpServer:
@@ -339,6 +358,48 @@ class SqlroomsHttpServer:
                 return JSONResponse({"error": str(exc)}, status_code=404)
             except Exception as exc:
                 return JSONResponse({"error": str(exc)}, status_code=500)
+
+        @app.post("/api/db/fetch-arrow-stream")
+        async def fetch_arrow_stream(payload: Dict[str, Any], request: Request):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+            sql = payload.get("sql", "")
+            if not isinstance(sql, str) or not sql.strip():
+                return JSONResponse({"error": "sql is required"}, status_code=400)
+            query_id = payload.get("queryId")
+            if not isinstance(query_id, str) or not query_id.strip():
+                query_id = f"bridge_{os.urandom(8).hex()}"
+            chunk_rows = payload.get("chunkRows")
+            if not isinstance(chunk_rows, int) or chunk_rows <= 0:
+                chunk_rows = 5000
+
+            async def _stream():
+                try:
+                    for batch in self.db_bridge_registry.stream_arrow_batches(
+                        connection_id=connection_id,
+                        sql=sql,
+                        chunk_rows=chunk_rows,
+                        query_id=query_id,
+                    ):
+                        if await request.is_disconnected():
+                            break
+                        yield _encode_stream_frame(
+                            "batch", query_id=query_id, payload=batch
+                        )
+                    yield _encode_stream_frame("end", query_id=query_id)
+                except UnknownBridgeConnectionError as exc:
+                    yield _encode_stream_frame(
+                        "error", query_id=query_id, error=str(exc)
+                    )
+                except Exception as exc:
+                    yield _encode_stream_frame(
+                        "error", query_id=query_id, error=str(exc)
+                    )
+
+            return StreamingResponse(
+                _stream(), media_type="application/octet-stream"
+            )
 
         @app.post("/api/db/cancel-query")
         async def cancel_query(payload: Dict[str, Any]):

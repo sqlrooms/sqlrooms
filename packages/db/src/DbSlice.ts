@@ -1,7 +1,7 @@
 import {createDuckDbSlice, CreateDuckDbSliceProps} from '@sqlrooms/duckdb';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
-import type * as arrow from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
 import {
   createDefaultDbConfig,
@@ -137,6 +137,81 @@ export function createDbSlice(props?: {
       }
       return qualified;
     };
+    const decodeArrowIpcChunk = async (
+      ipcChunk: Uint8Array,
+    ): Promise<arrow.Table> => {
+      const reader = await arrow.RecordBatchReader.from(ipcChunk);
+      const batches: arrow.RecordBatch[] = [];
+      for await (const batch of reader) {
+        batches.push(batch);
+      }
+      if (batches.length === 0) {
+        return arrow.tableFromArrays({}) as unknown as arrow.Table;
+      }
+      return new arrow.Table(reader.schema, batches);
+    };
+    const materializeArrowStreamResult = async (args: {
+      stream: AsyncIterable<Uint8Array>;
+      relationName: string;
+      schema?: string;
+      database?: string;
+    }): Promise<string> => {
+      const {stream, relationName, schema, database} = args;
+      const core = await get().db.getConnector();
+      if (!hasLoadArrow(core)) {
+        throw new Error(
+          'Core DuckDB connector does not support Arrow materialization',
+        );
+      }
+      const qualified = await resolveMaterializationTarget({
+        relationName,
+        schema,
+        database,
+      });
+      let isFirstChunk = true;
+      for await (const ipcChunk of stream) {
+        const chunkTable = await decodeArrowIpcChunk(ipcChunk);
+        if (chunkTable.numRows === 0) {
+          continue;
+        }
+        if (isFirstChunk) {
+          await materializeArrowResult({
+            table: chunkTable,
+            relationName,
+            schema,
+            database,
+          });
+          isFirstChunk = false;
+          continue;
+        }
+        const tempChunkTable = `__sqlrooms_stream_chunk_${Date.now().toString(36)}_${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        try {
+          try {
+            await core.loadArrow(chunkTable, tempChunkTable);
+          } catch (error) {
+            if (!isUnsupportedArrowUploadError(error)) {
+              throw error;
+            }
+            await core.loadObjects(toObjectRows(chunkTable), tempChunkTable, {
+              replace: true,
+            });
+          }
+          await core.query(
+            `INSERT INTO ${qualified} SELECT * FROM ${escapeId(tempChunkTable)}`,
+          );
+        } finally {
+          await core.query(`DROP TABLE IF EXISTS ${escapeId(tempChunkTable)}`);
+        }
+      }
+      if (isFirstChunk) {
+        await core.query(
+          `CREATE OR REPLACE TABLE ${qualified} AS SELECT * FROM (SELECT 1 AS __sqlrooms_empty__) WHERE FALSE`,
+        );
+      }
+      return qualified;
+    };
 
     const runQuery = async (
       request: QueryExecutionRequest,
@@ -226,17 +301,37 @@ export function createDbSlice(props?: {
             jsonData: bridgeResult.jsonData,
           };
         }
+        const shouldMaterialize = request.materialize !== false;
+        const relationName =
+          request.materializedName || `ext_${Date.now().toString(36)}`;
+        if (shouldMaterialize && bridge.fetchArrowStream) {
+          const stream = bridge.fetchArrowStream({
+            connectionId,
+            sql: request.sql,
+            signal: request.signal,
+            chunkRows: 5000,
+          });
+          const qualifiedRelation = await materializeArrowStreamResult({
+            stream,
+            relationName,
+            schema: request.materializedSchema,
+            database: request.materializedDatabase,
+          });
+          return {
+            connectionId,
+            engineId,
+            materialized: true,
+            relationName: qualifiedRelation,
+          };
+        }
         const arrowTable = await bridge.fetchArrow({
           connectionId,
           sql: request.sql,
           signal: request.signal,
         });
-        const shouldMaterialize = request.materialize !== false;
         if (!shouldMaterialize) {
           return {connectionId, engineId, materialized: false, arrowTable};
         }
-        const relationName =
-          request.materializedName || `ext_${Date.now().toString(36)}`;
         const qualifiedRelation = await materializeArrowResult({
           table: arrowTable,
           relationName,

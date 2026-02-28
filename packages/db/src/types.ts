@@ -166,6 +166,13 @@ export type DbBridge = {
     sql: string;
     signal?: AbortSignal;
   }) => Promise<arrow.Table>;
+  fetchArrowStream?: (args: {
+    connectionId: string;
+    sql: string;
+    signal?: AbortSignal;
+    queryId?: string;
+    chunkRows?: number;
+  }) => AsyncIterable<Uint8Array>;
   cancelQuery: (queryId: string) => Promise<boolean>;
 };
 
