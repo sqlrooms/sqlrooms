@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Protocol
@@ -25,7 +24,7 @@ class DbBridgeConnector(Protocol):
 
     def execute_query(self, sql: str, query_type: str) -> dict[str, Any]: ...
 
-    def fetch_arrow_base64(self, sql: str) -> str: ...
+    def fetch_arrow_bytes(self, sql: str) -> bytes: ...
 
     def cancel_query(self, query_id: str) -> bool: ...
 
@@ -48,10 +47,10 @@ def _rows_to_json_rows(
     return [dict(zip(columns, row)) for row in rows]
 
 
-def _rows_to_arrow_base64(
+def _rows_to_arrow_bytes(
     rows: Iterable[Iterable[Any]],
     columns: list[str],
-) -> str:
+) -> bytes:
     json_rows = _rows_to_json_rows(rows, columns)
     if json_rows:
         table = pa.Table.from_pylist(json_rows)
@@ -63,7 +62,7 @@ def _rows_to_arrow_base64(
     sink = pa.BufferOutputStream()
     with pa.ipc.new_stream(sink, table.schema) as writer:
         writer.write_table(table)
-    return base64.b64encode(sink.getvalue().to_pybytes()).decode("ascii")
+    return sink.getvalue().to_pybytes()
 
 
 def _quoted_ident(ident: str) -> str:
@@ -112,8 +111,8 @@ class DbBridgeRegistry:
     ) -> dict[str, Any]:
         return self._get_connector(connection_id).execute_query(sql, query_type)
 
-    def fetch_arrow_base64(self, connection_id: str, sql: str) -> str:
-        return self._get_connector(connection_id).fetch_arrow_base64(sql)
+    def fetch_arrow_bytes(self, connection_id: str, sql: str) -> bytes:
+        return self._get_connector(connection_id).fetch_arrow_bytes(sql)
 
     def cancel_query(self, connection_id: str, query_id: str) -> bool:
         return self._get_connector(connection_id).cancel_query(query_id)
@@ -198,13 +197,13 @@ class PostgresBridgeConnector:
                 columns = _cursor_columns(cur)
                 return {"jsonData": _rows_to_json_rows(rows, columns)}
 
-    def fetch_arrow_base64(self, sql: str) -> str:
+    def fetch_arrow_bytes(self, sql: str) -> bytes:
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql)
                 rows = cur.fetchall()
                 columns = _cursor_columns(cur)
-                return _rows_to_arrow_base64(rows, columns)
+                return _rows_to_arrow_bytes(rows, columns)
 
     def cancel_query(self, query_id: str) -> bool:
         _ = query_id
@@ -345,13 +344,13 @@ class SnowflakeBridgeConnector:
                 columns = _cursor_columns(cur)
                 return {"jsonData": _rows_to_json_rows(rows, columns)}
 
-    def fetch_arrow_base64(self, sql: str) -> str:
+    def fetch_arrow_bytes(self, sql: str) -> bytes:
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql)
                 rows = cur.fetchall()
                 columns = _cursor_columns(cur)
-                return _rows_to_arrow_base64(rows, columns)
+                return _rows_to_arrow_bytes(rows, columns)
 
     def cancel_query(self, query_id: str) -> bool:
         _ = query_id

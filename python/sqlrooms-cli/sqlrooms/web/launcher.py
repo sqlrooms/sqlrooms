@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from diskcache import Cache
@@ -328,11 +328,13 @@ class SqlroomsHttpServer:
             if not isinstance(sql, str) or not sql.strip():
                 return JSONResponse({"error": "sql is required"}, status_code=400)
             try:
-                arrow_base64 = self.db_bridge_registry.fetch_arrow_base64(
+                arrow_bytes = self.db_bridge_registry.fetch_arrow_bytes(
                     connection_id=connection_id,
                     sql=sql,
                 )
-                return {"arrowBase64": arrow_base64}
+                return Response(
+                    content=arrow_bytes, media_type="application/vnd.apache.arrow.stream"
+                )
             except UnknownBridgeConnectionError as exc:
                 return JSONResponse({"error": str(exc)}, status_code=404)
             except Exception as exc:

@@ -47,6 +47,7 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 
+import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';

@@ -1,5 +1,5 @@
-import * as arrow from 'apache-arrow';
 import type {DbBridge} from './types';
+import * as arrow from 'apache-arrow';
 
 type HttpBridgeOptions = {
   id: string;
@@ -7,24 +7,6 @@ type HttpBridgeOptions = {
   runtimeSupport?: DbBridge['runtimeSupport'];
   headers?: Record<string, string>;
 };
-
-function decodeBase64ToBytes(value: string): Uint8Array {
-  if (typeof atob === 'function') {
-    const decoded = atob(value);
-    const bytes = new Uint8Array(decoded.length);
-    for (let i = 0; i < decoded.length; i += 1) {
-      bytes[i] = decoded.charCodeAt(i);
-    }
-    return bytes;
-  }
-  // Node.js fallback
-  const nodeBuffer = Buffer.from(value, 'base64');
-  return new Uint8Array(
-    nodeBuffer.buffer,
-    nodeBuffer.byteOffset,
-    nodeBuffer.byteLength,
-  );
-}
 
 export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
   const {id, baseUrl, runtimeSupport = 'both', headers = {}} = options;
@@ -109,18 +91,6 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
         throw new Error(
           `Bridge fetchArrow failed (${res.status})${details ? `: ${details}` : ''}`,
         );
-      }
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const body = (await res.json()) as {
-          arrowBase64?: string;
-          error?: string;
-        };
-        if (!body.arrowBase64) {
-          throw new Error(body.error || 'Bridge returned no Arrow payload');
-        }
-        const bytes = decodeBase64ToBytes(body.arrowBase64);
-        return arrow.tableFromIPC(bytes);
       }
       const buffer = new Uint8Array(await res.arrayBuffer());
       return arrow.tableFromIPC(buffer);

@@ -21,8 +21,8 @@ class _FakeConnector:
     def execute_query(self, sql: str, query_type: str):
         return {"jsonData": [{"sql": sql, "queryType": query_type}]}
 
-    def fetch_arrow_base64(self, sql: str) -> str:
-        return f"arrow:{sql}"
+    def fetch_arrow_bytes(self, sql: str) -> bytes:
+        return f"arrow:{sql}".encode("utf-8")
 
     def cancel_query(self, query_id: str) -> bool:
         return query_id == "known-query"
@@ -54,7 +54,7 @@ def test_registry_routes_to_registered_connector():
     assert registry.execute_query("fake-conn", "SELECT 1", "json") == {
         "jsonData": [{"sql": "SELECT 1", "queryType": "json"}]
     }
-    assert registry.fetch_arrow_base64("fake-conn", "SELECT 1") == "arrow:SELECT 1"
+    assert registry.fetch_arrow_bytes("fake-conn", "SELECT 1") == b"arrow:SELECT 1"
     assert registry.cancel_query("fake-conn", "known-query") is True
 
 
