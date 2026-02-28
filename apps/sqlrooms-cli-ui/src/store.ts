@@ -19,7 +19,6 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createHttpDbBridge} from '@sqlrooms/db';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createNotebookSlice,
@@ -48,6 +47,7 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 
+import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
@@ -98,6 +98,14 @@ export type RoomState = RoomShellSliceState &
   };
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const runtimeAiProviders =
+  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
+const defaultProviderFromConfig =
+  runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
+const defaultModelFromProvider =
+  runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
+const defaultModelFromConfig =
+  runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -113,6 +121,26 @@ connector.loadFile = async (file, desiredTableName, options) => {
   return baseLoadFile(file, desiredTableName, options);
 };
 
+function getRuntimeBridgeConfig():
+  | {
+      id: string;
+      connections: Array<{
+        id: string;
+        engineId: string;
+        title: string;
+        runtimeSupport?: 'browser' | 'server' | 'both';
+        requiresBridge?: boolean;
+        bridgeId?: string;
+        isCore?: boolean;
+      }>;
+    }
+  | undefined {
+  if (runtimeConfig.dbBridge?.connections?.length) {
+    return runtimeConfig.dbBridge;
+  }
+  return undefined;
+}
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
     {
@@ -121,7 +149,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         room: BaseRoomConfig,
         layout: LayoutConfig,
         ai: AiSliceConfig,
-        aiSettings: AiSettingsSliceConfig,
+        // aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
@@ -203,14 +231,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createAiSettingsSlice({
-        config: {providers: {} as AiSettingsSliceConfig['providers']},
+        config: {providers: runtimeAiProviders},
       })(set, get, store),
 
       ...createAiSlice({
         config: AiSliceConfig.parse({sessions: []}),
-        defaultProvider: (runtimeConfig.llmProvider as any) || 'openai',
-        defaultModel: runtimeConfig.llmModel || 'gpt-4o-mini',
-        getApiKey: () => runtimeConfig.apiKey || '',
+        defaultProvider: defaultProviderFromConfig as any,
+        defaultModel: defaultModelFromConfig,
+        getApiKey: (provider) =>
+          runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
         getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
         getInstructions: () => createDefaultAiInstructions(store),
         tools: {
@@ -222,22 +251,24 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   ),
 );
 
-if (runtimeConfig.postgresBridgeEnabled) {
-  const postgresBridgeId = 'postgres-http-bridge';
-  roomStore.getState().db.connectors.registerBridge(
-    createHttpDbBridge({
-      id: postgresBridgeId,
-      baseUrl: runtimeConfig.apiBaseUrl || '',
-      runtimeSupport: 'server',
-    }),
-  );
-  roomStore.getState().db.connectors.registerConnection({
-    id: 'postgres',
-    engineId: 'postgres',
-    title: 'Postgres',
-    runtimeSupport: 'server',
-    requiresBridge: true,
-    bridgeId: postgresBridgeId,
-    isCore: false,
+const bridgeConfig = getRuntimeBridgeConfig();
+if (bridgeConfig?.connections.length) {
+  const bridge = createHttpDbBridge({
+    id: bridgeConfig.id,
+    baseUrl: runtimeConfig.apiBaseUrl || '',
   });
+  const state = roomStore.getState();
+  state.db.connectors.registerBridge(bridge);
+  for (const connection of bridgeConfig.connections) {
+    const normalizedConnection: DbConnection = {
+      id: connection.id,
+      engineId: connection.engineId,
+      title: connection.title || connection.id,
+      runtimeSupport: connection.runtimeSupport || 'server',
+      requiresBridge: connection.requiresBridge ?? true,
+      bridgeId: connection.bridgeId || bridgeConfig.id,
+      isCore: connection.isCore ?? false,
+    };
+    state.db.connectors.registerConnection(normalizedConnection);
+  }
 }

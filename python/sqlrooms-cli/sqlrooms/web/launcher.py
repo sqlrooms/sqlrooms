@@ -7,6 +7,7 @@ import socket
 import tempfile
 import threading
 import webbrowser
+import json
 from pathlib import Path
 from typing import Any, Dict
 
@@ -14,21 +15,29 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from diskcache import Cache
 from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
+from .db_bridge import (
+    PostgresConnectorSettings,
+    SnowflakeConnectorSettings,
+    UnknownBridgeConnectionError,
+    build_cli_db_bridge_registry,
+)
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
+DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 
 
 def _sanitize_filename(name: str) -> str:
     safe = os.path.basename(name.strip().replace("\\", "/"))
     return safe or "upload.dat"
+
 
 def _pick_free_port(host: str) -> int:
     """
@@ -85,6 +94,24 @@ def _references_internal_namespace(sql: str, namespace: str) -> bool:
     return bool(pattern.search(sql))
 
 
+def _encode_stream_frame(
+    frame_type: str,
+    *,
+    query_id: str,
+    payload: bytes = b"",
+    error: str | None = None,
+) -> bytes:
+    header = {
+        "type": frame_type,
+        "queryId": query_id,
+        "payloadLength": len(payload),
+    }
+    if error:
+        header["error"] = error
+    header_bytes = json.dumps(header).encode("utf-8")
+    return len(header_bytes).to_bytes(4, byteorder="big") + header_bytes + payload
+
+
 class SqlroomsHttpServer:
     def __init__(
         self,
@@ -99,7 +126,10 @@ class SqlroomsHttpServer:
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
-        postgres_dsn: str | None = None,
+        ai_providers: dict[str, dict[str, Any]] | None = None,
+        connector_settings: list[
+            PostgresConnectorSettings | SnowflakeConnectorSettings
+        ] | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
     ):
@@ -125,11 +155,15 @@ class SqlroomsHttpServer:
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.api_key = api_key
-        self.postgres_dsn = postgres_dsn
+        self.ai_providers = ai_providers or {}
         self.open_browser = open_browser
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
+        self.db_bridge_registry = build_cli_db_bridge_registry(
+            bridge_id=DB_BRIDGE_ID,
+            connector_settings=connector_settings,
+        )
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -200,9 +234,13 @@ class SqlroomsHttpServer:
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
+            "aiProviders": self.ai_providers,
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
-            "postgresBridgeEnabled": bool(self.postgres_dsn),
+            "dbBridge": {
+                "id": self.db_bridge_registry.bridge_id,
+                "connections": self.db_bridge_registry.runtime_connections(),
+            },
         }
 
     def _build_app(self) -> FastAPI:
@@ -245,130 +283,140 @@ class SqlroomsHttpServer:
 
         @app.post("/api/db/test-connection")
         async def test_connection(payload: Dict[str, Any]):
-            _ = payload.get("connectionId")
-            if not self.postgres_dsn:
-                return {"ok": False, "error": "postgres bridge is not configured"}
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return {"ok": False, "error": "connectionId is required"}
             try:
-                import psycopg  # type: ignore
-
-                with psycopg.connect(self.postgres_dsn) as conn:
-                    with conn.cursor() as cur:
-                        cur.execute("SELECT 1")
-                        cur.fetchone()
-                return {"ok": True}
+                ok = self.db_bridge_registry.test_connection(connection_id)
+                return {"ok": bool(ok)}
+            except UnknownBridgeConnectionError as exc:
+                return {"ok": False, "error": str(exc)}
             except Exception as exc:
                 return {"ok": False, "error": str(exc)}
 
         @app.post("/api/db/list-catalog")
         async def list_catalog(payload: Dict[str, Any]):
-            _ = payload.get("connectionId")
-            if not self.postgres_dsn:
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
                 return {
                     "databases": [],
                     "schemas": [],
                     "tables": [],
-                    "error": "postgres bridge is not configured",
+                    "error": "connectionId is required",
                 }
             try:
-                import psycopg  # type: ignore
-
-                with psycopg.connect(self.postgres_dsn) as conn:
-                    with conn.cursor() as cur:
-                        cur.execute("SELECT current_database()")
-                        db = cur.fetchone()[0]
-                        cur.execute(
-                            """
-                            SELECT schema_name
-                            FROM information_schema.schemata
-                            ORDER BY schema_name
-                            """
-                        )
-                        schemas = [{"database": db, "schema": r[0]} for r in cur.fetchall()]
-                        cur.execute(
-                            """
-                            SELECT table_schema, table_name, table_type
-                            FROM information_schema.tables
-                            WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-                            ORDER BY table_schema, table_name
-                            """
-                        )
-                        tables = [
-                            {
-                                "database": db,
-                                "schema": r[0],
-                                "table": r[1],
-                                "isView": str(r[2]).upper().endswith("VIEW"),
-                            }
-                            for r in cur.fetchall()
-                        ]
-                return {"databases": [{"database": db}], "schemas": schemas, "tables": tables}
+                return self.db_bridge_registry.list_catalog(connection_id)
+            except UnknownBridgeConnectionError as exc:
+                return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
             except Exception as exc:
-                return {
-                    "databases": [],
-                    "schemas": [],
-                    "tables": [],
-                    "error": str(exc),
-                }
+                return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
 
         @app.post("/api/db/execute-query")
         async def execute_query(payload: Dict[str, Any]):
-            if not self.postgres_dsn:
-                return {"error": "postgres bridge is not configured"}
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
             sql = payload.get("sql", "")
             query_type = payload.get("queryType", "json")
+            if query_type not in {"json", "exec"}:
+                return JSONResponse(
+                    {"error": "queryType must be either 'json' or 'exec'"},
+                    status_code=400,
+                )
             if not isinstance(sql, str) or not sql.strip():
-                return {"error": "sql is required"}
+                return JSONResponse({"error": "sql is required"}, status_code=400)
             try:
-                import psycopg  # type: ignore
-
-                with psycopg.connect(self.postgres_dsn) as conn:
-                    with conn.cursor() as cur:
-                        cur.execute(sql)
-                        if query_type == "exec":
-                            return {"ok": True}
-                        rows = cur.fetchall()
-                        columns = [d.name for d in cur.description or []]
-                        json_data = [dict(zip(columns, row)) for row in rows]
-                        return {"jsonData": json_data}
+                return self.db_bridge_registry.execute_query(
+                    connection_id=connection_id,
+                    sql=sql,
+                    query_type=query_type,
+                )
+            except UnknownBridgeConnectionError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=404)
             except Exception as exc:
-                return {"error": str(exc)}
+                return JSONResponse({"error": str(exc)}, status_code=500)
 
         @app.post("/api/db/fetch-arrow")
         async def fetch_arrow(payload: Dict[str, Any]):
-            if not self.postgres_dsn:
-                return JSONResponse(
-                    {"error": "postgres bridge is not configured"},
-                    status_code=400,
-                )
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
             sql = payload.get("sql", "")
             if not isinstance(sql, str) or not sql.strip():
                 return JSONResponse({"error": "sql is required"}, status_code=400)
             try:
-                import pyarrow as pa
-                import psycopg  # type: ignore
-
-                with psycopg.connect(self.postgres_dsn) as conn:
-                    with conn.cursor() as cur:
-                        cur.execute(sql)
-                        rows = cur.fetchall()
-                        columns = [d.name for d in cur.description or []]
-                as_dicts = [dict(zip(columns, row)) for row in rows]
-                table = pa.Table.from_pylist(as_dicts)
-                sink = pa.BufferOutputStream()
-                with pa.ipc.new_stream(sink, table.schema) as writer:
-                    writer.write_table(table)
-                raw = sink.getvalue().to_pybytes()
-                return Response(
-                    content=raw, media_type="application/vnd.apache.arrow.stream"
+                arrow_bytes = self.db_bridge_registry.fetch_arrow_bytes(
+                    connection_id=connection_id,
+                    sql=sql,
                 )
+                return Response(
+                    content=arrow_bytes, media_type="application/vnd.apache.arrow.stream"
+                )
+            except UnknownBridgeConnectionError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=404)
             except Exception as exc:
                 return JSONResponse({"error": str(exc)}, status_code=500)
 
+        @app.post("/api/db/fetch-arrow-stream")
+        async def fetch_arrow_stream(payload: Dict[str, Any], request: Request):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+            sql = payload.get("sql", "")
+            if not isinstance(sql, str) or not sql.strip():
+                return JSONResponse({"error": "sql is required"}, status_code=400)
+            query_id = payload.get("queryId")
+            if not isinstance(query_id, str) or not query_id.strip():
+                query_id = f"bridge_{os.urandom(8).hex()}"
+            chunk_rows = payload.get("chunkRows")
+            if not isinstance(chunk_rows, int) or chunk_rows <= 0:
+                chunk_rows = 5000
+
+            async def _stream():
+                try:
+                    for batch in self.db_bridge_registry.stream_arrow_batches(
+                        connection_id=connection_id,
+                        sql=sql,
+                        chunk_rows=chunk_rows,
+                        query_id=query_id,
+                    ):
+                        if await request.is_disconnected():
+                            break
+                        yield _encode_stream_frame(
+                            "batch", query_id=query_id, payload=batch
+                        )
+                    yield _encode_stream_frame("end", query_id=query_id)
+                except UnknownBridgeConnectionError as exc:
+                    yield _encode_stream_frame(
+                        "error", query_id=query_id, error=str(exc)
+                    )
+                except Exception as exc:
+                    yield _encode_stream_frame(
+                        "error", query_id=query_id, error=str(exc)
+                    )
+
+            return StreamingResponse(
+                _stream(), media_type="application/octet-stream"
+            )
+
         @app.post("/api/db/cancel-query")
         async def cancel_query(payload: Dict[str, Any]):
-            _ = payload.get("queryId")
-            # Not implemented yet for Postgres bridge in CLI mode.
-            return {"cancelled": False}
+            query_id = payload.get("queryId")
+            connection_id = payload.get("connectionId")
+            if not isinstance(query_id, str) or not query_id.strip():
+                return {"cancelled": False, "error": "queryId is required"}
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return {"cancelled": False}
+            try:
+                cancelled = self.db_bridge_registry.cancel_query(
+                    connection_id=connection_id,
+                    query_id=query_id,
+                )
+                return {"cancelled": bool(cancelled)}
+            except UnknownBridgeConnectionError:
+                return {"cancelled": False}
+            except Exception:
+                return {"cancelled": False}
 
         @app.post("/api/project/query")
         async def project_query(payload: Dict[str, Any]):
@@ -456,4 +504,3 @@ class SqlroomsHttpServer:
             )
         finally:
             signal.signal = original_signal  # type: ignore
-

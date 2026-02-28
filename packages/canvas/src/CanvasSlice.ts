@@ -159,8 +159,8 @@ export function createCanvasSlice(
             get().cells.config.currentSheetId ||
             get().cells.config.sheetOrder[0];
           if (!sheetId) return;
-          await get().cells.runAllCellsCascade(sheetId);
-          await get().db.refreshTableSchemas();
+          // don't await this - it will block the UI
+          get().cells.runAllCellsCascade(sheetId);
         },
 
         addNode: async ({

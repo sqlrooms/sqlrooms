@@ -1,8 +1,9 @@
 import {createDuckDbSlice, CreateDuckDbSliceProps} from '@sqlrooms/duckdb';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
-import type * as arrow from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
+import {decodeArrowIpcChunk} from './arrow-streaming';
 import {
   createDefaultDbConfig,
   hasLoadArrow,
@@ -47,6 +48,38 @@ export function createDbSlice(props?: {
           Object.fromEntries(Object.entries(row as Record<string, unknown>)),
         );
     };
+    // Keep ATTACH idempotent per alias (including concurrent callers) so the
+    // server doesn't receive noisy duplicate ATTACH statements.
+    const attachedDatabasePromises = new Map<string, Promise<void>>();
+    const ensureAttachedDatabase = async (
+      core: Awaited<ReturnType<DbSliceState['db']['getConnector']>>,
+      attachedName: string,
+    ): Promise<void> => {
+      const existing = attachedDatabasePromises.get(attachedName);
+      if (existing) {
+        await existing;
+        return;
+      }
+
+      const attachPromise = (async () => {
+        try {
+          await core.query(`ATTACH ':memory:' AS "${attachedName}"`);
+        } catch (err) {
+          if (!isDuplicateAttachError(err, attachedName)) {
+            throw err;
+          }
+        }
+      })();
+      attachedDatabasePromises.set(attachedName, attachPromise);
+
+      try {
+        await attachPromise;
+      } catch (err) {
+        // Allow retries after non-duplicate attach failures.
+        attachedDatabasePromises.delete(attachedName);
+        throw err;
+      }
+    };
     const ensureSchemaExists = async (args: {
       core: Awaited<ReturnType<DbSliceState['db']['getConnector']>>;
       schema?: string;
@@ -88,13 +121,7 @@ export function createDbSlice(props?: {
         database ?? get().db.config.coreMaterialization.attachedDatabaseName;
       // Strict ephemeral default: keep external materialized data in an attached
       // in-memory database scoped to runtime process.
-      try {
-        await core.query(`ATTACH ':memory:' AS "${attachedName}"`);
-      } catch (err) {
-        if (!isDuplicateAttachError(err, attachedName)) {
-          throw err;
-        }
-      }
+      await ensureAttachedDatabase(core, attachedName);
       const schemaName = schema ?? 'main';
       await ensureSchemaExists({
         core,
@@ -134,6 +161,68 @@ export function createDbSlice(props?: {
         // WS connectors cannot upload Arrow buffers; degrade gracefully to SQL
         // object ingestion so materialization still succeeds.
         await core.loadObjects(toObjectRows(table), qualified, {replace: true});
+      }
+      return qualified;
+    };
+    const materializeArrowStreamResult = async (args: {
+      stream: AsyncIterable<Uint8Array>;
+      relationName: string;
+      schema?: string;
+      database?: string;
+    }): Promise<string> => {
+      const {stream, relationName, schema, database} = args;
+      const core = await get().db.getConnector();
+      if (!hasLoadArrow(core)) {
+        throw new Error(
+          'Core DuckDB connector does not support Arrow materialization',
+        );
+      }
+      const qualified = await resolveMaterializationTarget({
+        relationName,
+        schema,
+        database,
+      });
+      let isFirstChunk = true;
+      for await (const ipcChunk of stream) {
+        const chunkTable = await decodeArrowIpcChunk(ipcChunk);
+        if (chunkTable.numRows === 0) {
+          continue;
+        }
+        if (isFirstChunk) {
+          await materializeArrowResult({
+            table: chunkTable,
+            relationName,
+            schema,
+            database,
+          });
+          isFirstChunk = false;
+          continue;
+        }
+        const tempChunkTable = `__sqlrooms_stream_chunk_${Date.now().toString(36)}_${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        try {
+          try {
+            await core.loadArrow(chunkTable, tempChunkTable);
+          } catch (error) {
+            if (!isUnsupportedArrowUploadError(error)) {
+              throw error;
+            }
+            await core.loadObjects(toObjectRows(chunkTable), tempChunkTable, {
+              replace: true,
+            });
+          }
+          await core.query(
+            `INSERT INTO ${qualified} SELECT * FROM ${escapeId(tempChunkTable)}`,
+          );
+        } finally {
+          await core.query(`DROP TABLE IF EXISTS ${escapeId(tempChunkTable)}`);
+        }
+      }
+      if (isFirstChunk) {
+        await core.query(
+          `CREATE OR REPLACE TABLE ${qualified} AS SELECT * FROM (SELECT 1 AS __sqlrooms_empty__) WHERE FALSE`,
+        );
       }
       return qualified;
     };
@@ -226,17 +315,37 @@ export function createDbSlice(props?: {
             jsonData: bridgeResult.jsonData,
           };
         }
+        const shouldMaterialize = request.materialize !== false;
+        const relationName =
+          request.materializedName || `ext_${Date.now().toString(36)}`;
+        if (shouldMaterialize && bridge.fetchArrowStream) {
+          const stream = bridge.fetchArrowStream({
+            connectionId,
+            sql: request.sql,
+            signal: request.signal,
+            chunkRows: 5000,
+          });
+          const qualifiedRelation = await materializeArrowStreamResult({
+            stream,
+            relationName,
+            schema: request.materializedSchema,
+            database: request.materializedDatabase,
+          });
+          return {
+            connectionId,
+            engineId,
+            materialized: true,
+            relationName: qualifiedRelation,
+          };
+        }
         const arrowTable = await bridge.fetchArrow({
           connectionId,
           sql: request.sql,
           signal: request.signal,
         });
-        const shouldMaterialize = request.materialize !== false;
         if (!shouldMaterialize) {
           return {connectionId, engineId, materialized: false, arrowTable};
         }
-        const relationName =
-          request.materializedName || `ext_${Date.now().toString(36)}`;
         const qualifiedRelation = await materializeArrowResult({
           table: arrowTable,
           relationName,

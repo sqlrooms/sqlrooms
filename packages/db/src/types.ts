@@ -43,7 +43,7 @@ export type CoreMaterializationStrategy = z.infer<
 export const CoreMaterializationConfig = z.object({
   strategy: CoreMaterializationStrategy.default('attached_ephemeral'),
   schemaName: z.string().default('__sqlrooms_external'),
-  attachedDatabaseName: z.string().default('__sqlrooms_external_ephemeral'),
+  attachedDatabaseName: z.string().default('__sqlrooms_ephemeral'),
 });
 /**
  * Configuration for how non-core results are stored in core DuckDB.
@@ -166,6 +166,13 @@ export type DbBridge = {
     sql: string;
     signal?: AbortSignal;
   }) => Promise<arrow.Table>;
+  fetchArrowStream?: (args: {
+    connectionId: string;
+    sql: string;
+    signal?: AbortSignal;
+    queryId?: string;
+    chunkRows?: number;
+  }) => AsyncIterable<Uint8Array>;
   cancelQuery: (queryId: string) => Promise<boolean>;
 };
 
