@@ -1,5 +1,6 @@
 import type {DbBridge} from './types';
 import * as arrow from 'apache-arrow';
+import {parseFramedBinaryStream} from './arrow-streaming';
 
 type HttpBridgeOptions = {
   id: string;
@@ -11,7 +12,6 @@ type HttpBridgeOptions = {
 export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
   const {id, baseUrl, runtimeSupport = 'both', headers = {}} = options;
   const bridgeBaseUrl = baseUrl.replace(/\/$/, '');
-  const textDecoder = new TextDecoder();
 
   const getErrorDetails = async (res: Response): Promise<string> => {
     const contentType = res.headers.get('content-type') || '';
@@ -55,50 +55,6 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
       );
     }
     return (await res.json()) as T;
-  };
-
-  const parseFramedStream = async function* (
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-  ): AsyncGenerator<{type: string; payload: Uint8Array; error?: string}> {
-    let buffer = new Uint8Array(0);
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) {
-        return;
-      }
-      const chunk = value ?? new Uint8Array(0);
-      if (chunk.length > 0) {
-        const next = new Uint8Array(buffer.length + chunk.length);
-        next.set(buffer, 0);
-        next.set(chunk, buffer.length);
-        buffer = next;
-      }
-      while (buffer.length >= 4) {
-        const headerLen = new DataView(
-          buffer.buffer,
-          buffer.byteOffset,
-          4,
-        ).getUint32(0, false);
-        if (buffer.length < 4 + headerLen) {
-          break;
-        }
-        const headerBytes = buffer.slice(4, 4 + headerLen);
-        const header = JSON.parse(textDecoder.decode(headerBytes)) as {
-          type?: string;
-          payloadLength?: number;
-          error?: string;
-        };
-        const payloadLength =
-          typeof header.payloadLength === 'number' ? header.payloadLength : 0;
-        const frameLen = 4 + headerLen + payloadLength;
-        if (buffer.length < frameLen) {
-          break;
-        }
-        const payload = buffer.slice(4 + headerLen, frameLen);
-        yield {type: header.type || 'unknown', payload, error: header.error};
-        buffer = buffer.slice(frameLen);
-      }
-    }
   };
 
   const cancelQuery = async (queryId: string) => {
@@ -174,7 +130,7 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
         signal?.addEventListener('abort', onAbort, {once: true});
         const reader = res.body.getReader();
         try {
-          for await (const frame of parseFramedStream(reader)) {
+          for await (const frame of parseFramedBinaryStream(reader)) {
             if (frame.type === 'batch') {
               yield frame.payload;
               continue;

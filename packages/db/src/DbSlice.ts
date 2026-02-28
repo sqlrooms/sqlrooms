@@ -3,6 +3,7 @@ import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
+import {decodeArrowIpcChunk} from './arrow-streaming';
 import {
   createDefaultDbConfig,
   hasLoadArrow,
@@ -136,19 +137,6 @@ export function createDbSlice(props?: {
         await core.loadObjects(toObjectRows(table), qualified, {replace: true});
       }
       return qualified;
-    };
-    const decodeArrowIpcChunk = async (
-      ipcChunk: Uint8Array,
-    ): Promise<arrow.Table> => {
-      const reader = await arrow.RecordBatchReader.from(ipcChunk);
-      const batches: arrow.RecordBatch[] = [];
-      for await (const batch of reader) {
-        batches.push(batch);
-      }
-      if (batches.length === 0) {
-        return arrow.tableFromArrays({}) as unknown as arrow.Table;
-      }
-      return new arrow.Table(reader.schema, batches);
     };
     const materializeArrowStreamResult = async (args: {
       stream: AsyncIterable<Uint8Array>;
