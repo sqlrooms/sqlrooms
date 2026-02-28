@@ -26,8 +26,15 @@ class _FakeConnector:
     def fetch_arrow_bytes(self, sql: str) -> bytes:
         return f"arrow:{sql}".encode("utf-8")
 
+    def stream_arrow_batches(self, sql: str, chunk_rows: int = 5000, query_id=None):
+        _ = chunk_rows, query_id
+        yield f"arrow:{sql}".encode("utf-8")
+
     def cancel_query(self, query_id: str) -> bool:
         return query_id == "known-query"
+
+    def dependency_diagnostics(self):
+        return {"available": True}
 
 
 def test_registry_routes_to_registered_connector():
@@ -57,6 +64,14 @@ def test_registry_routes_to_registered_connector():
         "jsonData": [{"sql": "SELECT 1", "queryType": "json"}]
     }
     assert registry.fetch_arrow_bytes("fake-conn", "SELECT 1") == b"arrow:SELECT 1"
+    assert registry.runtime_diagnostics() == [
+        {
+            "id": "fake-conn",
+            "engineId": "fake",
+            "title": "Fake Connector",
+            "available": True,
+        }
+    ]
     assert registry.cancel_query("fake-conn", "known-query") is True
 
 

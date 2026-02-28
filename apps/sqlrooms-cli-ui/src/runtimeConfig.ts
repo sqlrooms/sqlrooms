@@ -25,6 +25,19 @@ export type RuntimeConfig = {
       bridgeId?: string;
       isCore?: boolean;
     }>;
+    diagnostics?: Array<{
+      id: string;
+      engineId: string;
+      title: string;
+      available: boolean;
+      error?: string;
+      requiredPackages?: string[];
+      installCommands?: {
+        uvProject?: string;
+        uvxRelaunch?: string;
+        uvxWith?: string;
+      };
+    }>;
   };
 };
 

@@ -240,6 +240,7 @@ class SqlroomsHttpServer:
             "dbBridge": {
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
+                "diagnostics": self.db_bridge_registry.runtime_diagnostics(),
             },
         }
 

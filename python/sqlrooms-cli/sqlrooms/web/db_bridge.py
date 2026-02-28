@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Protocol
@@ -31,6 +32,8 @@ class DbBridgeConnector(Protocol):
     ) -> Iterable[bytes]: ...
 
     def cancel_query(self, query_id: str) -> bool: ...
+
+    def dependency_diagnostics(self) -> dict[str, Any]: ...
 
 
 def _cursor_columns(cursor: Any) -> list[str]:
@@ -101,6 +104,16 @@ class DbBridgeRegistry:
             for conn in self._connectors.values()
         ]
 
+    def runtime_diagnostics(self) -> list[dict[str, Any]]:
+        diagnostics: list[dict[str, Any]] = []
+        for conn in self._connectors.values():
+            payload = conn.dependency_diagnostics()
+            payload["id"] = conn.connection_id
+            payload["engineId"] = conn.engine_id
+            payload["title"] = conn.title
+            diagnostics.append(payload)
+        return diagnostics
+
     def test_connection(self, connection_id: str) -> bool:
         return self._get_connector(connection_id).test_connection()
 
@@ -170,6 +183,27 @@ class PostgresBridgeConnector:
                 "Postgres bridge requires `psycopg`. Install it to enable Postgres."
             ) from exc
         return psycopg.connect(self.settings.dsn)
+
+    def dependency_diagnostics(self) -> dict[str, Any]:
+        available = importlib.util.find_spec("psycopg") is not None
+        if available:
+            return {"available": True}
+        return {
+            "available": False,
+            "error": "Missing Python dependency: psycopg",
+            "requiredPackages": ["psycopg[binary]>=3.2.0"],
+            "installCommands": {
+                "uvProject": "uv sync --extra postgres",
+                "uvxRelaunch": (
+                    'uvx --from "sqlrooms-cli[postgres]" sqlrooms '
+                    "--db-path :memory:"
+                ),
+                "uvxWith": (
+                    'uvx --from sqlrooms-cli --with "psycopg[binary]>=3.2.0" '
+                    "sqlrooms --db-path :memory:"
+                ),
+            },
+        }
 
     def test_connection(self) -> bool:
         with self._connect() as conn:
@@ -314,6 +348,28 @@ class SnowflakeBridgeConnector:
                 "Snowflake bridge requires both account and user configuration."
             )
         return snowflake.connector.connect(**kwargs)
+
+    def dependency_diagnostics(self) -> dict[str, Any]:
+        available = importlib.util.find_spec("snowflake.connector") is not None
+        if available:
+            return {"available": True}
+        return {
+            "available": False,
+            "error": "Missing Python dependency: snowflake-connector-python",
+            "requiredPackages": ["snowflake-connector-python>=4.3.0"],
+            "installCommands": {
+                "uvProject": "uv sync --extra snowflake",
+                "uvxRelaunch": (
+                    'uvx --from "sqlrooms-cli[snowflake]" sqlrooms '
+                    "--db-path :memory:"
+                ),
+                "uvxWith": (
+                    'uvx --from sqlrooms-cli --with '
+                    '"snowflake-connector-python>=4.3.0" '
+                    "sqlrooms --db-path :memory:"
+                ),
+            },
+        }
 
     def test_connection(self) -> bool:
         with self._connect() as conn:

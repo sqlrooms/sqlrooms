@@ -133,6 +133,12 @@ function getRuntimeBridgeConfig():
         bridgeId?: string;
         isCore?: boolean;
       }>;
+      diagnostics?: Array<{
+        id: string;
+        engineId: string;
+        title: string;
+        available: boolean;
+      }>;
     }
   | undefined {
   if (runtimeConfig.dbBridge?.connections?.length) {
@@ -253,6 +259,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
 const bridgeConfig = getRuntimeBridgeConfig();
 if (bridgeConfig?.connections.length) {
+  const diagnosticsById = new Map(
+    (bridgeConfig.diagnostics || []).map((item) => [item.id, item]),
+  );
   const bridge = createHttpDbBridge({
     id: bridgeConfig.id,
     baseUrl: runtimeConfig.apiBaseUrl || '',
@@ -260,6 +269,10 @@ if (bridgeConfig?.connections.length) {
   const state = roomStore.getState();
   state.db.connectors.registerBridge(bridge);
   for (const connection of bridgeConfig.connections) {
+    const diagnostics = diagnosticsById.get(connection.id);
+    if (diagnostics && diagnostics.available === false) {
+      continue;
+    }
     const normalizedConnection: DbConnection = {
       id: connection.id,
       engineId: connection.engineId,
