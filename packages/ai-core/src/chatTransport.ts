@@ -22,6 +22,7 @@ import {AddToolResult} from './types';
 import {
   fixIncompleteToolCalls,
   mergeAbortSignals,
+  sanitizeMessagesForLLM,
   ToolAbortError,
 } from './utils';
 
@@ -124,6 +125,18 @@ export function convertToAiSDKTools(
   );
 }
 
+/**
+ * Creates a factory that produces a local chat transport which streams model-generated assistant messages and routes tool invocations to the local handlers.
+ *
+ * @param sessionId - Optional session id used to resolve per-session state such as model provider, model id, and abort controller.
+ * @param store - Application store used to read AI settings, tools, session state, and abort controllers at request time.
+ * @param defaultProvider - Default model provider name to use when the session does not specify one.
+ * @param defaultModel - Default model id to use when the session does not specify one.
+ * @param headers - Optional static headers to include when creating an OpenAI-compatible client for the model.
+ * @param getInstructions - Callback that returns dynamic system instructions to include with each request.
+ * @param getCustomModel - Optional hook that returns a LanguageModel instance to override the default OpenAI-compatible client.
+ * @returns A factory function that, when called, returns a DefaultChatTransport that handles incoming fetch-style chat requests by resolving up-to-date settings, preparing messages and tools, and streaming assistant output as UI messages.
+ */
 export function createLocalChatTransportFactory({
   sessionId,
   store,
@@ -200,7 +213,7 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
-        messages: convertToModelMessages(messagesCopy),
+        messages: convertToModelMessages(sanitizeMessagesForLLM(messagesCopy)),
         tools,
         system: systemInstructions,
         abortSignal,
@@ -274,6 +287,22 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
+/**
+ * Create chat-related handlers that update AI transport state in the provided store.
+ *
+ * The returned handlers manage tool invocation and completion, incremental UI data, session finalization,
+ * and error recording for chat-driven analyses.
+ *
+ * @returns An object with the following handlers:
+ *  - `onChatToolCall` — Handles a tool invocation: associates the tool call with a session, attempts to execute
+ *    the tool (or waits for a UI-provided result), records tool outputs or errors, and ensures session-tool mappings
+ *    are cleared on completion or failure.
+ *  - `onChatData` — Persists additional tool output payloads into the session when received.
+ *  - `onChatFinish` — Finalizes session messages by fixing incomplete tool calls, persists UI messages and analysis
+ *    results (including handling cancelled runs), and clears running/abort state when analysis ends.
+ *  - `onChatError` — Records and persists an error for the current session (including marking API key errors),
+ *    updates the latest pending analysis result with the error, and clears running/abort state.
+ */
 export function createChatHandlers({
   store,
 }: {
@@ -319,7 +348,9 @@ export function createChatHandlers({
           const sessionMessages = (session?.uiMessages ?? []) as UIMessage[];
           const llmResult = await tool.execute(input, {
             toolCallId,
-            messages: convertToModelMessages(sessionMessages),
+            messages: convertToModelMessages(
+              sanitizeMessagesForLLM(sessionMessages),
+            ),
             abortSignal: abortController?.signal,
           });
 

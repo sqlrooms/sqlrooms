@@ -181,14 +181,10 @@ export function isDynamicToolPart(
 }
 
 /**
- * Cleans up pending analysis results from interrupted conversations and restores them
- * with proper IDs from actual user messages. This handles the case where a page refresh
- * occurred during an active analysis, leaving orphaned "__pending__" results.
+ * Restores analysis results for user messages left unmatched due to interrupted analyses and removes pending placeholder results.
  *
- * Should be called once when loading persisted session data, not in migrations.
- *
- * @param session - The session to clean up
- * @returns The cleaned session with restored analysis results
+ * @param session - The analysis session to clean up
+ * @returns The session with pending results removed and restored analysis results added for orphaned user messages
  */
 export function cleanupPendingAnalysisResults(
   session: AnalysisSessionSchema,
@@ -247,6 +243,54 @@ export function cleanupPendingAnalysisResults(
     ...session,
     analysisResults: [...nonPendingResults, ...restoredResults],
   };
+}
+
+/**
+ * Remove empty text and reasoning parts from UI messages and ensure assistant messages retain at least one part.
+ *
+ * Filters out text parts whose `text` is empty or whitespace and reasoning parts whose `text` is empty or whitespace. If an assistant message would be left with no parts, replaces its parts with a single text part containing "[Response interrupted]". Messages that end up with no parts are removed.
+ *
+ * @param messages - The UI messages to sanitize
+ * @returns The sanitized array of UI messages with no empty text/reasoning parts and no messages lacking parts
+ */
+export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
+  return messages
+    .map((message) => {
+      if (!message.parts || message.parts.length === 0) {
+        return message;
+      }
+
+      // Filter out empty text parts and empty reasoning parts
+      const sanitizedParts = message.parts.filter((part) => {
+        if (part.type === 'text') {
+          const textPart = part as {type: 'text'; text: string};
+          return textPart.text && textPart.text.trim().length > 0;
+        }
+        if (part.type === 'reasoning') {
+          const reasoningPart = part as {type: 'reasoning'; text: string};
+          return reasoningPart.text && reasoningPart.text.trim().length > 0;
+        }
+        return true;
+      });
+
+      // If all parts were filtered out, add a placeholder for assistant messages
+      // to maintain conversation structure (user messages should always have content)
+      if (sanitizedParts.length === 0 && message.role === 'assistant') {
+        return {
+          ...message,
+          parts: [{type: 'text' as const, text: '[Response interrupted]'}],
+        };
+      }
+
+      return {
+        ...message,
+        parts: sanitizedParts,
+      };
+    })
+    .filter((message) => {
+      // Remove messages that have no parts (shouldn't happen after above logic, but safety check)
+      return message.parts && message.parts.length > 0;
+    });
 }
 
 /**
