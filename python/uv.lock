@@ -3878,6 +3878,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "python-multipart" },
     { name = "sqlrooms-server" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -3914,6 +3915,7 @@ requires-dist = [
     { name = "snowflake-connector-python", marker = "extra == 'connectors'", specifier = ">=4.3.0" },
     { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=4.3.0" },
     { name = "sqlrooms-server", editable = "sqlrooms-server" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.12.5" },
     { name = "uvicorn", specifier = ">=0.30.0" },
 ]

@@ -34,6 +34,8 @@ What happens:
 - `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
+- `--config`: Optional path to a SQLRooms TOML config file for connector defaults.
+- `--no-config`: Disable config file loading.
 - `--postgres-dsn`: Enables a Postgres backend connector bridge (also via `SQLROOMS_POSTGRES_DSN`).
 - `--snowflake-account` + `--snowflake-user`: Enables a Snowflake backend connector bridge (supports env vars `SNOWFLAKE_*` for credentials/settings).
 - `--postgres-connection-id` / `--snowflake-connection-id`: Connector ids exposed to `DbSlice` and notebook SQL cells.
@@ -47,6 +49,39 @@ Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` i
 - `__sqlrooms.sync_rooms` (only used when `--sync` is enabled)
 
 Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
+
+## Connector config file
+
+`sqlrooms` can read connector defaults from a local TOML file:
+
+- macOS/Linux: `$XDG_CONFIG_HOME/sqlrooms/config.toml` (or `~/.config/sqlrooms/config.toml`)
+- Windows: `%APPDATA%\sqlrooms\config.toml`
+- Legacy fallback: `~/.sqlrooms/config.toml`
+
+Override with `--config`, or disable with `--no-config`.
+
+Priority order is: CLI flags > environment variables > config file > built-in defaults.
+
+Example `config.toml`:
+
+```toml
+[connectors.postgres]
+dsn = "postgresql://postgres:postgres@localhost:5432/postgres"
+connection_id = "postgres-default"
+title = "Postgres"
+
+[connectors.snowflake]
+account = "your-account"
+user = "your-user"
+password = "your-password"
+warehouse = "your-warehouse"
+database = "your-database"
+schema = "your-schema"
+role = "your-role"
+authenticator = "externalbrowser"
+connection_id = "snowflake-default"
+title = "Snowflake"
+```
 
 ## Server-only mode (no UI)
 
