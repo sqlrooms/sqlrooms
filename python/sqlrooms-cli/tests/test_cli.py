@@ -7,6 +7,7 @@ from sqlrooms.cli import (
     _resolve_config_path,
     app,
 )
+from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 
 runner = CliRunner()
 
@@ -26,30 +27,59 @@ def test_load_connector_config_toml(tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         """
-[connectors.postgres]
+[[connectors]]
+id = "pg-local"
+engine = "postgres"
 dsn = "postgresql://u:p@localhost:5432/db"
-connection_id = "pg-local"
 title = "Local Postgres"
 
-[connectors.snowflake]
+[[connectors]]
+id = "sf-local"
+engine = "snowflake"
 account = "demo-account"
 user = "demo-user"
 warehouse = "DEMO_WH"
-connection_id = "sf-local"
 title = "Local Snowflake"
 """.strip(),
         encoding="utf-8",
     )
 
     data = _load_connector_config(config_path)
-    assert data["postgres_dsn"] == "postgresql://u:p@localhost:5432/db"
-    assert data["postgres_connection_id"] == "pg-local"
-    assert data["postgres_title"] == "Local Postgres"
-    assert data["snowflake_account"] == "demo-account"
-    assert data["snowflake_user"] == "demo-user"
-    assert data["snowflake_warehouse"] == "DEMO_WH"
-    assert data["snowflake_connection_id"] == "sf-local"
-    assert data["snowflake_title"] == "Local Snowflake"
+    assert isinstance(data[0], PostgresConnectorSettings)
+    assert data[0].dsn == "postgresql://u:p@localhost:5432/db"
+    assert data[0].connection_id == "pg-local"
+    assert data[0].title == "Local Postgres"
+    assert isinstance(data[1], SnowflakeConnectorSettings)
+    assert data[1].account == "demo-account"
+    assert data[1].user == "demo-user"
+    assert data[1].warehouse == "DEMO_WH"
+    assert data[1].connection_id == "sf-local"
+    assert data[1].title == "Local Snowflake"
+
+
+def test_load_connector_config_rejects_duplicate_ids(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[connectors]]
+id = "dup"
+engine = "postgres"
+dsn = "postgresql://u:p@localhost:5432/db"
+
+[[connectors]]
+id = "dup"
+engine = "snowflake"
+account = "demo-account"
+user = "demo-user"
+""".strip(),
+        encoding="utf-8",
+    )
+    try:
+        _load_connector_config(config_path)
+    except RuntimeError as exc:
+        assert "Duplicate connector id" in str(exc)
+    else:
+        raise AssertionError("Expected duplicate connector id failure")
 
 
 def test_resolve_config_path_prefers_explicit(tmp_path):

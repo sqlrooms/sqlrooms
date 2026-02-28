@@ -10,11 +10,10 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from click.core import ParameterSource
 import duckdb
 import typer
 
-from .web.db_bridge import SnowflakeConnectorSettings
+from .web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from .web.launcher import SqlroomsHttpServer
 
 logging.basicConfig(
@@ -83,44 +82,71 @@ def _read_toml(path: Path) -> dict[str, Any]:
     return data
 
 
-def _load_connector_config(path: Path | None) -> dict[str, str]:
+def _require_config_string(
+    payload: dict[str, Any], key: str, *, connector_id: str, engine: str
+) -> str:
+    value = _normalize_config_string(payload.get(key))
+    if value:
+        return value
+    raise RuntimeError(
+        f"Connector '{connector_id}' ({engine}) requires non-empty '{key}' in config."
+    )
+
+
+def _load_connector_config(
+    path: Path | None,
+) -> list[PostgresConnectorSettings | SnowflakeConnectorSettings]:
     if path is None:
-        return {}
+        return []
     raw = _read_toml(path)
-    connectors = raw.get("connectors")
-    if not isinstance(connectors, dict):
-        return {}
+    connectors = raw.get("connectors") or []
+    if not isinstance(connectors, list):
+        raise RuntimeError("'connectors' must be an array in SQLRooms config.")
 
-    out: dict[str, str] = {}
-    postgres = connectors.get("postgres")
-    if isinstance(postgres, dict):
-        dsn = _normalize_config_string(postgres.get("dsn"))
-        if dsn:
-            out["postgres_dsn"] = dsn
-        connection_id = _normalize_config_string(postgres.get("connection_id"))
-        if connection_id:
-            out["postgres_connection_id"] = connection_id
-        title = _normalize_config_string(postgres.get("title"))
-        if title:
-            out["postgres_title"] = title
+    out: list[PostgresConnectorSettings | SnowflakeConnectorSettings] = []
+    seen_ids: set[str] = set()
+    for idx, item in enumerate(connectors):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"Connector entry at index {idx} must be an object.")
+        engine = _normalize_config_string(item.get("engine"))
+        if engine not in {"postgres", "snowflake"}:
+            raise RuntimeError(
+                f"Connector entry at index {idx} has unsupported engine: {engine!r}"
+            )
+        connection_id = _require_config_string(
+            item, "id", connector_id=f"#{idx}", engine=engine
+        )
+        if connection_id in seen_ids:
+            raise RuntimeError(f"Duplicate connector id in config: {connection_id}")
+        seen_ids.add(connection_id)
 
-    snowflake = connectors.get("snowflake")
-    if isinstance(snowflake, dict):
-        for key in (
-            "account",
-            "user",
-            "password",
-            "warehouse",
-            "database",
-            "schema",
-            "role",
-            "authenticator",
-            "connection_id",
-            "title",
-        ):
-            value = _normalize_config_string(snowflake.get(key))
-            if value:
-                out[f"snowflake_{key}"] = value
+        title = _normalize_config_string(item.get("title")) or connection_id
+        if engine == "postgres":
+            out.append(
+                PostgresConnectorSettings(
+                    dsn=_require_config_string(
+                        item, "dsn", connector_id=connection_id, engine=engine
+                    ),
+                    connection_id=connection_id,
+                    title=title,
+                )
+            )
+            continue
+
+        out.append(
+            SnowflakeConnectorSettings(
+                account=_normalize_config_string(item.get("account")),
+                user=_normalize_config_string(item.get("user")),
+                password=_normalize_config_string(item.get("password")),
+                warehouse=_normalize_config_string(item.get("warehouse")),
+                database=_normalize_config_string(item.get("database")),
+                schema=_normalize_config_string(item.get("schema")),
+                role=_normalize_config_string(item.get("role")),
+                authenticator=_normalize_config_string(item.get("authenticator")),
+                connection_id=connection_id,
+                title=title,
+            )
+        )
     logger.info("Loaded SQLRooms connector config from %s", path)
     return out
 
@@ -244,7 +270,6 @@ def export_project(
 
 @app.callback(invoke_without_command=True)
 def main(
-    ctx: typer.Context,
     db_path: str | None = typer.Argument(
         None,
         help="DuckDB database to use (positional). Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",
@@ -288,84 +313,6 @@ def main(
         "--no-config",
         help="Disable loading connector settings from config file.",
     ),
-    postgres_dsn: str | None = typer.Option(
-        None,
-        "--postgres-dsn",
-        envvar="SQLROOMS_POSTGRES_DSN",
-        help="Optional Postgres DSN to enable backend connector bridge testing in CLI mode.",
-    ),
-    postgres_connection_id: str = typer.Option(
-        "postgres-default",
-        "--postgres-connection-id",
-        envvar="SQLROOMS_POSTGRES_CONNECTION_ID",
-        help="Connection id exposed to DbSlice for the Postgres bridge.",
-    ),
-    postgres_title: str = typer.Option(
-        "Postgres",
-        "--postgres-title",
-        envvar="SQLROOMS_POSTGRES_TITLE",
-        help="Human-friendly connection title exposed in SQL cell connector picker.",
-    ),
-    snowflake_account: str | None = typer.Option(
-        None,
-        "--snowflake-account",
-        envvar="SNOWFLAKE_ACCOUNT",
-        help="Snowflake account identifier (enables Snowflake bridge when used with --snowflake-user).",
-    ),
-    snowflake_user: str | None = typer.Option(
-        None,
-        "--snowflake-user",
-        envvar="SNOWFLAKE_USER",
-        help="Snowflake username.",
-    ),
-    snowflake_password: str | None = typer.Option(
-        None,
-        "--snowflake-password",
-        envvar="SNOWFLAKE_PASSWORD",
-        help="Snowflake password.",
-    ),
-    snowflake_warehouse: str | None = typer.Option(
-        None,
-        "--snowflake-warehouse",
-        envvar="SNOWFLAKE_WAREHOUSE",
-        help="Default Snowflake warehouse.",
-    ),
-    snowflake_database: str | None = typer.Option(
-        None,
-        "--snowflake-database",
-        envvar="SNOWFLAKE_DATABASE",
-        help="Default Snowflake database.",
-    ),
-    snowflake_schema: str | None = typer.Option(
-        None,
-        "--snowflake-schema",
-        envvar="SNOWFLAKE_SCHEMA",
-        help="Default Snowflake schema.",
-    ),
-    snowflake_role: str | None = typer.Option(
-        None,
-        "--snowflake-role",
-        envvar="SNOWFLAKE_ROLE",
-        help="Optional Snowflake role.",
-    ),
-    snowflake_authenticator: str | None = typer.Option(
-        None,
-        "--snowflake-authenticator",
-        envvar="SNOWFLAKE_AUTHENTICATOR",
-        help="Optional Snowflake authenticator (for example, externalbrowser).",
-    ),
-    snowflake_connection_id: str = typer.Option(
-        "snowflake-default",
-        "--snowflake-connection-id",
-        envvar="SQLROOMS_SNOWFLAKE_CONNECTION_ID",
-        help="Connection id exposed to DbSlice for the Snowflake bridge.",
-    ),
-    snowflake_title: str = typer.Option(
-        "Snowflake",
-        "--snowflake-title",
-        envvar="SQLROOMS_SNOWFLAKE_TITLE",
-        help="Human-friendly title exposed for the Snowflake connection.",
-    ),
     no_open_browser: bool = typer.Option(
         False, "--no-open-browser", help="Skip automatically opening the browser."
     ),
@@ -397,55 +344,12 @@ def main(
     """
     try:
         config_path = _resolve_config_path(config, no_config=no_config)
-        connector_config = _load_connector_config(config_path)
+        connector_settings = _load_connector_config(config_path)
     except Exception as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
 
-    if ctx.get_parameter_source("postgres_dsn") == ParameterSource.DEFAULT:
-        postgres_dsn = connector_config.get("postgres_dsn")
-    if ctx.get_parameter_source("postgres_connection_id") == ParameterSource.DEFAULT:
-        postgres_connection_id = connector_config.get(
-            "postgres_connection_id", postgres_connection_id
-        )
-    if ctx.get_parameter_source("postgres_title") == ParameterSource.DEFAULT:
-        postgres_title = connector_config.get("postgres_title", postgres_title)
-    if ctx.get_parameter_source("snowflake_account") == ParameterSource.DEFAULT:
-        snowflake_account = connector_config.get("snowflake_account")
-    if ctx.get_parameter_source("snowflake_user") == ParameterSource.DEFAULT:
-        snowflake_user = connector_config.get("snowflake_user")
-    if ctx.get_parameter_source("snowflake_password") == ParameterSource.DEFAULT:
-        snowflake_password = connector_config.get("snowflake_password")
-    if ctx.get_parameter_source("snowflake_warehouse") == ParameterSource.DEFAULT:
-        snowflake_warehouse = connector_config.get("snowflake_warehouse")
-    if ctx.get_parameter_source("snowflake_database") == ParameterSource.DEFAULT:
-        snowflake_database = connector_config.get("snowflake_database")
-    if ctx.get_parameter_source("snowflake_schema") == ParameterSource.DEFAULT:
-        snowflake_schema = connector_config.get("snowflake_schema")
-    if ctx.get_parameter_source("snowflake_role") == ParameterSource.DEFAULT:
-        snowflake_role = connector_config.get("snowflake_role")
-    if ctx.get_parameter_source("snowflake_authenticator") == ParameterSource.DEFAULT:
-        snowflake_authenticator = connector_config.get("snowflake_authenticator")
-    if ctx.get_parameter_source("snowflake_connection_id") == ParameterSource.DEFAULT:
-        snowflake_connection_id = connector_config.get(
-            "snowflake_connection_id", snowflake_connection_id
-        )
-    if ctx.get_parameter_source("snowflake_title") == ParameterSource.DEFAULT:
-        snowflake_title = connector_config.get("snowflake_title", snowflake_title)
-
     resolved_db_path = db_path if db_path is not None else db_path_option
-    snowflake_settings = SnowflakeConnectorSettings(
-        account=snowflake_account,
-        user=snowflake_user,
-        password=snowflake_password,
-        warehouse=snowflake_warehouse,
-        database=snowflake_database,
-        schema=snowflake_schema,
-        role=snowflake_role,
-        authenticator=snowflake_authenticator,
-        connection_id=snowflake_connection_id,
-        title=snowflake_title,
-    )
     server = SqlroomsHttpServer(
         db_path=resolved_db_path,
         host=host,
@@ -457,10 +361,7 @@ def main(
         llm_provider=llm_provider,
         llm_model=llm_model,
         api_key=api_key,
-        postgres_dsn=postgres_dsn,
-        postgres_connection_id=postgres_connection_id,
-        postgres_title=postgres_title,
-        snowflake_settings=snowflake_settings,
+        connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
     )

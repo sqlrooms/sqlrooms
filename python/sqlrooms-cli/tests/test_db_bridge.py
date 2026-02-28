@@ -2,8 +2,10 @@ import pytest
 
 from sqlrooms.web.db_bridge import (
     DbBridgeRegistry,
+    PostgresConnectorSettings,
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
+    build_cli_db_bridge_registry,
 )
 
 
@@ -68,3 +70,22 @@ def test_snowflake_settings_requires_account_and_user():
     assert SnowflakeConnectorSettings(account="acc", user="user").is_enabled() is True
     assert SnowflakeConnectorSettings(account="acc", user=None).is_enabled() is False
     assert SnowflakeConnectorSettings(account=None, user="user").is_enabled() is False
+
+
+def test_build_registry_supports_multiple_same_engine_connectors():
+    registry = build_cli_db_bridge_registry(
+        bridge_id="bridge-id",
+        connector_settings=[
+            PostgresConnectorSettings(
+                dsn="postgresql://one",
+                connection_id="pg-one",
+                title="Postgres One",
+            ),
+            PostgresConnectorSettings(
+                dsn="postgresql://two",
+                connection_id="pg-two",
+                title="Postgres Two",
+            ),
+        ],
+    )
+    assert [c["id"] for c in registry.runtime_connections()] == ["pg-one", "pg-two"]

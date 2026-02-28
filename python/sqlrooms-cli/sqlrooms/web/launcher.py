@@ -23,6 +23,7 @@ from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
 from .db_bridge import (
+    PostgresConnectorSettings,
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
     build_cli_db_bridge_registry,
@@ -125,10 +126,9 @@ class SqlroomsHttpServer:
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
-        postgres_dsn: str | None = None,
-        postgres_connection_id: str = "postgres-default",
-        postgres_title: str = "Postgres",
-        snowflake_settings: SnowflakeConnectorSettings | None = None,
+        connector_settings: list[
+            PostgresConnectorSettings | SnowflakeConnectorSettings
+        ] | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
     ):
@@ -160,10 +160,7 @@ class SqlroomsHttpServer:
         self.meta_namespace = meta_namespace
         self.db_bridge_registry = build_cli_db_bridge_registry(
             bridge_id=DB_BRIDGE_ID,
-            postgres_dsn=postgres_dsn,
-            postgres_connection_id=postgres_connection_id,
-            postgres_title=postgres_title,
-            snowflake_settings=snowflake_settings,
+            connector_settings=connector_settings,
         )
 
         self.ui_provider: UiProvider = (

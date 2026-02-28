@@ -143,11 +143,24 @@ class DbBridgeRegistry:
 
 
 @dataclass(frozen=True)
-class PostgresBridgeConnector:
+class PostgresConnectorSettings:
     dsn: str
     connection_id: str = "postgres-default"
     title: str = "Postgres"
+
+
+@dataclass(frozen=True)
+class PostgresBridgeConnector:
+    settings: PostgresConnectorSettings
     engine_id: str = "postgres"
+
+    @property
+    def connection_id(self) -> str:
+        return self.settings.connection_id
+
+    @property
+    def title(self) -> str:
+        return self.settings.title
 
     def _connect(self):
         try:
@@ -156,7 +169,7 @@ class PostgresBridgeConnector:
             raise RuntimeError(
                 "Postgres bridge requires `psycopg`. Install it to enable Postgres."
             ) from exc
-        return psycopg.connect(self.dsn)
+        return psycopg.connect(self.settings.dsn)
 
     def test_connection(self) -> bool:
         with self._connect() as conn:
@@ -404,20 +417,14 @@ class SnowflakeBridgeConnector:
 def build_cli_db_bridge_registry(
     *,
     bridge_id: str,
-    postgres_dsn: str | None = None,
-    postgres_connection_id: str = "postgres-default",
-    postgres_title: str = "Postgres",
-    snowflake_settings: SnowflakeConnectorSettings | None = None,
+    connector_settings: list[PostgresConnectorSettings | SnowflakeConnectorSettings]
+    | None = None,
 ) -> DbBridgeRegistry:
     registry = DbBridgeRegistry(bridge_id=bridge_id)
-    if postgres_dsn:
-        registry.register(
-            PostgresBridgeConnector(
-                dsn=postgres_dsn,
-                connection_id=postgres_connection_id,
-                title=postgres_title,
-            )
-        )
-    if snowflake_settings and snowflake_settings.is_enabled():
-        registry.register(SnowflakeBridgeConnector(settings=snowflake_settings))
+    for settings in connector_settings or []:
+        if isinstance(settings, PostgresConnectorSettings):
+            registry.register(PostgresBridgeConnector(settings=settings))
+            continue
+        if isinstance(settings, SnowflakeConnectorSettings) and settings.is_enabled():
+            registry.register(SnowflakeBridgeConnector(settings=settings))
     return registry
