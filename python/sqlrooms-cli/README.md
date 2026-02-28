@@ -46,13 +46,19 @@ Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/confi
 
 `sqlrooms` can read AI provider and connector settings from a local TOML file:
 
-- macOS/Linux: `$XDG_CONFIG_HOME/sqlrooms/config.toml` (or `~/.config/sqlrooms/config.toml`)
-- Windows: `%APPDATA%\sqlrooms\config.toml`
-- Legacy fallback: `~/.sqlrooms/config.toml`
+- macOS/Linux: `$XDG_CONFIG_HOME/sqlrooms/sqlrooms.toml` (or `~/.config/sqlrooms/sqlrooms.toml`)
+- Windows: `%APPDATA%\sqlrooms\sqlrooms.toml`
+- Legacy fallback: `~/.sqlrooms/sqlrooms.toml`
+- Optional local override in current working directory:
+  - `./sqlrooms.toml`
 
-Override with `--config`, or disable with `--no-config`.
+Load order and precedence:
 
-Example `config.toml`:
+- Default mode: global config, then local override file (local wins on conflicts).
+- `--config`: use only that file.
+- `--no-config`: disable all config loading.
+
+Example `sqlrooms.toml`:
 
 ```toml
 [ai]
@@ -151,7 +157,7 @@ What this enables:
 
 Notes:
 
-- Configure connectors in `config.toml` using `[[connectors]]` entries.
+- Configure connectors in `sqlrooms.toml` using `[[connectors]]` entries.
 - Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
 
 ## Developer setup
