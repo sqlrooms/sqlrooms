@@ -48,6 +48,38 @@ export function createDbSlice(props?: {
           Object.fromEntries(Object.entries(row as Record<string, unknown>)),
         );
     };
+    // Keep ATTACH idempotent per alias (including concurrent callers) so the
+    // server doesn't receive noisy duplicate ATTACH statements.
+    const attachedDatabasePromises = new Map<string, Promise<void>>();
+    const ensureAttachedDatabase = async (
+      core: Awaited<ReturnType<DbSliceState['db']['getConnector']>>,
+      attachedName: string,
+    ): Promise<void> => {
+      const existing = attachedDatabasePromises.get(attachedName);
+      if (existing) {
+        await existing;
+        return;
+      }
+
+      const attachPromise = (async () => {
+        try {
+          await core.query(`ATTACH ':memory:' AS "${attachedName}"`);
+        } catch (err) {
+          if (!isDuplicateAttachError(err, attachedName)) {
+            throw err;
+          }
+        }
+      })();
+      attachedDatabasePromises.set(attachedName, attachPromise);
+
+      try {
+        await attachPromise;
+      } catch (err) {
+        // Allow retries after non-duplicate attach failures.
+        attachedDatabasePromises.delete(attachedName);
+        throw err;
+      }
+    };
     const ensureSchemaExists = async (args: {
       core: Awaited<ReturnType<DbSliceState['db']['getConnector']>>;
       schema?: string;
@@ -89,13 +121,7 @@ export function createDbSlice(props?: {
         database ?? get().db.config.coreMaterialization.attachedDatabaseName;
       // Strict ephemeral default: keep external materialized data in an attached
       // in-memory database scoped to runtime process.
-      try {
-        await core.query(`ATTACH ':memory:' AS "${attachedName}"`);
-      } catch (err) {
-        if (!isDuplicateAttachError(err, attachedName)) {
-          throw err;
-        }
-      }
+      await ensureAttachedDatabase(core, attachedName);
       const schemaName = schema ?? 'main';
       await ensureSchemaExists({
         core,

@@ -52,6 +52,63 @@ function ipcChunk(rows: Array<Record<string, unknown>>): Uint8Array {
 }
 
 describe('DbSlice runQuery bridge routing', () => {
+  it('attaches ephemeral database only once for concurrent materialization', async () => {
+    const {store, connector} = createTestStore();
+    const fetchArrow = jest.fn<DbBridge['fetchArrow']>(async () =>
+      arrow.tableFromJSON([{id: 1}]),
+    );
+    const bridge: DbBridge = {
+      id: 'bridge-concurrent-attach',
+      runtimeSupport: 'server',
+      testConnection: async () => true,
+      listCatalog: async () => ({databases: [], schemas: [], tables: []}),
+      executeQuery: async () => ({jsonData: []}),
+      fetchArrow,
+      cancelQuery: async () => true,
+    };
+
+    store.getState().db.connectors.registerBridge(bridge);
+    store.getState().db.connectors.registerConnection({
+      id: 'athena',
+      engineId: 'athena',
+      title: 'Athena',
+      runtimeSupport: 'server',
+      requiresBridge: true,
+      bridgeId: 'bridge-concurrent-attach',
+      isCore: false,
+    });
+    store.getState().db.setConfig({
+      ...store.getState().db.config,
+      currentRuntime: 'browser',
+    });
+
+    await Promise.all([
+      store.getState().db.connectors.runQuery({
+        connectionId: 'athena',
+        sql: 'select 1 as id',
+        queryType: 'arrow',
+        materialize: true,
+        materializedName: 'result_a',
+      }),
+      store.getState().db.connectors.runQuery({
+        connectionId: 'athena',
+        sql: 'select 2 as id',
+        queryType: 'arrow',
+        materialize: true,
+        materializedName: 'result_b',
+      }),
+    ]);
+
+    const attachCount = connector.query.mock.calls.filter(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].startsWith(
+          `ATTACH ':memory:' AS "${store.getState().db.config.coreMaterialization.attachedDatabaseName}"`,
+        ),
+    ).length;
+    expect(attachCount).toBe(1);
+  });
+
   it('materializes bridge stream chunks into core relation', async () => {
     const {store, connector} = createTestStore();
     const fetchArrow = jest.fn<DbBridge['fetchArrow']>(async () =>
