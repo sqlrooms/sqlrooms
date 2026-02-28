@@ -17,6 +17,8 @@
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

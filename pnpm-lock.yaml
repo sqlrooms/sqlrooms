@@ -150,12 +150,21 @@ importers:
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../../packages/cells
+      '@sqlrooms/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
+      '@sqlrooms/layout-config':
+        specifier: workspace:*
+        version: link:../../packages/layout-config
       '@sqlrooms/notebook':
         specifier: workspace:*
         version: link:../../packages/notebook
