@@ -1,5 +1,5 @@
-import type {DbBridge} from './types';
 import * as arrow from 'apache-arrow';
+import type {DbBridge} from './types';
 
 type HttpBridgeOptions = {
   id: string;

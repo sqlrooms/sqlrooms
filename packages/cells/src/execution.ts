@@ -1,4 +1,3 @@
-import {isCoreDuckDbConnection} from '@sqlrooms/db';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -58,6 +57,10 @@ export async function executeSqlCell(
   const sheetId = findSheetIdForCell(state, cellId);
   const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
   const finalSchemaName = sheet ? resolveSheetSchemaName(sheet) : schemaName;
+  const finalDatabaseName =
+    state.db.config.coreMaterialization.strategy === 'attached_ephemeral'
+      ? state.db.config.coreMaterialization.attachedDatabaseName
+      : undefined;
   const sheetCellIds = sheet?.cellIds ?? [];
 
   // 1. Gather inputs for SQL rendering
@@ -77,6 +80,7 @@ export async function executeSqlCell(
   const sql = qualifySheetLocalResultNames({
     sql: renderedSql,
     sheetSchema: finalSchemaName,
+    sheetDatabase: finalDatabaseName,
     sheetCellIds,
     cells: state.cells.config.data,
     getSqlResultName: (id) => {
@@ -123,23 +127,19 @@ export async function executeSqlCell(
     let tableName = '';
     let relationType: ResultRelationType = 'view';
     const connector = await db.getConnector();
-    if (
-      selectedConnectorId &&
-      !isCoreDuckDbConnection(selectedConnectorId) &&
-      dbConnectors?.runQuery
-    ) {
-      // External connectors already return materialized relations, so treat
-      // them as table-backed results.
+    if (dbConnectors?.runQuery) {
       const routed = await dbConnectors.runQuery({
         connectionId: selectedConnectorId,
         sql,
         queryType: 'arrow',
         materialize: true,
         materializedName: effectiveResultName,
+        materializedSchema: finalSchemaName,
+        materializedDatabase: finalDatabaseName,
         signal,
       });
       if (!routed.relationName) {
-        throw new Error('External query did not return materialized relation');
+        throw new Error('Query did not return a materialized relation');
       }
       tableName = routed.relationName;
       relationType = 'table';

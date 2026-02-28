@@ -1,10 +1,11 @@
 import {createDuckDbSlice, CreateDuckDbSliceProps} from '@sqlrooms/duckdb';
-import {makeQualifiedTableName} from '@sqlrooms/duckdb-core';
+import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import {produce} from 'immer';
 import {
   createDefaultDbConfig,
+  hasLoadArrow,
   isDuplicateAttachError,
   isRuntimeCompatible,
 } from './helpers';
@@ -27,32 +28,64 @@ export function createDbSlice(props?: {
   const initialConfig = createDefaultDbConfig(props?.config);
   return createSlice<DbSliceState, DbRootState>((set, get, store) => {
     const duckDbSlice = createDuckDbSlice(props?.duckDb)(set, get, store);
-    const materializeArrowResult = async (args: {
-      table: arrow.Table;
-      relationName: string;
-    }): Promise<string> => {
-      const {table, relationName} = args;
-      const core = await get().db.getConnector();
-      if (!('loadArrow' in core) || typeof core.loadArrow !== 'function') {
-        throw new Error(
-          'Core DuckDB connector does not support Arrow materialization',
-        );
+    const isUnsupportedArrowUploadError = (error: unknown): boolean => {
+      if (!error || typeof error !== 'object') {
+        return false;
       }
-
+      const message =
+        'message' in error && typeof error.message === 'string'
+          ? error.message.toLowerCase()
+          : '';
+      return message.includes(
+        'arrow buffer upload is not supported over websocket backend',
+      );
+    };
+    const toObjectRows = (table: arrow.Table): Record<string, unknown>[] => {
+      return table
+        .toArray()
+        .map((row) =>
+          Object.fromEntries(Object.entries(row as Record<string, unknown>)),
+        );
+    };
+    const ensureSchemaExists = async (args: {
+      core: Awaited<ReturnType<DbSliceState['db']['getConnector']>>;
+      schema?: string;
+      database?: string;
+    }): Promise<void> => {
+      const {core, schema, database} = args;
+      if (!schema) {
+        return;
+      }
+      if (database) {
+        await core.query(
+          `CREATE SCHEMA IF NOT EXISTS ${escapeId(database)}.${escapeId(schema)}`,
+        );
+        return;
+      }
+      await core.query(`CREATE SCHEMA IF NOT EXISTS ${escapeId(schema)}`);
+    };
+    const resolveMaterializationTarget = async (args: {
+      relationName: string;
+      schema?: string;
+      database?: string;
+    }): Promise<string> => {
+      const {relationName, schema, database} = args;
+      const core = await get().db.getConnector();
       const strategy = get().db.config.coreMaterialization.strategy;
+
       if (strategy === 'schema') {
-        const schemaName = get().db.config.coreMaterialization.schemaName;
-        await core.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
-        const qualified = makeQualifiedTableName({
+        const schemaName =
+          schema ?? get().db.config.coreMaterialization.schemaName;
+        await ensureSchemaExists({core, schema: schemaName, database});
+        return makeQualifiedTableName({
+          database,
           schema: schemaName,
           table: relationName,
         }).toString();
-        await core.loadArrow(table, qualified);
-        return qualified;
       }
 
       const attachedName =
-        get().db.config.coreMaterialization.attachedDatabaseName;
+        database ?? get().db.config.coreMaterialization.attachedDatabaseName;
       // Strict ephemeral default: keep external materialized data in an attached
       // in-memory database scoped to runtime process.
       try {
@@ -62,12 +95,46 @@ export function createDbSlice(props?: {
           throw err;
         }
       }
-      const qualified = makeQualifiedTableName({
+      const schemaName = schema ?? 'main';
+      await ensureSchemaExists({
+        core,
+        schema: schemaName,
         database: attachedName,
-        schema: 'main',
+      });
+      return makeQualifiedTableName({
+        database: attachedName,
+        schema: schemaName,
         table: relationName,
       }).toString();
-      await core.loadArrow(table, qualified);
+    };
+    const materializeArrowResult = async (args: {
+      table: arrow.Table;
+      relationName: string;
+      schema?: string;
+      database?: string;
+    }): Promise<string> => {
+      const {table, relationName, schema, database} = args;
+      const core = await get().db.getConnector();
+      if (!hasLoadArrow(core)) {
+        throw new Error(
+          'Core DuckDB connector does not support Arrow materialization',
+        );
+      }
+      const qualified = await resolveMaterializationTarget({
+        relationName,
+        schema,
+        database,
+      });
+      try {
+        await core.loadArrow(table, qualified);
+      } catch (error) {
+        if (!isUnsupportedArrowUploadError(error)) {
+          throw error;
+        }
+        // WS connectors cannot upload Arrow buffers; degrade gracefully to SQL
+        // object ingestion so materialization still succeeds.
+        await core.loadObjects(toObjectRows(table), qualified, {replace: true});
+      }
       return qualified;
     };
 
@@ -107,6 +174,28 @@ export function createDbSlice(props?: {
           );
           const jsonData = await jsonHandle;
           return {connectionId, engineId, materialized: false, jsonData};
+        }
+        const shouldMaterialize = request.materialize === true;
+        if (shouldMaterialize) {
+          const relationName =
+            request.materializedName || `ext_${Date.now().toString(36)}`;
+          const qualifiedRelation = await resolveMaterializationTarget({
+            relationName,
+            schema: request.materializedSchema,
+            database: request.materializedDatabase,
+          });
+          await core.query(
+            `CREATE OR REPLACE TABLE ${qualifiedRelation} AS (${request.sql})`,
+            {
+              signal: request.signal,
+            },
+          );
+          return {
+            connectionId,
+            engineId,
+            materialized: true,
+            relationName: qualifiedRelation,
+          };
         }
         const arrowHandle = core.query(request.sql, {signal: request.signal});
         const arrowTable = await arrowHandle;
@@ -151,6 +240,8 @@ export function createDbSlice(props?: {
         const qualifiedRelation = await materializeArrowResult({
           table: arrowTable,
           relationName,
+          schema: request.materializedSchema,
+          database: request.materializedDatabase,
         });
         return {
           connectionId,
@@ -196,6 +287,8 @@ export function createDbSlice(props?: {
       const qualifiedRelation = await materializeArrowResult({
         table: arrowTable,
         relationName,
+        schema: request.materializedSchema,
+        database: request.materializedDatabase,
       });
       return {
         connectionId,

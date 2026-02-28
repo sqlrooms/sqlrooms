@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import socket
 import tempfile
 import threading
@@ -11,6 +12,7 @@ from typing import Any, Dict
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -54,6 +56,40 @@ def _pick_free_port(host: str) -> int:
         return int(sock.getsockname()[1])
     finally:
         sock.close()
+
+
+def _normalize_sql_for_policy(sql: str) -> str:
+    normalized = sql.strip()
+    if normalized.endswith(";"):
+        normalized = normalized[:-1].strip()
+    return normalized
+
+
+def _redact_sql_literals(sql: str) -> str:
+    # Redact quoted strings and numeric literals before logging user SQL.
+    redacted = re.sub(r"'(?:''|[^'])*'", "'***'", sql)
+    redacted = re.sub(r'"(?:""|[^"])*"', '"***"', redacted)
+    redacted = re.sub(r"\b\d+(?:\.\d+)?\b", "?", redacted)
+    return redacted
+
+
+def _is_select_only_sql(sql: str) -> bool:
+    normalized = _normalize_sql_for_policy(sql)
+    if not normalized:
+        return False
+    # One statement only.
+    if ";" in normalized:
+        return False
+    return bool(re.match(r"^(select|with)\s", normalized, re.IGNORECASE))
+
+
+def _references_internal_namespace(sql: str, namespace: str) -> bool:
+    escaped = re.escape(namespace)
+    pattern = re.compile(
+        rf"(^|[^A-Za-z0-9_])(?:{escaped}|\"{escaped}\"|`{escaped}`|\[{escaped}\])\s*\.",
+        re.IGNORECASE,
+    )
+    return bool(pattern.search(sql))
 
 
 class SqlroomsHttpServer:
@@ -200,6 +236,17 @@ class SqlroomsHttpServer:
             allow_headers=["*"],
         )
 
+        @app.middleware("http")
+        async def add_cross_origin_isolation_headers(
+            request: Request, call_next
+        ):
+            response = await call_next(request)
+            # WebContainer requires cross-origin isolation to transfer SharedArrayBuffer.
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+            response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+            response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+            return response
+
         @app.get("/api/config")
         async def get_config():
             return self._runtime_config()
@@ -309,6 +356,44 @@ class SqlroomsHttpServer:
                 return {"cancelled": False}
             except Exception:
                 return {"cancelled": False}
+
+        @app.post("/api/project/query")
+        async def project_query(payload: Dict[str, Any]):
+            sql = str(payload.get("sql") or "")
+            if not _is_select_only_sql(sql):
+                return JSONResponse(
+                    {"error": "Only SELECT statements are allowed"},
+                    status_code=400,
+                )
+            if _references_internal_namespace(sql, self.meta_namespace):
+                return JSONResponse(
+                    {"error": f"Access to internal schema {self.meta_namespace} is denied"},
+                    status_code=403,
+                )
+
+            logger.debug(
+                "project_query sql=%s",
+                _redact_sql_literals(_normalize_sql_for_policy(sql))[:2000],
+            )
+
+            def _run(cur):
+                cur.execute(sql)
+                columns = [d[0] for d in (cur.description or [])]
+                fetched = cur.fetchmany(5001)
+                truncated = len(fetched) > 5000
+                limited = fetched[:5000]
+                return {
+                    "columns": columns,
+                    "rows": [dict(zip(columns, row)) for row in limited],
+                    "rowCount": len(limited),
+                    "truncated": truncated,
+                }
+
+            try:
+                data = await db_async.run_db_task(_run)
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+            return data
 
         if self.static_dir.exists():
             app.mount(

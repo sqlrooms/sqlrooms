@@ -291,6 +291,10 @@ export function createRoomShellSlice(
             await updateReadyDataSources();
             await maybeDownloadDataSources();
 
+            setTaskProgress(INIT_ROOM_TASK, {
+              message: 'Initializing room…',
+              progress: undefined,
+            });
             // Call initialize on all other slices that have an initialize function
             const slices = Object.entries(store.getState()).filter(
               ([key, value]) =>
@@ -298,8 +302,13 @@ export function createRoomShellSlice(
                 key !== 'db' &&
                 isRoomSliceWithInitialize(value),
             );
-            for (const [_, slice] of slices) {
+            for (const [sliceName, slice] of slices) {
               if (isRoomSliceWithInitialize(slice)) {
+                setTaskProgress(INIT_ROOM_TASK, {
+                  message: `Initializing ${sliceName}…`,
+                  progress: undefined,
+                });
+
                 await slice.initialize();
               }
             }

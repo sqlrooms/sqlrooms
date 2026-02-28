@@ -1,17 +1,22 @@
+import {cn} from '@sqlrooms/ui';
 import {Terminal} from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import {SquareTerminalIcon} from 'lucide-react';
 import {useEffect, useRef} from 'react';
-import {useRoomStore} from '../store/store';
+import {useStoreWithWebContainer} from '../WebContainerSlice';
 
-export const TerminalView = () => {
-  const serverStatus = useRoomStore((s) => s.webContainer.serverStatus);
-  const output = useRoomStore((s) => s.webContainer.output);
+export function TerminalView({className}: {className?: string}) {
+  const serverStatus = useStoreWithWebContainer(
+    (s) => s.webContainer.serverStatus,
+  );
+  const output = useStoreWithWebContainer((s) => s.webContainer.output);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const lastIndexRef = useRef<number>(0);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Intentional stale closure: initialize terminal once on mount.
   useEffect(() => {
     if (!containerRef.current || terminalRef.current) {
       return;
@@ -26,7 +31,6 @@ export const TerminalView = () => {
     term.open(containerRef.current);
     terminalRef.current = term;
 
-    // Seed existing output if any
     if (output && output.length > 0) {
       term.write(output);
       lastIndexRef.current = output.length;
@@ -37,14 +41,13 @@ export const TerminalView = () => {
       terminalRef.current = null;
       lastIndexRef.current = 0;
     };
-  }, [output]);
+  }, []);
 
   useEffect(() => {
     const term = terminalRef.current;
     if (!term) {
       return;
     }
-    // If output shrank (e.g. reset), clear and re-render
     if (output.length < lastIndexRef.current) {
       term.clear();
       term.write(output);
@@ -62,8 +65,8 @@ export const TerminalView = () => {
   }, [output]);
 
   return (
-    <div className="relative h-full w-full p-2">
-      <div className="gap-21 flex h-full flex-col overflow-hidden">
+    <div className={cn('relative h-full w-full p-2', className)}>
+      <div className="flex h-full flex-col gap-2 overflow-hidden">
         <div className="text-foreground flex w-full justify-between text-xs font-bold">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <SquareTerminalIcon className="h-5 w-5 text-gray-500" />
@@ -77,4 +80,4 @@ export const TerminalView = () => {
       </div>
     </div>
   );
-};
+}

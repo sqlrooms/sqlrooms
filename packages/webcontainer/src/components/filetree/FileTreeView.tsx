@@ -1,19 +1,16 @@
+import {BaseTreeNode} from '@sqlrooms/schema-tree';
 import {cn, Tree, TreeNodeData} from '@sqlrooms/ui';
 import {File as FileIcon} from 'lucide-react';
-import {FC, useMemo} from 'react';
-import {useRoomStore} from '../../store/store';
+import {FC, ReactNode, useMemo} from 'react';
+import {useStoreWithWebContainer} from '../../WebContainerSlice';
 import {FileNodeObject, fileSystemTreeToNodes} from './fileSystemTreeToNodes';
-import {BaseTreeNode} from '@sqlrooms/schema-tree';
 
-/**
- * Default renderer for a file tree node.
- */
 export const RenderFileTreeNode = (
   node: TreeNodeData<FileNodeObject>,
   _isOpen: boolean,
+  options?: {onOpenFile?: (path: string) => void},
 ) => {
   const {object} = node;
-  const openFile = useRoomStore((s) => s.webContainer.openFile);
   return (
     <BaseTreeNode asChild className={cn('h-5.5')} nodeObject={object}>
       {object.type === 'directory' ? (
@@ -24,7 +21,7 @@ export const RenderFileTreeNode = (
         <div
           className="flex items-center gap-1 py-0.5"
           onClick={() => {
-            openFile(object.path);
+            options?.onOpenFile?.(object.path);
           }}
         >
           <div>
@@ -37,17 +34,17 @@ export const RenderFileTreeNode = (
   );
 };
 
-/**
- * Renders the WebContainer files tree using the generic Tree component.
- */
 export const FileTreeView: FC<{
   className?: string;
   renderNode?: (
     node: TreeNodeData<FileNodeObject>,
     isOpen: boolean,
-  ) => React.ReactNode;
-}> = ({className, renderNode = RenderFileTreeNode}) => {
-  const filesTree = useRoomStore((s) => s.webContainer.config.filesTree);
+  ) => ReactNode;
+}> = ({className, renderNode}) => {
+  const filesTree = useStoreWithWebContainer(
+    (s) => s.webContainer.config.filesTree,
+  );
+  const openFile = useStoreWithWebContainer((s) => s.webContainer.openFile);
   const rootNode = useMemo(
     () => fileSystemTreeToNodes(filesTree, '/'),
     [filesTree],
@@ -59,7 +56,18 @@ export const FileTreeView: FC<{
         className,
       )}
     >
-      <Tree treeData={rootNode} renderNode={renderNode} />
+      <Tree
+        treeData={rootNode}
+        renderNode={
+          renderNode ??
+          ((node, isOpen) =>
+            RenderFileTreeNode(node, isOpen, {
+              onOpenFile: (path) => {
+                void openFile(path);
+              },
+            }))
+        }
+      />
     </div>
   );
 };

@@ -14,7 +14,7 @@ const [target, ...restArgs] = process.argv.slice(2);
 const targetAliases = {
   cli: 'sqlrooms-cli-python',
 };
-const resolvedTarget = targetAliases[target] ?? target;
+const resolvedTarget = target ? (targetAliases[target] ?? target) : null;
 const filter = resolvedTarget ? `${resolvedTarget}...` : '@sqlrooms/*';
 
 const turboArgs = [

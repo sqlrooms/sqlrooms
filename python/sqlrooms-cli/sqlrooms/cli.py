@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+import json
+import re
+from pathlib import Path
 import sys
 
+import duckdb
 import typer
 
 from .web.db_bridge import SnowflakeConnectorSettings
@@ -19,6 +24,123 @@ app = typer.Typer(
     pretty_exceptions_enable=False,
     invoke_without_command=True,
 )
+
+
+@app.command("export")
+def export_project(
+    db_path: str = typer.Argument(
+        ...,
+        help="DuckDB project file to export from.",
+    ),
+    out_dir: str = typer.Option(
+        "./out",
+        "--dir",
+        help="Output directory for exported artifacts.",
+    ),
+    meta_namespace: str = typer.Option(
+        "__sqlrooms",
+        "--meta-namespace",
+        help="Namespace for SQLRooms meta tables.",
+    ),
+):
+    """
+    Export app-builder files stored in persisted UI state to a directory.
+    """
+    out = Path(out_dir).expanduser().resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(db_path)
+    try:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", meta_namespace):
+            typer.echo(
+                f"Invalid --meta-namespace value: {meta_namespace!r}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        ui_ref = f'"{meta_namespace}"."ui_state"'
+        row = con.execute(
+            f"SELECT payload_json FROM {ui_ref} WHERE key = 'default' LIMIT 1"
+        ).fetchone()
+        if not row:
+            typer.echo("No persisted ui_state found; nothing to export.")
+            return
+        payload = row[0]
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError as exc:
+                typer.echo(
+                    f"Failed to parse payload_json from {ui_ref}: {exc}",
+                    err=True,
+                )
+                raise typer.Exit(code=1) from exc
+        if not isinstance(payload, dict):
+            typer.echo(
+                "Invalid payload_json format: expected a JSON object.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        app_project = (payload or {}).get("appProject") or {}
+        config = app_project.get("config") or {}
+        apps_by_sheet = config.get("appsBySheetId") or {}
+        exported = 0
+        for sheet_id, sheet_app in apps_by_sheet.items():
+            files = (sheet_app or {}).get("files") or {}
+            if not isinstance(files, dict) or len(files) == 0:
+                continue
+            safe_sheet_id = "".join(
+                ch for ch in str(sheet_id) if ch.isalnum() or ch in ("-", "_")
+            )
+            if not safe_sheet_id:
+                safe_sheet_id = hashlib.sha1(
+                    str(sheet_id).encode("utf-8")
+                ).hexdigest()[:8]
+            name = str((sheet_app or {}).get("name") or sheet_id)
+            safe_name = "".join(
+                ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
+            ).strip()
+            safe_name = safe_name.replace(" ", "-") or safe_sheet_id
+            root = out / f"{safe_name}-{safe_sheet_id[:8]}"
+            root_resolved = root.resolve()
+            try:
+                root_resolved.relative_to(out)
+            except ValueError:
+                typer.echo(
+                    f"Unsafe export root path resolved outside output dir: {root_resolved}",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            root.mkdir(parents=True, exist_ok=True)
+            meta = {
+                "sheetId": sheet_id,
+                "name": name,
+                "prompt": (sheet_app or {}).get("prompt", ""),
+                "template": (sheet_app or {}).get("template", ""),
+                "updatedAt": (sheet_app or {}).get("updatedAt"),
+            }
+            (root / "app.json").write_text(
+                json.dumps(meta, indent=2), encoding="utf-8"
+            )
+            for path, content in files.items():
+                rel = Path(str(path).lstrip("/"))
+                target = (root / rel).resolve()
+                try:
+                    target.relative_to(root_resolved)
+                except ValueError:
+                    typer.echo(
+                        f"Skipping unsafe export path outside target directory: {path!r}",
+                        err=True,
+                    )
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(str(content), encoding="utf-8")
+            exported += 1
+        if exported == 0:
+            typer.echo("No app-builder files found in ui_state.")
+            return
+        typer.echo(f"Exported artifacts to {out}")
+    finally:
+        con.close()
 
 
 @app.callback(invoke_without_command=True)

@@ -288,42 +288,49 @@ export function createCellsSlice(props: CellsSliceOptions) {
             }),
           );
 
-          // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = getRequiredSqlSelectToJson(get());
-          const newDeps = await resolveDependencies(
-            updatedCell,
-            scopedCells,
-            ownerSheetId || '',
-            cellRegistry,
-            sqlSelectToJson,
-          );
+          // Avoid expensive dependency graph recomputation on each SQL keystroke.
+          // We recompute immediately for non-SQL edits, or when callers explicitly
+          // request cascading behavior.
+          const shouldRecomputeDependencies =
+            !semanticSqlChanged || opts?.cascade === true;
+          if (shouldRecomputeDependencies) {
+            // Pre-compute dependencies outside produce() to support async
+            const sqlSelectToJson = getRequiredSqlSelectToJson(get());
+            const newDeps = await resolveDependencies(
+              updatedCell,
+              scopedCells,
+              ownerSheetId || '',
+              cellRegistry,
+              sqlSelectToJson,
+            );
 
-          set((state) =>
-            produce(state, (draft) => {
-              const ownerSheet = Object.values(draft.cells.config.sheets).find(
-                (sheet) => sheet.cellIds.includes(id),
-              );
-              if (ownerSheet) {
-                const localCellIds = new Set(ownerSheet.cellIds);
-                ownerSheet.edges = ownerSheet.edges.filter(
-                  (e) => e.target !== id,
-                );
-                for (const depId of newDeps) {
-                  if (!localCellIds.has(depId) || depId === id) continue;
-                  ownerSheet.edges.push({
-                    id: `${depId}-${id}`,
-                    source: depId,
-                    target: id,
-                  });
+            set((state) =>
+              produce(state, (draft) => {
+                const ownerSheet = Object.values(
+                  draft.cells.config.sheets,
+                ).find((sheet) => sheet.cellIds.includes(id));
+                if (ownerSheet) {
+                  const localCellIds = new Set(ownerSheet.cellIds);
+                  ownerSheet.edges = ownerSheet.edges.filter(
+                    (e) => e.target !== id,
+                  );
+                  for (const depId of newDeps) {
+                    if (!localCellIds.has(depId) || depId === id) continue;
+                    ownerSheet.edges.push({
+                      id: `${depId}-${id}`,
+                      source: depId,
+                      target: id,
+                    });
+                  }
+                  replaceCellDependenciesInCache(
+                    ownerSheet,
+                    id,
+                    newDeps.filter((depId) => localCellIds.has(depId)),
+                  );
                 }
-                replaceCellDependenciesInCache(
-                  ownerSheet,
-                  id,
-                  newDeps.filter((depId) => localCellIds.has(depId)),
-                );
-              }
-            }),
-          );
+              }),
+            );
+          }
 
           // If we have an existing view, rename it instead of invalidating
           if (hasExistingView && existingStatus?.resultView) {
@@ -341,10 +348,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
           // After update, trigger cascade only if explicitly requested
           // or if semantic execution inputs changed.
           const shouldCascade =
-            opts?.cascade ||
-            resultNameChanged ||
-            semanticSqlChanged ||
-            semanticInputChanged;
+            opts?.cascade || resultNameChanged || semanticInputChanged;
           if (shouldCascade) {
             if (ownerSheetId) {
               void get().cells.runDownstreamCascade(ownerSheetId, id);

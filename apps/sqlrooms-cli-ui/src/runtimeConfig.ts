@@ -20,6 +20,7 @@ export type RuntimeConfig = {
   };
   // Backward-compatible fallback for older server versions.
   postgresBridgeEnabled?: boolean;
+  postgresBridgeEnabled?: boolean;
 };
 
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {

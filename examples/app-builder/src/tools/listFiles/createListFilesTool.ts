@@ -1,13 +1,13 @@
+import type {OpenAssistantTool} from '@openassistant/utils';
+import {TreeNodeData} from '@sqlrooms/ui';
+import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
 import z from 'zod';
 import {StoreApi} from 'zustand';
 import {
   FileNodeObject,
   fileSystemTreeToNodes,
 } from '../../components/filetree/fileSystemTreeToNodes';
-import {WebContainerSliceState} from '../../store/WebContainerSlice';
 import {ListFilesToolResult} from './ListFilesToolResult';
-import type {OpenAssistantTool} from '@openassistant/utils';
-import {TreeNodeData} from '@sqlrooms/ui';
 
 export const ListFilesToolParameters = z.object({
   basePath: z
@@ -34,12 +34,7 @@ export function createListFilesTool(
   return {
     name: 'listFiles',
     description: 'List project files',
-    parameters: z.object({
-      basePath: z
-        .string()
-        .describe('Optional base path to list files from')
-        .default('/'),
-    }),
+    parameters: ListFilesToolParameters,
     execute: async ({basePath = '/'}: ListFilesToolParameters) => {
       return {
         llmResult: {

@@ -1,4 +1,5 @@
 import {CORE_DUCKDB_CONNECTION_ID} from './connectors/duckdb';
+import type * as arrow from 'apache-arrow';
 import type {DbSliceConfig, RuntimeSupport} from './types';
 
 export function isCoreDuckDbConnection(connectionId: string): boolean {
@@ -62,5 +63,26 @@ export function isDuplicateAttachError(
 
   return (
     message.includes('already attached') || message.includes(duplicateAliasText)
+  );
+}
+
+/**
+ * Connector shape that can materialize Apache Arrow tables.
+ */
+export type ArrowMaterializingConnector = {
+  loadArrow: (table: arrow.Table, tableName: string) => Promise<unknown>;
+};
+
+/**
+ * Narrows an unknown connector value to one that supports Arrow materialization.
+ */
+export function hasLoadArrow(
+  connector: unknown,
+): connector is ArrowMaterializingConnector {
+  return (
+    typeof connector === 'object' &&
+    connector !== null &&
+    'loadArrow' in connector &&
+    typeof connector.loadArrow === 'function'
   );
 }

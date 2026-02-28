@@ -1,10 +1,12 @@
-import {Spinner} from '@sqlrooms/ui';
-import {useRoomStore} from '../store/store';
+import {cn, Spinner} from '@sqlrooms/ui';
+import {useStoreWithWebContainer} from '../WebContainerSlice';
 
-export const BrowserView = () => {
-  const serverStatus = useRoomStore((s) => s.webContainer.serverStatus);
+export function BrowserView({className}: {className?: string}) {
+  const serverStatus = useStoreWithWebContainer(
+    (s) => s.webContainer.serverStatus,
+  );
   return (
-    <div className="bg-background h-full w-full">
+    <div className={cn('bg-background h-full w-full', className)}>
       {serverStatus.type === 'ready' && serverStatus.url ? (
         <iframe
           className="h-full w-full overflow-auto bg-white"
@@ -22,4 +24,4 @@ export const BrowserView = () => {
       )}
     </div>
   );
-};
+}
