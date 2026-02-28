@@ -151,6 +151,68 @@ def _load_connector_config(
     return out
 
 
+def _load_ai_runtime_config(
+    path: Path | None,
+) -> tuple[str | None, str | None, dict[str, dict[str, Any]]]:
+    if path is None:
+        return (None, None, {})
+    raw = _read_toml(path)
+    ai = raw.get("ai")
+    if not isinstance(ai, dict):
+        return (None, None, {})
+
+    default_provider = _normalize_config_string(ai.get("default_provider"))
+    default_model = _normalize_config_string(ai.get("default_model"))
+    providers_raw = ai.get("providers") or []
+    if not isinstance(providers_raw, list):
+        raise RuntimeError("'ai.providers' must be an array in SQLRooms config.")
+
+    providers: dict[str, dict[str, Any]] = {}
+    for idx, item in enumerate(providers_raw):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"AI provider entry at index {idx} must be an object.")
+        provider_id = _require_config_string(
+            item, "id", connector_id=f"ai#{idx}", engine="ai"
+        )
+        if provider_id in providers:
+            raise RuntimeError(f"Duplicate AI provider id in config: {provider_id}")
+        base_url = _normalize_config_string(item.get("base_url")) or ""
+        api_key = _normalize_config_string(item.get("api_key")) or ""
+        api_key_env = _normalize_config_string(item.get("api_key_env"))
+        if api_key_env and not api_key:
+            api_key = os.environ.get(api_key_env, "")
+        models_raw = item.get("models") or []
+        if not isinstance(models_raw, list):
+            raise RuntimeError(
+                f"AI provider '{provider_id}' has invalid 'models' (must be an array)."
+            )
+        models = []
+        for model in models_raw:
+            model_name = _normalize_config_string(model)
+            if model_name:
+                models.append({"modelName": model_name})
+        providers[provider_id] = {
+            "baseUrl": base_url,
+            "apiKey": api_key,
+            "models": models,
+        }
+
+    if default_provider and default_provider not in providers:
+        raise RuntimeError(
+            f"AI default_provider '{default_provider}' is not defined under ai.providers."
+        )
+    if not default_provider and providers:
+        default_provider = next(iter(providers.keys()))
+
+    if not default_model and default_provider:
+        provider = providers.get(default_provider, {})
+        models = provider.get("models") or []
+        if models:
+            default_model = models[0].get("modelName")
+    logger.info("Loaded SQLRooms AI config from %s", path)
+    return (default_provider, default_model, providers)
+
+
 @app.command("export")
 def export_project(
     db_path: str = typer.Argument(
@@ -288,20 +350,6 @@ def main(
         "--ws-port",
         help="WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.",
     ),
-    llm_provider: str = typer.Option(
-        "openai", "--llm-provider", help="Default LLM provider (e.g. openai, ollama)."
-    ),
-    llm_model: str = typer.Option(
-        "gpt-4o-mini",
-        "--llm-model",
-        help="Default model name passed to the AI tools.",
-    ),
-    api_key: str = typer.Option(
-        None,
-        "--api-key",
-        envvar="SQLROOMS_API_KEY",
-        help="API key for the chosen LLM provider.",
-    ),
     config: str | None = typer.Option(
         None,
         "--config",
@@ -345,11 +393,17 @@ def main(
     try:
         config_path = _resolve_config_path(config, no_config=no_config)
         connector_settings = _load_connector_config(config_path)
+        llm_provider, llm_model, ai_providers = _load_ai_runtime_config(config_path)
     except Exception as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
 
     resolved_db_path = db_path if db_path is not None else db_path_option
+    selected_api_key = (
+        str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
+        if llm_provider
+        else ""
+    )
     server = SqlroomsHttpServer(
         db_path=resolved_db_path,
         host=host,
@@ -360,7 +414,8 @@ def main(
         meta_namespace=meta_namespace,
         llm_provider=llm_provider,
         llm_model=llm_model,
-        api_key=api_key,
+        api_key=selected_api_key,
+        ai_providers=ai_providers,
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,

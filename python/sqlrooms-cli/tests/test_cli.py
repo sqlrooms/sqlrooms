@@ -3,6 +3,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 from sqlrooms.cli import (
     _default_config_candidates,
+    _load_ai_runtime_config,
     _load_connector_config,
     _resolve_config_path,
     app,
@@ -57,6 +58,38 @@ title = "Local Snowflake"
     assert data[1].title == "Local Snowflake"
 
 
+def test_load_ai_runtime_config_toml(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-openai-key")
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "openai"
+default_model = "gpt-5"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-5", "gpt-4.1"]
+
+[[ai.providers]]
+id = "anthropic"
+base_url = "https://api.anthropic.com"
+api_key = "anthropic-key"
+models = ["claude-4-sonnet"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    default_provider, default_model, providers = _load_ai_runtime_config(config_path)
+    assert default_provider == "openai"
+    assert default_model == "gpt-5"
+    assert providers["openai"]["apiKey"] == "env-openai-key"
+    assert providers["openai"]["models"][0]["modelName"] == "gpt-5"
+    assert providers["anthropic"]["apiKey"] == "anthropic-key"
+
+
 def test_load_connector_config_rejects_duplicate_ids(tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(
@@ -80,6 +113,28 @@ user = "demo-user"
         assert "Duplicate connector id" in str(exc)
     else:
         raise AssertionError("Expected duplicate connector id failure")
+
+
+def test_load_ai_runtime_config_rejects_unknown_default_provider(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "missing"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+models = ["gpt-5"]
+""".strip(),
+        encoding="utf-8",
+    )
+    try:
+        _load_ai_runtime_config(config_path)
+    except RuntimeError as exc:
+        assert "default_provider" in str(exc)
+    else:
+        raise AssertionError("Expected invalid default provider failure")
 
 
 def test_resolve_config_path_prefers_explicit(tmp_path):

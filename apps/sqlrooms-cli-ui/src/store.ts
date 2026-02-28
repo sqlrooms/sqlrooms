@@ -98,6 +98,14 @@ export type RoomState = RoomShellSliceState &
   };
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const runtimeAiProviders =
+  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
+const defaultProviderFromConfig =
+  runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
+const defaultModelFromProvider =
+  runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
+const defaultModelFromConfig =
+  runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -130,23 +138,6 @@ function getRuntimeBridgeConfig():
   if (runtimeConfig.dbBridge?.connections?.length) {
     return runtimeConfig.dbBridge;
   }
-  // Legacy server fallback: only a Postgres bridge toggle was exposed.
-  if (runtimeConfig.postgresBridgeEnabled) {
-    return {
-      id: 'sqlrooms-cli-http-bridge',
-      connections: [
-        {
-          id: 'postgres-default',
-          engineId: 'postgres',
-          title: 'Postgres',
-          runtimeSupport: 'server',
-          requiresBridge: true,
-          bridgeId: 'sqlrooms-cli-http-bridge',
-          isCore: false,
-        },
-      ],
-    };
-  }
   return undefined;
 }
 
@@ -158,7 +149,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         room: BaseRoomConfig,
         layout: LayoutConfig,
         ai: AiSliceConfig,
-        aiSettings: AiSettingsSliceConfig,
+        // aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
@@ -240,14 +231,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createAiSettingsSlice({
-        config: {providers: {} as AiSettingsSliceConfig['providers']},
+        config: {providers: runtimeAiProviders},
       })(set, get, store),
 
       ...createAiSlice({
         config: AiSliceConfig.parse({sessions: []}),
-        defaultProvider: (runtimeConfig.llmProvider as any) || 'openai',
-        defaultModel: runtimeConfig.llmModel || 'gpt-4o-mini',
-        getApiKey: () => runtimeConfig.apiKey || '',
+        defaultProvider: defaultProviderFromConfig as any,
+        defaultModel: defaultModelFromConfig,
+        getApiKey: (provider) =>
+          runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
         getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
         getInstructions: () => createDefaultAiInstructions(store),
         tools: {

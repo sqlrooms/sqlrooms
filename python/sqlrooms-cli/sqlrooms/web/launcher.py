@@ -126,6 +126,7 @@ class SqlroomsHttpServer:
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
+        ai_providers: dict[str, dict[str, Any]] | None = None,
         connector_settings: list[
             PostgresConnectorSettings | SnowflakeConnectorSettings
         ] | None = None,
@@ -154,6 +155,7 @@ class SqlroomsHttpServer:
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.api_key = api_key
+        self.ai_providers = ai_providers or {}
         self.open_browser = open_browser
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -232,14 +234,13 @@ class SqlroomsHttpServer:
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
+            "aiProviders": self.ai_providers,
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
             "dbBridge": {
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
             },
-            # Backward-compatible flag for older UIs.
-            "postgresBridgeEnabled": self.db_bridge_registry.has_engine("postgres"),
         }
 
     def _build_app(self) -> FastAPI:

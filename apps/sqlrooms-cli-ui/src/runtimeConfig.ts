@@ -4,6 +4,14 @@ export type RuntimeConfig = {
   llmProvider?: string;
   llmModel?: string;
   apiKey?: string;
+  aiProviders?: Record<
+    string,
+    {
+      baseUrl: string;
+      apiKey: string;
+      models: Array<{modelName: string}>;
+    }
+  >;
   dbPath?: string;
   metaNamespace?: string;
   dbBridge?: {
@@ -18,9 +26,6 @@ export type RuntimeConfig = {
       isCore?: boolean;
     }>;
   };
-  // Backward-compatible fallback for older server versions.
-  postgresBridgeEnabled?: boolean;
-  postgresBridgeEnabled?: boolean;
 };
 
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {

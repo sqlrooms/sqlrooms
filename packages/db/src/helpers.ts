@@ -1,5 +1,5 @@
-import {CORE_DUCKDB_CONNECTION_ID} from './connectors/duckdb';
 import type * as arrow from 'apache-arrow';
+import {CORE_DUCKDB_CONNECTION_ID} from './connectors/duckdb';
 import type {DbSliceConfig, RuntimeSupport} from './types';
 
 export function isCoreDuckDbConnection(connectionId: string): boolean {
@@ -22,7 +22,7 @@ export function createDefaultDbConfig(
     coreMaterialization: {
       strategy: 'attached_ephemeral',
       schemaName: '__sqlrooms_external',
-      attachedDatabaseName: '__sqlrooms_external_ephemeral',
+      attachedDatabaseName: '__sqlrooms_ephemeral',
       ...config?.coreMaterialization,
     },
     connections: {

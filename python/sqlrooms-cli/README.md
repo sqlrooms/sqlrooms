@@ -9,10 +9,7 @@ Launch the SQLRooms AI example locally with a DuckDB websocket backend and persi
 uvx sqlrooms \
   ./sqlrooms.db \
   --ws-port 4000 \
-  --port 4173 \
-  --llm-provider openai \
-  --llm-model gpt-4o-mini \
-  --api-key sk-...
+  --port 4173
 ```
 
 What happens:
@@ -31,7 +28,6 @@ What happens:
 - `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
-- `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
 - `--config`: Optional path to a SQLRooms TOML config file for connectors.
@@ -46,9 +42,9 @@ Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` i
 
 Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
 
-## Connector config file
+## Config file
 
-`sqlrooms` can read connector defaults from a local TOML file:
+`sqlrooms` can read AI provider and connector settings from a local TOML file:
 
 - macOS/Linux: `$XDG_CONFIG_HOME/sqlrooms/config.toml` (or `~/.config/sqlrooms/config.toml`)
 - Windows: `%APPDATA%\sqlrooms\config.toml`
@@ -59,6 +55,22 @@ Override with `--config`, or disable with `--no-config`.
 Example `config.toml`:
 
 ```toml
+[ai]
+default_provider = "openai"
+default_model = "gpt-5"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-5", "gpt-4.1"]
+
+[[ai.providers]]
+id = "anthropic"
+base_url = "https://api.anthropic.com"
+api_key_env = "ANTHROPIC_API_KEY"
+models = ["claude-4-sonnet"]
+
 [[connectors]]
 id = "postgres-local"
 engine = "postgres"
@@ -172,4 +184,4 @@ Tips:
 
 - Use `--no-open-browser` if you don’t want the static bundle auto-opened.
 - Rebuild the UI (`pnpm --filter sqlrooms-cli-app build`) when you want the Python server to serve new static assets.
-- `/api/config` reflects CLI flags (provider/model/api key, WS URL).
+- `/api/config` reflects runtime config (AI providers/default model, DB bridge metadata, WS URL).
