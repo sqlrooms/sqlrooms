@@ -30,6 +30,7 @@ npx giget gh:sqlrooms/examples/get-started my-new-app/
 
 <!--@include: ../examples/query/README.md-->
 
+<!-- Multi-room section includes the updated sidebar-powered demo + description. -->
 <!--@include: ../examples/multi-room/README.md-->
 
 ## AI Assistant
