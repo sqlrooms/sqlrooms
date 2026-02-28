@@ -50,6 +50,13 @@ export function createDefaultCellRegistry(): CellRegistry {
         });
       },
       runCell: async ({id, opts, get, set}) => {
+        const ownerSheetId = findSheetIdForCell(get(), id);
+        if (ownerSheetId) {
+          // Recompute this SQL cell's dependencies on explicit run so graph state
+          // stays current without paying the cost on every keystroke.
+          await get().cells.updateEdgesFromSql(ownerSheetId, id);
+        }
+
         const controller = new AbortController();
         set((s) =>
           produce(s, (draft) => {
