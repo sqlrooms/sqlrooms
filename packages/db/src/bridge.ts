@@ -8,24 +8,6 @@ type HttpBridgeOptions = {
   headers?: Record<string, string>;
 };
 
-function decodeBase64ToBytes(value: string): Uint8Array {
-  if (typeof atob === 'function') {
-    const decoded = atob(value);
-    const bytes = new Uint8Array(decoded.length);
-    for (let i = 0; i < decoded.length; i += 1) {
-      bytes[i] = decoded.charCodeAt(i);
-    }
-    return bytes;
-  }
-  // Node.js fallback
-  const nodeBuffer = Buffer.from(value, 'base64');
-  return new Uint8Array(
-    nodeBuffer.buffer,
-    nodeBuffer.byteOffset,
-    nodeBuffer.byteLength,
-  );
-}
-
 export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
   const {id, baseUrl, runtimeSupport = 'both', headers = {}} = options;
 
@@ -78,19 +60,20 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
         },
       );
       if (!res.ok) {
-        throw new Error(`Bridge fetchArrow failed (${res.status})`);
-      }
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const body = (await res.json()) as {
-          arrowBase64?: string;
-          error?: string;
-        };
-        if (!body.arrowBase64) {
-          throw new Error(body.error || 'Bridge returned no Arrow payload');
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          let parsedError: string | undefined;
+          try {
+            const body = (await res.json()) as {error?: string};
+            parsedError = body.error;
+          } catch {
+            parsedError = undefined;
+          }
+          if (parsedError) {
+            throw new Error(parsedError);
+          }
         }
-        const bytes = decodeBase64ToBytes(body.arrowBase64);
-        return arrow.tableFromIPC(bytes);
+        throw new Error(`Bridge fetchArrow failed (${res.status})`);
       }
       const buffer = new Uint8Array(await res.arrayBuffer());
       return arrow.tableFromIPC(buffer);

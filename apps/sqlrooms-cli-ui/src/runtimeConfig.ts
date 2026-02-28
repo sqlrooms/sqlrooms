@@ -6,6 +6,7 @@ export type RuntimeConfig = {
   apiKey?: string;
   dbPath?: string;
   metaNamespace?: string;
+  postgresBridgeEnabled?: boolean;
 };
 
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {

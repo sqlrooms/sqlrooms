@@ -302,7 +302,6 @@ def init_meta_storage(namespace: str, attached_db_path: Optional[str] = None) ->
         """
     )
 
-
 def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) -> None:
     """Deprecated: use init_meta_storage(). Kept for internal back-compat."""
     init_meta_storage(namespace=namespace, attached_db_path=attached_db_path)

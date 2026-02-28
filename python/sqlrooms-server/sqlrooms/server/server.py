@@ -36,6 +36,25 @@ def _ws_send(ws, payload, opcode):
     return ok
 
 
+def _quote_ident(ident: str) -> str:
+    return '"' + ident.replace('"', '""') + '"'
+
+
+def _parse_framed_binary(message_bytes: bytes):
+    if len(message_bytes) < 4:
+        return None
+    header_len = int.from_bytes(message_bytes[:4], byteorder="big")
+    if header_len <= 0 or 4 + header_len > len(message_bytes):
+        return None
+    header_raw = message_bytes[4 : 4 + header_len]
+    try:
+        header = json.loads(header_raw.decode("utf-8"))
+    except Exception:
+        return None
+    payload = message_bytes[4 + header_len :]
+    return header, payload
+
+
 async def handle_query_ws(send, cache, query):
     start = time.time()
     query_id = query.get("queryId") or db_async.generate_query_id()
@@ -76,6 +95,48 @@ async def handle_query_ws(send, cache, query):
         send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
     total = round((time.time() - start) * 1_000)
     logger.info(f"DONE. Query took {total} ms.")
+
+
+async def handle_upload_arrow_ws(ws, header: dict, payload: bytes):
+    query_id = header.get("queryId") or db_async.generate_query_id()
+    table_name = header.get("tableName")
+    if not isinstance(table_name, str) or not table_name.strip():
+        ws.send(
+            {
+                "type": "error",
+                "queryId": query_id,
+                "error": "Missing tableName for uploadArrow",
+            },
+            OpCode.TEXT,
+        )
+        return
+
+    tmp_rel = "__sqlrooms_upload_" + str(query_id).replace("-", "_")
+    tmp_rel_q = _quote_ident(tmp_rel)
+    target_rel = table_name.strip()
+
+    def _upload(cur):
+        import pyarrow as pa
+
+        reader = pa.ipc.open_stream(payload)
+        table = reader.read_all()
+        cur.register(tmp_rel, table)
+        try:
+            cur.execute(
+                f"CREATE OR REPLACE TABLE {target_rel} AS SELECT * FROM {tmp_rel_q}"
+            )
+        finally:
+            try:
+                cur.unregister(tmp_rel)
+            except Exception:
+                pass
+
+    try:
+        await db_async.run_db_task(_upload, query_id=query_id)
+        ws.send({"type": "uploadAck", "queryId": query_id}, OpCode.TEXT)
+    except Exception as e:
+        logger.exception("Error handling Arrow upload")
+        ws.send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
 
 
 def on_error(error, res, req):
@@ -281,6 +342,14 @@ def server(
                 message_bytes = message.tobytes()
             else:
                 message_bytes = bytes(message)
+            parsed = _parse_framed_binary(message_bytes)
+            if (
+                parsed is not None
+                and isinstance(parsed[0], dict)
+                and parsed[0].get("type") == "uploadArrow"
+            ):
+                await handle_upload_arrow_ws(ws, parsed[0], parsed[1])
+                return
             if crdt_ws is not None:
                 try:
                     conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]

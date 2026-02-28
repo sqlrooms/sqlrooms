@@ -6,33 +6,33 @@ import {WebContainer} from '@webcontainer/api';
  */
 declare global {
   interface Window {
-    __webContainerInstance?: WebContainer;
-    __webContainerServerUrl?: string;
-    __webContainerBootPromise?: Promise<WebContainer>;
+    __webContainersInstance?: WebContainer;
+    __webContainersServerUrl?: string;
+    __webContainersBootPromise?: Promise<WebContainer>;
   }
 }
 
 export function getCachedWebContainer(): WebContainer | undefined {
   return typeof window !== 'undefined'
-    ? window.__webContainerInstance
+    ? window.__webContainersInstance
     : undefined;
 }
 
 export function setCachedWebContainer(instance: WebContainer): void {
   if (typeof window !== 'undefined') {
-    window.__webContainerInstance = instance;
+    window.__webContainersInstance = instance;
   }
 }
 
-export function getCachedServerUrl(): string | undefined {
+export function getCachedWebContainerServerUrl(): string | undefined {
   return typeof window !== 'undefined'
-    ? window.__webContainerServerUrl
+    ? window.__webContainersServerUrl
     : undefined;
 }
 
-export function setCachedServerUrl(url: string): void {
+export function setCachedWebContainerServerUrl(url: string): void {
   if (typeof window !== 'undefined') {
-    window.__webContainerServerUrl = url;
+    window.__webContainersServerUrl = url;
   }
 }
 
@@ -46,20 +46,20 @@ export async function bootWebContainer(): Promise<WebContainer> {
   }
 
   // Return existing instance
-  if (window.__webContainerInstance) {
-    return window.__webContainerInstance;
+  if (window.__webContainersInstance) {
+    return window.__webContainersInstance;
   }
 
   // Wait for in-progress boot
-  if (window.__webContainerBootPromise) {
-    return window.__webContainerBootPromise;
+  if (window.__webContainersBootPromise) {
+    return window.__webContainersBootPromise;
   }
 
   // Start new boot and cache the promise
-  window.__webContainerBootPromise = WebContainer.boot().then((instance) => {
-    window.__webContainerInstance = instance;
+  window.__webContainersBootPromise = WebContainer.boot().then((instance) => {
+    window.__webContainersInstance = instance;
     return instance;
   });
 
-  return window.__webContainerBootPromise;
+  return window.__webContainersBootPromise;
 }

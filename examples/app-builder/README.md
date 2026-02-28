@@ -5,7 +5,7 @@
 
 <video src="/media/examples/sqlrooms-ai-app-builder-2x.mp4" alt="SQLRooms AI App builder" width="450"  controls loop muted></video>
 
-A SQLRooms app that builds SQLRooms apps—demonstrating recursive bootstrapping. The outer app runs an AI assistant on the left and a code editor in the middle, while the right third hosts the inner app which compiles on the fly and executes in a browser-based virtual environment powered by [StackBlitz WebContainers](https://github.com/stackblitz/webcontainer-core).
+A SQLRooms app that builds SQLRooms apps—demonstrating recursive bootstrapping. The outer app runs an AI assistant on the left and a code editor in the middle, while the right third hosts the inner app which compiles on the fly and executes in a browser-based virtual environment powered by [StackBlitz WebContainer](https://github.com/stackblitz/webcontainer-core).
 
 Features:
 

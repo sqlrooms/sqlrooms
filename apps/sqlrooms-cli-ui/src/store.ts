@@ -19,6 +19,7 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
+import {createHttpDbBridge} from '@sqlrooms/db';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createNotebookSlice,
@@ -30,8 +31,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -40,19 +39,35 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {SpinnerPane} from '@sqlrooms/ui';
 import {createVegaChartTool} from '@sqlrooms/vega';
-import {DatabaseIcon} from 'lucide-react';
-import {createElement, Suspense} from 'react';
+import {
+  createWebContainerSlice,
+  WebContainerSliceConfig,
+  WebContainerSliceState,
+} from '@sqlrooms/webcontainer';
+import {produce} from 'immer';
 import {z} from 'zod';
 
-import {DataSourcesPanel} from './components/DataSourcesPanel';
-import {MainView} from './components/MainView';
+import {getDefaultScaffoldTree} from './helpers';
+import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 
-export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
-export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
+export const AppBuilderProjectConfig = z.object({
+  appsBySheetId: z
+    .record(
+      z.string(),
+      z.object({
+        name: z.string().default('Untitled App'),
+        prompt: z.string().default(''),
+        template: z.string().default('mosaic-dashboard'),
+        files: z.record(z.string(), z.string()).default({}),
+        updatedAt: z.number().default(0),
+      }),
+    )
+    .default({}),
+});
+export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
 
 export type RoomState = RoomShellSliceState &
   AiSliceState &
@@ -60,12 +75,29 @@ export type RoomState = RoomShellSliceState &
   AiSettingsSliceState &
   CellsSliceState &
   NotebookSliceState &
-  CanvasSliceState & {
+  CanvasSliceState &
+  WebContainerSliceState & {
+    appProject: {
+      config: AppBuilderProjectConfig;
+      upsertSheetApp: (
+        sheetId: string,
+        app: Partial<AppBuilderProjectConfig['appsBySheetId'][string]> & {
+          name: string;
+        },
+      ) => void;
+      updateSheetAppFiles: (
+        sheetId: string,
+        files: Record<string, string>,
+      ) => void;
+      getSheetApp: (
+        sheetId: string,
+      ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
+    };
     isAssistantOpen: boolean;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
   };
 
-const runtimeConfig = await fetchRuntimeConfig();
+export const runtimeConfig = await fetchRuntimeConfig();
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -94,12 +126,52 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         canvas: CanvasSliceConfig,
+        webContainer: WebContainerSliceConfig,
+        appProject: AppBuilderProjectConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
     },
     (set, get, store) => ({
+      appProject: {
+        config: AppBuilderProjectConfig.parse({}),
+        upsertSheetApp: (sheetId, app) => {
+          set(
+            produce((draft: RoomState) => {
+              const current = draft.appProject.config.appsBySheetId[
+                sheetId
+              ] ?? {
+                name: app.name,
+                prompt: '',
+                template: 'mosaic-dashboard',
+                files: {},
+                updatedAt: 0,
+              };
+              draft.appProject.config.appsBySheetId[sheetId] = {
+                ...current,
+                ...app,
+                updatedAt: Date.now(),
+              };
+            }),
+          );
+        },
+        updateSheetAppFiles: (sheetId, files) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const current = draft.appProject.config.appsBySheetId[sheetId];
+              if (!current) return;
+              draft.appProject.config.appsBySheetId[sheetId] = {
+                ...current,
+                files,
+                updatedAt: Date.now(),
+              };
+            }),
+          );
+        },
+        getSheetApp: (sheetId) =>
+          get().appProject.config.appsBySheetId[sheetId],
+      },
       isAssistantOpen: false,
       setAssistantOpen: (isAssistantOpen: boolean) => {
         set({isAssistantOpen});
@@ -108,55 +180,27 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         connector,
         config: {dataSources: []},
-        layout: {
-          config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: 'main',
-              splitPercentage: 20,
-            },
-          },
-          panels: {
-            [RoomPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
-              icon: DatabaseIcon,
-              component: DataSourcesPanel,
-              placement: 'sidebar',
-            },
-            // [RoomPanelTypes.enum.assistant]: {
-            //   title: 'Assistant',
-            //   icon: () => null,
-            //   component: AssistantPanel,
-            //   placement: 'sidebar',
-            // },
-            main: {
-              title: 'Main view',
-              icon: () => null,
-              component: () =>
-                createElement(Suspense, {
-                  fallback: createElement(SpinnerPane, {
-                    className: 'h-full w-full',
-                  }),
-                  children: createElement(MainView),
-                }),
-              placement: 'main',
-            },
-          },
-        },
+        layout: LAYOUT,
       })(set, get, store),
 
       ...createSqlEditorSlice()(set, get, store),
 
       ...createCellsSlice({
         cellRegistry: createDefaultCellRegistry(),
-        supportedSheetTypes: ['notebook', 'canvas'],
+        supportedSheetTypes: ['notebook', 'canvas', 'app'],
       })(set, get, store),
 
       ...createNotebookSlice()(set, get, store),
 
-      ...createCanvasSlice({})(set, get, store),
+      ...createCanvasSlice()(set, get, store),
+
+      ...createWebContainerSlice({
+        autoInitialize: false,
+        config: {
+          filesTree: getDefaultScaffoldTree(),
+          activeFilePath: '/src/App.jsx',
+        },
+      })(set, get, store),
 
       ...createAiSettingsSlice({
         config: {providers: {} as AiSettingsSliceConfig['providers']},
@@ -177,3 +221,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     }),
   ),
 );
+
+if (runtimeConfig.postgresBridgeEnabled) {
+  const postgresBridgeId = 'postgres-http-bridge';
+  roomStore.getState().db.connectors.registerBridge(
+    createHttpDbBridge({
+      id: postgresBridgeId,
+      baseUrl: runtimeConfig.apiBaseUrl || '',
+      runtimeSupport: 'server',
+    }),
+  );
+  roomStore.getState().db.connectors.registerConnection({
+    id: 'postgres',
+    engineId: 'postgres',
+    title: 'Postgres',
+    runtimeSupport: 'server',
+    requiresBridge: true,
+    bridgeId: postgresBridgeId,
+    isCore: false,
+  });
+}

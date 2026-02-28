@@ -180,7 +180,7 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
 /** Sheet and Edge types */
-export const SheetType = z.enum(['notebook', 'canvas']);
+export const SheetType = z.enum(['notebook', 'canvas', 'app']);
 export type SheetType = z.infer<typeof SheetType>;
 
 export const EdgeKind = z.enum(['dependency', 'manual']);
