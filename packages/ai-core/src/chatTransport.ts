@@ -22,6 +22,7 @@ import {AddToolResult} from './types';
 import {
   fixIncompleteToolCalls,
   mergeAbortSignals,
+  sanitizeMessagesForLLM,
   ToolAbortError,
 } from './utils';
 
@@ -200,7 +201,7 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
-        messages: convertToModelMessages(messagesCopy),
+        messages: convertToModelMessages(sanitizeMessagesForLLM(messagesCopy)),
         tools,
         system: systemInstructions,
         abortSignal,
@@ -319,7 +320,9 @@ export function createChatHandlers({
           const sessionMessages = (session?.uiMessages ?? []) as UIMessage[];
           const llmResult = await tool.execute(input, {
             toolCallId,
-            messages: convertToModelMessages(sessionMessages),
+            messages: convertToModelMessages(
+              sanitizeMessagesForLLM(sessionMessages),
+            ),
             abortSignal: abortController?.signal,
           });
 
