@@ -16,6 +16,7 @@ export {
   createDefaultMosaicConfig,
   createMosaicSlice,
   MosaicSliceConfig,
+  type MosaicSliceState,
   type MosaicClientOptions,
   type TrackedClient,
 } from './MosaicSlice';

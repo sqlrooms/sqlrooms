@@ -19,6 +19,8 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/layout-config": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
