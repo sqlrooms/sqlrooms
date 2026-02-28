@@ -127,7 +127,7 @@ function RoomContent({roomId, roomName}: {roomId: string; roomName: string}) {
   const onAddRoom = () => {
     const newRoom = {
       id: crypto.randomUUID(),
-      name: `Room ${roomOptions.length + 1}`,
+      name: `Room ${rooms.length + 1}`,
       defaultDataSources: [],
     };
     addRoom(newRoom);
