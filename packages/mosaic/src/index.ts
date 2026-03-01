@@ -9,6 +9,7 @@ export {
   Param,
   Selection,
 } from '@uwdata/mosaic-core';
+export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
 export {Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';

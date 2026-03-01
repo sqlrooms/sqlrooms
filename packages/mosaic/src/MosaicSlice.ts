@@ -348,24 +348,30 @@ export function useStoreWithMosaic<T>(
 
 function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
   return {
-    query: async (
+    query: (async (
       query: ArrowQueryRequest | ExecQueryRequest | JSONQueryRequest,
     ) => {
       const queryType = query.type ?? 'arrow';
       if (queryType === 'exec') {
         await connector.execute(query.sql);
-        return;
+        return undefined as any;
       }
       if (queryType === 'json') {
         const rows = await connector.queryJson<Record<string, unknown>>(
           query.sql,
         );
-        return Array.from(rows);
+        return Array.from(rows) as any;
       }
       if (queryType === 'arrow') {
-        return (await connector.query(query.sql)) as any;
+        // Mosaic expects flechette Arrow tables with `.toColumns()`.
+        // SQLRooms websocket connectors return Apache Arrow tables instead,
+        // so materialize to row objects for broad compatibility.
+        const rows = await connector.queryJson<Record<string, unknown>>(
+          query.sql,
+        );
+        return Array.from(rows) as any;
       }
       throw new Error(`Unsupported Mosaic query type "${queryType}".`);
-    },
+    }) as Connector['query'],
   };
 }

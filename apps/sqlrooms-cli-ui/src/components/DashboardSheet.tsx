@@ -1,6 +1,6 @@
 import {useCellsStore} from '@sqlrooms/cells';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {VgPlotChart} from '@sqlrooms/mosaic';
+import {astToDOM, parseSpec, VgPlotChart} from '@sqlrooms/mosaic';
 import type {Spec} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
 import {AlertCircle, SparklesIcon} from 'lucide-react';
@@ -25,6 +25,16 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function toRenderableMosaicSpec(
+  parsedValue: Record<string, unknown>,
+): Record<string, unknown> {
+  const mosaicSpec = {...parsedValue};
+  if ('$schema' in mosaicSpec) {
+    delete mosaicSpec.$schema;
+  }
+  return mosaicSpec;
+}
+
 function parseVgplotSpec(value: string): ParsedVgplotSpec {
   try {
     const parsed = JSON.parse(value) as unknown;
@@ -40,7 +50,9 @@ function parseVgplotSpec(value: string): ParsedVgplotSpec {
       };
     }
     return {
-      parsed: parsed as Spec,
+      parsed: toRenderableMosaicSpec(
+        parsed as Record<string, unknown>,
+      ) as unknown as Spec,
       formatted: JSON.stringify(parsed, null, 2),
       error: null,
     };
@@ -149,6 +161,13 @@ export const DashboardSheet: React.FC = () => {
   const canApply = Boolean(
     currentSheetId && parsedEditorSpec.formatted && isDirty,
   );
+  const [compiledPlot, setCompiledPlot] = React.useState<
+    HTMLElement | SVGSVGElement | null
+  >(null);
+  const [isCompilingPlot, setIsCompilingPlot] = React.useState(false);
+  const [plotCompileError, setPlotCompileError] = React.useState<string | null>(
+    null,
+  );
 
   const applyChanges = React.useCallback(() => {
     if (!currentSheetId || !parsedEditorSpec.formatted) return;
@@ -156,6 +175,37 @@ export const DashboardSheet: React.FC = () => {
     setLastAppliedValue(parsedEditorSpec.formatted);
     setEditorValue(parsedEditorSpec.formatted);
   }, [currentSheetId, parsedEditorSpec.formatted, setSheetVgplot]);
+
+  React.useEffect(() => {
+    if (mosaicConnection.status !== 'ready' || !previewSpec) {
+      setCompiledPlot(null);
+      setPlotCompileError(null);
+      setIsCompilingPlot(false);
+      return;
+    }
+    let cancelled = false;
+    setIsCompilingPlot(true);
+    setPlotCompileError(null);
+    void (async () => {
+      try {
+        const ast = await parseSpec(previewSpec);
+        const instantiated = await astToDOM(ast);
+        if (cancelled) return;
+        setCompiledPlot(instantiated.element);
+      } catch (error) {
+        if (cancelled) return;
+        setCompiledPlot(null);
+        setPlotCompileError(getErrorMessage(error));
+      } finally {
+        if (!cancelled) {
+          setIsCompilingPlot(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mosaicConnection.status, previewSpec]);
 
   if (!currentSheetId) {
     return null;
@@ -224,19 +274,25 @@ export const DashboardSheet: React.FC = () => {
             </div>
           )}
           {mosaicConnection.status === 'ready' &&
-            (previewSpec ? (
-              <VgPlotChart spec={previewSpec} />
+            (isCompilingPlot ? (
+              <SpinnerPane className="h-full w-full" />
+            ) : compiledPlot ? (
+              <div className="inline-block min-w-full rounded-md border bg-white p-2 text-black">
+                <VgPlotChart plot={compiledPlot} />
+              </div>
             ) : (
               <div className="text-muted-foreground text-sm">
-                No valid dashboard spec to preview yet.
+                {plotCompileError
+                  ? 'Unable to render dashboard from the current vgplot spec.'
+                  : 'No valid dashboard spec to preview yet.'}
               </div>
             ))}
         </div>
       </div>
-      {previewError && (
+      {(previewError || plotCompileError) && (
         <div className="bg-destructive/90 text-destructive-foreground flex items-center gap-2 px-3 py-2 text-xs">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span className="truncate">{previewError}</span>
+          <span className="truncate">{previewError ?? plotCompileError}</span>
         </div>
       )}
     </div>

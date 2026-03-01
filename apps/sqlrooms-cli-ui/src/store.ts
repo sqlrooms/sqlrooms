@@ -85,20 +85,30 @@ export const DEFAULT_DASHBOARD_VGPLOT_SPEC = JSON.stringify(
     data: {
       sample: {
         type: 'table',
-        query: 'SELECT 1 AS x, 1 AS y',
+        query: `
+          SELECT * FROM (
+            VALUES
+              ('A', 12),
+              ('B', 26),
+              ('C', 18),
+              ('D', 9)
+          ) AS t(category, amount)
+        `,
       },
     },
     plot: [
       {
-        mark: 'dot',
+        mark: 'barY',
         data: {from: 'sample'},
-        x: 'x',
-        y: 'y',
-        r: 6,
+        x: 'category',
+        y: 'amount',
+        fill: 'category',
       },
     ],
-    width: 420,
-    height: 280,
+    xLabel: 'Category',
+    yLabel: 'Amount',
+    width: 560,
+    height: 320,
   },
   null,
   2,
