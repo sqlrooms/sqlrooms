@@ -31,6 +31,7 @@ export type RuntimeConfig = {
       title: string;
       available: boolean;
       error?: string;
+      reason?: string;
       requiredPackages?: string[];
       installCommands?: {
         uvProject?: string;

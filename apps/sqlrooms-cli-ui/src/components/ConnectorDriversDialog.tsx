@@ -8,11 +8,16 @@ import {
   useToast,
 } from '@sqlrooms/ui';
 import React from 'react';
-import {runtimeConfig} from '../store';
+import {useRoomStore} from '../store';
 
-type ConnectorDiagnostic = NonNullable<
-  NonNullable<typeof runtimeConfig.dbBridge>['diagnostics']
->[number];
+type ConnectorDiagnostic = ReturnType<
+  typeof useRoomStore.getState
+>['connectorDriverDiagnostics'][number];
+
+const selectMissingConnectorDiagnostics = (
+  state: ReturnType<typeof useRoomStore.getState>,
+) =>
+  state.connectorDriverDiagnostics.filter((item) => item.available === false);
 
 function DriverInstallCommands({
   diagnostic,
@@ -69,13 +74,7 @@ function DriverInstallCommands({
 }
 
 export const ConnectorDriversDialog: React.FC = () => {
-  const missingConnectors = React.useMemo(
-    () =>
-      (runtimeConfig.dbBridge?.diagnostics || []).filter(
-        (item) => item.available === false,
-      ),
-    [],
-  );
+  const missingConnectors = useRoomStore(selectMissingConnectorDiagnostics);
 
   if (!missingConnectors.length) {
     return null;

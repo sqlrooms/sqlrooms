@@ -77,6 +77,20 @@ export type RoomState = RoomShellSliceState &
   NotebookSliceState &
   CanvasSliceState &
   WebContainerSliceState & {
+    connectorDriverDiagnostics: Array<{
+      id: string;
+      engineId: string;
+      title: string;
+      available: boolean;
+      error?: string;
+      reason?: string;
+      requiredPackages?: string[];
+      installCommands?: {
+        uvProject?: string;
+        uvxRelaunch?: string;
+        uvxWith?: string;
+      };
+    }>;
     appProject: {
       config: AppBuilderProjectConfig;
       upsertSheetApp: (
@@ -206,6 +220,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         getSheetApp: (sheetId) =>
           get().appProject.config.appsBySheetId[sheetId],
       },
+      connectorDriverDiagnostics: runtimeConfig.dbBridge?.diagnostics || [],
       isAssistantOpen: false,
       setAssistantOpen: (isAssistantOpen: boolean) => {
         set({isAssistantOpen});

@@ -71,7 +71,30 @@ class SnowflakeBridgeConnector(BaseSqlBridgeConnector):
         return snowflake.connector.connect(**kwargs)
 
     def dependency_diagnostics(self) -> dict[str, Any]:
-        available = importlib.util.find_spec("snowflake.connector") is not None
+        try:
+            available = importlib.util.find_spec("snowflake.connector") is not None
+        except ModuleNotFoundError as exc:
+            return {
+                "available": False,
+                "reason": (
+                    f"Failed to inspect dependency via "
+                    f"find_spec('snowflake.connector'): {exc}"
+                ),
+                "error": "Missing Python dependency: snowflake-connector-python",
+                "requiredPackages": ["snowflake-connector-python>=4.3.0"],
+                "installCommands": {
+                    "uvProject": "uv sync --extra snowflake",
+                    "uvxRelaunch": (
+                        'uvx --from "sqlrooms-cli[snowflake]" sqlrooms '
+                        "--db-path :memory:"
+                    ),
+                    "uvxWith": (
+                        'uvx --from sqlrooms-cli --with '
+                        '"snowflake-connector-python>=4.3.0" '
+                        "sqlrooms --db-path :memory:"
+                    ),
+                },
+            }
         if available:
             return {"available": True}
         return {

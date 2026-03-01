@@ -2,6 +2,7 @@ import pytest
 
 from sqlrooms.web.db_bridge import (
     DbBridgeRegistry,
+    SnowflakeBridgeConnector,
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
@@ -79,6 +80,27 @@ def test_registry_raises_for_unknown_connection():
     registry = DbBridgeRegistry(bridge_id="bridge-id")
     with pytest.raises(UnknownBridgeConnectionError):
         registry.test_connection("unknown")
+
+
+def test_registry_rejects_duplicate_connection_id():
+    registry = DbBridgeRegistry(bridge_id="bridge-id")
+    registry.register(_FakeConnector())
+    with pytest.raises(ValueError, match="Duplicate DB bridge connection id"):
+        registry.register(_FakeConnector())
+
+
+def test_snowflake_dependency_diagnostics_handles_find_spec_errors(monkeypatch):
+    connector = SnowflakeBridgeConnector(settings=SnowflakeConnectorSettings())
+
+    def _raise_module_not_found(name: str):
+        _ = name
+        raise ModuleNotFoundError("broken parent package import")
+
+    monkeypatch.setattr("importlib.util.find_spec", _raise_module_not_found)
+    payload = connector.dependency_diagnostics()
+    assert payload["available"] is False
+    assert "reason" in payload
+    assert "snowflake.connector" in payload["reason"]
 
 
 def test_snowflake_settings_requires_account_and_user():

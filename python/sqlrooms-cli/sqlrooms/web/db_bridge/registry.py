@@ -15,6 +15,10 @@ class DbBridgeRegistry:
         self._connectors: dict[str, DbBridgeConnector] = {}
 
     def register(self, connector: DbBridgeConnector) -> None:
+        if connector.connection_id in self._connectors:
+            raise ValueError(
+                f"Duplicate DB bridge connection id: {connector.connection_id}"
+            )
         self._connectors[connector.connection_id] = connector
 
     def has_connections(self) -> bool:
