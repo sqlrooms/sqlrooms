@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
-from ..utils import cursor_columns, quoted_ident, rows_to_arrow_bytes, rows_to_json_rows
+from ..utils import cursor_columns, quoted_ident, rows_to_json_rows
+from .base import BaseSqlBridgeConnector
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,7 @@ class SnowflakeConnectorSettings:
 
 
 @dataclass(frozen=True)
-class SnowflakeBridgeConnector:
+class SnowflakeBridgeConnector(BaseSqlBridgeConnector):
     settings: SnowflakeConnectorSettings
     engine_id: str = "snowflake"
 
@@ -90,13 +91,6 @@ class SnowflakeBridgeConnector:
                 ),
             },
         }
-
-    def test_connection(self) -> bool:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-        return True
 
     def list_catalog(self) -> dict[str, list[dict[str, Any]]]:
         with self._connect() as conn:
@@ -153,38 +147,3 @@ class SnowflakeBridgeConnector:
 
         return {"databases": databases, "schemas": schemas, "tables": tables}
 
-    def execute_query(self, sql: str, query_type: str) -> dict[str, Any]:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                if query_type == "exec":
-                    return {"ok": True}
-                rows = cur.fetchall()
-                columns = cursor_columns(cur)
-                return {"jsonData": rows_to_json_rows(rows, columns)}
-
-    def fetch_arrow_bytes(self, sql: str) -> bytes:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                rows = cur.fetchall()
-                columns = cursor_columns(cur)
-                return rows_to_arrow_bytes(rows, columns)
-
-    def stream_arrow_batches(
-        self, sql: str, chunk_rows: int = 5000, query_id: str | None = None
-    ) -> Iterable[bytes]:
-        _ = query_id
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                columns = cursor_columns(cur)
-                while True:
-                    rows = cur.fetchmany(max(1, int(chunk_rows)))
-                    if not rows:
-                        break
-                    yield rows_to_arrow_bytes(rows, columns)
-
-    def cancel_query(self, query_id: str) -> bool:
-        _ = query_id
-        return False
