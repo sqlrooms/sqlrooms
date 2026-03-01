@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/cells",
-  "version": "0.0.0",
+  "version": "0.28.1-rc.1",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
-    "@tanstack/react-table": "^8.21.3",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
@@ -36,10 +35,11 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
+    "@tanstack/react-table": "^8.21.3",
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
-    "monaco-editor": "^0.55.1",
     "lucide-react": "^0.555.0",
+    "monaco-editor": "^0.55.1",
     "react-hook-form": "^7.68.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",

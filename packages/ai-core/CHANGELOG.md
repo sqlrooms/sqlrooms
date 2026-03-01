@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Bug Fixes
+
+* sanitize UIMessages before sending to LLM to prevent empty content errors ([#404](https://github.com/sqlrooms/sqlrooms/issues/404)) ([635fbbb](https://github.com/sqlrooms/sqlrooms/commit/635fbbb5c3cedd4bcd7ab4eed94199a8fe022528))
+
+### Features
+
+* Create sqlrooms notebook package ([#131](https://github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](https://github.com/sqlrooms/sqlrooms/commit/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+
 ## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
 
 ### Bug Fixes

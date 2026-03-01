@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/notebook",
-  "version": "0.0.0",
+  "version": "0.28.1-rc.1",
   "private": true,
   "type": "module",
   "author": "SQLRooms Contributors",
