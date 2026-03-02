@@ -124,9 +124,8 @@ function createKeplerCommands(): RoomCommand<
         riskLevel: 'low',
       },
       execute: ({getState}) => {
-        const state = getState();
-        const currentMapId = state.kepler.config.currentMapId;
-        const sourceMap = state.kepler.config.maps.find(
+        const currentMapId = getState().kepler.config.currentMapId;
+        const sourceMap = getState().kepler.config.maps.find(
           (m) => m.id === currentMapId,
         );
 
@@ -140,8 +139,9 @@ function createKeplerCommands(): RoomCommand<
         }
 
         // Ensure the map's redux state is registered before attempting to duplicate
-        state.kepler.registerKeplerMapIfNotExists(currentMapId);
-        const sourceMapState = state.kepler.map[currentMapId];
+        getState().kepler.registerKeplerMapIfNotExists(currentMapId);
+        // Re-read state after registration to avoid stale state
+        const sourceMapState = getState().kepler.map[currentMapId];
 
         if (!sourceMapState) {
           return {
@@ -152,7 +152,7 @@ function createKeplerCommands(): RoomCommand<
           };
         }
 
-        state.kepler.duplicateMap(currentMapId);
+        getState().kepler.duplicateMap(currentMapId);
         return {
           success: true,
           commandId: 'kepler.tab.duplicate',
@@ -545,6 +545,9 @@ export function createKeplerSlice({
         },
 
         duplicateMap: (mapId) => {
+          // Ensure the map's redux state is registered, consistent with other kepler actions
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+
           const sourceMap = get().kepler.config.maps.find(
             (m) => m.id === mapId,
           );
