@@ -111,7 +111,7 @@ export function createDefaultKeplerConfig(
 function createKeplerCommands(): RoomCommand<
   BaseRoomStoreState & KeplerSliceState & DbSliceState
 >[] {
-  const DUPLICATE_TAB_COMMAND_ID = 'kepler.tab.duplicate';
+  const DUPLICATE_MAP_COMMAND_ID = 'kepler.duplicate-tab';
 
   // Error codes for internal tracking/logging
   const ERROR_CODES = {
@@ -121,7 +121,7 @@ function createKeplerCommands(): RoomCommand<
 
   return [
     {
-      id: DUPLICATE_TAB_COMMAND_ID,
+      id: DUPLICATE_MAP_COMMAND_ID,
       name: 'Duplicate Tab',
       description: 'Duplicate the current map tab',
       group: 'Kepler',
@@ -140,9 +140,9 @@ function createKeplerCommands(): RoomCommand<
         if (!sourceMap) {
           return {
             success: false,
-            commandId: DUPLICATE_TAB_COMMAND_ID,
+            commandId: DUPLICATE_MAP_COMMAND_ID,
             message: 'Unable to duplicate map: current map not found',
-            error: ERROR_CODES.MAP_NOT_FOUND,
+            code: ERROR_CODES.MAP_NOT_FOUND,
           };
         }
 
@@ -154,16 +154,26 @@ function createKeplerCommands(): RoomCommand<
         if (!sourceMapState) {
           return {
             success: false,
-            commandId: DUPLICATE_TAB_COMMAND_ID,
+            commandId: DUPLICATE_MAP_COMMAND_ID,
             message: 'Unable to duplicate map: map state not initialized',
-            error: ERROR_CODES.MAP_STATE_NOT_INITIALIZED,
+            code: ERROR_CODES.MAP_STATE_NOT_INITIALIZED,
           };
         }
 
-        await getState().kepler.duplicateMap(currentMapId);
+        const duplicateResult =
+          await getState().kepler.duplicateMap(currentMapId);
+        if (!duplicateResult.success) {
+          return {
+            success: false,
+            commandId: DUPLICATE_MAP_COMMAND_ID,
+            message: duplicateResult.message,
+            code: duplicateResult.code,
+          };
+        }
+
         return {
           success: true,
-          commandId: DUPLICATE_TAB_COMMAND_ID,
+          commandId: DUPLICATE_MAP_COMMAND_ID,
           message: 'Duplicated map tab',
         };
       },
@@ -235,7 +245,9 @@ export type KeplerSliceState = {
      */
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
-    duplicateMap: (mapId: string) => Promise<void>;
+    duplicateMap: (
+      mapId: string,
+    ) => Promise<{success: boolean; message?: string; code?: string}>;
     renameMap: (mapId: string, name: string) => void;
     closeMap: (mapId: string) => void;
     setOpenTabs: (tabIds: string[]) => void;
@@ -560,7 +572,13 @@ export function createKeplerSlice({
             (m) => m.id === mapId,
           );
           const sourceMapState = get().kepler.map[mapId];
-          if (!sourceMap || !sourceMapState) return;
+          if (!sourceMap || !sourceMapState) {
+            return {
+              success: false,
+              message: 'Unable to duplicate map: source map or state not found',
+              code: 'SOURCE_MAP_NOT_FOUND',
+            };
+          }
 
           const newMapId = createId();
           const now = Date.now();
@@ -593,6 +611,11 @@ export function createKeplerSlice({
           get().kepler.addConfigToMap(newMapId, savedConfig as any);
           requestMapStyle(newMapId);
           await get().kepler.syncKeplerDatasets();
+
+          return {
+            success: true,
+            message: 'Map duplicated successfully',
+          };
         },
 
         renameMap: (mapId, name) => {
