@@ -2,31 +2,42 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import socket
 import tempfile
 import threading
 import webbrowser
+import json
 from pathlib import Path
 from typing import Any, Dict
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from diskcache import Cache
 from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
+from .db_bridge import (
+    PostgresConnectorSettings,
+    SnowflakeConnectorSettings,
+    UnknownBridgeConnectionError,
+    build_cli_db_bridge_registry,
+)
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
+DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 
 
 def _sanitize_filename(name: str) -> str:
     safe = os.path.basename(name.strip().replace("\\", "/"))
     return safe or "upload.dat"
+
 
 def _pick_free_port(host: str) -> int:
     """
@@ -49,6 +60,58 @@ def _pick_free_port(host: str) -> int:
         sock.close()
 
 
+def _normalize_sql_for_policy(sql: str) -> str:
+    normalized = sql.strip()
+    if normalized.endswith(";"):
+        normalized = normalized[:-1].strip()
+    return normalized
+
+
+def _redact_sql_literals(sql: str) -> str:
+    # Redact quoted strings and numeric literals before logging user SQL.
+    redacted = re.sub(r"'(?:''|[^'])*'", "'***'", sql)
+    redacted = re.sub(r'"(?:""|[^"])*"', '"***"', redacted)
+    redacted = re.sub(r"\b\d+(?:\.\d+)?\b", "?", redacted)
+    return redacted
+
+
+def _is_select_only_sql(sql: str) -> bool:
+    normalized = _normalize_sql_for_policy(sql)
+    if not normalized:
+        return False
+    # One statement only.
+    if ";" in normalized:
+        return False
+    return bool(re.match(r"^(select|with)\s", normalized, re.IGNORECASE))
+
+
+def _references_internal_namespace(sql: str, namespace: str) -> bool:
+    escaped = re.escape(namespace)
+    pattern = re.compile(
+        rf"(^|[^A-Za-z0-9_])(?:{escaped}|\"{escaped}\"|`{escaped}`|\[{escaped}\])\s*\.",
+        re.IGNORECASE,
+    )
+    return bool(pattern.search(sql))
+
+
+def _encode_stream_frame(
+    frame_type: str,
+    *,
+    query_id: str,
+    payload: bytes = b"",
+    error: str | None = None,
+) -> bytes:
+    header = {
+        "type": frame_type,
+        "queryId": query_id,
+        "payloadLength": len(payload),
+    }
+    if error:
+        header["error"] = error
+    header_bytes = json.dumps(header).encode("utf-8")
+    return len(header_bytes).to_bytes(4, byteorder="big") + header_bytes + payload
+
+
 class SqlroomsHttpServer:
     def __init__(
         self,
@@ -63,6 +126,10 @@ class SqlroomsHttpServer:
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
+        ai_providers: dict[str, dict[str, Any]] | None = None,
+        connector_settings: list[
+            PostgresConnectorSettings | SnowflakeConnectorSettings
+        ] | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
     ):
@@ -88,10 +155,15 @@ class SqlroomsHttpServer:
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.api_key = api_key
+        self.ai_providers = ai_providers or {}
         self.open_browser = open_browser
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
+        self.db_bridge_registry = build_cli_db_bridge_registry(
+            bridge_id=DB_BRIDGE_ID,
+            connector_settings=connector_settings,
+        )
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -162,8 +234,13 @@ class SqlroomsHttpServer:
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
+            "aiProviders": self.ai_providers,
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
+            "dbBridge": {
+                "id": self.db_bridge_registry.bridge_id,
+                "connections": self.db_bridge_registry.runtime_connections(),
+            },
         }
 
     def _build_app(self) -> FastAPI:
@@ -175,6 +252,17 @@ class SqlroomsHttpServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+        @app.middleware("http")
+        async def add_cross_origin_isolation_headers(
+            request: Request, call_next
+        ):
+            response = await call_next(request)
+            # WebContainer requires cross-origin isolation to transfer SharedArrayBuffer.
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+            response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+            response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+            return response
 
         @app.get("/api/config")
         async def get_config():
@@ -192,6 +280,181 @@ class SqlroomsHttpServer:
             with open(target, "wb") as f:
                 f.write(content)
             return {"path": str(target)}
+
+        @app.post("/api/db/test-connection")
+        async def test_connection(payload: Dict[str, Any]):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return {"ok": False, "error": "connectionId is required"}
+            try:
+                ok = self.db_bridge_registry.test_connection(connection_id)
+                return {"ok": bool(ok)}
+            except UnknownBridgeConnectionError as exc:
+                return {"ok": False, "error": str(exc)}
+            except Exception as exc:
+                return {"ok": False, "error": str(exc)}
+
+        @app.post("/api/db/list-catalog")
+        async def list_catalog(payload: Dict[str, Any]):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return {
+                    "databases": [],
+                    "schemas": [],
+                    "tables": [],
+                    "error": "connectionId is required",
+                }
+            try:
+                return self.db_bridge_registry.list_catalog(connection_id)
+            except UnknownBridgeConnectionError as exc:
+                return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
+            except Exception as exc:
+                return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
+
+        @app.post("/api/db/execute-query")
+        async def execute_query(payload: Dict[str, Any]):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+            sql = payload.get("sql", "")
+            query_type = payload.get("queryType", "json")
+            if query_type not in {"json", "exec"}:
+                return JSONResponse(
+                    {"error": "queryType must be either 'json' or 'exec'"},
+                    status_code=400,
+                )
+            if not isinstance(sql, str) or not sql.strip():
+                return JSONResponse({"error": "sql is required"}, status_code=400)
+            try:
+                return self.db_bridge_registry.execute_query(
+                    connection_id=connection_id,
+                    sql=sql,
+                    query_type=query_type,
+                )
+            except UnknownBridgeConnectionError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=404)
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=500)
+
+        @app.post("/api/db/fetch-arrow")
+        async def fetch_arrow(payload: Dict[str, Any]):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+            sql = payload.get("sql", "")
+            if not isinstance(sql, str) or not sql.strip():
+                return JSONResponse({"error": "sql is required"}, status_code=400)
+            try:
+                arrow_bytes = self.db_bridge_registry.fetch_arrow_bytes(
+                    connection_id=connection_id,
+                    sql=sql,
+                )
+                return Response(
+                    content=arrow_bytes, media_type="application/vnd.apache.arrow.stream"
+                )
+            except UnknownBridgeConnectionError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=404)
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=500)
+
+        @app.post("/api/db/fetch-arrow-stream")
+        async def fetch_arrow_stream(payload: Dict[str, Any], request: Request):
+            connection_id = payload.get("connectionId")
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+            sql = payload.get("sql", "")
+            if not isinstance(sql, str) or not sql.strip():
+                return JSONResponse({"error": "sql is required"}, status_code=400)
+            query_id = payload.get("queryId")
+            if not isinstance(query_id, str) or not query_id.strip():
+                query_id = f"bridge_{os.urandom(8).hex()}"
+            chunk_rows = payload.get("chunkRows")
+            if not isinstance(chunk_rows, int) or chunk_rows <= 0:
+                chunk_rows = 5000
+
+            async def _stream():
+                try:
+                    for batch in self.db_bridge_registry.stream_arrow_batches(
+                        connection_id=connection_id,
+                        sql=sql,
+                        chunk_rows=chunk_rows,
+                        query_id=query_id,
+                    ):
+                        if await request.is_disconnected():
+                            break
+                        yield _encode_stream_frame(
+                            "batch", query_id=query_id, payload=batch
+                        )
+                    yield _encode_stream_frame("end", query_id=query_id)
+                except UnknownBridgeConnectionError as exc:
+                    yield _encode_stream_frame(
+                        "error", query_id=query_id, error=str(exc)
+                    )
+                except Exception as exc:
+                    yield _encode_stream_frame(
+                        "error", query_id=query_id, error=str(exc)
+                    )
+
+            return StreamingResponse(
+                _stream(), media_type="application/octet-stream"
+            )
+
+        @app.post("/api/db/cancel-query")
+        async def cancel_query(payload: Dict[str, Any]):
+            query_id = payload.get("queryId")
+            connection_id = payload.get("connectionId")
+            if not isinstance(query_id, str) or not query_id.strip():
+                return {"cancelled": False, "error": "queryId is required"}
+            if not isinstance(connection_id, str) or not connection_id.strip():
+                return {"cancelled": False}
+            try:
+                cancelled = self.db_bridge_registry.cancel_query(
+                    connection_id=connection_id,
+                    query_id=query_id,
+                )
+                return {"cancelled": bool(cancelled)}
+            except UnknownBridgeConnectionError:
+                return {"cancelled": False}
+            except Exception:
+                return {"cancelled": False}
+
+        @app.post("/api/project/query")
+        async def project_query(payload: Dict[str, Any]):
+            sql = str(payload.get("sql") or "")
+            if not _is_select_only_sql(sql):
+                return JSONResponse(
+                    {"error": "Only SELECT statements are allowed"},
+                    status_code=400,
+                )
+            if _references_internal_namespace(sql, self.meta_namespace):
+                return JSONResponse(
+                    {"error": f"Access to internal schema {self.meta_namespace} is denied"},
+                    status_code=403,
+                )
+
+            logger.debug(
+                "project_query sql=%s",
+                _redact_sql_literals(_normalize_sql_for_policy(sql))[:2000],
+            )
+
+            def _run(cur):
+                cur.execute(sql)
+                columns = [d[0] for d in (cur.description or [])]
+                fetched = cur.fetchmany(5001)
+                truncated = len(fetched) > 5000
+                limited = fetched[:5000]
+                return {
+                    "columns": columns,
+                    "rows": [dict(zip(columns, row)) for row in limited],
+                    "rowCount": len(limited),
+                    "truncated": truncated,
+                }
+
+            try:
+                data = await db_async.run_db_task(_run)
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+            return data
 
         if self.static_dir.exists():
             app.mount(
@@ -241,4 +504,3 @@ class SqlroomsHttpServer:
             )
         finally:
             signal.signal = original_signal  # type: ignore
-

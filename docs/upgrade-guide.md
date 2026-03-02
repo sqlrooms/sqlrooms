@@ -8,6 +8,186 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.29.0 (upcoming)
+
+### `@sqlrooms/ui`: `toast` export now uses Sonner (breaking)
+
+The top-level `toast` export from `@sqlrooms/ui` now points to Sonner's API.
+
+- **Before**: `toast({...})` used SQLRooms' legacy Radix-based object API.
+- **After**: `toast.success(...)`, `toast.error(...)`, etc. use Sonner.
+
+If you still need the old API temporarily, import `legacyToast` from `@sqlrooms/ui`.
+
+#### Before
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
+#### After (Sonner)
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast.success('Table created', {
+  description: 'File loaded',
+});
+```
+
+#### Temporary compatibility option
+
+```tsx
+import {legacyToast} from '@sqlrooms/ui';
+
+legacyToast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
+## 0.28.0
+
+### Tailwind v3 to v4
+
+Tailwind in SQLRooms is now upgraded from v3 to v4.
+
+For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
+
+You can use the official migration tool directly in your repository:
+
+```sh
+npx @tailwindcss/upgrade
+```
+
+#### Manual steps
+
+The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
+
+##### Step 1
+
+Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+
+```css
+/* index.css */
+
+@import 'tailwindcss';
+
+@import '@sqlrooms/ui/tailwind-preset.css';
+
+@source '../index.html';
+@source './**/*.{ts,tsx}';
+@source '../node_modules/@sqlrooms/*/dist/';
+
+/* styles */
+```
+
+##### Step 2
+
+Remove `tailwind.config.js`
+
+##### Step 3
+
+Remove `@layer base { ... }` from `index.css`
+
+Before:
+
+```css
+/* index.css */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    /* ... */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    /* ... */
+  }
+}
+```
+
+After:
+
+```css
+/* index.css */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  /* ... */
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  /* ... */
+}
+```
+
+##### Step 4: For Vite projects
+
+- Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
+
+```bash
+pnpm add -D @tailwindcss/vite
+```
+
+```javascript
+// vite.config.js
+
+import {defineConfig} from 'vite';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+});
+```
+
+- Remove `autoprefixer` and `postcss`
+- Remove `postcss.config.js`
+
+##### Step 4: For NextJS projects
+
+Update `postcss.config.js`
+
+Before:
+
+```javascript
+// postcss.config.js
+
+const config = {
+  plugins: ['@tailwindcss/postcss'],
+};
+
+export default config;
+```
+
+After:
+
+```javascript
+// postcss.config.js
+
+const config = {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};
+export default config;
+```
+
 ## 0.27.0-rc.0
 
 ### @sqlrooms/mosaic
@@ -135,7 +315,9 @@ await useRoomStore.getState().ai.startAnalysis(sendMessage);
 const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
 const sessionId = currentSession?.id;
 
-const prompt = useRoomStore((s) => (sessionId ? s.ai.getPrompt(sessionId) : ''));
+const prompt = useRoomStore((s) =>
+  sessionId ? s.ai.getPrompt(sessionId) : '',
+);
 const isRunning = useRoomStore((s) =>
   sessionId ? s.ai.getIsRunning(sessionId) : false,
 );
@@ -289,6 +471,7 @@ This release focuses on standardizing terminology across the codebase and improv
   <RoomShell.Sidebar />
   <RoomShell.LayoutComposer />
   <RoomShell.LoadingProgress />
+  <RoomShell.CommandPalette />
 </RoomShell>
 ```
 

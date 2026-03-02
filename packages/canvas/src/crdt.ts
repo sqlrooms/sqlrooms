@@ -4,33 +4,30 @@ import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
 
 /**
  * Mirror schema for syncing the `@sqlrooms/canvas` slice via `@sqlrooms/crdt`.
- *
- * This is intentionally exported from a separate entrypoint (`@sqlrooms/canvas/crdt`)
- * so consumer apps only pull `loro-mirror` when they opt into CRDT sync.
  */
 export const canvasMirrorSchema = schema.LoroMap({
   config: schema.LoroMap({
-    nodes: schema.LoroList(
+    sheets: schema.LoroList(
       schema.LoroMap({
         id: schema.String(),
-        position: schema.LoroMap({
-          x: schema.Number(),
-          y: schema.Number(),
+        nodes: schema.LoroList(
+          schema.LoroMap({
+            id: schema.String(),
+            position: schema.LoroMap({
+              x: schema.Number(),
+              y: schema.Number(),
+            }),
+            width: schema.Number(),
+            height: schema.Number(),
+          }),
+          (node) => node.id,
+        ),
+        meta: schema.LoroMap({
+          nodeOrder: schema.LoroList(schema.String()),
+          // viewport is kept local (unsynced)
         }),
-        type: schema.String(),
-        data: schema.Any(),
-        width: schema.Number(),
-        height: schema.Number(),
       }),
-      (node) => node.id,
-    ),
-    edges: schema.LoroList(
-      schema.LoroMap({
-        id: schema.String(),
-        source: schema.String(),
-        target: schema.String(),
-      }),
-      (edge) => edge.id,
+      (sheet) => sheet.id,
     ),
   }),
 });
@@ -42,16 +39,12 @@ export type CanvasMirrorSchema = typeof canvasMirrorSchema;
  */
 export const canvasMirrorInitialState = {
   config: {
-    nodes: [],
-    edges: [],
+    sheets: [],
   },
 };
 
 /**
  * Creates a CRDT mirror bundle for the canvas slice.
- *
- * Use this with `@sqlrooms/crdt`'s `createCrdtSlice({ mirrors: { ... } })` to
- * compose multiple slice schemas/bindings on a single shared Loro document.
  */
 export function createCanvasCrdtMirror<
   S extends CanvasSliceState = CanvasSliceState,
@@ -61,21 +54,46 @@ export function createCanvasCrdtMirror<
     initialState: canvasMirrorInitialState,
     select: (state) => ({
       config: {
-        nodes: state.canvas.config.nodes,
-        edges: state.canvas.config.edges,
+        sheets: Object.values(state.canvas.config.sheets).map((sheet) => ({
+          id: sheet.id,
+          nodes: Object.values(sheet.nodes),
+          meta: {
+            nodeOrder: sheet.meta.nodeOrder,
+          },
+        })),
       },
     }),
     apply: (value, set, get) => {
       if (!value?.config) return;
+      const currentConfig = get().canvas.config;
+
+      const newSheets: Record<string, any> = {};
+      for (const sheetValue of value.config.sheets || []) {
+        const localSheet = currentConfig.sheets[sheetValue.id];
+        newSheets[sheetValue.id] = {
+          id: sheetValue.id,
+          nodes: (sheetValue.nodes || []).reduce(
+            (acc: Record<string, any>, node: any) => {
+              acc[node.id] = node;
+              return acc;
+            },
+            {},
+          ),
+          meta: {
+            ...sheetValue.meta,
+            // Keep local viewport or use default
+            viewport: localSheet?.meta.viewport ?? {x: 0, y: 0, zoom: 1},
+          },
+        };
+      }
+
       set((state: S) => ({
         ...state,
         canvas: {
           ...state.canvas,
           config: CanvasSliceConfig.parse({
-            ...get().canvas.config,
-            ...value.config,
-            // Keep local viewport unsynced
-            viewport: get().canvas.config.viewport,
+            ...currentConfig,
+            sheets: newSheets,
           }),
         },
       }));

@@ -3,6 +3,48 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+## [0.28.1-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Features
+
+* Create sqlrooms notebook package ([#131](https://github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](https://github.com/sqlrooms/sqlrooms/commit/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+# [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* color utils get css color from theme mode ([#331](https://github.com/sqlrooms/sqlrooms/issues/331)) ([caa4db9](https://github.com/sqlrooms/sqlrooms/commit/caa4db9def2c9c790905500940a03bbd95b60e1f))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* monaco editor flashing ([#306](https://github.com/sqlrooms/sqlrooms/issues/306)) ([35e4420](https://github.com/sqlrooms/sqlrooms/commit/35e4420f21360460ed4950043e0628ef82f5ff93)), closes [#313](https://github.com/sqlrooms/sqlrooms/issues/313)
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 **Note:** Version bump only for package @sqlrooms/monaco-editor

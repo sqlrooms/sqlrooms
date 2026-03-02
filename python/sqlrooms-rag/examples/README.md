@@ -265,7 +265,7 @@ You can use the same approach for any documentation:
 
 ```bash
 # Example: Prepare React docs
-npx degit facebook/react/docs ./react-docs
+npx giget gh:facebook/react/docs ./react-docs
 uv run prepare-embeddings ./react-docs -o ./embeddings/react.duckdb
 ```
 
@@ -282,10 +282,10 @@ uv run prepare-embeddings /path/to/docs -o ./embeddings/my_docs.duckdb
 # Prepare multiple doc sets
 uv run python prepare_duckdb_docs.py -o ./embeddings/duckdb.duckdb
 
-npx degit nodejs/node/doc ./node-docs
+npx giget gh:nodejs/node/doc ./node-docs
 uv run prepare-embeddings ./node-docs -o ./embeddings/node.duckdb
 
-npx degit microsoft/TypeScript/docs ./ts-docs
+npx giget gh:microsoft/TypeScript/docs ./ts-docs
 uv run prepare-embeddings ./ts-docs -o ./embeddings/typescript.duckdb
 ```
 

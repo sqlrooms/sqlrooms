@@ -66,7 +66,7 @@ export const VegaSpecEditorPanel: React.FC<VegaSpecEditorPanelProps> = ({
       {/* Spec parse error */}
       {state.specParseError && (
         <div className="bg-destructive/90 text-destructive-foreground flex items-center gap-2 px-3 py-2 backdrop-blur-sm">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="truncate text-xs">{state.specParseError}</span>
         </div>
       )}

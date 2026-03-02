@@ -5,6 +5,12 @@ import {
   createCanvasSlice,
 } from '@sqlrooms/canvas';
 import {
+  CellsSliceConfig,
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
@@ -24,7 +30,8 @@ export const AppConfig = z.object({
 export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
-  CanvasSliceState & {
+  CanvasSliceState &
+  CellsSliceState & {
     app: {
       config: AppConfig;
       setApiKey: (apiKey: string) => void;
@@ -41,6 +48,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         room: BaseRoomConfig,
         layout: LayoutConfig,
         canvas: CanvasSliceConfig,
+        cells: CellsSliceConfig,
         app: AppConfig,
       },
     },
@@ -82,12 +90,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createCanvasSlice({
-        ai: {
-          getApiKey: () => get().app.config.apiKey,
-          defaultModel: 'gpt-4.1-mini',
-        },
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
       })(set, get, store),
+
+      ...createCanvasSlice()(set, get, store),
 
       // App slice with config
       app: {

@@ -8,6 +8,7 @@ export const Room = () => (
       <RoomShell.Sidebar />
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
     </RoomShell>
   </ThemeProvider>
 );

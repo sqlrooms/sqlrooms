@@ -10,7 +10,7 @@ All example applications are available in our [Examples Repository](https://gith
 
 ### [Getting Started](https://github.com/sqlrooms/examples/tree/main/get-started)
 
-[Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
+[GitHub repo](https://github.com/sqlrooms/examples/tree/main/get-started)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
 
 <!-- <img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450> -->
@@ -25,10 +25,13 @@ A minimal Vite application demonstrating the basic usage of SQLRooms. Features i
 To create a new project from the get-started example run this:
 
 ```bash
-npx degit sqlrooms/examples/get-started my-new-app/
+npx giget gh:sqlrooms/examples/get-started my-new-app/
 ```
 
 <!--@include: ../examples/query/README.md-->
+
+<!-- Multi-room section includes the updated sidebar-powered demo + description. -->
+<!--@include: ../examples/multi-room/README.md-->
 
 ## AI Assistant
 

@@ -3,19 +3,17 @@ import {TableStructurePanel} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
-import {useToast} from '@sqlrooms/ui';
+import {toast} from '@sqlrooms/ui';
 
 export const DataPanel = () => {
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const {toast} = useToast();
-
   return (
     <RoomPanel type="data">
       <FileDropzone
-        className="h-[200px] p-5"
+        className="h-50 p-5"
         acceptedFormats={{
           'text/csv': ['.csv'],
           'text/tsv': ['.tsv'],
@@ -27,15 +25,11 @@ export const DataPanel = () => {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
               await connector.loadFile(file, tableName);
-              toast({
-                variant: 'default',
-                title: 'Table created',
+              toast.success('Table created', {
                 description: `File ${file.name} loaded as ${tableName}`,
               });
             } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Error',
+              toast.error('Error', {
                 description: `Error loading file ${file.name}: ${error}`,
               });
             }

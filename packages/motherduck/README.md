@@ -1,8 +1,55 @@
-[MotherDuck](https://motherduck.com/) is a managed DuckDB-in-the-cloud service that enables you to run DuckDB queries both in your browser and in the cloud.
+MotherDuck connector for SQLRooms.
 
-This package exposes a `createWasmMotherDuckDbConnector` function, which allows SQLRooms to connect to MotherDuck.
-The connector is implemented using the [`@motherduck/wasm-client`](https://motherduck.com/docs/sql-reference/wasm-client/) library which is a customized version of [`@duckdb/duckdb-wasm`](https://github.com/duckdb/duckdb-wasm/tree/main/packages/duckdb-wasm) capable of querying MotherDuck datasets in the cloud from the browser.
+`@sqlrooms/motherduck` exposes a DuckDB connector implementation backed by [`@motherduck/wasm-client`](https://motherduck.com/docs/sql-reference/wasm-client/), so SQLRooms apps can query MotherDuck from the browser.
+
+## Installation
+
+```bash
+npm install @sqlrooms/motherduck @sqlrooms/room-shell
+```
+
+## Quick start
+
+```tsx
+import {createWasmMotherDuckDbConnector} from '@sqlrooms/motherduck';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
+
+type RoomState = RoomShellSliceState;
+
+export function createStore(mdToken: string) {
+  return createRoomStore<RoomState>((set, get, store) => ({
+    ...createRoomShellSlice({
+      connector: createWasmMotherDuckDbConnector({
+        mdToken,
+      }),
+    })(set, get, store),
+  }));
+}
+```
+
+## Connector options
+
+`createWasmMotherDuckDbConnector(options)` accepts:
+
+- MotherDuck WASM client connection params (for example `mdToken`)
+- optional `initializationQuery` string to run at connector init
+
+## Type guard and advanced access
+
+```ts
+import {isWasmMotherDuckDbConnector} from '@sqlrooms/motherduck';
+
+const connector = await roomStore.getState().db.getConnector();
+if (isWasmMotherDuckDbConnector(connector)) {
+  const connection = connector.getConnection();
+  // access low-level MotherDuck WASM connection APIs
+}
+```
 
 ## Example
 
-See [`MotherDuck Cloud Query Editor`](/examples#motherduck-cloud-query-editor) for a usage example.
+- MotherDuck cloud query example: https://github.com/sqlrooms/examples/tree/main/query-motherduck

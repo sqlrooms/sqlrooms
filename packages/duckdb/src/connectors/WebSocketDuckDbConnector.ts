@@ -79,6 +79,13 @@ export function createWebSocketDuckDbConnector(
       reject: (err: any) => void;
     }
   >();
+  const pendingUploads = new Map<
+    string,
+    {
+      resolve: () => void;
+      reject: (err: any) => void;
+    }
+  >();
 
   const closeAndRejectAll = (reason: string) => {
     for (const [qid, waiter] of pending.entries()) {
@@ -87,6 +94,13 @@ export function createWebSocketDuckDbConnector(
         // eslint-disable-next-line no-empty
       } catch {}
       pending.delete(qid);
+    }
+    for (const [qid, waiter] of pendingUploads.entries()) {
+      try {
+        waiter.reject(new Error(reason));
+        // eslint-disable-next-line no-empty
+      } catch {}
+      pendingUploads.delete(qid);
     }
   };
 
@@ -180,6 +194,21 @@ export function createWebSocketDuckDbConnector(
                 }
               }
               const qid: string | undefined = parsed?.queryId;
+              if (qid) {
+                const uploadWaiter = pendingUploads.get(qid);
+                if (uploadWaiter) {
+                  if (t === 'uploadAck') {
+                    pendingUploads.delete(qid);
+                    uploadWaiter.resolve();
+                  } else if (t === 'error') {
+                    pendingUploads.delete(qid);
+                    uploadWaiter.reject(
+                      new Error(parsed?.error || 'Arrow upload failed'),
+                    );
+                  }
+                  return;
+                }
+              }
               if (!qid) return;
               const waiter = pending.get(qid);
               if (!waiter) return;
@@ -370,15 +399,38 @@ export function createWebSocketDuckDbConnector(
       await impl.executeQueryInternal?.(sql, new AbortController().signal);
     },
 
-    async loadArrowInternal(
-      _file: arrow.Table | Uint8Array,
-      _tableName: string,
-    ) {
-      // Not supported over current WS protocol (no upload path). Use loadFileInternal
-      // with a server-accessible Arrow IPC file path instead.
-      throw new Error(
-        'Arrow buffer upload is not supported over WebSocket backend',
+    async loadArrowInternal(file: arrow.Table | Uint8Array, tableName: string) {
+      await ensureSocket();
+      const qid = `upload_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const payload =
+        file instanceof Uint8Array ? file : arrow.tableToIPC(file, 'stream');
+      const header = new TextEncoder().encode(
+        JSON.stringify({
+          type: 'uploadArrow',
+          queryId: qid,
+          tableName,
+        }),
       );
+      const framed = new Uint8Array(4 + header.length + payload.length);
+      new DataView(framed.buffer, framed.byteOffset, 4).setUint32(
+        0,
+        header.length,
+        false,
+      );
+      framed.set(header, 4);
+      framed.set(payload, 4 + header.length);
+      await new Promise<void>((resolve, reject) => {
+        pendingUploads.set(qid, {
+          resolve: () => resolve(),
+          reject: (err) => reject(err),
+        });
+        try {
+          socket!.send(framed);
+        } catch (error) {
+          pendingUploads.delete(qid);
+          reject(error);
+        }
+      });
     },
 
     async loadObjectsInternal(

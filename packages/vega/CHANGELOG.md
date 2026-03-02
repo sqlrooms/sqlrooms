@@ -3,6 +3,54 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## [0.28.1-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+# [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Features
+
+* tailwind v4 ([#324](https://github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](https://github.com/sqlrooms/sqlrooms/commit/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Bug Fixes
+
+* fix vega chart sizing ([#365](https://github.com/sqlrooms/sqlrooms/issues/365)) ([c9ed288](https://github.com/sqlrooms/sqlrooms/commit/c9ed28845aeae3739070ef3615e843076090f7f7))
+* improve sql error display in vega charts ([#369](https://github.com/sqlrooms/sqlrooms/issues/369)) ([0d26265](https://github.com/sqlrooms/sqlrooms/commit/0d2626512d98d9c4b983d0e8c640a64c20cb08e8))
+
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* chart label position and add responsive font size ([#328](https://github.com/sqlrooms/sqlrooms/issues/328)) ([99c5099](https://github.com/sqlrooms/sqlrooms/commit/99c509950f48f0d3e8128f9704939e247fbc8f90))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+
+### Features
+
+* Charts actions: only show on hover ([#336](https://github.com/sqlrooms/sqlrooms/issues/336)) ([87a21ce](https://github.com/sqlrooms/sqlrooms/commit/87a21ce58bc15b09b790456bd8d1719416c3ae44))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 ### Bug Fixes

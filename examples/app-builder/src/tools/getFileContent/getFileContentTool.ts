@@ -1,7 +1,7 @@
-import {StoreApi} from 'zustand';
-import {WebContainerSliceState} from '../../store/WebContainerSlice';
-import z from 'zod';
 import type {OpenAssistantTool} from '@openassistant/utils';
+import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
+import z from 'zod';
+import {StoreApi} from 'zustand';
 import {GetFileContentToolResult} from './GetFileContentToolResult';
 
 export const GetFileContentToolParameters = z.object({

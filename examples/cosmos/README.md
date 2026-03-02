@@ -1,7 +1,7 @@
 ### [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
 [Try live](http://sqlrooms-cosmos.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
+| [GitHub repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/9e7cb117-0355-406d-88f8-54bf6d9050a0/deploy-status)](https://app.netlify.com/projects/sqlrooms-cosmos/deploys)
@@ -21,7 +21,7 @@ An example demonstrating integration with the [Cosmos](https://github.com/cosmog
 To create a new project from the cosmos example run this:
 
 ```bash
-npx degit sqlrooms/examples/cosmos my-new-app/
+npx giget gh:sqlrooms/examples/cosmos my-new-app/
 ```
 
 #### Running locally

@@ -2,6 +2,7 @@
 
 import {ColumnTypeBadge} from '@sqlrooms/data-table';
 import {ColumnNodeObject} from '@sqlrooms/duckdb';
+import {cn} from '@sqlrooms/ui';
 import {CopyIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -9,7 +10,6 @@ import {
   TreeNodeActionsMenu,
   TreeNodeActionsMenuItem,
 } from './TreeNodeActionsMenu';
-import {cn} from '@sqlrooms/ui';
 
 export const ColumnTreeNode: FC<{
   className?: string;
@@ -18,14 +18,10 @@ export const ColumnTreeNode: FC<{
 }> = (props) => {
   const {className, nodeObject, additionalMenuItems} = props;
   return (
-    <BaseTreeNode
-      asChild
-      className={cn(className, 'h-[18px]')}
-      nodeObject={nodeObject}
-    >
+    <BaseTreeNode asChild className={cn(className)} nodeObject={nodeObject}>
       <div className="relative flex w-full items-center space-x-2">
         <ColumnTypeBadge
-          className="opacity-50"
+          className="flex opacity-60"
           columnType={nodeObject.columnType}
           typeCategory={nodeObject.columnTypeCategory}
         />

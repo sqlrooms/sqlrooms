@@ -15,10 +15,12 @@ export const Room = () => {
           isSelected={false}
           icon={TerminalIcon}
         />
+        <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
       <SqlEditorModal
         isOpen={sqlEditorDisclosure.isOpen}
         onClose={sqlEditorDisclosure.onClose}

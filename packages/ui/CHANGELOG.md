@@ -3,6 +3,66 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package @sqlrooms/ui
+
+## [0.28.1-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Features
+
+* Add shadcn Sidebar component ([#400](https://github.com/sqlrooms/sqlrooms/issues/400)) ([b44ac17](https://github.com/sqlrooms/sqlrooms/commit/b44ac175770022867bd869e484ac10992606988f))
+* Create sqlrooms notebook package ([#131](https://github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](https://github.com/sqlrooms/sqlrooms/commit/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Features
+
+* Sonner toast integration ([#397](https://github.com/sqlrooms/sqlrooms/issues/397)) ([487861d](https://github.com/sqlrooms/sqlrooms/commit/487861df81f0824d077bdeb0bb517a054586279b))
+
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](https://github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](https://github.com/sqlrooms/sqlrooms/commit/1e53f051828a36f8625af1c9576a820568951d42))
+
+# [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Features
+
+* tailwind v4 ([#324](https://github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](https://github.com/sqlrooms/sqlrooms/commit/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Features
+
+* AI output copy to clipboard ([#368](https://github.com/sqlrooms/sqlrooms/issues/368)) ([bcc10c1](https://github.com/sqlrooms/sqlrooms/commit/bcc10c12cac3219f762406fb18e4a4ee04546ada))
+* Data table row selection ([#358](https://github.com/sqlrooms/sqlrooms/issues/358)) ([3c63689](https://github.com/sqlrooms/sqlrooms/commit/3c636899dae81d13b24d501e9752257bced89e30))
+
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/ui
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* Kepler injector improvements ([#349](https://github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](https://github.com/sqlrooms/sqlrooms/commit/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* monaco editor flashing ([#306](https://github.com/sqlrooms/sqlrooms/issues/306)) ([35e4420](https://github.com/sqlrooms/sqlrooms/commit/35e4420f21360460ed4950043e0628ef82f5ff93)), closes [#313](https://github.com/sqlrooms/sqlrooms/issues/313)
+* Prevent horizontal scrolling in TabStrip.SearchDropdown ([#341](https://github.com/sqlrooms/sqlrooms/issues/341)) ([c574017](https://github.com/sqlrooms/sqlrooms/commit/c574017083591c36fbda4b00147fc7a5d2a4c73a))
+* TabStrip scroll into view ([#312](https://github.com/sqlrooms/sqlrooms/issues/312)) ([271efcf](https://github.com/sqlrooms/sqlrooms/commit/271efcfea8c095703d4e05150d75b59144d62930))
+
+### Features
+
+* AI open session tabs now saved in AI slice config ([#315](https://github.com/sqlrooms/sqlrooms/issues/315)) ([34a33cb](https://github.com/sqlrooms/sqlrooms/commit/34a33cb1819275e3365aaf7c4607405ec6a2d663))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 **Note:** Version bump only for package @sqlrooms/ui

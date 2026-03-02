@@ -29,6 +29,7 @@ export interface KeplerImageExportProps {
   cleanupExportImage: () => void;
   exportImageSettings: ExportImage;
   fileName?: string;
+  onExportStart?: () => void;
 }
 
 export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
@@ -36,6 +37,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   cleanupExportImage,
   exportImageSettings,
   fileName,
+  onExportStart,
 }) => {
   const {legend, ratio, resolution, processing, imageDataUri} =
     exportImageSettings;
@@ -49,10 +51,11 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
 
   const handleExportImage = useCallback(() => {
     if (!processing && imageDataUri) {
+      onExportStart?.();
       const file = dataURItoBlob(imageDataUri);
       downloadFile(file, `${fileName || 'Untitled'}.png`);
     }
-  }, [processing, imageDataUri, fileName]);
+  }, [processing, imageDataUri, fileName, onExportStart]);
 
   return (
     <div className="flex flex-col gap-6 px-[5px] pb-5 pt-1">

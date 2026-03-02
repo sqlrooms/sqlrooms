@@ -17,6 +17,19 @@ test('generateUniqueName generates unique table names', () => {
   expect(generateUniqueName('_', ['_'])).toBe('__1');
 });
 
+test('generateUniqueName with space separator', () => {
+  expect(generateUniqueName('Notebook 1', [], ' ')).toBe('Notebook 1');
+  expect(generateUniqueName('Notebook 1', ['Notebook 1'], ' ')).toBe(
+    'Notebook 2',
+  );
+  expect(generateUniqueName('Untitled 1', ['Untitled 1'], ' ')).toBe(
+    'Untitled 2',
+  );
+  expect(
+    generateUniqueName('Untitled 1', ['Untitled 1', 'Untitled 2'], ' '),
+  ).toBe('Untitled 3');
+});
+
 test('generateUniquePath generates unique paths', () => {
   expect(generateUniquePath('/foo/bar.csv', [])).toBe('/foo/bar.csv');
   expect(generateUniquePath('/foo/bar.csv', ['345'])).toBe('/foo/bar.csv');

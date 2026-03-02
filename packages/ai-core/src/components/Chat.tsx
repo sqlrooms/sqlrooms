@@ -1,16 +1,18 @@
 import type {FC, PropsWithChildren} from 'react';
 import {AnalysisResultsContainer} from './AnalysisResultsContainer';
+import {InlineApiKeyInput} from './InlineApiKeyInput';
+import {ModelSelector} from './ModelSelector';
 import {PromptSuggestions} from './PromptSuggestions';
 import {QueryControls} from './QueryControls';
 import {SessionChatManager} from './SessionChatManager';
 import {SessionControls} from './SessionControls';
-import {ModelSelector} from './ModelSelector';
 
 type ChatComponent = FC<PropsWithChildren> & {
   Root: FC<PropsWithChildren>;
   Sessions: typeof SessionControls;
   Messages: typeof AnalysisResultsContainer;
   Composer: typeof QueryControls;
+  InlineApiKeyInput: typeof InlineApiKeyInput;
   PromptSuggestions: typeof PromptSuggestions.Container & {
     Item: typeof PromptSuggestions.Item;
     VisibilityToggle: typeof PromptSuggestions.VisibilityToggle;
@@ -39,6 +41,7 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Sessions: SessionControls,
   Messages: AnalysisResultsContainer,
   Composer: QueryControls,
+  InlineApiKeyInput: InlineApiKeyInput,
   PromptSuggestions: PromptSuggestionsCompound,
   ModelSelector: ModelSelector,
 }) as ChatComponent;

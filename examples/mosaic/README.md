@@ -1,7 +1,7 @@
 ### [Mosaic Interactive Visualization Example](https://sqlrooms-mosaic.netlify.app/)
 
 [Try live](https://sqlrooms-mosaic.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/mosaic)
+| [GitHub repo](https://github.com/sqlrooms/examples/tree/main/mosaic)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/mosaic?embed=1&file=src/app.tsx)
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/e67a893c-87ac-409d-ac54-3d31e431bb0b/deploy-status)](https://app.netlify.com/projects/sqlrooms-mosaic/deploys)
@@ -23,7 +23,7 @@ Features include:
 To create a new project from the mosaic example run this:
 
 ```bash
-npx degit sqlrooms/examples/mosaic my-new-app/
+npx giget gh:sqlrooms/examples/mosaic my-new-app/
 ```
 
 #### Running locally
