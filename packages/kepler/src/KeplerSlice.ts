@@ -8,7 +8,11 @@ import {
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
-import {registerCommandsForOwner, RoomCommand} from '@sqlrooms/room-shell';
+import {
+  registerCommandsForOwner,
+  RoomCommand,
+  unregisterCommandsForOwner,
+} from '@sqlrooms/room-shell';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
   castDuckDBTypesForKepler,
@@ -104,7 +108,9 @@ export function createDefaultKeplerConfig(
   };
 }
 
-function createKeplerCommands(getState: () => any): RoomCommand[] {
+function createKeplerCommands(): RoomCommand<
+  BaseRoomStoreState & KeplerSliceState & DbSliceState
+>[] {
   return [
     {
       id: 'kepler.tab.duplicate',
@@ -117,9 +123,35 @@ function createKeplerCommands(getState: () => any): RoomCommand[] {
         idempotent: false,
         riskLevel: 'low',
       },
-      execute: async () => {
+      execute: ({getState}) => {
         const state = getState();
         const currentMapId = state.kepler.config.currentMapId;
+        const sourceMap = state.kepler.config.maps.find(
+          (m) => m.id === currentMapId,
+        );
+
+        if (!sourceMap) {
+          return {
+            success: false,
+            commandId: 'kepler.tab.duplicate',
+            message: 'Current map not found in config',
+            error: 'map_not_found',
+          };
+        }
+
+        // Ensure the map's redux state is registered before attempting to duplicate
+        state.kepler.registerKeplerMapIfNotExists(currentMapId);
+        const sourceMapState = state.kepler.map[currentMapId];
+
+        if (!sourceMapState) {
+          return {
+            success: false,
+            commandId: 'kepler.tab.duplicate',
+            message: 'Map state not initialized',
+            error: 'map_state_not_initialized',
+          };
+        }
+
         state.kepler.duplicateMap(currentMapId);
         return {
           success: true,
@@ -160,6 +192,7 @@ export type KeplerSliceState = {
       [mapId: string]: Dispatch;
     };
     initialize: () => Promise<void>;
+    destroy: () => Promise<void>;
     setConfig: (config: KeplerSliceConfig) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -344,8 +377,12 @@ export function createKeplerSlice({
           requestMapStyle(config.currentMapId);
 
           // Register Kepler commands
-          const keplerCommands = createKeplerCommands(get);
+          const keplerCommands = createKeplerCommands();
           registerCommandsForOwner(store, KEPLER_COMMAND_OWNER, keplerCommands);
+        },
+
+        async destroy() {
+          unregisterCommandsForOwner(store, KEPLER_COMMAND_OWNER);
         },
 
         addLayer: (mapId, layer, datasetId) => {
