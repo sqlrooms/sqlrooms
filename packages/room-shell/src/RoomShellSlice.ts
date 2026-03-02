@@ -1,10 +1,5 @@
-import {
-  DataTable,
-  DuckDbConnector,
-  DuckDbSliceState,
-  LoadFileOptions,
-  createDuckDbSlice,
-} from '@sqlrooms/duckdb';
+import {DbSliceState, createDbSlice} from '@sqlrooms/db';
+import {DataTable, DuckDbConnector, LoadFileOptions} from '@sqlrooms/duckdb';
 import {
   CreateLayoutSliceProps,
   LayoutSliceState,
@@ -26,12 +21,13 @@ import {
 import {
   BaseRoomStoreState,
   CommandSliceState,
+  CreateCommandSliceProps,
   CreateBaseRoomSliceProps,
+  RoomCommand,
   createBaseRoomSlice,
   createCommandSlice,
   isRoomSliceWithInitialize,
   registerCommandsForOwner,
-  RoomCommand,
   unregisterCommandsForOwner,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
@@ -154,7 +150,7 @@ export type RoomShellSliceState = {
       status?: DataSourceStatus,
     ) => Promise<void>;
   };
-} & DuckDbSliceState &
+} & DbSliceState &
   LayoutSliceState &
   CommandSliceState;
 
@@ -172,6 +168,7 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   layout?: CreateLayoutSliceProps;
   fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
   CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
+  createCommandProps?: CreateCommandSliceProps;
   /** @deprecated Use direct props instead e.g. layout.panels */
   room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
@@ -231,6 +228,7 @@ export function createRoomShellSlice(
       room: deprecatedRoomProps,
       fileDataSourceLoader,
       CustomErrorBoundary = ErrorBoundary,
+      createCommandProps,
       captureException = (exception) => console.error(exception),
       ...restProps
     } = props;
@@ -246,9 +244,9 @@ export function createRoomShellSlice(
 
     const sliceState: RoomShellSliceState = {
       ...roomSliceState,
-      ...createDuckDbSlice({connector})(set, get, store),
+      ...createDbSlice({duckDb: {connector}})(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
-      ...createCommandSlice()(set, get, store),
+      ...createCommandSlice(createCommandProps)(set, get, store),
       room: {
         ...roomSliceState.room,
         config: {
@@ -278,38 +276,49 @@ export function createRoomShellSlice(
             createRoomShellCommands(),
           );
           const {setTaskProgress} = get().room;
-          setTaskProgress(INIT_DB_TASK, {
-            message: 'Initializing database…',
-            progress: undefined,
-          });
-          await get().db.initialize();
-          setTaskProgress(INIT_DB_TASK, undefined);
+          try {
+            setTaskProgress(INIT_DB_TASK, {
+              message: 'Initializing database…',
+              progress: undefined,
+            });
+            await get().db.initialize();
+            setTaskProgress(INIT_DB_TASK, undefined);
 
-          setTaskProgress(INIT_ROOM_TASK, {
-            message: 'Loading data sources…',
-            progress: undefined,
-          });
-          await updateReadyDataSources();
-          await maybeDownloadDataSources();
+            setTaskProgress(INIT_ROOM_TASK, {
+              message: 'Loading data sources…',
+              progress: undefined,
+            });
+            await updateReadyDataSources();
+            await maybeDownloadDataSources();
 
-          // Call initialize on all other slices that have an initialize function
-          const slices = Object.entries(store.getState()).filter(
-            ([key, value]) =>
-              key !== 'room' &&
-              key !== 'db' &&
-              isRoomSliceWithInitialize(value),
-          );
-          for (const [_, slice] of slices) {
-            if (isRoomSliceWithInitialize(slice)) {
-              await slice.initialize();
+            setTaskProgress(INIT_ROOM_TASK, {
+              message: 'Initializing room…',
+              progress: undefined,
+            });
+            // Call initialize on all other slices that have an initialize function
+            const slices = Object.entries(store.getState()).filter(
+              ([key, value]) =>
+                key !== 'room' &&
+                key !== 'db' &&
+                isRoomSliceWithInitialize(value),
+            );
+            for (const [sliceName, slice] of slices) {
+              if (isRoomSliceWithInitialize(slice)) {
+                setTaskProgress(INIT_ROOM_TASK, {
+                  message: `Initializing ${sliceName}…`,
+                  progress: undefined,
+                });
+
+                await slice.initialize();
+              }
             }
+            const state = store.getState();
+            if (isRoomSliceWithInitialize(state)) {
+              await state.initialize();
+            }
+          } finally {
+            setTaskProgress(INIT_ROOM_TASK, undefined);
           }
-          const state = store.getState();
-          if (isRoomSliceWithInitialize(state)) {
-            await state.initialize();
-          }
-
-          setTaskProgress(INIT_ROOM_TASK, undefined);
         },
 
         async destroy() {
@@ -384,6 +393,7 @@ export function createRoomShellSlice(
         ) {
           const {schema} = get().db;
           const {db} = get();
+          const dbConnectors = get().db.connectors;
           const newTableName =
             tableName !== oldTableName
               ? convertToUniqueColumnOrTableName(
@@ -391,13 +401,23 @@ export function createRoomShellSlice(
                   await db.getTables(schema),
                 )
               : tableName;
-          const {rowCount} = await db.createTableFromQuery(
-            newTableName,
-            query,
-            {
+          let rowCount: number | undefined;
+          if (dbConnectors?.runQuery) {
+            const routed = await dbConnectors.runQuery({
+              sql: query,
+              queryType: 'arrow',
+              materialize: true,
+              materializedName: newTableName,
+              signal: abortSignal,
+            });
+            const relation = routed.relationName || newTableName;
+            rowCount = await db.getTableRowCount(relation as string, schema);
+          } else {
+            const created = await db.createTableFromQuery(newTableName, query, {
               abortSignal,
-            },
-          );
+            });
+            rowCount = created.rowCount;
+          }
           if (rowCount !== undefined) {
             get().db.setTableRowCount(newTableName, rowCount);
           }
@@ -714,6 +734,16 @@ export function createRoomShellSlice(
     }
 
     async function runDataSourceQueries(queries: SqlQueryDataSource[]) {
+      const dbConnectors = (get() as any).db.connectors as
+        | {
+            runQuery?: (args: {
+              sql: string;
+              queryType?: 'arrow' | 'json' | 'exec';
+              materialize?: boolean;
+              materializedName?: string;
+            }) => Promise<{relationName?: string}>;
+          }
+        | undefined;
       for (const ds of queries) {
         try {
           const {tableName, sqlQuery} = ds;
@@ -724,10 +754,23 @@ export function createRoomShellSlice(
               };
             }),
           );
-          const {rowCount} = await get().db.createTableFromQuery(
-            tableName,
-            sqlQuery,
-          );
+          let rowCount: number | undefined;
+          if (dbConnectors?.runQuery) {
+            const routed = await dbConnectors.runQuery({
+              sql: sqlQuery,
+              queryType: 'arrow',
+              materialize: true,
+              materializedName: tableName,
+            });
+            const relation = routed.relationName || tableName;
+            rowCount = await get().db.getTableRowCount(relation as string);
+          } else {
+            const created = await get().db.createTableFromQuery(
+              tableName,
+              sqlQuery,
+            );
+            rowCount = created.rowCount;
+          }
           if (rowCount !== undefined) {
             get().db.setTableRowCount(tableName, rowCount);
           }
@@ -786,6 +829,9 @@ function createRoomShellCommands(): RoomCommand<RoomShellCommandStoreState>[] {
       keywords: ['room', 'title', 'name'],
       inputSchema: RoomSetTitleCommandInput,
       inputDescription: 'Provide a non-empty room title.',
+      ui: {
+        keystrokes: 'Mod+Alt+Shift+T',
+      },
       metadata: {
         readOnly: false,
         idempotent: true,

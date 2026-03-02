@@ -14,7 +14,10 @@ export {createSqlEditorSlice} from './SqlEditorSlice';
 export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
 export {SqlMonacoEditor} from './SqlMonacoEditor';
-export type {SqlMonacoEditorProps} from './SqlMonacoEditor';
+export type {
+  SqlMonacoEditorProps,
+  SqlMonacoRunQueryOptions,
+} from './SqlMonacoEditor';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';

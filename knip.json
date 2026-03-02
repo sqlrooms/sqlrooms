@@ -8,6 +8,7 @@
     "python/**",
     "docs/**",
     "examples/app-builder/app-scaffolds/**",
+    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**",
     "submodules/**"
   ],
   "exclude": [
@@ -65,12 +66,11 @@
     },
     "examples/*nextjs*": {
       "entry": [
-        "app/page.tsx",
-        "app/api/**/*.ts",
+        "src/app/**/{page.tsx,api/**/*.ts}",
         "postcss.config.mjs"
       ],
       "ignore": [
-        "app/globals.css"
+        "src/globals.css"
       ]
     },
     "examples/canvas": {

@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/sql-editor",
-  "version": "0.28.0",
+  "version": "0.29.0-rc.1",
   "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
@@ -30,6 +30,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -42,7 +43,7 @@
     "file-saver": "^2.0.5",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
-    "monaco-editor": "^0.55.0",
+    "monaco-editor": "^0.55.1",
     "react-hook-form": "^7.63.0",
     "zod": "^4.1.8"
   },

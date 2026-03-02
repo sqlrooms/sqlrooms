@@ -1,7 +1,7 @@
 import {cn} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlMonacoEditor} from '../SqlMonacoEditor';
+import {SqlMonacoEditor, SqlMonacoRunQueryOptions} from '../SqlMonacoEditor';
 
 const MONACO_OPTIONS = {
   scrollBeyondLastLine: false,
@@ -38,14 +38,14 @@ export const QueryEditorPanelEditor: React.FC<{
 
   // Handle query execution via keyboard shortcut
   const handleRunQuery = useCallback(
-    ({selectedValue, isSelectionEmpty}: {selectedValue: string; isSelectionEmpty: boolean; value: string}) => {
+    ({value, selectedValue, isSelectionEmpty}: SqlMonacoRunQueryOptions) => {
       if (!isSelectionEmpty) {
         runQuery(selectedValue);
       } else {
-        runQuery(queryText ?? '');
+        runQuery(value ?? '');
       }
     },
-    [runQuery, queryText],
+    [runQuery],
   );
 
   return (

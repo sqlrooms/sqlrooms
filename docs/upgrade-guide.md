@@ -8,53 +8,94 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
-## 0.28.0-rc.0
+## 0.29.0 (upcoming)
 
-- Tailwind upgraded from v3 to v4
+### `@sqlrooms/ui`: `toast` export now uses Sonner (breaking)
 
-1. Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+The top-level `toast` export from `@sqlrooms/ui` now points to Sonner's API.
 
-Before:
+- **Before**: `toast({...})` used SQLRooms' legacy Radix-based object API.
+- **After**: `toast.success(...)`, `toast.error(...)`, etc. use Sonner.
 
-```javascript
-// tailwind.config.js
-import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
-import type {Config} from 'tailwindcss';
+If you still need the old API temporarily, import `legacyToast` from `@sqlrooms/ui`.
 
-const config = {
-  presets: [sqlroomsTailwindPreset()],
-  content: [
-    'src/**/*.{ts,tsx}',
-    '../packages/*/src/**/*.{ts,tsx}',
-    // If you make a precise list of packages used, instead of @sqlrooms/*,
-    // it would help Vite start faster in dev mode
-    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
-    '{./,../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
-  ],
-} satisfies Config;
+#### Before
 
-export default config;
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
 ```
 
-After:
+#### After (Sonner)
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast.success('Table created', {
+  description: 'File loaded',
+});
+```
+
+#### Temporary compatibility option
+
+```tsx
+import {legacyToast} from '@sqlrooms/ui';
+
+legacyToast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
+## 0.28.0
+
+### Tailwind v3 to v4
+
+Tailwind in SQLRooms is now upgraded from v3 to v4.
+
+For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
+
+You can use the official migration tool directly in your repository:
+
+```sh
+npx @tailwindcss/upgrade
+```
+
+#### Manual steps
+
+The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
+
+##### Step 1
+
+Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
 
 ```css
 /* index.css */
 
+@import 'tailwindcss';
+
 @import '@sqlrooms/ui/tailwind-preset.css';
 
 @source '../index.html';
-@source 'src/**/*.{ts,tsx}';
-@source '../../../packages/*/src/**/*.{ts,tsx}';
-@source '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.js';
-@source '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js';
+@source './**/*.{ts,tsx}';
+@source '../node_modules/@sqlrooms/*/dist/';
 
 /* styles */
 ```
 
-2. Remove `tailwind.config.js`
+##### Step 2
 
-3. Remove `@layer base { ... }` from `index.css`
+Remove `tailwind.config.js`
+
+##### Step 3
+
+Remove `@layer base { ... }` from `index.css`
 
 Before:
 
@@ -94,7 +135,7 @@ After:
 }
 ```
 
-4. For Vite projects:
+##### Step 4: For Vite projects
 
 - Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
 
@@ -118,7 +159,9 @@ export default defineConfig({
 - Remove `autoprefixer` and `postcss`
 - Remove `postcss.config.js`
 
-5. For NextJS projects update `postcss.config.js`
+##### Step 4: For NextJS projects
+
+Update `postcss.config.js`
 
 Before:
 

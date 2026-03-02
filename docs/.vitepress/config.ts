@@ -170,6 +170,10 @@ Canonical package combos:
             link: '/state-management',
           },
           {
+            text: 'Commands',
+            link: '/commands',
+          },
+          {
             text: 'Query Cancellation',
             link: '/query-cancellation',
           },

@@ -51,6 +51,7 @@ export {
   createSlice,
   doesCommandRequireInput,
   exportCommandInputSchema,
+  getCommandKeystrokes,
   getCommandInputComponent,
   getCommandShortcut,
   hasCommandSliceState,
@@ -77,11 +78,19 @@ export type {
   CommandMcpAdapterOptions,
   CommandMcpToolDescriptor,
   CommandSliceState,
+  CreateCommandSliceProps,
   CreateBaseRoomSliceProps,
   RoomCommandDescriptor,
   RoomCommandExecuteOutput,
+  RoomCommandKeystrokes,
   RoomCommandInvocation,
+  RoomCommandInvokeFailureEvent,
+  RoomCommandInvokeErrorEvent,
   RoomCommandInvocationOptions,
+  RoomCommandInvokeStartEvent,
+  RoomCommandInvokeSuccessEvent,
+  RoomCommandMiddleware,
+  RoomCommandMiddlewareNext,
   RegisteredRoomCommand,
   RoomCommand,
   RoomCommandInputComponent,
@@ -100,6 +109,10 @@ export type {
 } from '@sqlrooms/room-store';
 
 export {useShallow} from 'zustand/react/shallow';
+
+// Re-export from @sqlrooms/db
+export {createDbSlice} from '@sqlrooms/db';
+export type {DbSliceState} from '@sqlrooms/db';
 
 // Re-export from @sqlrooms/room-config (via room-store)
 // Values also export their corresponding types automatically (Zod pattern)

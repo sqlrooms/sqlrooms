@@ -6,6 +6,28 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
+## 0.29.0 (upcoming)
+
+### Sonner toast integration**
+
+`Toaster` now renders [Sonner](https://sonner.emilkowal.ski/) with SQLRooms theme-aware styling, and examples now use Sonner notifications instead of `useToast` in file-upload flows. `@sqlrooms/ui` also exports Sonner's `toast` function directly for app-level notifications.
+
+### Command system enhancements
+
+- **Command keystrokes**: Commands can now declare `ui.keystrokes` (single key combo or array). Keystrokes are shown in the command palette and can trigger commands directly when the palette is mounted.
+- **Middleware pipeline**: `createCommandSlice` now supports command middleware via `createCommandProps` (`(command, input, context, next)`), enabling clean telemetry, feature-flag, and confirmation layers without modifying `invokeCommand`.
+- **Telemetry hooks**: `createCommandProps` supports invocation lifecycle callbacks (`onCommandInvokeStart`, `onCommandInvokeSuccess`, `onCommandInvokeFailure`, `onCommandInvokeError`) for centralized instrumentation.
+- **Room shell wiring**: `createRoomShellSlice` now accepts `createCommandProps` and passes it to `createCommandSlice`, so shell-based apps can configure command middleware/telemetry from one place.
+- **Coverage + docs**: Added expanded unit tests for command execution/middleware behavior and a new Developer Guide page: [Commands](/commands).
+
+## 0.28.0
+
+- **Tailwind v4**: SQLRooms now uses Tailwind v4, including the new CSS-first setup that simplifies project styling and configuration ([#324](https://github.com/sqlrooms/sqlrooms/pull/324)). For Tailwind migration details, jump to the [upgrade guide](/upgrade-guide#tailwind-v3-to-v4).
+- **Cosmos.gl upgrade**: updates the [Cosmos.gl](https://cosmos.gl) integration to include the latest improvements in this powerful graph visualization library ([#379](https://github.com/sqlrooms/sqlrooms/pull/379))
+- **Command system implementation**: Command Palette UI added to shells (toggle with `Ctrl/Cmd+K`, sidebar button, searchable/grouped commands, per-command shortcuts, JSON input editor, and programmatic open/close controls). A global command system and tooling is also introduced to register, list, validate, and execute commands, with adapters for CLI/MCP and AI tool integrations, plus DB and editor command sets ([#382](https://github.com/sqlrooms/sqlrooms/pull/382))
+
+<video src="/media/whats-new/commands.mp4" alt="SQLRooms command system and command palette" width="450" loop muted controls autoplay></video>
+
 ## 0.27.0
 
 ### `@sqlrooms/data-table`: RowSelection API
@@ -42,7 +64,6 @@ const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 />;
 ```
 
-
 ### `@sqlrooms/room-store`: bound `useRoomStore` API + `useRoomStoreApi`
 
 `useRoomStore` now exposes imperative Zustand store methods (`getState`, `setState`, `subscribe`, `getInitialState`) in addition to selector usage. This makes event handlers and async callbacks more ergonomic while preserving existing reactive selector patterns.
@@ -71,7 +92,6 @@ See the [Mosaic API documentation](/api/mosaic/) for details and check out the [
 - **Kepler**: configurable injector with custom recipes, legend/timeline fixes, and stability improvements across integration edge cases.
 - **Room/store + persistence**: `storeKey` support in `createRoomStore` and `persistSliceConfigs` helper improvements.
 - **SQL/editor + query UX**: improved explain output, query panel/tab mapping fixes, and query cancellation support in create-table flows.
-
 
 ## 0.26.1-rc.7 (2025-12-05)
 

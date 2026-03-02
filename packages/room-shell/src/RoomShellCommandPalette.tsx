@@ -3,8 +3,8 @@ import {
   createRoomCommandExecutionContext,
   doesCommandRequireInput,
   exportCommandInputSchema,
+  getCommandKeystrokes,
   getCommandInputComponent,
-  getCommandShortcut,
   RegisteredRoomCommand,
   RoomCommandExecutionContext,
   RoomCommandPortableSchema,
@@ -118,6 +118,7 @@ function RoomShellCommandPaletteBase({
     `inmemory://sqlrooms/command-input/${Math.random().toString(36).slice(2)}`,
   );
   const roomStore = useRoomStoreApi<RoomShellSliceState>();
+  const isMac = useMemo(() => isMacOS(), []);
   const commandRegistry = useBaseRoomShellStore(
     (state) => state.commands.registry,
   );
@@ -165,6 +166,37 @@ function RoomShellCommandPaletteBase({
       return firstGroup.localeCompare(secondGroup);
     });
   }, [commands]);
+
+  const keystrokeCommandMap = useMemo(() => {
+    const nextCommandByKeystroke = new Map<string, PaletteCommand>();
+    const duplicateKeystrokes = new Set<string>();
+
+    for (const command of commands) {
+      if (!command.enabled) {
+        continue;
+      }
+      for (const keystroke of getCommandKeystrokes(command)) {
+        const normalizedKeystroke = normalizeCommandKeystroke(keystroke, isMac);
+        if (!normalizedKeystroke) {
+          continue;
+        }
+        const existingCommand = nextCommandByKeystroke.get(normalizedKeystroke);
+        if (existingCommand && existingCommand.id !== command.id) {
+          duplicateKeystrokes.add(normalizedKeystroke);
+          continue;
+        }
+        if (!duplicateKeystrokes.has(normalizedKeystroke)) {
+          nextCommandByKeystroke.set(normalizedKeystroke, command);
+        }
+      }
+    }
+
+    for (const duplicateKeystroke of duplicateKeystrokes) {
+      nextCommandByKeystroke.delete(duplicateKeystroke);
+    }
+
+    return nextCommandByKeystroke;
+  }, [commands, isMac]);
 
   const activeInputCommand = useMemo(() => {
     if (!activeInputCommandId) {
@@ -303,18 +335,31 @@ function RoomShellCommandPaletteBase({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!enableKeyboardShortcut) {
-      return;
-    }
-
     const onKeyDown = (event: KeyboardEvent) => {
-      const isCommandPaletteShortcut =
-        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
-      if (!isCommandPaletteShortcut) {
+      const normalizedKeystroke = normalizeKeyboardEventKeystroke(event);
+      if (!normalizedKeystroke) {
+        return;
+      }
+
+      if (
+        enableKeyboardShortcut &&
+        normalizedKeystroke === getPaletteToggleKeystroke(isMac)
+      ) {
+        event.preventDefault();
+        setPaletteOpen(!isOpenRef.current);
+        return;
+      }
+
+      if (event.repeat || isOpenRef.current || activeInputCommandId) {
+        return;
+      }
+
+      const command = keystrokeCommandMap.get(normalizedKeystroke);
+      if (!command || shouldSkipCommandKeystroke(event)) {
         return;
       }
       event.preventDefault();
-      setPaletteOpen(!isOpenRef.current);
+      void onSelectCommand(command);
     };
 
     // Use capture so this still works when focused widgets (e.g. Monaco)
@@ -323,7 +368,14 @@ function RoomShellCommandPaletteBase({
     return () => {
       window.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [enableKeyboardShortcut, setPaletteOpen]);
+  }, [
+    activeInputCommandId,
+    enableKeyboardShortcut,
+    isMac,
+    keystrokeCommandMap,
+    onSelectCommand,
+    setPaletteOpen,
+  ]);
 
   useEffect(() => {
     return subscribeToCommandPaletteControl((action) => {
@@ -354,30 +406,32 @@ function RoomShellCommandPaletteBase({
           <CommandEmpty>{emptyMessage}</CommandEmpty>
           {groupedCommands.map(([groupName, groupCommands]) => (
             <CommandGroup key={groupName} heading={groupName}>
-              {groupCommands.map((command) => (
-                <CommandItem
-                  key={command.id}
-                  value={getCommandSearchValue(command)}
-                  disabled={!command.enabled}
-                  onSelect={() => {
-                    void onSelectCommand(command);
-                  }}
-                >
-                  <div className="flex flex-col">
-                    <span>{command.name}</span>
-                    {command.description ? (
-                      <span className="text-muted-foreground text-xs">
-                        {command.description}
-                      </span>
+              {groupCommands.map((command) => {
+                const commandShortcutLabel =
+                  getCommandKeystrokeDisplayLabel(command);
+                return (
+                  <CommandItem
+                    key={command.id}
+                    value={getCommandSearchValue(command)}
+                    disabled={!command.enabled}
+                    onSelect={() => {
+                      void onSelectCommand(command);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span>{command.name}</span>
+                      {command.description ? (
+                        <span className="text-muted-foreground text-xs">
+                          {command.description}
+                        </span>
+                      ) : null}
+                    </div>
+                    {commandShortcutLabel ? (
+                      <CommandShortcut>{commandShortcutLabel}</CommandShortcut>
                     ) : null}
-                  </div>
-                  {getCommandShortcut(command) ? (
-                    <CommandShortcut>
-                      {getCommandShortcut(command)}
-                    </CommandShortcut>
-                  ) : null}
-                </CommandItem>
-              ))}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           ))}
         </CommandList>
@@ -566,7 +620,7 @@ function getCommandSearchValue(command: RegisteredRoomCommand): string {
     command.name,
     command.description,
     command.inputDescription,
-    getCommandShortcut(command),
+    ...getCommandKeystrokes(command),
     command.id,
     ...(command.keywords ?? []),
   ]
@@ -683,4 +737,184 @@ function safeStringifyJsonValue(value: unknown): string {
   } catch {
     return '{}';
   }
+}
+
+function getCommandKeystrokeDisplayLabel(
+  command: RegisteredRoomCommand,
+): string | undefined {
+  const keystrokes = getCommandKeystrokes(command);
+  if (keystrokes.length === 0) {
+    return undefined;
+  }
+  return keystrokes.join(', ');
+}
+
+function getPaletteToggleKeystroke(isMac: boolean): string {
+  return isMac ? 'meta+k' : 'ctrl+k';
+}
+
+function normalizeCommandKeystroke(
+  keystroke: string,
+  isMac: boolean,
+): string | undefined {
+  const tokens = keystroke
+    .split('+')
+    .map((token) => token.trim())
+    .filter(Boolean);
+  if (tokens.length === 0) {
+    return undefined;
+  }
+
+  let meta = false;
+  let ctrl = false;
+  let alt = false;
+  let shift = false;
+  let key: string | undefined;
+
+  for (const token of tokens) {
+    const normalizedToken = token.toLowerCase();
+    switch (normalizedToken) {
+      case 'mod':
+      case 'cmdorctrl':
+      case 'commandorcontrol':
+        if (isMac) {
+          meta = true;
+        } else {
+          ctrl = true;
+        }
+        continue;
+      case 'meta':
+      case 'cmd':
+      case 'command':
+        meta = true;
+        continue;
+      case 'ctrl':
+      case 'control':
+        ctrl = true;
+        continue;
+      case 'alt':
+      case 'option':
+        alt = true;
+        continue;
+      case 'shift':
+        shift = true;
+        continue;
+      default: {
+        const normalizedKey = normalizeKeystrokeKey(token);
+        if (normalizedKey) {
+          key = normalizedKey;
+        }
+      }
+    }
+  }
+
+  if (!key) {
+    return undefined;
+  }
+  return serializeKeystroke({meta, ctrl, alt, shift, key});
+}
+
+function normalizeKeyboardEventKeystroke(
+  event: KeyboardEvent,
+): string | undefined {
+  const key = normalizeKeystrokeKey(event.key);
+  if (!key) {
+    return undefined;
+  }
+  return serializeKeystroke({
+    meta: event.metaKey,
+    ctrl: event.ctrlKey,
+    alt: event.altKey,
+    shift: event.shiftKey,
+    key,
+  });
+}
+
+function normalizeKeystrokeKey(value: string): string | undefined {
+  const normalizedValue = value.trim().toLowerCase();
+  if (!normalizedValue) {
+    return undefined;
+  }
+  if (normalizedValue === ' ') {
+    return 'space';
+  }
+  if (normalizedValue === 'spacebar') {
+    return 'space';
+  }
+  if (normalizedValue === 'esc') {
+    return 'escape';
+  }
+  if (normalizedValue === 'return') {
+    return 'enter';
+  }
+  if (isModifierToken(normalizedValue)) {
+    return undefined;
+  }
+  return normalizedValue;
+}
+
+function serializeKeystroke({
+  meta,
+  ctrl,
+  alt,
+  shift,
+  key,
+}: {
+  meta: boolean;
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  key: string;
+}): string {
+  const parts: string[] = [];
+  if (meta) {
+    parts.push('meta');
+  }
+  if (ctrl) {
+    parts.push('ctrl');
+  }
+  if (alt) {
+    parts.push('alt');
+  }
+  if (shift) {
+    parts.push('shift');
+  }
+  parts.push(key);
+  return parts.join('+');
+}
+
+function isModifierToken(token: string): boolean {
+  return (
+    token === 'meta' ||
+    token === 'cmd' ||
+    token === 'command' ||
+    token === 'ctrl' ||
+    token === 'control' ||
+    token === 'alt' ||
+    token === 'option' ||
+    token === 'shift'
+  );
+}
+
+function shouldSkipCommandKeystroke(event: KeyboardEvent): boolean {
+  if (event.defaultPrevented) {
+    return true;
+  }
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    return false;
+  }
+  return isEditableTarget(event.target);
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select'
+  );
 }

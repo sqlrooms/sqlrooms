@@ -1,0 +1,27 @@
+import {cn, Spinner} from '@sqlrooms/ui';
+import {useStoreWithWebContainer} from '../WebContainerSlice';
+
+export function BrowserView({className}: {className?: string}) {
+  const serverStatus = useStoreWithWebContainer(
+    (s) => s.webContainer.serverStatus,
+  );
+  return (
+    <div className={cn('bg-background h-full w-full', className)}>
+      {serverStatus.type === 'ready' && serverStatus.url ? (
+        <iframe
+          className="h-full w-full overflow-auto bg-white"
+          src={serverStatus.url}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <div className="text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Spinner />
+              <p>{serverStatus.type}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

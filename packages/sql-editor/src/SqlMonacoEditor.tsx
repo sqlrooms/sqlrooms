@@ -1,19 +1,23 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
-import {MonacoEditor} from '@sqlrooms/monaco-editor';
-import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import type {OnMount} from '@monaco-editor/react';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/db';
+import {getFunctionSuggestions} from '@sqlrooms/duckdb';
+import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
+import {MonacoEditor} from '@sqlrooms/monaco-editor';
+import {cn} from '@sqlrooms/ui';
 import type * as Monaco from 'monaco-editor';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {
-  DUCKDB_KEYWORDS,
   DUCKDB_FUNCTIONS,
+  DUCKDB_KEYWORDS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import {
-  getFunctionSuggestions,
-  type DataTable,
-  type DuckDbConnector,
-} from '@sqlrooms/duckdb';
-import {cn} from '@sqlrooms/ui';
+
+export type SqlMonacoRunQueryOptions = {
+  value: string;
+  selectedValue: string;
+  isSelectionEmpty: boolean;
+};
+
 export interface SqlMonacoEditorProps extends Omit<
   MonacoEditorProps,
   'language'
@@ -44,17 +48,17 @@ export interface SqlMonacoEditorProps extends Omit<
     tableSchemas: DataTable[];
   };
   /** Callback when Cmd/Ctrl+Enter is pressed to run query */
-  onRunQuery?: (params: {
-    value: string;
-    selectedValue: string;
-    isSelectionEmpty: boolean;
-  }) => void;
+  onRunQuery?: (params: SqlMonacoRunQueryOptions) => void;
 }
 
 const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
   formatOnPaste: true,
   formatOnType: true,
   wordWrap: 'on',
+  scrollBeyondLastLine: false,
+  scrollbar: {
+    alwaysConsumeMouseWheel: false,
+  },
 };
 
 type MonacoInstance = typeof Monaco;
@@ -334,18 +338,24 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
       // Add keyboard shortcut for running query
       if (onRunQuery) {
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-          const model = editor.getModel();
-          const selection = editor.getSelection();
-          const value = editor.getValue();
-          const selectedValue = model && selection ? model.getValueInRange(selection) : '';
-          const isSelectionEmpty = !selection || selection.isEmpty();
+        editor.onKeyDown((e) => {
+          if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
+            e.preventDefault();
+            e.stopPropagation();
 
-          onRunQuery({
-            value,
-            selectedValue,
-            isSelectionEmpty,
-          });
+            const model = editor.getModel();
+            const selection = editor.getSelection();
+            const value = editor.getValue();
+            const selectedValue =
+              model && selection ? model.getValueInRange(selection) : '';
+            const isSelectionEmpty = !selection || selection.isEmpty();
+
+            onRunQuery({
+              value,
+              selectedValue,
+              isSelectionEmpty,
+            });
+          }
         });
       }
 

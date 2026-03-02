@@ -3,6 +3,37 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package sqlrooms
+
+## [0.28.1-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Bug Fixes
+
+* sanitize UIMessages before sending to LLM to prevent empty content errors ([#404](/github.com/sqlrooms/sqlrooms/issues/404)) ([635fbbb](github.com/sqlrooms/sqlrooms/commits/635fbbb5c3cedd4bcd7ab4eed94199a8fe022528))
+
+### Features
+
+* Add shadcn Sidebar component ([#400](/github.com/sqlrooms/sqlrooms/issues/400)) ([b44ac17](github.com/sqlrooms/sqlrooms/commits/b44ac175770022867bd869e484ac10992606988f))
+* Create sqlrooms notebook package ([#131](/github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](github.com/sqlrooms/sqlrooms/commits/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+* Snowflake connector integration ([#401](/github.com/sqlrooms/sqlrooms/issues/401)) ([1ccbe61](github.com/sqlrooms/sqlrooms/commits/1ccbe61e7e5107edd1c2ec36f9604f8b6cfcf603))
+* Webcontainer package ([#374](/github.com/sqlrooms/sqlrooms/issues/374)) ([c211b00](github.com/sqlrooms/sqlrooms/commits/c211b004b3aeff0984aa48521e7f247950c6cd0a))
+
+## [0.28.1-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Bug Fixes
+
+* Examples tailwind paths ([#387](/github.com/sqlrooms/sqlrooms/issues/387)) ([1cbae5b](github.com/sqlrooms/sqlrooms/commits/1cbae5b65191d082c9970a31e732724c660a82fa))
+* move copy button ([#390](/github.com/sqlrooms/sqlrooms/issues/390)) ([a7ba4f2](github.com/sqlrooms/sqlrooms/commits/a7ba4f247c66240e86c98cc1173a0091bb81cd44))
+* move copy button in the message container ([#388](/github.com/sqlrooms/sqlrooms/issues/388)) ([7c57d70](github.com/sqlrooms/sqlrooms/commits/7c57d7008af40efdefc87a98b00dd46bfdbc61fb))
+
+### Features
+
+* Commands system enhancements ([#396](/github.com/sqlrooms/sqlrooms/issues/396)) ([4585f80](github.com/sqlrooms/sqlrooms/commits/4585f80440eb070711005b857e73d58971754344))
+* Sonner toast integration ([#397](/github.com/sqlrooms/sqlrooms/issues/397)) ([487861d](github.com/sqlrooms/sqlrooms/commits/487861df81f0824d077bdeb0bb517a054586279b))
+* Tanstack multi-room example ([#385](/github.com/sqlrooms/sqlrooms/issues/385)) ([45ef14f](github.com/sqlrooms/sqlrooms/commits/45ef14ff9cb99528d7fefb372a98843006269e93))
+
 # [0.28.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
 
 ### Features

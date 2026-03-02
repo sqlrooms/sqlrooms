@@ -232,6 +232,33 @@ export {
   SheetDescription,
 } from './components/sheet';
 
+export {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarInput,
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from './components/sidebar';
+
 export {SkeletonPane} from './components/skeleton-pane';
 
 export {Skeleton} from './components/skeleton';
@@ -291,7 +318,8 @@ export {
 export {Tree, type TreeNodeData} from './components/tree';
 
 // Hooks
-export {useToast, toast, reducer} from './hooks/use-toast';
+export {useToast, toast as legacyToast, reducer} from './hooks/use-toast';
+export {toast, type ExternalToast} from 'sonner';
 
 export {
   useAspectRatioDimensions,
@@ -305,6 +333,7 @@ export {
 } from './hooks/useDisclosure';
 
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
+export {useIsMobile} from './hooks/use-mobile';
 
 export {useIsDarkTheme} from './hooks/useIsDarkTheme';
 
