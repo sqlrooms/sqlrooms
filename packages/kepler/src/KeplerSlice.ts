@@ -61,7 +61,7 @@ import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
-const KEPLER_COMMAND_OWNER = 'kepler';
+const KEPLER_COMMAND_OWNER = '@sqlrooms/kepler';
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
