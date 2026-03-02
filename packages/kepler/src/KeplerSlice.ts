@@ -111,9 +111,11 @@ export function createDefaultKeplerConfig(
 function createKeplerCommands(): RoomCommand<
   BaseRoomStoreState & KeplerSliceState & DbSliceState
 >[] {
+  const DUPLICATE_TAB_COMMAND_ID = 'kepler.tab.duplicate';
+
   return [
     {
-      id: 'kepler.tab.duplicate',
+      id: DUPLICATE_TAB_COMMAND_ID,
       name: 'Duplicate Tab',
       description: 'Duplicate the current map tab',
       group: 'Kepler',
@@ -132,7 +134,7 @@ function createKeplerCommands(): RoomCommand<
         if (!sourceMap) {
           return {
             success: false,
-            commandId: 'kepler.tab.duplicate',
+            commandId: DUPLICATE_TAB_COMMAND_ID,
             message: 'Current map not found in config',
             error: 'map_not_found',
           };
@@ -146,7 +148,7 @@ function createKeplerCommands(): RoomCommand<
         if (!sourceMapState) {
           return {
             success: false,
-            commandId: 'kepler.tab.duplicate',
+            commandId: DUPLICATE_TAB_COMMAND_ID,
             message: 'Map state not initialized',
             error: 'map_state_not_initialized',
           };
@@ -155,7 +157,7 @@ function createKeplerCommands(): RoomCommand<
         getState().kepler.duplicateMap(currentMapId);
         return {
           success: true,
-          commandId: 'kepler.tab.duplicate',
+          commandId: DUPLICATE_TAB_COMMAND_ID,
           message: 'Duplicated map tab',
         };
       },
