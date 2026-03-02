@@ -8,6 +8,7 @@ import {
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
+import {registerCommandsForOwner, RoomCommand} from '@sqlrooms/room-shell';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
   castDuckDBTypesForKepler,
@@ -56,6 +57,7 @@ import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
+const KEPLER_COMMAND_OWNER = 'kepler';
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
@@ -100,6 +102,33 @@ export function createDefaultKeplerConfig(
     openTabs: [mapId],
     ...props,
   };
+}
+
+function createKeplerCommands(getState: () => any): RoomCommand[] {
+  return [
+    {
+      id: 'kepler.tab.duplicate',
+      name: 'Duplicate Tab',
+      description: 'Duplicate the current map tab',
+      group: 'Kepler',
+      keywords: ['kepler', 'map', 'duplicate', 'tab', 'copy'],
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'low',
+      },
+      execute: async () => {
+        const state = getState();
+        const currentMapId = state.kepler.config.currentMapId;
+        state.kepler.duplicateMap(currentMapId);
+        return {
+          success: true,
+          commandId: 'kepler.tab.duplicate',
+          message: 'Duplicated map tab',
+        };
+      },
+    },
+  ];
 }
 
 export type KeplerAction = {
@@ -165,6 +194,7 @@ export type KeplerSliceState = {
      */
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
+    duplicateMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
     closeMap: (mapId: string) => void;
     setOpenTabs: (tabIds: string[]) => void;
@@ -226,7 +256,7 @@ export function createKeplerSlice({
   return createSlice<
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DbSliceState
-  >((set, get) => {
+  >((set, get, store) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
     const middlewares: Middleware[] = [
       taskMiddleware,
@@ -312,6 +342,10 @@ export function createKeplerSlice({
           updateMapConfigs();
           await get().kepler.syncKeplerDatasets();
           requestMapStyle(config.currentMapId);
+
+          // Register Kepler commands
+          const keplerCommands = createKeplerCommands(get);
+          registerCommandsForOwner(store, KEPLER_COMMAND_OWNER, keplerCommands);
         },
 
         addLayer: (mapId, layer, datasetId) => {
@@ -471,6 +505,46 @@ export function createKeplerSlice({
               delete draft.kepler.forwardDispatch[mapId];
             }),
           );
+        },
+
+        duplicateMap: (mapId) => {
+          const sourceMap = get().kepler.config.maps.find(
+            (m) => m.id === mapId,
+          );
+          const sourceMapState = get().kepler.map[mapId];
+          if (!sourceMap || !sourceMapState) return;
+
+          const newMapId = createId();
+          const now = Date.now();
+
+          // Save the source map state using Kepler's schema manager
+          const savedConfig =
+            KeplerGLSchemaManager.getConfigToSave(sourceMapState);
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.kepler.config.maps.push({
+                id: newMapId,
+                name: `Copy of ${sourceMap.name}`,
+                config: savedConfig as any,
+                lastOpenedAt: now,
+              });
+              draft.kepler.config.openTabs.push(newMapId);
+              draft.kepler.config.currentMapId = newMapId;
+              // Register the new map with empty state, then load the config
+              draft.kepler.map = keplerReducer(
+                draft.kepler.map,
+                registerEntry({id: newMapId}),
+              );
+              draft.kepler.forwardDispatch[newMapId] =
+                getForwardDispatch(newMapId);
+            }),
+          );
+
+          // Load the saved config into the new map
+          get().kepler.addConfigToMap(newMapId, savedConfig as any);
+          requestMapStyle(newMapId);
+          get().kepler.syncKeplerDatasets();
         },
 
         renameMap: (mapId, name) => {
