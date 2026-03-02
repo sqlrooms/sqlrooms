@@ -610,7 +610,7 @@ export function createKeplerSlice({
           // Load the saved config into the new map
           get().kepler.addConfigToMap(newMapId, savedConfig as any);
           requestMapStyle(newMapId);
-          await get().kepler.syncKeplerDatasets();
+          get().kepler.syncKeplerDatasets();
 
           return {
             success: true,
