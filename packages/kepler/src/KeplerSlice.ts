@@ -125,7 +125,7 @@ function createKeplerCommands(): RoomCommand<
         idempotent: false,
         riskLevel: 'low',
       },
-      execute: ({getState}) => {
+      execute: async ({getState}) => {
         const currentMapId = getState().kepler.config.currentMapId;
         const sourceMap = getState().kepler.config.maps.find(
           (m) => m.id === currentMapId,
@@ -154,7 +154,7 @@ function createKeplerCommands(): RoomCommand<
           };
         }
 
-        getState().kepler.duplicateMap(currentMapId);
+        await getState().kepler.duplicateMap(currentMapId);
         return {
           success: true,
           commandId: DUPLICATE_TAB_COMMAND_ID,
@@ -229,7 +229,7 @@ export type KeplerSliceState = {
      */
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
-    duplicateMap: (mapId: string) => void;
+    duplicateMap: (mapId: string) => Promise<void>;
     renameMap: (mapId: string, name: string) => void;
     closeMap: (mapId: string) => void;
     setOpenTabs: (tabIds: string[]) => void;
@@ -546,7 +546,7 @@ export function createKeplerSlice({
           );
         },
 
-        duplicateMap: (mapId) => {
+        duplicateMap: async (mapId) => {
           // Ensure the map's redux state is registered, consistent with other kepler actions
           get().kepler.registerKeplerMapIfNotExists(mapId);
 
@@ -586,7 +586,7 @@ export function createKeplerSlice({
           // Load the saved config into the new map
           get().kepler.addConfigToMap(newMapId, savedConfig as any);
           requestMapStyle(newMapId);
-          get().kepler.syncKeplerDatasets();
+          await get().kepler.syncKeplerDatasets();
         },
 
         renameMap: (mapId, name) => {
