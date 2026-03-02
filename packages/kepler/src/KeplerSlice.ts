@@ -113,10 +113,10 @@ function createKeplerCommands(): RoomCommand<
 >[] {
   const DUPLICATE_MAP_COMMAND_ID = 'kepler.duplicate-tab';
 
-  // Error codes for internal tracking/logging
+  // Error codes for internal tracking/logging (kebab-case for consistency)
   const ERROR_CODES = {
-    MAP_NOT_FOUND: 'MAP_NOT_FOUND',
-    MAP_STATE_NOT_INITIALIZED: 'MAP_STATE_NOT_INITIALIZED',
+    MAP_NOT_FOUND: 'map-not-found',
+    MAP_STATE_NOT_INITIALIZED: 'map-state-not-initialized',
   };
 
   return [
@@ -576,7 +576,7 @@ export function createKeplerSlice({
             return {
               success: false,
               message: 'Unable to duplicate map: source map or state not found',
-              code: 'SOURCE_MAP_NOT_FOUND',
+              code: 'source-map-not-found',
             };
           }
 
