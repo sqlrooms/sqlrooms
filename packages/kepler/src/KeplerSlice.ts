@@ -150,7 +150,8 @@ function createKeplerCommands(): RoomCommand<
             success: false,
             commandId: DUPLICATE_TAB_COMMAND_ID,
             message: 'Map state not initialized',
-            error: 'map_state_not_initialized',
+            code: 'map_state_not_initialized',
+            error: 'Map state not initialized',
           };
         }
 
