@@ -1,4 +1,5 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
+import {CopyButton} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
 import {SquareTerminalIcon} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
@@ -6,6 +7,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolGrouping} from '../hooks/useToolGrouping';
+import {isTextPart, isReasoningPart} from '../utils';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
@@ -56,6 +58,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     analysisResult.id,
   );
 
+  // Collect all text content from message parts for copy button
+  const allTextContent = uiMessageParts
+    .flatMap((part) =>
+      isTextPart(part) || isReasoningPart(part) ? [part.text] : [],
+    )
+    .join('\n\n');
+  const hasTextContent = allTextContent.trim().length > 0;
+
   // Measure div width using ResizeObserver
   useEffect(() => {
     const element = divRef.current;
@@ -97,7 +107,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <div className="flex-1">{analysisResult.prompt}</div>
         </div>
       </div>
-      <div ref={divRef} className="flex w-full flex-col gap-4">
+      <div ref={divRef} className="flex w-full flex-col gap-2">
         {enableReasoningBox ? (
           <GroupedMessageParts
             groupedParts={groupedParts}
@@ -120,6 +130,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           ) : (
             <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
           ))}
+        {hasTextContent && (
+          <div className="flex justify-start">
+            <CopyButton
+              text={allTextContent}
+              tooltipLabel="Copy message"
+              className="border-muted border"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
