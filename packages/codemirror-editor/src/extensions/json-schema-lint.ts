@@ -38,10 +38,21 @@ export function jsonSchemaLinter(schema: object) {
           }
         }
       }
-    } catch (e: any) {
+    } catch (e) {
+      if (!(e instanceof SyntaxError)) {
+        diagnostics.push({
+          from: 0,
+          to: Math.min(text.length, 100),
+          severity: 'error',
+          message: `Unexpected error during validation`,
+        });
+
+        return diagnostics;
+      }
+
       // JSON parse error
-      const errorMatch = e.message.match(/position (\d+)/);
-      const position = errorMatch ? parseInt(errorMatch[1], 10) : 0;
+      const [errorMatch] = e.message.match(/position (\d+)/) ?? [];
+      const position = errorMatch ? parseInt(errorMatch, 10) : 0;
 
       diagnostics.push({
         from: Math.min(position, text.length),
@@ -63,7 +74,9 @@ function convertErrorToDiagnostic(
   text: string,
   tree: Node | undefined,
 ): Diagnostic | null {
-  if (!tree) return null;
+  if (!tree) {
+    return null;
+  }
 
   // Parse the instance path (e.g., "/properties/name" or "/items/0")
   const pathSegments = error.instancePath

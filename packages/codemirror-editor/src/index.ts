@@ -10,17 +10,3 @@ export type {DuckdbCodeMirrorEditorProps} from './components/DuckdbCodeMirrorEdi
 
 export {JavascriptCodeMirrorEditor} from './components/JavascriptCodeMirrorEditor';
 export type {JavascriptCodeMirrorEditorProps} from './components/JavascriptCodeMirrorEditor';
-
-// Themes
-export {createBaseTheme} from './themes/base-theme';
-export {createSqlroomsTheme} from './themes/sqlrooms-theme';
-export {createJsonTheme} from './themes/json-theme';
-export {createSqlTheme} from './themes/sql-theme';
-
-// Extensions (for advanced users who want to customize)
-export {jsonSchemaLinter} from './extensions/json-schema-lint';
-export {jsonSchemaAutocomplete} from './extensions/json-schema-autocomplete';
-export {autoTriggerOnQuote} from './extensions/auto-trigger';
-export {createDuckDbSqlLanguage} from './extensions/duckdb-sql-language';
-export {createDuckDbCompletion} from './extensions/duckdb-completion';
-export {createSqlKeymap} from './extensions/sql-keymap';

@@ -2,15 +2,11 @@ import React, {useCallback, useMemo, useRef} from 'react';
 import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
-import {sqlExtension} from '@marimo-team/codemirror-sql';
-import {NodeSqlParser} from '@marimo-team/codemirror-sql';
 import {createSqlKeymap} from '../extensions/sql-keymap';
-import {createDuckDbSqlLanguage} from '../extensions/duckdb-sql-language';
-import {createDuckDbCompletion} from '../extensions/duckdb-completion';
-import {convertToSQLNamespace} from '../utils/schema-converter';
 import {CodeMirrorEditor, CodeMirrorEditorProps} from './CodeMirrorEditor';
 import {createSqlTheme} from '../themes/sql-theme';
 import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
+import {createDuckDbExtension} from '../extensions/duck-db';
 
 export interface DuckdbCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
@@ -28,6 +24,7 @@ export interface DuckdbCodeMirrorEditorProps extends Omit<
   getLatestSchemas?: () => {tableSchemas: DataTable[]};
   /** Callback when Cmd+Enter is pressed (selected text or full document) */
   onRunQuery?: (query: string) => void;
+  /** Optional theme override (defaults to auto-detect) */
   theme?: Theme;
 }
 
@@ -69,54 +66,26 @@ export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
   const isDark = useIsDarkTheme(theme);
 
   // Build extensions
-  const extensions = useMemo<Extension[]>(() => {
-    const exts: Extension[] = [];
-
-    // Convert schema to SQLNamespace format
-    const sqlNamespace = convertToSQLNamespace(currentSchemas);
-
-    // Create DuckDB parser
-    const duckdbParser = new NodeSqlParser({
-      getParserOptions: () => ({
-        database: 'DuckDB',
-      }),
-    });
-
-    // 1. SQL language with DuckDB dialect
-    exts.push(createDuckDbSqlLanguage(sqlNamespace));
-
-    exts.push(createSqlTheme(isDark));
-
-    // 2. DuckDB-specific completions (custom keywords/functions)
-    exts.push(
-      createDuckDbCompletion({
+  const extensions = useMemo<Extension[]>(
+    () => [
+      ...createDuckDbExtension({
+        currentSchemas,
         connector,
         customKeywords,
         customFunctions,
       }),
-    );
-
-    // 3. marimo-sql extension (linting, gutter, hover)
-    exts.push(
-      ...sqlExtension({
-        enableLinting: true,
-        linterConfig: {
-          parser: duckdbParser,
-          delay: 500,
-        },
-        enableGutterMarkers: true,
-        enableHover: true,
-        hoverConfig: {
-          schema: sqlNamespace,
-        },
-      }),
-    );
-
-    // 3. Keyboard shortcut (Cmd+Enter)
-    exts.push(createSqlKeymap(onRunQuery));
-
-    return exts;
-  }, [isDark, currentSchemas, onRunQuery, connector, customKeywords, customFunctions]);
+      createSqlKeymap(onRunQuery),
+      createSqlTheme(isDark),
+    ],
+    [
+      isDark,
+      currentSchemas,
+      onRunQuery,
+      connector,
+      customKeywords,
+      customFunctions,
+    ],
+  );
 
   // Handle editor mount
   const handleEditorMount = useCallback(
