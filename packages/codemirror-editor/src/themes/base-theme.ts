@@ -38,10 +38,10 @@ export function createBaseTheme(isDark: boolean): Extension {
         backgroundColor: 'hsl(var(--muted))',
       },
       '.cm-selectionMatch': {
-        backgroundColor: isDark ? '#264f7844' : '#add6ff44',
+        backgroundColor: 'hsl(var(--editor-selection-match) / 0.27)',
       },
       '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
-        backgroundColor: isDark ? '#ffffff1a' : '#00000011',
+        backgroundColor: 'hsl(var(--editor-bracket-match) / 0.1)',
         outline: '1px solid hsl(var(--border))',
       },
       '.cm-gutters': {
@@ -58,7 +58,7 @@ export function createBaseTheme(isDark: boolean): Extension {
         backgroundColor: 'hsl(var(--muted))',
       },
       '.cm-foldPlaceholder': {
-        backgroundColor: isDark ? '#3e3e42' : '#e5e7eb',
+        backgroundColor: 'hsl(var(--editor-fold-placeholder))',
         border: '1px solid hsl(var(--border))',
         color: 'hsl(var(--foreground))',
       },
@@ -91,11 +91,11 @@ export function createBaseTheme(isDark: boolean): Extension {
         borderTop: '1px solid hsl(var(--border))',
       },
       '.cm-searchMatch': {
-        backgroundColor: isDark ? '#51504433' : '#ffff0033',
+        backgroundColor: 'hsl(var(--editor-search-match) / 0.2)',
         outline: '1px solid hsl(var(--border))',
       },
       '.cm-searchMatch.cm-searchMatch-selected': {
-        backgroundColor: isDark ? '#515044' : '#ffff00',
+        backgroundColor: 'hsl(var(--editor-search-match-selected))',
       },
       '.cm-button': {
         backgroundImage: 'none',
@@ -115,17 +115,17 @@ export function createBaseTheme(isDark: boolean): Extension {
       },
       '.cm-lint-marker-error': {
         content: '✗',
-        color: isDark ? '#f48771' : '#d32f2f',
+        color: 'hsl(var(--editor-lint-error))',
       },
       '.cm-lint-marker-warning': {
         content: '⚠',
-        color: isDark ? '#ffab70' : '#f57c00',
+        color: 'hsl(var(--editor-lint-warning))',
       },
       '.cm-diagnostic-error': {
-        borderLeft: `3px solid ${isDark ? '#f48771' : '#d32f2f'}`,
+        borderLeft: '3px solid hsl(var(--editor-lint-error))',
       },
       '.cm-diagnostic-warning': {
-        borderLeft: `3px solid ${isDark ? '#ffab70' : '#f57c00'}`,
+        borderLeft: '3px solid hsl(var(--editor-lint-warning))',
       },
     },
     {dark: isDark},

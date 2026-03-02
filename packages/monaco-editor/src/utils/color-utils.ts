@@ -173,27 +173,35 @@ export function getMenuColors(isDarkTheme: boolean): Record<string, string> {
  * @returns A complete Monaco editor theme data object for JSON editing
  */
 export function getJsonEditorTheme(isDarkTheme: boolean): any {
-  // Predefined pastel colors for syntax highlighting
-  // Light theme colors
-  const lightThemeColors = {
-    property: '#4B6BDF', // Soft blue for property names
-    string: '#DB745C', // Soft coral for string values
-    number: '#56A64B', // Soft green for numbers
-    keyword: '#A450B5', // Soft purple for keywords
-    punctuation: '#6E7781', // Soft gray for punctuation
-  };
-
-  // Dark theme colors
-  const darkThemeColors = {
-    property: '#78AEFF', // Pastel blue for property names
-    string: '#FFAD85', // Pastel coral/orange for string values
-    number: '#7CD992', // Pastel green for numbers
-    keyword: '#C987E8', // Pastel purple for keywords
-    punctuation: '#A9B1BA', // Light gray for punctuation
-  };
-
-  // Select the appropriate color set based on theme
-  const colors = isDarkTheme ? darkThemeColors : lightThemeColors;
+  // Get syntax colors from CSS variables with fallbacks
+  const property = getCssColor(
+    '--editor-property',
+    isDarkTheme ? '#78AEFF' : '#4B6BDF',
+  );
+  const string = getCssColor(
+    '--editor-string',
+    isDarkTheme ? '#FFAD85' : '#DB745C',
+  );
+  const number = getCssColor(
+    '--editor-number',
+    isDarkTheme ? '#7CD992' : '#56A64B',
+  );
+  const keyword = getCssColor(
+    '--editor-keyword',
+    isDarkTheme ? '#C987E8' : '#A450B5',
+  );
+  const punctuation = getCssColor(
+    '--editor-punctuation',
+    isDarkTheme ? '#A9B1BA' : '#6E7781',
+  );
+  const comment = getCssColor(
+    '--editor-comment',
+    isDarkTheme ? '#6A9955' : '#008000',
+  );
+  const invalid = getCssColor(
+    '--editor-invalid',
+    isDarkTheme ? '#F44747' : '#CD3131',
+  );
 
   // Theme background and UI colors - read from current DOM
   const background = getCssColor(
@@ -236,24 +244,30 @@ export function getJsonEditorTheme(isDarkTheme: boolean): any {
     base: isDarkTheme ? 'vs-dark' : 'vs',
     inherit: true,
     rules: [
-      // Property keys - using pastel blue
-      {token: 'type', foreground: colors.property.slice(1)},
-      {token: 'string.key.json', foreground: colors.property.slice(1)},
-      {token: 'key', foreground: colors.property.slice(1)},
+      // Property keys
+      {token: 'type', foreground: property.slice(1)},
+      {token: 'string.key.json', foreground: property.slice(1)},
+      {token: 'key', foreground: property.slice(1)},
 
-      // String values - using pastel coral/orange
-      {token: 'string.value.json', foreground: colors.string.slice(1)},
-      {token: 'string', foreground: colors.string.slice(1)},
+      // String values
+      {token: 'string.value.json', foreground: string.slice(1)},
+      {token: 'string', foreground: string.slice(1)},
 
-      // Numbers - using pastel green
-      {token: 'number', foreground: colors.number.slice(1)},
+      // Numbers
+      {token: 'number', foreground: number.slice(1)},
 
-      // Keywords (true, false, null) - using pastel purple
-      {token: 'keyword', foreground: colors.keyword.slice(1)},
+      // Keywords (true, false, null)
+      {token: 'keyword', foreground: keyword.slice(1)},
 
-      // Punctuation - using light gray
-      {token: 'delimiter', foreground: colors.punctuation.slice(1)},
-      {token: 'bracket', foreground: colors.punctuation.slice(1)},
+      // Punctuation
+      {token: 'delimiter', foreground: punctuation.slice(1)},
+      {token: 'bracket', foreground: punctuation.slice(1)},
+
+      // Comments
+      {token: 'comment', foreground: comment.slice(1)},
+
+      // Invalid syntax
+      {token: 'invalid', foreground: invalid.slice(1)},
 
       // Fallbacks
       {token: '', foreground: foreground.slice(1)},
