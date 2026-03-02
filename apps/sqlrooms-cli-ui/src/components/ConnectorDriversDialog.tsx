@@ -14,10 +14,9 @@ type ConnectorDiagnostic = ReturnType<
   typeof useRoomStore.getState
 >['connectorDriverDiagnostics'][number];
 
-const selectMissingConnectorDiagnostics = (
+const selectConnectorDiagnostics = (
   state: ReturnType<typeof useRoomStore.getState>,
-) =>
-  state.connectorDriverDiagnostics.filter((item) => item.available === false);
+) => state.connectorDriverDiagnostics;
 
 function DriverInstallCommands({
   diagnostic,
@@ -74,7 +73,11 @@ function DriverInstallCommands({
 }
 
 export const ConnectorDriversDialog: React.FC = () => {
-  const missingConnectors = useRoomStore(selectMissingConnectorDiagnostics);
+  const connectorDiagnostics = useRoomStore(selectConnectorDiagnostics);
+  const missingConnectors = React.useMemo(
+    () => connectorDiagnostics.filter((item) => item.available === false),
+    [connectorDiagnostics],
+  );
 
   if (!missingConnectors.length) {
     return null;
