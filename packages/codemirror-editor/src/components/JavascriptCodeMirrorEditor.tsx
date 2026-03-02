@@ -5,6 +5,7 @@ import {createSqlroomsTheme} from '../themes/sqlrooms-theme';
 import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
 
 export interface JavascriptCodeMirrorEditorProps extends CodeMirrorEditorProps {
+  /** Optional theme override (defaults to auto-detect) */
   theme?: Theme;
 }
 
@@ -24,7 +25,13 @@ export const JavascriptCodeMirrorEditor: React.FC<
 
   // Build JavaScript-specific extensions
   const extensions = useMemo(() => {
-    return [javascript(), createSqlroomsTheme(isDark), ...userExtensions];
+    return [
+      javascript({
+        jsx: true,
+      }),
+      createSqlroomsTheme(isDark),
+      ...userExtensions,
+    ];
   }, [userExtensions, isDark]);
 
   return (

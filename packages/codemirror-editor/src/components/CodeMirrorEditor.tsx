@@ -19,29 +19,19 @@ export type CodeMirrorEditorOptions = {
 };
 
 export interface CodeMirrorEditorProps {
-  /**
-   * CSS class name for the editor container
-   * @default ''
-   */
+  /** CSS class name for the editor container */
   className?: string;
+  /** The content to display in the editor */
   value?: string;
+  /** Whether the editor should be in read-only mode */
   readOnly?: boolean;
-  /**
-   * Callback when the editor content changes
-   */
+  /** Callback when the editor content changes */
   onChange?: (value: string) => void;
-  /**
-   * Callback when the editor view is mounted
-   * Provides access to EditorView instance
-   */
+  /** Callback when the editor view is mounted - provides access to EditorView instance */
   onMount?: (view: EditorView) => void;
-  /**
-   * Additional CodeMirror extensions to apply
-   */
+  /** Additional CodeMirror extensions to apply */
   extensions?: Extension[];
-  /**
-   * Additional configuration options
-   */
+  /** Additional configuration options */
   options?: CodeMirrorEditorOptions;
 }
 

@@ -12,23 +12,15 @@ export interface JsonCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
   'value'
 > {
-  /**
-   * The JSON schema to validate against
-   */
+  /** The JSON schema to validate against */
   schema?: object;
-  /**
-   * The JSON value to edit
-   * Can be a string or an object (will be stringified)
-   */
+  /** The JSON value to edit - can be a string or an object (will be stringified) */
   value?: string | object;
-
+  /** Optional theme override (defaults to auto-detect) */
   theme?: Theme;
 }
 
-/**
- * A CodeMirror editor for editing JSON with schema validation and autocomplete
- * Equivalent to JsonMonacoEditor but using CodeMirror
- */
+/** A CodeMirror editor for editing JSON with schema validation and autocomplete */
 export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   schema,
   value = '',
