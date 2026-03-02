@@ -1,5 +1,5 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {Spinner, cn, useDetermineTheme} from '@sqlrooms/ui';
+import {Spinner, cn, useIsDarkTheme} from '@sqlrooms/ui';
 import type {Theme} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef} from 'react';
 import {getJsonEditorTheme, getMenuColors} from '../utils/color-utils';
@@ -167,9 +167,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   beforeMount,
   ...props
 }) => {
-  const theme = useDetermineTheme(explicitTheme);
-
-  const isDark = theme === 'dark';
+  const isDark = useIsDarkTheme(explicitTheme);
 
   const monacoTheme =
     language === 'json'

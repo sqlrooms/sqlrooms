@@ -8,9 +8,12 @@ import {
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
+import {
+  getFunctionSuggestions,
+  type DataTable,
+  type DuckDbConnector,
+} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
-import {getFunctionSuggestions} from './constants/functionSuggestions';
 export interface SqlMonacoEditorProps extends Omit<
   MonacoEditorProps,
   'language'
@@ -36,13 +39,16 @@ export interface SqlMonacoEditorProps extends Omit<
    * Table schemas for autocompletion
    */
   tableSchemas?: DataTable[];
-  /**
-   * Callback to get the latest table schemas
-   * This is called from within provideCompletionItems to ensure we have the latest data
-   */
+  /** Callback to get the latest table schemas */
   getLatestSchemas?: () => {
     tableSchemas: DataTable[];
   };
+  /** Callback when Cmd/Ctrl+Enter is pressed to run query */
+  onRunQuery?: (params: {
+    value: string;
+    selectedValue: string;
+    isSelectionEmpty: boolean;
+  }) => void;
 }
 
 const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
@@ -272,6 +278,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   customFunctions = [],
   tableSchemas = [],
   getLatestSchemas,
+  onRunQuery,
   onMount,
   className,
   options,
@@ -325,6 +332,23 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         });
       }
 
+      // Add keyboard shortcut for running query
+      if (onRunQuery) {
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+          const model = editor.getModel();
+          const selection = editor.getSelection();
+          const value = editor.getValue();
+          const selectedValue = model && selection ? model.getValueInRange(selection) : '';
+          const isSelectionEmpty = !selection || selection.isEmpty();
+
+          onRunQuery({
+            value,
+            selectedValue,
+            isSelectionEmpty,
+          });
+        });
+      }
+
       // Cleanup on dispose
       if (model) {
         editor.onDidDispose(() => {
@@ -343,6 +367,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       customFunctions,
       getLatestSchemas,
       onMount,
+      onRunQuery,
       tableSchemas,
     ],
   );

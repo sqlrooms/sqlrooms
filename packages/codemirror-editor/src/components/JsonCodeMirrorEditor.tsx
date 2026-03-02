@@ -4,10 +4,13 @@ import {lintGutter} from '@codemirror/lint';
 import {jsonSchemaLinter} from '../extensions/json-schema-lint';
 import {jsonSchemaAutocomplete} from '../extensions/json-schema-autocomplete';
 import {autoTriggerOnQuote} from '../extensions/auto-trigger';
+import {json} from '@codemirror/lang-json';
+import {createJsonTheme} from '../themes/json-theme';
+import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
 
 export interface JsonCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
-  'language' | 'value'
+  'value'
 > {
   /**
    * The JSON schema to validate against
@@ -18,6 +21,8 @@ export interface JsonCodeMirrorEditorProps extends Omit<
    * Can be a string or an object (will be stringified)
    */
   value?: string | object;
+
+  theme?: Theme;
 }
 
 /**
@@ -29,15 +34,20 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   value = '',
   extensions: userExtensions = [],
   options = {},
+  theme: explicitTheme,
   ...props
 }) => {
   // Convert object value to string if needed
   const stringValue =
     typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
 
+  const isDark = useIsDarkTheme(explicitTheme);
+
   // Build JSON-specific extensions
   const extensions = useMemo(() => {
     return [
+      json(),
+      createJsonTheme(isDark),
       ...(schema
         ? [
             jsonSchemaLinter(schema),
@@ -48,11 +58,10 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
       autoTriggerOnQuote(),
       ...userExtensions,
     ];
-  }, [schema, userExtensions]);
+  }, [schema, userExtensions, isDark]);
 
   return (
     <CodeMirrorEditor
-      language="json"
       value={stringValue}
       extensions={extensions}
       options={{

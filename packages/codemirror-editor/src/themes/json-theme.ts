@@ -1,8 +1,7 @@
-import {EditorView} from '@codemirror/view';
 import {Extension} from '@codemirror/state';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags as t} from '@lezer/highlight';
-import {getMonospaceFont} from '@sqlrooms/utils';
+import {createBaseTheme} from './base-theme';
 
 /**
  * Creates a JSON-specific theme with pastel syntax colors matching Monaco's JSON theme
@@ -27,80 +26,8 @@ export function createJsonTheme(isDark: boolean): Extension {
         punctuation: '#6E7781', // Soft gray for punctuation
       };
 
-  // Get monospace font
-  const fontFamily = getMonospaceFont();
-
-  // Base theme (same as sqlrooms-theme but can be customized for JSON)
-  const baseTheme = EditorView.theme(
-    {
-      '&': {
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        height: '100%',
-      },
-      '.cm-content': {
-        caretColor: 'hsl(var(--primary))',
-        fontFamily,
-        fontSize: '14px',
-        lineHeight: '21px',
-        paddingTop: '0',
-      },
-      '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: 'hsl(var(--primary))',
-      },
-      '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
-        {
-          backgroundColor: 'hsl(var(--accent))',
-        },
-      '.cm-activeLine': {
-        backgroundColor: 'hsl(var(--muted))',
-      },
-      '.cm-gutters': {
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--muted-foreground))',
-        border: 'none',
-        paddingLeft: '20px',
-      },
-      '.cm-gutterElement': {
-        marginTop: '0',
-        paddingRight: '0',
-      },
-      '.cm-activeLineGutter': {
-        backgroundColor: 'hsl(var(--muted))',
-      },
-      '.cm-tooltip': {
-        backgroundColor: 'hsl(var(--popover))',
-        color: 'hsl(var(--popover-foreground))',
-        border: '1px solid hsl(var(--border))',
-      },
-      '.cm-tooltip-autocomplete': {
-        '& > ul > li[aria-selected]': {
-          backgroundColor: 'hsl(var(--accent))',
-          color: 'hsl(var(--foreground))',
-        },
-      },
-      '.cm-completionLabel': {
-        color: 'hsl(var(--foreground))',
-      },
-      '.cm-completionDetail': {
-        color: 'hsl(var(--muted-foreground))',
-        fontStyle: 'italic',
-      },
-      // Lint markers
-      '.cm-lint-marker-error': {
-        content: '✗',
-        color: isDark ? '#f48771' : '#d32f2f',
-      },
-      '.cm-lint-marker-warning': {
-        content: '⚠',
-        color: isDark ? '#ffab70' : '#f57c00',
-      },
-      '.cm-diagnostic-error': {
-        borderLeft: `3px solid ${isDark ? '#f48771' : '#d32f2f'}`,
-      },
-    },
-    {dark: isDark},
-  );
+  // Use shared base theme
+  const baseTheme = createBaseTheme(isDark);
 
   // JSON-specific syntax highlighting with pastel colors
   const highlightStyle = HighlightStyle.define([

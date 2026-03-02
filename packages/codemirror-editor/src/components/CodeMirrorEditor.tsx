@@ -2,16 +2,11 @@ import {EditorView, lineNumbers} from '@codemirror/view';
 import {EditorState, Extension, StateEffect} from '@codemirror/state';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {keymap} from '@codemirror/view';
-import {javascript} from '@codemirror/lang-javascript';
-import {sql} from '@codemirror/lang-sql';
-import {json} from '@codemirror/lang-json';
 import {autocompletion, completionKeymap} from '@codemirror/autocomplete';
 import {bracketMatching, foldGutter, foldKeymap} from '@codemirror/language';
 import {searchKeymap, highlightSelectionMatches} from '@codemirror/search';
-import {cn, Theme, useDetermineTheme} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef} from 'react';
-import {createSqlroomsTheme} from '../themes/sqlrooms-theme';
-import {createJsonTheme} from '../themes/json-theme';
 import {createHighlightActiveLineTheme} from '../themes/highlight-active-line-theme';
 
 export type CodeMirrorEditorOptions = {
@@ -29,17 +24,6 @@ export interface CodeMirrorEditorProps {
    * @default ''
    */
   className?: string;
-  /**
-   * The language of the editor
-   * @default 'javascript'
-   */
-  language?: 'javascript' | 'json' | 'sql';
-  /**
-   * The theme of the editor
-   * Can be explicitly set or will automatically use the app theme if not provided
-   * @default undefined (auto-detect from app theme)
-   */
-  theme?: Theme;
   value?: string;
   readOnly?: boolean;
   /**
@@ -66,8 +50,6 @@ export interface CodeMirrorEditorProps {
  */
 export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   className,
-  language = 'javascript',
-  theme: explicitTheme,
   value = '',
   readOnly = false,
   onChange,
@@ -87,10 +69,6 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const theme = useDetermineTheme(explicitTheme);
-
-  const isDark = theme === 'dark';
-
   // Build extensions array
   const extensions = useMemo(() => {
     const extensionsList: Extension[] = [];
@@ -106,22 +84,6 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
         ...searchKeymap,
       ]),
     );
-
-    // Language support
-    if (language === 'javascript') {
-      extensionsList.push(javascript());
-    } else if (language === 'json') {
-      extensionsList.push(json());
-    } else if (language === 'sql') {
-      extensionsList.push(sql());
-    }
-
-    // Theme - use JSON-specific theme for JSON language
-    if (language === 'json') {
-      extensionsList.push(createJsonTheme(isDark));
-    } else {
-      extensionsList.push(createSqlroomsTheme(isDark));
-    }
 
     // Optional features based on options
     if (options.lineNumbers !== false) {
@@ -170,8 +132,6 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
 
     return extensionsList;
   }, [
-    language,
-    isDark,
     readOnly,
     options.lineNumbers,
     options.lineWrapping,

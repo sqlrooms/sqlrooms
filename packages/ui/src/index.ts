@@ -306,7 +306,7 @@ export {
 
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 
-export {useDetermineTheme} from './hooks/useDetermineTheme';
+export {useIsDarkTheme} from './hooks/useIsDarkTheme';
 
 // Utilities
 export {cn} from './lib/utils';

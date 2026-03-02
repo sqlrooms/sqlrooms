@@ -1,9 +1,7 @@
 import {Theme, useTheme} from '../theme/theme-provider';
 import {useIsSystemPrefersDark} from './useIsSystemPrefersDark';
 
-export function useDetermineTheme(
-  explicitTheme?: Theme,
-): Omit<Theme, 'system'> {
+export function useIsDarkTheme(explicitTheme?: Theme): boolean {
   const {theme: appTheme} = useTheme();
   const isSystemPrefersDark = useIsSystemPrefersDark();
 
@@ -17,5 +15,5 @@ export function useDetermineTheme(
           : appTheme === 'dark' ||
             (appTheme === 'system' && isSystemPrefersDark);
 
-  return isDark ? 'dark' : 'light';
+  return isDark;
 }

@@ -31,6 +31,8 @@
     "@codemirror/view": "^6.33.0",
     "@lezer/common": "^1.2.0",
     "@lezer/highlight": "^1.2.0",
+    "@marimo-team/codemirror-sql": "^0.2.0",
+    "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "ajv": "^8.17.1",

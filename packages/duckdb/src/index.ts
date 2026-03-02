@@ -45,6 +45,8 @@ export {
   type DuckDbQueryResult,
 } from './useSql';
 
+export {getFunctionSuggestions} from './functionSuggestions';
+
 // Re-export from @sqlrooms/duckdb-core
 export {
   createTypedRowAccessor,
