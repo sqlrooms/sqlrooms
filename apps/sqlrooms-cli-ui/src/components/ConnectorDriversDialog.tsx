@@ -18,18 +18,22 @@ const selectConnectorDiagnostics = (
   state: ReturnType<typeof useRoomStore.getState>,
 ) => state.connectorDriverDiagnostics;
 
+function getInstallCommands(diagnostic: ConnectorDiagnostic): string[] {
+  const installCommands = diagnostic.installCommands || {};
+  return [
+    installCommands.uvProject,
+    installCommands.uvxRelaunch,
+    installCommands.uvxWith,
+  ].filter((value): value is string => Boolean(value));
+}
+
 function DriverInstallCommands({
   diagnostic,
 }: {
   diagnostic: ConnectorDiagnostic;
 }) {
   const {toast} = useToast();
-  const installCommands = diagnostic.installCommands || {};
-  const commands = [
-    installCommands.uvProject,
-    installCommands.uvxRelaunch,
-    installCommands.uvxWith,
-  ].filter((value): value is string => Boolean(value));
+  const commands = getInstallCommands(diagnostic);
 
   if (!commands.length) {
     return null;
@@ -74,43 +78,80 @@ function DriverInstallCommands({
 
 export const ConnectorDriversDialog: React.FC = () => {
   const connectorDiagnostics = useRoomStore(selectConnectorDiagnostics);
-  const missingConnectors = React.useMemo(
-    () => connectorDiagnostics.filter((item) => item.available === false),
+  const {missingCount, installedCount} = React.useMemo(() => {
+    const missing = connectorDiagnostics.filter(
+      (item) => item.available === false,
+    );
+    return {
+      missingCount: missing.length,
+      installedCount: connectorDiagnostics.length - missing.length,
+    };
+  }, [connectorDiagnostics]);
+  const sortedDiagnostics = React.useMemo(
+    () =>
+      [...connectorDiagnostics].sort((a, b) =>
+        `${a.title}:${a.engineId}`.localeCompare(`${b.title}:${b.engineId}`),
+      ),
     [connectorDiagnostics],
   );
 
-  if (!missingConnectors.length) {
+  if (!connectorDiagnostics.length) {
     return null;
   }
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Install Drivers ({missingConnectors.length})
+        <Button size="xs" variant="outline">
+          Connectors
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Missing Connector Drivers</DialogTitle>
+          <DialogTitle>Connector Drivers</DialogTitle>
         </DialogHeader>
+        <div className="text-muted-foreground text-sm">
+          Installed: {installedCount} · Missing: {missingCount}
+        </div>
         <div className="space-y-4">
-          {missingConnectors.map((diagnostic) => (
-            <div key={diagnostic.id} className="rounded border p-3">
-              <div className="font-medium">
-                {diagnostic.title} ({diagnostic.engineId})
+          {sortedDiagnostics.map((diagnostic) => (
+            <div
+              key={`${diagnostic.id}:${diagnostic.engineId}`}
+              className="rounded border p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-medium">
+                  {diagnostic.title} ({diagnostic.engineId})
+                </div>
+                <span
+                  className={
+                    diagnostic.available
+                      ? 'rounded border border-green-600/30 bg-green-500/10 px-2 py-0.5 text-xs text-green-700'
+                      : 'rounded border border-amber-600/30 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700'
+                  }
+                >
+                  {diagnostic.available ? 'Installed' : 'Missing'}
+                </span>
               </div>
-              <div className="text-muted-foreground mt-1 text-sm">
-                {diagnostic.error ||
-                  'Driver is not installed in this Python environment.'}
-              </div>
-              {diagnostic.requiredPackages?.length ? (
+              {!diagnostic.available ? (
+                <div className="text-muted-foreground mt-1 text-sm">
+                  {diagnostic.error ||
+                    'Driver is not installed in this Python environment.'}
+                </div>
+              ) : (
+                <div className="text-muted-foreground mt-1 text-sm">
+                  Driver is available in the current Python environment.
+                </div>
+              )}
+              {!diagnostic.available && diagnostic.requiredPackages?.length ? (
                 <div className="mt-2 text-xs">
                   Required package:{' '}
                   <code>{diagnostic.requiredPackages.join(', ')}</code>
                 </div>
               ) : null}
-              <DriverInstallCommands diagnostic={diagnostic} />
+              {!diagnostic.available ? (
+                <DriverInstallCommands diagnostic={diagnostic} />
+              ) : null}
             </div>
           ))}
         </div>
