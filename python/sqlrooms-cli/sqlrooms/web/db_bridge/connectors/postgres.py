@@ -61,7 +61,12 @@ class PostgresBridgeConnector(BaseSqlBridgeConnector):
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT current_database()")
-                current_db = cur.fetchone()[0]
+                result = cur.fetchone()
+                if result is None:
+                    raise RuntimeError(
+                        "Postgres bridge could not resolve current database."
+                    )
+                current_db = result[0]
                 cur.execute(
                     """
                     SELECT schema_name

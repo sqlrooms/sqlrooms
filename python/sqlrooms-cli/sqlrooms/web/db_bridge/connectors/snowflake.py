@@ -7,6 +7,15 @@ from typing import Any
 from ..utils import cursor_columns, quoted_ident, rows_to_json_rows
 from .base import BaseSqlBridgeConnector
 
+SNOWFLAKE_INSTALL_COMMANDS = {
+    "uvProject": "uv sync --extra snowflake",
+    "uvxRelaunch": 'uvx --from "sqlrooms-cli[snowflake]" sqlrooms --db-path :memory:',
+    "uvxWith": (
+        'uvx --from sqlrooms-cli --with "snowflake-connector-python>=4.3.0" '
+        "sqlrooms --db-path :memory:"
+    ),
+}
+
 
 @dataclass(frozen=True)
 class SnowflakeConnectorSettings:
@@ -82,18 +91,7 @@ class SnowflakeBridgeConnector(BaseSqlBridgeConnector):
                 ),
                 "error": "Missing Python dependency: snowflake-connector-python",
                 "requiredPackages": ["snowflake-connector-python>=4.3.0"],
-                "installCommands": {
-                    "uvProject": "uv sync --extra snowflake",
-                    "uvxRelaunch": (
-                        'uvx --from "sqlrooms-cli[snowflake]" sqlrooms '
-                        "--db-path :memory:"
-                    ),
-                    "uvxWith": (
-                        'uvx --from sqlrooms-cli --with '
-                        '"snowflake-connector-python>=4.3.0" '
-                        "sqlrooms --db-path :memory:"
-                    ),
-                },
+                "installCommands": SNOWFLAKE_INSTALL_COMMANDS,
             }
         if available:
             return {"available": True}
@@ -101,18 +99,7 @@ class SnowflakeBridgeConnector(BaseSqlBridgeConnector):
             "available": False,
             "error": "Missing Python dependency: snowflake-connector-python",
             "requiredPackages": ["snowflake-connector-python>=4.3.0"],
-            "installCommands": {
-                "uvProject": "uv sync --extra snowflake",
-                "uvxRelaunch": (
-                    'uvx --from "sqlrooms-cli[snowflake]" sqlrooms '
-                    "--db-path :memory:"
-                ),
-                "uvxWith": (
-                    'uvx --from sqlrooms-cli --with '
-                    '"snowflake-connector-python>=4.3.0" '
-                    "sqlrooms --db-path :memory:"
-                ),
-            },
+            "installCommands": SNOWFLAKE_INSTALL_COMMANDS,
         }
 
     def list_catalog(self) -> dict[str, list[dict[str, Any]]]:

@@ -2,6 +2,7 @@ import pytest
 
 from sqlrooms.web.db_bridge import (
     DbBridgeRegistry,
+    PostgresBridgeConnector,
     SnowflakeBridgeConnector,
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
@@ -101,6 +102,37 @@ def test_snowflake_dependency_diagnostics_handles_find_spec_errors(monkeypatch):
     assert payload["available"] is False
     assert "reason" in payload
     assert "snowflake.connector" in payload["reason"]
+
+
+def test_postgres_catalog_requires_current_database_result(monkeypatch):
+    connector = PostgresBridgeConnector(settings=PostgresConnectorSettings(dsn="postgresql://x"))
+
+    class _FakeCursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, sql: str):
+            _ = sql
+
+        def fetchone(self):
+            return None
+
+    class _FakeConn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def cursor(self):
+            return _FakeCursor()
+
+    monkeypatch.setattr(PostgresBridgeConnector, "_connect", lambda self: _FakeConn())
+    with pytest.raises(RuntimeError, match="could not resolve current database"):
+        connector.list_catalog()
 
 
 def test_snowflake_settings_requires_account_and_user():

@@ -48,6 +48,7 @@ import {produce} from 'immer';
 import {z} from 'zod';
 
 import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
+import type {RuntimeConfig} from './runtimeConfig';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
@@ -68,6 +69,10 @@ export const AppBuilderProjectConfig = z.object({
     .default({}),
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
+type RuntimeDbBridgeConfig = NonNullable<RuntimeConfig['dbBridge']>;
+type ConnectorDriverDiagnostic = NonNullable<
+  RuntimeDbBridgeConfig['diagnostics']
+>[number];
 
 export type RoomState = RoomShellSliceState &
   AiSliceState &
@@ -77,20 +82,7 @@ export type RoomState = RoomShellSliceState &
   NotebookSliceState &
   CanvasSliceState &
   WebContainerSliceState & {
-    connectorDriverDiagnostics: Array<{
-      id: string;
-      engineId: string;
-      title: string;
-      available: boolean;
-      error?: string;
-      reason?: string;
-      requiredPackages?: string[];
-      installCommands?: {
-        uvProject?: string;
-        uvxRelaunch?: string;
-        uvxWith?: string;
-      };
-    }>;
+    connectorDriverDiagnostics: ConnectorDriverDiagnostic[];
     appProject: {
       config: AppBuilderProjectConfig;
       upsertSheetApp: (
@@ -135,26 +127,7 @@ connector.loadFile = async (file, desiredTableName, options) => {
   return baseLoadFile(file, desiredTableName, options);
 };
 
-function getRuntimeBridgeConfig():
-  | {
-      id: string;
-      connections: Array<{
-        id: string;
-        engineId: string;
-        title: string;
-        runtimeSupport?: 'browser' | 'server' | 'both';
-        requiresBridge?: boolean;
-        bridgeId?: string;
-        isCore?: boolean;
-      }>;
-      diagnostics?: Array<{
-        id: string;
-        engineId: string;
-        title: string;
-        available: boolean;
-      }>;
-    }
-  | undefined {
+function getRuntimeBridgeConfig(): RuntimeDbBridgeConfig | undefined {
   if (runtimeConfig.dbBridge?.connections?.length) {
     return runtimeConfig.dbBridge;
   }
@@ -274,8 +247,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
 const bridgeConfig = getRuntimeBridgeConfig();
 if (bridgeConfig?.connections.length) {
+  const diagnosticsKey = (id: string, engineId: string) => `${id}:${engineId}`;
   const diagnosticsById = new Map(
-    (bridgeConfig.diagnostics || []).map((item) => [item.id, item]),
+    (bridgeConfig.diagnostics || []).map((item) => [
+      diagnosticsKey(item.id, item.engineId),
+      item,
+    ]),
   );
   const bridge = createHttpDbBridge({
     id: bridgeConfig.id,
@@ -284,7 +261,9 @@ if (bridgeConfig?.connections.length) {
   const state = roomStore.getState();
   state.db.connectors.registerBridge(bridge);
   for (const connection of bridgeConfig.connections) {
-    const diagnostics = diagnosticsById.get(connection.id);
+    const diagnostics = diagnosticsById.get(
+      diagnosticsKey(connection.id, connection.engineId),
+    );
     if (diagnostics && diagnostics.available === false) {
       continue;
     }
