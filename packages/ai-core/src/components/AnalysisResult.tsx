@@ -134,7 +134,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <div className="flex justify-start">
             <CopyButton
               text={allTextContent}
-              tooltipLabel="Copy entire response"
+              tooltipLabel="Copy message"
               className="border-muted border"
             />
           </div>
