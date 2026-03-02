@@ -113,6 +113,12 @@ function createKeplerCommands(): RoomCommand<
 >[] {
   const DUPLICATE_TAB_COMMAND_ID = 'kepler.tab.duplicate';
 
+  // Error codes for internal tracking/logging
+  const ERROR_CODES = {
+    MAP_NOT_FOUND: 'MAP_NOT_FOUND',
+    MAP_STATE_NOT_INITIALIZED: 'MAP_STATE_NOT_INITIALIZED',
+  };
+
   return [
     {
       id: DUPLICATE_TAB_COMMAND_ID,
@@ -135,8 +141,8 @@ function createKeplerCommands(): RoomCommand<
           return {
             success: false,
             commandId: DUPLICATE_TAB_COMMAND_ID,
-            message: 'Current map not found in config',
-            error: 'map_not_found',
+            message: 'Unable to duplicate map: current map not found',
+            error: ERROR_CODES.MAP_NOT_FOUND,
           };
         }
 
@@ -149,9 +155,8 @@ function createKeplerCommands(): RoomCommand<
           return {
             success: false,
             commandId: DUPLICATE_TAB_COMMAND_ID,
-            message: 'Map state not initialized',
-            code: 'map_state_not_initialized',
-            error: 'Map state not initialized',
+            message: 'Unable to duplicate map: map state not initialized',
+            error: ERROR_CODES.MAP_STATE_NOT_INITIALIZED,
           };
         }
 
