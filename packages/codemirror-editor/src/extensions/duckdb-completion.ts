@@ -4,7 +4,7 @@ import {
 } from '@codemirror/autocomplete';
 import type {Extension} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
-import {getFunctionSuggestions, type DuckDbConnector} from '@sqlrooms/duckdb';
+import {type DuckDbConnector, getFunctionSuggestions} from '@sqlrooms/duckdb';
 import {LanguageSupport} from '@codemirror/language';
 
 interface DuckDbCompletionContext {

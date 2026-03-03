@@ -61,3 +61,5 @@ export {
 } from './schema-tree/types';
 
 export {type TableColumn, type DataTable} from './types';
+
+export {getFunctionSuggestions} from './duckdb-function-suggestions';

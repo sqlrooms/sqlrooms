@@ -46,8 +46,6 @@ export {
   type UseSqlQueryResult,
 } from './useSql';
 
-export {getFunctionSuggestions} from './functionSuggestions';
-
 // Re-export from @sqlrooms/duckdb-core
 export {
   arrowTableToJson,
@@ -76,6 +74,7 @@ export {
   separateLastStatement,
   splitSqlStatements,
   sqlFrom,
+  getFunctionSuggestions,
   type BaseDuckDbConnectorImpl,
   type BaseDuckDbConnectorOptions,
   type ColumnNodeObject,

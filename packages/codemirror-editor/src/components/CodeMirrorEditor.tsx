@@ -8,6 +8,7 @@ import {searchKeymap, highlightSelectionMatches} from '@codemirror/search';
 import {cn} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef} from 'react';
 import {createHighlightActiveLineTheme} from '../themes/highlight-active-line-theme';
+import {CodeMirrorDiagnostic, getDiagnostics} from '../utils/diagnostics-utils';
 
 export type CodeMirrorEditorOptions = {
   lineNumbers?: boolean;
@@ -29,6 +30,8 @@ export interface CodeMirrorEditorProps {
   onChange?: (value: string) => void;
   /** Callback when the editor view is mounted - provides access to EditorView instance */
   onMount?: (view: EditorView) => void;
+  /** Callback when lint diagnostics change (validation errors/warnings) */
+  onValidate?: (diagnostics: CodeMirrorDiagnostic[]) => void;
   /** Additional CodeMirror extensions to apply */
   extensions?: Extension[];
   /** Additional configuration options */
@@ -44,12 +47,14 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   readOnly = false,
   onChange,
   onMount,
+  onValidate,
   extensions: userExtensions = [],
   options = {},
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
+  const onValidateRef = useRef(onValidate);
 
   // Keep onChange ref updated without triggering extensions reconfiguration.
   // The updateListener closure accesses onChangeRef.current to always use the latest
@@ -58,6 +63,10 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    onValidateRef.current = onValidate;
+  }, [onValidate]);
 
   // Build extensions array
   const extensions = useMemo(() => {
@@ -111,11 +120,19 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     // User extensions
     extensionsList.push(...userExtensions);
 
-    // Update listener for onChange
+    // Update listener
     extensionsList.push(
       EditorView.updateListener.of((update) => {
+        // Call onChange when document changes
         if (update.docChanged && onChangeRef.current) {
           onChangeRef.current(update.state.doc.toString());
+        }
+
+        // Call onValidate when diagnostics change
+        if (onValidateRef.current) {
+          const diagnostics = getDiagnostics(update.state);
+
+          onValidateRef.current(diagnostics);
         }
       }),
     );
