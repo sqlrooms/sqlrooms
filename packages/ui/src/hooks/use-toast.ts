@@ -139,6 +139,9 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, 'id'>;
 
+/**
+ * @deprecated Use Sonner's `toast` from `@sqlrooms/ui` instead.
+ */
 function toast({...props}: Toast) {
   const id = genId();
 
@@ -168,6 +171,9 @@ function toast({...props}: Toast) {
   };
 }
 
+/**
+ * @deprecated Use Sonner's `toast` from `@sqlrooms/ui` instead.
+ */
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
 

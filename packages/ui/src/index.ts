@@ -318,6 +318,9 @@ export {
 export {Tree, type TreeNodeData} from './components/tree';
 
 // Hooks
+/**
+ * @deprecated Use Sonner's `toast` export from `@sqlrooms/ui` instead.
+ */
 export {useToast, toast as legacyToast, reducer} from './hooks/use-toast';
 export {toast, type ExternalToast} from 'sonner';
 

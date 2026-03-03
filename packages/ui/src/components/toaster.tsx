@@ -3,39 +3,7 @@
 import {Toaster as Sonner, type ToasterProps} from 'sonner';
 
 import {useTheme} from '../theme/theme-provider';
-import {useToast} from '../hooks/use-toast';
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from './toast';
-
-function LegacyToaster() {
-  const {toasts} = useToast();
-
-  return (
-    <ToastProvider>
-      {toasts.map(function ({id, title, description, action, ...props}) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid w-full gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        );
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  );
-}
+import {LegacyToaster} from './toaster-legacy';
 
 export function Toaster(props: ToasterProps) {
   const {theme} = useTheme();
