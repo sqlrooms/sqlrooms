@@ -1,18 +1,11 @@
 import {Extension} from '@codemirror/state';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags as t} from '@lezer/highlight';
-import {createBaseTheme} from './base-theme';
+import {createBaseTheme, BaseThemeOptions} from './base-theme';
 
-/**
- * Creates a SQL-specific theme using Tailwind CSS variables
- * @param isDark Whether to use dark theme colors
- * @returns CodeMirror extension for SQL theme
- */
-export function createSqlTheme(isDark: boolean): Extension {
-  // Use shared base theme
-  const baseTheme = createBaseTheme(isDark);
+export function createSqlTheme(options: BaseThemeOptions = {}): Extension {
+  const baseTheme = createBaseTheme(options);
 
-  // SQL-specific syntax highlighting using CSS variables
   const highlightStyle = HighlightStyle.define([
     // SQL keywords (SELECT, FROM, WHERE, JOIN, etc.)
     {

@@ -9,7 +9,11 @@ import {parseTree, Node, findNodeAtLocation} from 'jsonc-parser';
  * @returns CodeMirror linter extension
  */
 export function jsonSchemaLinter(schema: object) {
-  const ajv = new Ajv({allErrors: true, verbose: true});
+  const ajv = new Ajv({
+    allErrors: true,
+    verbose: true,
+    validateSchema: false, // Don't validate the schema itself to avoid meta-schema errors
+  });
   addFormats(ajv);
   const validate = ajv.compile(schema);
 

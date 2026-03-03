@@ -1,16 +1,9 @@
 import {Extension} from '@codemirror/state';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags as t} from '@lezer/highlight';
-import {createBaseTheme} from './base-theme';
-
-/**
- * Creates a SQLRooms-themed CodeMirror editor with colors from CSS variables
- * @param isDark Whether to use dark theme colors
- * @returns CodeMirror extension for theme
- */
-export function createSqlroomsTheme(isDark: boolean): Extension {
-  // Use shared base theme
-  const baseTheme = createBaseTheme(isDark);
+import {createBaseTheme, BaseThemeOptions} from './base-theme';
+export function createSqlroomsTheme(options: BaseThemeOptions = {}): Extension {
+  const baseTheme = createBaseTheme(options);
 
   // Syntax highlighting theme using CSS variables
   const highlightStyle = HighlightStyle.define([

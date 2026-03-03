@@ -18,6 +18,8 @@ export interface JsonCodeMirrorEditorProps extends Omit<
   value?: string | object;
   /** Optional theme override (defaults to auto-detect) */
   theme?: Theme;
+  /** Whether to hide the gutter (line numbers, fold markers, etc.) */
+  hideGutter?: boolean;
 }
 
 /** A CodeMirror editor for editing JSON with schema validation and autocomplete */
@@ -27,6 +29,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   extensions: userExtensions = [],
   options = {},
   theme: explicitTheme,
+  hideGutter,
   ...props
 }) => {
   // Convert object value to string if needed
@@ -39,7 +42,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   const extensions = useMemo(() => {
     return [
       json(),
-      createJsonTheme(isDark),
+      createJsonTheme({isDark, hideGutter}),
       ...(schema
         ? [
             jsonSchemaLinter(schema),
@@ -50,7 +53,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
       autoTriggerOnQuote(),
       ...userExtensions,
     ];
-  }, [schema, userExtensions, isDark]);
+  }, [schema, userExtensions, isDark, hideGutter]);
 
   return (
     <CodeMirrorEditor

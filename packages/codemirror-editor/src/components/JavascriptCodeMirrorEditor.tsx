@@ -29,7 +29,7 @@ export const JavascriptCodeMirrorEditor: React.FC<
       javascript({
         jsx: true,
       }),
-      createSqlroomsTheme(isDark),
+      createSqlroomsTheme({isDark}),
       ...userExtensions,
     ];
   }, [userExtensions, isDark]);

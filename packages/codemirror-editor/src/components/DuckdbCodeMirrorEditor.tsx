@@ -66,8 +66,8 @@ export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
   const isDark = useIsDarkTheme(theme);
 
   // Build extensions
-  const extensions = useMemo<Extension[]>(
-    () => [
+  const extensions = useMemo<Extension[]>(() => {
+    return [
       ...createDuckDbExtension({
         currentSchemas,
         connector,
@@ -75,17 +75,16 @@ export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
         customFunctions,
       }),
       createSqlKeymap(onRunQuery),
-      createSqlTheme(isDark),
-    ],
-    [
-      isDark,
-      currentSchemas,
-      onRunQuery,
-      connector,
-      customKeywords,
-      customFunctions,
-    ],
-  );
+      createSqlTheme({isDark}),
+    ];
+  }, [
+    isDark,
+    currentSchemas,
+    onRunQuery,
+    connector,
+    customKeywords,
+    customFunctions,
+  ]);
 
   // Handle editor mount
   const handleEditorMount = useCallback(

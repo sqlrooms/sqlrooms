@@ -2,13 +2,15 @@ import {EditorView} from '@codemirror/view';
 import {Extension} from '@codemirror/state';
 import {getMonospaceFont} from '@sqlrooms/utils';
 
-/**
- * Creates the base CodeMirror theme with SQLRooms styling
- * This is shared across all language-specific themes
- * @param isDark Whether to use dark theme colors
- * @returns CodeMirror extension for base theme
- */
-export function createBaseTheme(isDark: boolean): Extension {
+export interface BaseThemeOptions {
+  isDark?: boolean;
+  hideGutter?: boolean;
+}
+
+export function createBaseTheme({
+  isDark,
+  hideGutter,
+}: BaseThemeOptions = {}): Extension {
   // Get monospace font
   const fontFamily = getMonospaceFont();
 
@@ -49,6 +51,7 @@ export function createBaseTheme(isDark: boolean): Extension {
         color: 'hsl(var(--muted-foreground))',
         border: 'none',
         paddingLeft: '20px',
+        ...(hideGutter && {display: 'none'}),
       },
       '.cm-gutterElement': {
         marginTop: '0',

@@ -1,16 +1,11 @@
 import {Extension} from '@codemirror/state';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags as t} from '@lezer/highlight';
-import {createBaseTheme} from './base-theme';
+import {createBaseTheme, BaseThemeOptions} from './base-theme';
 
-/**
- * Creates a JSON-specific theme with syntax colors from Tailwind CSS variables
- * @param isDark Whether to use dark theme colors
- * @returns CodeMirror extension for JSON theme
- */
-export function createJsonTheme(isDark: boolean): Extension {
+export function createJsonTheme(options: BaseThemeOptions = {}): Extension {
   // Use shared base theme
-  const baseTheme = createBaseTheme(isDark);
+  const baseTheme = createBaseTheme(options);
 
   // JSON-specific syntax highlighting using CSS variables
   const highlightStyle = HighlightStyle.define([
