@@ -25,6 +25,25 @@ interface ModelSelectorProps {
   models?: Model[];
 }
 
+const MODEL_KEY_SEPARATOR = '::';
+
+const getModelSelectKey = (provider: string, modelValue: string): string =>
+  `${provider}${MODEL_KEY_SEPARATOR}${modelValue}`;
+
+const parseModelSelectKey = (
+  selectValue: string,
+): {provider: string; modelValue: string} | null => {
+  const separatorIndex = selectValue.indexOf(MODEL_KEY_SEPARATOR);
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  return {
+    provider: selectValue.slice(0, separatorIndex),
+    modelValue: selectValue.slice(separatorIndex + MODEL_KEY_SEPARATOR.length),
+  };
+};
+
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
   className,
   models: passedModels,
@@ -42,17 +61,24 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   const models = passedModels ?? settingsModels;
 
-  const handleModelChange = (value: string) => {
-    const selectedModel = models.find((model) => model.value === value);
-    if (selectedModel) {
-      setAiModel(selectedModel.provider, value);
+  const handleModelChange = (selectValue: string) => {
+    const parsed = parseModelSelectKey(selectValue);
+    if (parsed) {
+      setAiModel(parsed.provider, parsed.modelValue);
     }
   };
 
   if (!currentSession) return null;
 
   const currentModel = currentSession.model;
-  const currentModelDetails = models.find((m) => m.value === currentModel);
+  const currentModelProvider = currentSession.modelProvider;
+  const currentSelectValue = getModelSelectKey(
+    currentModelProvider,
+    currentModel,
+  );
+  const currentModelDetails = models.find(
+    (m) => m.provider === currentModelProvider && m.value === currentModel,
+  );
 
   // Group models by provider
   const modelsByProvider = models.reduce(
@@ -68,7 +94,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   return (
     <div className={className}>
-      <Select value={currentModel} onValueChange={handleModelChange}>
+      <Select value={currentSelectValue} onValueChange={handleModelChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select AI Model">
             {currentModelDetails?.label ?? ''}
@@ -83,7 +109,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     {capitalize(provider)}
                   </SelectLabel>
                   {providerModels.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
+                    <SelectItem
+                      key={getModelSelectKey(model.provider, model.value)}
+                      value={getModelSelectKey(model.provider, model.value)}
+                    >
                       {model.label}
                     </SelectItem>
                   ))}
