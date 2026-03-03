@@ -2368,9 +2368,6 @@ importers:
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
-      react-virtual:
-        specifier: 2.10.4
-        version: 2.10.4(react@19.2.1)
 
   packages/db:
     dependencies:
@@ -7008,9 +7005,6 @@ packages:
 
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
-
-  '@reach/observe-rect@1.2.0':
-    resolution: {integrity: sha512-Ba7HmkFgfQxZqqaeIWWkNK0rEhpxVQHIoVyW1YDSkGsGIXzcaW4deC8B0pZrNSSyLTdIk7y+5olKt5+g0GmFIQ==}
 
   '@react-dnd/asap@5.0.2':
     resolution: {integrity: sha512-WLyfoHvxhs0V9U+GTsGilGgf2QsPl6ZZ44fnv0/b8T3nQyvzxidxsg/ZltbWssbsRDlYW8UKSQMTGotuTotZ6A==}
@@ -13250,11 +13244,6 @@ packages:
       react: 19.2.1
       react-dom: 19.2.1
       vega-embed: ^7
-
-  react-virtual@2.10.4:
-    resolution: {integrity: sha512-Ir6+oPQZTVHfa6+JL9M7cvMILstFZH/H3jqeYeKI4MSUX+rIruVwFC6nGVXw9wqAw8L0Kg2KvfXxI85OvYQdpQ==}
-    peerDependencies:
-      react: 19.2.1
 
   react-virtualized@9.22.6:
     resolution: {integrity: sha512-U5j7KuUQt3AaMatlMJ0UJddqSiX+Km0YJxSqbAzIiGw5EmNz0khMyqP2hzgu4+QUtm+QPIrxzUX4raJxmVJnHg==}
@@ -21222,8 +21211,6 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
-  '@reach/observe-rect@1.2.0': {}
-
   '@react-dnd/asap@5.0.2': {}
 
   '@react-dnd/invariant@4.0.2': {}
@@ -28803,11 +28790,6 @@ snapshots:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
       vega-embed: 7.1.0(vega-lite@6.4.2(vega@6.2.0))(vega@6.2.0)
-
-  react-virtual@2.10.4(react@19.2.1):
-    dependencies:
-      '@reach/observe-rect': 1.2.0
-      react: 19.2.1
 
   react-virtualized@9.22.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
     dependencies:
