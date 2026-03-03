@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@sqlrooms/preset-jest": "workspace:*",
-    "ts-jest": "^29.4.4"
+    "ts-jest": "^29.4.4",
+    "zustand": "^5.0.8"
   }
 }
