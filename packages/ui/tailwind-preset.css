@@ -231,40 +231,15 @@
   }
 }
 
-/* Override Sonner toast colors to match app theme */
-[data-sonner-toaster][data-sonner-theme='light'],
-[data-sonner-toaster][data-sonner-theme='dark'] {
+/* Map Sonner toast colors to shadcn theme tokens */
+[data-sonner-toaster] {
   --normal-bg: hsl(var(--card));
   --normal-bg-hover: hsl(var(--card));
   --normal-border: hsl(var(--border));
   --normal-border-hover: hsl(var(--border));
   --normal-text: hsl(var(--card-foreground));
 
-  --success-bg: hsl(var(--card));
-  --success-border: hsl(var(--border));
-  --success-text: hsl(var(--card-foreground));
-
-  --info-bg: hsl(var(--card));
-  --info-border: hsl(var(--border));
-  --info-text: hsl(var(--card-foreground));
-
-  --warning-bg: hsl(var(--card));
-  --warning-border: hsl(var(--border));
-  --warning-text: hsl(var(--card-foreground));
-
   --error-bg: hsl(var(--destructive));
   --error-border: hsl(var(--destructive));
   --error-text: hsl(var(--destructive-foreground));
-}
-
-/* Force destructive colors on error toasts, overriding the bg-background
-   Tailwind utility class applied by the Toaster component's classNames */
-[data-sonner-toast][data-type='error'] {
-  background-color: hsl(var(--destructive)) !important;
-  border-color: hsl(var(--destructive)) !important;
-  color: hsl(var(--destructive-foreground)) !important;
-}
-
-[data-sonner-toast][data-type='error'] [data-content] [data-description] {
-  color: hsl(var(--destructive-foreground) / 0.9) !important;
 }
