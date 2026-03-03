@@ -142,7 +142,10 @@ export default function DataTablePaginated<Data extends object>({
       ? Math.ceil(numRows / pagination.pageSize)
       : undefined;
 
-  const shouldShowFooter = pagination || numRows !== undefined;
+  const shouldShowFooter =
+    Boolean(pagination) ||
+    (numRows !== undefined && Number.isFinite(numRows)) ||
+    footerActions != null;
 
   // TanStack's table hook returns non-memoizable functions by design.
   // eslint-disable-next-line react-hooks/incompatible-library
