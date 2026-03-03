@@ -27,21 +27,29 @@ interface ModelSelectorProps {
 
 const MODEL_KEY_SEPARATOR = '::';
 
+const encodeModelKeyPart = (value: string): string => encodeURIComponent(value);
+const decodeModelKeyPart = (value: string): string => decodeURIComponent(value);
+
 const getModelSelectKey = (provider: string, modelValue: string): string =>
-  `${provider}${MODEL_KEY_SEPARATOR}${modelValue}`;
+  `${encodeModelKeyPart(provider)}${MODEL_KEY_SEPARATOR}${encodeModelKeyPart(modelValue)}`;
 
 const parseModelSelectKey = (
   selectValue: string,
 ): {provider: string; modelValue: string} | null => {
-  const separatorIndex = selectValue.indexOf(MODEL_KEY_SEPARATOR);
-  if (separatorIndex === -1) {
+  const [encodedProvider, encodedModelValue, ...extraParts] =
+    selectValue.split(MODEL_KEY_SEPARATOR);
+  if (!encodedProvider || !encodedModelValue || extraParts.length > 0) {
     return null;
   }
 
-  return {
-    provider: selectValue.slice(0, separatorIndex),
-    modelValue: selectValue.slice(separatorIndex + MODEL_KEY_SEPARATOR.length),
-  };
+  try {
+    return {
+      provider: decodeModelKeyPart(encodedProvider),
+      modelValue: decodeModelKeyPart(encodedModelValue),
+    };
+  } catch {
+    return null;
+  }
 };
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
