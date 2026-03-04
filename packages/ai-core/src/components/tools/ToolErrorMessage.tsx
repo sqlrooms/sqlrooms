@@ -1,4 +1,4 @@
-import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror-editor';
+import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror';
 import {
   Button,
   Popover,

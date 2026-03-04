@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/codemirror-editor": "workspace:*",
+    "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

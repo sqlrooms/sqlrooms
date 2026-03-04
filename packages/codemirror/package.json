@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/codemirror-editor",
+  "name": "@sqlrooms/codemirror",
   "version": "0.28.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

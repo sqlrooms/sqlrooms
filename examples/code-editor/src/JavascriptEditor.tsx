@@ -1,4 +1,4 @@
-import {JavascriptCodeMirrorEditor} from '@sqlrooms/codemirror-editor';
+import {JavascriptCodeMirrorEditor} from '@sqlrooms/codemirror';
 import {MonacoEditor} from '@sqlrooms/monaco-editor';
 import {type EditorType} from './EditorTypeSwitch';
 

@@ -1,7 +1,4 @@
-import {
-  JsonCodeMirrorEditor,
-  CodeMirrorDiagnostic,
-} from '@sqlrooms/codemirror-editor';
+import {JsonCodeMirrorEditor, CodeMirrorDiagnostic} from '@sqlrooms/codemirror';
 import {
   createRoomCommandExecutionContext,
   doesCommandRequireInput,

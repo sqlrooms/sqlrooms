@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sqlrooms/codemirror-editor": "workspace:*",
+    "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

@@ -26,7 +26,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@sqlrooms/codemirror-editor": "workspace:*",
+    "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
