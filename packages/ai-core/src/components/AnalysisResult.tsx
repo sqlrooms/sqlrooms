@@ -108,7 +108,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <div className="opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
             <CopyButton
               text={analysisResult.prompt}
-              tooltipLabel="Copy question"
+              tooltipLabel="Copy prompt"
               className="h-6 w-6"
             />
           </div>
