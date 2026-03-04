@@ -26,11 +26,11 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/codemirror-editor": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

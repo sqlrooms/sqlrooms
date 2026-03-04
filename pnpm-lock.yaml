@@ -2118,9 +2118,9 @@ importers:
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
-      '@sqlrooms/monaco-editor':
+      '@sqlrooms/codemirror-editor':
         specifier: workspace:*
-        version: link:../monaco-editor
+        version: link:../codemirror-editor
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -2478,12 +2478,12 @@ importers:
 
   packages/data-table:
     dependencies:
+      '@sqlrooms/codemirror-editor':
+        specifier: workspace:*
+        version: link:../codemirror-editor
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
-      '@sqlrooms/monaco-editor':
-        specifier: workspace:*
-        version: link:../monaco-editor
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -3034,6 +3034,9 @@ importers:
 
   packages/room-shell:
     dependencies:
+      '@sqlrooms/codemirror-editor':
+        specifier: workspace:*
+        version: link:../codemirror-editor
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -3046,9 +3049,6 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
-      '@sqlrooms/monaco-editor':
-        specifier: workspace:*
-        version: link:../monaco-editor
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config

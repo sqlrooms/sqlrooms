@@ -1,4 +1,4 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror-editor';
 import {
   Button,
   Popover,
@@ -60,16 +60,14 @@ const ToolErrorMessageContent = memo(
             className="w-full overflow-hidden rounded-md border"
             style={{height: editorHeightPx}}
           >
-            <JsonMonacoEditor
+            <JsonCodeMirrorEditor
               className="h-full"
               value={details}
               readOnly
+              hideGutter
               options={{
-                lineNumbers: 'off',
-                minimap: {enabled: false},
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                fixedOverflowWidgets: false,
+                lineNumbers: false,
+                lineWrapping: true,
               }}
             />
           </div>

@@ -24,7 +24,7 @@
     "@openassistant/utils": "1.0.0-alpha.0",
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/ai-config": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/codemirror-editor": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

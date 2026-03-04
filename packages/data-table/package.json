@@ -19,8 +19,8 @@
     "access": "public"
   },
   "dependencies": {
+    "@sqlrooms/codemirror-editor": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",

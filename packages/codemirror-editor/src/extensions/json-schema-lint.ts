@@ -14,6 +14,7 @@ export function jsonSchemaLinter(schema: object) {
     verbose: true,
     validateSchema: false, // Don't validate the schema itself to avoid meta-schema errors
   });
+
   addFormats(ajv);
   const validate = ajv.compile(schema);
 

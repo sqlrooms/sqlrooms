@@ -1,4 +1,4 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror-editor';
 import {
   Button,
   Popover,
@@ -196,14 +196,12 @@ export default function useArrowDataTable(
                     {/* Scrollable content - JSON or raw text */}
                     <div className="max-h-[300px] min-h-[100px] overflow-auto">
                       {isJsonValue && parsedJson ? (
-                        <JsonMonacoEditor
+                        <JsonCodeMirrorEditor
                           value={parsedJson as any}
                           readOnly={true}
                           options={{
-                            lineNumbers: 'off',
-                            minimap: {enabled: false},
-                            scrollBeyondLastLine: false,
-                            wordWrap: 'on',
+                            lineNumbers: false,
+                            lineWrapping: true,
                           }}
                         />
                       ) : (
