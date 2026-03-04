@@ -7,22 +7,22 @@ export function createSqlroomsTheme(options: BaseThemeOptions = {}): Extension {
 
   // Syntax highlighting theme using CSS variables
   const highlightStyle = HighlightStyle.define([
-    {tag: t.keyword, color: 'hsl(var(--editor-keyword))'},
+    {tag: t.keyword, color: 'var(--color-editor-keyword)'},
     {
       tag: [t.name, t.deleted, t.character, t.propertyName, t.macroName],
-      color: 'hsl(var(--editor-property))',
+      color: 'var(--color-editor-property)',
     },
     {
       tag: [t.function(t.variableName), t.labelName],
-      color: 'hsl(var(--editor-function))',
+      color: 'var(--color-editor-function)',
     },
     {
       tag: [t.color, t.constant(t.name), t.standard(t.name)],
-      color: 'hsl(var(--editor-constant))',
+      color: 'var(--color-editor-constant)',
     },
     {
       tag: [t.definition(t.name), t.separator],
-      color: 'hsl(var(--editor-operator))',
+      color: 'var(--color-editor-operator)',
     },
     {
       tag: [
@@ -35,7 +35,7 @@ export function createSqlroomsTheme(options: BaseThemeOptions = {}): Extension {
         t.self,
         t.namespace,
       ],
-      color: 'hsl(var(--editor-type))',
+      color: 'var(--color-editor-type)',
     },
     {
       tag: [
@@ -47,31 +47,31 @@ export function createSqlroomsTheme(options: BaseThemeOptions = {}): Extension {
         t.link,
         t.special(t.string),
       ],
-      color: 'hsl(var(--editor-operator))',
+      color: 'var(--color-editor-operator)',
     },
-    {tag: [t.meta, t.comment], color: 'hsl(var(--editor-comment))'},
+    {tag: [t.meta, t.comment], color: 'var(--color-editor-comment)'},
     {tag: t.strong, fontWeight: 'bold'},
     {tag: t.emphasis, fontStyle: 'italic'},
     {tag: t.strikethrough, textDecoration: 'line-through'},
     {
       tag: t.link,
-      color: 'hsl(var(--editor-constant))',
+      color: 'var(--color-editor-constant)',
       textDecoration: 'underline',
     },
     {
       tag: t.heading,
       fontWeight: 'bold',
-      color: 'hsl(var(--editor-keyword))',
+      color: 'var(--color-editor-keyword)',
     },
     {
       tag: [t.atom, t.bool, t.special(t.variableName)],
-      color: 'hsl(var(--editor-keyword))',
+      color: 'var(--color-editor-keyword)',
     },
     {
       tag: [t.processingInstruction, t.string, t.inserted],
-      color: 'hsl(var(--editor-string))',
+      color: 'var(--color-editor-string)',
     },
-    {tag: t.invalid, color: 'hsl(var(--editor-invalid))'},
+    {tag: t.invalid, color: 'var(--color-editor-invalid)'},
   ]);
 
   return [baseTheme, syntaxHighlighting(highlightStyle)];

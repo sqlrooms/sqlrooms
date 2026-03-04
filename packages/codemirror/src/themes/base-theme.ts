@@ -18,37 +18,37 @@ export function createBaseTheme({
   return EditorView.theme(
     {
       '&': {
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-foreground)',
         height: '100%',
       },
       '.cm-content': {
-        caretColor: 'hsl(var(--primary))',
+        caretColor: 'var(--color-primary)',
         fontFamily,
         fontSize: '14px',
         lineHeight: '21px',
         paddingTop: '0',
       },
       '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: 'hsl(var(--primary))',
+        borderLeftColor: 'var(--color-primary)',
       },
       '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
         {
-          backgroundColor: 'hsl(var(--accent))',
+          backgroundColor: 'var(--color-accent)',
         },
       '.cm-activeLine': {
-        backgroundColor: 'hsl(var(--muted))',
+        backgroundColor: 'var(--color-muted)',
       },
       '.cm-selectionMatch': {
         backgroundColor: 'hsl(var(--editor-selection-match) / 0.27)',
       },
       '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
         backgroundColor: 'hsl(var(--editor-bracket-match) / 0.1)',
-        outline: '1px solid hsl(var(--border))',
+        outline: '1px solid var(--color-border)',
       },
       '.cm-gutters': {
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--muted-foreground))',
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-muted-foreground)',
         border: 'none',
         paddingLeft: '20px',
         ...(hideGutter && {display: 'none'}),
@@ -58,58 +58,58 @@ export function createBaseTheme({
         paddingRight: '0',
       },
       '.cm-activeLineGutter': {
-        backgroundColor: 'hsl(var(--muted))',
+        backgroundColor: 'var(--color-muted)',
       },
       '.cm-foldPlaceholder': {
-        backgroundColor: 'hsl(var(--editor-fold-placeholder))',
-        border: '1px solid hsl(var(--border))',
-        color: 'hsl(var(--foreground))',
+        backgroundColor: 'var(--color-editor-fold-placeholder)',
+        border: '1px solid var(--color-border)',
+        color: 'var(--color-foreground)',
       },
       '.cm-tooltip': {
-        backgroundColor: 'hsl(var(--popover))',
-        color: 'hsl(var(--popover-foreground))',
-        border: '1px solid hsl(var(--border))',
+        backgroundColor: 'var(--color-popover)',
+        color: 'var(--color-popover-foreground)',
+        border: '1px solid var(--color-border)',
       },
       '.cm-tooltip-autocomplete': {
         '& > ul > li[aria-selected]': {
-          backgroundColor: 'hsl(var(--accent))',
-          color: 'hsl(var(--foreground))',
+          backgroundColor: 'var(--color-accent)',
+          color: 'var(--color-foreground)',
         },
       },
       '.cm-completionLabel': {
-        color: 'hsl(var(--foreground))',
+        color: 'var(--color-foreground)',
       },
       '.cm-completionDetail': {
-        color: 'hsl(var(--muted-foreground))',
+        color: 'var(--color-muted-foreground)',
         fontStyle: 'italic',
       },
       '.cm-panels': {
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-foreground)',
       },
       '.cm-panels.cm-panels-top': {
-        borderBottom: '1px solid hsl(var(--border))',
+        borderBottom: '1px solid var(--color-border)',
       },
       '.cm-panels.cm-panels-bottom': {
-        borderTop: '1px solid hsl(var(--border))',
+        borderTop: '1px solid var(--color-border)',
       },
       '.cm-searchMatch': {
         backgroundColor: 'hsl(var(--editor-search-match) / 0.2)',
-        outline: '1px solid hsl(var(--border))',
+        outline: '1px solid var(--color-border)',
       },
       '.cm-searchMatch.cm-searchMatch-selected': {
-        backgroundColor: 'hsl(var(--editor-search-match-selected))',
+        backgroundColor: 'var(--color-editor-search-match-selected)',
       },
       '.cm-button': {
         backgroundImage: 'none',
-        backgroundColor: 'hsl(var(--accent))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
+        backgroundColor: 'var(--color-accent)',
+        color: 'var(--color-foreground)',
+        border: '1px solid var(--color-border)',
       },
       '.cm-textfield': {
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-foreground)',
+        border: '1px solid var(--color-border)',
       },
       // Lint gutter styling
       '.cm-lint-marker': {
@@ -118,17 +118,17 @@ export function createBaseTheme({
       },
       '.cm-lint-marker-error': {
         content: '✗',
-        color: 'hsl(var(--editor-lint-error))',
+        color: 'var(--color-editor-lint-error)',
       },
       '.cm-lint-marker-warning': {
         content: '⚠',
-        color: 'hsl(var(--editor-lint-warning))',
+        color: 'var(--color-editor-lint-warning)',
       },
       '.cm-diagnostic-error': {
-        borderLeft: '3px solid hsl(var(--editor-lint-error))',
+        borderLeft: '3px solid var(--color-editor-lint-error)',
       },
       '.cm-diagnostic-warning': {
-        borderLeft: '3px solid hsl(var(--editor-lint-warning))',
+        borderLeft: '3px solid var(--color-editor-lint-warning)',
       },
     },
     {dark: isDark},
