@@ -307,11 +307,6 @@ export {Tree, type TreeNodeData} from './components/tree';
 export {toast, type ExternalToast} from 'sonner';
 
 export {
-  toast as legacyToast,
-  useToast as useToastLegacy,
-} from './hooks/use-toast';
-
-export {
   useAspectRatioDimensions,
   type Dimensions,
   type UseAspectRatioDimensionsProps,
