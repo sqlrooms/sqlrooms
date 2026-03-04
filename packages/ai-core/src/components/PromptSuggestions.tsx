@@ -62,7 +62,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
                         'relative',
                         'flex items-center justify-center',
                         'px-4 py-2',
-                        'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
+                        'h-18 max-h-14 min-h-14 w-48 max-w-48 min-w-48',
                       )}
                       type="button"
                     >
@@ -141,7 +141,7 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
               'text-left',
               'overflow-hidden',
               'py-2 pr-4 pl-8',
-              'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
+              'h-18 max-h-14 min-h-14 w-48 max-w-48 min-w-48',
               className,
             )}
             type="button"
