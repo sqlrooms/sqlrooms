@@ -8,7 +8,7 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from './toast';
+} from './toast-legacy';
 
 export function LegacyToaster() {
   const {toasts} = useToast();
@@ -20,7 +20,9 @@ export function LegacyToaster() {
           <Toast key={id} {...props}>
             <div className="grid w-full gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
-              {description && <ToastDescription>{description}</ToastDescription>}
+              {description && (
+                <ToastDescription>{description}</ToastDescription>
+              )}
             </div>
             {action}
             <ToastClose />
