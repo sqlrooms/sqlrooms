@@ -5,6 +5,7 @@ import {useToast} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {RoomPanelTypes} from '../layout';
 import {useRoomStore} from '../store';
+import {ConnectorDriversDialog} from './ConnectorDriversDialog';
 
 export const DataSourcesPanel = () => {
   const connector = useRoomStore((state) => state.db.connector);
@@ -48,6 +49,10 @@ export const DataSourcesPanel = () => {
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
+      <div className="flex justify-end px-1">
+        <ConnectorDriversDialog />
+      </div>
+
       <TableStructurePanel />
     </RoomPanel>
   );
