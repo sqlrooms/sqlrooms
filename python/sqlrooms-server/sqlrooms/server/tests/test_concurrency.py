@@ -444,8 +444,8 @@ async def test_mixed_workload(server_proc):
 async def test_update_vs_alter_with_retry(server_proc):
     """
     Provoke a transaction conflict by overlapping UPDATE and ALTER on the same
-    table. The server is expected to recover by retrying the conflicting
-    transaction once and ultimately returning success for both operations.
+    table. The server is expected to recover by retrying (up to 5 times with
+    exponential backoff) and ultimately returning success for both operations.
 
     After completion, verify final state:
       - column 'z' has been added by ALTER
@@ -591,3 +591,199 @@ async def test_update_vs_alter_with_retry(server_proc):
                     break
             else:
                 pytest.fail("did not receive v==1 count response")
+
+
+@pytest.mark.asyncio
+async def test_multiple_concurrent_alters_with_retry(server_proc):
+    """
+    Stress test the enhanced retry mechanism by running multiple concurrent
+    ALTER operations on the same table. This tests that the exponential
+    backoff with jitter helps avoid thundering herd issues.
+
+    The server should handle all operations successfully with retries.
+    """
+    port = server_proc["port"]
+    table = "t_multi_alter"
+    timeout = aiohttp.ClientTimeout(total=10)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        # Setup base table
+        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+            cmds = [
+                f"DROP TABLE IF EXISTS {table}",
+                f"CREATE TABLE {table}(x INT)",
+                f"INSERT INTO {table} SELECT x FROM generate_series(1, 1000) AS t(x)",
+            ]
+            for sql in cmds:
+                qid = f"setup_{int(time.time() * 1000)}"
+                await ws.send_str(
+                    json.dumps({"type": "exec", "sql": sql, "queryId": qid})
+                )
+                for _ in range(100):
+                    msg = await ws.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get("queryId") == qid:
+                        assert payload.get("type") in ("ok", "error")
+                        if payload.get("type") == "error":
+                            pytest.fail(f"setup failed: {payload.get('error')}")
+                        break
+
+        # Concurrent ALTER operations adding different columns
+        async def add_column(col_name: str, idx: int):
+            qid = f"alt_{col_name}_{int(time.time() * 1000)}"
+            sql = f"ALTER TABLE {table} ADD COLUMN {col_name} INT DEFAULT {idx}"
+            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+                await ws2.send_str(
+                    json.dumps({"type": "exec", "sql": sql, "queryId": qid})
+                )
+                for _ in range(300):
+                    try:
+                        msg = await asyncio.wait_for(ws2.receive(), timeout=0.1)
+                    except asyncio.TimeoutError:
+                        continue
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get("queryId") == qid:
+                        return payload.get("type"), payload.get("error", "")
+            return "error", "timeout"
+
+        # Launch 5 concurrent ALTER operations
+        columns = [f"col_{i}" for i in range(5)]
+        tasks = [add_column(col, i) for i, col in enumerate(columns)]
+        results = await asyncio.gather(*tasks)
+
+        # All should succeed with retries
+        for i, (result_type, err) in enumerate(results):
+            assert result_type == "ok", f"ALTER {columns[i]} failed: {err}"
+
+        # Verify all columns were added
+        qid = f"schema_{int(time.time() * 1000)}"
+        sql = f"SELECT name FROM pragma_table_info('{table}')"
+        async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+            await ws3.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
+            for _ in range(100):
+                try:
+                    msg = await asyncio.wait_for(ws3.receive(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    continue
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    continue
+                try:
+                    payload = json.loads(msg.data)
+                except Exception:
+                    continue
+                if payload.get("queryId") == qid and payload.get("type") == "json":
+                    arr = json.loads(payload.get("data", "[]"))
+                    names = {row.get("name") for row in arr if isinstance(row, dict)}
+                    for col in columns:
+                        assert col in names, f"Column {col} not found in schema"
+                    break
+            else:
+                pytest.fail("did not receive schema response")
+
+
+@pytest.mark.asyncio
+async def test_concurrent_updates_same_table(server_proc):
+    """
+    Stress test: multiple concurrent UPDATE operations on the same table.
+    This tests that the retry mechanism handles write-write conflicts.
+    """
+    port = server_proc["port"]
+    table = "t_concurrent_update"
+    timeout = aiohttp.ClientTimeout(total=10)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        # Setup table with distinct ranges
+        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+            cmds = [
+                f"DROP TABLE IF EXISTS {table}",
+                f"CREATE TABLE {table}(id INT, val INT)",
+                f"INSERT INTO {table} SELECT x, 0 FROM generate_series(1, 5000) AS t(x)",
+            ]
+            for sql in cmds:
+                qid = f"setup_{int(time.time() * 1000)}"
+                await ws.send_str(
+                    json.dumps({"type": "exec", "sql": sql, "queryId": qid})
+                )
+                for _ in range(100):
+                    msg = await ws.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get("queryId") == qid:
+                        assert payload.get("type") in ("ok", "error")
+                        if payload.get("type") == "error":
+                            pytest.fail(f"setup failed: {payload.get('error')}")
+                        break
+
+        # Concurrent updates to different ranges
+        async def update_range(start: int, end: int, new_val: int, idx: int):
+            qid = f"upd_{idx}_{int(time.time() * 1000)}"
+            sql = f"UPDATE {table} SET val = {new_val} WHERE id >= {start} AND id < {end}"
+            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+                await ws2.send_str(
+                    json.dumps({"type": "exec", "sql": sql, "queryId": qid})
+                )
+                for _ in range(300):
+                    try:
+                        msg = await asyncio.wait_for(ws2.receive(), timeout=0.1)
+                    except asyncio.TimeoutError:
+                        continue
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get("queryId") == qid:
+                        return payload.get("type"), payload.get("error", "")
+            return "error", "timeout"
+
+        # Launch concurrent updates to different (but potentially overlapping) ranges
+        tasks = [
+            update_range(1, 1001, 1, 0),
+            update_range(1001, 2001, 2, 1),
+            update_range(2001, 3001, 3, 2),
+            update_range(3001, 4001, 4, 3),
+            update_range(4001, 5001, 5, 4),
+        ]
+        results = await asyncio.gather(*tasks)
+
+        # All should succeed
+        for i, (result_type, err) in enumerate(results):
+            assert result_type == "ok", f"UPDATE range {i} failed: {err}"
+
+        # Verify all rows were updated
+        qid = f"verify_{int(time.time() * 1000)}"
+        sql = f"SELECT SUM(val) as total FROM {table}"
+        async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+            await ws3.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
+            for _ in range(100):
+                try:
+                    msg = await asyncio.wait_for(ws3.receive(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    continue
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    continue
+                try:
+                    payload = json.loads(msg.data)
+                except Exception:
+                    continue
+                if payload.get("queryId") == qid and payload.get("type") == "json":
+                    arr = json.loads(payload.get("data", "[]"))
+                    # Each range has 1000 rows: 1*1000 + 2*1000 + 3*1000 + 4*1000 + 5*1000 = 15000
+                    expected = 1000 * (1 + 2 + 3 + 4 + 5)
+                    assert arr[0].get("total") == expected
+                    break
+            else:
+                pytest.fail("did not receive verification response")

@@ -1,6 +1,6 @@
 import {FC, useMemo, useState, useEffect} from 'react';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {
+  GraphConfigInterface,
   CosmosGraph,
   CosmosGraphControls,
   CosmosSimulationControls,
@@ -66,7 +66,7 @@ export const MammalsGraph: FC = () => {
       <CosmosGraphControls>
         <DownloadButton nodes={graphData.nodes} />
       </CosmosGraphControls>
-      <CosmosSimulationControls className="absolute right-1 top-1" />
+      <CosmosSimulationControls className="absolute top-1 right-1" />
     </CosmosGraph>
   ) : null;
 };

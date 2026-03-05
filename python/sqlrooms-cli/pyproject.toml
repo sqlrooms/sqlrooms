@@ -19,11 +19,18 @@ dependencies = [
   "duckdb>=1.4.0,<1.5.0",
   "fastapi>=0.115.0",
   "jinja2>=3.1.0",
+  "pyarrow>=17.0.0",
   "python-multipart>=0.0.9",
   "sqlrooms-server>=0.1.0",
+  "tomli>=2.0.0; python_version < '3.11'",
   "typer>=0.12.5",
   "uvicorn>=0.30.0",
 ]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2.0"]
+snowflake = ["snowflake-connector-python>=4.3.0"]
+connectors = ["psycopg[binary]>=3.2.0", "snowflake-connector-python>=4.3.0"]
 
 [project.urls]
 homepage = "https://sqlrooms.com"

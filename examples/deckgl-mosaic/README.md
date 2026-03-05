@@ -1,7 +1,7 @@
 ### [Deck.gl + Mosaic](https://sqlrooms-deckgl-mosaic.netlify.app/)
 
 [Try live](https://sqlrooms-deckgl-mosaic.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
+| [GitHub repo](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/deckgl-mosaic?embed=1&file=src/app.tsx)
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/e4571f95-9e51-4d4a-8e68-98d6f7c99980/deploy-status)](https://app.netlify.com/projects/sqlrooms-deckgl-mosaic/deploys)
@@ -17,7 +17,7 @@ The architecture uses Mosaic’s global Coordinator to manage state between link
 To create a new project from the deckgl-mosaic example run this:
 
 ```bash
-npx degit sqlrooms/examples/deckgl-mosaic my-new-app/
+npx giget gh:sqlrooms/examples/deckgl-mosaic my-new-app/
 ```
 
 #### Running locally

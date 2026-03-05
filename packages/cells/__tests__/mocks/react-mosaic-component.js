@@ -1,0 +1,12 @@
+export const Mosaic = () => null;
+export const MosaicWindow = () => null;
+export const MosaicZeroState = () => null;
+export const MosaicContext = {};
+export const MosaicWindowContext = {};
+export const MosaicBranch = {FIRST: 'first', SECOND: 'second'};
+export const MosaicDirection = {ROW: 'row', COLUMN: 'column'};
+export const createBalancedTreeFromLeaves = () => null;
+export const getLeaves = () => [];
+export const updateTree = (tree) => tree;
+export const createRemoveUpdate = () => ({});
+export default {};

@@ -10,6 +10,7 @@ export const MainView: React.FC = () => {
   );
 
   const settingsPanelOpen = useDisclosure();
+  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -18,7 +19,7 @@ export const MainView: React.FC = () => {
           <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
           <Button
             variant="outline"
-            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors hover:bg-accent"
+            className="hover:bg-accent absolute top-0 right-0 flex h-8 w-8 items-center justify-center transition-colors"
             onClick={settingsPanelOpen.onToggle}
             title="Configuration"
           >
@@ -27,7 +28,7 @@ export const MainView: React.FC = () => {
         </div>
 
         {settingsPanelOpen.isOpen ? (
-          <div className="flex-grow overflow-auto">
+          <div className="grow overflow-auto">
             {currentSessionId && (
               <AiSettingsPanel disclosure={settingsPanelOpen}>
                 <AiSettingsPanel.ProvidersSettings />
@@ -38,19 +39,24 @@ export const MainView: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="flex-grow overflow-auto">
+            <div className="grow overflow-auto">
               <Chat.Messages
                 key={currentSessionId} // will prevent scrolling to bottom after changing current session
               />
               <div className="flex h-full w-full flex-col items-center justify-center">
                 <SkeletonPane className="p-4" />
-                <p className="mt-4 text-muted-foreground">
+                <p className="text-muted-foreground mt-4">
                   Loading database...
                 </p>
               </div>
             </div>
 
             <Chat.Composer placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+              <Chat.InlineApiKeyInput
+                onSaveApiKey={(provider, apiKey) => {
+                  updateProvider(provider, {apiKey});
+                }}
+              />
               <div className="flex items-center justify-end gap-2">
                 <Chat.ModelSelector />
               </div>

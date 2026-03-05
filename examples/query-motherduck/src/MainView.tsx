@@ -39,8 +39,8 @@ export const MainView: FC = () => {
 
   return (
     <>
-      <div className="flex h-full flex-col bg-muted">
-        <div className="flex items-center justify-end gap-2 bg-background pb-2">
+      <div className="bg-muted flex h-full flex-col">
+        <div className="bg-background flex items-center justify-end gap-2 pb-2">
           <Button
             variant="ghost"
             size="xs"
@@ -60,7 +60,7 @@ export const MainView: FC = () => {
           <ResizablePanel
             defaultSize={50}
             // this is for Monaco's completion menu to not being cut off
-            // className="!overflow-visible"
+            // className="overflow-visible!"
           >
             <QueryEditorPanel />
           </ResizablePanel>

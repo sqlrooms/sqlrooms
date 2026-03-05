@@ -9,10 +9,7 @@ Launch the SQLRooms AI example locally with a DuckDB websocket backend and persi
 uvx sqlrooms \
   ./sqlrooms.db \
   --ws-port 4000 \
-  --port 4173 \
-  --llm-provider openai \
-  --llm-model gpt-4o-mini \
-  --api-key sk-...
+  --port 4173
 ```
 
 What happens:
@@ -31,9 +28,10 @@ What happens:
 - `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
-- `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
+- `--config`: Optional path to a SQLRooms TOML config file for connectors.
+- `--no-config`: Disable config file loading.
 
 ## Data persistence
 
@@ -44,6 +42,69 @@ Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` i
 
 Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
 
+## Config file
+
+`sqlrooms` can read AI provider and connector settings from a local TOML file:
+
+- macOS/Linux: `$XDG_CONFIG_HOME/sqlrooms/sqlrooms.toml` (or `~/.config/sqlrooms/sqlrooms.toml`)
+- Windows: `%APPDATA%\sqlrooms\sqlrooms.toml`
+- Legacy fallback: `~/.sqlrooms/sqlrooms.toml`
+- Optional local override in current working directory:
+  - `./sqlrooms.toml`
+
+Load order and precedence:
+
+- Default mode: global config, then local override file (local wins on conflicts).
+- `--config`: use only that file.
+- `--no-config`: disable all config loading.
+
+Example `sqlrooms.toml`:
+
+```toml
+[ai]
+default_provider = "openai"
+default_model = "gpt-5"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-5", "gpt-4.1"]
+
+[[ai.providers]]
+id = "anthropic"
+base_url = "https://api.anthropic.com"
+api_key_env = "ANTHROPIC_API_KEY"
+models = ["claude-4-sonnet"]
+
+[[connectors]]
+id = "postgres-local"
+engine = "postgres"
+title = "Postgres Local"
+dsn = "postgresql://postgres:postgres@localhost:5432/postgres"
+
+[[connectors]]
+id = "snowflake-prod"
+engine = "snowflake"
+title = "Snowflake Prod"
+account = "your-account"
+user = "your-user"
+password = "your-password"
+warehouse = "your-warehouse"
+database = "your-database"
+schema = "your-schema"
+role = "your-role"
+authenticator = "externalbrowser"
+
+[[connectors]]
+id = "snowflake-dev"
+engine = "snowflake"
+title = "Snowflake Dev"
+account = "your-dev-account"
+user = "your-dev-user"
+warehouse = "your-dev-warehouse"
+```
+
 ## Server-only mode (no UI)
 
 If you only want the DuckDB websocket server (no HTTP UI server), install/run `sqlrooms-server`:
@@ -53,6 +114,51 @@ uvx sqlrooms-server --db-path ./sqlrooms.db --port 4000
 ```
 
 `sqlrooms-server` is also available as an alias console script.
+
+## Backend connectors (DbSlice bridge)
+
+Use these modes to run remote queries through backend connectors and materialize
+results into core DuckDB for downstream notebook cells.
+
+Install optional connector dependencies first:
+
+```bash
+# From python/sqlrooms-cli
+uv sync --extra connectors
+# or install just one connector:
+uv sync --extra postgres
+uv sync --extra snowflake
+```
+
+### Postgres
+
+```bash
+uvx sqlrooms \
+  ./sqlrooms.db \
+  --ws-port 4000 \
+  --port 4173
+```
+
+### Snowflake
+
+```bash
+uvx sqlrooms \
+  ./sqlrooms.db \
+  --ws-port 4000 \
+  --port 4173
+```
+
+What this enables:
+
+- `sqlrooms-cli` exposes connector bridge endpoints under `/api/db/*`.
+- Runtime connector metadata is exposed via `/api/config`, so frontend `DbSlice` auto-registers available backend connections.
+- Notebook SQL cells can select Postgres/Snowflake connectors from the connector dropdown.
+- Arrow payloads are materialized into DuckDB and can be queried downstream in the same session.
+
+Notes:
+
+- Configure connectors in `sqlrooms.toml` using `[[connectors]]` entries.
+- Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
 
 ## Developer setup
 
@@ -84,4 +190,4 @@ Tips:
 
 - Use `--no-open-browser` if you don’t want the static bundle auto-opened.
 - Rebuild the UI (`pnpm --filter sqlrooms-cli-app build`) when you want the Python server to serve new static assets.
-- `/api/config` reflects CLI flags (provider/model/api key, WS URL).
+- `/api/config` reflects runtime config (AI providers/default model, DB bridge metadata, WS URL).

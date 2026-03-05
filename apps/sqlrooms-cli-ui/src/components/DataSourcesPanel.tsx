@@ -1,9 +1,10 @@
+import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
-import {FileDropzone} from '@sqlrooms/dropzone';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {useToast} from '@sqlrooms/ui';
-import {useRoomStore, RoomPanelTypes} from '../store';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {RoomPanelTypes} from '../layout';
+import {useRoomStore} from '../store';
 
 export const DataSourcesPanel = () => {
   const connector = useRoomStore((state) => state.db.connector);
@@ -15,7 +16,7 @@ export const DataSourcesPanel = () => {
   return (
     <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
       <FileDropzone
-        className="h-[200px] p-5"
+        className="h-50 p-5"
         acceptedFormats={{
           'text/csv': ['.csv'],
           'text/tsv': ['.tsv'],
@@ -43,7 +44,7 @@ export const DataSourcesPanel = () => {
           await refreshTableSchemas();
         }}
       >
-        <div className="text-xs text-muted-foreground">
+        <div className="text-muted-foreground text-xs">
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>

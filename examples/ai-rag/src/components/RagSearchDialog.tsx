@@ -42,7 +42,7 @@ function RagResultItem({
           Score: {result.score.toFixed(3)}
         </span>
       </div>
-      <p className="text-muted-foreground whitespace-pre-wrap font-mono text-xs">
+      <p className="text-muted-foreground font-mono text-xs whitespace-pre-wrap">
         {result.text}
       </p>
       {filePath && (
@@ -147,7 +147,7 @@ export function RagSearchDialog({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col space-y-4">
-          <div className="flex-shrink-0 space-y-4">
+          <div className="shrink-0 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="query">Search Query</Label>
               <div className="flex gap-2">

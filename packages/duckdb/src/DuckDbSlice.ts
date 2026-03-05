@@ -3,28 +3,71 @@ import {
   DataTable,
   DbSchemaNode,
   DuckDbConnector,
-  QueryHandle,
-  TableColumn,
-} from '@sqlrooms/duckdb-core';
-import {
-  BaseRoomStoreState,
-  createSlice,
-  useBaseRoomStore,
-} from '@sqlrooms/room-store';
-import * as arrow from 'apache-arrow';
-import deepEquals from 'fast-deep-equal';
-import {produce} from 'immer';
-import {StateCreator} from 'zustand';
-import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
-import {
   escapeVal,
   getColValAsNumber,
   isQualifiedTableName,
   joinStatements,
   makeQualifiedTableName,
   QualifiedTableName,
+  QueryHandle,
   separateLastStatement,
+  TableColumn,
 } from '@sqlrooms/duckdb-core';
+import {
+  BaseRoomStoreState,
+  createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
+  unregisterCommandsForOwner,
+  useBaseRoomStore,
+} from '@sqlrooms/room-store';
+import * as arrow from 'apache-arrow';
+import deepEquals from 'fast-deep-equal';
+import {produce} from 'immer';
+import {z} from 'zod';
+import {StateCreator} from 'zustand';
+import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
+
+const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
+const DropTableCommandInput = z.object({
+  tableName: z.string().describe('Name of the table to drop.'),
+});
+type DropTableCommandInput = z.infer<typeof DropTableCommandInput>;
+
+const CreateTableFromQueryCommandInput = z.object({
+  tableName: z.string().describe('Name of the table or view to create.'),
+  query: z.string().describe('SQL query used to populate the table/view.'),
+  replace: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe('Whether to replace existing table/view with the same name.'),
+  view: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('Whether to create a view instead of a table.'),
+  temp: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('Whether to create a temporary object.'),
+  allowMultipleStatements: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('Allow multiple SQL statements where the final one is SELECT.'),
+});
+type CreateTableFromQueryCommandInput = z.infer<
+  typeof CreateTableFromQueryCommandInput
+>;
+
+function isDuckDbPlaceholderViewColumn(
+  columnName: string,
+  columnType: string,
+): boolean {
+  return columnName === '__' && columnType.toUpperCase() === 'UNKNOWN';
+}
 
 export type SchemaAndDatabase = {
   schema?: string;
@@ -155,7 +198,10 @@ export type DuckDbSliceState = {
      * @param query - The SQL query to execute
      * @returns The QueryHandle for the query or null if disabled
      */
-    executeSql: (query: string) => Promise<QueryHandle | null>;
+    executeSql: (
+      query: string,
+      version?: number,
+    ) => Promise<QueryHandle | null>;
 
     /**
      * @deprecated Use .tables or .loadTableSchemas() instead
@@ -241,7 +287,7 @@ export type DuckDbSliceState = {
   };
 };
 
-type CreateDuckDbSliceProps = {
+export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
 };
 
@@ -253,7 +299,7 @@ export function createDuckDbSlice({
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   let refreshPromise: Promise<DataTable[]> | null = null;
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
-    (set, get) => {
+    (set, get, store) => {
       return {
         db: {
           connector, // Will be initialized during init
@@ -278,6 +324,11 @@ export function createDuckDbSlice({
           initialize: async () => {
             await get().db.connector.initialize();
             await get().db.refreshTableSchemas();
+            registerCommandsForOwner(
+              store,
+              DUCKDB_COMMAND_OWNER,
+              createDuckDbCommands(),
+            );
           },
 
           getConnector: async () => {
@@ -286,6 +337,7 @@ export function createDuckDbSlice({
           },
 
           destroy: async () => {
+            unregisterCommandsForOwner(store, DUCKDB_COMMAND_OWNER);
             try {
               if (get().db.connector) {
                 await get().db.connector.destroy();
@@ -493,45 +545,47 @@ export function createDuckDbSlice({
                 const estimatedSize = describeResults
                   .getChild('estimated_size')
                   ?.get(i);
-              const columns: TableColumn[] = [];
-              const qualifiedTable = makeQualifiedTableName({
-                database,
-                schema,
-                table,
-              });
-              try {
-                const tableInfo = await connector.query(
-                  `PRAGMA table_info(${escapeVal(qualifiedTable.toString())})`,
-                );
-                const columnNames = tableInfo.getChild('name');
-                const columnTypes = tableInfo.getChild('type');
-                for (let di = 0; di < tableInfo.numRows; di++) {
-                  columns.push({
-                    name: columnNames?.get(di),
-                    type: columnTypes?.get(di),
-                  });
+                const columns: TableColumn[] = [];
+                const qualifiedTable = makeQualifiedTableName({
+                  database,
+                  schema,
+                  table,
+                });
+                try {
+                  const tableInfo = await connector.query(
+                    `PRAGMA table_info(${escapeVal(qualifiedTable.toString())})`,
+                  );
+                  const columnNames = tableInfo.getChild('name');
+                  const columnTypes = tableInfo.getChild('type');
+                  for (let di = 0; di < tableInfo.numRows; di++) {
+                    const columnName = String(columnNames.get(di));
+                    const columnType = String(columnTypes?.get(di));
+                    if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
+                      continue;
+                    }
+                    columns.push({name: columnName, type: columnType});
+                  }
+                } catch (error) {
+                  if (!isView) {
+                    get().room.captureException(error);
+                  }
                 }
-              } catch (error) {
-                if (!isView) {
-                  get().room.captureException(error);
-                }
-              }
-              newTables.push({
-                table: qualifiedTable,
-                database,
-                schema,
-                tableName: table,
-                columns,
-                sql,
-                comment,
-                isView: Boolean(isView),
-                rowCount:
-                  typeof estimatedSize === 'bigint'
-                    ? Number(estimatedSize)
-                    : estimatedSize === null
-                      ? undefined
-                      : estimatedSize,
-              });
+                newTables.push({
+                  table: qualifiedTable,
+                  database,
+                  schema,
+                  tableName: table,
+                  columns,
+                  sql,
+                  comment,
+                  isView: Boolean(isView),
+                  rowCount:
+                    typeof estimatedSize === 'bigint'
+                      ? Number(estimatedSize)
+                      : estimatedSize === null
+                        ? undefined
+                        : estimatedSize,
+                });
               }
             }
             return newTables;
@@ -710,6 +764,107 @@ export function createDuckDbSlice({
       };
     },
   );
+}
+
+type DuckDbCommandStoreState = BaseRoomStoreState & DuckDbSliceState;
+
+function createDuckDbCommands(): RoomCommand<DuckDbCommandStoreState>[] {
+  return [
+    {
+      id: 'db.refresh-table-schemas',
+      name: 'Refresh table schemas',
+      description: 'Reload table and schema metadata from DuckDB',
+      group: 'Database',
+      keywords: ['duckdb', 'database', 'refresh', 'tables', 'schemas'],
+      metadata: {
+        readOnly: true,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      isEnabled: ({getState}) => !getState().db.isRefreshingTableSchemas,
+      execute: async ({getState}) => {
+        await getState().db.refreshTableSchemas();
+        return {
+          success: true,
+          commandId: 'db.refresh-table-schemas',
+          message: 'Table schemas refreshed.',
+        };
+      },
+    },
+    {
+      id: 'db.drop-table',
+      name: 'Drop table',
+      description: 'Drop a table from DuckDB by name',
+      group: 'Database',
+      keywords: ['duckdb', 'database', 'drop', 'table', 'delete'],
+      inputSchema: DropTableCommandInput,
+      inputDescription: 'Provide a tableName to remove from DuckDB.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'high',
+        requiresConfirmation: true,
+      },
+      validateInput: async (input, {getState}) => {
+        const {tableName} = input as DropTableCommandInput;
+        const exists = await getState().db.checkTableExists(tableName);
+        if (!exists) {
+          throw new Error(`Table "${tableName}" does not exist.`);
+        }
+      },
+      execute: async ({getState}, input) => {
+        const {tableName} = input as DropTableCommandInput;
+        await getState().db.dropTable(tableName);
+        return {
+          success: true,
+          commandId: 'db.drop-table',
+          message: `Dropped table "${tableName}".`,
+        };
+      },
+    },
+    {
+      id: 'db.create-table-from-query',
+      name: 'Create table from query',
+      description: 'Create a table or view from a SQL query',
+      group: 'Database',
+      keywords: ['duckdb', 'database', 'create', 'table', 'view', 'query'],
+      inputSchema: CreateTableFromQueryCommandInput,
+      inputDescription:
+        'Provide tableName and query, with optional replace/view/temp flags.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      validateInput: (input) => {
+        const {query} = input as CreateTableFromQueryCommandInput;
+        if (!query.trim()) {
+          throw new Error('Query cannot be empty.');
+        }
+      },
+      execute: async ({getState}, input) => {
+        const {tableName, query, replace, view, temp, allowMultipleStatements} =
+          input as CreateTableFromQueryCommandInput;
+        const result = await getState().db.createTableFromQuery(
+          tableName,
+          query,
+          {
+            replace,
+            view,
+            temp,
+            allowMultipleStatements,
+          },
+        );
+        await getState().db.refreshTableSchemas();
+        return {
+          success: true,
+          commandId: 'db.create-table-from-query',
+          message: `Created ${view ? 'view' : 'table'} "${tableName}".`,
+          data: result,
+        };
+      },
+    },
+  ];
 }
 
 /**

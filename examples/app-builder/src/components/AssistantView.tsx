@@ -18,7 +18,7 @@ export const AssistantView: React.FC = () => {
           <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
           <Button
             variant="outline"
-            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors hover:bg-accent"
+            className="hover:bg-accent absolute top-0 right-0 flex h-8 w-8 items-center justify-center transition-colors"
             onClick={settingsPanelOpen.onToggle}
             title="Configuration"
           >
@@ -27,7 +27,7 @@ export const AssistantView: React.FC = () => {
         </div>
 
         {settingsPanelOpen.isOpen ? (
-          <div className="flex-grow overflow-auto">
+          <div className="grow overflow-auto">
             {currentSessionId && (
               <AiSettingsPanel disclosure={settingsPanelOpen}>
                 <AiSettingsPanel.ProvidersSettings />
@@ -38,7 +38,7 @@ export const AssistantView: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="flex-grow overflow-auto">
+            <div className="grow overflow-auto">
               <Chat.Messages
                 key={currentSessionId} // will prevent scrolling to bottom after changing current session
               />

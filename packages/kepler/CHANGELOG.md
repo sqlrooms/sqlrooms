@@ -3,6 +3,51 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package @sqlrooms/kepler
+
+## [0.28.1-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Features
+
+* Create sqlrooms notebook package ([#131](https://github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](https://github.com/sqlrooms/sqlrooms/commit/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+**Note:** Version bump only for package @sqlrooms/kepler
+
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+**Note:** Version bump only for package @sqlrooms/kepler
+
+# [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Bug Fixes
+
+* update custom map legend panel when exporting image ([#372](https://github.com/sqlrooms/sqlrooms/issues/372)) ([144741e](https://github.com/sqlrooms/sqlrooms/commit/144741e8e5d1cfef942756809010d162a58e8c8f))
+
+### Features
+
+* tailwind v4 ([#324](https://github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](https://github.com/sqlrooms/sqlrooms/commit/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+**Note:** Version bump only for package @sqlrooms/kepler
+
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/kepler
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* Avoid deckgl v8 type errors ([#351](https://github.com/sqlrooms/sqlrooms/issues/351)) ([b3d5b88](https://github.com/sqlrooms/sqlrooms/commit/b3d5b887b27e12f83f0340294758cf23cc7f23bc))
+* getKeplerFactory causing constant remounting ([#352](https://github.com/sqlrooms/sqlrooms/issues/352)) ([bd2fbf0](https://github.com/sqlrooms/sqlrooms/commit/bd2fbf07485ae1ab1b545b36c82ee6f0c2467a5b))
+* getKeplerFactory number of hook calls errors ([#354](https://github.com/sqlrooms/sqlrooms/issues/354)) ([c52fa70](https://github.com/sqlrooms/sqlrooms/commit/c52fa70f15667959b72e63a065ac513f5084403b))
+* Kepler injector improvements ([#349](https://github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](https://github.com/sqlrooms/sqlrooms/commit/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
 # [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes

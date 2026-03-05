@@ -4,39 +4,50 @@
  */
 
 export {
+  createDefaultKeplerConfig,
   createKeplerSlice,
   useStoreWithKepler,
-  createDefaultKeplerConfig,
 } from './KeplerSlice';
 export type {KeplerSliceState} from './KeplerSlice';
 
-export {KeplerMapContainer} from './components/KeplerMapContainer';
-export {KeplerSidePanels} from './components/KeplerSidePanels';
-export {KeplerAddTileSetDialog} from './components/KeplerAddTileSetDialog';
-export type {LoadTileSet} from './components/KeplerAddTileSetDialog';
+export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
 export type {
-  KeplerAddDataDialogProps,
   AddDataMethods,
+  KeplerAddDataDialogProps,
 } from './components/KeplerAddDataDialog';
-export {FileDropInput} from './components/FileDropInput';
-export {KeplerS3Browser} from './components/KeplerS3Browser';
-export type {KeplerS3BrowserProps} from './components/KeplerS3Browser';
-export {KeplerProvider} from './components/KeplerProvider';
-export {useKeplerStateActions} from './hooks/useKeplerStateActions';
-export {KeplerPlotContainer} from './components/KeplerPlotContainer';
+export {KeplerAddTileSetDialog} from './components/KeplerAddTileSetDialog';
+export type {LoadTileSet} from './components/KeplerAddTileSetDialog';
 export {KeplerImageExport} from './components/KeplerImageExport';
 export {
   configureKeplerInjector,
-  resetKeplerInjectorRecipes,
-  getKeplerInjector,
+  KeplerInjector,
   getKeplerFactory,
+  getKeplerInjector,
+  resetKeplerInjectorRecipes,
 } from './components/KeplerInjector';
 export type {
   KeplerFactoryRecipe,
   KeplerFactoryRecipeMode,
 } from './components/KeplerInjector';
+export {KeplerMapContainer} from './components/KeplerMapContainer';
+export {KeplerPlotContainer} from './components/KeplerPlotContainer';
+export {KeplerProvider} from './components/KeplerProvider';
+export {KeplerS3Browser} from './components/KeplerS3Browser';
+export type {KeplerS3BrowserProps} from './components/KeplerS3Browser';
+export {KeplerSidePanels} from './components/KeplerSidePanels';
+export {useKeplerStateActions} from './hooks/useKeplerStateActions';
 
 // Re-export from @sqlrooms/kepler-config
 // Values also export their corresponding types automatically (Zod pattern)
 export {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
+
+export {CustomDndContextFactory} from './components/CustomDndContext';
+export {CustomFilterPanelHeaderFactory} from './components/CustomFilterPanelHeader';
+export {CustomMapControlTooltipFactory} from './components/CustomMapControlTooltipFactory';
+export {CustomMapLegendFactory} from './components/CustomMapLegend';
+export {CustomMapLegendPanelFactory} from './components/CustomMapLegendPanel';
+export {
+  CustomAddDataButtonFactory,
+  CustomPanelTitleFactory,
+} from './components/KeplerInjector';

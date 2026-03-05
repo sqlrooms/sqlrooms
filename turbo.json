@@ -1,5 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "concurrency": "100",
+  "globalEnv": ["NODE_ENV"],
   "tasks": {
     "typedoc": {
       "persistent": false,

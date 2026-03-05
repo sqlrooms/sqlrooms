@@ -1,8 +1,8 @@
+import type {OpenAssistantTool} from '@openassistant/utils';
+import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
 import z from 'zod';
 import {StoreApi} from 'zustand';
-import {WebContainerSliceState} from '../../store/WebContainerSlice';
 import {UpdateFileContentToolResult} from './UpdateFileContentToolResult';
-import type {OpenAssistantTool} from '@openassistant/utils';
 
 export const UpdateFileContentToolParameters = z.object({
   path: z.string().describe('The path to the file'),
@@ -33,7 +33,7 @@ export function createUpdateFileContentTool(
     description: 'Modify the content of a file',
     parameters: UpdateFileContentToolParameters,
     execute: async ({path, content}: UpdateFileContentToolParameters) => {
-      await store.getState().webContainer.updateFileContent(path, content);
+      store.getState().webContainer.updateFileContent(path, content);
       await store.getState().webContainer.saveAllOpenFiles();
       return {
         llmResult: {

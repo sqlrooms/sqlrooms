@@ -1,5 +1,5 @@
 {
-  "name": "sqlrooms-sync-example",
+  "name": "sync-example",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -28,4 +28,3 @@
     "vite-plugin-wasm": "^3.5.0"
   }
 }
-

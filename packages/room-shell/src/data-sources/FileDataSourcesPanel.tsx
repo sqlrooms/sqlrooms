@@ -1,6 +1,6 @@
 import {FC} from 'react';
-import {FileDataSourceCard} from './FileDataSourceCard';
 import {useBaseRoomShellStore} from '../RoomShellSlice';
+import {FileDataSourceCard} from './FileDataSourceCard';
 
 const FileDataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   const roomFiles = useBaseRoomShellStore((state) => state.room.roomFiles);
@@ -9,7 +9,7 @@ const FileDataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   );
 
   return (
-    <div className="flex flex-grow flex-col overflow-auto">
+    <div className="flex grow flex-col overflow-auto">
       {roomFiles.map((fileInfo, i) => (
         <FileDataSourceCard
           key={i}

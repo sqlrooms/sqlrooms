@@ -3,6 +3,88 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package sqlrooms
+
+## [0.28.1-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Bug Fixes
+
+* sanitize UIMessages before sending to LLM to prevent empty content errors ([#404](/github.com/sqlrooms/sqlrooms/issues/404)) ([635fbbb](github.com/sqlrooms/sqlrooms/commits/635fbbb5c3cedd4bcd7ab4eed94199a8fe022528))
+
+### Features
+
+* Add shadcn Sidebar component ([#400](/github.com/sqlrooms/sqlrooms/issues/400)) ([b44ac17](github.com/sqlrooms/sqlrooms/commits/b44ac175770022867bd869e484ac10992606988f))
+* Create sqlrooms notebook package ([#131](/github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](github.com/sqlrooms/sqlrooms/commits/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+* Snowflake connector integration ([#401](/github.com/sqlrooms/sqlrooms/issues/401)) ([1ccbe61](github.com/sqlrooms/sqlrooms/commits/1ccbe61e7e5107edd1c2ec36f9604f8b6cfcf603))
+* Webcontainer package ([#374](/github.com/sqlrooms/sqlrooms/issues/374)) ([c211b00](github.com/sqlrooms/sqlrooms/commits/c211b004b3aeff0984aa48521e7f247950c6cd0a))
+
+## [0.28.1-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Bug Fixes
+
+* Examples tailwind paths ([#387](/github.com/sqlrooms/sqlrooms/issues/387)) ([1cbae5b](github.com/sqlrooms/sqlrooms/commits/1cbae5b65191d082c9970a31e732724c660a82fa))
+* move copy button ([#390](/github.com/sqlrooms/sqlrooms/issues/390)) ([a7ba4f2](github.com/sqlrooms/sqlrooms/commits/a7ba4f247c66240e86c98cc1173a0091bb81cd44))
+* move copy button in the message container ([#388](/github.com/sqlrooms/sqlrooms/issues/388)) ([7c57d70](github.com/sqlrooms/sqlrooms/commits/7c57d7008af40efdefc87a98b00dd46bfdbc61fb))
+
+### Features
+
+* Commands system enhancements ([#396](/github.com/sqlrooms/sqlrooms/issues/396)) ([4585f80](github.com/sqlrooms/sqlrooms/commits/4585f80440eb070711005b857e73d58971754344))
+* Sonner toast integration ([#397](/github.com/sqlrooms/sqlrooms/issues/397)) ([487861d](github.com/sqlrooms/sqlrooms/commits/487861df81f0824d077bdeb0bb517a054586279b))
+* Tanstack multi-room example ([#385](/github.com/sqlrooms/sqlrooms/issues/385)) ([45ef14f](github.com/sqlrooms/sqlrooms/commits/45ef14ff9cb99528d7fefb372a98843006269e93))
+
+# [0.28.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](/github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](github.com/sqlrooms/sqlrooms/commits/1e53f051828a36f8625af1c9576a820568951d42))
+* Cosmos.gl upgrade ([#379](/github.com/sqlrooms/sqlrooms/issues/379)) ([92b3299](github.com/sqlrooms/sqlrooms/commits/92b3299f515aeb7b7bc1c5d5967827cb5a11ee55))
+
+# [0.28.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Bug Fixes
+
+* update custom map legend panel when exporting image ([#372](/github.com/sqlrooms/sqlrooms/issues/372)) ([144741e](github.com/sqlrooms/sqlrooms/commits/144741e8e5d1cfef942756809010d162a58e8c8f))
+
+### Features
+
+* tailwind v4 ([#324](/github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](github.com/sqlrooms/sqlrooms/commits/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Bug Fixes
+
+* fix vega chart sizing ([#365](/github.com/sqlrooms/sqlrooms/issues/365)) ([c9ed288](github.com/sqlrooms/sqlrooms/commits/c9ed28845aeae3739070ef3615e843076090f7f7))
+* improve sql error display in vega charts ([#369](/github.com/sqlrooms/sqlrooms/issues/369)) ([0d26265](github.com/sqlrooms/sqlrooms/commits/0d2626512d98d9c4b983d0e8c640a64c20cb08e8))
+
+### Features
+
+* AI output copy to clipboard ([#368](/github.com/sqlrooms/sqlrooms/issues/368)) ([bcc10c1](github.com/sqlrooms/sqlrooms/commits/bcc10c12cac3219f762406fb18e4a4ee04546ada))
+* Data table row selection ([#358](/github.com/sqlrooms/sqlrooms/issues/358)) ([3c63689](github.com/sqlrooms/sqlrooms/commits/3c636899dae81d13b24d501e9752257bced89e30))
+
+# [0.27.0-rc.5](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+### Features
+
+* room-store: expose bound useRoomStore API and add useRoomStoreApi hook ([#360](/github.com/sqlrooms/sqlrooms/issues/360)) ([c5b68a3](github.com/sqlrooms/sqlrooms/commits/c5b68a329c7134c1937927b53a7c39b0ac4f06ea))
+
+# [0.27.0-rc.4](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* AI settings changes are only applied in new sessions ([#356](/github.com/sqlrooms/sqlrooms/issues/356)) ([d1799d0](github.com/sqlrooms/sqlrooms/commits/d1799d0ab503be3a872a8cda948fe50bac0bc60c))
+* Avoid deckgl v8 type errors ([#351](/github.com/sqlrooms/sqlrooms/issues/351)) ([b3d5b88](github.com/sqlrooms/sqlrooms/commits/b3d5b887b27e12f83f0340294758cf23cc7f23bc))
+* ColumnTypeBadge styling ([#350](/github.com/sqlrooms/sqlrooms/issues/350)) ([25dcd19](github.com/sqlrooms/sqlrooms/commits/25dcd194806c5ace4f5b30b2f562070131a79639))
+* getKeplerFactory causing constant remounting ([#352](/github.com/sqlrooms/sqlrooms/issues/352)) ([bd2fbf0](github.com/sqlrooms/sqlrooms/commits/bd2fbf07485ae1ab1b545b36c82ee6f0c2467a5b))
+* getKeplerFactory number of hook calls errors ([#354](/github.com/sqlrooms/sqlrooms/issues/354)) ([c52fa70](github.com/sqlrooms/sqlrooms/commits/c52fa70f15667959b72e63a065ac513f5084403b))
+* Kepler injector improvements ([#349](/github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](github.com/sqlrooms/sqlrooms/commits/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
+### Features
+
+* AI: Ask for API key inline in chat input ([#357](/github.com/sqlrooms/sqlrooms/issues/357)) ([f256021](github.com/sqlrooms/sqlrooms/commits/f256021abb0b7f981d392f5e6d8c61e71e5eed09))
+* make View Instructions optional ([#353](/github.com/sqlrooms/sqlrooms/issues/353)) ([7782c36](github.com/sqlrooms/sqlrooms/commits/7782c363951a72fdf1c158cd85f50cb4f36f6d9f))
+
 # [0.27.0-rc.3](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes

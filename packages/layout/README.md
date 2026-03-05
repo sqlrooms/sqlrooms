@@ -1,10 +1,6 @@
-This package is part of the SQLRooms framework and provides flexible layout components for building complex, resizable, and draggable interfaces.
+Layout slice and mosaic utilities for SQLRooms panel-based UIs.
 
-## Overview
-
-The `@sqlrooms/layout` package offers a set of components and utilities for creating dynamic, multi-pane layouts in SQLRooms applications. It's primarily built around the [react-mosaic](https://nomcopter.github.io/react-mosaic/) library, which provides a powerful windowing system similar to the one found in advanced IDEs.
-
-> **Note:** This package uses [react-mosaic](https://nomcopter.github.io/react-mosaic/) which should not be confused with [uwdata/mosaic](https://github.com/uwdata/mosaic) used in the [`@sqlrooms/mosaic`](/api/mosaic/) package for data visualization purposes.
+This package uses `react-mosaic` to compose resizable panel layouts.
 
 ## Installation
 
@@ -12,78 +8,91 @@ The `@sqlrooms/layout` package offers a set of components and utilities for crea
 npm install @sqlrooms/layout
 ```
 
-## Mosaic Tree Structure
+## Main exports
 
-The mosaic layout is defined by a tree structure where each node is either a string (representing a panel ID) or an object with `direction`, `first`, `second`, and optional `splitPercentage` properties. Here's an example of how a mosaic tree might look:
+- `createLayoutSlice()`, `useStoreWithLayout()`
+- `MosaicLayout` component
+- mosaic helpers:
+  - `makeMosaicStack`
+  - `visitMosaicLeafNodes`
+  - `getVisibleMosaicLayoutPanels`
+  - `findMosaicNodePathByKey`
+  - `removeMosaicNodeByKey`
+- layout config schemas/types re-exported from `@sqlrooms/layout-config`
 
-```tsx
-// Simple two-panel layout with 30/70 split
-const simpleMosaicTree = {
-  direction: 'row',
-  first: 'data-sources', // Left panel (30% width)
-  second: 'main', // Right panel (70% width)
-  splitPercentage: 30,
-};
-
-// More complex nested layout
-const complexMosaicTree = {
-  direction: 'row',
-  first: 'data-sources', // Left panel
-  second: {
-    // Right side contains a nested layout
-    direction: 'column',
-    first: 'main', // Top panel
-    second: {
-      // Bottom contains another nested layout
-      direction: 'row',
-      first: 'sql-editor',
-      second: 'visualization',
-      splitPercentage: 50,
-    },
-    splitPercentage: 60,
-  },
-  splitPercentage: 20,
-};
-```
-
-## Components
-
-### MosaicLayout
-
-A wrapper around the `Mosaic` component from react-mosaic-component that provides a customized look and feel consistent with SQLRooms styling.
+## Store usage
 
 ```tsx
-import {MosaicLayout} from '@sqlrooms/layout';
+import {
+  LayoutSliceState,
+  LayoutTypes,
+  MAIN_VIEW,
+  createLayoutSlice,
+} from '@sqlrooms/layout';
+import {
+  BaseRoomStoreState,
+  createBaseRoomSlice,
+  createRoomStore,
+} from '@sqlrooms/room-store';
 
-// Example usage
-<MosaicLayout
-  renderTile={(id, path) => <YourTileContent id={id} />}
-  value={yourMosaicTree}
-  onChange={handleLayoutChange}
-/>;
+function DataPanel() {
+  return <div>Data</div>;
+}
+
+function MainPanel() {
+  return <div>Main</div>;
+}
+
+type State = BaseRoomStoreState & LayoutSliceState;
+
+export const {roomStore, useRoomStore} = createRoomStore<State>(
+  (set, get, store) => ({
+    ...createBaseRoomSlice()(set, get, store),
+    ...createLayoutSlice({
+      config: {
+        type: LayoutTypes.enum.mosaic,
+        nodes: {
+          direction: 'row',
+          first: 'data',
+          second: MAIN_VIEW,
+          splitPercentage: 30,
+        },
+      },
+      panels: {
+        data: {
+          title: 'Data',
+          component: DataPanel,
+          placement: 'sidebar',
+        },
+        main: {
+          title: 'Main',
+          component: MainPanel,
+          placement: 'main',
+        },
+      },
+    })(set, get, store),
+  }),
+);
 ```
 
-### MosaicTile
+## Programmatic panel visibility
 
-A component for rendering individual tiles within the mosaic layout.
+```tsx
+import {Button} from '@sqlrooms/ui';
 
-## Utility Functions
+function PanelButtons() {
+  const togglePanel = useRoomStore((state) => state.layout.togglePanel);
+  const togglePanelPin = useRoomStore((state) => state.layout.togglePanelPin);
 
-The package provides several utility functions for working with mosaic layouts:
+  return (
+    <div className="flex gap-2">
+      <Button onClick={() => togglePanel('data')}>Toggle Data Panel</Button>
+      <Button onClick={() => togglePanelPin('data')}>Pin/Unpin Data Panel</Button>
+    </div>
+  );
+}
+```
 
-- `makeMosaicStack`: Creates a stack of mosaic nodes with specified weights and direction
-- `visitMosaicLeafNodes`: Traverses all leaf nodes in a mosaic tree
-- `getVisibleMosaicLayoutPanels`: Gets an array of all visible panel IDs
-- `findMosaicNodePathByKey`: Finds the path to a specific node by its key
-- `removeMosaicNodeByKey`: Removes a node from the mosaic tree by its key
+## Note
 
-## Learn More
-
-For more information about the underlying react-mosaic library, visit:
-
-- [react-mosaic documentation](https://nomcopter.github.io/react-mosaic/)
-- [react-mosaic GitHub repository](https://github.com/nomcopter/react-mosaic)
-
-## License
-
-MIT
+`@sqlrooms/layout` (react-mosaic layout) is different from `@sqlrooms/mosaic` (UW IDL data visualization package).

@@ -18,19 +18,15 @@ export const ColumnTreeNode: FC<{
 }> = (props) => {
   const {className, nodeObject, additionalMenuItems} = props;
   return (
-    <BaseTreeNode
-      asChild
-      className={cn(className, 'h-[18px]')}
-      nodeObject={nodeObject}
-    >
+    <BaseTreeNode asChild className={cn(className)} nodeObject={nodeObject}>
       <div className="relative flex w-full items-center space-x-2">
         <ColumnTypeBadge
-          className="opacity-50"
+          className="flex opacity-60"
           columnType={nodeObject.columnType}
           typeCategory={nodeObject.columnTypeCategory}
         />
         <span
-          className="truncate whitespace-nowrap text-xs"
+          className="truncate text-xs whitespace-nowrap"
           title={nodeObject.name}
         >
           {nodeObject.name}

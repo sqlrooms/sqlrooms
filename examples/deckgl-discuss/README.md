@@ -1,7 +1,7 @@
 ### [Deck.gl + Commenting & Annotation](https://sqlrooms-deckgl-discuss.netlify.app/)
 
 [Try live](https://sqlrooms-deckgl-discuss.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/deckgl-discuss)
+| [GitHub repo](https://github.com/sqlrooms/examples/tree/main/deckgl-discuss)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/deckgl-discuss?embed=1&file=src/app.tsx)
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/9c32bdac-f2b1-4cf3-b48b-fa197e0986e3/deploy-status)](https://app.netlify.com/projects/sqlrooms-deckgl-discuss/deploys)
@@ -19,7 +19,7 @@ An example showcasing integration with [deck.gl](https://deck.gl/) for geospatia
 To create a new project from the deckgl-discuss example run this:
 
 ```bash
-npx degit sqlrooms/examples/deckgl-discuss my-new-app/
+npx giget gh:sqlrooms/examples/deckgl-discuss my-new-app/
 ```
 
 #### Running locally

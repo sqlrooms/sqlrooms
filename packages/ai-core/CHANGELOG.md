@@ -3,6 +3,59 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
+## [0.28.1-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Bug Fixes
+
+* sanitize UIMessages before sending to LLM to prevent empty content errors ([#404](https://github.com/sqlrooms/sqlrooms/issues/404)) ([635fbbb](https://github.com/sqlrooms/sqlrooms/commit/635fbbb5c3cedd4bcd7ab4eed94199a8fe022528))
+
+### Features
+
+* Create sqlrooms notebook package ([#131](https://github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](https://github.com/sqlrooms/sqlrooms/commit/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+
+## [0.28.1-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
+
+### Bug Fixes
+
+* move copy button ([#390](https://github.com/sqlrooms/sqlrooms/issues/390)) ([a7ba4f2](https://github.com/sqlrooms/sqlrooms/commit/a7ba4f247c66240e86c98cc1173a0091bb81cd44))
+* move copy button in the message container ([#388](https://github.com/sqlrooms/sqlrooms/issues/388)) ([7c57d70](https://github.com/sqlrooms/sqlrooms/commit/7c57d7008af40efdefc87a98b00dd46bfdbc61fb))
+
+# [0.28.0](https://github.com/sqlrooms/sqlrooms/compare/v0.28.0-rc.0...v0.28.0) (2026-02-25)
+
+### Features
+
+* Command system implementation ([#382](https://github.com/sqlrooms/sqlrooms/issues/382)) ([1e53f05](https://github.com/sqlrooms/sqlrooms/commit/1e53f051828a36f8625af1c9576a820568951d42))
+
+# [0.28.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Features
+
+* tailwind v4 ([#324](https://github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](https://github.com/sqlrooms/sqlrooms/commit/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Features
+
+* AI output copy to clipboard ([#368](https://github.com/sqlrooms/sqlrooms/issues/368)) ([bcc10c1](https://github.com/sqlrooms/sqlrooms/commit/bcc10c12cac3219f762406fb18e4a4ee04546ada))
+
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* AI settings changes are only applied in new sessions ([#356](https://github.com/sqlrooms/sqlrooms/issues/356)) ([d1799d0](https://github.com/sqlrooms/sqlrooms/commit/d1799d0ab503be3a872a8cda948fe50bac0bc60c))
+
+### Features
+
+* AI: Ask for API key inline in chat input ([#357](https://github.com/sqlrooms/sqlrooms/issues/357)) ([f256021](https://github.com/sqlrooms/sqlrooms/commit/f256021abb0b7f981d392f5e6d8c61e71e5eed09))
+
 # [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes
