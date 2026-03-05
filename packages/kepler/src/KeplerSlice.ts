@@ -8,11 +8,6 @@ import {
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
-import {
-  registerCommandsForOwner,
-  RoomCommand,
-  unregisterCommandsForOwner,
-} from '@sqlrooms/room-shell';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
   castDuckDBTypesForKepler,
@@ -58,10 +53,39 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+
+/**
+ * Get the appropriate basemap style ID based on the current theme
+ */
+function getBasemapForTheme(theme: 'light' | 'dark' | 'system'): string {
+  // Resolve 'system' theme to actual theme
+  const resolvedTheme =
+    theme === 'system'
+      ? typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      : theme;
+
+  // Map theme to basemap
+  return resolvedTheme === 'dark' ? 'dark-matter' : 'positron';
+}
+
+/**
+ * Get the current theme from the document element
+ */
+function getCurrentThemeFromDOM(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light';
+
+  const htmlElement = window.document.documentElement;
+  if (htmlElement.classList.contains('dark')) {
+    return 'dark';
+  }
+  return 'light';
+}
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
-const KEPLER_COMMAND_OWNER = '@sqlrooms/kepler';
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
@@ -108,79 +132,6 @@ export function createDefaultKeplerConfig(
   };
 }
 
-function createKeplerCommands(): RoomCommand<
-  BaseRoomStoreState & KeplerSliceState & DbSliceState
->[] {
-  const DUPLICATE_MAP_COMMAND_ID = 'kepler.duplicate-tab';
-
-  // Error codes for internal tracking/logging (kebab-case for consistency)
-  const ERROR_CODES = {
-    MAP_NOT_FOUND: 'map-not-found',
-    MAP_STATE_NOT_INITIALIZED: 'map-state-not-initialized',
-  };
-
-  return [
-    {
-      id: DUPLICATE_MAP_COMMAND_ID,
-      name: 'Duplicate Tab',
-      description: 'Duplicate the current map tab',
-      group: 'Kepler',
-      keywords: ['kepler', 'map', 'duplicate', 'tab', 'copy'],
-      metadata: {
-        readOnly: false,
-        idempotent: false,
-        riskLevel: 'low',
-      },
-      execute: async ({getState}) => {
-        const currentMapId = getState().kepler.config.currentMapId;
-        const sourceMap = getState().kepler.config.maps.find(
-          (m) => m.id === currentMapId,
-        );
-
-        if (!sourceMap) {
-          return {
-            success: false,
-            commandId: DUPLICATE_MAP_COMMAND_ID,
-            message: 'Unable to duplicate map: current map not found',
-            code: ERROR_CODES.MAP_NOT_FOUND,
-          };
-        }
-
-        // Ensure the map's redux state is registered before attempting to duplicate
-        getState().kepler.registerKeplerMapIfNotExists(currentMapId);
-        // Re-read state after registration to avoid stale state
-        const sourceMapState = getState().kepler.map[currentMapId];
-
-        if (!sourceMapState) {
-          return {
-            success: false,
-            commandId: DUPLICATE_MAP_COMMAND_ID,
-            message: 'Unable to duplicate map: map state not initialized',
-            code: ERROR_CODES.MAP_STATE_NOT_INITIALIZED,
-          };
-        }
-
-        const duplicateResult =
-          await getState().kepler.duplicateMap(currentMapId);
-        if (!duplicateResult.success) {
-          return {
-            success: false,
-            commandId: DUPLICATE_MAP_COMMAND_ID,
-            message: duplicateResult.message,
-            code: duplicateResult.code,
-          };
-        }
-
-        return {
-          success: true,
-          commandId: DUPLICATE_MAP_COMMAND_ID,
-          message: 'Duplicated map tab',
-        };
-      },
-    },
-  ];
-}
-
 export type KeplerAction = {
   type: string;
   payload?: unknown;
@@ -210,7 +161,6 @@ export type KeplerSliceState = {
       [mapId: string]: Dispatch;
     };
     initialize: () => Promise<void>;
-    destroy: () => Promise<void>;
     setConfig: (config: KeplerSliceConfig) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -245,9 +195,6 @@ export type KeplerSliceState = {
      */
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
-    duplicateMap: (
-      mapId: string,
-    ) => Promise<{success: boolean; message?: string; code?: string}>;
     renameMap: (mapId: string, name: string) => void;
     closeMap: (mapId: string) => void;
     setOpenTabs: (tabIds: string[]) => void;
@@ -269,7 +216,9 @@ export function createKeplerSlice({
   basicKeplerProps = {},
   config: initialConfigProps,
   initialKeplerState = {
-    mapStyle: {styleType: 'positron'} as MapStyle,
+    mapStyle: {
+      styleType: getBasemapForTheme(getCurrentThemeFromDOM()),
+    } as MapStyle,
     uiState: {
       ...INITIAL_UI_STATE,
       currentModal: null,
@@ -309,7 +258,7 @@ export function createKeplerSlice({
   return createSlice<
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DbSliceState
-  >((set, get, store) => {
+  >((set, get) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
     const middlewares: Middleware[] = [
       taskMiddleware,
@@ -395,14 +344,6 @@ export function createKeplerSlice({
           updateMapConfigs();
           await get().kepler.syncKeplerDatasets();
           requestMapStyle(config.currentMapId);
-
-          // Register Kepler commands
-          const keplerCommands = createKeplerCommands();
-          registerCommandsForOwner(store, KEPLER_COMMAND_OWNER, keplerCommands);
-        },
-
-        async destroy() {
-          unregisterCommandsForOwner(store, KEPLER_COMMAND_OWNER);
         },
 
         addLayer: (mapId, layer, datasetId) => {
@@ -464,6 +405,8 @@ export function createKeplerSlice({
         createMap: (name) => {
           const mapId = createId();
           const now = Date.now();
+          const themeBasemap = getBasemapForTheme(getCurrentThemeFromDOM());
+
           set((state) =>
             produce(state, (draft) => {
               draft.kepler.config.maps.push({
@@ -477,6 +420,11 @@ export function createKeplerSlice({
                 registerEntry({id: mapId}),
               );
               draft.kepler.forwardDispatch[mapId] = getForwardDispatch(mapId);
+
+              // Apply theme-aware basemap to the new map
+              if (draft.kepler.map[mapId]) {
+                draft.kepler.map[mapId].mapStyle.styleType = themeBasemap;
+              }
             }),
           );
           requestMapStyle(mapId);
@@ -562,60 +510,6 @@ export function createKeplerSlice({
               delete draft.kepler.forwardDispatch[mapId];
             }),
           );
-        },
-
-        duplicateMap: async (mapId) => {
-          // Ensure the map's redux state is registered, consistent with other kepler actions
-          get().kepler.registerKeplerMapIfNotExists(mapId);
-
-          const sourceMap = get().kepler.config.maps.find(
-            (m) => m.id === mapId,
-          );
-          const sourceMapState = get().kepler.map[mapId];
-          if (!sourceMap || !sourceMapState) {
-            return {
-              success: false,
-              message: 'Unable to duplicate map: source map or state not found',
-              code: 'source-map-not-found',
-            };
-          }
-
-          const newMapId = createId();
-          const now = Date.now();
-
-          // Save the source map state using Kepler's schema manager
-          const savedConfig =
-            KeplerGLSchemaManager.getConfigToSave(sourceMapState);
-
-          set((state) =>
-            produce(state, (draft) => {
-              draft.kepler.config.maps.push({
-                id: newMapId,
-                name: `Copy of ${sourceMap.name}`,
-                config: savedConfig as any,
-                lastOpenedAt: now,
-              });
-              draft.kepler.config.openTabs.push(newMapId);
-              draft.kepler.config.currentMapId = newMapId;
-              // Register the new map with empty state, then load the config
-              draft.kepler.map = keplerReducer(
-                draft.kepler.map,
-                registerEntry({id: newMapId}),
-              );
-              draft.kepler.forwardDispatch[newMapId] =
-                getForwardDispatch(newMapId);
-            }),
-          );
-
-          // Load the saved config into the new map
-          get().kepler.addConfigToMap(newMapId, savedConfig as any);
-          requestMapStyle(newMapId);
-          get().kepler.syncKeplerDatasets();
-
-          return {
-            success: true,
-            message: 'Map duplicated successfully',
-          };
         },
 
         renameMap: (mapId, name) => {
@@ -876,3 +770,6 @@ export function useStoreWithKepler<T>(
     selector(state as RoomStateWithDiscuss),
   );
 }
+
+// Export utility functions for theme-aware basemap selection
+export {getBasemapForTheme, getCurrentThemeFromDOM};

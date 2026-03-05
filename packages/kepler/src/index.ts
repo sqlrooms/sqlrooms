@@ -51,3 +51,5 @@ export {
   CustomAddDataButtonFactory,
   CustomPanelTitleFactory,
 } from './components/KeplerInjector';
+
+export {getBasemapForTheme, getCurrentThemeFromDOM} from './KeplerSlice';
