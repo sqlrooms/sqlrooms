@@ -18,6 +18,14 @@ export function opacifyHex(hexCode: string, opacity: number): string {
  * @returns Hex color string (#RRGGBB)
  */
 export function hslToHex(h: number, s: number, l: number): string {
+  // Normalize hue to [0, 360) range
+  h = h % 360;
+  if (h < 0) h += 360;
+
+  // Clamp saturation and lightness to valid range
+  s = Math.max(0, Math.min(100, s));
+  l = Math.max(0, Math.min(100, l));
+
   // Convert saturation and lightness to fractions
   s /= 100;
   l /= 100;
