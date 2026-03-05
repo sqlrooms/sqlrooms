@@ -671,7 +671,7 @@ export function createDuckDbSlice({
 
           async refreshTableSchemas(): Promise<DataTable[]> {
             if (refreshPromise) {
-              return get().db.tables;
+              return refreshPromise;
             }
             set((state) =>
               produce(state, (draft) => {
@@ -715,7 +715,7 @@ export function createDuckDbSlice({
                 );
               }
             })();
-            return get().db.tables;
+            return refreshPromise;
           },
 
           async sqlSelectToJson(sql: string) {
