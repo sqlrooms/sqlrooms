@@ -5,7 +5,7 @@ import {
   Completion,
 } from '@codemirror/autocomplete';
 import {syntaxTree} from '@codemirror/language';
-import {Extension} from '@codemirror/state';
+import {Extension, Text} from '@codemirror/state';
 import {SyntaxNode} from '@lezer/common';
 
 /**
@@ -19,13 +19,14 @@ export function jsonSchemaAutocomplete(schema: object): Extension {
       (context: CompletionContext): CompletionResult | null => {
         const tree = syntaxTree(context.state);
         const node = tree.resolveInner(context.pos, -1);
+        const doc = context.state.doc;
 
         // Determine context: are we completing a property key or a value?
         const isPropertyKey = isInPropertyKeyPosition(node, context.pos);
 
         if (isPropertyKey) {
           // Suggest property names from schema
-          const path = getJsonPath(node);
+          const path = getJsonPath(node, doc);
           const completions = extractPropertyCompletions(schema, path);
 
           if (completions.length > 0) {
@@ -39,8 +40,8 @@ export function jsonSchemaAutocomplete(schema: object): Extension {
           }
         } else {
           // Suggest values based on property type/enum
-          const path = getJsonPath(node);
-          const propertyName = getPropertyName(node);
+          const path = getJsonPath(node, doc);
+          const propertyName = getPropertyName(node, doc);
 
           if (propertyName) {
             const completions = extractValueCompletions(
@@ -96,14 +97,14 @@ function isInPropertyKeyPosition(node: SyntaxNode, pos: number): boolean {
 /**
  * Gets the JSON path to the current node
  */
-function getJsonPath(node: SyntaxNode): string[] {
+function getJsonPath(node: SyntaxNode, doc: Text): string[] {
   const path: string[] = [];
   let current: SyntaxNode | null = node;
 
   while (current) {
     if (current.name === 'Property') {
       // Get the property name
-      const propertyName = getPropertyName(current);
+      const propertyName = getPropertyName(current, doc);
       if (propertyName) {
         path.unshift(propertyName);
       }
@@ -118,7 +119,7 @@ function getJsonPath(node: SyntaxNode): string[] {
 /**
  * Gets the property name from a Property node
  */
-function getPropertyName(node: SyntaxNode): string | null {
+function getPropertyName(node: SyntaxNode, doc: Text): string | null {
   if (node.name !== 'Property' && node.name !== 'PropertyName') {
     // Try to find PropertyName child
     const propertyNameNode = findChildByName(node, 'PropertyName');
@@ -129,7 +130,7 @@ function getPropertyName(node: SyntaxNode): string | null {
     }
   }
 
-  const text = node.from !== undefined ? node.toString() : null;
+  const text = doc.sliceString(node.from, node.to);
   if (!text) return null;
 
   // Remove quotes if present

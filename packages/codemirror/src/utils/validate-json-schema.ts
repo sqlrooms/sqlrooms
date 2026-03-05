@@ -69,7 +69,7 @@ export function validateJsonSchema(text: string, schema: object): Diagnostic[] {
     }
 
     // JSON parse error
-    const [errorMatch] = error.message.match(/position (\d+)/) ?? [];
+    const [, errorMatch] = error.message.match(/position (\d+)/) ?? [];
     const position = errorMatch ? parseInt(errorMatch, 10) : 0;
 
     diagnostics.push({
