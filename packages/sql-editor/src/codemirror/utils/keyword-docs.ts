@@ -10,8 +10,6 @@ export const getKeywordDocs = async (): Promise<Record<string, KeywordDoc>> => {
     import('@marimo-team/codemirror-sql/data/duckdb-keywords.json'),
   ]);
 
-  console.log(commonKeywords);
-
   return {
     ...commonKeywords.default.keywords,
     ...duckdbKeywords.default.keywords,

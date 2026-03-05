@@ -1,17 +1,8 @@
-import {forEachDiagnostic} from '@codemirror/lint';
+import {Diagnostic, forEachDiagnostic} from '@codemirror/lint';
 import {EditorState} from '@codemirror/state';
 
-export type CodeMirrorDiagnostic = {
-  from: number;
-  to: number;
-  severity: 'hint' | 'info' | 'warning' | 'error';
-  message: string;
-};
-
-export function getDiagnostics(
-  editorState: EditorState,
-): CodeMirrorDiagnostic[] {
-  const diagnostics: CodeMirrorDiagnostic[] = [];
+export function getDiagnostics(editorState: EditorState): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
 
   forEachDiagnostic(editorState, ({from, to, severity, message}) => {
     diagnostics.push({

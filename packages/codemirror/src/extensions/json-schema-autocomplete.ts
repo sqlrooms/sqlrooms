@@ -5,6 +5,7 @@ import {
   Completion,
 } from '@codemirror/autocomplete';
 import {syntaxTree} from '@codemirror/language';
+import {Extension} from '@codemirror/state';
 import {SyntaxNode} from '@lezer/common';
 
 /**
@@ -12,7 +13,7 @@ import {SyntaxNode} from '@lezer/common';
  * @param schema JSON schema to extract completions from
  * @returns CodeMirror autocomplete extension
  */
-export function jsonSchemaAutocomplete(schema: object) {
+export function jsonSchemaAutocomplete(schema: object): Extension {
   return autocompletion({
     override: [
       (context: CompletionContext): CompletionResult | null => {

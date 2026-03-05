@@ -16,6 +16,9 @@ export function createDuckDbSql(schema: SQLNamespace): LanguageSupport {
         label,
         keyword: label,
         info: async () => {
+          if (typeof document === 'undefined') {
+            return null;
+          }
           const dom = document.createElement('div');
           const keywordDocs = await getKeywordDocs();
           const description = keywordDocs[label.toLocaleLowerCase()];

@@ -8,13 +8,13 @@ import {searchKeymap, highlightSelectionMatches} from '@codemirror/search';
 import {cn} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef} from 'react';
 import {createHighlightActiveLineTheme} from '../themes/highlight-active-line-theme';
-import {CodeMirrorDiagnostic, getDiagnostics} from '../utils/diagnostics-utils';
+import {getDiagnostics} from '../utils/diagnostics-utils';
+import {Diagnostic} from '@codemirror/lint';
 
 export type CodeMirrorEditorOptions = {
   lineNumbers?: boolean;
   lineWrapping?: boolean;
   highlightActiveLine?: boolean;
-  highlightActiveLineGutter?: boolean;
   foldGutter?: boolean;
   autocompletion?: boolean;
 };
@@ -31,7 +31,7 @@ export interface CodeMirrorEditorProps {
   /** Callback when the editor view is mounted - provides access to EditorView instance */
   onMount?: (view: EditorView) => void;
   /** Callback when lint diagnostics change (validation errors/warnings) */
-  onValidate?: (diagnostics: CodeMirrorDiagnostic[]) => void;
+  onValidate?: (diagnostics: Diagnostic[]) => void;
   /** Additional CodeMirror extensions to apply */
   extensions?: Extension[];
   /** Additional configuration options */
@@ -123,8 +123,12 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     // Update listener
     extensionsList.push(
       EditorView.updateListener.of((update) => {
+        if (!update.docChanged) {
+          return;
+        }
+
         // Call onChange when document changes
-        if (update.docChanged && onChangeRef.current) {
+        if (onChangeRef.current) {
           onChangeRef.current(update.state.doc.toString());
         }
 

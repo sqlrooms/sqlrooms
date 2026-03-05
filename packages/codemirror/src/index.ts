@@ -1,7 +1,7 @@
 // Components
 export {CodeMirrorEditor} from './components/CodeMirrorEditor';
 export type {CodeMirrorEditorProps} from './components/CodeMirrorEditor';
-export type {CodeMirrorDiagnostic} from './utils/diagnostics-utils';
+export type {Diagnostic as CodeMirrorDiagnostic} from '@codemirror/lint';
 
 export {JsonCodeMirrorEditor} from './components/JsonCodeMirrorEditor';
 export type {JsonCodeMirrorEditorProps} from './components/JsonCodeMirrorEditor';
