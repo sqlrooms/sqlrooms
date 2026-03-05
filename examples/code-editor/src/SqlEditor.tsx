@@ -1,6 +1,5 @@
-import {DuckdbCodeMirrorEditor} from '@sqlrooms/codemirror';
 import {type DataTable} from '@sqlrooms/duckdb';
-import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {DuckdbCodeMirrorEditor, SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {type EditorType} from './EditorTypeSwitch';
 
 interface SqlEditorProps {

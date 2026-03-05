@@ -18,6 +18,8 @@ export type {
   SqlMonacoEditorProps,
   SqlMonacoRunQueryOptions,
 } from './SqlMonacoEditor';
+export {DuckdbCodeMirrorEditor} from './components/DuckdbCodeMirrorEditor';
+export type {DuckdbCodeMirrorEditorProps} from './components/DuckdbCodeMirrorEditor';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';

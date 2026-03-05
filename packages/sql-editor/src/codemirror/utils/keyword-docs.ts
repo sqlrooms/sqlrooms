@@ -1,4 +1,4 @@
-interface KeywordDoc {
+export interface KeywordDoc {
   description: string;
   example?: string;
 }

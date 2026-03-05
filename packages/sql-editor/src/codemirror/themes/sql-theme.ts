@@ -1,7 +1,9 @@
 import {Extension} from '@codemirror/state';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags as t} from '@lezer/highlight';
-import {createBaseTheme, BaseThemeOptions} from './base-theme';
+import {createBaseTheme, type BaseThemeOptions} from '@sqlrooms/codemirror';
+
+export type {BaseThemeOptions};
 
 export function createSqlTheme(options: BaseThemeOptions = {}): Extension {
   const baseTheme = createBaseTheme(options);

@@ -2,11 +2,11 @@ import React, {useCallback, useMemo, useRef} from 'react';
 import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
-import {createSqlKeymap} from '../extensions/sql-keymap';
-import {CodeMirrorEditor, CodeMirrorEditorProps} from './CodeMirrorEditor';
-import {createSqlTheme} from '../themes/sql-theme';
+import {CodeMirrorEditor, CodeMirrorEditorProps} from '@sqlrooms/codemirror';
 import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
-import {createDuckDbExtension} from '../extensions/duck-db';
+import {createDuckDbExtension} from '../codemirror/extensions/duck-db';
+import {createSqlKeymap} from '../codemirror/extensions/sql-keymap';
+import {createSqlTheme} from '../codemirror/themes/sql-theme';
 
 export interface DuckdbCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,

@@ -1,18 +1,19 @@
 # @sqlrooms/codemirror
 
-CodeMirror 6 editor components for SQLRooms with theme integration, DuckDB SQL support, JSON schema validation, and JavaScript/JSX editing.
+CodeMirror 6 editor components for SQLRooms with theme integration, JSON schema validation, and JavaScript/JSX editing.
 
 A lightweight alternative to `@sqlrooms/monaco-editor`. Perfect for data-focused applications that need fast, efficient code editors.
 
 ## Features
 
 - 🎨 **Theme Integration** - Seamless integration with SQLRooms theme system (light/dark/system)
-- 🌐 **Language Support** - JavaScript/JSX, JSON, and DuckDB SQL syntax highlighting
-- 🦆 **DuckDB SQL Dialect** - Schema-aware completions, hover tooltips, and Cmd+Enter execution
+- 🌐 **Language Support** - JavaScript/JSX and JSON syntax highlighting
 - ✅ **JSON Schema Validation** - Real-time validation with inline error markers
-- 💡 **Schema-based Autocomplete** - Intelligent completions for JSON and SQL editing
+- 💡 **Schema-based Autocomplete** - Intelligent completions for JSON editing
 - 🔒 **Read-only Mode** - Support for non-editable views
 - 🎯 **Similar API** - Familiar interface for Monaco users with component parity
+
+> **Note**: For DuckDB SQL editing with CodeMirror, see the `DuckdbCodeMirrorEditor` component in the [`@sqlrooms/sql-editor`](../sql-editor) package.
 
 ## Installation
 
@@ -71,34 +72,13 @@ const MyJsonEditor: FC = () => {
 };
 ```
 
-### SQL Editor with DuckDB Dialect
-
-```tsx
-import {DuckdbCodeMirrorEditor} from '@sqlrooms/codemirror';
-import {FC, useState} from 'react';
-
-const MySqlEditor: FC = () => {
-  const [sql, setSql] = useState('SELECT * FROM users;');
-
-  return (
-    <DuckdbCodeMirrorEditor
-      value={sql}
-      onChange={setSql}
-      tableSchemas={tableSchemas}
-      onRunQuery={(query) => executeQuery(query)}
-    />
-  );
-};
-```
-
 ## Components
 
-The package exports four editor components:
+The package exports three editor components:
 
 1. **CodeMirrorEditor** - Base editor component (requires manual configuration)
 2. **JsonCodeMirrorEditor** - JSON editor with schema validation and autocomplete
-3. **DuckdbCodeMirrorEditor** - SQL editor with DuckDB dialect and schema-aware completions
-4. **JavascriptCodeMirrorEditor** - JavaScript/JSX editor with syntax highlighting
+3. **JavascriptCodeMirrorEditor** - JavaScript/JSX editor with syntax highlighting
 
 ### CodeMirrorEditor
 
@@ -254,64 +234,6 @@ const MyJsonEditor: FC = () => {
 };
 ```
 
-### DuckdbCodeMirrorEditor
-
-SQL editor with DuckDB dialect support, schema-aware autocompletion, and hover tooltips.
-
-#### Props
-
-```typescript
-interface DuckdbCodeMirrorEditorProps extends Omit<
-  CodeMirrorEditorProps,
-  'extensions'
-> {
-  connector?: DuckDbConnector; // DuckDB connector for dynamic suggestions
-  customKeywords?: string[]; // Custom SQL keywords for completion
-  customFunctions?: string[]; // Custom SQL functions for completion
-  tableSchemas?: DataTable[]; // Table schemas for autocompletion/hover
-  getLatestSchemas?: () => {tableSchemas: DataTable[]}; // Callback for fresh schemas
-  onRunQuery?: (query: string) => void; // Cmd+Enter callback (runs selected text or full doc)
-  theme?: 'dark' | 'light' | 'system'; // Theme override (auto-detects if not set)
-}
-```
-
-#### Features
-
-- **DuckDB Dialect**: Syntax highlighting for DuckDB-specific SQL
-- **Schema-aware Completions**: Autocomplete table names, column names, and functions
-- **Hover Tooltips**: Show table/column schemas and function signatures
-- **Keyword Execution**: Press Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) to run query
-- **Custom Vocabulary**: Add custom keywords and functions for completion
-
-#### Example
-
-```tsx
-import {DuckdbCodeMirrorEditor} from '@sqlrooms/codemirror';
-import {useDuckDb} from '@sqlrooms/duckdb';
-import {FC, useState} from 'react';
-
-const SqlEditor: FC = () => {
-  const [sql, setSql] = useState('SELECT * FROM users WHERE age > 18;');
-  const {connector, tableSchemas} = useDuckDb();
-
-  const handleRunQuery = async (query: string) => {
-    const result = await connector.query(query);
-    console.log('Query result:', result);
-  };
-
-  return (
-    <DuckdbCodeMirrorEditor
-      value={sql}
-      onChange={setSql}
-      connector={connector}
-      tableSchemas={tableSchemas}
-      onRunQuery={handleRunQuery}
-      customKeywords={['PIVOT', 'UNPIVOT']}
-      customFunctions={['my_custom_udf']}
-    />
-  );
-};
-```
 
 ### JavascriptCodeMirrorEditor
 
@@ -362,7 +284,7 @@ function HelloWorld() {
 
 ## Theme Integration
 
-All specialized editor components (`JsonCodeMirrorEditor`, `DuckdbCodeMirrorEditor`, `JavascriptCodeMirrorEditor`) automatically integrate with SQLRooms' theme system:
+All specialized editor components (`JsonCodeMirrorEditor`, `JavascriptCodeMirrorEditor`) automatically integrate with SQLRooms' theme system:
 
 - **Light Mode**: Uses light theme colors from CSS variables
 - **Dark Mode**: Uses dark theme colors from CSS variables
@@ -390,22 +312,19 @@ Specialized components allow explicit theme override:
 ```tsx
 import {
   JsonCodeMirrorEditor,
-  DuckdbCodeMirrorEditor,
   JavascriptCodeMirrorEditor,
 } from '@sqlrooms/codemirror';
 import {FC} from 'react';
 
 interface MyEditorsProps {
   json: object;
-  sql: string;
   code: string;
 }
 
-const MyEditors: FC<MyEditorsProps> = ({json, sql, code}) => {
+const MyEditors: FC<MyEditorsProps> = ({json, code}) => {
   return (
     <>
       <JsonCodeMirrorEditor theme="dark" value={json} schema={schema} />
-      <DuckdbCodeMirrorEditor theme="light" value={sql} />
       <JavascriptCodeMirrorEditor theme="system" value={code} />
     </>
   );
@@ -551,11 +470,10 @@ If you're migrating from `@sqlrooms/monaco-editor`, here are the key differences
 
 ### Component Mapping
 
-| Monaco Component                            | CodeMirror Equivalent        | Notes                                  |
-| ------------------------------------------- | ---------------------------- | -------------------------------------- |
-| `MonacoEditor` with `language="javascript"` | `JavascriptCodeMirrorEditor` | Built-in JSX support                   |
-| `JsonMonacoEditor`                          | `JsonCodeMirrorEditor`       | Feature parity for schema validation   |
-| `SqlMonacoEditor`                           | `DuckdbCodeMirrorEditor`     | DuckDB dialect with schema completions |
+| Monaco Component                            | CodeMirror Equivalent        | Notes                                |
+| ------------------------------------------- | ---------------------------- | ------------------------------------ |
+| `MonacoEditor` with `language="javascript"` | `JavascriptCodeMirrorEditor` | Built-in JSX support                 |
+| `JsonMonacoEditor`                          | `JsonCodeMirrorEditor`       | Feature parity for schema validation |
 
 ### API Differences
 
@@ -571,7 +489,7 @@ If you're migrating from `@sqlrooms/monaco-editor`, here are the key differences
 ✅ **Fully Supported:**
 
 - Theme integration (light/dark/system)
-- Language support (JavaScript/JSX, JSON, SQL/DuckDB)
+- Language support (JavaScript/JSX, JSON)
 - Read-only mode
 - onChange callback
 - Line numbers, line wrapping, code folding
@@ -633,43 +551,6 @@ const MyEditor: FC = () => {
 };
 ```
 
-**SQL Editor:**
-
-```tsx
-// Before (Monaco)
-import {SqlMonacoEditor} from '@sqlrooms/monaco-editor';
-import {FC, useState} from 'react';
-
-const SqlEditor: FC = () => {
-  const [sql, setSql] = useState('');
-
-  return (
-    <SqlMonacoEditor
-      value={sql}
-      onChange={setSql}
-      tableSchemas={schemas}
-      onExecuteQuery={handleExecute}
-    />
-  );
-};
-
-// After (CodeMirror)
-import {DuckdbCodeMirrorEditor} from '@sqlrooms/codemirror';
-import {FC, useState} from 'react';
-
-const SqlEditor: FC = () => {
-  const [sql, setSql] = useState('');
-
-  return (
-    <DuckdbCodeMirrorEditor
-      value={sql}
-      onChange={setSql}
-      tableSchemas={schemas}
-      onRunQuery={handleExecute}
-    />
-  );
-};
-```
 
 **JSON Editor:**
 
@@ -702,9 +583,8 @@ const JsonEditor: FC = () => {
 - Building PWAs or mobile-first applications where bundle size matters
 - Bundle size is a critical concern (~100KB vs Monaco's ~2MB)
 - You need basic code editing without full IDE features
-- Working with JSON, SQL/DuckDB, or JavaScript/JSX
+- Working with JSON or JavaScript/JSX
 - You want fast editor initialization and low memory footprint
-- You're building data-focused apps (DuckDB SQL support is excellent)
 
 ### Use Monaco When:
 
@@ -727,10 +607,6 @@ export type {CodeMirrorEditorProps} from '@sqlrooms/codemirror';
 export {JsonCodeMirrorEditor} from '@sqlrooms/codemirror';
 export type {JsonCodeMirrorEditorProps} from '@sqlrooms/codemirror';
 
-// DuckDB SQL editor with dialect support and schema-aware completions
-export {DuckdbCodeMirrorEditor} from '@sqlrooms/codemirror';
-export type {DuckdbCodeMirrorEditorProps} from '@sqlrooms/codemirror';
-
 // JavaScript editor with JSX support
 export {JavascriptCodeMirrorEditor} from '@sqlrooms/codemirror';
 export type {JavascriptCodeMirrorEditorProps} from '@sqlrooms/codemirror';
@@ -739,16 +615,22 @@ export type {JavascriptCodeMirrorEditorProps} from '@sqlrooms/codemirror';
 export type {CodeMirrorDiagnostic} from '@sqlrooms/codemirror';
 ```
 
+### Exported Theme Utilities
+
+The package exports a base theme system for building custom editors:
+
+```typescript
+// Base theme creator (used internally by all editor themes)
+export {createBaseTheme} from '@sqlrooms/codemirror';
+export type {BaseThemeOptions} from '@sqlrooms/codemirror';
+```
+
 ### Internal Extensions (Not Exported)
 
-The following extensions and themes are used internally by the specialized editor components but are not exported from the package. Use the specialized components instead of manually composing these extensions:
+The following extensions and themes are used internally by the specialized editor components:
 
 - `createSqlroomsTheme()` - Used by JavascriptCodeMirrorEditor
 - `createJsonTheme()` - Used by JsonCodeMirrorEditor
-- `createSqlTheme()` - Used by DuckdbCodeMirrorEditor
-- `createBaseTheme()` - Base theme system
 - `jsonSchemaLinter()` - JSON schema validation (used by JsonCodeMirrorEditor)
 - `jsonSchemaAutocomplete()` - JSON schema completions (used by JsonCodeMirrorEditor)
 - `autoTriggerOnQuote()` - Auto-trigger completions (used by JsonCodeMirrorEditor)
-- `createDuckDbExtension()` - DuckDB SQL features (used by DuckdbCodeMirrorEditor)
-- `createSqlKeymap()` - SQL keyboard shortcuts (used by DuckdbCodeMirrorEditor)
