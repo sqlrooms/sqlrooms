@@ -558,7 +558,7 @@ export function createDuckDbSlice({
                   const columnNames = tableInfo.getChild('name');
                   const columnTypes = tableInfo.getChild('type');
                   for (let di = 0; di < tableInfo.numRows; di++) {
-                    const columnName = String(columnNames.get(di));
+                    const columnName = String(columnNames?.get(di));
                     const columnType = String(columnTypes?.get(di));
                     if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
                       continue;
