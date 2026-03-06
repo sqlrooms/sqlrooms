@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@sqlrooms/preset-jest": "workspace:*",
+    "@types/lodash.throttle": "^4.1.9",
     "ts-jest": "^29.4.4"
   }
 }
