@@ -80,6 +80,7 @@ export function getThemePreference({
 export function getResolvedTheme(theme: Theme): ResolvedTheme {
   if (theme !== 'system') return theme;
   if (typeof window === 'undefined') return 'light';
+  if (typeof window.matchMedia !== 'function') return 'light';
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
