@@ -21,7 +21,8 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@sqlrooms/ui": "workspace:*",
-    "monaco-editor": "^0.55.1"
+    "@sqlrooms/utils": "workspace:*",
+    "monaco-editor": "^0.55.0"
   },
   "peerDependencies": {
     "react": ">=18",

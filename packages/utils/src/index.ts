@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-export {opacifyHex} from './color';
+export {opacifyHex, hslToHex, getCssColor, getMonospaceFont} from './color';
 
 export {formatCount, formatCount4, formatCountShort, shorten} from './format';
 

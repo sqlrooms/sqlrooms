@@ -74,6 +74,7 @@ export {
   separateLastStatement,
   splitSqlStatements,
   sqlFrom,
+  getFunctionSuggestions,
   type BaseDuckDbConnectorImpl,
   type BaseDuckDbConnectorOptions,
   type ColumnNodeObject,

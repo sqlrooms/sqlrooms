@@ -103,9 +103,9 @@ export const InputCellContent: React.FC<InputCellContentProps> = ({
         <EditableText
           value={input.varName}
           onChange={(varName) => updateInput({varName})}
-          className="h-6 text-xs font-semibold shadow-none outline-none ring-0"
+          className="h-6 text-xs font-semibold shadow-none ring-0 outline-none"
         />
-        <span className="text-[10px] font-bold uppercase text-gray-400">
+        <span className="text-[10px] font-bold text-gray-400 uppercase">
           Input
         </span>
       </div>

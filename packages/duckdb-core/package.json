@@ -19,7 +19,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/room-config": "workspace:*"
+    "@sqlrooms/room-config": "workspace:*",
+    "@sqlrooms/utils": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

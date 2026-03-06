@@ -42,7 +42,7 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
       >
         {isEditing ? 'Save' : 'Edit text'}
       </Button>
-      <span className="text-[10px] font-bold uppercase text-gray-400">
+      <span className="text-[10px] font-bold text-gray-400 uppercase">
         Text
       </span>
     </div>

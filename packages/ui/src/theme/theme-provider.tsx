@@ -10,7 +10,7 @@ import {
  * Available theme options
  * @typedef {'dark' | 'light' | 'system'} Theme
  */
-type Theme = 'dark' | 'light' | 'system';
+export type Theme = 'dark' | 'light' | 'system';
 
 /**
  * Props for the ThemeProvider component

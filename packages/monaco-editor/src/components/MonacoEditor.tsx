@@ -1,13 +1,10 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {Spinner, cn, useTheme} from '@sqlrooms/ui';
+import {Spinner, cn, useIsDarkTheme} from '@sqlrooms/ui';
+import type {Theme} from '@sqlrooms/ui';
+import React, {useEffect, useMemo, useRef} from 'react';
+import {getJsonEditorTheme, getMenuColors} from '../utils/color-utils';
 import type * as Monaco from 'monaco-editor';
-import React, {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
-import {
-  getCssColor,
-  getJsonEditorTheme,
-  getMenuColors,
-  getMonospaceFont,
-} from '../utils/color-utils';
+import {getCssColor, getMonospaceFont} from '@sqlrooms/utils';
 
 // Rendering issue fix for white rectangle appearing above text in Monaco.
 // Monaco creates a hidden textarea for IME input. If Monaco CSS loads late,
@@ -63,9 +60,9 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   /**
    * The theme of the editor
    * Can be explicitly set or will automatically use the app theme if not provided
-   * @default 'vs-dark'
+   * @default 'dark'
    */
-  theme?: 'vs-dark' | 'light';
+  theme?: Theme;
   /**
    * The value of the editor
    */
@@ -149,6 +146,8 @@ const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions
     automaticLayout: true,
     fontLigatures: true,
     fixedOverflowWidgets: true,
+    fontSize: 14,
+    lineHeight: 21,
     // Prevent an initial top "reserved" area that can appear briefly while Monaco
     // computes sticky scroll layout (shows up as a blank/white rectangle above text).
     stickyScroll: {enabled: false} as any,
@@ -168,31 +167,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   beforeMount,
   ...props
 }) => {
-  const {theme: appTheme} = useTheme();
-
-  // Track system dark preference without setState-in-effect
-  const systemPrefersDark = useSyncExternalStore(
-    (onStoreChange) => {
-      if (appTheme !== 'system' || typeof window === 'undefined') {
-        return () => {};
-      }
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      mediaQuery.addEventListener('change', onStoreChange);
-      return () => mediaQuery.removeEventListener('change', onStoreChange);
-    },
-    () => {
-      if (appTheme !== 'system' || typeof window === 'undefined') return false;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    },
-    () => false,
-  );
-
-  const isDark =
-    explicitTheme === 'vs-dark'
-      ? true
-      : explicitTheme === 'light'
-        ? false
-        : appTheme === 'dark' || (appTheme === 'system' && systemPrefersDark);
+  const isDark = useIsDarkTheme(explicitTheme);
 
   const monacoTheme =
     language === 'json'
