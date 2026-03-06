@@ -8,7 +8,11 @@ export {
   createKeplerSlice,
   useStoreWithKepler,
 } from './KeplerSlice';
-export type {KeplerSliceState} from './KeplerSlice';
+export type {
+  CreateInitialMapKeplerStateContext,
+  CreateKeplerSliceOptions,
+  KeplerSliceState,
+} from './KeplerSlice';
 
 export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
