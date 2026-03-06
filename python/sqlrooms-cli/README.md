@@ -16,7 +16,7 @@ What happens:
 
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on `ws://localhost:4000`.
 - Serves the AI example UI on `http://localhost:4173` and opens your browser (disable with `--no-open-browser`).
-- Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
+- Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB directly from your filesystem using the dropped file reference (no upload copy).
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
 ## CLI flags
@@ -40,7 +40,7 @@ Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` i
 - `__sqlrooms.ui_state` (one row: `key='default'`)
 - `__sqlrooms.sync_rooms` (only used when `--sync` is enabled)
 
-Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
+Runtime config for the UI is exposed at `/api/config` / `/config.json`.
 
 ## Config file
 
