@@ -67,6 +67,7 @@ function getBasemapForTheme(theme: 'light' | 'dark' | 'system'): string {
   const resolvedTheme =
     theme === 'system'
       ? typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
         : 'light'
