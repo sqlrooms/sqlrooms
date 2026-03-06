@@ -45,7 +45,7 @@ export const DataSourcesPanel = () => {
         }}
       >
         <div className="text-muted-foreground text-xs">
-          Files you add will stay local to your browser.
+          Files are loaded directly from your local filesystem by DuckDB.
         </div>
       </FileDropzone>
       <TableStructurePanel />

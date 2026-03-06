@@ -1,5 +1,4 @@
 import {PersistStorage, StorageValue} from 'zustand/middleware';
-import {RuntimeConfig} from './runtimeConfig';
 
 type DuckDbLikeConnector = {
   query: (sql: string) => PromiseLike<any>;
@@ -139,23 +138,4 @@ export function createDuckDbPersistStorage(
       );
     },
   };
-}
-
-function getApiBaseUrl(config: RuntimeConfig): string {
-  return (config.apiBaseUrl || '').replace(/\/$/, '');
-}
-
-export async function uploadFileToServer(
-  file: File,
-  config: RuntimeConfig,
-): Promise<string> {
-  const uploadUrl = `${getApiBaseUrl(config)}/api/upload`;
-  const form = new FormData();
-  form.append('file', file, file.name);
-  const res = await fetch(uploadUrl, {method: 'POST', body: form});
-  if (!res.ok) {
-    throw new Error(`Upload failed: ${res.statusText}`);
-  }
-  const data = (await res.json()) as {path: string};
-  return data.path;
 }
