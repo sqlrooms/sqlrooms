@@ -8,11 +8,6 @@ import {
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
-import {
-  registerCommandsForOwner,
-  RoomCommand,
-  unregisterCommandsForOwner,
-} from '@sqlrooms/room-shell';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
   castDuckDBTypesForKepler,
@@ -43,10 +38,14 @@ import {
   BaseRoomStoreState,
   createSlice,
   DbSliceState,
+  registerCommandsForOwner,
+  RoomCommand,
   RoomShellSliceState,
+  unregisterCommandsForOwner,
   useBaseRoomShellStore,
   type StateCreator,
 } from '@sqlrooms/room-shell';
+import {getTheme, type ResolvedTheme} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {produce, setAutoFreeze} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
@@ -62,33 +61,11 @@ import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 /**
  * Get the appropriate basemap style ID based on the current theme
  */
-function getBasemapForTheme(theme: 'light' | 'dark' | 'system'): string {
-  // Resolve 'system' theme to actual theme
-  const resolvedTheme =
-    theme === 'system'
-      ? typeof window !== 'undefined' &&
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : theme;
-
+function getBasemapForTheme(resolvedTheme: ResolvedTheme): string {
   // Map theme to basemap
   return resolvedTheme === 'dark' ? 'dark-matter' : 'positron';
 }
 
-/**
- * Get the current theme from the document element
- */
-function getCurrentThemeFromDOM(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light';
-
-  const htmlElement = window.document.documentElement;
-  if (htmlElement.classList.contains('dark')) {
-    return 'dark';
-  }
-  return 'light';
-}
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
@@ -301,7 +278,7 @@ export function createKeplerSlice({
   config: initialConfigProps,
   initialKeplerState = {
     mapStyle: {
-      styleType: getBasemapForTheme(getCurrentThemeFromDOM()),
+      styleType: getBasemapForTheme(getTheme()),
     } as MapStyle,
     uiState: {
       ...INITIAL_UI_STATE,
@@ -497,7 +474,7 @@ export function createKeplerSlice({
         createMap: (name) => {
           const mapId = createId();
           const now = Date.now();
-          const themeBasemap = getBasemapForTheme(getCurrentThemeFromDOM());
+          const themeBasemap = getBasemapForTheme(getTheme());
 
           set((state) =>
             produce(state, (draft) => {
@@ -916,5 +893,3 @@ export function useStoreWithKepler<T>(
     selector(state as RoomStateWithDiscuss),
   );
 }
-
-export {getBasemapForTheme, getCurrentThemeFromDOM};
