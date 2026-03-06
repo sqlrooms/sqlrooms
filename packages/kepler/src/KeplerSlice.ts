@@ -916,5 +916,4 @@ export function useStoreWithKepler<T>(
   );
 }
 
-// Export utility functions for theme-aware basemap selection
 export {getBasemapForTheme, getCurrentThemeFromDOM};
