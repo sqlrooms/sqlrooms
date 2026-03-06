@@ -10,6 +10,40 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
+
+`createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
+
+Use `createInitialMapKeplerState` instead. It is called whenever a map's kepler state is initialized, so consumers can override the default map state and, if needed, derive things like the basemap style from the current theme by calling `getTheme()`.
+
+#### Before
+
+```ts
+createKeplerSlice({
+  initialKeplerState: {
+    mapStyle: {
+      styleType: 'positron',
+    },
+  },
+});
+```
+
+#### After
+
+```ts
+import {getTheme} from '@sqlrooms/ui';
+
+createKeplerSlice({
+  createInitialMapKeplerState: ({defaultInitialMapKeplerState}) => ({
+    ...defaultInitialMapKeplerState,
+    mapStyle: {
+      ...defaultInitialMapKeplerState.mapStyle,
+      styleType: getTheme() === 'dark' ? 'dark-matter' : 'positron',
+    },
+  }),
+});
+```
+
 ### `@sqlrooms/ui`: `toast` export now uses Sonner (breaking)
 
 The top-level `toast` export from `@sqlrooms/ui` now points to Sonner's API.
