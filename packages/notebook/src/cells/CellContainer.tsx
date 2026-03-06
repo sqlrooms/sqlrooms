@@ -43,7 +43,7 @@ export const CellContainer: React.FC<{
             editTrigger="doubleClick"
             value={(cell.data as any).title}
             onChange={(v) => onRename(id, v)}
-            className="h-full text-sm font-medium shadow-none outline-none ring-0"
+            className="h-full text-sm font-medium shadow-none ring-0 outline-none"
           />
         </div>
         <div className="flex items-center justify-end gap-2 text-xs">

@@ -21,8 +21,8 @@ import {
 import {
   BaseRoomStoreState,
   CommandSliceState,
-  CreateCommandSliceProps,
   CreateBaseRoomSliceProps,
+  CreateCommandSliceProps,
   RoomCommand,
   createBaseRoomSlice,
   createCommandSlice,
@@ -578,6 +578,9 @@ export function createRoomShellSlice(
       const {tables} = get().db;
       const {dataSourceStates} = get().room;
       const {config} = get().room;
+      if (!config) {
+        return;
+      }
       const {dataSources} = config;
       set((state) =>
         produce(state, (draft) => {
