@@ -240,6 +240,7 @@ export type KeplerSliceState = {
       [mapId: string]: Dispatch;
     };
     initialize: () => Promise<void>;
+    destroy: () => Promise<void>;
     setConfig: (config: KeplerSliceConfig) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -274,6 +275,9 @@ export type KeplerSliceState = {
      */
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
+    duplicateMap: (
+      mapId: string,
+    ) => Promise<{success: boolean; message?: string; code?: string}>;
     renameMap: (mapId: string, name: string) => void;
     closeMap: (mapId: string) => void;
     setOpenTabs: (tabIds: string[]) => void;
