@@ -532,49 +532,85 @@ export function createDuckDbSlice({
             }`;
             const tableResults = await connector.query(tableSql);
             const viewResults = await connector.query(viewSql);
+            const columnSql = `FROM duckdb_columns() SELECT
+              database_name AS database,
+              schema_name AS schema,
+              table_name AS name,
+              column_name AS column_name,
+              data_type AS column_type,
+              column_index AS column_index
+            ${
+              schema || database || table
+                ? `WHERE ${[
+                    defaultDatabaseFilter,
+                    schema ? `schema_name = ${escapeVal(schema)}` : '',
+                    table ? `table_name = ${escapeVal(table)}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' AND ')}`
+                : `WHERE ${defaultDatabaseFilter}`
+            }
+            ORDER BY database_name, schema_name, table_name, column_index`;
+            const columnsByTable = new Map<string, TableColumn[]>();
+            try {
+              const columnResults = await connector.query(columnSql);
+              for (let ci = 0; ci < columnResults.numRows; ci++) {
+                const rowDatabase = columnResults.getChild('database')?.get(ci);
+                const rowSchema = columnResults.getChild('schema')?.get(ci);
+                const rowTable = columnResults.getChild('name')?.get(ci);
+                const columnName = columnResults
+                  .getChild('column_name')
+                  ?.get(ci);
+                const columnType = columnResults
+                  .getChild('column_type')
+                  ?.get(ci);
+                if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
+                  continue;
+                }
+                const tableKey = `${rowDatabase}.${rowSchema}.${rowTable}`;
+                const tableColumns = columnsByTable.get(tableKey) ?? [];
+                tableColumns.push({
+                  name: columnName,
+                  type: columnType,
+                });
+                columnsByTable.set(tableKey, tableColumns);
+              }
+            } catch (error) {
+              // Keep parity with prior behavior: report metadata failures for real tables,
+              // but avoid noisy captures when only querying view metadata.
+              if (tableResults.numRows > 0) {
+                get().room.captureException(error);
+              }
+            }
             const newTables: DataTable[] = [];
             const results = [tableResults, viewResults];
             for (const describeResults of results) {
               for (let i = 0; i < describeResults.numRows; i++) {
                 const isView = describeResults.getChild('isView')?.get(i);
-                const database = describeResults.getChild('database')?.get(i);
-                const schema = describeResults.getChild('schema')?.get(i);
-                const table = describeResults.getChild('name')?.get(i);
+                const rowDatabase = describeResults
+                  .getChild('database')
+                  ?.get(i);
+                const rowSchema = describeResults.getChild('schema')?.get(i);
+                const rowTable = describeResults.getChild('name')?.get(i);
                 const sql = describeResults.getChild('sql')?.get(i);
                 const comment = describeResults.getChild('comment')?.get(i);
                 const estimatedSize = describeResults
                   .getChild('estimated_size')
                   ?.get(i);
-                const columns: TableColumn[] = [];
                 const qualifiedTable = makeQualifiedTableName({
-                  database,
-                  schema,
-                  table,
+                  database: rowDatabase,
+                  schema: rowSchema,
+                  table: rowTable,
                 });
-                try {
-                  const tableInfo = await connector.query(
-                    `PRAGMA table_info(${escapeVal(qualifiedTable.toString())})`,
-                  );
-                  const columnNames = tableInfo.getChild('name');
-                  const columnTypes = tableInfo.getChild('type');
-                  for (let di = 0; di < tableInfo.numRows; di++) {
-                    const columnName = String(columnNames?.get(di));
-                    const columnType = String(columnTypes?.get(di));
-                    if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
-                      continue;
-                    }
-                    columns.push({name: columnName, type: columnType});
-                  }
-                } catch (error) {
-                  if (!isView) {
-                    get().room.captureException(error);
-                  }
-                }
+                const columns =
+                  columnsByTable.get(
+                    `${rowDatabase}.${rowSchema}.${rowTable}`,
+                  ) ?? [];
                 newTables.push({
                   table: qualifiedTable,
-                  database,
-                  schema,
-                  tableName: table,
+                  database: rowDatabase,
+                  schema: rowSchema,
+                  tableName: rowTable,
                   columns,
                   sql,
                   comment,
