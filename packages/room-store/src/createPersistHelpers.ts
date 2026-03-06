@@ -1,5 +1,6 @@
 import {persist, PersistOptions} from 'zustand/middleware';
 import z from 'zod';
+import throttle from 'lodash.throttle';
 import {StateCreator} from './BaseRoomStore';
 
 /**
@@ -148,5 +149,6 @@ export function persistSliceConfigs<S>(
     ...persistOptions,
     partialize: partialize || helpers.partialize,
     merge: merge || helpers.merge,
+    throttle: 1000,
   } as PersistOptions<S>) as StateCreator<S>;
 }
