@@ -21,6 +21,7 @@
   "dependencies": {
     "@sqlrooms/room-config": "workspace:*",
     "immer": "^11.0.1",
+    "lodash.throttle": "^4.1.1",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@sqlrooms/preset-jest": "workspace:*",
+    "@types/lodash.throttle": "^4.1.9",
     "ts-jest": "^29.4.4"
   }
 }
