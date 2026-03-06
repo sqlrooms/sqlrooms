@@ -11,6 +11,15 @@ import {
  * @typedef {'dark' | 'light' | 'system'} Theme
  */
 export type Theme = 'dark' | 'light' | 'system';
+export type ResolvedTheme = Exclude<Theme, 'system'>;
+
+export const DEFAULT_THEME: Theme = 'system';
+export const DEFAULT_THEME_STORAGE_KEY = 'sqlrooms-ui-theme';
+
+type GetThemeOptions = {
+  defaultTheme?: Theme;
+  storageKey?: string;
+};
 
 /**
  * Props for the ThemeProvider component
@@ -37,11 +46,53 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-  theme: 'system',
+  theme: DEFAULT_THEME,
   setTheme: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+
+function isTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
+/**
+ * Returns the currently stored theme preference without requiring React context.
+ * Falls back to the provided default when storage is unavailable or invalid.
+ */
+export function getThemePreference({
+  defaultTheme = DEFAULT_THEME,
+  storageKey = DEFAULT_THEME_STORAGE_KEY,
+}: GetThemeOptions = {}): Theme {
+  if (typeof window === 'undefined') return defaultTheme;
+
+  try {
+    const storedTheme = window.localStorage.getItem(storageKey);
+    return isTheme(storedTheme) ? storedTheme : defaultTheme;
+  } catch {
+    return defaultTheme;
+  }
+}
+
+/**
+ * Resolves a theme preference to the concrete light/dark theme currently in use.
+ */
+export function getResolvedTheme(theme: Theme): ResolvedTheme {
+  if (theme !== 'system') return theme;
+  if (typeof window === 'undefined') return 'light';
+  if (typeof window.matchMedia !== 'function') return 'light';
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+}
+
+/**
+ * Returns the concrete light/dark theme currently in use.
+ */
+export function getTheme(options: GetThemeOptions = {}): ResolvedTheme {
+  return getResolvedTheme(getThemePreference(options));
+}
 
 /**
  * ThemeProvider component that manages and provides theme context to its children.
@@ -70,18 +121,13 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
  */
 export function ThemeProvider({
   children,
-  defaultTheme = 'system',
-  storageKey = 'sqlrooms-ui-theme',
+  defaultTheme = DEFAULT_THEME,
+  storageKey = DEFAULT_THEME_STORAGE_KEY,
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return defaultTheme;
-    try {
-      return (window.localStorage.getItem(storageKey) as Theme) || defaultTheme;
-    } catch {
-      return defaultTheme;
-    }
-  });
+  const [theme, setTheme] = useState<Theme>(() =>
+    getThemePreference({defaultTheme, storageKey}),
+  );
 
   // Apply theme class before paint to avoid a light-theme flash on initial load.
   // (useLayoutEffect on the client, fall back to useEffect in non-DOM environments)
@@ -93,18 +139,7 @@ export function ThemeProvider({
     const root = window.document.documentElement;
 
     root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light';
-
-      root.classList.add(systemTheme);
-      return;
-    }
-
-    root.classList.add(theme);
+    root.classList.add(getResolvedTheme(theme));
   }, [theme]);
 
   const value = {
