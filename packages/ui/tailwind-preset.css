@@ -230,28 +230,3 @@
     color: hsl(var(--muted-foreground));
   }
 }
-
-/* Map Sonner toast colors to shadcn theme tokens */
-[data-sonner-toaster] {
-  --normal-bg: hsl(var(--card));
-  --normal-bg-hover: hsl(var(--card));
-  --normal-border: hsl(var(--border));
-  --normal-border-hover: hsl(var(--border));
-  --normal-text: hsl(var(--card-foreground));
-
-  --success-bg: hsl(var(--card));
-  --success-border: hsl(var(--border));
-  --success-text: hsl(var(--card-foreground));
-
-  --info-bg: hsl(var(--card));
-  --info-border: hsl(var(--border));
-  --info-text: hsl(var(--card-foreground));
-
-  --warning-bg: hsl(var(--card));
-  --warning-border: hsl(var(--border));
-  --warning-text: hsl(var(--card-foreground));
-
-  --error-bg: hsl(var(--destructive));
-  --error-border: hsl(var(--destructive));
-  --error-text: hsl(var(--destructive-foreground));
-}
