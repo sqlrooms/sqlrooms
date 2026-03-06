@@ -165,6 +165,12 @@ importers:
       '@sqlrooms/layout-config':
         specifier: workspace:*
         version: link:../../packages/layout-config
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../../packages/monaco-editor
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../../packages/mosaic
       '@sqlrooms/notebook':
         specifier: workspace:*
         version: link:../../packages/notebook
