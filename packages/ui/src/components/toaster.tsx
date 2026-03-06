@@ -12,6 +12,13 @@ import {
   ToastTitle,
   ToastViewport,
 } from './toast';
+import {
+  CircleCheckIcon,
+  InfoIcon,
+  Loader2Icon,
+  OctagonXIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
 
 function LegacyToaster() {
   const {toasts} = useToast();
@@ -37,28 +44,52 @@ function LegacyToaster() {
   );
 }
 
-export function Toaster(props: ToasterProps) {
-  const {theme} = useTheme();
+export const Toaster = ({...props}: ToasterProps) => {
+  const {theme = 'system'} = useTheme();
 
   return (
-    <>
-      <LegacyToaster />
-      <Sonner
-        theme={theme as ToasterProps['theme']}
-        className="toaster group"
-        toastOptions={{
-          classNames: {
-            toast:
-              'group toast group-[.toaster]:border-border group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:shadow-lg',
-            description: 'group-[.toast]:text-muted-foreground',
-            actionButton:
-              'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
-            cancelButton:
-              'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
-          },
-        }}
-        {...props}
-      />
-    </>
+    <Sonner
+      richColors
+      theme={theme as ToasterProps['theme']}
+      className="toaster group"
+      icons={{
+        success: <CircleCheckIcon className="size-4" />,
+        info: <InfoIcon className="size-4" />,
+        warning: <TriangleAlertIcon className="size-4" />,
+        error: <OctagonXIcon className="size-4" />,
+        loading: <Loader2Icon className="size-4 animate-spin" />,
+      }}
+      style={
+        {
+          '--normal-bg': 'var(--color-popover)',
+          '--normal-text': 'var(--color-popover-foreground)',
+          '--normal-border': 'var(--color-border)',
+
+          '--success-bg': 'var(--color-popover)',
+          '--success-text': 'var(--color-popover-foreground)',
+          '--success-border': 'var(--color-border)',
+
+          '--info-bg': 'var(--color-popover)',
+          '--info-text': 'var(--color-popover-foreground)',
+          '--info-border': 'var(--color-border)',
+
+          '--warning-bg': 'var(--color-popover)',
+          '--warning-text': 'var(--color-popover-foreground)',
+          '--warning-border': 'var(--color-border)',
+
+          '--error-bg': 'var(--color-destructive)',
+          '--error-text': 'var(--color-destructive-foreground)',
+          '--error-border': 'var(--color-destructive)',
+
+          '--border-radius': 'var(--radius)',
+        } as React.CSSProperties
+      }
+      toastOptions={{
+        classNames: {
+          toast: 'cn-toast',
+        },
+      }}
+      {...props}
+    />
   );
-}
+};
