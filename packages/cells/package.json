@@ -38,7 +38,7 @@
     "@tanstack/react-table": "^8.21.3",
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.577.0",
     "monaco-editor": "^0.55.1",
     "react-hook-form": "^7.68.0",
     "react-markdown": "^10.1.0",
