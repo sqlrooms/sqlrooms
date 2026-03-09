@@ -1,6 +1,7 @@
 import {linter} from '@codemirror/lint';
 import {validateJsonSchema} from '../utils/validate-json-schema';
 import {Extension} from '@codemirror/state';
+import {createJsonSchemaValidator} from '../utils/create-json-schema-validator';
 
 /**
  * Creates a linter extension for JSON schema validation
@@ -8,8 +9,10 @@ import {Extension} from '@codemirror/state';
  * @returns CodeMirror linter extension
  */
 export function jsonSchemaLinter(schema: object): Extension {
+  const validator = createJsonSchemaValidator(schema);
+
   return linter((view) => {
     const text = view.state.doc.toString();
-    return validateJsonSchema(text, schema);
+    return validateJsonSchema(text, validator);
   });
 }

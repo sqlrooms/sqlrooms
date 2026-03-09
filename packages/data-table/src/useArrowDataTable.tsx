@@ -197,7 +197,7 @@ export default function useArrowDataTable(
                     <div className="max-h-[300px] min-h-[100px] overflow-auto">
                       {isJsonValue && parsedJson ? (
                         <JsonCodeMirrorEditor
-                          value={parsedJson as any}
+                          value={parsedJson}
                           readOnly={true}
                           options={{
                             lineNumbers: false,

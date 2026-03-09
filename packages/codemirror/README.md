@@ -99,7 +99,6 @@ interface CodeMirrorEditorProps {
     lineNumbers?: boolean; // Show line numbers (default: true)
     lineWrapping?: boolean; // Wrap long lines (default: false)
     highlightActiveLine?: boolean; // Highlight current line (default: true)
-    highlightActiveLineGutter?: boolean; // Highlight gutter for active line
     foldGutter?: boolean; // Show code folding gutter (default: true)
     autocompletion?: boolean; // Enable autocomplete (default: true)
   };
@@ -202,7 +201,7 @@ const schema = {
 };
 
 const MyJsonEditor: FC = () => {
-  const [json, setJson] = useState({status: 'active'});
+  const [json, setJson] = useState('{\n  "status": "active"\n}');
   const [errors, setErrors] = useState([]);
 
   return (
@@ -233,7 +232,6 @@ const MyJsonEditor: FC = () => {
   );
 };
 ```
-
 
 ### JavascriptCodeMirrorEditor
 
@@ -301,7 +299,13 @@ import {FC, useState} from 'react';
 const MyEditor: FC = () => {
   const [code, setCode] = useState('');
 
-  return <CodeMirrorEditor value={code} onChange={setCode} extensions={[javascript()]} />;
+  return (
+    <CodeMirrorEditor
+      value={code}
+      onChange={setCode}
+      extensions={[javascript()]}
+    />
+  );
 };
 ```
 
@@ -315,6 +319,13 @@ import {
   JavascriptCodeMirrorEditor,
 } from '@sqlrooms/codemirror';
 import {FC} from 'react';
+
+const schema = {
+  type: 'object',
+  properties: {
+    name: {type: 'string'},
+  },
+};
 
 interface MyEditorsProps {
   json: object;
@@ -402,8 +413,7 @@ CodeMirror's extension system is fully accessible:
 
 ```tsx
 import {CodeMirrorEditor} from '@sqlrooms/codemirror';
-import {EditorView} from '@codemirror/view';
-import {placeholder} from '@codemirror/view';
+import {EditorView, placeholder} from '@codemirror/view';
 import {FC, useState} from 'react';
 
 const MyEditor: FC = () => {
@@ -413,7 +423,9 @@ const MyEditor: FC = () => {
     EditorView.lineWrapping,
   ];
 
-  return <CodeMirrorEditor value={code} onChange={setCode} extensions={extensions} />;
+  return (
+    <CodeMirrorEditor value={code} onChange={setCode} extensions={extensions} />
+  );
 };
 ```
 
@@ -551,7 +563,6 @@ const MyEditor: FC = () => {
 };
 ```
 
-
 **JSON Editor:**
 
 ```tsx
@@ -559,20 +570,35 @@ const MyEditor: FC = () => {
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {FC, useState} from 'react';
 
+const schema = {
+  type: 'object',
+  properties: {
+    name: {type: 'string'},
+  },
+};
+
 const JsonEditor: FC = () => {
   const [json, setJson] = useState({});
 
   return <JsonMonacoEditor value={json} onChange={setJson} schema={schema} />;
 };
 
-// After (CodeMirror) - No changes needed!
 import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror';
 import {FC, useState} from 'react';
 
-const JsonEditor: FC = () => {
-  const [json, setJson] = useState({});
+const schema = {
+  type: 'object',
+  properties: {
+    name: {type: 'string'},
+  },
+};
 
-  return <JsonCodeMirrorEditor value={json} onChange={setJson} schema={schema} />;
+const JsonEditor: FC = () => {
+  const [json, setJson] = useState('{}');
+
+  return (
+    <JsonCodeMirrorEditor value={json} onChange={setJson} schema={schema} />
+  );
 };
 ```
 

@@ -1,5 +1,4 @@
-import Ajv, {ErrorObject} from 'ajv';
-import addFormats from 'ajv-formats';
+import {ErrorObject, ValidateFunction} from 'ajv';
 import {parseTree, Node, findNodeAtLocation} from 'jsonc-parser';
 import {Diagnostic} from '@codemirror/lint';
 
@@ -9,34 +8,14 @@ import {Diagnostic} from '@codemirror/lint';
  * @param schema - JSON schema to validate against
  * @returns Array of validation diagnostics
  */
-export function validateJsonSchema(text: string, schema: object): Diagnostic[] {
+export function validateJsonSchema(
+  text: string,
+  validate: ValidateFunction,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   // Don't lint empty documents
   if (!text.trim()) {
-    return diagnostics;
-  }
-
-  // Create AJV validator
-  const ajv = new Ajv({
-    allErrors: true,
-    verbose: true,
-    validateSchema: false, // Don't validate the schema itself to avoid meta-schema errors
-  });
-
-  addFormats(ajv);
-
-  let validate;
-  try {
-    validate = ajv.compile(schema);
-  } catch (schemaError) {
-    // Handle broken/invalid schemas gracefully
-    diagnostics.push({
-      from: 0,
-      to: Math.min(text.length, 100),
-      severity: 'error',
-      message: `Invalid schema: ${schemaError instanceof Error ? schemaError.message : 'Schema compilation failed'}`,
-    });
     return diagnostics;
   }
 

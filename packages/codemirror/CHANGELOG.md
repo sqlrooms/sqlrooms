@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - 🎉 Initial release of `@sqlrooms/codemirror` package
-- ✨ `CodeMirrorEditor` component with JavaScript, JSON, and SQL language support
+- ✨ `CodeMirrorEditor` component with JavaScript, JSON, and SQL support
 - ✨ `JsonCodeMirrorEditor` component with full JSON schema validation
 - 🎨 Theme integration with SQLRooms theme system (light/dark/system modes)
 - 💡 Schema-based autocomplete for JSON property names and enum values
