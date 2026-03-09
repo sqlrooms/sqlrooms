@@ -1,4 +1,5 @@
 import {validateJsonSchema} from '../src/utils/validate-json-schema';
+import {createJsonSchemaValidator} from '../src/utils/create-json-schema-validator';
 
 describe('validateJsonSchema', () => {
   describe('valid JSON', () => {
@@ -12,22 +13,25 @@ describe('validateJsonSchema', () => {
         required: ['name'],
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = JSON.stringify({name: 'John', age: 30}, null, 2);
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toEqual([]);
     });
 
     it('should return no diagnostics for empty text', () => {
       const schema = {type: 'object'};
-      const diagnostics = validateJsonSchema('', schema);
+      const validate = createJsonSchemaValidator(schema);
+      const diagnostics = validateJsonSchema('', validate);
 
       expect(diagnostics).toEqual([]);
     });
 
     it('should return no diagnostics for whitespace-only text', () => {
       const schema = {type: 'object'};
-      const diagnostics = validateJsonSchema('   \n\t  ', schema);
+      const validate = createJsonSchemaValidator(schema);
+      const diagnostics = validateJsonSchema('   \n\t  ', validate);
 
       expect(diagnostics).toEqual([]);
     });
@@ -36,8 +40,9 @@ describe('validateJsonSchema', () => {
   describe('invalid JSON syntax', () => {
     it('should return diagnostic for invalid JSON syntax', () => {
       const schema = {type: 'object'};
+      const validate = createJsonSchemaValidator(schema);
       const text = '{invalid json}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -46,8 +51,9 @@ describe('validateJsonSchema', () => {
 
     it('should return diagnostic for unclosed braces', () => {
       const schema = {type: 'object'};
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"name": "John"';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -65,8 +71,9 @@ describe('validateJsonSchema', () => {
         required: ['name'],
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -83,8 +90,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"age": "not a number"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -99,8 +107,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"status": "pending"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -117,8 +126,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"age": 10}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -133,8 +143,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"age": 150}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -149,8 +160,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"name": "ab"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -167,8 +179,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"name": "toolong"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -185,8 +198,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"email": "invalid"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -202,8 +216,9 @@ describe('validateJsonSchema', () => {
         additionalProperties: false,
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"name": "John", "extra": "value"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -224,8 +239,9 @@ describe('validateJsonSchema', () => {
         required: ['name', 'age'],
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"age": -5}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
       const messages = diagnostics.map((d) => d.message);
@@ -252,8 +268,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"user": {"age": 30}}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.message).toContain(
@@ -275,13 +292,64 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '[{"id": 1}, {"name": "invalid"}]';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.message).toContain(
         "missing required property 'id'",
       );
+    });
+
+    it('should correctly position errors in array items', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          addresses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                street: {type: 'string'},
+                city: {type: 'string'},
+                country: {type: 'string'},
+              },
+              required: ['street', 'city', 'country'],
+            },
+          },
+        },
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+      const text = `{
+  "addresses": [
+    {
+      "city": "asd"
+    }
+  ]
+}`;
+      const diagnostics = validateJsonSchema(text, validate);
+
+      expect(diagnostics.length).toBeGreaterThan(0);
+
+      // All errors should point to the array item, not to the beginning of the document
+      for (const diagnostic of diagnostics) {
+        expect(diagnostic.from).toBeGreaterThan(20); // Should be inside the array item
+        expect(diagnostic.to).toBeGreaterThan(diagnostic.from);
+
+        // Should not point to the beginning of the document (0)
+        expect(diagnostic.from).not.toBe(0);
+      }
+
+      // Check that we have the expected errors
+      const messages = diagnostics.map((d) => d.message);
+      expect(
+        messages.some((m) => m.includes("missing required property 'street'")),
+      ).toBe(true);
+      expect(
+        messages.some((m) => m.includes("missing required property 'country'")),
+      ).toBe(true);
     });
   });
 
@@ -295,8 +363,9 @@ describe('validateJsonSchema', () => {
         required: ['name'],
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{\n  "age": 30\n}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.from).toBeDefined();
@@ -315,8 +384,9 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"email": "not-an-email"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
@@ -330,62 +400,181 @@ describe('validateJsonSchema', () => {
         },
       };
 
+      const validate = createJsonSchemaValidator(schema);
       const text = '{"timestamp": "not-a-date"}';
-      const diagnostics = validateJsonSchema(text, schema);
+      const diagnostics = validateJsonSchema(text, validate);
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
     });
   });
 
-  describe('error handling', () => {
-    it('should handle broken/invalid schema gracefully', () => {
-      // Schema with invalid type reference
-      const brokenSchema = {
+  describe('union types (multiple type values)', () => {
+    it('should accept string or null for string | null type', () => {
+      const schema = {
         type: 'object',
         properties: {
-          name: {type: 'invalid-type' as any},
+          optionalName: {
+            type: ['string', 'null'],
+          },
         },
       };
 
-      const text = '{"name": "John"}';
+      const validate = createJsonSchemaValidator(schema);
 
-      // Should not throw an error, should handle gracefully
-      expect(() => validateJsonSchema(text, brokenSchema)).not.toThrow();
+      // Should accept string
+      const text1 = '{"optionalName": "John"}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
 
-      const diagnostics = validateJsonSchema(text, brokenSchema);
+      // Should accept null
+      const text2 = '{"optionalName": null}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+      expect(diagnostics2).toEqual([]);
+    });
 
-      // Should return a diagnostic about the invalid schema
-      expect(Array.isArray(diagnostics)).toBe(true);
+    it('should reject invalid types for union type', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          optionalName: {
+            type: ['string', 'null'],
+          },
+        },
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // Should reject number
+      const text = '{"optionalName": 123}';
+      const diagnostics = validateJsonSchema(text, validate);
+
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
-      expect(diagnostics[0]?.message).toContain('Invalid schema');
+      expect(diagnostics[0]?.message).toContain('should be');
     });
 
-    it('should handle schema with circular references', () => {
-      const circularSchema: any = {
+    it('should accept boolean or null for boolean | null type', () => {
+      const schema = {
         type: 'object',
         properties: {
-          child: {},
+          optionalFlag: {
+            type: ['boolean', 'null'],
+          },
         },
       };
-      // Create circular reference
-      circularSchema.properties.child = circularSchema;
 
-      const text = '{"child": {"child": {}}}';
+      const validate = createJsonSchemaValidator(schema);
 
-      // Should not throw an error
-      expect(() => validateJsonSchema(text, circularSchema)).not.toThrow();
+      // Should accept true
+      const text1 = '{"optionalFlag": true}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
+
+      // Should accept false
+      const text2 = '{"optionalFlag": false}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+      expect(diagnostics2).toEqual([]);
+
+      // Should accept null
+      const text3 = '{"optionalFlag": null}';
+      const diagnostics3 = validateJsonSchema(text3, validate);
+      expect(diagnostics3).toEqual([]);
     });
 
-    it('should handle unexpected errors during validation', () => {
-      // Empty/null schema edge case
-      const text = '{"name": "John"}';
-      const emptySchema = {};
+    it('should validate enum with null in union type', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          optionalStatus: {
+            type: ['string', 'null'],
+            enum: ['active', 'inactive', null],
+          },
+        },
+      };
 
-      expect(() => validateJsonSchema(text, emptySchema)).not.toThrow();
-      const diagnostics = validateJsonSchema(text, emptySchema);
-      expect(Array.isArray(diagnostics)).toBe(true);
+      const validate = createJsonSchemaValidator(schema);
+
+      // Should accept enum value
+      const text1 = '{"optionalStatus": "active"}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
+
+      // Should accept null
+      const text2 = '{"optionalStatus": null}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+      expect(diagnostics2).toEqual([]);
+
+      // Should reject invalid enum value
+      const text3 = '{"optionalStatus": "pending"}';
+      const diagnostics3 = validateJsonSchema(text3, validate);
+      expect(diagnostics3).toHaveLength(1);
+      expect(diagnostics3[0]?.message).toContain('should be one of');
+    });
+
+    it('should handle number | string union type', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          flexibleValue: {
+            type: ['number', 'string'],
+          },
+        },
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // Should accept number
+      const text1 = '{"flexibleValue": 123}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
+
+      // Should accept string
+      const text2 = '{"flexibleValue": "abc"}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+      expect(diagnostics2).toEqual([]);
+
+      // Should reject boolean
+      const text3 = '{"flexibleValue": true}';
+      const diagnostics3 = validateJsonSchema(text3, validate);
+      expect(diagnostics3).toHaveLength(1);
+    });
+
+    it('should handle complex union types with constraints', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          age: {
+            type: ['number', 'null'],
+            minimum: 0,
+            maximum: 120,
+          },
+        },
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // Should accept valid number
+      const text1 = '{"age": 25}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
+
+      // Should accept null
+      const text2 = '{"age": null}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+      expect(diagnostics2).toEqual([]);
+
+      // Should reject number below minimum
+      const text3 = '{"age": -1}';
+      const diagnostics3 = validateJsonSchema(text3, validate);
+      expect(diagnostics3).toHaveLength(1);
+      expect(diagnostics3[0]?.message).toContain('should be >= 0');
+
+      // Should reject number above maximum
+      const text4 = '{"age": 150}';
+      const diagnostics4 = validateJsonSchema(text4, validate);
+      expect(diagnostics4).toHaveLength(1);
+      expect(diagnostics4[0]?.message).toContain('should be <= 120');
     });
   });
 });

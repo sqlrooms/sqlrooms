@@ -6,6 +6,7 @@ export function createJsonSchemaValidator(schema: object): ValidateFunction {
     allErrors: true,
     verbose: true,
     validateSchema: false,
+    allowUnionTypes: true, // Support union types like ['string', 'null']
   });
 
   addFormats(ajv);

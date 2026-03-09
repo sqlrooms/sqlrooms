@@ -77,7 +77,12 @@ function convertErrorToDiagnostic(
   // Parse the instance path (e.g., "/properties/name" or "/items/0")
   const pathSegments = error.instancePath
     .split('/')
-    .filter((segment) => segment !== '');
+    .filter((segment) => segment !== '')
+    .map((segment) => {
+      // Convert numeric strings to numbers for array indices
+      const num = parseInt(segment, 10);
+      return isNaN(num) ? segment : num;
+    });
 
   // Find the node at this path
   let node: Node | undefined = tree;

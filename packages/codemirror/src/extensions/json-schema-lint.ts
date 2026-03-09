@@ -9,10 +9,15 @@ import {createJsonSchemaValidator} from '../utils/create-json-schema-validator';
  * @returns CodeMirror linter extension
  */
 export function jsonSchemaLinter(schema: object): Extension {
-  const validator = createJsonSchemaValidator(schema);
+  try {
+    const validator = createJsonSchemaValidator(schema);
 
-  return linter((view) => {
-    const text = view.state.doc.toString();
-    return validateJsonSchema(text, validator);
-  });
+    return linter((view) => {
+      const text = view.state.doc.toString();
+      return validateJsonSchema(text, validator);
+    });
+  } catch (error) {
+    console.error('Failed to create JSON schema validator:', error);
+    return [];
+  }
 }
