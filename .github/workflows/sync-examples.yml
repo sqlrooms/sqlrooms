@@ -5,7 +5,7 @@ on:
   #   branches: [main]
   #   paths:
   #     - 'examples/**'
-  #     - 'docs/media/examples/**'
+  #     - 'docs/public/media/examples/**'
   #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
     inputs:
@@ -63,9 +63,9 @@ jobs:
           # Copy examples directory
           cp -r source/examples/* target/
 
-          # Copy images from docs/media/examples if it exists
-          if [ -d "source/docs/media/examples" ]; then
-            cp -r source/docs/media/examples/* target/media/examples/
+          # Copy images from docs/public/media/examples if it exists
+          if [ -d "source/docs/public/media/examples" ]; then
+            cp -r source/docs/public/media/examples/. target/media/examples/
           fi
 
           # Copy examples documentation as README.md
