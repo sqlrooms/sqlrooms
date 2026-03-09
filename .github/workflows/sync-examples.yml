@@ -5,6 +5,7 @@ on:
   #   branches: [main]
   #   paths:
   #     - 'examples/**'
+  #     - 'docs/public/media/examples/**'
   #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
     inputs:
