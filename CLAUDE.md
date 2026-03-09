@@ -319,7 +319,7 @@ Changes to table structure:
 
 ### Working with Git LFS
 
-Media files in `docs/media/` use Git LFS:
+Media files in `docs/public/media/` use Git LFS:
 ```bash
 # Install Git LFS
 brew install git-lfs  # macOS
