@@ -21,7 +21,7 @@ hero:
       link: https://github.com/sqlrooms/sqlrooms
   image:
     # Must be in the public/ directory (see https://github.com/vuejs/vitepress/issues/4097#issuecomment-2261203743)
-    src: /media/sqlrooms-ai.webp
+    src: https://sqlrooms.org/media/sqlrooms-ai.webp
     alt: SQLRooms AI
 
 caseStudies:
@@ -65,7 +65,7 @@ features:
 </div> -->
 
 <div style="display: flex; justify-content: center; margin: 2rem 0;">
-  <video src="/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
+  <video src="https://sqlrooms.org/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
 </div>
 
 ## Get Started in Minutes

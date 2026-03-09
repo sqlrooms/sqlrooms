@@ -52,17 +52,17 @@ function dismiss() {
       <template #home-hero-image>
         <video
           class="video"
-          poster="/media/overview/collage.webp"
+          poster="https://sqlrooms.org/media/overview/collage.webp"
           controls
           loop
           muted
         >
-          <source src="/media/sqlrooms-examples-75.mp4" type="video/mp4" />
+          <source src="https://sqlrooms.org/media/sqlrooms-examples-75.mp4" type="video/mp4" />
         </video>
         <!--
         <video
           class="video dark"
-          src="/media/sqlrooms-examples.mp4"
+          src="https://sqlrooms.org/media/sqlrooms-examples.mp4"
           autoplay
           controls
           loop

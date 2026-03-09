@@ -11,7 +11,7 @@ A Room consists of:
 
 ---
 
-![SQLRooms example RoomShell diagram](/media/key-concepts/room-shell.png)
+![SQLRooms example RoomShell diagram](https://sqlrooms.org/media/key-concepts/room-shell.png)
 
 ---
 

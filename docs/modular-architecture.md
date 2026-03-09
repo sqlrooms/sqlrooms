@@ -2,7 +2,7 @@
 
 SQLRooms is designed with a modular architecture that allows developers to pick and choose exactly the functionality they need for their data analytics applications. This approach enables you to build custom solutions tailored to your specific requirements.
 
-![SQLRooms Architecture](/media/overview/architecture.svg)
+![SQLRooms Architecture](https://sqlrooms.org/media/overview/architecture.svg)
 
 The diagram above illustrates how SQLRooms is structured for composability and extensibility:
 
