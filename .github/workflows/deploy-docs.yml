@@ -33,7 +33,7 @@ jobs:
       - name: Verify Git LFS media
         run: |
           git lfs ls-files | wc -l
-          du -sh docs/media
+          du -sh docs/public/media
 
       - name: Free disk space on runner
         run: |
