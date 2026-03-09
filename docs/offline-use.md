@@ -6,7 +6,7 @@ title: Offline Use
 
 SQLRooms can be integrated into a [Progressive Web App (PWA)](https://web.dev/progressive-web-apps/) capable of working offline:
 
-![SQLRooms Query Workbench progressive web app](https://sqlrooms.org/media/offline/sqlrooms-query-pwa.png)
+![SQLRooms Query Workbench progressive web app](/media/offline/sqlrooms-query-pwa.png)
 
 All computation happens on your device, whether in the browser or a desktop app, with no backend required. This enables privacy, speed, and user control, even when you're completely offline.
 

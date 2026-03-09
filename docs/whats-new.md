@@ -26,7 +26,7 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 - **Cosmos.gl upgrade**: updates the [Cosmos.gl](https://cosmos.gl) integration to include the latest improvements in this powerful graph visualization library ([#379](https://github.com/sqlrooms/sqlrooms/pull/379))
 - **Command system implementation**: Command Palette UI added to shells (toggle with `Ctrl/Cmd+K`, sidebar button, searchable/grouped commands, per-command shortcuts, JSON input editor, and programmatic open/close controls). A global command system and tooling is also introduced to register, list, validate, and execute commands, with adapters for CLI/MCP and AI tool integrations, plus DB and editor command sets ([#382](https://github.com/sqlrooms/sqlrooms/pull/382))
 
-<video src="https://sqlrooms.org/media/whats-new/commands.mp4" alt="SQLRooms command system and command palette" width="450" loop muted controls autoplay></video>
+<video src="/media/whats-new/commands.mp4" alt="SQLRooms command system and command palette" width="450" loop muted controls autoplay></video>
 
 ## 0.27.0
 
@@ -40,7 +40,7 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 Checkbox clicks are handled independently from row click handlers, so selecting via checkbox does not double-toggle rows.
 
-<img src="https://sqlrooms.org/media/whats-new/row-selection.png" alt="SQLRooms DataTable row selection with checkboxes" width=450>
+<img src="/media/whats-new/row-selection.png" alt="SQLRooms DataTable row selection with checkboxes" width=450>
 
 Example:
 
@@ -74,7 +74,7 @@ For context-based access, use the new `useRoomStoreApi()` hook to read/write sta
 
 A new centralized state management system for Mosaic integration. The `MosaicSlice` provides a unified way to manage Mosaic connections, coordinate cross-filtering between visualizations, and create reactive data queries that automatically update based on user selections.
 
-<video src="https://sqlrooms.org/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
+<video src="/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
 
 Key features:
 
@@ -107,13 +107,13 @@ A composable tab strip with drag-to-reorder, inline renaming, and a search dropd
 
 New: the search dropdown can optionally sort items by recent usage via `sortSearchItems="recent"` and an optional `getTabLastOpenedAt` accessor.
 
-<video src="https://sqlrooms.org/media/whats-new/tab-strip-component.mp4" alt="SQLRooms TabStrip component" width="450" loop muted controls autoplay></video>
+<video src="/media/whats-new/tab-strip-component.mp4" alt="SQLRooms TabStrip component" width="450" loop muted controls autoplay></video>
 
 ### Kepler integration
 
 Added [Kepler.gl](https://kepler.gl/) integration module for geospatial data visualization.
 
-<img src="https://sqlrooms.org/media/examples/kepler.webp" alt="SQLRooms Kepler.gl geospatial visualization example" width=450>
+<img src="/media/examples/kepler.webp" alt="SQLRooms Kepler.gl geospatial visualization example" width=450>
 
 Check the [Kepler example](https://github.com/sqlrooms/examples/tree/main/kepler)
 
@@ -121,7 +121,7 @@ Check the [Kepler example](https://github.com/sqlrooms/examples/tree/main/kepler
 
 New `@sqlrooms/ai-rag` module for Retrieval Augmented Generation. Query your documentation using vector similarity search powered by DuckDB's native vector capabilities.
 
-<img src="https://sqlrooms.org/media/examples/rag.webp" alt="SQLRooms AI RAG example" width=450>
+<img src="/media/examples/rag.webp" alt="SQLRooms AI RAG example" width=450>
 
 Check the [AI RAG example](https://github.com/sqlrooms/examples/tree/main/ai-rag)
 

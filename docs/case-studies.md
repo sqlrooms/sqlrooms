@@ -12,7 +12,7 @@ Built something with SQLRooms? We'd love to feature it!
 
 [Foursquare Spatial Desktop](https://foursquare.com/products/spatial-desktop) is a powerful geospatial computing tool that transforms your desktop into a comprehensive spatial analysis environment. Built on SQLRooms, it delivers native DuckDB query performance and real-time visualization rendering—all powered natively on your machine without requiring server infrastructure.
 
-[<img src=https://sqlrooms.org/media/case-studies/fsq-spatial-desktop-earthquakes.webp width=450>](https://foursquare.com/products/spatial-desktop/)
+[<img src=/media/case-studies/fsq-spatial-desktop-earthquakes.webp width=450>](https://foursquare.com/products/spatial-desktop/)
 
 Key features include:
 
@@ -26,10 +26,10 @@ Key features include:
 
 [Flowmap City](https://www.flowmap.city/) is a powerful web-based platform for visualizing and analyzing mobility data and origin-destination flows. The application helps urban planners, transportation analysts, and researchers understand movement patterns in cities and regions.
 
-<!-- [<img src=https://sqlrooms.org/media/case-studies/flowmap-city.webp width=400>](https://www.flowmap.city/) -->
+<!-- [<img src=/media/case-studies/flowmap-city.webp width=400>](https://www.flowmap.city/) -->
 
-<video src="https://sqlrooms.org/media/case-studies/flowmap-city.mp4" alt="Flowmap City: Mobility data visualization" width="450" loop muted controls autoplay>
-  <img src="https://sqlrooms.org/media/case-studies/flowmap-city.webp" alt="Flowmap City: Mobility data visualization" width="450" />
+<video src="/media/case-studies/flowmap-city.mp4" alt="Flowmap City: Mobility data visualization" width="450" loop muted controls autoplay>
+  <img src="/media/case-studies/flowmap-city.webp" alt="Flowmap City: Mobility data visualization" width="450" />
 </video>
 
 The platform enables users to upload their own mobility datasets and create interactive visualizations that can be shared with stakeholders or embedded in other applications.
@@ -47,8 +47,8 @@ Key features include:
 
 [Cosmograph](https://cosmograph.app/) is a powerful web-based application for visualizing and analyzing large graph datasets and machine learning embeddings. The application runs entirely in the browser, leveraging your GPU for all computations while keeping your data private and secure. The upcoming version of Cosmograph is being built using SQLRooms to enhance its data processing capabilities and analytical features.
 
-<video src="https://sqlrooms.org/media/case-studies/cosmograph-2.0-967px.mp4" alt="Cosmograph: Graph and Embedding Visualization" width="450" loop muted controls autoplay>
-  <img src="https://sqlrooms.org/media/case-studies/cosmograph.webp" alt="Cosmograph: Graph and Embedding Visualization" width="450" />
+<video src="/media/case-studies/cosmograph-2.0-967px.mp4" alt="Cosmograph: Graph and Embedding Visualization" width="450" loop muted controls autoplay>
+  <img src="/media/case-studies/cosmograph.webp" alt="Cosmograph: Graph and Embedding Visualization" width="450" />
 </video>
 
 Key features include:
@@ -64,8 +64,8 @@ Key features include:
 
 [Transcality](https://www.transcality.com/) is a Swiss company building transport modeling software using SQLRooms. Their platform creates digital twins of transportation systems, enabling planners and engineers to simulate infrastructure changes—like adding or closing a road—and immediately see the effects on traffic flow.
 
-<video src="https://sqlrooms.org/media/case-studies/transcality.mp4"  alt="Transcality: Transport modeling and simulation" width="450"  loop muted controls autoplay>
-  <img src="https://sqlrooms.org/media/case-studies/transcality.webp" alt="Transcality: Transport modeling and simulation" width="450" />
+<video src="/media/case-studies/transcality.mp4"  alt="Transcality: Transport modeling and simulation" width="450"  loop muted controls autoplay>
+  <img src="/media/case-studies/transcality.webp" alt="Transcality: Transport modeling and simulation" width="450" />
 </video>
 
 By leveraging SQLRooms, Transcality enables visualization, filtering, and aggregation of simulation results to run directly on end-users' machines, providing fast and interactive exploration of traffic scenarios.
