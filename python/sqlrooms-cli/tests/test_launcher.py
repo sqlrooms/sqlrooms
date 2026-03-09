@@ -29,6 +29,7 @@ def test_api_config(server):
     assert "aiProviders" in data
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
+    assert data["dbBridge"]["diagnostics"] == []
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):
@@ -103,6 +104,10 @@ def test_api_config_with_postgres_connector(tmp_path):
             "isCore": False,
         }
     ]
+    assert len(data["dbBridge"]["diagnostics"]) == 1
+    assert data["dbBridge"]["diagnostics"][0]["id"] == "postgres-default"
+    assert data["dbBridge"]["diagnostics"][0]["engineId"] == "postgres"
+    assert "available" in data["dbBridge"]["diagnostics"][0]
 
 
 def test_api_config_with_snowflake_connector_metadata(tmp_path):
@@ -137,6 +142,10 @@ def test_api_config_with_snowflake_connector_metadata(tmp_path):
             "isCore": False,
         }
     ]
+    assert len(data["dbBridge"]["diagnostics"]) == 1
+    assert data["dbBridge"]["diagnostics"][0]["id"] == "snowflake-default"
+    assert data["dbBridge"]["diagnostics"][0]["engineId"] == "snowflake"
+    assert "available" in data["dbBridge"]["diagnostics"][0]
 
 
 def test_api_config_with_multiple_same_engine_connectors(tmp_path):
