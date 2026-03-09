@@ -65,7 +65,7 @@ jobs:
 
           # Copy images from docs/public/media/examples if it exists
           if [ -d "source/docs/public/media/examples" ]; then
-            cp -r source/docs/public/media/examples/* target/media/examples/
+            cp -r source/docs/public/media/examples/. target/media/examples/
           fi
 
           # Copy examples documentation as README.md
