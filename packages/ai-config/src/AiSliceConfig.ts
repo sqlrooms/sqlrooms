@@ -24,7 +24,7 @@ export function createDefaultAiConfig(
         analysisResults: [],
         createdAt: new Date(),
         uiMessages: [],
-        toolAdditionalData: {},
+        toolEditState: {},
         messagesRevision: 0,
         prompt: '',
         isRunning: false,

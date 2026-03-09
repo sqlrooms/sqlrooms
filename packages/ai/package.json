@@ -19,7 +19,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
@@ -28,6 +27,7 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.556.0",
+    "ai": "^5.0.44",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

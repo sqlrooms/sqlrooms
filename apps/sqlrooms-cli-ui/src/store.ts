@@ -7,7 +7,9 @@ import {
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiTools,
+  createDefaultAiToolRenderers,
 } from '@sqlrooms/ai';
+import {vegaChartToolRenderer} from '@sqlrooms/vega';
 import {
   CanvasSliceConfig,
   CanvasSliceState,
@@ -253,6 +255,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
           chart: createVegaChartTool(),
+        },
+        toolRenderers: {
+          ...createDefaultAiToolRenderers(),
+          chart: vegaChartToolRenderer,
         },
       })(set, get, store),
     }),

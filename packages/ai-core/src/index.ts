@@ -34,11 +34,14 @@ export {
   ToolAbortError,
   extractModelsFromSettings,
 } from './utils';
-export {
-  convertToAiSDKTools,
-  createOnToolCompletedHandler,
-} from './chatTransport';
-export type {AddToolResult} from './types';
+export type {
+  AddToolResult,
+  StoredTool,
+  StoredToolSet,
+  ToolRendererProps,
+  ToolRenderer,
+  ToolRendererRegistry,
+} from './types';
 export {fixIncompleteToolCalls} from './utils';
 
 export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';

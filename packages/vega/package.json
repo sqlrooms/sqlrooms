@@ -19,13 +19,14 @@
     "access": "public"
   },
   "dependencies": {
-    "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
+    "ai": "^5.0.44",
     "lucide-react": "^0.556.0",
     "react-vega": "^8.0.0",
     "vega": "^6.2.0",

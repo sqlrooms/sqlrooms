@@ -1,4 +1,5 @@
-import type {OpenAssistantToolSet} from '@openassistant/utils';
+import {tool} from 'ai';
+import type {ToolSet} from 'ai';
 import {hasCommandSliceState} from '@sqlrooms/room-shell';
 import type {
   BaseRoomStoreState,
@@ -81,25 +82,22 @@ const DEFAULT_EXECUTE_TOOL_NAME = 'execute_command';
 export function createCommandTools<RS extends BaseRoomStoreState>(
   store: StoreApi<RS>,
   options?: CommandToolsOptions,
-): OpenAssistantToolSet {
+): ToolSet {
   const listToolName = options?.listToolName ?? DEFAULT_LIST_TOOL_NAME;
   const executeToolName = options?.executeToolName ?? DEFAULT_EXECUTE_TOOL_NAME;
 
   return {
-    [listToolName]: {
-      name: listToolName,
+    [listToolName]: tool({
       description: `List available room commands, including whether they are enabled and whether they require input.
 Use this before executing commands so you can pick a valid command ID and understand input expectations.`,
-      parameters: ListCommandsToolParameters,
+      inputSchema: ListCommandsToolParameters,
       execute: async (params: ListCommandsToolParameters) => {
         const state = store.getState();
         if (!hasCommandSliceState(state)) {
           return {
-            llmResult: {
-              success: false,
-              errorMessage: 'Command registry is not available in this room.',
-            } satisfies ListCommandsToolLlmResult,
-          };
+            success: false,
+            errorMessage: 'Command registry is not available in this room.',
+          } satisfies ListCommandsToolLlmResult;
         }
 
         const descriptors = state.commands.listCommands({
@@ -110,39 +108,32 @@ Use this before executing commands so you can pick a valid command ID and unders
         });
 
         return {
-          llmResult: {
-            success: true,
-            commands: descriptors,
-            details: `Found ${descriptors.length} commands.`,
-          } satisfies ListCommandsToolLlmResult,
-        };
+          success: true,
+          commands: descriptors,
+          details: `Found ${descriptors.length} commands.`,
+        } satisfies ListCommandsToolLlmResult;
       },
-    },
-    [executeToolName]: {
-      name: executeToolName,
+    }),
+    [executeToolName]: tool({
       description: `Execute a room command by ID.
 Call ${listToolName} first to discover valid command IDs and input requirements.`,
-      parameters: ExecuteCommandToolParameters,
+      inputSchema: ExecuteCommandToolParameters,
       execute: async ({commandId, input}: ExecuteCommandToolParameters) => {
         const state = store.getState();
         if (!hasCommandSliceState(state)) {
           return {
-            llmResult: {
-              success: false,
-              commandId,
-              errorMessage: 'Command registry is not available in this room.',
-            } satisfies ExecuteCommandToolLlmResult,
-          };
+            success: false,
+            commandId,
+            errorMessage: 'Command registry is not available in this room.',
+          } satisfies ExecuteCommandToolLlmResult;
         }
 
         if (!state.commands.getCommand(commandId)) {
           return {
-            llmResult: {
-              success: false,
-              commandId,
-              errorMessage: `Unknown command ID "${commandId}".`,
-            } satisfies ExecuteCommandToolLlmResult,
-          };
+            success: false,
+            commandId,
+            errorMessage: `Unknown command ID "${commandId}".`,
+          } satisfies ExecuteCommandToolLlmResult;
         }
 
         const result = await state.commands.invokeCommand(commandId, input, {
@@ -150,30 +141,26 @@ Call ${listToolName} first to discover valid command IDs and input requirements.
         });
         if (result.success) {
           return {
-            llmResult: {
-              success: true,
-              commandId,
-              details: `Executed command "${commandId}".`,
-              result: {
-                code: result.code,
-                message: result.message,
-                data: result.data,
-              },
-            } satisfies ExecuteCommandToolLlmResult,
-          };
-        }
-        return {
-          llmResult: {
-            success: false,
+            success: true,
             commandId,
-            errorMessage: result.error ?? 'Command execution failed.',
+            details: `Executed command "${commandId}".`,
             result: {
               code: result.code,
               message: result.message,
+              data: result.data,
             },
-          } satisfies ExecuteCommandToolLlmResult,
-        };
+          } satisfies ExecuteCommandToolLlmResult;
+        }
+        return {
+          success: false,
+          commandId,
+          errorMessage: result.error ?? 'Command execution failed.',
+          result: {
+            code: result.code,
+            message: result.message,
+          },
+        } satisfies ExecuteCommandToolLlmResult;
       },
-    },
+    }),
   };
 }

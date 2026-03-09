@@ -5,7 +5,7 @@
  *
  * Changes:
  * - add uiMessages (AI SDK v5) to AnalysisSession along with legacy analysisResults
- * - add toolAdditionalData to AnalysisSession to store tool call additional data per session
+ * - add toolEditState (originally toolAdditionalData) to AnalysisSession to store tool edit state per session
  * - deprecate the following properties in AnalysisResult:
  *   - streamMessage
  *
@@ -43,7 +43,7 @@
  *     errorMessage?: { error: string },
  *   }>,
  *   uiMessages: Array<UIMessageSchema>, //<-- NEW FIELD
- *   toolAdditionalData: Record<string, unknown>, //<-- NEW FIELD
+ *   toolEditState: Record<string, unknown>, //<-- NEW FIELD
  *   messagesRevision?: number, //<-- NEW FIELD
  *   prompt: string, //<-- NEW FIELD
  *   isRunning: boolean, //<-- NEW FIELD
@@ -60,20 +60,26 @@ function isObject(value: unknown): value is UnknownRecord {
 function needsV0_26_0Migration(data: unknown): boolean {
   if (!isObject(data)) return false;
 
-  const uiMessages = (data as UnknownRecord).uiMessages;
-  const toolAdditionalData = (data as UnknownRecord).toolAdditionalData;
+  const d = data as UnknownRecord;
 
-  // Session needs migration if either field is missing
-  return !Array.isArray(uiMessages) || toolAdditionalData === undefined;
+  // Use key-presence checks rather than value comparisons so that a field
+  // explicitly set to `{}` or `null` is still treated as "present" and does
+  // not incorrectly re-trigger migration (which could duplicate uiMessages).
+  const hasUiMessages = Array.isArray(d.uiMessages);
+  const hasToolState = 'toolEditState' in d || 'toolAdditionalData' in d;
+
+  return !hasUiMessages || !hasToolState;
 }
 
-/** Perform migration to AI SDK v5 uiMessages/toolAdditionalData */
+/** Perform migration to AI SDK v5 uiMessages/toolEditState */
 function migrateFromV0_26_0(data: unknown) {
   const session = {...(data as UnknownRecord)};
   const analysisResults = (session.analysisResults as UnknownRecord[]) || [];
   const existingUiMessages = (session.uiMessages as UnknownRecord[]) || [];
-  const toolAdditionalData =
-    (session.toolAdditionalData as UnknownRecord) || {};
+  const toolEditState =
+    (session.toolEditState as UnknownRecord) ??
+    (session.toolAdditionalData as UnknownRecord) ??
+    {};
 
   const synthesizedMessages: UnknownRecord[] = [];
 
@@ -109,9 +115,9 @@ function migrateFromV0_26_0(data: unknown) {
           const llmResult = toolInvocation.result;
           const additional = part.additionalData;
 
-          // Persist additionalData per toolCallId into session-level toolAdditionalData
-          if (toolCallId && additional !== undefined && toolAdditionalData) {
-            toolAdditionalData[toolCallId] = additional;
+          // Persist additionalData per toolCallId into session-level toolEditState
+          if (toolCallId && additional !== undefined && toolEditState) {
+            toolEditState[toolCallId] = additional;
           }
 
           // Map state to AI SDK v5 tool-* parts
@@ -160,7 +166,7 @@ function migrateFromV0_26_0(data: unknown) {
     ...session,
     analysisResults: cleanedAnalysisResults,
     uiMessages: [...existingUiMessages, ...synthesizedMessages],
-    toolAdditionalData,
+    toolEditState,
     prompt: '',
     isRunning: false,
   };

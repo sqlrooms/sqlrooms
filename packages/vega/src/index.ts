@@ -15,6 +15,7 @@ export {VegaChartToolResult as VegaChartToolResult} from './VegaChartToolResult'
 export type {VisualizationSpec} from 'vega-embed';
 export {
   createVegaChartTool,
+  vegaChartToolRenderer,
   VegaChartToolParameters,
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
@@ -22,6 +23,7 @@ export {
 export type {
   VegaChartToolParameters as VegaChartToolParametersType,
   VegaChartToolOptions,
+  VegaChartToolOutput,
 } from './VegaChartTool';
 
 /**

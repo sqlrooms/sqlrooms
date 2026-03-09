@@ -1,4 +1,4 @@
-import type {OpenAssistantToolSet} from '@openassistant/utils';
+import type {ComponentType} from 'react';
 import type {AiSliceConfig, AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import type {UIMessage} from 'ai';
 import {streamText} from 'ai';
@@ -6,6 +6,30 @@ import {streamText} from 'ai';
 export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
 >;
+
+/**
+ * Shallow tool representation stored in state.
+ *
+ * The AI SDK's `ToolSet` type contains deeply recursive Zod generics that
+ * exceed TypeScript's type-instantiation depth when wrapped in Immer's
+ * `Draft<>` (TS2589). This interface preserves the properties consumers
+ * need to read from state while keeping the type shallow enough for Immer.
+ *
+ * Tools are still accepted as the full `ToolSet` in `AiSliceOptions` for
+ * type-safe tool creation. Internal call-sites that pass tools to
+ * `streamText()` / `generateText()` cast back to `ToolSet`.
+ */
+export interface StoredTool {
+  description?: string;
+  execute?: (args: any, options?: any) => PromiseLike<unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * Immer-safe tool map stored in AI slice state.
+ * @see {@link StoredTool} for why this exists instead of `ToolSet`.
+ */
+export type StoredToolSet = Record<string, StoredTool>;
 
 /**
  * Provide provider-specific options for the underlying AI SDK call.
@@ -38,7 +62,7 @@ export type AiChatSendMessage = (message: {text: string}) => void;
  */
 export interface AiStateForTransport {
   config: AiSliceConfig;
-  tools: OpenAssistantToolSet;
+  tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
   getAbortController: (sessionId: string) => AbortController | undefined;
@@ -48,13 +72,14 @@ export interface AiStateForTransport {
   ) => void;
   getIsRunning: (sessionId: string) => boolean;
   setIsRunning: (sessionId: string, isRunning: boolean) => void;
-  setSessionToolAdditionalData: (
+  setToolEditState: (
     sessionId: string,
     toolCallId: string,
-    additionalData: unknown,
+    editState: unknown,
   ) => void;
   setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-  findToolComponent: (toolName: string) => React.ComponentType | undefined;
+  toolRenderers: ToolRendererRegistry;
+  findToolRenderer: (toolName: string) => ToolRenderer | undefined;
   /** Map toolCallId -> sessionId for long-running tool streams (e.g. agents) */
   setToolCallSession: (
     toolCallId: string,
@@ -81,3 +106,32 @@ export interface AiStateForTransport {
 export interface AiSliceStateForTransport {
   ai: AiStateForTransport;
 }
+
+/**
+ * Props passed to tool renderer components.
+ */
+export type ToolRendererProps<TOutput = unknown> = {
+  output: TOutput | undefined;
+  input: unknown;
+  toolCallId: string;
+  state:
+    | 'input-streaming'
+    | 'input-available'
+    | 'output-available'
+    | 'output-error';
+  errorText?: string;
+};
+
+/**
+ * A React component that renders the result of a tool call.
+ */
+export type ToolRenderer<TOutput = unknown> = ComponentType<
+  ToolRendererProps<TOutput>
+>;
+
+/**
+ * Registry mapping tool names to their renderer components.
+ * Uses `ToolRenderer<any>` so that typed renderers (e.g. `ToolRenderer<QueryToolOutput>`)
+ * are directly assignable without an explicit cast at registration sites.
+ */
+export type ToolRendererRegistry = Record<string, ToolRenderer<any>>;

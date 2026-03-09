@@ -19,9 +19,18 @@ import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 import {AI_SETTINGS} from '../config';
 import {LLM_INSTRUCTIONS} from '../instructions';
-import {createGetFileContentTool} from '../tools/getFileContent/getFileContentTool';
-import {createListFilesTool} from '../tools/listFiles/createListFilesTool';
-import {createUpdateFileContentTool} from '../tools/updateFileContent/updateFileContentTool';
+import {
+  createGetFileContentTool,
+  getFileContentToolRenderer,
+} from '../tools/getFileContent/getFileContentTool';
+import {
+  createListFilesTool,
+  listFilesToolRenderer,
+} from '../tools/listFiles/createListFilesTool';
+import {
+  createUpdateFileContentTool,
+  updateFileContentToolRenderer,
+} from '../tools/updateFileContent/updateFileContentTool';
 
 type RoomState = BaseRoomStoreState &
   AiSliceState &
@@ -59,16 +68,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Ai slice
       ...createAiSlice({
         getInstructions: () => {
-          const instructions = `${LLM_INSTRUCTIONS} 
+          const instructions = `${LLM_INSTRUCTIONS}
             <file_list>
             ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
           return instructions;
         },
 
+        // Tool renderers for displaying tool results in the UI
+        toolRenderers: {
+          listFiles: listFilesToolRenderer,
+          getFileContent: getFileContentToolRenderer,
+          updateFileContent: updateFileContentToolRenderer,
+        },
+
         // Add custom tools
         tools: {
-          // Example of adding a simple echo tool
           listFiles: createListFilesTool(store),
           getFileContent: createGetFileContentTool(store),
           updateFileContent: createUpdateFileContentTool(store),

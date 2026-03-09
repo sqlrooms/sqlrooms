@@ -3,9 +3,11 @@ import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import type {BaseRoomStoreState, StoreApi} from '@sqlrooms/room-shell';
 import {createQueryTool} from './query/queryTool';
 import type {QueryToolOptions} from './query/queryTool';
-import type {OpenAssistantToolSet} from '@openassistant/utils';
+import type {ToolSet} from 'ai';
+import type {ToolRendererRegistry} from '@sqlrooms/ai-core';
 import {createCommandTools} from './commandTools';
 import type {CommandToolsOptions} from './commandTools';
+import {QueryToolResult} from './query/QueryToolResult';
 
 export type DefaultToolsOptions = {
   query?: QueryToolOptions;
@@ -21,12 +23,21 @@ export type DefaultToolsOptions = {
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,
-): OpenAssistantToolSet {
+): ToolSet {
   const {query, commands} = options || {};
   const commandTools =
     commands === false ? {} : createCommandTools(store, commands || undefined);
   return {
     query: createQueryTool(store, query),
     ...commandTools,
+  };
+}
+
+/**
+ * Creates the default tool renderer registry for the built-in AI tools.
+ */
+export function createDefaultAiToolRenderers(): ToolRendererRegistry {
+  return {
+    query: QueryToolResult,
   };
 }

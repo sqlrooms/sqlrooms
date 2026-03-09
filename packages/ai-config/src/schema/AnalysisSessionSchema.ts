@@ -36,7 +36,7 @@ const AnalysisSessionBaseSchema = z.object({
   analysisResults: z.array(AnalysisResultSchema),
   createdAt: z.coerce.date().optional(),
   uiMessages: z.array(UIMessageSchema),
-  toolAdditionalData: z.record(z.string(), z.unknown()).optional(),
+  toolEditState: z.record(z.string(), z.unknown()).optional(),
   /** Revision counter that increments when messages are deleted, used to force useChat reset */
   messagesRevision: z.number().optional().default(0),
   /** Per-session analysis prompt text */
@@ -67,6 +67,17 @@ const migrateAnalysisSession = z.preprocess((data) => {
   // Apply v0.26.0 migration (add uiMessages and toolAdditionalData)
   if (needsV0_26_0Migration(migrated)) {
     migrated = migrateFromV0_26_0(migrated);
+  }
+
+  // Migration: rename toolAdditionalData -> toolEditState
+  if (
+    migrated &&
+    typeof migrated === 'object' &&
+    'toolAdditionalData' in migrated &&
+    !('toolEditState' in migrated)
+  ) {
+    const {toolAdditionalData, ...rest} = migrated as Record<string, unknown>;
+    migrated = {...rest, toolEditState: toolAdditionalData};
   }
 
   return migrated;

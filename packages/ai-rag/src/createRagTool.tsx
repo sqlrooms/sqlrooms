@@ -1,5 +1,6 @@
-import type {OpenAssistantTool} from '@openassistant/utils';
+import {tool} from 'ai';
 import {ReasoningBox} from '@sqlrooms/ai-core';
+import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {Button} from '@sqlrooms/ui';
 import {useState} from 'react';
 import {z} from 'zod';
@@ -43,9 +44,7 @@ export type RagToolLlmResult = {
   details?: string;
 };
 
-export type RagToolAdditionalData = Record<string, never>;
-
-export type RagToolContext = unknown;
+export type RagToolOutput = RagToolLlmResult;
 
 /**
  * Individual result item with collapsible details
@@ -76,7 +75,7 @@ function RagResultItem({
       </Button>
 
       {isExpanded && (
-        <p className="text-muted-foreground/50 whitespace-pre-wrap p-5 font-mono text-xs">
+        <p className="text-muted-foreground/50 p-5 font-mono text-xs whitespace-pre-wrap">
           {result.text}
         </p>
       )}
@@ -87,17 +86,17 @@ function RagResultItem({
 /**
  * Result component for displaying RAG search results
  */
-function RagToolResult(result: RagToolLlmResult) {
-  if (!result?.success) {
+function RagToolResult({output}: ToolRendererProps<RagToolOutput>) {
+  if (!output?.success) {
     return (
       <div className="rounded border border-red-300 bg-red-50 p-3 text-red-600 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400">
         <p className="text-xs font-semibold">RAG Search Failed</p>
-        <p className="text-xs">{result?.error || 'Unknown error'}</p>
+        <p className="text-xs">{output?.error || 'Unknown error'}</p>
       </div>
     );
   }
 
-  const {query, results, database} = result;
+  const {query, results, database} = output;
 
   return (
     <ReasoningBox title={`Found ${results?.length || 0} results`}>
@@ -112,6 +111,9 @@ function RagToolResult(result: RagToolLlmResult) {
     </ReasoningBox>
   );
 }
+
+/** Tool renderer component for use in `toolRenderers` registry. */
+export const ragToolRenderer = RagToolResult;
 
 /**
  * Create a RAG (Retrieval Augmented Generation) tool for AI.
@@ -133,16 +135,10 @@ function RagToolResult(result: RagToolLlmResult) {
  * });
  * ```
  */
-export function createRagTool(): OpenAssistantTool<
-  typeof RagToolParameters,
-  RagToolLlmResult,
-  RagToolAdditionalData,
-  RagToolContext
-> {
-  return {
-    name: 'search_documentation',
+export function createRagTool() {
+  return tool({
     description: `Search through documentation and knowledge bases using semantic search.
-    
+
 Use this tool when you need to:
 - Find specific information in documentation
 - Look up API references or technical details
@@ -151,18 +147,28 @@ Use this tool when you need to:
 
 The search uses vector embeddings to find semantically similar content, not just keyword matching.`,
 
-    parameters: RagToolParameters,
+    inputSchema: RagToolParameters,
 
-    execute: async (params: RagToolParameters) => {
+    toModelOutput: (output: RagToolOutput) => ({
+      type: 'text',
+      value: JSON.stringify({
+        success: output.success,
+        ...(output.error ? {error: output.error} : {}),
+        ...(output.query ? {query: output.query} : {}),
+        ...(output.database ? {database: output.database} : {}),
+        ...(output.context ? {context: output.context} : {}),
+        ...(output.details ? {details: output.details} : {}),
+      }),
+    }),
+
+    execute: async (params: RagToolParameters): Promise<RagToolOutput> => {
       const {query, database, topK = 5} = params;
       // Get the store instance
       const store = (globalThis as any).__ROOM_STORE__;
       if (!store) {
         return {
-          llmResult: {
-            success: false,
-            error: 'Store not available',
-          } satisfies RagToolLlmResult,
+          success: false,
+          error: 'Store not available',
         };
       }
 
@@ -180,10 +186,8 @@ The search uses vector embeddings to find semantically similar content, not just
 
         if (!targetDatabase) {
           return {
-            llmResult: {
-              success: false,
-              error: 'No RAG databases configured',
-            } satisfies RagToolLlmResult,
+            success: false,
+            error: 'No RAG databases configured',
           };
         }
 
@@ -202,32 +206,26 @@ The search uses vector embeddings to find semantically similar content, not just
           .join('\n\n---\n\n');
 
         return {
-          llmResult: {
-            success: true,
-            query,
-            database: targetDatabase,
-            results: results.map((r) => ({
-              text: r.text,
-              score: r.score,
-              metadata: r.metadata,
-            })),
-            // Provide formatted context for the LLM
-            context: formattedContext,
-            details: `Found ${results.length} relevant documents in ${targetDatabase}`,
-          } satisfies RagToolLlmResult,
+          success: true,
+          query,
+          database: targetDatabase,
+          results: results.map((r) => ({
+            text: r.text,
+            score: r.score,
+            metadata: r.metadata,
+          })),
+          // Provide formatted context for the LLM
+          context: formattedContext,
+          details: `Found ${results.length} relevant documents in ${targetDatabase}`,
         };
       } catch (error) {
         console.error('RAG search error:', error);
         return {
-          llmResult: {
-            success: false,
-            error:
-              error instanceof Error ? error.message : 'Unknown error occurred',
-          } satisfies RagToolLlmResult,
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Unknown error occurred',
         };
       }
     },
-
-    component: RagToolResult,
-  };
+  });
 }

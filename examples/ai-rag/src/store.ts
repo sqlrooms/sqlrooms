@@ -6,9 +6,15 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
+  createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {createRagSlice, createRagTool, RagSliceState} from '@sqlrooms/ai-rag';
+import {
+  createRagSlice,
+  createRagTool,
+  ragToolRenderer,
+  RagSliceState,
+} from '@sqlrooms/ai-rag';
 import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,
@@ -25,7 +31,8 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {createVegaChartTool, vegaChartToolRenderer} from '@sqlrooms/vega';
+import {tool} from 'ai';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -132,6 +139,14 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return createDefaultAiInstructions(store);
         },
 
+        // Tool renderers for displaying tool results in the UI
+        toolRenderers: {
+          ...createDefaultAiToolRenderers(),
+          chart: vegaChartToolRenderer,
+          search_documentation: ragToolRenderer,
+          echo: EchoToolResult,
+        },
+
         // Add custom tools
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
@@ -143,22 +158,16 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           chart: createVegaChartTool(),
 
           // Example of adding a simple echo tool
-          echo: {
-            name: 'echo',
+          echo: tool({
             description: 'A simple echo tool that returns the input text',
-            parameters: z.object({
+            inputSchema: z.object({
               text: z.string().describe('The text to echo back'),
             }),
-            execute: async ({text}: {text: string}) => {
-              return {
-                llmResult: {
-                  success: true,
-                  details: `Echo: ${text}`,
-                },
-              };
-            },
-            component: EchoToolResult,
-          },
+            execute: async ({text}) => ({
+              success: true,
+              details: `Echo: ${text}`,
+            }),
+          }),
         },
       })(set, get, store),
     }),
