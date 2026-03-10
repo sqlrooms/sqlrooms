@@ -473,13 +473,27 @@ export function createKeplerSlice({
           if (!tooltipConfig) return;
           const currentFieldsToShow = tooltipConfig.config?.fieldsToShow || {};
           const existingFields = currentFieldsToShow[datasetId] || [];
-          const existingNames = new Set(
-            existingFields.map((f: {name: string}) => f.name),
+          const existingByName = new Map(
+            existingFields.map(
+              (field: {name: string; format: string | null}) => [
+                field.name,
+                field,
+              ],
+            ),
           );
-          const newFields = fieldNames
-            .filter((name) => !existingNames.has(name))
-            .map((name) => ({name, format: null}));
-          if (newFields.length === 0) return;
+          const nextFields = Array.from(new Set(fieldNames)).map(
+            (name) => existingByName.get(name) ?? {name, format: null},
+          );
+          if (
+            nextFields.length === existingFields.length &&
+            nextFields.every(
+              (field, index) =>
+                field.name === existingFields[index]?.name &&
+                field.format === existingFields[index]?.format,
+            )
+          ) {
+            return;
+          }
           get().kepler.dispatchAction(
             mapId,
             interactionConfigChange({
@@ -488,7 +502,7 @@ export function createKeplerSlice({
                 ...tooltipConfig.config,
                 fieldsToShow: {
                   ...currentFieldsToShow,
-                  [datasetId]: [...existingFields, ...newFields],
+                  [datasetId]: nextFields,
                 },
               },
             }),
