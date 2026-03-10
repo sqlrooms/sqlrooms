@@ -2,6 +2,7 @@ import {
   addDataToMap,
   addLayer as addLayerAction,
   deleteEntry,
+  interactionConfigChange,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   removeDataset,
@@ -257,6 +258,11 @@ export type KeplerSliceState = {
      */
     syncKeplerDatasets: () => Promise<void>;
     addLayer: (mapId: string, layer: Layer, datasetId: string) => void;
+    updateTooltipFields: (
+      mapId: string,
+      datasetId: string,
+      fieldNames: string[],
+    ) => void;
     addTableToMap: (
       mapId: string,
       tableName: string,
@@ -458,6 +464,35 @@ export function createKeplerSlice({
         addLayer: (mapId, layer, datasetId) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
+        },
+
+        updateTooltipFields: (mapId, datasetId, fieldNames) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          const mapState = get().kepler.map[mapId];
+          const tooltipConfig = mapState?.visState?.interactionConfig?.tooltip;
+          if (!tooltipConfig) return;
+          const currentFieldsToShow = tooltipConfig.config?.fieldsToShow || {};
+          const existingFields = currentFieldsToShow[datasetId] || [];
+          const existingNames = new Set(
+            existingFields.map((f: {name: string}) => f.name),
+          );
+          const newFields = fieldNames
+            .filter((name) => !existingNames.has(name))
+            .map((name) => ({name, format: null}));
+          if (newFields.length === 0) return;
+          get().kepler.dispatchAction(
+            mapId,
+            interactionConfigChange({
+              ...tooltipConfig,
+              config: {
+                ...tooltipConfig.config,
+                fieldsToShow: {
+                  ...currentFieldsToShow,
+                  [datasetId]: [...existingFields, ...newFields],
+                },
+              },
+            }),
+          );
         },
 
         addTableToMap: async (mapId, tableName, options = {}) => {
