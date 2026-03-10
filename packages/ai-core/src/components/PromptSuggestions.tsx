@@ -185,32 +185,34 @@ const VisibilityToggle: React.FC<PromptSuggestionsVisibilityToggleProps> = ({
   }, [isVisible, setIsVisible]);
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          onClick={toggleVisibility}
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'h-6 w-6 shrink-0',
-            isVisible
-              ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              : 'text-muted-foreground hover:text-foreground',
-            className,
-          )}
-          title={
-            isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'
-          }
-        >
-          {icon ?? <Lightbulb className="h-4 w-4" />}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>
-          {isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'}
-        </p>
-      </TooltipContent>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={toggleVisibility}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-6 w-6 shrink-0',
+              isVisible
+                ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                : 'text-muted-foreground hover:text-foreground',
+              className,
+            )}
+            title={
+              isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'
+            }
+          >
+            {icon ?? <Lightbulb className="h-4 w-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>
+            {isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

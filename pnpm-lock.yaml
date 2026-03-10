@@ -256,6 +256,9 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../../packages/vega
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -396,6 +399,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -539,6 +545,9 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../../packages/vega
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.1)
@@ -2004,7 +2013,7 @@ importers:
         specifier: workspace:*
         version: link:../ui
       ai:
-        specifier: ^5.0.108
+        specifier: ^5.0.44
         version: 5.0.108(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
