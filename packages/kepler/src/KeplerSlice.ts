@@ -8,11 +8,6 @@ import {
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
-import {
-  registerCommandsForOwner,
-  RoomCommand,
-  unregisterCommandsForOwner,
-} from '@sqlrooms/room-shell';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
   castDuckDBTypesForKepler,
@@ -43,7 +38,10 @@ import {
   BaseRoomStoreState,
   createSlice,
   DbSliceState,
+  registerCommandsForOwner,
+  RoomCommand,
   RoomShellSliceState,
+  unregisterCommandsForOwner,
   useBaseRoomShellStore,
   type StateCreator,
 } from '@sqlrooms/room-shell';
@@ -296,6 +294,7 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
+  let syncKeplerPromise: Promise<void> | null = null;
   const updateMapLastOpenedAt = (
     maps: KeplerSliceConfig['maps'],
     mapId: string,
@@ -485,23 +484,33 @@ export function createKeplerSlice({
         },
 
         async syncKeplerDatasets() {
-          for (const mapId of Object.keys(get().kepler.map)) {
-            const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
-            for (const {table} of get().db.tables) {
-              // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
-              // const qualifiedTable = table.toString();
-              if (
-                // !table.schema?.startsWith('__') && // skip internal schemas
-                // !keplerDatasets?.[qualifiedTable]
-                table.schema === 'main' &&
-                !keplerDatasets?.[table.table]
-              ) {
-                await get().kepler.addTableToMap(mapId, table.table, {
-                  autoCreateLayers: false,
-                  centerMap: false,
-                });
+          if (syncKeplerPromise) {
+            return syncKeplerPromise;
+          }
+          syncKeplerPromise = (async () => {
+            for (const mapId of Object.keys(get().kepler.map)) {
+              const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
+              for (const {table} of get().db.tables) {
+                // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
+                // const qualifiedTable = table.toString();
+                if (
+                  // !table.schema?.startsWith('__') && // skip internal schemas
+                  // !keplerDatasets?.[qualifiedTable]
+                  table.schema === 'main' &&
+                  !keplerDatasets?.[table.table]
+                ) {
+                  await get().kepler.addTableToMap(mapId, table.table, {
+                    autoCreateLayers: false,
+                    centerMap: false,
+                  });
+                }
               }
             }
+          })();
+          try {
+            await syncKeplerPromise;
+          } finally {
+            syncKeplerPromise = null;
           }
         },
 

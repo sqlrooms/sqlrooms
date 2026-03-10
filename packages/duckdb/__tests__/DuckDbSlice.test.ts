@@ -215,6 +215,33 @@ describe('DuckDbSlice', () => {
       // Verify it's gone
       await expect(connector.query('SELECT * FROM to_drop')).rejects.toThrow();
     });
+
+    it('should reject dropping a view', async () => {
+      await store
+        .getState()
+        .db.createTableFromQuery('view_via_drop_table', 'SELECT 1 as id', {
+          view: true,
+        });
+
+      await expect(
+        store.getState().db.dropTable('view_via_drop_table'),
+      ).rejects.toThrow('Use dropRelation() to remove views.');
+    });
+  });
+
+  describe('dropRelation', () => {
+    it('should drop an existing view', async () => {
+      await store
+        .getState()
+        .db.createTableFromQuery('view_to_drop', 'SELECT 1 as id', {view: true});
+
+      const connector = await store.getState().db.getConnector();
+      await expect(connector.query('SELECT * FROM view_to_drop')).resolves.toBeTruthy();
+
+      await store.getState().db.dropRelation('view_to_drop');
+
+      await expect(connector.query('SELECT * FROM view_to_drop')).rejects.toThrow();
+    });
   });
 
   describe('loadTableSchemas', () => {

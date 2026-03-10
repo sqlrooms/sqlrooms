@@ -58,3 +58,4 @@ When adding features, update the relevant documentation and verify that example 
 - Tests only exist in 5 packages (`utils`, `duckdb`, `duckdb-core`, `duckdb-node`, `crdt`). Running `pnpm test` is fast (~10s).
 - Lint produces warnings only (no errors) in the current codebase; 0 errors is the expected baseline.
 - AI-related examples (e.g. `examples/ai`) require an `OPENAI_API_KEY` environment variable at runtime; core examples like `minimal` and `query` do not need any API keys.
+- In Zustand selectors, avoid returning freshly created arrays or objects such as `useRoomStore((state) => state.items.filter(...))`; that creates a new reference on every store update and can trigger unnecessary rerenders or `Maximum update depth exceeded` loops when used in effects. Select stable state first, then derive filtered/mapped values with `useMemo`.

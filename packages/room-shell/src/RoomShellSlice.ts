@@ -278,7 +278,7 @@ export function createRoomShellSlice(
           const {setTaskProgress} = get().room;
           try {
             setTaskProgress(INIT_DB_TASK, {
-              message: 'Initializing database…',
+              message: 'Establishing database connection…',
               progress: undefined,
             });
             await get().db.initialize();
@@ -288,6 +288,7 @@ export function createRoomShellSlice(
               message: 'Loading data sources…',
               progress: undefined,
             });
+
             await updateReadyDataSources();
             await maybeDownloadDataSources();
 
@@ -316,6 +317,9 @@ export function createRoomShellSlice(
             if (isRoomSliceWithInitialize(state)) {
               await state.initialize();
             }
+          } catch (error) {
+            captureException(error);
+            throw error;
           } finally {
             setTaskProgress(INIT_ROOM_TASK, undefined);
           }
@@ -521,7 +525,7 @@ export function createRoomShellSlice(
                 delete draft.room.dataSourceStates[tableName];
               }),
             );
-            await db.dropTable(tableName);
+            await db.dropRelation(tableName);
             await db.refreshTableSchemas();
           }
         },

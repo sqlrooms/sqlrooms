@@ -229,7 +229,13 @@ export type DuckDbSliceState = {
     ) => Promise<boolean>;
 
     /**
-     * Delete a table with optional schema and database
+     * Delete a table or view with optional schema and database.
+     * @param tableName - The name of the relation to delete (qualified or plain)
+     */
+    dropRelation: (tableName: string | QualifiedTableName) => Promise<void>;
+
+    /**
+     * Delete a table with optional schema and database.
      * @param tableName - The name of the table to delete (qualified or plain)
      */
     dropTable: (tableName: string | QualifiedTableName) => Promise<void>;
@@ -323,7 +329,9 @@ export function createDuckDbSlice({
 
           initialize: async () => {
             await get().db.connector.initialize();
-            await get().db.refreshTableSchemas();
+            // No await here, we want to continue initializing the room even
+            // if the table schemas are not refreshed yet
+            get().db.refreshTableSchemas();
             registerCommandsForOwner(
               store,
               DUCKDB_COMMAND_OWNER,
@@ -638,13 +646,40 @@ export function createDuckDbSlice({
             return true;
           },
 
+          async dropRelation(tableName): Promise<void> {
+            const connector = await get().db.getConnector();
+            const qualifiedTable = isQualifiedTableName(tableName)
+              ? tableName
+              : makeQualifiedTableName({table: tableName});
+            const table =
+              get().db.findTableByName(qualifiedTable) ??
+              (await get().db.loadTableSchemas(qualifiedTable))[0];
+            const isView = table?.isView;
+            if (isView) {
+              await connector.query(`DROP VIEW IF EXISTS ${qualifiedTable};`);
+            } else {
+              await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
+            }
+            get().db.refreshTableSchemas();
+          },
+
           async dropTable(tableName): Promise<void> {
             const connector = await get().db.getConnector();
             const qualifiedTable = isQualifiedTableName(tableName)
               ? tableName
               : makeQualifiedTableName({table: tableName});
+            const table =
+              get().db.findTableByName(qualifiedTable) ??
+              (await get().db.loadTableSchemas(qualifiedTable))[0];
+
+            if (table?.isView) {
+              throw new Error(
+                `"${qualifiedTable}" is a view. Use dropRelation() to remove views.`,
+              );
+            }
+
             await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
-            await get().db.refreshTableSchemas();
+            get().db.refreshTableSchemas();
           },
 
           async addTable(tableName, data) {
@@ -670,7 +705,7 @@ export function createDuckDbSlice({
                 draft.db.tables.push(newTable);
               }),
             );
-            await get().db.refreshTableSchemas();
+            get().db.refreshTableSchemas();
             return newTable;
           },
 
@@ -829,10 +864,18 @@ function createDuckDbCommands(): RoomCommand<DuckDbCommandStoreState>[] {
     },
     {
       id: 'db.drop-table',
-      name: 'Drop table',
-      description: 'Drop a table from DuckDB by name',
+      name: 'Drop relation',
+      description: 'Drop a table or view from DuckDB by name',
       group: 'Database',
-      keywords: ['duckdb', 'database', 'drop', 'table', 'delete'],
+      keywords: [
+        'duckdb',
+        'database',
+        'drop',
+        'table',
+        'view',
+        'relation',
+        'delete',
+      ],
       inputSchema: DropTableCommandInput,
       inputDescription: 'Provide a tableName to remove from DuckDB.',
       metadata: {
@@ -850,11 +893,11 @@ function createDuckDbCommands(): RoomCommand<DuckDbCommandStoreState>[] {
       },
       execute: async ({getState}, input) => {
         const {tableName} = input as DropTableCommandInput;
-        await getState().db.dropTable(tableName);
+        await getState().db.dropRelation(tableName);
         return {
           success: true,
           commandId: 'db.drop-table',
-          message: `Dropped table "${tableName}".`,
+          message: `Dropped relation "${tableName}".`,
         };
       },
     },
