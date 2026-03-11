@@ -199,7 +199,7 @@ const VisibilityToggle: React.FC<PromptSuggestionsVisibilityToggleProps> = ({
                 : 'text-muted-foreground hover:text-foreground',
               className,
             )}
-            title={
+            aria-label={
               isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'
             }
           >

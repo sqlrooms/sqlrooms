@@ -210,16 +210,24 @@ layout: {
 
 ### AI/Agent Framework
 
-Tools are composable functions for LLM agents:
+Tools are composable functions for LLM agents, defined with the AI SDK `tool()` helper:
 ```typescript
-tools: {
-  query: {
-    name: 'query',
-    parameters: z.object({sql: z.string()}),
-    execute: async ({sql}) => ({llmResult: {rows: [...]}}),
-    component: QueryToolResult,  // UI for result
+import {tool} from 'ai';
+
+// Tool definition (no renderer attached)
+const myTool = tool({
+  description: 'Does something',
+  inputSchema: z.object({sql: z.string()}),
+  execute: async ({sql}) => ({rows: [...]}),  // flat output
+});
+
+// Renderers registered separately in createAiSlice
+createAiSlice({
+  tools: {query: createQueryTool(store), ...myTool},
+  toolRenderers: {
+    query: QueryToolResult,  // ToolRenderer<Output, Input>
   },
-}
+});
 ```
 
 Tools have full access to room store via `createDefaultAiTools(store)`.

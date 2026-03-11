@@ -65,7 +65,7 @@ function needsV0_26_0Migration(data: unknown): boolean {
   // Use key-presence checks rather than value comparisons so that a field
   // explicitly set to `{}` or `null` is still treated as "present" and does
   // not incorrectly re-trigger migration (which could duplicate uiMessages).
-  const hasUiMessages = Array.isArray(d.uiMessages);
+  const hasUiMessages = 'uiMessages' in d;
   const hasToolState = 'toolEditState' in d || 'toolAdditionalData' in d;
 
   return !hasUiMessages || !hasToolState;
@@ -73,7 +73,9 @@ function needsV0_26_0Migration(data: unknown): boolean {
 
 /** Perform migration to AI SDK v5 uiMessages/toolEditState */
 function migrateFromV0_26_0(data: unknown) {
-  const session = {...(data as UnknownRecord)};
+  const {toolAdditionalData: _legacyToolAdditionalData, ...session} = {
+    ...(data as UnknownRecord),
+  };
   const analysisResults = (session.analysisResults as UnknownRecord[]) || [];
   const existingUiMessages = (session.uiMessages as UnknownRecord[]) || [];
   const toolEditState =

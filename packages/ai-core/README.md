@@ -20,6 +20,8 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
 
+> **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `toolAdditionalData` → `toolEditState`.
+
 ```tsx
 import {createAiSlice, type AiSliceState, type ToolRendererRegistry} from '@sqlrooms/ai-core';
 import {
