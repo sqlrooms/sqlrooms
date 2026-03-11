@@ -416,19 +416,21 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   return renderContainer({
     header: (
       <div className="flex w-full items-center gap-2">
-        <div className="flex-1">
-          <select
-            className="border-input bg-background text-foreground h-7 rounded border px-2 text-xs"
-            value={selectedConnectorId}
-            onChange={(e) => handleConnectorChange(e.target.value)}
-          >
-            {connectionOptions.map((connection) => (
-              <option key={connection.id} value={connection.id}>
-                {connection.title}
-              </option>
-            ))}
-          </select>
-        </div>
+        {connectionOptions.length > 1 && (
+          <div className="flex-1">
+            <select
+              className="border-input bg-background text-foreground h-7 rounded border px-2 text-xs"
+              value={selectedConnectorId}
+              onChange={(e) => handleConnectorChange(e.target.value)}
+            >
+              {connectionOptions.map((connection) => (
+                <option key={connection.id} value={connection.id}>
+                  {connection.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <SqlCellRunButton
           onRun={handleRun}
           onCancel={handleCancel}
