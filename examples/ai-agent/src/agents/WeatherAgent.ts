@@ -26,16 +26,9 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
           state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
       }).chatModel(modelId);
 
-      const sessionAbortSignal = currentSession?.id
-        ? state.ai.getAbortController(currentSession.id)?.signal
-        : undefined;
-
       const weatherAgent = new Agent({
         model,
-        abortSignal:
-          options?.abortSignal && sessionAbortSignal
-            ? AbortSignal.any([options.abortSignal, sessionAbortSignal])
-            : (options?.abortSignal ?? sessionAbortSignal),
+        abortSignal: options?.abortSignal,
         tools: {
           weather: tool({
             description: 'Get the weather in a location (in Fahrenheit)',

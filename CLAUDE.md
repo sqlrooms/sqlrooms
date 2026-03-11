@@ -223,7 +223,7 @@ const myTool = tool({
 
 // Renderers registered separately in createAiSlice
 createAiSlice({
-  tools: {query: createQueryTool(store), ...myTool},
+  tools: {query: createQueryTool(store), myTool},
   toolRenderers: {
     query: QueryToolResult,  // ToolRenderer<Output, Input>
   },
