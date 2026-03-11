@@ -2,7 +2,7 @@ import {DataTable} from '@sqlrooms/duckdb';
 import {useBaseRoomStore} from '@sqlrooms/room-store';
 import {Button, Tabs, TabsList, TabsTrigger} from '@sqlrooms/ui';
 import {PlusIcon, XIcon} from 'lucide-react';
-import React, {useEffect, useMemo} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {PivotEditor} from './PivotEditor';
 import {PivotResults} from './PivotResults';
 import {getPivotFieldsFromTable} from './pivotExecution';
@@ -120,35 +120,44 @@ export const PivotView: React.FC = () => {
         : undefined,
     [currentPivot?.source, sourceOptions],
   );
-
-  useEffect(() => {
+  const autoRunKey = useMemo(() => {
     if (
       !currentPivotId ||
       !currentPivot?.source ||
       !selectedSourceOption?.relationName
     ) {
+      return undefined;
+    }
+    return JSON.stringify({
+      pivotId: currentPivotId,
+      source: currentPivot.source,
+      relation: selectedSourceOption.relationName,
+      config: currentPivot.config,
+    });
+  }, [
+    currentPivotId,
+    currentPivot?.config,
+    currentPivot?.source,
+    selectedSourceOption?.relationName,
+  ]);
+  const lastAutoRunKeyRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!autoRunKey || !currentPivotId) {
       return;
     }
     if (currentStatus?.status === 'running') {
       return;
     }
-    if (currentStatus?.relations && !currentStatus.stale) {
+    if (lastAutoRunKeyRef.current === autoRunKey) {
       return;
     }
     const timeout = window.setTimeout(() => {
+      lastAutoRunKeyRef.current = autoRunKey;
       void runPivot(currentPivotId);
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [
-    currentPivotId,
-    currentPivot?.config,
-    currentPivot?.source,
-    currentStatus?.relations,
-    currentStatus?.stale,
-    currentStatus?.status,
-    selectedSourceOption?.relationName,
-    runPivot,
-  ]);
+  }, [autoRunKey, currentPivotId, currentStatus?.status, runPivot]);
 
   if (!currentPivot) {
     return (
