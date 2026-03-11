@@ -2,7 +2,7 @@
 
 import type {FC} from 'react';
 import {zip, uniq} from 'es-toolkit';
-import type {FunctionSuggestion} from '@sqlrooms/duckdb';
+import type {FunctionSuggestion} from '@sqlrooms/db';
 
 export interface FunctionDocumentationProps {
   functions: FunctionSuggestion[];

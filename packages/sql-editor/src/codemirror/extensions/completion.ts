@@ -1,39 +1,32 @@
 import {
-  type CompletionContext,
+  type CompletionContext as CMCompletionContext,
   type Completion,
   autocompletion,
 } from '@codemirror/autocomplete';
 import type {Extension} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
-import {type DuckDbConnector, getFunctionSuggestions} from '@sqlrooms/duckdb';
-import {DUCKDB_SQL_KEYWORDS} from './duckdb-keywords';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToString} from '@sqlrooms/utils';
+import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
 
-interface DuckDbCompletionContext {
-  connector?: DuckDbConnector;
-  customKeywords: string[];
-  customFunctions: string[];
+export interface CompletionContext {
+  getKeywordSuggestions?: () => string[];
+  getFunctionSuggestions?: (
+    query: string,
+  ) => Promise<GroupedFunctionSuggestion[]>;
 }
 
-const duckdbCompletionContextByView = new WeakMap<
-  EditorView,
-  DuckDbCompletionContext
->();
+const completionContextByView = new WeakMap<EditorView, CompletionContext>();
 
 /**
- * Creates DuckDB completion extension with dynamic function docs and custom keywords/functions.
+ * Creates SQL completion extension with dynamic function docs and keywords.
  * Complements marimo-sql's base SQL completions (keywords, tables, columns, CTEs).
  */
-export function createDuckDbCompletion(
-  context: DuckDbCompletionContext,
-): Extension {
-  const completionSource = async (completionContext: CompletionContext) => {
+export function createCompletion(context: CompletionContext): Extension {
+  const completionSource = async (completionContext: CMCompletionContext) => {
     // Get context from WeakMap (falls back to initial context)
     const view = completionContext.view;
-    const ctx = view
-      ? (duckdbCompletionContextByView.get(view) ?? context)
-      : context;
+    const ctx = view ? (completionContextByView.get(view) ?? context) : context;
 
     const suggestions: Completion[] = [];
 
@@ -44,7 +37,8 @@ export function createDuckDbCompletion(
     }
 
     // Add keywords
-    [...DUCKDB_SQL_KEYWORDS, ...ctx.customKeywords].forEach((keyword) => {
+    const keywords = ctx.getKeywordSuggestions?.() ?? [];
+    keywords.forEach((keyword) => {
       suggestions.push({
         label: keyword,
         type: 'keyword',
@@ -52,22 +46,10 @@ export function createDuckDbCompletion(
       });
     });
 
-    // Add custom functions
-    ctx.customFunctions.forEach((func) => {
-      suggestions.push({
-        label: func,
-        type: 'method',
-        boost: 0,
-      });
-    });
-
-    // Add dynamic function suggestions with documentation from DuckDB
-    if (ctx.connector && word.text) {
+    // Add dynamic function suggestions with documentation
+    if (ctx.getFunctionSuggestions && word.text) {
       try {
-        const functionGroups = await getFunctionSuggestions(
-          ctx.connector,
-          word.text,
-        );
+        const functionGroups = await ctx.getFunctionSuggestions(word.text);
 
         suggestions.push(
           ...functionGroups.map(({name, overloads}): Completion => {
@@ -86,7 +68,7 @@ export function createDuckDbCompletion(
           }),
         );
       } catch (error) {
-        console.error('Error fetching DuckDB function suggestions:', error);
+        console.error('Error fetching function suggestions:', error);
       }
     }
 

@@ -9,7 +9,7 @@ export {createSqlTooltipTheme};
 
 export function createSqlTheme(options: BaseThemeOptions = {}): Extension {
   const baseTheme = createBaseTheme(options);
-  const tooltipTheme = createSqlTooltipTheme(options);
+  const tooltipTheme = createSqlTooltipTheme();
 
   const highlightStyle = HighlightStyle.define([
     // SQL keywords (SELECT, FROM, WHERE, JOIN, etc.)

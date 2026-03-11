@@ -26,8 +26,10 @@ export type {
   SqlMonacoEditorProps,
   SqlMonacoRunQueryOptions,
 } from './SqlMonacoEditor';
-export {SqlCodeMirrorEditor} from './components/SqlCodeMirrorEditor';
-export type {SqlCodeMirrorEditorProps} from './components/SqlCodeMirrorEditor';
+export {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
+export type {SqlCodeMirrorEditorProps} from './SqlCodeMirrorEditor';
+export {SqlDialects} from './codemirror/extensions/create-sql-extension';
+export type {SqlDialect} from './codemirror/extensions/create-sql-extension';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';

@@ -1,7 +1,7 @@
 import {cn} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
+import {SqlCodeMirrorEditor} from '../SqlCodeMirrorEditor';
 
 const CODEMIRROR_OPTIONS = {
   lineWrapping: true,

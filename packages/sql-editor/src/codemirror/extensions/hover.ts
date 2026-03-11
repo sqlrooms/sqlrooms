@@ -2,26 +2,24 @@ import {hoverTooltip} from '@codemirror/view';
 import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import {syntaxTree} from '@codemirror/language';
-import {type DuckDbConnector, getFunctionDocumentation} from '@sqlrooms/duckdb';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToString} from '@sqlrooms/utils';
+import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
 
-interface DuckDbHoverContext {
-  connector?: DuckDbConnector;
+export interface HoverContext {
+  getFunctionDocumentation?: (
+    functionName: string,
+  ) => Promise<GroupedFunctionSuggestion | null>;
 }
 
 /**
- * Creates a hover tooltip extension for DuckDB functions.
+ * Creates a hover tooltip extension for SQL functions.
  * Shows function signatures, descriptions, and examples on hover.
  */
-export function createDuckDbHover(context: DuckDbHoverContext): Extension {
-  if (!context.connector) {
-    return [];
-  }
-
+export function createHover(context: HoverContext): Extension {
   return hoverTooltip(async (view: EditorView, pos: number, side) => {
-    const {connector} = context;
-    if (!connector) {
+    const {getFunctionDocumentation} = context;
+    if (!getFunctionDocumentation) {
       return null;
     }
 
@@ -30,7 +28,7 @@ export function createDuckDbHover(context: DuckDbHoverContext): Extension {
     const node = tree.resolveInner(pos, side);
 
     // Check if we're hovering over a function call, identifier, or keyword
-    // Some DuckDB functions are keywords (CAST, EXTRACT, etc.)
+    // Some SQL functions are keywords (CAST, EXTRACT, etc.)
     if (!node || (node.name !== 'Identifier' && node.name !== 'Keyword')) {
       return null;
     }
@@ -43,7 +41,7 @@ export function createDuckDbHover(context: DuckDbHoverContext): Extension {
 
     try {
       // Fetch exact function documentation
-      const functionGroup = await getFunctionDocumentation(connector, word);
+      const functionGroup = await getFunctionDocumentation(word);
 
       if (!functionGroup) {
         return null;
@@ -62,7 +60,7 @@ export function createDuckDbHover(context: DuckDbHoverContext): Extension {
         create: () => ({dom}),
       };
     } catch (error) {
-      console.error('Error fetching DuckDB function hover info:', error);
+      console.error('Error fetching function hover info:', error);
       return null;
     }
   });

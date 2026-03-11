@@ -3,20 +3,25 @@ import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {CodeMirrorEditor, CodeMirrorEditorProps} from '@sqlrooms/codemirror';
-import {createDuckDbExtension} from '../codemirror/extensions/duck-db';
-import {createSqlKeymap} from '../codemirror/extensions/sql-keymap';
-import {createSqlTheme} from '../codemirror/themes/sql-theme';
+import {
+  createSqlExtension,
+  SqlDialects,
+  type SqlDialect,
+} from './codemirror/extensions/create-sql-extension';
+import {createSqlKeymap} from './codemirror/extensions/sql-keymap';
+import {createSqlTheme} from './codemirror/themes/sql-theme';
 
 export interface SqlCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
   'extensions'
 > {
-  /** DuckDB connector for dynamic function suggestions */
+  /** SQL dialect for syntax highlighting and completions */
+  dialect?: SqlDialect;
+  /**
+   * Connector for dynamic function suggestions
+   * TODO: change to generic connector interface to support multiple dialects
+   */
   connector?: DuckDbConnector;
-  /** Custom SQL keywords (completion-only, not syntax highlighting) */
-  customKeywords?: string[];
-  /** Custom SQL functions (completion-only, not syntax highlighting) */
-  customFunctions?: string[];
   /** Table schemas for autocompletion and hover tooltips */
   tableSchemas?: DataTable[];
   /** Callback to get the latest table schemas */
@@ -33,15 +38,14 @@ const EDITOR_OPTIONS: CodeMirrorEditorProps['options'] = {
 };
 
 /**
- * CodeMirror editor for SQL with DuckDB dialect support
+ * CodeMirror editor for SQL with dialect-specific support
  *
  * Lightweight alternative to SqlMonacoEditor with syntax highlighting,
  * linting, schema-aware completions, and hover tooltips. Cmd+Enter to run query.
  */
 export const SqlCodeMirrorEditor: React.FC<SqlCodeMirrorEditorProps> = ({
+  dialect = SqlDialects.DuckDb,
   connector,
-  customKeywords = [],
-  customFunctions = [],
   tableSchemas = [],
   getLatestSchemas,
   onRunQuery,
@@ -62,16 +66,15 @@ export const SqlCodeMirrorEditor: React.FC<SqlCodeMirrorEditorProps> = ({
   // Build extensions
   const extensions = useMemo<Extension[]>(() => {
     return [
-      ...createDuckDbExtension({
+      ...createSqlExtension({
+        dialect,
         currentSchemas,
         connector,
-        customKeywords,
-        customFunctions,
       }),
       createSqlKeymap(onRunQuery),
       createSqlTheme(),
     ];
-  }, [currentSchemas, onRunQuery, connector, customKeywords, customFunctions]);
+  }, [dialect, currentSchemas, onRunQuery, connector]);
 
   // Handle editor mount
   const handleEditorMount = useCallback(

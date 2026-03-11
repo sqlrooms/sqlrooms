@@ -41,7 +41,7 @@ import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
+import {SqlCodeMirrorEditor} from '../SqlCodeMirrorEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 

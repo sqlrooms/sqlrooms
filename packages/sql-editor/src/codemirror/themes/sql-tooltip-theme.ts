@@ -1,15 +1,13 @@
 import {Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
-import {type BaseThemeOptions} from '@sqlrooms/codemirror';
+import {getTheme} from '@sqlrooms/ui';
 
 /**
  * Creates theme styles specifically for SQL hover tooltips.
  * Only handles the base tooltip container - components use Tailwind classes for styling.
  */
-export function createSqlTooltipTheme(
-  options: BaseThemeOptions = {},
-): Extension {
-  const {isDark} = options;
+export function createSqlTooltipTheme(): Extension {
+  const theme = getTheme();
 
   return EditorView.theme(
     {
@@ -23,6 +21,6 @@ export function createSqlTooltipTheme(
         lineHeight: 'inherit',
       },
     },
-    {dark: isDark},
+    {dark: theme === 'dark'},
   );
 }
