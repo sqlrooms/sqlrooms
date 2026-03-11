@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  ErrorPane,
   Input,
   Label,
   Popover,
@@ -769,7 +770,12 @@ export const PivotEditor: React.FC<PivotEditorProps> = ({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="min-h-0">{results}</CardContent>
+            <CardContent className="min-h-0 space-y-3">
+              {status?.lastError ? (
+                <ErrorPane error={new Error(status.lastError)} />
+              ) : null}
+              {results}
+            </CardContent>
           </Card>
         </div>
       </DndContext>
