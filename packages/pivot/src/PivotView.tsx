@@ -122,14 +122,33 @@ export const PivotView: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!currentPivotId || !currentPivot?.source) {
+    if (
+      !currentPivotId ||
+      !currentPivot?.source ||
+      !selectedSourceOption?.relationName
+    ) {
+      return;
+    }
+    if (currentStatus?.status === 'running') {
+      return;
+    }
+    if (currentStatus?.relations && !currentStatus.stale) {
       return;
     }
     const timeout = window.setTimeout(() => {
       void runPivot(currentPivotId);
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [currentPivotId, currentPivot?.config, currentPivot?.source, runPivot]);
+  }, [
+    currentPivotId,
+    currentPivot?.config,
+    currentPivot?.source,
+    currentStatus?.relations,
+    currentStatus?.stale,
+    currentStatus?.status,
+    selectedSourceOption?.relationName,
+    runPivot,
+  ]);
 
   if (!currentPivot) {
     return (

@@ -18,14 +18,23 @@ type SqlConnectorLike = {
   ) => PromiseLike<unknown>;
 };
 
-export function buildPivotRelationNames(
-  baseRelationName: string,
-): PivotRelations {
+export function buildPivotRelationNames(args: {
+  relationId: string;
+  schemaName: string;
+  database?: string;
+}): PivotRelations {
+  const {relationId, schemaName, database} = args;
+  const makeRelation = (suffix: string) =>
+    makeQualifiedTableName({
+      table: `pivot_${relationId}${suffix}`,
+      schema: schemaName,
+      database,
+    }).toString();
   return {
-    cellsRelation: `${baseRelationName}_cells`,
-    rowTotalsRelation: `${baseRelationName}_row_totals`,
-    colTotalsRelation: `${baseRelationName}_col_totals`,
-    grandTotalRelation: `${baseRelationName}_grand_total`,
+    cellsRelation: makeRelation('_cells'),
+    rowTotalsRelation: makeRelation('_row_totals'),
+    colTotalsRelation: makeRelation('_col_totals'),
+    grandTotalRelation: makeRelation('_grand_total'),
     relationType: 'view',
   };
 }
@@ -104,12 +113,11 @@ export async function executePivotRelations(args: {
     signal ? {signal} : undefined,
   );
 
-  const baseRelationName = buildPivotBaseRelationName({
+  const relations = buildPivotRelationNames({
     relationId,
     schemaName,
     database,
   });
-  const relations = buildPivotRelationNames(baseRelationName);
 
   await createOrReplaceView({
     connector,
