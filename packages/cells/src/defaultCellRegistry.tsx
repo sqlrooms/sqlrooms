@@ -1,22 +1,26 @@
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {createDefaultPivotConfig} from '@sqlrooms/pivot-table';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {InputCellContent} from './components/InputCellContent';
+import {PivotCellContent} from './components/PivotCellContent';
 import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
 import {executeSqlCell} from './execution';
 import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
+import {executePivotCell} from './pivotCellExecution';
+import {renameResultRelation} from './resultRelationPolicy';
 import {
   findSqlDependenciesFromAst,
   qualifySheetLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
-import {renameResultRelation} from './resultRelationPolicy';
 import type {
   Cell,
   CellRegistry,
   InputCell,
+  PivotCell,
   SqlCell,
   SqlCellData,
   TextCell,
@@ -232,6 +236,42 @@ export function createDefaultCellRegistry(): CellRegistry {
         />
       ),
       findDependencies: async () => [],
+    },
+    pivot: {
+      type: 'pivot',
+      title: 'Pivot Table',
+      createCell: (id: string): PivotCell => ({
+        id,
+        type: 'pivot',
+        data: {
+          title: 'Pivot',
+          pivotConfig: createDefaultPivotConfig(),
+        },
+      }),
+      renderCell: ({id, cell, renderContainer}) => (
+        <PivotCellContent
+          id={id}
+          cell={cell as PivotCell}
+          renderContainer={renderContainer}
+        />
+      ),
+      findDependencies: async ({cell}) => {
+        const source = (cell as PivotCell).data.source;
+        return source?.kind === 'sql' ? [source.sqlId] : [];
+      },
+      runCell: async ({id, opts, get, set}) => {
+        const controller = new AbortController();
+        set((state) =>
+          produce(state, (draft) => {
+            draft.cells.activeAbortControllers[id] = controller;
+          }),
+        );
+        await executePivotCell(id, get, set, {
+          schemaName: opts?.schemaName || 'main',
+          cascade: opts?.cascade,
+          signal: controller.signal,
+        });
+      },
     },
   };
 }

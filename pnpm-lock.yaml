@@ -1642,14 +1642,14 @@ importers:
         specifier: ^7.1.9
         version: 7.2.2(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(yaml@2.8.2)
 
-  examples/pivot:
+  examples/pivot-table:
     dependencies:
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
-      '@sqlrooms/pivot':
+      '@sqlrooms/pivot-table':
         specifier: workspace:*
-        version: link:../../packages/pivot
+        version: link:../../packages/pivot-table
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -2281,6 +2281,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/pivot-table':
+        specifier: workspace:*
+        version: link:../pivot-table
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -2841,7 +2844,7 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
 
-  packages/pivot:
+  packages/pivot-table:
     dependencies:
       '@dnd-kit/core':
         specifier: ^6.3.1

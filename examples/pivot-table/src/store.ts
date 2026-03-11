@@ -1,17 +1,17 @@
 import {
-  BaseRoomConfig,
-  LayoutConfig,
-  LayoutTypes,
-  createRoomShellSlice,
-  createRoomStore,
-  persistSliceConfigs,
-  RoomShellSliceState,
-} from '@sqlrooms/room-shell';
-import {
   PivotSliceConfig,
   PivotSliceState,
   createPivotSlice,
-} from '@sqlrooms/pivot';
+} from '@sqlrooms/pivot-table';
+import {
+  BaseRoomConfig,
+  LayoutConfig,
+  LayoutTypes,
+  RoomShellSliceState,
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 import {DatabaseIcon, TablePropertiesIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataPanel} from './DataPanel';
@@ -72,14 +72,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
       ...createPivotSlice({
-        config: {
-          tableName: 'tips',
-          rows: ['day'],
-          cols: ['sex'],
-          aggregatorName: 'Sum over Sum',
-          vals: ['tip', 'total_bill'],
-          rendererName: 'Grouped Column Chart',
-          unusedOrder: ['time', 'smoker', 'size'],
+        initialPivot: {
+          source: {
+            kind: 'table',
+            tableName: 'tips',
+          },
+          config: {
+            rows: ['day'],
+            cols: ['sex'],
+            aggregatorName: 'Sum over Sum',
+            vals: ['tip', 'total_bill'],
+            rendererName: 'Grouped Column Chart',
+            unusedOrder: ['time', 'smoker', 'size'],
+          },
         },
       })(set, get, store),
     }),

@@ -12,8 +12,7 @@ import {
   rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
-import {DataTable, arrowTableToJson, useSql} from '@sqlrooms/duckdb';
-import {useBaseRoomStore} from '@sqlrooms/room-store';
+import {arrowTableToJson, useSql} from '@sqlrooms/duckdb';
 import {
   Badge,
   Button,
@@ -22,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  ErrorPane,
   Input,
   Label,
   Popover,
@@ -42,31 +42,23 @@ import {
   Columns2Icon,
   FilterIcon,
   GripVerticalIcon,
+  PlayIcon,
   Rows3Icon,
   TablePropertiesIcon,
 } from 'lucide-react';
-import React, {useEffect, useMemo, useState} from 'react';
-import {
-  PIVOT_AGGREGATORS,
-  getDefaultValuesForAggregator,
-  getPivotAggregator,
-} from './aggregators';
-import {PivotResults} from './PivotResults';
+import React, {useMemo, useState} from 'react';
+import {PIVOT_AGGREGATORS, getPivotAggregator} from './aggregators';
 import {buildDistinctValuesQuery} from './sql';
 import {
   PIVOT_RENDERER_NAMES,
+  PivotConfig,
   PivotDropZone,
   PivotField,
-  PivotSliceState,
+  PivotSourceOption,
 } from './types';
 
-type PivotRootState = PivotSliceState & {
-  db: {
-    tables: DataTable[];
-  };
-};
-
 const CONTAINER_ID_PREFIX = 'pivot-container:';
+const numericTypePattern = /INT|DECIMAL|FLOAT|DOUBLE|REAL|HUGEINT|BIGINT/i;
 
 function getContainerId(zone: PivotDropZone) {
   return `${CONTAINER_ID_PREFIX}${zone}`;
@@ -79,7 +71,7 @@ function parseContainerId(id: string): PivotDropZone | null {
   return id.replace(CONTAINER_ID_PREFIX, '') as PivotDropZone;
 }
 
-function getSortIcon(order: PivotRootState['pivot']['config']['rowOrder']) {
+function getSortIcon(order: PivotConfig['rowOrder']) {
   switch (order) {
     case 'value_a_to_z':
       return ArrowDownWideNarrowIcon;
@@ -90,11 +82,9 @@ function getSortIcon(order: PivotRootState['pivot']['config']['rowOrder']) {
   }
 }
 
-const numericTypePattern = /INT|DECIMAL|FLOAT|DOUBLE|REAL|HUGEINT|BIGINT/i;
-
-const FilterableSortableFieldChip: React.FC<{
+type FilterableSortableFieldChipProps = {
   field: PivotField;
-  table: DataTable;
+  sourceRelation?: string;
   menuLimit: number;
   isFiltered: boolean;
   filterValues: Record<string, boolean>;
@@ -102,9 +92,13 @@ const FilterableSortableFieldChip: React.FC<{
   addFilters: (values: string[]) => void;
   removeFilters: (values: string[]) => void;
   clearFilter: () => void;
-}> = ({
+};
+
+const FilterableSortableFieldChip: React.FC<
+  FilterableSortableFieldChipProps
+> = ({
   field,
-  table,
+  sourceRelation,
   menuLimit,
   isFiltered,
   filterValues,
@@ -118,10 +112,16 @@ const FilterableSortableFieldChip: React.FC<{
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const query = useMemo(
-    () => buildDistinctValuesQuery(table, field.name, menuLimit),
-    [field.name, menuLimit, table],
+    () =>
+      sourceRelation
+        ? buildDistinctValuesQuery(sourceRelation, field.name, menuLimit)
+        : '',
+    [field.name, menuLimit, sourceRelation],
   );
-  const valuesResult = useSql({query, enabled: open});
+  const valuesResult = useSql({
+    query,
+    enabled: open && Boolean(sourceRelation),
+  });
   const values = useMemo(
     () =>
       valuesResult.data?.arrowTable
@@ -227,7 +227,7 @@ const FilterableSortableFieldChip: React.FC<{
                 <div className="space-y-1 p-2">
                   {valuesResult.isLoading ? (
                     <div className="text-muted-foreground text-xs">
-                      Loading values…
+                      Loading values...
                     </div>
                   ) : shownValues.length === 0 ? (
                     <div className="text-muted-foreground text-xs">
@@ -285,26 +285,28 @@ const FilterableSortableFieldChip: React.FC<{
   );
 };
 
-const FieldZone: React.FC<{
+type FieldZoneProps = {
   zone: PivotDropZone;
   title: string;
   description: string;
   framed?: boolean;
   items: PivotField[];
-  table: DataTable;
+  sourceRelation?: string;
   menuLimit: number;
-  filterValues: PivotRootState['pivot']['config']['valueFilter'];
+  filterValues: PivotConfig['valueFilter'];
   setFilterValues: (field: string, values: string[]) => void;
   addFilters: (field: string, values: string[]) => void;
   removeFilters: (field: string, values: string[]) => void;
   clearFilter: (field: string) => void;
-}> = ({
+};
+
+const FieldZone: React.FC<FieldZoneProps> = ({
   zone,
   title,
   description,
   framed = true,
   items,
-  table,
+  sourceRelation,
   menuLimit,
   filterValues,
   setFilterValues,
@@ -338,7 +340,7 @@ const FieldZone: React.FC<{
               <FilterableSortableFieldChip
                 key={field.name}
                 field={field}
-                table={table}
+                sourceRelation={sourceRelation}
                 menuLimit={menuLimit}
                 isFiltered={Boolean(filterValues[field.name])}
                 filterValues={filterValues[field.name] ?? {}}
@@ -381,7 +383,7 @@ const FieldZone: React.FC<{
               <FilterableSortableFieldChip
                 key={field.name}
                 field={field}
-                table={table}
+                sourceRelation={sourceRelation}
                 menuLimit={menuLimit}
                 isFiltered={Boolean(filterValues[field.name])}
                 filterValues={filterValues[field.name] ?? {}}
@@ -407,120 +409,78 @@ const FieldZone: React.FC<{
   return <Card>{content}</Card>;
 };
 
-export const PivotView: React.FC = () => {
-  const tables = useBaseRoomStore<PivotRootState, DataTable[]>(
-    (state) => state.db.tables,
-  );
-  const config = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['config']
-  >((state) => state.pivot.config);
-  const setTableName = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['setTableName']
-  >((state) => state.pivot.setTableName);
-  const setRendererName = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['setRendererName']
-  >((state) => state.pivot.setRendererName);
-  const setAggregatorName = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['setAggregatorName']
-  >((state) => state.pivot.setAggregatorName);
-  const setVals = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['setVals']
-  >((state) => state.pivot.setVals);
-  const moveField = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['moveField']
-  >((state) => state.pivot.moveField);
-  const cycleRowOrder = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['cycleRowOrder']
-  >((state) => state.pivot.cycleRowOrder);
-  const cycleColOrder = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['cycleColOrder']
-  >((state) => state.pivot.cycleColOrder);
-  const setAttributeFilterValues = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['setAttributeFilterValues']
-  >((state) => state.pivot.setAttributeFilterValues);
-  const addAttributeFilterValues = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['addAttributeFilterValues']
-  >((state) => state.pivot.addAttributeFilterValues);
-  const removeAttributeFilterValues = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['removeAttributeFilterValues']
-  >((state) => state.pivot.removeAttributeFilterValues);
-  const clearAttributeFilter = useBaseRoomStore<
-    PivotRootState,
-    PivotRootState['pivot']['clearAttributeFilter']
-  >((state) => state.pivot.clearAttributeFilter);
+export type PivotEditorProps = {
+  title?: string;
+  sourceLabel?: string;
+  sourceValue?: string;
+  sourceOptions: PivotSourceOption[];
+  config: PivotConfig;
+  availableFields: PivotField[];
+  sourceRelation?: string;
+  status?: {
+    status: string;
+    stale?: boolean;
+    lastError?: string;
+  };
+  onSourceChange: (value: string) => void;
+  onRendererNameChange: (rendererName: PivotConfig['rendererName']) => void;
+  onAggregatorNameChange: (aggregatorName: string) => void;
+  onValsChange: (vals: string[]) => void;
+  onMoveField: (
+    field: string,
+    destination: PivotDropZone,
+    index?: number,
+  ) => void;
+  onCycleRowOrder: () => void;
+  onCycleColOrder: () => void;
+  onSetFilterValues: (field: string, values: string[]) => void;
+  onAddFilters: (field: string, values: string[]) => void;
+  onRemoveFilters: (field: string, values: string[]) => void;
+  onClearFilter: (field: string) => void;
+  onRun?: () => void;
+  results: React.ReactNode;
+};
 
-  const selectedTable = useMemo(
-    () =>
-      tables.find((table) => table.tableName === config.tableName) ?? tables[0],
-    [config.tableName, tables],
-  );
-
-  useEffect(() => {
-    if (
-      selectedTable?.tableName &&
-      selectedTable.tableName !== config.tableName
-    ) {
-      setTableName(selectedTable.tableName);
-    }
-  }, [config.tableName, selectedTable?.tableName, setTableName]);
-
-  const visibleFields = useMemo<PivotField[]>(() => {
-    return (selectedTable?.columns ?? [])
-      .filter((column) => !config.hiddenAttributes.includes(column.name))
-      .map((column) => ({name: column.name, type: column.type}));
-  }, [config.hiddenAttributes, selectedTable?.columns]);
-
-  useEffect(() => {
-    if (!selectedTable) {
-      return;
-    }
-    const nextValues = getDefaultValuesForAggregator({
-      aggregatorName: config.aggregatorName,
-      fields: visibleFields.filter(
-        (field) => !config.hiddenFromAggregators.includes(field.name),
-      ),
-      currentValues: config.vals,
-    });
-    if (JSON.stringify(nextValues) !== JSON.stringify(config.vals)) {
-      setVals(nextValues);
-    }
-  }, [
-    config.aggregatorName,
-    config.hiddenFromAggregators,
-    config.vals,
-    selectedTable,
-    setVals,
-    visibleFields,
-  ]);
-
+export const PivotEditor: React.FC<PivotEditorProps> = ({
+  title = 'Pivot output',
+  sourceLabel = 'Source',
+  sourceValue,
+  sourceOptions,
+  config,
+  availableFields,
+  sourceRelation,
+  status,
+  onSourceChange,
+  onRendererNameChange,
+  onAggregatorNameChange,
+  onValsChange,
+  onMoveField,
+  onCycleRowOrder,
+  onCycleColOrder,
+  onSetFilterValues,
+  onAddFilters,
+  onRemoveFilters,
+  onClearFilter,
+  onRun,
+  results,
+}) => {
   const rowFields = useMemo(
     () =>
       config.rows
-        .map((name) => visibleFields.find((field) => field.name === name))
+        .map((name) => availableFields.find((field) => field.name === name))
         .filter((field): field is PivotField => Boolean(field)),
-    [config.rows, visibleFields],
+    [availableFields, config.rows],
   );
   const colFields = useMemo(
     () =>
       config.cols
-        .map((name) => visibleFields.find((field) => field.name === name))
+        .map((name) => availableFields.find((field) => field.name === name))
         .filter((field): field is PivotField => Boolean(field)),
-    [config.cols, visibleFields],
+    [availableFields, config.cols],
   );
   const unusedFields = useMemo(() => {
     const used = new Set([...config.rows, ...config.cols]);
-    const candidates = visibleFields.filter(
+    const candidates = availableFields.filter(
       (field) =>
         !used.has(field.name) &&
         !config.hiddenFromDragDrop.includes(field.name),
@@ -537,11 +497,11 @@ export const PivotView: React.FC = () => {
       .map((name) => candidates.find((field) => field.name === name))
       .filter((field): field is PivotField => Boolean(field));
   }, [
+    availableFields,
     config.cols,
     config.hiddenFromDragDrop,
     config.rows,
     config.unusedOrder,
-    visibleFields,
   ]);
 
   const sensors = useSensors(
@@ -568,11 +528,10 @@ export const PivotView: React.FC = () => {
       parseContainerId(
         String(event.over?.data.current?.sortable?.containerId ?? ''),
       );
-    const destination =
-      containerId ??
-      (Object.entries(zoneItems).find(([, items]) =>
-        items.includes(overId),
-      )?.[0] as PivotDropZone | undefined);
+    const fallbackDestination = Object.entries(zoneItems).find(([, items]) =>
+      items.includes(overId),
+    )?.[0] as PivotDropZone | undefined;
+    const destination = containerId ?? fallbackDestination;
 
     if (!destination) {
       return;
@@ -581,38 +540,29 @@ export const PivotView: React.FC = () => {
     const index = containerId
       ? zoneItems[destination].length
       : zoneItems[destination].indexOf(overId);
-    moveField(activeId, destination, index);
+    onMoveField(activeId, destination, index);
   };
 
   const aggregator = getPivotAggregator(config.aggregatorName);
   const rowSortIcon = getSortIcon(config.rowOrder);
   const colSortIcon = getSortIcon(config.colOrder);
 
-  if (!selectedTable) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-sm">
-        Add or load a table to start pivoting data.
-      </div>
-    );
-  }
-
   return (
     <div className="bg-muted/10 flex h-full flex-col gap-4 overflow-auto p-4">
       <Card>
         <CardContent className="grid gap-4 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
           <div className="space-y-2">
-            <Label>Table</Label>
-            <Select
-              value={selectedTable.tableName}
-              onValueChange={setTableName}
-            >
+            <Label>{sourceLabel}</Label>
+            <Select value={sourceValue} onValueChange={onSourceChange}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue
+                  placeholder={`Select ${sourceLabel.toLowerCase()}`}
+                />
               </SelectTrigger>
               <SelectContent>
-                {tables.map((table) => (
-                  <SelectItem key={table.tableName} value={table.tableName}>
-                    {table.tableName}
+                {sourceOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -620,7 +570,10 @@ export const PivotView: React.FC = () => {
           </div>
           <div className="space-y-2">
             <Label>Renderer</Label>
-            <Select value={config.rendererName} onValueChange={setRendererName}>
+            <Select
+              value={config.rendererName}
+              onValueChange={onRendererNameChange}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -637,7 +590,7 @@ export const PivotView: React.FC = () => {
             <Label>Aggregator</Label>
             <Select
               value={config.aggregatorName}
-              onValueChange={setAggregatorName}
+              onValueChange={onAggregatorNameChange}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -661,14 +614,14 @@ export const PivotView: React.FC = () => {
                   onValueChange={(value) => {
                     const nextValues = [...config.vals];
                     nextValues[index] = value;
-                    setVals(nextValues.slice(0, aggregator.numInputs));
+                    onValsChange(nextValues.slice(0, aggregator.numInputs));
                   }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={`Value ${index + 1}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {visibleFields
+                    {availableFields
                       .filter(
                         (field) =>
                           !config.hiddenFromAggregators.includes(field.name) &&
@@ -709,7 +662,7 @@ export const PivotView: React.FC = () => {
                       Drag fields to define row groups.
                     </div>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={cycleRowOrder}>
+                  <Button size="icon" variant="ghost" onClick={onCycleRowOrder}>
                     {React.createElement(rowSortIcon, {className: 'h-4 w-4'})}
                   </Button>
                 </CardHeader>
@@ -720,19 +673,13 @@ export const PivotView: React.FC = () => {
                     description=""
                     framed={false}
                     items={rowFields}
-                    table={selectedTable}
+                    sourceRelation={sourceRelation}
                     menuLimit={config.menuLimit}
                     filterValues={config.valueFilter}
-                    setFilterValues={(field, values) =>
-                      setAttributeFilterValues(field, values)
-                    }
-                    addFilters={(field, values) =>
-                      addAttributeFilterValues(field, values)
-                    }
-                    removeFilters={(field, values) =>
-                      removeAttributeFilterValues(field, values)
-                    }
-                    clearFilter={(field) => clearAttributeFilter(field)}
+                    setFilterValues={onSetFilterValues}
+                    addFilters={onAddFilters}
+                    removeFilters={onRemoveFilters}
+                    clearFilter={onClearFilter}
                   />
                 </CardContent>
               </Card>
@@ -745,7 +692,7 @@ export const PivotView: React.FC = () => {
                       Drag fields to define column groups.
                     </div>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={cycleColOrder}>
+                  <Button size="icon" variant="ghost" onClick={onCycleColOrder}>
                     {React.createElement(colSortIcon, {className: 'h-4 w-4'})}
                   </Button>
                 </CardHeader>
@@ -756,19 +703,13 @@ export const PivotView: React.FC = () => {
                     description=""
                     framed={false}
                     items={colFields}
-                    table={selectedTable}
+                    sourceRelation={sourceRelation}
                     menuLimit={config.menuLimit}
                     filterValues={config.valueFilter}
-                    setFilterValues={(field, values) =>
-                      setAttributeFilterValues(field, values)
-                    }
-                    addFilters={(field, values) =>
-                      addAttributeFilterValues(field, values)
-                    }
-                    removeFilters={(field, values) =>
-                      removeAttributeFilterValues(field, values)
-                    }
-                    clearFilter={(field) => clearAttributeFilter(field)}
+                    setFilterValues={onSetFilterValues}
+                    addFilters={onAddFilters}
+                    removeFilters={onRemoveFilters}
+                    clearFilter={onClearFilter}
                   />
                 </CardContent>
               </Card>
@@ -779,47 +720,61 @@ export const PivotView: React.FC = () => {
               title="Available fields"
               description="Drag fields into rows or columns."
               items={unusedFields}
-              table={selectedTable}
+              sourceRelation={sourceRelation}
               menuLimit={config.menuLimit}
               filterValues={config.valueFilter}
-              setFilterValues={(field, values) =>
-                setAttributeFilterValues(field, values)
-              }
-              addFilters={(field, values) =>
-                addAttributeFilterValues(field, values)
-              }
-              removeFilters={(field, values) =>
-                removeAttributeFilterValues(field, values)
-              }
-              clearFilter={(field) => clearAttributeFilter(field)}
+              setFilterValues={onSetFilterValues}
+              addFilters={onAddFilters}
+              removeFilters={onRemoveFilters}
+              clearFilter={onClearFilter}
             />
           </div>
 
           <Card className="min-h-0">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
               <div>
-                <CardTitle className="text-sm">Pivot output</CardTitle>
+                <CardTitle className="text-sm">{title}</CardTitle>
                 <div className="text-muted-foreground text-xs">
                   DuckDB computes the aggregation; charts render with Vega-Lite.
                 </div>
               </div>
-              <div className="text-muted-foreground flex items-center gap-3 text-xs">
-                <span className="inline-flex items-center gap-1">
-                  <Rows3Icon className="h-3.5 w-3.5" /> {config.rows.length}{' '}
-                  rows
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Columns2Icon className="h-3.5 w-3.5" /> {config.cols.length}{' '}
-                  cols
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <TablePropertiesIcon className="h-3.5 w-3.5" />{' '}
-                  {aggregator.name}
-                </span>
+              <div className="flex items-center gap-3">
+                {status ? (
+                  <Badge
+                    variant={
+                      status.status === 'error' ? 'destructive' : 'secondary'
+                    }
+                  >
+                    {status.stale ? 'stale' : status.status}
+                  </Badge>
+                ) : null}
+                {onRun ? (
+                  <Button size="sm" variant="secondary" onClick={onRun}>
+                    <PlayIcon className="mr-1 h-4 w-4" />
+                    Run
+                  </Button>
+                ) : null}
+                <div className="text-muted-foreground flex items-center gap-3 text-xs">
+                  <span className="inline-flex items-center gap-1">
+                    <Rows3Icon className="h-3.5 w-3.5" /> {config.rows.length}{' '}
+                    rows
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Columns2Icon className="h-3.5 w-3.5" />{' '}
+                    {config.cols.length} cols
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <TablePropertiesIcon className="h-3.5 w-3.5" />
+                    {aggregator.name}
+                  </span>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="min-h-0">
-              <PivotResults config={config} table={selectedTable} />
+            <CardContent className="min-h-0 space-y-3">
+              {status?.lastError ? (
+                <ErrorPane error={new Error(status.lastError)} />
+              ) : null}
+              {results}
             </CardContent>
           </Card>
         </div>

@@ -1,5 +1,13 @@
 import {z} from 'zod';
-import {InputCellData, InputTypes} from '@sqlrooms/cells';
+import {
+  InputCellData,
+  InputTypes,
+  InputCellSchema,
+  PivotCellSchema,
+  SqlCellSchema,
+  TextCellSchema,
+  VegaCellSchema,
+} from '@sqlrooms/cells';
 
 export {InputTypes};
 
@@ -10,9 +18,32 @@ export const InputCell = z.object({
 });
 export type InputCell = z.infer<typeof InputCell>;
 
-export type NotebookCellType = InputCell['type'];
+export const SqlCell = SqlCellSchema;
+export type SqlCell = z.infer<typeof SqlCell>;
 
-export const NotebookCell = InputCell;
+export const TextCell = TextCellSchema;
+export type TextCell = z.infer<typeof TextCell>;
+
+export const VegaCell = VegaCellSchema;
+export type VegaCell = z.infer<typeof VegaCell>;
+
+export const PivotCell = PivotCellSchema;
+export type PivotCell = z.infer<typeof PivotCell>;
+
+export type NotebookCellType =
+  | InputCell['type']
+  | SqlCell['type']
+  | TextCell['type']
+  | VegaCell['type']
+  | PivotCell['type'];
+
+export const NotebookCell = z.discriminatedUnion('type', [
+  InputCellSchema,
+  SqlCellSchema,
+  TextCellSchema,
+  VegaCellSchema,
+  PivotCellSchema,
+]);
 export type NotebookCell = z.infer<typeof NotebookCell>;
 
 /** Notebook View Meta */

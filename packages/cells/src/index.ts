@@ -10,6 +10,7 @@ export {createCellsSlice} from './cellsSlice';
 export type {CellsRootState} from './types';
 export {initializeInput} from './components/Input/helpers';
 export {InputCellContent} from './components/InputCellContent';
+export {PivotCellContent} from './components/PivotCellContent';
 export {SheetsTabBar} from './components/SheetsTabBar';
 export {SqlCellContentComponent as SqlCellContent};
 export {SqlCellRunButtonComponent as SqlCellRunButton};
