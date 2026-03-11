@@ -116,6 +116,59 @@ function RagToolResult({output}: ToolRendererProps<RagToolOutput>) {
 export const ragToolRenderer = RagToolResult;
 
 /**
+ * Execute a RAG search against a given rag slice state.
+ * Can be called directly (e.g. from UI components) without going through the AI tool layer.
+ */
+export async function executeRagSearch(
+  params: RagToolParameters,
+  state: RagSliceState,
+): Promise<RagToolOutput> {
+  const {query, database, topK = 5} = params;
+
+  try {
+    await state.rag.initialize();
+
+    const clampedTopK = Math.min(Math.max(1, topK), 20);
+    const targetDatabase = database || state.rag.listDatabases()[0];
+
+    if (!targetDatabase) {
+      return {success: false, error: 'No RAG databases configured'};
+    }
+
+    const results = await state.rag.queryByText(query, {
+      topK: clampedTopK,
+      database: targetDatabase,
+    });
+
+    const formattedContext = results
+      .map(
+        (result, i) =>
+          `[Result ${i + 1}] (Score: ${result.score.toFixed(3)})\n${result.text}`,
+      )
+      .join('\n\n---\n\n');
+
+    return {
+      success: true,
+      query,
+      database: targetDatabase,
+      results: results.map((r) => ({
+        text: r.text,
+        score: r.score,
+        metadata: r.metadata,
+      })),
+      context: formattedContext,
+      details: `Found ${results.length} relevant documents in ${targetDatabase}`,
+    };
+  } catch (error) {
+    console.error('RAG search error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
  * Create a RAG (Retrieval Augmented Generation) tool for AI.
  *
  * This tool allows the AI to search through embedded documentation
@@ -162,70 +215,11 @@ The search uses vector embeddings to find semantically similar content, not just
     }),
 
     execute: async (params: RagToolParameters): Promise<RagToolOutput> => {
-      const {query, database, topK = 5} = params;
-      // Get the store instance
       const store = (globalThis as any).__ROOM_STORE__;
       if (!store) {
-        return {
-          success: false,
-          error: 'Store not available',
-        };
+        return {success: false, error: 'Store not available'};
       }
-
-      const state = store.getState() as RagSliceState;
-
-      try {
-        // Initialize RAG if not already initialized
-        await state.rag.initialize();
-
-        // Clamp topK to reasonable limits
-        const clampedTopK = Math.min(Math.max(1, topK), 20);
-
-        // Determine which database to search
-        const targetDatabase = database || state.rag.listDatabases()[0];
-
-        if (!targetDatabase) {
-          return {
-            success: false,
-            error: 'No RAG databases configured',
-          };
-        }
-
-        // Perform the search
-        const results = await state.rag.queryByText(query, {
-          topK: clampedTopK,
-          database: targetDatabase,
-        });
-
-        // Format results for LLM
-        const formattedContext = results
-          .map(
-            (result, i) =>
-              `[Result ${i + 1}] (Score: ${result.score.toFixed(3)})\n${result.text}`,
-          )
-          .join('\n\n---\n\n');
-
-        return {
-          success: true,
-          query,
-          database: targetDatabase,
-          results: results.map((r) => ({
-            text: r.text,
-            score: r.score,
-            metadata: r.metadata,
-          })),
-          // Provide formatted context for the LLM
-          context: formattedContext,
-          details: `Found ${results.length} relevant documents in ${targetDatabase}`,
-        };
-      } catch (error) {
-        console.error('RAG search error:', error);
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Unknown error occurred',
-        };
-      }
+      return executeRagSearch(params, store.getState() as RagSliceState);
     },
   });
 }

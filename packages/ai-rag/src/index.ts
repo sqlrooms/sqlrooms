@@ -14,6 +14,7 @@ export {
 } from './RagSlice';
 export {
   createRagTool,
+  executeRagSearch,
   ragToolRenderer,
   RagToolParameters,
   type RagToolLlmResult,
