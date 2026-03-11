@@ -1,7 +1,7 @@
 import {cn} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {DuckdbCodeMirrorEditor} from './DuckdbCodeMirrorEditor';
+import {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
 
 const CODEMIRROR_OPTIONS = {
   lineWrapping: true,
@@ -42,7 +42,7 @@ export const QueryEditorPanelEditor: React.FC<{
   );
 
   return (
-    <DuckdbCodeMirrorEditor
+    <SqlCodeMirrorEditor
       key={queryId}
       connector={connector}
       value={queryText ?? ''}

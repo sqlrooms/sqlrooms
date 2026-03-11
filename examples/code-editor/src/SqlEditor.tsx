@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {type DataTable} from '@sqlrooms/duckdb';
-import {DuckdbCodeMirrorEditor, SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {SqlCodeMirrorEditor, SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {type EditorType} from './EditorTypeSwitch';
 
 // Example SQL query
@@ -85,7 +85,7 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
   }
 
   return (
-    <DuckdbCodeMirrorEditor
+    <SqlCodeMirrorEditor
       tableSchemas={tableSchemas}
       value={sqlValue}
       onChange={(value: string) => setSqlValue(value)}

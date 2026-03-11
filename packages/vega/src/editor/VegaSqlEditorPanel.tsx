@@ -1,4 +1,4 @@
-import {DuckdbCodeMirrorEditor, SqlQueryPreview} from '@sqlrooms/sql-editor';
+import {SqlCodeMirrorEditor, SqlQueryPreview} from '@sqlrooms/sql-editor';
 import {Button, cn} from '@sqlrooms/ui';
 import {PlayIcon} from 'lucide-react';
 import React, {useCallback, useState} from 'react';
@@ -93,7 +93,7 @@ export const VegaSqlEditorPanel: React.FC<VegaSqlEditorPanelProps> = ({
 
       {/* Editor */}
       <div className="relative min-h-[100px] flex-1">
-        <DuckdbCodeMirrorEditor
+        <SqlCodeMirrorEditor
           className="absolute inset-0 h-full w-full"
           value={state.editedSql}
           onChange={(value) => {

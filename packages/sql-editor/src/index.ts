@@ -14,20 +14,20 @@ export {createSqlEditorSlice} from './SqlEditorSlice';
 export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
 /**
- * @deprecated Use DuckdbCodeMirrorEditor instead.
+ * @deprecated Use SqlCodeMirrorEditor instead.
  * SqlMonacoEditor will be removed in the next major version.
  */
 export {SqlMonacoEditor} from './SqlMonacoEditor';
 /**
- * @deprecated Use DuckdbCodeMirrorEditor instead.
+ * @deprecated Use SqlCodeMirrorEditor instead.
  * SqlMonacoEditor will be removed in the next major version.
  */
 export type {
   SqlMonacoEditorProps,
   SqlMonacoRunQueryOptions,
 } from './SqlMonacoEditor';
-export {DuckdbCodeMirrorEditor} from './components/DuckdbCodeMirrorEditor';
-export type {DuckdbCodeMirrorEditorProps} from './components/DuckdbCodeMirrorEditor';
+export {SqlCodeMirrorEditor} from './components/SqlCodeMirrorEditor';
+export type {SqlCodeMirrorEditorProps} from './components/SqlCodeMirrorEditor';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';

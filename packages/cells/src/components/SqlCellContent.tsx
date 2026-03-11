@@ -5,7 +5,7 @@ import {
 } from '@sqlrooms/data-table';
 import {getCoreDuckDbConnectionId, type DbConnection} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
-import {DuckdbCodeMirrorEditor} from '@sqlrooms/sql-editor';
+import {SqlCodeMirrorEditor} from '@sqlrooms/sql-editor';
 import {
   Button,
   DropdownMenu,
@@ -281,7 +281,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     <div className="flex flex-col">
       <div className="h-full w-full py-1">
         <div className="relative h-full min-h-[200px] w-full">
-          <DuckdbCodeMirrorEditor
+          <SqlCodeMirrorEditor
             className="absolute inset-0 h-full w-full"
             value={cell.data.sql}
             onChange={handleSqlChange}

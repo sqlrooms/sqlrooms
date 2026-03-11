@@ -13,7 +13,7 @@ A lightweight alternative to `@sqlrooms/monaco-editor`. Perfect for data-focused
 - 🔒 **Read-only Mode** - Support for non-editable views
 - 🎯 **Similar API** - Familiar interface for Monaco users with component parity
 
-> **Note**: For DuckDB SQL editing with CodeMirror, see the `DuckdbCodeMirrorEditor` component in the [`@sqlrooms/sql-editor`](../sql-editor) package.
+> **Note**: For DuckDB SQL editing with CodeMirror, see the `SqlCodeMirrorEditor` component in the [`@sqlrooms/sql-editor`](../sql-editor) package.
 
 ## Installation
 

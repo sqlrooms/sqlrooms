@@ -7,7 +7,7 @@ import {createDuckDbExtension} from '../codemirror/extensions/duck-db';
 import {createSqlKeymap} from '../codemirror/extensions/sql-keymap';
 import {createSqlTheme} from '../codemirror/themes/sql-theme';
 
-export interface DuckdbCodeMirrorEditorProps extends Omit<
+export interface SqlCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
   'extensions'
 > {
@@ -38,7 +38,7 @@ const EDITOR_OPTIONS: CodeMirrorEditorProps['options'] = {
  * Lightweight alternative to SqlMonacoEditor with syntax highlighting,
  * linting, schema-aware completions, and hover tooltips. Cmd+Enter to run query.
  */
-export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
+export const SqlCodeMirrorEditor: React.FC<SqlCodeMirrorEditorProps> = ({
   connector,
   customKeywords = [],
   customFunctions = [],
