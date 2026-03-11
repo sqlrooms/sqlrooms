@@ -53,6 +53,8 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const getCellResult = useCellsStore((s) => s.cells.getCellResult);
   const fetchCellResultPage = useCellsStore((s) => s.cells.fetchCellResultPage);
   const dbConnections = useCellsStore((s) => s.db.config.connections);
+  const connector = useCellsStore((s) => s.db.connector);
+  const tableSchemas = useCellsStore((s) => s.db.tables);
 
   // Re-read the cache whenever resultVersion or pageVersion changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -283,6 +285,8 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
         <div className="relative h-full min-h-[200px] w-full">
           <SqlCodeMirrorEditor
             className="absolute inset-0 h-full w-full"
+            connector={connector}
+            tableSchemas={tableSchemas}
             value={cell.data.sql}
             onChange={handleSqlChange}
             onRunQuery={handleRunQuery}
