@@ -1,7 +1,6 @@
 import React, {useState, useCallback} from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {Button, cn} from '@sqlrooms/ui';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, TextCell} from '../types';
 import {produce} from 'immer';
@@ -32,26 +31,15 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
     setIsEditing(false);
   }, [id, draftText, updateCell]);
 
-  const header = (
-    <div className="flex items-center gap-2">
-      <Button
-        size="xs"
-        variant="secondary"
-        className="h-6"
-        onClick={() => (isEditing ? saveText() : setIsEditing(true))}
-      >
-        {isEditing ? 'Save' : 'Edit text'}
-      </Button>
-      <span className="text-[10px] font-bold uppercase text-gray-400">
-        Text
-      </span>
-    </div>
-  );
+  const cancelEdit = useCallback(() => {
+    setDraftText(cell.data.text);
+    setIsEditing(false);
+  }, [cell.data.text]);
 
   const content = (
     <div
       className="flex min-h-[100px] flex-col divide-y dark:divide-gray-800"
-      onDoubleClick={() => setIsEditing((prev) => !prev)}
+      onDoubleClick={() => !isEditing && setIsEditing(true)}
     >
       {isEditing && (
         <textarea
@@ -60,6 +48,13 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
           onChange={(e) => setDraftText(e.target.value)}
           placeholder="Write text... (Markdown supported)"
           autoFocus
+          onBlur={saveText}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              cancelEdit();
+            }
+          }}
         />
       )}
       {!isEditing && (
@@ -73,7 +68,7 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
   );
 
   return renderContainer({
-    header,
+    hideHeader: true,
     content,
   });
 };
