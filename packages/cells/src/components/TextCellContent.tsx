@@ -43,7 +43,7 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
     >
       {isEditing && (
         <textarea
-          className="bg-accent w-full p-3 text-xs outline-none"
+          className="bg-accent w-full p-3 text-sm outline-none"
           value={draftText}
           onChange={(e) => setDraftText(e.target.value)}
           placeholder="Write text... (Markdown supported)"
