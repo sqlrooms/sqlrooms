@@ -258,6 +258,46 @@ state.ai.setToolEditState(sessionId, toolCallId, data);
 
 Session state field `toolAdditionalData` is renamed to `toolEditState`. Persisted sessions are migrated automatically on load.
 
+### `@sqlrooms/ai`: Remote transport — drop `data-tool-additional-output` custom chunk (breaking)
+
+If you have a custom Next.js (or other server-side) route that manually wrote `data-tool-additional-output` data chunks to ferry `additionalData` to the client, you can remove that code entirely.
+
+#### Before
+
+```ts
+// app/api/chat/route.ts
+result.pipeThrough(
+  new TransformStream({
+    async onChunk({chunk}) {
+      if (chunk.type === 'tool-result') {
+        writer.write({
+          type: 'data-tool-additional-output',
+          transient: true,
+          data: {
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            output: getToolAdditionalData(chunk.toolCallId),
+          },
+        });
+      }
+    },
+  }),
+);
+```
+
+#### After
+
+Remove the `onChunk` handler. The AI SDK's `toUIMessageStream()` now embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
+
+```ts
+// app/api/chat/route.ts
+writer.merge(
+  result.toUIMessageStream({originalMessages: messages}),
+);
+```
+
+**Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.
+
 ### `@sqlrooms/ai-core`: Removed exports
 
 - `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
