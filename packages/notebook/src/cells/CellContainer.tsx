@@ -42,7 +42,12 @@ export const CellContainer: React.FC<{
     >
       {hideHeader ? (
         <div
-          className="absolute top-1 right-1 z-10 hidden items-center gap-1 group-focus-within:flex group-hover:flex"
+          className={cn(
+            'absolute top-1 right-1 z-10 items-center gap-1',
+            isCurrent
+              ? 'flex'
+              : 'hidden group-hover:flex group-focus-within:flex',
+          )}
           onMouseDown={(e) => e.preventDefault()}
         >
           <DeleteCellDialog cell={cell as any} />
