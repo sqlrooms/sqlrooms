@@ -72,14 +72,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
       ...createPivotSlice({
-        config: {
-          tableName: 'tips',
-          rows: ['day'],
-          cols: ['sex'],
-          aggregatorName: 'Sum over Sum',
-          vals: ['tip', 'total_bill'],
-          rendererName: 'Grouped Column Chart',
-          unusedOrder: ['time', 'smoker', 'size'],
+        initialPivot: {
+          source: {
+            kind: 'table',
+            tableName: 'tips',
+          },
+          config: {
+            rows: ['day'],
+            cols: ['sex'],
+            aggregatorName: 'Sum over Sum',
+            vals: ['tip', 'total_bill'],
+            rendererName: 'Grouped Column Chart',
+            unusedOrder: ['time', 'smoker', 'size'],
+          },
         },
       })(set, get, store),
     }),

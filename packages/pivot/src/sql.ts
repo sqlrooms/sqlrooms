@@ -1,18 +1,14 @@
-import {DataTable, escapeId, escapeVal} from '@sqlrooms/duckdb';
+import {escapeId, escapeVal} from '@sqlrooms/duckdb';
 import {getAggregatorLabel, getPivotAggregator} from './aggregators';
-import {PivotSliceConfig, PivotValueFilter} from './types';
+import {PivotConfig, PivotValueFilter} from './types';
 
 const NULL_LABEL = 'null';
-
-function getTableReference(table: DataTable) {
-  return table.table.toString();
-}
 
 function getDimensionValueSql(field: string) {
   return `COALESCE(CAST(${escapeId(field)} AS VARCHAR), ${escapeVal(NULL_LABEL)})`;
 }
 
-function buildFilterClause(config: PivotSliceConfig) {
+function buildFilterClause(config: PivotConfig) {
   const predicates = Object.entries(config.valueFilter as PivotValueFilter)
     .filter(([, values]) => Object.keys(values).length > 0)
     .map(([field, values]) => {
@@ -61,14 +57,14 @@ function buildConcatLabelSql(
   return `CONCAT_WS(' / ', ${metadata.map((item) => item.expression).join(', ')})`;
 }
 
-function buildBaseAggregateSql(config: PivotSliceConfig) {
+function buildBaseAggregateSql(config: PivotConfig) {
   const aggregator = getPivotAggregator(config.aggregatorName);
   return aggregator.buildSql(config.vals.slice(0, aggregator.numInputs));
 }
 
 function buildOrderByAliases(
   metadata: ReturnType<typeof buildDimensionMetadata>,
-  sortOrder: PivotSliceConfig['rowOrder'],
+  sortOrder: PivotConfig['rowOrder'],
 ) {
   if (sortOrder !== 'key_a_to_z') {
     return [] as string[];
@@ -76,9 +72,8 @@ function buildOrderByAliases(
   return metadata.map((item) => escapeId(item.alias));
 }
 
-export function buildCellsQuery(config: PivotSliceConfig, table: DataTable) {
+export function buildCellsQuery(config: PivotConfig, sourceRelation: string) {
   const aggregator = getPivotAggregator(config.aggregatorName);
-  const tableRef = getTableReference(table);
   const rowMetadata = buildDimensionMetadata(config.rows, 'row');
   const colMetadata = buildDimensionMetadata(config.cols, 'col');
   const allMetadata = [...rowMetadata, ...colMetadata];
@@ -99,7 +94,7 @@ export function buildCellsQuery(config: PivotSliceConfig, table: DataTable) {
   if (aggregator.kind === 'default') {
     return `WITH filtered AS (
   SELECT *
-  FROM ${tableRef}
+  FROM ${sourceRelation}
   ${filterClause}
 )
 SELECT
@@ -125,7 +120,7 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 
   return `WITH filtered AS (
   SELECT *
-  FROM ${tableRef}
+  FROM ${sourceRelation}
   ${filterClause}
 ),
 grouped AS (
@@ -147,12 +142,11 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 }
 
 function buildAxisTotalsQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  sourceRelation: string,
   axis: 'row' | 'col' | 'grand',
 ) {
   const aggregator = getPivotAggregator(config.aggregatorName);
-  const tableRef = getTableReference(table);
   const rowMetadata = buildDimensionMetadata(config.rows, 'row');
   const colMetadata = buildDimensionMetadata(config.cols, 'col');
   const metadata =
@@ -167,7 +161,7 @@ function buildAxisTotalsQuery(
   if (axis === 'grand') {
     if (aggregator.kind === 'default') {
       return `SELECT ${baseAggregateSql} AS ${escapeId('value')}
-FROM ${tableRef}
+FROM ${sourceRelation}
 ${filterClause}`;
     }
     return `SELECT 1.0 AS ${escapeId('value')}`;
@@ -186,7 +180,7 @@ ${filterClause}`;
   if (aggregator.kind === 'default') {
     return `SELECT
   ${[...axisSelects, `${baseAggregateSql} AS ${escapeId('value')}`].join(',\n  ')}
-FROM ${tableRef}
+FROM ${sourceRelation}
 ${filterClause}
 ${groupBy.length > 0 ? `GROUP BY ${groupBy.join(', ')}` : ''}
 ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
@@ -198,7 +192,7 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
   ) {
     return `SELECT
   ${[...axisSelects, `1.0 AS ${escapeId('value')}`].join(',\n  ')}
-FROM ${tableRef}
+FROM ${sourceRelation}
 ${filterClause}
 ${groupBy.length > 0 ? `GROUP BY ${groupBy.join(', ')}` : ''}
 ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
@@ -207,13 +201,13 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
   return `WITH totals AS (
   SELECT
     ${[...axisSelects, `${baseAggregateSql} AS ${escapeId('base_value')}`].join(',\n    ')}
-  FROM ${tableRef}
+  FROM ${sourceRelation}
   ${filterClause}
   ${groupBy.length > 0 ? `GROUP BY ${groupBy.join(', ')}` : ''}
 ),
 grand_total AS (
   SELECT ${baseAggregateSql} AS ${escapeId('grand_value')}
-  FROM ${tableRef}
+  FROM ${sourceRelation}
   ${filterClause}
 )
 SELECT
@@ -228,67 +222,59 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 }
 
 export function buildRowTotalsQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  sourceRelation: string,
 ) {
-  return buildAxisTotalsQuery(config, table, 'row');
+  return buildAxisTotalsQuery(config, sourceRelation, 'row');
 }
 
 export function buildColTotalsQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  sourceRelation: string,
 ) {
-  return buildAxisTotalsQuery(config, table, 'col');
+  return buildAxisTotalsQuery(config, sourceRelation, 'col');
 }
 
 export function buildGrandTotalQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  sourceRelation: string,
 ) {
-  return buildAxisTotalsQuery(config, table, 'grand');
+  return buildAxisTotalsQuery(config, sourceRelation, 'grand');
 }
 
 export function buildDistinctValuesQuery(
-  table: DataTable,
+  sourceRelation: string,
   attribute: string,
   menuLimit: number,
 ) {
-  const tableRef = getTableReference(table);
   const valueExpression = getDimensionValueSql(attribute);
   return `SELECT
   ${valueExpression} AS ${escapeId('value')},
   COUNT(*) AS ${escapeId('count')}
-FROM ${tableRef}
+FROM ${sourceRelation}
 GROUP BY 1
 ORDER BY 1
 LIMIT ${menuLimit + 1}`;
 }
 
 export function buildPivotExportQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  cellsRelation: string,
   colKeys: string[],
 ) {
   const rowMetadata = buildDimensionMetadata(config.rows, 'row');
-  const cellsQuery = buildCellsQuery(config, table);
   const orderBy = buildOrderByAliases(rowMetadata, config.rowOrder);
 
   if (colKeys.length === 0) {
-    return `WITH cells AS (
-${indentSql(cellsQuery)}
-)
-SELECT
+    return `SELECT
   ${[
     ...rowMetadata.map((item) => escapeId(item.alias)),
     `${escapeId('value')} AS ${escapeId(getAggregatorLabel(config.aggregatorName, config.vals))}`,
   ].join(',\n  ')}
-FROM cells`;
+FROM ${cellsRelation}`;
   }
 
-  return `WITH cells AS (
-${indentSql(cellsQuery)}
-)
-SELECT *
+  return `SELECT *
 FROM (
   SELECT
     ${[
@@ -296,7 +282,7 @@ FROM (
       escapeId('col_label'),
       escapeId('value'),
     ].join(',\n    ')}
-  FROM cells
+  FROM ${cellsRelation}
 )
 PIVOT(
   MAX(${escapeId('value')})
@@ -305,10 +291,7 @@ PIVOT(
 ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 }
 
-export function buildRendererTitle(
-  config: PivotSliceConfig,
-  transpose = false,
-) {
+export function buildRendererTitle(config: PivotConfig, transpose = false) {
   const fullAggName = getAggregatorLabel(config.aggregatorName, config.vals);
   const axisTitle = transpose ? config.rows.join(', ') : config.cols.join(', ');
   const groupByTitle = transpose
@@ -322,13 +305,6 @@ export function buildRendererTitle(
     title += ` by ${groupByTitle}`;
   }
   return title;
-}
-
-function indentSql(sql: string) {
-  return sql
-    .split('\n')
-    .map((line) => `  ${line}`)
-    .join('\n');
 }
 
 export function getRowAlias(index: number) {

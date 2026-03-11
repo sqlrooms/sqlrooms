@@ -33,7 +33,6 @@ describe('pivot SQL helpers', () => {
 
   it('builds grouped SQL with filters', () => {
     const config = createDefaultPivotConfig({
-      tableName: 'tips',
       rows: ['day'],
       cols: ['sex'],
       aggregatorName: 'Sum',
@@ -41,7 +40,7 @@ describe('pivot SQL helpers', () => {
       valueFilter: {sex: {Male: true}},
     });
 
-    const sql = buildCellsQuery(config, table);
+    const sql = buildCellsQuery(config, table.table.toString());
     expect(sql).toContain('SUM(TRY_CAST("tip" AS DOUBLE))');
     expect(sql).toContain(
       "WHERE COALESCE(CAST(\"sex\" AS VARCHAR), 'null') NOT IN ('Male')",
@@ -51,13 +50,15 @@ describe('pivot SQL helpers', () => {
 
   it('builds pivot export SQL with PIVOT statement', () => {
     const config = createDefaultPivotConfig({
-      tableName: 'tips',
       rows: ['day'],
       cols: ['sex'],
       aggregatorName: 'Count',
     });
 
-    const sql = buildPivotExportQuery(config, table, ['Female', 'Male']);
+    const sql = buildPivotExportQuery(config, '"main"."tips_pivot_cells"', [
+      'Female',
+      'Male',
+    ]);
     expect(sql).toContain('PIVOT(');
     expect(sql).toContain("FOR \"col_label\" IN ('Female', 'Male')");
   });

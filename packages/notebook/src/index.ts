@@ -18,6 +18,7 @@ export {
   NotebookSliceConfig,
   NotebookTab,
   InputCell,
+  PivotCell,
   NotebookCell,
   NotebookSheet,
   NotebookSheetMeta,

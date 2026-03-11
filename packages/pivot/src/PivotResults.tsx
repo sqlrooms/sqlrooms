@@ -1,92 +1,104 @@
-import {DataTable, useSql} from '@sqlrooms/duckdb';
+import {useSql} from '@sqlrooms/duckdb';
 import {ErrorPane, SpinnerPane} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import React, {useMemo} from 'react';
-import {getDefaultValuesForAggregator} from './aggregators';
 import {
   buildChartSpec,
   getUniqueStringColumnValues,
   type HeatmapMode,
 } from './helpers';
-import {
-  buildCellsQuery,
-  buildColTotalsQuery,
-  buildGrandTotalQuery,
-  buildPivotExportQuery,
-  buildRowTotalsQuery,
-} from './sql';
+import {buildPivotExportQuery} from './sql';
 import {TableRenderer} from './TableRenderer';
 import {TsvRenderer} from './TsvRenderer';
-import {PivotSliceConfig} from './types';
+import {PivotConfig, PivotRelations} from './types';
 
 type PivotResultsProps = {
-  config: PivotSliceConfig;
-  table: DataTable;
+  config: PivotConfig;
+  relations?: PivotRelations;
 };
 
 type PivotRow = Record<string, unknown>;
 
-export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
-  const resolvedConfig = useMemo(() => {
-    const nextVals = getDefaultValuesForAggregator({
-      aggregatorName: config.aggregatorName,
-      fields: table.columns
-        .filter((column) => !config.hiddenFromAggregators.includes(column.name))
-        .map((column) => ({name: column.name, type: column.type})),
-      currentValues: config.vals,
-    });
-
-    if (JSON.stringify(nextVals) === JSON.stringify(config.vals)) {
-      return config;
-    }
-
-    return {
-      ...config,
-      vals: nextVals,
-    };
-  }, [config, table.columns]);
-
+export const PivotResults: React.FC<PivotResultsProps> = ({
+  config,
+  relations,
+}) => {
   const cellsQuery = useMemo(
-    () => buildCellsQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.cellsRelation
+        ? `SELECT * FROM ${relations.cellsRelation}`
+        : undefined,
+    [relations?.cellsRelation],
   );
   const rowTotalsQuery = useMemo(
-    () => buildRowTotalsQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.rowTotalsRelation
+        ? `SELECT * FROM ${relations.rowTotalsRelation}`
+        : undefined,
+    [relations?.rowTotalsRelation],
   );
   const colTotalsQuery = useMemo(
-    () => buildColTotalsQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.colTotalsRelation
+        ? `SELECT * FROM ${relations.colTotalsRelation}`
+        : undefined,
+    [relations?.colTotalsRelation],
   );
   const grandTotalQuery = useMemo(
-    () => buildGrandTotalQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.grandTotalRelation
+        ? `SELECT * FROM ${relations.grandTotalRelation}`
+        : undefined,
+    [relations?.grandTotalRelation],
   );
 
-  const cellsResult = useSql<PivotRow>({query: cellsQuery});
-  const rowTotalsResult = useSql<PivotRow>({query: rowTotalsQuery});
-  const colTotalsResult = useSql<PivotRow>({query: colTotalsQuery});
-  const grandTotalResult = useSql<PivotRow>({query: grandTotalQuery});
+  const cellsResult = useSql<PivotRow>({
+    query: cellsQuery || '',
+    enabled: Boolean(cellsQuery),
+  });
+  const rowTotalsResult = useSql<PivotRow>({
+    query: rowTotalsQuery || '',
+    enabled: Boolean(rowTotalsQuery),
+  });
+  const colTotalsResult = useSql<PivotRow>({
+    query: colTotalsQuery || '',
+    enabled: Boolean(colTotalsQuery),
+  });
+  const grandTotalResult = useSql<PivotRow>({
+    query: grandTotalQuery || '',
+    enabled: Boolean(grandTotalQuery),
+  });
 
   const grandTotal = useMemo(() => {
     return grandTotalResult.data?.arrowTable?.getChild('value')?.get(0) ?? null;
   }, [grandTotalResult.data?.arrowTable]);
 
-  const chartRenderer = resolvedConfig.rendererName.includes('Chart');
+  const chartRenderer = config.rendererName.includes('Chart');
   const numericOutput = !['List Unique Values', 'First', 'Last'].includes(
-    resolvedConfig.aggregatorName,
+    config.aggregatorName,
   );
   const chartSpec = useMemo(
-    () => buildChartSpec(resolvedConfig, resolvedConfig.rendererName),
-    [resolvedConfig],
+    () => buildChartSpec(config, config.rendererName),
+    [config],
   );
   const chartExportQuery = useMemo(() => {
+    if (!relations?.cellsRelation) {
+      return '';
+    }
     const colLabels = getUniqueStringColumnValues(
       cellsResult.data?.arrowTable,
       'col_label',
     );
-    return buildPivotExportQuery(resolvedConfig, table, colLabels);
-  }, [cellsResult.data?.arrowTable, resolvedConfig, table]);
+    return buildPivotExportQuery(config, relations.cellsRelation, colLabels);
+  }, [cellsResult.data?.arrowTable, config, relations?.cellsRelation]);
+
+  if (!relations) {
+    return (
+      <div className="text-muted-foreground flex h-80 items-center justify-center text-sm">
+        Run pivot to preview results.
+      </div>
+    );
+  }
 
   if (
     cellsResult.error ||
@@ -116,7 +128,7 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
     return <SpinnerPane className="h-80" />;
   }
 
-  if (resolvedConfig.rendererName === 'Exportable TSV') {
+  if (config.rendererName === 'Exportable TSV') {
     return <TsvRenderer query={chartExportQuery} />;
   }
 
@@ -143,17 +155,17 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
   }
 
   const heatmapMode: HeatmapMode =
-    resolvedConfig.rendererName === 'Table Heatmap'
+    config.rendererName === 'Table Heatmap'
       ? 'full'
-      : resolvedConfig.rendererName === 'Table Row Heatmap'
+      : config.rendererName === 'Table Row Heatmap'
         ? 'row'
-        : resolvedConfig.rendererName === 'Table Col Heatmap'
+        : config.rendererName === 'Table Col Heatmap'
           ? 'col'
           : undefined;
 
   return (
     <TableRenderer
-      config={resolvedConfig}
+      config={config}
       cellRows={cellsResult.data?.arrowTable}
       rowTotals={rowTotalsResult.data?.arrowTable}
       colTotals={colTotalsResult.data?.arrowTable}

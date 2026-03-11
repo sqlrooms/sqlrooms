@@ -1,6 +1,7 @@
 import {createId} from '@paralleldrive/cuid2';
 import {makePagedQuery} from '@sqlrooms/data-table';
 import {sanitizeQuery} from '@sqlrooms/duckdb';
+import {dropPivotRelations} from '@sqlrooms/pivot';
 import {createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -31,7 +32,7 @@ import type {
   Edge,
   SheetType,
 } from './types';
-import {isInputCell, isSqlCell} from './types';
+import {isInputCell, isPivotCell, isSqlCell} from './types';
 import {getSheetSchemaName, isDefined} from './utils';
 
 function createDefaultCellsConfig(
@@ -93,6 +94,16 @@ export function createCellsSlice(props: CellsSliceOptions) {
         // might be unavailable during teardown.
       }
     };
+    const dropPivotResultRelations = async (
+      relations?: Parameters<typeof dropPivotRelations>[0]['relations'],
+    ) => {
+      try {
+        const connector = await get().db.getConnector();
+        await dropPivotRelations({connector, relations});
+      } catch {
+        // Best-effort cleanup.
+      }
+    };
 
     return {
       cells: {
@@ -131,6 +142,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   type: 'sql',
                   status: 'idle',
                   referencedTables: [],
+                };
+              } else if (cell.type === 'pivot') {
+                draft.cells.status[cell.id] = {
+                  type: 'pivot',
+                  status: 'idle',
+                  stale: false,
                 };
               } else {
                 draft.cells.status[cell.id] = {type: 'other'};
@@ -230,6 +247,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
           if (previousStatus?.type === 'sql') {
             void dropSqlResultRelation(previousStatus.resultView);
+          } else if (previousStatus?.type === 'pivot') {
+            void dropPivotResultRelations(previousStatus.relations);
           }
         },
 
@@ -277,6 +296,10 @@ export function createCellsSlice(props: CellsSliceOptions) {
             isSqlCell(cell) &&
             isSqlCell(updatedCell) &&
             cell.data.sql !== updatedCell.data.sql;
+          const semanticPivotChanged =
+            isPivotCell(cell) &&
+            isPivotCell(updatedCell) &&
+            JSON.stringify(cell.data) !== JSON.stringify(updatedCell.data);
 
           // Apply cell data to the store immediately so that other
           // actions (e.g. runCell triggered via Cmd+Enter) always see
@@ -347,6 +370,10 @@ export function createCellsSlice(props: CellsSliceOptions) {
 
           // After update, trigger cascade only if explicitly requested
           // or if semantic execution inputs changed.
+          if (semanticPivotChanged) {
+            get().cells.invalidateCellStatus(id);
+          }
+
           const shouldCascade =
             opts?.cascade || resultNameChanged || semanticInputChanged;
           if (shouldCascade) {
@@ -396,9 +423,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const ownedCellIds = [...sheet.cellIds];
           const relationNamesToDrop = ownedCellIds.flatMap((cellId) => {
             const status = get().cells.status[cellId];
-            return status?.type === 'sql' && status.resultView
-              ? [status.resultView]
-              : [];
+            if (status?.type === 'sql' && status.resultView) {
+              return [status.resultView];
+            }
+            if (status?.type === 'pivot' && status.relations) {
+              return [
+                status.relations.cellsRelation,
+                status.relations.rowTotalsRelation,
+                status.relations.colTotalsRelation,
+                status.relations.grandTotalRelation,
+              ];
+            }
+            return [];
           });
           set((state) =>
             produce(state, (draft) => {
@@ -639,6 +675,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   type: 'sql',
                   status: 'idle',
                   referencedTables: status.referencedTables || [],
+                };
+              } else if (status?.type === 'pivot') {
+                draft.cells.status[id] = {
+                  ...status,
+                  status: 'stale',
+                  stale: true,
                 };
               }
             }),
