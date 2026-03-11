@@ -11,7 +11,8 @@ import {
   DUCKDB_KEYWORDS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import {formatFunctionDocumentation} from './components/FunctionDocumentation';
+import {FunctionDocumentation} from './components/FunctionDocumentation';
+import {renderComponentToString} from '@sqlrooms/utils';
 
 export type SqlMonacoRunQueryOptions = {
   value: string;
@@ -184,7 +185,9 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
                   label: name,
                   insertText: name,
                   documentation: {
-                    value: formatFunctionDocumentation(overloads),
+                    value: renderComponentToString(FunctionDocumentation, {
+                      functions: overloads,
+                    }),
                     isTrusted: true,
                     supportHtml: true,
                   },
