@@ -69,17 +69,6 @@ const migrateAnalysisSession = z.preprocess((data) => {
     migrated = migrateFromV0_26_0(migrated);
   }
 
-  // Migration: rename toolAdditionalData -> toolEditState
-  if (
-    migrated &&
-    typeof migrated === 'object' &&
-    'toolAdditionalData' in migrated &&
-    !('toolEditState' in migrated)
-  ) {
-    const {toolAdditionalData, ...rest} = migrated as Record<string, unknown>;
-    migrated = {...rest, toolEditState: toolAdditionalData};
-  }
-
   return migrated;
 }, AnalysisSessionBaseSchema);
 
