@@ -281,10 +281,7 @@ export function getDefaultValuesForAggregator(args: {
   return selected.slice(0, aggregator.numInputs);
 }
 
-export function formatAggregatorValue(
-  aggregatorName: string,
-  value: number | string | null,
-) {
+export function formatAggregatorValue(aggregatorName: string, value: unknown) {
   if (value === null || value === undefined) {
     return '';
   }

@@ -1,4 +1,4 @@
-import {arrowTableToJson, DataTable, useSql} from '@sqlrooms/duckdb';
+import {DataTable, type UseSqlQueryResult, useSql} from '@sqlrooms/duckdb';
 import {ErrorPane, SpinnerPane, Textarea} from '@sqlrooms/ui';
 import {VegaLiteChart, VisualizationSpec} from '@sqlrooms/vega';
 import React, {useMemo} from 'react';
@@ -24,7 +24,9 @@ type PivotResultsProps = {
   table: DataTable;
 };
 
-type PivotJsonRow = Record<string, unknown>;
+type PivotRow = Record<string, unknown>;
+type PivotRows = UseSqlQueryResult<PivotRow> | undefined;
+type PivotCellValue = unknown;
 
 type HeatmapMode = 'full' | 'row' | 'col' | undefined;
 
@@ -59,7 +61,7 @@ function keyId(key: string[]) {
   return key.join('\u0000');
 }
 
-function extractKey(row: PivotJsonRow, aliases: string[]) {
+function extractKey(row: PivotRow, aliases: string[]) {
   return aliases.map((alias) => String(row[alias] ?? ''));
 }
 
@@ -301,39 +303,33 @@ function buildChartSpec(
 
 const TableRenderer: React.FC<{
   config: PivotSliceConfig;
-  cellRows: PivotJsonRow[];
-  rowTotals: PivotJsonRow[];
-  colTotals: PivotJsonRow[];
-  grandTotal: number | string | null;
+  cellRows: PivotRows;
+  rowTotals: PivotRows;
+  colTotals: PivotRows;
+  grandTotal: PivotCellValue;
   heatmapMode?: HeatmapMode;
 }> = ({config, cellRows, rowTotals, colTotals, grandTotal, heatmapMode}) => {
   const rowAliases = config.rows.map((_, index) => getRowAlias(index));
   const colAliases = config.cols.map((_, index) => getColAlias(index));
 
-  const rowTotalsMap = useMemo(
-    () =>
-      new Map(
-        rowTotals.map((row) => [
-          keyId(extractKey(row, rowAliases)),
-          row.value ?? null,
-        ]),
-      ),
-    [rowAliases, rowTotals],
-  );
-  const colTotalsMap = useMemo(
-    () =>
-      new Map(
-        colTotals.map((row) => [
-          keyId(extractKey(row, colAliases)),
-          row.value ?? null,
-        ]),
-      ),
-    [colAliases, colTotals],
-  );
+  const rowTotalsMap = useMemo(() => {
+    const map = new Map<string, PivotCellValue>();
+    for (const row of rowTotals ?? []) {
+      map.set(keyId(extractKey(row, rowAliases)), row.value ?? null);
+    }
+    return map;
+  }, [rowAliases, rowTotals]);
+  const colTotalsMap = useMemo(() => {
+    const map = new Map<string, PivotCellValue>();
+    for (const row of colTotals ?? []) {
+      map.set(keyId(extractKey(row, colAliases)), row.value ?? null);
+    }
+    return map;
+  }, [colAliases, colTotals]);
 
   const rowKeys = useMemo(() => {
-    const source = rowTotals.length > 0 ? rowTotals : cellRows;
-    const keys = source.map((row) => extractKey(row, rowAliases));
+    const source = rowTotals && rowTotals.length > 0 ? rowTotals : cellRows;
+    const keys = Array.from(source ?? [], (row) => extractKey(row, rowAliases));
     const unique = Array.from(
       new Map(keys.map((key) => [keyId(key), key])).values(),
     );
@@ -354,8 +350,8 @@ const TableRenderer: React.FC<{
   }, [cellRows, config.rowOrder, rowAliases, rowTotals, rowTotalsMap]);
 
   const colKeys = useMemo(() => {
-    const source = colTotals.length > 0 ? colTotals : cellRows;
-    const keys = source.map((row) => extractKey(row, colAliases));
+    const source = colTotals && colTotals.length > 0 ? colTotals : cellRows;
+    const keys = Array.from(source ?? [], (row) => extractKey(row, colAliases));
     const unique = Array.from(
       new Map(keys.map((key) => [keyId(key), key])).values(),
     );
@@ -375,16 +371,16 @@ const TableRenderer: React.FC<{
     return unique;
   }, [cellRows, colAliases, colTotals, colTotalsMap, config.colOrder]);
 
-  const cellMap = useMemo(
-    () =>
-      new Map(
-        cellRows.map((row) => [
-          `${keyId(extractKey(row, rowAliases))}::${keyId(extractKey(row, colAliases))}`,
-          row.value ?? null,
-        ]),
-      ),
-    [cellRows, colAliases, rowAliases],
-  );
+  const cellMap = useMemo(() => {
+    const map = new Map<string, PivotCellValue>();
+    for (const row of cellRows ?? []) {
+      map.set(
+        `${keyId(extractKey(row, rowAliases))}::${keyId(extractKey(row, colAliases))}`,
+        row.value ?? null,
+      );
+    }
+    return map;
+  }, [cellRows, colAliases, rowAliases]);
 
   const valueScale = useMemo(
     () => toNumericValues(Array.from(cellMap.values())),
@@ -595,24 +591,20 @@ const TableRenderer: React.FC<{
 const TsvRenderer: React.FC<{
   query: string;
 }> = ({query}) => {
-  const exportResult = useSql({query, enabled: Boolean(query)});
+  const exportResult = useSql<PivotRow>({query, enabled: Boolean(query)});
   const value = useMemo(() => {
     if (!exportResult.data?.arrowTable) {
       return '';
     }
-    const rows = arrowTableToJson(
-      exportResult.data.arrowTable,
-    ) as PivotJsonRow[];
     const headers = exportResult.data.arrowTable.schema.fields.map(
       (field) => field.name,
     );
-    return [
-      headers.join('\t'),
-      ...rows.map((row) =>
-        headers.map((header) => String(row[header] ?? '')).join('\t'),
-      ),
-    ].join('\n');
-  }, [exportResult.data?.arrowTable]);
+    const lines = [headers.join('\t')];
+    for (const row of exportResult.data) {
+      lines.push(headers.map((header) => String(row[header] ?? '')).join('\t'));
+    }
+    return lines.join('\n');
+  }, [exportResult.data]);
 
   if (exportResult.error) {
     return <ErrorPane error={exportResult.error} />;
@@ -663,39 +655,17 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
     [resolvedConfig, table],
   );
 
-  const cellsResult = useSql({query: cellsQuery});
-  const rowTotalsResult = useSql({query: rowTotalsQuery});
-  const colTotalsResult = useSql({query: colTotalsQuery});
-  const grandTotalResult = useSql({query: grandTotalQuery});
-
-  const cellRows = useMemo(
-    () =>
-      cellsResult.data?.arrowTable
-        ? (arrowTableToJson(cellsResult.data.arrowTable) as PivotJsonRow[])
-        : [],
-    [cellsResult.data?.arrowTable],
-  );
-  const rowTotals = useMemo(
-    () =>
-      rowTotalsResult.data?.arrowTable
-        ? (arrowTableToJson(rowTotalsResult.data.arrowTable) as PivotJsonRow[])
-        : [],
-    [rowTotalsResult.data?.arrowTable],
-  );
-  const colTotals = useMemo(
-    () =>
-      colTotalsResult.data?.arrowTable
-        ? (arrowTableToJson(colTotalsResult.data.arrowTable) as PivotJsonRow[])
-        : [],
-    [colTotalsResult.data?.arrowTable],
-  );
+  const cellsResult = useSql<PivotRow>({query: cellsQuery});
+  const rowTotalsResult = useSql<PivotRow>({query: rowTotalsQuery});
+  const colTotalsResult = useSql<PivotRow>({query: colTotalsQuery});
+  const grandTotalResult = useSql<PivotRow>({query: grandTotalQuery});
 
   const grandTotal = useMemo(() => {
-    const rows = grandTotalResult.data?.arrowTable
-      ? (arrowTableToJson(grandTotalResult.data.arrowTable) as PivotJsonRow[])
-      : [];
-    return (rows[0]?.value ?? null) as number | string | null;
-  }, [grandTotalResult.data?.arrowTable]);
+    if (!grandTotalResult.data || grandTotalResult.data.length === 0) {
+      return null;
+    }
+    return grandTotalResult.data.getRow(0).value ?? null;
+  }, [grandTotalResult.data]);
 
   const chartRenderer = resolvedConfig.rendererName.includes('Chart');
   const numericOutput = !['List Unique Values', 'First', 'Last'].includes(
@@ -707,10 +677,14 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
   );
   const chartExportQuery = useMemo(() => {
     const colLabels = Array.from(
-      new Set(cellRows.map((row) => String(row.col_label ?? ''))),
+      new Set(
+        Array.from(cellsResult.data ?? [], (row) =>
+          String(row.col_label ?? ''),
+        ),
+      ),
     );
     return buildPivotExportQuery(resolvedConfig, table, colLabels);
-  }, [cellRows, resolvedConfig, table]);
+  }, [cellsResult.data, resolvedConfig, table]);
 
   if (
     cellsResult.error ||
@@ -778,9 +752,9 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
   return (
     <TableRenderer
       config={resolvedConfig}
-      cellRows={cellRows}
-      rowTotals={rowTotals}
-      colTotals={colTotals}
+      cellRows={cellsResult.data}
+      rowTotals={rowTotalsResult.data}
+      colTotals={colTotalsResult.data}
       grandTotal={grandTotal}
       heatmapMode={heatmapMode}
     />
