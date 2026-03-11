@@ -38,12 +38,12 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
 
   const content = (
     <div
-      className="flex min-h-[100px] flex-col divide-y dark:divide-gray-800"
+      className="flex flex-col divide-y dark:divide-gray-800"
       onDoubleClick={() => !isEditing && setIsEditing(true)}
     >
       {isEditing && (
         <textarea
-          className="bg-accent min-h-[100px] w-full p-3 text-xs outline-none"
+          className="bg-accent w-full p-3 text-xs outline-none"
           value={draftText}
           onChange={(e) => setDraftText(e.target.value)}
           placeholder="Write text... (Markdown supported)"

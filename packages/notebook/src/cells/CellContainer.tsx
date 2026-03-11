@@ -6,14 +6,23 @@ import {DeleteCellDialog} from '../cellOperations/DeleteCellDialog';
 import {MoveCellButtons} from '../cellOperations/MoveCellButtons';
 import {findCellInNotebook} from '../NotebookUtils';
 
-export const CellContainer: React.FC<{
+export type CellContainerProps = {
   id: string;
   header?: React.ReactNode;
   footer?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
   hideHeader?: boolean;
-}> = ({id, header, footer, children, className, hideHeader}) => {
+};
+
+export const CellContainer: React.FC<CellContainerProps> = ({
+  id,
+  header,
+  footer,
+  children,
+  className,
+  hideHeader,
+}) => {
   const cell = useStoreWithNotebook(
     (s) => findCellInNotebook(s as any, id)?.cell,
   );
@@ -46,7 +55,7 @@ export const CellContainer: React.FC<{
             'absolute top-1 right-1 z-10 items-center gap-1',
             isCurrent
               ? 'flex'
-              : 'hidden group-hover:flex group-focus-within:flex',
+              : 'hidden group-focus-within:flex group-hover:flex',
           )}
           onMouseDown={(e) => e.preventDefault()}
         >
