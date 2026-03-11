@@ -2,11 +2,14 @@ import {Extension} from '@codemirror/state';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags as t} from '@lezer/highlight';
 import {createBaseTheme, type BaseThemeOptions} from '@sqlrooms/codemirror';
+import {createSqlTooltipTheme} from './sql-tooltip-theme';
 
 export type {BaseThemeOptions};
+export {createSqlTooltipTheme};
 
 export function createSqlTheme(options: BaseThemeOptions = {}): Extension {
   const baseTheme = createBaseTheme(options);
+  const tooltipTheme = createSqlTooltipTheme(options);
 
   const highlightStyle = HighlightStyle.define([
     // SQL keywords (SELECT, FROM, WHERE, JOIN, etc.)
@@ -53,5 +56,5 @@ export function createSqlTheme(options: BaseThemeOptions = {}): Extension {
     {tag: [t.invalid], color: 'var(--color-editor-invalid)'},
   ]);
 
-  return [baseTheme, syntaxHighlighting(highlightStyle)];
+  return [baseTheme, tooltipTheme, syntaxHighlighting(highlightStyle)];
 }

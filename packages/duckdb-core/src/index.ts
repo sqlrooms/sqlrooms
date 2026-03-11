@@ -62,4 +62,9 @@ export {
 
 export {type TableColumn, type DataTable} from './types';
 
-export {getFunctionSuggestions} from './duckdb-function-suggestions';
+export {getFunctionSuggestions} from './get-function-suggestions';
+export {getFunctionDocumentation} from './get-function-documentation';
+export {
+  type FunctionSuggestion,
+  type GroupedFunctionSuggestion,
+} from './duckdb-function-utils';

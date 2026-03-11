@@ -45,3 +45,5 @@ export {
   toDecimalNumber,
   fromDecimalString,
 } from './decimal';
+
+export {renderComponentToString} from './renderComponentToString';

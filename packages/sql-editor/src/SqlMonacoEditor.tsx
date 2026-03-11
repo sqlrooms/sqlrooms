@@ -11,6 +11,7 @@ import {
   DUCKDB_KEYWORDS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
+import {formatFunctionDocumentation} from './components/FunctionDocumentation';
 
 export type SqlMonacoRunQueryOptions = {
   value: string;
@@ -173,16 +174,17 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
               });
             });
             if (ctx.connector) {
-              const functionSuggestions = await getFunctionSuggestions(
+              const functionGroups = await getFunctionSuggestions(
                 ctx.connector,
                 word.word,
               );
-              for (const {name, documentation} of functionSuggestions) {
+
+              for (const {name, overloads} of functionGroups) {
                 suggestions.push({
                   label: name,
                   insertText: name,
                   documentation: {
-                    value: documentation,
+                    value: formatFunctionDocumentation(overloads),
                     isTrusted: true,
                     supportHtml: true,
                   },

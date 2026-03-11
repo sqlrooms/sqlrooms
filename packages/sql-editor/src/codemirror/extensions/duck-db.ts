@@ -4,6 +4,7 @@ import {createDuckDbSql} from './duckdb-sql';
 import {convertToSQLNamespace} from '../utils/schema-converter';
 import {createDuckDbCompletion} from './duckdb-completion';
 import {createDuckDbSqlExtension} from './duckdb-sql-extension';
+import {createDuckDbHover} from './duckdb-hover';
 
 type DuckDbExtensionOptions = {
   currentSchemas: DataTable[];
@@ -21,16 +22,16 @@ export function createDuckDbExtension({
   // Convert schema to SQLNamespace format
   const schema = convertToSQLNamespace(currentSchemas);
 
-  const languageSupport = createDuckDbSql(schema);
-
-  return [
-    languageSupport,
+  const extensions: Extension[] = [
+    createDuckDbSql(schema),
     createDuckDbCompletion({
-      languageSupport,
       connector,
       customKeywords,
       customFunctions,
     }),
-    createDuckDbSqlExtension(schema),
+    createDuckDbSqlExtension(schema, currentSchemas),
+    createDuckDbHover({connector}),
   ];
+
+  return extensions;
 }

@@ -22,6 +22,9 @@ export function createBaseTheme({
         color: 'var(--color-foreground)',
         height: '100%',
       },
+      '&.cm-focused': {
+        outline: 'none',
+      },
       '.cm-content': {
         caretColor: 'var(--color-primary)',
         fontFamily,
@@ -69,6 +72,13 @@ export function createBaseTheme({
         backgroundColor: 'var(--color-popover)',
         color: 'var(--color-popover-foreground)',
         border: '1px solid var(--color-border)',
+      },
+      '.cm-tooltip-hover': {
+        backgroundColor: 'var(--color-popover)',
+        color: 'var(--color-popover-foreground)',
+        border: '1px solid var(--color-border)',
+        padding: '4px 8px',
+        borderRadius: '4px',
       },
       '.cm-tooltip-autocomplete': {
         '& > ul > li[aria-selected]': {

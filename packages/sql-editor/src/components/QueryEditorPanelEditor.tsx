@@ -1,15 +1,12 @@
 import {cn} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlMonacoEditor, SqlMonacoRunQueryOptions} from '../SqlMonacoEditor';
+import {DuckdbCodeMirrorEditor} from './DuckdbCodeMirrorEditor';
 
-const MONACO_OPTIONS = {
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  minimap: {enabled: false},
-  wordWrap: 'on' as const,
-  quickSuggestions: true,
-  suggestOnTriggerCharacters: true,
+const CODEMIRROR_OPTIONS = {
+  lineWrapping: true,
+  autocompletion: true,
+  highlightActiveLine: true,
 };
 
 export const QueryEditorPanelEditor: React.FC<{
@@ -38,28 +35,20 @@ export const QueryEditorPanelEditor: React.FC<{
 
   // Handle query execution via keyboard shortcut
   const handleRunQuery = useCallback(
-    ({value, selectedValue, isSelectionEmpty}: SqlMonacoRunQueryOptions) => {
-      if (!isSelectionEmpty) {
-        runQuery(selectedValue);
-      } else {
-        runQuery(value ?? '');
-      }
+    (query: string) => {
+      runQuery(query);
     },
     [runQuery],
   );
 
   return (
-    <SqlMonacoEditor
-      path={`sqlrooms://query/${queryId}.sql`}
-      // Preserve per-tab cursor/scroll state when switching tabs (models).
-      saveViewState
-      // Keep the previous model alive when switching `path` so per-tab undo/redo isn't lost.
-      keepCurrentModel
+    <DuckdbCodeMirrorEditor
+      key={queryId}
       connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
       className={cn('h-full w-full grow', className)}
-      options={MONACO_OPTIONS}
+      options={CODEMIRROR_OPTIONS}
       onRunQuery={handleRunQuery}
       tableSchemas={tableSchemas}
     />

@@ -48,6 +48,7 @@
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "d3-dsv": "^3.0.1",
+    "es-toolkit": "^1.39.9",
     "file-saver": "^2.0.5",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",

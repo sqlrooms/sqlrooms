@@ -3262,6 +3262,9 @@ importers:
       d3-dsv:
         specifier: ^3.0.1
         version: 3.0.1
+      es-toolkit:
+        specifier: ^1.39.9
+        version: 1.44.0
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5

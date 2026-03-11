@@ -5,7 +5,7 @@ import {
 } from '@sqlrooms/data-table';
 import {getCoreDuckDbConnectionId, type DbConnection} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
-import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {DuckdbCodeMirrorEditor} from '@sqlrooms/sql-editor';
 import {
   Button,
   DropdownMenu,
@@ -22,7 +22,6 @@ import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import type {PaginationState, SortingState} from '@tanstack/react-table';
 import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
-import type * as Monaco from 'monaco-editor';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, CellsRootState, SqlCell} from '../types';
@@ -79,6 +78,23 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const handleRun = useCallback(() => {
     runCell(id);
   }, [id, runCell]);
+
+  const handleRunQuery = useCallback(
+    (query: string) => {
+      // Sync the actual query being executed to store before running
+      // to avoid race condition with onChange callback
+      storeApi.setState(
+        produce(storeApi.getState(), (draft: Draft<CellsRootState>) => {
+          const c = draft.cells?.config?.data?.[id];
+          if (c && c.type === 'sql') {
+            c.data.sql = query;
+          }
+        }),
+      );
+      handleRunRef.current();
+    },
+    [id, storeApi],
+  );
 
   const handleConnectorChange = useCallback(
     (connectorId: string) => {
@@ -261,52 +277,18 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     handleRunRef.current = handleRun;
   }, [handleRun]);
 
-  const handleSqlEditorMount = useCallback(
-    (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
-      // Use onKeyDown instead of addCommand to scope the shortcut
-      // to THIS specific editor instance. Monaco's addCommand registers
-      // globally, so the last editor mounted wins -- breaking multi-cell
-      // notebooks.
-      editor.onKeyDown((e) => {
-        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
-          e.preventDefault();
-          e.stopPropagation();
-          // Flush the current editor value directly to the store
-          // synchronously before running. Monaco's onChange may not have
-          // fired yet for the latest content, so we read the editor model
-          // directly and write it to the Zustand store in a single
-          // synchronous call, bypassing the async updateCell path.
-          const currentSql = editor.getValue();
-          storeApi.setState(
-            produce(storeApi.getState(), (draft: Draft<CellsRootState>) => {
-              const c = draft.cells?.config?.data?.[id];
-              if (c && c.type === 'sql') {
-                c.data.sql = currentSql;
-              }
-            }),
-          );
-          handleRunRef.current();
-        }
-      });
-    },
-    [id, storeApi],
-  );
-
   const content = (
     <div className="flex flex-col">
       <div className="h-full w-full py-1">
         <div className="relative h-full min-h-[200px] w-full">
-          <SqlMonacoEditor
+          <DuckdbCodeMirrorEditor
             className="absolute inset-0 h-full w-full"
             value={cell.data.sql}
             onChange={handleSqlChange}
-            onMount={handleSqlEditorMount}
+            onRunQuery={handleRunQuery}
             options={{
-              minimap: {enabled: false},
-              scrollBeyondLastLine: false,
-              scrollbar: {
-                alwaysConsumeMouseWheel: false,
-              },
+              lineNumbers: false,
+              lineWrapping: false,
             }}
           />
         </div>

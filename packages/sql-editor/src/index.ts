@@ -13,7 +13,15 @@ export {default as SqlEditorModal} from './SqlEditorModal';
 export {createSqlEditorSlice} from './SqlEditorSlice';
 export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
+/**
+ * @deprecated Use DuckdbCodeMirrorEditor instead.
+ * SqlMonacoEditor will be removed in the next major version.
+ */
 export {SqlMonacoEditor} from './SqlMonacoEditor';
+/**
+ * @deprecated Use DuckdbCodeMirrorEditor instead.
+ * SqlMonacoEditor will be removed in the next major version.
+ */
 export type {
   SqlMonacoEditorProps,
   SqlMonacoRunQueryOptions,

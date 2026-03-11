@@ -1,14 +1,16 @@
 import {
   type CompletionContext,
   type Completion,
+  autocompletion,
 } from '@codemirror/autocomplete';
 import type {Extension} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
 import {type DuckDbConnector, getFunctionSuggestions} from '@sqlrooms/duckdb';
-import {LanguageSupport} from '@codemirror/language';
+import {DUCKDB_SQL_KEYWORDS} from './duckdb-keywords';
+import {FunctionDocumentation} from '../../components/FunctionDocumentation';
+import {renderComponentToString} from '@sqlrooms/utils';
 
 interface DuckDbCompletionContext {
-  languageSupport: LanguageSupport;
   connector?: DuckDbConnector;
   customKeywords: string[];
   customFunctions: string[];
@@ -41,12 +43,11 @@ export function createDuckDbCompletion(
       return null;
     }
 
-    // Add custom keywords
-    ctx.customKeywords.forEach((keyword) => {
+    // Add keywords
+    [...DUCKDB_SQL_KEYWORDS, ...ctx.customKeywords].forEach((keyword) => {
       suggestions.push({
         label: keyword,
         type: 'keyword',
-        detail: 'Custom Keyword',
         boost: 5,
       });
     });
@@ -55,8 +56,7 @@ export function createDuckDbCompletion(
     ctx.customFunctions.forEach((func) => {
       suggestions.push({
         label: func,
-        type: 'function',
-        detail: 'Custom Function',
+        type: 'method',
         boost: 0,
       });
     });
@@ -64,19 +64,26 @@ export function createDuckDbCompletion(
     // Add dynamic function suggestions with documentation from DuckDB
     if (ctx.connector && word.text) {
       try {
-        const functionSuggestions = await getFunctionSuggestions(
+        const functionGroups = await getFunctionSuggestions(
           ctx.connector,
           word.text,
         );
 
         suggestions.push(
-          ...Array.from(functionSuggestions).map(({name, documentation}) => ({
-            label: name,
-            type: 'function',
-            detail: 'DuckDB Function',
-            info: documentation, // HTML formatted documentation
-            boost: 5, // Higher boost for DuckDB functions
-          })),
+          ...functionGroups.map(({name, overloads}): Completion => {
+            const dom = document.createElement('div');
+            dom.innerHTML = renderComponentToString(FunctionDocumentation, {
+              functions: overloads,
+            });
+
+            return {
+              label: name,
+              type: 'method',
+              detail: overloads[0]?.description ?? '',
+              info: () => dom,
+              boost: 5,
+            };
+          }),
         );
       } catch (error) {
         console.error('Error fetching DuckDB function suggestions:', error);
@@ -91,8 +98,8 @@ export function createDuckDbCompletion(
       : null;
   };
 
-  // Use SQL language data to add completions alongside base SQL keyword completions
-  return context.languageSupport.language.data.of({
-    autocomplete: completionSource,
+  // Override default SQL completions with our custom completion source
+  return autocompletion({
+    override: [completionSource],
   });
 }
