@@ -5,7 +5,7 @@ import React, {useMemo} from 'react';
 import {
   formatAggregatorValue,
   getAggregatorLabel,
-  getPivotAggregator,
+  getDefaultValuesForAggregator,
 } from './aggregators';
 import {
   buildCellsQuery,
@@ -627,21 +627,40 @@ const TsvRenderer: React.FC<{
 };
 
 export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
+  const resolvedConfig = useMemo(() => {
+    const nextVals = getDefaultValuesForAggregator({
+      aggregatorName: config.aggregatorName,
+      fields: table.columns
+        .filter((column) => !config.hiddenFromAggregators.includes(column.name))
+        .map((column) => ({name: column.name, type: column.type})),
+      currentValues: config.vals,
+    });
+
+    if (JSON.stringify(nextVals) === JSON.stringify(config.vals)) {
+      return config;
+    }
+
+    return {
+      ...config,
+      vals: nextVals,
+    };
+  }, [config, table.columns]);
+
   const cellsQuery = useMemo(
-    () => buildCellsQuery(config, table),
-    [config, table],
+    () => buildCellsQuery(resolvedConfig, table),
+    [resolvedConfig, table],
   );
   const rowTotalsQuery = useMemo(
-    () => buildRowTotalsQuery(config, table),
-    [config, table],
+    () => buildRowTotalsQuery(resolvedConfig, table),
+    [resolvedConfig, table],
   );
   const colTotalsQuery = useMemo(
-    () => buildColTotalsQuery(config, table),
-    [config, table],
+    () => buildColTotalsQuery(resolvedConfig, table),
+    [resolvedConfig, table],
   );
   const grandTotalQuery = useMemo(
-    () => buildGrandTotalQuery(config, table),
-    [config, table],
+    () => buildGrandTotalQuery(resolvedConfig, table),
+    [resolvedConfig, table],
   );
 
   const cellsResult = useSql({query: cellsQuery});
@@ -678,20 +697,20 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
     return (rows[0]?.value ?? null) as number | string | null;
   }, [grandTotalResult.data?.arrowTable]);
 
-  const chartRenderer = config.rendererName.includes('Chart');
+  const chartRenderer = resolvedConfig.rendererName.includes('Chart');
   const numericOutput = !['List Unique Values', 'First', 'Last'].includes(
-    config.aggregatorName,
+    resolvedConfig.aggregatorName,
   );
   const chartSpec = useMemo(
-    () => buildChartSpec(config, config.rendererName),
-    [config],
+    () => buildChartSpec(resolvedConfig, resolvedConfig.rendererName),
+    [resolvedConfig],
   );
   const chartExportQuery = useMemo(() => {
     const colLabels = Array.from(
       new Set(cellRows.map((row) => String(row.col_label ?? ''))),
     );
-    return buildPivotExportQuery(config, table, colLabels);
-  }, [cellRows, config, table]);
+    return buildPivotExportQuery(resolvedConfig, table, colLabels);
+  }, [cellRows, resolvedConfig, table]);
 
   if (
     cellsResult.error ||
@@ -721,7 +740,7 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
     return <SpinnerPane className="h-80" />;
   }
 
-  if (config.rendererName === 'Exportable TSV') {
+  if (resolvedConfig.rendererName === 'Exportable TSV') {
     return <TsvRenderer query={chartExportQuery} />;
   }
 
@@ -748,17 +767,17 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
   }
 
   const heatmapMode: HeatmapMode =
-    config.rendererName === 'Table Heatmap'
+    resolvedConfig.rendererName === 'Table Heatmap'
       ? 'full'
-      : config.rendererName === 'Table Row Heatmap'
+      : resolvedConfig.rendererName === 'Table Row Heatmap'
         ? 'row'
-        : config.rendererName === 'Table Col Heatmap'
+        : resolvedConfig.rendererName === 'Table Col Heatmap'
           ? 'col'
           : undefined;
 
   return (
     <TableRenderer
-      config={config}
+      config={resolvedConfig}
       cellRows={cellRows}
       rowTotals={rowTotals}
       colTotals={colTotals}
