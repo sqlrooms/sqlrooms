@@ -1,0 +1,43 @@
+{
+  "name": "kepler-query-example",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/kepler": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "lucide-react": "^0.555.0",
+    "monaco-editor": "^0.55.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "19.1.7",
+    "@types/react-dom": "19.1.6",
+    "@vitejs/plugin-react": "^4.3.4",
+    "esbuild-plugin-react-virtualized": "^1.0.4",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^7.1.9"
+  }
+}
