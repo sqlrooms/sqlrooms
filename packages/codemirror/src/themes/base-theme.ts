@@ -1,16 +1,17 @@
 import {EditorView} from '@codemirror/view';
 import {Extension} from '@codemirror/state';
 import {getMonospaceFont} from '@sqlrooms/utils';
+import {getTheme} from '@sqlrooms/ui';
 
 export interface BaseThemeOptions {
-  isDark?: boolean;
   hideGutter?: boolean;
 }
 
 export function createBaseTheme({
-  isDark,
   hideGutter,
 }: BaseThemeOptions = {}): Extension {
+  const theme = getTheme();
+
   // Get monospace font
   const fontFamily = getMonospaceFont();
 
@@ -141,6 +142,6 @@ export function createBaseTheme({
         borderLeft: '3px solid var(--color-editor-lint-warning)',
       },
     },
-    {dark: isDark},
+    {dark: theme === 'dark'},
   );
 }

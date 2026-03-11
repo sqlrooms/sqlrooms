@@ -3,7 +3,6 @@ import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {CodeMirrorEditor, CodeMirrorEditorProps} from '@sqlrooms/codemirror';
-import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
 import {createDuckDbExtension} from '../codemirror/extensions/duck-db';
 import {createSqlKeymap} from '../codemirror/extensions/sql-keymap';
 import {createSqlTheme} from '../codemirror/themes/sql-theme';
@@ -24,8 +23,6 @@ export interface DuckdbCodeMirrorEditorProps extends Omit<
   getLatestSchemas?: () => {tableSchemas: DataTable[]};
   /** Callback when Cmd+Enter is pressed (selected text or full document) */
   onRunQuery?: (query: string) => void;
-  /** Optional theme override (defaults to auto-detect) */
-  theme?: Theme;
 }
 
 const EDITOR_OPTIONS: CodeMirrorEditorProps['options'] = {
@@ -50,7 +47,6 @@ export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
   onRunQuery,
   onMount,
   options,
-  theme,
   ...restProps
 }) => {
   const viewRef = useRef<EditorView | null>(null);
@@ -63,8 +59,6 @@ export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
     return tableSchemas;
   }, [getLatestSchemas, tableSchemas]);
 
-  const isDark = useIsDarkTheme(theme);
-
   // Build extensions
   const extensions = useMemo<Extension[]>(() => {
     return [
@@ -75,16 +69,9 @@ export const DuckdbCodeMirrorEditor: React.FC<DuckdbCodeMirrorEditorProps> = ({
         customFunctions,
       }),
       createSqlKeymap(onRunQuery),
-      createSqlTheme({isDark}),
+      createSqlTheme(),
     ];
-  }, [
-    isDark,
-    currentSchemas,
-    onRunQuery,
-    connector,
-    customKeywords,
-    customFunctions,
-  ]);
+  }, [currentSchemas, onRunQuery, connector, customKeywords, customFunctions]);
 
   // Handle editor mount
   const handleEditorMount = useCallback(

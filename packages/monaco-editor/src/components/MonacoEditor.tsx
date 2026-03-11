@@ -1,5 +1,5 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {Spinner, cn, useIsDarkTheme} from '@sqlrooms/ui';
+import {Spinner, cn, getTheme} from '@sqlrooms/ui';
 import type {Theme} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef} from 'react';
 import {getJsonEditorTheme, getMenuColors} from '../utils/color-utils';
@@ -158,7 +158,6 @@ const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions
 export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   className,
   language = 'javascript',
-  theme: explicitTheme,
   value = '',
   readOnly = false,
   onMount,
@@ -167,7 +166,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   beforeMount,
   ...props
 }) => {
-  const isDark = useIsDarkTheme(explicitTheme);
+  const isDark = getTheme() === 'dark';
 
   const monacoTheme =
     language === 'json'

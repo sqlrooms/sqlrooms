@@ -2,37 +2,25 @@ import React, {useMemo} from 'react';
 import {CodeMirrorEditor, CodeMirrorEditorProps} from './CodeMirrorEditor';
 import {javascript} from '@codemirror/lang-javascript';
 import {createSqlroomsTheme} from '../themes/sqlrooms-theme';
-import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
 
-export interface JavascriptCodeMirrorEditorProps extends CodeMirrorEditorProps {
-  /** Optional theme override (defaults to auto-detect) */
-  theme?: Theme;
-}
+export type JavascriptCodeMirrorEditorProps = CodeMirrorEditorProps;
 
 /**
  * A CodeMirror editor for editing JavaScript
  */
 export const JavascriptCodeMirrorEditor: React.FC<
   JavascriptCodeMirrorEditorProps
-> = ({
-  value = '',
-  extensions: userExtensions = [],
-  options = {},
-  theme: explicitTheme,
-  ...props
-}) => {
-  const isDark = useIsDarkTheme(explicitTheme);
-
+> = ({value = '', extensions: userExtensions = [], options = {}, ...props}) => {
   // Build JavaScript-specific extensions
   const extensions = useMemo(() => {
     return [
       javascript({
         jsx: true,
       }),
-      createSqlroomsTheme({isDark}),
+      createSqlroomsTheme(),
       ...userExtensions,
     ];
-  }, [userExtensions, isDark]);
+  }, [userExtensions]);
 
   return (
     <CodeMirrorEditor

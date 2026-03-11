@@ -6,7 +6,6 @@ import {jsonSchemaAutocomplete} from '../extensions/json-schema-autocomplete';
 import {autoTriggerOnQuote} from '../extensions/auto-trigger';
 import {json} from '@codemirror/lang-json';
 import {createJsonTheme} from '../themes/json-theme';
-import {Theme, useIsDarkTheme} from '@sqlrooms/ui';
 
 export interface JsonCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
@@ -16,8 +15,7 @@ export interface JsonCodeMirrorEditorProps extends Omit<
   schema?: object;
   /** The JSON value to edit - can be a string or an object (will be stringified) */
   value?: string | object;
-  /** Optional theme override (defaults to auto-detect) */
-  theme?: Theme;
+
   /** Whether to hide the gutter (line numbers, fold markers, etc.) */
   hideGutter?: boolean;
 }
@@ -28,7 +26,6 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   value = '',
   extensions: userExtensions = [],
   options = {},
-  theme: explicitTheme,
   hideGutter,
   ...props
 }) => {
@@ -36,13 +33,11 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   const stringValue =
     typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
 
-  const isDark = useIsDarkTheme(explicitTheme);
-
   // Build JSON-specific extensions
   const extensions = useMemo(() => {
     return [
       json(),
-      createJsonTheme({isDark, hideGutter}),
+      createJsonTheme({hideGutter}),
       ...(schema
         ? [
             jsonSchemaLinter(schema),
@@ -53,7 +48,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
       autoTriggerOnQuote(),
       ...userExtensions,
     ];
-  }, [schema, userExtensions, isDark, hideGutter]);
+  }, [schema, userExtensions, hideGutter]);
 
   return (
     <CodeMirrorEditor

@@ -335,8 +335,6 @@ export {
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 export {useIsMobile} from './hooks/use-mobile';
 
-export {useIsDarkTheme} from './hooks/useIsDarkTheme';
-
 // Utilities
 export {cn} from './lib/utils';
 export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
