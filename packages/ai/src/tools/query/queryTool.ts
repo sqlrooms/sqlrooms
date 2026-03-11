@@ -42,9 +42,6 @@ export type QueryToolOptions = {
   numberOfRowsToShareWithLLM?: number;
 };
 
-/** Tool renderer component for use in `toolRenderers` registry. */
-export {QueryToolResult as queryToolRenderer} from './QueryToolResult';
-
 export function createQueryTool(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
   options?: QueryToolOptions,

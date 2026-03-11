@@ -13,7 +13,6 @@ export {
   QueryToolParameters,
   createQueryTool,
   getQuerySummary,
-  queryToolRenderer,
   type QueryToolOutput,
   type QueryToolOptions,
 } from './tools/query/queryTool';
