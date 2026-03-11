@@ -13,6 +13,7 @@ export {
   QueryToolParameters,
   createQueryTool,
   getQuerySummary,
+  queryToolRenderer,
   type QueryToolOutput,
   type QueryToolOptions,
 } from './tools/query/queryTool';
@@ -42,8 +43,19 @@ export {
 } from './tools/defaultInstructions';
 
 // From @sqlrooms/ai-core - State/Logic
-export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
-export type {AiSliceState} from '@sqlrooms/ai-core';
+export {
+  createAiSlice,
+  createAiTools,
+  toolWithRenderer,
+  useStoreWithAi,
+} from '@sqlrooms/ai-core';
+export type {
+  AiSliceState,
+  AiToolEntries,
+  AiToolEntry,
+  CreateAiToolsResult,
+  ToolWithRenderer,
+} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';

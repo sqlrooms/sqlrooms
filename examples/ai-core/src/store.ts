@@ -1,4 +1,10 @@
-import {AiSliceConfig, AiSliceState, createAiSlice} from '@sqlrooms/ai-core';
+import {
+  AiSliceConfig,
+  AiSliceState,
+  createAiSlice,
+  createAiTools,
+  toolWithRenderer,
+} from '@sqlrooms/ai-core';
 import {
   AiSettingsSliceConfig,
   AiSettingsSliceState,
@@ -41,26 +47,22 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
         getInstructions: () => {
           return `You are an AI assistant that can answer questions and help with tasks.`;
         },
-
-        // Tool renderers for displaying tool results in the UI
-        toolRenderers: {
-          echo: EchoToolResult,
-        },
-
-        // Add custom tools
-        tools: {
+        ...createAiTools({
           // Example of adding a simple echo tool
-          echo: tool({
-            description: 'A simple echo tool that returns the input text',
-            inputSchema: z.object({
-              text: z.string().describe('The text to echo back'),
+          echo: toolWithRenderer(
+            tool({
+              description: 'A simple echo tool that returns the input text',
+              inputSchema: z.object({
+                text: z.string().describe('The text to echo back'),
+              }),
+              execute: async ({text}) => ({
+                success: true,
+                details: `Echo: ${text}`,
+              }),
             }),
-            execute: async ({text}) => ({
-              success: true,
-              details: `Echo: ${text}`,
-            }),
-          }),
-        },
+            EchoToolResult,
+          ),
+        }),
       })(set, get, store),
     }),
   ),

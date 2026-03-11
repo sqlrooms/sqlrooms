@@ -3,11 +3,14 @@ import {
   AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
+  createAiTools,
   createAiSettingsSlice,
   createAiSlice,
-  createDefaultAiTools,
-  createDefaultAiToolRenderers,
+  createCommandTools,
   createDefaultAiInstructions,
+  createQueryTool,
+  queryToolRenderer,
+  toolWithRenderer,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -24,7 +27,7 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {createVegaChartTool, vegaChartToolRenderer} from '@sqlrooms/vega';
 import {tool} from 'ai';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
@@ -138,32 +141,31 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         //   };
         // },
 
-        // Tool renderers for displaying tool results in the UI
-        toolRenderers: {
-          ...createDefaultAiToolRenderers(),
-          chart: VegaChartToolResult,
-          echo: EchoToolResult,
-        },
-
-        // Add custom tools
-        tools: {
-          ...createDefaultAiTools(store, {query: {}}),
+        ...createAiTools({
+          query: toolWithRenderer(
+            createQueryTool(store, {}),
+            queryToolRenderer,
+          ),
+          ...createCommandTools(store),
 
           // Add the VegaChart tool from the vega package with a custom description
-          chart: createVegaChartTool(),
+          chart: toolWithRenderer(createVegaChartTool(), vegaChartToolRenderer),
 
           // Example of adding a simple echo tool
-          echo: tool({
-            description: 'A simple echo tool that returns the input text',
-            inputSchema: z.object({
-              text: z.string().describe('The text to echo back'),
+          echo: toolWithRenderer(
+            tool({
+              description: 'A simple echo tool that returns the input text',
+              inputSchema: z.object({
+                text: z.string().describe('The text to echo back'),
+              }),
+              execute: async ({text}) => ({
+                success: true,
+                details: `Echo: ${text}`,
+              }),
             }),
-            execute: async ({text}) => ({
-              success: true,
-              details: `Echo: ${text}`,
-            }),
-          }),
-        },
+            EchoToolResult,
+          ),
+        }),
       })(set, get, store),
     }),
   ),

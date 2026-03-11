@@ -20,10 +20,13 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
 
+If you want to define tools and renderers together, use `createAiTools()` with
+`toolWithRenderer()` and spread the result into `createAiSlice(...)`.
+
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `toolAdditionalData` → `toolEditState`.
 
 ```tsx
-import {createAiSlice, type AiSliceState, type ToolRendererRegistry} from '@sqlrooms/ai-core';
+import {createAiSlice, createAiTools, toolWithRenderer, type AiSliceState} from '@sqlrooms/ai-core';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
@@ -43,16 +46,16 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
     ...createBaseRoomSlice()(set, get, store),
     ...createAiSlice({
       getInstructions: () => 'You are a helpful analytics assistant.',
-      tools: {
-        echo: tool({
-          description: 'Echo text back',
-          inputSchema: z.object({text: z.string()}),
-          execute: async ({text}) => ({success: true, text: `Echo: ${text}`}),
-        }),
-      },
-      toolRenderers: {
-        echo: EchoResult,
-      },
+      ...createAiTools({
+        echo: toolWithRenderer(
+          tool({
+            description: 'Echo text back',
+            inputSchema: z.object({text: z.string()}),
+            execute: async ({text}) => ({success: true, text: `Echo: ${text}`}),
+          }),
+          EchoResult,
+        ),
+      }),
     })(set, get, store),
   }),
 );
@@ -79,7 +82,7 @@ export function AiPanel() {
 
 ## Useful exports
 
-- Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`
+- Slice/hooks: `createAiSlice`, `createAiTools`, `toolWithRenderer`, `useStoreWithAi`, `AiSliceState`
 - Chat UI: `Chat`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
 - Types: `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`

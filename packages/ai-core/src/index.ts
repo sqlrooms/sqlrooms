@@ -4,8 +4,15 @@
  */
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
+export {createAiTools, toolWithRenderer} from './aiTools';
 
 export type {AiSliceState, AiSliceOptions} from './AiSlice';
+export type {
+  AiToolEntries,
+  AiToolEntry,
+  CreateAiToolsResult,
+  ToolWithRenderer,
+} from './aiTools';
 // @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';

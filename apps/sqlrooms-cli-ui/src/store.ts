@@ -3,13 +3,16 @@ import {
   AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
+  createAiTools,
   createAiSettingsSlice,
   createAiSlice,
+  createCommandTools,
   createDefaultAiInstructions,
-  createDefaultAiTools,
-  createDefaultAiToolRenderers,
+  createQueryTool,
+  queryToolRenderer,
+  toolWithRenderer,
 } from '@sqlrooms/ai';
-import {VegaChartToolResult} from '@sqlrooms/vega';
+import {vegaChartToolRenderer} from '@sqlrooms/vega';
 import {
   CanvasSliceConfig,
   CanvasSliceState,
@@ -252,14 +255,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
         getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
         getInstructions: () => createDefaultAiInstructions(store),
-        tools: {
-          ...createDefaultAiTools(store, {query: {}}),
-          chart: createVegaChartTool(),
-        },
-        toolRenderers: {
-          ...createDefaultAiToolRenderers(),
-          chart: VegaChartToolResult,
-        },
+        ...createAiTools({
+          query: toolWithRenderer(
+            createQueryTool(store, {}),
+            queryToolRenderer,
+          ),
+          ...createCommandTools(store),
+          chart: toolWithRenderer(createVegaChartTool(), vegaChartToolRenderer),
+        }),
       })(set, get, store),
     }),
   ),

@@ -3,11 +3,14 @@ import {
   AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
+  createAiTools,
   createAiSettingsSlice,
   createAiSlice,
+  createCommandTools,
   createDefaultAiInstructions,
-  createDefaultAiToolRenderers,
-  createDefaultAiTools,
+  createQueryTool,
+  queryToolRenderer,
+  toolWithRenderer,
 } from '@sqlrooms/ai';
 import {
   createRagSlice,
@@ -31,7 +34,7 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {createVegaChartTool, vegaChartToolRenderer} from '@sqlrooms/vega';
 import {tool} from 'ai';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
@@ -139,36 +142,37 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return createDefaultAiInstructions(store);
         },
 
-        // Tool renderers for displaying tool results in the UI
-        toolRenderers: {
-          ...createDefaultAiToolRenderers(),
-          chart: VegaChartToolResult,
-          search_documentation: ragToolRenderer,
-          echo: EchoToolResult,
-        },
-
-        // Add custom tools
-        tools: {
-          ...createDefaultAiTools(store, {query: {}}),
+        ...createAiTools({
+          query: toolWithRenderer(
+            createQueryTool(store, {}),
+            queryToolRenderer,
+          ),
+          ...createCommandTools(store),
 
           // RAG tool - search through documentation
-          search_documentation: createRagTool(),
+          search_documentation: toolWithRenderer(
+            createRagTool(),
+            ragToolRenderer,
+          ),
 
           // Add the VegaChart tool from the vega package with a custom description
-          chart: createVegaChartTool(),
+          chart: toolWithRenderer(createVegaChartTool(), vegaChartToolRenderer),
 
           // Example of adding a simple echo tool
-          echo: tool({
-            description: 'A simple echo tool that returns the input text',
-            inputSchema: z.object({
-              text: z.string().describe('The text to echo back'),
+          echo: toolWithRenderer(
+            tool({
+              description: 'A simple echo tool that returns the input text',
+              inputSchema: z.object({
+                text: z.string().describe('The text to echo back'),
+              }),
+              execute: async ({text}) => ({
+                success: true,
+                details: `Echo: ${text}`,
+              }),
             }),
-            execute: async ({text}) => ({
-              success: true,
-              details: `Echo: ${text}`,
-            }),
-          }),
-        },
+            EchoToolResult,
+          ),
+        }),
       })(set, get, store),
     }),
   ),

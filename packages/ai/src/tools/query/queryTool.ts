@@ -8,6 +8,7 @@ import {
 } from '@sqlrooms/duckdb';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {z} from 'zod';
+import {QueryToolResult} from './QueryToolResult';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -41,6 +42,9 @@ export type QueryToolOptions = {
   autoSummary?: boolean;
   numberOfRowsToShareWithLLM?: number;
 };
+
+/** Tool renderer component for use in `toolRenderers` registry. */
+export {QueryToolResult as queryToolRenderer} from './QueryToolResult';
 
 export function createQueryTool(
   store: StoreApi<AiSliceState & DuckDbSliceState>,

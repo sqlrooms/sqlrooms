@@ -1,4 +1,10 @@
-import {AiSliceConfig, AiSliceState, createAiSlice} from '@sqlrooms/ai-core';
+import {
+  AiSliceConfig,
+  AiSliceState,
+  createAiSlice,
+  createAiTools,
+  toolWithRenderer,
+} from '@sqlrooms/ai-core';
 import {
   AiSettingsSliceConfig,
   AiSettingsSliceState,
@@ -74,20 +80,20 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             </file_list>`;
           return instructions;
         },
-
-        // Tool renderers for displaying tool results in the UI
-        toolRenderers: {
-          listFiles: listFilesToolRenderer,
-          getFileContent: getFileContentToolRenderer,
-          updateFileContent: updateFileContentToolRenderer,
-        },
-
-        // Add custom tools
-        tools: {
-          listFiles: createListFilesTool(store),
-          getFileContent: createGetFileContentTool(store),
-          updateFileContent: createUpdateFileContentTool(store),
-        },
+        ...createAiTools({
+          listFiles: toolWithRenderer(
+            createListFilesTool(store),
+            listFilesToolRenderer,
+          ),
+          getFileContent: toolWithRenderer(
+            createGetFileContentTool(store),
+            getFileContentToolRenderer,
+          ),
+          updateFileContent: toolWithRenderer(
+            createUpdateFileContentTool(store),
+            updateFileContentToolRenderer,
+          ),
+        }),
       })(set, get, store),
     }),
   ),

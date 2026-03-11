@@ -1,4 +1,9 @@
-import {AiSliceConfig, AiSliceState, createAiSlice} from '@sqlrooms/ai-core';
+import {
+  AiSliceConfig,
+  AiSliceState,
+  createAiSlice,
+  createAiTools,
+} from '@sqlrooms/ai-core';
 import {
   AiSettingsSliceConfig,
   AiSettingsSliceState,
@@ -39,12 +44,10 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
         getInstructions: () => {
           return `You are an AI assistant that can answer questions and help with tasks.`;
         },
-
-        // Add custom tools
-        tools: {
+        ...createAiTools({
           // Example of using an agent as a tool
           'agent-weather': weatherAgentTool(store),
-        },
+        }),
       })(set, get, store),
     }),
   ),
