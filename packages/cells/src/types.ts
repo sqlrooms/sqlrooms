@@ -1,11 +1,11 @@
 import type {DbSliceState} from '@sqlrooms/db';
-import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import {
   PivotConfig,
   PivotExecutionState,
   PivotRelations,
   PivotSource,
-} from '@sqlrooms/pivot';
+} from '@sqlrooms/pivot-table';
+import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import type React from 'react';
 import {z} from 'zod';

@@ -1,17 +1,17 @@
 import {
-  BaseRoomConfig,
-  LayoutConfig,
-  LayoutTypes,
-  createRoomShellSlice,
-  createRoomStore,
-  persistSliceConfigs,
-  RoomShellSliceState,
-} from '@sqlrooms/room-shell';
-import {
   PivotSliceConfig,
   PivotSliceState,
   createPivotSlice,
-} from '@sqlrooms/pivot';
+} from '@sqlrooms/pivot-table';
+import {
+  BaseRoomConfig,
+  LayoutConfig,
+  LayoutTypes,
+  RoomShellSliceState,
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 import {DatabaseIcon, TablePropertiesIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataPanel} from './DataPanel';

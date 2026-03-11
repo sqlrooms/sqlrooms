@@ -1,14 +1,14 @@
 import {createId} from '@paralleldrive/cuid2';
 import {makePagedQuery} from '@sqlrooms/data-table';
 import {sanitizeQuery} from '@sqlrooms/duckdb';
-import {dropPivotRelations} from '@sqlrooms/pivot';
+import {dropPivotRelations} from '@sqlrooms/pivot-table';
 import {createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
-  buildGraphCacheFromEdges,
   buildDependencyGraph,
   buildDependencyGraphAsync,
+  buildGraphCacheFromEdges,
   collectReachable,
   ensureGraphCache,
   removeCellFromCache,

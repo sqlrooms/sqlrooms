@@ -4,7 +4,7 @@ import {
   sanitizePivotConfigForFields,
   type PivotField,
   type PivotSource,
-} from '@sqlrooms/pivot';
+} from '@sqlrooms/pivot-table';
 import {produce} from 'immer';
 import {
   findSheetIdForCell,

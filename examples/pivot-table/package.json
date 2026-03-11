@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@sqlrooms/dropzone": "workspace:*",
-    "@sqlrooms/pivot": "workspace:*",
+    "@sqlrooms/pivot-table": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

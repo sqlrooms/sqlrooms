@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/pivot",
+  "name": "@sqlrooms/pivot-table",
   "version": "0.29.0-rc.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

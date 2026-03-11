@@ -1,5 +1,5 @@
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
-import {createDefaultPivotConfig} from '@sqlrooms/pivot';
+import {createDefaultPivotConfig} from '@sqlrooms/pivot-table';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {InputCellContent} from './components/InputCellContent';
@@ -10,12 +10,12 @@ import {VegaCellContent} from './components/VegaCellContent';
 import {executeSqlCell} from './execution';
 import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
 import {executePivotCell} from './pivotCellExecution';
+import {renameResultRelation} from './resultRelationPolicy';
 import {
   findSqlDependenciesFromAst,
   qualifySheetLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
-import {renameResultRelation} from './resultRelationPolicy';
 import type {
   Cell,
   CellRegistry,

@@ -8,7 +8,7 @@ import {
   removeAttributeFilterValuesInConfig,
   setAttributeFilterValuesInConfig,
   type PivotSourceOption,
-} from '@sqlrooms/pivot';
+} from '@sqlrooms/pivot-table';
 import {produce} from 'immer';
 import React, {useMemo} from 'react';
 import {getUnqualifiedSqlIdentifier} from '../helpers';
