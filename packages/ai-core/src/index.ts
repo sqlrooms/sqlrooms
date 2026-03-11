@@ -5,7 +5,7 @@
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
-export type {AiSliceState} from './AiSlice';
+export type {AiSliceState, AiSliceOptions} from './AiSlice';
 // @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
@@ -41,6 +41,7 @@ export type {
   ToolRendererProps,
   ToolRenderer,
   ToolRendererRegistry,
+  ToolRenderers,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 

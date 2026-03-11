@@ -15,16 +15,11 @@ export {VegaChartToolResult as VegaChartToolResult} from './VegaChartToolResult'
 export type {VisualizationSpec} from 'vega-embed';
 export {
   createVegaChartTool,
-  vegaChartToolRenderer,
   VegaChartToolParameters,
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
 
-export type {
-  VegaChartToolParameters as VegaChartToolParametersType,
-  VegaChartToolOptions,
-  VegaChartToolOutput,
-} from './VegaChartTool';
+export type {VegaChartToolOptions, VegaChartToolOutput} from './VegaChartTool';
 
 /**
  * Composable Vega-Lite chart component with editing capabilities.

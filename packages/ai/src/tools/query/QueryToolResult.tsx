@@ -5,7 +5,7 @@ import {
 } from '@sqlrooms/data-table';
 import {Button, CopyButton, useDisclosure} from '@sqlrooms/ui';
 import {TableIcon} from 'lucide-react';
-import type {QueryToolOutput} from './queryTool';
+import type {QueryToolOutput, QueryToolParameters} from './queryTool';
 
 export type QueryToolRendererOptions = {
   /** Whether to show the SQL text in the result. Defaults to true. */
@@ -29,12 +29,12 @@ export type QueryToolRendererOptions = {
  */
 export function createQueryToolRenderer(
   options?: QueryToolRendererOptions,
-): ToolRenderer<QueryToolOutput> {
+): ToolRenderer<QueryToolOutput, QueryToolParameters> {
   const {showSql = true, formatValue} = options ?? {};
 
   return function QueryToolResultRenderer({
     output,
-  }: ToolRendererProps<QueryToolOutput>) {
+  }: ToolRendererProps<QueryToolOutput, QueryToolParameters>) {
     const tableModal = useDisclosure();
     if (!output) return null;
     const {title, sqlQuery} = output;

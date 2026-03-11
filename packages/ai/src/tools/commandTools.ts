@@ -1,5 +1,5 @@
 import {tool} from 'ai';
-import type {ToolSet} from 'ai';
+import type {Tool, ToolSet} from 'ai';
 import {hasCommandSliceState} from '@sqlrooms/room-shell';
 import type {
   BaseRoomStoreState,
@@ -79,6 +79,25 @@ export type CommandToolsOptions = {
 const DEFAULT_LIST_TOOL_NAME = 'list_commands';
 const DEFAULT_EXECUTE_TOOL_NAME = 'execute_command';
 
+/**
+ * The typed shape returned by {@link createCommandTools} when using the default tool names.
+ * Consumed by {@link createDefaultAiTools} to give its return type literal string keys.
+ */
+export type DefaultCommandTools = {
+  list_commands: Tool<ListCommandsToolParameters, ListCommandsToolLlmResult>;
+  execute_command: Tool<
+    ExecuteCommandToolParameters,
+    ExecuteCommandToolLlmResult
+  >;
+};
+
+export function createCommandTools<RS extends BaseRoomStoreState>(
+  store: StoreApi<RS>,
+): DefaultCommandTools;
+export function createCommandTools<RS extends BaseRoomStoreState>(
+  store: StoreApi<RS>,
+  options: CommandToolsOptions,
+): ToolSet;
 export function createCommandTools<RS extends BaseRoomStoreState>(
   store: StoreApi<RS>,
   options?: CommandToolsOptions,
@@ -162,5 +181,7 @@ Call ${listToolName} first to discover valid command IDs and input requirements.
         } satisfies ExecuteCommandToolLlmResult;
       },
     }),
-  };
+    // Single cast required: TypeScript cannot narrow computed property names
+    // ([listToolName], [executeToolName]) to their literal string types.
+  } as DefaultCommandTools;
 }

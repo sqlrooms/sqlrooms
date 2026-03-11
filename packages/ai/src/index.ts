@@ -25,6 +25,7 @@ export {
 export type {
   CommandToolDescriptor,
   CommandToolsOptions,
+  DefaultCommandTools,
   ExecuteCommandToolLlmResult,
   ListCommandsToolLlmResult,
 } from './tools/commandTools';
@@ -32,7 +33,10 @@ export {
   createDefaultAiTools,
   createDefaultAiToolRenderers,
 } from './tools/defaultTools';
-export type {DefaultToolsOptions} from './tools/defaultTools';
+export type {
+  DefaultToolsOptions,
+  DefaultAiToolRenderers,
+} from './tools/defaultTools';
 export {
   createDefaultAiInstructions,
   formatTablesForLLM,
@@ -51,6 +55,13 @@ export type {
   UIMessageChunk,
   AgentToolCall,
   AgentToolCallAdditionalData,
+  ToolRenderers,
+  ToolRenderer,
+  ToolRendererProps,
+  ToolRendererRegistry,
+  StoredTool,
+  StoredToolSet,
+  AiSliceOptions,
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components

@@ -45,6 +45,7 @@ import type {
   StoredToolSet,
   ToolRenderer,
   ToolRendererRegistry,
+  ToolRenderers,
 } from './types';
 import {
   cleanupPendingAnalysisResults,
@@ -174,13 +175,29 @@ export type AiSliceState = {
 };
 
 /**
- * Configuration options for creating an AI slice
+ * Configuration options for creating an AI slice.
+ *
+ * `TTools` is inferred from the `tools` value and constrains `toolRenderers`:
+ * - Keys must be present in `tools`
+ * - Each renderer's `output` prop is typed to that tool's return type
+ *
+ * @example
+ * ```ts
+ * createAiSlice({
+ *   tools: {query: createQueryTool(store), chart: createVegaChartTool()},
+ *   toolRenderers: {
+ *     query: QueryToolResult,        // ToolRenderer<QueryToolOutput>
+ *     chart: VegaChartToolResult,    // ToolRenderer<VegaChartToolOutput>
+ *     TYPO: SomeRenderer,            // compile error — not a key of tools
+ *   },
+ * })
+ * ```
  */
-export interface AiSliceOptions {
+export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   config?: Partial<AiSliceConfig>;
   initialPrompt?: string;
-  tools: ToolSet;
-  toolRenderers?: ToolRendererRegistry;
+  tools: TTools;
+  toolRenderers?: ToolRenderers<TTools>;
   getInstructions: () => string;
   defaultProvider?: string;
   defaultModel?: string;
@@ -196,8 +213,8 @@ export interface AiSliceOptions {
   chatHeaders?: Record<string, string>;
 }
 
-export function createAiSlice(
-  params: AiSliceOptions,
+export function createAiSlice<TTools extends ToolSet = ToolSet>(
+  params: AiSliceOptions<TTools>,
 ): StateCreator<AiSliceState> {
   const {
     initialPrompt = '',

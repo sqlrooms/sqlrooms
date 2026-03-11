@@ -31,7 +31,7 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool, vegaChartToolRenderer} from '@sqlrooms/vega';
+import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
 import {tool} from 'ai';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
@@ -142,7 +142,7 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         // Tool renderers for displaying tool results in the UI
         toolRenderers: {
           ...createDefaultAiToolRenderers(),
-          chart: vegaChartToolRenderer,
+          chart: VegaChartToolResult,
           search_documentation: ragToolRenderer,
           echo: EchoToolResult,
         },

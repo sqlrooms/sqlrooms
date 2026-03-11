@@ -14,12 +14,6 @@ export const VegaChartToolParameters = z.object({
 
 export type VegaChartToolParameters = z.infer<typeof VegaChartToolParameters>;
 
-export type VegaChartToolArgs = z.ZodObject<{
-  sqlQuery: z.ZodString;
-  vegaLiteSpec: z.ZodString;
-  reasoning: z.ZodString;
-}>;
-
 export type VegaChartToolOutput = {
   success: boolean;
   details: string;
@@ -54,9 +48,6 @@ export type VegaChartToolOptions = {
    */
   description?: string;
 };
-
-/** Tool renderer component for use in `toolRenderers` registry. */
-export {VegaChartToolResult as vegaChartToolRenderer} from './VegaChartToolResult';
 
 /**
  * Creates a VegaLite chart visualization tool for AI assistants
