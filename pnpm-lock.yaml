@@ -1669,9 +1669,6 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
-      '@eslint/js':
-        specifier: ^9.36.0
-        version: 9.39.1
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.2.2(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(yaml@2.8.2))
@@ -1687,24 +1684,12 @@ importers:
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
-      eslint-plugin-react-hooks:
-        specifier: ^5.2.0
-        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
-      eslint-plugin-react-refresh:
-        specifier: ^0.4.21
-        version: 0.4.24(eslint@9.39.1(jiti@2.6.1))
-      globals:
-        specifier: ^16.4.0
-        version: 16.5.0
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.44.1
-        version: 8.49.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
       vite:
         specifier: ^7.1.9
         version: 7.2.2(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(yaml@2.8.2)
