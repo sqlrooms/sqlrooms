@@ -1,19 +1,12 @@
 import {cn} from '@sqlrooms/ui';
-import type * as Monaco from 'monaco-editor';
-import {useCallback, useRef} from 'react';
+import {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlMonacoEditor} from '../SqlMonacoEditor';
+import {SqlCodeMirrorEditor} from '../SqlCodeMirrorEditor';
 
-type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
-type MonacoInstance = typeof Monaco;
-
-const MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions = {
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  minimap: {enabled: false},
-  wordWrap: 'on',
-  quickSuggestions: true,
-  suggestOnTriggerCharacters: true,
+const CODEMIRROR_OPTIONS = {
+  lineWrapping: true,
+  autocompletion: true,
+  highlightActiveLine: true,
 };
 
 export const QueryEditorPanelEditor: React.FC<{
@@ -30,10 +23,6 @@ export const QueryEditorPanelEditor: React.FC<{
   const updateQueryText = useStoreWithSqlEditor(
     (s) => s.sqlEditor.updateQueryText,
   );
-  // Editor instance ref for keyboard shortcuts
-  const editorRef = useRef<{
-    [key: string]: EditorInstance;
-  }>({});
 
   // Handle query text update
   const handleUpdateQuery = useCallback(
@@ -44,44 +33,23 @@ export const QueryEditorPanelEditor: React.FC<{
     [queryId, updateQueryText],
   );
 
-  // Handle editor mount
-  const handleEditorMount = useCallback(
-    (editor: EditorInstance, monaco: MonacoInstance) => {
-      editorRef.current[queryId] = editor;
-      // Use onKeyDown instead of addCommand to scope the shortcut
-      // to THIS specific editor instance. Monaco's addCommand registers
-      // globally, so the last editor mounted wins when multiple editors
-      // are on the page.
-      editor.onKeyDown((e) => {
-        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
-          e.preventDefault();
-          e.stopPropagation();
-          const model = editor.getModel();
-          const selection = editor.getSelection();
-          if (model && selection && !selection.isEmpty()) {
-            runQuery(model.getValueInRange(selection));
-          } else {
-            runQuery(editor.getValue());
-          }
-        }
-      });
+  // Handle query execution via keyboard shortcut
+  const handleRunQuery = useCallback(
+    (query: string) => {
+      runQuery(query);
     },
-    [queryId, runQuery],
+    [runQuery],
   );
 
   return (
-    <SqlMonacoEditor
-      path={`sqlrooms://query/${queryId}.sql`}
-      // Preserve per-tab cursor/scroll state when switching tabs (models).
-      saveViewState
-      // Keep the previous model alive when switching `path` so per-tab undo/redo isn't lost.
-      keepCurrentModel
+    <SqlCodeMirrorEditor
+      key={queryId}
       connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
       className={cn('h-full w-full grow', className)}
-      options={MONACO_OPTIONS}
-      onMount={handleEditorMount}
+      options={CODEMIRROR_OPTIONS}
+      onRunQuery={handleRunQuery}
       tableSchemas={tableSchemas}
     />
   );

@@ -1,10 +1,22 @@
 import * as arrow from 'apache-arrow';
 import {useStoreWithDuckDb} from './DuckDbSlice';
 
-export function useExportToCsv() {
+export interface UseExportToCsvReturn {
+  exportToCsv: (
+    query: string,
+    fileName: string,
+    pageSize?: number,
+  ) => Promise<void>;
+}
+
+export function useExportToCsv(): UseExportToCsvReturn {
   const getConnector = useStoreWithDuckDb((state) => state.db.getConnector);
   return {
-    exportToCsv: async (query: string, fileName: string, pageSize = 100000) => {
+    exportToCsv: async (
+      query: string,
+      fileName: string,
+      pageSize = 100000,
+    ): Promise<void> => {
       const dbConnector = await getConnector();
 
       let offset = 0;

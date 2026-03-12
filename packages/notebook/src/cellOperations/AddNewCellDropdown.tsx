@@ -93,7 +93,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
                   }}
                   className="cursor-pointer"
                 >
-                  <span className="text-xs capitalize whitespace-nowrap">
+                  <span className="text-xs whitespace-nowrap capitalize">
                     {getCellTypeLabel(type, cellRegistry)}
                   </span>
                 </CommandItem>
