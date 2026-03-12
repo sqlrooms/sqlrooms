@@ -57,9 +57,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const tableSchemas = useCellsStore((s) => s.db.tables);
 
   // Re-read the cache whenever resultVersion or pageVersion changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const cellResult = useMemo(
     () => getCellResult(id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [getCellResult, id, resultVersion, pageVersion],
   );
   const arrowTableData = useArrowDataTable(cellResult?.arrowTable);
@@ -170,10 +170,10 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   > | null>(null);
   const [isResultNameInvalid, setIsResultNameInvalid] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const downstreamCellIds = useMemo(() => {
     if (!currentSheetId) return [];
     return getDownstream(currentSheetId, id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSheetId, getDownstream, id, cellsData, sheets]);
 
   const downstreamCells = useMemo(
@@ -225,7 +225,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   // Fetch new page when pagination or sorting changes (not on initial render
   // since executeSqlCell already fetches the first page)
   const isFirstRender = useRef(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -234,6 +234,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     if (resultName) {
       fetchCellResultPage(id, pagination, sorting);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination, sorting, id, fetchCellResultPage]);
 
   const clearDependentsCloseTimer = useCallback(() => {
@@ -291,8 +292,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
             onChange={handleSqlChange}
             onRunQuery={handleRunQuery}
             options={{
-              lineNumbers: false,
+              lineNumbers: true,
               lineWrapping: false,
+              highlightActiveLine: true,
             }}
           />
         </div>
