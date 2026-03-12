@@ -36,7 +36,8 @@
     "@sqlrooms/vega": "workspace:*",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
-    "zod": "^4.1.8"
+    "zod": "^4.1.8",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@sqlrooms/preset-jest": "workspace:*",

@@ -1,7 +1,12 @@
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {
+  createDefaultPivotConfig,
+  createOrReplacePivotRelations,
+} from '@sqlrooms/pivot';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {InputCellContent} from './components/InputCellContent';
+import {PivotCellContent} from './components/PivotCellContent';
 import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
@@ -17,6 +22,7 @@ import type {
   Cell,
   CellRegistry,
   InputCell,
+  PivotCell,
   SqlCell,
   SqlCellData,
   TextCell,
@@ -24,6 +30,7 @@ import type {
 } from './types';
 import {isInputCell} from './types';
 import {getEffectiveResultName, isDefined} from './utils';
+import {getPivotQuerySourceForCell} from './pivotHelpers';
 
 export function createDefaultCellRegistry(): CellRegistry {
   return {
@@ -232,6 +239,120 @@ export function createDefaultCellRegistry(): CellRegistry {
         />
       ),
       findDependencies: async () => [],
+    },
+    pivot: {
+      type: 'pivot',
+      title: 'Pivot Table',
+      createCell: (id: string): PivotCell => ({
+        id,
+        type: 'pivot',
+        data: {
+          title: 'Pivot',
+          pivotConfig: createDefaultPivotConfig(),
+        },
+      }),
+      renderCell: ({id, cell, renderContainer}) => (
+        <PivotCellContent
+          id={id}
+          cell={cell as PivotCell}
+          renderContainer={renderContainer}
+        />
+      ),
+      findDependencies: async ({cell}) => {
+        const source = (cell as PivotCell).data.source;
+        return source?.kind === 'sql' ? [source.sqlId] : [];
+      },
+      runCell: async ({id, opts, get, set}) => {
+        const state = get();
+        const cell = state.cells.config.data[id];
+        if (!cell || cell.type !== 'pivot') {
+          return;
+        }
+
+        const sheetId = findSheetIdForCell(state, id);
+        const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
+        const schemaName = sheet
+          ? resolveSheetSchemaName(sheet)
+          : opts?.schemaName || 'main';
+        const controller = new AbortController();
+        set((s) =>
+          produce(s, (draft) => {
+            draft.cells.activeAbortControllers[id] = controller;
+            draft.cells.status[id] = {
+              type: 'pivot',
+              status: 'running',
+              stale: true,
+              resultViews:
+                draft.cells.status[id]?.type === 'pivot'
+                  ? draft.cells.status[id].resultViews
+                  : undefined,
+            };
+          }),
+        );
+
+        try {
+          const runtime = getPivotQuerySourceForCell(get(), cell as PivotCell);
+          if (!runtime.querySource || !runtime.sourceRelation) {
+            throw new Error(
+              'Pivot source is not ready. Run the source query first.',
+            );
+          }
+
+          const connector = await state.db.getConnector();
+          const resultViews = await createOrReplacePivotRelations({
+            connector,
+            source: runtime.querySource,
+            config: (cell as PivotCell).data.pivotConfig,
+            relationBaseName: `pivot_${id}`,
+            schemaName,
+            signal: controller.signal,
+          });
+
+          set((s) =>
+            produce(s, (draft) => {
+              draft.cells.status[id] = {
+                type: 'pivot',
+                status: 'success',
+                stale: false,
+                resultViews,
+                sourceRelation: runtime.sourceRelation,
+                lastRunTime: Date.now(),
+              };
+            }),
+          );
+
+          void get().db.refreshTableSchemas();
+          if (opts?.cascade && sheetId) {
+            await get().cells.runDownstreamCascade(sheetId, id);
+          }
+        } catch (error) {
+          set((s) =>
+            produce(s, (draft) => {
+              draft.cells.status[id] = {
+                type: 'pivot',
+                status: controller.signal.aborted ? 'cancel' : 'error',
+                stale: true,
+                resultViews:
+                  draft.cells.status[id]?.type === 'pivot'
+                    ? draft.cells.status[id].resultViews
+                    : undefined,
+                sourceRelation:
+                  draft.cells.status[id]?.type === 'pivot'
+                    ? draft.cells.status[id].sourceRelation
+                    : undefined,
+                lastError:
+                  error instanceof Error ? error.message : String(error),
+              };
+            }),
+          );
+        } finally {
+          set((s) =>
+            produce(s, (draft) => {
+              delete draft.cells.activeAbortControllers[id];
+            }),
+          );
+        }
+      },
     },
   };
 }

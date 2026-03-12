@@ -1,18 +1,44 @@
 import {DataTable, escapeId, escapeVal} from '@sqlrooms/duckdb';
 import {getAggregatorLabel, getPivotAggregator} from './aggregators';
-import {PivotSliceConfig, PivotValueFilter} from './types';
+import {
+  PivotConfig,
+  PivotField,
+  PivotQuerySource,
+  PivotValueFilter,
+} from './types';
 
 const NULL_LABEL = 'null';
 
-function getTableReference(table: DataTable) {
-  return table.table.toString();
+type PivotQueryInput = DataTable | PivotQuerySource;
+
+function getTableReference(source: PivotQueryInput) {
+  return 'tableRef' in source ? source.tableRef : source.table.toString();
+}
+
+export function createPivotQuerySource(
+  tableRef: string,
+  columns: PivotField[],
+): PivotQuerySource {
+  return {tableRef, columns};
+}
+
+export function createPivotQuerySourceFromTable(
+  table: DataTable,
+): PivotQuerySource {
+  return {
+    tableRef: table.table.toString(),
+    columns: table.columns.map((column) => ({
+      name: column.name,
+      type: column.type,
+    })),
+  };
 }
 
 function getDimensionValueSql(field: string) {
   return `COALESCE(CAST(${escapeId(field)} AS VARCHAR), ${escapeVal(NULL_LABEL)})`;
 }
 
-function buildFilterClause(config: PivotSliceConfig) {
+function buildFilterClause(config: PivotConfig) {
   const predicates = Object.entries(config.valueFilter as PivotValueFilter)
     .filter(([, values]) => Object.keys(values).length > 0)
     .map(([field, values]) => {
@@ -61,14 +87,14 @@ function buildConcatLabelSql(
   return `CONCAT_WS(' / ', ${metadata.map((item) => item.expression).join(', ')})`;
 }
 
-function buildBaseAggregateSql(config: PivotSliceConfig) {
+function buildBaseAggregateSql(config: PivotConfig) {
   const aggregator = getPivotAggregator(config.aggregatorName);
   return aggregator.buildSql(config.vals.slice(0, aggregator.numInputs));
 }
 
 function buildOrderByAliases(
   metadata: ReturnType<typeof buildDimensionMetadata>,
-  sortOrder: PivotSliceConfig['rowOrder'],
+  sortOrder: PivotConfig['rowOrder'],
 ) {
   if (sortOrder !== 'key_a_to_z') {
     return [] as string[];
@@ -76,9 +102,9 @@ function buildOrderByAliases(
   return metadata.map((item) => escapeId(item.alias));
 }
 
-export function buildCellsQuery(config: PivotSliceConfig, table: DataTable) {
+export function buildCellsQuery(config: PivotConfig, source: PivotQueryInput) {
   const aggregator = getPivotAggregator(config.aggregatorName);
-  const tableRef = getTableReference(table);
+  const tableRef = getTableReference(source);
   const rowMetadata = buildDimensionMetadata(config.rows, 'row');
   const colMetadata = buildDimensionMetadata(config.cols, 'col');
   const allMetadata = [...rowMetadata, ...colMetadata];
@@ -147,12 +173,12 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 }
 
 function buildAxisTotalsQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  source: PivotQueryInput,
   axis: 'row' | 'col' | 'grand',
 ) {
   const aggregator = getPivotAggregator(config.aggregatorName);
-  const tableRef = getTableReference(table);
+  const tableRef = getTableReference(source);
   const rowMetadata = buildDimensionMetadata(config.rows, 'row');
   const colMetadata = buildDimensionMetadata(config.cols, 'col');
   const metadata =
@@ -228,32 +254,32 @@ ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 }
 
 export function buildRowTotalsQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  source: PivotQueryInput,
 ) {
-  return buildAxisTotalsQuery(config, table, 'row');
+  return buildAxisTotalsQuery(config, source, 'row');
 }
 
 export function buildColTotalsQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  source: PivotQueryInput,
 ) {
-  return buildAxisTotalsQuery(config, table, 'col');
+  return buildAxisTotalsQuery(config, source, 'col');
 }
 
 export function buildGrandTotalQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  source: PivotQueryInput,
 ) {
-  return buildAxisTotalsQuery(config, table, 'grand');
+  return buildAxisTotalsQuery(config, source, 'grand');
 }
 
 export function buildDistinctValuesQuery(
-  table: DataTable,
+  source: PivotQueryInput,
   attribute: string,
   menuLimit: number,
 ) {
-  const tableRef = getTableReference(table);
+  const tableRef = getTableReference(source);
   const valueExpression = getDimensionValueSql(attribute);
   return `SELECT
   ${valueExpression} AS ${escapeId('value')},
@@ -265,12 +291,12 @@ LIMIT ${menuLimit + 1}`;
 }
 
 export function buildPivotExportQuery(
-  config: PivotSliceConfig,
-  table: DataTable,
+  config: PivotConfig,
+  source: PivotQueryInput,
   colKeys: string[],
 ) {
   const rowMetadata = buildDimensionMetadata(config.rows, 'row');
-  const cellsQuery = buildCellsQuery(config, table);
+  const cellsQuery = buildCellsQuery(config, source);
   const orderBy = buildOrderByAliases(rowMetadata, config.rowOrder);
 
   if (colKeys.length === 0) {
@@ -305,10 +331,7 @@ PIVOT(
 ${orderBy.length > 0 ? `ORDER BY ${orderBy.join(', ')}` : ''}`;
 }
 
-export function buildRendererTitle(
-  config: PivotSliceConfig,
-  transpose = false,
-) {
+export function buildRendererTitle(config: PivotConfig, transpose = false) {
   const fullAggName = getAggregatorLabel(config.aggregatorName, config.vals);
   const axisTitle = transpose ? config.rows.join(', ') : config.cols.join(', ');
   const groupByTitle = transpose

@@ -1,270 +1,457 @@
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import {z} from 'zod';
-import {DEFAULT_PIVOT_AGGREGATOR} from './aggregators';
-import {PivotSliceConfig, PivotSliceState, PivotSortOrder} from './types';
+import {createId} from '@paralleldrive/cuid2';
+import {
+  createDefaultPivotConfig,
+  moveFieldInConfig,
+  nextSortOrder,
+  normalizePivotConfig,
+} from './PivotCoreSlice';
+import {createPivotQuerySourceFromTable} from './sql';
+import {
+  createOrReplacePivotRelations,
+  dropPivotRelations,
+} from './pivotExecution';
+import {
+  type PivotConfig,
+  type PivotSliceConfig as PivotSlicePersistedConfig,
+  type PivotSource,
+  type PivotStatus,
+  PivotSliceConfig,
+  PivotSliceState,
+} from './types';
 
-export function createDefaultPivotConfig(
-  props?: Partial<PivotSliceConfig>,
-): PivotSliceConfig {
+function createInitialPivotSliceConfig(props?: {
+  config?: Partial<PivotConfig & {tableName?: string}>;
+}): PivotSlicePersistedConfig {
+  const id = createId();
+  const source = props?.config?.tableName
+    ? ({kind: 'table', tableName: props.config.tableName} as PivotSource)
+    : undefined;
+  const config = createDefaultPivotConfig(props?.config);
   return PivotSliceConfig.parse({
-    aggregatorName: DEFAULT_PIVOT_AGGREGATOR,
-    rendererName: 'Table',
-    rows: [],
-    cols: [],
-    vals: [],
-    valueFilter: {},
-    rowOrder: PivotSortOrder.enum.key_a_to_z,
-    colOrder: PivotSortOrder.enum.key_a_to_z,
-    unusedOrder: [],
-    menuLimit: 500,
-    hiddenAttributes: [],
-    hiddenFromAggregators: [],
-    hiddenFromDragDrop: [],
-    ...props,
+    pivots: {
+      [id]: {
+        id,
+        title: 'Pivot 1',
+        source,
+        config,
+        status: {state: 'idle', stale: false},
+      },
+    },
+    pivotOrder: [id],
+    currentPivotId: id,
   });
 }
 
-function nextSortOrder(current: z.infer<typeof PivotSortOrder>) {
-  switch (current) {
-    case PivotSortOrder.enum.key_a_to_z:
-      return PivotSortOrder.enum.value_a_to_z;
-    case PivotSortOrder.enum.value_a_to_z:
-      return PivotSortOrder.enum.value_z_to_a;
-    default:
-      return PivotSortOrder.enum.key_a_to_z;
-  }
-}
-
-export function createPivotSlice(props?: {config?: Partial<PivotSliceConfig>}) {
+export function createPivotSlice(props?: {
+  config?: Partial<PivotConfig & {tableName?: string}>;
+}) {
   return createSlice<
     PivotSliceState,
     BaseRoomStoreState & DuckDbSliceState & PivotSliceState
   >((set, get) => ({
     pivot: {
-      config: createDefaultPivotConfig(props?.config),
+      config: createInitialPivotSliceConfig(props),
 
       async initialize() {
         const tables = get().db.tables;
         if (tables.length === 0) {
           return;
         }
-        const currentTable = get().pivot.config.tableName;
-        const nextTable = tables.find(
-          (table) => table.tableName === currentTable,
-        )
-          ? currentTable
-          : tables[0]?.tableName;
-        if (!nextTable) {
-          return;
-        }
-
-        const availableFields = new Set(
-          (
-            tables.find((table) => table.tableName === nextTable)?.columns ?? []
-          ).map((column) => column.name),
-        );
-
         set((state) =>
           produce(state, (draft) => {
-            draft.pivot.config.tableName = nextTable;
-            draft.pivot.config.rows = draft.pivot.config.rows.filter((field) =>
-              availableFields.has(field),
+            if (
+              !draft.pivot.config.currentPivotId &&
+              draft.pivot.config.pivotOrder.length > 0
+            ) {
+              draft.pivot.config.currentPivotId =
+                draft.pivot.config.pivotOrder[0];
+            }
+
+            for (const pivotId of draft.pivot.config.pivotOrder) {
+              const pivot = draft.pivot.config.pivots[pivotId];
+              if (!pivot) continue;
+              if (pivot.source?.kind === 'table') {
+                const tableName = pivot.source.tableName;
+                const table =
+                  tables.find(
+                    (candidate) => candidate.tableName === tableName,
+                  ) ?? tables[0];
+                if (table) {
+                  pivot.source = {kind: 'table', tableName: table.tableName};
+                  pivot.config = normalizePivotConfig(
+                    pivot.config,
+                    table.columns,
+                  );
+                }
+              }
+            }
+          }),
+        );
+      },
+
+      addPivot(pivotProps) {
+        const id = createId();
+        const title = generateUniqueName(
+          pivotProps?.title ?? 'Pivot 1',
+          Object.values(get().pivot.config.pivots).map((pivot) => pivot.title),
+          ' ',
+        );
+        const nextPivot = {
+          id,
+          title,
+          source: pivotProps?.source,
+          config: createDefaultPivotConfig(pivotProps?.config),
+          status: {state: 'idle', stale: false} satisfies PivotStatus,
+        };
+        set((state) =>
+          produce(state, (draft) => {
+            draft.pivot.config.pivots[id] = nextPivot;
+            draft.pivot.config.pivotOrder.push(id);
+            draft.pivot.config.currentPivotId = id;
+          }),
+        );
+        return id;
+      },
+
+      removePivot(pivotId) {
+        const relations = get().pivot.config.pivots[pivotId]?.status.relations;
+        void (async () => {
+          if (!relations) return;
+          const connector = await get().db.getConnector();
+          await dropPivotRelations({connector, relations});
+          void get().db.refreshTableSchemas();
+        })();
+        set((state) =>
+          produce(state, (draft) => {
+            delete draft.pivot.config.pivots[pivotId];
+            draft.pivot.config.pivotOrder =
+              draft.pivot.config.pivotOrder.filter((id) => id !== pivotId);
+            if (draft.pivot.config.currentPivotId === pivotId) {
+              draft.pivot.config.currentPivotId =
+                draft.pivot.config.pivotOrder[0];
+            }
+          }),
+        );
+      },
+
+      setCurrentPivot(pivotId) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.pivot.config.currentPivotId = pivotId;
+          }),
+        );
+      },
+
+      renamePivot(pivotId, title) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (pivot) {
+              pivot.title = title;
+            }
+          }),
+        );
+      },
+
+      setSource(pivotId, source) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.source = source;
+            pivot.config = createDefaultPivotConfig();
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setStatus(pivotId, status) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.status = {
+              ...pivot.status,
+              ...status,
+            };
+          }),
+        );
+      },
+
+      setConfig(pivotId, config) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            const tableSource =
+              pivot.source?.kind === 'table' ? pivot.source : undefined;
+            const table = tableSource
+              ? get().db.tables.find(
+                  (candidate) => candidate.tableName === tableSource.tableName,
+                )
+              : undefined;
+            pivot.config = normalizePivotConfig(config, table?.columns ?? []);
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      patchConfig(pivotId, config) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            const tableSource =
+              pivot.source?.kind === 'table' ? pivot.source : undefined;
+            const table = tableSource
+              ? get().db.tables.find(
+                  (candidate) => candidate.tableName === tableSource.tableName,
+                )
+              : undefined;
+            pivot.config = normalizePivotConfig(
+              {
+                ...pivot.config,
+                ...config,
+              },
+              table?.columns ?? [],
             );
-            draft.pivot.config.cols = draft.pivot.config.cols.filter((field) =>
-              availableFields.has(field),
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setRendererName(pivotId, rendererName) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.rendererName = rendererName;
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setAggregatorName(pivotId, aggregatorName) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.aggregatorName = aggregatorName;
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setRows(pivotId, rows) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.rows = rows;
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setCols(pivotId, cols) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.cols = cols;
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setVals(pivotId, vals) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.vals = vals;
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      setUnusedOrder(pivotId, unusedOrder) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.unusedOrder = unusedOrder;
+            pivot.status.stale = true;
+          }),
+        );
+      },
+
+      moveField(pivotId, field, destination, index) {
+        set((state) =>
+          produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config = moveFieldInConfig(
+              pivot.config,
+              field,
+              destination,
+              index,
             );
-            draft.pivot.config.vals = draft.pivot.config.vals.filter((field) =>
-              availableFields.has(field),
-            );
-            draft.pivot.config.unusedOrder =
-              draft.pivot.config.unusedOrder.filter((field) =>
-                availableFields.has(field),
-              );
-            draft.pivot.config.valueFilter = Object.fromEntries(
-              Object.entries(draft.pivot.config.valueFilter).filter(([field]) =>
-                availableFields.has(field),
-              ),
-            );
+            pivot.status.stale = true;
           }),
         );
       },
 
-      setConfig(config) {
+      cycleRowOrder(pivotId) {
         set((state) =>
           produce(state, (draft) => {
-            draft.pivot.config = PivotSliceConfig.parse(config);
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.rowOrder = nextSortOrder(pivot.config.rowOrder);
+            pivot.status.stale = true;
           }),
         );
       },
 
-      patchConfig(config) {
+      cycleColOrder(pivotId) {
         set((state) =>
           produce(state, (draft) => {
-            draft.pivot.config = PivotSliceConfig.parse({
-              ...draft.pivot.config,
-              ...config,
-            });
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.colOrder = nextSortOrder(pivot.config.colOrder);
+            pivot.status.stale = true;
           }),
         );
       },
 
-      setTableName(tableName) {
+      setAttributeFilterValues(pivotId, attribute, values) {
         set((state) =>
           produce(state, (draft) => {
-            draft.pivot.config.tableName = tableName;
-            draft.pivot.config.rows = [];
-            draft.pivot.config.cols = [];
-            draft.pivot.config.vals = [];
-            draft.pivot.config.unusedOrder = [];
-            draft.pivot.config.valueFilter = {};
-          }),
-        );
-      },
-
-      setRendererName(rendererName) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.rendererName = rendererName;
-          }),
-        );
-      },
-
-      setAggregatorName(aggregatorName) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.aggregatorName = aggregatorName;
-          }),
-        );
-      },
-
-      setRows(rows) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.rows = rows;
-          }),
-        );
-      },
-
-      setCols(cols) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.cols = cols;
-          }),
-        );
-      },
-
-      setVals(vals) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.vals = vals;
-          }),
-        );
-      },
-
-      setUnusedOrder(unusedOrder) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.unusedOrder = unusedOrder;
-          }),
-        );
-      },
-
-      moveField(field, destination, index) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.rows = draft.pivot.config.rows.filter(
-              (value) => value !== field,
-            );
-            draft.pivot.config.cols = draft.pivot.config.cols.filter(
-              (value) => value !== field,
-            );
-            draft.pivot.config.unusedOrder =
-              draft.pivot.config.unusedOrder.filter((value) => value !== field);
-
-            const target =
-              destination === 'rows'
-                ? draft.pivot.config.rows
-                : destination === 'cols'
-                  ? draft.pivot.config.cols
-                  : draft.pivot.config.unusedOrder;
-
-            const targetIndex =
-              index === undefined || index < 0 || index > target.length
-                ? target.length
-                : index;
-            target.splice(targetIndex, 0, field);
-          }),
-        );
-      },
-
-      cycleRowOrder() {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.rowOrder = nextSortOrder(
-              draft.pivot.config.rowOrder,
-            );
-          }),
-        );
-      },
-
-      cycleColOrder() {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.colOrder = nextSortOrder(
-              draft.pivot.config.colOrder,
-            );
-          }),
-        );
-      },
-
-      setAttributeFilterValues(attribute, values) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.pivot.config.valueFilter[attribute] = Object.fromEntries(
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            pivot.config.valueFilter[attribute] = Object.fromEntries(
               values.map((value) => [value, true]),
             );
+            pivot.status.stale = true;
           }),
         );
       },
 
-      addAttributeFilterValues(attribute, values) {
+      addAttributeFilterValues(pivotId, attribute, values) {
         set((state) =>
           produce(state, (draft) => {
-            const current = draft.pivot.config.valueFilter[attribute] ?? {};
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            const current = pivot.config.valueFilter[attribute] ?? {};
             for (const value of values) {
               current[value] = true;
             }
-            draft.pivot.config.valueFilter[attribute] = current;
+            pivot.config.valueFilter[attribute] = current;
+            pivot.status.stale = true;
           }),
         );
       },
 
-      removeAttributeFilterValues(attribute, values) {
+      removeAttributeFilterValues(pivotId, attribute, values) {
         set((state) =>
           produce(state, (draft) => {
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
             const current = {
-              ...(draft.pivot.config.valueFilter[attribute] ?? {}),
+              ...(pivot.config.valueFilter[attribute] ?? {}),
             };
             for (const value of values) {
               delete current[value];
             }
             if (Object.keys(current).length === 0) {
-              delete draft.pivot.config.valueFilter[attribute];
+              delete pivot.config.valueFilter[attribute];
             } else {
-              draft.pivot.config.valueFilter[attribute] = current;
+              pivot.config.valueFilter[attribute] = current;
             }
+            pivot.status.stale = true;
           }),
         );
       },
 
-      clearAttributeFilter(attribute) {
+      clearAttributeFilter(pivotId, attribute) {
         set((state) =>
           produce(state, (draft) => {
-            delete draft.pivot.config.valueFilter[attribute];
+            const pivot = draft.pivot.config.pivots[pivotId];
+            if (!pivot) return;
+            delete pivot.config.valueFilter[attribute];
+            pivot.status.stale = true;
           }),
         );
+      },
+
+      async runPivot(pivotId) {
+        const state = get();
+        const pivot = state.pivot.config.pivots[pivotId];
+        const tableSource =
+          pivot?.source?.kind === 'table' ? pivot.source : undefined;
+        if (!pivot || !tableSource) {
+          return;
+        }
+        const table = state.db.tables.find(
+          (candidate) => candidate.tableName === tableSource.tableName,
+        );
+        if (!table) {
+          return;
+        }
+
+        const querySource = createPivotQuerySourceFromTable(table);
+        set((current) =>
+          produce(current, (draft) => {
+            const currentPivot = draft.pivot.config.pivots[pivotId];
+            if (!currentPivot) return;
+            currentPivot.status = {
+              ...currentPivot.status,
+              state: 'running',
+            };
+          }),
+        );
+
+        try {
+          const connector = await state.db.getConnector();
+          const relations = await createOrReplacePivotRelations({
+            connector,
+            source: querySource,
+            config: pivot.config,
+            relationBaseName: `pivot_${pivotId}`,
+            schemaName: 'pivot',
+          });
+          set((current) =>
+            produce(current, (draft) => {
+              const currentPivot = draft.pivot.config.pivots[pivotId];
+              if (!currentPivot) return;
+              currentPivot.status = {
+                state: 'success',
+                stale: false,
+                lastRunTime: Date.now(),
+                relations,
+                sourceRelation: querySource.tableRef,
+              };
+            }),
+          );
+          void get().db.refreshTableSchemas();
+        } catch (error) {
+          set((current) =>
+            produce(current, (draft) => {
+              const currentPivot = draft.pivot.config.pivots[pivotId];
+              if (!currentPivot) return;
+              currentPivot.status = {
+                ...currentPivot.status,
+                state: 'error',
+                lastError:
+                  error instanceof Error ? error.message : String(error),
+              };
+            }),
+          );
+        }
       },
     },
   }));

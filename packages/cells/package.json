@@ -30,6 +30,7 @@
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

@@ -1,4 +1,4 @@
-import {DataTable, useSql} from '@sqlrooms/duckdb';
+import {useSql} from '@sqlrooms/duckdb';
 import {ErrorPane, SpinnerPane} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import React, {useMemo} from 'react';
@@ -14,25 +14,46 @@ import {
   buildGrandTotalQuery,
   buildPivotExportQuery,
   buildRowTotalsQuery,
+  createPivotQuerySourceFromTable,
 } from './sql';
 import {TableRenderer} from './TableRenderer';
 import {TsvRenderer} from './TsvRenderer';
-import {PivotSliceConfig} from './types';
+import {
+  type PivotConfig,
+  type PivotQuerySource,
+  type PivotRelationViews,
+} from './types';
 
 type PivotResultsProps = {
-  config: PivotSliceConfig;
-  table: DataTable;
+  config: PivotConfig;
+  source?: PivotQuerySource;
+  table?: Parameters<typeof createPivotQuerySourceFromTable>[0];
+  relations?: PivotRelationViews;
+  runState?: 'idle' | 'running' | 'success' | 'cancel' | 'error';
+  lastError?: string;
 };
 
 type PivotRow = Record<string, unknown>;
 
-export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
+export const PivotResults: React.FC<PivotResultsProps> = ({
+  config,
+  source,
+  table,
+  relations,
+  runState,
+  lastError,
+}) => {
+  const querySource = useMemo(
+    () =>
+      source ?? (table ? createPivotQuerySourceFromTable(table) : undefined),
+    [source, table],
+  );
   const resolvedConfig = useMemo(() => {
     const nextVals = getDefaultValuesForAggregator({
       aggregatorName: config.aggregatorName,
-      fields: table.columns
-        .filter((column) => !config.hiddenFromAggregators.includes(column.name))
-        .map((column) => ({name: column.name, type: column.type})),
+      fields: (querySource?.columns ?? []).filter(
+        (column) => !config.hiddenFromAggregators.includes(column.name),
+      ),
       currentValues: config.vals,
     });
 
@@ -44,29 +65,64 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
       ...config,
       vals: nextVals,
     };
-  }, [config, table.columns]);
+  }, [config, querySource?.columns]);
+
+  const directCellsQuery = useMemo(
+    () => (querySource ? buildCellsQuery(resolvedConfig, querySource) : ''),
+    [querySource, resolvedConfig],
+  );
+  const directRowTotalsQuery = useMemo(
+    () => (querySource ? buildRowTotalsQuery(resolvedConfig, querySource) : ''),
+    [querySource, resolvedConfig],
+  );
+  const directColTotalsQuery = useMemo(
+    () => (querySource ? buildColTotalsQuery(resolvedConfig, querySource) : ''),
+    [querySource, resolvedConfig],
+  );
+  const directGrandTotalQuery = useMemo(
+    () =>
+      querySource ? buildGrandTotalQuery(resolvedConfig, querySource) : '',
+    [querySource, resolvedConfig],
+  );
 
   const cellsQuery = useMemo(
-    () => buildCellsQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.cells ? `SELECT * FROM ${relations.cells}` : directCellsQuery,
+    [directCellsQuery, relations?.cells],
   );
   const rowTotalsQuery = useMemo(
-    () => buildRowTotalsQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.rowTotals
+        ? `SELECT * FROM ${relations.rowTotals}`
+        : directRowTotalsQuery,
+    [directRowTotalsQuery, relations?.rowTotals],
   );
   const colTotalsQuery = useMemo(
-    () => buildColTotalsQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.colTotals
+        ? `SELECT * FROM ${relations.colTotals}`
+        : directColTotalsQuery,
+    [directColTotalsQuery, relations?.colTotals],
   );
   const grandTotalQuery = useMemo(
-    () => buildGrandTotalQuery(resolvedConfig, table),
-    [resolvedConfig, table],
+    () =>
+      relations?.grandTotal
+        ? `SELECT * FROM ${relations.grandTotal}`
+        : directGrandTotalQuery,
+    [directGrandTotalQuery, relations?.grandTotal],
   );
 
-  const cellsResult = useSql<PivotRow>({query: cellsQuery});
-  const rowTotalsResult = useSql<PivotRow>({query: rowTotalsQuery});
-  const colTotalsResult = useSql<PivotRow>({query: colTotalsQuery});
-  const grandTotalResult = useSql<PivotRow>({query: grandTotalQuery});
+  const enabled = Boolean(
+    relations?.cells ||
+    relations?.rowTotals ||
+    relations?.colTotals ||
+    relations?.grandTotal ||
+    querySource,
+  );
+  const cellsResult = useSql<PivotRow>({query: cellsQuery, enabled});
+  const rowTotalsResult = useSql<PivotRow>({query: rowTotalsQuery, enabled});
+  const colTotalsResult = useSql<PivotRow>({query: colTotalsQuery, enabled});
+  const grandTotalResult = useSql<PivotRow>({query: grandTotalQuery, enabled});
 
   const grandTotal = useMemo(() => {
     return grandTotalResult.data?.arrowTable?.getChild('value')?.get(0) ?? null;
@@ -85,8 +141,30 @@ export const PivotResults: React.FC<PivotResultsProps> = ({config, table}) => {
       cellsResult.data?.arrowTable,
       'col_label',
     );
-    return buildPivotExportQuery(resolvedConfig, table, colLabels);
-  }, [cellsResult.data?.arrowTable, resolvedConfig, table]);
+    if (relations?.export) {
+      return `SELECT * FROM ${relations.export}`;
+    }
+    return querySource
+      ? buildPivotExportQuery(resolvedConfig, querySource, colLabels)
+      : '';
+  }, [
+    cellsResult.data?.arrowTable,
+    querySource,
+    relations?.export,
+    resolvedConfig,
+  ]);
+
+  if (!enabled) {
+    return (
+      <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-sm">
+        Select a pivot source to preview results.
+      </div>
+    );
+  }
+
+  if (runState === 'error' && lastError) {
+    return <ErrorPane error={new Error(lastError)} />;
+  }
 
   if (
     cellsResult.error ||

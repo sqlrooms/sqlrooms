@@ -37,8 +37,7 @@ export const PivotValueFilterSchema = z.record(
 );
 export type PivotValueFilter = z.infer<typeof PivotValueFilterSchema>;
 
-export const PivotSliceConfig = z.object({
-  tableName: z.string().optional(),
+export const PivotConfig = z.object({
   rendererName: PivotRendererName.default('Table'),
   aggregatorName: z.string().default('Count'),
   rows: z.array(z.string()).default([]),
@@ -53,6 +52,62 @@ export const PivotSliceConfig = z.object({
   hiddenFromAggregators: z.array(z.string()).default([]),
   hiddenFromDragDrop: z.array(z.string()).default([]),
 });
+export type PivotConfig = z.infer<typeof PivotConfig>;
+
+export const PivotSource = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('table'),
+    tableName: z.string(),
+  }),
+  z.object({
+    kind: z.literal('sql'),
+    sqlId: z.string(),
+  }),
+]);
+export type PivotSource = z.infer<typeof PivotSource>;
+
+export const PivotRelationViews = z.object({
+  cells: z.string().optional(),
+  rowTotals: z.string().optional(),
+  colTotals: z.string().optional(),
+  grandTotal: z.string().optional(),
+  export: z.string().optional(),
+});
+export type PivotRelationViews = z.infer<typeof PivotRelationViews>;
+
+export const PivotRunState = z.enum([
+  'idle',
+  'running',
+  'success',
+  'cancel',
+  'error',
+]);
+export type PivotRunState = z.infer<typeof PivotRunState>;
+
+export const PivotStatus = z.object({
+  state: PivotRunState.default('idle'),
+  stale: z.boolean().default(false),
+  lastError: z.string().optional(),
+  lastRunTime: z.number().optional(),
+  relations: PivotRelationViews.optional(),
+  sourceRelation: z.string().optional(),
+});
+export type PivotStatus = z.infer<typeof PivotStatus>;
+
+export const PivotSliceItem = z.object({
+  id: z.string(),
+  title: z.string(),
+  source: PivotSource.optional(),
+  config: PivotConfig,
+  status: PivotStatus.default({state: 'idle', stale: false}),
+});
+export type PivotSliceItem = z.infer<typeof PivotSliceItem>;
+
+export const PivotSliceConfig = z.object({
+  pivots: z.record(z.string(), PivotSliceItem).default({}),
+  pivotOrder: z.array(z.string()).default([]),
+  currentPivotId: z.string().optional(),
+});
 export type PivotSliceConfig = z.infer<typeof PivotSliceConfig>;
 
 export type PivotDropZone = 'unused' | 'rows' | 'cols';
@@ -62,30 +117,58 @@ export type PivotField = {
   type: string;
 };
 
+export type PivotQuerySource = {
+  tableRef: string;
+  columns: PivotField[];
+};
+
 export type PivotSliceState = {
   pivot: SliceFunctions & {
     config: PivotSliceConfig;
     initialize: () => Promise<void>;
-    setConfig: (config: PivotSliceConfig) => void;
-    patchConfig: (config: Partial<PivotSliceConfig>) => void;
-    setTableName: (tableName: string | undefined) => void;
-    setRendererName: (rendererName: PivotRendererName) => void;
-    setAggregatorName: (aggregatorName: string) => void;
-    setRows: (rows: string[]) => void;
-    setCols: (cols: string[]) => void;
-    setVals: (vals: string[]) => void;
-    setUnusedOrder: (unusedOrder: string[]) => void;
+    addPivot: (props?: {
+      title?: string;
+      source?: PivotSource;
+      config?: Partial<PivotConfig>;
+    }) => string;
+    removePivot: (pivotId: string) => void;
+    setCurrentPivot: (pivotId: string) => void;
+    renamePivot: (pivotId: string, title: string) => void;
+    setSource: (pivotId: string, source: PivotSource | undefined) => void;
+    setStatus: (pivotId: string, status: Partial<PivotStatus>) => void;
+    setConfig: (pivotId: string, config: PivotConfig) => void;
+    patchConfig: (pivotId: string, config: Partial<PivotConfig>) => void;
+    setRendererName: (pivotId: string, rendererName: PivotRendererName) => void;
+    setAggregatorName: (pivotId: string, aggregatorName: string) => void;
+    setRows: (pivotId: string, rows: string[]) => void;
+    setCols: (pivotId: string, cols: string[]) => void;
+    setVals: (pivotId: string, vals: string[]) => void;
+    setUnusedOrder: (pivotId: string, unusedOrder: string[]) => void;
     moveField: (
+      pivotId: string,
       field: string,
       destination: PivotDropZone,
       index?: number,
     ) => void;
-    cycleRowOrder: () => void;
-    cycleColOrder: () => void;
-    setAttributeFilterValues: (attribute: string, values: string[]) => void;
-    addAttributeFilterValues: (attribute: string, values: string[]) => void;
-    removeAttributeFilterValues: (attribute: string, values: string[]) => void;
-    clearAttributeFilter: (attribute: string) => void;
+    cycleRowOrder: (pivotId: string) => void;
+    cycleColOrder: (pivotId: string) => void;
+    setAttributeFilterValues: (
+      pivotId: string,
+      attribute: string,
+      values: string[],
+    ) => void;
+    addAttributeFilterValues: (
+      pivotId: string,
+      attribute: string,
+      values: string[],
+    ) => void;
+    removeAttributeFilterValues: (
+      pivotId: string,
+      attribute: string,
+      values: string[],
+    ) => void;
+    clearAttributeFilter: (pivotId: string, attribute: string) => void;
+    runPivot: (pivotId: string, opts?: {cascade?: boolean}) => Promise<void>;
   };
 };
 

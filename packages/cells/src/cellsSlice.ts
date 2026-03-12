@@ -31,7 +31,7 @@ import type {
   Edge,
   SheetType,
 } from './types';
-import {isInputCell, isSqlCell} from './types';
+import {isInputCell, isPivotCell, isSqlCell} from './types';
 import {getSheetSchemaName, isDefined} from './utils';
 
 function createDefaultCellsConfig(
@@ -93,6 +93,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
         // might be unavailable during teardown.
       }
     };
+    const dropPivotResultRelations = async (
+      relationNames?: Record<string, string>,
+    ) => {
+      if (!relationNames) return;
+      for (const relationName of Object.values(relationNames)) {
+        await dropSqlResultRelation(relationName);
+      }
+    };
 
     return {
       cells: {
@@ -131,6 +139,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   type: 'sql',
                   status: 'idle',
                   referencedTables: [],
+                };
+              } else if (cell.type === 'pivot') {
+                draft.cells.status[cell.id] = {
+                  type: 'pivot',
+                  status: 'idle',
+                  stale: true,
                 };
               } else {
                 draft.cells.status[cell.id] = {type: 'other'};
@@ -230,6 +244,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
           if (previousStatus?.type === 'sql') {
             void dropSqlResultRelation(previousStatus.resultView);
+          } else if (previousStatus?.type === 'pivot') {
+            void dropPivotResultRelations(previousStatus.resultViews);
           }
         },
 
@@ -277,6 +293,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
             isSqlCell(cell) &&
             isSqlCell(updatedCell) &&
             cell.data.sql !== updatedCell.data.sql;
+          const semanticPivotChanged =
+            isPivotCell(cell) &&
+            isPivotCell(updatedCell) &&
+            (JSON.stringify(cell.data.source) !==
+              JSON.stringify(updatedCell.data.source) ||
+              JSON.stringify(cell.data.pivotConfig) !==
+                JSON.stringify(updatedCell.data.pivotConfig));
 
           // Apply cell data to the store immediately so that other
           // actions (e.g. runCell triggered via Cmd+Enter) always see
@@ -285,6 +308,15 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[id] = updatedCell;
+              if (semanticPivotChanged) {
+                const status = draft.cells.status[id];
+                if (status?.type === 'pivot') {
+                  status.stale = true;
+                  if (status.status === 'success') {
+                    status.status = 'idle';
+                  }
+                }
+              }
             }),
           );
 
@@ -396,9 +428,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const ownedCellIds = [...sheet.cellIds];
           const relationNamesToDrop = ownedCellIds.flatMap((cellId) => {
             const status = get().cells.status[cellId];
-            return status?.type === 'sql' && status.resultView
-              ? [status.resultView]
-              : [];
+            if (status?.type === 'sql' && status.resultView) {
+              return [status.resultView];
+            }
+            if (status?.type === 'pivot') {
+              return Object.values(status.resultViews ?? {}).filter(isDefined);
+            }
+            return [];
           });
           set((state) =>
             produce(state, (draft) => {
@@ -639,6 +675,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   type: 'sql',
                   status: 'idle',
                   referencedTables: status.referencedTables || [],
+                };
+              } else if (status?.type === 'pivot') {
+                draft.cells.status[id] = {
+                  type: 'pivot',
+                  status: 'idle',
+                  stale: true,
+                  resultViews: status.resultViews,
+                  sourceRelation: status.sourceRelation,
                 };
               }
             }),

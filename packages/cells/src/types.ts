@@ -1,11 +1,17 @@
 import type {DbSliceState} from '@sqlrooms/db';
+import {
+  createDefaultPivotConfig,
+  PivotConfigSchema,
+  PivotRelationViewsSchema,
+  PivotSourceSchema,
+} from '@sqlrooms/pivot';
 import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import type React from 'react';
 import {z} from 'zod';
 
 /** Cell types */
-export type BuiltInCellType = 'sql' | 'text' | 'vega' | 'input';
+export type BuiltInCellType = 'sql' | 'text' | 'vega' | 'input' | 'pivot';
 export type CellType = BuiltInCellType | (string & {});
 export const CellType = z.string();
 
@@ -77,6 +83,14 @@ export const InputCellData = z.object({
 });
 export type InputCellData = z.infer<typeof InputCellData>;
 
+/** Pivot Cell Data */
+export const PivotCellData = z.object({
+  title: z.string().default('Pivot'),
+  source: PivotSourceSchema.optional(),
+  pivotConfig: PivotConfigSchema.default(createDefaultPivotConfig()),
+});
+export type PivotCellData = z.infer<typeof PivotCellData>;
+
 /** Unified Cell Data */
 export const CellData = z.object({
   type: CellType,
@@ -114,10 +128,17 @@ export const InputCell = z.object({
   data: InputCellData,
 });
 export type InputCell = z.infer<typeof InputCell>;
+export const PivotCell = z.object({
+  id: z.string(),
+  type: z.literal('pivot'),
+  data: PivotCellData,
+});
+export type PivotCell = z.infer<typeof PivotCell>;
 export const SqlCellSchema = SqlCell;
 export const TextCellSchema = TextCell;
 export const VegaCellSchema = VegaCell;
 export const InputCellSchema = InputCell;
+export const PivotCellSchema = PivotCell;
 
 /** Canonical Cell */
 export const Cell = z.object({
@@ -230,7 +251,22 @@ export const OtherCellStatus = z.object({
 });
 export type OtherCellStatus = z.infer<typeof OtherCellStatus>;
 
-export const CellStatus = z.union([SqlCellStatus, OtherCellStatus]);
+export const PivotCellStatus = z.object({
+  type: z.literal('pivot'),
+  status: z.enum(['idle', 'running', 'success', 'cancel', 'error']),
+  stale: z.boolean().default(true),
+  lastError: z.string().optional(),
+  resultViews: PivotRelationViewsSchema.optional(),
+  sourceRelation: z.string().optional(),
+  lastRunTime: z.number().optional(),
+});
+export type PivotCellStatus = z.infer<typeof PivotCellStatus>;
+
+export const CellStatus = z.union([
+  SqlCellStatus,
+  PivotCellStatus,
+  OtherCellStatus,
+]);
 export type CellStatus = z.infer<typeof CellStatus>;
 
 /** SQL execution results */
@@ -368,4 +404,8 @@ export function isVegaCell(cell: Cell): cell is VegaCell {
 
 export function isInputCell(cell: Cell): cell is InputCell {
   return cell.type === 'input';
+}
+
+export function isPivotCell(cell: Cell): cell is PivotCell {
+  return cell.type === 'pivot';
 }

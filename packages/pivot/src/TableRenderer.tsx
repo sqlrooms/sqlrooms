@@ -13,11 +13,11 @@ import {
   toNumericValues,
 } from './helpers';
 import {getColAlias, getRowAlias} from './sql';
-import {PivotSliceConfig} from './types';
+import {PivotConfig} from './types';
 import React, {useMemo} from 'react';
 
 type TableRendererProps = {
-  config: PivotSliceConfig;
+  config: PivotConfig;
   cellRows: PivotArrowTable;
   rowTotals: PivotArrowTable;
   colTotals: PivotArrowTable;

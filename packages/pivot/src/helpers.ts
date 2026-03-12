@@ -1,6 +1,6 @@
 import {getAggregatorLabel} from './aggregators';
 import {buildRendererTitle} from './sql';
-import {PivotSliceConfig} from './types';
+import {PivotConfig} from './types';
 import {VisualizationSpec} from '@sqlrooms/vega';
 import * as arrow from 'apache-arrow';
 
@@ -231,8 +231,8 @@ export function toNumericValues(values: unknown[]) {
  * pivot result's `row_label` and `col_label` columns.
  */
 export function buildChartSpec(
-  config: PivotSliceConfig,
-  rendererName: PivotSliceConfig['rendererName'],
+  config: PivotConfig,
+  rendererName: PivotConfig['rendererName'],
 ): VisualizationSpec {
   const fullAggName = getAggregatorLabel(config.aggregatorName, config.vals);
   const defaultSeries = JSON.stringify(fullAggName);
