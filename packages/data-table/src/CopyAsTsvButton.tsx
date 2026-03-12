@@ -8,9 +8,13 @@ export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
   const [isCopying, setIsCopying] = useState(false);
 
   const handleCopy = async () => {
-    if (!query) return;
+    if (!query) {
+      return;
+    }
+
+    const loadingToastId = toast.loading('Copying results to clipboard...');
+
     try {
-      toast.loading('Copying results to clipboard...');
       setIsCopying(true);
       const rowCount = await copyAsTsv(query);
       toast.success(
@@ -18,7 +22,14 @@ export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
           ? 'Copied 1 row'
           : `Copied ${rowCount.toLocaleString()} rows`,
       );
+    } catch (error) {
+      toast.error('Failed to copy to clipboard', {
+        description:
+          error instanceof Error ? error.message : 'An unknown error occurred',
+      });
     } finally {
+      toast.dismiss(loadingToastId);
+
       setIsCopying(false);
     }
   };
