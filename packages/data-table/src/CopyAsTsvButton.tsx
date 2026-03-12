@@ -3,7 +3,7 @@ import {Button, Spinner, toast} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
 import {FC, useState} from 'react';
 
-const MAX_SIZE_MB = 5; // 50 MB
+const MAX_SIZE_MB = 50; // 50 MB
 
 export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
   const {copyAsTsv} = useCopyAsTsv();
