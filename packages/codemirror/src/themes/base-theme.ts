@@ -29,8 +29,8 @@ export function createBaseTheme({
       '.cm-content': {
         caretColor: 'var(--color-primary)',
         fontFamily,
-        fontSize: '14px',
-        lineHeight: '21px',
+        fontSize: '12px',
+        lineHeight: '18px',
         paddingTop: '0',
       },
       '.cm-cursor, .cm-dropCursor': {
