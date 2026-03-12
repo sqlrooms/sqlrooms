@@ -9,11 +9,16 @@ import {
   type GroupedFunctionSuggestion,
 } from './duckdb-function-utils';
 
+const MAX_LIMIT = 10000;
+
 const getFunctionSuggestionsImpl = async (
   connector: DuckDbConnector,
   wordBeforeCursor: string,
   limit = 100,
 ): Promise<GroupedFunctionSuggestion[]> => {
+  // Validate and sanitize limit
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 100, MAX_LIMIT));
+
   const result = await connector.query(
     `SELECT
       function_name as name,
@@ -29,7 +34,7 @@ const getFunctionSuggestionsImpl = async (
      )} ESCAPE '\\'
      AND REGEXP_MATCHES(function_name, '^[A-Z]', 'i')
     ORDER BY function_name
-    LIMIT ${limit}`,
+    LIMIT ${safeLimit}`,
   );
 
   const functions = convertArrowResultToFunctionSuggestions(result);

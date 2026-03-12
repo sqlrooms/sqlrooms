@@ -58,7 +58,7 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
    */
   language?: string;
   /**
-   * The theme of the editor
+   * The theme of the editor ('dark' | 'light' | 'system')
    * Can be explicitly set or will automatically use the app theme if not provided
    * @default 'dark'
    */

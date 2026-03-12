@@ -16,9 +16,10 @@ export interface HoverContext {
  * Creates a hover tooltip extension for SQL functions.
  * Shows function signatures, descriptions, and examples on hover.
  */
-export function createHover(context: HoverContext): Extension {
+export function createHover({
+  getFunctionDocumentation,
+}: HoverContext): Extension {
   return hoverTooltip(async (view: EditorView, pos: number, side) => {
-    const {getFunctionDocumentation} = context;
     if (!getFunctionDocumentation) {
       return null;
     }

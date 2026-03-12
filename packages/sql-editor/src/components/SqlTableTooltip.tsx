@@ -3,6 +3,10 @@ import type {DataTable} from '@sqlrooms/duckdb';
 import type {NamespaceTooltipData} from '@marimo-team/codemirror-sql';
 import {Badge} from '@sqlrooms/ui';
 import {SqlColumnsTable} from './SqlColumnsTable';
+import {
+  parseQualifiedTableName,
+  findTable,
+} from '../utils/qualified-name-parser';
 
 export interface SqlTableTooltipProps {
   data: NamespaceTooltipData;
@@ -13,7 +17,8 @@ export const SqlTableTooltip: React.FC<SqlTableTooltipProps> = ({
   data: {word: tableName},
   tables,
 }) => {
-  const table = tables.find((table) => table.table.table === tableName);
+  const qualifiedName = parseQualifiedTableName(tableName);
+  const table = findTable(qualifiedName, tables);
 
   const typeLabel = table?.isView ? 'view' : 'table';
   const rowCount = table?.rowCount;

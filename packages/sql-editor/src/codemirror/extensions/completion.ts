@@ -4,7 +4,6 @@ import {
   autocompletion,
 } from '@codemirror/autocomplete';
 import type {Extension} from '@codemirror/state';
-import type {EditorView} from '@codemirror/view';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToString} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
@@ -16,18 +15,15 @@ export interface CompletionContext {
   ) => Promise<GroupedFunctionSuggestion[]>;
 }
 
-const completionContextByView = new WeakMap<EditorView, CompletionContext>();
-
 /**
  * Creates SQL completion extension with dynamic function docs and keywords.
  * Complements marimo-sql's base SQL completions (keywords, tables, columns, CTEs).
  */
-export function createCompletion(context: CompletionContext): Extension {
+export function createCompletion({
+  getKeywordSuggestions,
+  getFunctionSuggestions,
+}: CompletionContext): Extension {
   const completionSource = async (completionContext: CMCompletionContext) => {
-    // Get context from WeakMap (falls back to initial context)
-    const view = completionContext.view;
-    const ctx = view ? (completionContextByView.get(view) ?? context) : context;
-
     const suggestions: Completion[] = [];
 
     // Get word at cursor for matching
@@ -37,7 +33,7 @@ export function createCompletion(context: CompletionContext): Extension {
     }
 
     // Add keywords
-    const keywords = ctx.getKeywordSuggestions?.() ?? [];
+    const keywords = getKeywordSuggestions?.() ?? [];
     keywords.forEach((keyword) => {
       suggestions.push({
         label: keyword,
@@ -47,9 +43,9 @@ export function createCompletion(context: CompletionContext): Extension {
     });
 
     // Add dynamic function suggestions with documentation
-    if (ctx.getFunctionSuggestions && word.text) {
+    if (getFunctionSuggestions && word.text) {
       try {
-        const functionGroups = await ctx.getFunctionSuggestions(word.text);
+        const functionGroups = await getFunctionSuggestions(word.text);
 
         suggestions.push(
           ...functionGroups.map(({name, overloads}): Completion => {

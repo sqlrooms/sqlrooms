@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import {useState, type FC} from 'react';
 import {type DataTable} from '@sqlrooms/duckdb';
 import {SqlCodeMirrorEditor, SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {type EditorType} from './EditorTypeSwitch';
@@ -58,10 +58,7 @@ interface SqlEditorProps {
   className?: string;
 }
 
-export const SqlEditor: React.FC<SqlEditorProps> = ({
-  editorType,
-  className,
-}) => {
+export const SqlEditor: FC<SqlEditorProps> = ({editorType, className}) => {
   const [sqlValue, setSqlValue] = useState(initialSqlQuery);
 
   const handleRunQuery = (query: string) => {

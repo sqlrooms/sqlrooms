@@ -45,8 +45,9 @@ export function convertArrowResultToFunctionSuggestions(
             : typeof example === 'string'
               ? [example]
               : [],
-        parameters: Array.from(parameters),
-        parameterTypes: Array.from(parameterTypes),
+        parameters: parameters == null ? null : Array.from(parameters),
+        parameterTypes:
+          parameterTypes == null ? null : Array.from(parameterTypes),
         description: description,
       };
     },

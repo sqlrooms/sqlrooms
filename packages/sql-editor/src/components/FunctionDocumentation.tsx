@@ -71,7 +71,8 @@ const FunctionSignatures: FC<FunctionSignaturesProps> = ({
       ))}
       {moreOverloadsCount > 0 && (
         <>
-          {'\n'}(+{moreOverloadsCount} more overload)
+          {'\n'}(+{moreOverloadsCount} more{' '}
+          {moreOverloadsCount === 1 ? 'overload' : 'overloads'})
         </>
       )}
     </pre>
@@ -84,10 +85,6 @@ interface FunctionSignatureProps {
 
 const FunctionSignature: FC<FunctionSignatureProps> = ({functionMetadata}) => {
   const {parameterTypes, parameters, returnType} = functionMetadata;
-
-  if (!parameterTypes && !parameters && !returnType) {
-    return null;
-  }
 
   return (
     <>

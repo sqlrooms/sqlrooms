@@ -280,6 +280,8 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
 /**
  * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
  * This is an internal component used by SqlEditor
+ *
+ * @deprecated Use SqlCodeMirrorEditor instead. This component will be removed in a future version.
  */
 export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   connector,
@@ -294,6 +296,11 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   ...restProps
 }) => {
   const modelRef = useRef<any>(null);
+  const onRunQueryRef = useRef(onRunQuery);
+
+  useEffect(() => {
+    onRunQueryRef.current = onRunQuery;
+  }, [onRunQuery]);
 
   // Update per-model context when props change
   useEffect(() => {

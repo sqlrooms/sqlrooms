@@ -109,7 +109,7 @@ configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
 | --------- | ----------------- | ------------ | ---------------------------------------- |
 | className | string            | ''           | CSS class name for the editor container  |
 | language  | string            | 'javascript' | The language of the editor               |
-| theme     | 'dark' \| 'light' | 'dark'       | The theme of the editor                  |
+| theme     | 'dark' \| 'light' \| 'system' | 'dark'       | The theme of the editor                  |
 | value     | string            | ''           | The value of the editor                  |
 | readOnly  | boolean           | false        | Whether the editor is read-only          |
 | options   | object            | {}           | Additional options for the editor        |

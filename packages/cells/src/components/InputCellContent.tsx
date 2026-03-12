@@ -103,7 +103,7 @@ export const InputCellContent: React.FC<InputCellContentProps> = ({
         <EditableText
           value={input.varName}
           onChange={(varName) => updateInput({varName})}
-          className="h-6 text-xs font-semibold shadow-none ring-0 outline-none"
+          className="h-6 text-xs font-semibold shadow-none ring-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
         />
         <span className="text-[10px] font-bold text-gray-400 uppercase">
           Input
