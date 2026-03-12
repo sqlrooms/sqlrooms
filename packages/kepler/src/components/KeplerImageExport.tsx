@@ -15,6 +15,8 @@ import {dataURItoBlob, downloadFile} from '@kepler.gl/utils';
 import {ExportImage} from '@kepler.gl/types';
 import {Loader2} from 'lucide-react';
 
+type ExportResolutionOption = ExportImage['resolution'];
+
 export interface KeplerImageExportProps {
   setExportImageSetting: (settings: Partial<ExportImage>) => void;
   cleanupExportImage: () => void;
@@ -72,9 +74,9 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
         <Label>Resolution</Label>
         <Select
           value={resolution}
-          onValueChange={(value: string) =>
+          onValueChange={(value: ExportResolutionOption) =>
             setExportImageSetting({
-              resolution: value as string,
+              resolution: value,
             })
           }
           disabled={processing}
@@ -83,10 +85,12 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
             <SelectValue placeholder="Select resolution" />
           </SelectTrigger>
           <SelectContent>
-            {EXPORT_IMG_RESOLUTION_OPTIONS.map((option) => (
+            {EXPORT_IMG_RESOLUTION_OPTIONS.filter(
+              (option) => !option.scale,
+            ).map((option) => (
               <SelectItem
                 key={option.id}
-                value={option.id}
+                value={option.id as ExportResolutionOption}
                 disabled={!option.available}
               >
                 {option.label}
@@ -106,12 +110,6 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
           disabled={processing}
         />
       </div>
-
-      {isPreviewReady && imageSize && (
-        <div className="text-sm text-gray-600">
-          Export size: {imageSize.imageW} × {imageSize.imageH} px
-        </div>
-      )}
 
       <div className="flex flex-col gap-2">
         <Button
