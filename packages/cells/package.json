@@ -42,6 +42,7 @@
     "monaco-editor": "^0.55.1",
     "react-hook-form": "^7.68.0",
     "react-markdown": "^10.1.0",
+    "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "zod": "^4.1.8"
   },
