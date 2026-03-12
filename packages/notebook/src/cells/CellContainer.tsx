@@ -12,7 +12,7 @@ export type CellContainerProps = {
   footer?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
-  hideHeader?: boolean;
+  showHeader?: boolean;
 };
 
 export const CellContainer: React.FC<CellContainerProps> = ({
@@ -21,7 +21,7 @@ export const CellContainer: React.FC<CellContainerProps> = ({
   footer,
   children,
   className,
-  hideHeader,
+  showHeader = true,
 }) => {
   const cell = useStoreWithNotebook(
     (s) => findCellInNotebook(s as any, id)?.cell,
@@ -40,7 +40,7 @@ export const CellContainer: React.FC<CellContainerProps> = ({
       data-cell-container-id={id}
       className={cn(
         'group relative rounded',
-        hideHeader
+        !showHeader
           ? isCurrent
             ? 'border-primary border'
             : ''
@@ -49,7 +49,7 @@ export const CellContainer: React.FC<CellContainerProps> = ({
       )}
       onClick={() => setCurrentCell(id)}
     >
-      {hideHeader ? (
+      {!showHeader ? (
         <div
           className={cn(
             'absolute top-1 right-1 z-10 items-center gap-1',

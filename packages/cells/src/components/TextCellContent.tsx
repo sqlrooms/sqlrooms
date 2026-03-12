@@ -81,7 +81,7 @@ export const TextCellContent: React.FC<TextCellContentProps> = ({
   );
 
   return renderContainer({
-    hideHeader: true,
+    showHeader: false,
     content,
   });
 };
