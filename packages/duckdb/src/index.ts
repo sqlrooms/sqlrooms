@@ -35,7 +35,7 @@ export {
   type SchemaAndDatabase,
 } from './DuckDbSlice';
 
-export {useExportToCsv} from './exportToCsv';
+export {useExportToCsv, useCopyAsTsv} from './exportToCsv';
 
 export {useDuckDb} from './useDuckDb';
 
