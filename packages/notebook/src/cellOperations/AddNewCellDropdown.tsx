@@ -76,7 +76,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
   return (
     <PopoverContent
       align={align}
-      className="w-[100px] p-0"
+      className="w-auto p-0"
       onCloseAutoFocus={(e) => e.preventDefault()}
     >
       <Command tabIndex={0} loop className="focus-visible:outline-none">
@@ -93,7 +93,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
                   }}
                   className="cursor-pointer"
                 >
-                  <span className="text-xs capitalize">
+                  <span className="text-xs capitalize whitespace-nowrap">
                     {getCellTypeLabel(type, cellRegistry)}
                   </span>
                 </CommandItem>
