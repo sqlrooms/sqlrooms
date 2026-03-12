@@ -1,5 +1,5 @@
 import {useCopyAsTsv} from '@sqlrooms/duckdb';
-import {Button, toast} from '@sqlrooms/ui';
+import {Button, Spinner, toast} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
 import {FC, useState} from 'react';
 
@@ -10,10 +10,13 @@ export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
   const handleCopy = async () => {
     if (!query) return;
     try {
+      toast.loading('Copying results to clipboard...');
       setIsCopying(true);
       const rowCount = await copyAsTsv(query);
       toast.success(
-        rowCount === 1 ? 'Copied 1 row' : `Copied ${rowCount} rows`,
+        rowCount === 1
+          ? 'Copied 1 row'
+          : `Copied ${rowCount.toLocaleString()} rows`,
       );
     } finally {
       setIsCopying(false);
@@ -29,11 +32,7 @@ export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
       title="Copy results to clipboard"
       onClick={handleCopy}
     >
-      {isCopying ? (
-        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-      ) : (
-        <ClipboardIcon size={16} />
-      )}
+      {isCopying ? <Spinner /> : <ClipboardIcon size={16} />}
     </Button>
   );
 };
