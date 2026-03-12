@@ -6,8 +6,11 @@ import {EditorView, tooltips} from '@codemirror/view';
  */
 export const tooltipTheme = [
   // Mount tooltips to document.body so they can escape overflow containers
+  // Use a getter to avoid accessing document at module load time (safe for SSR/tests)
   tooltips({
-    parent: document.body,
+    get parent() {
+      return typeof document !== 'undefined' ? document.body : undefined;
+    },
   }),
   // Style adjustments for body-mounted tooltips
   EditorView.theme({
