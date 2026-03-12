@@ -15,6 +15,7 @@ import {
   PivotConfig as PivotConfigSchema,
   PivotSortOrder,
 } from './types';
+import type {PivotHostBinding, PivotPersistedState} from './PivotBinding';
 
 export function createDefaultPivotConfig(
   props?: Partial<PivotConfig>,
@@ -266,6 +267,15 @@ function createPivotInstanceSnapshot(
   };
 }
 
+function createDefaultPivotPersistedState(
+  partial?: Partial<PivotPersistedState>,
+): PivotPersistedState {
+  return {
+    source: partial?.source,
+    config: createDefaultPivotConfig(partial?.config),
+  };
+}
+
 function samePivotSnapshot(a: PivotInstanceSnapshot, b: PivotInstanceSnapshot) {
   return (
     sameJson(a.source, b.source) &&
@@ -428,12 +438,38 @@ export function createPivotCoreStore(
   });
 }
 
-export function createPivotInstanceAdapterStore(args: {
-  getSnapshot: () => PivotInstanceSnapshot;
-  subscribeToHost: (listener: () => void) => () => void;
-  callbacks: PivotInstanceCallbacks;
+function getBoundPivotSnapshot<RootState, Id extends string>(
+  rootStore: StoreApi<RootState>,
+  id: Id,
+  binding: PivotHostBinding<RootState, Id>,
+): PivotInstanceSnapshot {
+  const rootState = rootStore.getState();
+  const persistedState = createDefaultPivotPersistedState(
+    binding.getPersistedState(rootState, id),
+  );
+  const runtimeState = binding.getRuntimeState(rootState, id);
+  const fields = runtimeState.querySource?.columns ?? runtimeState.fields;
+
+  return {
+    source: persistedState.source,
+    config: normalizePivotConfig(persistedState.config, fields),
+    status: defaultStatus(runtimeState.status),
+    querySource: runtimeState.querySource,
+    fields,
+    availableTables: runtimeState.availableTables,
+  };
+}
+
+export function createPivotBoundStore<RootState, Id extends string>(args: {
+  rootStore: StoreApi<RootState>;
+  id: Id;
+  binding: PivotHostBinding<RootState, Id>;
 }): PivotInstanceStore {
-  let currentSnapshot = args.getSnapshot();
+  let currentSnapshot = getBoundPivotSnapshot(
+    args.rootStore,
+    args.id,
+    args.binding,
+  );
   const store = createStore<PivotInstanceState>((set, get) => ({
     ...currentSnapshot,
     ui: {
@@ -441,19 +477,28 @@ export function createPivotInstanceAdapterStore(args: {
     },
     ...createPivotInstanceActions(get, set, {
       setSourceImpl: (source) => {
-        args.callbacks.setSource?.(source);
+        args.binding.setPersistedState(args.id, () =>
+          createDefaultPivotPersistedState({source}),
+        );
       },
       setConfigImpl: (config) => {
-        args.callbacks.setConfig?.(config);
+        args.binding.setPersistedState(args.id, (current) => ({
+          ...current,
+          config,
+        }));
       },
       runImpl: async () => {
-        await args.callbacks.run?.();
+        await args.binding.run(args.id);
       },
     }),
   }));
 
-  const unsubscribe = args.subscribeToHost(() => {
-    const nextSnapshot = args.getSnapshot();
+  const unsubscribe = args.binding.subscribe(() => {
+    const nextSnapshot = getBoundPivotSnapshot(
+      args.rootStore,
+      args.id,
+      args.binding,
+    );
     if (samePivotSnapshot(currentSnapshot, nextSnapshot)) {
       return;
     }

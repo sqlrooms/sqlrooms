@@ -7,14 +7,14 @@ import {
   addAttributeFilterValuesInConfig,
   clearAttributeFilterInConfig,
   createDefaultPivotConfig,
-  createPivotInstanceAdapterStore,
+  createPivotBoundStore,
   moveFieldInConfig,
   nextSortOrder,
   normalizePivotConfig,
   removeAttributeFilterValuesInConfig,
   setAttributeFilterValuesInConfig,
-  type PivotInstanceSnapshot,
 } from './PivotCoreSlice';
+import type {PivotHostBinding, PivotPersistedState} from './PivotBinding';
 import {createPivotQuerySourceFromTable} from './sql';
 import {
   createOrReplacePivotRelations,
@@ -65,7 +65,12 @@ export function createPivotSlice(props?: {
 }) {
   const pivotStores = new Map<
     string,
-    ReturnType<typeof createPivotInstanceAdapterStore>
+    ReturnType<
+      typeof createPivotBoundStore<
+        BaseRoomStoreState & DuckDbSliceState & PivotSliceState,
+        string
+      >
+    >
   >();
 
   return createSlice<
@@ -119,40 +124,86 @@ export function createPivotSlice(props?: {
           return existing;
         }
 
-        const getPivotSnapshot = (): PivotInstanceSnapshot => {
-          const state = get();
-          const pivot = state.pivot.config.pivots[pivotId];
-          const availableTables = state.db.tables.map(
-            (table) => table.tableName,
+        const updatePivotPersistedState = (
+          boundPivotId: string,
+          updater: (current: PivotPersistedState) => PivotPersistedState,
+        ) => {
+          const tables = get().db.tables;
+          set((state) =>
+            produce(state, (draft) => {
+              const pivot = draft.pivot.config.pivots[boundPivotId];
+              if (!pivot) return;
+              const nextPersisted = updater({
+                source: pivot.source,
+                config: pivot.config,
+              });
+              const tableSource =
+                nextPersisted.source?.kind === 'table'
+                  ? nextPersisted.source
+                  : undefined;
+              const table = tableSource
+                ? tables.find(
+                    (candidate) =>
+                      candidate.tableName === tableSource.tableName,
+                  )
+                : undefined;
+              pivot.source = nextPersisted.source;
+              pivot.config = normalizePivotConfig(
+                nextPersisted.config,
+                table?.columns ?? [],
+              );
+              pivot.status = resetPivotRuntimeStatus(pivot.status);
+            }),
           );
-          const tableSource =
-            pivot?.source?.kind === 'table' ? pivot.source : undefined;
-          const table = tableSource
-            ? state.db.tables.find(
-                (candidate) => candidate.tableName === tableSource.tableName,
-              )
-            : undefined;
-          const querySource = table
-            ? createPivotQuerySourceFromTable(table)
-            : undefined;
-          return {
-            source: pivot?.source,
-            config: pivot?.config ?? createDefaultPivotConfig(),
-            status: pivot?.status ?? {state: 'idle', stale: false},
-            querySource,
-            fields: querySource?.columns ?? [],
-            availableTables,
-          };
         };
 
-        const boundStore = createPivotInstanceAdapterStore({
-          getSnapshot: getPivotSnapshot,
-          subscribeToHost: (listener) => store.subscribe(listener),
-          callbacks: {
-            setSource: (source) => get().pivot.setSource(pivotId, source),
-            setConfig: (config) => get().pivot.setConfig(pivotId, config),
-            run: () => get().pivot.runPivot(pivotId),
+        const binding: PivotHostBinding<
+          BaseRoomStoreState & DuckDbSliceState & PivotSliceState,
+          string
+        > = {
+          getPersistedState: (rootState, boundPivotId) => {
+            const pivot = rootState.pivot.config.pivots[boundPivotId];
+            if (!pivot) {
+              return undefined;
+            }
+            return {
+              source: pivot.source,
+              config: pivot.config,
+            };
           },
+          setPersistedState: (boundPivotId, updater) => {
+            updatePivotPersistedState(boundPivotId, updater);
+          },
+          getRuntimeState: (rootState, boundPivotId) => {
+            const pivot = rootState.pivot.config.pivots[boundPivotId];
+            const availableTables = rootState.db.tables.map(
+              (table) => table.tableName,
+            );
+            const tableSource =
+              pivot?.source?.kind === 'table' ? pivot.source : undefined;
+            const table = tableSource
+              ? rootState.db.tables.find(
+                  (candidate) => candidate.tableName === tableSource.tableName,
+                )
+              : undefined;
+            const querySource = table
+              ? createPivotQuerySourceFromTable(table)
+              : undefined;
+            return {
+              status: pivot?.status ?? {state: 'idle', stale: false},
+              querySource,
+              fields: querySource?.columns ?? [],
+              availableTables,
+            };
+          },
+          run: (boundPivotId) => get().pivot.runPivot(boundPivotId),
+          subscribe: (listener) => store.subscribe(listener),
+        };
+
+        const boundStore = createPivotBoundStore({
+          rootStore: store,
+          id: pivotId,
+          binding,
         });
         pivotStores.set(pivotId, boundStore);
         return boundStore;

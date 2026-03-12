@@ -1,4 +1,5 @@
 import {
+  createPivotBoundStore,
   type PivotInstanceStore,
   PivotEditor,
   type PivotSource,
@@ -16,7 +17,7 @@ import React, {useEffect, useMemo} from 'react';
 import {useStore} from 'zustand';
 import {findSheetIdForCell} from '../helpers';
 import {useCellsStore} from '../hooks';
-import {createPivotCellStore} from '../pivotInstanceStore';
+import {createNotebookPivotBinding} from '../pivotBinding';
 import type {CellContainerProps, CellsRootState, PivotCell} from '../types';
 
 const EMPTY_CELL_IDS: string[] = [];
@@ -94,9 +95,18 @@ export const PivotCellContent: React.FC<PivotCellContentProps> = ({
   );
   const cellsData = useCellsStore((state) => state.cells.config.data);
   const cellsStatus = useCellsStore((state) => state.cells.status);
+  const pivotBinding = useMemo(
+    () => createNotebookPivotBinding(roomStore),
+    [roomStore],
+  );
   const pivotStore = useMemo(
-    () => createPivotCellStore(roomStore, id),
-    [id, roomStore],
+    () =>
+      createPivotBoundStore({
+        rootStore: roomStore,
+        id,
+        binding: pivotBinding,
+      }),
+    [id, pivotBinding, roomStore],
   );
 
   useEffect(() => () => pivotStore.destroy(), [pivotStore]);

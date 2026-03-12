@@ -8,8 +8,8 @@ export {
   addAttributeFilterValuesInConfig,
   clearAttributeFilterInConfig,
   createDefaultPivotConfig,
+  createPivotBoundStore,
   createPivotCoreStore,
-  createPivotInstanceAdapterStore,
   normalizePivotConfig,
   removeAttributeFilterValuesInConfig,
   setAttributeFilterValuesInConfig,
@@ -47,6 +47,11 @@ export type {
   PivotInstanceState,
   PivotInstanceStore,
 } from './PivotCoreSlice';
+export type {
+  PivotHostBinding,
+  PivotPersistedState,
+  PivotRuntimeState,
+} from './PivotBinding';
 export type {
   PivotConfig,
   PivotRelationViews,
