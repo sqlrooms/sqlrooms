@@ -55,10 +55,10 @@ import React, {
 import {useStore} from 'zustand';
 import {PIVOT_AGGREGATORS, getPivotAggregator} from './aggregators';
 import {
-  createDefaultPivotConfig,
   createPivotCoreStore,
   type CreatePivotCoreStoreProps,
-  type PivotCoreSliceState,
+  type PivotInstanceState,
+  type PivotInstanceStore,
 } from './PivotCoreSlice';
 import {PivotResults} from './PivotResults';
 import {buildDistinctValuesQuery} from './sql';
@@ -71,20 +71,16 @@ import {
 } from './types';
 
 type PivotEditorProps = CreatePivotCoreStoreProps & {
-  store?: ReturnType<typeof createPivotCoreStore>;
+  store?: PivotInstanceStore;
   autoRun?: boolean;
   autoRunDebounceMs?: number;
   className?: string;
   children?: React.ReactNode;
 };
 
-const PivotEditorStoreContext = createContext<ReturnType<
-  typeof createPivotCoreStore
-> | null>(null);
+const PivotEditorStoreContext = createContext<PivotInstanceStore | null>(null);
 
-function usePivotEditorStore<T>(
-  selector: (state: PivotCoreSliceState) => T,
-): T {
+function usePivotEditorStore<T>(selector: (state: PivotInstanceState) => T): T {
   const store = useContext(PivotEditorStoreContext);
   if (!store) {
     throw new Error('PivotEditor store context is missing');
@@ -115,7 +111,7 @@ function parseContainerId(id: string): PivotDropZone | null {
   return id.replace(CONTAINER_ID_PREFIX, '') as PivotDropZone;
 }
 
-function getSortIcon(order: PivotCoreSliceState['config']['rowOrder']) {
+function getSortIcon(order: PivotInstanceState['config']['rowOrder']) {
   switch (order) {
     case 'value_a_to_z':
       return ArrowDownWideNarrowIcon;
@@ -261,9 +257,7 @@ const PivotEditorRoot: React.FC<PivotEditorProps> = ({
   className,
   children,
 }) => {
-  const internalStoreRef = useRef<ReturnType<
-    typeof createPivotCoreStore
-  > | null>(null);
+  const internalStoreRef = useRef<PivotInstanceStore | null>(null);
 
   if (!store && !internalStoreRef.current) {
     internalStoreRef.current = createPivotCoreStore({
@@ -281,34 +275,6 @@ const PivotEditorRoot: React.FC<PivotEditorProps> = ({
   if (!resolvedStore) {
     return null;
   }
-
-  useEffect(() => {
-    resolvedStore.getState().syncFromHost({
-      source,
-      config: config ? createDefaultPivotConfig(config) : undefined,
-      status: status
-        ? {
-            state: status.state ?? 'idle',
-            stale: status.stale ?? false,
-            lastError: status.lastError,
-            lastRunTime: status.lastRunTime,
-            relations: status.relations,
-            sourceRelation: status.sourceRelation,
-          }
-        : undefined,
-      querySource,
-      fields,
-      availableTables,
-    });
-  }, [
-    availableTables,
-    config,
-    fields,
-    querySource,
-    resolvedStore,
-    source,
-    status,
-  ]);
 
   return (
     <PivotEditorStoreContext.Provider value={resolvedStore}>
@@ -947,6 +913,7 @@ const PivotResultsView: React.FC = () => {
       source={querySource}
       relations={status.relations}
       runState={status.state}
+      stale={status.stale}
       lastError={status.lastError}
     />
   );

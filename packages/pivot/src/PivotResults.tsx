@@ -30,6 +30,7 @@ type PivotResultsProps = {
   table?: Parameters<typeof createPivotQuerySourceFromTable>[0];
   relations?: PivotRelationViews;
   runState?: 'idle' | 'running' | 'success' | 'cancel' | 'error';
+  stale?: boolean;
   lastError?: string;
 };
 
@@ -41,6 +42,7 @@ export const PivotResults: React.FC<PivotResultsProps> = ({
   table,
   relations,
   runState,
+  stale,
   lastError,
 }) => {
   const querySource = useMemo(
@@ -85,38 +87,46 @@ export const PivotResults: React.FC<PivotResultsProps> = ({
     [querySource, resolvedConfig],
   );
 
+  const materializedRelations = useMemo(
+    () =>
+      !querySource && runState === 'success' && !stale ? relations : undefined,
+    [querySource, relations, runState, stale],
+  );
+
   const cellsQuery = useMemo(
     () =>
-      relations?.cells ? `SELECT * FROM ${relations.cells}` : directCellsQuery,
-    [directCellsQuery, relations?.cells],
+      materializedRelations?.cells
+        ? `SELECT * FROM ${materializedRelations.cells}`
+        : directCellsQuery,
+    [directCellsQuery, materializedRelations?.cells],
   );
   const rowTotalsQuery = useMemo(
     () =>
-      relations?.rowTotals
-        ? `SELECT * FROM ${relations.rowTotals}`
+      materializedRelations?.rowTotals
+        ? `SELECT * FROM ${materializedRelations.rowTotals}`
         : directRowTotalsQuery,
-    [directRowTotalsQuery, relations?.rowTotals],
+    [directRowTotalsQuery, materializedRelations?.rowTotals],
   );
   const colTotalsQuery = useMemo(
     () =>
-      relations?.colTotals
-        ? `SELECT * FROM ${relations.colTotals}`
+      materializedRelations?.colTotals
+        ? `SELECT * FROM ${materializedRelations.colTotals}`
         : directColTotalsQuery,
-    [directColTotalsQuery, relations?.colTotals],
+    [directColTotalsQuery, materializedRelations?.colTotals],
   );
   const grandTotalQuery = useMemo(
     () =>
-      relations?.grandTotal
-        ? `SELECT * FROM ${relations.grandTotal}`
+      materializedRelations?.grandTotal
+        ? `SELECT * FROM ${materializedRelations.grandTotal}`
         : directGrandTotalQuery,
-    [directGrandTotalQuery, relations?.grandTotal],
+    [directGrandTotalQuery, materializedRelations?.grandTotal],
   );
 
   const enabled = Boolean(
-    relations?.cells ||
-    relations?.rowTotals ||
-    relations?.colTotals ||
-    relations?.grandTotal ||
+    materializedRelations?.cells ||
+    materializedRelations?.rowTotals ||
+    materializedRelations?.colTotals ||
+    materializedRelations?.grandTotal ||
     querySource,
   );
   const cellsResult = useSql<PivotRow>({query: cellsQuery, enabled});
@@ -141,16 +151,16 @@ export const PivotResults: React.FC<PivotResultsProps> = ({
       cellsResult.data?.arrowTable,
       'col_label',
     );
-    if (relations?.export) {
-      return `SELECT * FROM ${relations.export}`;
+    if (materializedRelations?.export) {
+      return `SELECT * FROM ${materializedRelations.export}`;
     }
     return querySource
       ? buildPivotExportQuery(resolvedConfig, querySource, colLabels)
       : '';
   }, [
     cellsResult.data?.arrowTable,
+    materializedRelations?.export,
     querySource,
-    relations?.export,
     resolvedConfig,
   ]);
 

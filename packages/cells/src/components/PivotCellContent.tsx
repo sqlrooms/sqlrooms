@@ -1,4 +1,8 @@
-import {PivotEditor, type PivotSource} from '@sqlrooms/pivot';
+import {
+  type PivotInstanceStore,
+  PivotEditor,
+  type PivotSource,
+} from '@sqlrooms/pivot';
 import {
   Label,
   Select,
@@ -7,11 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {produce} from 'immer';
-import React, {useMemo} from 'react';
+import {useRoomStoreApi} from '@sqlrooms/room-store';
+import React, {useEffect, useMemo} from 'react';
+import {useStore} from 'zustand';
 import {findSheetIdForCell} from '../helpers';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, PivotCell} from '../types';
+import {createPivotCellStore} from '../pivotInstanceStore';
+import type {CellContainerProps, CellsRootState, PivotCell} from '../types';
 
 const EMPTY_CELL_IDS: string[] = [];
 
@@ -21,49 +27,20 @@ export type PivotCellContentProps = {
   renderContainer: (props: CellContainerProps) => React.ReactElement;
 };
 
-function PivotSourceSelect({id, cell}: {id: string; cell: PivotCell}) {
-  const updateCell = useCellsStore((state) => state.cells.updateCell);
+function PivotSourceSelect({
+  store,
+  sqlOptions,
+}: {
+  store: PivotInstanceStore;
+  sqlOptions: Array<{id: string; label: string}>;
+}) {
   const tables = useCellsStore((state) => state.db.tables);
-  const ownerSheetId = useCellsStore((state) =>
-    findSheetIdForCell(state as any, id),
-  );
-  const sheetCellIds = useCellsStore(
-    (state) =>
-      (ownerSheetId
-        ? state.cells.config.sheets[ownerSheetId]?.cellIds
-        : undefined) ?? EMPTY_CELL_IDS,
-  );
-  const cellsData = useCellsStore((state) => state.cells.config.data);
-  const cellsStatus = useCellsStore((state) => state.cells.status);
+  const source = useStore(store, (state) => state.source);
 
-  const sqlOptions = useMemo(
-    () =>
-      sheetCellIds
-        .map((cellId) => {
-          const candidate = cellsData[cellId];
-          if (!candidate || candidate.type !== 'sql') {
-            return undefined;
-          }
-          const status = cellsStatus[cellId];
-          return {
-            id: candidate.id,
-            label:
-              (status?.type === 'sql' ? status.resultView : undefined) ??
-              candidate.data.resultName ??
-              candidate.data.title ??
-              candidate.id,
-          };
-        })
-        .filter((option): option is {id: string; label: string} =>
-          Boolean(option),
-        ),
-    [cellsData, cellsStatus, sheetCellIds],
-  );
-
-  const value = cell.data.source
-    ? cell.data.source.kind === 'table'
-      ? `table:${cell.data.source.tableName}`
-      : `sql:${cell.data.source.sqlId}`
+  const value = source
+    ? source.kind === 'table'
+      ? `table:${source.tableName}`
+      : `sql:${source.sqlId}`
     : undefined;
 
   const handleValueChange = (nextValue: string) => {
@@ -72,14 +49,7 @@ function PivotSourceSelect({id, cell}: {id: string; cell: PivotCell}) {
       : nextValue.startsWith('sql:')
         ? {kind: 'sql', sqlId: nextValue.replace('sql:', '')}
         : undefined;
-
-    updateCell(id, (current) =>
-      produce(current, (draft) => {
-        if (draft.type === 'pivot') {
-          draft.data.source = nextSource;
-        }
-      }),
-    );
+    store.getState().setSource(nextSource);
   };
 
   return (
@@ -111,118 +81,56 @@ function PivotSourceSelect({id, cell}: {id: string; cell: PivotCell}) {
 
 export const PivotCellContent: React.FC<PivotCellContentProps> = ({
   id,
-  cell,
+  cell: _cell,
   renderContainer,
 }) => {
-  const updateCell = useCellsStore((state) => state.cells.updateCell);
-  const runCell = useCellsStore((state) => state.cells.runCell);
-  const status = useCellsStore((state) => state.cells.status[id]);
-  const tables = useCellsStore((state) => state.db.tables);
-  const getCellResult = useCellsStore((state) => state.cells.getCellResult);
-  const sourceSqlStatus = useCellsStore((state) =>
-    cell.data.source?.kind === 'sql'
-      ? state.cells.status[cell.data.source.sqlId]
-      : undefined,
+  const roomStore = useRoomStoreApi<CellsRootState>();
+  const ownerSheetId = useCellsStore((state) =>
+    findSheetIdForCell(state as CellsRootState, id),
   );
-  const sourceResultVersion = useCellsStore((state) =>
-    cell.data.source?.kind === 'sql'
-      ? state.cells.resultVersion[cell.data.source.sqlId]
-      : undefined,
+  const sheetCellIds = useCellsStore(
+    (state) =>
+      state.cells.config.sheets[ownerSheetId ?? '']?.cellIds ?? EMPTY_CELL_IDS,
+  );
+  const cellsData = useCellsStore((state) => state.cells.config.data);
+  const cellsStatus = useCellsStore((state) => state.cells.status);
+  const pivotStore = useMemo(
+    () => createPivotCellStore(roomStore, id),
+    [id, roomStore],
   );
 
-  const availableTables = useMemo(
-    () => tables.map((table) => table.tableName),
-    [tables],
+  useEffect(() => () => pivotStore.destroy(), [pivotStore]);
+
+  const sqlOptions = useMemo(
+    () =>
+      sheetCellIds
+        .map((cellId) => {
+          const candidate = cellsData[cellId];
+          if (!candidate || candidate.type !== 'sql') {
+            return undefined;
+          }
+          const status = cellsStatus[cellId];
+          return {
+            id: candidate.id,
+            label:
+              (status?.type === 'sql' ? status.resultView : undefined) ??
+              candidate.data.resultName ??
+              candidate.data.title ??
+              candidate.id,
+          };
+        })
+        .filter((option): option is {id: string; label: string} =>
+          Boolean(option),
+        ),
+    [cellsData, cellsStatus, sheetCellIds],
   );
-  const runtime = useMemo(() => {
-    const source = cell.data.source;
-    if (!source) {
-      return {};
-    }
-    if (source.kind === 'table') {
-      const table = tables.find(
-        (candidate) => candidate.tableName === source.tableName,
-      );
-      if (!table) {
-        return {};
-      }
-      return {
-        querySource: {
-          tableRef: table.table.toString(),
-          columns: table.columns.map((column) => ({
-            name: column.name,
-            type: column.type,
-          })),
-        },
-        sourceRelation: table.table.toString(),
-      };
-    }
-
-    const resultView =
-      sourceSqlStatus?.type === 'sql' ? sourceSqlStatus.resultView : undefined;
-    if (!resultView) {
-      return {};
-    }
-    const result = getCellResult(source.sqlId)?.arrowTable;
-    const columns = result?.schema.fields.map((field) => ({
-      name: field.name,
-      type: String(field.type),
-    }));
-    if (!columns?.length) {
-      return {sourceRelation: resultView};
-    }
-    return {
-      querySource: {
-        tableRef: resultView,
-        columns,
-      },
-      sourceRelation: resultView,
-    };
-  }, [
-    cell.data.source,
-    getCellResult,
-    sourceResultVersion,
-    sourceSqlStatus,
-    tables,
-  ]);
-
-  const querySource = runtime.querySource;
-
-  const pivotStatus =
-    status?.type === 'pivot'
-      ? ({
-          state: status.status,
-          stale: status.stale,
-          lastError: status.lastError,
-          lastRunTime: status.lastRunTime,
-          relations: status.resultViews,
-          sourceRelation: status.sourceRelation,
-        } as const)
-      : undefined;
 
   const content = (
     <div className="h-[720px]">
-      <PivotEditor
-        source={cell.data.source}
-        config={cell.data.pivotConfig}
-        status={pivotStatus}
-        querySource={querySource}
-        availableTables={availableTables}
-        callbacks={{
-          onConfigChange: (config) =>
-            updateCell(id, (current) =>
-              produce(current, (draft) => {
-                if (draft.type === 'pivot') {
-                  draft.data.pivotConfig = config;
-                }
-              }),
-            ),
-          onRun: () => runCell(id),
-        }}
-      >
+      <PivotEditor store={pivotStore}>
         <PivotEditor.Source>
           <>
-            <PivotSourceSelect id={id} cell={cell} />
+            <PivotSourceSelect store={pivotStore} sqlOptions={sqlOptions} />
             <PivotEditor.RendererSelector />
             <PivotEditor.AggregatorSelector />
             <div className="space-y-2">

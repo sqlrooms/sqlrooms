@@ -1,14 +1,27 @@
 import {DataTable} from '@sqlrooms/duckdb';
+import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import {useBaseRoomStore} from '@sqlrooms/room-store';
 import React, {useEffect, useMemo} from 'react';
 import {PivotEditor} from './PivotEditor';
-import {createPivotQuerySourceFromTable} from './sql';
 import {PivotSliceState} from './types';
 
-type PivotRootState = PivotSliceState & {
-  db: {
-    tables: DataTable[];
+type PivotRootState = BaseRoomStoreState &
+  PivotSliceState & {
+    db: {
+      tables: DataTable[];
+    };
   };
+
+const PivotViewContent: React.FC<{pivotId: string}> = ({pivotId}) => {
+  const getPivotStore = useBaseRoomStore(
+    (state: PivotRootState) => state.pivot.getPivotStore,
+  );
+  const pivotStore = useMemo(
+    () => getPivotStore(pivotId),
+    [getPivotStore, pivotId],
+  );
+
+  return <PivotEditor store={pivotStore} autoRun />;
 };
 
 export const PivotView: React.FC = () => {
@@ -25,12 +38,6 @@ export const PivotView: React.FC = () => {
   const setSource = useBaseRoomStore(
     (state: PivotRootState) => state.pivot.setSource,
   );
-  const setConfig = useBaseRoomStore(
-    (state: PivotRootState) => state.pivot.setConfig,
-  );
-  const runPivot = useBaseRoomStore(
-    (state: PivotRootState) => state.pivot.runPivot,
-  );
 
   const selectedTable = useMemo(() => {
     if (currentPivot?.source?.kind !== 'table') {
@@ -39,11 +46,6 @@ export const PivotView: React.FC = () => {
     const tableName = currentPivot.source.tableName;
     return tables.find((table) => table.tableName === tableName) ?? tables[0];
   }, [currentPivot?.source, tables]);
-
-  const availableTables = useMemo(
-    () => tables.map((table) => table.tableName),
-    [tables],
-  );
 
   useEffect(() => {
     if (currentPivot && !currentPivot.source && selectedTable) {
@@ -54,25 +56,12 @@ export const PivotView: React.FC = () => {
     }
   }, [currentPivot, selectedTable, setSource]);
 
-  if (!currentPivot || !selectedTable) {
+  const tableSource =
+    currentPivot?.source?.kind === 'table' ? currentPivot.source : undefined;
+
+  if (!currentPivot || !selectedTable || !tableSource) {
     return null;
   }
 
-  const querySource = createPivotQuerySourceFromTable(selectedTable);
-
-  return (
-    <PivotEditor
-      source={currentPivot.source}
-      config={currentPivot.config}
-      status={currentPivot.status}
-      availableTables={availableTables}
-      querySource={querySource}
-      callbacks={{
-        onSourceChange: (source) => setSource(currentPivot.id, source),
-        onConfigChange: (config) => setConfig(currentPivot.id, config),
-        onRun: () => runPivot(currentPivot.id),
-      }}
-      autoRun
-    />
-  );
+  return <PivotViewContent pivotId={currentPivot.id} />;
 };

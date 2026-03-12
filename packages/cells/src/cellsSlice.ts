@@ -102,6 +102,24 @@ export function createCellsSlice(props: CellsSliceOptions) {
       }
     };
 
+    const resetPersistedPivotStatuses = () => {
+      set((state) =>
+        produce(state, (draft) => {
+          for (const [cellId, status] of Object.entries(draft.cells.status)) {
+            if (status?.type !== 'pivot') continue;
+            draft.cells.status[cellId] = {
+              type: 'pivot',
+              status: 'idle',
+              stale: true,
+              lastRunTime: status.lastRunTime,
+              resultViews: undefined,
+              sourceRelation: undefined,
+            };
+          }
+        }),
+      );
+    };
+
     return {
       cells: {
         cellRegistry,
@@ -111,6 +129,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
         activeAbortControllers: {},
         resultVersion: {},
         pageVersion: {},
+        async initialize() {
+          resetPersistedPivotStatuses();
+        },
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
@@ -311,10 +332,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
               if (semanticPivotChanged) {
                 const status = draft.cells.status[id];
                 if (status?.type === 'pivot') {
-                  status.stale = true;
-                  if (status.status === 'success') {
-                    status.status = 'idle';
-                  }
+                  draft.cells.status[id] = {
+                    type: 'pivot',
+                    status: 'idle',
+                    stale: true,
+                    lastRunTime: status.lastRunTime,
+                  };
                 }
               }
             }),
@@ -681,8 +704,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   type: 'pivot',
                   status: 'idle',
                   stale: true,
-                  resultViews: status.resultViews,
-                  sourceRelation: status.sourceRelation,
+                  lastRunTime: status.lastRunTime,
                 };
               }
             }),

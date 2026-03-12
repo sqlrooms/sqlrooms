@@ -1,5 +1,6 @@
 import {SliceFunctions} from '@sqlrooms/room-store';
 import {z} from 'zod';
+import type {PivotInstanceStore} from './PivotCoreSlice';
 
 export const PIVOT_RENDERER_NAMES = [
   'Table',
@@ -94,13 +95,40 @@ export const PivotStatus = z.object({
 });
 export type PivotStatus = z.infer<typeof PivotStatus>;
 
-export const PivotSliceItem = z.object({
-  id: z.string(),
-  title: z.string(),
-  source: PivotSource.optional(),
-  config: PivotConfig,
-  status: PivotStatus.default({state: 'idle', stale: false}),
-});
+function sanitizePersistedPivotStatus(status: PivotStatus): PivotStatus {
+  const hasEphemeralRuntimeState = Boolean(
+    status.relations ||
+    status.sourceRelation ||
+    status.lastError ||
+    status.state === 'running' ||
+    status.state === 'success' ||
+    status.state === 'cancel' ||
+    status.state === 'error',
+  );
+
+  if (!hasEphemeralRuntimeState) {
+    return status;
+  }
+
+  return {
+    state: 'idle',
+    stale: true,
+    lastRunTime: status.lastRunTime,
+  };
+}
+
+export const PivotSliceItem = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    source: PivotSource.optional(),
+    config: PivotConfig,
+    status: PivotStatus.default({state: 'idle', stale: false}),
+  })
+  .transform((item) => ({
+    ...item,
+    status: sanitizePersistedPivotStatus(item.status),
+  }));
 export type PivotSliceItem = z.infer<typeof PivotSliceItem>;
 
 export const PivotSliceConfig = z.object({
@@ -126,6 +154,7 @@ export type PivotSliceState = {
   pivot: SliceFunctions & {
     config: PivotSliceConfig;
     initialize: () => Promise<void>;
+    getPivotStore: (pivotId: string) => PivotInstanceStore;
     addPivot: (props?: {
       title?: string;
       source?: PivotSource;

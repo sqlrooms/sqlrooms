@@ -2,6 +2,7 @@ import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {
   createDefaultPivotConfig,
   createOrReplacePivotRelations,
+  normalizePivotConfig,
 } from '@sqlrooms/pivot';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -299,10 +300,14 @@ export function createDefaultCellRegistry(): CellRegistry {
           }
 
           const connector = await state.db.getConnector();
+          const normalizedConfig = normalizePivotConfig(
+            (cell as PivotCell).data.pivotConfig,
+            runtime.querySource.columns,
+          );
           const resultViews = await createOrReplacePivotRelations({
             connector,
             source: runtime.querySource,
-            config: (cell as PivotCell).data.pivotConfig,
+            config: normalizedConfig,
             relationBaseName: `pivot_${id}`,
             schemaName,
             signal: controller.signal,

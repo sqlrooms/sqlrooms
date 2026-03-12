@@ -5,7 +5,7 @@ import {
   PivotRelationViewsSchema,
   PivotSourceSchema,
 } from '@sqlrooms/pivot';
-import type {BaseRoomStoreState} from '@sqlrooms/room-store';
+import type {BaseRoomStoreState, SliceFunctions} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import type React from 'react';
 import {z} from 'zod';
@@ -322,7 +322,7 @@ export type CellResultData = {
 };
 
 export type CellsSliceState = {
-  cells: {
+  cells: SliceFunctions & {
     config: CellsSliceConfig;
     status: Record<string, CellStatus>;
     activeAbortControllers: Record<string, AbortController>;

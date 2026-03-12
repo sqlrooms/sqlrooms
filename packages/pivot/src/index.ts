@@ -5,9 +5,14 @@
 
 export {createPivotSlice} from './PivotSlice';
 export {
+  addAttributeFilterValuesInConfig,
+  clearAttributeFilterInConfig,
   createDefaultPivotConfig,
   createPivotCoreStore,
+  createPivotInstanceAdapterStore,
   normalizePivotConfig,
+  removeAttributeFilterValuesInConfig,
+  setAttributeFilterValuesInConfig,
 } from './PivotCoreSlice';
 export {PivotEditor} from './PivotEditor';
 export {PivotView} from './PivotView';
@@ -37,6 +42,11 @@ export {
   createPivotQuerySourceFromTable,
 } from './sql';
 export type {PivotAggregatorDefinition} from './aggregators';
+export type {
+  PivotInstanceSnapshot,
+  PivotInstanceState,
+  PivotInstanceStore,
+} from './PivotCoreSlice';
 export type {
   PivotConfig,
   PivotRelationViews,

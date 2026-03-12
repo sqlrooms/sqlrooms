@@ -4,10 +4,16 @@ import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {createId} from '@paralleldrive/cuid2';
 import {
+  addAttributeFilterValuesInConfig,
+  clearAttributeFilterInConfig,
   createDefaultPivotConfig,
+  createPivotInstanceAdapterStore,
   moveFieldInConfig,
   nextSortOrder,
   normalizePivotConfig,
+  removeAttributeFilterValuesInConfig,
+  setAttributeFilterValuesInConfig,
+  type PivotInstanceSnapshot,
 } from './PivotCoreSlice';
 import {createPivotQuerySourceFromTable} from './sql';
 import {
@@ -46,13 +52,26 @@ function createInitialPivotSliceConfig(props?: {
   });
 }
 
+function resetPivotRuntimeStatus(status: PivotStatus): PivotStatus {
+  return {
+    state: 'idle',
+    stale: true,
+    lastRunTime: status.lastRunTime,
+  };
+}
+
 export function createPivotSlice(props?: {
   config?: Partial<PivotConfig & {tableName?: string}>;
 }) {
+  const pivotStores = new Map<
+    string,
+    ReturnType<typeof createPivotInstanceAdapterStore>
+  >();
+
   return createSlice<
     PivotSliceState,
     BaseRoomStoreState & DuckDbSliceState & PivotSliceState
-  >((set, get) => ({
+  >((set, get, store) => ({
     pivot: {
       config: createInitialPivotSliceConfig(props),
 
@@ -88,9 +107,55 @@ export function createPivotSlice(props?: {
                   );
                 }
               }
+              pivot.status = resetPivotRuntimeStatus(pivot.status);
             }
           }),
         );
+      },
+
+      getPivotStore(pivotId) {
+        const existing = pivotStores.get(pivotId);
+        if (existing) {
+          return existing;
+        }
+
+        const getPivotSnapshot = (): PivotInstanceSnapshot => {
+          const state = get();
+          const pivot = state.pivot.config.pivots[pivotId];
+          const availableTables = state.db.tables.map(
+            (table) => table.tableName,
+          );
+          const tableSource =
+            pivot?.source?.kind === 'table' ? pivot.source : undefined;
+          const table = tableSource
+            ? state.db.tables.find(
+                (candidate) => candidate.tableName === tableSource.tableName,
+              )
+            : undefined;
+          const querySource = table
+            ? createPivotQuerySourceFromTable(table)
+            : undefined;
+          return {
+            source: pivot?.source,
+            config: pivot?.config ?? createDefaultPivotConfig(),
+            status: pivot?.status ?? {state: 'idle', stale: false},
+            querySource,
+            fields: querySource?.columns ?? [],
+            availableTables,
+          };
+        };
+
+        const boundStore = createPivotInstanceAdapterStore({
+          getSnapshot: getPivotSnapshot,
+          subscribeToHost: (listener) => store.subscribe(listener),
+          callbacks: {
+            setSource: (source) => get().pivot.setSource(pivotId, source),
+            setConfig: (config) => get().pivot.setConfig(pivotId, config),
+            run: () => get().pivot.runPivot(pivotId),
+          },
+        });
+        pivotStores.set(pivotId, boundStore);
+        return boundStore;
       },
 
       addPivot(pivotProps) {
@@ -118,6 +183,8 @@ export function createPivotSlice(props?: {
       },
 
       removePivot(pivotId) {
+        pivotStores.get(pivotId)?.destroy();
+        pivotStores.delete(pivotId);
         const relations = get().pivot.config.pivots[pivotId]?.status.relations;
         void (async () => {
           if (!relations) return;
@@ -164,7 +231,7 @@ export function createPivotSlice(props?: {
             if (!pivot) return;
             pivot.source = source;
             pivot.config = createDefaultPivotConfig();
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -195,7 +262,7 @@ export function createPivotSlice(props?: {
                 )
               : undefined;
             pivot.config = normalizePivotConfig(config, table?.columns ?? []);
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -219,7 +286,7 @@ export function createPivotSlice(props?: {
               },
               table?.columns ?? [],
             );
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -230,7 +297,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.rendererName = rendererName;
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -241,7 +308,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.aggregatorName = aggregatorName;
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -252,7 +319,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.rows = rows;
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -263,7 +330,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.cols = cols;
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -274,7 +341,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.vals = vals;
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -285,7 +352,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.unusedOrder = unusedOrder;
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -301,7 +368,7 @@ export function createPivotSlice(props?: {
               destination,
               index,
             );
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -312,7 +379,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.rowOrder = nextSortOrder(pivot.config.rowOrder);
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -323,7 +390,7 @@ export function createPivotSlice(props?: {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
             pivot.config.colOrder = nextSortOrder(pivot.config.colOrder);
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -333,10 +400,12 @@ export function createPivotSlice(props?: {
           produce(state, (draft) => {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
-            pivot.config.valueFilter[attribute] = Object.fromEntries(
-              values.map((value) => [value, true]),
+            pivot.config = setAttributeFilterValuesInConfig(
+              pivot.config,
+              attribute,
+              values,
             );
-            pivot.status.stale = true;
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -346,12 +415,12 @@ export function createPivotSlice(props?: {
           produce(state, (draft) => {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
-            const current = pivot.config.valueFilter[attribute] ?? {};
-            for (const value of values) {
-              current[value] = true;
-            }
-            pivot.config.valueFilter[attribute] = current;
-            pivot.status.stale = true;
+            pivot.config = addAttributeFilterValuesInConfig(
+              pivot.config,
+              attribute,
+              values,
+            );
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -361,18 +430,12 @@ export function createPivotSlice(props?: {
           produce(state, (draft) => {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
-            const current = {
-              ...(pivot.config.valueFilter[attribute] ?? {}),
-            };
-            for (const value of values) {
-              delete current[value];
-            }
-            if (Object.keys(current).length === 0) {
-              delete pivot.config.valueFilter[attribute];
-            } else {
-              pivot.config.valueFilter[attribute] = current;
-            }
-            pivot.status.stale = true;
+            pivot.config = removeAttributeFilterValuesInConfig(
+              pivot.config,
+              attribute,
+              values,
+            );
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -382,8 +445,11 @@ export function createPivotSlice(props?: {
           produce(state, (draft) => {
             const pivot = draft.pivot.config.pivots[pivotId];
             if (!pivot) return;
-            delete pivot.config.valueFilter[attribute];
-            pivot.status.stale = true;
+            pivot.config = clearAttributeFilterInConfig(
+              pivot.config,
+              attribute,
+            );
+            pivot.status = resetPivotRuntimeStatus(pivot.status);
           }),
         );
       },
@@ -417,10 +483,14 @@ export function createPivotSlice(props?: {
 
         try {
           const connector = await state.db.getConnector();
+          const normalizedConfig = normalizePivotConfig(
+            pivot.config,
+            querySource.columns,
+          );
           const relations = await createOrReplacePivotRelations({
             connector,
             source: querySource,
-            config: pivot.config,
+            config: normalizedConfig,
             relationBaseName: `pivot_${pivotId}`,
             schemaName: 'pivot',
           });
@@ -428,6 +498,7 @@ export function createPivotSlice(props?: {
             produce(current, (draft) => {
               const currentPivot = draft.pivot.config.pivots[pivotId];
               if (!currentPivot) return;
+              currentPivot.config = normalizedConfig;
               currentPivot.status = {
                 state: 'success',
                 stale: false,

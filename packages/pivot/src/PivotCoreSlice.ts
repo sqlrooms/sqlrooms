@@ -108,35 +108,23 @@ export type PivotEditorUiState = {
   sectionOpenState: Record<string, boolean>;
 };
 
-export type PivotCoreHostCallbacks = {
-  onSourceChange?: (source: PivotSource | undefined) => void;
-  onConfigChange?: (config: PivotConfig) => void;
-  onRun?: () => void | Promise<void>;
-};
-
-export type PivotCoreSliceState = {
+export type PivotInstanceSnapshot = {
   source?: PivotSource;
   config: PivotConfig;
   status: PivotStatus;
   querySource?: PivotQuerySource;
   fields: PivotField[];
   availableTables: string[];
+};
+
+export type PivotInstanceCallbacks = {
+  setSource?: (source: PivotSource | undefined) => void;
+  setConfig?: (config: PivotConfig) => void;
+  run?: () => void | Promise<void>;
+};
+
+export type PivotInstanceState = PivotInstanceSnapshot & {
   ui: PivotEditorUiState;
-  syncFromHost: (
-    partial: Partial<
-      Pick<
-        PivotCoreSliceState,
-        | 'source'
-        | 'config'
-        | 'status'
-        | 'querySource'
-        | 'fields'
-        | 'availableTables'
-      >
-    >,
-  ) => void;
-  setFields: (fields: PivotField[]) => void;
-  setAvailableTables: (tableNames: string[]) => void;
   setSource: (source: PivotSource | undefined) => void;
   setConfig: (config: PivotConfig) => void;
   patchConfig: (config: Partial<PivotConfig>) => void;
@@ -158,6 +146,10 @@ export type PivotCoreSliceState = {
   run: () => Promise<void>;
 };
 
+export type PivotInstanceStore = StoreApi<PivotInstanceState> & {
+  destroy: () => void;
+};
+
 export type CreatePivotCoreStoreProps = {
   source?: PivotSource;
   config?: Partial<PivotConfig>;
@@ -165,7 +157,7 @@ export type CreatePivotCoreStoreProps = {
   querySource?: PivotQuerySource;
   fields?: PivotField[];
   availableTables?: string[];
-  callbacks?: PivotCoreHostCallbacks;
+  callbacks?: PivotInstanceCallbacks;
 };
 
 function sameJson(a: unknown, b: unknown) {
@@ -186,6 +178,16 @@ function samePivotFields(a: PivotField[], b: PivotField[]) {
   );
 }
 
+function sameQuerySource(
+  a: PivotQuerySource | undefined,
+  b: PivotQuerySource | undefined,
+) {
+  if (a?.tableRef !== b?.tableRef) {
+    return false;
+  }
+  return samePivotFields(a?.columns ?? [], b?.columns ?? []);
+}
+
 function defaultStatus(status?: Partial<PivotStatus>): PivotStatus {
   return {
     state: 'idle',
@@ -194,110 +196,115 @@ function defaultStatus(status?: Partial<PivotStatus>): PivotStatus {
   };
 }
 
-export function createPivotCoreStore(
-  props?: CreatePivotCoreStoreProps,
-): StoreApi<PivotCoreSliceState> {
-  const callbacks = props?.callbacks;
-
-  const applyConfigChange = (updater: (config: PivotConfig) => PivotConfig) => {
-    const previous = store.getState();
-    const nextConfig = normalizePivotConfig(
-      updater(previous.config),
-      previous.fields,
+export function setAttributeFilterValuesInConfig(
+  config: PivotConfig,
+  attribute: string,
+  values: string[],
+) {
+  return produce(config, (draft) => {
+    draft.valueFilter[attribute] = Object.fromEntries(
+      values.map((value) => [value, true]),
     );
-    store.setState({
-      config: nextConfig,
-      status: {
-        ...previous.status,
-        stale: true,
-      },
-    });
-    callbacks?.onConfigChange?.(nextConfig);
-  };
-  const store = createStore<PivotCoreSliceState>((set, get) => ({
+  });
+}
+
+export function addAttributeFilterValuesInConfig(
+  config: PivotConfig,
+  attribute: string,
+  values: string[],
+) {
+  return produce(config, (draft) => {
+    const currentValues = draft.valueFilter[attribute] ?? {};
+    for (const value of values) {
+      currentValues[value] = true;
+    }
+    draft.valueFilter[attribute] = currentValues;
+  });
+}
+
+export function removeAttributeFilterValuesInConfig(
+  config: PivotConfig,
+  attribute: string,
+  values: string[],
+) {
+  return produce(config, (draft) => {
+    const currentValues = {...(draft.valueFilter[attribute] ?? {})};
+    for (const value of values) {
+      delete currentValues[value];
+    }
+    if (Object.keys(currentValues).length === 0) {
+      delete draft.valueFilter[attribute];
+    } else {
+      draft.valueFilter[attribute] = currentValues;
+    }
+  });
+}
+
+export function clearAttributeFilterInConfig(
+  config: PivotConfig,
+  attribute: string,
+) {
+  return produce(config, (draft) => {
+    delete draft.valueFilter[attribute];
+  });
+}
+
+function createPivotInstanceSnapshot(
+  props?: CreatePivotCoreStoreProps,
+): PivotInstanceSnapshot {
+  const fields = props?.querySource?.columns ?? props?.fields ?? [];
+  return {
     source: props?.source,
     config: normalizePivotConfig(
       createDefaultPivotConfig(props?.config),
-      props?.querySource?.columns ?? props?.fields ?? [],
+      fields,
     ),
     status: defaultStatus(props?.status),
     querySource: props?.querySource,
-    fields: props?.querySource?.columns ?? props?.fields ?? [],
+    fields,
     availableTables: props?.availableTables ?? [],
-    ui: {
-      sectionOpenState: {},
-    },
-    syncFromHost: (partial) => {
-      set((state) => {
-        const nextFields =
-          partial.querySource?.columns ?? partial.fields ?? state.fields;
-        const nextConfig = partial.config
-          ? normalizePivotConfig(partial.config, nextFields)
-          : state.config;
-        const nextStatus = partial.status
-          ? defaultStatus(partial.status)
-          : state.status;
-        const nextSource = Object.prototype.hasOwnProperty.call(
-          partial,
-          'source',
-        )
-          ? partial.source
-          : state.source;
-        const nextQuerySource = partial.querySource ?? state.querySource;
-        const nextAvailableTables =
-          partial.availableTables ?? state.availableTables;
+  };
+}
 
-        if (
-          sameJson(nextSource, state.source) &&
-          sameJson(nextConfig, state.config) &&
-          sameJson(nextStatus, state.status) &&
-          sameJson(nextQuerySource, state.querySource) &&
-          samePivotFields(nextFields, state.fields) &&
-          sameStringArray(nextAvailableTables, state.availableTables)
-        ) {
-          return state;
-        }
+function samePivotSnapshot(a: PivotInstanceSnapshot, b: PivotInstanceSnapshot) {
+  return (
+    sameJson(a.source, b.source) &&
+    sameJson(a.config, b.config) &&
+    sameJson(a.status, b.status) &&
+    sameQuerySource(a.querySource, b.querySource) &&
+    samePivotFields(a.fields, b.fields) &&
+    sameStringArray(a.availableTables, b.availableTables)
+  );
+}
 
-        return {
-          ...state,
-          source: nextSource,
-          config: nextConfig,
-          status: nextStatus,
-          querySource: nextQuerySource,
-          fields: nextFields,
-          availableTables: nextAvailableTables,
-        };
-      });
-    },
-    setFields: (fields) => {
-      set((state) => ({
-        fields,
-        config: normalizePivotConfig(state.config, fields),
-      }));
-    },
-    setAvailableTables: (availableTables) => set({availableTables}),
-    setSource: (source) => {
-      set((state) => ({
-        source,
-        config: createDefaultPivotConfig(),
-        status: {
-          ...state.status,
-          stale: true,
-        },
-      }));
-      callbacks?.onSourceChange?.(source);
-      callbacks?.onConfigChange?.(createDefaultPivotConfig());
-    },
+type PivotInstanceInternalOps = {
+  setSourceImpl: (source: PivotSource | undefined) => void;
+  setConfigImpl: (config: PivotConfig) => void;
+  runImpl: () => Promise<void>;
+};
+
+function createPivotInstanceActions(
+  get: () => PivotInstanceState,
+  set: (
+    partial:
+      | Partial<PivotInstanceState>
+      | ((state: PivotInstanceState) => Partial<PivotInstanceState>),
+  ) => void,
+  ops: PivotInstanceInternalOps,
+): Omit<PivotInstanceState, keyof PivotInstanceSnapshot | 'ui'> {
+  const applyConfigChange = (updater: (config: PivotConfig) => PivotConfig) => {
+    const nextConfig = normalizePivotConfig(
+      updater(get().config),
+      get().fields,
+    );
+    ops.setConfigImpl(nextConfig);
+  };
+
+  return {
+    setSource: (source) => ops.setSourceImpl(source),
     setConfig: (config) => {
       const nextConfig = normalizePivotConfig(config, get().fields);
-      set((state) => ({
-        config: nextConfig,
-        status: {
-          ...state.status,
-          stale: true,
-        },
-      }));
-      callbacks?.onConfigChange?.(nextConfig);
+      ops.setConfigImpl(nextConfig);
     },
     patchConfig: (config) => {
       applyConfigChange((current) => ({
@@ -342,44 +349,22 @@ export function createPivotCoreStore(
     },
     setAttributeFilterValues: (attribute, values) => {
       applyConfigChange((current) =>
-        produce(current, (draft) => {
-          draft.valueFilter[attribute] = Object.fromEntries(
-            values.map((value) => [value, true]),
-          );
-        }),
+        setAttributeFilterValuesInConfig(current, attribute, values),
       );
     },
     addAttributeFilterValues: (attribute, values) => {
       applyConfigChange((current) =>
-        produce(current, (draft) => {
-          const currentValues = draft.valueFilter[attribute] ?? {};
-          for (const value of values) {
-            currentValues[value] = true;
-          }
-          draft.valueFilter[attribute] = currentValues;
-        }),
+        addAttributeFilterValuesInConfig(current, attribute, values),
       );
     },
     removeAttributeFilterValues: (attribute, values) => {
       applyConfigChange((current) =>
-        produce(current, (draft) => {
-          const currentValues = {...(draft.valueFilter[attribute] ?? {})};
-          for (const value of values) {
-            delete currentValues[value];
-          }
-          if (Object.keys(currentValues).length === 0) {
-            delete draft.valueFilter[attribute];
-          } else {
-            draft.valueFilter[attribute] = currentValues;
-          }
-        }),
+        removeAttributeFilterValuesInConfig(current, attribute, values),
       );
     },
     clearAttributeFilter: (attribute) => {
       applyConfigChange((current) =>
-        produce(current, (draft) => {
-          delete draft.valueFilter[attribute];
-        }),
+        clearAttributeFilterInConfig(current, attribute),
       );
     },
     setSectionOpen: (section, isOpen) =>
@@ -393,8 +378,95 @@ export function createPivotCoreStore(
         },
       })),
     run: async () => {
-      await callbacks?.onRun?.();
+      await ops.runImpl();
     },
+  };
+}
+
+export function createPivotCoreStore(
+  props?: CreatePivotCoreStoreProps,
+): PivotInstanceStore {
+  const snapshot = createPivotInstanceSnapshot(props);
+  const callbacks = props?.callbacks;
+  const store = createStore<PivotInstanceState>((set, get) => ({
+    ...snapshot,
+    ui: {
+      sectionOpenState: {},
+    },
+    ...createPivotInstanceActions(get, set, {
+      setSourceImpl: (source) => {
+        const nextConfig = createDefaultPivotConfig();
+        set((state) => ({
+          source,
+          config: nextConfig,
+          status: {
+            ...state.status,
+            stale: true,
+          },
+        }));
+        callbacks?.setSource?.(source);
+        callbacks?.setConfig?.(nextConfig);
+      },
+      setConfigImpl: (config) => {
+        set((state) => ({
+          config,
+          status: {
+            ...state.status,
+            stale: true,
+          },
+        }));
+        callbacks?.setConfig?.(config);
+      },
+      runImpl: async () => {
+        await callbacks?.run?.();
+      },
+    }),
   }));
-  return store;
+
+  return Object.assign(store, {
+    destroy: () => undefined,
+  });
+}
+
+export function createPivotInstanceAdapterStore(args: {
+  getSnapshot: () => PivotInstanceSnapshot;
+  subscribeToHost: (listener: () => void) => () => void;
+  callbacks: PivotInstanceCallbacks;
+}): PivotInstanceStore {
+  let currentSnapshot = args.getSnapshot();
+  const store = createStore<PivotInstanceState>((set, get) => ({
+    ...currentSnapshot,
+    ui: {
+      sectionOpenState: {},
+    },
+    ...createPivotInstanceActions(get, set, {
+      setSourceImpl: (source) => {
+        args.callbacks.setSource?.(source);
+      },
+      setConfigImpl: (config) => {
+        args.callbacks.setConfig?.(config);
+      },
+      runImpl: async () => {
+        await args.callbacks.run?.();
+      },
+    }),
+  }));
+
+  const unsubscribe = args.subscribeToHost(() => {
+    const nextSnapshot = args.getSnapshot();
+    if (samePivotSnapshot(currentSnapshot, nextSnapshot)) {
+      return;
+    }
+    currentSnapshot = nextSnapshot;
+    store.setState((state) => ({
+      ...state,
+      ...nextSnapshot,
+    }));
+  });
+
+  return Object.assign(store, {
+    destroy: () => {
+      unsubscribe();
+    },
+  });
 }
