@@ -105,16 +105,16 @@ configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
 
 ### MonacoEditor Props
 
-| Prop      | Type                 | Default      | Description                              |
-| --------- | -------------------- | ------------ | ---------------------------------------- |
-| className | string               | ''           | CSS class name for the editor container  |
-| language  | string               | 'javascript' | The language of the editor               |
-| theme     | 'vs-dark' \| 'light' | 'vs-dark'    | The theme of the editor                  |
-| value     | string               | ''           | The value of the editor                  |
-| readOnly  | boolean              | false        | Whether the editor is read-only          |
-| options   | object               | {}           | Additional options for the editor        |
-| onMount   | function             | -            | Callback when the editor is mounted      |
-| onChange  | function             | -            | Callback when the editor content changes |
+| Prop      | Type              | Default      | Description                              |
+| --------- | ----------------- | ------------ | ---------------------------------------- |
+| className | string            | ''           | CSS class name for the editor container  |
+| language  | string            | 'javascript' | The language of the editor               |
+| theme     | 'dark' \| 'light' \| 'system' | 'dark'       | The theme of the editor                  |
+| value     | string            | ''           | The value of the editor                  |
+| readOnly  | boolean           | false        | Whether the editor is read-only          |
+| options   | object            | {}           | Additional options for the editor        |
+| onMount   | function          | -            | Callback when the editor is mounted      |
+| onChange  | function          | -            | Callback when the editor content changes |
 
 ### JsonMonacoEditor Props
 

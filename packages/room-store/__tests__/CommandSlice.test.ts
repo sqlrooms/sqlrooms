@@ -10,8 +10,7 @@ import {
 } from '../src/CommandSlice';
 
 interface TestRoomState
-  extends BaseRoomStoreState,
-    CommandSliceState<TestRoomState> {
+  extends BaseRoomStoreState, CommandSliceState<TestRoomState> {
   features: {
     enabledCommands: string[];
   };
@@ -23,7 +22,11 @@ function createTestCommandStore(
 ) {
   const store = createStore<TestRoomState>((set, get, roomStore) => ({
     ...createBaseRoomSlice({captureException})(set, get, roomStore),
-    ...createCommandSlice<TestRoomState>(createCommandProps)(set, get, roomStore),
+    ...createCommandSlice<TestRoomState>(createCommandProps)(
+      set,
+      get,
+      roomStore,
+    ),
     features: {
       enabledCommands: [],
     },

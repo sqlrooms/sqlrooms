@@ -56,7 +56,9 @@ export const VegaLiteChart = Object.assign(VegaLiteSqlChart, {
 });
 
 // Export editor components and hooks for advanced use
+/** @deprecated Use VegaCodeMirrorEditor instead */
 export {VegaMonacoEditor} from './editor/VegaMonacoEditor';
+export {VegaCodeMirrorEditor} from './editor/VegaCodeMirrorEditor';
 export {useVegaChartEditor} from './editor/useVegaChartEditor';
 export {useVegaEditorContext} from './editor/VegaEditorContext';
 

@@ -11,7 +11,7 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-![SQLRooms example apps](docs/media/overview/collage.webp)
+![SQLRooms example apps](https://sqlrooms.org/media/overview/collage.webp)
 
 ## Why SQLRooms?
 
@@ -28,16 +28,16 @@ SQLRooms is designed to empower developers and users with a modern, modular anal
 </div> -->
 
 <div style="display: flex; justify-content: center; margin: 2rem 0;">
-  <video src="docs/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
+  <video src="https://sqlrooms.org/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
 </div>
 
 ## Why Single-Node?
 
-SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed. If you are evaluating architecture options for your organization, see [Deployment Scenarios](http://sqlrooms.org/deployment-scenarios).
+SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed. If you are evaluating architecture options for your organization, see [Deployment Scenarios](https://sqlrooms.org/deployment-scenarios).
 
 - **Privacy:** All data remains on your device for simplified compliance and peace of mind—nothing leaves your browser unless you choose.
 - **Own Your Data:** You control your files and data, with no vendor lock-in or forced cloud storage. Your work is portable and future-proof.
-- **Offline Use:** SQLRooms [supports offline work](http://sqlrooms.org/offline-use)—query, analyze, and visualize your data even without an internet connection.
+- **Offline Use:** SQLRooms [supports offline work](https://sqlrooms.org/offline-use)—query, analyze, and visualize your data even without an internet connection.
 - **Fast Local Querying:** Queries run instantly in your browser, with no network roundtrip or server lag—results are available as soon as you ask.
 - **Private AI Insights:** AI agents generate insights and run queries locally, so your data is never shared with external model providers. You get the power of AI-driven analytics without sacrificing privacy.
 
@@ -49,17 +49,17 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 ## Next Steps
 
-- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
+- **Review the [Key Concepts](https://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
 
-- **Explore the [Modular Architecture](http://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
+- **Explore the [Modular Architecture](https://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
 
-- **Check the [Example Applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
+- **Check the [Example Applications](https://sqlrooms.org/examples)** to see what can be built with the framework.
 
-- **Compare [Deployment Scenarios](http://sqlrooms.org/deployment-scenarios)** to choose the right setup for your team.
+- **Compare [Deployment Scenarios](https://sqlrooms.org/deployment-scenarios)** to choose the right setup for your team.
 
-<!-- - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
+<!-- - **Quick start the [Getting Started Guide](https://sqlrooms.org/getting-started)** to set up your first room.
 
-- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration. -->
+- **Read the [API reference](https://sqlrooms.org/packages/)** for deeper integration. -->
 
 <!-- END:overview.md -->
 
@@ -67,7 +67,7 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Key Concepts](http://sqlrooms.org/key-concepts) and [Modular Architecture](http://sqlrooms.org/modular-architecture) pages.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Key Concepts](https://sqlrooms.org/key-concepts) and [Modular Architecture](https://sqlrooms.org/modular-architecture) pages.
 
 ## Try the Minimal Example
 
@@ -447,4 +447,4 @@ This project uses Git Large File Storage (LFS) for managing media files in the d
    git lfs pull
    ```
 
-4. When adding new media files to the `docs/media/` directory, they will be automatically tracked by Git LFS as specified in the `.gitattributes` file.
+4. When adding new media files to the `docs/public/media/` directory, they will be automatically tracked by Git LFS as specified in the `.gitattributes` file.

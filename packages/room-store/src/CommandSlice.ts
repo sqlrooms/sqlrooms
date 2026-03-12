@@ -227,9 +227,7 @@ export type CommandSliceState<
 
 export function createCommandSlice<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
->(
-  props?: CreateCommandSliceProps<RS>,
-): StateCreator<CommandSliceState<RS>> {
+>(props?: CreateCommandSliceProps<RS>): StateCreator<CommandSliceState<RS>> {
   const middleware = props?.middleware ?? [];
   return createSlice<CommandSliceState<RS>, RS & CommandSliceState<RS>>(
     (set, get, store) => ({
@@ -739,9 +737,7 @@ function invokeCommandSliceCallback<TEvent>(
   }
 }
 
-function toCommandKeystrokeArray(
-  keystrokes?: RoomCommandKeystrokes,
-): string[] {
+function toCommandKeystrokeArray(keystrokes?: RoomCommandKeystrokes): string[] {
   if (!keystrokes) {
     return [];
   }

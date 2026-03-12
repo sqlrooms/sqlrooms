@@ -7,7 +7,7 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/9c32bdac-f2b1-4cf3-b48b-fa197e0986e3/deploy-status)](https://app.netlify.com/projects/sqlrooms-deckgl-discuss/deploys)
 
 <a href="https://sqlrooms-deckgl-discuss.netlify.app/" target="_blank">
-  <img src="/media/examples/deckgl-discuss.webp" alt="SQLRooms Deck.gl with commenting and annotation example" width=450>
+  <img src="https://sqlrooms.org/media/examples/deckgl-discuss.webp" alt="SQLRooms Deck.gl with commenting and annotation example" width=450>
 </a>
 
 An example showcasing integration with [deck.gl](https://deck.gl/) for geospatial data visualization combined with the [@sqlrooms/discuss](/api/discuss) module for collaborative features. Features include:

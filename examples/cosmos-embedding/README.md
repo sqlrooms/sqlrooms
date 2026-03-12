@@ -7,7 +7,7 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/da9fa044-3770-40c1-80cb-224db20de6d4/deploy-status)](https://app.netlify.com/projects/sqlrooms-cosmos-embedding/deploys)
 
 <a href="http://sqlrooms-cosmos-embedding.netlify.app/" target="_blank">
-  <img src="/media/examples/cosmos-embedding.webp" alt="SQLRooms 2D Embedding visualization using Cosmos" width=450>
+  <img src="https://sqlrooms.org/media/examples/cosmos-embedding.webp" alt="SQLRooms 2D Embedding visualization using Cosmos" width=450>
 </a>
 
 An example showcasing integration with Cosmos for visualizing high-dimensional data in 2D space. Features include:

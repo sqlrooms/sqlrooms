@@ -1,4 +1,4 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {JsonCodeMirrorEditor, CodeMirrorDiagnostic} from '@sqlrooms/codemirror';
 import {
   createRoomCommandExecutionContext,
   doesCommandRequireInput,
@@ -70,11 +70,6 @@ type JsonSchema = {
   items?: JsonSchema;
   anyOf?: JsonSchema[];
 };
-type MonacoMarker = {
-  severity: number;
-};
-
-const MONACO_MARKER_SEVERITY_ERROR = 8;
 
 type CommandPaletteControlAction = 'open' | 'close' | 'toggle';
 type CommandPaletteControlListener = (
@@ -114,9 +109,6 @@ function RoomShellCommandPaletteBase({
   const [isSubmittingInput, setIsSubmittingInput] = useState(false);
   const isOpen = controlledOpen ?? uncontrolledOpen;
   const isOpenRef = useRef(isOpen);
-  const commandInputEditorPathPrefixRef = useRef(
-    `inmemory://sqlrooms/command-input/${Math.random().toString(36).slice(2)}`,
-  );
   const roomStore = useRoomStoreApi<RoomShellSliceState>();
   const isMac = useMemo(() => isMacOS(), []);
   const commandRegistry = useBaseRoomShellStore(
@@ -224,12 +216,6 @@ function RoomShellCommandPaletteBase({
       ...jsonSchema,
     } satisfies JsonSchema;
   }, [activeInputCommand]);
-  const activeInputEditorPath = useMemo(() => {
-    if (!activeInputCommand) {
-      return undefined;
-    }
-    return `${commandInputEditorPathPrefixRef.current}/${encodeURIComponent(activeInputCommand.id)}.json`;
-  }, [activeInputCommand]);
 
   const setPaletteOpen = useCallback(
     (nextOpen: boolean) => {
@@ -323,12 +309,15 @@ function RoomShellCommandPaletteBase({
     }
   }, [hasJsonValidationErrors, inputJsonValue, submitCommandInput]);
 
-  const handleJsonEditorValidate = useCallback((markers: MonacoMarker[]) => {
-    const hasErrors = markers.some(
-      (marker) => marker.severity === MONACO_MARKER_SEVERITY_ERROR,
-    );
-    setHasJsonValidationErrors(hasErrors);
-  }, []);
+  const handleJsonEditorValidate = useCallback(
+    (diagnostics: CodeMirrorDiagnostic[]) => {
+      const hasErrors = diagnostics.some(
+        (diagnostic) => diagnostic.severity === 'error',
+      );
+      setHasJsonValidationErrors(hasErrors);
+    },
+    [],
+  );
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -475,25 +464,20 @@ function RoomShellCommandPaletteBase({
                   'Provide command input as a JSON value. Example: {"panelId":"sql-editor"}'}
               </DialogDescription>
               <div className="relative h-56 w-full rounded-md border">
-                <JsonMonacoEditor
+                <JsonCodeMirrorEditor
                   className="absolute inset-0 h-full w-full"
                   schema={activeInputCommandJsonSchema}
                   value={inputJsonValue}
-                  path={activeInputEditorPath}
                   readOnly={isSubmittingInput}
                   onChange={(value) => {
                     setInputJsonValue(value ?? '');
                     setInputError(undefined);
                   }}
+                  hideGutter
                   onValidate={handleJsonEditorValidate}
                   options={{
-                    lineNumbers: 'off',
-                    glyphMargin: false,
-                    folding: false,
-                    wordWrap: 'on',
-                    tabSize: 2,
-                    fixedOverflowWidgets: false,
-                    automaticLayout: true,
+                    lineNumbers: false,
+                    lineWrapping: true,
                   }}
                 />
               </div>
