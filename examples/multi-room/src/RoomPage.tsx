@@ -112,13 +112,18 @@ function RoomContent({roomId, roomName}: {roomId: string; roomName: string}) {
       setSelectedTable(null);
       return;
     }
-    if (!selectedTable || !tables.some((table) => table.table.table === selectedTable)) {
+    if (
+      !selectedTable ||
+      !tables.some((table) => table.table.table === selectedTable)
+    ) {
       setSelectedTable(tables[0].table.table);
     }
   }, [initialized, tables, selectedTable]);
 
   const roomOptions =
-    rooms.length > 0 ? rooms : [{id: roomId, name: roomName, defaultDataSources: []}];
+    rooms.length > 0
+      ? rooms
+      : [{id: roomId, name: roomName, defaultDataSources: []}];
 
   const onRoomSelect = (nextRoomId: string) => {
     navigate({to: '/room/$id', params: {id: nextRoomId}});
@@ -319,7 +324,10 @@ function NavMain({
                 {tables.length > 0 ? (
                   tables.map((table) => (
                     <SidebarMenuSubItem key={table.table.table}>
-                      <SidebarMenuSubButton asChild isActive={selectedTable === table.table.table}>
+                      <SidebarMenuSubButton
+                        asChild
+                        isActive={selectedTable === table.table.table}
+                      >
                         <a
                           href="#"
                           onClick={(event) => {
@@ -416,7 +424,6 @@ function TableBrowser({
   selectedTable: string | null;
   onSelectTable: (tableName: string) => void;
 }) {
-
   if (!initialized) {
     return (
       <div className="flex h-full items-center justify-center gap-2">
@@ -441,10 +448,13 @@ function TableBrowser({
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-end gap-2 border-b px-4 py-2">
-        <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+        <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
           Preview table
         </span>
-        <Select value={selectedTable ?? undefined} onValueChange={onSelectTable}>
+        <Select
+          value={selectedTable ?? undefined}
+          onValueChange={onSelectTable}
+        >
           <SelectTrigger className="h-8 w-[260px]">
             <SelectValue placeholder="Select table" />
           </SelectTrigger>

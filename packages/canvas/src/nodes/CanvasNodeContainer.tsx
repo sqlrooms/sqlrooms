@@ -77,7 +77,7 @@ export const CanvasNodeContainer: FC<
         </Popover> */}
         <div className="w-full flex-1 overflow-auto">{children}</div>
       </div>
-      <AddNodePopover className="absolute -right-10 top-1/2" parentId={id}>
+      <AddNodePopover className="absolute top-1/2 -right-10" parentId={id}>
         <Button
           variant="default"
           className="h-8 w-8 -translate-y-1/2 rounded-full"

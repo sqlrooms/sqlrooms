@@ -41,7 +41,7 @@ import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlMonacoEditor} from '../SqlMonacoEditor';
+import {SqlCodeMirrorEditor} from '../SqlCodeMirrorEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -504,21 +504,16 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
             render={({field}) => (
               <FormItem className="relative flex h-[200px] flex-col">
                 <FormControl>
-                  <SqlMonacoEditor
+                  <SqlCodeMirrorEditor
                     connector={connector}
                     value={field.value}
                     onChange={field.onChange}
                     className="absolute inset-0 h-full w-full"
                     options={{
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      minimap: {enabled: false},
-                      wordWrap: 'on',
-                      folding: false,
-                      lineNumbers: 'off',
-                      readOnly: isSubmitting,
-                      fixedOverflowWidgets: false, // default true doesn't work well in a modal
+                      lineWrapping: true,
+                      lineNumbers: false,
                     }}
+                    readOnly={isSubmitting}
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />

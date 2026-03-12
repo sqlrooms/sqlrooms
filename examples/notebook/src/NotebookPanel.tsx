@@ -14,7 +14,7 @@ export const NotebookPanel: React.FC = () => {
       <div className="min-h-0 flex-1">
         {!currentSheet && (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               No sheets yet. Create one from the tab bar above.
             </p>
           </div>

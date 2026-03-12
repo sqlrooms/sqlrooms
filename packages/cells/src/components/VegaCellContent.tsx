@@ -107,7 +107,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
       >
         {isEditing ? 'Save' : 'Edit chart'}
       </Button>
-      <span className="text-[10px] font-bold uppercase text-gray-400">
+      <span className="text-[10px] font-bold text-gray-400 uppercase">
         Vega
       </span>
     </div>
