@@ -1,20 +1,40 @@
 import * as arrow from 'apache-arrow';
 import {useStoreWithDuckDb} from './DuckDbSlice';
 
+export interface CopyAsTsvResult {
+  rowCount: number;
+  limitExceeded: boolean;
+}
+
+export interface CopyAsTsvOptions {
+  pageSize?: number;
+  maxSizeBytes?: number;
+}
+
 export interface UseCopyAsTsvReturn {
-  copyAsTsv: (query: string, pageSize?: number) => Promise<number>;
+  copyAsTsv: (
+    query: string,
+    options?: CopyAsTsvOptions,
+  ) => Promise<CopyAsTsvResult>;
 }
 
 export function useCopyAsTsv(): UseCopyAsTsvReturn {
   const getConnector = useStoreWithDuckDb((state) => state.db.getConnector);
   return {
-    copyAsTsv: async (query: string, pageSize = 100000): Promise<number> => {
+    copyAsTsv: async (
+      query: string,
+      options?: CopyAsTsvOptions,
+    ): Promise<CopyAsTsvResult> => {
+      const {pageSize = 100000, maxSizeBytes = 50 * 1024 * 1024} =
+        options || {};
       const dbConnector = await getConnector();
 
       let offset = 0;
       const chunks: string[] = [];
       let headersAdded = false;
       let totalRows = 0;
+      let totalBytes = 0;
+      let limitExceeded = false;
 
       while (true) {
         const currentQuery = `(
@@ -27,14 +47,23 @@ export function useCopyAsTsv(): UseCopyAsTsvReturn {
         }
 
         const tsvChunk = convertToTsv(results, !headersAdded);
+        const chunkBytes = new Blob([tsvChunk]).size;
+
+        // Check if adding this chunk would exceed the limit
+        if (totalBytes + chunkBytes > maxSizeBytes) {
+          limitExceeded = true;
+          break;
+        }
+
         chunks.push(tsvChunk);
+        totalBytes += chunkBytes;
         totalRows += results.numRows;
         headersAdded = true;
         offset += pageSize;
       }
 
       await navigator.clipboard.writeText(chunks.join(''));
-      return totalRows;
+      return {rowCount: totalRows, limitExceeded};
     },
   };
 }

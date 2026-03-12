@@ -3,6 +3,8 @@ import {Button, Spinner, toast} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
 import {FC, useState} from 'react';
 
+const MAX_SIZE_MB = 5; // 50 MB
+
 export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
   const {copyAsTsv} = useCopyAsTsv();
   const [isCopying, setIsCopying] = useState(false);
@@ -16,12 +18,24 @@ export const CopyAsTsvButton: FC<{query: string}> = ({query}) => {
 
     try {
       setIsCopying(true);
-      const rowCount = await copyAsTsv(query);
-      toast.success(
-        rowCount === 1
-          ? 'Copied 1 row'
-          : `Copied ${rowCount.toLocaleString()} rows`,
-      );
+      const {rowCount, limitExceeded} = await copyAsTsv(query, {
+        maxSizeBytes: MAX_SIZE_MB * 1024 * 1024, // 50 MB
+      });
+
+      if (limitExceeded) {
+        toast.warning('Data too large for clipboard', {
+          description:
+            rowCount === 0
+              ? `Dataset exceeds ${MAX_SIZE_MB} MB limit. Use CSV export instead.`
+              : `Copied ${rowCount.toLocaleString()} rows (${MAX_SIZE_MB} MB limit reached). Use CSV export for full dataset.`,
+        });
+      } else {
+        toast.success(
+          rowCount === 1
+            ? 'Copied 1 row'
+            : `Copied ${rowCount.toLocaleString()} rows`,
+        );
+      }
     } catch (error) {
       toast.error('Failed to copy to clipboard', {
         description:

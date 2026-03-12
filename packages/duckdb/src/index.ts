@@ -37,7 +37,12 @@ export {
 
 export {useExportToCsv, type UseExportToCsvReturn} from './use-export-to-csv';
 
-export {useCopyAsTsv, type UseCopyAsTsvReturn} from './use-copy-as-tsv';
+export {
+  useCopyAsTsv,
+  type CopyAsTsvOptions,
+  type CopyAsTsvResult,
+  type UseCopyAsTsvReturn,
+} from './use-copy-as-tsv';
 
 export {useDuckDb} from './useDuckDb';
 
