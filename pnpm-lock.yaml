@@ -3477,6 +3477,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../ai
+      '@sqlrooms/codemirror':
+        specifier: workspace:*
+        version: link:../codemirror
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb

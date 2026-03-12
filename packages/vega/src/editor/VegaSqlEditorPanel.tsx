@@ -100,7 +100,9 @@ export const VegaSqlEditorPanel: React.FC<VegaSqlEditorPanelProps> = ({
             actions.setEditedSql(value);
           }}
           options={{
-            lineNumbers: false,
+            lineNumbers: true,
+            lineWrapping: false,
+            foldGutter: true,
           }}
           readOnly={!editable}
         />

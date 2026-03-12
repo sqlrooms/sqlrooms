@@ -28,7 +28,10 @@ export function validateJsonSchema(
       // Parse with position tracking
       const tree = parseTree(text);
 
-      for (const error of validate.errors) {
+      // Filter and deduplicate errors
+      const filteredErrors = filterMeaningfulErrors(validate.errors);
+
+      for (const error of filteredErrors) {
         const diagnostic = convertErrorToDiagnostic(error, text, tree);
         if (diagnostic) {
           diagnostics.push(diagnostic);
@@ -60,6 +63,58 @@ export function validateJsonSchema(
   }
 
   return diagnostics;
+}
+
+/**
+ * Filters out unhelpful/duplicate errors from anyOf/oneOf branches.
+ * Prioritizes specific, actionable errors over generic ones.
+ */
+function filterMeaningfulErrors(errors: ErrorObject[]): ErrorObject[] {
+  // Group errors by path
+  const errorsByPath = new Map<string, ErrorObject[]>();
+
+  for (const error of errors) {
+    const path = error.instancePath || 'root';
+    if (!errorsByPath.has(path)) {
+      errorsByPath.set(path, []);
+    }
+    errorsByPath.get(path)!.push(error);
+  }
+
+  const meaningful: ErrorObject[] = [];
+
+  for (const [, pathErrors] of errorsByPath) {
+    // Filter out generic anyOf/oneOf errors if we have more specific errors
+    const specificErrors = pathErrors.filter(
+      (e) => e.keyword !== 'anyOf' && e.keyword !== 'oneOf',
+    );
+
+    if (specificErrors.length > 0) {
+      // Prioritize enum errors (they're most specific)
+      const enumErrors = specificErrors.filter((e) => e.keyword === 'enum');
+      if (enumErrors.length > 0 && enumErrors[0]) {
+        meaningful.push(enumErrors[0]); // Take first enum error
+        continue;
+      }
+
+      // Prioritize type errors
+      const typeErrors = specificErrors.filter((e) => e.keyword === 'type');
+      if (typeErrors.length > 0 && typeErrors[0]) {
+        meaningful.push(typeErrors[0]); // Take first type error
+        continue;
+      }
+
+      // Take first specific error
+      if (specificErrors[0]) {
+        meaningful.push(specificErrors[0]);
+      }
+    } else if (pathErrors.length > 0 && pathErrors[0]) {
+      // Only anyOf/oneOf errors - take one
+      meaningful.push(pathErrors[0]);
+    }
+  }
+
+  return meaningful;
 }
 
 /**
@@ -117,28 +172,36 @@ function convertErrorToDiagnostic(
  * Formats an ajv error into a human-readable message
  */
 function formatErrorMessage(error: ErrorObject): string {
-  const path = error.instancePath || 'root';
-
   switch (error.keyword) {
     case 'type':
-      return `${path}: should be ${error.params.type}`;
+      return `Should be ${error.params.type}`;
     case 'required':
-      return `${path}: missing required property '${error.params.missingProperty}'`;
-    case 'enum':
-      return `${path}: should be one of [${error.params.allowedValues.join(', ')}]`;
+      return `Missing required property '${error.params.missingProperty}'`;
+    case 'enum': {
+      const values = error.params.allowedValues;
+      // Show first 5 values, indicate if there are more
+      const displayValues =
+        values.length > 5
+          ? values.slice(0, 5).join(', ') + `, ... (${values.length - 5} more)`
+          : values.join(', ');
+      return `Should be one of: ${displayValues}`;
+    }
     case 'minimum':
-      return `${path}: should be >= ${error.params.limit}`;
+      return `Should be >= ${error.params.limit}`;
     case 'maximum':
-      return `${path}: should be <= ${error.params.limit}`;
+      return `Should be <= ${error.params.limit}`;
     case 'minLength':
-      return `${path}: should be at least ${error.params.limit} characters`;
+      return `Should be at least ${error.params.limit} characters`;
     case 'maxLength':
-      return `${path}: should be at most ${error.params.limit} characters`;
+      return `Should be at most ${error.params.limit} characters`;
     case 'pattern':
-      return `${path}: should match pattern "${error.params.pattern}"`;
+      return `Should match pattern: ${error.params.pattern}`;
     case 'additionalProperties':
-      return `${path}: should not have additional property '${error.params.additionalProperty}'`;
+      return `Unknown property '${error.params.additionalProperty}'`;
+    case 'anyOf':
+    case 'oneOf':
+      return 'Does not match any valid schema variant';
     default:
-      return error.message || `${path}: validation error`;
+      return error.message || 'Validation error';
   }
 }

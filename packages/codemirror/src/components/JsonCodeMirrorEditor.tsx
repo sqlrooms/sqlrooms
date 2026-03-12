@@ -6,16 +6,16 @@ import {jsonSchemaAutocomplete} from '../extensions/json-schema-autocomplete';
 import {autoTriggerOnQuote} from '../extensions/auto-trigger';
 import {json} from '@codemirror/lang-json';
 import {createJsonTheme} from '../themes/json-theme';
+import {tooltipTheme} from '../themes/tooltip-theme';
 
 export interface JsonCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
-  'value'
+  'value' | 'extensions'
 > {
   /** The JSON schema to validate against */
   schema?: object;
   /** The JSON value to edit - can be a string or an object (will be stringified) */
   value?: string | object;
-
   /** Whether to hide the gutter (line numbers, fold markers, etc.) */
   hideGutter?: boolean;
 }
@@ -24,7 +24,6 @@ export interface JsonCodeMirrorEditorProps extends Omit<
 export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   schema,
   value = '',
-  extensions: userExtensions = [],
   options = {},
   hideGutter,
   ...props
@@ -38,6 +37,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
     return [
       json(),
       createJsonTheme({hideGutter}),
+      tooltipTheme, // Use fixed positioning for tooltips to escape overflow containers
       ...(schema
         ? [
             jsonSchemaLinter(schema),
@@ -46,9 +46,8 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
           ]
         : []),
       autoTriggerOnQuote(),
-      ...userExtensions,
     ];
-  }, [schema, userExtensions, hideGutter]);
+  }, [schema, hideGutter]);
 
   return (
     <CodeMirrorEditor
