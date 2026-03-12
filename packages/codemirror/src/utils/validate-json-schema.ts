@@ -90,6 +90,15 @@ function filterMeaningfulErrors(errors: ErrorObject[]): ErrorObject[] {
     );
 
     if (specificErrors.length > 0) {
+      // For required properties, include all of them
+      const requiredErrors = specificErrors.filter(
+        (e) => e.keyword === 'required',
+      );
+      if (requiredErrors.length > 0) {
+        meaningful.push(...requiredErrors); // Include all required errors
+        continue;
+      }
+
       // Prioritize enum errors (they're most specific)
       const enumErrors = specificErrors.filter((e) => e.keyword === 'enum');
       if (enumErrors.length > 0 && enumErrors[0]) {
