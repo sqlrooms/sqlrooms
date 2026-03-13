@@ -6,6 +6,7 @@ import {SparklesIcon} from 'lucide-react';
 import React from 'react';
 import {AppBuilderSheet} from './AppBuilderSheet';
 import {AssistantDrawer} from './AssistantDrawer';
+import {DashboardSheet} from './DashboardSheet';
 
 export const SheetsPanel: React.FC<{className?: string}> = ({className}) => {
   const currentSheet = useCellsStore((s) => {
@@ -36,6 +37,7 @@ export const SheetsPanel: React.FC<{className?: string}> = ({className}) => {
         {currentSheet?.type === 'notebook' && <Notebook />}
         {currentSheet?.type === 'canvas' && <Canvas />}
         {currentSheet?.type === 'app' && <AppBuilderSheet />}
+        {currentSheet?.type === 'dashboard' && <DashboardSheet />}
       </div>
     </div>
   );
