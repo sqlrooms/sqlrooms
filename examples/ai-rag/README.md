@@ -3,7 +3,7 @@
 [GitHub repo](https://github.com/sqlrooms/examples/tree/main/ai-rag)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/ai-rag?embed=1&file=src/app.tsx)
 
-<img src="/media/examples/rag.webp" alt="SQLRooms AI RAG example" width=450>
+<img src="https://sqlrooms.org/media/examples/rag.webp" alt="SQLRooms AI RAG example" width=450>
 
 An example demonstrating Retrieval Augmented Generation (RAG) using SQLRooms and DuckDB for vector search. Features include:
 

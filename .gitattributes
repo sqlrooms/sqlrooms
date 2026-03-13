@@ -1,1 +1,1 @@
-docs/media/** filter=lfs diff=lfs merge=lfs -text
+docs/public/media/** filter=lfs diff=lfs merge=lfs -text
