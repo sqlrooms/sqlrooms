@@ -9,20 +9,13 @@ import {
   Label,
   Switch,
 } from '@sqlrooms/ui';
-import type {
-  ImageRatioOption,
-  ImageResolutionOption,
-} from '@kepler.gl/constants';
-import {
-  EXPORT_IMG_RATIOS,
-  RESOLUTIONS,
-  EXPORT_IMG_RATIO_OPTIONS,
-  EXPORT_IMG_RESOLUTION_OPTIONS,
-} from '@kepler.gl/constants';
-import {FormattedMessage} from '@kepler.gl/localization';
+import {EXPORT_IMG_RESOLUTION_OPTIONS} from '@kepler.gl/constants';
 import {ImagePreview} from '@kepler.gl/components';
 import {dataURItoBlob, downloadFile} from '@kepler.gl/utils';
 import {ExportImage} from '@kepler.gl/types';
+import {Loader2} from 'lucide-react';
+
+type ExportResolutionOption = ExportImage['resolution'];
 
 export interface KeplerImageExportProps {
   setExportImageSetting: (settings: Partial<ExportImage>) => void;
@@ -39,7 +32,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   fileName,
   onExportStart,
 }) => {
-  const {legend, ratio, resolution, processing, imageDataUri} =
+  const {legend, resolution, processing, imageDataUri, imageSize} =
     exportImageSettings;
 
   useEffect(() => {
@@ -49,6 +42,13 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
     return cleanupExportImage;
   }, [setExportImageSetting, cleanupExportImage]);
 
+  // Trigger preview regeneration when resolution or legend changes
+  useEffect(() => {
+    setExportImageSetting({
+      imageDataUri: '',
+    });
+  }, [resolution, legend, setExportImageSetting]);
+
   const handleExportImage = useCallback(() => {
     if (!processing && imageDataUri) {
       onExportStart?.();
@@ -57,55 +57,43 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
     }
   }, [processing, imageDataUri, fileName, onExportStart]);
 
+  const isPreviewReady = !processing && imageDataUri;
+
   return (
-    <div className="flex flex-col gap-6 px-[5px] pb-5 pt-1">
+    <div className="flex flex-col gap-6 px-[5px] pt-1 pb-5">
       <ImagePreview exportImage={exportImageSettings} />
+
+      {processing && (
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+          <span className="text-sm text-gray-600">Generating preview...</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-[100px_auto] items-center gap-4">
         <Label>Resolution</Label>
         <Select
           value={resolution}
-          onValueChange={(value) =>
+          onValueChange={(value: ExportResolutionOption) =>
             setExportImageSetting({
-              resolution: value as keyof typeof RESOLUTIONS,
+              resolution: value,
             })
           }
+          disabled={processing}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select resolution" />
           </SelectTrigger>
           <SelectContent>
-            {EXPORT_IMG_RESOLUTION_OPTIONS.map(
-              (option: ImageResolutionOption) => (
-                <SelectItem
-                  key={option.id}
-                  value={option.id}
-                  disabled={!option.available}
-                >
-                  {option.label}
-                </SelectItem>
-              ),
-            )}
-          </SelectContent>
-        </Select>
-
-        <Label>Ratio</Label>
-        <Select
-          value={ratio}
-          onValueChange={(value) =>
-            setExportImageSetting({
-              ratio: value as keyof typeof EXPORT_IMG_RATIOS,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select ratio" />
-          </SelectTrigger>
-          <SelectContent>
-            {EXPORT_IMG_RATIO_OPTIONS.filter(
-              (op: ImageRatioOption) => !op.hidden,
-            ).map((option: ImageRatioOption) => (
-              <SelectItem key={option.id} value={option.id}>
-                <FormattedMessage id={option.label} />
+            {EXPORT_IMG_RESOLUTION_OPTIONS.filter(
+              (option) => !option.scale,
+            ).map((option) => (
+              <SelectItem
+                key={option.id}
+                value={option.id as ExportResolutionOption}
+                disabled={!option.available}
+              >
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -119,6 +107,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
               legend: checked === true,
             })
           }
+          disabled={processing}
         />
       </div>
 
@@ -127,8 +116,16 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
           variant="default"
           className="w-full"
           onClick={handleExportImage}
+          disabled={processing || !isPreviewReady}
         >
-          Export Image
+          {processing ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing...
+            </span>
+          ) : (
+            'Export Image'
+          )}
         </Button>
       </div>
     </div>
