@@ -58,7 +58,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   }, [processing, imageDataUri, fileName, onExportStart]);
 
   return (
-    <div className="flex flex-col gap-6 px-[5px] pb-5 pt-1">
+    <div className="flex flex-col gap-6 px-[5px] pt-1 pb-5">
       <ImagePreview exportImage={exportImageSettings} />
       <div className="grid grid-cols-[100px_auto] items-center gap-4">
         <Label>Resolution</Label>

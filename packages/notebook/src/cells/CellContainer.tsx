@@ -1,10 +1,10 @@
-import React from 'react';
 import {cn, EditableText} from '@sqlrooms/ui';
+import React from 'react';
 
-import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {DeleteCellDialog} from '../cellOperations/DeleteCellDialog';
 import {MoveCellButtons} from '../cellOperations/MoveCellButtons';
 import {findCellInNotebook} from '../NotebookUtils';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 export type CellContainerProps = {
   id: string;

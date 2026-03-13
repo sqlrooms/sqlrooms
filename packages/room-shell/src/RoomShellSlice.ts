@@ -21,8 +21,8 @@ import {
 import {
   BaseRoomStoreState,
   CommandSliceState,
-  CreateCommandSliceProps,
   CreateBaseRoomSliceProps,
+  CreateCommandSliceProps,
   RoomCommand,
   createBaseRoomSlice,
   createCommandSlice,
@@ -278,7 +278,7 @@ export function createRoomShellSlice(
           const {setTaskProgress} = get().room;
           try {
             setTaskProgress(INIT_DB_TASK, {
-              message: 'Initializing database…',
+              message: 'Establishing database connection…',
               progress: undefined,
             });
             await get().db.initialize();
@@ -288,6 +288,7 @@ export function createRoomShellSlice(
               message: 'Loading data sources…',
               progress: undefined,
             });
+
             await updateReadyDataSources();
             await maybeDownloadDataSources();
 
@@ -316,6 +317,9 @@ export function createRoomShellSlice(
             if (isRoomSliceWithInitialize(state)) {
               await state.initialize();
             }
+          } catch (error) {
+            captureException(error);
+            throw error;
           } finally {
             setTaskProgress(INIT_ROOM_TASK, undefined);
           }
@@ -444,7 +448,7 @@ export function createRoomShellSlice(
               };
             }),
           );
-          await get().db.refreshTableSchemas();
+          get().db.refreshTableSchemas();
         },
 
         setRoomFiles: (roomFiles) =>
@@ -521,7 +525,7 @@ export function createRoomShellSlice(
                 delete draft.room.dataSourceStates[tableName];
               }),
             );
-            await db.dropTable(tableName);
+            await db.dropRelation(tableName);
             await db.refreshTableSchemas();
           }
         },
@@ -578,6 +582,9 @@ export function createRoomShellSlice(
       const {tables} = get().db;
       const {dataSourceStates} = get().room;
       const {config} = get().room;
+      if (!config) {
+        return;
+      }
       const {dataSources} = config;
       set((state) =>
         produce(state, (draft) => {
@@ -729,7 +736,7 @@ export function createRoomShellSlice(
         }),
       );
       if (loadedFiles.length) {
-        await get().db.refreshTableSchemas();
+        get().db.refreshTableSchemas();
       }
     }
 
@@ -793,8 +800,11 @@ export function createRoomShellSlice(
           // TODO: Make sure the errors are shown
         }
       }
-      await get().db.refreshTableSchemas();
-      await updateReadyDataSources();
+      get()
+        .db.refreshTableSchemas()
+        .then(() => {
+          updateReadyDataSources();
+        });
     }
 
     function updateTotalFileDownloadProgress() {

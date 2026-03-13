@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@duckdb/node-api": "^1.4.2-r.1",
+    "@duckdb/node-api": "^1.4.4-r.3",
     "@sqlrooms/duckdb-core": "workspace:*"
   },
   "devDependencies": {
