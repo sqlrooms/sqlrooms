@@ -11,7 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
@@ -19,6 +18,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
+    "ai": "^5.0.44",
     "immer": "^11.0.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",

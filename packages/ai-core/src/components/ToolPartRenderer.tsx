@@ -21,7 +21,7 @@ const AgentProgressRenderer: React.FC<{
   finalOutput?: string;
   reasoning?: string;
 }> = ({agentToolCalls, finalOutput, reasoning}) => {
-  const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
+  const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
 
   return (
     <div className="mt-2 px-5 text-[0.9em]">
@@ -32,7 +32,7 @@ const AgentProgressRenderer: React.FC<{
       ) : null}
       <div className="ml-3">
         {agentToolCalls.map((toolCall) => {
-          const ToolComponent = findToolComponent(toolCall.toolName);
+          const ToolComponent = toolRenderers[toolCall.toolName];
           const isSuccess = toolCall.state === 'success';
           const isError = toolCall.state === 'error';
           const hasComponent =
@@ -66,7 +66,11 @@ const AgentProgressRenderer: React.FC<{
               {isSuccess && hasComponent && hasObjectOutput ? (
                 <div className="mt-1 ml-6">
                   <ToolComponent
-                    {...(toolCall.output as Record<string, unknown>)}
+                    output={toolCall.output}
+                    input={undefined}
+                    toolCallId={toolCall.toolCallId}
+                    state="output-available"
+                    errorText={toolCall.errorText}
                   />
                 </div>
               ) : null}
@@ -97,13 +101,12 @@ const AgentProgressRenderer: React.FC<{
 export const ToolPartRenderer = ({
   part,
   toolCallId,
-  toolAdditionalData = {},
 }: {
   part: UIMessagePart;
   toolCallId: string;
-  toolAdditionalData?: Record<string, unknown>;
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
+  const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
@@ -116,32 +119,37 @@ export const ToolPartRenderer = ({
   const output = state === 'output-available' ? part.output : undefined;
   const errorText = state === 'output-error' ? part.errorText : undefined;
   const isCompleted = state === 'output-available' || state === 'output-error';
-  const additionalData = toolAdditionalData[toolCallId];
+
+  const hasExecute = !!tools[toolName]?.execute;
+  // Look up directly from the registry object (stable reference) to avoid
+  // the react-hooks/static-components lint rule flagging a function call.
+  const ToolComponent = toolRenderers[toolName];
 
   if (
-    !tools[toolName]?.execute &&
+    !hasExecute &&
     (state === 'input-streaming' ||
       state === 'input-available' ||
       state === 'output-available')
   ) {
-    const ToolComponent = tools[toolName]?.component as React.ComponentType;
-    const props = {
-      ...(input as Record<string, unknown>),
-      ...({toolCallId, toolName, isCompleted} as Record<string, unknown>),
-    };
     return (
       <div>
         {ToolComponent && typeof ToolComponent === 'function' && (
-          <ToolComponent {...props} />
+          <ToolComponent
+            output={output}
+            input={input}
+            toolCallId={toolCallId}
+            state={state}
+            errorText={errorText}
+          />
         )}
       </div>
     );
   }
 
   // Otherwise, render <ToolResult>
-  if (tools[toolName]?.execute) {
+  if (hasExecute) {
     const isAgentTool = toolName.startsWith('agent-');
-    const agentData = additionalData as {
+    const agentOutput = output as {
       agentToolCalls?: Array<{
         toolCallId: string;
         toolName: string;
@@ -153,8 +161,8 @@ export const ToolPartRenderer = ({
     };
     const hasAgentProgress =
       isAgentTool &&
-      agentData?.agentToolCalls &&
-      agentData.agentToolCalls.length > 0;
+      agentOutput?.agentToolCalls &&
+      agentOutput.agentToolCalls.length > 0;
     const reasoning =
       input instanceof Object && 'reasoning' in input
         ? (input.reasoning as string)
@@ -171,24 +179,18 @@ export const ToolPartRenderer = ({
         <div data-tool-call-id={toolCallId}>
           {hasAgentProgress ? (
             <AgentProgressRenderer
-              agentToolCalls={agentData.agentToolCalls!}
-              finalOutput={agentData.finalOutput}
+              agentToolCalls={agentOutput.agentToolCalls!}
+              finalOutput={agentOutput.finalOutput}
               reasoning={reasoning}
             />
           ) : (
             <ToolResult
               toolCallId={toolCallId}
-              toolData={{
-                toolCallId,
-                name: toolName,
-                state: state,
-                args: input,
-                result: output,
-                errorText,
-              }}
-              additionalData={additionalData}
-              isCompleted={isCompleted}
-              errorMessage={state === 'output-error' ? errorText : undefined}
+              toolName={toolName}
+              output={output}
+              input={input}
+              state={state}
+              errorText={state === 'output-error' ? errorText : undefined}
             />
           )}
         </div>

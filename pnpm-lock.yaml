@@ -238,6 +238,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -256,6 +259,9 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../../packages/vega
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -396,6 +402,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -454,9 +463,6 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
         version: 1.0.28(zod@4.1.13)
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
@@ -521,6 +527,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@sqlrooms/ai-rag':
         specifier: workspace:*
         version: link:../../packages/ai-rag
@@ -542,6 +551,9 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../../packages/vega
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.1)
@@ -591,9 +603,6 @@ importers:
 
   examples/app-builder:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
@@ -615,6 +624,9 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.1
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -2052,9 +2064,6 @@ importers:
 
   packages/ai:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
@@ -2076,6 +2085,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -2109,9 +2121,6 @@ importers:
       '@ai-sdk/react':
         specifier: ^2.0.44
         version: 2.0.109(react@19.2.1)(zod@4.1.13)
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4
@@ -2170,9 +2179,6 @@ importers:
 
   packages/ai-rag:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../ai-core
@@ -3471,12 +3477,12 @@ importers:
 
   packages/vega:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../ai
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror
@@ -3495,6 +3501,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.108(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -6492,9 +6501,6 @@ packages:
 
   '@open-wc/dedupe-mixin@1.4.0':
     resolution: {integrity: sha512-Sj7gKl1TLcDbF7B6KUhtvr+1UCxdhMbNY5KxdU5IfMFWqL8oy1ZeAcCANjoB1TL0AJTcPmcCFsCbHf8X2jGDUA==}
-
-  '@openassistant/utils@1.0.0-alpha.0':
-    resolution: {integrity: sha512-/IGGeTkCoOPLOXR953VrKmopYahqwaJGP9M1XwOQCE1G1tHcBLvjzGt9jgz6w/XUq5RDaK16AzeQha9irZZxFQ==}
 
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
@@ -13127,7 +13133,6 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
-
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   quadbin@0.4.2:
@@ -20839,10 +20844,6 @@ snapshots:
       '@octokit/openapi-types': 27.0.0
 
   '@open-wc/dedupe-mixin@1.4.0': {}
-
-  '@openassistant/utils@1.0.0-alpha.0':
-    dependencies:
-      zod: 4.1.13
 
   '@opentelemetry/api@1.9.0': {}
 

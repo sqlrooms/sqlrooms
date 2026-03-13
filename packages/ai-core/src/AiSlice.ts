@@ -21,13 +21,13 @@ import {
   LanguageModel,
   ChatOnDataCallback,
   generateText,
+  ToolSet,
 } from 'ai';
 import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
   ToolCall,
-  convertToAiSDKTools,
 } from './chatTransport';
 import {
   ABORT_EVENT,
@@ -38,11 +38,14 @@ import {
   TOOL_CALL_CANCELLED,
 } from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
-import {OpenAssistantToolSet} from '@openassistant/utils';
 import type {
   AddToolResult,
   AiChatSendMessage,
   GetProviderOptions,
+  StoredToolSet,
+  ToolRenderer,
+  ToolRendererRegistry,
+  ToolRenderers,
 } from './types';
 import {
   cleanupPendingAnalysisResults,
@@ -62,7 +65,8 @@ export type AiSliceState = {
     promptSuggestionsVisible: boolean;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
-    tools: OpenAssistantToolSet;
+    tools: StoredToolSet;
+    toolRenderers: ToolRendererRegistry;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
@@ -128,15 +132,15 @@ export type AiSliceState = {
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-    setSessionToolAdditionalData: (
+    setToolEditState: (
       sessionId: string,
       toolCallId: string,
-      additionalData: unknown,
+      editState: unknown,
     ) => void;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
-    findToolComponent: (toolName: string) => React.ComponentType | undefined;
+    findToolRenderer: (toolName: string) => ToolRenderer | undefined;
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
@@ -171,12 +175,29 @@ export type AiSliceState = {
 };
 
 /**
- * Configuration options for creating an AI slice
+ * Configuration options for creating an AI slice.
+ *
+ * `TTools` is inferred from the `tools` value and constrains `toolRenderers`:
+ * - Keys must be present in `tools`
+ * - Each renderer's `output` prop is typed to that tool's return type
+ *
+ * @example
+ * ```ts
+ * createAiSlice({
+ *   tools: {query: createQueryTool(store), chart: createVegaChartTool()},
+ *   toolRenderers: {
+ *     query: QueryToolResult,        // ToolRenderer<QueryToolOutput>
+ *     chart: VegaChartToolResult,    // ToolRenderer<VegaChartToolOutput>
+ *     TYPO: SomeRenderer,            // compile error — not a key of tools
+ *   },
+ * })
+ * ```
  */
-export interface AiSliceOptions {
+export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   config?: Partial<AiSliceConfig>;
   initialPrompt?: string;
-  tools: OpenAssistantToolSet;
+  tools: TTools;
+  toolRenderers?: ToolRenderers<TTools>;
   getInstructions: () => string;
   defaultProvider?: string;
   defaultModel?: string;
@@ -192,8 +213,8 @@ export interface AiSliceOptions {
   chatHeaders?: Record<string, string>;
 }
 
-export function createAiSlice(
-  params: AiSliceOptions,
+export function createAiSlice<TTools extends ToolSet = ToolSet>(
+  params: AiSliceOptions<TTools>,
 ): StateCreator<AiSliceState> {
   const {
     initialPrompt = '',
@@ -284,6 +305,7 @@ export function createAiSlice(
         promptSuggestionsVisible: true,
         apiKeyErrors: {},
         tools,
+        toolRenderers: params.toolRenderers ?? {},
         getProviderOptions,
         waitForToolResult: (
           sessionId: string,
@@ -555,7 +577,7 @@ export function createAiSlice(
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
-                toolAdditionalData: {},
+                toolEditState: {},
                 messagesRevision: 0,
                 prompt: '',
                 isRunning: false,
@@ -696,12 +718,12 @@ export function createAiSlice(
         },
 
         /**
-         * Save additional data for a session
+         * Save mutable UI edit state for a tool call in a session.
          */
-        setSessionToolAdditionalData: (
+        setToolEditState: (
           sessionId: string,
           toolCallId: string,
-          additionalData: unknown,
+          editState: unknown,
         ) => {
           set((state) =>
             produce(state, (draft) => {
@@ -709,17 +731,17 @@ export function createAiSlice(
                 (s) => s.id === sessionId,
               );
               if (session) {
-                if (!session.toolAdditionalData) {
-                  session.toolAdditionalData = {};
+                if (!session.toolEditState) {
+                  session.toolEditState = {};
                 }
-                session.toolAdditionalData[toolCallId] = additionalData;
+                session.toolEditState[toolCallId] = editState;
               }
             }),
           );
         },
 
-        findToolComponent: (toolName: string) => {
-          return get().ai.tools[toolName]?.component as React.ComponentType;
+        findToolRenderer: (toolName: string) => {
+          return get().ai.toolRenderers[toolName];
         },
 
         getBaseUrlFromSettings: () => {
@@ -866,9 +888,7 @@ export function createAiSlice(
               messages: [{role: 'user', content: prompt}],
               system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,
-              ...(useTools
-                ? {tools: convertToAiSDKTools(toolsWithoutExecute)}
-                : {}),
+              ...(useTools ? {tools: toolsWithoutExecute as ToolSet} : {}),
             });
             return response.text;
           } catch (error) {
@@ -1001,7 +1021,7 @@ export function createAiSlice(
         /**
          * Delete an analysis result from a session
          * - remove the corresponding prompt-response pair from uiMessages
-         * - remove the associated toolAdditionalData
+         * - remove the associated toolEditState
          */
         deleteAnalysisResult: (sessionId: string, resultId: string) => {
           set((state) =>
@@ -1054,12 +1074,12 @@ export function createAiSlice(
                   session.messagesRevision =
                     (session.messagesRevision || 0) + 1;
 
-                  // Clean up toolAdditionalData for deleted messages
-                  if (session.toolAdditionalData) {
+                  // Clean up toolEditState for deleted messages
+                  if (session.toolEditState) {
                     // Remove data keyed by the toolCallId from the deleted messages
                     toolCallIdsToDelete.forEach((toolCallId) => {
-                      if (session.toolAdditionalData![toolCallId]) {
-                        delete session.toolAdditionalData![toolCallId];
+                      if (session.toolEditState![toolCallId]) {
+                        delete session.toolEditState![toolCallId];
                       }
                     });
                   }

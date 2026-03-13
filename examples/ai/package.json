@@ -12,12 +12,14 @@
   },
   "dependencies": {
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
+    "ai": "^5.0.44",
     "lucide-react": "^0.555.0",
     "zod": "^4.1.8"
   },

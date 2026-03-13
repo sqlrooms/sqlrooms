@@ -1,3 +1,4 @@
+import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {FC} from 'react';
 
 interface WebSearchResult {
@@ -6,17 +7,21 @@ interface WebSearchResult {
   url: string;
 }
 
-const WebSearchToolResult: FC<{
+type WebSearchToolOutput = {
   success: boolean;
   details: string;
   results?: WebSearchResult[];
-}> = ({details, results}) => {
+};
+
+const WebSearchToolResult: FC<ToolRendererProps<WebSearchToolOutput>> = ({
+  output,
+}) => {
   return (
     <div className="border-muted rounded-md border bg-blue-500/10 p-3 text-sm">
-      <div className="mb-2 font-semibold">🔍 {details}</div>
-      {results && results.length > 0 && (
+      <div className="mb-2 font-semibold">🔍 {output?.details}</div>
+      {output?.results && output.results.length > 0 && (
         <div className="space-y-2">
-          {results.map((result, index) => (
+          {output.results.map((result, index) => (
             <div key={index} className="border-muted rounded border p-2">
               <div className="font-medium">{result.title}</div>
               <div className="text-muted-foreground text-xs">

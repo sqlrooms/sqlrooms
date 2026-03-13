@@ -59,7 +59,7 @@ export function updateAgentToolCallData(params: {
   const {store, parentToolCallId, agentToolCalls, sessionId, finalOutput} =
     params;
   const state = store.getState();
-  state.ai.setSessionToolAdditionalData(sessionId, parentToolCallId, {
+  state.ai.setToolEditState(sessionId, parentToolCallId, {
     agentToolCalls: [...agentToolCalls],
     finalOutput,
     timestamp: new Date().toISOString(),

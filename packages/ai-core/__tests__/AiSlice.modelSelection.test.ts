@@ -48,7 +48,7 @@ function createTestStore() {
             analysisResults: [],
             createdAt: new Date(now),
             uiMessages: [],
-            toolAdditionalData: {},
+            toolEditState: {},
             messagesRevision: 0,
             prompt: '',
             isRunning: false,

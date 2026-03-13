@@ -5,7 +5,7 @@ import {
   convertToModelMessages,
 } from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import {getServerAiSDKTools, getToolAdditionalData} from '@/app/lib/tools';
+import {getServerAiSDKTools} from '@/app/lib/tools';
 
 const systemPrompt = `You are a helpful assistant that can answer questions and help with tasks.`;
 
@@ -32,24 +32,6 @@ export async function POST(req: Request) {
           messages: modelMessages,
           system: systemPrompt,
           tools,
-          async onChunk({chunk}) {
-            switch (chunk.type) {
-              case 'tool-result':
-                // Send tool additional data as a data part that will be handled by onData callback
-                // This data will be sent to the client but not included in UIMessages
-                writer.write({
-                  type: 'data-tool-additional-output',
-                  transient: true, // Won't be added to message history
-                  data: {
-                    toolCallId: chunk.toolCallId,
-                    toolName: chunk.toolName,
-                    output: getToolAdditionalData(chunk.toolCallId),
-                    timestamp: new Date().toISOString(),
-                  },
-                });
-                break;
-            }
-          },
         });
 
         // Merge the streamText result into the UI message stream

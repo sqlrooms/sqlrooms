@@ -1,6 +1,6 @@
-import type {OpenAssistantTool} from '@openassistant/utils';
 import {TreeNodeData} from '@sqlrooms/ui';
 import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
+import {tool} from 'ai';
 import z from 'zod';
 import {StoreApi} from 'zustand';
 import {
@@ -16,36 +16,25 @@ export const ListFilesToolParameters = z.object({
     .default('/'),
 });
 export type ListFilesToolParameters = z.infer<typeof ListFilesToolParameters>;
-export type ListFilesToolLlmResult = {
+export type ListFilesToolOutput = {
   success: boolean;
   details: TreeNodeData<FileNodeObject>;
 };
-export type ListFilesToolAdditionalData = Record<string, never>;
-export type ListFilesToolContext = unknown;
 
-export function createListFilesTool(
-  store: StoreApi<WebContainerSliceState>,
-): OpenAssistantTool<
-  typeof ListFilesToolParameters,
-  ListFilesToolLlmResult,
-  ListFilesToolAdditionalData,
-  ListFilesToolContext
-> {
-  return {
-    name: 'listFiles',
+export function createListFilesTool(store: StoreApi<WebContainerSliceState>) {
+  return tool({
     description: 'List project files',
-    parameters: ListFilesToolParameters,
-    execute: async ({basePath = '/'}: ListFilesToolParameters) => {
+    inputSchema: ListFilesToolParameters,
+    execute: async ({basePath = '/'}) => {
       return {
-        llmResult: {
-          success: true,
-          details: fileSystemTreeToNodes(
-            store.getState().webContainer.config.filesTree,
-            basePath,
-          ),
-        },
+        success: true,
+        details: fileSystemTreeToNodes(
+          store.getState().webContainer.config.filesTree,
+          basePath,
+        ),
       };
     },
-    component: ListFilesToolResult,
-  };
+  });
 }
+
+export const listFilesToolRenderer = ListFilesToolResult;
