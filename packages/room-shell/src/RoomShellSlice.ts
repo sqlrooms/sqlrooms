@@ -448,7 +448,7 @@ export function createRoomShellSlice(
               };
             }),
           );
-          await get().db.refreshTableSchemas();
+          get().db.refreshTableSchemas();
         },
 
         setRoomFiles: (roomFiles) =>
@@ -736,7 +736,7 @@ export function createRoomShellSlice(
         }),
       );
       if (loadedFiles.length) {
-        await get().db.refreshTableSchemas();
+        get().db.refreshTableSchemas();
       }
     }
 
@@ -800,8 +800,11 @@ export function createRoomShellSlice(
           // TODO: Make sure the errors are shown
         }
       }
-      await get().db.refreshTableSchemas();
-      await updateReadyDataSources();
+      get()
+        .db.refreshTableSchemas()
+        .then(() => {
+          updateReadyDataSources();
+        });
     }
 
     function updateTotalFileDownloadProgress() {

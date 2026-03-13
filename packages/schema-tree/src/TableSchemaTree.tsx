@@ -3,6 +3,7 @@ import {cn, Tree} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {ColumnTreeNode} from './nodes/ColumnTreeNode';
 import {DatabaseTreeNode} from './nodes/DatabaseTreeNode';
+import {RefreshButton} from './nodes/RefreshButton';
 import {SchemaTreeNode} from './nodes/SchemaTreeNode';
 import {TableTreeNode} from './nodes/TableTreeNode';
 
@@ -22,7 +23,7 @@ export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
   }
 };
 
-export const TableSchemaTree: FC<{
+const TableSchemaTreeRoot: FC<{
   className?: string;
   schemaTrees: DbSchemaNode[];
   renderNode?: (node: DbSchemaNode, isOpen: boolean) => React.ReactNode;
@@ -58,3 +59,7 @@ export const TableSchemaTree: FC<{
     </div>
   );
 };
+
+export const TableSchemaTree = Object.assign(TableSchemaTreeRoot, {
+  RefreshButton: RefreshButton,
+});

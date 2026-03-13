@@ -497,140 +497,111 @@ export function createDuckDbSlice({
           ): Promise<DataTable[]> {
             const {schema, database, table} = filter || {};
             const connector = await get().db.getConnector();
-            const defaultDatabaseFilter = database
-              ? `database = ${escapeVal(database)}`
-              : `database != 'system'`;
-            const tableSql = `FROM duckdb_tables() SELECT
-              database_name AS database,
-              schema_name AS schema,
-              table_name AS name,
+            const buildMetadataWhereClause = (nameColumn: string) =>
+              [
+                database
+                  ? `database_name = ${escapeVal(database)}`
+                  : `database_name != 'system'`,
+                schema ? `schema_name = ${escapeVal(schema)}` : '',
+                table ? `${nameColumn} = ${escapeVal(table)}` : '',
+              ]
+                .filter(Boolean)
+                .join(' AND ');
+            const sql = `WITH tables_and_views AS (
+              FROM duckdb_tables() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                table_name AS name,
+                sql,
+                comment,
+                estimated_size,
+                FALSE AS isView
+              WHERE ${buildMetadataWhereClause('table_name')}
+              UNION ALL
+              FROM duckdb_views() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                view_name AS name,
+                sql,
+                comment,
+                NULL AS estimated_size,
+                TRUE AS isView
+              WHERE ${buildMetadataWhereClause('view_name')}
+            ),
+            columns AS (
+              FROM duckdb_columns() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                table_name AS name,
+                list(column_name ORDER BY column_index) AS column_names,
+                list(data_type ORDER BY column_index) AS column_types
+              WHERE ${buildMetadataWhereClause('table_name')}
+              GROUP BY database_name, schema_name, table_name
+            )
+            SELECT
+              isView,
+              database,
+              schema,
+              name,
+              column_names,
+              column_types,
               sql,
               comment,
-              estimated_size,
-              FALSE AS isView
-            ${
-              schema || database || table
-                ? `WHERE ${[
-                    defaultDatabaseFilter,
-                    schema ? `schema = ${escapeVal(schema)}` : '',
-                    table ? `name = ${escapeVal(table)}` : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' AND ')}`
-                : `WHERE ${defaultDatabaseFilter}`
-            }`;
-            const viewSql = `FROM duckdb_views() SELECT
-              database_name AS database,
-              schema_name AS schema,
-              view_name AS name,
-              sql,
-              comment,
-              NULL estimated_size,
-              TRUE AS isView
-            ${
-              schema || database || table
-                ? `WHERE ${[
-                    defaultDatabaseFilter,
-                    schema ? `schema = ${escapeVal(schema)}` : '',
-                    table ? `name = ${escapeVal(table)}` : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' AND ')}`
-                : `WHERE ${defaultDatabaseFilter}`
-            }`;
-            const tableResults = await connector.query(tableSql);
-            const viewResults = await connector.query(viewSql);
-            const columnSql = `FROM duckdb_columns() SELECT
-              database_name AS database,
-              schema_name AS schema,
-              table_name AS name,
-              column_name AS column_name,
-              data_type AS column_type,
-              column_index AS column_index
-            ${
-              schema || database || table
-                ? `WHERE ${[
-                    defaultDatabaseFilter,
-                    schema ? `schema_name = ${escapeVal(schema)}` : '',
-                    table ? `table_name = ${escapeVal(table)}` : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' AND ')}`
-                : `WHERE ${defaultDatabaseFilter}`
-            }
-            ORDER BY database_name, schema_name, table_name, column_index`;
-            const columnsByTable = new Map<string, TableColumn[]>();
-            try {
-              const columnResults = await connector.query(columnSql);
-              for (let ci = 0; ci < columnResults.numRows; ci++) {
-                const rowDatabase = columnResults.getChild('database')?.get(ci);
-                const rowSchema = columnResults.getChild('schema')?.get(ci);
-                const rowTable = columnResults.getChild('name')?.get(ci);
-                const columnName = columnResults
-                  .getChild('column_name')
-                  ?.get(ci);
-                const columnType = columnResults
-                  .getChild('column_type')
-                  ?.get(ci);
+              estimated_size
+            FROM tables_and_views
+            LEFT JOIN columns USING (database, schema, name)
+            ORDER BY isView, database, schema, name`;
+            const describeResults = await connector.query(sql);
+            const newTables: DataTable[] = [];
+            for (let i = 0; i < describeResults.numRows; i++) {
+              const isView = describeResults.getChild('isView')?.get(i);
+              const rowDatabase = describeResults.getChild('database')?.get(i);
+              const rowSchema = describeResults.getChild('schema')?.get(i);
+              const rowTable = describeResults.getChild('name')?.get(i);
+              const sql = describeResults.getChild('sql')?.get(i);
+              const comment = describeResults.getChild('comment')?.get(i);
+              const estimatedSize = describeResults
+                .getChild('estimated_size')
+                ?.get(i);
+              const columnNames = describeResults
+                .getChild('column_names')
+                ?.get(i);
+              const columnTypes = describeResults
+                .getChild('column_types')
+                ?.get(i);
+              const qualifiedTable = makeQualifiedTableName({
+                database: rowDatabase,
+                schema: rowSchema,
+                table: rowTable,
+              });
+              const columns: TableColumn[] = [];
+              for (let ci = 0; ci < (columnNames?.length ?? 0); ci++) {
+                const columnName = String(columnNames.get(ci));
+                const columnType = String(columnTypes?.get(ci));
                 if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
                   continue;
                 }
-                const tableKey = `${rowDatabase}.${rowSchema}.${rowTable}`;
-                const tableColumns = columnsByTable.get(tableKey) ?? [];
-                tableColumns.push({
+                columns.push({
                   name: columnName,
                   type: columnType,
                 });
-                columnsByTable.set(tableKey, tableColumns);
               }
-            } catch (error) {
-              // Keep parity with prior behavior: report metadata failures for real tables,
-              // but avoid noisy captures when only querying view metadata.
-              if (tableResults.numRows > 0) {
-                get().room.captureException(error);
-              }
-            }
-            const newTables: DataTable[] = [];
-            const results = [tableResults, viewResults];
-            for (const describeResults of results) {
-              for (let i = 0; i < describeResults.numRows; i++) {
-                const isView = describeResults.getChild('isView')?.get(i);
-                const rowDatabase = describeResults
-                  .getChild('database')
-                  ?.get(i);
-                const rowSchema = describeResults.getChild('schema')?.get(i);
-                const rowTable = describeResults.getChild('name')?.get(i);
-                const sql = describeResults.getChild('sql')?.get(i);
-                const comment = describeResults.getChild('comment')?.get(i);
-                const estimatedSize = describeResults
-                  .getChild('estimated_size')
-                  ?.get(i);
-                const qualifiedTable = makeQualifiedTableName({
-                  database: rowDatabase,
-                  schema: rowSchema,
-                  table: rowTable,
-                });
-                const columns =
-                  columnsByTable.get(
-                    `${rowDatabase}.${rowSchema}.${rowTable}`,
-                  ) ?? [];
-                newTables.push({
-                  table: qualifiedTable,
-                  database: rowDatabase,
-                  schema: rowSchema,
-                  tableName: rowTable,
-                  columns,
-                  sql,
-                  comment,
-                  isView: Boolean(isView),
-                  rowCount:
-                    typeof estimatedSize === 'bigint'
-                      ? Number(estimatedSize)
-                      : estimatedSize === null
-                        ? undefined
-                        : estimatedSize,
-                });
-              }
+              newTables.push({
+                table: qualifiedTable,
+                database: rowDatabase,
+                schema: rowSchema,
+                tableName: rowTable,
+                columns,
+                sql,
+                comment,
+                isView: Boolean(isView),
+                rowCount:
+                  typeof estimatedSize === 'bigint'
+                    ? Number(estimatedSize)
+                    : estimatedSize === null
+                      ? undefined
+                      : estimatedSize,
+              });
             }
             return newTables;
           },
