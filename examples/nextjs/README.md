@@ -7,7 +7,7 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/3b7e32f9-b8f0-4da1-8ae7-6fa7c0fd9589/deploy-status)](https://app.netlify.com/projects/sqlrooms-nextjs/deploys)
 
 <a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
-  <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
+  <img src="https://sqlrooms.org/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
 </a>
 
 A minimalistic [Next.js](https://nextjs.org/) app example featuring:

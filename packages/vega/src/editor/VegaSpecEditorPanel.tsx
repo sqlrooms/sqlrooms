@@ -2,7 +2,7 @@ import {cn} from '@sqlrooms/ui';
 import {AlertCircle} from 'lucide-react';
 import React from 'react';
 import {useVegaEditorContext} from './VegaEditorContext';
-import {VegaMonacoEditor} from './VegaMonacoEditor';
+import {VegaCodeMirrorEditor} from './VegaCodeMirrorEditor';
 
 export interface VegaSpecEditorPanelProps {
   /**
@@ -51,7 +51,7 @@ export const VegaSpecEditorPanel: React.FC<VegaSpecEditorPanelProps> = ({
 
       {/* Editor */}
       <div className="relative flex-1">
-        <VegaMonacoEditor
+        <VegaCodeMirrorEditor
           className="absolute inset-0 h-full w-full"
           value={state.editedSpecString}
           onChange={(value) => {
@@ -60,6 +60,11 @@ export const VegaSpecEditorPanel: React.FC<VegaSpecEditorPanelProps> = ({
             }
           }}
           readOnly={!editable}
+          options={{
+            lineNumbers: true,
+            lineWrapping: false,
+            foldGutter: true,
+          }}
         />
       </div>
 

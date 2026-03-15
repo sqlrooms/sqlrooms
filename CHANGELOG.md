@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
+
+**Note:** Version bump only for package sqlrooms
+
+## [0.28.1-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.28.1-rc.0...v0.28.1-rc.1) (2026-03-01)
+
+### Bug Fixes
+
+* sanitize UIMessages before sending to LLM to prevent empty content errors ([#404](/github.com/sqlrooms/sqlrooms/issues/404)) ([635fbbb](github.com/sqlrooms/sqlrooms/commits/635fbbb5c3cedd4bcd7ab4eed94199a8fe022528))
+
+### Features
+
+* Add shadcn Sidebar component ([#400](/github.com/sqlrooms/sqlrooms/issues/400)) ([b44ac17](github.com/sqlrooms/sqlrooms/commits/b44ac175770022867bd869e484ac10992606988f))
+* Create sqlrooms notebook package ([#131](/github.com/sqlrooms/sqlrooms/issues/131)) ([f42caa2](github.com/sqlrooms/sqlrooms/commits/f42caa21f5e48f8e7b0dd522044c22858d81ba0f))
+* Snowflake connector integration ([#401](/github.com/sqlrooms/sqlrooms/issues/401)) ([1ccbe61](github.com/sqlrooms/sqlrooms/commits/1ccbe61e7e5107edd1c2ec36f9604f8b6cfcf603))
+* Webcontainer package ([#374](/github.com/sqlrooms/sqlrooms/issues/374)) ([c211b00](github.com/sqlrooms/sqlrooms/commits/c211b004b3aeff0984aa48521e7f247950c6cd0a))
+
 ## [0.28.1-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.28.0...v0.28.1-rc.0) (2026-02-27)
 
 ### Bug Fixes

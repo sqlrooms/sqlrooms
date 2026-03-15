@@ -1,4 +1,5 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
+import {CopyButton} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
 import {SquareTerminalIcon} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
@@ -6,6 +7,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolGrouping} from '../hooks/useToolGrouping';
+import {isTextPart, isReasoningPart} from '../utils';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
@@ -56,6 +58,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     analysisResult.id,
   );
 
+  // Collect all text content from message parts for copy button
+  const allTextContent = uiMessageParts
+    .flatMap((part) =>
+      isTextPart(part) || isReasoningPart(part) ? [part.text] : [],
+    )
+    .join('\n\n');
+  const hasTextContent = allTextContent.trim().length > 0;
+
   // Measure div width using ResizeObserver
   useEffect(() => {
     const element = divRef.current;
@@ -94,10 +104,17 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         <div className="group/prompt bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
-          <div className="flex-1">{analysisResult.prompt}</div>
+          <div className="flex-1 min-w-0 break-words">{analysisResult.prompt}</div>
+          <div className="opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
+            <CopyButton
+              text={analysisResult.prompt}
+              tooltipLabel="Copy prompt"
+              className="h-6 w-6"
+            />
+          </div>
         </div>
       </div>
-      <div ref={divRef} className="flex w-full flex-col gap-4">
+      <div ref={divRef} className="flex w-full flex-col gap-2">
         {enableReasoningBox ? (
           <GroupedMessageParts
             groupedParts={groupedParts}
@@ -120,6 +137,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           ) : (
             <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
           ))}
+        {hasTextContent && (
+          <div className="flex justify-start">
+            <CopyButton
+              text={allTextContent}
+              tooltipLabel="Copy message"
+              className="border-muted border"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

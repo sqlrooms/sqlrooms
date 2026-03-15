@@ -14,8 +14,13 @@ export const CellView: React.FC<{id: string}> = ({id}) => {
   return registryItem.renderCell({
     id,
     cell,
-    renderContainer: ({header, content, footer}) => (
-      <CellContainer id={id} header={header} footer={footer}>
+    renderContainer: ({header, content, footer, showHeader}) => (
+      <CellContainer
+        id={id}
+        header={header}
+        footer={footer}
+        showHeader={showHeader}
+      >
         {content}
       </CellContainer>
     ),

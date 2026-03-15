@@ -5,7 +5,7 @@ on:
   #   branches: [main]
   #   paths:
   #     - 'examples/**'
-  #     - 'docs/media/examples/**'
+  #     - 'docs/public/media/examples/**'
   #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
     inputs:
@@ -28,12 +28,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           path: source
-          lfs: true # Enable LFS for the checkout
-
-      - name: Install Git LFS for source
-        run: |
-          sudo apt-get install -y git-lfs
-          git lfs install
 
       - name: Setup target repository
         run: |
@@ -55,18 +49,10 @@ jobs:
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Sync examples and media
+      - name: Sync examples
         run: |
-          # Create target directories
-          mkdir -p target/media/examples
-
           # Copy examples directory
           cp -r source/examples/* target/
-
-          # Copy images from docs/media/examples if it exists
-          if [ -d "source/docs/media/examples" ]; then
-            cp -r source/docs/media/examples/* target/media/examples/
-          fi
 
           # Copy examples documentation as README.md
           cp source/docs/examples.md target/README.md
