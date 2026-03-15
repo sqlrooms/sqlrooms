@@ -4,7 +4,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useState} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
@@ -19,16 +19,13 @@ export const AddNodePopover: FC<
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
   const sheetId = useStoreWithCanvas((s) => s.cells.config.currentSheetId);
   const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
-  const {toast} = useToast();
+
   const onAdd = (type: string) => {
     if (sheetId) {
       addNode({sheetId, parentId, nodeType: type});
       setOpen(false);
     } else {
-      toast({
-        variant: 'destructive',
-        description: 'No sheet selected',
-      });
+      toast.error('No sheet selected');
     }
   };
 

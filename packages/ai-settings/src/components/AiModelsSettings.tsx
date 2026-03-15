@@ -10,7 +10,7 @@ import {
   Input,
   Label,
   useDisclosure,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {
   Blocks,
@@ -38,7 +38,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
   allowEditProviderModels = true,
   allowCustomModels = true,
 }) => {
-  const {toast} = useToast();
   const aiConfig = useStoreWithAiSettings((s) => s.aiSettings.config);
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
   const addModelToProvider = useStoreWithAiSettings(
@@ -115,20 +114,16 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
     // Validate required fields
     if (!customName.trim()) {
-      toast({
-        title: 'Model Name Required',
+      toast.error('Model Name Required', {
         description: 'Please enter a model name.',
-        variant: 'destructive',
       });
       return;
     }
 
     if (!customBaseUrl.trim()) {
       setBaseUrlError(true);
-      toast({
-        title: 'Base URL Required',
+      toast.error('Base URL Required', {
         description: 'Please enter a base URL for the model.',
-        variant: 'destructive',
       });
       return;
     }
@@ -142,10 +137,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     setAiModel('custom', trimmedName);
 
     // Show success message
-    toast({
-      title: 'Custom Model Added',
+    toast.success('Custom Model Added', {
       description: `Successfully added "${trimmedName}" to your custom models.`,
-      variant: 'default',
     });
 
     // Reset form
@@ -178,20 +171,16 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
     // Validate required fields
     if (!editingModel.modelName.trim()) {
-      toast({
-        title: 'Model Name Required',
+      toast.error('Model Name Required', {
         description: 'Please enter a model name.',
-        variant: 'destructive',
       });
       return;
     }
 
     if (!editingModel.baseUrl.trim()) {
       setEditBaseUrlError(true);
-      toast({
-        title: 'Base URL Required',
+      toast.error('Base URL Required', {
         description: 'Please enter a base URL for the model.',
-        variant: 'destructive',
       });
       return;
     }
@@ -208,10 +197,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     );
 
     if (duplicateModel) {
-      toast({
-        title: 'Model Name Already Exists',
+      toast.error('Model Name Already Exists', {
         description: `A custom model with the name "${trimmedName}" already exists.`,
-        variant: 'destructive',
       });
       return;
     }
@@ -225,10 +212,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     );
 
     // Show success message
-    toast({
-      title: 'Custom Model Updated',
+    toast.success('Custom Model Updated', {
       description: `Successfully updated "${trimmedName}".`,
-      variant: 'default',
     });
 
     // Reset form and close dialog
@@ -254,10 +239,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     );
 
     if (modelExists) {
-      toast({
-        title: 'Model Already Exists',
+      toast.error('Model Already Exists', {
         description: `The model "${newModelName.trim()}" already exists in this provider.`,
-        variant: 'destructive',
       });
       return;
     }
@@ -284,17 +267,13 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
         modelToDelete.providerKey,
         modelToDelete.modelName,
       );
-      toast({
-        title: 'Model Deleted',
+      toast.success('Model Deleted', {
         description: `Successfully removed "${modelToDelete.modelName}" from the provider.`,
-        variant: 'default',
       });
     } else if (modelToDelete.type === 'custom') {
       removeCustomModel(modelToDelete.modelName);
-      toast({
-        title: 'Custom Model Deleted',
+      toast.success('Custom Model Deleted', {
         description: `Successfully removed "${modelToDelete.modelName}" from custom models.`,
-        variant: 'default',
       });
     }
 

@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
   useDisclosure,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
@@ -36,8 +36,6 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {toast} = useToast();
-
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleMaxStepsChange = (value: number) => {
@@ -69,10 +67,8 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
       !allowedTypes.includes(file.type) &&
       !allowedExtensions.includes(fileExtension)
     ) {
-      toast({
-        title: 'Invalid file type',
+      toast.error('Invalid file type', {
         description: 'Please select a text file (.txt, .md, .json)',
-        variant: 'destructive',
       });
       return;
     }
@@ -80,10 +76,8 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
     // Validate file size (max 1MB)
     const maxSize = 1024 * 1024; // 1MB
     if (file.size > maxSize) {
-      toast({
-        title: 'File too large',
+      toast.error('File too large', {
         description: 'File size must be less than 1MB',
-        variant: 'destructive',
       });
       return;
     }
@@ -91,17 +85,14 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
     try {
       const text = await file.text();
       setAdditionalInstruction(text);
-      toast({
-        title: 'File uploaded successfully',
+      toast.success('File uploaded successfully', {
         description:
           'System instructions have been updated from the uploaded file.',
       });
     } catch (error) {
       console.error('Error reading file:', error);
-      toast({
-        title: 'Error reading file',
+      toast.error('Error reading file', {
         description: 'Please try again.',
-        variant: 'destructive',
       });
     }
 
