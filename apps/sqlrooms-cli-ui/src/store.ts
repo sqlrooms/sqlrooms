@@ -56,7 +56,7 @@ import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
-import {createDuckDbPersistStorage} from './serverApi';
+import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 
 export const AppBuilderProjectConfig = z.object({
   appsBySheetId: z
@@ -548,20 +548,12 @@ const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
 });
 
-type FileWithNativePath = File & {path?: string};
-
-function getCliFileReference(file: File): string {
-  const nativePath = (file as FileWithNativePath).path;
-  if (typeof nativePath === 'string' && nativePath.trim()) {
-    return nativePath;
-  }
-  return file.name;
-}
-
 const baseLoadFile = connector.loadFile.bind(connector);
 connector.loadFile = async (file, desiredTableName, options) => {
   if (file instanceof File) {
-    return baseLoadFile(getCliFileReference(file), desiredTableName, options);
+    const serverPath = await uploadFileToServer(file, runtimeConfig);
+    const renamedFile = new File([file], serverPath, {type: file.type});
+    return baseLoadFile(renamedFile, desiredTableName, options);
   }
   return baseLoadFile(file, desiredTableName, options);
 };
