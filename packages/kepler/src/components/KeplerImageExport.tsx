@@ -10,7 +10,6 @@ import {
   Switch,
 } from '@sqlrooms/ui';
 import {
-  EXPORT_IMG_RESOLUTION_OPTIONS,
   Resolution1024x768Option,
   Resolution1280x720Option,
   Resolution1280x960Option,
