@@ -27,7 +27,7 @@ export function jsonSchemaLinter(
       {
         delay, // Debounce validation to avoid slowdown during typing
         tooltipFilter: (diagnostics) => {
-          // Show only the first 5 errors in the tooltip to keep it manageable
+          // Show only the first errors in the tooltip to keep it manageable
           return diagnostics.slice(0, maxErrors);
         },
       },
