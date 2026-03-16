@@ -57,14 +57,14 @@ export const SqlCellResults: React.FC<SqlCellResultsProps> = ({
     if (resultName) {
       fetchCellResultPage(cellId, pagination, sorting);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination, sorting, cellId, fetchCellResultPage]);
+  }, [pagination, sorting, cellId, fetchCellResultPage, resultName]);
 
   // Reset pagination when a new result arrives (new run)
   const prevResultVersion = useRef(resultVersion);
   useEffect(() => {
     if (resultVersion !== prevResultVersion.current) {
       prevResultVersion.current = resultVersion;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPagination((prev) =>
         prev.pageIndex === 0 ? prev : {...prev, pageIndex: 0},
       );

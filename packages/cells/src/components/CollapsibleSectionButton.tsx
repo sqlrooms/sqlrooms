@@ -17,8 +17,9 @@ export const CollapsibleSectionButton: React.FC<
     <Button
       size="xs"
       variant="ghost"
-      className="absolute top-1 left-1 z-20 h-4 w-4 p-0 opacity-0 transition-opacity group-hover:opacity-50"
+      className="absolute top-1 left-1 z-20 h-4 w-4 p-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-50 focus-visible:opacity-100"
       onClick={onToggle}
+      aria-expanded={!isCollapsed}
       aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
     >
       {isCollapsed ? (

@@ -210,7 +210,7 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
 
   return (
     <div className={cn('h-[300px] w-full', className)}>
-      <div ref={editorRef} className="h-auto w-full" />
+      <div ref={editorRef} className="h-full w-full" />
     </div>
   );
 };
