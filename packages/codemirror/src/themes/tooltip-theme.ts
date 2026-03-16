@@ -36,6 +36,7 @@ export const tooltipTheme = [
       // Error text styling
       fontSize: '12px',
       display: 'block',
+      fontFamily: 'monospace',
     },
   }),
 ];
