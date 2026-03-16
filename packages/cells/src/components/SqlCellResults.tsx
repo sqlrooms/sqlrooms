@@ -5,6 +5,7 @@ import {
 } from '@sqlrooms/data-table';
 import type {PaginationState, SortingState} from '@tanstack/react-table';
 import React, {useEffect, useRef, useState} from 'react';
+import {cn} from '@sqlrooms/ui';
 import {CollapsibleSectionButton} from './CollapsibleSectionButton';
 import {CellResultData} from '../types';
 
@@ -120,9 +121,10 @@ export const SqlCellResults: React.FC<SqlCellResultsProps> = ({
               />
               <div
                 aria-hidden={!isRunning}
-                className={`bg-background/45 pointer-events-none absolute inset-0 z-10 transition-opacity duration-200 ${
-                  isRunning ? 'animate-pulse opacity-100' : 'opacity-0'
-                }`}
+                className={cn(
+                  'bg-background/45 pointer-events-none absolute inset-0 z-10 transition-opacity duration-200',
+                  isRunning ? 'animate-pulse opacity-100' : 'opacity-0',
+                )}
               />
             </div>
           ) : null}
