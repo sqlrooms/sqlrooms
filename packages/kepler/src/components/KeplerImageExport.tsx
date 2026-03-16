@@ -55,11 +55,16 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   const {legend, resolution, processing, imageDataUri} = exportImageSettings;
 
   useEffect(() => {
-    // hardcode default resolution, because the incoming resolution is ONE_X and we don't want to show that one
-    setExportImageSetting({
-      resolution: Resolution1280x720Option.id,
-    });
-  }, []);
+    // hardcode default resolution only when incoming resolution is not a supported custom option
+    const isSupportedResolution = CUSTOM_RESOLUTION_OPTIONS.some(
+      (option) => option.id === resolution,
+    );
+    if (!isSupportedResolution) {
+      setExportImageSetting({
+        resolution: Resolution1280x720Option.id,
+      });
+    }
+  }, [resolution, setExportImageSetting]);
 
   useEffect(() => {
     setExportImageSetting({
