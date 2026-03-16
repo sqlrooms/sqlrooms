@@ -1,3 +1,4 @@
+import type {Param} from '@sqlrooms/mosaic';
 import {
   ChartBuilderColumn,
   ChartBuilderDialog,
@@ -9,7 +10,6 @@ import {
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
-import type {Param} from '@uwdata/mosaic-core';
 import {Code, Plus, X} from 'lucide-react';
 import {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
