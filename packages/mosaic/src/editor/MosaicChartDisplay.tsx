@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import React from 'react';
+import React, {useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
 import {useMosaicEditorContext} from './MosaicEditorContext';
 
@@ -19,17 +19,21 @@ export interface MosaicChartDisplayProps {
  *
  * Must be used within a MosaicChart.Container component.
  */
-export const MosaicChartDisplay: React.FC<MosaicChartDisplayProps> = ({
-  className,
-}) => {
-  const {state, params} = useMosaicEditorContext();
+export const MosaicChartDisplay: React.FC<MosaicChartDisplayProps> = React.memo(
+  ({className}) => {
+    const {state, params} = useMosaicEditorContext();
 
-  // Use parsed spec for live preview, fall back to last valid spec
-  const spec = state.parsedSpec ?? state.lastValidSpec;
+    const spec = useMemo(
+      () => state.parsedSpec ?? state.lastValidSpec,
+      [state.parsedSpec, state.lastValidSpec],
+    );
 
-  return (
-    <div className={cn('relative', className)}>
-      <VgPlotChart spec={spec} params={params} />
-    </div>
-  );
-};
+    return (
+      <div className={cn('relative', className)}>
+        <VgPlotChart spec={spec} params={params} />
+      </div>
+    );
+  },
+);
+
+MosaicChartDisplay.displayName = 'MosaicChartDisplay';

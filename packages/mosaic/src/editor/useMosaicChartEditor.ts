@@ -1,5 +1,5 @@
 import {Spec} from '@uwdata/mosaic-spec';
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {safeJsonParse} from '@sqlrooms/utils';
 import {
   MosaicEditorActions,
@@ -7,6 +7,37 @@ import {
   UseMosaicChartEditorOptions,
   UseMosaicChartEditorReturn,
 } from './types';
+
+function normalizeInitialSpec(spec: Spec | string) {
+  if (typeof spec === 'string') {
+    const parsed = safeJsonParse(spec) as unknown;
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      !Array.isArray(parsed)
+    ) {
+      return {
+        parsed: parsed as Spec,
+        normalized: JSON.stringify(parsed),
+        formatted: JSON.stringify(parsed, null, 2),
+        parseOk: true,
+      };
+    }
+    return {
+      parsed: null,
+      normalized: spec,
+      formatted: spec,
+      parseOk: false,
+    };
+  }
+
+  return {
+    parsed: spec,
+    normalized: JSON.stringify(spec),
+    formatted: JSON.stringify(spec, null, 2),
+    parseOk: true,
+  };
+}
 
 /**
  * Hook for managing Mosaic chart editor state.
@@ -18,37 +49,6 @@ export function useMosaicChartEditor({
   initialSpec,
   onSpecChange,
 }: UseMosaicChartEditorOptions): UseMosaicChartEditorReturn {
-  const normalizeInitialSpec = (spec: Spec | string) => {
-    if (typeof spec === 'string') {
-      const parsed = safeJsonParse(spec) as unknown;
-      if (
-        typeof parsed === 'object' &&
-        parsed !== null &&
-        !Array.isArray(parsed)
-      ) {
-        return {
-          parsed: parsed as Spec,
-          normalized: JSON.stringify(parsed),
-          formatted: JSON.stringify(parsed, null, 2),
-          parseOk: true,
-        };
-      }
-      return {
-        parsed: null,
-        normalized: spec,
-        formatted: spec,
-        parseOk: false,
-      };
-    }
-
-    return {
-      parsed: spec,
-      normalized: JSON.stringify(spec),
-      formatted: JSON.stringify(spec, null, 2),
-      parseOk: true,
-    };
-  };
-
   const initialSpecState = normalizeInitialSpec(initialSpec);
 
   const [editorState, setEditorState] = useState(() => ({
@@ -75,29 +75,53 @@ export function useMosaicChartEditor({
 
   const {editedSpecString, appliedSpecString} = editorState;
 
-  // Debounced spec parsing for live preview
-  const [debouncedSpecString, setDebouncedSpecString] =
-    useState(editedSpecString);
+  // Debounced spec parsing for live preview.
+  // Only update parsedSpec/specParseError after the user stops typing.
+  const [debouncedParsed, setDebouncedParsed] = useState<{
+    parsedSpec: Spec | null;
+    specParseError: string | null;
+    normalized: string | null;
+  }>(() => {
+    try {
+      const parsed = JSON.parse(editedSpecString) as Spec;
+      return {
+        parsedSpec: parsed,
+        specParseError: null,
+        normalized: JSON.stringify(parsed),
+      };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Invalid JSON';
+      return {parsedSpec: null, specParseError: message, normalized: null};
+    }
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSpecString(editedSpecString);
+      setDebouncedParsed((prev) => {
+        try {
+          const parsed = JSON.parse(editedSpecString) as Spec;
+          const normalized = JSON.stringify(parsed);
+          if (normalized === prev.normalized) {
+            return prev;
+          }
+          return {parsedSpec: parsed, specParseError: null, normalized};
+        } catch (e) {
+          const message = e instanceof Error ? e.message : 'Invalid JSON';
+          if (prev.specParseError === message) {
+            return prev;
+          }
+          return {
+            parsedSpec: null,
+            specParseError: message,
+            normalized: prev.normalized,
+          };
+        }
+      });
     }, 300);
     return () => clearTimeout(timer);
   }, [editedSpecString]);
 
-  const {parsedSpec, specParseError} = useMemo((): {
-    parsedSpec: Spec | null;
-    specParseError: string | null;
-  } => {
-    try {
-      const parsed = JSON.parse(debouncedSpecString) as Spec;
-      return {parsedSpec: parsed, specParseError: null};
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Invalid JSON';
-      return {parsedSpec: null, specParseError: message};
-    }
-  }, [debouncedSpecString]);
+  const {parsedSpec, specParseError} = debouncedParsed;
 
   if (parsedSpec && parsedSpec !== editorState.lastValidSpec) {
     setEditorState((prev) => ({...prev, lastValidSpec: parsedSpec}));
@@ -116,79 +140,104 @@ export function useMosaicChartEditor({
   const hasChanges = isSpecDirty;
   const canApply = hasChanges && !specParseError;
 
-  const actions: MosaicEditorActions = useMemo(
-    () => ({
-      setEditedSpec: (spec: string) => {
-        setEditorState((prev) => ({...prev, editedSpecString: spec}));
-      },
+  const onSpecChangeRef = useRef(onSpecChange);
+  useEffect(() => {
+    onSpecChangeRef.current = onSpecChange;
+  });
 
-      applyChanges: () => {
-        if (!parsedSpec) return;
+  const setEditedSpec = useCallback((spec: string) => {
+    setEditorState((prev) => ({...prev, editedSpecString: spec}));
+  }, []);
 
-        const newAppliedSpecString = JSON.stringify(parsedSpec);
+  const applyChanges = useCallback(() => {
+    setDebouncedParsed((currentParsed) => {
+      if (!currentParsed.parsedSpec) return currentParsed;
 
-        if (isSpecDirty) {
-          onSpecChange?.(parsedSpec);
+      const newAppliedSpecString = JSON.stringify(currentParsed.parsedSpec);
+
+      setEditorState((prev) => {
+        const dirty = (() => {
+          try {
+            return (
+              JSON.stringify(JSON.parse(prev.editedSpecString)) !==
+              prev.appliedSpecString
+            );
+          } catch {
+            return true;
+          }
+        })();
+
+        if (dirty) {
+          onSpecChangeRef.current?.(currentParsed.parsedSpec!);
         }
 
-        setEditorState((prev) => ({
+        return {
           ...prev,
-          appliedSpecString: isSpecDirty
+          appliedSpecString: dirty
             ? newAppliedSpecString
             : prev.appliedSpecString,
-          prevInitialSpecString: isSpecDirty
+          prevInitialSpecString: dirty
             ? newAppliedSpecString
             : prev.prevInitialSpecString,
-        }));
-      },
+        };
+      });
 
-      cancelChanges: () => {
-        setEditorState((prev) => {
-          try {
-            const appliedSpec = JSON.parse(prev.appliedSpecString);
-            return {
-              ...prev,
-              editedSpecString: JSON.stringify(appliedSpec, null, 2),
-            };
-          } catch {
-            return {
-              ...prev,
-              editedSpecString: prev.appliedSpecString,
-            };
-          }
-        });
-      },
+      return currentParsed;
+    });
+  }, []);
 
-      resetToOriginal: () => {
-        setEditorState((prev) => {
-          try {
-            const originalSpec = JSON.parse(prev.originalSpecString) as Spec;
-            const originalSpecNormalized = JSON.stringify(originalSpec);
+  const cancelChanges = useCallback(() => {
+    setEditorState((prev) => {
+      try {
+        const appliedSpec = JSON.parse(prev.appliedSpecString);
+        return {
+          ...prev,
+          editedSpecString: JSON.stringify(appliedSpec, null, 2),
+        };
+      } catch {
+        return {
+          ...prev,
+          editedSpecString: prev.appliedSpecString,
+        };
+      }
+    });
+  }, []);
 
-            onSpecChange?.(originalSpec);
+  const resetToOriginal = useCallback(() => {
+    setEditorState((prev) => {
+      try {
+        const originalSpec = JSON.parse(prev.originalSpecString) as Spec;
+        const originalSpecNormalized = JSON.stringify(originalSpec);
 
-            return {
-              ...prev,
-              editedSpecString: prev.originalSpecString,
-              appliedSpecString: originalSpecNormalized,
-              prevInitialSpecString: originalSpecNormalized,
-            };
-          } catch {
-            return prev;
-          }
-        });
-      },
-    }),
-    [parsedSpec, isSpecDirty, onSpecChange],
+        onSpecChangeRef.current?.(originalSpec);
+
+        return {
+          ...prev,
+          editedSpecString: prev.originalSpecString,
+          appliedSpecString: originalSpecNormalized,
+          prevInitialSpecString: originalSpecNormalized,
+        };
+      } catch {
+        return prev;
+      }
+    });
+  }, []);
+
+  const actions: MosaicEditorActions = useMemo(
+    () => ({setEditedSpec, applyChanges, cancelChanges, resetToOriginal}),
+    [setEditedSpec, applyChanges, cancelChanges, resetToOriginal],
   );
 
-  const state: MosaicEditorState = {
-    editedSpecString,
-    parsedSpec,
-    lastValidSpec,
-    specParseError,
-    isSpecDirty,
-  };
+  const state: MosaicEditorState = useMemo(
+    () => ({
+      editedSpecString,
+      parsedSpec,
+      lastValidSpec,
+      specParseError,
+      isSpecDirty,
+    }),
+    [editedSpecString, parsedSpec, lastValidSpec, specParseError, isSpecDirty],
+  );
 
   return {
     state,

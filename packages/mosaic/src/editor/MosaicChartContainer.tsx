@@ -1,7 +1,7 @@
 import {cn} from '@sqlrooms/ui';
 import {Param} from '@uwdata/mosaic-core';
 import {Spec} from '@uwdata/mosaic-spec';
-import React from 'react';
+import React, {useMemo} from 'react';
 import {MosaicEditorContext} from './MosaicEditorContext';
 import {MosaicEditorContextValue, OnMosaicSpecChange} from './types';
 import {useMosaicChartEditor} from './useMosaicChartEditor';
@@ -14,7 +14,6 @@ export interface MosaicChartContainerProps {
   /**
    * Pre-defined params/selections for shared cross-filtering
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: Map<string, Param<any>>;
   /**
    * Whether editing is enabled
@@ -66,14 +65,17 @@ export const MosaicChartContainer: React.FC<MosaicChartContainerProps> = ({
     onSpecChange,
   });
 
-  const contextValue: MosaicEditorContextValue = {
-    state,
-    actions,
-    editable,
-    params,
-    canApply,
-    hasChanges,
-  };
+  const contextValue: MosaicEditorContextValue = useMemo(
+    () => ({
+      state,
+      actions,
+      editable,
+      params,
+      canApply,
+      hasChanges,
+    }),
+    [state, actions, editable, params, canApply, hasChanges],
+  );
 
   return (
     <MosaicEditorContext.Provider value={contextValue}>
