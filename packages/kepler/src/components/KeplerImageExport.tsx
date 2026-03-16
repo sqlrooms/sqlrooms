@@ -91,13 +91,6 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
     <div className="flex flex-col gap-6 px-[5px] pt-1 pb-5">
       <ImagePreview exportImage={exportImageSettings} />
 
-      {processing && (
-        <div className="flex items-center justify-center gap-2 py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-          <span className="text-sm text-gray-600">Generating preview...</span>
-        </div>
-      )}
-
       <div className="grid grid-cols-[100px_auto] items-center gap-4">
         <Label>Resolution</Label>
         <Select
