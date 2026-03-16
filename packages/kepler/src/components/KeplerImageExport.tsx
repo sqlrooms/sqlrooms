@@ -53,8 +53,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   fileName,
   onExportStart,
 }) => {
-  const {legend, resolution, processing, imageDataUri, imageSize} =
-    exportImageSettings;
+  const {legend, resolution, processing, imageDataUri} = exportImageSettings;
 
   useEffect(() => {
     // hardcode default resolution, because the incomong resolution is ONE_X and we don't want to show that one
@@ -69,13 +68,6 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
     });
     return cleanupExportImage;
   }, [setExportImageSetting, cleanupExportImage]);
-
-  // Trigger preview regeneration when resolution or legend changes
-  useEffect(() => {
-    setExportImageSetting({
-      imageDataUri: '',
-    });
-  }, [resolution, legend, setExportImageSetting]);
 
   const handleExportImage = useCallback(() => {
     if (!processing && imageDataUri) {
