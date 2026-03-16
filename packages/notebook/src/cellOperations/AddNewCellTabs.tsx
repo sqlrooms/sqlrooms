@@ -26,7 +26,7 @@ export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
               key={type}
               disabled={!currentTabId}
               onClick={() => onAdd(type)}
-              className="h-6 gap-1 py-0 capitalize text-gray-500"
+              className="h-6 gap-1 py-0 text-gray-500 capitalize"
               variant="ghost"
               size="xs"
             >
