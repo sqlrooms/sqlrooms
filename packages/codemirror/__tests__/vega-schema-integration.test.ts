@@ -12,12 +12,11 @@ describe('Vega-Lite schema integration', () => {
     schema = await response.json();
   }, 30000); // 30 second timeout for schema download
 
-  it('should show only enum error for invalid mark value, not composition errors', () => {
+  it('should show only enum error for invalid mark value, not composition errors', async () => {
     const validate = createJsonSchemaValidator(schema);
 
     // Invalid mark value (should be 'line', not 'lineg')
     const text = JSON.stringify({
-      $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
       title: 'Monthly Earthquake Counts',
       data: {values: []},
       mark: 'lineg', // Invalid
@@ -27,7 +26,7 @@ describe('Vega-Lite schema integration', () => {
       },
     });
 
-    const diagnostics = validateJsonSchema(text, validate);
+    const diagnostics = await validateJsonSchema(text, validate);
     const messages = diagnostics.map((d) => d.message).join(' | ');
 
     // Should have at least one error (for the invalid mark)
@@ -43,18 +42,18 @@ describe('Vega-Lite schema integration', () => {
     expect(messages).not.toContain('Unknown property');
   });
 
-  it('should show no errors for valid unit spec', () => {
+  it('should show no errors for valid unit spec', async () => {
     const validate = createJsonSchemaValidator(schema);
 
     const text = JSON.stringify({
-      $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+      data: {values: []},
       mark: 'line',
       encoding: {
         x: {field: 'a', type: 'quantitative'},
       },
     });
 
-    const diagnostics = validateJsonSchema(text, validate);
+    const diagnostics = await validateJsonSchema(text, validate);
 
     // Should have no errors
     expect(diagnostics).toEqual([]);

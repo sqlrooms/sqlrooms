@@ -19,9 +19,9 @@ export function jsonSchemaLinter(
     const validator = createJsonSchemaValidator(schema);
 
     return linter(
-      (view) => {
+      async (view) => {
         const text = view.state.doc.toString();
-        const diagnostics = validateJsonSchema(text, validator);
+        const diagnostics = await validateJsonSchema(text, validator);
         return diagnostics;
       },
       {

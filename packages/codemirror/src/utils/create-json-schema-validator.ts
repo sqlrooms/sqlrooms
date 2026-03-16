@@ -1,18 +1,30 @@
-import Ajv, {ValidateFunction} from 'ajv';
-import addFormats from 'ajv-formats';
+import {getLanguageService} from 'vscode-json-languageservice';
+import {JsonSchemaValidator} from './validate-json-schema';
 
-export function createJsonSchemaValidator(schema: object): ValidateFunction {
-  const ajv = new Ajv({
-    allErrors: true,
-    validateSchema: false,
-    allowUnionTypes: true, // Support union types like ['string', 'null']
-    strictSchema: false, // Allow unknown keywords and formats (e.g., Vega-Lite's custom formats)
-    strictTypes: false, // Don't require explicit types when using keywords like minimum/maximum
-    validateFormats: false, // Don't validate format keywords, just schema structure
-    logger: false, // Disable console warnings for strict mode issues
+/**
+ * Creates a JSON schema validator using vscode-json-languageservice
+ * @param schema - JSON schema to validate against
+ * @returns Validator object with language service and schema
+ */
+export function createJsonSchemaValidator(schema: object): JsonSchemaValidator {
+  const languageService = getLanguageService({});
+
+  // Register the schema with the language service
+  const schemaUri = 'inmemory://schema.json';
+  languageService.configure({
+    schemas: [
+      {
+        uri: schemaUri,
+        fileMatch: ['*'], // Match all documents
+        schema: schema,
+      },
+    ],
+    validate: true,
+    allowComments: false,
   });
 
-  addFormats(ajv);
-
-  return ajv.compile(schema);
+  return {
+    schema,
+    languageService,
+  };
 }
