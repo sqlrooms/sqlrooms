@@ -1,13 +1,13 @@
 import {Spec} from '@uwdata/mosaic-spec';
 import {
+  AlignHorizontalDistributeCenter,
   BarChart3,
   BarChartHorizontal,
-  Circle,
+  BubblesIcon,
   Code,
   Grid3X3,
   LineChart,
   TrendingUp,
-  BoxSelect,
 } from 'lucide-react';
 import {MosaicChartBuilder} from './types';
 
@@ -201,7 +201,7 @@ const heatmapBuilder: MosaicChartBuilder = {
  */
 const boxPlotBuilder: MosaicChartBuilder = {
   id: 'box-plot',
-  icon: BoxSelect,
+  icon: AlignHorizontalDistributeCenter,
   description: 'Create a box plot',
   fields: [
     {key: 'x', label: 'X Field (categorical)', required: true},
@@ -233,7 +233,7 @@ const boxPlotBuilder: MosaicChartBuilder = {
  */
 const bubbleChartBuilder: MosaicChartBuilder = {
   id: 'bubble-chart',
-  icon: Circle,
+  icon: BubblesIcon,
   description: 'Create a bubble chart',
   fields: [
     {key: 'x', label: 'X Field', required: true},

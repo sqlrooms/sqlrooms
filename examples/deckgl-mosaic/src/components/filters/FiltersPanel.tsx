@@ -80,22 +80,16 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   const handleCreateChart = useCallback((spec: Spec, title: string) => {
     const id = `chart-${Date.now()}`;
     setCharts((prev) => [{id, title, spec}, ...prev]);
-    setExpandedCharts((prev) => [id, ...prev]);
   }, []);
 
   const handleRemoveChart = useCallback((chartId: string) => {
     setCharts((prev) => prev.filter((c) => c.id !== chartId));
-    setExpandedCharts((prev) => prev.filter((id) => id !== chartId));
     setEditingCharts((prev) => {
       const next = new Set(prev);
       next.delete(chartId);
       return next;
     });
   }, []);
-
-  const [expandedCharts, setExpandedCharts] = useState<string[]>(() =>
-    charts.map((c) => c.id),
-  );
 
   return (
     <RoomPanel type="filters" showHeader={false} className={className}>
@@ -113,20 +107,11 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2">
-            <div
-              type="multiple"
-              value={expandedCharts}
-              onValueChange={setExpandedCharts}
-              className="w-full space-y-2"
-            >
+            <div className="w-full space-y-2">
               {charts.map((chart) => {
                 const isEditing = editingCharts.has(chart.id);
                 return (
-                  <div
-                    key={chart.id}
-                    value={chart.id}
-                    className="rounded-sm border px-2"
-                  >
+                  <div key={chart.id} className="rounded-sm border px-2">
                     <div className="py-2 hover:no-underline">
                       <div className="flex w-full items-center justify-between pr-2">
                         <span className="text-sm font-medium">
