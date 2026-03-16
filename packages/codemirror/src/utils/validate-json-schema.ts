@@ -46,14 +46,12 @@ export async function validateJsonSchema(
 
     // Convert vscode diagnostics to CodeMirror diagnostics
     // VS Code DiagnosticSeverity: Error=1, Warning=2, Information=3, Hint=4
+    // Treat all schema validation issues as warnings (yellow underlines)
     for (const vsDiagnostic of vsDiagnostics) {
       diagnostics.push({
         from: document.offsetAt(vsDiagnostic.range.start),
         to: document.offsetAt(vsDiagnostic.range.end),
-        severity:
-          vsDiagnostic.severity === 1 || vsDiagnostic.severity === 2
-            ? 'error'
-            : 'warning',
+        severity: 'warning',
         message: vsDiagnostic.message,
       });
     }
