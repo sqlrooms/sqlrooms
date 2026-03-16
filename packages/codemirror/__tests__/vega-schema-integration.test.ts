@@ -12,7 +12,7 @@ describe('Vega-Lite schema integration', () => {
     schema = await response.json();
   }, 30000); // 30 second timeout for schema download
 
-  it('should show only enum error for invalid mark value, not composition errors', async () => {
+  it('should show only enum warning for invalid mark value, not composition warnings', async () => {
     const validate = createJsonSchemaValidator(schema);
 
     // Invalid mark value (should be 'line', not 'lineg')
@@ -29,10 +29,10 @@ describe('Vega-Lite schema integration', () => {
     const diagnostics = await validateJsonSchema(text, validate);
     const messages = diagnostics.map((d) => d.message).join(' | ');
 
-    // Should have at least one error (for the invalid mark)
+    // Should have at least one warning (for the invalid mark)
     expect(diagnostics.length).toBeGreaterThan(0);
 
-    // Should NOT show composition spec errors
+    // Should NOT show composition spec warnings
     expect(messages).not.toContain('repeat');
     expect(messages).not.toContain('layer');
     expect(messages).not.toContain('facet');
@@ -42,7 +42,7 @@ describe('Vega-Lite schema integration', () => {
     expect(messages).not.toContain('Unknown property');
   });
 
-  it('should show no errors for valid unit spec', async () => {
+  it('should show no warnings for valid unit spec', async () => {
     const validate = createJsonSchemaValidator(schema);
 
     const text = JSON.stringify({
@@ -55,7 +55,7 @@ describe('Vega-Lite schema integration', () => {
 
     const diagnostics = await validateJsonSchema(text, validate);
 
-    // Should have no errors
+    // Should have no diagnostics
     expect(diagnostics).toEqual([]);
   });
 });

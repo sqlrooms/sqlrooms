@@ -45,7 +45,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       // vscode-json-languageservice provides detailed syntax errors
     });
 
@@ -56,7 +56,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       // vscode-json-languageservice provides detailed syntax errors
     });
   });
@@ -76,7 +76,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('Missing property');
     });
 
@@ -93,7 +93,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('Incorrect type');
     });
 
@@ -110,7 +110,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('Value is not accepted');
       expect(diagnostics[0]?.message).toContain('active');
       expect(diagnostics[0]?.message).toContain('inactive');
@@ -129,7 +129,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('below the minimum');
     });
 
@@ -146,7 +146,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('above the maximum');
     });
 
@@ -163,7 +163,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('shorter than the minimum');
     });
 
@@ -180,7 +180,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('longer than the maximum');
     });
 
@@ -197,7 +197,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('String does not match');
     });
 
@@ -215,7 +215,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('Property');
     });
   });
@@ -373,7 +373,7 @@ describe('validateJsonSchema', () => {
       // Format validation may not be enabled by default
       // If diagnostics are returned, they should be errors
       if (diagnostics.length > 0) {
-        expect(diagnostics[0]?.severity).toBe('error');
+        expect(diagnostics[0]?.severity).toBe('warning');
       }
     });
 
@@ -392,7 +392,7 @@ describe('validateJsonSchema', () => {
       // Format validation may not be enabled by default
       // If diagnostics are returned, they should be errors
       if (diagnostics.length > 0) {
-        expect(diagnostics[0]?.severity).toBe('error');
+        expect(diagnostics[0]?.severity).toBe('warning');
       }
     });
   });
@@ -755,7 +755,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.message).toContain('Incorrect type');
     });
 
