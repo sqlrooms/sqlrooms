@@ -13,8 +13,23 @@ export {default as SqlEditorModal} from './SqlEditorModal';
 export {createSqlEditorSlice} from './SqlEditorSlice';
 export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
+/**
+ * @deprecated Use SqlCodeMirrorEditor instead.
+ * SqlMonacoEditor will be removed in the next major version.
+ */
 export {SqlMonacoEditor} from './SqlMonacoEditor';
-export type {SqlMonacoEditorProps} from './SqlMonacoEditor';
+/**
+ * @deprecated Use SqlCodeMirrorEditor instead.
+ * SqlMonacoEditor will be removed in the next major version.
+ */
+export type {
+  SqlMonacoEditorProps,
+  SqlMonacoRunQueryOptions,
+} from './SqlMonacoEditor';
+export {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
+export type {SqlCodeMirrorEditorProps} from './SqlCodeMirrorEditor';
+export {SqlDialects} from './codemirror/extensions/create-sql-extension';
+export type {SqlDialect} from './codemirror/extensions/create-sql-extension';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';

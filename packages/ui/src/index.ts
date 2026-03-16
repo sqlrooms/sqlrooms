@@ -325,7 +325,17 @@ export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
 export {cn} from './lib/utils';
 
 // Theme
-export {ThemeProvider, useTheme} from './theme/theme-provider';
+export {
+  DEFAULT_THEME,
+  DEFAULT_THEME_STORAGE_KEY,
+  getResolvedTheme,
+  getThemePreference,
+  getTheme,
+  ThemeProvider,
+  type Theme,
+  type ResolvedTheme,
+  useTheme,
+} from './theme/theme-provider';
 
 // Re-export from Radix
 export {Slot} from '@radix-ui/react-slot';

@@ -24,7 +24,7 @@
     "@openassistant/utils": "1.0.0-alpha.0",
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/ai-config": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
@@ -43,8 +43,15 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
+  },
+  "devDependencies": {
+    "@sqlrooms/preset-jest": "workspace:*",
+    "ts-jest": "^29.4.4",
+    "zustand": "^5.0.8"
   }
 }

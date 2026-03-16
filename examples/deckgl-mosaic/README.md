@@ -8,7 +8,7 @@
 
 This example is based on the [original demo app](https://github.com/dzole0311/deckgl-duckdb-geoarrow) by [Gjore Milevski](https://github.com/dzole0311).
 
-<video src="/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
+<video src="https://sqlrooms.org/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
 
 An example showcasing integration with [deck.gl](https://deck.gl/) and [@geoarrow/deck.gl-layers](https://www.npmjs.com/package/@geoarrow/deck.gl-layers) libraries for geospatial data visualization combined with the [UWData Mosaic](https://github.com/uwdata/mosaic) package for performant cross-filtering.
 

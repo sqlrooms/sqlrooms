@@ -3,6 +3,9 @@ import {MonacoEditor, MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import React, {useEffect, useRef} from 'react';
 import {loadVegaLiteSchema} from '../schema/vegaLiteSchema';
 
+/**
+ * @deprecated Use VegaCodeMirrorEditorProps instead. This interface is kept for backward compatibility.
+ */
 export interface VegaMonacoEditorProps extends Omit<
   MonacoEditorProps,
   'language'
@@ -17,6 +20,8 @@ export interface VegaMonacoEditorProps extends Omit<
 /**
  * A Monaco editor specialized for editing Vega-Lite specifications.
  * Automatically loads and configures the Vega-Lite JSON schema for validation.
+ *
+ * @deprecated Use VegaCodeMirrorEditor instead. This component is kept for backward compatibility.
  */
 export const VegaMonacoEditor: React.FC<VegaMonacoEditorProps> = ({
   value,

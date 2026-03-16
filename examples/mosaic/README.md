@@ -7,7 +7,7 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/e67a893c-87ac-409d-ac54-3d31e431bb0b/deploy-status)](https://app.netlify.com/projects/sqlrooms-mosaic/deploys)
 
 <a href="https://sqlrooms-mosaic.netlify.app/" target="_blank">
-  <img src="/media/examples/mosaic.webp" alt="SQLRooms Mosaic example Vite app" width=400>
+  <img src="https://sqlrooms.org/media/examples/mosaic.webp" alt="SQLRooms Mosaic example Vite app" width=400>
 </a>
 
 An example demonstrating integration with [Mosaic](https://idl.uw.edu/mosaic/), a powerful interactive visualization framework utilizing DuckDB and high-performance cross-filtering.

@@ -8,18 +8,24 @@ function stripFrontmatter(md) {
 }
 
 function adjustRelativePaths(md) {
-  // 1. Fix HTML-style src="media/..."
-  md = md.replace(/(src\s*=\s*["'])\/?media\//g, '$1docs/media/');
+  // 1. Point media assets at the deployed docs site instead of Git LFS paths.
+  md = md.replace(
+    /(src\s*=\s*["'])\/?media\//g,
+    '$1https://sqlrooms.org/media/',
+  );
 
   // 2. Fix Markdown image links ![...](media/...)
-  md = md.replace(/(!\[[^\]]*\]\()\s*\/?media\//g, '$1docs/media/');
+  md = md.replace(
+    /(!\[[^\]]*\]\()\s*\/?media\//g,
+    '$1https://sqlrooms.org/media/',
+  );
 
   // 3. Convert other relative markdown links (not images) to absolute URLs, avoiding double slashes
   md = md.replace(
     /(?<!!)[\[]([^\]]+)[\]]\((?!https?:\/\/|#|mailto:)(\/?[^)]+)\)/g,
     (match, text, path) => {
       const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-      return `[${text}](http://sqlrooms.org/${cleanPath})`;
+      return `[${text}](https://sqlrooms.org/${cleanPath})`;
     },
   );
 
