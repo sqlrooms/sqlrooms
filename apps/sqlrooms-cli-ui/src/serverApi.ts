@@ -1,4 +1,5 @@
 import {PersistStorage, StorageValue} from 'zustand/middleware';
+import {RuntimeConfig} from './runtimeConfig';
 
 type DuckDbLikeConnector = {
   query: (sql: string) => PromiseLike<any>;
@@ -138,4 +139,52 @@ export function createDuckDbPersistStorage(
       );
     },
   };
+}
+
+function getApiBaseUrl(config: RuntimeConfig): string {
+  return (config.apiBaseUrl || '').replace(/\/$/, '');
+}
+
+const SAFE_PATH_RE = /^[A-Za-z0-9_\-./:\\]+$/;
+
+/**
+ * Validate and sanitize a server-returned file path to prevent SQL injection
+ * when the path is later interpolated into DuckDB queries
+ * (e.g. `read_ipc('${filePath}')`).
+ */
+function validateServerPath(raw: unknown): string {
+  if (typeof raw !== 'string' || raw.length === 0) {
+    throw new Error('Server returned an invalid upload path (not a string)');
+  }
+
+  const normalized = raw.replace(/\\/g, '/');
+
+  if (!SAFE_PATH_RE.test(normalized)) {
+    throw new Error(
+      `Server returned an upload path with disallowed characters: ${normalized}`,
+    );
+  }
+
+  if (normalized.includes('..')) {
+    throw new Error(
+      `Server returned an upload path with directory traversal: ${normalized}`,
+    );
+  }
+
+  return normalized;
+}
+
+export async function uploadFileToServer(
+  file: File,
+  config: RuntimeConfig,
+): Promise<string> {
+  const uploadUrl = `${getApiBaseUrl(config)}/api/upload`;
+  const form = new FormData();
+  form.append('file', file, file.name);
+  const res = await fetch(uploadUrl, {method: 'POST', body: form});
+  if (!res.ok) {
+    throw new Error(`Upload failed: ${res.statusText}`);
+  }
+  const data = (await res.json()) as {path: string};
+  return validateServerPath(data.path);
 }
