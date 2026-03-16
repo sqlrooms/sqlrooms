@@ -413,6 +413,323 @@ describe('validateJsonSchema', () => {
     });
   });
 
+  describe('oneOf schemas with required properties', () => {
+    it('should only show errors from the matching oneOf branch', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              mark: {type: 'string'},
+              encoding: {type: 'object'},
+            },
+            required: ['mark', 'encoding'],
+          },
+          {
+            type: 'object',
+            properties: {
+              facet: {type: 'object'},
+              spec: {type: 'object'},
+            },
+            required: ['facet', 'spec'],
+          },
+          {
+            type: 'object',
+            properties: {
+              layer: {type: 'array'},
+            },
+            required: ['layer'],
+          },
+        ],
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // User provides mark + encoding (unit spec) - valid
+      const text1 = '{"mark": "line", "encoding": {}}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
+
+      // User provides mark but missing encoding
+      const text2 = '{"mark": "line"}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+
+      // Should show error about missing 'encoding', NOT about missing 'facet', 'spec', or 'layer'
+      expect(diagnostics2.length).toBeGreaterThan(0);
+      const messages = diagnostics2.map((d) => d.message).join(' ');
+      expect(messages).toContain('encoding');
+      expect(messages).not.toContain('facet');
+      expect(messages).not.toContain('spec');
+      expect(messages).not.toContain('layer');
+    });
+
+    it('should show enum error for invalid property value, not composition spec errors', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              mark: {
+                type: 'string',
+                enum: ['line', 'bar', 'point', 'area'],
+              },
+              encoding: {type: 'object'},
+            },
+            required: ['mark', 'encoding'],
+          },
+          {
+            type: 'object',
+            properties: {
+              facet: {type: 'object'},
+              spec: {type: 'object'},
+            },
+            required: ['facet', 'spec'],
+          },
+          {
+            type: 'object',
+            properties: {
+              layer: {type: 'array'},
+            },
+            required: ['layer'],
+          },
+        ],
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // User provides invalid mark value (unit spec with wrong enum)
+      const text = '{"mark": "invalid-mark", "encoding": {}}';
+      const diagnostics = validateJsonSchema(text, validate);
+
+      // Should show enum error about mark value
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const messages = diagnostics.map((d) => d.message).join(' ');
+      expect(messages).toContain('Should be one of');
+
+      // Should NOT show errors about missing 'facet', 'layer', etc.
+      expect(messages).not.toContain('facet');
+      expect(messages).not.toContain('layer');
+    });
+
+    it('should handle facet spec correctly without showing unit spec errors', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              mark: {type: 'string'},
+              encoding: {type: 'object'},
+            },
+            required: ['mark', 'encoding'],
+          },
+          {
+            type: 'object',
+            properties: {
+              facet: {type: 'object'},
+              spec: {type: 'object'},
+            },
+            required: ['facet', 'spec'],
+          },
+        ],
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // User provides facet but missing spec
+      const text = '{"facet": {}}';
+      const diagnostics = validateJsonSchema(text, validate);
+
+      // Should show error about missing 'spec', NOT about missing 'mark' or 'encoding'
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const messages = diagnostics.map((d) => d.message).join(' ');
+      expect(messages).toContain('spec');
+      expect(messages).not.toContain('mark');
+      expect(messages).not.toContain('encoding');
+    });
+
+    it('should handle complex Vega-Lite-like schema', () => {
+      const schema = {
+        oneOf: [
+          {
+            // Unit spec
+            type: 'object',
+            properties: {
+              mark: {
+                type: 'string',
+                enum: ['bar', 'line', 'point', 'area', 'boxplot'],
+              },
+              encoding: {type: 'object'},
+              data: {type: 'object'},
+            },
+            required: ['mark'],
+          },
+          {
+            // Layer spec
+            type: 'object',
+            properties: {
+              layer: {type: 'array'},
+              data: {type: 'object'},
+            },
+            required: ['layer'],
+          },
+          {
+            // Facet spec
+            type: 'object',
+            properties: {
+              facet: {type: 'object'},
+              spec: {type: 'object'},
+              data: {type: 'object'},
+            },
+            required: ['facet', 'spec'],
+          },
+          {
+            // Repeat spec
+            type: 'object',
+            properties: {
+              repeat: {type: 'object'},
+              spec: {type: 'object'},
+              data: {type: 'object'},
+            },
+            required: ['repeat', 'spec'],
+          },
+        ],
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // Valid unit spec
+      const text1 = '{"mark": "line", "encoding": {}}';
+      const diagnostics1 = validateJsonSchema(text1, validate);
+      expect(diagnostics1).toEqual([]);
+
+      // Invalid mark value in unit spec
+      const text2 = '{"mark": "invalid", "encoding": {}}';
+      const diagnostics2 = validateJsonSchema(text2, validate);
+      expect(diagnostics2.length).toBeGreaterThan(0);
+      const messages2 = diagnostics2.map((d) => d.message).join(' ');
+      expect(messages2).toContain('Should be one of');
+      expect(messages2).not.toContain('layer');
+      expect(messages2).not.toContain('facet');
+      expect(messages2).not.toContain('repeat');
+
+      // Valid layer spec
+      const text3 = '{"layer": []}';
+      const diagnostics3 = validateJsonSchema(text3, validate);
+      expect(diagnostics3).toEqual([]);
+
+      // Valid facet spec
+      const text4 = '{"facet": {}, "spec": {}}';
+      const diagnostics4 = validateJsonSchema(text4, validate);
+      expect(diagnostics4).toEqual([]);
+    });
+
+    it('should handle oneOf with additionalProperties: false', () => {
+      const schema = {
+        oneOf: [
+          {
+            // Unit spec - allows mark and encoding
+            type: 'object',
+            properties: {
+              mark: {
+                type: 'string',
+                enum: ['line', 'bar', 'point'],
+              },
+              encoding: {type: 'object'},
+            },
+            required: ['mark'],
+            additionalProperties: true,
+          },
+          {
+            // Repeat spec - only allows repeat and spec
+            type: 'object',
+            properties: {
+              repeat: {type: 'object'},
+              spec: {type: 'object'},
+            },
+            required: ['repeat', 'spec'],
+            additionalProperties: false, // Rejects mark, encoding, etc.
+          },
+          {
+            // Facet spec - only allows facet and spec
+            type: 'object',
+            properties: {
+              facet: {type: 'object'},
+              spec: {type: 'object'},
+            },
+            required: ['facet', 'spec'],
+            additionalProperties: false, // Rejects mark, encoding, etc.
+          },
+          {
+            // Layer spec - only allows layer
+            type: 'object',
+            properties: {
+              layer: {type: 'array'},
+            },
+            required: ['layer'],
+            additionalProperties: false, // Rejects mark, encoding, etc.
+          },
+        ],
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // User provides invalid mark value in unit spec
+      const text = '{"mark": "lineg", "encoding": {}}';
+      const diagnostics = validateJsonSchema(text, validate);
+
+      // Should show enum error about mark value
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const messages = diagnostics.map((d) => d.message).join(' ');
+      expect(messages).toContain('Should be one of');
+
+      // Should NOT show errors from composition branches:
+      // - "Missing required property 'repeat'"
+      // - "Missing required property 'facet'"
+      // - "Missing required property 'layer'"
+      // - "Unknown property 'mark'" (from branches with additionalProperties: false)
+      // - "Unknown property 'encoding'" (from branches with additionalProperties: false)
+      expect(messages).not.toContain('repeat');
+      expect(messages).not.toContain('facet');
+      expect(messages).not.toContain('layer');
+      expect(messages).not.toContain('Unknown property');
+    });
+
+    it('should handle oneOf with anyOf combinations', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              type: {const: 'A'},
+              requiredA: {type: 'string'},
+            },
+            required: ['type', 'requiredA'],
+          },
+          {
+            type: 'object',
+            properties: {
+              type: {const: 'B'},
+              requiredB: {type: 'number'},
+            },
+            required: ['type', 'requiredB'],
+          },
+        ],
+      };
+
+      const validate = createJsonSchemaValidator(schema);
+
+      // User provides type A but missing requiredA
+      const text = '{"type": "A"}';
+      const diagnostics = validateJsonSchema(text, validate);
+
+      // Should show error about missing 'requiredA', NOT 'requiredB'
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const messages = diagnostics.map((d) => d.message).join(' ');
+      expect(messages).toContain('requiredA');
+      expect(messages).not.toContain('requiredB');
+    });
+  });
+
   describe('union types (multiple type values)', () => {
     it('should accept string or null for string | null type', () => {
       const schema = {
