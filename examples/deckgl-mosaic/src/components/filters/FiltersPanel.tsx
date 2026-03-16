@@ -8,15 +8,7 @@ import {
   Spec,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Button,
-  ScrollArea,
-  SpinnerPane,
-} from '@sqlrooms/ui';
+import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
 import type {Param} from '@uwdata/mosaic-core';
 import {Code, Plus, X} from 'lucide-react';
 import {useCallback, useMemo, useState} from 'react';
@@ -121,7 +113,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2">
-            <Accordion
+            <div
               type="multiple"
               value={expandedCharts}
               onValueChange={setExpandedCharts}
@@ -130,12 +122,12 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
               {charts.map((chart) => {
                 const isEditing = editingCharts.has(chart.id);
                 return (
-                  <AccordionItem
+                  <div
                     key={chart.id}
                     value={chart.id}
                     className="rounded-sm border px-2"
                   >
-                    <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="py-2 hover:no-underline">
                       <div className="flex w-full items-center justify-between pr-2">
                         <span className="text-sm font-medium">
                           {chart.title}
@@ -168,8 +160,8 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                           )}
                         </div>
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="overflow-hidden pb-4">
+                    </div>
+                    <div className="overflow-hidden pb-4">
                       <MosaicChartContainer
                         spec={chart.spec}
                         params={paramsMap}
@@ -189,11 +181,11 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                           </>
                         )}
                       </MosaicChartContainer>
-                    </AccordionContent>
-                  </AccordionItem>
+                    </div>
+                  </div>
                 );
               })}
-            </Accordion>
+            </div>
           </div>
         </ScrollArea>
 

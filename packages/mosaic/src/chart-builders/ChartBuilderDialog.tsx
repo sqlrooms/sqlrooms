@@ -1,4 +1,3 @@
-import {Spec} from '@uwdata/mosaic-spec';
 import {
   Button,
   Dialog,
@@ -99,23 +98,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-lg"
-        onPointerDownOutside={(e) => {
-          // Prevent dialog from closing when interacting with Select dropdowns
-          // that portal outside the dialog content
-          const target = e.target as HTMLElement;
-          if (target.closest('[data-radix-select-content]')) {
-            e.preventDefault();
-          }
-        }}
-        onInteractOutside={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('[data-radix-select-content]')) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {selectedBuilder ? selectedBuilder.description : 'Add Chart'}
