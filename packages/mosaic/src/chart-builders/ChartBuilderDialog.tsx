@@ -8,6 +8,7 @@ import {
   DialogTitle,
   cn,
 } from '@sqlrooms/ui';
+import type {Spec} from '@uwdata/mosaic-spec';
 import React, {useCallback, useMemo, useState} from 'react';
 import {createDefaultChartBuilders} from './builders';
 import {FieldSelectorInput} from './FieldSelectorInput';
