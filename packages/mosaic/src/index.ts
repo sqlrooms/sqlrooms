@@ -21,3 +21,42 @@ export {
 } from './MosaicSlice';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
+
+// Editor compound components
+export {MosaicChartContainer} from './editor/MosaicChartContainer';
+export type {MosaicChartContainerProps} from './editor/MosaicChartContainer';
+export {MosaicChartDisplay} from './editor/MosaicChartDisplay';
+export type {MosaicChartDisplayProps} from './editor/MosaicChartDisplay';
+export {MosaicSpecEditorPanel} from './editor/MosaicSpecEditorPanel';
+export type {MosaicSpecEditorPanelProps} from './editor/MosaicSpecEditorPanel';
+export {MosaicChartEditorActions} from './editor/MosaicChartEditorActions';
+export type {MosaicChartEditorActionsProps} from './editor/MosaicChartEditorActions';
+export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+export type {MosaicCodeMirrorEditorProps} from './editor/MosaicCodeMirrorEditor';
+export {useMosaicChartEditor} from './editor/useMosaicChartEditor';
+export {useMosaicEditorContext} from './editor/MosaicEditorContext';
+export {
+  loadMosaicSchema,
+  getCachedMosaicSchema,
+  preloadMosaicSchema,
+} from './editor/mosaicSchema';
+export type {
+  MosaicEditorState,
+  MosaicEditorActions,
+  MosaicEditorContextValue,
+  OnMosaicSpecChange,
+  UseMosaicChartEditorOptions,
+  UseMosaicChartEditorReturn,
+} from './editor/types';
+
+// Chart builders
+export {ChartBuilderDialog} from './chart-builders/ChartBuilderDialog';
+export type {ChartBuilderDialogProps} from './chart-builders/ChartBuilderDialog';
+export {FieldSelectorInput} from './chart-builders/FieldSelectorInput';
+export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
+export {createDefaultChartBuilders} from './chart-builders/builders';
+export type {
+  MosaicChartBuilder,
+  MosaicChartBuilderField,
+  ChartBuilderColumn,
+} from './chart-builders/types';

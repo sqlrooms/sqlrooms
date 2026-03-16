@@ -1,70 +1,110 @@
-import {vg, Selection} from '@sqlrooms/mosaic';
+import {Spec} from '@sqlrooms/mosaic';
 
 const backgroundColor = '#f5d9a6';
 const foregroundColor = '#e67f5f';
 
-export const createMagPlot = (brush: Selection) =>
-  vg.plot(
-    vg.rectY(vg.from('earthquakes'), {
-      x: vg.bin('Magnitude', {maxbins: 25}),
-      y: vg.count(),
-      fill: backgroundColor,
-      inset: 0.5,
-    }),
-    vg.rectY(vg.from('earthquakes', {filterBy: brush}), {
-      x: vg.bin('Magnitude', {maxbins: 25}),
-      y: vg.count(),
-      fill: foregroundColor,
-      inset: 0.5,
-    }),
-    vg.intervalX({as: brush}),
-    vg.xLabel('Magnitude (Richter)'),
-    vg.yLabel(null),
-    vg.yAxis(null),
-    vg.height(180),
-    vg.width(380),
-    vg.margins({left: 0, right: 10, top: 10, bottom: 30}),
-  );
+export interface ChartConfig {
+  id: string;
+  title: string;
+  spec: Spec;
+}
 
-export const createDepthPlot = (brush: Selection) =>
-  vg.plot(
-    vg.raster(vg.from('earthquakes', {filterBy: brush}), {
-      x: 'Magnitude',
-      y: 'Depth',
-      fill: 'density',
-      bandwidth: 0,
-      pixelSize: 3,
-    }),
-    vg.colorScale('sqrt'),
-    vg.colorScheme('ylorrd'),
-    vg.intervalXY({as: brush}),
-    vg.yReverse(true),
-    vg.xLabel('Magnitude'),
-    vg.yLabel('Depth (km)'),
-    vg.height(250),
-    vg.width(380),
-    vg.margins({left: 24, right: 10, top: 15, bottom: 30}),
-  );
+export const magChartConfig: ChartConfig = {
+  id: 'magnitude',
+  title: 'Distribution by Magnitude',
+  spec: {
+    plot: [
+      {
+        mark: 'rectY',
+        data: {from: 'earthquakes'},
+        x: {bin: 'Magnitude', maxbins: 25},
+        y: {count: null},
+        fill: backgroundColor,
+        inset: 0.5,
+      },
+      {
+        mark: 'rectY',
+        data: {from: 'earthquakes', filterBy: '$brush'},
+        x: {bin: 'Magnitude', maxbins: 25},
+        y: {count: null},
+        fill: foregroundColor,
+        inset: 0.5,
+      },
+      {select: 'intervalX', as: '$brush'},
+    ],
+    xLabel: 'Magnitude (Richter)',
+    yLabel: null,
+    yAxis: null,
+    height: 180,
+    width: 380,
+    margins: {left: 0, right: 10, top: 10, bottom: 30},
+    params: {brush: {select: 'crossfilter'}},
+  } as Spec,
+};
 
-export const createTimePlot = (brush: Selection) =>
-  vg.plot(
-    vg.rectY(vg.from('earthquakes'), {
-      x: vg.bin('DateTime', {maxbins: 40}),
-      y: vg.count(),
-      fill: backgroundColor,
-      inset: 0.5,
-    }),
-    vg.rectY(vg.from('earthquakes', {filterBy: brush}), {
-      x: vg.bin('DateTime', {maxbins: 40}),
-      y: vg.count(),
-      fill: foregroundColor,
-      inset: 0.5,
-    }),
-    vg.intervalX({as: brush}),
-    vg.xLabel('Year'),
-    vg.yLabel(null),
-    vg.yAxis(null),
-    vg.height(180),
-    vg.width(380),
-    vg.margins({left: -15, right: 15, top: 10, bottom: 30}),
-  );
+export const timeChartConfig: ChartConfig = {
+  id: 'timeline',
+  title: 'Temporal Frequency',
+  spec: {
+    plot: [
+      {
+        mark: 'rectY',
+        data: {from: 'earthquakes'},
+        x: {bin: 'DateTime', maxbins: 40},
+        y: {count: null},
+        fill: backgroundColor,
+        inset: 0.5,
+      },
+      {
+        mark: 'rectY',
+        data: {from: 'earthquakes', filterBy: '$brush'},
+        x: {bin: 'DateTime', maxbins: 40},
+        y: {count: null},
+        fill: foregroundColor,
+        inset: 0.5,
+      },
+      {select: 'intervalX', as: '$brush'},
+    ],
+    xLabel: 'Year',
+    yLabel: null,
+    yAxis: null,
+    height: 180,
+    width: 380,
+    margins: {left: -15, right: 15, top: 10, bottom: 30},
+    params: {brush: {select: 'crossfilter'}},
+  } as Spec,
+};
+
+export const depthChartConfig: ChartConfig = {
+  id: 'depth',
+  title: 'Depth vs Magnitude',
+  spec: {
+    plot: [
+      {
+        mark: 'raster',
+        data: {from: 'earthquakes', filterBy: '$brush'},
+        x: 'Magnitude',
+        y: 'Depth',
+        fill: 'density',
+        bandwidth: 0,
+        pixelSize: 3,
+      },
+      {select: 'intervalXY', as: '$brush'},
+    ],
+    colorScale: 'sqrt',
+    colorScheme: 'ylorrd',
+    yReverse: true,
+    xLabel: 'Magnitude',
+    yLabel: 'Depth (km)',
+    height: 250,
+    width: 380,
+    margins: {left: 24, right: 10, top: 15, bottom: 30},
+    params: {brush: {select: 'crossfilter'}},
+  } as Spec,
+};
+
+export const defaultChartConfigs: ChartConfig[] = [
+  magChartConfig,
+  timeChartConfig,
+  depthChartConfig,
+];

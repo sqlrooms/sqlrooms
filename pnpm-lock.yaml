@@ -2841,12 +2841,21 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4
+      '@sqlrooms/codemirror':
+        specifier: workspace:*
+        version: link:../codemirror
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@uwdata/mosaic-core':
         specifier: ^0.21.0
         version: 0.21.1
@@ -2862,6 +2871,9 @@ importers:
       immer:
         specifier: ^11.0.1
         version: 11.0.1
+      lucide-react:
+        specifier: '>=0.300.0'
+        version: 0.544.0(react@19.2.1)
       react:
         specifier: 19.2.1
         version: 19.2.1

@@ -1,16 +1,27 @@
-import {VgPlotChart} from '@sqlrooms/mosaic';
+import {
+  ChartBuilderColumn,
+  ChartBuilderDialog,
+  MosaicChartContainer,
+  MosaicChartDisplay,
+  MosaicChartEditorActions,
+  MosaicSpecEditorPanel,
+  Spec,
+} from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  Button,
   ScrollArea,
   SpinnerPane,
 } from '@sqlrooms/ui';
-import {useMemo} from 'react';
+import type {Param} from '@uwdata/mosaic-core';
+import {Code, Plus, X} from 'lucide-react';
+import {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
-import {createDepthPlot, createMagPlot, createTimePlot} from './filterPlots';
+import {ChartConfig, defaultChartConfigs} from './filterPlots';
 
 export default function FiltersPanel({className}: {className?: string}) {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
@@ -28,61 +39,171 @@ export default function FiltersPanel({className}: {className?: string}) {
 
 const FiltersPanelContent = ({className}: {className?: string}) => {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
-  const magPlot = useMemo(() => createMagPlot(brush), [brush]);
-  const depthPlot = useMemo(() => createDepthPlot(brush), [brush]);
-  const timePlot = useMemo(() => createTimePlot(brush), [brush]);
+  const tables = useRoomStore((state) => state.db.tables);
+
+  // Shared params map for cross-filtering across all charts
+  const paramsMap = useMemo(
+    () => new Map<string, Param<any>>([['brush', brush as Param<any>]]),
+    [brush],
+  );
+
+  // Chart list state
+  const [charts, setCharts] = useState<ChartConfig[]>(() => [
+    ...defaultChartConfigs,
+  ]);
+
+  // Track which charts have editor open
+  const [editingCharts, setEditingCharts] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  // Chart builder dialog state
+  const [builderOpen, setBuilderOpen] = useState(false);
+
+  // Get columns for the earthquakes table
+  const columns: ChartBuilderColumn[] = useMemo(() => {
+    const table = tables.find((t) => t.tableName === 'earthquakes');
+    if (!table?.columns) return [];
+    return table.columns.map((c) => ({name: c.name, type: c.type}));
+  }, [tables]);
+
+  const handleSpecChange = useCallback((chartId: string, newSpec: Spec) => {
+    setCharts((prev) =>
+      prev.map((c) => (c.id === chartId ? {...c, spec: newSpec} : c)),
+    );
+  }, []);
+
+  const toggleEditor = useCallback((chartId: string) => {
+    setEditingCharts((prev) => {
+      const next = new Set(prev);
+      if (next.has(chartId)) {
+        next.delete(chartId);
+      } else {
+        next.add(chartId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleCreateChart = useCallback((spec: Spec, title: string) => {
+    const id = `chart-${Date.now()}`;
+    setCharts((prev) => [{id, title, spec}, ...prev]);
+    setExpandedCharts((prev) => [id, ...prev]);
+  }, []);
+
+  const handleRemoveChart = useCallback((chartId: string) => {
+    setCharts((prev) => prev.filter((c) => c.id !== chartId));
+    setExpandedCharts((prev) => prev.filter((id) => id !== chartId));
+    setEditingCharts((prev) => {
+      const next = new Set(prev);
+      next.delete(chartId);
+      return next;
+    });
+  }, []);
+
+  const [expandedCharts, setExpandedCharts] = useState<string[]>(() =>
+    charts.map((c) => c.id),
+  );
 
   return (
     <RoomPanel type="filters" showHeader={false} className={className}>
       <div className="flex h-full flex-col">
+        <div className="p-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setBuilderOpen(true)}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Add Chart
+          </Button>
+        </div>
         <ScrollArea className="flex-1">
           <div className="p-2">
             <Accordion
               type="multiple"
-              defaultValue={['magnitude', 'depth', 'timeline']}
+              value={expandedCharts}
+              onValueChange={setExpandedCharts}
               className="w-full space-y-2"
             >
-              <AccordionItem
-                value="magnitude"
-                className="rounded-sm border px-2"
-              >
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    Distribution by Magnitude
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="flex overflow-hidden pb-4">
-                  <VgPlotChart plot={magPlot} />
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="timeline"
-                className="rounded-sm border px-2"
-              >
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    Temporal Frequency
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="flex overflow-hidden pb-4">
-                  <VgPlotChart plot={timePlot} />
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="depth" className="rounded-sm border px-2">
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    Depth vs Magnitude
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="flex overflow-hidden pb-4">
-                  <VgPlotChart plot={depthPlot} />
-                </AccordionContent>
-              </AccordionItem>
+              {charts.map((chart) => {
+                const isEditing = editingCharts.has(chart.id);
+                return (
+                  <AccordionItem
+                    key={chart.id}
+                    value={chart.id}
+                    className="rounded-sm border px-2"
+                  >
+                    <AccordionTrigger className="py-2 hover:no-underline">
+                      <div className="flex w-full items-center justify-between pr-2">
+                        <span className="text-sm font-medium">
+                          {chart.title}
+                        </span>
+                        <div
+                          className="flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => toggleEditor(chart.id)}
+                            title={isEditing ? 'Hide editor' : 'Edit spec'}
+                          >
+                            <Code className="h-3.5 w-3.5" />
+                          </Button>
+                          {!defaultChartConfigs.some(
+                            (d) => d.id === chart.id,
+                          ) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleRemoveChart(chart.id)}
+                              title="Remove chart"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="overflow-hidden pb-4">
+                      <MosaicChartContainer
+                        spec={chart.spec}
+                        params={paramsMap}
+                        editable={isEditing}
+                        onSpecChange={(spec) =>
+                          handleSpecChange(chart.id, spec)
+                        }
+                      >
+                        <MosaicChartDisplay />
+                        {isEditing && (
+                          <>
+                            <MosaicSpecEditorPanel
+                              className="h-64 border-t"
+                              title=""
+                            />
+                            <MosaicChartEditorActions />
+                          </>
+                        )}
+                      </MosaicChartContainer>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           </div>
         </ScrollArea>
+
+        <ChartBuilderDialog
+          open={builderOpen}
+          onOpenChange={setBuilderOpen}
+          tableName="earthquakes"
+          columns={columns}
+          onCreateChart={handleCreateChart}
+        />
       </div>
     </RoomPanel>
   );
