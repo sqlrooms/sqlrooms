@@ -9,7 +9,17 @@ import {
   Label,
   Switch,
 } from '@sqlrooms/ui';
-import {EXPORT_IMG_RESOLUTION_OPTIONS} from '@kepler.gl/constants';
+import {
+  EXPORT_IMG_RESOLUTION_OPTIONS,
+  Resolution1024x768Option,
+  Resolution1280x720Option,
+  Resolution1280x960Option,
+  Resolution1600x1200Option,
+  Resolution1600x900Option,
+  Resolution1920x1080Option,
+  Resolution1920x1440Option,
+  Resolution2560x1440Option,
+} from '@kepler.gl/constants';
 import {ImagePreview} from '@kepler.gl/components';
 import {dataURItoBlob, downloadFile} from '@kepler.gl/utils';
 import {ExportImage} from '@kepler.gl/types';
@@ -25,6 +35,17 @@ export interface KeplerImageExportProps {
   onExportStart?: () => void;
 }
 
+const CUSTOM_RESOLUTION_OPTIONS = [
+  Resolution1280x720Option,
+  Resolution1920x1080Option,
+  Resolution2560x1440Option,
+  Resolution1600x900Option,
+  Resolution1024x768Option,
+  Resolution1280x960Option,
+  Resolution1600x1200Option,
+  Resolution1920x1440Option,
+];
+
 export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   setExportImageSetting,
   cleanupExportImage,
@@ -34,6 +55,13 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
 }) => {
   const {legend, resolution, processing, imageDataUri, imageSize} =
     exportImageSettings;
+
+  useEffect(() => {
+    // hardcode default resolution, because the incomong resolution is ONE_X and we don't want to show that one
+    setExportImageSetting({
+      resolution: Resolution1280x720Option.id,
+    });
+  }, []);
 
   useEffect(() => {
     setExportImageSetting({
@@ -85,9 +113,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
             <SelectValue placeholder="Select resolution" />
           </SelectTrigger>
           <SelectContent>
-            {EXPORT_IMG_RESOLUTION_OPTIONS.filter(
-              (option) => !option.scale,
-            ).map((option) => (
+            {CUSTOM_RESOLUTION_OPTIONS.map((option) => (
               <SelectItem
                 key={option.id}
                 value={option.id as ExportResolutionOption}
