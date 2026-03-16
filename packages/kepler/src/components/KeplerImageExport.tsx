@@ -81,7 +81,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
     }
   }, [processing, imageDataUri, fileName, onExportStart]);
 
-  const isPreviewReady = !processing && imageDataUri;
+  const isPreviewReady = !processing && Boolean(imageDataUri);
 
   return (
     <div className="flex flex-col gap-6 px-[5px] pt-1 pb-5">
