@@ -2402,9 +2402,6 @@ importers:
       vscode-languageserver-textdocument:
         specifier: ^1.0.12
         version: 1.0.12
-      vscode-languageserver-types:
-        specifier: ^3.17.5
-        version: 3.17.5
     devDependencies:
       ts-jest:
         specifier: ^29.4.4
