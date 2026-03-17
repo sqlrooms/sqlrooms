@@ -46,4 +46,7 @@ export {
   fromDecimalString,
 } from './decimal';
 
-export {renderComponentToString} from './renderComponentToString';
+export {
+  renderComponentToString,
+  renderComponentToDomElement,
+} from './render-component';
