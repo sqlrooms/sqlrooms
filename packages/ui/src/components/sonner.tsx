@@ -4,7 +4,6 @@ import {Toaster as Sonner, type ToasterProps} from 'sonner';
 import {useTheme} from '../theme/theme-provider';
 import type {CSSProperties} from 'react';
 
-
 const Toaster = ({...props}: ToasterProps) => {
   const {theme = 'system'} = useTheme();
 
@@ -48,14 +47,7 @@ const Toaster = ({...props}: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: 'cn-toast relative',
-          closeButton:
-            'absolute top-2 right-2 z-10 cursor-pointer text-muted-foreground hover:text-foreground',
-        },
-        cancelButtonStyle: {
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
+          toast: 'cn-toast',
         },
       }}
       {...props}
