@@ -56,19 +56,27 @@ export function createQueryToolRenderer(
             </div>
           </div>
         )}
-        <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-          <Button variant="ghost" size="xs" onClick={tableModal.onOpen}>
-            <TableIcon className="h-4 w-4" />
-            <h3 className="text-xs">Show Query Result</h3>
-          </Button>
-        </div>
+        {output.success === false ? (
+          <div className="text-destructive bg-destructive/10 rounded-md p-2 text-xs">
+            {output.error ?? output.details ?? 'Query execution failed.'}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+              <Button variant="ghost" size="xs" onClick={tableModal.onOpen}>
+                <TableIcon className="h-4 w-4" />
+                <h3 className="text-xs">Show Query Result</h3>
+              </Button>
+            </div>
 
-        <DataTableModal
-          title={title}
-          query={sqlQuery}
-          tableModal={tableModal}
-          formatValue={formatValue}
-        />
+            <DataTableModal
+              title={title}
+              query={sqlQuery}
+              tableModal={tableModal}
+              formatValue={formatValue}
+            />
+          </>
+        )}
       </>
     );
   };
