@@ -45,7 +45,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('warning');
+      expect(diagnostics[0]?.severity).toBe('error');
       // vscode-json-languageservice provides detailed syntax errors
     });
 
@@ -56,7 +56,7 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.severity).toBe('warning');
+      expect(diagnostics[0]?.severity).toBe('error');
       // vscode-json-languageservice provides detailed syntax errors
     });
   });
