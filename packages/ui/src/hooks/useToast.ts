@@ -24,8 +24,8 @@ export function useToast() {
       },
     ) =>
       toast.promise(promise, {
-        ...options,
         duration: DEFAULT_DURATION,
+        ...options,
       }),
   };
 }
