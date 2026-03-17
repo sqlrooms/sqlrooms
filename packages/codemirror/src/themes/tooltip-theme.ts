@@ -23,12 +23,11 @@ export const tooltipTheme = [
       // Lint tooltip styling
       fontSize: '12px',
       maxWidth: '400px',
-      padding: '6px 8px !important',
+      padding: '4px 8px !important',
     },
     '.cm-diagnostic': {
       // Individual error styling
-      paddingTop: '0 !important',
-      paddingBottom: '0 !important',
+      padding: '0 !important',
       margin: '0 !important',
       lineHeight: '1.5',
     },
