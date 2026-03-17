@@ -5,7 +5,7 @@ import {
 } from '@codemirror/autocomplete';
 import type {Extension} from '@codemirror/state';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
-import {renderComponentToString} from '@sqlrooms/utils';
+import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
 
 export interface CompletionContext {
@@ -49,16 +49,18 @@ export function createCompletion({
 
         suggestions.push(
           ...functionGroups.map(({name, overloads}): Completion => {
-            const dom = document.createElement('div');
-            dom.innerHTML = renderComponentToString(FunctionDocumentation, {
-              functions: overloads,
-            });
+            const {dom, destroy} = renderComponentToDomElement(
+              FunctionDocumentation,
+              {
+                functions: overloads,
+              },
+            );
 
             return {
               label: name,
               type: 'method',
               detail: overloads[0]?.description ?? '',
-              info: () => dom,
+              info: () => ({dom, destroy}),
               boost: 5,
             };
           }),
