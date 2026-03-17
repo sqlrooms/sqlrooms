@@ -11,7 +11,7 @@ import {
 import {Toaster as Sonner, type ToasterProps} from 'sonner';
 import {useTheme} from '../theme/theme-provider';
 import type {CSSProperties} from 'react';
-import React from 'react';
+
 
 const Toaster = ({...props}: ToasterProps) => {
   const {theme = 'system'} = useTheme();
@@ -52,7 +52,7 @@ const Toaster = ({...props}: ToasterProps) => {
           '--error-border': 'var(--color-destructive)',
 
           '--border-radius': 'var(--radius)',
-        } as React.CSSProperties
+        } as CSSProperties
       }
       toastOptions={{
         classNames: {
