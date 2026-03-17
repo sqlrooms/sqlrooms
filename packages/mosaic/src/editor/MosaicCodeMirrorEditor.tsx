@@ -32,11 +32,15 @@ export const MosaicCodeMirrorEditor: React.FC<MosaicCodeMirrorEditorProps> = ({
 
   useEffect(() => {
     if (enableSchemaValidation) {
+      let cancelled = false;
       loadMosaicSchema().then((loadedSchema) => {
-        if (loadedSchema) {
+        if (!cancelled && loadedSchema) {
           setSchema(loadedSchema);
         }
       });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [enableSchemaValidation]);
 

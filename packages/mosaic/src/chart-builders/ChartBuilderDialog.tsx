@@ -9,7 +9,7 @@ import {
   cn,
 } from '@sqlrooms/ui';
 import type {Spec} from '@uwdata/mosaic-spec';
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {createDefaultChartBuilders} from './builders';
 import {FieldSelectorInput} from './FieldSelectorInput';
 import {ChartBuilderColumn, MosaicChartBuilder} from './types';
@@ -63,6 +63,13 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     onOpenChange(false);
     setTimeout(handleReset, DIALOG_CLOSE_ANIMATION_MS);
   }, [onOpenChange, handleReset]);
+
+  useEffect(() => {
+    if (!open) {
+      const timer = setTimeout(handleReset, DIALOG_CLOSE_ANIMATION_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [open, handleReset]);
 
   const handleSelectBuilder = useCallback((builder: MosaicChartBuilder) => {
     setSelectedBuilder(builder);

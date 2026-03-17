@@ -67,6 +67,7 @@ export function useMosaicChartEditor({
       prevInitialSpecString: currentInitialSpec.normalized,
       appliedSpecString: currentInitialSpec.normalized,
       editedSpecString: currentInitialSpec.formatted,
+      originalSpecString: currentInitialSpec.formatted,
       lastValidSpec: currentInitialSpec.parseOk
         ? (currentInitialSpec.parsed as Spec)
         : prev.lastValidSpec,
