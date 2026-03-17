@@ -199,9 +199,7 @@ export default function DataTablePaginated<Data extends object>({
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  <TableHead
-                    className={`bg-background sticky -top-px left-0 z-10 w-auto border-r py-2 text-center whitespace-nowrap`}
-                  >
+                  <TableHead className="bg-background sticky -top-px left-0 z-10 w-auto min-w-[40px] border-r py-2 text-center whitespace-nowrap">
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                     ) : null}
@@ -279,7 +277,10 @@ export default function DataTablePaginated<Data extends object>({
                   }
                 >
                   <TableCell
-                    className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSizeClass}`}
+                    className={cn(
+                      'bg-background text-muted-foreground sticky left-0 min-w-[40px] border-r text-center',
+                      fontSizeClass,
+                    )}
                   >
                     {enableRowSelection ? (
                       <Checkbox
