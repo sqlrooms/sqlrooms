@@ -1,4 +1,5 @@
-import {TextDocument, LanguageService} from 'vscode-json-languageservice';
+import {LanguageService} from 'vscode-json-languageservice';
+import {TextDocument} from 'vscode-languageserver-textdocument';
 import {Diagnostic} from '@codemirror/lint';
 
 /**

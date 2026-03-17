@@ -32,7 +32,9 @@
     "@lezer/highlight": "^1.2.0",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "vscode-json-languageservice": "^5.7.2"
+    "vscode-json-languageservice": "^5.7.2",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-languageserver-types": "^3.17.5"
   },
   "peerDependencies": {
     "react": ">=18",
