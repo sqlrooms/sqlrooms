@@ -75,9 +75,9 @@ describe('validateJsonSchema', () => {
       const text = '{}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('Missing property');
+      expect(diagnostics[0]?.message).toBe('Missing property "name".');
     });
 
     it('should return diagnostic for wrong type', async () => {
@@ -92,9 +92,11 @@ describe('validateJsonSchema', () => {
       const text = '{"age": "not a number"}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('Incorrect type');
+      expect(diagnostics[0]?.message).toBe(
+        'Incorrect type. Expected "number".',
+      );
     });
 
     it('should return diagnostic for enum violation', async () => {
@@ -109,11 +111,11 @@ describe('validateJsonSchema', () => {
       const text = '{"status": "pending"}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('Value is not accepted');
-      expect(diagnostics[0]?.message).toContain('active');
-      expect(diagnostics[0]?.message).toContain('inactive');
+      expect(diagnostics[0]?.message).toBe(
+        'Value is not accepted. Valid values: "active", "inactive".',
+      );
     });
 
     it('should return diagnostic for minimum value violation', async () => {
@@ -128,9 +130,9 @@ describe('validateJsonSchema', () => {
       const text = '{"age": 10}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('below the minimum');
+      expect(diagnostics[0]?.message).toBe('Value is below the minimum of 18.');
     });
 
     it('should return diagnostic for maximum value violation', async () => {
@@ -145,9 +147,11 @@ describe('validateJsonSchema', () => {
       const text = '{"age": 150}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('above the maximum');
+      expect(diagnostics[0]?.message).toBe(
+        'Value is above the maximum of 100.',
+      );
     });
 
     it('should return diagnostic for minLength violation', async () => {
@@ -162,9 +166,11 @@ describe('validateJsonSchema', () => {
       const text = '{"name": "ab"}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('shorter than the minimum');
+      expect(diagnostics[0]?.message).toBe(
+        'String is shorter than the minimum length of 3.',
+      );
     });
 
     it('should return diagnostic for maxLength violation', async () => {
@@ -179,9 +185,11 @@ describe('validateJsonSchema', () => {
       const text = '{"name": "toolong"}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('longer than the maximum');
+      expect(diagnostics[0]?.message).toBe(
+        'String is longer than the maximum length of 5.',
+      );
     });
 
     it('should return diagnostic for pattern violation', async () => {
@@ -196,9 +204,11 @@ describe('validateJsonSchema', () => {
       const text = '{"email": "invalid"}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('String does not match');
+      expect(diagnostics[0]?.message).toBe(
+        'String does not match the pattern of "^[a-z]+@[a-z]+\\.[a-z]+$".',
+      );
     });
 
     it('should return diagnostic for additional properties', async () => {
@@ -214,9 +224,9 @@ describe('validateJsonSchema', () => {
       const text = '{"name": "John", "extra": "value"}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('Property');
+      expect(diagnostics[0]?.message).toBe('Property extra is not allowed.');
     });
   });
 
@@ -235,10 +245,9 @@ describe('validateJsonSchema', () => {
       const text = '{"age": -5}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const messages = diagnostics.map((d) => d.message);
-      expect(messages.some((m) => m.includes('Missing property'))).toBe(true);
-      expect(messages.some((m) => m.includes('below the minimum'))).toBe(true);
+      expect(diagnostics).toHaveLength(2);
+      expect(diagnostics[0]?.message).toBe('Missing property "name".');
+      expect(diagnostics[1]?.message).toBe('Value is below the minimum of 0.');
     });
   });
 
@@ -262,8 +271,8 @@ describe('validateJsonSchema', () => {
       const text = '{"user": {"age": 30}}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.message).toContain('Missing property');
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toBe('Missing property "name".');
     });
   });
 
@@ -284,8 +293,8 @@ describe('validateJsonSchema', () => {
       const text = '[{"id": 1}, {"name": "invalid"}]';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
-      expect(diagnostics[0]?.message).toContain('Missing property');
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toBe('Missing property "id".');
     });
 
     it('should correctly position errors in array items', async () => {
@@ -317,21 +326,14 @@ describe('validateJsonSchema', () => {
 }`;
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
-
-      // All errors should point to the array item, not to the beginning of the document
-      for (const diagnostic of diagnostics) {
-        expect(diagnostic.from).toBeGreaterThan(20); // Should be inside the array item
-        expect(diagnostic.to).toBeGreaterThan(diagnostic.from);
-
-        // Should not point to the beginning of the document (0)
-        expect(diagnostic.from).not.toBe(0);
-      }
-
       // Check that we have the expected errors
-      const messages = diagnostics.map((d) => d.message);
-      expect(messages.some((m) => m.includes('Missing property'))).toBe(true);
-      expect(messages.some((m) => m.includes('Missing property'))).toBe(true);
+      expect(diagnostics).toHaveLength(2);
+      // Should not point to the beginning of the document (0)
+      expect(diagnostics[0]?.from).not.toBe(0);
+      expect(diagnostics[1]?.from).not.toBe(0);
+
+      expect(diagnostics[0]?.message).toBe('Missing property "street".');
+      expect(diagnostics[1]?.message).toBe('Missing property "country".');
     });
   });
 
@@ -439,12 +441,8 @@ describe('validateJsonSchema', () => {
       const diagnostics2 = await validateJsonSchema(text2, validate);
 
       // Should show error about missing 'encoding', NOT about missing 'facet', 'spec', or 'layer'
-      expect(diagnostics2.length).toBeGreaterThan(0);
-      const messages = diagnostics2.map((d) => d.message).join(' ');
-      expect(messages).toContain('encoding');
-      expect(messages).not.toContain('facet');
-      expect(messages).not.toContain('spec');
-      expect(messages).not.toContain('layer');
+      expect(diagnostics2).toHaveLength(1);
+      expect(diagnostics2[0]?.message).toBe('Missing property "encoding".');
     });
 
     it('should show enum error for invalid property value, not composition spec errors', async () => {
@@ -486,13 +484,10 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       // Should show enum error about mark value
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const messages = diagnostics.map((d) => d.message).join(' ');
-      expect(messages).toContain('Value is not accepted');
-
-      // Should NOT show errors about missing 'facet', 'layer', etc.
-      expect(messages).not.toContain('facet');
-      expect(messages).not.toContain('layer');
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toBe(
+        'Value is not accepted. Valid values: "line", "bar", "point", "area".',
+      );
     });
 
     it('should handle facet spec correctly without showing unit spec errors', async () => {
@@ -524,11 +519,8 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       // Should show error about missing 'spec', NOT about missing 'mark' or 'encoding'
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const messages = diagnostics.map((d) => d.message).join(' ');
-      expect(messages).toContain('spec');
-      expect(messages).not.toContain('mark');
-      expect(messages).not.toContain('encoding');
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toBe('Missing property "spec".');
     });
 
     it('should handle complex Vega-Lite-like schema', async () => {
@@ -589,12 +581,10 @@ describe('validateJsonSchema', () => {
       // Invalid mark value in unit spec
       const text2 = '{"mark": "invalid", "encoding": {}}';
       const diagnostics2 = await validateJsonSchema(text2, validate);
-      expect(diagnostics2.length).toBeGreaterThan(0);
-      const messages2 = diagnostics2.map((d) => d.message).join(' ');
-      expect(messages2).toContain('Value is not accepted');
-      expect(messages2).not.toContain('layer');
-      expect(messages2).not.toContain('facet');
-      expect(messages2).not.toContain('repeat');
+      expect(diagnostics2).toHaveLength(1);
+      expect(diagnostics2[0]?.message).toBe(
+        'Value is not accepted. Valid values: "bar", "line", "point", "area", "boxplot".',
+      );
 
       // Valid layer spec
       const text3 = '{"layer": []}';
@@ -661,21 +651,11 @@ describe('validateJsonSchema', () => {
       const text = '{"mark": "lineg", "encoding": {}}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      // Should show enum error about mark value
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const messages = diagnostics.map((d) => d.message).join(' ');
-      expect(messages).toContain('Value is not accepted');
-
-      // Should NOT show errors from composition branches:
-      // - "Missing property 'repeat'"
-      // - "Missing property 'facet'"
-      // - "Missing property 'layer'"
-      // - "Unknown property 'mark'" (from branches with additionalProperties: false)
-      // - "Unknown property 'encoding'" (from branches with additionalProperties: false)
-      expect(messages).not.toContain('repeat');
-      expect(messages).not.toContain('facet');
-      expect(messages).not.toContain('layer');
-      expect(messages).not.toContain('Unknown property');
+      // Should show enum error about mark value only, not composition branch errors
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toBe(
+        'Value is not accepted. Valid values: "line", "bar", "point".',
+      );
     });
 
     it('should handle oneOf with anyOf combinations', async () => {
@@ -707,10 +687,8 @@ describe('validateJsonSchema', () => {
       const diagnostics = await validateJsonSchema(text, validate);
 
       // Should show error about missing 'requiredA', NOT 'requiredB'
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const messages = diagnostics.map((d) => d.message).join(' ');
-      expect(messages).toContain('requiredA');
-      expect(messages).not.toContain('requiredB');
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toBe('Missing property "requiredA".');
     });
   });
 
@@ -754,9 +732,11 @@ describe('validateJsonSchema', () => {
       const text = '{"optionalName": 123}';
       const diagnostics = await validateJsonSchema(text, validate);
 
-      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
-      expect(diagnostics[0]?.message).toContain('Incorrect type');
+      expect(diagnostics[0]?.message).toBe(
+        'Incorrect type. Expected one of string, null.',
+      );
     });
 
     it('should accept boolean or null for boolean | null type', async () => {
@@ -814,7 +794,9 @@ describe('validateJsonSchema', () => {
       const text3 = '{"optionalStatus": "pending"}';
       const diagnostics3 = await validateJsonSchema(text3, validate);
       expect(diagnostics3).toHaveLength(1);
-      expect(diagnostics3[0]?.message).toContain('Value is not accepted');
+      expect(diagnostics3[0]?.message).toBe(
+        'Value is not accepted. Valid values: "active", "inactive", null.',
+      );
     });
 
     it('should handle number | string union type', async () => {
@@ -873,13 +855,15 @@ describe('validateJsonSchema', () => {
       const text3 = '{"age": -1}';
       const diagnostics3 = await validateJsonSchema(text3, validate);
       expect(diagnostics3).toHaveLength(1);
-      expect(diagnostics3[0]?.message).toContain('below the minimum');
+      expect(diagnostics3[0]?.message).toBe('Value is below the minimum of 0.');
 
       // Should reject number above maximum
       const text4 = '{"age": 150}';
       const diagnostics4 = await validateJsonSchema(text4, validate);
       expect(diagnostics4).toHaveLength(1);
-      expect(diagnostics4[0]?.message).toContain('above the maximum');
+      expect(diagnostics4[0]?.message).toBe(
+        'Value is above the maximum of 120.',
+      );
     });
   });
 });

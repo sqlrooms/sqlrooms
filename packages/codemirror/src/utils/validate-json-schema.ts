@@ -30,7 +30,6 @@ export async function validateJsonSchema(
   }
 
   try {
-    // Create a TextDocument from the text
     const document = TextDocument.create(
       'inmemory://doc.json',
       'json',
@@ -38,10 +37,8 @@ export async function validateJsonSchema(
       text,
     );
 
-    // Parse the JSON document
     const jsonDocument = validator.languageService.parseJSONDocument(document);
 
-    // Get validation diagnostics
     const vsDiagnostics = await validator.languageService.doValidation(
       document,
       jsonDocument,
