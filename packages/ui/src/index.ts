@@ -305,6 +305,7 @@ export {Tree, type TreeNodeData} from './components/tree';
 
 // Hooks
 export {toast, type ExternalToast} from 'sonner';
+export {useToast} from './hooks/useToast';
 
 export {
   useAspectRatioDimensions,
