@@ -20,16 +20,19 @@ function renderToContainer<P extends object>(
 }
 
 /**
- * Renders a React component to a DOM element
- * Returns the rendered DOM node suitable for insertion into the DOM.
- * Note: The root is not unmounted, as the DOM node is intended to be used.
+ * Renders a React component to a DOM element with cleanup support
+ * Returns an object with the rendered DOM node and a destroy callback.
+ * The destroy callback must be called to unmount the React root and prevent memory leaks.
  */
 export function renderComponentToDomElement<P extends object>(
   Component: React.ComponentType<P>,
   props: P,
-): HTMLDivElement {
-  const {container} = renderToContainer(Component, props);
-  return container;
+): {dom: HTMLDivElement; destroy: () => void} {
+  const {container, root} = renderToContainer(Component, props);
+  return {
+    dom: container,
+    destroy: () => root.unmount(),
+  };
 }
 
 /**

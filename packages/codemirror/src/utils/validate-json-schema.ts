@@ -52,10 +52,12 @@ export async function validateJsonSchema(
         severity: convertSeverity(vsSeverity),
         message: message,
         renderMessage: () => {
-          return renderComponentToDomElement(DiagnosticTooltip, {
+          const {dom} = renderComponentToDomElement(DiagnosticTooltip, {
             message,
             code,
           });
+
+          return dom;
         },
       });
     }
@@ -71,9 +73,10 @@ export async function validateJsonSchema(
       severity: 'error',
       message,
       renderMessage: () => {
-        return renderComponentToDomElement(DiagnosticTooltip, {
+        const {dom} = renderComponentToDomElement(DiagnosticTooltip, {
           message,
         });
+        return dom;
       },
     });
   }

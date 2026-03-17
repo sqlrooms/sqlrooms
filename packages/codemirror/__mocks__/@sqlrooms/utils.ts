@@ -3,7 +3,10 @@
 export const renderComponentToDomElement = jest.fn(() => {
   const div = document.createElement('div');
   div.textContent = 'Mocked tooltip';
-  return div;
+  return {
+    dom: div,
+    destroy: jest.fn(),
+  };
 });
 
 export const renderComponentToString = jest.fn(() => 'Mocked string');

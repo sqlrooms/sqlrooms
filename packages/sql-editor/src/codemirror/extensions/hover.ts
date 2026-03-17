@@ -48,16 +48,19 @@ export function createHover({
         return null;
       }
 
-      // Create tooltip DOM element
-      const dom = renderComponentToDomElement(FunctionDocumentation, {
-        functions: functionGroup.overloads,
-      });
+      // Create tooltip DOM element with cleanup callback
+      const {dom, destroy} = renderComponentToDomElement(
+        FunctionDocumentation,
+        {
+          functions: functionGroup.overloads,
+        },
+      );
 
       return {
         pos: node.from,
         end: node.to,
         above: true,
-        create: () => ({dom}),
+        create: () => ({dom, destroy}),
       };
     } catch (error) {
       console.error('Error fetching function hover info:', error);
