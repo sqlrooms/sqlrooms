@@ -1,25 +1,33 @@
 import {getCoreDuckDbConnectionId, type DbConnection} from '@sqlrooms/db';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlrooms/ui';
 import React, {useMemo} from 'react';
 
 export type SqlCellConnectionSelectorProps = {
-  dbConnections: Record<string, DbConnection>;
+  connectors: Record<string, DbConnection>;
   selectedConnectorId: string;
   onChange: (connectorId: string) => void;
 };
 
 export const SqlCellConnectionSelector: React.FC<
   SqlCellConnectionSelectorProps
-> = ({dbConnections, selectedConnectorId, onChange}) => {
+> = ({connectors, selectedConnectorId, onChange}) => {
   const connectionOptions = useMemo(() => {
-    const entries = Object.values(dbConnections);
+    const entries = Object.values(connectors);
     if (!entries.length) {
       return [{id: getCoreDuckDbConnectionId(), title: 'Core DuckDB'}];
     }
-    return entries.map((conn: DbConnection) => ({
-      id: conn.id,
-      title: conn.title || conn.id,
+
+    return entries.map(({id, title}) => ({
+      id,
+      title: title || id,
     }));
-  }, [dbConnections]);
+  }, [connectors]);
 
   if (connectionOptions.length <= 1) {
     return null;
@@ -27,17 +35,18 @@ export const SqlCellConnectionSelector: React.FC<
 
   return (
     <div className="flex-1">
-      <select
-        className="border-input bg-background text-foreground h-7 rounded border px-2 text-xs"
-        value={selectedConnectorId}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {connectionOptions.map((connection) => (
-          <option key={connection.id} value={connection.id}>
-            {connection.title}
-          </option>
-        ))}
-      </select>
+      <Select value={selectedConnectorId} onValueChange={onChange}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {connectionOptions.map(({id, title}) => (
+            <SelectItem key={id} value={id}>
+              {title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };

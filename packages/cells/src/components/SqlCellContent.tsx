@@ -182,7 +182,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     header: (
       <div className="flex w-full items-center gap-2">
         <SqlCellConnectionSelector
-          dbConnections={dbConnections}
+          connectors={dbConnections}
           selectedConnectorId={selectedConnectorId}
           onChange={handleConnectorChange}
         />
