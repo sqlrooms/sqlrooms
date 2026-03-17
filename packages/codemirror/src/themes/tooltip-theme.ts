@@ -1,9 +1,6 @@
 import {EditorView, tooltips} from '@codemirror/view';
+import {getMonospaceFont} from '@sqlrooms/utils';
 
-/**
- * Configures tooltips to use fixed positioning relative to the document body.
- * This allows tooltips to escape overflow:hidden containers (e.g., popovers, modals).
- */
 export const tooltipTheme = [
   // Mount tooltips to document.body so they can escape overflow containers
   // Use a getter to avoid accessing document at module load time (safe for SSR/tests)
@@ -12,7 +9,7 @@ export const tooltipTheme = [
       return typeof document !== 'undefined' ? document.body : undefined;
     },
   }),
-  // Style adjustments for body-mounted tooltips
+
   EditorView.theme({
     '.cm-tooltip': {
       // Ensure proper z-index above other elements
@@ -20,22 +17,31 @@ export const tooltipTheme = [
       padding: '0 !important',
     },
     '.cm-tooltip-lint': {
-      // Lint tooltip styling
       fontSize: '12px',
-      maxWidth: '400px',
-      padding: '4px 8px !important',
+      fontFamily: getMonospaceFont(),
+      maxWidth: '500px',
+      padding: '4px 0 !important',
+      lineHeight: '18px',
     },
     '.cm-diagnostic': {
-      // Individual error styling
       padding: '0 !important',
       margin: '0 !important',
-      lineHeight: '1.5',
+      lineHeight: '1.6',
+      '&:not(:first-child)': {
+        borderTop: '1px solid var(--color-border)',
+        marginTop: '8px !important',
+        paddingTop: '8px !important',
+      },
     },
     '.cm-diagnosticText': {
-      // Error text styling
       fontSize: '12px',
       display: 'block',
-      fontFamily: 'monospace',
+      fontFamily: 'inherit',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+      lineHeight: '18px',
+      color: 'var(--color-foreground)',
+      padding: 0,
     },
   }),
 ];

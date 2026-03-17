@@ -3,7 +3,7 @@ import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import {syntaxTree} from '@codemirror/language';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
-import {renderComponentToString} from '@sqlrooms/utils';
+import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
 
 export interface HoverContext {
@@ -49,8 +49,7 @@ export function createHover({
       }
 
       // Create tooltip DOM element
-      const dom = document.createElement('div');
-      dom.innerHTML = renderComponentToString(FunctionDocumentation, {
+      const dom = renderComponentToDomElement(FunctionDocumentation, {
         functions: functionGroup.overloads,
       });
 
