@@ -35,9 +35,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
 
   const filteredColumns = field.types
     ? columns.filter((col) =>
-        field.types!.some((t) =>
-          col.type.toUpperCase().includes(t.toUpperCase()),
-        ),
+        field.types!.some((t) => col.type.toUpperCase() === t.toUpperCase()),
       )
     : columns;
 

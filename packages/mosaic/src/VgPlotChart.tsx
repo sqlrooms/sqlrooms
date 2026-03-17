@@ -34,6 +34,7 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
   (props) => {
     const containerRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
+      let cancelled = false;
       (async () => {
         if (containerRef.current) {
           let element: HTMLElement | SVGSVGElement;
@@ -41,15 +42,21 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
             element = props.plot;
           } else if (isSpecProps(props)) {
             const ast = await parseSpec(props.spec);
+            if (cancelled) return;
             const options = props.params ? {params: props.params} : undefined;
             element = (await astToDOM(ast, options)).element;
           } else {
             element = document.createElement('div');
             element.innerHTML = 'Error: Invalid props provided to VgPlotChart';
           }
-          containerRef.current?.replaceChildren(element);
+          if (!cancelled) {
+            containerRef.current?.replaceChildren(element);
+          }
         }
       })();
+      return () => {
+        cancelled = true;
+      };
     }, [props]);
 
     return <div ref={containerRef} />;

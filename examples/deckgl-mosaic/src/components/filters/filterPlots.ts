@@ -70,6 +70,7 @@ export const timeChartConfig: ChartConfig = {
     yAxis: null,
     height: 180,
     width: 380,
+    // Negative left margin offsets the hidden y-axis (yAxis: null) so bin bars align flush
     margins: {left: -15, right: 15, top: 10, bottom: 30},
     params: {brush: {select: 'crossfilter'}},
   } as Spec,

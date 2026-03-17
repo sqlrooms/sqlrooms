@@ -57,10 +57,11 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     setFieldValues({});
   }, []);
 
+  const DIALOG_CLOSE_ANIMATION_MS = 200;
+
   const handleClose = useCallback(() => {
     onOpenChange(false);
-    // Reset after animation
-    setTimeout(handleReset, 200);
+    setTimeout(handleReset, DIALOG_CLOSE_ANIMATION_MS);
   }, [onOpenChange, handleReset]);
 
   const handleSelectBuilder = useCallback((builder: MosaicChartBuilder) => {
@@ -75,7 +76,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   const canCreate = useMemo(() => {
     if (!selectedBuilder) return false;
     return selectedBuilder.fields
-      .filter((f) => f.required !== false)
+      .filter((f) => f.required ?? true)
       .every((f) => fieldValues[f.key]);
   }, [selectedBuilder, fieldValues]);
 

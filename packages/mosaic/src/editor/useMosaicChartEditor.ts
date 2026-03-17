@@ -143,7 +143,7 @@ export function useMosaicChartEditor({
   const onSpecChangeRef = useRef(onSpecChange);
   useEffect(() => {
     onSpecChangeRef.current = onSpecChange;
-  });
+  }, [onSpecChange]);
 
   const setEditedSpec = useCallback((spec: string) => {
     setEditorState((prev) => ({...prev, editedSpecString: spec}));

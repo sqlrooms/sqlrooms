@@ -11,7 +11,7 @@ export interface MosaicCodeMirrorEditorProps extends Omit<
 > {
   /**
    * Whether to enable Mosaic JSON schema validation
-   * @default true
+   * @default false
    */
   enableSchemaValidation?: boolean;
 }
