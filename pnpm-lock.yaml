@@ -2872,8 +2872,8 @@ importers:
         specifier: ^11.0.1
         version: 11.0.1
       lucide-react:
-        specifier: '>=0.300.0'
-        version: 0.544.0(react@19.2.1)
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
       react:
         specifier: 19.2.1
         version: 19.2.1
