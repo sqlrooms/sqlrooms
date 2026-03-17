@@ -20,12 +20,12 @@ export function createDuckDbSqlExtension(
   });
 
   return sqlExtension({
-    enableLinting: true,
+    enableLinting: false,
     linterConfig: {
       parser: duckdbParser,
       delay: LINT_DELAY_DEFAULT,
     },
-    enableGutterMarkers: true,
+    enableGutterMarkers: false,
     gutterConfig: {
       parser: duckdbParser,
     },
