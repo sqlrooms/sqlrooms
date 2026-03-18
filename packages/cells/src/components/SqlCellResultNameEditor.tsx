@@ -11,21 +11,30 @@ export type SqlCellResultNameEditorProps = {
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
+  /** Optional extra validation beyond the SQL-identifier check. Returns an
+   *  error message string when invalid, or null when the name is acceptable. */
+  getValidationError?: (name: string) => string | null;
 };
 
 export const SqlCellResultNameEditor: React.FC<
   SqlCellResultNameEditorProps
-> = ({value, placeholder, onChange}) => {
-  const [isInvalid, setIsInvalid] = useState(false);
+> = ({value, placeholder, onChange, getValidationError}) => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const validateResultName = useCallback((value: string) => {
-    const nextValue = value.trim();
-    return Boolean(nextValue) && isValidSqlIdentifier(nextValue);
-  }, []);
+  const validateResultName = useCallback(
+    (value: string): string | null => {
+      const nextValue = value.trim();
+      if (!nextValue || !isValidSqlIdentifier(nextValue)) {
+        return 'Invalid result name';
+      }
+      return getValidationError?.(nextValue) ?? null;
+    },
+    [getValidationError],
+  );
 
   const handleInputChange = useCallback(
     (value: string) => {
-      setIsInvalid(!validateResultName(value));
+      setErrorMessage(validateResultName(value));
     },
     [validateResultName],
   );
@@ -33,24 +42,25 @@ export const SqlCellResultNameEditor: React.FC<
   const handleChange = useCallback(
     (value: string) => {
       const nextValue = value.trim();
-      if (!validateResultName(nextValue)) {
-        setIsInvalid(true);
+      const error = validateResultName(nextValue);
+      if (error) {
+        setErrorMessage(error);
         return;
       }
 
       onChange(nextValue);
-      setIsInvalid(false);
+      setErrorMessage(null);
     },
     [onChange, validateResultName],
   );
 
   return (
-    <Tooltip open={isInvalid}>
+    <Tooltip open={errorMessage !== null}>
       <TooltipTrigger asChild>
         <div>
           <EditableText
             className={`h-6 w-40 font-mono text-xs text-green-500 shadow-none ${
-              isInvalid
+              errorMessage !== null
                 ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                 : ''
             }`}
@@ -61,7 +71,9 @@ export const SqlCellResultNameEditor: React.FC<
         </div>
       </TooltipTrigger>
       <TooltipContent side="top">
-        <span className="text-xs">Invalid result name</span>
+        <span className="text-xs">
+          {errorMessage ?? 'Invalid result name'}
+        </span>
       </TooltipContent>
     </Tooltip>
   );
