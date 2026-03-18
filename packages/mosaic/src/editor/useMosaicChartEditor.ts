@@ -151,39 +151,28 @@ export function useMosaicChartEditor({
   }, []);
 
   const applyChanges = useCallback(() => {
-    setDebouncedParsed((currentParsed) => {
-      if (!currentParsed.parsedSpec) return currentParsed;
+    setEditorState((prev) => {
+      let parsed: Spec;
+      try {
+        parsed = JSON.parse(prev.editedSpecString) as Spec;
+      } catch {
+        return prev;
+      }
 
-      const newAppliedSpecString = JSON.stringify(currentParsed.parsedSpec);
+      const newAppliedSpecString = JSON.stringify(parsed);
+      const dirty = newAppliedSpecString !== prev.appliedSpecString;
 
-      setEditorState((prev) => {
-        const dirty = (() => {
-          try {
-            return (
-              JSON.stringify(JSON.parse(prev.editedSpecString)) !==
-              prev.appliedSpecString
-            );
-          } catch {
-            return true;
+      if (dirty) {
+        onSpecChangeRef.current?.(parsed);
+      }
+
+      return dirty
+        ? {
+            ...prev,
+            appliedSpecString: newAppliedSpecString,
+            prevInitialSpecString: newAppliedSpecString,
           }
-        })();
-
-        if (dirty) {
-          onSpecChangeRef.current?.(currentParsed.parsedSpec!);
-        }
-
-        return {
-          ...prev,
-          appliedSpecString: dirty
-            ? newAppliedSpecString
-            : prev.appliedSpecString,
-          prevInitialSpecString: dirty
-            ? newAppliedSpecString
-            : prev.prevInitialSpecString,
-        };
-      });
-
-      return currentParsed;
+        : prev;
     });
   }, []);
 
