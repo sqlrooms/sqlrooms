@@ -29,6 +29,7 @@ import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
+const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
 const DropTableCommandInput = z.object({
   tableName: z.string().describe('Name of the table to drop.'),
 });
@@ -287,29 +288,8 @@ export type DuckDbSliceState = {
   };
 };
 
-/**
- * Default filter for table schemas that excludes internal SQLRooms resources.
- * Tables with database or schema names prefixed with `__sqlrooms_` are considered internal.
- */
-export function defaultLoadTableSchemasFilter(
-  table: QualifiedTableName,
-): boolean {
-  return (
-    !table.database?.startsWith('__sqlrooms_') &&
-    !table.schema?.startsWith('__sqlrooms_')
-  );
-}
-
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
-  /**
-   * Optional filter function applied when loading table schemas.
-   * Receives a QualifiedTableName and returns true to include the table.
-   * Defaults to {@link defaultLoadTableSchemasFilter}, which excludes all
-   * internal SQLRooms resources (databases/schemas prefixed with `__sqlrooms_`).
-   * Pass `() => true` to disable filtering.
-   */
-  loadTableSchemasFilter?: (table: QualifiedTableName) => boolean;
 };
 
 /**
@@ -317,7 +297,6 @@ export type CreateDuckDbSliceProps = {
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
-  loadTableSchemasFilter = defaultLoadTableSchemasFilter,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
@@ -509,6 +488,17 @@ export function createDuckDbSlice({
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
             const {schema, database, table} = filter || {};
+
+            // Build WHERE conditions
+            const conditions = [
+              // Exclude internal SQLRooms databases and schemas
+              `NOT starts_with(database, ${escapeVal(INTERNAL_SQLROOMS_PREFIX)})`,
+              `NOT starts_with(schema, ${escapeVal(INTERNAL_SQLROOMS_PREFIX)})`,
+              schema ? `schema = ${escapeVal(schema)}` : '',
+              database ? `database = ${escapeVal(database)}` : '',
+              table ? `name = ${escapeVal(table)}` : '',
+            ].filter(Boolean);
+
             const sql = `WITH tables_and_views AS (
               FROM duckdb_tables() SELECT
                 database_name AS database,
@@ -536,17 +526,7 @@ export function createDuckDbSlice({
                 estimated_size
             FROM (DESCRIBE)
             LEFT OUTER JOIN tables_and_views USING (database, schema, name)
-            ${
-              schema || database || table
-                ? `WHERE ${[
-                    schema ? `schema = ${escapeVal(schema)}` : '',
-                    database ? `database = ${escapeVal(database)}` : '',
-                    table ? `name = ${escapeVal(table)}` : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' AND ')}`
-                : ''
-            }`;
+            WHERE ${conditions.join(' AND ')}`;
             const describeResults = await connector.query(sql);
 
             const newTables: DataTable[] = [];
@@ -695,10 +675,7 @@ export function createDuckDbSlice({
                     ?.get(0);
                 }),
               );
-              const allTables = await get().db.loadTableSchemas();
-              const newTables = allTables.filter((t) =>
-                loadTableSchemasFilter(t.table),
-              );
+              const newTables = await get().db.loadTableSchemas();
               // Only update if there's an actual change in the schemas
               if (!deepEquals(newTables, get().db.tables)) {
                 set((state) =>

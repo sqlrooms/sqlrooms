@@ -1,13 +1,8 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
-import {
-  createDuckDbSlice,
-  defaultLoadTableSchemasFilter,
-  DuckDbSliceState,
-} from '../src/DuckDbSlice';
+import {createDuckDbSlice, DuckDbSliceState} from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
-import {makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 
 type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
 
@@ -24,64 +19,6 @@ function createTestStore() {
     ...createDuckDbSlice({connector})(...args),
   }));
 }
-
-describe('defaultLoadTableSchemasFilter', () => {
-  it('should exclude tables in __sqlrooms_* databases', () => {
-    expect(
-      defaultLoadTableSchemasFilter(
-        makeQualifiedTableName({
-          database: '__sqlrooms_ephemeral',
-          schema: 'main',
-          table: 'temp',
-        }),
-      ),
-    ).toBe(false);
-  });
-
-  it('should exclude tables in __sqlrooms_* schemas', () => {
-    expect(
-      defaultLoadTableSchemasFilter(
-        makeQualifiedTableName({
-          database: 'main',
-          schema: '__sqlrooms_external',
-          table: 'data',
-        }),
-      ),
-    ).toBe(false);
-  });
-
-  it('should include tables in regular databases and schemas', () => {
-    expect(
-      defaultLoadTableSchemasFilter(
-        makeQualifiedTableName({
-          database: 'my_db',
-          schema: 'public',
-          table: 'users',
-        }),
-      ),
-    ).toBe(true);
-  });
-
-  it('should include tables in __ prefixed databases that are not __sqlrooms_*', () => {
-    expect(
-      defaultLoadTableSchemasFilter(
-        makeQualifiedTableName({
-          database: '__my_database',
-          schema: 'public',
-          table: 'users',
-        }),
-      ),
-    ).toBe(true);
-  });
-
-  it('should include tables when no database or schema is set', () => {
-    expect(
-      defaultLoadTableSchemasFilter(
-        makeQualifiedTableName({table: 'users'}),
-      ),
-    ).toBe(true);
-  });
-});
 
 describe('DuckDbSlice', () => {
   let store: ReturnType<typeof createTestStore>;
