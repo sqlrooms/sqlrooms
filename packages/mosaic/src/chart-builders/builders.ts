@@ -9,7 +9,7 @@ import {
   LineChart,
   TrendingUp,
 } from 'lucide-react';
-import {MosaicChartBuilder} from './types';
+import {ChartBuilderTemplate} from './types';
 
 const BG_COLOR = '#f5d9a6';
 const FG_COLOR = '#e67f5f';
@@ -17,7 +17,7 @@ const FG_COLOR = '#e67f5f';
 /**
  * Creates a count plot (bar chart with counts) of a field
  */
-const countPlotBuilder: MosaicChartBuilder = {
+const countPlotBuilder: ChartBuilderTemplate = {
   id: 'count-plot',
   icon: BarChartHorizontal,
   description: 'Create a count plot of a field',
@@ -56,7 +56,7 @@ const countPlotBuilder: MosaicChartBuilder = {
 /**
  * Creates a histogram with background/filtered overlay
  */
-const histogramBuilder: MosaicChartBuilder = {
+const histogramBuilder: ChartBuilderTemplate = {
   id: 'histogram',
   icon: BarChart3,
   description: 'Create a histogram of a field',
@@ -94,7 +94,7 @@ const histogramBuilder: MosaicChartBuilder = {
 /**
  * Creates a line chart of two fields
  */
-const lineChartBuilder: MosaicChartBuilder = {
+const lineChartBuilder: ChartBuilderTemplate = {
   id: 'line-chart',
   icon: LineChart,
   description: 'Create a line chart of two fields',
@@ -126,7 +126,7 @@ const lineChartBuilder: MosaicChartBuilder = {
 /**
  * Creates an empirical cumulative distribution (eCDF) chart
  */
-const ecdfBuilder: MosaicChartBuilder = {
+const ecdfBuilder: ChartBuilderTemplate = {
   id: 'ecdf',
   icon: TrendingUp,
   description: 'Create an eCDF chart of a field',
@@ -163,7 +163,7 @@ const ecdfBuilder: MosaicChartBuilder = {
 /**
  * Creates a 2D heatmap of two fields
  */
-const heatmapBuilder: MosaicChartBuilder = {
+const heatmapBuilder: ChartBuilderTemplate = {
   id: 'heatmap',
   icon: Grid3X3,
   description: 'Create a 2D heatmap of two fields',
@@ -199,7 +199,7 @@ const heatmapBuilder: MosaicChartBuilder = {
 /**
  * Creates a box plot
  */
-const boxPlotBuilder: MosaicChartBuilder = {
+const boxPlotBuilder: ChartBuilderTemplate = {
   id: 'box-plot',
   icon: AlignHorizontalDistributeCenter,
   description: 'Create a box plot',
@@ -231,7 +231,7 @@ const boxPlotBuilder: MosaicChartBuilder = {
 /**
  * Creates a bubble chart
  */
-const bubbleChartBuilder: MosaicChartBuilder = {
+const bubbleChartBuilder: ChartBuilderTemplate = {
   id: 'bubble-chart',
   icon: BubblesIcon,
   description: 'Create a bubble chart',
@@ -265,7 +265,7 @@ const bubbleChartBuilder: MosaicChartBuilder = {
 /**
  * Creates a chart with custom spec (empty template)
  */
-const customSpecBuilder: MosaicChartBuilder = {
+const customSpecBuilder: ChartBuilderTemplate = {
   id: 'custom-spec',
   icon: Code,
   description: 'Create a chart with custom spec',
@@ -294,7 +294,7 @@ const customSpecBuilder: MosaicChartBuilder = {
  * Creates the default set of chart builders.
  * Call this to get a fresh array that you can extend or filter.
  */
-export function createDefaultChartBuilders(): MosaicChartBuilder[] {
+export function createDefaultChartBuilders(): ChartBuilderTemplate[] {
   return [
     countPlotBuilder,
     histogramBuilder,

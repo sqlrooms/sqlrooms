@@ -4,7 +4,7 @@ import {ComponentType} from 'react';
 /**
  * Describes a field selector in a chart builder UI
  */
-export interface MosaicChartBuilderField {
+export interface ChartBuilderField {
   /** Unique key for this field */
   key: string;
   /** Display label */
@@ -18,7 +18,7 @@ export interface MosaicChartBuilderField {
 /**
  * Describes a chart builder template that generates Mosaic JSON specs
  */
-export interface MosaicChartBuilder {
+export interface ChartBuilderTemplate {
   /** Unique identifier */
   id: string;
   /** Icon component */
@@ -26,7 +26,7 @@ export interface MosaicChartBuilder {
   /** Short description of what this builder creates */
   description: string;
   /** Field selectors the user must fill in */
-  fields: MosaicChartBuilderField[];
+  fields: ChartBuilderField[];
   /** Generate a Mosaic spec from table name and selected field values */
   createSpec: (tableName: string, values: Record<string, string>) => Spec;
 }

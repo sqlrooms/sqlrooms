@@ -1,8 +1,8 @@
 import type {Param} from '@sqlrooms/mosaic';
 import {
-  ChartBuilder,
   type ChartBuilderColumn,
   MosaicChart,
+  MosaicChartBuilder,
   type Spec,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
@@ -171,7 +171,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
           </div>
         </ScrollArea>
 
-        <ChartBuilder.Dialog
+        <MosaicChartBuilder.Dialog
           open={builderOpen}
           onOpenChange={setBuilderOpen}
           tableName="earthquakes"

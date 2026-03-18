@@ -13,10 +13,10 @@ import {
 } from '@sqlrooms/ui';
 import {Check, ChevronsUpDown} from 'lucide-react';
 import React, {useState} from 'react';
-import {ChartBuilderColumn, MosaicChartBuilderField} from './types';
+import {ChartBuilderColumn, ChartBuilderField} from './types';
 
 export interface FieldSelectorInputProps {
-  field: MosaicChartBuilderField;
+  field: ChartBuilderField;
   columns: ChartBuilderColumn[];
   value: string | undefined;
   onChange: (value: string) => void;
