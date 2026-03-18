@@ -46,6 +46,8 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
             'overflow-y-auto px-3 pb-3',
             'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
             'dark:scrollbar-thumb-gray-600',
+            // Add selection styles to improve visibility
+            'selection:bg-primary/30 selection:text-foreground',
           )}
           style={{
             scrollbarWidth: 'thin',
