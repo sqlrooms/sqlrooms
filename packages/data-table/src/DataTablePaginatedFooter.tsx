@@ -137,7 +137,7 @@ export function DataTablePaginatedFooter<Data extends object>({
             </>
           ) : null}
 
-          {numRows !== undefined && isFinite(numRows) ? (
+          {numRows !== undefined && Number.isFinite(numRows) ? (
             <div className={cn('min-w-fit font-normal', fontSizeClass)}>
               {`${formatCount(numRows)} rows`}
             </div>
