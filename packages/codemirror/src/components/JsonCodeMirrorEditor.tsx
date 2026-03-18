@@ -6,6 +6,7 @@ import {autoTriggerOnQuote} from '../extensions/auto-trigger';
 import {json} from '@codemirror/lang-json';
 import {createJsonTheme} from '../themes/json-theme';
 import {tooltipTheme} from '../themes/tooltip-theme';
+import {createJsonSchemaValidator} from '../utils/create-json-schema-validator';
 
 export interface JsonCodeMirrorEditorProps extends Omit<
   CodeMirrorEditorProps,
@@ -31,18 +32,23 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
   const stringValue =
     typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
 
+  // Create validator once if schema is provided
+  const validator = useMemo(() => {
+    return schema ? createJsonSchemaValidator(schema) : null;
+  }, [schema]);
+
   // Build JSON-specific extensions
   const extensions = useMemo(() => {
     return [
       json(),
       createJsonTheme({hideGutter}),
       tooltipTheme, // Use fixed positioning for tooltips to escape overflow containers
-      ...(schema
-        ? [jsonSchemaLinter(schema), jsonSchemaAutocomplete(schema)]
+      ...(validator
+        ? [jsonSchemaLinter(validator), jsonSchemaAutocomplete(validator)]
         : []),
       autoTriggerOnQuote(),
     ];
-  }, [schema, hideGutter]);
+  }, [validator, hideGutter]);
 
   return (
     <CodeMirrorEditor
@@ -51,7 +57,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
       options={{
         lineNumbers: options.lineNumbers ?? false,
         lineWrapping: options.lineWrapping ?? true,
-        autocompletion: true,
+        autocompletion: !validator, // Only use base autocompletion when no schema validator
         foldGutter: options.foldGutter ?? false,
         ...options,
       }}

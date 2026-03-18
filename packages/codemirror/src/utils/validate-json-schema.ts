@@ -1,8 +1,8 @@
 import {DiagnosticSeverity, LanguageService} from 'vscode-json-languageservice';
-import {TextDocument} from 'vscode-languageserver-textdocument';
 import {Diagnostic} from '@codemirror/lint';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import {DiagnosticTooltip} from '../components/DiagnosticTooltip';
+import {createJsonDocument} from './create-json-document';
 
 /**
  * Validator object containing schema and language service
@@ -30,14 +30,7 @@ export async function validateJsonSchema(
   }
 
   try {
-    const document = TextDocument.create(
-      'inmemory://doc.json',
-      'json',
-      1,
-      text,
-    );
-
-    const jsonDocument = validator.languageService.parseJSONDocument(document);
+    const {document, jsonDocument} = createJsonDocument(text, validator);
 
     const vsDiagnostics = await validator.languageService.doValidation(
       document,
