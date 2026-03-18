@@ -34,17 +34,18 @@ export function createQueryToolRenderer(
 
   return function QueryToolResultRenderer({
     output,
+    input,
   }: ToolRendererProps<QueryToolOutput, QueryToolParameters>) {
     const tableModal = useDisclosure();
     if (!output) return null;
-    const {title, sqlQuery} = output;
-    // Per-call output takes precedence over the factory default.
+    const sqlQuery = output.sqlQuery ?? input?.sqlQuery ?? '';
+    const title = output.title ?? 'Query Result';
     const shouldShowSql = output.showSql ?? showSql;
     return (
       <>
         {shouldShowSql && (
           <div className="text-muted-foreground group/sql bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
-            <pre className="pr-8 wrap-break-word whitespace-pre-wrap">
+            <pre className="min-h-4 pr-8 wrap-break-word whitespace-pre-wrap">
               {sqlQuery}
             </pre>
             <div className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within/sql:opacity-100 group-hover/sql:opacity-100">

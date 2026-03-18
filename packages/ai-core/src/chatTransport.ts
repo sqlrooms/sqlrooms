@@ -312,20 +312,8 @@ export function createChatHandlers({
         store.getState().ai.setToolCallSession(toolCallId, undefined);
       }
     },
-    onChatData: (sessionId: string, dataPart: DataUIPart<UIDataTypes>) => {
-      if (
-        dataPart.type === 'data-tool-additional-output' &&
-        dataPart.data &&
-        (dataPart.data as {toolCallId?: unknown}).toolCallId != null
-      ) {
-        const {toolCallId, output} = dataPart.data as {
-          toolCallId: string;
-          output: unknown;
-        };
-        if (sessionId) {
-          store.getState().ai.setToolEditState(sessionId, toolCallId, output);
-        }
-      }
+    onChatData: (_sessionId: string, _dataPart: DataUIPart<UIDataTypes>) => {
+      // data-tool-additional-output events are currently unused
     },
     onChatFinish: ({
       sessionId,

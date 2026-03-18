@@ -11,7 +11,7 @@ const baseFields = {
 
 describe('AnalysisSession migration', () => {
   describe('needsV0_26_0Migration guard', () => {
-    it('does NOT re-migrate a fully migrated session (has uiMessages + toolEditState)', () => {
+    it('does NOT re-migrate a fully migrated session (has uiMessages, no legacy keys)', () => {
       const existingMessages = [
         {
           id: 'msg-1',
@@ -22,10 +22,8 @@ describe('AnalysisSession migration', () => {
       const raw = {
         ...baseFields,
         uiMessages: existingMessages,
-        toolEditState: {},
       };
       const result = AnalysisSessionSchema.parse(raw);
-      // uiMessages should not be extended — no duplication
       expect(result.uiMessages).toHaveLength(1);
       expect(result.uiMessages[0]?.id).toBe('msg-1');
     });
@@ -33,7 +31,6 @@ describe('AnalysisSession migration', () => {
     it('DOES migrate a pre-v0.26.0 session that has no uiMessages', () => {
       const raw = {
         ...baseFields,
-        // no uiMessages, no toolEditState — this is a pre-migration session
         analysisResults: [
           {
             id: 'r1',
@@ -45,13 +42,10 @@ describe('AnalysisSession migration', () => {
       };
       const result = AnalysisSessionSchema.parse(raw);
       expect(Array.isArray(result.uiMessages)).toBe(true);
-      // One user message synthesized from the prompt
       expect(result.uiMessages.some((m) => m.role === 'user')).toBe(true);
     });
 
-    it('renames toolAdditionalData to toolEditState without duplicating existing uiMessages', () => {
-      // Sessions persisted by an intermediate build that wrote toolAdditionalData
-      // instead of toolEditState but already had uiMessages synthesized.
+    it('strips legacy toolAdditionalData without duplicating existing uiMessages', () => {
       const existingMessages = [
         {
           id: 'msg-1',
@@ -63,17 +57,16 @@ describe('AnalysisSession migration', () => {
         ...baseFields,
         uiMessages: existingMessages,
         toolAdditionalData: {'call-1': {someEdit: true}},
-        // no toolEditState
       };
       const result = AnalysisSessionSchema.parse(raw);
-      // Messages must not be duplicated
       expect(result.uiMessages).toHaveLength(1);
       expect(result.uiMessages[0]?.id).toBe('msg-1');
-      // Legacy key must be promoted to toolEditState
-      expect(result.toolEditState).toEqual({'call-1': {someEdit: true}});
+      expect(
+        (result as Record<string, unknown>).toolAdditionalData,
+      ).toBeUndefined();
     });
 
-    it('adds empty toolEditState when uiMessages is present but no tool state key exists', () => {
+    it('parses cleanly when uiMessages is present and no legacy keys exist', () => {
       const existingMessages = [
         {
           id: 'msg-2',
@@ -84,14 +77,10 @@ describe('AnalysisSession migration', () => {
       const raw = {
         ...baseFields,
         uiMessages: existingMessages,
-        // neither toolEditState nor toolAdditionalData
       };
       const result = AnalysisSessionSchema.parse(raw);
-      // Messages must not be duplicated
       expect(result.uiMessages).toHaveLength(1);
       expect(result.uiMessages[0]?.id).toBe('msg-2');
-      // toolEditState must default to empty record
-      expect(result.toolEditState).toEqual({});
     });
   });
 });

@@ -246,17 +246,18 @@ tools: {search_documentation: createRagTool()},
 toolRenderers: {search_documentation: ragToolRenderer},
 ```
 
-### `@sqlrooms/ai-core`: `setSessionToolAdditionalData` renamed (breaking)
+### `@sqlrooms/ai-core`: In-chat tool result editing removed (breaking)
+
+The `setSessionToolAdditionalData` API and the `toolAdditionalData` session field have been removed. In-chat editing of tool results (e.g. inline Vega chart spec editing) is no longer supported — charts and other tool outputs are now rendered read-only within the chat.
 
 ```ts
 // Before
 state.ai.setSessionToolAdditionalData(sessionId, toolCallId, data);
 
-// After
-state.ai.setToolEditState(sessionId, toolCallId, data);
+// After — remove the call entirely; no replacement needed.
 ```
 
-Session state field `toolAdditionalData` is renamed to `toolEditState`. Persisted sessions are migrated automatically on load.
+If you were using `toolAdditionalData` to persist user edits to charts, extract the chart into a first-class entity stored independently of the chat instead. Persisted sessions with `toolAdditionalData` are automatically cleaned up on load.
 
 ### `@sqlrooms/ai`: Remote transport — drop `data-tool-additional-output` custom chunk (breaking)
 

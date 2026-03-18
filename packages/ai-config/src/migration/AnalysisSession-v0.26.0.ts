@@ -5,7 +5,7 @@
  *
  * Changes:
  * - add uiMessages (AI SDK v5) to AnalysisSession along with legacy analysisResults
- * - add toolEditState (originally toolAdditionalData) to AnalysisSession to store tool edit state per session
+ * - remove toolAdditionalData (in-chat editing removed)
  * - deprecate the following properties in AnalysisResult:
  *   - streamMessage
  *
@@ -43,7 +43,6 @@
  *     errorMessage?: { error: string },
  *   }>,
  *   uiMessages: Array<UIMessageSchema>, //<-- NEW FIELD
- *   toolEditState: Record<string, unknown>, //<-- NEW FIELD
  *   messagesRevision?: number, //<-- NEW FIELD
  *   prompt: string, //<-- NEW FIELD
  *   isRunning: boolean, //<-- NEW FIELD
@@ -62,30 +61,24 @@ function needsV0_26_0Migration(data: unknown): boolean {
 
   const d = data as UnknownRecord;
 
-  // Use key-presence checks rather than value comparisons so that a field
-  // explicitly set to `{}` or `null` is still treated as "present" and does
-  // not incorrectly re-trigger migration (which could duplicate uiMessages).
+  // Needs migration if uiMessages is missing, or if legacy toolAdditionalData is present
   const hasUiMessages = 'uiMessages' in d;
-  const hasToolEditState = 'toolEditState' in d;
+  const hasLegacyToolData = 'toolAdditionalData' in d;
 
-  return !hasUiMessages || !hasToolEditState;
+  return !hasUiMessages || hasLegacyToolData;
 }
 
-/** Perform migration to AI SDK v5 uiMessages/toolEditState */
+/** Perform migration to AI SDK v5 uiMessages, strip toolAdditionalData */
 function migrateFromV0_26_0(data: unknown) {
-  const {toolAdditionalData: legacyToolAdditionalData, ...session} = {
+  const {toolAdditionalData: _legacyToolAdditionalData, ...session} = {
     ...(data as UnknownRecord),
   };
   const analysisResults = (session.analysisResults as UnknownRecord[]) || [];
   const existingUiMessages = (session.uiMessages as UnknownRecord[]) || [];
-  const toolEditState =
-    (session.toolEditState as UnknownRecord) ??
-    (legacyToolAdditionalData as UnknownRecord) ??
-    {};
 
   // Only synthesize messages from legacy analysisResults when uiMessages is
-  // absent entirely. If it's already present (e.g. only toolAdditionalData →
-  // toolEditState rename is needed), skip synthesis to avoid duplicating messages.
+  // absent entirely. If it's already present (e.g. only key cleanup is needed),
+  // skip synthesis to avoid duplicating messages.
   const synthesizedMessages: UnknownRecord[] = [];
   const needsMessageSynthesis = !('uiMessages' in (data as UnknownRecord));
 
@@ -120,12 +113,6 @@ function migrateFromV0_26_0(data: unknown) {
             const state = toolInvocation.state as string;
             const args = toolInvocation.args;
             const llmResult = toolInvocation.result;
-            const additional = part.additionalData;
-
-            // Persist additionalData per toolCallId into session-level toolEditState
-            if (toolCallId && additional !== undefined && toolEditState) {
-              toolEditState[toolCallId] = additional;
-            }
 
             // Map state to AI SDK v5 tool-* parts
             if (state === 'call') {
@@ -136,7 +123,6 @@ function migrateFromV0_26_0(data: unknown) {
                 input: args,
               });
             } else {
-              // Fallback: treat other states as result
               assistantParts.push({
                 type: `tool-${toolName}`,
                 toolCallId,
@@ -147,7 +133,6 @@ function migrateFromV0_26_0(data: unknown) {
             }
           }
         }
-        // Unknown legacy part types are ignored
       }
 
       if (assistantParts.length > 0) {
@@ -174,7 +159,6 @@ function migrateFromV0_26_0(data: unknown) {
     ...session,
     analysisResults: cleanedAnalysisResults,
     uiMessages: [...existingUiMessages, ...synthesizedMessages],
-    toolEditState,
     prompt: '',
     isRunning: false,
   };

@@ -10,7 +10,7 @@ import {
   TabsTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {Check, Code2, Database, EditIcon} from 'lucide-react';
+import {Check, Code2, CodeIcon, Database} from 'lucide-react';
 import {useState} from 'react';
 import {useVegaEditorContext} from './editor/VegaEditorContext';
 import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
@@ -30,7 +30,8 @@ export interface VegaEditActionProps {
 }
 
 /**
- * Inline editor actions component (Discard + Apply)
+ * Inline editor actions component (Discard + Apply).
+ * Only shown when editing is enabled.
  */
 function EditorActions({onClose}: {onClose: () => void}) {
   const {actions, canApply, hasChanges} = useVegaEditorContext();
@@ -66,14 +67,15 @@ function EditorActions({onClose}: {onClose: () => void}) {
 }
 
 /**
- * Edit action component for VegaLiteArrowChart.
- * Provides a popover with tabbed Vega-Lite spec and SQL editors.
+ * View/Edit action component for VegaLiteArrowChart.
+ * Provides a popover with tabbed Vega-Lite spec and SQL viewers.
+ * When `editable` is true in the context, shows editing controls.
  *
  * Must be used within a VegaChartContainer to access editor context.
  *
  * @example
  * ```tsx
- * <VegaChartContainer spec={spec} sqlQuery={query} editable>
+ * <VegaChartContainer spec={spec} sqlQuery={query}>
  *   <VegaChartDisplay>
  *     <VegaLiteArrowChart.Actions>
  *       <VegaExportAction />
@@ -82,18 +84,13 @@ function EditorActions({onClose}: {onClose: () => void}) {
  *   </VegaChartDisplay>
  * </VegaChartContainer>
  * ```
- *
- * @example
- * ```tsx
- * // Spec editor only
- * <VegaEditAction editorMode="spec" />
- * ```
  */
 export const VegaEditAction: React.FC<VegaEditActionProps> = ({
   editorMode = 'both',
   className,
 }) => {
   const editorPopover = useDisclosure();
+  const {editable} = useVegaEditorContext();
   const [activeTab, setActiveTab] = useState<'spec' | 'sql'>('spec');
 
   const showSpecEditor = editorMode === 'spec' || editorMode === 'both';
@@ -101,38 +98,21 @@ export const VegaEditAction: React.FC<VegaEditActionProps> = ({
   const showTabs = showSpecEditor && showSqlEditor;
 
   return (
-    <Popover
-      open={editorPopover.isOpen}
-      onOpenChange={editorPopover.onToggle}
-      modal={false}
-    >
+    <Popover open={editorPopover.isOpen} onOpenChange={editorPopover.onToggle}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="ghost"
           size="xs"
           className={cn(className)}
-          aria-label="Edit chart specification"
+          aria-label={
+            editable ? 'Edit chart specification' : 'View chart specification'
+          }
         >
-          <EditIcon className="h-4 w-4" />
+          <CodeIcon className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        side="bottom"
-        className="w-[400px] p-0"
-        onInteractOutside={(e) => {
-          // Don't close popover when interacting with CodeMirror tooltips
-          const target = e.target as HTMLElement;
-          if (
-            target.closest('.cm-tooltip') ||
-            target.closest('.cm-tooltip-lint') ||
-            target.closest('.cm-diagnostic')
-          ) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <PopoverContent align="end" side="bottom" className="w-[400px] p-0">
         <div className="flex h-[400px] flex-col">
           {/* Header with tabs */}
           <div className="flex items-center justify-between border-b px-2 py-1">
@@ -153,7 +133,9 @@ export const VegaEditAction: React.FC<VegaEditActionProps> = ({
                       SQL
                     </TabsTrigger>
                   </TabsList>
-                  <EditorActions onClose={editorPopover.onClose} />
+                  {editable && (
+                    <EditorActions onClose={editorPopover.onClose} />
+                  )}
                 </div>
               </Tabs>
             ) : (
@@ -161,7 +143,7 @@ export const VegaEditAction: React.FC<VegaEditActionProps> = ({
                 <span className="text-sm font-medium">
                   {showSpecEditor ? 'Vega-Lite Spec' : 'SQL Query'}
                 </span>
-                <EditorActions onClose={editorPopover.onClose} />
+                {editable && <EditorActions onClose={editorPopover.onClose} />}
               </div>
             )}
           </div>

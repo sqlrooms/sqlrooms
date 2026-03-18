@@ -132,11 +132,6 @@ export type AiSliceState = {
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-    setToolEditState: (
-      sessionId: string,
-      toolCallId: string,
-      editState: unknown,
-    ) => void;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
@@ -577,7 +572,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
-                toolEditState: {},
                 messagesRevision: 0,
                 prompt: '',
                 isRunning: false,
@@ -712,29 +706,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 // store the latest UI messages from the chat hook
                 // Create a deep copy to avoid read-only property issues
                 session.uiMessages = JSON.parse(JSON.stringify(uiMessages));
-              }
-            }),
-          );
-        },
-
-        /**
-         * Save mutable UI edit state for a tool call in a session.
-         */
-        setToolEditState: (
-          sessionId: string,
-          toolCallId: string,
-          editState: unknown,
-        ) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const session = draft.ai.config.sessions.find(
-                (s) => s.id === sessionId,
-              );
-              if (session) {
-                if (!session.toolEditState) {
-                  session.toolEditState = {};
-                }
-                session.toolEditState[toolCallId] = editState;
               }
             }),
           );
@@ -1020,8 +991,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
         /**
          * Delete an analysis result from a session
-         * - remove the corresponding prompt-response pair from uiMessages
-         * - remove the associated toolEditState
+         * and remove the corresponding prompt-response pair from uiMessages.
          */
         deleteAnalysisResult: (sessionId: string, resultId: string) => {
           set((state) =>
@@ -1042,25 +1012,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 if (userMessageIndex !== -1) {
                   // Find the next user message (or end of array) to determine response boundary
                   let nextUserIndex = userMessageIndex + 1;
-                  const toolCallIdsToDelete: Set<string> = new Set();
 
                   while (
                     nextUserIndex < uiMessages.length &&
                     uiMessages[nextUserIndex]?.role !== 'user'
                   ) {
-                    const msg = uiMessages[nextUserIndex];
-                    // Extract toolCallId from message parts
-                    if (msg?.parts) {
-                      for (const part of msg.parts) {
-                        // Check for tool-* or dynamic-tool parts that have toolCallId
-                        if (
-                          'toolCallId' in part &&
-                          typeof part.toolCallId === 'string'
-                        ) {
-                          toolCallIdsToDelete.add(part.toolCallId);
-                        }
-                      }
-                    }
                     nextUserIndex++;
                   }
 
@@ -1073,16 +1029,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   // Increment messagesRevision to force useChat reset
                   session.messagesRevision =
                     (session.messagesRevision || 0) + 1;
-
-                  // Clean up toolEditState for deleted messages
-                  if (session.toolEditState) {
-                    // Remove data keyed by the toolCallId from the deleted messages
-                    toolCallIdsToDelete.forEach((toolCallId) => {
-                      if (session.toolEditState![toolCallId]) {
-                        delete session.toolEditState![toolCallId];
-                      }
-                    });
-                  }
                 }
               }
             }),
