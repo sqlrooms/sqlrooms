@@ -1,12 +1,9 @@
 import type {Param} from '@sqlrooms/mosaic';
 import {
-  ChartBuilderColumn,
-  ChartBuilderDialog,
-  MosaicChartContainer,
-  MosaicChartDisplay,
-  MosaicChartEditorActions,
-  MosaicSpecEditorPanel,
-  Spec,
+  ChartBuilder,
+  type ChartBuilderColumn,
+  MosaicChart,
+  type Spec,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
@@ -147,7 +144,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                       </div>
                     </div>
                     <div className="overflow-hidden pb-4">
-                      <MosaicChartContainer
+                      <MosaicChart.Container
                         spec={chart.spec}
                         params={paramsMap}
                         editable={isEditing}
@@ -155,17 +152,17 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                           handleSpecChange(chart.id, spec)
                         }
                       >
-                        <MosaicChartDisplay />
+                        <MosaicChart.Display />
                         {isEditing && (
                           <>
-                            <MosaicSpecEditorPanel
+                            <MosaicChart.SpecEditor
                               className="h-64 border-t"
                               title=""
                             />
-                            <MosaicChartEditorActions />
+                            <MosaicChart.Actions />
                           </>
                         )}
-                      </MosaicChartContainer>
+                      </MosaicChart.Container>
                     </div>
                   </div>
                 );
@@ -174,7 +171,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
           </div>
         </ScrollArea>
 
-        <ChartBuilderDialog
+        <ChartBuilder.Dialog
           open={builderOpen}
           onOpenChange={setBuilderOpen}
           tableName="earthquakes"

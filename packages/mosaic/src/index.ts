@@ -22,7 +22,11 @@ export {
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
 
-// Editor compound components
+// Compound components
+export {MosaicChart} from './MosaicChart';
+export {ChartBuilder} from './ChartBuilder';
+
+// Editor sub-components (also accessible via MosaicChart.*)
 export {MosaicChartContainer} from './editor/MosaicChartContainer';
 export type {MosaicChartContainerProps} from './editor/MosaicChartContainer';
 export {MosaicChartDisplay} from './editor/MosaicChartDisplay';
@@ -49,7 +53,7 @@ export type {
   UseMosaicChartEditorReturn,
 } from './editor/types';
 
-// Chart builders
+// Chart builder sub-components (also accessible via ChartBuilder.*)
 export {ChartBuilderDialog} from './chart-builders/ChartBuilderDialog';
 export type {ChartBuilderDialogProps} from './chart-builders/ChartBuilderDialog';
 export {FieldSelectorInput} from './chart-builders/FieldSelectorInput';
