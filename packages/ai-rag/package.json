@@ -23,7 +23,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "ai": "^5.0.44",
+    "ai": "^5.0.155",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

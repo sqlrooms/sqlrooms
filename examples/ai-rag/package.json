@@ -21,7 +21,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "ai": "^5.0.44",
+    "ai": "^5.0.155",
     "lucide-react": "^0.544.0",
     "zod": "^4.1.8"
   },
