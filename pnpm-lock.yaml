@@ -2378,9 +2378,6 @@ importers:
       '@codemirror/view':
         specifier: ^6.33.0
         version: 6.39.15
-      '@lezer/common':
-        specifier: ^1.2.0
-        version: 1.5.1
       '@lezer/highlight':
         specifier: ^1.2.0
         version: 1.2.3
