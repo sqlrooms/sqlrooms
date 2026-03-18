@@ -1,6 +1,12 @@
 import type {ComponentType} from 'react';
 import type {AiSliceConfig, AnalysisSessionSchema} from '@sqlrooms/ai-config';
-import type {UIMessage, ToolSet, InferToolOutput, InferToolInput} from 'ai';
+import type {
+  UIMessage,
+  ToolSet,
+  Tool,
+  InferToolOutput,
+  InferToolInput,
+} from 'ai';
 import {streamText} from 'ai';
 
 export type ProviderOptions = NonNullable<
@@ -124,38 +130,31 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
 
 /**
  * A React component that renders the result of a tool call.
+ *
+ * ```ts
+ * ToolRenderer<ReturnType<typeof myTool>>    // infers output/input from Tool
+ * ToolRenderer<MyOutput, MyInput>            // explicit output/input
+ * ```
  */
-export type ToolRenderer<TOutput = unknown, TInput = unknown> = ComponentType<
-  ToolRendererProps<TOutput, TInput>
->;
+export type ToolRenderer<
+  TToolOrOutput = unknown,
+  TInput = unknown,
+> = TToolOrOutput extends Tool
+  ? ComponentType<
+      ToolRendererProps<
+        InferToolOutput<TToolOrOutput>,
+        InferToolInput<TToolOrOutput>
+      >
+    >
+  : ComponentType<ToolRendererProps<TToolOrOutput, TInput>>;
 
-/**
- * Registry mapping tool names to their renderer components.
- * Uses `ToolRenderer<any>` so that typed renderers (e.g. `ToolRenderer<QueryToolOutput>`)
- * are directly assignable without an explicit cast at registration sites.
- */
+/** Registry mapping tool names to their renderer components. */
 export type ToolRendererRegistry = Record<string, ToolRenderer<any>>;
 
 /**
  * Typed renderer map for a given `ToolSet`.
- *
- * Keys are constrained to the keys of `TTools` — registering a renderer for a
- * non-existent tool name is a compile error. Values are typed to
- * `ToolRenderer<InferToolOutput<TTools[K]>, InferToolInput<TTools[K]>>`, so
- * both the `output` and `input` props in each renderer component are
- * automatically narrowed to that tool's return type and parameter type.
- *
- * @example
- * ```ts
- * const renderers: ToolRenderers<typeof myTools> = {
- *   query: QueryToolResult,   // ToolRenderer<QueryToolOutput, QueryToolParameters>
- *   chart: VegaChartToolResult, // ToolRenderer<VegaChartToolOutput, VegaChartToolParameters>
- * };
- * ```
+ * Keys constrained to tool names; values typed via `ToolRenderer<TTools[K]>`.
  */
 export type ToolRenderers<TTools extends ToolSet> = {
-  [K in keyof TTools]?: ToolRenderer<
-    InferToolOutput<TTools[K]>,
-    InferToolInput<TTools[K]>
-  >;
+  [K in keyof TTools]?: ToolRenderer<TTools[K]>;
 };
