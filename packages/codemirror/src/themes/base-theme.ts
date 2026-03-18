@@ -79,7 +79,6 @@ export function createBaseTheme({
         color: 'var(--color-popover-foreground)',
         border: '1px solid var(--color-border)',
         padding: '4px 8px',
-        borderRadius: '4px',
       },
       '.cm-tooltip-autocomplete': {
         '& > ul > li[aria-selected]': {
