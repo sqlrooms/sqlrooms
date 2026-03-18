@@ -2,8 +2,8 @@ import {CompletionResult, Completion} from '@codemirror/autocomplete';
 import {CompletionItemKind} from 'vscode-json-languageservice';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import {JsonSchemaDocumentation} from '../components/JsonSchemaDocumentation';
-import {JsonSchemaValidator} from './validate-json-schema';
 import {createJsonDocument} from './create-json-document';
+import {JsonSchemaValidator} from './json-schema-validator';
 
 /**
  * Gets JSON schema completions for a given position in the text

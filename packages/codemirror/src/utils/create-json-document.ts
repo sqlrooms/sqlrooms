@@ -1,6 +1,6 @@
 import {JSONDocument} from 'vscode-json-languageservice';
 import {TextDocument} from 'vscode-languageserver-textdocument';
-import {JsonSchemaValidator} from './validate-json-schema';
+import {JsonSchemaValidator} from './json-schema-validator';
 
 type CreateJsonDocumentReturn = {
   document: TextDocument;

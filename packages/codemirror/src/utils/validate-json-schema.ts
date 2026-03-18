@@ -1,16 +1,9 @@
-import {DiagnosticSeverity, LanguageService} from 'vscode-json-languageservice';
+import {DiagnosticSeverity} from 'vscode-json-languageservice';
 import {Diagnostic} from '@codemirror/lint';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import {DiagnosticTooltip} from '../components/DiagnosticTooltip';
 import {createJsonDocument} from './create-json-document';
-
-/**
- * Validator object containing schema and language service
- */
-export interface JsonSchemaValidator {
-  schema: object;
-  languageService: LanguageService;
-}
+import {JsonSchemaValidator} from './json-schema-validator';
 
 /**
  * Validates JSON text against a JSON schema using vscode-json-languageservice

@@ -4,8 +4,8 @@ import {
   CompletionResult,
 } from '@codemirror/autocomplete';
 import {Extension} from '@codemirror/state';
-import {JsonSchemaValidator} from '../utils/validate-json-schema';
 import {getJsonSchemaCompletions} from '../utils/get-json-schema-completions';
+import {JsonSchemaValidator} from '../utils/json-schema-validator';
 
 /**
  * Creates an autocomplete extension for JSON schema-based completions using vscode-json-languageservice

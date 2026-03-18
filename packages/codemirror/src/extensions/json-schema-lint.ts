@@ -1,9 +1,7 @@
 import {linter} from '@codemirror/lint';
-import {
-  validateJsonSchema,
-  JsonSchemaValidator,
-} from '../utils/validate-json-schema';
+import {validateJsonSchema} from '../utils/validate-json-schema';
 import {Extension} from '@codemirror/state';
+import {JsonSchemaValidator} from '../utils/json-schema-validator';
 
 /**
  * Creates a linter extension for JSON schema validation
