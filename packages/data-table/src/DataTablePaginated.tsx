@@ -1,17 +1,10 @@
 import {
   Badge,
-  Button,
   Checkbox,
   cn,
-  Input,
   resolveFontSizeClass,
   ScrollArea,
   ScrollBar,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -19,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@sqlrooms/ui';
-import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
   flexRender,
@@ -31,16 +23,10 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import {
-  ChevronsLeftIcon as ChevronDoubleLeftIcon,
-  ChevronsRightIcon as ChevronDoubleRightIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-} from 'lucide-react';
+import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
+import {DataTablePaginatedFooter} from './DataTablePaginatedFooter';
 
 export type DataTablePaginatedProps<Data extends object> = {
   className?: string;
@@ -87,7 +73,7 @@ export type DataTablePaginatedProps<Data extends object> = {
 /**
  * Data table with pagination, sorting, row selection, and custom actions.
  */
-export default function DataTablePaginated<Data extends object>({
+export function DataTablePaginated<Data extends object>({
   className,
   fontSize = 'text-xs',
   data,
@@ -142,11 +128,6 @@ export default function DataTablePaginated<Data extends object>({
       ? Math.ceil(numRows / pagination.pageSize)
       : undefined;
 
-  const shouldShowFooter =
-    Boolean(pagination) ||
-    (numRows !== undefined && Number.isFinite(numRows)) ||
-    footerActions != null;
-
   // TanStack's table hook returns non-memoizable functions by design.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -176,13 +157,6 @@ export default function DataTablePaginated<Data extends object>({
       rowSelection: currentRowSelection,
     },
   });
-
-  const [internalPageIndex, setInternalPageIndex] = useState(
-    pagination?.pageIndex ?? 0,
-  );
-  useEffect(() => {
-    setInternalPageIndex(pagination?.pageIndex ?? 0);
-  }, [pagination?.pageIndex]);
 
   return (
     <div
@@ -323,116 +297,14 @@ export default function DataTablePaginated<Data extends object>({
         </ScrollArea>
       </div>
 
-      {shouldShowFooter ? (
-        <div className="bg-background sticky bottom-0 left-0 flex h-[45px] items-center gap-2 border-t px-2">
-          {isFetching ? (
-            <div className="ml-2 text-xs">Loading...</div>
-          ) : (
-            <>
-              {pagination ? (
-                <>
-                  <div className="flex items-center gap-1 truncate">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="h-7 w-7"
-                      onClick={() => table.setPageIndex(0)}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <ChevronDoubleLeftIcon size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="h-7 w-7"
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <ChevronLeftIcon size={16} />
-                    </Button>
-                    <div
-                      className={`ml-1 flex items-center gap-1 ${fontSizeClass}`}
-                    >
-                      <div>Page</div>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={table.getPageCount()}
-                        className="h-7 w-16"
-                        value={internalPageIndex + 1}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value) {
-                            const page = Math.max(
-                              0,
-                              Math.min(
-                                table.getPageCount() - 1,
-                                Number(value) - 1,
-                              ),
-                            );
-                            setInternalPageIndex(page);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (internalPageIndex !== pagination?.pageIndex) {
-                            table.setPageIndex(internalPageIndex);
-                          }
-                        }}
-                      />
-                      <div>{`of ${formatCount(table.getPageCount())}`}</div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="h-7 w-7"
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <ChevronRightIcon size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="h-7 w-7"
-                      onClick={() =>
-                        table.setPageIndex(table.getPageCount() - 1)
-                      }
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <ChevronDoubleRightIcon size={16} />
-                    </Button>
-                    <Select
-                      value={String(table.getState().pagination.pageSize)}
-                      onValueChange={(value) =>
-                        table.setPageSize(Number(value))
-                      }
-                    >
-                      <SelectTrigger className="hidden h-7 w-[110px] lg:inline-flex">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[10, 50, 100, 500, 1000].map((pageSize) => (
-                          <SelectItem key={pageSize} value={String(pageSize)}>
-                            {`${pageSize} rows`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="min-w-0 flex-1" />
-                </>
-              ) : null}
-
-              {numRows !== undefined && isFinite(numRows) ? (
-                <div className={`min-w-fit font-normal ${fontSizeClass}`}>
-                  {`${formatCount(numRows)} rows`}
-                </div>
-              ) : null}
-              {footerActions}
-            </>
-          )}
-        </div>
-      ) : null}
+      <DataTablePaginatedFooter
+        fontSize={fontSize}
+        isFetching={isFetching}
+        pagination={pagination}
+        numRows={numRows}
+        footerActions={footerActions}
+        table={table}
+      />
     </div>
   );
 }

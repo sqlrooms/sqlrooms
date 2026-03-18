@@ -186,18 +186,35 @@ function getExistingProperties(node: SyntaxNode, doc: Text): Set<string> {
 }
 
 /**
- * Gets the property name from a Property node
+ * Gets the property name from a Property node or any node within a property's value area.
+ *
+ * This function is robust to being called with:
+ * - A PropertyName node directly
+ * - A Property node (will find PropertyName child)
+ * - A colon node or value node (will walk up to Property, then find PropertyName)
  */
 function getPropertyName(node: SyntaxNode, doc: Text): string | null {
   let targetNode = node;
 
-  // If not already a PropertyName node, try to find one
+  // If not already a PropertyName node, find the containing Property
   if (targetNode.name !== 'PropertyName') {
-    const propertyNameNode = findChildByName(targetNode, 'PropertyName');
-    if (!propertyNameNode) {
+    // Walk up to find the Property node
+    let current: SyntaxNode | null = targetNode;
+    while (current && current.name !== 'Property') {
+      current = current.parent;
+    }
+
+    // If we found a Property, look for its PropertyName child
+    if (current) {
+      const propertyNameNode = findChildByName(current, 'PropertyName');
+      if (!propertyNameNode) {
+        return null;
+      }
+      targetNode = propertyNameNode;
+    } else {
+      // No Property node found in ancestors
       return null;
     }
-    targetNode = propertyNameNode;
   }
 
   const text = doc.sliceString(targetNode.from, targetNode.to);
@@ -205,7 +222,6 @@ function getPropertyName(node: SyntaxNode, doc: Text): string | null {
     return null;
   }
 
-  // Remove quotes if present
   return text.replace(/^["']|["']$/g, '');
 }
 
