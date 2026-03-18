@@ -29,6 +29,7 @@ import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
+const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
 const DropTableCommandInput = z.object({
   tableName: z.string().describe('Name of the table to drop.'),
 });
@@ -487,6 +488,17 @@ export function createDuckDbSlice({
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
             const {schema, database, table} = filter || {};
+
+            // Build WHERE conditions
+            const conditions = [
+              // Exclude internal SQLRooms databases and schemas
+              `NOT starts_with(database, ${escapeVal(INTERNAL_SQLROOMS_PREFIX)})`,
+              `NOT starts_with(schema, ${escapeVal(INTERNAL_SQLROOMS_PREFIX)})`,
+              schema ? `schema = ${escapeVal(schema)}` : '',
+              database ? `database = ${escapeVal(database)}` : '',
+              table ? `name = ${escapeVal(table)}` : '',
+            ].filter(Boolean);
+
             const sql = `WITH tables_and_views AS (
               FROM duckdb_tables() SELECT
                 database_name AS database,
@@ -514,17 +526,7 @@ export function createDuckDbSlice({
                 estimated_size
             FROM (DESCRIBE)
             LEFT OUTER JOIN tables_and_views USING (database, schema, name)
-            ${
-              schema || database || table
-                ? `WHERE ${[
-                    schema ? `schema = ${escapeVal(schema)}` : '',
-                    database ? `database = ${escapeVal(database)}` : '',
-                    table ? `name = ${escapeVal(table)}` : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' AND ')}`
-                : ''
-            }`;
+            WHERE ${conditions.join(' AND ')}`;
             const describeResults = await connector.query(sql);
 
             const newTables: DataTable[] = [];
