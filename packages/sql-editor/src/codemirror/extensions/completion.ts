@@ -49,18 +49,14 @@ export function createCompletion({
 
         suggestions.push(
           ...functionGroups.map(({name, overloads}): Completion => {
-            const {dom, destroy} = renderComponentToDomElement(
-              FunctionDocumentation,
-              {
-                functions: overloads,
-              },
-            );
-
             return {
               label: name,
               type: 'method',
               detail: overloads[0]?.description ?? '',
-              info: () => ({dom, destroy}),
+              info: () =>
+                renderComponentToDomElement(FunctionDocumentation, {
+                  functions: overloads,
+                }),
               boost: 5,
             };
           }),
