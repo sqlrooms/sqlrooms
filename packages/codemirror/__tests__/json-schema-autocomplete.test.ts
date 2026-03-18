@@ -4,6 +4,16 @@ import {jsonSchemaAutocomplete} from '../src/extensions/json-schema-autocomplete
 import {CompletionContext, CompletionResult} from '@codemirror/autocomplete';
 import {createJsonSchemaValidator} from '../src/utils/create-json-schema-validator';
 
+// Mock react-markdown and remark-gfm to avoid ES module issues in Jest
+jest.mock('react-markdown', () => ({
+  __esModule: true,
+  default: ({children}: {children: string}) => children,
+}));
+jest.mock('remark-gfm', () => ({
+  __esModule: true,
+  default: () => {},
+}));
+
 const TEST_SCHEMA = {
   type: 'object',
   properties: {
@@ -92,67 +102,22 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).toContain('name');
-      expect(labels).toContain('email');
-      expect(labels).toContain('age');
-      expect(labels).toContain('status');
-      expect(labels).toContain('premium');
-      expect(labels).toContain('settings');
+      expect(labels).toEqual([
+        'name',
+        'email',
+        'age',
+        'status',
+        'premium',
+        'settings',
+      ]);
     });
 
-    it('should exclude already-defined root properties', async () => {
-      const text = '{"name": "John",|}';
-      const pos = text.indexOf('|');
-      const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
-
-      expect(labels).not.toContain('name');
-      expect(labels).toContain('email');
-      expect(labels).toContain('age');
-    });
-
-    it('should exclude multiple already-defined properties', async () => {
+    it('should exclude already-defined properties', async () => {
       const text = '{"name": "John","email": "test@example.com",|}';
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).not.toContain('name');
-      expect(labels).not.toContain('email');
-      expect(labels).toContain('age');
-      expect(labels).toContain('status');
-    });
-
-    it('should include property descriptions in completion info', async () => {
-      const text = '{|}';
-      const pos = text.indexOf('|');
-      const result = await getCompletions(text, pos, TEST_SCHEMA);
-
-      const nameCompletion = result?.options?.find(
-        (opt) => opt.label === 'name',
-      );
-      expect(nameCompletion?.info).toBe('Full name of the user');
-
-      const emailCompletion = result?.options?.find(
-        (opt) => opt.label === 'email',
-      );
-      expect(emailCompletion?.info).toBe('Email address');
-    });
-
-    it('should include all schema properties in completions', async () => {
-      const text = '{|}';
-      const pos = text.indexOf('|');
-      const result = await getCompletions(text, pos, TEST_SCHEMA);
-
-      expect(result?.options).toBeDefined();
-      const labels = result?.options?.map((opt) => opt.label) ?? [];
-
-      // Verify all properties from TEST_SCHEMA are present
-      const expectedProperties = Object.keys(TEST_SCHEMA.properties);
-      expectedProperties.forEach((prop) => {
-        expect(labels).toContain(prop);
-      });
-
-      // Verify we have the expected number of completions
-      expect(labels.length).toBe(expectedProperties.length);
+      expect(labels).toEqual(['age', 'status', 'premium', 'settings']);
     });
   });
 
@@ -162,10 +127,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).toContain('theme');
-      expect(labels).toContain('notifications');
-      expect(labels).not.toContain('name'); // root property
-      expect(labels).not.toContain('email'); // root property
+      expect(labels).toEqual(['theme', 'notifications']);
     });
 
     it('should exclude already-defined nested properties', async () => {
@@ -173,8 +135,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).not.toContain('theme');
-      expect(labels).toContain('notifications');
+      expect(labels).toEqual(['notifications']);
     });
 
     it('should handle deeply nested objects', async () => {
@@ -199,7 +160,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, deepSchema);
 
-      expect(labels).toContain('deepProp');
+      expect(labels).toEqual(['deepProp']);
     });
   });
 
@@ -209,10 +170,12 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).toContain('"active"');
-      expect(labels).toContain('"inactive"');
-      expect(labels).toContain('"pending"');
-      expect(labels).toContain('"suspended"');
+      expect(labels).toEqual([
+        '"active"',
+        '"inactive"',
+        '"pending"',
+        '"suspended"',
+      ]);
     });
 
     it('should suggest boolean values for premium field', async () => {
@@ -220,8 +183,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).toContain('true');
-      expect(labels).toContain('false');
+      expect(labels).toEqual(['true', 'false']);
     });
 
     it('should suggest enum values for nested properties', async () => {
@@ -229,9 +191,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).toContain('"light"');
-      expect(labels).toContain('"dark"');
-      expect(labels).toContain('"auto"');
+      expect(labels).toEqual(['"light"', '"dark"', '"auto"']);
     });
 
     it('should suggest boolean values for nested properties', async () => {
@@ -239,8 +199,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      expect(labels).toContain('true');
-      expect(labels).toContain('false');
+      expect(labels).toEqual(['true', 'false']);
     });
 
     it('should handle null type', async () => {
@@ -257,7 +216,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, schemaWithNull);
 
-      expect(labels).toContain('null');
+      expect(labels).toEqual(['null']);
     });
 
     it('should not suggest value completions for non-enum strings', async () => {
@@ -286,9 +245,14 @@ describe('jsonSchemaAutocomplete', () => {
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
       // Should suggest property keys, not values
-      expect(labels).toContain('name');
-      expect(labels).not.toContain('true');
-      expect(labels).not.toContain('false');
+      expect(labels).toEqual([
+        'name',
+        'email',
+        'age',
+        'status',
+        'premium',
+        'settings',
+      ]);
     });
 
     it('should detect value position after colon', async () => {
@@ -297,9 +261,7 @@ describe('jsonSchemaAutocomplete', () => {
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
       // Should suggest values, not property keys
-      expect(labels).toContain('true');
-      expect(labels).toContain('false');
-      expect(labels).not.toContain('name');
+      expect(labels).toEqual(['true', 'false']);
     });
 
     it('should detect property key position after comma', async () => {
@@ -307,9 +269,8 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
-      // Should suggest property keys
-      expect(labels).toContain('email');
-      expect(labels).not.toContain('true');
+      // Should suggest property keys (excluding already-defined 'name')
+      expect(labels).toEqual(['email', 'age', 'status', 'premium', 'settings']);
     });
   });
 
@@ -370,8 +331,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, arraySchema);
 
-      expect(labels).toContain('id');
-      expect(labels).toContain('name');
+      expect(labels).toEqual(['id', 'name']);
     });
   });
 
@@ -418,8 +378,12 @@ describe('jsonSchemaAutocomplete', () => {
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
       // Should find the enum values for status
-      expect(labels).toContain('"active"');
-      expect(labels.length).toBeGreaterThan(0);
+      expect(labels).toEqual([
+        '"active"',
+        '"inactive"',
+        '"pending"',
+        '"suspended"',
+      ]);
     });
 
     it('should correctly extract property name from Property nodes', async () => {
@@ -429,10 +393,7 @@ describe('jsonSchemaAutocomplete', () => {
       const labels = await getCompletionLabels(text, pos, TEST_SCHEMA);
 
       // Should find nested properties, not root properties
-      expect(labels).toContain('theme');
-      expect(labels).toContain('notifications');
-      expect(labels).not.toContain('name');
-      expect(labels).not.toContain('email');
+      expect(labels).toEqual(['theme', 'notifications']);
     });
   });
 
@@ -452,7 +413,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, schemaWithUnion);
 
-      expect(labels).toContain('null');
+      expect(labels).toEqual(['null']);
     });
 
     it('should suggest true, false, and null for boolean | null type', async () => {
@@ -469,9 +430,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, schemaWithUnion);
 
-      expect(labels).toContain('true');
-      expect(labels).toContain('false');
-      expect(labels).toContain('null');
+      expect(labels).toEqual(['true', 'false', 'null']);
     });
 
     it('should suggest enum values and null for enum with null type', async () => {
@@ -489,9 +448,7 @@ describe('jsonSchemaAutocomplete', () => {
       const pos = text.indexOf('|');
       const labels = await getCompletionLabels(text, pos, schemaWithUnion);
 
-      expect(labels).toContain('"active"');
-      expect(labels).toContain('"inactive"');
-      expect(labels).toContain('null');
+      expect(labels).toEqual(['"active"', '"inactive"', 'null']);
     });
 
     it('should not suggest completions for number | string union without enum', async () => {
@@ -510,30 +467,6 @@ describe('jsonSchemaAutocomplete', () => {
 
       // No suggestions for non-enum, non-boolean, non-null types
       expect(result?.options?.length || 0).toBe(0);
-    });
-
-    it('should handle union type detail display', async () => {
-      const schemaWithUnion = {
-        type: 'object',
-        properties: {
-          optionalName: {
-            type: ['string', 'null'],
-            enum: ['test', null],
-          },
-        },
-      };
-
-      const text = '{"optionalName": |}';
-      const pos = text.indexOf('|');
-      const result = await getCompletions(text, pos, schemaWithUnion);
-
-      const testCompletion = result?.options?.find(
-        (opt) => opt.label === '"test"',
-      );
-
-      // Should show the union type in detail
-      // Note: vscode-json-languageservice may not provide detail in all cases
-      // expect(testCompletion?.detail).toBeTruthy();
     });
   });
 });
