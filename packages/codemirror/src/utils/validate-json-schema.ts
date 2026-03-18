@@ -1,4 +1,4 @@
-import {DiagnosticSeverity} from 'vscode-json-languageservice';
+import {DiagnosticSeverity} from 'vscode-languageserver-types';
 import {Diagnostic} from '@codemirror/lint';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import {DiagnosticTooltip} from '../components/DiagnosticTooltip';

@@ -1,5 +1,5 @@
 import {CompletionResult, Completion} from '@codemirror/autocomplete';
-import {CompletionItemKind} from 'vscode-json-languageservice';
+import {CompletionItemKind} from 'vscode-languageserver-types';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import {JsonSchemaDocumentation} from '../components/JsonSchemaDocumentation';
 import {createJsonDocument} from './create-json-document';
