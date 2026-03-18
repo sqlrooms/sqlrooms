@@ -1,14 +1,4 @@
-import {
-  Button,
-  cn,
-  Input,
-  resolveFontSizeClass,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@sqlrooms/ui';
+import {Button, cn, Input, resolveFontSizeClass} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {PaginationState, Table} from '@tanstack/react-table';
 import {
@@ -18,6 +8,7 @@ import {
   ChevronRightIcon,
 } from 'lucide-react';
 import {useState, JSX} from 'react';
+import {PageSizeSelect} from './PageSizeSelect';
 
 export type DataTablePaginatedFooterProps<Data extends object> = {
   fontSize?: string;
@@ -60,6 +51,23 @@ export function DataTablePaginatedFooter<Data extends object>({
     return null;
   }
 
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value) {
+      const page = Math.max(
+        0,
+        Math.min(table.getPageCount() - 1, Number(value) - 1),
+      );
+      setInternalPageIndex(page);
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    if (internalPageIndex !== pagination?.pageIndex) {
+      table.setPageIndex(internalPageIndex);
+    }
+  };
+
   return (
     <div className="bg-background sticky bottom-0 left-0 flex h-[45px] items-center gap-2 border-t px-2">
       {isFetching ? (
@@ -95,23 +103,10 @@ export function DataTablePaginatedFooter<Data extends object>({
                     type="number"
                     min={1}
                     max={table.getPageCount()}
-                    className="h-7 w-16"
+                    className="no-spinner h-7 w-16"
                     value={internalPageIndex + 1}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value) {
-                        const page = Math.max(
-                          0,
-                          Math.min(table.getPageCount() - 1, Number(value) - 1),
-                        );
-                        setInternalPageIndex(page);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (internalPageIndex !== pagination?.pageIndex) {
-                        table.setPageIndex(internalPageIndex);
-                      }
-                    }}
+                    onChange={handlePageInputChange}
+                    onBlur={handlePageInputBlur}
                   />
                   <div>{`of ${formatCount(table.getPageCount())}`}</div>
                 </div>
@@ -133,21 +128,10 @@ export function DataTablePaginatedFooter<Data extends object>({
                 >
                   <ChevronDoubleRightIcon size={16} />
                 </Button>
-                <Select
-                  value={String(table.getState().pagination.pageSize)}
-                  onValueChange={(value) => table.setPageSize(Number(value))}
-                >
-                  <SelectTrigger className="hidden h-7 w-[110px] lg:inline-flex">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 50, 100, 500, 1000].map((pageSize) => (
-                      <SelectItem key={pageSize} value={String(pageSize)}>
-                        {`${pageSize} rows`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PageSizeSelect
+                  pageSize={table.getState().pagination.pageSize}
+                  onPageSizeChange={(pageSize) => table.setPageSize(pageSize)}
+                />
               </div>
               <div className="min-w-0 flex-1" />
             </>
