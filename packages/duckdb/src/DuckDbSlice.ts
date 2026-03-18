@@ -287,8 +287,29 @@ export type DuckDbSliceState = {
   };
 };
 
+/**
+ * Default filter for table schemas that excludes internal SQLRooms resources.
+ * Tables with database or schema names prefixed with `__sqlrooms_` are considered internal.
+ */
+export function defaultLoadTableSchemasFilter(
+  table: QualifiedTableName,
+): boolean {
+  return (
+    !table.database?.startsWith('__sqlrooms_') &&
+    !table.schema?.startsWith('__sqlrooms_')
+  );
+}
+
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
+  /**
+   * Optional filter function applied when loading table schemas.
+   * Receives a QualifiedTableName and returns true to include the table.
+   * Defaults to {@link defaultLoadTableSchemasFilter}, which excludes all
+   * internal SQLRooms resources (databases/schemas prefixed with `__sqlrooms_`).
+   * Pass `() => true` to disable filtering.
+   */
+  loadTableSchemasFilter?: (table: QualifiedTableName) => boolean;
 };
 
 /**
@@ -296,6 +317,7 @@ export type CreateDuckDbSliceProps = {
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
+  loadTableSchemasFilter = defaultLoadTableSchemasFilter,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
@@ -673,7 +695,10 @@ export function createDuckDbSlice({
                     ?.get(0);
                 }),
               );
-              const newTables = await get().db.loadTableSchemas();
+              const allTables = await get().db.loadTableSchemas();
+              const newTables = allTables.filter((t) =>
+                loadTableSchemasFilter(t.table),
+              );
               // Only update if there's an actual change in the schemas
               if (!deepEquals(newTables, get().db.tables)) {
                 set((state) =>

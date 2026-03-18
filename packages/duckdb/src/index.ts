@@ -29,6 +29,7 @@ export {
 
 export {
   createDuckDbSlice,
+  defaultLoadTableSchemasFilter,
   useStoreWithDuckDb,
   type CreateDuckDbSliceProps,
   type DuckDbSliceState,

@@ -3,16 +3,6 @@ import {getDuckDbTypeCategory} from './typeCategories';
 import type {DbSchemaNode} from './types';
 
 /**
- * Check if a database or schema name is an internal SQLRooms resource.
- * Internal resources are prefixed with __sqlrooms_ and should be hidden from UI.
- * @param name - The database or schema name to check
- * @returns True if the name is an internal SQLRooms resource
- */
-function isInternalSqlRoomsResource(name: string): boolean {
-  return name.startsWith('__sqlrooms_');
-}
-
-/**
  * Group tables by database, schema and create a tree of databases, schemas, tables, and columns.
  * @param tables - The tables to group
  * @returns An array of database nodes containing schemas, tables and columns
@@ -24,14 +14,6 @@ export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
     const database = table.database ?? 'default';
     const schema = table.schema;
     const tableName = table.tableName;
-
-    // Skip internal SQLRooms databases and schemas
-    if (
-      isInternalSqlRoomsResource(database) ||
-      isInternalSqlRoomsResource(schema)
-    ) {
-      continue;
-    }
 
     const columnNodes = table.columns.map((column) =>
       createColumnNode(schema, tableName, column.name, column.type),
