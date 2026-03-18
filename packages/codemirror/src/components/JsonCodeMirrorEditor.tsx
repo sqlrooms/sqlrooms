@@ -1,6 +1,5 @@
 import React, {useMemo} from 'react';
 import {CodeMirrorEditor, CodeMirrorEditorProps} from './CodeMirrorEditor';
-import {lintGutter} from '@codemirror/lint';
 import {jsonSchemaLinter} from '../extensions/json-schema-lint';
 import {jsonSchemaAutocomplete} from '../extensions/json-schema-autocomplete';
 import {autoTriggerOnQuote} from '../extensions/auto-trigger';
@@ -39,11 +38,7 @@ export const JsonCodeMirrorEditor: React.FC<JsonCodeMirrorEditorProps> = ({
       createJsonTheme({hideGutter}),
       tooltipTheme, // Use fixed positioning for tooltips to escape overflow containers
       ...(schema
-        ? [
-            jsonSchemaLinter(schema),
-            jsonSchemaAutocomplete(schema),
-            lintGutter(),
-          ]
+        ? [jsonSchemaLinter(schema), jsonSchemaAutocomplete(schema)]
         : []),
       autoTriggerOnQuote(),
     ];

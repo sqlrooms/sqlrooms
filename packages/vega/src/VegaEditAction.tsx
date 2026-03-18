@@ -101,7 +101,11 @@ export const VegaEditAction: React.FC<VegaEditActionProps> = ({
   const showTabs = showSpecEditor && showSqlEditor;
 
   return (
-    <Popover open={editorPopover.isOpen} onOpenChange={editorPopover.onToggle}>
+    <Popover
+      open={editorPopover.isOpen}
+      onOpenChange={editorPopover.onToggle}
+      modal={false}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -113,7 +117,22 @@ export const VegaEditAction: React.FC<VegaEditActionProps> = ({
           <EditIcon className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" side="bottom" className="w-[400px] p-0">
+      <PopoverContent
+        align="end"
+        side="bottom"
+        className="w-[400px] p-0"
+        onInteractOutside={(e) => {
+          // Don't close popover when interacting with CodeMirror tooltips
+          const target = e.target as HTMLElement;
+          if (
+            target.closest('.cm-tooltip') ||
+            target.closest('.cm-tooltip-lint') ||
+            target.closest('.cm-diagnostic')
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
         <div className="flex h-[400px] flex-col">
           {/* Header with tabs */}
           <div className="flex items-center justify-between border-b px-2 py-1">

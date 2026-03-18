@@ -3,7 +3,7 @@ import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import {syntaxTree} from '@codemirror/language';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
-import {renderComponentToString} from '@sqlrooms/utils';
+import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
 
 export interface HoverContext {
@@ -48,17 +48,19 @@ export function createHover({
         return null;
       }
 
-      // Create tooltip DOM element
-      const dom = document.createElement('div');
-      dom.innerHTML = renderComponentToString(FunctionDocumentation, {
-        functions: functionGroup.overloads,
-      });
+      // Create tooltip DOM element with cleanup callback
+      const {dom, destroy} = renderComponentToDomElement(
+        FunctionDocumentation,
+        {
+          functions: functionGroup.overloads,
+        },
+      );
 
       return {
         pos: node.from,
         end: node.to,
         above: true,
-        create: () => ({dom}),
+        create: () => ({dom, destroy}),
       };
     } catch (error) {
       console.error('Error fetching function hover info:', error);

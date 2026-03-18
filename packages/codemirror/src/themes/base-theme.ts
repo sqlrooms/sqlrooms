@@ -139,7 +139,7 @@ export function createBaseTheme({
         borderLeft: '3px solid var(--color-editor-lint-error)',
       },
       '.cm-diagnostic-warning': {
-        borderLeft: '3px solid var(--color-editor-lint-warning)',
+        borderLeft: 'none',
       },
     },
     {dark: theme === 'dark'},

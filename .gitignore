@@ -24,3 +24,5 @@ docs/.vitepress/cache
 .pnpm-store/
 
 .cursor/plans/
+
+.worktrees/
