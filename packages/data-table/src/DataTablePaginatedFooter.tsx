@@ -68,7 +68,7 @@ export function DataTablePaginatedFooter<Data extends object>({
         <>
           {pagination ? (
             <>
-              <div className="flex items-center gap-1 truncate">
+              <div className="flex items-center gap-1 whitespace-nowrap">
                 <Button
                   variant="ghost"
                   size="xs"
