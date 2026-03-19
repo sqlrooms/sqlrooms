@@ -1,6 +1,6 @@
 'use client';
 
-import {Toaster as Sonner, type ToasterProps, type ToastProps} from 'sonner';
+import {Toaster as Sonner, type ToasterProps} from 'sonner';
 import {useTheme} from '../theme/theme-provider';
 import type {CSSProperties, ReactNode} from 'react';
 
@@ -14,7 +14,11 @@ interface CustomToasterProps extends ToasterProps {
   };
 }
 
-const Toaster = ({closeButton = false, icons, ...props}: ToastProps) => {
+const Toaster = ({
+  closeButton = false,
+  icons,
+  ...props
+}: CustomToasterProps) => {
   const {theme = 'system'} = useTheme();
 
   return (
