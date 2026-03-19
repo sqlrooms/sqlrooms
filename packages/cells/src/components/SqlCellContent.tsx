@@ -1,12 +1,10 @@
 import {getCoreDuckDbConnectionId} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, CellsRootState, SqlCell} from '../types';
-import {getEffectiveResultName, getResultNameValidationError} from '../utils';
 import {SqlCellConnectionSelector} from './SqlCellConnectionSelector';
 import {SqlCellDependentsMenu} from './SqlCellDependentsMenu';
 import {SqlCellEditor} from './SqlCellEditor';
@@ -113,11 +111,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     [id, updateCell],
   );
 
-  const effectiveResultName = getEffectiveResultName(
-    cell.data,
-    convertToValidColumnOrTableName,
-  );
-  const explicitResultName = cell.data.resultName || '';
+  const resultName = cell.data.resultName || '';
   const selectedConnectorId =
     cell.data.connectorId || getCoreDuckDbConnectionId();
 
@@ -131,40 +125,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
         }
       : undefined;
 
-  const resultName = status?.resultName;
   const isRunning = status?.state === 'running';
-
-  // Compute the list of main-schema table names to check against.
-  // DataTable exposes schema/tableName both via the modern `table` object and
-  // via deprecated top-level fields for backward compatibility.
-  const mainSchemaTableNames = useMemo(
-    () =>
-      tableSchemas
-        .filter((t) => (t.table.schema ?? t.schema) === 'main')
-        .map((t) => t.table.table ?? t.tableName),
-    [tableSchemas],
-  );
-
-  // Compute the sheet cell IDs for collision detection
-  const sheetCellIds = useMemo(
-    () => (currentSheetId ? (sheets[currentSheetId]?.cellIds ?? []) : []),
-    [currentSheetId, sheets],
-  );
-
-  // Validation function that checks for collisions, main-schema conflicts, and cycles
-  const getValidationError = useCallback(
-    (name: string) =>
-      getResultNameValidationError({
-        proposedName: name,
-        currentCellId: id,
-        currentCellSql: cell.data.sql,
-        sheetCellIds,
-        cells: cellsData,
-        mainSchemaTableNames,
-        convertToValidName: convertToValidColumnOrTableName,
-      }),
-    [id, cell.data.sql, sheetCellIds, cellsData, mainSchemaTableNames],
-  );
 
   const handleRunRef = useRef(handleRun);
   useEffect(() => {
@@ -203,10 +164,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
         getDownstream={getDownstream}
       />
       <SqlCellResultNameEditor
-        value={explicitResultName}
-        placeholder={effectiveResultName}
+        cellId={id}
+        value={resultName}
         onChange={handleResultNameChange}
-        getValidationError={getValidationError}
       />
     </div>
   );

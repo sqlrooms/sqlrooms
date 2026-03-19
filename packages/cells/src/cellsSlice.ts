@@ -2,7 +2,10 @@ import {createId} from '@paralleldrive/cuid2';
 import {makePagedQuery} from '@sqlrooms/data-table';
 import {sanitizeQuery} from '@sqlrooms/duckdb';
 import {createSlice} from '@sqlrooms/room-store';
-import {generateUniqueName} from '@sqlrooms/utils';
+import {
+  convertToValidColumnOrTableName,
+  generateUniqueName,
+} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
   buildGraphCacheFromEdges,
@@ -20,7 +23,9 @@ import {
   normalizeCellsConfigStructure,
   resolveDependencies,
 } from './helpers';
+import {migrateSqlCellResultNames} from './migration';
 import {dropResultRelation} from './resultRelationPolicy';
+import {getEffectiveResultName} from './utils';
 import type {
   Cell,
   CellResultData,
@@ -28,8 +33,10 @@ import type {
   CellsSliceConfig,
   CellsSliceOptions,
   CellsSliceState,
+  SqlCell,
   Edge,
   SheetType,
+  SqlCellData,
 } from './types';
 import {isInputCell, isSqlCell} from './types';
 import {getSheetSchemaName, isDefined} from './utils';
@@ -62,6 +69,7 @@ function createDefaultCellsConfig(
   if (!config) {
     return defaultConfig;
   }
+
   const {sheets, sheetOrder, currentSheetId} = normalizeCellsConfigStructure(
     config,
     defaultConfig,
@@ -83,7 +91,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
   const initialConfig = createDefaultCellsConfig(props?.config);
   // Keep result data outside Immer drafts, but scoped per slice instance.
   const cellResultCache = new Map<string, CellResultData>();
-  return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
+  return createSlice<CellsSliceState, CellsRootState>((set, get) => {
     const dropSqlResultRelation = async (resultName?: string) => {
       try {
         const connector = await get().db.getConnector();
@@ -115,6 +123,22 @@ export function createCellsSlice(props: CellsSliceOptions) {
               .map((candidate) => [candidate.id, candidate]),
           ) as Record<string, Cell>;
           scopedCells[cell.id] = cell;
+
+          // Generate a unique result name for SQL cells if not set
+          if (cell.type === 'sql' && !cell.data.resultName) {
+            const existingNames = Object.values(scopedCells)
+              .filter((c): c is SqlCell => c.type === 'sql')
+              .map((c) =>
+                getEffectiveResultName(c.data, convertToValidColumnOrTableName),
+              );
+            const baseName = getEffectiveResultName(
+              cell.data as SqlCellData,
+              convertToValidColumnOrTableName,
+            );
+            const uniqueName = generateUniqueName(baseName, existingNames);
+            (cell as SqlCell).data.resultName = uniqueName;
+          }
+
           const deps = await resolveDependencies(
             cell,
             scopedCells,
@@ -823,6 +847,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
             }
           }
         },
+      },
+      initialize: async () => {
+        set((state) => produce(state, migrateSqlCellResultNames));
       },
     } as CellsSliceState;
   });

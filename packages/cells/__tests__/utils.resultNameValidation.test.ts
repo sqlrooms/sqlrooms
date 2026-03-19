@@ -1,4 +1,4 @@
-import {getResultNameValidationError} from '../src/utils';
+import {validateResultName} from '../src/useValidateResultName';
 
 const identity = (s: string) => s;
 
@@ -14,11 +14,11 @@ function makeCell(id: string, resultName?: string, sql = '') {
   };
 }
 
-describe('getResultNameValidationError', () => {
+describe('validateResultName', () => {
   it('returns null for a valid, unused name', () => {
     const cells = {a: makeCell('a', 'result_a')};
     expect(
-      getResultNameValidationError({
+      validateResultName({
         proposedName: 'result_b',
         currentCellId: 'b',
         currentCellSql: 'SELECT 1',
@@ -35,7 +35,7 @@ describe('getResultNameValidationError', () => {
       a: makeCell('a', 'result_1'),
       b: makeCell('b'),
     };
-    const error = getResultNameValidationError({
+    const error = validateResultName({
       proposedName: 'result_1',
       currentCellId: 'b',
       currentCellSql: 'SELECT 1',
@@ -52,7 +52,7 @@ describe('getResultNameValidationError', () => {
     // Cell 'a' explicitly has result_1, so cell 'a' trying to keep result_1 is fine.
     const cells = {a: makeCell('a', 'result_1')};
     expect(
-      getResultNameValidationError({
+      validateResultName({
         proposedName: 'result_1',
         currentCellId: 'a',
         currentCellSql: 'SELECT 1',
@@ -66,7 +66,7 @@ describe('getResultNameValidationError', () => {
 
   it('returns an error when the name conflicts with a main-schema table', () => {
     const cells = {a: makeCell('a')};
-    const error = getResultNameValidationError({
+    const error = validateResultName({
       proposedName: 'earthquakes',
       currentCellId: 'a',
       currentCellSql: 'SELECT 1',
@@ -81,7 +81,7 @@ describe('getResultNameValidationError', () => {
 
   it('is case-insensitive when checking main-schema table names', () => {
     const cells = {a: makeCell('a')};
-    const error = getResultNameValidationError({
+    const error = validateResultName({
       proposedName: 'Earthquakes',
       currentCellId: 'a',
       currentCellSql: 'SELECT 1',
@@ -98,7 +98,7 @@ describe('getResultNameValidationError', () => {
       a: makeCell('a', 'Result_One'),
       b: makeCell('b'),
     };
-    const error = getResultNameValidationError({
+    const error = validateResultName({
       proposedName: 'result_one',
       currentCellId: 'b',
       currentCellSql: 'SELECT 1',
@@ -114,7 +114,7 @@ describe('getResultNameValidationError', () => {
     // The cell references "my_result" in its SQL; if named "my_result" it
     // would reference itself.
     const cells = {a: makeCell('a')};
-    const error = getResultNameValidationError({
+    const error = validateResultName({
       proposedName: 'my_result',
       currentCellId: 'a',
       currentCellSql: 'SELECT * FROM my_result WHERE id > 0',
@@ -131,7 +131,7 @@ describe('getResultNameValidationError', () => {
     // "my_result" is inside quotes — not an identifier reference.
     const cells = {a: makeCell('a')};
     expect(
-      getResultNameValidationError({
+      validateResultName({
         proposedName: 'my_result',
         currentCellId: 'a',
         currentCellSql: "SELECT 'my_result' AS label",
@@ -151,7 +151,7 @@ describe('getResultNameValidationError', () => {
     };
     // cell_b is NOT in sheetCellIds for this sheet
     expect(
-      getResultNameValidationError({
+      validateResultName({
         proposedName: 'my_view',
         currentCellId: 'cell_a',
         currentCellSql: 'SELECT 1',
@@ -174,7 +174,7 @@ describe('getResultNameValidationError', () => {
       data: {title: 'SQL 2', sql: 'SELECT 1', resultName: undefined},
     };
     const cells = {cell_a: cellA};
-    const error = getResultNameValidationError({
+    const error = validateResultName({
       proposedName: 'result_2',
       currentCellId: 'cell_b',
       currentCellSql: 'SELECT 1',

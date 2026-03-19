@@ -26,11 +26,6 @@ export {
   runSqlWithCallbacks,
 } from './sqlHelpers';
 export * from './types';
-export {
-  getEffectiveResultName,
-  getResultNameValidationError,
-  isValidSqlIdentifier,
-} from './utils';
 
 export const SqlCell = {
   RunButton: SqlCellRunButtonComponent,

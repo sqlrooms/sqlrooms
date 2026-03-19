@@ -1,4 +1,4 @@
-import type {Cell, SqlCellData} from './types';
+import type {SqlCellData} from './types';
 
 export function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -42,90 +42,6 @@ export function getEffectiveResultName(
 export function getSheetSchemaName(sheetId: string): string {
   const normalized = sheetId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
   return `sheet_${normalized}`;
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Strips single-quoted SQL string literals from text so that identifier
- * checks don't produce false positives on quoted string content.
- * Handles escaped single-quotes inside literals (e.g. 'it''s fine').
- */
-function stripStringLiterals(sql: string): string {
-  return sql.replace(/'(?:[^']|'')*'/g, "''");
-}
-
-function containsIdentifier(text: string, name: string): boolean {
-  // The lookbehind includes '.' so that qualified names like `schema.my_result`
-  // are NOT matched — we only want to detect unqualified references.
-  // The lookahead intentionally omits '.' so that column-access expressions like
-  // `my_result.column` ARE matched (they reference the `my_result` table).
-  const pattern = new RegExp(
-    `(?<![a-zA-Z0-9_.])${escapeRegExp(name)}(?![a-zA-Z0-9_])`,
-    'i',
-  );
-  return pattern.test(stripStringLiterals(text));
-}
-
-/**
- * Validates whether a proposed result name is available for a SQL cell.
- *
- * Returns a human-readable error message if the name is taken or would cause
- * problems, or `null` if the name is acceptable.
- *
- * Checks performed (in order):
- * 1. Not already used by another SQL cell in the same sheet (name collision).
- * 2. Not conflicting with a main-schema table name (would shadow real data).
- * 3. Not creating a self-reference cycle (SQL references the proposed name).
- */
-export function getResultNameValidationError(opts: {
-  proposedName: string;
-  currentCellId: string;
-  currentCellSql: string;
-  sheetCellIds: string[];
-  cells: Record<string, Cell>;
-  mainSchemaTableNames: ReadonlyArray<string>;
-  convertToValidName: (name: string) => string;
-}): string | null {
-  const {
-    proposedName,
-    currentCellId,
-    currentCellSql,
-    sheetCellIds,
-    cells,
-    mainSchemaTableNames,
-    convertToValidName,
-  } = opts;
-
-  const nameLower = proposedName.toLowerCase();
-
-  // 1. Check for name collision with other SQL cells in the same sheet
-  for (const cellId of sheetCellIds) {
-    if (cellId === currentCellId) continue;
-    const cell = cells[cellId];
-    if (!cell || cell.type !== 'sql') continue;
-    const otherName = getEffectiveResultName(
-      cell.data as SqlCellData,
-      convertToValidName,
-    );
-    if (otherName.toLowerCase() === nameLower) {
-      return 'Name already used by another cell';
-    }
-  }
-
-  // 2. Check for conflict with main-schema table names
-  if (mainSchemaTableNames.some((t) => t.toLowerCase() === nameLower)) {
-    return 'Name conflicts with an existing table';
-  }
-
-  // 3. Check for self-reference cycle: the cell's SQL references the proposed name
-  if (containsIdentifier(currentCellSql, proposedName)) {
-    return 'Name creates a dependency cycle';
-  }
-
-  return null;
 }
 
 /**
