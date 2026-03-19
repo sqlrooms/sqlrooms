@@ -238,6 +238,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -256,6 +259,9 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../../packages/vega
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -324,8 +330,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       ai:
-        specifier: ^5.0.44
-        version: 5.0.108(zod@4.1.13)
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -396,6 +402,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -454,9 +463,6 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
         version: 1.0.28(zod@4.1.13)
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
@@ -470,8 +476,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       ai:
-        specifier: ^5.0.44
-        version: 5.0.108(zod@4.1.13)
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -521,6 +527,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@sqlrooms/ai-rag':
         specifier: workspace:*
         version: link:../../packages/ai-rag
@@ -542,6 +551,9 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../../packages/vega
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.1)
@@ -591,9 +603,6 @@ importers:
 
   examples/app-builder:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
@@ -615,6 +624,9 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.1
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -2052,9 +2064,6 @@ importers:
 
   packages/ai:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
@@ -2076,6 +2085,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -2109,9 +2121,6 @@ importers:
       '@ai-sdk/react':
         specifier: ^2.0.44
         version: 2.0.109(react@19.2.1)(zod@4.1.13)
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4
@@ -2131,8 +2140,8 @@ importers:
         specifier: workspace:*
         version: link:../utils
       ai:
-        specifier: ^5.0.44
-        version: 5.0.108(zod@4.1.13)
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -2170,9 +2179,6 @@ importers:
 
   packages/ai-rag:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../ai-core
@@ -2186,8 +2192,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       ai:
-        specifier: ^5.0.44
-        version: 5.0.108(zod@4.1.13)
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -3480,9 +3486,6 @@ importers:
 
   packages/vega:
     dependencies:
-      '@openassistant/utils':
-        specifier: 1.0.0-alpha.0
-        version: 1.0.0-alpha.0
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../ai
@@ -3504,6 +3507,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -3590,6 +3596,12 @@ packages:
     peerDependencies:
       zod: 4.1.13
 
+  '@ai-sdk/gateway@2.0.59':
+    resolution: {integrity: sha512-hmXtD2InGIMoHm3gf1yZM4GURS0/4ZL4ff9O0jkF1tXcKl9V/72omLZlwlOM9r7pgpr/65H7anaV2t8kbip0FQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
   '@ai-sdk/openai-compatible@1.0.28':
     resolution: {integrity: sha512-yKubDxLYtXyGUzkr9lNStf/lE/I+Okc8tmotvyABhsQHHieLKk6oV5fJeRJxhr67Ejhg+FRnwUOxAmjRoFM4dA==}
     engines: {node: '>=18'}
@@ -3614,8 +3626,18 @@ packages:
     peerDependencies:
       zod: 4.1.13
 
+  '@ai-sdk/provider-utils@3.0.22':
+    resolution: {integrity: sha512-fFT1KfUUKktfAFm5mClJhS1oux9tP2qgzmEZVl5UdwltQ1LO/s8hd7znVrgKzivwv1s1FIPza0s9OpJaNB/vHw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
   '@ai-sdk/provider@2.0.0':
     resolution: {integrity: sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==}
+    engines: {node: '>=18'}
+
+  '@ai-sdk/provider@2.0.1':
+    resolution: {integrity: sha512-KCUwswvsC5VsW2PWFqF8eJgSCu5Ysj7m1TxiHTVA6g7k360bk0RNQENT8KTMAYEs+8fWPD3Uu4dEmzGHc+jGng==}
     engines: {node: '>=18'}
 
   '@ai-sdk/react@2.0.109':
@@ -6564,9 +6586,6 @@ packages:
   '@open-wc/dedupe-mixin@1.4.0':
     resolution: {integrity: sha512-Sj7gKl1TLcDbF7B6KUhtvr+1UCxdhMbNY5KxdU5IfMFWqL8oy1ZeAcCANjoB1TL0AJTcPmcCFsCbHf8X2jGDUA==}
 
-  '@openassistant/utils@1.0.0-alpha.0':
-    resolution: {integrity: sha512-/IGGeTkCoOPLOXR953VrKmopYahqwaJGP9M1XwOQCE1G1tHcBLvjzGt9jgz6w/XUq5RDaK16AzeQha9irZZxFQ==}
-
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
@@ -8970,6 +8989,10 @@ packages:
     resolution: {integrity: sha512-fnYhv671l+eTTp48gB4zEsTW/YtRgRPnkI2nT7x6qw5rkI1Lq2hTmQIpHPgyThI0znLK+vX2n9XxKdXZ7BUbbw==}
     engines: {node: '>= 20'}
 
+  '@vercel/oidc@3.1.0':
+    resolution: {integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==}
+    engines: {node: '>= 20'}
+
   '@vis.gl/react-mapbox@8.1.0':
     resolution: {integrity: sha512-FwvH822oxEjWYOr+pP2L8hpv+7cZB2UsQbHHHT0ryrkvvqzmTgt7qHDhamv0EobKw86e1I+B4ojENdJ5G5BkyQ==}
     peerDependencies:
@@ -9159,6 +9182,12 @@ packages:
 
   ai@5.0.108:
     resolution: {integrity: sha512-Jex3Lb7V41NNpuqJHKgrwoU6BCLHdI1Pg4qb4GJH4jRIDRXUBySJErHjyN4oTCwbiYCeb/8II9EnqSRPq9EifA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
+  ai@5.0.155:
+    resolution: {integrity: sha512-lq6PafJobpWyxnQofOukwIBwWNWKpf4AJMWISwHOOXEjMCcsHR1cKw92rQ/cy9O/tneQpP8uXgNWUDU+f+270A==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
@@ -13358,7 +13387,6 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
-
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   quadbin@0.4.2:
@@ -15726,6 +15754,13 @@ snapshots:
       '@vercel/oidc': 3.0.5
       zod: 4.1.13
 
+  '@ai-sdk/gateway@2.0.59(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.1
+      '@ai-sdk/provider-utils': 3.0.22(zod@4.1.13)
+      '@vercel/oidc': 3.1.0
+      zod: 4.1.13
+
   '@ai-sdk/openai-compatible@1.0.28(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
@@ -15752,7 +15787,18 @@ snapshots:
       eventsource-parser: 3.0.6
       zod: 4.1.13
 
+  '@ai-sdk/provider-utils@3.0.22(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.1
+      '@standard-schema/spec': 1.0.0
+      eventsource-parser: 3.0.6
+      zod: 4.1.13
+
   '@ai-sdk/provider@2.0.0':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@2.0.1':
     dependencies:
       json-schema: 0.4.0
 
@@ -21322,10 +21368,6 @@ snapshots:
 
   '@open-wc/dedupe-mixin@1.4.0': {}
 
-  '@openassistant/utils@1.0.0-alpha.0':
-    dependencies:
-      zod: 4.1.13
-
   '@opentelemetry/api@1.9.0': {}
 
   '@oxc-resolver/binding-android-arm-eabi@11.15.0':
@@ -24040,6 +24082,8 @@ snapshots:
 
   '@vercel/oidc@3.0.5': {}
 
+  '@vercel/oidc@3.1.0': {}
+
   '@vis.gl/react-mapbox@8.1.0(mapbox-gl@3.17.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       react: 19.2.1
@@ -24264,6 +24308,14 @@ snapshots:
       '@ai-sdk/gateway': 2.0.18(zod@4.1.13)
       '@ai-sdk/provider': 2.0.0
       '@ai-sdk/provider-utils': 3.0.18(zod@4.1.13)
+      '@opentelemetry/api': 1.9.0
+      zod: 4.1.13
+
+  ai@5.0.155(zod@4.1.13):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.59(zod@4.1.13)
+      '@ai-sdk/provider': 2.0.1
+      '@ai-sdk/provider-utils': 3.0.22(zod@4.1.13)
       '@opentelemetry/api': 1.9.0
       zod: 4.1.13
 

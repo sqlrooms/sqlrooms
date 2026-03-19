@@ -10,12 +10,11 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.18",
-    "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "ai": "^5.0.44",
+    "ai": "^5.0.155",
     "lucide-react": "^0.555.0",
     "next": "^16.1.6",
     "react": "^19.2.0",

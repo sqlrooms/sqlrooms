@@ -5,7 +5,7 @@
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
-export type {AiSliceState} from './AiSlice';
+export type {AiSliceState, AiSliceOptions} from './AiSlice';
 // @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
@@ -34,18 +34,21 @@ export {
   ToolAbortError,
   extractModelsFromSettings,
 } from './utils';
-export {
-  convertToAiSDKTools,
-  createOnToolCompletedHandler,
-} from './chatTransport';
-export type {AddToolResult} from './types';
+export type {
+  AddToolResult,
+  StoredTool,
+  StoredToolSet,
+  ToolRendererProps,
+  ToolRenderer,
+  ToolRendererRegistry,
+  ToolRenderers,
+} from './types';
 export {fixIncompleteToolCalls} from './utils';
 
-export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';
+export {processAgentStream} from './agents/AgentUtils';
 export type {
   AgentStreamResult,
   UIMessageChunk,
   AgentToolCall,
-  AgentToolCallAdditionalData,
 } from './agents/AgentUtils';
 export {ReasoningBox} from './components/ReasoningBox';

@@ -20,14 +20,12 @@ export type ToolGroup = {
  * @param uiMessageParts - Array of UI message parts from the assistant
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
  * @param exclude - Array of tool names that should not be grouped and must be rendered separately
- * @param toolAdditionalData - Additional data for tool calls (e.g., agent tool execution details)
  * @returns Grouped parts with generated titles for tool groups
  */
 export function useToolGrouping(
   uiMessageParts: UIMessagePart[],
   containerWidth: number = 0,
   exclude: string[] = [],
-  toolAdditionalData: Record<string, unknown> = {},
 ): ToolGroup[] {
   return useMemo(() => {
     if (!uiMessageParts.length) return [];

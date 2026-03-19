@@ -121,7 +121,9 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           } else {
             const dbConnector = await get().db.getConnector();
             if (!isWasmDuckDbConnector(dbConnector)) {
-              throw new Error('Only WasmDuckDbConnector is currently supported');
+              throw new Error(
+                'Only WasmDuckDbConnector is currently supported',
+              );
             }
             resolvedCoordinator = coordinator();
             mosaicConnector = await resolvedCoordinator.databaseConnector(

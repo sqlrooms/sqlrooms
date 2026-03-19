@@ -1,5 +1,3 @@
-import {StoreApi} from '@sqlrooms/room-store';
-import {AiSliceState} from '../AiSlice';
 import {ToolAbortError} from '../utils';
 import {TOOL_CALL_CANCELLED} from '../constants';
 
@@ -38,53 +36,28 @@ export type AgentToolCall = {
 };
 
 /**
- * Additional data stored for an agent tool call to track progress
+ * Minimal store interface required by processAgentStream.
  */
-export type AgentToolCallAdditionalData = {
-  agentToolCalls: AgentToolCall[];
-  finalOutput?: string;
-  timestamp: string;
-};
-
-/**
- * Updates the additional data for an agent tool call.
- */
-export function updateAgentToolCallData(params: {
-  store: StoreApi<AiSliceState>;
-  parentToolCallId: string;
-  agentToolCalls: AgentToolCall[];
-  sessionId: string;
-  finalOutput?: string;
-}): void {
-  const {store, parentToolCallId, agentToolCalls, sessionId, finalOutput} =
-    params;
-  const state = store.getState();
-  state.ai.setSessionToolAdditionalData(sessionId, parentToolCallId, {
-    agentToolCalls: [...agentToolCalls],
-    finalOutput,
-    timestamp: new Date().toISOString(),
-  } as AgentToolCallAdditionalData);
+interface AgentStreamStore {
+  getState(): {
+    ai: {
+      getToolCallSession?: (toolCallId: string) => string | undefined;
+    };
+  };
 }
 
 /**
- * Processes an agent stream result, tracking tool calls and forwarding chunks to the writer
- *
- * This function handles:
- * - Tracking all tool calls made by the agent
- * - Updating session additional data for UI progress rendering
- * - Forwarding text deltas and tool outputs to the stream writer
- * - Returning the final text result
+ * Processes an agent stream result, consuming chunks and returning the final text.
  *
  * @param agentResult - The stream result from agent.stream()
- * @param store - The store containing AiSliceState
- * @param parentToolCallId - The tool call ID of the parent agent tool (for storing additional data)
- * @param sessionId - The session ID to use for storing additional data
- * @param abortSignal - The abort signal to use for cancelling the stream
+ * @param store - The store (used to resolve the owning session)
+ * @param parentToolCallId - The tool call ID of the parent agent tool
+ * @param abortSignal - Optional abort signal for cancellation
  * @returns The final text output from the agent
  */
 export async function processAgentStream(
   agentResult: AgentStreamResult,
-  store: StoreApi<AiSliceState>,
+  store: AgentStreamStore,
   parentToolCallId: string,
   abortSignal?: AbortSignal,
 ): Promise<string> {
@@ -102,99 +75,15 @@ export async function processAgentStream(
     }
   };
 
-  const agentToolCalls: AgentToolCall[] = [];
-
-  // Keep track of tool calls by ID for updating state
-  const toolCallMap = new Map<string, number>();
-
   try {
-    for await (const chunk of agentResult.toUIMessageStream()) {
+    for await (const _chunk of agentResult.toUIMessageStream()) {
       throwIfAborted();
-      // Capture tool input (when agent starts calling a tool)
-      if (
-        chunk.type === 'tool-input-available' &&
-        chunk.toolCallId &&
-        chunk.toolName
-      ) {
-        const index = agentToolCalls.length;
-        toolCallMap.set(chunk.toolCallId, index);
-        agentToolCalls.push({
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-          state: 'pending',
-        });
-
-        updateAgentToolCallData({
-          store,
-          parentToolCallId,
-          agentToolCalls,
-          sessionId,
-        });
-      }
-
-      // Forward text deltas to writer stream
-      if (chunk.type === 'tool-output-available' && chunk.toolCallId) {
-        // Update the tool call with success state
-        const index = toolCallMap.get(chunk.toolCallId);
-        if (index !== undefined) {
-          const toolCall = agentToolCalls[index];
-          if (toolCall) {
-            agentToolCalls[index] = {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: chunk.output,
-              state: 'success',
-            };
-
-            updateAgentToolCallData({
-              store,
-              parentToolCallId,
-              agentToolCalls,
-              sessionId,
-            });
-          }
-        }
-      } else if (chunk.type === 'tool-output-error' && chunk.toolCallId) {
-        // Update the tool call with error state
-        const index = toolCallMap.get(chunk.toolCallId);
-        if (index !== undefined) {
-          const toolCall = agentToolCalls[index];
-          if (toolCall) {
-            agentToolCalls[index] = {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              errorText: chunk.errorText,
-              state: 'error',
-            };
-
-            updateAgentToolCallData({
-              store,
-              parentToolCallId,
-              agentToolCalls,
-              sessionId,
-            });
-          }
-        }
-      }
     }
   } catch (err) {
-    // If we were cancelled, normalize to ToolAbortError so upstream shows "cancelled by user"
     throwIfAborted();
     throw err;
   }
 
   throwIfAborted();
-  // Await the text promise (this also consumes the stream)
-  const resultText = await agentResult.text;
-
-  // Store final additional data with all tool calls
-  updateAgentToolCallData({
-    store,
-    parentToolCallId,
-    agentToolCalls,
-    sessionId,
-    finalOutput: resultText,
-  });
-
-  return resultText;
+  return await agentResult.text;
 }

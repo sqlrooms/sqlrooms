@@ -19,10 +19,7 @@ export {
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
 
-export type {
-  VegaChartToolParameters as VegaChartToolParametersType,
-  VegaChartToolOptions,
-} from './VegaChartTool';
+export type {VegaChartToolOptions, VegaChartToolOutput} from './VegaChartTool';
 
 /**
  * Composable Vega-Lite chart component with editing capabilities.

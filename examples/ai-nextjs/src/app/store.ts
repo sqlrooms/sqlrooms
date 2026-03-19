@@ -11,7 +11,7 @@ import {
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {AI_SETTINGS} from '../config';
-import {getClientTools} from './lib/tools';
+import {getClientTools, getClientToolRenderers} from './lib/tools';
 
 type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
 
@@ -41,6 +41,11 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
 
         getInstructions: () => {
           return 'You are a helpful assistant that can answer questions and help with tasks';
+        },
+
+        // Tool renderers for displaying tool results in the UI
+        toolRenderers: {
+          ...getClientToolRenderers(),
         },
 
         // Add custom tools

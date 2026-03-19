@@ -1,64 +1,70 @@
-import React from 'react';
+import type {FC} from 'react';
+import {useEffect} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
 import {ToolErrorMessage} from './ToolErrorMessage';
 
-// Tool invocation type that can handle both migrated and AI SDK formats
-type ToolData = {
+type ToolResultProps = {
   toolCallId: string;
-  toolName?: string;
-  name?: string;
-  args?: any;
-  input?: any;
-  state?:
-    | 'call'
-    | 'result'
-    | 'partial-call'
+  toolName: string;
+  output: unknown;
+  input: unknown;
+  state:
     | 'input-streaming'
     | 'input-available'
     | 'output-available'
     | 'output-error';
-  result?: any;
-  output?: any;
   errorText?: string;
-  [key: string]: any;
 };
 
-export const ToolResult: React.FC<ToolData> = ({
-  toolData,
-  additionalData,
-  isCompleted,
-  errorMessage,
+export const ToolResult: FC<ToolResultProps> = ({
+  toolCallId,
+  toolName,
+  output,
+  input,
+  state,
+  errorText,
 }) => {
-  const toolName = toolData.toolName || toolData.name || 'unknown';
-  const args = toolData.args || toolData.input || {};
-  const state = toolData.state || 'call';
-  const llmResult =
-    state === 'result' || state === 'output-available'
-      ? toolData.result || toolData.output
-      : null;
+  const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
+  // Look up directly from the registry object (stable reference) to avoid
+  // the react-hooks/static-components lint rule flagging a function call.
+  const ToolComponent = toolName ? toolRenderers[toolName] : undefined;
 
-  // show reason text before tool call complete
-  const text = args.reasoning || '';
+  const args = (input ?? {}) as Record<string, unknown>;
 
-  // Access tool component directly from tools registry to avoid lint error
-  // about creating components during render
-  const tools = useStoreWithAi((state) => state.ai.tools);
-  const ToolComponent = tools[toolName]?.component as React.ComponentType;
+  // check if args has a property called 'reasoning'
+  const reason = args.reasoning as string | undefined;
 
-  // check if args has a property called 'reason'
-  const reason = args.reasoning as string;
+  const isCompleted = state === 'output-available' || state === 'output-error';
 
-  // check if llmResult is an object and has a success property
+  // Determine success: non-object outputs (strings, numbers) are always treated
+  // as success. Object outputs are success unless they explicitly set `success: false`.
+  // This is lenient by design — tools that don't follow the `{success: boolean}`
+  // convention still render their result component.
   const isSuccess =
-    typeof llmResult === 'object' &&
-    llmResult !== null &&
-    'success' in llmResult &&
-    llmResult.success === true;
+    state === 'output-available' &&
+    output != null &&
+    (typeof output !== 'object' ||
+      (output as Record<string, unknown>).success !== false);
+
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      isCompleted &&
+      isSuccess &&
+      toolName &&
+      !ToolComponent
+    ) {
+      console.warn(
+        `[ai-core] Tool "${toolName}" completed with output but has no registered renderer. ` +
+          `Register one via createAiSlice({ toolRenderers: { ${toolName}: MyRenderer } }).`,
+      );
+    }
+  }, [isCompleted, isSuccess, toolName, ToolComponent]);
 
   return !isCompleted ? (
-    <div className="text-sm text-gray-500">{text}</div>
+    <div className="text-sm text-gray-500">{reason ?? ''}</div>
   ) : (
     <MessageContainer
       isSuccess={isSuccess}
@@ -66,17 +72,16 @@ export const ToolResult: React.FC<ToolData> = ({
       content={{
         toolName,
         args,
-        llmResult,
-        additionalData,
+        output,
         isCompleted,
       }}
     >
       <div className="text-sm text-gray-500">
         {reason && <span>{reason}</span>}
-        {isCompleted && (errorMessage || !isSuccess) && (
+        {isCompleted && (errorText || !isSuccess) && (
           <ToolErrorMessage
-            error={errorMessage ?? 'Tool call failed'}
-            details={toolData}
+            error={errorText ?? 'Tool call failed'}
+            details={{toolName, input, output, state}}
             title="Tool call error"
             triggerLabel="Tool call failed"
             editorHeightPx={300}
@@ -87,11 +92,11 @@ export const ToolResult: React.FC<ToolData> = ({
         <ToolCallErrorBoundary>
           {typeof ToolComponent === 'function' ? (
             <ToolComponent
-              {...({
-                ...(llmResult as Record<string, unknown>),
-                ...(additionalData as Record<string, unknown>),
-                toolCallId: toolData.toolCallId,
-              } as Record<string, unknown>)}
+              output={output}
+              input={input}
+              toolCallId={toolCallId}
+              state={state}
+              errorText={errorText}
             />
           ) : (
             ToolComponent
