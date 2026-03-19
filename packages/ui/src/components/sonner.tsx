@@ -4,21 +4,7 @@ import {Toaster as Sonner, type ToasterProps} from 'sonner';
 import {useTheme} from '../theme/theme-provider';
 import type {CSSProperties, ReactNode} from 'react';
 
-interface CustomToasterProps extends ToasterProps {
-  closeButton?: boolean;
-  icons?: {
-    success?: ReactNode;
-    error?: ReactNode;
-    warning?: ReactNode;
-    info?: ReactNode;
-  };
-}
-
-const Toaster = ({
-  closeButton = false,
-  icons,
-  ...props
-}: CustomToasterProps) => {
+const Toaster = ({...props}: ToasterProps) => {
   const {theme = 'system'} = useTheme();
 
   return (
@@ -26,8 +12,15 @@ const Toaster = ({
       richColors
       theme={theme as ToasterProps['theme']}
       className="toaster group"
-      closeButton={closeButton}
-      icons={icons}
+      closeButton
+      swipeDirections={['bottom']}
+      icons={{
+        success: null,
+        info: null,
+        warning: null,
+        error: null,
+        loading: null,
+      }}
       style={
         {
           '--normal-bg': 'var(--color-popover)',
