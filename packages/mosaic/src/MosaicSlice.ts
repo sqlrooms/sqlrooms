@@ -50,7 +50,7 @@ export type MosaicSliceState = {
   mosaic: SliceFunctions & {
     connection:
       | {status: 'idle' | 'loading'}
-      | {status: 'ready'; connector: Connector; coordinator: Coordinator}
+      | {status: 'ready'; connector?: Connector; coordinator: Coordinator}
       | {status: 'error'; error: unknown};
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
@@ -87,9 +87,12 @@ export function createDefaultMosaicConfig(
   } as MosaicSliceConfig;
 }
 
-export function createMosaicSlice(props?: {
+export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
-}) {
+  coordinator?: Coordinator;
+};
+
+export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
   return createSlice<
     MosaicSliceState,
     BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
@@ -105,23 +108,30 @@ export function createMosaicSlice(props?: {
 
       async initialize() {
         let mosaicConnector: Connector | undefined;
+        let resolvedCoordinator!: Coordinator;
         set((state) =>
           produce(state, (draft) => {
             draft.mosaic.connection = {status: 'loading'};
           }),
         );
         try {
-          const dbConnector = await get().db.getConnector();
-          if (!isWasmDuckDbConnector(dbConnector)) {
-            throw new Error('Only WasmDuckDbConnector is currently supported');
+          if (props.coordinator) {
+            // Use the custom coordinator directly – caller is responsible for setup
+            resolvedCoordinator = props.coordinator;
+          } else {
+            const dbConnector = await get().db.getConnector();
+            if (!isWasmDuckDbConnector(dbConnector)) {
+              throw new Error('Only WasmDuckDbConnector is currently supported');
+            }
+            resolvedCoordinator = coordinator();
+            mosaicConnector = await resolvedCoordinator.databaseConnector(
+              wasmConnector({
+                // @ts-expect-error - We install a different version of duckdb-wasm
+                duckDb: dbConnector.getDb(),
+                connection: dbConnector.getConnection(),
+              }),
+            );
           }
-          mosaicConnector = await coordinator().databaseConnector(
-            wasmConnector({
-              // @ts-expect-error - We install a different version of duckdb-wasm
-              duckDb: dbConnector.getDb(),
-              connection: dbConnector.getConnection(),
-            }),
-          );
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
@@ -129,17 +139,16 @@ export function createMosaicSlice(props?: {
             }),
           );
           throw error;
-        } finally {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.mosaic.connection = {
-                status: 'ready',
-                connector: mosaicConnector!,
-                coordinator: coordinator(),
-              };
-            }),
-          );
         }
+        set((state) =>
+          produce(state, (draft) => {
+            draft.mosaic.connection = {
+              status: 'ready',
+              connector: mosaicConnector,
+              coordinator: resolvedCoordinator,
+            };
+          }),
+        );
       },
 
       async destroy() {
