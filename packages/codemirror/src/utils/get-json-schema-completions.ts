@@ -1,9 +1,96 @@
-import {CompletionResult, Completion} from '@codemirror/autocomplete';
-import {CompletionItemKind} from 'vscode-languageserver-types';
+import {CompletionResult, Completion, snippet} from '@codemirror/autocomplete';
+import {
+  CompletionItemKind,
+  InsertTextFormat,
+  CompletionItem,
+} from 'vscode-languageserver-types';
+import {TextDocument} from 'vscode-languageserver-textdocument';
+import {EditorView} from '@codemirror/view';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import {JsonSchemaDocumentation} from '../components/JsonSchemaDocumentation';
 import {createJsonDocument} from './create-json-document';
 import {JsonSchemaValidator} from './json-schema-validator';
+
+/**
+ * Converts LSP snippet syntax to CodeMirror snippet syntax
+ * LSP: $1, $2, ${1:default} → CodeMirror: ${}, ${default}
+ */
+function convertLspSnippetToCodeMirror(text: string): string {
+  return text
+    .replace(/\$\{(\d+):([^}]*)\}/g, '${$2}') // ${1:text} → ${text}
+    .replace(/\$\d+/g, '${}'); // $1, $2, etc → ${}
+}
+
+/**
+ * Strips LSP snippet syntax from plain text
+ */
+function stripSnippetSyntax(text: string): string {
+  return text
+    .replace(/\$\{\d+:?([^}]*)\}/g, '$1') // ${1:text} → text
+    .replace(/\$\d+/g, ''); // $1 → empty
+}
+
+/**
+ * Creates the apply value for a completion item, handling textEdit ranges and snippet formats
+ */
+function createCompletionApply(
+  item: CompletionItem,
+  document: TextDocument,
+):
+  | string
+  | ((
+      view: EditorView,
+      completion: Completion,
+      from: number,
+      to: number,
+    ) => void) {
+  // Determine insertion text from textEdit, insertText, or label
+  let insertText =
+    item.textEdit && 'newText' in item.textEdit
+      ? item.textEdit.newText
+      : item.insertText || item.label;
+
+  // Convert or strip snippet syntax based on format
+  if (item.insertTextFormat === InsertTextFormat.Snippet) {
+    insertText = convertLspSnippetToCodeMirror(insertText);
+  } else if (insertText.includes('$')) {
+    // Language service sometimes includes snippet syntax without setting the format
+    insertText = stripSnippetSyntax(insertText);
+  }
+
+  // Check if the text actually contains snippet placeholders after conversion
+  const hasPlaceholders =
+    insertText.includes('${}') || insertText.includes('${');
+
+  // Handle per-item textEdit range
+  if (item.textEdit && 'range' in item.textEdit) {
+    const editFrom = document.offsetAt(item.textEdit.range.start);
+    const editTo = document.offsetAt(item.textEdit.range.end);
+
+    // Only use snippet API if there are actual placeholders
+    if (item.insertTextFormat === InsertTextFormat.Snippet && hasPlaceholders) {
+      // Apply snippet with custom range
+      return (view, completion) => {
+        snippet(insertText)(view, completion, editFrom, editTo);
+      };
+    } else {
+      // Apply plain text with custom range (even if originally marked as snippet)
+      return (view) => {
+        view.dispatch({
+          changes: {from: editFrom, to: editTo, insert: insertText},
+          selection: {anchor: editFrom + insertText.length},
+        });
+      };
+    }
+  }
+
+  // No custom range - use default behavior
+  if (item.insertTextFormat === InsertTextFormat.Snippet && hasPlaceholders) {
+    return snippet(insertText);
+  }
+
+  return insertText;
+}
 
 /**
  * Gets JSON schema completions for a given position in the text
@@ -48,14 +135,13 @@ export async function getJsonSchemaCompletions(
       label: item.label,
       type: convertCompletionItemKind(item.kind),
       detail: item.detail,
-      // Render markdown documentation if available
       info: documentation
         ? () =>
             renderComponentToDomElement(JsonSchemaDocumentation, {
               documentation,
             })
         : undefined,
-      apply: item.insertText || item.label,
+      apply: createCompletionApply(item, document),
       boost: item.sortText ? -(parseInt(item.sortText, 10) || 0) : 0,
     };
   });

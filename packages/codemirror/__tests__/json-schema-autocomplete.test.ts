@@ -344,7 +344,12 @@ describe('jsonSchemaAutocomplete', () => {
       const nameCompletion = result?.options?.find(
         (opt) => opt.label === 'name',
       );
-      expect(nameCompletion?.apply).toContain('name');
+      // apply can be a string or function
+      if (typeof nameCompletion?.apply === 'string') {
+        expect(nameCompletion.apply).toContain('name');
+      } else {
+        expect(nameCompletion?.apply).toBeDefined();
+      }
     });
 
     it('should apply enum value completion', async () => {
@@ -355,7 +360,12 @@ describe('jsonSchemaAutocomplete', () => {
       const activeCompletion = result?.options?.find(
         (opt) => opt.label === '"active"',
       );
-      expect(activeCompletion?.apply).toContain('active');
+      // apply can be a string or function
+      if (typeof activeCompletion?.apply === 'string') {
+        expect(activeCompletion.apply).toContain('active');
+      } else {
+        expect(activeCompletion?.apply).toBeDefined();
+      }
     });
 
     it('should apply boolean completion', async () => {
@@ -366,7 +376,12 @@ describe('jsonSchemaAutocomplete', () => {
       const trueCompletion = result?.options?.find(
         (opt) => opt.label === 'true',
       );
-      expect(trueCompletion?.apply).toContain('true');
+      // apply can be a string or function
+      if (typeof trueCompletion?.apply === 'string') {
+        expect(trueCompletion.apply).toContain('true');
+      } else {
+        expect(trueCompletion?.apply).toBeDefined();
+      }
     });
   });
 
