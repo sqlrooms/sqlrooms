@@ -56,7 +56,7 @@ export async function getJsonSchemaCompletions(
             })
         : undefined,
       apply: item.insertText || item.label,
-      boost: item.sortText ? -parseInt(item.sortText, 10) : 0,
+      boost: item.sortText ? -(parseInt(item.sortText, 10) || 0) : 0,
     };
   });
 
