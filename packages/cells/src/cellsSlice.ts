@@ -127,7 +127,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
           // Generate a unique result name for SQL cells if not set
           if (cell.type === 'sql' && !cell.data.resultName) {
             const existingNames = Object.values(scopedCells)
-              .filter((c): c is SqlCell => c.type === 'sql')
+              .filter((c): c is SqlCell => c.type === 'sql' && c.id !== cell.id)
               .map((c) =>
                 getEffectiveResultName(c.data, convertToValidColumnOrTableName),
               );
