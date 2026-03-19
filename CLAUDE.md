@@ -9,6 +9,7 @@ SQLRooms is a comprehensive framework for building browser-based data analytics 
 ## Development Commands
 
 ### Build & Development
+
 ```bash
 # Install dependencies
 pnpm install
@@ -27,6 +28,7 @@ pnpm clean
 ```
 
 ### Testing & Quality
+
 ```bash
 # Run tests
 pnpm test
@@ -45,6 +47,7 @@ pnpm format
 ```
 
 ### Documentation
+
 ```bash
 # Develop docs locally (runs TypeDoc + VitePress)
 pnpm docs:dev
@@ -57,6 +60,7 @@ pnpm docs:preview
 ```
 
 ### Publishing (Maintainers)
+
 ```bash
 # Version with conventional commits
 pnpm version-auto
@@ -67,6 +71,7 @@ pnpm publish-release
 ```
 
 ### Python Workspace
+
 ```bash
 # From python/ directory
 cd python
@@ -86,6 +91,7 @@ uv run sqlrooms-server --db-path :memory: --port 4000
 ### Core Concepts
 
 #### 1. Slices - Composable State Units
+
 The entire architecture is built on **slices**: self-contained units combining state, actions, and lifecycle hooks.
 
 - Each slice implements `SliceFunctions` with optional `initialize()` and `destroy()` lifecycle methods
@@ -94,6 +100,7 @@ The entire architecture is built on **slices**: self-contained units combining s
 - Automatically initialized/destroyed via `room.initialize()` orchestration
 
 Common slices:
+
 - `RoomShellSliceState`: Base layer with config, file management, data sources
 - `DuckDbSliceState`: Database operations (tables, queries, schemas)
 - `LayoutSliceState`: Panel management and mosaic layout
@@ -101,24 +108,33 @@ Common slices:
 - `AiSliceState`: AI chat sessions and tool execution
 
 #### 2. Room - Complete Workspace
+
 A **Room** is a composable data exploration workspace defined by combining slices in `createRoomStore()`.
 
 Pattern:
+
 ```typescript
-export type RoomState = RoomShellSliceState & DuckDbSliceState & CustomSliceState;
-export const {roomStore, useRoomStore} = createRoomStore<RoomState>(stateCreator);
+export type RoomState = RoomShellSliceState &
+  DuckDbSliceState &
+  CustomSliceState;
+export const {roomStore, useRoomStore} =
+  createRoomStore<RoomState>(stateCreator);
 ```
 
 #### 3. State Management: Zustand + Immer
+
 - **Zustand**: Lightweight state management with devtools middleware
 - **Immer**: Immutable updates via mutable draft syntax in `produce()`
 - **Persistence**: State serialized via Zod schemas with `persistSliceConfigs()`
 
 State updates pattern:
+
 ```typescript
-set((state) => produce(state, (draft) => {
-  draft.db.tables = newTables;
-}))
+set((state) =>
+  produce(state, (draft) => {
+    draft.db.tables = newTables;
+  }),
+);
 ```
 
 ### DuckDB Integration
@@ -130,11 +146,13 @@ Three-layer architecture:
 3. **`duckdb-node`**: Node.js support for SSR/backend
 
 Key hooks:
+
 - `useSql()`: Execute SQL queries with automatic re-runs on state changes
 - `useDuckDb()`: Access DuckDB connector directly
 - `useDuckDbQuery()`: Lower-level query execution
 
 Data flow:
+
 ```
 RoomShell Config (dataSources)
   → RoomShellSlice loads files/URLs
@@ -146,6 +164,7 @@ RoomShell Config (dataSources)
 ### Package Organization
 
 #### Core Packages (Essential)
+
 - `room-store`: Zustand + Immer foundation, `createRoomStore`, persistence
 - `room-config`: Zod schemas for configs and data sources
 - `room-shell`: Main UI entry, panel management, RoomShell component
@@ -156,6 +175,7 @@ RoomShell Config (dataSources)
 - `data-table`: Virtualized tables for Arrow data
 
 #### Feature Packages (Optional)
+
 - `sql-editor`: Monaco-based SQL editor with query execution
 - `kepler`: Kepler.gl geospatial visualization
 - `mosaic`: Observable Mosaic interactive charts
@@ -165,6 +185,7 @@ RoomShell Config (dataSources)
 - `motherduck`, `s3-browser`: External data source integrations
 
 #### Utility Packages
+
 - `utils`: File conversion, Arrow operations, column naming
 - `schema-tree`: Database schema hierarchy
 - `crdt`: Collaborative features (experimental)
@@ -173,6 +194,7 @@ RoomShell Config (dataSources)
 ### Data Sources
 
 Three types defined in `room-config`:
+
 ```typescript
 // File upload
 {type: 'file', fileName: 'data.parquet', tableName: 'data'}
@@ -187,6 +209,7 @@ Three types defined in `room-config`:
 ### Panel System
 
 Panels are React components with access to the room store:
+
 ```typescript
 layout: {
   panels: {
@@ -211,6 +234,7 @@ layout: {
 ### AI/Agent Framework
 
 Tools are composable functions for LLM agents:
+
 ```typescript
 tools: {
   query: {
@@ -227,42 +251,51 @@ Tools have full access to room store via `createDefaultAiTools(store)`.
 ## Important Patterns
 
 ### 1. Always Use Produce for State Updates
+
 ```typescript
 // Correct
-set((state) => produce(state, (draft) => {
-  draft.db.tables.push(newTable);
-}))
+set((state) =>
+  produce(state, (draft) => {
+    draft.db.tables.push(newTable);
+  }),
+);
 
 // Incorrect - will not trigger updates
 set((state) => {
   state.db.tables.push(newTable);
   return state;
-})
+});
 ```
 
 ### 2. Zustand Selectors for Performance
+
 ```typescript
 // Memoized, efficient
 const tables = useRoomStore((state) => state.db.tables);
 
 // Re-renders on any store change
-const {db} = useRoomStore();  // Avoid unless necessary
+const {db} = useRoomStore(); // Avoid unless necessary
 ```
 
 ### 3. Lifecycle Management
+
 - Slices auto-initialize via `room.initialize()` on mount
 - Clean up resources in slice's `destroy()` method
 - DuckDB connector auto-created during initialization
 
 ### 4. Query Cancellation
+
 QueryHandle supports AbortSignal:
+
 ```typescript
 const handle = await db.executeSql(query);
-handle.cancel();  // Aborts query execution
+handle.cancel(); // Aborts query execution
 ```
 
 ### 5. Schema Validation
+
 All configs use Zod schemas:
+
 ```typescript
 type MyConfig = z.infer<typeof MyConfigSchema>;
 ```
@@ -306,6 +339,7 @@ sqlrooms/
 ### Modifying DuckDB Schema
 
 Changes to table structure:
+
 1. Update schema in `duckdb-core/src/types.ts`
 2. Modify loader in `room-shell` if data source handling changes
 3. Update `db.addTable()` or `db.loadTableSchemas()` in `duckdb` slice
@@ -320,6 +354,7 @@ Changes to table structure:
 ### Working with Git LFS
 
 Media files in `docs/public/media/` use Git LFS:
+
 ```bash
 # Install Git LFS
 brew install git-lfs  # macOS
@@ -334,6 +369,7 @@ git lfs pull
 ## Dependencies
 
 ### Core Runtime Dependencies
+
 - React 18+ (React 19 supported)
 - Tailwind CSS 3 (Tailwind 4 experimental)
 - Node.js >= 22
@@ -342,6 +378,7 @@ git lfs pull
 - Zod (schema validation)
 
 ### Key Build Tools
+
 - pnpm: Package manager (workspaces)
 - Turbo: Monorepo build orchestration
 - TypeScript 5.9.3
@@ -350,6 +387,7 @@ git lfs pull
 - Jest: Testing framework
 
 ### Python Environment
+
 - uv: Python package manager
 - Python 3.11+
 
@@ -369,21 +407,30 @@ git lfs pull
 ## Troubleshooting
 
 ### Build Issues
+
 - `pnpm clean` removes all build artifacts and cache
 - Check `turbo.json` for task dependencies
 - Verify `pnpm-lock.yaml` is up to date: `pnpm install`
 
 ### Type Errors
+
 - Run `pnpm typecheck` to see all errors across workspace
 - Ensure all packages are built: `pnpm build`
 - Check TypeScript version (should be 5.9.3)
 
 ### DuckDB Connection Issues
+
 - WASM connector requires proper CORS headers for remote files
 - WebSocket connector needs server running at specified URL
 - Check browser console for initialization errors
 
 ### Import Resolution
+
 - Packages must be built before importing: `pnpm build`
 - Use workspace protocol in package.json: `"@sqlrooms/ui": "workspace:*"`
 - Restart TypeScript server after adding new packages
+
+### React
+
+- Prefer `const Component: React.FC<Props> = (props) => {}` over `function Component(props)`
+- Prefer `cn('text-sm overflow-auto', { 'underline': isUnderline })` over string concatenation or template literals
