@@ -19,7 +19,6 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
-  ChatOnDataCallback,
   generateText,
   ToolSet,
 } from 'ai';
@@ -161,10 +160,6 @@ export type AiSliceState = {
       toolCall: ToolCall;
       addToolResult?: AddToolResult;
     }) => Promise<void> | void;
-    onChatData: (
-      sessionId: string,
-      dataPart: Parameters<ChatOnDataCallback<UIMessage>>[0],
-    ) => void;
     onChatError: (sessionId: string, error: unknown) => void;
   };
 };

@@ -36,30 +36,6 @@ export type AgentToolCall = {
 };
 
 /**
- * Additional data stored for an agent tool call to track progress
- */
-export type AgentToolCallAdditionalData = {
-  agentToolCalls: AgentToolCall[];
-  finalOutput?: string;
-  timestamp: string;
-};
-
-/**
- * @deprecated This function is a no-op. Agent progress is now tracked
- * only locally inside {@link processAgentStream} and returned as part
- * of the tool output.
- */
-export function updateAgentToolCallData(_params: {
-  store: unknown;
-  parentToolCallId: string;
-  agentToolCalls: AgentToolCall[];
-  sessionId: string;
-  finalOutput?: string;
-}): void {
-  // no-op — in-chat tool result editing has been removed
-}
-
-/**
  * Minimal store interface required by processAgentStream.
  */
 interface AgentStreamStore {
@@ -71,12 +47,7 @@ interface AgentStreamStore {
 }
 
 /**
- * Processes an agent stream result, tracking tool calls and forwarding chunks.
- *
- * This function handles:
- * - Tracking all tool calls made by the agent
- * - Forwarding text deltas and tool outputs to the stream writer
- * - Returning the final text result
+ * Processes an agent stream result, consuming chunks and returning the final text.
  *
  * @param agentResult - The stream result from agent.stream()
  * @param store - The store (used to resolve the owning session)
@@ -104,54 +75,9 @@ export async function processAgentStream(
     }
   };
 
-  const agentToolCalls: AgentToolCall[] = [];
-  const toolCallMap = new Map<string, number>();
-
   try {
-    for await (const chunk of agentResult.toUIMessageStream()) {
+    for await (const _chunk of agentResult.toUIMessageStream()) {
       throwIfAborted();
-
-      if (
-        chunk.type === 'tool-input-available' &&
-        chunk.toolCallId &&
-        chunk.toolName
-      ) {
-        const index = agentToolCalls.length;
-        toolCallMap.set(chunk.toolCallId, index);
-        agentToolCalls.push({
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-          state: 'pending',
-        });
-      }
-
-      if (chunk.type === 'tool-output-available' && chunk.toolCallId) {
-        const index = toolCallMap.get(chunk.toolCallId);
-        if (index !== undefined) {
-          const toolCall = agentToolCalls[index];
-          if (toolCall) {
-            agentToolCalls[index] = {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: chunk.output,
-              state: 'success',
-            };
-          }
-        }
-      } else if (chunk.type === 'tool-output-error' && chunk.toolCallId) {
-        const index = toolCallMap.get(chunk.toolCallId);
-        if (index !== undefined) {
-          const toolCall = agentToolCalls[index];
-          if (toolCall) {
-            agentToolCalls[index] = {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              errorText: chunk.errorText,
-              state: 'error',
-            };
-          }
-        }
-      }
     }
   } catch (err) {
     throwIfAborted();
@@ -159,7 +85,5 @@ export async function processAgentStream(
   }
 
   throwIfAborted();
-  const resultText = await agentResult.text;
-
-  return resultText;
+  return await agentResult.text;
 }

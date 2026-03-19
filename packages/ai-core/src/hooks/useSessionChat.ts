@@ -73,7 +73,6 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   // Get chat handlers
   const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
   const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
-  const onChatData = useStoreWithAi((s) => s.ai.onChatData);
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
   const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
@@ -140,7 +139,6 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
     onError: (error) => onChatError?.(sessionId, error),
-    onData: (dataPart) => onChatData?.(sessionId, dataPart),
     sendAutomaticallyWhen: shouldAutoSend,
   });
 

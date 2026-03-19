@@ -48,12 +48,11 @@ export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
-export {processAgentStream, updateAgentToolCallData} from '@sqlrooms/ai-core';
+export {processAgentStream} from '@sqlrooms/ai-core';
 export type {
   AgentStreamResult,
   UIMessageChunk,
   AgentToolCall,
-  AgentToolCallAdditionalData,
   ToolRenderers,
   ToolRenderer,
   ToolRendererProps,

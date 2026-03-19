@@ -45,11 +45,10 @@ export type {
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 
-export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';
+export {processAgentStream} from './agents/AgentUtils';
 export type {
   AgentStreamResult,
   UIMessageChunk,
   AgentToolCall,
-  AgentToolCallAdditionalData,
 } from './agents/AgentUtils';
 export {ReasoningBox} from './components/ReasoningBox';

@@ -2,7 +2,7 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
-import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
+import type {LanguageModel, ToolSet} from 'ai';
 import {
   convertToModelMessages,
   DefaultChatTransport,
@@ -311,9 +311,6 @@ export function createChatHandlers({
         // ensure mapping cleared on error too
         store.getState().ai.setToolCallSession(toolCallId, undefined);
       }
-    },
-    onChatData: (_sessionId: string, _dataPart: DataUIPart<UIDataTypes>) => {
-      // data-tool-additional-output events are currently unused
     },
     onChatFinish: ({
       sessionId,
