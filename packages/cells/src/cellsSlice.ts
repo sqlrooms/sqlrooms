@@ -23,7 +23,6 @@ import {
   normalizeCellsConfigStructure,
   resolveDependencies,
 } from './helpers';
-import {migrateSqlCellResultNames} from './migration';
 import {dropResultRelation} from './resultRelationPolicy';
 import {getEffectiveResultName} from './utils';
 import type {
@@ -848,9 +847,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
       },
-      initialize: async () => {
-        set((state) => produce(state, migrateSqlCellResultNames));
-      },
+      initialize: async () => {},
     } as CellsSliceState;
   });
 }
