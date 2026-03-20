@@ -847,7 +847,6 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
       },
-      initialize: async () => {},
     } as CellsSliceState;
   });
 }

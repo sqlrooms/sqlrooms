@@ -30,6 +30,19 @@ import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
+
+/**
+ * Default filter to exclude internal SQLRooms tables, schemas, and databases
+ */
+export const createDefaultLoadTableSchemasFilter = (
+  table: QualifiedTableName,
+): boolean => {
+  return (
+    !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
+  );
+};
+
 const DropTableCommandInput = z.object({
   tableName: z.string().describe('Name of the table to drop.'),
 });
@@ -290,6 +303,14 @@ export type DuckDbSliceState = {
 
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
+  /**
+   * Optional filter function to control which tables are included when loading schemas.
+   * By default, filters out tables/schemas/databases starting with '__sqlrooms_'.
+   * Pass `null` to disable filtering and show all tables.
+   * @param table - The qualified table name to evaluate
+   * @returns true to include the table, false to exclude it
+   */
+  loadTableSchemasFilter?: ((table: QualifiedTableName) => boolean) | null;
 };
 
 /**
@@ -297,6 +318,7 @@ export type CreateDuckDbSliceProps = {
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
+  loadTableSchemasFilter = createDefaultLoadTableSchemasFilter,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
@@ -491,13 +513,13 @@ export function createDuckDbSlice({
 
             // Build WHERE conditions
             const conditions = [
-              // Exclude internal SQLRooms databases and schemas
-              `NOT starts_with(database, ${escapeVal(INTERNAL_SQLROOMS_PREFIX)})`,
-              `NOT starts_with(schema, ${escapeVal(INTERNAL_SQLROOMS_PREFIX)})`,
               schema ? `schema = ${escapeVal(schema)}` : '',
               database ? `database = ${escapeVal(database)}` : '',
               table ? `name = ${escapeVal(table)}` : '',
             ].filter(Boolean);
+
+            const whereClause =
+              conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
             const sql = `WITH tables_and_views AS (
               FROM duckdb_tables() SELECT
@@ -526,7 +548,7 @@ export function createDuckDbSlice({
                 estimated_size
             FROM (DESCRIBE)
             LEFT OUTER JOIN tables_and_views USING (database, schema, name)
-            WHERE ${conditions.join(' AND ')}`;
+            ${whereClause}`;
             const describeResults = await connector.query(sql);
 
             const newTables: DataTable[] = [];
@@ -558,7 +580,7 @@ export function createDuckDbSlice({
                   type: columnType,
                 });
               }
-              newTables.push({
+              const dataTable = {
                 table: makeQualifiedTableName({database, schema, table}),
                 database,
                 schema,
@@ -573,7 +595,15 @@ export function createDuckDbSlice({
                     : estimatedSize === null
                       ? undefined
                       : estimatedSize,
-              });
+              };
+
+              // Apply filter (if null, include all tables)
+              if (
+                loadTableSchemasFilter === null ||
+                loadTableSchemasFilter(dataTable.table)
+              ) {
+                newTables.push(dataTable);
+              }
             }
             return newTables;
           },
