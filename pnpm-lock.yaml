@@ -2384,9 +2384,6 @@ importers:
       '@codemirror/view':
         specifier: ^6.33.0
         version: 6.39.15
-      '@lezer/common':
-        specifier: ^1.2.0
-        version: 1.5.1
       '@lezer/highlight':
         specifier: ^1.2.0
         version: 1.2.3
@@ -2402,12 +2399,21 @@ importers:
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.7)(react@19.2.1)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
       vscode-json-languageservice:
         specifier: ^5.7.2
         version: 5.7.2
       vscode-languageserver-textdocument:
         specifier: ^1.0.12
         version: 1.0.12
+      vscode-languageserver-types:
+        specifier: ^3.17.5
+        version: 3.17.5
     devDependencies:
       ts-jest:
         specifier: ^29.4.4

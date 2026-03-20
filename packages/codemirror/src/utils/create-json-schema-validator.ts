@@ -1,5 +1,5 @@
 import {getLanguageService} from 'vscode-json-languageservice';
-import {JsonSchemaValidator} from './validate-json-schema';
+import {JsonSchemaValidator} from './json-schema-validator';
 
 /**
  * Creates a JSON schema validator using vscode-json-languageservice
