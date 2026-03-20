@@ -123,8 +123,16 @@ export async function getJsonSchemaCompletions(
     return null;
   }
 
+  // Track if any completions use position-dependent textEdit ranges
+  let hasPositionDependentCompletions = false;
+
   // Convert vscode-json-languageservice completions to CodeMirror completions
   const options = completionList.items.map<Completion>((item) => {
+    // Check if this item uses a position-dependent textEdit range
+    if (item.textEdit && 'range' in item.textEdit) {
+      hasPositionDependentCompletions = true;
+    }
+
     // Convert documentation to string if it's a MarkupContent object
     const documentation =
       typeof item.documentation === 'string'
@@ -149,7 +157,8 @@ export async function getJsonSchemaCompletions(
   return {
     from: wordFrom ?? pos,
     options,
-    validFor: /^[\w$"]*$/,
+    // Disable caching for position-dependent completions to prevent stale offsets
+    validFor: hasPositionDependentCompletions ? undefined : /^[\w$"]*$/,
   };
 }
 
