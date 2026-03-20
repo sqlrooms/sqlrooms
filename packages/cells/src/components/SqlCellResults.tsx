@@ -72,7 +72,7 @@ export const SqlCellResults: React.FC<SqlCellResultsProps> = ({
     }
   }, [resultVersion]);
 
-  if (!errorMessage && !resultName && !arrowTableData) {
+  if (!errorMessage && (!resultName || !arrowTableData)) {
     return null;
   }
 
