@@ -11,11 +11,10 @@ import {
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {
-  createWebContainerBashTool,
+  createWebContainerToolkit,
   WebContainerPersistConfig,
   WebContainerSliceState,
   createWebContainerSlice,
-  webContainerBashToolRenderer,
 } from '@sqlrooms/webcontainer';
 import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
@@ -56,25 +55,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       // Ai slice
-      ...createAiSlice({
-        getInstructions: () => {
-          const instructions = `${LLM_INSTRUCTIONS}
+      ...(() => {
+        const webContainerToolkit = createWebContainerToolkit(store);
+        return createAiSlice({
+          getInstructions: () => {
+            const instructions = `${LLM_INSTRUCTIONS}
             <file_list>
             ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
-          return instructions;
-        },
+            return instructions;
+          },
 
-        // Tool renderers for displaying tool results in the UI
-        toolRenderers: {
-          bash: webContainerBashToolRenderer,
-        },
+          toolRenderers: webContainerToolkit.toolRenderers,
 
-        // Add custom tools
-        tools: {
-          bash: createWebContainerBashTool(store),
-        },
-      })(set, get, store),
+          tools: webContainerToolkit.tools,
+        })(set, get, store);
+      })(),
     }),
   ),
 );

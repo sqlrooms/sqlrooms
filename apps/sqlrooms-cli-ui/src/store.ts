@@ -42,11 +42,10 @@ import {
 } from '@sqlrooms/sql-editor';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {
-  createWebContainerBashTool,
+  createWebContainerToolkit,
   createWebContainerSlice,
   WebContainerPersistConfig,
   WebContainerSliceState,
-  webContainerBashToolRenderer,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
 import {z} from 'zod';
@@ -238,25 +237,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         config: {providers: runtimeAiProviders},
       })(set, get, store),
 
-      ...createAiSlice({
-        config: AiSliceConfig.parse({sessions: []}),
-        defaultProvider: defaultProviderFromConfig as any,
-        defaultModel: defaultModelFromConfig,
-        getApiKey: (provider) =>
-          runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
-        getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
-        getInstructions: () => createDefaultAiInstructions(store),
-        tools: {
-          ...createDefaultAiTools(store, {query: {}}),
-          bash: createWebContainerBashTool(store),
-          chart: createVegaChartTool(),
-        },
-        toolRenderers: {
-          ...createDefaultAiToolRenderers(),
-          bash: webContainerBashToolRenderer,
-          chart: VegaChartToolResult,
-        },
-      })(set, get, store),
+      ...(() => {
+        const webContainerToolkit = createWebContainerToolkit(store);
+        return createAiSlice({
+          config: AiSliceConfig.parse({sessions: []}),
+          defaultProvider: defaultProviderFromConfig as any,
+          defaultModel: defaultModelFromConfig,
+          getApiKey: (provider) =>
+            runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
+          getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
+          getInstructions: () => createDefaultAiInstructions(store),
+          tools: {
+            ...createDefaultAiTools(store, {query: {}}),
+            ...webContainerToolkit.tools,
+            chart: createVegaChartTool(),
+          },
+          toolRenderers: {
+            ...createDefaultAiToolRenderers(),
+            ...webContainerToolkit.toolRenderers,
+            chart: VegaChartToolResult,
+          },
+        })(set, get, store);
+      })(),
     }),
   ),
 );

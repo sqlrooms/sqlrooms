@@ -12,9 +12,14 @@ export {
   WebContainerPersistConfig,
 } from './WebContainerSlice';
 export {WebContainerFsAdapter} from './WebContainerFsAdapter';
+export {createWebContainerSandbox} from './WebContainerSandbox';
+export type {Sandbox} from './WebContainerSandbox';
 export {
   createWebContainerBashTool,
+  createWebContainerToolkit,
   WebContainerBashToolResult,
+  WebContainerReadFileToolResult,
+  WebContainerWriteFileToolResult,
   webContainerBashToolRenderer,
 } from './createWebContainerBashTool';
 
@@ -22,4 +27,7 @@ export type {WebContainerSliceState} from './WebContainerSlice';
 export type {
   WebContainerBashToolOutput,
   WebContainerBashToolParameters,
+  WebContainerReadFileToolOutput,
+  WebContainerWriteFileToolOutput,
+  WebContainerToolkitResult,
 } from './createWebContainerBashTool';
