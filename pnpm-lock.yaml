@@ -624,12 +624,6 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.1
-      ai:
-        specifier: ^5.0.155
-        version: 5.0.155(zod@4.1.13)
-      immer:
-        specifier: ^11.0.1
-        version: 11.0.1
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.1)
@@ -639,12 +633,6 @@ importers:
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
-      zod:
-        specifier: 4.1.13
-        version: 4.1.13
-      zustand:
-        specifier: ^5.0.5
-        version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
       '@eslint/js':
         specifier: ^9.28.0
