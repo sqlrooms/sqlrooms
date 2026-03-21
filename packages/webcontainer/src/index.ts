@@ -10,5 +10,16 @@ export {
   useStoreWithWebContainer,
   WebContainerSliceConfig,
 } from './WebContainerSlice';
+export {WebContainerFsAdapter} from './WebContainerFsAdapter';
+export {
+  createWebContainerBashTool,
+  WebContainerBashToolParameters,
+  WebContainerBashToolResult,
+  webContainerBashToolRenderer,
+} from './createWebContainerBashTool';
 
 export type {WebContainerSliceState} from './WebContainerSlice';
+export type {
+  WebContainerBashToolOutput,
+  WebContainerBashToolParameters,
+} from './createWebContainerBashTool';

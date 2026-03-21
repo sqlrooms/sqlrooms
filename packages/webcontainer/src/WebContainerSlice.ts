@@ -5,8 +5,10 @@ import {
 } from '@sqlrooms/room-store';
 import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
+import {Bash} from 'just-bash/browser';
 import z from 'zod';
 import {setFileContentInTree} from './setFileContentInTree';
+import {WebContainerFsAdapter} from './WebContainerFsAdapter';
 import {
   bootWebContainer,
   getCachedWebContainer,
@@ -73,6 +75,25 @@ function getFirstFilePathFromTree(
   return null;
 }
 
+function pathExistsInTree(tree: FileSystemTree, path: string): boolean {
+  const clean = path.replace(/^\/+/, '');
+  if (!clean) return false;
+  const parts = clean.split('/').filter(Boolean);
+  let cursor: any = tree;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!;
+    const entry = cursor?.[part];
+    if (!entry) return false;
+    const isLeaf = i === parts.length - 1;
+    if (isLeaf) {
+      return Boolean(entry.file);
+    }
+    if (!entry.directory) return false;
+    cursor = entry.directory;
+  }
+  return false;
+}
+
 export type WebContainerSliceState = {
   webContainer: {
     config: WebContainerSliceConfig;
@@ -100,6 +121,12 @@ export type WebContainerSliceState = {
      * (possibly unsaved) content. Otherwise, loads the content from the webcontainer FS.
      */
     getFileContent: (path: string) => Promise<string>;
+    executeBashCommand: (command: string) => Promise<{
+      exitCode: number;
+      stdout: string;
+      stderr: string;
+      durationMs: number;
+    }>;
     openFile: (path: string, content?: string) => Promise<void>;
     closeFile: (path: string) => void;
     setActiveFile: (path: string) => void;
@@ -152,6 +179,97 @@ export function createWebContainerSlice(props?: {
    */
   autoInitialize?: boolean;
 }): StateCreator<WebContainerSliceState> {
+  let bashRuntime:
+    | {
+        owner: WebContainer;
+        adapter: WebContainerFsAdapter;
+        bash: Bash;
+      }
+    | undefined;
+
+  const syncSliceConfigFromWebContainer = async (
+    get: () => WebContainerSliceState,
+    set: (
+      partial:
+        | WebContainerSliceState
+        | Partial<WebContainerSliceState>
+        | ((
+            state: WebContainerSliceState,
+          ) => WebContainerSliceState | Partial<WebContainerSliceState>),
+      replace?: false,
+    ) => void,
+  ) => {
+    const instance = get().webContainer.instance;
+    if (!instance) {
+      return;
+    }
+
+    const filesTree = await instance.export('.');
+    const prevConfig = get().webContainer.config;
+    const openedFiles = await Promise.all(
+      prevConfig.openedFiles
+        .filter((file) => pathExistsInTree(filesTree, file.path))
+        .map(async (file) => {
+          try {
+            const content = await instance.fs.readFile(file.path, 'utf-8');
+            return {
+              path: file.path,
+              content,
+              dirty: false,
+            };
+          } catch (_error) {
+            return {
+              path: file.path,
+              content: file.content,
+              dirty: false,
+            };
+          }
+        }),
+    );
+
+    const nextActive =
+      prevConfig.activeFilePath &&
+      pathExistsInTree(filesTree, prevConfig.activeFilePath)
+        ? prevConfig.activeFilePath
+        : (openedFiles.at(-1)?.path ?? getFirstFilePathFromTree(filesTree));
+
+    set((state) =>
+      produce(state, (draft) => {
+        draft.webContainer.config.filesTree = filesTree;
+        draft.webContainer.config.openedFiles = openedFiles;
+        draft.webContainer.config.activeFilePath = nextActive;
+      }),
+    );
+  };
+
+  const getOrCreateBashRuntime = async (
+    get: () => WebContainerSliceState,
+  ): Promise<{
+    owner: WebContainer;
+    adapter: WebContainerFsAdapter;
+    bash: Bash;
+  }> => {
+    const instance = get().webContainer.instance;
+    if (!instance) {
+      throw new Error('WebContainer instance not found');
+    }
+
+    if (!bashRuntime || bashRuntime.owner !== instance) {
+      const adapter = new WebContainerFsAdapter(instance);
+      bashRuntime = {
+        owner: instance,
+        adapter,
+        bash: new Bash({
+          cwd: '/',
+          fs: adapter.asFileSystem(),
+        }),
+      };
+    }
+
+    await bashRuntime.adapter.syncFromWebContainer();
+    return bashRuntime;
+  };
+
   return createSlice<WebContainerSliceState>((set, get) => ({
     webContainer: {
       config: createDefaultWebContainerSliceConfig(props?.config),
@@ -511,37 +629,82 @@ export function createWebContainerSlice(props?: {
         return '';
       },
 
+      async executeBashCommand(command) {
+        const instance = get().webContainer.instance;
+        if (!instance) {
+          throw new Error('WebContainer instance not found');
+        }
+
+        await get().webContainer.saveAllOpenFiles();
+        const {bash} = await getOrCreateBashRuntime(get);
+
+        const startedAt = Date.now();
+        set((state) =>
+          produce(state, (draft) => {
+            draft.webContainer.output += `$ ${command}\n`;
+          }),
+        );
+
+        try {
+          const result = await bash.exec(command, {cwd: '/'});
+          const durationMs = Date.now() - startedAt;
+          const combinedOutput = `${result.stdout}${result.stderr}`;
+
+          if (combinedOutput) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.webContainer.output += combinedOutput.endsWith('\n')
+                  ? combinedOutput
+                  : `${combinedOutput}\n`;
+              }),
+            );
+          }
+
+          await syncSliceConfigFromWebContainer(get, set);
+          return {
+            exitCode: result.exitCode,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            durationMs,
+          };
+        } catch (error) {
+          const durationMs = Date.now() - startedAt;
+          const message =
+            error instanceof Error
+              ? error.message
+              : String(error ?? 'Unknown error');
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.output += message.endsWith('\n')
+                ? message
+                : `${message}\n`;
+            }),
+          );
+
+          await syncSliceConfigFromWebContainer(get, set);
+          return {
+            exitCode: 1,
+            stdout: '',
+            stderr: message,
+            durationMs,
+          };
+        }
+      },
+
       async applyFilesTree({filesTree, activeFilePath}) {
         const instance = get().webContainer.instance;
-        const pathExistsInTree = (path: string): boolean => {
-          const clean = path.replace(/^\/+/, '');
-          if (!clean) return false;
-          const parts = clean.split('/').filter(Boolean);
-          let cursor: any = filesTree;
-          for (let i = 0; i < parts.length; i++) {
-            const part = parts[i]!;
-            const entry = cursor?.[part];
-            if (!entry) return false;
-            const isLeaf = i === parts.length - 1;
-            if (isLeaf) {
-              return Boolean(entry.file);
-            }
-            if (!entry.directory) return false;
-            cursor = entry.directory;
-          }
-          return false;
-        };
-
         const prev = get().webContainer.config;
         const preservedOpened = prev.openedFiles.filter((f) =>
-          pathExistsInTree(f.path),
+          pathExistsInTree(filesTree, f.path),
         );
         const nextActiveFromRequest =
-          activeFilePath && pathExistsInTree(activeFilePath)
+          activeFilePath && pathExistsInTree(filesTree, activeFilePath)
             ? activeFilePath
             : null;
         const nextActiveFromPrev =
-          prev.activeFilePath && pathExistsInTree(prev.activeFilePath)
+          prev.activeFilePath &&
+          pathExistsInTree(filesTree, prev.activeFilePath)
             ? prev.activeFilePath
             : null;
         const nextActive =
@@ -560,7 +723,7 @@ export function createWebContainerSlice(props?: {
 
         if (instance) {
           await instance.mount(filesTree);
-          if (nextActive && pathExistsInTree(nextActive)) {
+          if (nextActive && pathExistsInTree(filesTree, nextActive)) {
             await get().webContainer.openFile(nextActive);
           }
           return;

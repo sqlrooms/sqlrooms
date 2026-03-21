@@ -42,9 +42,11 @@ import {
 } from '@sqlrooms/sql-editor';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {
+  createWebContainerBashTool,
   createWebContainerSlice,
   WebContainerSliceConfig,
   WebContainerSliceState,
+  webContainerBashToolRenderer,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
 import {z} from 'zod';
@@ -246,10 +248,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         getInstructions: () => createDefaultAiInstructions(store),
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
+          bash: createWebContainerBashTool(store),
           chart: createVegaChartTool(),
         },
         toolRenderers: {
           ...createDefaultAiToolRenderers(),
+          bash: webContainerBashToolRenderer,
           chart: VegaChartToolResult,
         },
       })(set, get, store),

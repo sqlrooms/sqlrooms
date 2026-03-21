@@ -11,26 +11,16 @@ import {
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {
+  createWebContainerBashTool,
   WebContainerSliceConfig,
   WebContainerSliceState,
   createWebContainerSlice,
+  webContainerBashToolRenderer,
 } from '@sqlrooms/webcontainer';
 import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 import {AI_SETTINGS} from '../config';
 import {LLM_INSTRUCTIONS} from '../instructions';
-import {
-  createGetFileContentTool,
-  getFileContentToolRenderer,
-} from '../tools/getFileContent/getFileContentTool';
-import {
-  createListFilesTool,
-  listFilesToolRenderer,
-} from '../tools/listFiles/createListFilesTool';
-import {
-  createUpdateFileContentTool,
-  updateFileContentToolRenderer,
-} from '../tools/updateFileContent/updateFileContentTool';
 
 type RoomState = BaseRoomStoreState &
   AiSliceState &
@@ -77,16 +67,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         // Tool renderers for displaying tool results in the UI
         toolRenderers: {
-          listFiles: listFilesToolRenderer,
-          getFileContent: getFileContentToolRenderer,
-          updateFileContent: updateFileContentToolRenderer,
+          bash: webContainerBashToolRenderer,
         },
 
         // Add custom tools
         tools: {
-          listFiles: createListFilesTool(store),
-          getFileContent: createGetFileContentTool(store),
-          updateFileContent: createUpdateFileContentTool(store),
+          bash: createWebContainerBashTool(store),
         },
       })(set, get, store),
     }),
