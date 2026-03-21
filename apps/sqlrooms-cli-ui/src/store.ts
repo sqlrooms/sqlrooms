@@ -28,7 +28,6 @@ import {
   NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
-import type {RoomCommand} from '@sqlrooms/room-shell';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -50,16 +49,23 @@ import {
   WebContainerSliceConfig,
   WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
-import {tool} from 'ai';
 import {produce} from 'immer';
 import {z} from 'zod';
 
 import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
+import {
+  createDashboardAiTools,
+  DASHBOARD_AI_INSTRUCTIONS,
+} from './createDashboardAiTools';
+import {
+  createDashboardCommands,
+  DASHBOARD_COMMAND_OWNER,
+} from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {getErrorMessage} from './utils';
+import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
 
 export const AppBuilderProjectConfig = z.object({
   appsBySheetId: z
@@ -77,46 +83,6 @@ export const AppBuilderProjectConfig = z.object({
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
 
-export const DEFAULT_DASHBOARD_VGPLOT_SPEC = JSON.stringify(
-  {
-    $schema: 'https://idl.uw.edu/mosaic/schema/latest.json',
-    meta: {
-      title: 'New Dashboard',
-      description:
-        'Use the assistant to generate a dashboard spec from your current DuckDB tables.',
-    },
-    data: {
-      sample: {
-        type: 'table',
-        query: `
-          SELECT * FROM (
-            VALUES
-              ('A', 12),
-              ('B', 26),
-              ('C', 18),
-              ('D', 9)
-          ) AS t(category, amount)
-        `,
-      },
-    },
-    plot: [
-      {
-        mark: 'barY',
-        data: {from: 'sample'},
-        x: 'category',
-        y: 'amount',
-        fill: 'category',
-      },
-    ],
-    xLabel: 'Category',
-    yLabel: 'Amount',
-    width: 560,
-    height: 320,
-  },
-  null,
-  2,
-);
-
 export const DashboardProjectConfig = z.object({
   dashboardsBySheetId: z
     .record(
@@ -129,124 +95,6 @@ export const DashboardProjectConfig = z.object({
     .default({}),
 });
 export type DashboardProjectConfig = z.infer<typeof DashboardProjectConfig>;
-
-const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
-
-const DashboardCreateSheetCommandInput = z
-  .object({
-    title: z.string().optional().describe('Optional dashboard sheet title.'),
-  })
-  .default({});
-type DashboardCreateSheetCommandInput = z.infer<
-  typeof DashboardCreateSheetCommandInput
->;
-
-const DashboardSelectSheetCommandInput = z.object({
-  sheetId: z.string().describe('Target dashboard sheet ID.'),
-});
-type DashboardSelectSheetCommandInput = z.infer<
-  typeof DashboardSelectSheetCommandInput
->;
-
-const DashboardSetVgPlotCommandInput = z.object({
-  sheetId: z
-    .string()
-    .optional()
-    .describe('Optional dashboard sheet ID. Defaults to current dashboard.'),
-  vgplot: z
-    .string()
-    .describe('VgPlot JSON string for the dashboard specification.'),
-});
-type DashboardSetVgPlotCommandInput = z.infer<
-  typeof DashboardSetVgPlotCommandInput
->;
-
-const DashboardGetVgPlotCommandInput = z
-  .object({
-    sheetId: z
-      .string()
-      .optional()
-      .describe('Optional dashboard sheet ID. Defaults to current dashboard.'),
-  })
-  .default({});
-type DashboardGetVgPlotCommandInput = z.infer<
-  typeof DashboardGetVgPlotCommandInput
->;
-
-const DashboardCreateSheetToolParameters = z
-  .object({
-    title: z.string().optional(),
-  })
-  .default({});
-type DashboardCreateSheetToolParameters = z.infer<
-  typeof DashboardCreateSheetToolParameters
->;
-
-const DashboardGetVgPlotToolParameters = z
-  .object({
-    sheetId: z.string().optional(),
-  })
-  .default({});
-type DashboardGetVgPlotToolParameters = z.infer<
-  typeof DashboardGetVgPlotToolParameters
->;
-
-const DashboardSetVgPlotToolParameters = z.object({
-  sheetId: z
-    .string()
-    .optional()
-    .describe('Optional target dashboard sheet ID.'),
-  vgplot: z
-    .union([z.string(), z.object({}).passthrough()])
-    .describe('Dashboard vgplot specification as JSON string or object.'),
-  createSheetIfMissing: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe(
-      'If true and no dashboard sheet is selected, create one automatically.',
-    ),
-});
-type DashboardSetVgPlotToolParameters = z.infer<
-  typeof DashboardSetVgPlotToolParameters
->;
-
-const DASHBOARD_AI_INSTRUCTIONS = `
-Dashboard authoring:
-- Use the dashboard tools to create/update dashboard vgplot specs.
-- Prefer \`set_dashboard_vgplot\` with complete JSON.
-- Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
-- Use SQL against DuckDB tables when deciding fields, filters, and aggregations in the spec.
-`;
-
-function parseVgPlotSpecString(vgplot: string): {
-  parsed: Record<string, unknown>;
-  formatted: string;
-} {
-  let parsedValue: unknown;
-  try {
-    parsedValue = JSON.parse(vgplot);
-  } catch (error) {
-    throw new Error(
-      `VgPlot spec must be valid JSON. ${getErrorMessage(error)}`,
-    );
-  }
-  if (
-    typeof parsedValue !== 'object' ||
-    parsedValue === null ||
-    Array.isArray(parsedValue)
-  ) {
-    throw new Error('VgPlot spec must be a JSON object.');
-  }
-  return {
-    parsed: parsedValue as Record<string, unknown>,
-    formatted: JSON.stringify(parsedValue, null, 2),
-  };
-}
-
-function toVgPlotSpecString(vgplot: string | Record<string, unknown>): string {
-  return typeof vgplot === 'string' ? vgplot : JSON.stringify(vgplot, null, 2);
-}
 
 export type RoomState = RoomShellSliceState &
   MosaicSliceState &
@@ -287,264 +135,6 @@ export type RoomState = RoomShellSliceState &
     isAssistantOpen: boolean;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
   };
-
-function createDashboardCommands(): RoomCommand<RoomState>[] {
-  return [
-    {
-      id: 'dashboard.create-sheet',
-      name: 'Create dashboard sheet',
-      description: 'Create a new dashboard sheet and select it',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'sheet', 'create', 'new'],
-      inputSchema: DashboardCreateSheetCommandInput,
-      inputDescription: 'Optional title for the dashboard sheet.',
-      metadata: {
-        readOnly: false,
-        idempotent: false,
-        riskLevel: 'low',
-      },
-      execute: ({getState}, input) => {
-        const {title} =
-          (input as DashboardCreateSheetCommandInput | undefined) ?? {};
-        const sheetId = getState().dashboard.createDashboardSheet(title);
-        return {
-          success: true,
-          commandId: 'dashboard.create-sheet',
-          message: `Created dashboard sheet "${sheetId}".`,
-          data: {sheetId},
-        };
-      },
-    },
-    {
-      id: 'dashboard.select-sheet',
-      name: 'Select dashboard sheet',
-      description: 'Switch current sheet to a dashboard sheet',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'sheet', 'select', 'switch'],
-      inputSchema: DashboardSelectSheetCommandInput,
-      inputDescription: 'Provide the dashboard sheet ID.',
-      metadata: {
-        readOnly: false,
-        idempotent: true,
-        riskLevel: 'low',
-      },
-      validateInput: (input, {getState}) => {
-        const {sheetId} = input as DashboardSelectSheetCommandInput;
-        const sheet = getState().cells.config.sheets[sheetId];
-        if (!sheet) {
-          throw new Error(`Unknown sheet "${sheetId}".`);
-        }
-        if (sheet.type !== 'dashboard') {
-          throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
-        }
-      },
-      execute: ({getState}, input) => {
-        const {sheetId} = input as DashboardSelectSheetCommandInput;
-        getState().cells.setCurrentSheet(sheetId);
-        getState().dashboard.ensureSheetDashboard(sheetId);
-        return {
-          success: true,
-          commandId: 'dashboard.select-sheet',
-          message: `Selected dashboard sheet "${sheetId}".`,
-        };
-      },
-    },
-    {
-      id: 'dashboard.set-vgplot',
-      name: 'Set dashboard vgplot',
-      description: 'Set the vgplot JSON spec for a dashboard sheet',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'vgplot', 'spec', 'json', 'update'],
-      inputSchema: DashboardSetVgPlotCommandInput,
-      inputDescription: 'Provide vgplot JSON and optional dashboard sheet ID.',
-      metadata: {
-        readOnly: false,
-        idempotent: false,
-        riskLevel: 'medium',
-      },
-      validateInput: (input, {getState}) => {
-        const {sheetId, vgplot} = input as DashboardSetVgPlotCommandInput;
-        parseVgPlotSpecString(vgplot);
-        if (!sheetId) return;
-        const sheet = getState().cells.config.sheets[sheetId];
-        if (!sheet) {
-          throw new Error(`Unknown sheet "${sheetId}".`);
-        }
-        if (sheet.type !== 'dashboard') {
-          throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
-        }
-      },
-      execute: ({getState}, input) => {
-        const {sheetId, vgplot} = input as DashboardSetVgPlotCommandInput;
-        const state = getState();
-        const targetSheetId =
-          sheetId ??
-          state.dashboard.getCurrentDashboardSheetId() ??
-          state.dashboard.createDashboardSheet();
-        state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
-        state.cells.setCurrentSheet(targetSheetId);
-        return {
-          success: true,
-          commandId: 'dashboard.set-vgplot',
-          message: `Updated dashboard spec for "${targetSheetId}".`,
-          data: {sheetId: targetSheetId},
-        };
-      },
-    },
-    {
-      id: 'dashboard.get-vgplot',
-      name: 'Get dashboard vgplot',
-      description: 'Read the current vgplot JSON spec for a dashboard sheet',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'vgplot', 'spec', 'json', 'read'],
-      inputSchema: DashboardGetVgPlotCommandInput,
-      inputDescription: 'Optional dashboard sheet ID.',
-      metadata: {
-        readOnly: true,
-        idempotent: true,
-        riskLevel: 'low',
-      },
-      execute: ({getState}, input) => {
-        const {sheetId} =
-          (input as DashboardGetVgPlotCommandInput | undefined) ?? {};
-        const state = getState();
-        const targetSheetId =
-          sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-        if (!targetSheetId) {
-          return {
-            success: false,
-            commandId: 'dashboard.get-vgplot',
-            error: 'No dashboard sheet is available.',
-          };
-        }
-        const sheet = state.cells.config.sheets[targetSheetId];
-        if (!sheet || sheet.type !== 'dashboard') {
-          return {
-            success: false,
-            commandId: 'dashboard.get-vgplot',
-            error: `Sheet "${targetSheetId}" is not a dashboard sheet.`,
-          };
-        }
-        state.dashboard.ensureSheetDashboard(targetSheetId);
-        const vgplot = state.dashboard.getSheetVgPlot(targetSheetId);
-        return {
-          success: true,
-          commandId: 'dashboard.get-vgplot',
-          data: {
-            sheetId: targetSheetId,
-            vgplot,
-          },
-        };
-      },
-    },
-  ];
-}
-
-function createDashboardAiTools(store: {getState: () => RoomState}) {
-  return {
-    create_dashboard_sheet: tool({
-      description:
-        'Create a new dashboard sheet and make it the active sheet. Use when no dashboard sheet exists yet.',
-      inputSchema: DashboardCreateSheetToolParameters,
-      execute: async (params: DashboardCreateSheetToolParameters) => {
-        const {title} = params;
-        const sheetId = store.getState().dashboard.createDashboardSheet(title);
-        return {
-          llmResult: {
-            success: true,
-            details: `Created dashboard sheet "${sheetId}".`,
-            data: {sheetId},
-          },
-        };
-      },
-    }),
-    get_dashboard_vgplot: tool({
-      description:
-        'Get the current vgplot JSON spec for a dashboard sheet. If sheetId is omitted, uses the current dashboard sheet.',
-      inputSchema: DashboardGetVgPlotToolParameters,
-      execute: async (params: DashboardGetVgPlotToolParameters) => {
-        const state = store.getState();
-        const targetSheetId =
-          params.sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-        if (!targetSheetId) {
-          return {
-            llmResult: {
-              success: false,
-              errorMessage:
-                'No dashboard sheet found. Create one with create_dashboard_sheet first.',
-            },
-          };
-        }
-        const sheet = state.cells.config.sheets[targetSheetId];
-        if (!sheet || sheet.type !== 'dashboard') {
-          return {
-            llmResult: {
-              success: false,
-              errorMessage: `Sheet "${targetSheetId}" is not a dashboard sheet.`,
-            },
-          };
-        }
-        state.dashboard.ensureSheetDashboard(targetSheetId);
-        const vgplot = state.dashboard.getSheetVgPlot(targetSheetId);
-        return {
-          llmResult: {
-            success: true,
-            details: `Loaded dashboard spec from "${targetSheetId}".`,
-            data: {
-              sheetId: targetSheetId,
-              vgplot,
-            },
-          },
-        };
-      },
-    }),
-    set_dashboard_vgplot: tool({
-      description:
-        'Set the vgplot JSON spec for a dashboard sheet. If sheetId is omitted, updates the current dashboard sheet (or creates one when allowed).',
-      inputSchema: DashboardSetVgPlotToolParameters,
-      execute: async (params: DashboardSetVgPlotToolParameters) => {
-        const state = store.getState();
-        let targetSheetId =
-          params.sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-        if (!targetSheetId && params.createSheetIfMissing) {
-          targetSheetId = state.dashboard.createDashboardSheet();
-        }
-        if (!targetSheetId) {
-          return {
-            llmResult: {
-              success: false,
-              errorMessage:
-                'No dashboard sheet available. Set createSheetIfMissing=true or provide a sheetId.',
-            },
-          };
-        }
-
-        try {
-          const vgplotString = toVgPlotSpecString(params.vgplot);
-          state.dashboard.setSheetVgPlot(targetSheetId, vgplotString);
-          state.cells.setCurrentSheet(targetSheetId);
-          return {
-            llmResult: {
-              success: true,
-              details: `Updated dashboard spec for "${targetSheetId}".`,
-              data: {
-                sheetId: targetSheetId,
-                vgplot: state.dashboard.getSheetVgPlot(targetSheetId),
-              },
-            },
-          };
-        } catch (error) {
-          return {
-            llmResult: {
-              success: false,
-              errorMessage: getErrorMessage(error),
-            },
-          };
-        }
-      },
-    }),
-  };
-}
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
