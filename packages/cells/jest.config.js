@@ -7,8 +7,6 @@ export default {
     ...(nodeConfig.moduleNameMapper ?? {}),
     '^monaco-editor(.*)$': '<rootDir>/__tests__/mocks/monaco-editor.js',
     '^@sqlrooms/sql-editor$': '<rootDir>/__tests__/mocks/sql-editor.js',
-    '^@openassistant/utils$':
-      '<rootDir>/__tests__/mocks/openassistant-utils.js',
     '^react-mosaic-component$':
       '<rootDir>/__tests__/mocks/react-mosaic-component.js',
     '^rdndmb-html5-to-touch$':

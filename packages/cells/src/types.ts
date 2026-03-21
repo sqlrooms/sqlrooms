@@ -136,6 +136,7 @@ export type CellContainerProps = {
   header?: React.ReactNode;
   content: React.ReactNode;
   footer?: React.ReactNode;
+  showHeader?: boolean;
 };
 
 /** Type for SQL AST parsing function from DuckDB slice */
@@ -348,6 +349,8 @@ export type CellsSliceState = {
       sourceCellId: string,
     ) => Promise<void>;
   };
+  // Slice lifecycle
+  initialize?: () => Promise<void>;
 };
 
 export type CellsRootState = BaseRoomStoreState &

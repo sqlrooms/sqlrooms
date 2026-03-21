@@ -8,7 +8,11 @@ export {
   createKeplerSlice,
   useStoreWithKepler,
 } from './KeplerSlice';
-export type {KeplerSliceState} from './KeplerSlice';
+export type {
+  CreateInitialMapKeplerStateContext,
+  CreateKeplerSliceOptions,
+  KeplerSliceState,
+} from './KeplerSlice';
 
 export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
@@ -21,9 +25,9 @@ export type {LoadTileSet} from './components/KeplerAddTileSetDialog';
 export {KeplerImageExport} from './components/KeplerImageExport';
 export {
   configureKeplerInjector,
-  KeplerInjector,
   getKeplerFactory,
   getKeplerInjector,
+  KeplerInjector,
   resetKeplerInjectorRecipes,
 } from './components/KeplerInjector';
 export type {

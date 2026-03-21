@@ -1,14 +1,7 @@
+import {tool} from 'ai';
 import {z} from 'zod';
-import {
-  VegaChartToolResult,
-  VegaChartToolResultProps,
-} from './VegaChartToolResult';
-import type {OpenAssistantTool} from '@openassistant/utils';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
-import {EmbedOptions} from 'vega-embed';
-import {makeDefaultVegaLiteOptions} from './VegaLiteArrowChart';
-import {EditorMode} from './editor/types';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -21,23 +14,13 @@ export const VegaChartToolParameters = z.object({
 
 export type VegaChartToolParameters = z.infer<typeof VegaChartToolParameters>;
 
-export type VegaChartToolArgs = z.ZodObject<{
-  sqlQuery: z.ZodString;
-  vegaLiteSpec: z.ZodString;
-  reasoning: z.ZodString;
-}>;
-
-export type VegaChartToolLlmResult = {
+export type VegaChartToolOutput = {
   success: boolean;
   details: string;
-};
-
-export type VegaChartToolAdditionalData = {
   sqlQuery: string;
-  vegaLiteSpec: object;
+  vegaLiteSpec: TopLevelSpec | null;
+  error?: string;
 };
-
-export type VegaChartToolContext = unknown;
 
 /**
  * Default description for the VegaChart tool
@@ -64,20 +47,6 @@ export type VegaChartToolOptions = {
    * Custom description for the tool
    */
   description?: string;
-  /**
-   * Vega embed options
-   */
-  embedOptions?: EmbedOptions;
-  /**
-   * Whether editing is enabled
-   * @default true
-   */
-  editable?: boolean;
-  /**
-   * Which editors to show when editing
-   * @default 'both'
-   */
-  editorMode?: EditorMode;
 };
 
 /**
@@ -90,23 +59,11 @@ export type VegaChartToolOptions = {
  */
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
-  embedOptions = makeDefaultVegaLiteOptions(),
-  editable = true,
-  editorMode = 'both',
-}: VegaChartToolOptions = {}): OpenAssistantTool<
-  typeof VegaChartToolParameters,
-  VegaChartToolLlmResult,
-  VegaChartToolAdditionalData,
-  VegaChartToolContext
-> {
-  return {
-    name: 'chart',
+}: VegaChartToolOptions = {}) {
+  return tool<VegaChartToolParameters, VegaChartToolOutput>({
     description,
-    parameters: VegaChartToolParameters,
-    execute: async (
-      params: VegaChartToolParameters,
-      options?: {abortSignal?: AbortSignal},
-    ) => {
+    inputSchema: VegaChartToolParameters,
+    execute: async (params, options) => {
       const abortSignal = options?.abortSignal;
       const {sqlQuery, vegaLiteSpec} = params;
       try {
@@ -130,44 +87,39 @@ export function createVegaChartTool({
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           return {
-            llmResult: {
-              success: false,
-              details: `Invalid Vega-Lite spec: ${message}`,
-            },
+            success: false,
+            details: `Invalid Vega-Lite spec: ${message}`,
+            sqlQuery: '',
+            vegaLiteSpec: null,
           };
         }
 
-        // data object of the vegaLiteSpec and sqlQuery
-        // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
         return {
-          llmResult: {
-            success: true,
-            details:
-              vegaWarnings.length > 0
-                ? `Chart created successfully with warnings:\n- ${vegaWarnings.join('\n- ')}`
-                : 'Chart created successfully.',
-          },
-          additionalData: {
-            sqlQuery,
-            vegaLiteSpec: parsedVegaLiteSpec,
-          },
+          success: true,
+          details:
+            vegaWarnings.length > 0
+              ? `Chart created successfully with warnings:\n- ${vegaWarnings.join('\n- ')}`
+              : 'Chart created successfully.',
+          sqlQuery,
+          vegaLiteSpec: parsedVegaLiteSpec,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            details: `Not a valid JSON object: ${error}`,
-          },
+          success: false,
+          details: `Not a valid JSON object: ${error}`,
+          error: error instanceof Error ? error.message : String(error),
+          sqlQuery: '',
+          vegaLiteSpec: null,
         };
       }
     },
-    component: ({options, ...restProps}: VegaChartToolResultProps) => (
-      <VegaChartToolResult
-        {...restProps}
-        options={{...options, ...embedOptions}}
-        editable={editable}
-        editorMode={editorMode}
-      />
-    ),
-  };
+    toModelOutput: (output) => ({
+      type: 'text',
+      value: JSON.stringify({
+        success: output.success,
+        details: output.details,
+        ...(output.error ? {error: output.error} : {}),
+      }),
+    }),
+  });
 }

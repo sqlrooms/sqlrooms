@@ -1,5 +1,5 @@
-import {SqlMonacoEditor, SqlQueryPreview} from '@sqlrooms/sql-editor';
-import {Button, cn} from '@sqlrooms/ui';
+import {SqlCodeMirrorEditor, SqlQueryPreview} from '@sqlrooms/sql-editor';
+import {Button, cn, CopyButton} from '@sqlrooms/ui';
 import {PlayIcon} from 'lucide-react';
 import React, {useCallback, useState} from 'react';
 import {useVegaEditorContext} from './VegaEditorContext';
@@ -23,7 +23,7 @@ export interface VegaSqlEditorPanelProps {
 
 /**
  * SQL editor panel subcomponent for VegaLiteChart.Container.
- * Renders a Monaco editor with SQL syntax highlighting and a query preview.
+ * Renders a CodeMirror editor with SQL syntax highlighting and a query preview.
  *
  * Must be used within a VegaLiteChart.Container component.
  *
@@ -93,20 +93,27 @@ export const VegaSqlEditorPanel: React.FC<VegaSqlEditorPanelProps> = ({
 
       {/* Editor */}
       <div className="relative min-h-[100px] flex-1">
-        <SqlMonacoEditor
+        <SqlCodeMirrorEditor
           className="absolute inset-0 h-full w-full"
           value={state.editedSql}
           onChange={(value) => {
-            if (value !== undefined) {
-              actions.setEditedSql(value);
-            }
+            actions.setEditedSql(value);
           }}
           options={{
-            lineNumbers: 'off',
-            fixedOverflowWidgets: false,
+            lineNumbers: true,
+            lineWrapping: true,
+            foldGutter: true,
           }}
           readOnly={!editable}
         />
+        <div className="bg-background absolute top-2 right-2 rounded-md border">
+          <CopyButton
+            text={state.editedSql}
+            size="xs"
+            tooltipLabel="Copy SQL"
+            disabled={!state.editedSql.trim()}
+          />
+        </div>
       </div>
 
       {/* Preview Results */}

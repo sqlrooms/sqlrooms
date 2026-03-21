@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.32",
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-rag": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -20,6 +21,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
+    "ai": "^5.0.155",
     "lucide-react": "^0.544.0",
     "zod": "^4.1.8"
   },

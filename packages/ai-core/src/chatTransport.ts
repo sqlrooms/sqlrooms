@@ -1,9 +1,8 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
-import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
+import type {LanguageModel, ToolSet} from 'ai';
 import {
   convertToModelMessages,
   DefaultChatTransport,
@@ -49,34 +48,6 @@ export type ChatTransportConfig = {
   getCustomModel?: () => LanguageModel | undefined;
 };
 
-/**
- * Creates a handler for tool completion that updates the tool additional data in the store
- */
-export function createOnToolCompletedHandler(
-  store: StoreApi<AiSliceStateForTransport>,
-  sessionId?: string,
-) {
-  return (toolCallId: string, additionalData: unknown) => {
-    // Prefer explicit sessionId if provided, otherwise attempt to resolve from toolCallId.
-    const toolCallSessionId = store
-      .getState()
-      .ai.getToolCallSession(toolCallId);
-    const resolvedSessionId =
-      sessionId ||
-      toolCallSessionId ||
-      store.getState().ai.config.currentSessionId;
-    if (!resolvedSessionId) return;
-
-    store
-      .getState()
-      .ai.setSessionToolAdditionalData(
-        resolvedSessionId,
-        toolCallId,
-        additionalData,
-      );
-  };
-}
-
 function getSessionById(
   store: StoreApi<AiSliceStateForTransport>,
   sessionId: string | undefined,
@@ -97,32 +68,6 @@ function getSessionById(
   }
 
   return session;
-}
-
-/**
- * Converts OpenAssistant tools to Vercel AI SDK tools with onToolCompleted handler
- */
-export function convertToAiSDKTools(
-  tools: Record<string, OpenAssistantTool>,
-  onToolCompleted?: OpenAssistantTool['onToolCompleted'],
-): ToolSet {
-  return Object.entries(tools || {}).reduce(
-    (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
-      acc[name] = convertToVercelAiToolV5({
-        ...tool,
-        onToolCompleted: (toolCallId: string, additionalData: unknown) => {
-          if (tool.onToolCompleted) {
-            // Call the onToolCompleted handler provided by the tool if it exists
-            tool.onToolCompleted(toolCallId, additionalData);
-          }
-          // Call the onToolCompleted handler provided by the caller if it exists
-          onToolCompleted?.(toolCallId, additionalData);
-        },
-      });
-      return acc;
-    },
-    {},
-  );
 }
 
 export function createLocalChatTransportFactory({
@@ -174,14 +119,15 @@ export function createLocalChatTransportFactory({
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      const onToolCompleted = createOnToolCompletedHandler(store, sessionId);
-      const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
-      // Remove execute from tools for the model call so tool invocations are
-      // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
-      // to return fresh tool objects; if that ever changes, clone before mutate.
-      Object.values(tools).forEach((tool) => {
-        tool.execute = undefined;
-      });
+      // Clone tools without execute for the model call.
+      // Tool invocations are handled exclusively by onChatToolCall.
+      // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
+      const tools = Object.fromEntries(
+        Object.entries(state.ai.tools || {}).map(([name, t]) => [
+          name,
+          {...t, execute: undefined},
+        ]),
+      ) as ToolSet;
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
@@ -309,16 +255,10 @@ export function createChatHandlers({
           return;
         }
 
-        const onToolCompleted = createOnToolCompletedHandler(store, sessionId);
-        const tools = convertToAiSDKTools(
-          state.ai.tools || {},
-          onToolCompleted,
-        );
-
-        const tool = tools[toolName];
-        if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
+        const tool = state.ai.tools[toolName];
+        if (tool?.execute) {
           const sessionMessages = (session?.uiMessages ?? []) as UIMessage[];
-          const llmResult = await tool.execute(input, {
+          const result = await tool.execute(input, {
             toolCallId,
             messages: convertToModelMessages(
               sanitizeMessagesForLLM(sessionMessages),
@@ -329,13 +269,13 @@ export function createChatHandlers({
           addToolResult?.({
             tool: toolName,
             toolCallId,
-            output: llmResult,
+            output: result,
           });
           state.ai.setToolCallSession(toolCallId, undefined);
         } else {
           // Tool has no execute function - wait for UI component to call addToolResult
-          const hasToolComponent = !!state.ai.findToolComponent(toolName);
-          if (hasToolComponent && state.ai.waitForToolResult) {
+          const hasToolRenderer = !!state.ai.findToolRenderer(toolName);
+          if (hasToolRenderer && state.ai.waitForToolResult) {
             try {
               await state.ai.waitForToolResult(
                 sessionId,
@@ -370,23 +310,6 @@ export function createChatHandlers({
         });
         // ensure mapping cleared on error too
         store.getState().ai.setToolCallSession(toolCallId, undefined);
-      }
-    },
-    onChatData: (sessionId: string, dataPart: DataUIPart<UIDataTypes>) => {
-      if (
-        dataPart.type === 'data-tool-additional-output' &&
-        dataPart.data &&
-        (dataPart.data as {toolCallId?: unknown}).toolCallId != null
-      ) {
-        const {toolCallId, output} = dataPart.data as {
-          toolCallId: string;
-          output: unknown;
-        };
-        if (sessionId) {
-          store
-            .getState()
-            .ai.setSessionToolAdditionalData(sessionId, toolCallId, output);
-        }
       }
     },
     onChatFinish: ({

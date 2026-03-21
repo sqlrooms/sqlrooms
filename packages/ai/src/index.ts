@@ -4,13 +4,16 @@
  */
 
 // Tools
-export {QueryToolResult} from './tools/query/QueryToolResult';
+export {
+  QueryToolResult,
+  createQueryToolRenderer,
+  type QueryToolRendererOptions,
+} from './tools/query/QueryToolResult';
 export {
   QueryToolParameters,
   createQueryTool,
   getQuerySummary,
-  type QueryToolLlmResult,
-  type QueryToolAdditionalData,
+  type QueryToolOutput,
   type QueryToolOptions,
 } from './tools/query/queryTool';
 export {
@@ -21,11 +24,18 @@ export {
 export type {
   CommandToolDescriptor,
   CommandToolsOptions,
+  DefaultCommandTools,
   ExecuteCommandToolLlmResult,
   ListCommandsToolLlmResult,
 } from './tools/commandTools';
-export {createDefaultAiTools} from './tools/defaultTools';
-export type {DefaultToolsOptions} from './tools/defaultTools';
+export {
+  createDefaultAiTools,
+  createDefaultAiToolRenderers,
+} from './tools/defaultTools';
+export type {
+  DefaultToolsOptions,
+  DefaultAiToolRenderers,
+} from './tools/defaultTools';
 export {
   createDefaultAiInstructions,
   formatTablesForLLM,
@@ -37,13 +47,19 @@ export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
-export {convertToAiSDKTools, fixIncompleteToolCalls} from '@sqlrooms/ai-core';
-export {processAgentStream, updateAgentToolCallData} from '@sqlrooms/ai-core';
+export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
+export {processAgentStream} from '@sqlrooms/ai-core';
 export type {
   AgentStreamResult,
   UIMessageChunk,
   AgentToolCall,
-  AgentToolCallAdditionalData,
+  ToolRenderers,
+  ToolRenderer,
+  ToolRendererProps,
+  ToolRendererRegistry,
+  StoredTool,
+  StoredToolSet,
+  AiSliceOptions,
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components

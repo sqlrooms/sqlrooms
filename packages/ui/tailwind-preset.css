@@ -39,6 +39,24 @@
   --sidebar-border: 220 13% 91%;
   --sidebar-ring: 217.2 91.2% 59.8%;
   --radius: 0.5rem;
+  --editor-keyword: 240 100% 50%;
+  --editor-string: 0 57% 33%;
+  --editor-number: 156 100% 30%;
+  --editor-comment: 120 100% 25%;
+  --editor-operator: 0 0% 0%;
+  --editor-punctuation: 0 0% 0%;
+  --editor-property: 214 100% 25%;
+  --editor-function: 38 63% 33%;
+  --editor-type: 156 100% 30%;
+  --editor-constant: 204 100% 38%;
+  --editor-invalid: 0 70% 49%;
+  --editor-selection-match: 207 100% 84%;
+  --editor-bracket-match: 0 0% 0%;
+  --editor-fold-placeholder: 220 14% 91%;
+  --editor-search-match: 60 100% 50%;
+  --editor-search-match-selected: 60 100% 50%;
+  --editor-lint-error: 0 63% 49%;
+  --editor-lint-warning: 32 94% 48%;
 }
 
 .dark {
@@ -74,6 +92,24 @@
   --sidebar-accent-foreground: 240 4.8% 95.9%;
   --sidebar-border: 240 3.7% 15.9%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+  --editor-keyword: 206 100% 60%;
+  --editor-string: 25 58% 59%;
+  --editor-number: 120 43% 71%;
+  --editor-comment: 122 39% 49%;
+  --editor-operator: 0 0% 83%;
+  --editor-punctuation: 0 0% 83%;
+  --editor-property: 207 100% 74%;
+  --editor-function: 49 44% 67%;
+  --editor-type: 167 47% 55%;
+  --editor-constant: 210 100% 66%;
+  --editor-invalid: 0 100% 63%;
+  --editor-selection-match: 207 35% 35%;
+  --editor-bracket-match: 0 0% 100%;
+  --editor-fold-placeholder: 0 0% 24%;
+  --editor-search-match: 43 16% 33%;
+  --editor-search-match-selected: 43 16% 33%;
+  --editor-lint-error: 3 88% 71%;
+  --editor-lint-warning: 28 100% 72%;
 }
 
 @theme inline {
@@ -113,6 +149,26 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-editor-keyword: hsl(var(--editor-keyword));
+  --color-editor-string: hsl(var(--editor-string));
+  --color-editor-number: hsl(var(--editor-number));
+  --color-editor-comment: hsl(var(--editor-comment));
+  --color-editor-operator: hsl(var(--editor-operator));
+  --color-editor-punctuation: hsl(var(--editor-punctuation));
+  --color-editor-property: hsl(var(--editor-property));
+  --color-editor-function: hsl(var(--editor-function));
+  --color-editor-type: hsl(var(--editor-type));
+  --color-editor-constant: hsl(var(--editor-constant));
+  --color-editor-invalid: hsl(var(--editor-invalid));
+  --color-editor-selection-match: hsl(var(--editor-selection-match));
+  --color-editor-bracket-match: hsl(var(--editor-bracket-match));
+  --color-editor-fold-placeholder: hsl(var(--editor-fold-placeholder));
+  --color-editor-search-match: hsl(var(--editor-search-match));
+  --color-editor-search-match-selected: hsl(
+    var(--editor-search-match-selected)
+  );
+  --color-editor-lint-error: hsl(var(--editor-lint-error));
+  --color-editor-lint-warning: hsl(var(--editor-lint-warning));
   --animate-sqlrooms-progress: sqlrooms-progress 1s infinite linear;
 }
 
@@ -135,6 +191,19 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+}
+
+@layer utilities {
+  .no-spinner {
+    appearance: textfield;
+  }
+
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
   }
 }
 

@@ -1,7 +1,17 @@
+import {Param} from '@uwdata/mosaic-core';
 import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
-import {FC, useEffect, useRef} from 'react';
+import {FC, memo, useEffect, useRef} from 'react';
 
-type SpecProps = {spec: Spec};
+type SpecProps = {
+  spec: Spec;
+  /**
+   * Pre-defined params/selections to inject when rendering the spec.
+   * Keys are param names (without $), values are Param or Selection instances.
+   * This allows multiple independently-rendered specs to share the same
+   * Selection objects for cross-filtering.
+   */
+  params?: Map<string, Param<any>>;
+};
 type PlotProps = {plot: HTMLElement | SVGSVGElement};
 type VgPlotChartProps = SpecProps | PlotProps;
 
@@ -20,25 +30,49 @@ export function isPlotProps(props: VgPlotChartProps): props is PlotProps {
  * @param {Spec} props.spec - The Vega-Lite specification for the chart.
  * @returns {React.ReactElement} The rendered chart component.
  */
-export const VgPlotChart: FC<VgPlotChartProps> = (props) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    (async () => {
-      if (containerRef.current) {
-        let element: HTMLElement | SVGSVGElement;
-        if (isPlotProps(props)) {
-          element = props.plot;
-        } else if (isSpecProps(props)) {
-          const ast = await parseSpec(props.spec);
-          element = (await astToDOM(ast)).element;
-        } else {
-          element = document.createElement('div');
-          element.innerHTML = 'Error: Invalid props provided to VgPlotChart';
+export const VgPlotChart: FC<VgPlotChartProps> = memo(
+  (props) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        if (containerRef.current) {
+          let element: HTMLElement | SVGSVGElement;
+          if (isPlotProps(props)) {
+            element = props.plot;
+          } else if (isSpecProps(props)) {
+            const ast = await parseSpec(props.spec);
+            if (cancelled) return;
+            const options = props.params ? {params: props.params} : undefined;
+            element = (await astToDOM(ast, options)).element;
+          } else {
+            element = document.createElement('div');
+            element.innerHTML = 'Error: Invalid props provided to VgPlotChart';
+          }
+          if (!cancelled) {
+            containerRef.current?.replaceChildren(element);
+          }
         }
-        containerRef.current?.replaceChildren(element);
-      }
-    })();
-  }, [props, containerRef]);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [props]);
 
-  return <div ref={containerRef} />;
-};
+    return <div ref={containerRef} />;
+  },
+  (prevProps, nextProps) => {
+    if (isPlotProps(prevProps) && isPlotProps(nextProps)) {
+      return prevProps.plot === nextProps.plot;
+    }
+    if (isSpecProps(prevProps) && isSpecProps(nextProps)) {
+      const specEqual =
+        JSON.stringify(prevProps.spec) === JSON.stringify(nextProps.spec);
+      const paramsEqual = prevProps.params === nextProps.params;
+      return specEqual && paramsEqual;
+    }
+    return false;
+  },
+);
+
+VgPlotChart.displayName = 'VgPlotChart';

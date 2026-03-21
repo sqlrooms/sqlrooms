@@ -29,5 +29,10 @@ export type {
   RuntimeSupport,
 } from './types';
 
+export type {
+  FunctionSuggestion,
+  GroupedFunctionSuggestion,
+} from '@sqlrooms/duckdb-core';
+
 export {useSql} from '@sqlrooms/duckdb';
 export * from '@sqlrooms/duckdb-core';
