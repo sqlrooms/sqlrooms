@@ -2,11 +2,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 from sqlrooms.cli import (
-    _default_config_candidates,
-    _default_local_config_candidates,
+    DEFAULT_CONFIG_PATH,
     _load_ai_runtime_config,
     _load_connector_config,
-    _resolve_config_paths,
+    _resolve_config_path,
     app,
 )
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
@@ -46,7 +45,7 @@ title = "Local Snowflake"
         encoding="utf-8",
     )
 
-    data = _load_connector_config([config_path])
+    data = _load_connector_config(config_path)
     assert isinstance(data[0], PostgresConnectorSettings)
     assert data[0].dsn == "postgresql://u:p@localhost:5432/db"
     assert data[0].connection_id == "pg-local"
@@ -83,7 +82,7 @@ models = ["claude-4-sonnet"]
         encoding="utf-8",
     )
 
-    default_provider, default_model, providers = _load_ai_runtime_config([config_path])
+    default_provider, default_model, providers = _load_ai_runtime_config(config_path)
     assert default_provider == "openai"
     assert default_model == "gpt-5"
     assert providers["openai"]["apiKey"] == "env-openai-key"
@@ -109,7 +108,7 @@ user = "demo-user"
         encoding="utf-8",
     )
     try:
-        _load_connector_config([config_path])
+        _load_connector_config(config_path)
     except RuntimeError as exc:
         assert "Duplicate connector id" in str(exc)
     else:
@@ -131,99 +130,28 @@ models = ["gpt-5"]
         encoding="utf-8",
     )
     try:
-        _load_ai_runtime_config([config_path])
+        _load_ai_runtime_config(config_path)
     except RuntimeError as exc:
         assert "default_provider" in str(exc)
     else:
         raise AssertionError("Expected invalid default provider failure")
 
 
-def test_resolve_config_paths_prefers_explicit(tmp_path):
+def test_resolve_config_path_prefers_explicit(tmp_path):
     explicit = tmp_path / "explicit.toml"
     explicit.write_text("[connectors]\n", encoding="utf-8")
-    resolved = _resolve_config_paths(str(explicit), no_config=False)
-    assert resolved == [explicit]
+    resolved = _resolve_config_path(str(explicit), no_config=False)
+    assert resolved == explicit
 
 
-def test_resolve_config_paths_honors_no_config():
-    assert _resolve_config_paths(None, no_config=True) == []
+def test_resolve_config_path_honors_no_config():
+    assert _resolve_config_path(None, no_config=True) is None
 
 
-def test_default_config_candidates_include_legacy_path():
-    candidates = _default_config_candidates()
-    assert Path.home() / ".sqlrooms" / "sqlrooms.toml" in candidates
-
-
-def test_default_local_config_candidates_include_cwd():
-    candidates = _default_local_config_candidates()
-    assert Path.cwd() / "sqlrooms.toml" in candidates
-
-
-def test_connector_config_local_overrides_global(tmp_path):
-    global_path = tmp_path / "global.toml"
-    local_path = tmp_path / "local.toml"
-    global_path.write_text(
-        """
-[[connectors]]
-id = "pg"
-engine = "postgres"
-dsn = "postgresql://global"
-title = "Global"
-""".strip(),
-        encoding="utf-8",
-    )
-    local_path.write_text(
-        """
-[[connectors]]
-id = "pg"
-engine = "postgres"
-dsn = "postgresql://local"
-title = "Local"
-""".strip(),
-        encoding="utf-8",
-    )
-    connectors = _load_connector_config([global_path, local_path])
-    assert len(connectors) == 1
-    assert isinstance(connectors[0], PostgresConnectorSettings)
-    assert connectors[0].dsn == "postgresql://local"
-    assert connectors[0].title == "Local"
-
-
-def test_ai_config_local_overrides_global(tmp_path):
-    global_path = tmp_path / "global.toml"
-    local_path = tmp_path / "local.toml"
-    global_path.write_text(
-        """
-[ai]
-default_provider = "openai"
-default_model = "gpt-4.1"
-
-[[ai.providers]]
-id = "openai"
-base_url = "https://api.openai.com/v1"
-models = ["gpt-4.1"]
-""".strip(),
-        encoding="utf-8",
-    )
-    local_path.write_text(
-        """
-[ai]
-default_model = "gpt-5"
-
-[[ai.providers]]
-id = "openai"
-base_url = "https://api.openai.com/v1"
-models = ["gpt-5"]
-""".strip(),
-        encoding="utf-8",
-    )
-    provider, model, providers = _load_ai_runtime_config([global_path, local_path])
-    assert provider == "openai"
-    assert model == "gpt-5"
-    assert providers["openai"]["models"][0]["modelName"] == "gpt-5"
+def test_default_config_path():
+    assert DEFAULT_CONFIG_PATH == Path.home() / ".sqlrooms" / "config.toml"
 
 
 # Since the main function in cli.py starts an asyncio loop and a server,
 # unit testing it without mocks is hard. We'll skip deep integration tests
 # of the full server startup here.
-
