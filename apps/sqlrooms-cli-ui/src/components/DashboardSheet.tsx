@@ -1,7 +1,7 @@
 import {useCellsStore} from '@sqlrooms/cells';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {astToDOM, parseSpec, VgPlotChart} from '@sqlrooms/mosaic';
 import type {Spec} from '@sqlrooms/mosaic';
+import {astToDOM, parseSpec, VgPlotChart} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
 import {AlertCircle, SparklesIcon} from 'lucide-react';
 import React from 'react';
@@ -10,12 +10,12 @@ import {getErrorMessage} from '../utils';
 
 const VGPLOT_SCHEMA_URL = 'https://idl.uw.edu/mosaic/schema/latest.json';
 
-type VgplotSchemaCache = {
+type VgPlotSchemaCache = {
   data: Record<string, unknown> | null;
   promise: Promise<Record<string, unknown>> | null;
 };
 
-type ParsedVgplotSpec = {
+type ParsedVgPlotSpec = {
   parsed: Spec | null;
   formatted: string | null;
   error: string | null;
@@ -31,7 +31,7 @@ function toRenderableMosaicSpec(
   return mosaicSpec;
 }
 
-function parseVgplotSpec(value: string): ParsedVgplotSpec {
+function parseVgPlotSpec(value: string): ParsedVgPlotSpec {
   try {
     const parsed = JSON.parse(value) as unknown;
     if (
@@ -42,7 +42,7 @@ function parseVgplotSpec(value: string): ParsedVgplotSpec {
       return {
         parsed: null,
         formatted: null,
-        error: 'Vgplot spec must be a JSON object.',
+        error: 'VgPlot spec must be a JSON object.',
       };
     }
     return {
@@ -61,8 +61,8 @@ function parseVgplotSpec(value: string): ParsedVgplotSpec {
   }
 }
 
-async function loadVgplotSchema(
-  cache: VgplotSchemaCache,
+async function loadVgPlotSchema(
+  cache: VgPlotSchemaCache,
 ): Promise<Record<string, unknown>> {
   if (cache.data) {
     return cache.data;
@@ -100,13 +100,13 @@ export const DashboardSheet: React.FC = () => {
   const ensureSheetDashboard = useRoomStore(
     (state) => state.dashboard.ensureSheetDashboard,
   );
-  const setSheetVgplot = useRoomStore(
-    (state) => state.dashboard.setSheetVgplot,
+  const setSheetVgPlot = useRoomStore(
+    (state) => state.dashboard.setSheetVgPlot,
   );
   const setAssistantOpen = useRoomStore((state) => state.setAssistantOpen);
   const mosaicConnection = useRoomStore((state) => state.mosaic.connection);
 
-  const schemaCacheRef = React.useRef<VgplotSchemaCache>({
+  const schemaCacheRef = React.useRef<VgPlotSchemaCache>({
     data: null,
     promise: null,
   });
@@ -147,7 +147,7 @@ export const DashboardSheet: React.FC = () => {
 
   React.useEffect(() => {
     let cancelled = false;
-    void loadVgplotSchema(schemaCacheRef.current)
+    void loadVgPlotSchema(schemaCacheRef.current)
       .then((loadedSchema) => {
         if (!cancelled) {
           setSchema(loadedSchema);
@@ -165,11 +165,11 @@ export const DashboardSheet: React.FC = () => {
   }, []);
 
   const parsedEditorSpec = React.useMemo(
-    () => parseVgplotSpec(editorValue),
+    () => parseVgPlotSpec(editorValue),
     [editorValue],
   );
   const parsedAppliedSpec = React.useMemo(
-    () => parseVgplotSpec(lastAppliedValue),
+    () => parseVgPlotSpec(lastAppliedValue),
     [lastAppliedValue],
   );
   const previewSpec = parsedEditorSpec.parsed ?? parsedAppliedSpec.parsed;
@@ -188,10 +188,10 @@ export const DashboardSheet: React.FC = () => {
 
   const applyChanges = React.useCallback(() => {
     if (!currentSheetId || !parsedEditorSpec.formatted) return;
-    setSheetVgplot(currentSheetId, parsedEditorSpec.formatted);
+    setSheetVgPlot(currentSheetId, parsedEditorSpec.formatted);
     setLastAppliedValue(parsedEditorSpec.formatted);
     setEditorValue(parsedEditorSpec.formatted);
-  }, [currentSheetId, parsedEditorSpec.formatted, setSheetVgplot]);
+  }, [currentSheetId, parsedEditorSpec.formatted, setSheetVgPlot]);
 
   React.useEffect(() => {
     if (mosaicConnection.status !== 'ready' || !previewSpec) {
