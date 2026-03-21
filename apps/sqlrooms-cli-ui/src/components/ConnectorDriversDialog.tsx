@@ -145,7 +145,7 @@ export const ConnectorDriversDialog: React.FC = () => {
               )}
               {!diagnostic.available && diagnostic.requiredPackages?.length ? (
                 <div className="mt-2 text-xs">
-                  Required package:{' '}
+                  {`Required package${diagnostic.requiredPackages.length > 1 ? 's' : ''}:`}
                   <code>{diagnostic.requiredPackages.join(', ')}</code>
                 </div>
               ) : null}
