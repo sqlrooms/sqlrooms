@@ -416,6 +416,14 @@ function createDashboardCommands(): RoomCommand<RoomState>[] {
             error: 'No dashboard sheet is available.',
           };
         }
+        const sheet = state.cells.config.sheets[targetSheetId];
+        if (!sheet || sheet.type !== 'dashboard') {
+          return {
+            success: false,
+            commandId: 'dashboard.get-vgplot',
+            error: `Sheet "${targetSheetId}" is not a dashboard sheet.`,
+          };
+        }
         state.dashboard.ensureSheetDashboard(targetSheetId);
         const vgplot = state.dashboard.getSheetVgplot(targetSheetId);
         return {
@@ -465,6 +473,15 @@ function createDashboardAiTools(store: {getState: () => RoomState}) {
               success: false,
               errorMessage:
                 'No dashboard sheet found. Create one with create_dashboard_sheet first.',
+            },
+          };
+        }
+        const sheet = state.cells.config.sheets[targetSheetId];
+        if (!sheet || sheet.type !== 'dashboard') {
+          return {
+            llmResult: {
+              success: false,
+              errorMessage: `Sheet "${targetSheetId}" is not a dashboard sheet.`,
             },
           };
         }

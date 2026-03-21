@@ -201,26 +201,30 @@ export const DashboardSheet: React.FC = () => {
       return;
     }
     let cancelled = false;
-    setIsCompilingPlot(true);
-    setPlotCompileError(null);
-    void (async () => {
-      try {
-        const ast = await parseSpec(previewSpec);
-        const instantiated = await astToDOM(ast);
-        if (cancelled) return;
-        setCompiledPlot(instantiated.element);
-      } catch (error) {
-        if (cancelled) return;
-        setCompiledPlot(null);
-        setPlotCompileError(getErrorMessage(error));
-      } finally {
-        if (!cancelled) {
-          setIsCompilingPlot(false);
+    const DEBOUNCE_MS = 300;
+    const timer = setTimeout(() => {
+      setIsCompilingPlot(true);
+      setPlotCompileError(null);
+      void (async () => {
+        try {
+          const ast = await parseSpec(previewSpec);
+          const instantiated = await astToDOM(ast);
+          if (cancelled) return;
+          setCompiledPlot(instantiated.element);
+        } catch (error) {
+          if (cancelled) return;
+          setCompiledPlot(null);
+          setPlotCompileError(getErrorMessage(error));
+        } finally {
+          if (!cancelled) {
+            setIsCompilingPlot(false);
+          }
         }
-      }
-    })();
+      })();
+    }, DEBOUNCE_MS);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [mosaicConnection.status, previewSpec]);
 
