@@ -13,7 +13,6 @@ export {
 export {WebContainerFsAdapter} from './WebContainerFsAdapter';
 export {
   createWebContainerBashTool,
-  WebContainerBashToolParameters,
   WebContainerBashToolResult,
   webContainerBashToolRenderer,
 } from './createWebContainerBashTool';

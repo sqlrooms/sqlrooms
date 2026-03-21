@@ -200,9 +200,11 @@ export class WebContainerFsAdapter {
   async mkdir(path: string, options?: MkdirOptions): Promise<void> {
     const resolvedPath = this.resolveWithinRoot('/', path);
     await this.mirror.mkdir(resolvedPath, options);
-    await this.webContainer.fs.mkdir(resolvedPath, {
-      recursive: options?.recursive,
-    });
+    if (options?.recursive) {
+      await this.webContainer.fs.mkdir(resolvedPath, {recursive: true});
+      return;
+    }
+    await this.webContainer.fs.mkdir(resolvedPath);
   }
 
   async readdir(path: string): Promise<string[]> {
