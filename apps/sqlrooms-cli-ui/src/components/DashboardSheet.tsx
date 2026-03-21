@@ -6,24 +6,20 @@ import {Button, SpinnerPane} from '@sqlrooms/ui';
 import {AlertCircle, SparklesIcon} from 'lucide-react';
 import React from 'react';
 import {DEFAULT_DASHBOARD_VGPLOT_SPEC, useRoomStore} from '../store';
+import {getErrorMessage} from '../utils';
 
 const VGPLOT_SCHEMA_URL = 'https://idl.uw.edu/mosaic/schema/latest.json';
 
-let vgplotSchemaCache: Record<string, unknown> | null = null;
-let vgplotSchemaPromise: Promise<Record<string, unknown>> | null = null;
+type VgplotSchemaCache = {
+  data: Record<string, unknown> | null;
+  promise: Promise<Record<string, unknown>> | null;
+};
 
 type ParsedVgplotSpec = {
   parsed: Spec | null;
   formatted: string | null;
   error: string | null;
 };
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
 
 function toRenderableMosaicSpec(
   parsedValue: Record<string, unknown>,
@@ -65,12 +61,14 @@ function parseVgplotSpec(value: string): ParsedVgplotSpec {
   }
 }
 
-async function loadVgplotSchema(): Promise<Record<string, unknown>> {
-  if (vgplotSchemaCache) {
-    return vgplotSchemaCache;
+async function loadVgplotSchema(
+  cache: VgplotSchemaCache,
+): Promise<Record<string, unknown>> {
+  if (cache.data) {
+    return cache.data;
   }
-  if (!vgplotSchemaPromise) {
-    vgplotSchemaPromise = fetch(VGPLOT_SCHEMA_URL)
+  if (!cache.promise) {
+    cache.promise = fetch(VGPLOT_SCHEMA_URL)
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(
@@ -81,15 +79,15 @@ async function loadVgplotSchema(): Promise<Record<string, unknown>> {
         if (typeof data !== 'object' || data === null || Array.isArray(data)) {
           throw new Error('Received an invalid vgplot schema document.');
         }
-        vgplotSchemaCache = data as Record<string, unknown>;
-        return vgplotSchemaCache;
+        cache.data = data as Record<string, unknown>;
+        return cache.data;
       })
       .catch((error) => {
-        vgplotSchemaPromise = null;
+        cache.promise = null;
         throw error;
       });
   }
-  return vgplotSchemaPromise;
+  return cache.promise;
 }
 
 export const DashboardSheet: React.FC = () => {
@@ -108,6 +106,11 @@ export const DashboardSheet: React.FC = () => {
   const setAssistantOpen = useRoomStore((state) => state.setAssistantOpen);
   const mosaicConnection = useRoomStore((state) => state.mosaic.connection);
 
+  const schemaCacheRef = React.useRef<VgplotSchemaCache>({
+    data: null,
+    promise: null,
+  });
+
   const persistedSpec = dashboardEntry?.vgplot ?? DEFAULT_DASHBOARD_VGPLOT_SPEC;
 
   const [editorValue, setEditorValue] = React.useState<string>(persistedSpec);
@@ -115,7 +118,7 @@ export const DashboardSheet: React.FC = () => {
     React.useState<string>(persistedSpec);
   const [schema, setSchema] = React.useState<
     Record<string, unknown> | undefined
-  >(vgplotSchemaCache ?? undefined);
+  >(undefined);
   const [schemaError, setSchemaError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -129,9 +132,8 @@ export const DashboardSheet: React.FC = () => {
   }, [currentSheetId, persistedSpec]);
 
   React.useEffect(() => {
-    if (schema) return;
     let cancelled = false;
-    void loadVgplotSchema()
+    void loadVgplotSchema(schemaCacheRef.current)
       .then((loadedSchema) => {
         if (!cancelled) {
           setSchema(loadedSchema);
@@ -145,7 +147,8 @@ export const DashboardSheet: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [schema]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const parsedEditorSpec = React.useMemo(
     () => parseVgplotSpec(editorValue),

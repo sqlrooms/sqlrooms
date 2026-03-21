@@ -357,6 +357,17 @@ export function useStoreWithMosaic<T>(
   );
 }
 
+/**
+ * Adapts a {@link DuckDbConnector} to the Mosaic {@link Connector} interface.
+ *
+ * When the underlying connector cannot return native flechette Arrow tables
+ * (e.g. WebSocket-based connectors), both `'arrow'` and `'json'` query types
+ * fall back to {@link DuckDbConnector.queryJson} with {@link Array.from}
+ * materialization. This keeps Mosaic working everywhere but may have
+ * performance/memory implications for large result sets compared to native
+ * Arrow. The `as any` casts on the return type are an intentional adapter
+ * trade-off to satisfy the polymorphic {@link Connector['query']} signature.
+ */
 function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
   return {
     query: (async (

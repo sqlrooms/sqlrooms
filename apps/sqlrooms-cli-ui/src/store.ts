@@ -58,6 +58,7 @@ import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
+import {getErrorMessage} from './utils';
 
 export const AppBuilderProjectConfig = z.object({
   appsBySheetId: z
@@ -216,11 +217,6 @@ Dashboard authoring:
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
 - Use SQL against DuckDB tables when deciding fields, filters, and aggregations in the spec.
 `;
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 function parseVgplotSpecString(vgplot: string): {
   parsed: Record<string, unknown>;
