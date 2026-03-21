@@ -25,11 +25,12 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "lucide-react": "^0.556.0",
     "@uwdata/mosaic-core": "^0.21.0",
     "@uwdata/mosaic-spec": "^0.21.0",
     "@uwdata/mosaic-sql": "^0.21.0",
     "@uwdata/vgplot": "^0.21.0",
+    "apache-arrow": "17.0.0",
+    "lucide-react": "^0.556.0",
     "immer": "^11.0.1",
     "zod": "^4.1.8"
   },
