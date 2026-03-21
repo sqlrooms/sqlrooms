@@ -50,6 +50,7 @@ import {
   WebContainerSliceConfig,
   WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
+import {tool} from 'ai';
 import {produce} from 'immer';
 import {z} from 'zod';
 
@@ -441,11 +442,10 @@ function createDashboardCommands(): RoomCommand<RoomState>[] {
 
 function createDashboardAiTools(store: {getState: () => RoomState}) {
   return {
-    create_dashboard_sheet: {
-      name: 'create_dashboard_sheet',
+    create_dashboard_sheet: tool({
       description:
         'Create a new dashboard sheet and make it the active sheet. Use when no dashboard sheet exists yet.',
-      parameters: DashboardCreateSheetToolParameters,
+      inputSchema: DashboardCreateSheetToolParameters,
       execute: async (params: DashboardCreateSheetToolParameters) => {
         const {title} = params;
         const sheetId = store.getState().dashboard.createDashboardSheet(title);
@@ -457,12 +457,11 @@ function createDashboardAiTools(store: {getState: () => RoomState}) {
           },
         };
       },
-    },
-    get_dashboard_vgplot: {
-      name: 'get_dashboard_vgplot',
+    }),
+    get_dashboard_vgplot: tool({
       description:
         'Get the current vgplot JSON spec for a dashboard sheet. If sheetId is omitted, uses the current dashboard sheet.',
-      parameters: DashboardGetVgplotToolParameters,
+      inputSchema: DashboardGetVgplotToolParameters,
       execute: async (params: DashboardGetVgplotToolParameters) => {
         const state = store.getState();
         const targetSheetId =
@@ -498,12 +497,11 @@ function createDashboardAiTools(store: {getState: () => RoomState}) {
           },
         };
       },
-    },
-    set_dashboard_vgplot: {
-      name: 'set_dashboard_vgplot',
+    }),
+    set_dashboard_vgplot: tool({
       description:
         'Set the vgplot JSON spec for a dashboard sheet. If sheetId is omitted, updates the current dashboard sheet (or creates one when allowed).',
-      parameters: DashboardSetVgplotToolParameters,
+      inputSchema: DashboardSetVgplotToolParameters,
       execute: async (params: DashboardSetVgplotToolParameters) => {
         const state = store.getState();
         let targetSheetId =
@@ -544,7 +542,7 @@ function createDashboardAiTools(store: {getState: () => RoomState}) {
           };
         }
       },
-    },
+    }),
   };
 }
 
