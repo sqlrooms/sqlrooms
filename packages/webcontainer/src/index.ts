@@ -9,6 +9,7 @@ export {
   createWebContainerSlice,
   useStoreWithWebContainer,
   WebContainerSliceConfig,
+  WebContainerPersistConfig,
 } from './WebContainerSlice';
 export {WebContainerFsAdapter} from './WebContainerFsAdapter';
 export {

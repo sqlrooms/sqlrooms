@@ -27,6 +27,16 @@ export const WebContainerSliceConfig = z.object({
   ),
   activeFilePath: z.string().nullable(),
 });
+
+/**
+ * Persistence-safe schema that strips `filesTree` (which can be huge after
+ * `npm install` pulls in `node_modules`) so `JSON.stringify` in the persist
+ * middleware never blows up.  The tree is re-exported from the live
+ * WebContainer on every boot, so there is nothing to restore.
+ */
+export const WebContainerPersistConfig = WebContainerSliceConfig.transform(
+  ({filesTree: _filesTree, ...rest}) => ({...rest, filesTree: {}}),
+);
 export type WebContainerSliceConfig = z.infer<typeof WebContainerSliceConfig>;
 
 export function createDefaultWebContainerSliceConfig(
@@ -38,6 +48,15 @@ export function createDefaultWebContainerSliceConfig(
     activeFilePath: null,
     ...props,
   };
+}
+
+const MAX_COMMAND_OUTPUT_CHARS = 100_000;
+
+function truncateCommandOutput(output: string): string {
+  if (output.length <= MAX_COMMAND_OUTPUT_CHARS) return output;
+  const half = Math.floor(MAX_COMMAND_OUTPUT_CHARS / 2);
+  const omitted = output.length - MAX_COMMAND_OUTPUT_CHARS;
+  return `${output.slice(0, half)}\n\n... [${omitted} characters truncated] ...\n\n${output.slice(-half)}`;
 }
 
 function isDirectoryEntry(entry: unknown): entry is {
@@ -204,7 +223,9 @@ export function createWebContainerSlice(props?: {
       return;
     }
 
-    const filesTree = await instance.export('.');
+    const filesTree = await instance.export('.', {
+      excludes: ['**/node_modules/**'],
+    });
     const prevConfig = get().webContainer.config;
     const openedFiles = await Promise.all(
       prevConfig.openedFiles
@@ -653,9 +674,10 @@ export function createWebContainerSlice(props?: {
           if (combinedOutput) {
             set((state) =>
               produce(state, (draft) => {
-                draft.webContainer.output += combinedOutput.endsWith('\n')
-                  ? combinedOutput
-                  : `${combinedOutput}\n`;
+                const truncated = truncateCommandOutput(combinedOutput);
+                draft.webContainer.output += truncated.endsWith('\n')
+                  ? truncated
+                  : `${truncated}\n`;
               }),
             );
           }
@@ -663,8 +685,8 @@ export function createWebContainerSlice(props?: {
           await syncSliceConfigFromWebContainer(get, set);
           return {
             exitCode: result.exitCode,
-            stdout: result.stdout,
-            stderr: result.stderr,
+            stdout: truncateCommandOutput(result.stdout),
+            stderr: truncateCommandOutput(result.stderr),
             durationMs,
           };
         } catch (error) {

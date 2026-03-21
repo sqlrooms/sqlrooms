@@ -692,18 +692,23 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
          * Save the Ai SDK UI messages for a session
          */
         setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
-              );
-              if (session) {
-                // store the latest UI messages from the chat hook
-                // Create a deep copy to avoid read-only property issues
-                session.uiMessages = JSON.parse(JSON.stringify(uiMessages));
-              }
-            }),
-          );
+          try {
+            set((state) =>
+              produce(state, (draft) => {
+                const session = draft.ai.config.sessions.find(
+                  (s: AnalysisSessionSchema) => s.id === sessionId,
+                );
+                if (session) {
+                  session.uiMessages = JSON.parse(JSON.stringify(uiMessages));
+                }
+              }),
+            );
+          } catch (error) {
+            console.warn(
+              'Failed to persist UI messages (payload too large):',
+              error instanceof Error ? error.message : error,
+            );
+          }
         },
 
         findToolRenderer: (toolName: string) => {

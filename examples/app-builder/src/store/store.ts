@@ -12,7 +12,7 @@ import {
 } from '@sqlrooms/room-store';
 import {
   createWebContainerBashTool,
-  WebContainerSliceConfig,
+  WebContainerPersistConfig,
   WebContainerSliceState,
   createWebContainerSlice,
   webContainerBashToolRenderer,
@@ -37,7 +37,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         ai: AiSliceConfig,
         aiSettings: AiSettingsSliceConfig,
-        webContainer: WebContainerSliceConfig,
+        webContainer: WebContainerPersistConfig,
       },
     },
     (set, get, store) => ({

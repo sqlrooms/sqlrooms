@@ -44,7 +44,7 @@ import {createVegaChartTool} from '@sqlrooms/vega';
 import {
   createWebContainerBashTool,
   createWebContainerSlice,
-  WebContainerSliceConfig,
+  WebContainerPersistConfig,
   WebContainerSliceState,
   webContainerBashToolRenderer,
 } from '@sqlrooms/webcontainer';
@@ -158,7 +158,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         canvas: CanvasSliceConfig,
-        webContainer: WebContainerSliceConfig,
+        webContainer: WebContainerPersistConfig,
         appProject: AppBuilderProjectConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
