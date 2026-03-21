@@ -6,7 +6,7 @@ export const constants = {
 
 function unsupported(methodName: string): never {
   throw new Error(
-    `${methodName} is not available in browser builds. just-bash gzip commands remain unsupported in this environment.`,
+    `${methodName} is not available in browser builds (synchronous zlib APIs unsupported). The browser environment may still support gzip via other means.`,
   );
 }
 

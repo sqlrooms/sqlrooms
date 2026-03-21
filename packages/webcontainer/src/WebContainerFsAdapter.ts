@@ -92,13 +92,13 @@ async function loadTreeIntoFs(
   }
 }
 
-export class WebContainerFsAdapter {
+export class WebContainerFsAdapter implements IFileSystem {
   private mirror = new InMemoryFs();
 
   constructor(private readonly webContainer: WebContainerLike) {}
 
   asFileSystem(): IFileSystem {
-    return this as unknown as IFileSystem;
+    return this;
   }
 
   async syncFromWebContainer(): Promise<void> {
@@ -162,13 +162,13 @@ export class WebContainerFsAdapter {
     options?: {encoding?: BufferEncoding} | BufferEncoding,
   ): Promise<void> {
     const resolvedPath = this.resolveWithinRoot('/', path);
+    await this.ensureParentDirectory(resolvedPath);
+    await this.webContainer.fs.writeFile(resolvedPath, content);
     await this.mirror.writeFile(
       resolvedPath,
       content,
       options as BufferEncoding,
     );
-    await this.ensureParentDirectory(resolvedPath);
-    await this.webContainer.fs.writeFile(resolvedPath, content);
   }
 
   async appendFile(
@@ -184,7 +184,12 @@ export class WebContainerFsAdapter {
     );
     await this.ensureParentDirectory(resolvedPath);
     const updatedContents = await this.mirror.readFileBuffer(resolvedPath);
-    await this.webContainer.fs.writeFile(resolvedPath, updatedContents);
+    try {
+      await this.webContainer.fs.writeFile(resolvedPath, updatedContents);
+    } catch (error) {
+      await this.syncFromWebContainer();
+      throw error;
+    }
   }
 
   async exists(path: string): Promise<boolean> {
@@ -199,12 +204,12 @@ export class WebContainerFsAdapter {
 
   async mkdir(path: string, options?: MkdirOptions): Promise<void> {
     const resolvedPath = this.resolveWithinRoot('/', path);
-    await this.mirror.mkdir(resolvedPath, options);
     if (options?.recursive) {
       await this.webContainer.fs.mkdir(resolvedPath, {recursive: true});
-      return;
+    } else {
+      await this.webContainer.fs.mkdir(resolvedPath);
     }
-    await this.webContainer.fs.mkdir(resolvedPath);
+    await this.mirror.mkdir(resolvedPath, options);
   }
 
   async readdir(path: string): Promise<string[]> {
@@ -214,26 +219,31 @@ export class WebContainerFsAdapter {
 
   async rm(path: string, options?: RmOptions): Promise<void> {
     const resolvedPath = this.resolveWithinRoot('/', path);
-    await this.mirror.rm(resolvedPath, options);
     await this.webContainer.fs.rm(resolvedPath, {
       force: options?.force,
       recursive: options?.recursive,
     });
+    await this.mirror.rm(resolvedPath, options);
   }
 
   async cp(src: string, dest: string, options?: CpOptions): Promise<void> {
     const resolvedSrc = this.resolveWithinRoot('/', src);
     const resolvedDest = this.resolveWithinRoot('/', dest);
     await this.mirror.cp(resolvedSrc, resolvedDest, options);
-    await this.persistMirrorPath(resolvedDest);
+    try {
+      await this.persistMirrorPath(resolvedDest);
+    } catch (error) {
+      await this.syncFromWebContainer();
+      throw error;
+    }
   }
 
   async mv(src: string, dest: string): Promise<void> {
     const resolvedSrc = this.resolveWithinRoot('/', src);
     const resolvedDest = this.resolveWithinRoot('/', dest);
-    await this.mirror.mv(resolvedSrc, resolvedDest);
     await this.ensureParentDirectory(resolvedDest);
     await this.webContainer.fs.rename(resolvedSrc, resolvedDest);
+    await this.mirror.mv(resolvedSrc, resolvedDest);
   }
 
   resolvePath(base: string, path: string): string {

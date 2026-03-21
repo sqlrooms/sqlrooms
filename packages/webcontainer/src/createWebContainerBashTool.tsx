@@ -1,5 +1,6 @@
-import {tool} from 'ai';
+import {tool, type Tool} from 'ai';
 import z from 'zod';
+import type {ComponentType} from 'react';
 import type {WebContainerSliceState} from './WebContainerSlice';
 import {createWebContainerSandbox} from './WebContainerSandbox';
 import type {Sandbox} from './WebContainerSandbox';
@@ -40,13 +41,23 @@ export type WebContainerWriteFileToolOutput = {
   success: boolean;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ToolResultRendererProps = {
+  toolCallId: string;
+  input: Record<string, unknown>;
+  output: unknown;
+  state: ToolResultState;
+  errorText?: string;
+};
+
 export type WebContainerToolkitResult = {
-  bash: any;
-  readFile: any;
-  writeFile: any;
-  tools: Record<string, any>;
-  toolRenderers: Record<string, React.ComponentType<any>>;
+  bash: Tool<WebContainerBashToolParameters, WebContainerBashToolOutput>;
+  readFile: Tool<{path: string}, WebContainerReadFileToolOutput>;
+  writeFile: Tool<
+    {path: string; content: string},
+    WebContainerWriteFileToolOutput
+  >;
+  tools: Record<string, Tool>;
+  toolRenderers: Record<string, ComponentType<ToolResultRendererProps>>;
 };
 
 // ---------------------------------------------------------------------------
@@ -118,9 +129,12 @@ export function createWebContainerToolkit(
       path: z.string().describe('The path where the file should be written'),
       content: z.string().describe('The content to write to the file'),
     }),
-    execute: async ({path, content}) => {
+    execute: async ({
+      path,
+      content,
+    }): Promise<WebContainerWriteFileToolOutput> => {
       await getSandbox().writeFiles([{path, content}]);
-      return {success: true} satisfies WebContainerWriteFileToolOutput;
+      return {success: true};
     },
   });
 
@@ -130,9 +144,11 @@ export function createWebContainerToolkit(
     writeFile,
     tools: {bash, readFile, writeFile},
     toolRenderers: {
-      bash: WebContainerBashToolResult,
-      readFile: WebContainerReadFileToolResult,
-      writeFile: WebContainerWriteFileToolResult,
+      bash: WebContainerBashToolResult as ComponentType<ToolResultRendererProps>,
+      readFile:
+        WebContainerReadFileToolResult as ComponentType<ToolResultRendererProps>,
+      writeFile:
+        WebContainerWriteFileToolResult as ComponentType<ToolResultRendererProps>,
     },
   };
 }
@@ -160,6 +176,7 @@ type ToolResultState =
   | 'output-error';
 
 type WebContainerBashToolResultProps = {
+  toolCallId: string;
   input: WebContainerBashToolParameters;
   output: WebContainerBashToolOutput | undefined;
   state: ToolResultState;
@@ -192,6 +209,7 @@ export function WebContainerBashToolResult({
 export const webContainerBashToolRenderer = WebContainerBashToolResult;
 
 type WebContainerReadFileToolResultProps = {
+  toolCallId: string;
   input: {path: string};
   output: WebContainerReadFileToolOutput | undefined;
   state: ToolResultState;
@@ -208,6 +226,7 @@ export function WebContainerReadFileToolResult({
 }
 
 type WebContainerWriteFileToolResultProps = {
+  toolCallId: string;
   input: {path: string; content: string};
   output: WebContainerWriteFileToolOutput | undefined;
   state: ToolResultState;

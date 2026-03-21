@@ -48,6 +48,12 @@ export function createWebContainerSandbox(
           typeof file.content === 'string'
             ? file.content
             : file.content.toString('utf-8');
+        const isOpened = getState().webContainer.config.openedFiles.some(
+          (f) => f.path === file.path,
+        );
+        if (!isOpened) {
+          await wc.openFile(file.path, content);
+        }
         wc.updateFileContent(file.path, content);
       }
       await wc.saveAllOpenFiles();

@@ -130,7 +130,10 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
-    setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
+    setSessionUiMessages: (
+      sessionId: string,
+      uiMessages: UIMessage[],
+    ) => boolean;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
@@ -691,7 +694,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         /**
          * Save the Ai SDK UI messages for a session
          */
-        setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => {
+        setSessionUiMessages: (
+          sessionId: string,
+          uiMessages: UIMessage[],
+        ): boolean => {
           try {
             set((state) =>
               produce(state, (draft) => {
@@ -703,11 +709,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 }
               }),
             );
+            return true;
           } catch (error) {
             console.warn(
-              'Failed to persist UI messages (payload too large):',
+              'Failed to persist UI messages:',
               error instanceof Error ? error.message : error,
             );
+            return false;
           }
         },
 
