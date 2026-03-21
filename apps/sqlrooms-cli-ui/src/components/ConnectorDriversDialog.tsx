@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import React from 'react';
 import {useRoomStore} from '../store';
@@ -32,7 +32,6 @@ function DriverInstallCommands({
 }: {
   diagnostic: ConnectorDiagnostic;
 }) {
-  const {toast} = useToast();
   const commands = getInstallCommands(diagnostic);
 
   if (!commands.length) {
@@ -53,15 +52,12 @@ function DriverInstallCommands({
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(command);
-                  toast({
-                    title: 'Command copied',
+                  toast.success('Command copied', {
                     description:
                       'Paste it into your terminal and restart sqlrooms.',
                   });
                 } catch {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Clipboard unavailable',
+                  toast.error('Clipboard unavailable', {
                     description: 'Copy the command manually from the dialog.',
                   });
                 }
