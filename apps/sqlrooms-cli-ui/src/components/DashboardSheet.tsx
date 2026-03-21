@@ -126,9 +126,23 @@ export const DashboardSheet: React.FC = () => {
     ensureSheetDashboard(currentSheetId);
   }, [currentSheetId, ensureSheetDashboard]);
 
+  const prevSheetIdRef = React.useRef(currentSheetId);
   React.useEffect(() => {
-    setEditorValue(persistedSpec);
-    setLastAppliedValue(persistedSpec);
+    const sheetChanged = currentSheetId !== prevSheetIdRef.current;
+    prevSheetIdRef.current = currentSheetId;
+
+    if (sheetChanged) {
+      setEditorValue(persistedSpec);
+      setLastAppliedValue(persistedSpec);
+    } else {
+      setLastAppliedValue((prev) => {
+        if (prev === persistedSpec) return prev;
+        setEditorValue((editorVal) =>
+          editorVal === prev ? persistedSpec : editorVal,
+        );
+        return persistedSpec;
+      });
+    }
   }, [currentSheetId, persistedSpec]);
 
   React.useEffect(() => {

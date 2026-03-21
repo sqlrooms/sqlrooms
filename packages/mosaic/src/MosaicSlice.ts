@@ -19,6 +19,7 @@ import {
   Connector,
   Coordinator,
   coordinator,
+  decodeIPC,
   makeClient,
   Selection,
   wasmConnector,
@@ -360,13 +361,13 @@ export function useStoreWithMosaic<T>(
 /**
  * Adapts a {@link DuckDbConnector} to the Mosaic {@link Connector} interface.
  *
- * When the underlying connector cannot return native flechette Arrow tables
- * (e.g. WebSocket-based connectors), both `'arrow'` and `'json'` query types
- * fall back to {@link DuckDbConnector.queryJson} with {@link Array.from}
- * materialization. This keeps Mosaic working everywhere but may have
- * performance/memory implications for large result sets compared to native
- * Arrow. The `as any` casts on the return type are an intentional adapter
- * trade-off to satisfy the polymorphic {@link Connector['query']} signature.
+ * For `'arrow'` queries the Apache Arrow table returned by the connector is
+ * serialized to IPC bytes and decoded via {@link decodeIPC} into a flechette
+ * `Table`, which is the shape Mosaic consumers expect (with `.toColumns()`).
+ * For `'json'` queries, rows are materialized with {@link Array.from} which
+ * may have performance/memory implications for very large result sets.
+ * The `as any` casts on the return type are an intentional adapter trade-off
+ * to satisfy the polymorphic {@link Connector['query']} signature.
  */
 function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
   return {
@@ -385,13 +386,9 @@ function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
         return Array.from(rows) as any;
       }
       if (queryType === 'arrow') {
-        // Mosaic expects flechette Arrow tables with `.toColumns()`.
-        // SQLRooms websocket connectors return Apache Arrow tables instead,
-        // so materialize to row objects for broad compatibility.
-        const rows = await connector.queryJson<Record<string, unknown>>(
-          query.sql,
-        );
-        return Array.from(rows) as any;
+        const arrowTable = await connector.query(query.sql);
+        const {tableToIPC} = await import('apache-arrow');
+        return decodeIPC(tableToIPC(arrowTable, 'stream')) as any;
       }
       throw new Error(`Unsupported Mosaic query type "${queryType}".`);
     }) as Connector['query'],
