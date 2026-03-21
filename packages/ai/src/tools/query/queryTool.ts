@@ -1,3 +1,4 @@
+import {tool} from 'ai';
 import {AiSliceState} from '@sqlrooms/ai-core';
 import {
   arrowTableToJson,
@@ -7,7 +8,6 @@ import {
 } from '@sqlrooms/duckdb';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {z} from 'zod';
-import {QueryToolResult} from './QueryToolResult';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -17,20 +17,23 @@ export const QueryToolParameters = z.object({
 
 export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 
-export type QueryToolLlmResult = {
+export type QueryToolOutput = {
   success: boolean;
   data?: {
     type: 'query';
     summary: Record<string, unknown>[] | null;
     firstRows?: Record<string, unknown>[];
   };
-  details?: string;
-  errorMessage?: string;
-};
-
-export type QueryToolAdditionalData = {
   title: string;
   sqlQuery: string;
+  details?: string;
+  error?: string;
+  /**
+   * Whether to show the SQL query block in the renderer.
+   * Overrides the `showSql` option passed to {@link createQueryToolRenderer}.
+   * Defaults to the renderer's `showSql` option when not set (which itself defaults to true).
+   */
+  showSql?: boolean;
 };
 
 export type QueryToolOptions = {
@@ -48,16 +51,12 @@ export function createQueryTool(
     autoSummary = false,
     numberOfRowsToShareWithLLM = 0,
   } = options || {};
-  return {
-    name: 'query',
+  return tool<QueryToolParameters, QueryToolOutput>({
     description: `A tool for running SQL queries on the tables in the database.
-Please only run one query at a time.
-If a query fails, please don't try to run it again with the same syntax.`,
-    parameters: QueryToolParameters,
-    execute: async (
-      params: QueryToolParameters,
-      options?: {abortSignal?: AbortSignal},
-    ) => {
+                  Please only run one query at a time.
+                  If a query fails, please don't try to run it again with the same syntax.`,
+    inputSchema: QueryToolParameters,
+    execute: async (params, options) => {
       const {type, sqlQuery} = params;
       const abortSignal = options?.abortSignal;
 
@@ -116,32 +115,35 @@ If a query fails, please don't try to run it again with the same syntax.`,
             : [];
 
         return {
-          llmResult: {
-            success: true,
-            data: {
-              type,
-              summary: summaryData,
-              ...(numberOfRowsToShareWithLLM > 0 ? {firstRows} : {}),
-            },
+          success: true,
+          data: {
+            type,
+            summary: summaryData,
+            ...(numberOfRowsToShareWithLLM > 0 ? {firstRows} : {}),
           },
-          additionalData: {
-            title: 'Query Result',
-            sqlQuery,
-          },
+          title: 'Query Result',
+          sqlQuery,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            details: 'Query execution failed.',
-            errorMessage:
-              error instanceof Error ? error.message : 'Unknown error',
-          },
+          success: false,
+          details: 'Query execution failed.',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          title: 'Query Result',
+          sqlQuery: params.sqlQuery,
         };
       }
     },
-    component: QueryToolResult,
-  };
+    toModelOutput: (output) => ({
+      type: 'text',
+      value: JSON.stringify({
+        success: output.success,
+        data: output.data,
+        ...(output.details ? {details: output.details} : {}),
+        ...(output.error ? {error: output.error} : {}),
+      }),
+    }),
+  });
 }
 
 /**

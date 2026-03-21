@@ -5,14 +5,13 @@ import {AiSliceState, processAgentStream} from '@sqlrooms/ai-core';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
 export function weatherAgentTool(store: StoreApi<AiSliceState>) {
-  return {
-    name: 'agent-weather',
+  return tool({
     description: 'My weather agent',
-    parameters: z.object({
+    inputSchema: z.object({
       prompt: z.string().describe('The prompt to the agent'),
     }),
     execute: async (
-      {prompt}: {prompt: string},
+      {prompt},
       options?: {toolCallId?: string; abortSignal?: AbortSignal},
     ) => {
       const state = store.getState();
@@ -29,9 +28,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
 
       const weatherAgent = new Agent({
         model,
-        abortSignal: currentSession?.id
-          ? state.ai.getAbortController(currentSession.id)?.signal
-          : undefined,
+        abortSignal: options?.abortSignal,
         tools: {
           weather: tool({
             description: 'Get the weather in a location (in Fahrenheit)',
@@ -71,11 +68,9 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
       );
 
       return {
-        llmResult: {
-          success: true,
-          details: resultText,
-        },
+        success: true,
+        details: resultText,
       };
     },
-  };
+  });
 }

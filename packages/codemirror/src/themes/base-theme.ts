@@ -79,7 +79,6 @@ export function createBaseTheme({
         color: 'var(--color-popover-foreground)',
         border: '1px solid var(--color-border)',
         padding: '4px 8px',
-        borderRadius: '4px',
       },
       '.cm-tooltip-autocomplete': {
         '& > ul > li[aria-selected]': {
@@ -139,7 +138,7 @@ export function createBaseTheme({
         borderLeft: '3px solid var(--color-editor-lint-error)',
       },
       '.cm-diagnostic-warning': {
-        borderLeft: '3px solid var(--color-editor-lint-warning)',
+        borderLeft: 'none',
       },
     },
     {dark: theme === 'dark'},

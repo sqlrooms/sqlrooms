@@ -10,6 +10,7 @@ import {
   BaseRoomStoreState,
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
+import {tool} from 'ai';
 import {z} from 'zod';
 import EchoToolResult from './components/EchoToolResult';
 import {AI_SETTINGS} from './config';
@@ -41,25 +42,24 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
           return `You are an AI assistant that can answer questions and help with tasks.`;
         },
 
+        // Tool renderers for displaying tool results in the UI
+        toolRenderers: {
+          echo: EchoToolResult,
+        },
+
         // Add custom tools
         tools: {
           // Example of adding a simple echo tool
-          echo: {
-            name: 'echo',
+          echo: tool({
             description: 'A simple echo tool that returns the input text',
-            parameters: z.object({
+            inputSchema: z.object({
               text: z.string().describe('The text to echo back'),
             }),
-            execute: async ({text}: {text: string}) => {
-              return {
-                llmResult: {
-                  success: true,
-                  details: `Echo: ${text}`,
-                },
-              };
-            },
-            component: EchoToolResult,
-          },
+            execute: async ({text}) => ({
+              success: true,
+              details: `Echo: ${text}`,
+            }),
+          }),
         },
       })(set, get, store),
     }),

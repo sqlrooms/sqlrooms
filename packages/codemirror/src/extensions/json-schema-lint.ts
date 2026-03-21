@@ -1,39 +1,25 @@
 import {linter} from '@codemirror/lint';
 import {validateJsonSchema} from '../utils/validate-json-schema';
 import {Extension} from '@codemirror/state';
-import {createJsonSchemaValidator} from '../utils/create-json-schema-validator';
+import {JsonSchemaValidator} from '../utils/json-schema-validator';
 
 /**
  * Creates a linter extension for JSON schema validation
- * @param schema JSON schema to validate against
+ * @param validator JSON schema validator instance
  * @param delay Debounce delay in milliseconds (default: 500ms)
- * @param maxErrors Maximum number of errors to show at once (default: 10)
  * @returns CodeMirror linter extension
  */
 export function jsonSchemaLinter(
-  schema: object,
+  validator: JsonSchemaValidator,
   delay: number = 500,
-  maxErrors: number = 10,
 ): Extension {
-  try {
-    const validator = createJsonSchemaValidator(schema);
-
-    return linter(
-      (view) => {
-        const text = view.state.doc.toString();
-        const diagnostics = validateJsonSchema(text, validator);
-        return diagnostics;
-      },
-      {
-        delay, // Debounce validation to avoid slowdown during typing
-        tooltipFilter: (diagnostics) => {
-          // Show only the first 5 errors in the tooltip to keep it manageable
-          return diagnostics.slice(0, maxErrors);
-        },
-      },
-    );
-  } catch (error) {
-    console.error('Failed to create JSON schema validator:', error);
-    return [];
-  }
+  return linter(
+    async (view) => {
+      const text = view.state.doc.toString();
+      return await validateJsonSchema(text, validator);
+    },
+    {
+      delay, // Debounce validation to avoid slowdown during typing
+    },
+  );
 }

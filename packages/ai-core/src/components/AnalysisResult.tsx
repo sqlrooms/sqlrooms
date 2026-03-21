@@ -47,9 +47,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
-  const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
-  );
   const [divWidth, setDivWidth] = useState<number>(0);
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -91,12 +88,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, []);
 
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(
-    uiMessageParts,
-    divWidth,
-    userTools,
-    toolAdditionalData,
-  );
+  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
 
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
@@ -104,7 +96,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         <div className="group/prompt bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
-          <div className="flex-1 min-w-0 break-words">{analysisResult.prompt}</div>
+          <div className="min-w-0 flex-1 break-words">
+            {analysisResult.prompt}
+          </div>
           <div className="opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
             <CopyButton
               text={analysisResult.prompt}
@@ -119,13 +113,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <GroupedMessageParts
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
-            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         ) : (
           <MessagePartsList
             parts={uiMessageParts}
-            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         )}

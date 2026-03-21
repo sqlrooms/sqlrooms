@@ -349,6 +349,8 @@ export type CellsSliceState = {
       sourceCellId: string,
     ) => Promise<void>;
   };
+  // Slice lifecycle
+  initialize?: () => Promise<void>;
 };
 
 export type CellsRootState = BaseRoomStoreState &

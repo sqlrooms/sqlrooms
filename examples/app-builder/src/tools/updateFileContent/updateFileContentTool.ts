@@ -1,5 +1,5 @@
-import type {OpenAssistantTool} from '@openassistant/utils';
 import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
+import {tool} from 'ai';
 import z from 'zod';
 import {StoreApi} from 'zustand';
 import {UpdateFileContentToolResult} from './UpdateFileContentToolResult';
@@ -11,37 +11,28 @@ export const UpdateFileContentToolParameters = z.object({
 export type UpdateFileContentToolParameters = z.infer<
   typeof UpdateFileContentToolParameters
 >;
-export type UpdateFileContentToolLlmResult = {
+export type UpdateFileContentToolOutput = {
   success: boolean;
   details: {
     path: string;
   };
 };
-export type UpdateFileContentToolAdditionalData = Record<string, never>;
-export type UpdateFileContentToolContext = unknown;
 
 export function createUpdateFileContentTool(
   store: StoreApi<WebContainerSliceState>,
-): OpenAssistantTool<
-  typeof UpdateFileContentToolParameters,
-  UpdateFileContentToolLlmResult,
-  UpdateFileContentToolAdditionalData,
-  UpdateFileContentToolContext
-> {
-  return {
-    name: 'updateFileContent',
+) {
+  return tool({
     description: 'Modify the content of a file',
-    parameters: UpdateFileContentToolParameters,
-    execute: async ({path, content}: UpdateFileContentToolParameters) => {
+    inputSchema: UpdateFileContentToolParameters,
+    execute: async ({path, content}) => {
       store.getState().webContainer.updateFileContent(path, content);
       await store.getState().webContainer.saveAllOpenFiles();
       return {
-        llmResult: {
-          success: true,
-          details: {path},
-        },
+        success: true,
+        details: {path},
       };
     },
-    component: UpdateFileContentToolResult,
-  };
+  });
 }
+
+export const updateFileContentToolRenderer = UpdateFileContentToolResult;

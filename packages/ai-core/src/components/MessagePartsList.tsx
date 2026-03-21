@@ -16,8 +16,6 @@ import {
 type MessagePartsListProps = {
   /** Array of UI message parts to render */
   parts: UIMessagePart[];
-  /** Per-session additional data keyed by toolCallId */
-  toolAdditionalData?: Record<string, unknown>;
   /** Optional custom components for markdown rendering */
   customMarkdownComponents?: Partial<Components>;
 };
@@ -32,7 +30,6 @@ type MessagePartsListProps = {
  */
 export const MessagePartsList: React.FC<MessagePartsListProps> = ({
   parts,
-  toolAdditionalData,
   customMarkdownComponents,
 }) => {
   return (
@@ -61,7 +58,6 @@ export const MessagePartsList: React.FC<MessagePartsListProps> = ({
               key={`tool-call-${index}`}
               part={part}
               toolCallId={part.toolCallId}
-              toolAdditionalData={toolAdditionalData}
             />
           );
         }

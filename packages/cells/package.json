@@ -1,7 +1,6 @@
 {
   "name": "@sqlrooms/cells",
   "version": "0.29.0-rc.1",
-  "private": false,
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",

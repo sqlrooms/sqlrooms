@@ -192,6 +192,19 @@
   body {
     @apply bg-background text-foreground;
   }
+
+}
+
+@layer utilities {
+  .no-spinner {
+    appearance: textfield;
+  }
+
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
 }
 
 @layer components {

@@ -1,8 +1,8 @@
-import {cn} from '@sqlrooms/ui';
+import {cn, CopyButton} from '@sqlrooms/ui';
 import {AlertCircle} from 'lucide-react';
 import React from 'react';
-import {useVegaEditorContext} from './VegaEditorContext';
 import {VegaCodeMirrorEditor} from './VegaCodeMirrorEditor';
+import {useVegaEditorContext} from './VegaEditorContext';
 
 export interface VegaSpecEditorPanelProps {
   /**
@@ -66,6 +66,14 @@ export const VegaSpecEditorPanel: React.FC<VegaSpecEditorPanelProps> = ({
             foldGutter: true,
           }}
         />
+        <div className="bg-background absolute top-2 right-2 rounded-md border">
+          <CopyButton
+            text={state.editedSpecString}
+            size="xs"
+            tooltipLabel="Copy spec"
+            disabled={!state.editedSpecString.trim()}
+          />
+        </div>
       </div>
 
       {/* Spec parse error */}

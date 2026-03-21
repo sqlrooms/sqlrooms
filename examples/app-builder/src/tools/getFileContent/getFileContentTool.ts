@@ -1,5 +1,5 @@
-import type {OpenAssistantTool} from '@openassistant/utils';
 import type {WebContainerSliceState} from '@sqlrooms/webcontainer';
+import {tool} from 'ai';
 import z from 'zod';
 import {StoreApi} from 'zustand';
 import {GetFileContentToolResult} from './GetFileContentToolResult';
@@ -11,41 +11,31 @@ export type GetFileContentToolParameters = z.infer<
   typeof GetFileContentToolParameters
 >;
 
-export type GetFileContentToolLlmResult = {
+export type GetFileContentToolOutput = {
   success: boolean;
   details: {
+    path: string;
     content: string;
   };
 };
 
-export type GetFileContentToolAdditionalData = Record<string, never>;
-
-export type GetFileContentToolContext = unknown;
-
 export function createGetFileContentTool(
   store: StoreApi<WebContainerSliceState>,
-): OpenAssistantTool<
-  typeof GetFileContentToolParameters,
-  GetFileContentToolLlmResult,
-  GetFileContentToolAdditionalData,
-  GetFileContentToolContext
-> {
-  return {
-    name: 'getFileContent',
+) {
+  return tool({
     description: 'Get the content of a file',
-    parameters: GetFileContentToolParameters,
-    execute: async ({path}: GetFileContentToolParameters) => {
+    inputSchema: GetFileContentToolParameters,
+    execute: async ({path}) => {
       const content = await store.getState().webContainer.getFileContent(path);
       return {
-        llmResult: {
-          success: true,
-          details: {
-            path,
-            content,
-          },
+        success: true,
+        details: {
+          path,
+          content,
         },
       };
     },
-    component: GetFileContentToolResult,
-  };
+  });
 }
+
+export const getFileContentToolRenderer = GetFileContentToolResult;

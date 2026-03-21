@@ -12,4 +12,3 @@ export const QueryDataTableActionsMenu: FC<{
     </div>
   );
 };
-

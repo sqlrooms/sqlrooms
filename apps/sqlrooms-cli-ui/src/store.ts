@@ -6,6 +6,7 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
+  createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
@@ -20,13 +21,14 @@ import {
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import {createMosaicSlice} from '@sqlrooms/mosaic';
 import type {MosaicSliceState} from '@sqlrooms/mosaic';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
 import {
   createNotebookSlice,
   NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
+import type {RoomCommand} from '@sqlrooms/room-shell';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -37,13 +39,12 @@ import {
   RoomShellSliceState,
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
-import type {RoomCommand} from '@sqlrooms/room-shell';
 import {
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   WebContainerSliceConfig,
@@ -769,6 +770,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...createDefaultAiTools(store, {query: {}}),
             ...createDashboardAiTools(store),
             chart: createVegaChartTool(),
+          },
+          toolRenderers: {
+            ...createDefaultAiToolRenderers(),
+            chart: VegaChartToolResult,
           },
         })(set, get, store),
       };

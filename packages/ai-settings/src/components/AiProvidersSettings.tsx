@@ -11,7 +11,7 @@ import {
   DialogTrigger,
   DialogFooter,
   useDisclosure,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {
   Cone,
@@ -25,7 +25,6 @@ import {
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
 export const AiProvidersSettings: FC = () => {
-  const {toast} = useToast();
   const updateProvider = useStoreWithAiSettings(
     (state) => state.aiSettings.updateProvider,
   );
@@ -73,10 +72,8 @@ export const AiProvidersSettings: FC = () => {
     if (newProviderKey) {
       // Check if provider already exists
       if (providers[newProviderKey]) {
-        toast({
-          title: 'Provider already exists',
+        toast.error('Provider already exists', {
           description: `A provider with the key "${newProviderKey}" already exists. Please choose a different key.`,
-          variant: 'destructive',
         });
         return;
       }
@@ -87,8 +84,7 @@ export const AiProvidersSettings: FC = () => {
       setNewProviderBaseUrl('');
       onClose();
 
-      toast({
-        title: 'Provider added successfully',
+      toast.success('Provider added successfully', {
         description: `Provider "${newProviderKey}" has been added.`,
       });
     }
@@ -113,8 +109,7 @@ export const AiProvidersSettings: FC = () => {
       onDeleteClose();
       setProviderToDelete(null);
 
-      toast({
-        title: 'Provider deleted successfully',
+      toast.success('Provider deleted successfully', {
         description: `Provider "${providerToDelete.key}" and its associated models have been removed.`,
       });
     }
