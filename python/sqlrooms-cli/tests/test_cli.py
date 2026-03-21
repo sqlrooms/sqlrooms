@@ -149,7 +149,13 @@ def test_resolve_config_path_honors_no_config():
 
 
 def test_default_config_path():
-    assert DEFAULT_CONFIG_PATH == Path.home() / ".sqlrooms" / "config.toml"
+    import sys
+    if sys.platform.startswith("win"):
+        import os
+        expected = Path(os.environ.get("APPDATA", "")) / "sqlrooms" / "config.toml"
+    else:
+        expected = Path.home() / ".config" / "sqlrooms" / "config.toml"
+    assert DEFAULT_CONFIG_PATH == expected
 
 
 # Since the main function in cli.py starts an asyncio loop and a server,

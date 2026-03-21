@@ -30,7 +30,7 @@ What happens:
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
-- `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.sqlrooms/config.toml`.
+- `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 
 ## Data persistence
@@ -44,11 +44,14 @@ Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/confi
 
 ## Config file
 
-`sqlrooms` reads AI provider and connector settings from `~/.sqlrooms/config.toml`.
+`sqlrooms` reads AI provider and connector settings from a TOML config file:
+
+- macOS / Linux: `~/.config/sqlrooms/config.toml`
+- Windows: `%APPDATA%\sqlrooms\config.toml`
 
 Override with `--config <path>`, or disable with `--no-config`.
 
-Example `~/.sqlrooms/config.toml`:
+Example config file:
 
 ```toml
 [ai]

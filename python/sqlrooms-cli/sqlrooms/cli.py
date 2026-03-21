@@ -28,7 +28,11 @@ app = typer.Typer(
     invoke_without_command=True,
 )
 
-DEFAULT_CONFIG_PATH = Path.home() / ".sqlrooms" / "config.toml"
+if sys.platform.startswith("win"):
+    _config_base = Path(os.environ.get("APPDATA", "")) / "sqlrooms"
+else:
+    _config_base = Path.home() / ".config" / "sqlrooms"
+DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 
 
 def _normalize_config_string(value: Any) -> str | None:
@@ -335,7 +339,7 @@ def main(
         None,
         "--config",
         envvar="SQLROOMS_CONFIG",
-        help="Path to a SQLRooms TOML config file. Defaults to ~/.sqlrooms/config.toml.",
+        help="Path to a SQLRooms TOML config file. Defaults to ~/.config/sqlrooms/config.toml (%%APPDATA%%\\sqlrooms\\config.toml on Windows).",
     ),
     no_config: bool = typer.Option(
         False,
