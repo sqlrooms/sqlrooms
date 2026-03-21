@@ -1,12 +1,20 @@
 import {createId} from '@paralleldrive/cuid2';
-import {isWasmDuckDbConnector} from '@sqlrooms/duckdb';
-import {type DuckDbConnector, type DuckDbSliceState} from '@sqlrooms/duckdb';
+import {
+  isWasmDuckDbConnector,
+  type DuckDbConnector,
+  type DuckDbSliceState,
+} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
   type SliceFunctions,
 } from '@sqlrooms/room-store';
+import type {
+  ArrowQueryRequest,
+  ExecQueryRequest,
+  JSONQueryRequest,
+} from '@uwdata/mosaic-core';
 import {
   Connector,
   Coordinator,
@@ -14,11 +22,6 @@ import {
   makeClient,
   Selection,
   wasmConnector,
-} from '@uwdata/mosaic-core';
-import type {
-  ArrowQueryRequest,
-  ExecQueryRequest,
-  JSONQueryRequest,
 } from '@uwdata/mosaic-core';
 import {Query} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';

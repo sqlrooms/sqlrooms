@@ -775,6 +775,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...createDefaultAiToolRenderers(),
             chart: VegaChartToolResult,
           },
+          toolRenderers: {
+            ...createDefaultAiToolRenderers(),
+            chart: VegaChartToolResult,
+          },
         })(set, get, store),
       };
     },
