@@ -22,6 +22,21 @@ export type WebContainerBashToolParameters = z.infer<
   typeof WebContainerBashToolParameters
 >;
 
+export const WebContainerReadFileToolParameters = z.object({
+  path: z.string().describe('The path to the file to read'),
+});
+export type WebContainerReadFileToolParameters = z.infer<
+  typeof WebContainerReadFileToolParameters
+>;
+
+export const WebContainerWriteFileToolParameters = z.object({
+  path: z.string().describe('The path where the file should be written'),
+  content: z.string().describe('The content to write to the file'),
+});
+export type WebContainerWriteFileToolParameters = z.infer<
+  typeof WebContainerWriteFileToolParameters
+>;
+
 export type WebContainerBashToolOutput = {
   success: boolean;
   details: {
@@ -34,11 +49,14 @@ export type WebContainerBashToolOutput = {
 };
 
 export type WebContainerReadFileToolOutput = {
-  content: string;
+  success: boolean;
+  content?: string;
+  errorMessage?: string;
 };
 
 export type WebContainerWriteFileToolOutput = {
   success: boolean;
+  errorMessage?: string;
 };
 
 type ToolResultRendererProps = {
@@ -51,9 +69,12 @@ type ToolResultRendererProps = {
 
 export type WebContainerToolkitResult = {
   bash: Tool<WebContainerBashToolParameters, WebContainerBashToolOutput>;
-  readFile: Tool<{path: string}, WebContainerReadFileToolOutput>;
+  readFile: Tool<
+    WebContainerReadFileToolParameters,
+    WebContainerReadFileToolOutput
+  >;
   writeFile: Tool<
-    {path: string; content: string},
+    WebContainerWriteFileToolParameters,
     WebContainerWriteFileToolOutput
   >;
   tools: Record<string, Tool>;
@@ -113,28 +134,39 @@ export function createWebContainerToolkit(
 
   const readFile = tool({
     description: 'Read the contents of a file from the project',
-    inputSchema: z.object({
-      path: z.string().describe('The path to the file to read'),
-    }),
-    execute: async ({path}) => {
-      const content = await getSandbox().readFile(path);
-      return {content} satisfies WebContainerReadFileToolOutput;
+    inputSchema: WebContainerReadFileToolParameters,
+    execute: async ({path}): Promise<WebContainerReadFileToolOutput> => {
+      try {
+        const content = await getSandbox().readFile(path);
+        return {success: true, content};
+      } catch (error) {
+        return {
+          success: false,
+          errorMessage:
+            error instanceof Error ? error.message : `Failed to read ${path}`,
+        };
+      }
     },
   });
 
   const writeFile = tool({
     description:
       'Write content to a file in the project. Creates the file if it does not exist.',
-    inputSchema: z.object({
-      path: z.string().describe('The path where the file should be written'),
-      content: z.string().describe('The content to write to the file'),
-    }),
+    inputSchema: WebContainerWriteFileToolParameters,
     execute: async ({
       path,
       content,
     }): Promise<WebContainerWriteFileToolOutput> => {
-      await getSandbox().writeFiles([{path, content}]);
-      return {success: true};
+      try {
+        await getSandbox().writeFiles([{path, content}]);
+        return {success: true};
+      } catch (error) {
+        return {
+          success: false,
+          errorMessage:
+            error instanceof Error ? error.message : `Failed to write ${path}`,
+        };
+      }
     },
   });
 
@@ -210,34 +242,56 @@ export const webContainerBashToolRenderer = WebContainerBashToolResult;
 
 type WebContainerReadFileToolResultProps = {
   toolCallId: string;
-  input: {path: string};
+  input: WebContainerReadFileToolParameters;
   output: WebContainerReadFileToolOutput | undefined;
   state: ToolResultState;
+  errorText?: string;
 };
 
 export function WebContainerReadFileToolResult({
   input,
+  state,
+  errorText,
 }: WebContainerReadFileToolResultProps) {
+  const suffix =
+    state === 'output-error'
+      ? ` (${errorText || 'failed'})`
+      : state === 'output-available'
+        ? ''
+        : ' …';
+
   return (
     <div className="text-foreground/50 text-xs">
       Reading file <span className="font-mono">{input.path}</span>
+      {suffix}
     </div>
   );
 }
 
 type WebContainerWriteFileToolResultProps = {
   toolCallId: string;
-  input: {path: string; content: string};
+  input: WebContainerWriteFileToolParameters;
   output: WebContainerWriteFileToolOutput | undefined;
   state: ToolResultState;
+  errorText?: string;
 };
 
 export function WebContainerWriteFileToolResult({
   input,
+  state,
+  errorText,
 }: WebContainerWriteFileToolResultProps) {
+  const suffix =
+    state === 'output-error'
+      ? ` (${errorText || 'failed'})`
+      : state === 'output-available'
+        ? ''
+        : ' …';
+
   return (
     <div className="text-foreground/50 text-xs">
       Writing file <span className="font-mono">{input.path}</span>
+      {suffix}
     </div>
   );
 }

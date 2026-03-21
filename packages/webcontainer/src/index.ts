@@ -28,6 +28,8 @@ export type {
   WebContainerBashToolOutput,
   WebContainerBashToolParameters,
   WebContainerReadFileToolOutput,
+  WebContainerReadFileToolParameters,
   WebContainerWriteFileToolOutput,
+  WebContainerWriteFileToolParameters,
   WebContainerToolkitResult,
 } from './createWebContainerBashTool';

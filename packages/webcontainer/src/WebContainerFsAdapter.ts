@@ -162,13 +162,15 @@ export class WebContainerFsAdapter implements IFileSystem {
     options?: {encoding?: BufferEncoding} | BufferEncoding,
   ): Promise<void> {
     const resolvedPath = this.resolveWithinRoot('/', path);
+    const encoding =
+      typeof options === 'string' ? options : (options?.encoding ?? undefined);
     await this.ensureParentDirectory(resolvedPath);
-    await this.webContainer.fs.writeFile(resolvedPath, content);
-    await this.mirror.writeFile(
+    await this.webContainer.fs.writeFile(
       resolvedPath,
       content,
-      options as BufferEncoding,
+      encoding ? {encoding} : undefined,
     );
+    await this.mirror.writeFile(resolvedPath, content, encoding);
   }
 
   async appendFile(
@@ -182,9 +184,9 @@ export class WebContainerFsAdapter implements IFileSystem {
       content,
       options as BufferEncoding,
     );
-    await this.ensureParentDirectory(resolvedPath);
-    const updatedContents = await this.mirror.readFileBuffer(resolvedPath);
     try {
+      await this.ensureParentDirectory(resolvedPath);
+      const updatedContents = await this.mirror.readFileBuffer(resolvedPath);
       await this.webContainer.fs.writeFile(resolvedPath, updatedContents);
     } catch (error) {
       await this.syncFromWebContainer();
