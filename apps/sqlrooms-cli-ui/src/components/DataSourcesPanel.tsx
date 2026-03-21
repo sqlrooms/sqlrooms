@@ -44,7 +44,7 @@ export const DataSourcesPanel = () => {
           Files stay on your machine and are loaded into DuckDB locally.
         </div>
       </FileDropzone>
-      <div className="flex justify-end px-1">
+      <div className="flex items-center justify-end px-2 pt-1">
         <ConnectorDriversDialog />
       </div>
 

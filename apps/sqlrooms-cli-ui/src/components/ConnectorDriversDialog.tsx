@@ -5,8 +5,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   toast,
 } from '@sqlrooms/ui';
+import {SettingsIcon} from 'lucide-react';
 import React from 'react';
 import {useRoomStore} from '../store';
 
@@ -91,17 +95,27 @@ export const ConnectorDriversDialog: React.FC = () => {
     [connectorDiagnostics],
   );
 
-  if (!connectorDiagnostics.length) {
-    return null;
-  }
+  // if (!connectorDiagnostics.length) {
+  //   return null;
+  // }
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button size="xs" variant="outline">
-          Connectors
-        </Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-6 w-6">
+              <SettingsIcon className="h-3.5 w-3.5" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          <p>
+            Connector drivers ({installedCount} installed
+            {missingCount > 0 ? `, ${missingCount} missing` : ''})
+          </p>
+        </TooltipContent>
+      </Tooltip>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Connector Drivers</DialogTitle>
