@@ -61,12 +61,26 @@ export const TextCellData = z.object({
 });
 export type TextCellData = z.infer<typeof TextCellData>;
 
+/** Field type category for cross-filter predicates */
+export type BrushFieldType = 'numeric' | 'temporal' | 'string';
+
+/** Cross-filter configuration for Vega chart cells */
+export const CrossFilterConfig = z.object({
+  enabled: z.boolean().default(true),
+  brushField: z.string().optional(),
+  brushFieldType: z
+    .enum(['numeric', 'temporal', 'string'])
+    .optional() as z.ZodOptional<z.ZodType<BrushFieldType>>,
+});
+export type CrossFilterConfig = z.infer<typeof CrossFilterConfig>;
+
 /** Vega Cell */
 export const VegaCellData = z.object({
   title: z.string().default('Chart'),
   sqlId: z.string().optional(), // In notebook, it links to another cell. In canvas, it might be the same.
   sql: z.string().optional(), // In canvas, it often has its own SQL.
   vegaSpec: z.any().optional(),
+  crossFilter: CrossFilterConfig.default({enabled: true}),
 });
 export type VegaCellData = z.infer<typeof VegaCellData>;
 
@@ -286,6 +300,14 @@ export type CellResultData = {
   totalRows: number;
 };
 
+/** Cross-filter selection value emitted by a Vega chart brush */
+export type CrossFilterSelection = {
+  field: string;
+  fieldType?: BrushFieldType;
+  type: 'interval' | 'point';
+  value: unknown;
+};
+
 export type CellsSliceState = {
   cells: {
     config: CellsSliceConfig;
@@ -297,6 +319,25 @@ export type CellsSliceState = {
     resultVersion: Record<string, number>;
     /** Monotonic counter per cell, incremented when a pagination/sorting fetch completes. Used to trigger re-render without resetting pagination. */
     pageVersion: Record<string, number>;
+
+    /**
+     * Ephemeral cross-filter selections (not persisted).
+     * Outer key: sqlId (the shared data source), inner key: chartCellId.
+     */
+    crossFilterSelections: Record<
+      string,
+      Record<string, CrossFilterSelection | null>
+    >;
+    setCrossFilterSelection: (
+      chartCellId: string,
+      sqlId: string,
+      selection: CrossFilterSelection | null,
+    ) => void;
+    getCrossFilterPredicate: (
+      chartCellId: string,
+      sqlId: string,
+    ) => string | null;
+    clearCrossFilterGroup: (sqlId: string) => void;
 
     // Cell CRUD
     addCell: (sheetId: string, cell: Cell, index?: number) => Promise<void>;

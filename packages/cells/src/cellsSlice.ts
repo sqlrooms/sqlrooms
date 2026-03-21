@@ -24,6 +24,7 @@ import {
   resolveDependencies,
 } from './helpers';
 import {dropResultRelation} from './resultRelationPolicy';
+import {buildCrossFilterPredicate} from './vegaSelectionUtils';
 import {getEffectiveResultName} from './utils';
 import type {
   Cell,
@@ -32,6 +33,7 @@ import type {
   CellsSliceConfig,
   CellsSliceOptions,
   CellsSliceState,
+  CrossFilterSelection,
   SqlCell,
   Edge,
   SheetType,
@@ -110,6 +112,42 @@ export function createCellsSlice(props: CellsSliceOptions) {
         activeAbortControllers: {},
         resultVersion: {},
         pageVersion: {},
+        crossFilterSelections: {},
+
+        setCrossFilterSelection: (
+          chartCellId: string,
+          sqlId: string,
+          selection: CrossFilterSelection | null,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.cells.crossFilterSelections[sqlId]) {
+                draft.cells.crossFilterSelections[sqlId] = {};
+              }
+              draft.cells.crossFilterSelections[sqlId][chartCellId] = selection;
+            }),
+          );
+        },
+
+        getCrossFilterPredicate: (
+          chartCellId: string,
+          sqlId: string,
+        ): string | null => {
+          const group = get().cells.crossFilterSelections[sqlId];
+          if (!group) return null;
+          const siblingSelections = Object.entries(group)
+            .filter(([id]) => id !== chartCellId)
+            .map(([, sel]) => sel);
+          return buildCrossFilterPredicate(siblingSelections);
+        },
+
+        clearCrossFilterGroup: (sqlId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.cells.crossFilterSelections[sqlId];
+            }),
+          );
+        },
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async

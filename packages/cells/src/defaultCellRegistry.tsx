@@ -190,6 +190,7 @@ export function createDefaultCellRegistry(): CellRegistry {
         type: 'vega',
         data: {
           title: 'Chart',
+          crossFilter: {enabled: true},
           vegaSpec: {
             data: {name: 'queryResult'},
             mark: 'bar',
