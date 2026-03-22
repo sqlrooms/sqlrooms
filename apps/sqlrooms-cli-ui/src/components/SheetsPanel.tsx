@@ -18,7 +18,7 @@ export const SheetsPanel: React.FC<{className?: string}> = ({className}) => {
     <div className={cn('flex h-full flex-col', className)}>
       <div className="bg-muted flex items-center justify-between">
         <SheetsTabBar />
-        <div className="p-1">
+        <div className="flex items-center gap-2 p-1">
           <AssistantDrawer>
             <Button size="icon" className="h-7 w-7 rounded-full">
               <SparklesIcon />

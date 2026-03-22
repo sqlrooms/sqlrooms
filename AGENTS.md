@@ -22,11 +22,11 @@ SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based an
 ## Gotchas
 
 - **Always run `pnpm build` first.** Example apps depend on built `@sqlrooms/*` packages via `workspace:*` links and will not work otherwise.
-- **To run an example:** `pnpm build && cd examples/<name> && pnpm dev` (Vite defaults to port 5173+)
+- **To run an example:** `pnpm dev <name>-example` (<name> is the example/<name> directory name, Vite defaults to port 5173+)
 - **`pnpm dev` at the root** watches packages for rebuilds — it does NOT start an app. You still need `pnpm dev` inside an example directory.
-- **Tests are fast (~10s):** they exist in only 5 packages — `utils`, `duckdb`, `duckdb-core`, `duckdb-node`, `crdt`.
 - **Lint baseline:** warnings only; 0 errors is the expected state.
 - **AI examples** (e.g. `examples/ai`) require `OPENAI_API_KEY`. Core examples (`minimal`, `query`) do not.
+- When using Zustand/room-store selectors in React, do not create derived arrays/objects/functions inside the selector (for example `state.items.filter(...)`). That returns a new reference on every read and can trigger `useSyncExternalStore` snapshot loops (`The result of getSnapshot should be cached`) and max update depth errors. Select stable raw state first, then derive with `React.useMemo` in the component.
 
 ## Further Reading
 
