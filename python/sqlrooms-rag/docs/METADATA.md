@@ -203,7 +203,7 @@ python -c "import yaml; print(yaml.safe_load(open('knowledge_base.yaml')))"
 
 **Problem:**
 
-```
+```text
 Created database with: text-embedding-3-small (1536 dims)
 Querying with: BAAI/bge-small-en-v1.5 (384 dims)
 Result: Completely wrong results
