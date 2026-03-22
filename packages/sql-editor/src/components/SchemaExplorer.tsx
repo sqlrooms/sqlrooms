@@ -33,11 +33,11 @@ function SchemaExplorerHeader({
   children,
 }: SchemaExplorerHeaderProps) {
   return (
-    <div className="flex items-center justify-between pb-2">
+    <div className="flex items-center justify-between p-1 pb-2">
       <h2 className="text-muted-foreground text-xs font-medium uppercase">
         {title}
       </h2>
-      <div className="flex items-center gap-0.5">{children}</div>
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   );
 }
