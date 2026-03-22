@@ -9,6 +9,7 @@ import {
 } from '@sqlrooms/ui';
 import {
   AppWindow,
+  BarChart3,
   FileText,
   LayoutDashboard,
   PencilIcon,
@@ -28,6 +29,7 @@ const TYPE_ICONS: Record<SheetType, React.ElementType> = {
   notebook: FileText,
   canvas: LayoutDashboard,
   app: AppWindow,
+  dashboard: BarChart3,
 };
 
 export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {

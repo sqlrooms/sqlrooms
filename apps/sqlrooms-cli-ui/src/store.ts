@@ -6,10 +6,9 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
-  createDefaultAiTools,
   createDefaultAiToolRenderers,
+  createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {VegaChartToolResult} from '@sqlrooms/vega';
 import {
   CanvasSliceConfig,
   CanvasSliceState,
@@ -22,6 +21,8 @@ import {
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+import type {MosaicSliceState} from '@sqlrooms/mosaic';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
 import {
   createNotebookSlice,
   NotebookSliceConfig,
@@ -33,17 +34,19 @@ import {
   createRoomStore,
   LayoutConfig,
   persistSliceConfigs,
+  registerCommandsForOwner,
   RoomShellSliceState,
+  unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
 import {
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
 import {
-  createWebContainerToolkit,
   createWebContainerSlice,
+  createWebContainerToolkit,
   WebContainerPersistConfig,
   WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
@@ -51,11 +54,20 @@ import {produce} from 'immer';
 import {z} from 'zod';
 
 import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
-import type {RuntimeConfig} from './runtimeConfig';
+import {
+  createDashboardAiTools,
+  DASHBOARD_AI_INSTRUCTIONS,
+} from './createDashboardAiTools';
+import {
+  createDashboardCommands,
+  DASHBOARD_COMMAND_OWNER,
+} from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
+import type {RuntimeConfig} from './runtimeConfig';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
+import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
 
 export const AppBuilderProjectConfig = z.object({
   appsBySheetId: z
@@ -77,7 +89,21 @@ type ConnectorDriverDiagnostic = NonNullable<
   RuntimeDbBridgeConfig['diagnostics']
 >[number];
 
+export const DashboardProjectConfig = z.object({
+  dashboardsBySheetId: z
+    .record(
+      z.string(),
+      z.object({
+        vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
+        updatedAt: z.number().default(0),
+      }),
+    )
+    .default({}),
+});
+export type DashboardProjectConfig = z.infer<typeof DashboardProjectConfig>;
+
 export type RoomState = RoomShellSliceState &
+  MosaicSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState &
@@ -101,6 +127,17 @@ export type RoomState = RoomShellSliceState &
       getSheetApp: (
         sheetId: string,
       ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
+    };
+    dashboard: {
+      initialize?: () => Promise<void>;
+      destroy?: () => Promise<void>;
+      config: DashboardProjectConfig;
+      ensureSheetDashboard: (sheetId: string) => void;
+      setSheetVgPlot: (sheetId: string, vgplot: string) => void;
+      getSheetVgPlot: (sheetId: string) => string | undefined;
+      getCurrentDashboardSheetId: () => string | undefined;
+      createDashboardSheet: (title?: string) => string;
+      setCurrentSheetVgPlot: (vgplot: string) => string;
     };
     isAssistantOpen: boolean;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
@@ -152,108 +189,198 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         canvas: CanvasSliceConfig,
         webContainer: WebContainerPersistConfig,
         appProject: AppBuilderProjectConfig,
+        dashboard: DashboardProjectConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
     },
-    (set, get, store) => ({
-      appProject: {
-        config: AppBuilderProjectConfig.parse({}),
-        upsertSheetApp: (sheetId, app) => {
-          set(
-            produce((draft: RoomState) => {
-              const current = draft.appProject.config.appsBySheetId[
-                sheetId
-              ] ?? {
-                name: app.name,
-                prompt: '',
-                template: 'mosaic-dashboard',
-                files: {},
-                updatedAt: 0,
-              };
-              draft.appProject.config.appsBySheetId[sheetId] = {
-                ...current,
-                ...app,
-                updatedAt: Date.now(),
-              };
-            }),
+    (set, get, store) => {
+      const getFirstDashboardSheetId = () =>
+        Object.values(get().cells.config.sheets).find(
+          (sheet) => sheet.type === 'dashboard',
+        )?.id;
+
+      const dashboardSlice: RoomState['dashboard'] = {
+        initialize: async () => {
+          registerCommandsForOwner(
+            store,
+            DASHBOARD_COMMAND_OWNER,
+            createDashboardCommands(),
           );
         },
-        updateSheetAppFiles: (sheetId, files) => {
+        destroy: async () => {
+          unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+        },
+        config: DashboardProjectConfig.parse({}),
+        ensureSheetDashboard: (sheetId) => {
+          const sheet = get().cells.config.sheets[sheetId];
+          if (!sheet || sheet.type !== 'dashboard') {
+            return;
+          }
           set((state) =>
             produce(state, (draft) => {
-              const current = draft.appProject.config.appsBySheetId[sheetId];
-              if (!current) return;
-              draft.appProject.config.appsBySheetId[sheetId] = {
-                ...current,
-                files,
+              if (draft.dashboard.config.dashboardsBySheetId[sheetId]) {
+                return;
+              }
+              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
+                vgplot: DEFAULT_DASHBOARD_VGPLOT_SPEC,
                 updatedAt: Date.now(),
               };
             }),
           );
         },
-        getSheetApp: (sheetId) =>
-          get().appProject.config.appsBySheetId[sheetId],
-      },
-      connectorDriverDiagnostics: runtimeConfig.dbBridge?.diagnostics || [],
-      isAssistantOpen: false,
-      setAssistantOpen: (isAssistantOpen: boolean) => {
-        set({isAssistantOpen});
-      },
-
-      ...createRoomShellSlice({
-        connector,
-        config: {dataSources: []},
-        layout: LAYOUT,
-      })(set, get, store),
-
-      ...createSqlEditorSlice()(set, get, store),
-
-      ...createCellsSlice({
-        cellRegistry: createDefaultCellRegistry(),
-        supportedSheetTypes: ['notebook', 'canvas', 'app'],
-      })(set, get, store),
-
-      ...createNotebookSlice()(set, get, store),
-
-      ...createCanvasSlice()(set, get, store),
-
-      ...createWebContainerSlice({
-        autoInitialize: false,
-        config: {
-          filesTree: getDefaultScaffoldTree(),
-          activeFilePath: '/src/App.jsx',
+        setSheetVgPlot: (sheetId, vgplot) => {
+          const sheet = get().cells.config.sheets[sheetId];
+          if (!sheet) {
+            throw new Error(`Unknown sheet "${sheetId}".`);
+          }
+          if (sheet.type !== 'dashboard') {
+            throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
+          }
+          const {formatted} = parseVgPlotSpecString(vgplot);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
+                vgplot: formatted,
+                updatedAt: Date.now(),
+              };
+            }),
+          );
         },
-      })(set, get, store),
+        getSheetVgPlot: (sheetId) =>
+          get().dashboard.config.dashboardsBySheetId[sheetId]?.vgplot,
+        getCurrentDashboardSheetId: () => {
+          const currentSheetId = get().cells.config.currentSheetId;
+          const currentSheet = currentSheetId
+            ? get().cells.config.sheets[currentSheetId]
+            : undefined;
+          if (currentSheet?.type === 'dashboard') {
+            return currentSheetId;
+          }
+          return getFirstDashboardSheetId();
+        },
+        createDashboardSheet: (title) => {
+          const sheetId = get().cells.addSheet(title, 'dashboard');
+          get().dashboard.ensureSheetDashboard(sheetId);
+          return sheetId;
+        },
+        setCurrentSheetVgPlot: (vgplot) => {
+          const state = get();
+          const targetSheetId =
+            state.dashboard.getCurrentDashboardSheetId() ??
+            state.dashboard.createDashboardSheet();
+          state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
+          state.cells.setCurrentSheet(targetSheetId);
+          return targetSheetId;
+        },
+      };
 
-      ...createAiSettingsSlice({
-        config: {providers: runtimeAiProviders},
-      })(set, get, store),
+      return {
+        appProject: {
+          config: AppBuilderProjectConfig.parse({}),
+          upsertSheetApp: (sheetId, app) => {
+            set(
+              produce((draft: RoomState) => {
+                const current = draft.appProject.config.appsBySheetId[
+                  sheetId
+                ] ?? {
+                  name: app.name,
+                  prompt: '',
+                  template: 'mosaic-dashboard',
+                  files: {},
+                  updatedAt: 0,
+                };
+                draft.appProject.config.appsBySheetId[sheetId] = {
+                  ...current,
+                  ...app,
+                  updatedAt: Date.now(),
+                };
+              }),
+            );
+          },
+          updateSheetAppFiles: (sheetId, files) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const current = draft.appProject.config.appsBySheetId[sheetId];
+                if (!current) return;
+                draft.appProject.config.appsBySheetId[sheetId] = {
+                  ...current,
+                  files,
+                  updatedAt: Date.now(),
+                };
+              }),
+            );
+          },
+          getSheetApp: (sheetId) =>
+            get().appProject.config.appsBySheetId[sheetId],
+        },
+        dashboard: dashboardSlice,
+        connectorDriverDiagnostics: runtimeConfig.dbBridge?.diagnostics || [],
+        isAssistantOpen: false,
+        setAssistantOpen: (isAssistantOpen: boolean) => {
+          set({isAssistantOpen});
+        },
 
-      ...(() => {
-        const webContainerToolkit = createWebContainerToolkit(store);
-        return createAiSlice({
-          config: AiSliceConfig.parse({sessions: []}),
-          defaultProvider: defaultProviderFromConfig as any,
-          defaultModel: defaultModelFromConfig,
-          getApiKey: (provider) =>
-            runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
-          getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
-          getInstructions: () => createDefaultAiInstructions(store),
-          tools: {
-            ...createDefaultAiTools(store, {query: {}}),
-            ...webContainerToolkit.tools,
-            chart: createVegaChartTool(),
+        ...createRoomShellSlice({
+          connector,
+          config: {dataSources: []},
+          layout: LAYOUT,
+        })(set, get, store),
+
+        ...createMosaicSlice()(set, get, store),
+
+        ...createSqlEditorSlice()(set, get, store),
+
+        ...createCellsSlice({
+          cellRegistry: createDefaultCellRegistry(),
+          supportedSheetTypes: ['notebook', 'canvas', 'app', 'dashboard'],
+        })(set, get, store),
+
+        ...createNotebookSlice()(set, get, store),
+
+        ...createCanvasSlice()(set, get, store),
+
+        ...createWebContainerSlice({
+          autoInitialize: false,
+          config: {
+            filesTree: getDefaultScaffoldTree(),
+            activeFilePath: '/src/App.jsx',
           },
-          toolRenderers: {
-            ...createDefaultAiToolRenderers(),
-            ...webContainerToolkit.toolRenderers,
-            chart: VegaChartToolResult,
-          },
-        })(set, get, store);
-      })(),
-    }),
+        })(set, get, store),
+
+        ...createAiSettingsSlice({
+          config: {providers: runtimeAiProviders},
+        })(set, get, store),
+
+        ...(() => {
+          const webContainerToolkit = createWebContainerToolkit(store);
+          return createAiSlice({
+            config: AiSliceConfig.parse({sessions: []}),
+            defaultProvider: defaultProviderFromConfig as any,
+            defaultModel: defaultModelFromConfig,
+            getApiKey: (provider) =>
+              runtimeAiProviders[provider]?.apiKey ||
+              runtimeConfig.apiKey ||
+              '',
+            getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
+            getInstructions: () =>
+              `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,
+            tools: {
+              ...createDefaultAiTools(store, {query: {}}),
+              ...createDashboardAiTools(store),
+              ...webContainerToolkit.tools,
+              chart: createVegaChartTool(),
+            },
+            toolRenderers: {
+              ...createDefaultAiToolRenderers(),
+              ...webContainerToolkit.toolRenderers,
+              chart: VegaChartToolResult,
+            },
+          })(set, get, store);
+        })(),
+      };
+    },
   ),
 );
 
