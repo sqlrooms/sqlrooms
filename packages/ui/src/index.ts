@@ -194,6 +194,8 @@ export {
   ResizablePanelGroup,
 } from './components/resizable';
 
+export {RunButton, type RunButtonProps} from './components/run-button';
+
 export {
   TabStrip,
   type TabDescriptor,

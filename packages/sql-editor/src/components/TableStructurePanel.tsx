@@ -10,8 +10,6 @@ export interface TableStructurePanelProps {
    * If '*' is provided, all tables will be shown.
    * If a function is provided, it will be used to filter the tables. */
   schema?: string | ((name: string) => boolean);
-  /** Callback when a table is selected */
-  onTableSelect?: (table: string | undefined) => void;
 }
 
 export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
