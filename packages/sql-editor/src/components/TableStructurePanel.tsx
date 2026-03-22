@@ -20,12 +20,12 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
   const filteredSchemaTrees = useMemo(() => {
     if (schema === '*') {
-      return schemaTrees;
+      return schemaTrees ?? [];
     }
     if (typeof schema === 'function') {
-      return schemaTrees?.filter((tree) => schema(tree.object.name));
+      return schemaTrees?.filter((tree) => schema(tree.object.name)) ?? [];
     }
-    return schemaTrees?.filter((tree) => tree.object.name === schema);
+    return schemaTrees?.filter((tree) => tree.object.name === schema) ?? [];
   }, [schema, schemaTrees]);
 
   return (
@@ -42,9 +42,7 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
         <TableSchemaTree.RefreshButton />
       </div>
 
-      {filteredSchemaTrees && (
-        <TableSchemaTree schemaTrees={filteredSchemaTrees} />
-      )}
+      <TableSchemaTree schemaTrees={filteredSchemaTrees} className="h-full" />
       <ScrollBar orientation="vertical" />
       <ScrollBar orientation="horizontal" />
     </ScrollArea>

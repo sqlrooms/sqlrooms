@@ -42,6 +42,19 @@ const TableSchemaTreeRoot: FC<{
         : schemaTrees[0]?.children?.[0]?.children
     : schemaTrees;
 
+  if (!trees?.length || trees.every((tree) => tree.children?.length === 0)) {
+    return (
+      <div
+        className={cn(
+          'text-muted-foreground/50 flex h-full items-center justify-center p-4 text-xs',
+          className,
+        )}
+      >
+        No tables found
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -49,7 +62,7 @@ const TableSchemaTreeRoot: FC<{
         className,
       )}
     >
-      {trees?.map((subtree) => (
+      {trees.map((subtree) => (
         <Tree
           key={subtree.object.name}
           treeData={subtree}
