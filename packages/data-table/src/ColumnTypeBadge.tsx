@@ -1,12 +1,12 @@
 import {ColumnTypeCategory} from '@sqlrooms/duckdb';
 import {
   CopyButton,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
   cn,
 } from '@sqlrooms/ui';
-import {FC, useCallback, useRef, useState} from 'react';
+import {FC} from 'react';
 
 /**∏
  * A badge that displays the type of a database table column.
@@ -54,49 +54,11 @@ export const ColumnTypeBadge: FC<{
     return badge;
   }
 
-  return <HoverPopover label={label}>{badge}</HoverPopover>;
-};
-
-const OPEN_DELAY = 300;
-const CLOSE_DELAY = 300;
-
-const HoverPopover: FC<{label: string; children: React.ReactNode}> = ({
-  label,
-  children,
-}) => {
-  const [open, setOpen] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  const clearPending = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-  }, []);
-
-  const handleEnter = useCallback(() => {
-    clearPending();
-    timeoutRef.current = setTimeout(() => setOpen(true), OPEN_DELAY);
-  }, [clearPending]);
-
-  const handleLeave = useCallback(() => {
-    clearPending();
-    timeoutRef.current = setTimeout(() => setOpen(false), CLOSE_DELAY);
-  }, [clearPending]);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        asChild
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-      >
-        {children}
-      </PopoverTrigger>
-      <PopoverContent
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        className="relative"
-      >
-        <div className="max-h-[200px] max-w-[200px] overflow-auto leading-tight">
+    <HoverCard openDelay={300} closeDelay={200}>
+      <HoverCardTrigger asChild>{badge}</HoverCardTrigger>
+      <HoverCardContent className="relative w-auto max-w-[200px] p-2.5">
+        <div className="max-h-[200px] overflow-auto leading-tight">
           <span className="wrap-break-words font-mono text-xs whitespace-pre-wrap">
             {label}
           </span>
@@ -105,7 +67,7 @@ const HoverPopover: FC<{label: string; children: React.ReactNode}> = ({
           text={label}
           className="bg-background absolute top-1 right-1 h-6 w-6"
         />
-      </PopoverContent>
-    </Popover>
+      </HoverCardContent>
+    </HoverCard>
   );
 };

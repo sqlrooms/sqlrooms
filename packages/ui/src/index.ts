@@ -329,15 +329,21 @@ export {
   DEFAULT_THEME,
   DEFAULT_THEME_STORAGE_KEY,
   getResolvedTheme,
-  getThemePreference,
   getTheme,
+  getThemePreference,
   ThemeProvider,
-  type Theme,
-  type ResolvedTheme,
   useTheme,
+  type ResolvedTheme,
+  type Theme,
 } from './theme/theme-provider';
 
 // Re-export from Radix
 export {Slot} from '@radix-ui/react-slot';
 
 export {Toaster} from './components/sonner';
+
+export {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from './components/hover-card';
