@@ -9,15 +9,15 @@ SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based an
 
 ## Key Commands
 
-| Command | Purpose |
-|---|---|
-| `pnpm install` | Install all dependencies |
-| `pnpm build` | Build all packages via Turbo |
-| `pnpm test` | Run Jest tests |
-| `pnpm typecheck` | TypeScript type checking |
-| `pnpm lint` | ESLint |
-| `pnpm format` | Prettier |
-| `pnpm docs:dev` | Local docs with hot reload |
+| Command          | Purpose                      |
+| ---------------- | ---------------------------- |
+| `pnpm install`   | Install all dependencies     |
+| `pnpm build`     | Build all packages via Turbo |
+| `pnpm test`      | Run Jest tests               |
+| `pnpm typecheck` | TypeScript type checking     |
+| `pnpm lint`      | ESLint                       |
+| `pnpm format`    | Prettier                     |
+| `pnpm docs:dev`  | Local docs with hot reload   |
 
 ## Gotchas
 

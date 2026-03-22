@@ -211,7 +211,7 @@ export default function MapView({className}: {className?: string}) {
         {showInfo && <MapInfoModal onClose={() => setShowInfo(false)} />}
 
         {!dbReady && (
-          <div className="absolute left-0 top-0 z-40 flex h-full w-full items-center justify-center bg-black/40 text-white backdrop-blur-sm">
+          <div className="absolute top-0 left-0 z-40 flex h-full w-full items-center justify-center bg-black/40 text-white backdrop-blur-sm">
             <Loader2 className="mr-2 h-8 w-8 animate-spin" />
             <span>Loading earthquakes...</span>
           </div>

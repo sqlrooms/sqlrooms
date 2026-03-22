@@ -45,4 +45,3 @@ pnpm dev
 ```
 
 You should see console logs of the mirrored state. Start a second process to observe updates flowing through the server. State is persisted locally via `createLocalStorageDocStorage`.
-

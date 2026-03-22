@@ -267,9 +267,9 @@ def export_project(
                 ch for ch in str(sheet_id) if ch.isalnum() or ch in ("-", "_")
             )
             if not safe_sheet_id:
-                safe_sheet_id = hashlib.sha1(
-                    str(sheet_id).encode("utf-8")
-                ).hexdigest()[:8]
+                safe_sheet_id = hashlib.sha1(str(sheet_id).encode("utf-8")).hexdigest()[
+                    :8
+                ]
             name = str((sheet_app or {}).get("name") or sheet_id)
             safe_name = "".join(
                 ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
@@ -293,9 +293,7 @@ def export_project(
                 "template": (sheet_app or {}).get("template", ""),
                 "updatedAt": (sheet_app or {}).get("updatedAt"),
             }
-            (root / "app.json").write_text(
-                json.dumps(meta, indent=2), encoding="utf-8"
-            )
+            (root / "app.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
             for path, content in files.items():
                 rel = Path(str(path).lstrip("/"))
                 target = (root / rel).resolve()

@@ -138,8 +138,8 @@ Tool renderers (`component`) are no longer attached to individual tools. They ar
 ```ts
 createAiSlice({
   tools: {
-    query: createQueryTool(store),   // had component: QueryToolResult
-    chart: createVegaChartTool(),    // had component: VegaChartToolResult
+    query: createQueryTool(store), // had component: QueryToolResult
+    chart: createVegaChartTool(), // had component: VegaChartToolResult
   },
   // ...
 });
@@ -169,14 +169,14 @@ createAiSlice({
 
 The `llmResult`/`additionalData` split has been replaced with a single flat output type per tool.
 
-| Package | Old type | New type |
-|---------|----------|----------|
-| `@sqlrooms/ai` | `QueryToolLlmResult` + `QueryToolAdditionalData` | `QueryToolOutput` |
-| `@sqlrooms/ai` | `QueryToolOutput.errorMessage` | `QueryToolOutput.error` |
-| `@sqlrooms/vega` | `VegaChartToolLlmResult` + `VegaChartToolAdditionalData` | `VegaChartToolOutput` |
-| `@sqlrooms/vega` | `VegaChartToolArgs` (type alias) | removed — use `VegaChartToolParameters` |
-| `@sqlrooms/vega` | `VegaChartToolContext` | removed |
-| `@sqlrooms/ai-rag` | `RagToolAdditionalData` + `RagToolContext` | removed — use `RagToolOutput` |
+| Package            | Old type                                                 | New type                                |
+| ------------------ | -------------------------------------------------------- | --------------------------------------- |
+| `@sqlrooms/ai`     | `QueryToolLlmResult` + `QueryToolAdditionalData`         | `QueryToolOutput`                       |
+| `@sqlrooms/ai`     | `QueryToolOutput.errorMessage`                           | `QueryToolOutput.error`                 |
+| `@sqlrooms/vega`   | `VegaChartToolLlmResult` + `VegaChartToolAdditionalData` | `VegaChartToolOutput`                   |
+| `@sqlrooms/vega`   | `VegaChartToolArgs` (type alias)                         | removed — use `VegaChartToolParameters` |
+| `@sqlrooms/vega`   | `VegaChartToolContext`                                   | removed                                 |
+| `@sqlrooms/ai-rag` | `RagToolAdditionalData` + `RagToolContext`               | removed — use `RagToolOutput`           |
 
 ### `@sqlrooms/ai`: `QueryToolResult` props changed (breaking)
 
@@ -212,7 +212,7 @@ The `embedOptions`, `editable`, and `editorMode` options have been removed from 
 #### Before
 
 ```ts
-createVegaChartTool({editable: false, editorMode: 'sql'})
+createVegaChartTool({editable: false, editorMode: 'sql'});
 ```
 
 #### After
@@ -234,7 +234,9 @@ The RAG tool renderer is no longer attached to the tool. Import and register it 
 
 ```ts
 // renderer was bundled inside createRagTool() as `component`
-tools: {search_documentation: createRagTool()}
+tools: {
+  search_documentation: createRagTool();
+}
 ```
 
 #### After
@@ -292,9 +294,7 @@ Remove the `onChunk` handler. The AI SDK's `toUIMessageStream()` now embeds the 
 
 ```ts
 // app/api/chat/route.ts
-writer.merge(
-  result.toUIMessageStream({originalMessages: messages}),
-);
+writer.merge(result.toUIMessageStream({originalMessages: messages}));
 ```
 
 **Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.

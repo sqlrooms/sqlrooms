@@ -127,9 +127,8 @@ class SqlroomsHttpServer:
         llm_model: str | None = None,
         api_key: str | None = None,
         ai_providers: dict[str, dict[str, Any]] | None = None,
-        connector_settings: list[
-            PostgresConnectorSettings | SnowflakeConnectorSettings
-        ] | None = None,
+        connector_settings: list[PostgresConnectorSettings | SnowflakeConnectorSettings]
+        | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
     ):
@@ -255,9 +254,7 @@ class SqlroomsHttpServer:
         )
 
         @app.middleware("http")
-        async def add_cross_origin_isolation_headers(
-            request: Request, call_next
-        ):
+        async def add_cross_origin_isolation_headers(request: Request, call_next):
             response = await call_next(request)
             # WebContainer requires cross-origin isolation to transfer SharedArrayBuffer.
             response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
@@ -316,7 +313,9 @@ class SqlroomsHttpServer:
         async def execute_query(payload: Dict[str, Any]):
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
-                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+                return JSONResponse(
+                    {"error": "connectionId is required"}, status_code=400
+                )
             sql = payload.get("sql", "")
             query_type = payload.get("queryType", "json")
             if query_type not in {"json", "exec"}:
@@ -341,7 +340,9 @@ class SqlroomsHttpServer:
         async def fetch_arrow(payload: Dict[str, Any]):
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
-                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+                return JSONResponse(
+                    {"error": "connectionId is required"}, status_code=400
+                )
             sql = payload.get("sql", "")
             if not isinstance(sql, str) or not sql.strip():
                 return JSONResponse({"error": "sql is required"}, status_code=400)
@@ -351,7 +352,8 @@ class SqlroomsHttpServer:
                     sql=sql,
                 )
                 return Response(
-                    content=arrow_bytes, media_type="application/vnd.apache.arrow.stream"
+                    content=arrow_bytes,
+                    media_type="application/vnd.apache.arrow.stream",
                 )
             except UnknownBridgeConnectionError as exc:
                 return JSONResponse({"error": str(exc)}, status_code=404)
@@ -362,7 +364,9 @@ class SqlroomsHttpServer:
         async def fetch_arrow_stream(payload: Dict[str, Any], request: Request):
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
-                return JSONResponse({"error": "connectionId is required"}, status_code=400)
+                return JSONResponse(
+                    {"error": "connectionId is required"}, status_code=400
+                )
             sql = payload.get("sql", "")
             if not isinstance(sql, str) or not sql.strip():
                 return JSONResponse({"error": "sql is required"}, status_code=400)
@@ -396,9 +400,7 @@ class SqlroomsHttpServer:
                         "error", query_id=query_id, error=str(exc)
                     )
 
-            return StreamingResponse(
-                _stream(), media_type="application/octet-stream"
-            )
+            return StreamingResponse(_stream(), media_type="application/octet-stream")
 
         @app.post("/api/db/cancel-query")
         async def cancel_query(payload: Dict[str, Any]):
@@ -429,7 +431,9 @@ class SqlroomsHttpServer:
                 )
             if _references_internal_namespace(sql, self.meta_namespace):
                 return JSONResponse(
-                    {"error": f"Access to internal schema {self.meta_namespace} is denied"},
+                    {
+                        "error": f"Access to internal schema {self.meta_namespace} is denied"
+                    },
                     status_code=403,
                 )
 

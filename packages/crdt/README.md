@@ -33,8 +33,16 @@ const {roomStore, useRoomStore} = createRoomStore(
       ...createCrdtSlice({
         schema: mirrorSchema,
         bindings: [
-          {key: 'room', select: (s) => s.room?.config, apply: (value) => set({room: {...get().room, config: value}})},
-          {key: 'layout', select: (s) => s.layout?.config, apply: (value) => set({layout: {...get().layout, config: value}})},
+          {
+            key: 'room',
+            select: (s) => s.room?.config,
+            apply: (value) => set({room: {...get().room, config: value}}),
+          },
+          {
+            key: 'layout',
+            select: (s) => s.layout?.config,
+            apply: (value) => set({layout: {...get().layout, config: value}}),
+          },
         ],
         storage: createLocalStorageDocStorage('sqlrooms-sync-demo'),
         sync: createWebSocketSyncConnector({
@@ -69,4 +77,3 @@ See `examples/sync` for an end-to-end demonstration with the Python sync server.
 - Mirror emits `tags` metadata; we tag store-origin writes as `from-store` to avoid loops. Log `mirror.subscribe` in your app if you need deeper inspection.
 - Use the `storage` hook to inject an in-memory or temp store in tests; pass a fake `sync` connector that captures `subscribeLocalUpdates` traffic for assertions.
 - The websocket connector exposes `onStatus` for basic connection logging; attach console logs or telemetry there during development.
-

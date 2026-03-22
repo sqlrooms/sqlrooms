@@ -55,7 +55,12 @@ generateUniquePath('results.csv', ['results.csv']); // "results_1.csv"
 ## Network and JSON helpers
 
 ```ts
-import {safeJsonParse, downloadFile, uploadFile, postData} from '@sqlrooms/utils';
+import {
+  safeJsonParse,
+  downloadFile,
+  uploadFile,
+  postData,
+} from '@sqlrooms/utils';
 
 const parsed = safeJsonParse('{"ok": true}'); // { ok: true }
 const invalid = safeJsonParse('{'); // undefined

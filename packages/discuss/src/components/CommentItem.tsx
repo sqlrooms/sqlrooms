@@ -28,7 +28,7 @@ export const defaultRenderComment = (props: CommentItemProps): ReactNode => {
         <div className="text-muted-foreground text-xs">
           Anonymous - {formatTimeRelative(comment.timestamp)}
         </div>
-        <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
+        <div className="text-sm whitespace-pre-wrap">{comment.text}</div>
       </div>
     </CommentItem>
   );

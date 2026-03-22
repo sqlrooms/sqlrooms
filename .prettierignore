@@ -1,0 +1,4 @@
+docs/api/
+.venv/
+.pytest_cache/
+CHANGELOG.md
