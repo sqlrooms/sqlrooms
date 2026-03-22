@@ -3,6 +3,7 @@ import {cn, Tree} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {ColumnTreeNode} from './nodes/ColumnTreeNode';
 import {DatabaseTreeNode} from './nodes/DatabaseTreeNode';
+import {RefreshButton} from './nodes/RefreshButton';
 import {SchemaTreeNode} from './nodes/SchemaTreeNode';
 import {TableTreeNode} from './nodes/TableTreeNode';
 
@@ -22,7 +23,7 @@ export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
   }
 };
 
-export const TableSchemaTree: FC<{
+const TableSchemaTreeRoot: FC<{
   className?: string;
   schemaTrees: DbSchemaNode[];
   renderNode?: (node: DbSchemaNode, isOpen: boolean) => React.ReactNode;
@@ -41,6 +42,19 @@ export const TableSchemaTree: FC<{
         : schemaTrees[0]?.children?.[0]?.children
     : schemaTrees;
 
+  if (!trees?.length || trees.every((tree) => tree.children?.length === 0)) {
+    return (
+      <div
+        className={cn(
+          'text-muted-foreground/50 flex h-full items-center justify-center p-4 text-xs',
+          className,
+        )}
+      >
+        No tables found
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -48,7 +62,7 @@ export const TableSchemaTree: FC<{
         className,
       )}
     >
-      {trees?.map((subtree) => (
+      {trees.map((subtree) => (
         <Tree
           key={subtree.object.name}
           treeData={subtree}
@@ -58,3 +72,7 @@ export const TableSchemaTree: FC<{
     </div>
   );
 };
+
+export const TableSchemaTree = Object.assign(TableSchemaTreeRoot, {
+  RefreshButton: RefreshButton,
+});
