@@ -11,7 +11,8 @@ import {
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {
-  WebContainerSliceConfig,
+  createWebContainerToolkit,
+  WebContainerPersistConfig,
   WebContainerSliceState,
   createWebContainerSlice,
 } from '@sqlrooms/webcontainer';
@@ -19,18 +20,6 @@ import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 import {AI_SETTINGS} from '../config';
 import {LLM_INSTRUCTIONS} from '../instructions';
-import {
-  createGetFileContentTool,
-  getFileContentToolRenderer,
-} from '../tools/getFileContent/getFileContentTool';
-import {
-  createListFilesTool,
-  listFilesToolRenderer,
-} from '../tools/listFiles/createListFilesTool';
-import {
-  createUpdateFileContentTool,
-  updateFileContentToolRenderer,
-} from '../tools/updateFileContent/updateFileContentTool';
 
 type RoomState = BaseRoomStoreState &
   AiSliceState &
@@ -47,7 +36,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         ai: AiSliceConfig,
         aiSettings: AiSettingsSliceConfig,
-        webContainer: WebContainerSliceConfig,
+        webContainer: WebContainerPersistConfig,
       },
     },
     (set, get, store) => ({
@@ -66,29 +55,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       // Ai slice
-      ...createAiSlice({
-        getInstructions: () => {
-          const instructions = `${LLM_INSTRUCTIONS}
+      ...(() => {
+        const webContainerToolkit = createWebContainerToolkit(store);
+        return createAiSlice({
+          getInstructions: () => {
+            const instructions = `${LLM_INSTRUCTIONS}
             <file_list>
             ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
-          return instructions;
-        },
+            return instructions;
+          },
 
-        // Tool renderers for displaying tool results in the UI
-        toolRenderers: {
-          listFiles: listFilesToolRenderer,
-          getFileContent: getFileContentToolRenderer,
-          updateFileContent: updateFileContentToolRenderer,
-        },
+          toolRenderers: webContainerToolkit.toolRenderers,
 
-        // Add custom tools
-        tools: {
-          listFiles: createListFilesTool(store),
-          getFileContent: createGetFileContentTool(store),
-          updateFileContent: createUpdateFileContentTool(store),
-        },
-      })(set, get, store),
+          tools: webContainerToolkit.tools,
+        })(set, get, store);
+      })(),
     }),
   ),
 );

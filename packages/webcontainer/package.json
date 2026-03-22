@@ -25,7 +25,9 @@
     "@sqlrooms/ui": "workspace:*",
     "@webcontainer/api": "^1.6.1",
     "@xterm/xterm": "^5.5.0",
+    "ai": "^5.0.155",
     "immer": "^11.0.1",
+    "just-bash": "^2.14.0",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "zod": "^4.1.8"

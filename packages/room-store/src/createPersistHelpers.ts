@@ -3,6 +3,33 @@ import z from 'zod';
 import {StateCreator} from './BaseRoomStore';
 
 /**
+ * Wraps a Zustand persist storage so that `setItem` silently drops writes
+ * whose serialised payload exceeds the engine's string-length limit (or any
+ * other serialisation error).  This prevents `RangeError: Invalid string
+ * length` from crashing the app when the state grows unexpectedly large.
+ */
+function createSafeStorage<S>(
+  base: PersistOptions<S>['storage'],
+): PersistOptions<S>['storage'] {
+  if (!base) return base;
+  const originalSetItem = base.setItem?.bind(base);
+  if (!originalSetItem) return base;
+  return {
+    ...base,
+    setItem: (...args: Parameters<typeof originalSetItem>) => {
+      try {
+        return originalSetItem(...args);
+      } catch (error) {
+        console.warn(
+          'Persist storage setItem failed (payload too large?):',
+          error instanceof Error ? error.message : error,
+        );
+      }
+    },
+  };
+}
+
+/**
  * Creates partialize and merge functions for Zustand persist middleware.
  * Automatically handles extracting and merging slice configs.
  *
@@ -141,11 +168,15 @@ export function persistSliceConfigs<S>(
   } & Omit<PersistOptions<S>, 'partialize' | 'merge'>,
   stateCreator: StateCreator<S>,
 ): StateCreator<S> {
-  const {sliceConfigSchemas, partialize, merge, ...persistOptions} = options;
+  const {sliceConfigSchemas, partialize, merge, storage, ...persistOptions} =
+    options;
   const helpers = createPersistHelpers(sliceConfigSchemas);
+
+  const safeStorage = createSafeStorage(storage);
 
   return persist<S>(stateCreator, {
     ...persistOptions,
+    ...(safeStorage ? {storage: safeStorage} : {}),
     partialize: partialize || helpers.partialize,
     merge: merge || helpers.merge,
   } as PersistOptions<S>) as StateCreator<S>;

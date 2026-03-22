@@ -42,8 +42,9 @@ import {
 } from '@sqlrooms/sql-editor';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {
+  createWebContainerToolkit,
   createWebContainerSlice,
-  WebContainerSliceConfig,
+  WebContainerPersistConfig,
   WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
@@ -156,7 +157,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         canvas: CanvasSliceConfig,
-        webContainer: WebContainerSliceConfig,
+        webContainer: WebContainerPersistConfig,
         appProject: AppBuilderProjectConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
@@ -236,23 +237,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         config: {providers: runtimeAiProviders},
       })(set, get, store),
 
-      ...createAiSlice({
-        config: AiSliceConfig.parse({sessions: []}),
-        defaultProvider: defaultProviderFromConfig as any,
-        defaultModel: defaultModelFromConfig,
-        getApiKey: (provider) =>
-          runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
-        getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
-        getInstructions: () => createDefaultAiInstructions(store),
-        tools: {
-          ...createDefaultAiTools(store, {query: {}}),
-          chart: createVegaChartTool(),
-        },
-        toolRenderers: {
-          ...createDefaultAiToolRenderers(),
-          chart: VegaChartToolResult,
-        },
-      })(set, get, store),
+      ...(() => {
+        const webContainerToolkit = createWebContainerToolkit(store);
+        return createAiSlice({
+          config: AiSliceConfig.parse({sessions: []}),
+          defaultProvider: defaultProviderFromConfig as any,
+          defaultModel: defaultModelFromConfig,
+          getApiKey: (provider) =>
+            runtimeAiProviders[provider]?.apiKey || runtimeConfig.apiKey || '',
+          getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
+          getInstructions: () => createDefaultAiInstructions(store),
+          tools: {
+            ...createDefaultAiTools(store, {query: {}}),
+            ...webContainerToolkit.tools,
+            chart: createVegaChartTool(),
+          },
+          toolRenderers: {
+            ...createDefaultAiToolRenderers(),
+            ...webContainerToolkit.toolRenderers,
+            chart: VegaChartToolResult,
+          },
+        })(set, get, store);
+      })(),
     }),
   ),
 );
