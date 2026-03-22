@@ -153,6 +153,9 @@ importers:
       '@sqlrooms/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@sqlrooms/db-settings':
+        specifier: workspace:*
+        version: link:../../packages/db-settings
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -2169,7 +2172,7 @@ importers:
         version: link:../preset-jest
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.0))(typescript@5.9.3)
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
@@ -2546,6 +2549,33 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+
+  packages/db-settings:
+    dependencies:
+      '@sqlrooms/db':
+        specifier: workspace:*
+        version: link:../db
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
 
   packages/discuss:
     dependencies:
@@ -3412,7 +3442,7 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@tailwindcss/typography':
         specifier: ^0.5.18
-        version: 0.5.19
+        version: 0.5.19(tailwindcss@4.1.18)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3448,7 +3478,7 @@ importers:
         version: 4.1.18
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7
+        version: 1.0.7(tailwindcss@4.1.18)
       usehooks-ts:
         specifier: ^3.1.1
         version: 3.1.1(react@19.2.1)
@@ -23128,9 +23158,10 @@ snapshots:
       postcss: 8.5.6
       tailwindcss: 4.1.17
 
-  '@tailwindcss/typography@0.5.19':
+  '@tailwindcss/typography@0.5.19(tailwindcss@4.1.18)':
     dependencies:
       postcss-selector-parser: 6.0.10
+      tailwindcss: 4.1.18
 
   '@tailwindcss/vite@4.1.18(vite@7.2.2(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.1)(yaml@2.8.2))':
     dependencies:
@@ -31477,7 +31508,9 @@ snapshots:
 
   tailwind-merge@2.6.0: {}
 
-  tailwindcss-animate@1.0.7: {}
+  tailwindcss-animate@1.0.7(tailwindcss@4.1.18):
+    dependencies:
+      tailwindcss: 4.1.18
 
   tailwindcss@4.1.17: {}
 

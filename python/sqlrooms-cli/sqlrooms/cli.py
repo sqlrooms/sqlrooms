@@ -407,6 +407,7 @@ def main(
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
+        config_path=config_path,
     )
     try:
         asyncio.run(server.start())

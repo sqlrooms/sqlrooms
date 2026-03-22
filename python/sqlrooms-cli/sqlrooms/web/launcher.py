@@ -34,6 +34,51 @@ logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 
 
+def _write_db_connectors_to_toml(
+    config_path: Path, connections: list[dict[str, Any]]
+) -> None:
+    """Write ``[[db.connectors]]`` entries into a TOML config file.
+
+    Preserves all non-``[db]`` sections. If the file does not exist yet it is
+    created.
+    """
+    import tomlkit
+
+    if config_path.exists():
+        doc = tomlkit.parse(config_path.read_text(encoding="utf-8"))
+    else:
+        doc = tomlkit.document()
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    connectors_aot = tomlkit.aot()
+    key_map = {
+        "engineId": "engine",
+        "runtimeSupport": None,
+        "requiresBridge": None,
+        "bridgeId": None,
+        "isCore": None,
+    }
+    for conn in connections:
+        item = tomlkit.table()
+        for k, v in conn.items():
+            if v is None:
+                continue
+            toml_key = key_map.get(k, k)
+            if toml_key is None:
+                continue
+            item.add(toml_key, v)
+        connectors_aot.append(item)
+
+    if "db" not in doc:
+        doc.add("db", tomlkit.table())
+    db_section = doc["db"]
+    if "connectors" in db_section:
+        del db_section["connectors"]  # type: ignore[arg-type]
+    db_section["connectors"] = connectors_aot  # type: ignore[index]
+
+    config_path.write_text(tomlkit.dumps(doc), encoding="utf-8")
+
+
 def _sanitize_filename(name: str) -> str:
     safe = os.path.basename(name.strip().replace("\\", "/"))
     return safe or "upload.dat"
@@ -132,6 +177,7 @@ class SqlroomsHttpServer:
         ] | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
+        config_path: Path | None = None,
     ):
         db_path_str = str(db_path)
         self.is_in_memory = db_path_str == ":memory:"
@@ -164,6 +210,8 @@ class SqlroomsHttpServer:
             bridge_id=DB_BRIDGE_ID,
             connector_settings=connector_settings,
         )
+        self.config_path = config_path
+        self.connector_settings = connector_settings or []
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -272,6 +320,32 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
+
+        @app.get("/api/db/settings")
+        async def get_db_settings():
+            connections = self.db_bridge_registry.runtime_connections()
+            diagnostics = self.db_bridge_registry.runtime_diagnostics()
+            return {"connections": connections, "diagnostics": diagnostics}
+
+        @app.put("/api/db/settings")
+        async def put_db_settings(payload: Dict[str, Any]):
+            if self.config_path is None:
+                return JSONResponse(
+                    {"error": "No config file available (started with --no-config or no config found)."},
+                    status_code=400,
+                )
+            connections = payload.get("connections")
+            if not isinstance(connections, list):
+                return JSONResponse(
+                    {"error": "'connections' must be an array."},
+                    status_code=400,
+                )
+            try:
+                _write_db_connectors_to_toml(self.config_path, connections)
+            except Exception as exc:
+                logger.error("Failed to write db settings to %s: %s", self.config_path, exc)
+                return JSONResponse({"error": str(exc)}, status_code=500)
+            return {"ok": True, "configPath": str(self.config_path)}
 
         @app.post("/api/upload")
         async def upload_file(file: UploadFile = File(...)):

@@ -53,7 +53,12 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 
-import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
+import {createHttpDbBridge} from '@sqlrooms/db';
+import {
+  createDbSettingsSlice,
+  DbSettingsSliceState,
+  syncConnectionsToDb,
+} from '@sqlrooms/db-settings';
 import {
   createDashboardAiTools,
   DASHBOARD_AI_INSTRUCTIONS,
@@ -64,7 +69,6 @@ import {
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
 import {LAYOUT} from './layout';
-import type {RuntimeConfig} from './runtimeConfig';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
@@ -84,10 +88,6 @@ export const AppBuilderProjectConfig = z.object({
     .default({}),
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
-type RuntimeDbBridgeConfig = NonNullable<RuntimeConfig['dbBridge']>;
-type ConnectorDriverDiagnostic = NonNullable<
-  RuntimeDbBridgeConfig['diagnostics']
->[number];
 
 export const DashboardProjectConfig = z.object({
   dashboardsBySheetId: z
@@ -110,8 +110,8 @@ export type RoomState = RoomShellSliceState &
   CellsSliceState &
   NotebookSliceState &
   CanvasSliceState &
-  WebContainerSliceState & {
-    connectorDriverDiagnostics: ConnectorDriverDiagnostic[];
+  WebContainerSliceState &
+  DbSettingsSliceState & {
     appProject: {
       config: AppBuilderProjectConfig;
       upsertSheetApp: (
@@ -167,7 +167,7 @@ connector.loadFile = async (file, desiredTableName, options) => {
   return baseLoadFile(file, desiredTableName, options);
 };
 
-function getRuntimeBridgeConfig(): RuntimeDbBridgeConfig | undefined {
+function getRuntimeBridgeConfig() {
   if (runtimeConfig.dbBridge?.connections?.length) {
     return runtimeConfig.dbBridge;
   }
@@ -316,11 +316,27 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().appProject.config.appsBySheetId[sheetId],
         },
         dashboard: dashboardSlice,
-        connectorDriverDiagnostics: runtimeConfig.dbBridge?.diagnostics || [],
         isAssistantOpen: false,
         setAssistantOpen: (isAssistantOpen: boolean) => {
           set({isAssistantOpen});
         },
+
+        ...createDbSettingsSlice({
+          config: {
+            connections: (runtimeConfig.dbBridge?.connections ?? []).map(
+              (c) => ({
+                id: c.id,
+                engineId: c.engineId,
+                title: c.title || c.id,
+                runtimeSupport: c.runtimeSupport || 'server',
+                requiresBridge: c.requiresBridge ?? true,
+                bridgeId: c.bridgeId,
+                isCore: c.isCore ?? false,
+              }),
+            ),
+            diagnostics: runtimeConfig.dbBridge?.diagnostics ?? [],
+          },
+        })(set, get, store),
 
         ...createRoomShellSlice({
           connector,
@@ -385,36 +401,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 
 const bridgeConfig = getRuntimeBridgeConfig();
-if (bridgeConfig?.connections.length) {
-  const diagnosticsKey = (id: string, engineId: string) => `${id}:${engineId}`;
-  const diagnosticsById = new Map(
-    (bridgeConfig.diagnostics || []).map((item) => [
-      diagnosticsKey(item.id, item.engineId),
-      item,
-    ]),
-  );
+if (bridgeConfig) {
   const bridge = createHttpDbBridge({
     id: bridgeConfig.id,
     baseUrl: runtimeConfig.apiBaseUrl || '',
   });
-  const state = roomStore.getState();
-  state.db.connectors.registerBridge(bridge);
-  for (const connection of bridgeConfig.connections) {
-    const diagnostics = diagnosticsById.get(
-      diagnosticsKey(connection.id, connection.engineId),
-    );
-    if (diagnostics && diagnostics.available === false) {
-      continue;
-    }
-    const normalizedConnection: DbConnection = {
-      id: connection.id,
-      engineId: connection.engineId,
-      title: connection.title || connection.id,
-      runtimeSupport: connection.runtimeSupport || 'server',
-      requiresBridge: connection.requiresBridge ?? true,
-      bridgeId: connection.bridgeId || bridgeConfig.id,
-      isCore: connection.isCore ?? false,
-    };
-    state.db.connectors.registerConnection(normalizedConnection);
-  }
+  roomStore.getState().db.connectors.registerBridge(bridge);
 }
+syncConnectionsToDb(roomStore);
