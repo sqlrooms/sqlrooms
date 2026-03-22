@@ -1,7 +1,7 @@
 import {DbSettingsDialog} from '@sqlrooms/db-settings';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {TableStructurePanel} from '@sqlrooms/sql-editor';
+import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {toast} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {RoomPanelTypes} from '../layout';
@@ -44,11 +44,10 @@ export const DataSourcesPanel = () => {
           Files stay on your machine and are loaded into DuckDB locally.
         </div>
       </FileDropzone>
-      <div className="flex items-center justify-end px-2 pt-1">
-        <DbSettingsDialog />
-      </div>
 
-      <TableStructurePanel />
+      <SchemaExplorer>
+        <DbSettingsDialog />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

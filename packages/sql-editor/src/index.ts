@@ -30,7 +30,15 @@ export {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
 export type {SqlCodeMirrorEditorProps} from './SqlCodeMirrorEditor';
 export {SqlDialects} from './codemirror/extensions/create-sql-extension';
 export type {SqlDialect} from './codemirror/extensions/create-sql-extension';
+export {SchemaExplorer} from './components/SchemaExplorer';
+export type {SchemaExplorerProps} from './components/SchemaExplorer';
+/**
+ * @deprecated Use `SchemaExplorer` instead.
+ */
 export {TableStructurePanel} from './components/TableStructurePanel';
+/**
+ * @deprecated Use `SchemaExplorerProps` instead.
+ */
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';
 export type {

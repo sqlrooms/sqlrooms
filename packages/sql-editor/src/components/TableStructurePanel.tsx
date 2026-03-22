@@ -3,8 +3,10 @@ import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import React, {useMemo} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
+/**
+ * @deprecated Use `SchemaExplorer` instead.
+ */
 export interface TableStructurePanelProps {
-  /** Custom class name for styling */
   className?: string;
   /** The database schema to use. Defaults to '*'.
    * If '*' is provided, all tables will be shown.
@@ -12,11 +14,13 @@ export interface TableStructurePanelProps {
   schema?: string | ((name: string) => boolean);
 }
 
+/**
+ * @deprecated Use `SchemaExplorer` instead.
+ */
 export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   className,
   schema = '*',
 }) => {
-  // Get state from store
   const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
   const filteredSchemaTrees = useMemo(() => {
     if (schema === '*') {
