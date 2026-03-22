@@ -1,15 +1,25 @@
 import {createId} from '@paralleldrive/cuid2';
-import {DuckDbSliceState, isWasmDuckDbConnector} from '@sqlrooms/duckdb';
+import {
+  isWasmDuckDbConnector,
+  type DuckDbConnector,
+  type DuckDbSliceState,
+} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
   type SliceFunctions,
 } from '@sqlrooms/room-store';
+import type {
+  ArrowQueryRequest,
+  ExecQueryRequest,
+  JSONQueryRequest,
+} from '@uwdata/mosaic-core';
 import {
   Connector,
   Coordinator,
   coordinator,
+  decodeIPC,
   makeClient,
   Selection,
   wasmConnector,
@@ -50,7 +60,7 @@ export type MosaicSliceState = {
   mosaic: SliceFunctions & {
     connection:
       | {status: 'idle' | 'loading'}
-      | {status: 'ready'; connector: Connector; coordinator: Coordinator}
+      | {status: 'ready'; connector?: Connector; coordinator: Coordinator}
       | {status: 'error'; error: unknown};
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
@@ -87,41 +97,45 @@ export function createDefaultMosaicConfig(
   } as MosaicSliceConfig;
 }
 
-export function createMosaicSlice(props?: {
+export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
-}) {
+  coordinator?: Coordinator;
+};
+
+export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
   return createSlice<
     MosaicSliceState,
     BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
   >((set, get, store) => ({
     mosaic: {
       config: createDefaultMosaicConfig(props?.config),
-      connection: {
-        status: 'idle',
-        connector: undefined,
-      },
+      connection: {status: 'idle'},
       clients: {},
       selections: {},
 
       async initialize() {
         let mosaicConnector: Connector | undefined;
+        let resolvedCoordinator!: Coordinator;
         set((state) =>
           produce(state, (draft) => {
             draft.mosaic.connection = {status: 'loading'};
           }),
         );
         try {
-          const dbConnector = await get().db.getConnector();
-          if (!isWasmDuckDbConnector(dbConnector)) {
-            throw new Error('Only WasmDuckDbConnector is currently supported');
+          if (props.coordinator) {
+            resolvedCoordinator = props.coordinator;
+          } else {
+            const dbConnector = await get().db.getConnector();
+            resolvedCoordinator = coordinator();
+            mosaicConnector = isWasmDuckDbConnector(dbConnector)
+              ? await wasmConnector({
+                  // @ts-expect-error - We install a different version of duckdb-wasm
+                  duckDb: dbConnector.getDb(),
+                  connection: dbConnector.getConnection(),
+                })
+              : createDuckDbMosaicConnector(dbConnector);
+            resolvedCoordinator.databaseConnector(mosaicConnector);
           }
-          mosaicConnector = await coordinator().databaseConnector(
-            wasmConnector({
-              // @ts-expect-error - We install a different version of duckdb-wasm
-              duckDb: dbConnector.getDb(),
-              connection: dbConnector.getConnection(),
-            }),
-          );
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
@@ -129,17 +143,16 @@ export function createMosaicSlice(props?: {
             }),
           );
           throw error;
-        } finally {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.mosaic.connection = {
-                status: 'ready',
-                connector: mosaicConnector!,
-                coordinator: coordinator(),
-              };
-            }),
-          );
         }
+        set((state) =>
+          produce(state, (draft) => {
+            draft.mosaic.connection = {
+              status: 'ready',
+              connector: mosaicConnector,
+              coordinator: resolvedCoordinator,
+            };
+          }),
+        );
       },
 
       async destroy() {
@@ -343,4 +356,41 @@ export function useStoreWithMosaic<T>(
   return useBaseRoomStore<BaseRoomStoreState, T>((state) =>
     selector(state as unknown as DuckDbSliceStateWithMosaic),
   );
+}
+
+/**
+ * Adapts a {@link DuckDbConnector} to the Mosaic {@link Connector} interface.
+ *
+ * For `'arrow'` queries the Apache Arrow table returned by the connector is
+ * serialized to IPC bytes and decoded via {@link decodeIPC} into a flechette
+ * `Table`, which is the shape Mosaic consumers expect (with `.toColumns()`).
+ * For `'json'` queries, rows are materialized with {@link Array.from} which
+ * may have performance/memory implications for very large result sets.
+ * The `as any` casts on the return type are an intentional adapter trade-off
+ * to satisfy the polymorphic {@link Connector['query']} signature.
+ */
+function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
+  return {
+    query: (async (
+      query: ArrowQueryRequest | ExecQueryRequest | JSONQueryRequest,
+    ) => {
+      const queryType = query.type ?? 'arrow';
+      if (queryType === 'exec') {
+        await connector.execute(query.sql);
+        return undefined as any;
+      }
+      if (queryType === 'json') {
+        const rows = await connector.queryJson<Record<string, unknown>>(
+          query.sql,
+        );
+        return Array.from(rows) as any;
+      }
+      if (queryType === 'arrow') {
+        const arrowTable = await connector.query(query.sql);
+        const {tableToIPC} = await import('apache-arrow');
+        return decodeIPC(tableToIPC(arrowTable, 'stream')) as any;
+      }
+      throw new Error(`Unsupported Mosaic query type "${queryType}".`);
+    }) as Connector['query'],
+  };
 }

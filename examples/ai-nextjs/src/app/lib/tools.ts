@@ -1,103 +1,61 @@
 import {z} from 'zod';
-import {
-  convertToVercelAiToolV5,
-  OpenAssistantTool,
-  OpenAssistantToolSet,
-  ToolCache,
-} from '@openassistant/utils';
+import {tool, ToolSet} from 'ai';
+import type {ToolRendererRegistry} from '@sqlrooms/ai-core';
 import WebSearchToolResult from '@/components/WebSearchToolResult';
-import {ToolSet} from 'ai';
 
 // Define the web search tool (server side tool)
-const webSearchSchema = z.object({
-  query: z.string().describe('The search query'),
-});
-
-const webSearchTool: OpenAssistantTool = {
-  name: 'webSearch',
+const webSearchTool = tool({
   description: 'Search the web for information',
-  parameters: webSearchSchema,
-  execute: async ({query}: any) => {
+  inputSchema: z.object({
+    query: z.string().describe('The search query'),
+  }),
+  execute: async ({query}) => {
     // This is a toy implementation for demo purposes
     console.log(`Web search executed for query: ${query}`);
 
     return {
-      llmResult: {
-        success: true,
-        details: `Web search results for: ${query}`,
-      },
-      additionalData: {
-        datasetName: 'webSearchResults',
-        webSearchResults: {
-          type: 'string',
-          content: `Web search results for: ${query}`,
-        },
-      },
+      success: true,
+      details: `Web search results for: ${query}`,
     };
   },
-  component: WebSearchToolResult,
-};
-
-// Define the weather tool (client side tool)
-const weatherSchema = z.object({
-  cityName: z.string().describe('The name of the city'),
 });
 
-const weatherTool: OpenAssistantTool = {
-  name: 'weather',
+// Define the weather tool (client side tool - no execute on server)
+const weatherTool = tool({
   description: 'Get the weather in a city from a weather station',
-  parameters: weatherSchema,
-  execute: async ({cityName}: any) => {
+  inputSchema: z.object({
+    cityName: z.string().describe('The name of the city'),
+  }),
+  execute: async ({cityName}) => {
     return {
-      llmResult: {
-        success: true,
-        details: `The weather in ${cityName} is sunny.`,
-      },
-      additionalData: {
-        datasetName: 'weatherResults',
-        weatherResults: {
-          type: 'string',
-          content: `The weather in ${cityName} is sunny.`,
-        },
-      },
+      success: true,
+      details: `The weather in ${cityName} is sunny.`,
     };
   },
-};
+});
 
-export const tools = {
-  serverTools: [webSearchTool],
-  clientTools: [weatherTool],
-};
-
-const allTools = [...tools.serverTools, ...tools.clientTools];
-
-const toolCache = ToolCache.getInstance();
-
-const onToolCompleted = async (toolCallId: string, additionalData: unknown) => {
-  toolCache.addDataset(toolCallId, additionalData);
+const allTools = {
+  webSearch: webSearchTool,
+  weather: weatherTool,
 };
 
 export function getServerAiSDKTools(): ToolSet {
-  const aiSDKTools = allTools.reduce((acc, tool) => {
-    tool.onToolCompleted = onToolCompleted;
-    acc[tool.name] = convertToVercelAiToolV5(tool);
-    // Only keep execute function for server tools
-    if (!tools.serverTools.includes(tool)) {
-      acc[tool.name].execute = undefined;
-    }
-    return acc;
-  }, {} as ToolSet);
-
-  return aiSDKTools;
+  // Return all tools but strip execute from client-only tools
+  return {
+    webSearch: allTools.webSearch,
+    weather: {
+      ...allTools.weather,
+      execute: undefined,
+    },
+  } as ToolSet;
 }
 
-export function getClientTools(): OpenAssistantToolSet {
-  return allTools.reduce((acc, tool) => {
-    acc[tool.name] = tool;
-    return acc;
-  }, {} as OpenAssistantToolSet);
+export function getClientTools(): ToolSet {
+  return allTools;
 }
 
-export function getToolAdditionalData(toolCallId: string): unknown {
-  return toolCache.getDataset(toolCallId);
+export function getClientToolRenderers(): ToolRendererRegistry {
+  return {
+    webSearch: WebSearchToolResult,
+  };
 }

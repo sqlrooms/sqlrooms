@@ -1,8 +1,9 @@
 import {sanitizeQuery, useSql} from '@sqlrooms/duckdb';
 import {PaginationState, SortingState} from '@tanstack/table-core';
 import {FC, useMemo, useState} from 'react';
-import DataTablePaginated, {
-  DataTablePaginatedProps,
+import {
+  DataTablePaginated,
+  type DataTablePaginatedProps,
 } from './DataTablePaginated';
 import {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
 import useArrowDataTable, {

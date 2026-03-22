@@ -1,5 +1,5 @@
 import {SqlCodeMirrorEditor, SqlQueryPreview} from '@sqlrooms/sql-editor';
-import {Button, cn} from '@sqlrooms/ui';
+import {Button, cn, CopyButton} from '@sqlrooms/ui';
 import {PlayIcon} from 'lucide-react';
 import React, {useCallback, useState} from 'react';
 import {useVegaEditorContext} from './VegaEditorContext';
@@ -101,11 +101,19 @@ export const VegaSqlEditorPanel: React.FC<VegaSqlEditorPanelProps> = ({
           }}
           options={{
             lineNumbers: true,
-            lineWrapping: false,
+            lineWrapping: true,
             foldGutter: true,
           }}
           readOnly={!editable}
         />
+        <div className="bg-background absolute top-2 right-2 rounded-md border">
+          <CopyButton
+            text={state.editedSql}
+            size="xs"
+            tooltipLabel="Copy SQL"
+            disabled={!state.editedSql.trim()}
+          />
+        </div>
       </div>
 
       {/* Preview Results */}

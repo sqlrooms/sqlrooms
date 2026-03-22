@@ -1,4 +1,4 @@
-import {createRagTool, type RagToolLlmResult} from '@sqlrooms/ai-rag';
+import {executeRagSearch, type RagToolLlmResult} from '@sqlrooms/ai-rag';
 import {
   Button,
   Dialog,
@@ -10,8 +10,6 @@ import {
 } from '@sqlrooms/ui';
 import {useState} from 'react';
 import {roomStore} from '../store';
-
-const ragTool = createRagTool();
 
 /**
  * Individual result item - always visible, no collapsing
@@ -121,12 +119,12 @@ export function RagSearchDialog({
     setResult(null);
 
     try {
-      const toolResult = await ragTool.execute({
-        query,
-        topK: 5,
-      });
+      const toolResult = await executeRagSearch(
+        {query, topK: 5},
+        roomStore.getState(),
+      );
 
-      setResult(toolResult.llmResult);
+      setResult(toolResult);
     } catch (error) {
       console.error('RAG search error:', error);
       setResult({

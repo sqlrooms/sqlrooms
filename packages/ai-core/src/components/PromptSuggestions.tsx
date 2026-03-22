@@ -3,7 +3,6 @@ import {
   Button,
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
   Spinner,
   ScrollableRow,
@@ -39,54 +38,52 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
   }
 
   return (
-    <TooltipProvider>
-      <div className={cn('w-full py-1', className)}>
-        {/* Container with scrollable suggestions and hide button */}
-        <div className="flex h-full w-full gap-2">
-          <ScrollableRow
-            className="min-w-0 flex-1"
-            scrollClassName="flex flex-1 snap-x snap-mandatory scroll-pl-7 scroll-pr-7 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            arrowVisibility="always"
-            arrowIconClassName="h-4 w-4 opacity-80"
-          >
-            {isLoading
-              ? // Show placeholder buttons with spinners while loading
-                Array.from({length: 3}).map((_, index) => (
-                  <div key={index} className="shrink-0 snap-start">
-                    <Button
-                      disabled
-                      className={cn(
-                        'bg-muted/50 border-border border',
-                        'rounded-lg',
-                        'text-muted-foreground text-xs',
-                        'relative',
-                        'flex items-center justify-center',
-                        'px-4 py-2',
-                        'h-18 max-h-14 min-h-14 w-48 max-w-48 min-w-48',
-                      )}
-                      type="button"
-                    >
-                      <Spinner className="text-muted-foreground h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))
-              : children}
-          </ScrollableRow>
+    <div className={cn('w-full py-1', className)}>
+      {/* Container with scrollable suggestions and hide button */}
+      <div className="flex h-full w-full gap-2">
+        <ScrollableRow
+          className="min-w-0 flex-1"
+          scrollClassName="flex flex-1 snap-x snap-mandatory scroll-pl-7 scroll-pr-7 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          arrowVisibility="always"
+          arrowIconClassName="h-4 w-4 opacity-80"
+        >
+          {isLoading
+            ? // Show placeholder buttons with spinners while loading
+              Array.from({length: 3}).map((_, index) => (
+                <div key={index} className="shrink-0 snap-start">
+                  <Button
+                    disabled
+                    className={cn(
+                      'bg-muted/50 border-border border',
+                      'rounded-lg',
+                      'text-muted-foreground text-xs',
+                      'relative',
+                      'flex items-center justify-center',
+                      'px-4 py-2',
+                      'h-18 max-h-14 min-h-14 w-48 max-w-48 min-w-48',
+                    )}
+                    type="button"
+                  >
+                    <Spinner className="text-muted-foreground h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))
+            : children}
+        </ScrollableRow>
 
-          <div className="flex shrink-0 items-center pr-1">
-            <Button
-              onClick={toggleVisibility}
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground h-6 w-6 shrink-0"
-              title="Hide prompt suggestions"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="flex shrink-0 items-center pr-1">
+          <Button
+            onClick={toggleVisibility}
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground h-6 w-6 shrink-0"
+            title="Hide prompt suggestions"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-    </TooltipProvider>
+    </div>
   );
 };
 
@@ -198,7 +195,7 @@ const VisibilityToggle: React.FC<PromptSuggestionsVisibilityToggleProps> = ({
               : 'text-muted-foreground hover:text-foreground',
             className,
           )}
-          title={
+          aria-label={
             isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'
           }
         >

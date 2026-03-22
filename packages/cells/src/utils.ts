@@ -43,3 +43,25 @@ export function getSheetSchemaName(sheetId: string): string {
   const normalized = sheetId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
   return `sheet_${normalized}`;
 }
+
+/**
+ * Extracts a preview from SQL query - first non-empty line and whether there are more lines.
+ * Returns empty firstLine if the SQL is empty or contains only whitespace.
+ */
+export function getSqlQueryPreview(sql: string): {
+  firstLine: string;
+  hasMoreLines: boolean;
+} {
+  const [firstLine, ...rest] = sql
+    .split('\n')
+    .filter((line) => line.trim() !== '');
+
+  if (!firstLine) {
+    return {firstLine: '', hasMoreLines: false};
+  }
+
+  return {
+    firstLine,
+    hasMoreLines: rest.length > 0,
+  };
+}

@@ -13,7 +13,7 @@ export {
   type DataTableModalProps,
 } from './DataTableModal';
 export {
-  default as DataTablePaginated,
+  DataTablePaginated,
   type DataTablePaginatedProps,
 } from './DataTablePaginated';
 export {

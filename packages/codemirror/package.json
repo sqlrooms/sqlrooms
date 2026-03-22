@@ -28,13 +28,14 @@
     "@codemirror/search": "^6.5.0",
     "@codemirror/state": "^6.4.0",
     "@codemirror/view": "^6.33.0",
-    "@lezer/common": "^1.2.0",
     "@lezer/highlight": "^1.2.0",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
-    "jsonc-parser": "^3.3.0"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "vscode-json-languageservice": "^5.7.2",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-languageserver-types": "^3.17.5"
   },
   "peerDependencies": {
     "react": ">=18",

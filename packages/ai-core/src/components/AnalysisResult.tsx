@@ -47,9 +47,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
-  const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
-  );
   const [divWidth, setDivWidth] = useState<number>(0);
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -91,12 +88,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, []);
 
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(
-    uiMessageParts,
-    divWidth,
-    userTools,
-    toolAdditionalData,
-  );
+  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
 
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
@@ -121,13 +113,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <GroupedMessageParts
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
-            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         ) : (
           <MessagePartsList
             parts={uiMessageParts}
-            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         )}

@@ -1,5 +1,6 @@
-import type {OpenAssistantTool} from '@openassistant/utils';
+import {tool} from 'ai';
 import {ReasoningBox} from '@sqlrooms/ai-core';
+import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {Button} from '@sqlrooms/ui';
 import {useState} from 'react';
 import {z} from 'zod';
@@ -43,9 +44,7 @@ export type RagToolLlmResult = {
   details?: string;
 };
 
-export type RagToolAdditionalData = Record<string, never>;
-
-export type RagToolContext = unknown;
+export type RagToolOutput = RagToolLlmResult;
 
 /**
  * Individual result item with collapsible details
@@ -76,7 +75,7 @@ function RagResultItem({
       </Button>
 
       {isExpanded && (
-        <p className="text-muted-foreground/50 whitespace-pre-wrap p-5 font-mono text-xs">
+        <p className="text-muted-foreground/50 p-5 font-mono text-xs whitespace-pre-wrap">
           {result.text}
         </p>
       )}
@@ -87,17 +86,17 @@ function RagResultItem({
 /**
  * Result component for displaying RAG search results
  */
-function RagToolResult(result: RagToolLlmResult) {
-  if (!result?.success) {
+function RagToolResult({output}: ToolRendererProps<RagToolOutput>) {
+  if (!output?.success) {
     return (
       <div className="rounded border border-red-300 bg-red-50 p-3 text-red-600 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400">
         <p className="text-xs font-semibold">RAG Search Failed</p>
-        <p className="text-xs">{result?.error || 'Unknown error'}</p>
+        <p className="text-xs">{output?.error || 'Unknown error'}</p>
       </div>
     );
   }
 
-  const {query, results, database} = result;
+  const {query, results, database} = output;
 
   return (
     <ReasoningBox title={`Found ${results?.length || 0} results`}>
@@ -111,6 +110,62 @@ function RagToolResult(result: RagToolLlmResult) {
       </div>
     </ReasoningBox>
   );
+}
+
+/** Tool renderer component for use in `toolRenderers` registry. */
+export const ragToolRenderer = RagToolResult;
+
+/**
+ * Execute a RAG search against a given rag slice state.
+ * Can be called directly (e.g. from UI components) without going through the AI tool layer.
+ */
+export async function executeRagSearch(
+  params: RagToolParameters,
+  state: RagSliceState,
+): Promise<RagToolOutput> {
+  const {query, database, topK = 5} = params;
+
+  try {
+    await state.rag.initialize();
+
+    const clampedTopK = Math.min(Math.max(1, topK), 20);
+    const targetDatabase = database || state.rag.listDatabases()[0];
+
+    if (!targetDatabase) {
+      return {success: false, error: 'No RAG databases configured'};
+    }
+
+    const results = await state.rag.queryByText(query, {
+      topK: clampedTopK,
+      database: targetDatabase,
+    });
+
+    const formattedContext = results
+      .map(
+        (result, i) =>
+          `[Result ${i + 1}] (Score: ${result.score.toFixed(3)})\n${result.text}`,
+      )
+      .join('\n\n---\n\n');
+
+    return {
+      success: true,
+      query,
+      database: targetDatabase,
+      results: results.map((r) => ({
+        text: r.text,
+        score: r.score,
+        metadata: r.metadata,
+      })),
+      context: formattedContext,
+      details: `Found ${results.length} relevant documents in ${targetDatabase}`,
+    };
+  } catch (error) {
+    console.error('RAG search error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
 }
 
 /**
@@ -133,16 +188,10 @@ function RagToolResult(result: RagToolLlmResult) {
  * });
  * ```
  */
-export function createRagTool(): OpenAssistantTool<
-  typeof RagToolParameters,
-  RagToolLlmResult,
-  RagToolAdditionalData,
-  RagToolContext
-> {
-  return {
-    name: 'search_documentation',
+export function createRagTool() {
+  return tool({
     description: `Search through documentation and knowledge bases using semantic search.
-    
+
 Use this tool when you need to:
 - Find specific information in documentation
 - Look up API references or technical details
@@ -151,83 +200,26 @@ Use this tool when you need to:
 
 The search uses vector embeddings to find semantically similar content, not just keyword matching.`,
 
-    parameters: RagToolParameters,
+    inputSchema: RagToolParameters,
 
-    execute: async (params: RagToolParameters) => {
-      const {query, database, topK = 5} = params;
-      // Get the store instance
+    toModelOutput: (output: RagToolOutput) => ({
+      type: 'text',
+      value: JSON.stringify({
+        success: output.success,
+        ...(output.error ? {error: output.error} : {}),
+        ...(output.query ? {query: output.query} : {}),
+        ...(output.database ? {database: output.database} : {}),
+        ...(output.context ? {context: output.context} : {}),
+        ...(output.details ? {details: output.details} : {}),
+      }),
+    }),
+
+    execute: async (params: RagToolParameters): Promise<RagToolOutput> => {
       const store = (globalThis as any).__ROOM_STORE__;
       if (!store) {
-        return {
-          llmResult: {
-            success: false,
-            error: 'Store not available',
-          } satisfies RagToolLlmResult,
-        };
+        return {success: false, error: 'Store not available'};
       }
-
-      const state = store.getState() as RagSliceState;
-
-      try {
-        // Initialize RAG if not already initialized
-        await state.rag.initialize();
-
-        // Clamp topK to reasonable limits
-        const clampedTopK = Math.min(Math.max(1, topK), 20);
-
-        // Determine which database to search
-        const targetDatabase = database || state.rag.listDatabases()[0];
-
-        if (!targetDatabase) {
-          return {
-            llmResult: {
-              success: false,
-              error: 'No RAG databases configured',
-            } satisfies RagToolLlmResult,
-          };
-        }
-
-        // Perform the search
-        const results = await state.rag.queryByText(query, {
-          topK: clampedTopK,
-          database: targetDatabase,
-        });
-
-        // Format results for LLM
-        const formattedContext = results
-          .map(
-            (result, i) =>
-              `[Result ${i + 1}] (Score: ${result.score.toFixed(3)})\n${result.text}`,
-          )
-          .join('\n\n---\n\n');
-
-        return {
-          llmResult: {
-            success: true,
-            query,
-            database: targetDatabase,
-            results: results.map((r) => ({
-              text: r.text,
-              score: r.score,
-              metadata: r.metadata,
-            })),
-            // Provide formatted context for the LLM
-            context: formattedContext,
-            details: `Found ${results.length} relevant documents in ${targetDatabase}`,
-          } satisfies RagToolLlmResult,
-        };
-      } catch (error) {
-        console.error('RAG search error:', error);
-        return {
-          llmResult: {
-            success: false,
-            error:
-              error instanceof Error ? error.message : 'Unknown error occurred',
-          } satisfies RagToolLlmResult,
-        };
-      }
+      return executeRagSearch(params, store.getState() as RagSliceState);
     },
-
-    component: RagToolResult,
-  };
+  });
 }

@@ -1,17 +1,17 @@
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
-import {useToast} from '@sqlrooms/ui';
+import {toast} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {RoomPanelTypes} from '../layout';
 import {useRoomStore} from '../store';
+import {ConnectorDriversDialog} from './ConnectorDriversDialog';
 
 export const DataSourcesPanel = () => {
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const {toast} = useToast();
 
   return (
     <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
@@ -28,15 +28,11 @@ export const DataSourcesPanel = () => {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
               await connector.loadFile(file, tableName);
-              toast({
-                variant: 'default',
-                title: 'Table created',
+              toast.success('Table created', {
                 description: `File ${file.name} loaded as ${tableName}`,
               });
             } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Error',
+              toast.error('Error', {
                 description: `Error loading file ${file.name}: ${error}`,
               });
             }
@@ -48,6 +44,10 @@ export const DataSourcesPanel = () => {
           Files stay on your machine and are loaded into DuckDB locally.
         </div>
       </FileDropzone>
+      <div className="flex items-center justify-end px-2 pt-1">
+        <ConnectorDriversDialog />
+      </div>
+
       <TableStructurePanel />
     </RoomPanel>
   );

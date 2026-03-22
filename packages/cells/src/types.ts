@@ -181,7 +181,7 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
 /** Sheet and Edge types */
-export const SheetType = z.enum(['notebook', 'canvas', 'app']);
+export const SheetType = z.enum(['notebook', 'canvas', 'app', 'dashboard']);
 export type SheetType = z.infer<typeof SheetType>;
 
 export const EdgeKind = z.enum(['dependency', 'manual']);
@@ -349,6 +349,8 @@ export type CellsSliceState = {
       sourceCellId: string,
     ) => Promise<void>;
   };
+  // Slice lifecycle
+  initialize?: () => Promise<void>;
 };
 
 export type CellsRootState = BaseRoomStoreState &
