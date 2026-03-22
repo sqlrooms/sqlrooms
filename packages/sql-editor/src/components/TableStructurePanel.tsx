@@ -1,5 +1,5 @@
 import {TableSchemaTree} from '@sqlrooms/schema-tree';
-import {cn, ScrollArea, ScrollBar, SpinnerPane} from '@sqlrooms/ui';
+import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import React, {useMemo} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
@@ -30,10 +30,6 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
     return schemaTrees?.filter((tree) => tree.object.name === schema);
   }, [schema, schemaTrees]);
 
-  const isRefreshing = useStoreWithSqlEditor(
-    (s) => s.db.isRefreshingTableSchemas,
-  );
-
   return (
     <ScrollArea
       className={cn(
@@ -41,11 +37,15 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
         className,
       )}
     >
+      <div className="flex items-center justify-between pb-2">
+        <h2 className="text-muted-foreground text-xs font-medium uppercase">
+          Schema Explorer
+        </h2>
+        <TableSchemaTree.RefreshButton />
+      </div>
+
       {filteredSchemaTrees && (
         <TableSchemaTree schemaTrees={filteredSchemaTrees} />
-      )}
-      {isRefreshing && (
-        <SpinnerPane className="bg-background/80 absolute inset-0 h-full" />
       )}
       <ScrollBar orientation="vertical" />
       <ScrollBar orientation="horizontal" />
