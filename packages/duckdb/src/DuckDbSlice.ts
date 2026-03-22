@@ -304,6 +304,7 @@ export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   let refreshPromise: Promise<DataTable[]> | null = null;
+  let pendingSchemaRefresh = false;
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
       return {
@@ -713,6 +714,7 @@ export function createDuckDbSlice({
 
           async refreshTableSchemas(): Promise<DataTable[]> {
             if (refreshPromise) {
+              pendingSchemaRefresh = true;
               return refreshPromise;
             }
             set((state) =>
@@ -722,20 +724,25 @@ export function createDuckDbSlice({
             );
             refreshPromise = (async () => {
               try {
-                const connector = await get().db.getConnector();
-                const result = await connector.query(
-                  `SELECT current_schema() AS schema, current_database() AS database`,
-                );
-                set((state) =>
-                  produce(state, (draft) => {
-                    draft.db.currentSchema = result.getChild('schema')?.get(0);
-                    draft.db.currentDatabase = result
-                      .getChild('database')
-                      ?.get(0);
-                  }),
-                );
-                const newTables = await get().db.loadTableSchemas();
-                // Only update if there's an actual change in the schemas
+                let newTables: DataTable[];
+                do {
+                  pendingSchemaRefresh = false;
+                  const connector = await get().db.getConnector();
+                  const result = await connector.query(
+                    `SELECT current_schema() AS schema, current_database() AS database`,
+                  );
+                  set((state) =>
+                    produce(state, (draft) => {
+                      draft.db.currentSchema = result
+                        .getChild('schema')
+                        ?.get(0);
+                      draft.db.currentDatabase = result
+                        .getChild('database')
+                        ?.get(0);
+                    }),
+                  );
+                  newTables = await get().db.loadTableSchemas();
+                } while (pendingSchemaRefresh);
                 if (!deepEquals(newTables, get().db.tables)) {
                   set((state) =>
                     produce(state, (draft) => {

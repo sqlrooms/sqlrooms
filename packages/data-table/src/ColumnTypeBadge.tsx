@@ -1,5 +1,11 @@
 import {ColumnTypeCategory} from '@sqlrooms/duckdb';
-import {Tooltip, TooltipContent, TooltipTrigger, cn} from '@sqlrooms/ui';
+import {
+  CopyButton,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  cn,
+} from '@sqlrooms/ui';
 import {FC} from 'react';
 
 /**∏
@@ -11,7 +17,7 @@ export const ColumnTypeBadge: FC<{
   typeCategory?: ColumnTypeCategory;
 }> = ({className, columnType, typeCategory}) => {
   const label = String(columnType);
-  const shouldShowTooltip = label.length > 10;
+  const shouldShowPopover = label.length > 10;
 
   const badge = (
     <div
@@ -44,14 +50,20 @@ export const ColumnTypeBadge: FC<{
     </div>
   );
 
-  if (!shouldShowTooltip) {
+  if (!shouldShowPopover) {
     return badge;
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{badge}</TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
+    <Popover>
+      <PopoverTrigger asChild>{badge}</PopoverTrigger>
+      <PopoverContent className="wrap-break-words relative max-w-[200px] font-mono text-xs whitespace-pre-wrap">
+        <CopyButton
+          text={label}
+          className="bg-background absolute top-2 right-2 mr-2"
+        />
+        {label}
+      </PopoverContent>
+    </Popover>
   );
 };

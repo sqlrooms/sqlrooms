@@ -325,6 +325,12 @@ export function createKeplerSlice({
     ...applicationConfig,
   });
   let syncKeplerPromise: Promise<void> | null = null;
+  // When a caller arrives while a sync is already in-flight, the in-flight run
+  // may have captured a stale snapshot of db.tables/kepler.map (missing maps or
+  // tables added by createMap, duplicateMap, etc.). Setting this flag tells the
+  // active run to loop once more with a fresh snapshot after it finishes, so
+  // late mutations are never silently dropped.
+  let pendingKeplerSync = false;
   const updateMapLastOpenedAt = (
     maps: KeplerSliceConfig['maps'],
     mapId: string,
@@ -588,27 +594,31 @@ export function createKeplerSlice({
 
         async syncKeplerDatasets() {
           if (syncKeplerPromise) {
+            pendingKeplerSync = true;
             return syncKeplerPromise;
           }
           syncKeplerPromise = (async () => {
-            for (const mapId of Object.keys(get().kepler.map)) {
-              const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
-              for (const {table} of get().db.tables) {
-                // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
-                // const qualifiedTable = table.toString();
-                if (
-                  // !table.schema?.startsWith('__') && // skip internal schemas
-                  // !keplerDatasets?.[qualifiedTable]
-                  table.schema === 'main' &&
-                  !keplerDatasets?.[table.table]
-                ) {
-                  await get().kepler.addTableToMap(mapId, table.table, {
-                    autoCreateLayers: false,
-                    centerMap: false,
-                  });
+            // Loop until no new sync was requested during the current pass.
+            // Each iteration reads a fresh snapshot of db.tables and kepler.map,
+            // so tables/maps added concurrently are picked up on the next pass.
+            do {
+              pendingKeplerSync = false;
+              for (const mapId of Object.keys(get().kepler.map)) {
+                const keplerDatasets =
+                  get().kepler.map[mapId]?.visState.datasets;
+                for (const {table} of get().db.tables) {
+                  if (
+                    table.schema === 'main' &&
+                    !keplerDatasets?.[table.table]
+                  ) {
+                    await get().kepler.addTableToMap(mapId, table.table, {
+                      autoCreateLayers: false,
+                      centerMap: false,
+                    });
+                  }
                 }
               }
-            }
+            } while (pendingKeplerSync);
           })();
           try {
             await syncKeplerPromise;

@@ -317,9 +317,6 @@ export function createRoomShellSlice(
             if (isRoomSliceWithInitialize(state)) {
               await state.initialize();
             }
-          } catch (error) {
-            captureException(error);
-            throw error;
           } finally {
             setTaskProgress(INIT_ROOM_TASK, undefined);
           }
