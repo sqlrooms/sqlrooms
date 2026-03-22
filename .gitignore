@@ -28,3 +28,6 @@ docs/.vitepress/cache
 .worktrees/
 
 .venv/
+
+packages/*/CHANGELOG.md
+examples/*/CHANGELOG.md
