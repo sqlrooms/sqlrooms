@@ -28,13 +28,13 @@ def test_load_connector_config_toml(tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         """
-[[connectors]]
+[[db.connectors]]
 id = "pg-local"
 engine = "postgres"
 dsn = "postgresql://u:p@localhost:5432/db"
 title = "Local Postgres"
 
-[[connectors]]
+[[db.connectors]]
 id = "sf-local"
 engine = "snowflake"
 account = "demo-account"
@@ -94,12 +94,12 @@ def test_load_connector_config_rejects_duplicate_ids(tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         """
-[[connectors]]
+[[db.connectors]]
 id = "dup"
 engine = "postgres"
 dsn = "postgresql://u:p@localhost:5432/db"
 
-[[connectors]]
+[[db.connectors]]
 id = "dup"
 engine = "snowflake"
 account = "demo-account"
@@ -139,7 +139,7 @@ models = ["gpt-5"]
 
 def test_resolve_config_path_prefers_explicit(tmp_path):
     explicit = tmp_path / "explicit.toml"
-    explicit.write_text("[connectors]\n", encoding="utf-8")
+    explicit.write_text("[db.connectors]\n", encoding="utf-8")
     resolved = _resolve_config_path(str(explicit), no_config=False)
     assert resolved == explicit
 

@@ -70,13 +70,13 @@ base_url = "https://api.anthropic.com"
 api_key_env = "ANTHROPIC_API_KEY"
 models = ["claude-4-sonnet"]
 
-[[connectors]]
+[[db.connectors]]
 id = "postgres-local"
 engine = "postgres"
 title = "Postgres Local"
 dsn = "postgresql://postgres:postgres@localhost:5432/postgres"
 
-[[connectors]]
+[[db.connectors]]
 id = "snowflake-prod"
 engine = "snowflake"
 title = "Snowflake Prod"
@@ -89,7 +89,7 @@ schema = "your-schema"
 role = "your-role"
 authenticator = "externalbrowser"
 
-[[connectors]]
+[[db.connectors]]
 id = "snowflake-dev"
 engine = "snowflake"
 title = "Snowflake Dev"
@@ -150,7 +150,7 @@ What this enables:
 
 Notes:
 
-- Configure connectors in `sqlrooms.toml` using `[[connectors]]` entries.
+- Configure connectors in `sqlrooms.toml` using `[[db.connectors]]` entries.
 - Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
 
 ## Developer setup

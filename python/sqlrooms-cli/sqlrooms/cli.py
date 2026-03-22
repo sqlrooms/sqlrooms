@@ -84,9 +84,12 @@ def _load_connector_config(
     if path is None:
         return []
     raw = _read_toml(path)
-    connectors = raw.get("connectors") or []
+    db = raw.get("db")
+    if not isinstance(db, dict):
+        db = {}
+    connectors = db.get("connectors") or []
     if not isinstance(connectors, list):
-        raise RuntimeError("'connectors' must be an array in SQLRooms config.")
+        raise RuntimeError("'db.connectors' must be an array in SQLRooms config.")
 
     out: list[PostgresConnectorSettings | SnowflakeConnectorSettings] = []
     seen_ids: set[str] = set()
