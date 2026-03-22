@@ -30,7 +30,7 @@ What happens:
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
-- `--config`: Optional path to a SQLRooms TOML config file for connectors.
+- `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 
 ## Data persistence
@@ -44,21 +44,14 @@ Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/confi
 
 ## Config file
 
-`sqlrooms` can read AI provider and connector settings from a local TOML file:
+`sqlrooms` reads AI provider and connector settings from a TOML config file:
 
-- macOS/Linux: `$XDG_CONFIG_HOME/sqlrooms/sqlrooms.toml` (or `~/.config/sqlrooms/sqlrooms.toml`)
-- Windows: `%APPDATA%\sqlrooms\sqlrooms.toml`
-- Legacy fallback: `~/.sqlrooms/sqlrooms.toml`
-- Optional local override in current working directory:
-  - `./sqlrooms.toml`
+- macOS / Linux: `~/.config/sqlrooms/config.toml`
+- Windows: `%APPDATA%\sqlrooms\config.toml`
 
-Load order and precedence:
+Override with `--config <path>`, or disable with `--no-config`.
 
-- Default mode: global config, then local override file (local wins on conflicts).
-- `--config`: use only that file.
-- `--no-config`: disable all config loading.
-
-Example `sqlrooms.toml`:
+Example config file:
 
 ```toml
 [ai]
@@ -77,13 +70,13 @@ base_url = "https://api.anthropic.com"
 api_key_env = "ANTHROPIC_API_KEY"
 models = ["claude-4-sonnet"]
 
-[[connectors]]
+[[db.connectors]]
 id = "postgres-local"
 engine = "postgres"
 title = "Postgres Local"
 dsn = "postgresql://postgres:postgres@localhost:5432/postgres"
 
-[[connectors]]
+[[db.connectors]]
 id = "snowflake-prod"
 engine = "snowflake"
 title = "Snowflake Prod"
@@ -96,7 +89,7 @@ schema = "your-schema"
 role = "your-role"
 authenticator = "externalbrowser"
 
-[[connectors]]
+[[db.connectors]]
 id = "snowflake-dev"
 engine = "snowflake"
 title = "Snowflake Dev"
@@ -157,7 +150,7 @@ What this enables:
 
 Notes:
 
-- Configure connectors in `sqlrooms.toml` using `[[connectors]]` entries.
+- Configure connectors in `sqlrooms.toml` using `[[db.connectors]]` entries.
 - Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
 
 ## Developer setup

@@ -5,6 +5,7 @@ import {toast} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {RoomPanelTypes} from '../layout';
 import {useRoomStore} from '../store';
+import {ConnectorDriversDialog} from './ConnectorDriversDialog';
 
 export const DataSourcesPanel = () => {
   const connector = useRoomStore((state) => state.db.connector);
@@ -43,6 +44,10 @@ export const DataSourcesPanel = () => {
           Files stay on your machine and are loaded into DuckDB locally.
         </div>
       </FileDropzone>
+      <div className="flex items-center justify-end px-2 pt-1">
+        <ConnectorDriversDialog />
+      </div>
+
       <TableStructurePanel />
     </RoomPanel>
   );

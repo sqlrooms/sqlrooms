@@ -422,7 +422,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   Name
                 </Label>
                 <div className="relative flex-1">
-                  <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Cpu className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="custom-name"
                     value={customName}
@@ -438,7 +438,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   baseUrl
                 </Label>
                 <div className="relative flex-1">
-                  <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="custom-baseUrl"
                     value={customBaseUrl}
@@ -459,7 +459,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   API key
                 </Label>
                 <div className="relative flex-1">
-                  <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="custom-apiKey"
                     type="password"
@@ -510,7 +510,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                 Model Name
               </Label>
               <div className="relative flex-1">
-                <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Cpu className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-model-name"
                   value={newModelName}
@@ -562,7 +562,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   Name
                 </Label>
                 <div className="relative flex-1">
-                  <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Cpu className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="edit-model-name"
                     value={editingModel?.modelName || ''}
@@ -582,7 +582,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   baseUrl
                 </Label>
                 <div className="relative flex-1">
-                  <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="edit-model-baseUrl"
                     value={editingModel?.baseUrl || ''}
@@ -605,7 +605,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   API key
                 </Label>
                 <div className="relative flex-1">
-                  <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="edit-model-apiKey"
                     type="password"
