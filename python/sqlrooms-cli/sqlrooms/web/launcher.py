@@ -23,6 +23,7 @@ from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
 from .db_bridge import (
+    SUPPORTED_ENGINES,
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
@@ -289,6 +290,7 @@ class SqlroomsHttpServer:
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
                 "diagnostics": self.db_bridge_registry.runtime_diagnostics(),
+                "supportedEngines": SUPPORTED_ENGINES,
             },
         }
 
@@ -325,7 +327,11 @@ class SqlroomsHttpServer:
         async def get_db_settings():
             connections = self.db_bridge_registry.runtime_connections()
             diagnostics = self.db_bridge_registry.runtime_diagnostics()
-            return {"connections": connections, "diagnostics": diagnostics}
+            return {
+                "connections": connections,
+                "diagnostics": diagnostics,
+                "supportedEngines": SUPPORTED_ENGINES,
+            }
 
         @app.put("/api/db/settings")
         async def put_db_settings(payload: Dict[str, Any]):

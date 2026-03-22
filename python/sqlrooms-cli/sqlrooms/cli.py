@@ -13,7 +13,7 @@ from typing import Any
 import duckdb
 import typer
 
-from .web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
+from .web.db_bridge import SUPPORTED_ENGINES, PostgresConnectorSettings, SnowflakeConnectorSettings
 from .web.launcher import SqlroomsHttpServer
 
 logging.basicConfig(
@@ -97,7 +97,7 @@ def _load_connector_config(
         if not isinstance(item, dict):
             raise RuntimeError(f"Connector entry at index {idx} must be an object.")
         engine = _normalize_config_string(item.get("engine"))
-        if engine not in {"postgres", "snowflake"}:
+        if engine not in SUPPORTED_ENGINES:
             raise RuntimeError(
                 f"Connector entry at index {idx} has unsupported engine: {engine!r}"
             )

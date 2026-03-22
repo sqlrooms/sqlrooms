@@ -30,5 +30,6 @@ export type ConnectorDriverDiagnostic = z.infer<
 export const DbSettingsSliceConfig = z.object({
   connections: z.array(DbConnection).default([]),
   diagnostics: z.array(ConnectorDriverDiagnostic).default([]),
+  supportedEngines: z.array(z.string()).default([]),
 });
 export type DbSettingsSliceConfig = z.infer<typeof DbSettingsSliceConfig>;

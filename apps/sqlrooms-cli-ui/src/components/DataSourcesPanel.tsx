@@ -1,4 +1,4 @@
-import {ConnectorDriversDiagnostics} from '@sqlrooms/db-settings';
+import {DbSettingsDialog} from '@sqlrooms/db-settings';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
@@ -45,7 +45,7 @@ export const DataSourcesPanel = () => {
         </div>
       </FileDropzone>
       <div className="flex items-center justify-end px-2 pt-1">
-        <ConnectorDriversDiagnostics />
+        <DbSettingsDialog />
       </div>
 
       <TableStructurePanel />

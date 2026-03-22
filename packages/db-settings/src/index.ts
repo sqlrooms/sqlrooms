@@ -19,6 +19,7 @@ export {
 export type {DbSettingsSliceState} from './DbSettingsSlice';
 
 export {DbSettingsPanel} from './components/DbSettingsPanel';
+export {DbSettingsDialog} from './components/DbSettingsDialog';
 export {ConnectorDriversDiagnostics} from './components/ConnectorDriversDiagnostics';
 export {DbConnectionsList} from './components/DbConnectionsList';
 export {DbConnectionForm} from './components/DbConnectionForm';

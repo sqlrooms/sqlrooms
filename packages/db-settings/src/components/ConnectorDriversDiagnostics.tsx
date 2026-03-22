@@ -66,6 +66,60 @@ function DriverInstallCommands({
   );
 }
 
+function DiagnosticsHint() {
+  const diagnostics = useStoreWithDbSettings(
+    (s) => s.dbSettings.config.diagnostics,
+  );
+  const supportedEngines = useStoreWithDbSettings(
+    (s) => s.dbSettings.config.supportedEngines,
+  );
+  const hasMissing = diagnostics.some((d) => !d.available);
+
+  const engineList =
+    supportedEngines.length > 0 ? (
+      supportedEngines.map((e, i) => (
+        <span key={e}>
+          {i > 0 && ', '}
+          <strong>{e}</strong>
+        </span>
+      ))
+    ) : (
+      <em>none reported</em>
+    );
+
+  return (
+    <div className="text-muted-foreground rounded border border-dashed p-3 text-xs leading-relaxed">
+      {diagnostics.length === 0 ? (
+        <p>
+          No connector drivers detected. Add a connection in the{' '}
+          <strong>Connections</strong> tab and restart sqlrooms to see driver
+          status here.
+        </p>
+      ) : hasMissing ? (
+        <>
+          <p>
+            To install a missing driver, copy one of the commands shown above,
+            run it in your terminal, then restart sqlrooms.
+          </p>
+          <p className="mt-2">
+            If you launched via{' '}
+            <code className="bg-muted rounded px-1">uvx</code>, use the{' '}
+            <code className="bg-muted rounded px-1">uvx --from</code> or{' '}
+            <code className="bg-muted rounded px-1">uvx --with</code> variant to
+            include the driver package in the ephemeral environment.
+          </p>
+        </>
+      ) : (
+        <p>
+          All configured drivers are installed. Supported engines: {engineList}.
+          Support for additional engines requires adding a connector plugin to
+          the sqlrooms-cli backend.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function DiagnosticsList() {
   const diagnostics = useStoreWithDbSettings(
     (s) => s.dbSettings.config.diagnostics,
@@ -79,11 +133,7 @@ function DiagnosticsList() {
   );
 
   if (!diagnostics.length) {
-    return (
-      <div className="text-muted-foreground py-4 text-center text-sm">
-        No connector drivers configured.
-      </div>
-    );
+    return <DiagnosticsHint />;
   }
 
   return (
@@ -128,6 +178,7 @@ function DiagnosticsList() {
           ) : null}
         </div>
       ))}
+      <DiagnosticsHint />
     </div>
   );
 }
@@ -220,5 +271,6 @@ export const ConnectorDriversDiagnostics = Object.assign(
     Dialog: DiagnosticsDialog,
     List: DiagnosticsList,
     Summary: DiagnosticsSummary,
+    Hint: DiagnosticsHint,
   },
 );

@@ -39,6 +39,7 @@ export type RuntimeConfig = {
         uvxWith?: string;
       };
     }>;
+    supportedEngines?: string[];
   };
 };
 

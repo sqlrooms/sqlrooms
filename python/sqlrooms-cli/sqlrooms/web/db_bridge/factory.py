@@ -8,6 +8,8 @@ from .connectors import (
 )
 from .registry import DbBridgeRegistry
 
+SUPPORTED_ENGINES: list[str] = ["postgres", "snowflake"]
+
 
 def build_cli_db_bridge_registry(
     *,

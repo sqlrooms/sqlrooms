@@ -335,6 +335,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             ),
             diagnostics: runtimeConfig.dbBridge?.diagnostics ?? [],
+            supportedEngines: runtimeConfig.dbBridge?.supportedEngines ?? [],
           },
         })(set, get, store),
 

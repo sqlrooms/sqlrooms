@@ -9,20 +9,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {PlusIcon} from 'lucide-react';
+import {CheckIcon, PlusIcon, XIcon} from 'lucide-react';
 import React from 'react';
 import {useStoreWithDbSettings} from '../DbSettingsSlice';
 
-const SUPPORTED_ENGINES = ['postgres', 'snowflake'] as const;
+export type DbConnectionFormProps = {
+  editing?: DbConnection;
+  onDone?: () => void;
+};
 
-export function DbConnectionForm({onSaved}: {onSaved?: () => void}) {
+export function DbConnectionForm({editing, onDone}: DbConnectionFormProps) {
   const upsertConnection = useStoreWithDbSettings(
     (s) => s.dbSettings.upsertConnection,
   );
-  const [engineId, setEngineId] = React.useState<string>('postgres');
-  const [connectionId, setConnectionId] = React.useState('');
-  const [title, setTitle] = React.useState('');
-  const [bridgeId, setBridgeId] = React.useState('');
+  const supportedEngines = useStoreWithDbSettings(
+    (s) => s.dbSettings.config.supportedEngines,
+  );
+  const [engineId, setEngineId] = React.useState<string>(
+    editing?.engineId ?? supportedEngines[0] ?? '',
+  );
+  const [connectionId, setConnectionId] = React.useState(editing?.id ?? '');
+  const [title, setTitle] = React.useState(editing?.title ?? '');
+  const [bridgeId, setBridgeId] = React.useState(editing?.bridgeId ?? '');
+
+  React.useEffect(() => {
+    if (editing) {
+      setEngineId(editing.engineId);
+      setConnectionId(editing.id);
+      setTitle(editing.title);
+      setBridgeId(editing.bridgeId ?? '');
+    }
+  }, [editing]);
+
+  const reset = () => {
+    setEngineId(supportedEngines[0] ?? '');
+    setConnectionId('');
+    setTitle('');
+    setBridgeId('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,22 +56,22 @@ export function DbConnectionForm({onSaved}: {onSaved?: () => void}) {
       id: connectionId.trim(),
       engineId: engineId.trim(),
       title: title.trim() || connectionId.trim(),
-      runtimeSupport: 'server',
-      requiresBridge: true,
+      runtimeSupport: editing?.runtimeSupport ?? 'server',
+      requiresBridge: editing?.requiresBridge ?? true,
       bridgeId: bridgeId.trim() || undefined,
       isCore: false,
     });
     upsertConnection(connection);
 
-    setConnectionId('');
-    setTitle('');
-    setBridgeId('');
-    onSaved?.();
+    if (!editing) reset();
+    onDone?.();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded border p-3">
-      <div className="text-sm font-medium">Add Connection</div>
+      <div className="text-sm font-medium">
+        {editing ? 'Edit Connection' : 'Add Connection'}
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor="db-conn-engine" className="text-xs">
@@ -58,7 +82,7 @@ export function DbConnectionForm({onSaved}: {onSaved?: () => void}) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SUPPORTED_ENGINES.map((eng) => (
+              {supportedEngines.map((eng) => (
                 <SelectItem key={eng} value={eng}>
                   {eng}
                 </SelectItem>
@@ -76,6 +100,7 @@ export function DbConnectionForm({onSaved}: {onSaved?: () => void}) {
             onChange={(e) => setConnectionId(e.target.value)}
             placeholder="my-postgres"
             required
+            disabled={!!editing}
           />
         </div>
         <div className="space-y-1">
@@ -101,10 +126,27 @@ export function DbConnectionForm({onSaved}: {onSaved?: () => void}) {
           />
         </div>
       </div>
-      <Button type="submit" size="sm" disabled={!connectionId.trim()}>
-        <PlusIcon className="mr-1 h-3.5 w-3.5" />
-        Add
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={!connectionId.trim()}>
+          {editing ? (
+            <>
+              <CheckIcon className="mr-1 h-3.5 w-3.5" />
+              Save
+            </>
+          ) : (
+            <>
+              <PlusIcon className="mr-1 h-3.5 w-3.5" />
+              Add
+            </>
+          )}
+        </Button>
+        {editing && onDone && (
+          <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+            <XIcon className="mr-1 h-3.5 w-3.5" />
+            Cancel
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
