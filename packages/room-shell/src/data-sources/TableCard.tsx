@@ -43,7 +43,7 @@ const TableCard: FC<{
       <div className="mt-0 flex w-full flex-col gap-2 px-2">
         <div className="w-full overflow-auto">
           <div className="relative mb-2 flex h-[30px] cursor-pointer flex-row items-center gap-1 overflow-hidden">
-            <div className="text-foreground mb-1 flex-1 overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold">
+            <div className="text-foreground mb-1 flex-1 overflow-hidden py-1 font-mono text-sm font-bold text-ellipsis whitespace-nowrap">
               {value.tableName}
             </div>
             {menuRenderer ? (
@@ -72,7 +72,7 @@ const TableCard: FC<{
                   <div className="hover:bg-foreground/10 flex items-center gap-3 rounded-sm font-mono">
                     <Badge
                       variant="secondary"
-                      className="text-muted-foreground w-[70px] overflow-hidden whitespace-nowrap px-1 py-0 text-xs"
+                      className="text-muted-foreground w-[70px] overflow-hidden px-1 py-0 text-xs whitespace-nowrap"
                     >
                       {row.type}
                     </Badge>

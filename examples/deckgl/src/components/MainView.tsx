@@ -40,7 +40,7 @@ export const MainView: React.FC = () => {
       <MapView features={features} />
       {isLoading ? <SpinnerPane className="h-full w-full" /> : null}
       {error ? (
-        <div className="absolute left-5 top-5 whitespace-pre-wrap font-mono text-xs text-red-500">
+        <div className="absolute top-5 left-5 font-mono text-xs whitespace-pre-wrap text-red-500">
           Error: {error.message}
         </div>
       ) : null}

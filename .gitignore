@@ -26,3 +26,5 @@ docs/.vitepress/cache
 .cursor/plans/
 
 .worktrees/
+
+.venv/

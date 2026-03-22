@@ -140,7 +140,7 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
                     backoff = _calculate_backoff(attempts)
                     logger.warning(
                         f"Transaction conflict detected (attempt {attempts + 1}/{MAX_CONFLICT_RETRIES}); "
-                        f"retrying in {backoff*1000:.1f}ms. Error: {e}"
+                        f"retrying in {backoff * 1000:.1f}ms. Error: {e}"
                     )
                     attempts += 1
                     time.sleep(backoff)

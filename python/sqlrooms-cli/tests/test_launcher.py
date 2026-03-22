@@ -16,6 +16,7 @@ def server(tmp_path):
         open_browser=False,
     )
 
+
 def test_api_config(server):
     app = server._build_app()
     client = TestClient(app)
@@ -176,4 +177,3 @@ def test_api_config_with_multiple_same_engine_connectors(tmp_path):
     assert response.status_code == 200
     data = response.json()
     assert [c["id"] for c in data["dbBridge"]["connections"]] == ["pg-a", "pg-b"]
-

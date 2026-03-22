@@ -156,4 +156,3 @@ class SnowflakeBridgeConnector(BaseSqlBridgeConnector):
                     ]
 
         return {"databases": databases, "schemas": schemas, "tables": tables}
-
