@@ -85,15 +85,27 @@ export async function queryToArrowTable<T extends arrow.TypeMap = any>(
     return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
   }
 
-  // Build column name -> array mapping, converting BigInts for Arrow compatibility
-  const columnsObject: Record<string, unknown[]> = {};
+  // Build column name -> Vector mapping, converting BigInts for Arrow compatibility.
+  // Handles special cases where Arrow can't infer types automatically:
+  //  - All-null columns: use explicit Utf8 type
+  //  - Nested arrays (DuckDB LIST columns): use List<Utf8> type
+  const listOfUtf8 = new arrow.List(new arrow.Field('item', new arrow.Utf8()));
+  const vecs: Record<string, arrow.Vector> = {};
   for (let i = 0; i < columnNames.length; i++) {
     const name = columnNames[i] as string;
     const columnData = columns[i] ?? [];
-    columnsObject[name] = (columnData as unknown[]).map((v) =>
+    const mapped = (columnData as unknown[]).map((v) =>
       typeof v === 'bigint' ? convertBigInt(v) : v,
     );
+    const firstNonNull = mapped.find((v) => v !== null && v !== undefined);
+    if (firstNonNull === undefined) {
+      vecs[name] = arrow.vectorFromArray(mapped, new arrow.Utf8());
+    } else if (Array.isArray(firstNonNull)) {
+      vecs[name] = arrow.vectorFromArray(mapped, listOfUtf8);
+    } else {
+      vecs[name] = arrow.vectorFromArray(mapped);
+    }
   }
 
-  return arrow.tableFromArrays(columnsObject) as unknown as arrow.Table<T>;
+  return new arrow.Table(vecs) as unknown as arrow.Table<T>;
 }

@@ -347,6 +347,17 @@ export function createDuckDbSlice({
 
           destroy: async () => {
             unregisterCommandsForOwner(store, DUCKDB_COMMAND_OWNER);
+            // Wait for any in-flight refreshTableSchemas() to finish before
+            // destroying the connector. initialize() fires it without await,
+            // so it may still be querying the native DuckDB instance; tearing
+            // that down mid-flight causes a use-after-free segfault.
+            if (refreshPromise) {
+              try {
+                await refreshPromise;
+              } catch {
+                // ignore – we're shutting down
+              }
+            }
             try {
               if (get().db.connector) {
                 await get().db.connector.destroy();
