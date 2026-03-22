@@ -42,7 +42,12 @@ export const DataSourcesPanel = () => {
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
-      <SchemaExplorer />
+      <SchemaExplorer>
+        <SchemaExplorer.Header>
+          <SchemaExplorer.RefreshButton />
+        </SchemaExplorer.Header>
+        <SchemaExplorer.Tree className="h-full" />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

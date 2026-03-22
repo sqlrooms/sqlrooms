@@ -5,7 +5,12 @@ import {RoomPanelTypes} from './store';
 export const DataPanel = () => {
   return (
     <RoomPanel type={RoomPanelTypes.enum['data']}>
-      <SchemaExplorer />
+      <SchemaExplorer>
+        <SchemaExplorer.Header>
+          <SchemaExplorer.RefreshButton />
+        </SchemaExplorer.Header>
+        <SchemaExplorer.Tree className="h-full" />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

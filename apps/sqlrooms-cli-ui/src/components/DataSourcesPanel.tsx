@@ -45,9 +45,16 @@ export const DataSourcesPanel = () => {
         </div>
       </FileDropzone>
 
-      <SchemaExplorer>
-        <DbSettingsDialog />
-      </SchemaExplorer>
+      <DbSettingsDialog>
+        <SchemaExplorer>
+          <SchemaExplorer.Header>
+            <DbSettingsDialog.Button />
+            <SchemaExplorer.RefreshButton />
+          </SchemaExplorer.Header>
+          <SchemaExplorer.Tree className="h-full" />
+        </SchemaExplorer>
+        <DbSettingsDialog.Content />
+      </DbSettingsDialog>
     </RoomPanel>
   );
 };
