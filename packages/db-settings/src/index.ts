@@ -18,8 +18,8 @@ export {
 } from './DbSettingsSlice';
 export type {DbSettingsSliceState} from './DbSettingsSlice';
 
-export {DbSettingsPanel} from './components/DbSettingsPanel';
-export {DbSettingsDialog} from './components/DbSettingsDialog';
+export {DbSettings} from './components/DbSettings';
 export {ConnectorDriversDiagnostics} from './components/ConnectorDriversDiagnostics';
 export {DbConnectionsList} from './components/DbConnectionsList';
 export {DbConnectionForm} from './components/DbConnectionForm';
+export type {DbConnectionFormProps} from './components/DbConnectionForm';

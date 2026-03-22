@@ -1,8 +1,19 @@
-import {DbSettingsDialog} from '@sqlrooms/db-settings';
+import {DbSettings} from '@sqlrooms/db-settings';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
-import {toast} from '@sqlrooms/ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  toast,
+} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {RoomPanelTypes} from '../layout';
 import {useRoomStore} from '../store';
@@ -45,16 +56,52 @@ export const DataSourcesPanel = () => {
         </div>
       </FileDropzone>
 
-      <DbSettingsDialog>
+      <Dialog>
         <SchemaExplorer>
           <SchemaExplorer.Header>
-            <DbSettingsDialog.Button />
+            <DialogTrigger asChild>
+              <DbSettings.TriggerButton />
+            </DialogTrigger>
             <SchemaExplorer.RefreshButton />
           </SchemaExplorer.Header>
           <SchemaExplorer.Tree className="h-full" />
         </SchemaExplorer>
-        <DbSettingsDialog.Content />
-      </DbSettingsDialog>
+
+        <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col">
+          <DialogHeader>
+            <DialogTitle>Database Settings</DialogTitle>
+          </DialogHeader>
+          <Tabs
+            defaultValue="connections"
+            className="flex min-h-0 w-full flex-col"
+          >
+            <TabsList className="w-full shrink-0">
+              <TabsTrigger value="connections" className="flex-1">
+                Connections
+              </TabsTrigger>
+              <TabsTrigger value="drivers" className="flex-1">
+                <DbSettings.DriversTabLabel />
+              </TabsTrigger>
+            </TabsList>
+            <div className="mt-4 grid min-h-0 overflow-y-auto [&>*]:col-start-1 [&>*]:row-start-1">
+              <TabsContent
+                value="connections"
+                forceMount
+                className="space-y-4 data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible"
+              >
+                <DbSettings.Connections />
+              </TabsContent>
+              <TabsContent
+                value="drivers"
+                forceMount
+                className="data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible"
+              >
+                <DbSettings.Diagnostics />
+              </TabsContent>
+            </div>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </RoomPanel>
   );
 };

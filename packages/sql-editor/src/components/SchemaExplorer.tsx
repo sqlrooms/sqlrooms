@@ -3,14 +3,12 @@ import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
-export interface SchemaExplorerProps {
+export interface SchemaExplorerRootProps {
   className?: string;
   children?: React.ReactNode;
 }
 
-function SchemaExplorerRoot({className, children}: SchemaExplorerProps) {
-  const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
-
+function SchemaExplorerRoot({className, children}: SchemaExplorerRootProps) {
   return (
     <ScrollArea
       className={cn(
@@ -18,23 +16,45 @@ function SchemaExplorerRoot({className, children}: SchemaExplorerProps) {
         className,
       )}
     >
-      <div className="flex items-center justify-between pb-2">
-        <h2 className="text-muted-foreground text-xs font-medium uppercase">
-          Schema Explorer
-        </h2>
-        <div className="flex items-center gap-0.5">
-          {children}
-          <TableSchemaTree.RefreshButton />
-        </div>
-      </div>
-
-      <TableSchemaTree schemaTrees={schemaTrees} className="h-full" />
+      {children}
       <ScrollBar orientation="vertical" />
       <ScrollBar orientation="horizontal" />
     </ScrollArea>
   );
 }
 
+export interface SchemaExplorerHeaderProps {
+  title?: string;
+  children?: React.ReactNode;
+}
+
+function SchemaExplorerHeader({
+  title = 'Schema Explorer',
+  children,
+}: SchemaExplorerHeaderProps) {
+  return (
+    <div className="flex items-center justify-between pb-2">
+      <h2 className="text-muted-foreground text-xs font-medium uppercase">
+        {title}
+      </h2>
+      <div className="flex items-center gap-0.5">{children}</div>
+    </div>
+  );
+}
+
+export interface SchemaExplorerTreeProps {
+  className?: string;
+}
+
+function SchemaExplorerTree({className}: SchemaExplorerTreeProps) {
+  const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
+  return (
+    <TableSchemaTree schemaTrees={schemaTrees ?? []} className={className} />
+  );
+}
+
 export const SchemaExplorer = Object.assign(SchemaExplorerRoot, {
+  Header: SchemaExplorerHeader,
+  Tree: SchemaExplorerTree,
   RefreshButton: TableSchemaTree.RefreshButton,
 });
