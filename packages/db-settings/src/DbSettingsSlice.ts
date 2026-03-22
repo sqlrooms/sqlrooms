@@ -111,14 +111,13 @@ export function syncConnectionsToDb(store: {
     diagnostics.map((d) => [diagnosticsKey(d.id, d.engineId), d]),
   );
 
-  const existingIds = new Set(
-    state.db.connectors.listConnections().map((c) => c.id),
-  );
+  const existingConnections = state.db.connectors.listConnections();
   const desiredIds = new Set(connections.map((c) => c.id));
 
-  for (const id of existingIds) {
-    if (!desiredIds.has(id)) {
-      state.db.connectors.removeConnection(id);
+  for (const existing of existingConnections) {
+    if (existing.isCore) continue;
+    if (!desiredIds.has(existing.id)) {
+      state.db.connectors.removeConnection(existing.id);
     }
   }
 
