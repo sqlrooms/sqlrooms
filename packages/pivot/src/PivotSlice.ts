@@ -543,7 +543,7 @@ export function createPivotSlice(props?: {
             source: querySource,
             config: normalizedConfig,
             relationBaseName: `pivot_${pivotId}`,
-            schemaName: 'pivot',
+            schemaName: '__sqlrooms_pivot',
           });
           set((current) =>
             produce(current, (draft) => {
