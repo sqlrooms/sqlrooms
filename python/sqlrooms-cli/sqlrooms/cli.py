@@ -40,6 +40,8 @@ DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 
 
 def _normalize_config_string(value: Any) -> str | None:
+    if isinstance(value, (int, float)):
+        return str(value)
     if not isinstance(value, str):
         return None
     normalized = value.strip()
@@ -390,6 +392,12 @@ def main(
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
 
+    # config_path may be None when the file doesn't exist yet; for saving we
+    # still want a writable target unless the user explicitly opted out.
+    save_config_path = (
+        config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
+    )
+
     resolved_db_path = db_path if db_path is not None else db_path_option
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
@@ -411,7 +419,7 @@ def main(
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
-        config_path=config_path,
+        config_path=save_config_path,
     )
     try:
         asyncio.run(server.start())

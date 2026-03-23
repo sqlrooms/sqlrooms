@@ -5,6 +5,7 @@ from sqlrooms.cli import (
     DEFAULT_CONFIG_PATH,
     _load_ai_runtime_config,
     _load_connector_config,
+    _normalize_config_string,
     _resolve_config_path,
     app,
 )
@@ -170,6 +171,31 @@ def test_default_config_path():
     else:
         expected = Path.home() / ".config" / "sqlrooms" / "config.toml"
     assert DEFAULT_CONFIG_PATH == expected
+
+
+def test_normalize_config_string_coerces_int():
+    assert _normalize_config_string(5432) == "5432"
+    assert _normalize_config_string(0) == "0"
+    assert _normalize_config_string(3.14) == "3.14"
+
+
+def test_load_connector_config_int_port(tmp_path):
+    """tomllib parses bare ``port = 6543`` as int; ensure it's preserved."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[db.connectors]]
+id = "pg"
+engine = "postgres"
+host = "db.example.com"
+port = 6543
+database = "mydb"
+user = "admin"
+""".strip(),
+        encoding="utf-8",
+    )
+    data = _load_connector_config(config_path)
+    assert data[0].port == "6543"
 
 
 # Since the main function in cli.py starts an asyncio loop and a server,

@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from pathlib import Path
 
 
@@ -259,3 +260,50 @@ def test_api_config_redacts_secret_fields(tmp_path):
     assert response.status_code == 200
     conn = response.json()["dbBridge"]["connections"][0]
     assert "password" not in conn.get("config", {})
+
+
+def test_write_toml_engine_change_clears_stale_keys(tmp_path):
+    """Switching a connection from snowflake to postgres drops snowflake-only keys."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[db.connectors]]
+id = "c1"
+engine = "snowflake"
+title = "My Conn"
+account = "xy12345"
+user = "sf_user"
+warehouse = "WH"
+schema = "PUBLIC"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    _write_db_connectors_to_toml(
+        config_path,
+        [
+            {
+                "id": "c1",
+                "engineId": "postgres",
+                "title": "My Conn",
+                "config": {
+                    "host": "localhost",
+                    "port": "5432",
+                    "database": "mydb",
+                    "user": "pg_user",
+                },
+            }
+        ],
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    entry = doc["db"]["connectors"][0]
+    assert entry["engine"] == "postgres"
+    assert entry["host"] == "localhost"
+    assert entry["user"] == "pg_user"
+    assert "account" not in entry
+    assert "warehouse" not in entry
+    assert "schema" not in entry

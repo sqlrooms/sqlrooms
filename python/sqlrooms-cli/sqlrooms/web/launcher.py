@@ -74,10 +74,22 @@ def _write_db_connectors_to_toml(
         "config": None,
     }
 
+    from .db_bridge import ENGINE_CONFIG_FIELDS
+
+    all_engine_keys: set[str] = set()
+    engine_to_keys: dict[str, set[str]] = {}
+    for eng, fields in ENGINE_CONFIG_FIELDS.items():
+        keys = {f["key"] for f in fields}
+        engine_to_keys[eng] = keys
+        all_engine_keys |= keys
+
     connectors_aot = tomlkit.aot()
     for conn in connections:
         conn_id = conn.get("id")
         base = dict(existing_by_id.get(conn_id, {})) if conn_id else {}
+
+        old_engine = base.get("engine")
+        new_engine = conn.get("engineId") or old_engine
 
         for k, v in conn.items():
             if v is None:
@@ -86,6 +98,13 @@ def _write_db_connectors_to_toml(
             if toml_key is None:
                 continue
             base[toml_key] = v
+
+        if old_engine and new_engine and old_engine != new_engine:
+            stale_keys = engine_to_keys.get(old_engine, set()) - engine_to_keys.get(
+                new_engine, set()
+            )
+            for sk in stale_keys:
+                base.pop(sk, None)
 
         engine_config = conn.get("config")
         if isinstance(engine_config, dict):
