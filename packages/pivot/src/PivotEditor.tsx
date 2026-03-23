@@ -1,6 +1,8 @@
 import {
   DndContext,
   type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
   PointerSensor,
   closestCenter,
   useDroppable,
@@ -306,9 +308,16 @@ const PivotEditorDndProvider: React.FC<{
     cols: colFields.map((field) => field.name),
   };
 
+  const [activeDragField, setActiveDragField] = useState<string | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragField(String(event.active.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : '';
+    setActiveDragField(null);
     if (!overId) {
       return;
     }
@@ -344,9 +353,19 @@ const PivotEditorDndProvider: React.FC<{
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDragField(null)}
       >
         {children}
+        <DragOverlay dropAnimation={null}>
+          {activeDragField ? (
+            <div className="bg-background flex items-center gap-1 rounded-md border px-2 py-1 text-sm shadow-md">
+              <GripVerticalIcon className="text-muted-foreground h-4 w-4" />
+              <span className="truncate">{activeDragField}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
