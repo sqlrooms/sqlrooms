@@ -68,5 +68,3 @@ Build it from the repo root:
 ```bash
 pnpm --filter sqlrooms-cli-app build
 ```
-
-

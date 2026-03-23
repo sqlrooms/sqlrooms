@@ -67,7 +67,9 @@ import {Chat} from '@sqlrooms/ai';
 import {useRoomStore} from './store';
 
 function AiPanel() {
-  const updateProvider = useRoomStore((state) => state.aiSettings.updateProvider);
+  const updateProvider = useRoomStore(
+    (state) => state.aiSettings.updateProvider,
+  );
 
   return (
     <Chat>
@@ -93,7 +95,11 @@ function AiPanel() {
 
 ```tsx
 import {z} from 'zod';
-import {createAiSlice, createDefaultAiInstructions, createDefaultAiTools} from '@sqlrooms/ai';
+import {
+  createAiSlice,
+  createDefaultAiInstructions,
+  createDefaultAiTools,
+} from '@sqlrooms/ai';
 
 // inside createRoomStore(...):
 createAiSlice({

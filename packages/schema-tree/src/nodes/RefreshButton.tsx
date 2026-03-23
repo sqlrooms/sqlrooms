@@ -23,14 +23,14 @@ export const RefreshButton: FC<{
   );
 
   const [minSpinActive, setMinSpinActive] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spinning = isRefreshingTableSchemas || minSpinActive;
 
   const handleClick = useCallback(
     (evt: React.MouseEvent) => {
       evt.preventDefault();
       setMinSpinActive(true);
-      clearTimeout(timerRef.current);
+      if (timerRef.current != null) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setMinSpinActive(false), MIN_SPIN_MS);
       refreshTableSchemas();
     },
@@ -38,7 +38,9 @@ export const RefreshButton: FC<{
   );
 
   useEffect(() => {
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      if (timerRef.current != null) clearTimeout(timerRef.current);
+    };
   }, []);
 
   return (

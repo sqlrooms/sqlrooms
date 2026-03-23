@@ -75,7 +75,11 @@ export function DiscussionPanel() {
   const discussions = useRoomStore((state) => state.discuss.config.discussions);
 
   if (discussions.length === 0) {
-    return <div className="p-4 text-sm text-muted-foreground">No discussions yet.</div>;
+    return (
+      <div className="text-muted-foreground p-4 text-sm">
+        No discussions yet.
+      </div>
+    );
   }
 
   return (
@@ -83,10 +87,13 @@ export function DiscussionPanel() {
       className="flex flex-col gap-4"
       renderComment={(props) => (
         <CommentItem {...props}>
-          <div className="text-xs text-muted-foreground">
-            {props.comment.userId} • {formatTimeRelative(props.comment.timestamp)}
+          <div className="text-muted-foreground text-xs">
+            {props.comment.userId} •{' '}
+            {formatTimeRelative(props.comment.timestamp)}
           </div>
-          <div className="whitespace-pre-wrap text-sm">{props.comment.text}</div>
+          <div className="text-sm whitespace-pre-wrap">
+            {props.comment.text}
+          </div>
         </CommentItem>
       )}
     />

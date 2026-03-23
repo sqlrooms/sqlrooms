@@ -64,8 +64,7 @@ class PostgresBridgeConnector(BaseSqlBridgeConnector):
             "installCommands": {
                 "uvProject": "uv sync --extra postgres",
                 "uvxRelaunch": (
-                    'uvx --from "sqlrooms-cli[postgres]" sqlrooms '
-                    "--db-path :memory:"
+                    'uvx --from "sqlrooms-cli[postgres]" sqlrooms --db-path :memory:'
                 ),
                 "uvxWith": (
                     'uvx --from sqlrooms-cli --with "psycopg[binary]>=3.2.0" '
@@ -116,4 +115,3 @@ class PostgresBridgeConnector(BaseSqlBridgeConnector):
             "schemas": schemas,
             "tables": tables,
         }
-

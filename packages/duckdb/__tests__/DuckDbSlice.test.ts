@@ -233,14 +233,20 @@ describe('DuckDbSlice', () => {
     it('should drop an existing view', async () => {
       await store
         .getState()
-        .db.createTableFromQuery('view_to_drop', 'SELECT 1 as id', {view: true});
+        .db.createTableFromQuery('view_to_drop', 'SELECT 1 as id', {
+          view: true,
+        });
 
       const connector = await store.getState().db.getConnector();
-      await expect(connector.query('SELECT * FROM view_to_drop')).resolves.toBeTruthy();
+      await expect(
+        connector.query('SELECT * FROM view_to_drop'),
+      ).resolves.toBeTruthy();
 
       await store.getState().db.dropRelation('view_to_drop');
 
-      await expect(connector.query('SELECT * FROM view_to_drop')).rejects.toThrow();
+      await expect(
+        connector.query('SELECT * FROM view_to_drop'),
+      ).rejects.toThrow();
     });
   });
 

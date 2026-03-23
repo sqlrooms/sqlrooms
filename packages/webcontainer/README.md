@@ -43,7 +43,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           filesTree: {
             src: {
               directory: {
-                'App.jsx': {file: {contents: "export default function App() { return 'hello'; }"}},
+                'App.jsx': {
+                  file: {
+                    contents:
+                      "export default function App() { return 'hello'; }",
+                  },
+                },
               },
             },
             'package.json': {

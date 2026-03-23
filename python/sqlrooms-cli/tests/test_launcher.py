@@ -16,6 +16,7 @@ def server(tmp_path):
         open_browser=False,
     )
 
+
 def test_api_config(server):
     app = server._build_app()
     client = TestClient(app)
@@ -84,7 +85,9 @@ def test_api_config_with_postgres_connector(tmp_path):
         port=0,
         ws_port=None,
         open_browser=False,
-        connector_settings=[PostgresConnectorSettings(host="localhost", database="example", user="u")],
+        connector_settings=[
+            PostgresConnectorSettings(host="localhost", database="example", user="u")
+        ],
     )
     app = server._build_app()
     client = TestClient(app)
@@ -229,4 +232,3 @@ def test_api_test_connection_missing_params(server):
     data = response.json()
     assert data["ok"] is False
     assert "error" in data
-

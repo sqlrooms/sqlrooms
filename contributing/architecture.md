@@ -10,9 +10,13 @@ Everything is a **slice**: state + actions + lifecycle (`initialize`/`destroy`),
 ## Room
 
 Combine slices into a typed store:
+
 ```typescript
-export type RoomState = RoomShellSliceState & DuckDbSliceState & CustomSliceState;
-export const {roomStore, useRoomStore} = createRoomStore<RoomState>(stateCreator);
+export type RoomState = RoomShellSliceState &
+  DuckDbSliceState &
+  CustomSliceState;
+export const {roomStore, useRoomStore} =
+  createRoomStore<RoomState>(stateCreator);
 ```
 
 ## DuckDB

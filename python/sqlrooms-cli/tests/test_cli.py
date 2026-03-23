@@ -12,10 +12,12 @@ from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnector
 
 runner = CliRunner()
 
+
 def test_cli_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "Start the SQLRooms local experience" in result.stdout
+
 
 def test_cli_export_help():
     result = runner.invoke(app, ["export", "--help"])
@@ -159,8 +161,10 @@ def test_resolve_config_path_honors_no_config():
 
 def test_default_config_path():
     import sys
+
     if sys.platform.startswith("win"):
         import os
+
         expected = Path(os.environ.get("APPDATA", "")) / "sqlrooms" / "config.toml"
     else:
         expected = Path.home() / ".config" / "sqlrooms" / "config.toml"
