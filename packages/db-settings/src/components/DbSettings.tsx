@@ -1,5 +1,11 @@
-import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
-import {SettingsIcon} from 'lucide-react';
+import {
+  Button,
+  toast,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
+import {LoaderIcon, PlusIcon, SaveIcon, SettingsIcon} from 'lucide-react';
 import React from 'react';
 import {useStoreWithDbSettings} from '../DbSettingsSlice';
 import {ConnectorDriversDiagnostics} from './ConnectorDriversDiagnostics';
@@ -45,10 +51,23 @@ const DbSettingsTriggerButton = React.forwardRef<
 DbSettingsTriggerButton.displayName = 'DbSettings.TriggerButton';
 
 function DbSettingsConnections() {
+  const [showAddForm, setShowAddForm] = React.useState(false);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {showAddForm ? (
+        <DbConnectionForm onDone={() => setShowAddForm(false)} />
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAddForm(true)}
+        >
+          <PlusIcon className="mr-1 h-3.5 w-3.5" />
+          Add Connection
+        </Button>
+      )}
       <DbConnectionsList />
-      <DbConnectionForm />
     </div>
   );
 }
@@ -85,8 +104,38 @@ function DriversTabLabel() {
   );
 }
 
+function DbSettingsSaveButton({apiBaseUrl}: {apiBaseUrl?: string}) {
+  const saveToServer = useStoreWithDbSettings((s) => s.dbSettings.saveToServer);
+  const isSaving = useStoreWithDbSettings((s) => s.dbSettings.isSaving);
+
+  const handleSave = React.useCallback(async () => {
+    const ok = await saveToServer(apiBaseUrl);
+    if (ok) {
+      toast.success('Settings saved', {
+        description: 'Connection config written to sqlrooms.toml.',
+      });
+    } else {
+      toast.error('Failed to save', {
+        description: 'Check the console for details.',
+      });
+    }
+  }, [saveToServer, apiBaseUrl]);
+
+  return (
+    <Button size="sm" onClick={handleSave} disabled={isSaving}>
+      {isSaving ? (
+        <LoaderIcon className="mr-1 h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <SaveIcon className="mr-1 h-3.5 w-3.5" />
+      )}
+      {isSaving ? 'Saving…' : 'Save to config'}
+    </Button>
+  );
+}
+
 export const DbSettings = {
   TriggerButton: DbSettingsTriggerButton,
+  SaveButton: DbSettingsSaveButton,
   Connections: DbSettingsConnections,
   Diagnostics: DbSettingsDiagnostics,
   DriversTabLabel,

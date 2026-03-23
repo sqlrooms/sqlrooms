@@ -8,6 +8,7 @@ from sqlrooms.web.db_bridge import (
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
     build_cli_db_bridge_registry,
+    build_ephemeral_connector,
 )
 
 
@@ -37,6 +38,9 @@ class _FakeConnector:
 
     def dependency_diagnostics(self):
         return {"available": True}
+
+    def config_dict(self):
+        return {}
 
 
 def test_registry_routes_to_registered_connector():
@@ -105,7 +109,7 @@ def test_snowflake_dependency_diagnostics_handles_find_spec_errors(monkeypatch):
 
 
 def test_postgres_catalog_requires_current_database_result(monkeypatch):
-    connector = PostgresBridgeConnector(settings=PostgresConnectorSettings(dsn="postgresql://x"))
+    connector = PostgresBridgeConnector(settings=PostgresConnectorSettings(host="localhost", database="x", user="x"))
 
     class _FakeCursor:
         def __enter__(self):
@@ -146,15 +150,41 @@ def test_build_registry_supports_multiple_same_engine_connectors():
         bridge_id="bridge-id",
         connector_settings=[
             PostgresConnectorSettings(
-                dsn="postgresql://one",
+                host="localhost",
+                database="one",
+                user="u",
                 connection_id="pg-one",
                 title="Postgres One",
             ),
             PostgresConnectorSettings(
-                dsn="postgresql://two",
+                host="localhost",
+                database="two",
+                user="u",
                 connection_id="pg-two",
                 title="Postgres Two",
             ),
         ],
     )
     assert [c["id"] for c in registry.runtime_connections()] == ["pg-one", "pg-two"]
+
+
+def test_build_ephemeral_connector_postgres():
+    connector = build_ephemeral_connector(
+        "postgres", {"host": "myhost", "port": "5433", "database": "mydb", "user": "u"}
+    )
+    assert isinstance(connector, PostgresBridgeConnector)
+    assert connector.settings.host == "myhost"
+    assert connector.settings.port == "5433"
+
+
+def test_build_ephemeral_connector_snowflake():
+    connector = build_ephemeral_connector(
+        "snowflake", {"account": "acc", "user": "usr"}
+    )
+    assert isinstance(connector, SnowflakeBridgeConnector)
+    assert connector.settings.account == "acc"
+
+
+def test_build_ephemeral_connector_unsupported():
+    with pytest.raises(ValueError, match="Unsupported engine"):
+        build_ephemeral_connector("mysql", {})

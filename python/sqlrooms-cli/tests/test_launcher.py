@@ -84,7 +84,7 @@ def test_api_config_with_postgres_connector(tmp_path):
         port=0,
         ws_port=None,
         open_browser=False,
-        connector_settings=[PostgresConnectorSettings(dsn="postgresql://example")],
+        connector_settings=[PostgresConnectorSettings(host="localhost", database="example", user="u")],
     )
     app = server._build_app()
     client = TestClient(app)
@@ -102,6 +102,12 @@ def test_api_config_with_postgres_connector(tmp_path):
             "requiresBridge": True,
             "bridgeId": "sqlrooms-cli-http-bridge",
             "isCore": False,
+            "config": {
+                "host": "localhost",
+                "port": "5432",
+                "database": "example",
+                "user": "u",
+            },
         }
     ]
     assert len(data["dbBridge"]["diagnostics"]) == 1
@@ -140,6 +146,10 @@ def test_api_config_with_snowflake_connector_metadata(tmp_path):
             "requiresBridge": True,
             "bridgeId": "sqlrooms-cli-http-bridge",
             "isCore": False,
+            "config": {
+                "account": "demo-account",
+                "user": "demo-user",
+            },
         }
     ]
     assert len(data["dbBridge"]["diagnostics"]) == 1
@@ -158,12 +168,16 @@ def test_api_config_with_multiple_same_engine_connectors(tmp_path):
         open_browser=False,
         connector_settings=[
             PostgresConnectorSettings(
-                dsn="postgresql://a",
+                host="localhost",
+                database="a",
+                user="u",
                 connection_id="pg-a",
                 title="Postgres A",
             ),
             PostgresConnectorSettings(
-                dsn="postgresql://b",
+                host="localhost",
+                database="b",
+                user="u",
                 connection_id="pg-b",
                 title="Postgres B",
             ),
@@ -176,4 +190,43 @@ def test_api_config_with_multiple_same_engine_connectors(tmp_path):
     assert response.status_code == 200
     data = response.json()
     assert [c["id"] for c in data["dbBridge"]["connections"]] == ["pg-a", "pg-b"]
+
+
+def test_api_test_connection_adhoc_unsupported_engine(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.post(
+        "/api/db/test-connection",
+        json={"engine": "mysql", "config": {"host": "localhost"}},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Unsupported engine" in data["error"]
+
+
+def test_api_test_connection_adhoc_missing_driver(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.post(
+        "/api/db/test-connection",
+        json={
+            "engine": "postgres",
+            "config": {"host": "localhost", "database": "x", "user": "x"},
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "error" in data
+
+
+def test_api_test_connection_missing_params(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.post("/api/db/test-connection", json={})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "error" in data
 

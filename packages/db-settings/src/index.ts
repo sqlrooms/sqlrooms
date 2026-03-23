@@ -6,10 +6,12 @@
 export {
   DbSettingsSliceConfig,
   ConnectorDriverDiagnostic,
+  EngineConfigField,
 } from './DbSettingsSliceConfig';
 export type {
   DbSettingsSliceConfig as DbSettingsSliceConfigType,
   ConnectorDriverDiagnostic as ConnectorDriverDiagnosticType,
+  EngineConfigField as EngineConfigFieldType,
 } from './DbSettingsSliceConfig';
 export {
   createDbSettingsSlice,

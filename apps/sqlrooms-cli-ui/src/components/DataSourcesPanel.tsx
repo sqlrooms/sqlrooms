@@ -99,6 +99,13 @@ export const DataSourcesPanel = () => {
                 <DbSettings.Diagnostics />
               </TabsContent>
             </div>
+            <TabsContent
+              value="connections"
+              forceMount
+              className="flex shrink-0 justify-end pt-4 data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible"
+            >
+              <DbSettings.SaveButton />
+            </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>

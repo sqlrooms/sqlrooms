@@ -28,8 +28,9 @@ class DbBridgeRegistry:
         return any(conn.engine_id == engine_id for conn in self._connectors.values())
 
     def runtime_connections(self) -> list[dict[str, Any]]:
-        return [
-            {
+        result = []
+        for conn in self._connectors.values():
+            entry: dict[str, Any] = {
                 "id": conn.connection_id,
                 "engineId": conn.engine_id,
                 "title": conn.title,
@@ -38,8 +39,11 @@ class DbBridgeRegistry:
                 "bridgeId": self.bridge_id,
                 "isCore": False,
             }
-            for conn in self._connectors.values()
-        ]
+            cfg = conn.config_dict()
+            if cfg:
+                entry["config"] = cfg
+            result.append(entry)
+        return result
 
     def runtime_diagnostics(self) -> list[dict[str, Any]]:
         diagnostics: list[dict[str, Any]] = []

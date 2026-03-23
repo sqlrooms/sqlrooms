@@ -332,10 +332,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 requiresBridge: c.requiresBridge ?? true,
                 bridgeId: c.bridgeId,
                 isCore: c.isCore ?? false,
+                config: c.config,
               }),
             ),
             diagnostics: runtimeConfig.dbBridge?.diagnostics ?? [],
             supportedEngines: runtimeConfig.dbBridge?.supportedEngines ?? [],
+            engineConfigFields:
+              runtimeConfig.dbBridge?.engineConfigFields ?? {},
           },
         })(set, get, store),
 

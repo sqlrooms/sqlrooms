@@ -112,9 +112,11 @@ def _load_connector_config(
         if engine == "postgres":
             out.append(
                 PostgresConnectorSettings(
-                    dsn=_require_config_string(
-                        item, "dsn", connector_id=connection_id, engine=engine
-                    ),
+                    host=_normalize_config_string(item.get("host")) or "localhost",
+                    port=_normalize_config_string(item.get("port")) or "5432",
+                    database=_normalize_config_string(item.get("database")) or "",
+                    user=_normalize_config_string(item.get("user")) or "",
+                    password=_normalize_config_string(item.get("password")),
                     connection_id=connection_id,
                     title=title,
                 )

@@ -13,10 +13,18 @@ import {
 export type DbSettingsSliceState = {
   dbSettings: {
     config: DbSettingsSliceConfig;
+    isSaving: boolean;
+    lastSaveError: string | null;
     setConfig: (config: DbSettingsSliceConfig) => void;
     upsertConnection: (connection: DbConnection) => void;
     removeConnection: (id: string) => void;
     setDiagnostics: (diagnostics: ConnectorDriverDiagnostic[]) => void;
+    saveToServer: (apiBaseUrl?: string) => Promise<boolean>;
+    testConnection: (
+      engine: string,
+      config: Record<string, string>,
+      apiBaseUrl?: string,
+    ) => Promise<{ok: boolean; error?: string}>;
   };
 };
 
@@ -34,9 +42,11 @@ export function createDbSettingsSlice(
   props?: CreateDbSettingsSliceParams,
 ): StateCreator<DbSettingsSliceState> {
   const config = createDefaultDbSettingsConfig(props?.config);
-  return createSlice<DbSettingsSliceState>((set) => ({
+  return createSlice<DbSettingsSliceState>((set, get) => ({
     dbSettings: {
       config,
+      isSaving: false,
+      lastSaveError: null,
 
       setConfig: (config) => {
         set((state) =>
@@ -76,6 +86,64 @@ export function createDbSettingsSlice(
             draft.dbSettings.config.diagnostics = diagnostics;
           }),
         );
+      },
+
+      saveToServer: async (apiBaseUrl = '') => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.dbSettings.isSaving = true;
+            draft.dbSettings.lastSaveError = null;
+          }),
+        );
+
+        try {
+          const connections = (get() as DbSettingsSliceState).dbSettings.config
+            .connections;
+          const res = await fetch(`${apiBaseUrl}/api/db/settings`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({connections}),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            const msg =
+              (body as {error?: string}).error ??
+              `Server returned ${res.status}`;
+            throw new Error(msg);
+          }
+          set((state) =>
+            produce(state, (draft) => {
+              draft.dbSettings.isSaving = false;
+            }),
+          );
+          return true;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.dbSettings.isSaving = false;
+              draft.dbSettings.lastSaveError = msg;
+            }),
+          );
+          return false;
+        }
+      },
+
+      testConnection: async (engine, config, apiBaseUrl = '') => {
+        try {
+          const res = await fetch(`${apiBaseUrl}/api/db/test-connection`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({engine, config}),
+          });
+          const body = (await res.json()) as {ok: boolean; error?: string};
+          return body;
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          };
+        }
       },
     },
   }));

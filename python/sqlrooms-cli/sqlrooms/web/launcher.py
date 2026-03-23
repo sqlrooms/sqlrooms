@@ -23,11 +23,13 @@ from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
 from .db_bridge import (
+    ENGINE_CONFIG_FIELDS,
     SUPPORTED_ENGINES,
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
     build_cli_db_bridge_registry,
+    build_ephemeral_connector,
 )
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
@@ -40,7 +42,12 @@ def _write_db_connectors_to_toml(
 ) -> None:
     """Write ``[[db.connectors]]`` entries into a TOML config file.
 
-    Preserves all non-``[db]`` sections. If the file does not exist yet it is
+    Merges incoming connection metadata with existing TOML entries so that
+    engine-specific fields the frontend doesn't know about (e.g.
+    ``account``, ``password``) are preserved.  Connections whose ``id`` is no
+    longer present in *connections* are removed.
+
+    Preserves all non-``[db]`` sections.  If the file does not exist yet it is
     created.
     """
     import tomlkit
@@ -51,23 +58,44 @@ def _write_db_connectors_to_toml(
         doc = tomlkit.document()
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
-    connectors_aot = tomlkit.aot()
-    key_map = {
+    existing_by_id: dict[str, dict[str, Any]] = {}
+    if "db" in doc and "connectors" in doc["db"]:
+        for entry in doc["db"]["connectors"]:
+            eid = entry.get("id")
+            if eid:
+                existing_by_id[eid] = dict(entry)
+
+    frontend_to_toml = {
         "engineId": "engine",
         "runtimeSupport": None,
         "requiresBridge": None,
         "bridgeId": None,
         "isCore": None,
+        "config": None,
     }
+
+    connectors_aot = tomlkit.aot()
     for conn in connections:
-        item = tomlkit.table()
+        conn_id = conn.get("id")
+        base = dict(existing_by_id.get(conn_id, {})) if conn_id else {}
+
         for k, v in conn.items():
             if v is None:
                 continue
-            toml_key = key_map.get(k, k)
+            toml_key = frontend_to_toml.get(k, k)
             if toml_key is None:
                 continue
-            item.add(toml_key, v)
+            base[toml_key] = v
+
+        engine_config = conn.get("config")
+        if isinstance(engine_config, dict):
+            for ck, cv in engine_config.items():
+                if cv is not None and cv != "":
+                    base[ck] = cv
+
+        item = tomlkit.table()
+        for k, v in base.items():
+            item.add(k, v)
         connectors_aot.append(item)
 
     if "db" not in doc:
@@ -77,7 +105,11 @@ def _write_db_connectors_to_toml(
         del db_section["connectors"]  # type: ignore[arg-type]
     db_section["connectors"] = connectors_aot  # type: ignore[index]
 
-    config_path.write_text(tomlkit.dumps(doc), encoding="utf-8")
+    raw = tomlkit.dumps(doc)
+    # Collapse runs of blank lines that tomlkit may accumulate on repeated writes
+    import re
+    raw = re.sub(r"\n{3,}", "\n\n", raw)
+    config_path.write_text(raw, encoding="utf-8")
 
 
 def _sanitize_filename(name: str) -> str:
@@ -291,6 +323,7 @@ class SqlroomsHttpServer:
                 "connections": self.db_bridge_registry.runtime_connections(),
                 "diagnostics": self.db_bridge_registry.runtime_diagnostics(),
                 "supportedEngines": SUPPORTED_ENGINES,
+                "engineConfigFields": ENGINE_CONFIG_FIELDS,
             },
         }
 
@@ -331,6 +364,7 @@ class SqlroomsHttpServer:
                 "connections": connections,
                 "diagnostics": diagnostics,
                 "supportedEngines": SUPPORTED_ENGINES,
+                "engineConfigFields": ENGINE_CONFIG_FIELDS,
             }
 
         @app.put("/api/db/settings")
@@ -365,11 +399,23 @@ class SqlroomsHttpServer:
         @app.post("/api/db/test-connection")
         async def test_connection(payload: Dict[str, Any]):
             connection_id = payload.get("connectionId")
-            if not isinstance(connection_id, str) or not connection_id.strip():
-                return {"ok": False, "error": "connectionId is required"}
+            engine = payload.get("engine")
+            config = payload.get("config")
+
             try:
-                ok = self.db_bridge_registry.test_connection(connection_id)
-                return {"ok": bool(ok)}
+                if isinstance(engine, str) and isinstance(config, dict):
+                    connector = build_ephemeral_connector(engine, config)
+                    ok = connector.test_connection()
+                    return {"ok": bool(ok)}
+
+                if isinstance(connection_id, str) and connection_id.strip():
+                    ok = self.db_bridge_registry.test_connection(connection_id)
+                    return {"ok": bool(ok)}
+
+                return {
+                    "ok": False,
+                    "error": "Provide either engine+config or connectionId",
+                }
             except UnknownBridgeConnectionError as exc:
                 return {"ok": False, "error": str(exc)}
             except Exception as exc:

@@ -24,6 +24,7 @@ export type RuntimeConfig = {
       requiresBridge?: boolean;
       bridgeId?: string;
       isCore?: boolean;
+      config?: Record<string, string>;
     }>;
     diagnostics?: Array<{
       id: string;
@@ -40,6 +41,16 @@ export type RuntimeConfig = {
       };
     }>;
     supportedEngines?: string[];
+    engineConfigFields?: Record<
+      string,
+      Array<{
+        key: string;
+        label: string;
+        placeholder?: string;
+        secret?: boolean;
+        required?: boolean;
+      }>
+    >;
   };
 };
 

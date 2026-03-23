@@ -31,7 +31,11 @@ def test_load_connector_config_toml(tmp_path):
 [[db.connectors]]
 id = "pg-local"
 engine = "postgres"
-dsn = "postgresql://u:p@localhost:5432/db"
+host = "localhost"
+port = "5432"
+database = "db"
+user = "u"
+password = "p"
 title = "Local Postgres"
 
 [[db.connectors]]
@@ -47,7 +51,10 @@ title = "Local Snowflake"
 
     data = _load_connector_config(config_path)
     assert isinstance(data[0], PostgresConnectorSettings)
-    assert data[0].dsn == "postgresql://u:p@localhost:5432/db"
+    assert data[0].host == "localhost"
+    assert data[0].database == "db"
+    assert data[0].user == "u"
+    assert data[0].password == "p"
     assert data[0].connection_id == "pg-local"
     assert data[0].title == "Local Postgres"
     assert isinstance(data[1], SnowflakeConnectorSettings)
@@ -97,7 +104,9 @@ def test_load_connector_config_rejects_duplicate_ids(tmp_path):
 [[db.connectors]]
 id = "dup"
 engine = "postgres"
-dsn = "postgresql://u:p@localhost:5432/db"
+host = "localhost"
+database = "db"
+user = "u"
 
 [[db.connectors]]
 id = "dup"

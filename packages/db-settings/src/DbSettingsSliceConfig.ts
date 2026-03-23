@@ -25,11 +25,26 @@ export type ConnectorDriverDiagnostic = z.infer<
 >;
 
 /**
+ * Field descriptor for engine-specific configuration.
+ */
+export const EngineConfigField = z.object({
+  key: z.string(),
+  label: z.string(),
+  placeholder: z.string().optional(),
+  secret: z.boolean().optional(),
+  required: z.boolean().optional(),
+});
+export type EngineConfigField = z.infer<typeof EngineConfigField>;
+
+/**
  * Persisted configuration for the DB settings slice.
  */
 export const DbSettingsSliceConfig = z.object({
   connections: z.array(DbConnection).default([]),
   diagnostics: z.array(ConnectorDriverDiagnostic).default([]),
   supportedEngines: z.array(z.string()).default([]),
+  engineConfigFields: z
+    .record(z.string(), z.array(EngineConfigField))
+    .default({}),
 });
 export type DbSettingsSliceConfig = z.infer<typeof DbSettingsSliceConfig>;
