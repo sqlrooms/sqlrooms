@@ -65,6 +65,7 @@ export function DbConnectionForm({editing, onDone}: DbConnectionFormProps) {
 
   const originalRef = React.useRef(editing);
   const suppressSyncRef = React.useRef(false);
+  const hasInitializedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (editing) {
@@ -74,7 +75,12 @@ export function DbConnectionForm({editing, onDone}: DbConnectionFormProps) {
       setTitle(editing.title);
       setBridgeId(editing.bridgeId ?? '');
       setConfig(editing.config ?? {});
-      originalRef.current = editing;
+      if (!hasInitializedRef.current) {
+        originalRef.current = editing;
+        hasInitializedRef.current = true;
+      }
+    } else {
+      hasInitializedRef.current = false;
     }
   }, [editing]);
 

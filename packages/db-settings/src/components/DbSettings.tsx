@@ -107,6 +107,9 @@ function DriversTabLabel() {
 function DbSettingsSaveButton({apiBaseUrl}: {apiBaseUrl?: string}) {
   const saveToServer = useStoreWithDbSettings((s) => s.dbSettings.saveToServer);
   const isSaving = useStoreWithDbSettings((s) => s.dbSettings.isSaving);
+  const hasUnsavedChanges = useStoreWithDbSettings(
+    (s) => s.dbSettings.hasUnsavedChanges,
+  );
 
   const handleSave = React.useCallback(async () => {
     const ok = await saveToServer(apiBaseUrl);
@@ -122,7 +125,11 @@ function DbSettingsSaveButton({apiBaseUrl}: {apiBaseUrl?: string}) {
   }, [saveToServer, apiBaseUrl]);
 
   return (
-    <Button size="sm" onClick={handleSave} disabled={isSaving}>
+    <Button
+      size="sm"
+      onClick={handleSave}
+      disabled={isSaving || !hasUnsavedChanges}
+    >
       {isSaving ? (
         <LoaderIcon className="mr-1 h-3.5 w-3.5 animate-spin" />
       ) : (

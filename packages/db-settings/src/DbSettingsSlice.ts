@@ -10,10 +10,25 @@ import {
   DbSettingsSliceConfig,
 } from './DbSettingsSliceConfig';
 
+function connectionsSnapshot(connections: DbConnection[]): string {
+  return JSON.stringify(
+    connections
+      .filter((c) => !c.isCore)
+      .map(({id, engineId, title, bridgeId, config}) => ({
+        id,
+        engineId,
+        title,
+        bridgeId,
+        config,
+      })),
+  );
+}
+
 export type DbSettingsSliceState = {
   dbSettings: {
     config: DbSettingsSliceConfig;
     isSaving: boolean;
+    hasUnsavedChanges: boolean;
     lastSaveError: string | null;
     setConfig: (config: DbSettingsSliceConfig) => void;
     upsertConnection: (connection: DbConnection) => void;
@@ -42,16 +57,25 @@ export function createDbSettingsSlice(
   props?: CreateDbSettingsSliceParams,
 ): StateCreator<DbSettingsSliceState> {
   const config = createDefaultDbSettingsConfig(props?.config);
+  let savedSnapshot = connectionsSnapshot(config.connections);
+
+  const markDirty = (state: DbSettingsSliceState) => {
+    const current = connectionsSnapshot(state.dbSettings.config.connections);
+    return current !== savedSnapshot;
+  };
+
   return createSlice<DbSettingsSliceState>((set, get) => ({
     dbSettings: {
       config,
       isSaving: false,
+      hasUnsavedChanges: false,
       lastSaveError: null,
 
       setConfig: (config) => {
         set((state) =>
           produce(state, (draft) => {
             draft.dbSettings.config = config;
+            draft.dbSettings.hasUnsavedChanges = markDirty(draft);
           }),
         );
       },
@@ -67,6 +91,7 @@ export function createDbSettingsSlice(
             } else {
               draft.dbSettings.config.connections.push(connection);
             }
+            draft.dbSettings.hasUnsavedChanges = markDirty(draft);
           }),
         );
       },
@@ -76,6 +101,7 @@ export function createDbSettingsSlice(
           produce(state, (draft) => {
             draft.dbSettings.config.connections =
               draft.dbSettings.config.connections.filter((c) => c.id !== id);
+            draft.dbSettings.hasUnsavedChanges = markDirty(draft);
           }),
         );
       },
@@ -114,6 +140,10 @@ export function createDbSettingsSlice(
           set((state) =>
             produce(state, (draft) => {
               draft.dbSettings.isSaving = false;
+              savedSnapshot = connectionsSnapshot(
+                draft.dbSettings.config.connections,
+              );
+              draft.dbSettings.hasUnsavedChanges = false;
             }),
           );
           return true;
