@@ -32,6 +32,7 @@ const DbSettingsTriggerButton = React.forwardRef<
           size="icon"
           variant="ghost"
           className="h-6 w-6"
+          aria-label="Database settings"
           {...props}
         >
           <SettingsIcon className="h-3.5 w-3.5" />

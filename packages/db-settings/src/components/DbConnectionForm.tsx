@@ -75,12 +75,16 @@ export function DbConnectionForm({editing, onDone}: DbConnectionFormProps) {
       setTitle(editing.title);
       setBridgeId(editing.bridgeId ?? '');
       setConfig(editing.config ?? {});
-      if (!hasInitializedRef.current) {
+      if (
+        !hasInitializedRef.current ||
+        originalRef.current?.id !== editing.id
+      ) {
         originalRef.current = editing;
         hasInitializedRef.current = true;
       }
     } else {
       hasInitializedRef.current = false;
+      originalRef.current = undefined;
     }
   }, [editing]);
 

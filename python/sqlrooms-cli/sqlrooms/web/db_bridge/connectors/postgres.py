@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote
 
 from .base import BaseSqlBridgeConnector
 
@@ -18,8 +19,8 @@ class PostgresConnectorSettings:
     password: str | None = None
 
     def resolve_dsn(self) -> str:
-        pw = f":{self.password}" if self.password else ""
-        return f"postgresql://{self.user}{pw}@{self.host}:{self.port}/{self.database}"
+        pw = f":{quote(self.password, safe='')}" if self.password else ""
+        return f"postgresql://{quote(self.user, safe='')}{pw}@{self.host}:{self.port}/{self.database}"
 
 
 @dataclass(frozen=True)

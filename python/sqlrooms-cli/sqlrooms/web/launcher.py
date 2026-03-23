@@ -92,6 +92,8 @@ def _write_db_connectors_to_toml(
             for ck, cv in engine_config.items():
                 if cv is not None and cv != "":
                     base[ck] = cv
+                else:
+                    base.pop(ck, None)
 
         item = tomlkit.table()
         for k, v in base.items():

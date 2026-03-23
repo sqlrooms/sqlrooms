@@ -4,6 +4,22 @@ from typing import Any
 
 from .types import DbBridgeConnector
 
+_SECRET_KEYS: frozenset[str] | None = None
+
+
+def _get_secret_keys() -> frozenset[str]:
+    global _SECRET_KEYS
+    if _SECRET_KEYS is None:
+        from .factory import ENGINE_CONFIG_FIELDS
+
+        keys: set[str] = set()
+        for fields in ENGINE_CONFIG_FIELDS.values():
+            for f in fields:
+                if f.get("secret"):
+                    keys.add(f["key"])
+        _SECRET_KEYS = frozenset(keys)
+    return _SECRET_KEYS
+
 
 class UnknownBridgeConnectionError(KeyError):
     """Raised when a bridge request references an unknown connection id."""
@@ -41,7 +57,8 @@ class DbBridgeRegistry:
             }
             cfg = conn.config_dict()
             if cfg:
-                entry["config"] = cfg
+                secret_keys = _get_secret_keys()
+                entry["config"] = {k: v for k, v in cfg.items() if k not in secret_keys}
             result.append(entry)
         return result
 

@@ -54,6 +54,7 @@ title = "Local Snowflake"
     data = _load_connector_config(config_path)
     assert isinstance(data[0], PostgresConnectorSettings)
     assert data[0].host == "localhost"
+    assert data[0].port == "5432"
     assert data[0].database == "db"
     assert data[0].user == "u"
     assert data[0].password == "p"

@@ -140,10 +140,8 @@ export function createDbSettingsSlice(
           set((state) =>
             produce(state, (draft) => {
               draft.dbSettings.isSaving = false;
-              savedSnapshot = connectionsSnapshot(
-                draft.dbSettings.config.connections,
-              );
-              draft.dbSettings.hasUnsavedChanges = false;
+              savedSnapshot = connectionsSnapshot(connections);
+              draft.dbSettings.hasUnsavedChanges = markDirty(draft);
             }),
           );
           return true;
@@ -215,6 +213,13 @@ export function syncConnectionsToDb(store: {
   for (const existing of existingConnections) {
     if (existing.isCore) continue;
     if (!desiredIds.has(existing.id)) {
+      state.db.connectors.removeConnection(existing.id);
+      continue;
+    }
+    const diag = diagnosticsByKey.get(
+      diagnosticsKey(existing.id, existing.engineId),
+    );
+    if (diag && diag.available === false) {
       state.db.connectors.removeConnection(existing.id);
     }
   }

@@ -48,9 +48,7 @@ export interface SchemaExplorerTreeProps {
 
 function SchemaExplorerTree({className}: SchemaExplorerTreeProps) {
   const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
-  return (
-    <TableSchemaTree schemaTrees={schemaTrees ?? []} className={className} />
-  );
+  return <TableSchemaTree schemaTrees={schemaTrees} className={className} />;
 }
 
 export const SchemaExplorer = Object.assign(SchemaExplorerRoot, {

@@ -232,3 +232,30 @@ def test_api_test_connection_missing_params(server):
     data = response.json()
     assert data["ok"] is False
     assert "error" in data
+
+
+def test_api_config_redacts_secret_fields(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        connector_settings=[
+            PostgresConnectorSettings(
+                host="localhost",
+                database="db",
+                user="u",
+                password="top-secret",
+                connection_id="pg-secret",
+            ),
+        ],
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    conn = response.json()["dbBridge"]["connections"][0]
+    assert "password" not in conn.get("config", {})
