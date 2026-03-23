@@ -191,7 +191,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       type={isAnswer ? 'answer' : 'thinking'}
       content={{content, isAnswer}}
     >
-      <div className="prose dark:prose-invert text-foreground/90 max-w-none text-sm">
+      <div className="prose dark:prose-invert text-foreground max-w-none text-sm">
         <Markdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
