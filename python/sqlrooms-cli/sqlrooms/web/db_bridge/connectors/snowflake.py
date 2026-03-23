@@ -64,6 +64,9 @@ class SnowflakeBridgeConnector(BaseSqlBridgeConnector):
     def title(self) -> str:
         return self.settings.title
 
+    def config_dict(self) -> dict[str, Any]:
+        return self.settings.to_connect_kwargs()
+
     def _connect(self):
         try:
             import snowflake.connector  # type: ignore

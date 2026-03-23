@@ -3,15 +3,24 @@ from __future__ import annotations
 import importlib.util
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote
 
 from .base import BaseSqlBridgeConnector
 
 
 @dataclass(frozen=True)
 class PostgresConnectorSettings:
-    dsn: str
     connection_id: str = "postgres-default"
     title: str = "Postgres"
+    host: str = "localhost"
+    port: str = "5432"
+    database: str = ""
+    user: str = ""
+    password: str | None = None
+
+    def resolve_dsn(self) -> str:
+        pw = f":{quote(self.password, safe='')}" if self.password else ""
+        return f"postgresql://{quote(self.user, safe='')}{pw}@{self.host}:{self.port}/{self.database}"
 
 
 @dataclass(frozen=True)
@@ -27,6 +36,15 @@ class PostgresBridgeConnector(BaseSqlBridgeConnector):
     def title(self) -> str:
         return self.settings.title
 
+    def config_dict(self) -> dict[str, Any]:
+        s = self.settings
+        d: dict[str, Any] = {}
+        for k in ("host", "port", "database", "user", "password"):
+            v = getattr(s, k)
+            if v:
+                d[k] = v
+        return d
+
     def _connect(self):
         try:
             import psycopg  # type: ignore
@@ -34,7 +52,7 @@ class PostgresBridgeConnector(BaseSqlBridgeConnector):
             raise RuntimeError(
                 "Postgres bridge requires `psycopg`. Install it to enable Postgres."
             ) from exc
-        return psycopg.connect(self.settings.dsn)
+        return psycopg.connect(self.settings.resolve_dsn())
 
     def dependency_diagnostics(self) -> dict[str, Any]:
         available = importlib.util.find_spec("psycopg") is not None

@@ -49,14 +49,11 @@ export const RefreshButton: FC<{
         <Button
           variant="ghost"
           size="icon"
-          className={cn('h-8 w-8', className)}
+          className={cn('h-6 w-6', className)}
           onClick={handleClick}
         >
           <RefreshCwIcon
-            className={cn(
-              'text-muted-foreground h-4 w-4',
-              spinning ? 'animate-spin' : '',
-            )}
+            className={cn('h-3.5 w-3.5', spinning ? 'animate-spin' : '')}
           />
         </Button>
       </TooltipTrigger>

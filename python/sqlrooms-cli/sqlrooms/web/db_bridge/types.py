@@ -8,6 +8,10 @@ class DbBridgeConnector(Protocol):
     engine_id: str
     title: str
 
+    def config_dict(self) -> dict[str, Any]:
+        """Return engine-specific configuration as a flat dict."""
+        ...
+
     def test_connection(self) -> bool: ...
 
     def list_catalog(self) -> dict[str, list[dict[str, Any]]]: ...

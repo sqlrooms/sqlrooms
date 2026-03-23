@@ -23,15 +23,115 @@ from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
 from .db_bridge import (
+    ENGINE_CONFIG_FIELDS,
+    SUPPORTED_ENGINES,
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
     UnknownBridgeConnectionError,
     build_cli_db_bridge_registry,
+    build_ephemeral_connector,
 )
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
+
+
+def _write_db_connectors_to_toml(
+    config_path: Path, connections: list[dict[str, Any]]
+) -> None:
+    """Write ``[[db.connectors]]`` entries into a TOML config file.
+
+    Merges incoming connection metadata with existing TOML entries so that
+    engine-specific fields the frontend doesn't know about (e.g.
+    ``account``, ``password``) are preserved.  Connections whose ``id`` is no
+    longer present in *connections* are removed.
+
+    Preserves all non-``[db]`` sections.  If the file does not exist yet it is
+    created.
+    """
+    import tomlkit
+
+    if config_path.exists():
+        doc = tomlkit.parse(config_path.read_text(encoding="utf-8"))
+    else:
+        doc = tomlkit.document()
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    existing_by_id: dict[str, dict[str, Any]] = {}
+    if "db" in doc and "connectors" in doc["db"]:
+        for entry in doc["db"]["connectors"]:
+            eid = entry.get("id")
+            if eid:
+                existing_by_id[eid] = dict(entry)
+
+    frontend_to_toml = {
+        "engineId": "engine",
+        "runtimeSupport": None,
+        "requiresBridge": None,
+        "bridgeId": None,
+        "isCore": None,
+        "config": None,
+    }
+
+    from .db_bridge import ENGINE_CONFIG_FIELDS
+
+    all_engine_keys: set[str] = set()
+    engine_to_keys: dict[str, set[str]] = {}
+    for eng, fields in ENGINE_CONFIG_FIELDS.items():
+        keys = {f["key"] for f in fields}
+        engine_to_keys[eng] = keys
+        all_engine_keys |= keys
+
+    connectors_aot = tomlkit.aot()
+    for conn in connections:
+        conn_id = conn.get("id")
+        base = dict(existing_by_id.get(conn_id, {})) if conn_id else {}
+
+        old_engine = base.get("engine")
+        new_engine = conn.get("engineId") or old_engine
+
+        for k, v in conn.items():
+            if v is None:
+                continue
+            toml_key = frontend_to_toml.get(k, k)
+            if toml_key is None:
+                continue
+            base[toml_key] = v
+
+        if old_engine and new_engine and old_engine != new_engine:
+            stale_keys = engine_to_keys.get(old_engine, set()) - engine_to_keys.get(
+                new_engine, set()
+            )
+            for sk in stale_keys:
+                base.pop(sk, None)
+
+        engine_config = conn.get("config")
+        if isinstance(engine_config, dict):
+            for ck, cv in engine_config.items():
+                if cv is not None and cv != "":
+                    base[ck] = cv
+                else:
+                    base.pop(ck, None)
+
+        item = tomlkit.table()
+        for k, v in base.items():
+            item.add(k, v)
+        connectors_aot.append(item)
+
+    if "db" not in doc:
+        doc.add("db", tomlkit.table())
+    db_section = doc["db"]
+    if "connectors" in db_section:
+        del db_section["connectors"]  # type: ignore[arg-type]
+    db_section["connectors"] = connectors_aot  # type: ignore[index]
+
+    raw = tomlkit.dumps(doc)
+    # Collapse runs of blank lines that tomlkit may accumulate on repeated writes
+    import re
+
+    raw = re.sub(r"\n{3,}", "\n\n", raw)
+    config_path.write_text(raw, encoding="utf-8")
 
 
 def _sanitize_filename(name: str) -> str:
@@ -131,6 +231,7 @@ class SqlroomsHttpServer:
         | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
+        config_path: Path | None = None,
     ):
         db_path_str = str(db_path)
         self.is_in_memory = db_path_str == ":memory:"
@@ -163,6 +264,8 @@ class SqlroomsHttpServer:
             bridge_id=DB_BRIDGE_ID,
             connector_settings=connector_settings,
         )
+        self.config_path = config_path
+        self.connector_settings = connector_settings or []
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -240,6 +343,8 @@ class SqlroomsHttpServer:
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
                 "diagnostics": self.db_bridge_registry.runtime_diagnostics(),
+                "supportedEngines": SUPPORTED_ENGINES,
+                "engineConfigFields": ENGINE_CONFIG_FIELDS,
             },
         }
 
@@ -270,6 +375,41 @@ class SqlroomsHttpServer:
         async def get_config_json():
             return self._runtime_config()
 
+        @app.get("/api/db/settings")
+        async def get_db_settings():
+            connections = self.db_bridge_registry.runtime_connections()
+            diagnostics = self.db_bridge_registry.runtime_diagnostics()
+            return {
+                "connections": connections,
+                "diagnostics": diagnostics,
+                "supportedEngines": SUPPORTED_ENGINES,
+                "engineConfigFields": ENGINE_CONFIG_FIELDS,
+            }
+
+        @app.put("/api/db/settings")
+        async def put_db_settings(payload: Dict[str, Any]):
+            if self.config_path is None:
+                return JSONResponse(
+                    {
+                        "error": "No config file available (started with --no-config or no config found)."
+                    },
+                    status_code=400,
+                )
+            connections = payload.get("connections")
+            if not isinstance(connections, list):
+                return JSONResponse(
+                    {"error": "'connections' must be an array."},
+                    status_code=400,
+                )
+            try:
+                _write_db_connectors_to_toml(self.config_path, connections)
+            except Exception as exc:
+                logger.error(
+                    "Failed to write db settings to %s: %s", self.config_path, exc
+                )
+                return JSONResponse({"error": str(exc)}, status_code=500)
+            return {"ok": True, "configPath": str(self.config_path)}
+
         @app.post("/api/upload")
         async def upload_file(file: UploadFile = File(...)):
             content = await file.read()
@@ -282,11 +422,23 @@ class SqlroomsHttpServer:
         @app.post("/api/db/test-connection")
         async def test_connection(payload: Dict[str, Any]):
             connection_id = payload.get("connectionId")
-            if not isinstance(connection_id, str) or not connection_id.strip():
-                return {"ok": False, "error": "connectionId is required"}
+            engine = payload.get("engine")
+            config = payload.get("config")
+
             try:
-                ok = self.db_bridge_registry.test_connection(connection_id)
-                return {"ok": bool(ok)}
+                if isinstance(engine, str) and isinstance(config, dict):
+                    connector = build_ephemeral_connector(engine, config)
+                    ok = connector.test_connection()
+                    return {"ok": bool(ok)}
+
+                if isinstance(connection_id, str) and connection_id.strip():
+                    ok = self.db_bridge_registry.test_connection(connection_id)
+                    return {"ok": bool(ok)}
+
+                return {
+                    "ok": False,
+                    "error": "Provide either engine+config or connectionId",
+                }
             except UnknownBridgeConnectionError as exc:
                 return {"ok": False, "error": str(exc)}
             except Exception as exc:

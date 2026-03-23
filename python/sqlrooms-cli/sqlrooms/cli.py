@@ -13,7 +13,11 @@ from typing import Any
 import duckdb
 import typer
 
-from .web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
+from .web.db_bridge import (
+    SUPPORTED_ENGINES,
+    PostgresConnectorSettings,
+    SnowflakeConnectorSettings,
+)
 from .web.launcher import SqlroomsHttpServer
 
 logging.basicConfig(
@@ -36,6 +40,8 @@ DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 
 
 def _normalize_config_string(value: Any) -> str | None:
+    if isinstance(value, (int, float)):
+        return str(value)
     if not isinstance(value, str):
         return None
     normalized = value.strip()
@@ -97,7 +103,7 @@ def _load_connector_config(
         if not isinstance(item, dict):
             raise RuntimeError(f"Connector entry at index {idx} must be an object.")
         engine = _normalize_config_string(item.get("engine"))
-        if engine not in {"postgres", "snowflake"}:
+        if engine not in SUPPORTED_ENGINES:
             raise RuntimeError(
                 f"Connector entry at index {idx} has unsupported engine: {engine!r}"
             )
@@ -112,9 +118,11 @@ def _load_connector_config(
         if engine == "postgres":
             out.append(
                 PostgresConnectorSettings(
-                    dsn=_require_config_string(
-                        item, "dsn", connector_id=connection_id, engine=engine
-                    ),
+                    host=_normalize_config_string(item.get("host")) or "localhost",
+                    port=_normalize_config_string(item.get("port")) or "5432",
+                    database=_normalize_config_string(item.get("database")) or "",
+                    user=_normalize_config_string(item.get("user")) or "",
+                    password=_normalize_config_string(item.get("password")),
                     connection_id=connection_id,
                     title=title,
                 )
@@ -384,6 +392,12 @@ def main(
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
 
+    # config_path may be None when the file doesn't exist yet; for saving we
+    # still want a writable target unless the user explicitly opted out.
+    save_config_path = (
+        config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
+    )
+
     resolved_db_path = db_path if db_path is not None else db_path_option
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
@@ -405,6 +419,7 @@ def main(
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
+        config_path=save_config_path,
     )
     try:
         asyncio.run(server.start())

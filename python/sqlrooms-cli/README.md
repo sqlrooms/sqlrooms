@@ -74,7 +74,11 @@ models = ["claude-4-sonnet"]
 id = "postgres-local"
 engine = "postgres"
 title = "Postgres Local"
-dsn = "postgresql://postgres:postgres@localhost:5432/postgres"
+host = "localhost"
+port = "5432"
+database = "postgres"
+user = "postgres"
+password = "postgres"
 
 [[db.connectors]]
 id = "snowflake-prod"
