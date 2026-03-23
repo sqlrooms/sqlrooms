@@ -16,6 +16,7 @@
     "zustand": "5.0.5",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
+    "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

@@ -1,8 +1,9 @@
-import {type PivotHostBinding, type PivotPersistedState} from '@sqlrooms/pivot';
+import type {CellsRootState} from '@sqlrooms/cells';
 import {produce} from 'immer';
 import type {StoreApi} from 'zustand';
-import {getPivotQuerySourceForCell} from './pivotHelpers';
-import {isPivotCell, type CellsRootState} from './types';
+import type {PivotHostBinding, PivotPersistedState} from './PivotBinding';
+import {getPivotQuerySourceForCell} from './pivotCellHelpers';
+import {isPivotCell, type PivotCellStatus} from './pivotCellTypes';
 
 export function createNotebookPivotBinding(
   roomStore: StoreApi<CellsRootState>,
@@ -46,11 +47,13 @@ export function createNotebookPivotBinding(
         status:
           status?.type === 'pivot'
             ? {
-                state: status.status,
-                stale: status.stale,
-                lastError: status.lastError,
-                lastRunTime: status.lastRunTime,
-                relations: runtime.querySource ? status.resultViews : undefined,
+                state: (status as PivotCellStatus).status,
+                stale: (status as PivotCellStatus).stale,
+                lastError: (status as PivotCellStatus).lastError,
+                lastRunTime: (status as PivotCellStatus).lastRunTime,
+                relations: runtime.querySource
+                  ? (status as PivotCellStatus).resultViews
+                  : undefined,
                 sourceRelation: runtime.sourceRelation,
               }
             : {state: 'idle', stale: false},

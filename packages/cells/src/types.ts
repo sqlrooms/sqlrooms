@@ -1,17 +1,11 @@
 import type {DbSliceState} from '@sqlrooms/db';
-import {
-  createDefaultPivotConfig,
-  PivotConfigSchema,
-  PivotRelationViewsSchema,
-  PivotSourceSchema,
-} from '@sqlrooms/pivot';
 import type {BaseRoomStoreState, SliceFunctions} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import type React from 'react';
 import {z} from 'zod';
 
 /** Cell types */
-export type BuiltInCellType = 'sql' | 'text' | 'vega' | 'input' | 'pivot';
+export type BuiltInCellType = 'sql' | 'text' | 'vega' | 'input';
 export type CellType = BuiltInCellType | (string & {});
 export const CellType = z.string();
 
@@ -83,14 +77,6 @@ export const InputCellData = z.object({
 });
 export type InputCellData = z.infer<typeof InputCellData>;
 
-/** Pivot Cell Data */
-export const PivotCellData = z.object({
-  title: z.string().default('Pivot'),
-  source: PivotSourceSchema.optional(),
-  pivotConfig: PivotConfigSchema.default(createDefaultPivotConfig()),
-});
-export type PivotCellData = z.infer<typeof PivotCellData>;
-
 /** Unified Cell Data */
 export const CellData = z.object({
   type: CellType,
@@ -128,17 +114,10 @@ export const InputCell = z.object({
   data: InputCellData,
 });
 export type InputCell = z.infer<typeof InputCell>;
-export const PivotCell = z.object({
-  id: z.string(),
-  type: z.literal('pivot'),
-  data: PivotCellData,
-});
-export type PivotCell = z.infer<typeof PivotCell>;
 export const SqlCellSchema = SqlCell;
 export const TextCellSchema = TextCell;
 export const VegaCellSchema = VegaCell;
 export const InputCellSchema = InputCell;
-export const PivotCellSchema = PivotCell;
 
 /** Canonical Cell */
 export const Cell = z.object({
@@ -196,6 +175,33 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     get: () => CellsRootState;
     set: (updater: (state: CellsRootState) => CellsRootState) => void;
   }) => Promise<void>;
+
+  /** Return initial CellStatus when a cell is first added. Default: {type:'other'} */
+  createStatus?: (id: string) => CellStatus;
+  /** Called once during cells.initialize() for each cell of this type. Reset ephemeral runtime state after hydration. */
+  onInitialize?: (args: {
+    id: string;
+    status: CellStatus | undefined;
+    get: () => CellsRootState;
+    set: (updater: (state: CellsRootState) => CellsRootState) => void;
+  }) => void;
+  /** Called when cell is removed. Clean up DuckDB relations, caches, etc. */
+  onRemove?: (args: {
+    id: string;
+    status: CellStatus | undefined;
+    get: () => CellsRootState;
+    set: (updater: (state: CellsRootState) => CellsRootState) => void;
+  }) => Promise<void> | void;
+  /** Detect whether an updateCell change is semantically significant for this cell type. */
+  hasSemanticChange?: (oldCell: TCell, newCell: TCell) => boolean;
+  /** Reset status to idle/stale. Called by invalidateCellStatus. If not provided, status is set to {type:'other'}. */
+  invalidateStatus?: (currentStatus: CellStatus) => CellStatus;
+  /** Collect DuckDB relation names that should be dropped when this cell is removed. */
+  getRelationsToDrop?: (status: CellStatus) => string[];
+  /** Record an error on the cell status during cascade execution. */
+  recordError?: (currentStatus: CellStatus, message: string) => CellStatus;
+  /** Return the query relation name for paged fetches, if applicable. */
+  getResultRelation?: (status: CellStatus) => string | undefined;
 };
 
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
@@ -251,23 +257,8 @@ export const OtherCellStatus = z.object({
 });
 export type OtherCellStatus = z.infer<typeof OtherCellStatus>;
 
-export const PivotCellStatus = z.object({
-  type: z.literal('pivot'),
-  status: z.enum(['idle', 'running', 'success', 'cancel', 'error']),
-  stale: z.boolean().default(true),
-  lastError: z.string().optional(),
-  resultViews: PivotRelationViewsSchema.optional(),
-  sourceRelation: z.string().optional(),
-  lastRunTime: z.number().optional(),
-});
-export type PivotCellStatus = z.infer<typeof PivotCellStatus>;
-
-export const CellStatus = z.union([
-  SqlCellStatus,
-  PivotCellStatus,
-  OtherCellStatus,
-]);
-export type CellStatus = z.infer<typeof CellStatus>;
+/** Extensible cell status -- each cell type defines its own shape with a discriminating `type` field. */
+export type CellStatus = {type: string; [key: string]: unknown};
 
 /** SQL execution results */
 export type SqlRunResult = {
@@ -404,8 +395,4 @@ export function isVegaCell(cell: Cell): cell is VegaCell {
 
 export function isInputCell(cell: Cell): cell is InputCell {
   return cell.type === 'input';
-}
-
-export function isPivotCell(cell: Cell): cell is PivotCell {
-  return cell.type === 'pivot';
 }

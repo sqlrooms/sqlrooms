@@ -1,7 +1,7 @@
 import type {DataTable} from '@sqlrooms/duckdb';
 import {getDefaultValuesForAggregator} from '../src/aggregators';
 import {buildCellsQuery, buildPivotExportQuery} from '../src/sql';
-import {createDefaultPivotConfig} from '../src/PivotSlice';
+import {createDefaultPivotConfig} from '../src/PivotCoreSlice';
 
 const table: DataTable = {
   table: {

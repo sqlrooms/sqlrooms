@@ -41,6 +41,22 @@ export {
   createPivotQuerySource,
   createPivotQuerySourceFromTable,
 } from './sql';
+
+export {pivotCellRegistryEntry} from './pivotCellRegistryEntry';
+export {PivotCellContent} from './PivotCellContent';
+export {createNotebookPivotBinding} from './pivotCellBinding';
+export {
+  PivotCellData,
+  PivotCell,
+  PivotCellSchema,
+  PivotCellStatus,
+  isPivotCell,
+} from './pivotCellTypes';
+export {
+  getPivotQuerySourceForCell,
+  getPivotSqlSourceOptions,
+} from './pivotCellHelpers';
+
 export type {PivotAggregatorDefinition} from './aggregators';
 export type {
   PivotInstanceSnapshot,

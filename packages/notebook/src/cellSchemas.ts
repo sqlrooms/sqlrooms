@@ -3,11 +3,11 @@ import {
   InputCellData,
   InputCellSchema,
   InputTypes,
-  PivotCellSchema,
   SqlCellSchema,
   TextCellSchema,
   VegaCellSchema,
 } from '@sqlrooms/cells';
+import {PivotCellSchema} from '@sqlrooms/pivot';
 
 export {InputTypes};
 

@@ -1,10 +1,11 @@
-import {
-  createPivotQuerySource,
-  createPivotQuerySourceFromTable,
-  type PivotQuerySource,
-} from '@sqlrooms/pivot';
-import type {CellsRootState, PivotCell, SqlCellStatus} from './types';
-import {isDefined} from './utils';
+import type {CellsRootState, SqlCellStatus} from '@sqlrooms/cells';
+import {createPivotQuerySource, createPivotQuerySourceFromTable} from './sql';
+import type {PivotQuerySource} from './types';
+import type {PivotCell} from './pivotCellTypes';
+
+function isDefined<T>(value: T | undefined | null): value is T {
+  return value != null;
+}
 
 export function getPivotQuerySourceForCell(
   state: CellsRootState,
@@ -33,7 +34,9 @@ export function getPivotQuerySourceForCell(
 
   const sourceStatus = state.cells.status[source.sqlId];
   const resultView =
-    sourceStatus?.type === 'sql' ? sourceStatus.resultView : undefined;
+    sourceStatus?.type === 'sql'
+      ? (sourceStatus as SqlCellStatus).resultView
+      : undefined;
   if (!resultView) {
     return {};
   }

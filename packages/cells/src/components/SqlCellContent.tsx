@@ -25,7 +25,12 @@ import {CornerDownRightIcon} from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, CellsRootState, SqlCell} from '../types';
+import type {
+  CellContainerProps,
+  CellsRootState,
+  SqlCell,
+  SqlCellStatus,
+} from '../types';
 import {getEffectiveResultName, isValidSqlIdentifier} from '../utils';
 import {SqlCellRunButton} from './SqlCellRunButton';
 
@@ -187,10 +192,12 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const status =
     cellStatus?.type === 'sql'
       ? {
-          state: cellStatus.status,
-          message: cellStatus.lastError,
-          resultName: cellStatus.resultView || cellStatus.resultName,
-          lastRunTime: cellStatus.lastRunTime,
+          state: (cellStatus as SqlCellStatus).status,
+          message: (cellStatus as SqlCellStatus).lastError,
+          resultName:
+            (cellStatus as SqlCellStatus).resultView ||
+            (cellStatus as SqlCellStatus).resultName,
+          lastRunTime: (cellStatus as SqlCellStatus).lastRunTime,
         }
       : undefined;
 

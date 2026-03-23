@@ -31,7 +31,7 @@ import type {
   Edge,
   SheetType,
 } from './types';
-import {isInputCell, isPivotCell, isSqlCell} from './types';
+import {isInputCell, isSqlCell} from './types';
 import {getSheetSchemaName, isDefined} from './utils';
 
 function createDefaultCellsConfig(
@@ -84,40 +84,25 @@ export function createCellsSlice(props: CellsSliceOptions) {
   // Keep result data outside Immer drafts, but scoped per slice instance.
   const cellResultCache = new Map<string, CellResultData>();
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
-    const dropSqlResultRelation = async (resultName?: string) => {
+    const dropRelationBestEffort = async (relationName: string) => {
       try {
         const connector = await get().db.getConnector();
-        await dropResultRelation({connector, relationName: resultName});
+        await dropResultRelation({connector, relationName});
       } catch {
-        // Best-effort cleanup: relation might already be gone or connector
-        // might be unavailable during teardown.
-      }
-    };
-    const dropPivotResultRelations = async (
-      relationNames?: Record<string, string>,
-    ) => {
-      if (!relationNames) return;
-      for (const relationName of Object.values(relationNames)) {
-        await dropSqlResultRelation(relationName);
+        // Best-effort cleanup
       }
     };
 
-    const resetPersistedPivotStatuses = () => {
-      set((state) =>
-        produce(state, (draft) => {
-          for (const [cellId, status] of Object.entries(draft.cells.status)) {
-            if (status?.type !== 'pivot') continue;
-            draft.cells.status[cellId] = {
-              type: 'pivot',
-              status: 'idle',
-              stale: true,
-              lastRunTime: status.lastRunTime,
-              resultViews: undefined,
-              sourceRelation: undefined,
-            };
-          }
-        }),
-      );
+    const dropRelationsForStatus = async (
+      cellType: string,
+      status: {type: string; [key: string]: unknown} | undefined,
+    ) => {
+      if (!status) return;
+      const registryItem = cellRegistry[cellType];
+      const names = registryItem?.getRelationsToDrop?.(status) ?? [];
+      for (const name of names) {
+        await dropRelationBestEffort(name);
+      }
     };
 
     return {
@@ -130,7 +115,19 @@ export function createCellsSlice(props: CellsSliceOptions) {
         resultVersion: {},
         pageVersion: {},
         async initialize() {
-          resetPersistedPivotStatuses();
+          for (const [cellId, cell] of Object.entries(
+            get().cells.config.data,
+          )) {
+            const registryItem = cellRegistry[cell.type];
+            if (registryItem?.onInitialize) {
+              registryItem.onInitialize({
+                id: cellId,
+                status: get().cells.status[cellId],
+                get,
+                set,
+              });
+            }
+          }
         },
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
@@ -155,21 +152,10 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[cell.id] = cell;
-              if (cell.type === 'sql') {
-                draft.cells.status[cell.id] = {
-                  type: 'sql',
-                  status: 'idle',
-                  referencedTables: [],
-                };
-              } else if (cell.type === 'pivot') {
-                draft.cells.status[cell.id] = {
-                  type: 'pivot',
-                  status: 'idle',
-                  stale: true,
-                };
-              } else {
-                draft.cells.status[cell.id] = {type: 'other'};
-              }
+              const registryItem = cellRegistry[cell.type];
+              draft.cells.status[cell.id] = registryItem?.createStatus?.(
+                cell.id,
+              ) ?? {type: 'other'};
 
               // Single-owner invariant: a cell can belong to one sheet only.
               for (const [existingSheetId, existingSheet] of Object.entries(
@@ -239,6 +225,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
         },
 
         removeCell: (id: string) => {
+          const cell = get().cells.config.data[id];
           const previousStatus = get().cells.status[id];
           cellResultCache.delete(id);
           set((state) =>
@@ -263,10 +250,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
               }
             }),
           );
-          if (previousStatus?.type === 'sql') {
-            void dropSqlResultRelation(previousStatus.resultView);
-          } else if (previousStatus?.type === 'pivot') {
-            void dropPivotResultRelations(previousStatus.resultViews);
+          if (cell) {
+            const registryItem = cellRegistry[cell.type];
+            if (registryItem?.onRemove) {
+              void registryItem.onRemove({
+                id,
+                status: previousStatus,
+                get,
+                set,
+              });
+            } else {
+              void dropRelationsForStatus(cell.type, previousStatus);
+            }
           }
         },
 
@@ -292,18 +287,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const updatedCell = updater(cell);
           scopedCells[id] = updatedCell;
 
-          // Check if resultName changed for SQL cells with successful execution
-          const resultNameChanged =
-            isSqlCell(cell) &&
-            isSqlCell(updatedCell) &&
-            cell.data.resultName !== updatedCell.data.resultName;
+          const registryItem = cellRegistry[cell.type];
 
           const existingStatus = get().cells.status[id];
-          const hasExistingView =
-            resultNameChanged &&
-            existingStatus?.type === 'sql' &&
-            existingStatus.status === 'success' &&
-            existingStatus.resultView;
+          const oldResultRelation =
+            existingStatus && registryItem?.getResultRelation
+              ? registryItem.getResultRelation(existingStatus)
+              : undefined;
 
           const semanticInputChanged =
             isInputCell(cell) &&
@@ -314,13 +304,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
             isSqlCell(cell) &&
             isSqlCell(updatedCell) &&
             cell.data.sql !== updatedCell.data.sql;
-          const semanticPivotChanged =
-            isPivotCell(cell) &&
-            isPivotCell(updatedCell) &&
-            (JSON.stringify(cell.data.source) !==
-              JSON.stringify(updatedCell.data.source) ||
-              JSON.stringify(cell.data.pivotConfig) !==
-                JSON.stringify(updatedCell.data.pivotConfig));
+
+          const semanticChanged =
+            registryItem?.hasSemanticChange?.(cell, updatedCell) ?? false;
 
           // Apply cell data to the store immediately so that other
           // actions (e.g. runCell triggered via Cmd+Enter) always see
@@ -329,15 +315,11 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[id] = updatedCell;
-              if (semanticPivotChanged) {
+              if (semanticChanged) {
                 const status = draft.cells.status[id];
-                if (status?.type === 'pivot') {
-                  draft.cells.status[id] = {
-                    type: 'pivot',
-                    status: 'idle',
-                    stale: true,
-                    lastRunTime: status.lastRunTime,
-                  };
+                if (status && registryItem?.invalidateStatus) {
+                  draft.cells.status[id] =
+                    registryItem.invalidateStatus(status);
                 }
               }
             }),
@@ -387,23 +369,27 @@ export function createCellsSlice(props: CellsSliceOptions) {
             );
           }
 
-          // If we have an existing view, rename it instead of invalidating
-          if (hasExistingView && existingStatus?.resultView) {
-            const registryItem = cellRegistry[cell.type];
-            if (registryItem?.renameResult) {
-              void registryItem.renameResult({
-                id,
-                oldResultView: existingStatus.resultView,
-                get,
-                set,
-              });
-            }
+          // If the result relation changed name (e.g. SQL resultName changed), rename it
+          const newStatus = get().cells.status[id];
+          const newResultRelation =
+            newStatus && registryItem?.getResultRelation
+              ? registryItem.getResultRelation(newStatus)
+              : undefined;
+          const resultRelationChanged =
+            oldResultRelation && newResultRelation !== oldResultRelation;
+          if (resultRelationChanged && registryItem?.renameResult) {
+            void registryItem.renameResult({
+              id,
+              oldResultView: oldResultRelation,
+              get,
+              set,
+            });
           }
 
           // After update, trigger cascade only if explicitly requested
           // or if semantic execution inputs changed.
           const shouldCascade =
-            opts?.cascade || resultNameChanged || semanticInputChanged;
+            opts?.cascade || resultRelationChanged || semanticInputChanged;
           if (shouldCascade) {
             if (ownerSheetId) {
               void get().cells.runDownstreamCascade(ownerSheetId, id);
@@ -450,14 +436,11 @@ export function createCellsSlice(props: CellsSliceOptions) {
           if (!sheet) return;
           const ownedCellIds = [...sheet.cellIds];
           const relationNamesToDrop = ownedCellIds.flatMap((cellId) => {
+            const cell = get().cells.config.data[cellId];
             const status = get().cells.status[cellId];
-            if (status?.type === 'sql' && status.resultView) {
-              return [status.resultView];
-            }
-            if (status?.type === 'pivot') {
-              return Object.values(status.resultViews ?? {}).filter(isDefined);
-            }
-            return [];
+            if (!cell || !status) return [];
+            const registryItem = cellRegistry[cell.type];
+            return registryItem?.getRelationsToDrop?.(status) ?? [];
           });
           set((state) =>
             produce(state, (draft) => {
@@ -500,7 +483,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             }),
           );
           for (const relationName of relationNamesToDrop) {
-            void dropSqlResultRelation(relationName);
+            void dropRelationBestEffort(relationName);
           }
         },
 
@@ -689,23 +672,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
         invalidateCellStatus: (id: string) => {
+          const cell = get().cells.config.data[id];
+          if (!cell) return;
+          const registryItem = cellRegistry[cell.type];
           set((state) =>
             produce(state, (draft) => {
               const status = draft.cells.status[id];
-              if (status?.type === 'sql') {
-                // Reset to idle, clearing the result so user knows to re-run
-                draft.cells.status[id] = {
-                  type: 'sql',
-                  status: 'idle',
-                  referencedTables: status.referencedTables || [],
-                };
-              } else if (status?.type === 'pivot') {
-                draft.cells.status[id] = {
-                  type: 'pivot',
-                  status: 'idle',
-                  stale: true,
-                  lastRunTime: status.lastRunTime,
-                };
+              if (status && registryItem?.invalidateStatus) {
+                draft.cells.status[id] = registryItem.invalidateStatus(status);
               }
             }),
           );
@@ -752,11 +726,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
           sorting?: {id: string; desc: boolean}[],
         ) => {
           const state = get();
+          const cell = state.cells.config.data[id];
+          if (!cell) return;
+          const registryItem = cellRegistry[cell.type];
           const status = state.cells.status[id];
-          if (status?.type !== 'sql' || !status.resultView) return;
+          const resultRelation =
+            status && registryItem?.getResultRelation
+              ? registryItem.getResultRelation(status)
+              : undefined;
+          if (!resultRelation) return;
 
           const connector = await state.db.getConnector();
-          const baseQuery = sanitizeQuery(`SELECT * FROM ${status.resultView}`);
+          const baseQuery = sanitizeQuery(`SELECT * FROM ${resultRelation}`);
           const pagedQuery = makePagedQuery(
             baseQuery,
             sorting ?? [],
@@ -765,7 +746,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
 
           const arrowTable = await connector.query(pagedQuery);
           const countResult = await connector.query(
-            `SELECT COUNT(*)::int AS count FROM ${status.resultView}`,
+            `SELECT COUNT(*)::int AS count FROM ${resultRelation}`,
           );
           const totalRows = countResult.toArray()[0]?.count ?? 0;
 
@@ -827,15 +808,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : String(error);
-              set((state) =>
-                produce(state, (draft) => {
-                  const status = draft.cells.status[cellId];
-                  if (status?.type === 'sql') {
-                    status.status = 'error';
-                    status.lastError = message;
-                  }
-                }),
-              );
+              const failedCell = get().cells.config.data[cellId];
+              const failedRegistryItem = failedCell
+                ? cellRegistry[failedCell.type]
+                : undefined;
+              if (failedRegistryItem?.recordError) {
+                set((state) =>
+                  produce(state, (draft) => {
+                    const status = draft.cells.status[cellId];
+                    if (status) {
+                      draft.cells.status[cellId] =
+                        failedRegistryItem.recordError!(status, message);
+                    }
+                  }),
+                );
+              }
             }
           }
         },
@@ -877,15 +864,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : String(error);
-              set((state) =>
-                produce(state, (draft) => {
-                  const status = draft.cells.status[cellId];
-                  if (status?.type === 'sql') {
-                    status.status = 'error';
-                    status.lastError = message;
-                  }
-                }),
-              );
+              const failedCell = get().cells.config.data[cellId];
+              const failedRegistryItem = failedCell
+                ? cellRegistry[failedCell.type]
+                : undefined;
+              if (failedRegistryItem?.recordError) {
+                set((state) =>
+                  produce(state, (draft) => {
+                    const status = draft.cells.status[cellId];
+                    if (status) {
+                      draft.cells.status[cellId] =
+                        failedRegistryItem.recordError!(status, message);
+                    }
+                  }),
+                );
+              }
             }
           }
         },

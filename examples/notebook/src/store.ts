@@ -9,6 +9,7 @@ import {
   CellsSliceConfig,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
+import {pivotCellRegistryEntry} from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -75,7 +76,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createCellsSlice({
-        cellRegistry: createDefaultCellRegistry(),
+        cellRegistry: {
+          ...createDefaultCellRegistry(),
+          pivot: pivotCellRegistryEntry,
+        },
         supportedSheetTypes: ['notebook'],
       })(set, get, store),
       ...createNotebookSlice()(set, get, store),

@@ -1,9 +1,11 @@
 import {
-  createPivotBoundStore,
-  type PivotInstanceStore,
-  PivotEditor,
-  type PivotSource,
-} from '@sqlrooms/pivot';
+  type CellContainerProps,
+  type CellsRootState,
+  type SqlCellStatus,
+  findSheetIdForCell,
+  useCellsStore,
+} from '@sqlrooms/cells';
+import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {
   Label,
   Select,
@@ -12,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {useRoomStoreApi} from '@sqlrooms/room-store';
 import React, {useEffect, useMemo} from 'react';
 import {useStore} from 'zustand';
-import {findSheetIdForCell} from '../helpers';
-import {useCellsStore} from '../hooks';
-import {createNotebookPivotBinding} from '../pivotBinding';
-import type {CellContainerProps, CellsRootState, PivotCell} from '../types';
+import {createPivotBoundStore} from './PivotCoreSlice';
+import {PivotEditor} from './PivotEditor';
+import type {PivotInstanceStore} from './PivotCoreSlice';
+import type {PivotSource} from './types';
+import {createNotebookPivotBinding} from './pivotCellBinding';
+import type {PivotCell} from './pivotCellTypes';
 
 const EMPTY_CELL_IDS: string[] = [];
 
@@ -123,7 +126,9 @@ export const PivotCellContent: React.FC<PivotCellContentProps> = ({
           return {
             id: candidate.id,
             label:
-              (status?.type === 'sql' ? status.resultView : undefined) ??
+              (status?.type === 'sql'
+                ? (status as SqlCellStatus).resultView
+                : undefined) ??
               candidate.data.resultName ??
               candidate.data.title ??
               candidate.id,
