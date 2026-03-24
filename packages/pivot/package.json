@@ -38,7 +38,7 @@
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
     "zod": "^4.1.8",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@sqlrooms/preset-jest": "workspace:*",

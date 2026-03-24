@@ -112,7 +112,10 @@ export const PivotCellContent: React.FC<PivotCellContentProps> = ({
     [id, pivotBinding, roomStore],
   );
 
-  useEffect(() => () => pivotStore.destroy(), [pivotStore]);
+  useEffect(() => {
+    pivotStore.startSync?.();
+    return () => pivotStore.destroy();
+  }, [pivotStore]);
 
   const sqlOptions = useMemo(
     () =>

@@ -149,6 +149,7 @@ export type PivotInstanceState = PivotInstanceSnapshot & {
 
 export type PivotInstanceStore = StoreApi<PivotInstanceState> & {
   destroy: () => void;
+  startSync?: () => void;
 };
 
 export type CreatePivotCoreStoreProps = {
@@ -477,11 +478,22 @@ export function createPivotBoundStore<RootState, Id extends string>(args: {
     },
     ...createPivotInstanceActions(get, set, {
       setSourceImpl: (source) => {
+        set((state) => ({
+          ...state,
+          source,
+          config: createDefaultPivotConfig(),
+          status: {...state.status, stale: true},
+        }));
         args.binding.setPersistedState(args.id, () =>
           createDefaultPivotPersistedState({source}),
         );
       },
       setConfigImpl: (config) => {
+        set((state) => ({
+          ...state,
+          config,
+          status: {...state.status, stale: true},
+        }));
         args.binding.setPersistedState(args.id, (current) => ({
           ...current,
           config,
@@ -493,25 +505,42 @@ export function createPivotBoundStore<RootState, Id extends string>(args: {
     }),
   }));
 
-  const unsubscribe = args.binding.subscribe(() => {
-    const nextSnapshot = getBoundPivotSnapshot(
+  let unsubscribe: (() => void) | undefined;
+
+  function startSync() {
+    stopSync();
+    currentSnapshot = getBoundPivotSnapshot(
       args.rootStore,
       args.id,
       args.binding,
     );
-    if (samePivotSnapshot(currentSnapshot, nextSnapshot)) {
-      return;
-    }
-    currentSnapshot = nextSnapshot;
-    store.setState((state) => ({
-      ...state,
-      ...nextSnapshot,
-    }));
-  });
+    store.setState((state) => ({...state, ...currentSnapshot}));
+    unsubscribe = args.binding.subscribe(() => {
+      const nextSnapshot = getBoundPivotSnapshot(
+        args.rootStore,
+        args.id,
+        args.binding,
+      );
+      if (samePivotSnapshot(currentSnapshot, nextSnapshot)) {
+        return;
+      }
+      currentSnapshot = nextSnapshot;
+      store.setState((state) => ({
+        ...state,
+        ...nextSnapshot,
+      }));
+    });
+  }
+
+  function stopSync() {
+    unsubscribe?.();
+    unsubscribe = undefined;
+  }
+
+  startSync();
 
   return Object.assign(store, {
-    destroy: () => {
-      unsubscribe();
-    },
+    destroy: stopSync,
+    startSync,
   });
 }
