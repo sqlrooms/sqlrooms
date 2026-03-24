@@ -57,7 +57,7 @@ const DiscussionPanel = () => {
                   <div className="text-muted-foreground text-xs">
                     {comment.userId} - {formatTimeRelative(comment.timestamp)}
                   </div>
-                  <div className="whitespace-pre-wrap text-sm">
+                  <div className="text-sm whitespace-pre-wrap">
                     {comment.text}
                   </div>
                 </div>

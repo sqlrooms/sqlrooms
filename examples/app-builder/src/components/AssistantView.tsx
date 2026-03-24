@@ -10,6 +10,7 @@ export const AssistantView: React.FC = () => {
   );
 
   const settingsPanelOpen = useDisclosure();
+  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -51,6 +52,11 @@ export const AssistantView: React.FC = () => {
               <div className="flex items-center justify-end gap-2">
                 <Chat.ModelSelector />
               </div>
+              <Chat.InlineApiKeyInput
+                onSaveApiKey={(provider, apiKey) => {
+                  updateProvider(provider, {apiKey});
+                }}
+              />
             </Chat.Composer>
           </>
         )}

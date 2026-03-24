@@ -18,7 +18,7 @@ export const Legend: FC<LegendProps> = ({
   sizeScale,
 }) => {
   return (
-    <div className="absolute right-4 top-4 rounded-lg bg-gray-900/80 p-3 backdrop-blur-sm">
+    <div className="absolute top-4 right-4 rounded-lg bg-gray-900/80 p-3 backdrop-blur-sm">
       <div className="mb-2 text-xs font-medium text-gray-300">Fields</div>
       <div className="flex flex-col gap-1.5">
         {uniqueFields.map((field) => (
@@ -33,7 +33,7 @@ export const Legend: FC<LegendProps> = ({
       </div>
       {citationStats && sizeScale && (
         <>
-          <div className="mb-2 mt-4 text-xs font-medium text-gray-300">
+          <div className="mt-4 mb-2 text-xs font-medium text-gray-300">
             Citations
           </div>
           <div className="flex flex-col gap-1.5">
@@ -47,7 +47,7 @@ export const Legend: FC<LegendProps> = ({
                   style={{width: '20px', height: '20px'}}
                 >
                   <span
-                    className="absolute rounded-full bg-white bg-opacity-50"
+                    className="bg-opacity-50 absolute rounded-full bg-white"
                     style={{
                       width: `${sizeScale(citations)}px`,
                       height: `${sizeScale(citations)}px`,

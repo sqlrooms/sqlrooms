@@ -24,7 +24,7 @@ export const AiSettingsPanelBase: FC<
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="absolute right-2 top-2 z-10"
+          className="absolute top-2 right-2 z-10"
         >
           <X className="h-4 w-4" />
         </Button>

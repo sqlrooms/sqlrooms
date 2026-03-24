@@ -18,13 +18,9 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
-    "ai": "^5.0.155",
-    "immer": "^11.0.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.5"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",

@@ -3,7 +3,9 @@
     "turbo lint --filter=@sqlrooms/* --",
     "prettier --write"
   ],
+  "**/*.md": ["prettier --write"],
   "python/**/*.py": [
-    "uv run --project python ruff check --fix"
+    "uv run --project python ruff check --fix",
+    "uv run --project python ruff format"
   ]
 }

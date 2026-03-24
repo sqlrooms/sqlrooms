@@ -41,7 +41,6 @@ Reference:
 - [DuckDB: Iceberg in the Browser](https://duckdb.org/2025/12/16/iceberg-in-the-browser)
 - [MotherDuck example](/examples#motherduck-cloud-query-editor)
 
-
 ## 3) Collaborative shared rooms with `sqlrooms-server` (coming soon)
 
 Use server-backed sessions when many users need to see and edit the same analytical workspace in near real time.
@@ -62,7 +61,6 @@ Examples and references:
 - [`sqlrooms-server` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-server)
 - [Build your own data warehouse with DuckDB, DBT, and Modal](https://modal.com/docs/examples/dbt_duckdb)
 
-
 ## Backend platform options for Scenarios 2 and 3
 
 In practice, teams can choose between managed data persistence (MotherDuck) and per-room compute runtimes (Modal/Daytona/Cloudflare/Plane), or combine them.
@@ -74,9 +72,6 @@ In practice, teams can choose between managed data persistence (MotherDuck) and 
 - **Use Plane when:** You want a self-hostable system for stateful per-session WebSocket backends with full control over infrastructure behavior.
 
 Pricing and limits can change frequently, so treat platform economics as a regularly reviewed decision input.
-
-
-
 
 ## 4) Local session backend from CLI
 
@@ -91,7 +86,6 @@ This scenario is for single-user local workflows, similar to how Jupyter is ofte
 Reference:
 
 - [`sqlrooms-cli` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-cli)
-
 
 ## 5) Offline-capable PWA
 

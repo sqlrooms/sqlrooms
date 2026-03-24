@@ -9,6 +9,7 @@ export {
   Param,
   Selection,
 } from '@uwdata/mosaic-core';
+export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
 export {Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
@@ -29,36 +30,36 @@ export {MosaicChart} from './MosaicChart';
 export {MosaicChartBuilder} from './MosaicChartBuilder';
 
 // Editor hooks and context
-export {useMosaicChartEditor} from './editor/useMosaicChartEditor';
 export {useMosaicEditorContext} from './editor/MosaicEditorContext';
 export {
-  loadMosaicSchema,
   getCachedMosaicSchema,
+  loadMosaicSchema,
   preloadMosaicSchema,
 } from './editor/mosaicSchema';
+export {useMosaicChartEditor} from './editor/useMosaicChartEditor';
 
 // Editor types
 export type {MosaicChartContainerProps} from './editor/MosaicChartContainer';
 export type {MosaicChartDisplayProps} from './editor/MosaicChartDisplay';
-export type {MosaicSpecEditorPanelProps} from './editor/MosaicSpecEditorPanel';
 export type {MosaicChartEditorActionsProps} from './editor/MosaicChartEditorActions';
 export type {MosaicCodeMirrorEditorProps} from './editor/MosaicCodeMirrorEditor';
+export type {MosaicSpecEditorPanelProps} from './editor/MosaicSpecEditorPanel';
 export type {
-  MosaicEditorState,
   MosaicEditorActions,
   MosaicEditorContextValue,
+  MosaicEditorState,
   OnMosaicSpecChange,
   UseMosaicChartEditorOptions,
   UseMosaicChartEditorReturn,
 } from './editor/types';
 
 // Chart builder types and utilities
-export type {ChartBuilderDialogProps} from './chart-builders/ChartBuilderDialog';
-export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
-export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
 export {createDefaultChartBuilders} from './chart-builders/builders';
+export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
+export type {ChartBuilderDialogProps} from './chart-builders/ChartBuilderDialog';
+export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
 export type {
-  ChartBuilderTemplate,
-  ChartBuilderField,
   ChartBuilderColumn,
+  ChartBuilderField,
+  ChartBuilderTemplate,
 } from './chart-builders/types';

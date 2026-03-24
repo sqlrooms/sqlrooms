@@ -1,5 +1,5 @@
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
-import {TableStructurePanel} from '@sqlrooms/sql-editor';
+import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {useRoomStore, RoomPanelTypes} from './store';
 import {toast} from '@sqlrooms/ui';
 import {FileDropzone} from '@sqlrooms/dropzone';
@@ -42,7 +42,12 @@ export const DataSourcesPanel = () => {
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
-      <TableStructurePanel />
+      <SchemaExplorer>
+        <SchemaExplorer.Header>
+          <SchemaExplorer.RefreshButton />
+        </SchemaExplorer.Header>
+        <SchemaExplorer.Tree className="h-full" />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

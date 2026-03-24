@@ -63,6 +63,8 @@ export const DbConnection = z.object({
   requiresBridge: z.boolean().default(false),
   bridgeId: z.string().optional(),
   isCore: z.boolean().default(false),
+  /** Engine-specific configuration (e.g. dsn, account, warehouse). */
+  config: z.record(z.string(), z.string()).optional(),
 });
 /**
  * Declarative connection metadata used by the orchestration layer.

@@ -23,6 +23,7 @@ dependencies = [
   "python-multipart>=0.0.9",
   "sqlrooms-server>=0.1.0",
   "tomli>=2.0.0; python_version < '3.11'",
+  "tomlkit>=0.13.0",
   "typer>=0.12.5",
   "uvicorn>=0.30.0",
 ]

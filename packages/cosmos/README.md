@@ -31,7 +31,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 ## Render a graph
 
 ```tsx
-import {CosmosGraph, CosmosGraphControls, CosmosSimulationControls} from '@sqlrooms/cosmos';
+import {
+  CosmosGraph,
+  CosmosGraphControls,
+  CosmosSimulationControls,
+} from '@sqlrooms/cosmos';
 import {GraphConfigInterface} from '@cosmos.gl/graph';
 
 const config: GraphConfigInterface = {
@@ -43,20 +47,16 @@ const config: GraphConfigInterface = {
 };
 
 const pointPositions = new Float32Array([
-  0, 0, // node 0
-  1, 0, // node 1
-  0.5, 1, // node 2
+  0,
+  0, // node 0
+  1,
+  0, // node 1
+  0.5,
+  1, // node 2
 ]);
 const pointSizes = new Float32Array([5, 5, 5]);
-const pointColors = new Float32Array([
-  1, 0, 0, 1,
-  0, 1, 0, 1,
-  0, 0, 1, 1,
-]);
-const linkIndexes = new Float32Array([
-  0, 1,
-  1, 2,
-]);
+const pointColors = new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]);
+const linkIndexes = new Float32Array([0, 1, 1, 2]);
 
 export function GraphView() {
   return (
@@ -69,7 +69,7 @@ export function GraphView() {
       renderPointTooltip={(index) => `Node ${index}`}
     >
       <CosmosGraphControls />
-      <CosmosSimulationControls className="absolute right-2 top-2" />
+      <CosmosSimulationControls className="absolute top-2 right-2" />
     </CosmosGraph>
   );
 }
@@ -82,7 +82,9 @@ import {useRoomStore} from './store';
 import {Button} from '@sqlrooms/ui';
 
 function SimulationButtons() {
-  const toggleSimulation = useRoomStore((state) => state.cosmos.toggleSimulation);
+  const toggleSimulation = useRoomStore(
+    (state) => state.cosmos.toggleSimulation,
+  );
   const fitView = useRoomStore((state) => state.cosmos.fitView);
   const updateSimulationConfig = useRoomStore(
     (state) => state.cosmos.updateSimulationConfig,
@@ -92,7 +94,9 @@ function SimulationButtons() {
     <div className="flex gap-2">
       <Button onClick={toggleSimulation}>Toggle simulation</Button>
       <Button onClick={fitView}>Fit view</Button>
-      <Button onClick={() => updateSimulationConfig({simulationRepulsion: 1.5})}>
+      <Button
+        onClick={() => updateSimulationConfig({simulationRepulsion: 1.5})}
+      >
         Stronger repulsion
       </Button>
     </div>
