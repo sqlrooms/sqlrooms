@@ -144,10 +144,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         config: {
           type: LayoutTypes.enum.mosaic,
           nodes: {
+            type: 'split',
             direction: 'row',
-            first: 'data-sources',
-            second: 'main',
-            splitPercentage: 30,
+            children: ['data-sources', 'main'],
+            splitPercentages: [30, 70],
           },
         },
         panels: {

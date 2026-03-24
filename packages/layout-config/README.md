@@ -11,7 +11,7 @@ npm install @sqlrooms/layout-config
 - `MAIN_VIEW`
 - `LayoutTypes`
 - `MosaicLayoutConfig`, `LayoutConfig`
-- `MosaicLayoutNode`, `MosaicLayoutParent`, `isMosaicLayoutParent`
+- `MosaicLayoutNode`, `MosaicLayoutSplitNode`, `MosaicLayoutParent`, `isMosaicLayoutSplitNode`, `isMosaicLayoutParent`
 - `createDefaultMosaicLayout()`, `DEFAULT_MOSAIC_LAYOUT`
 
 ## Basic usage
@@ -29,10 +29,10 @@ const minimalLayout = createDefaultMosaicLayout();
 const twoPaneLayout: MosaicLayoutConfig = {
   type: 'mosaic',
   nodes: {
+    type: 'split',
     direction: 'row',
-    first: 'data',
-    second: MAIN_VIEW,
-    splitPercentage: 30,
+    children: ['data', MAIN_VIEW],
+    splitPercentages: [30, 70],
   },
 };
 
