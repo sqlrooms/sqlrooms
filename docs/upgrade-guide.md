@@ -37,7 +37,7 @@ const agent = new ToolLoopAgent({
   stopWhen: stepCountIs(10),
   temperature: 0,
 });
-const resultText = await streamSubAgent(agent, prompt, store, toolCallId, abortSignal);
+const resultText = await streamSubAgent(agent, prompt, abortSignal);
 ```
 
 #### `addToolResult` → `addToolOutput`
