@@ -639,9 +639,6 @@ importers:
       ai:
         specifier: 6.0.132
         version: 6.0.132(zod@4.1.13)
-      immer:
-        specifier: ^11.0.1
-        version: 11.0.1
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.1)
