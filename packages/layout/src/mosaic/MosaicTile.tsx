@@ -1,9 +1,8 @@
-import {MAIN_VIEW} from '@sqlrooms/layout-config';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
-import {MosaicPath, MosaicWindow} from 'react-mosaic-component';
-
-const ENABLE_LAYOUT_REARRANGE = false;
+import {MosaicNode, MosaicPath, MosaicWindow} from 'react-mosaic-component';
+import {MosaicLayoutNode} from '@sqlrooms/layout-config';
+import {findParentArea} from './mosaic-utils';
 
 const MosaicTile: FC<{
   id: string;
@@ -11,8 +10,9 @@ const MosaicTile: FC<{
   content: React.ReactNode;
   isDragging: boolean;
   className?: string;
+  currentTree?: MosaicNode<string> | null;
 }> = (props) => {
-  const {id, content, path, isDragging, className} = props;
+  const {id, content, path, isDragging, className, currentTree} = props;
   const body = (
     <div
       className={cn(
@@ -24,23 +24,18 @@ const MosaicTile: FC<{
       {content}
     </div>
   );
-  if (!ENABLE_LAYOUT_REARRANGE || id === MAIN_VIEW) {
+
+  const parentArea = currentTree
+    ? findParentArea(currentTree as MosaicLayoutNode, path)
+    : undefined;
+  const isDraggable = parentArea?.node?.draggable === true;
+
+  if (!isDraggable) {
     return body;
   }
+
   return (
-    <MosaicWindow<string>
-      title={id}
-      path={path}
-      renderToolbar={() =>
-        id === MAIN_VIEW ? (
-          <div />
-        ) : (
-          <div style={{display: 'flex', width: '100%', height: '100%'}}>
-            {/* <RoomPanelHeader panelKey={id as RoomPanelTypes} /> */}
-          </div>
-        )
-      }
-    >
+    <MosaicWindow<string> title={id} path={path} draggable={true}>
       {body}
     </MosaicWindow>
   );

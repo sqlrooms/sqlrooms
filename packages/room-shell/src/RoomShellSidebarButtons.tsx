@@ -33,7 +33,6 @@ const SidebarButton: FC<{
           className={cn(
             'h-10 w-10 rounded-none',
             isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
-            // isDisabled && 'opacity-50 cursor-not-allowed',
             className,
           )}
           disabled={isDisabled}
@@ -102,4 +101,67 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
   );
 };
 
-export {RoomShellSidebarButton, RoomShellSidebarButtons, SidebarButton};
+/**
+ * Renders sidebar buttons for all panels belonging to a named area.
+ * Clicking the active panel's button collapses the area;
+ * clicking an inactive panel expands the area and switches to that tab.
+ */
+const AreaPanelButtons: FC<{
+  area: string;
+  className?: string;
+}> = ({area, className}) => {
+  const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const activePanel = useBaseRoomShellStore((state) =>
+    state.layout.getActivePanel(area),
+  );
+  const isCollapsed = useBaseRoomShellStore((state) =>
+    state.layout.isAreaCollapsed(area),
+  );
+  const setActivePanel = useBaseRoomShellStore(
+    (state) => state.layout.setActivePanel,
+  );
+  const setAreaCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.setAreaCollapsed,
+  );
+  const initialized = useBaseRoomShellStore((state) => state.room.initialized);
+
+  const areaPanels = useMemo(
+    () =>
+      Object.entries(panels).filter(
+        ([, info]) => info.area === area || info.placement === area,
+      ),
+    [panels, area],
+  );
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      {areaPanels.map(([panelId, info]) => {
+        const isSelected = activePanel === panelId && !isCollapsed;
+        return (
+          <SidebarButton
+            key={panelId}
+            title={info.title ?? panelId}
+            icon={info.icon ?? (() => null)}
+            isSelected={isSelected}
+            isDisabled={!initialized}
+            onClick={() => {
+              if (isSelected) {
+                setAreaCollapsed(area, true);
+              } else {
+                setAreaCollapsed(area, false);
+                setActivePanel(area, panelId);
+              }
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+export {
+  AreaPanelButtons,
+  RoomShellSidebarButton,
+  RoomShellSidebarButtons,
+  SidebarButton,
+};

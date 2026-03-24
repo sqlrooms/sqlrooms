@@ -78,6 +78,7 @@ interface TabStripContextValue {
   selectedTabId?: string | null;
   openTabs?: string[];
   preventCloseLastTab: boolean;
+  closeable: boolean;
   getLastOpenedAt: (tabId: string) => number | undefined;
 
   // Callbacks
@@ -122,7 +123,7 @@ interface SortableTabProps {
   tab: TabDescriptor;
   tabClassName?: string;
   editingTabId: string | null;
-  hideCloseButton?: boolean;
+  closeable?: boolean;
   onClose: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
@@ -139,7 +140,7 @@ function SortableTab({
   tab,
   tabClassName,
   editingTabId,
-  hideCloseButton,
+  closeable = true,
   onClose,
   onStartEditing,
   onStopEditing,
@@ -245,7 +246,7 @@ function SortableTab({
               </DropdownMenu>
             )}
 
-            {!hideCloseButton && (
+            {closeable && (
               <button
                 type="button"
                 aria-label="Close tab"
@@ -368,6 +369,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     renderTabMenu,
     renderTabLabel,
     preventCloseLastTab,
+    closeable,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
@@ -428,7 +430,9 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               tab={tab}
               tabClassName={tabClassName}
               editingTabId={editingTabId}
-              hideCloseButton={preventCloseLastTab && openTabItems.length === 1}
+              closeable={
+                closeable && !(preventCloseLastTab && openTabItems.length === 1)
+              }
               onClose={handleClose}
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
@@ -805,6 +809,8 @@ export interface TabStripProps {
   selectedTabId?: string | null;
   /** If true, hides the close button when only one tab remains open. */
   preventCloseLastTab?: boolean;
+  /** Whether tabs can be closed. Defaults to true. */
+  closeable?: boolean;
   /** Called when a tab is closed (hidden, can be reopened). */
   onClose?: (tabId: string) => void;
   /** Called when the list of open tabs changes (open from dropdown or reorder). */
@@ -854,6 +860,7 @@ function TabStripRoot({
   openTabs,
   selectedTabId,
   preventCloseLastTab = false,
+  closeable = true,
   onClose,
   onOpenTabsChange,
   onSelect,
@@ -1034,6 +1041,7 @@ function TabStripRoot({
     selectedTabId,
     openTabs,
     preventCloseLastTab,
+    closeable,
     getLastOpenedAt: (tabId) => lastOpenedAtRef.current.get(tabId),
     onOpenTabsChange,
     onSelect,

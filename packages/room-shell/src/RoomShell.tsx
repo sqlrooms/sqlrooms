@@ -1,4 +1,9 @@
-import {MosaicLayout} from '@sqlrooms/layout';
+import {getNodeAtPath, MosaicLayout} from '@sqlrooms/layout';
+import type {MosaicLayoutNode} from '@sqlrooms/layout-config';
+import {
+  isMosaicLayoutTabsNode,
+  MosaicLayoutTabsNode,
+} from '@sqlrooms/layout-config';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
   cn,
@@ -9,13 +14,59 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
-import type {MosaicLayoutNode} from '@sqlrooms/layout-config';
+import {MosaicPath} from 'react-mosaic-component';
 import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
+  AreaPanelButtons,
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
 import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
+
+function findAreaByPath(
+  root: MosaicLayoutNode,
+  path: MosaicPath,
+): MosaicLayoutTabsNode | undefined {
+  const node = getNodeAtPath(root, path);
+  if (node && isMosaicLayoutTabsNode(node as MosaicLayoutTabsNode)) {
+    return node as MosaicLayoutTabsNode;
+  }
+  return undefined;
+}
+
+function updateTabsOrder(
+  root: MosaicLayoutNode | null,
+  path: MosaicPath,
+  newTabIds: string[],
+): MosaicLayoutNode | null {
+  if (!root) return root;
+  if (path.length === 0) {
+    if (typeof root === 'object' && 'type' in root && root.type === 'tabs') {
+      const tabsNode = root as MosaicLayoutTabsNode;
+      const activeTab = tabsNode.tabs[tabsNode.activeTabIndex];
+      const newActiveIndex = activeTab ? newTabIds.indexOf(activeTab) : 0;
+      return {
+        ...tabsNode,
+        tabs: newTabIds,
+        activeTabIndex: Math.max(0, newActiveIndex),
+      };
+    }
+    return root;
+  }
+  if (typeof root === 'string') return root;
+  const [head, ...rest] = path;
+  if (head === undefined) return root;
+  if ('children' in root && Array.isArray(root.children)) {
+    const newChildren = [...root.children];
+    newChildren[head] = updateTabsOrder(
+      newChildren[head] as MosaicLayoutNode,
+      rest,
+      newTabIds,
+    ) as MosaicLayoutNode;
+    return {...root, children: newChildren};
+  }
+  return root;
+}
 
 export function RoomShellBase({
   className,
@@ -39,7 +90,7 @@ export function RoomShellBase({
   );
 }
 
-export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
+export const SidebarContainer: FC<PropsWithChildren<{className?: string}>> = ({
   className,
   children,
 }) => {
@@ -50,9 +101,22 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
         className,
       )}
     >
-      <RoomShellSidebarButtons />
       {children}
     </div>
+  );
+};
+
+/**
+ * @deprecated Use SidebarContainer instead
+ */
+export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
+  className,
+  children,
+}) => {
+  return (
+    <SidebarContainer className={className}>
+      <RoomShellSidebarButtons /> {children}
+    </SidebarContainer>
   );
 };
 
@@ -63,25 +127,83 @@ export const LayoutComposer: FC<{
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const setActivePanel = useBaseRoomShellStore(
+    (state) => state.layout.setActivePanel,
+  );
+  const removePanelFromArea = useBaseRoomShellStore(
+    (state) => state.layout.removePanelFromArea,
+  );
+  const setAreaCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.setAreaCollapsed,
+  );
   const ErrorBoundary = useBaseRoomShellStore(
     (state) => state.room.CustomErrorBoundary,
   );
 
   const handleLayoutChange = useCallback(
     (nodes: MosaicLayoutNode | null) => {
-      // Keep layout properties, e.g. 'pinned' and 'fixed'
       setLayout({...layout, nodes});
     },
     [setLayout, layout],
   );
 
-  // const visibleRoomPanels = useMemo(
-  //   () => getVisibleMosaicLayoutPanels(layout?.nodes),
-  //   [layout],
-  // );
+  const handleTabSelect = useCallback(
+    (path: MosaicPath, tabId: string) => {
+      const areaResult = layout.nodes
+        ? findAreaByPath(layout.nodes, path)
+        : undefined;
+      if (areaResult?.id) {
+        setActivePanel(areaResult.id, tabId);
+      }
+    },
+    [layout.nodes, setActivePanel],
+  );
+
+  const handleTabClose = useCallback(
+    (path: MosaicPath, tabId: string) => {
+      const areaResult = layout.nodes
+        ? findAreaByPath(layout.nodes, path)
+        : undefined;
+      if (areaResult?.id) {
+        removePanelFromArea(areaResult.id, tabId);
+      }
+    },
+    [layout.nodes, removePanelFromArea],
+  );
+
+  const handleTabReorder = useCallback(
+    (path: MosaicPath, tabIds: string[]) => {
+      const areaResult = layout.nodes
+        ? findAreaByPath(layout.nodes, path)
+        : undefined;
+      if (areaResult?.id) {
+        setLayout({
+          ...layout,
+          nodes: updateTabsOrder(layout.nodes, path, tabIds),
+        });
+      }
+    },
+    [layout, setLayout],
+  );
+
+  const handleAreaCollapse = useCallback(
+    (areaId: string) => {
+      setAreaCollapsed(areaId, true);
+    },
+    [setAreaCollapsed],
+  );
+
+  const handleAreaExpand = useCallback(
+    (areaId: string, panelId?: string) => {
+      setAreaCollapsed(areaId, false);
+      if (panelId) {
+        setActivePanel(areaId, panelId);
+      }
+    },
+    [setAreaCollapsed, setActivePanel],
+  );
 
   const renderTile = (panelId: string) => {
-    // const panelId = visibleRoomPanels.find((p) => p === id);
     const PanelComp = panelId && panels[panelId]?.component;
     if (!PanelComp) {
       return <></>;
@@ -106,6 +228,12 @@ export const LayoutComposer: FC<{
           value={layout.nodes}
           onChange={handleLayoutChange}
           tileClassName={tileClassName}
+          panels={panels}
+          onTabSelect={handleTabSelect}
+          onTabClose={handleTabClose}
+          onTabReorder={handleTabReorder}
+          onAreaCollapse={handleAreaCollapse}
+          onAreaExpand={handleAreaExpand}
         />
       ) : null}
     </div>
@@ -129,9 +257,14 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
 };
 
 export const RoomShell = Object.assign(RoomShellBase, {
+  /**
+   * @deprecated Use SidebarContainer instead
+   */
   Sidebar: RoomSidebar,
+  SidebarContainer: SidebarContainer,
   SidebarButton: SidebarButton,
   SidebarButtons: RoomShellSidebarButtons,
+  AreaPanelButtons: AreaPanelButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
   CommandPalette: RoomShellCommandPalette,

@@ -34,8 +34,16 @@ export type MosaicLayoutSplitNode = z.infer<
 
 export const MosaicLayoutTabsNode = z.object({
   type: z.literal('tabs'),
+  id: z.string().optional(),
   tabs: z.array(MosaicLayoutNodeKey),
   activeTabIndex: z.number(),
+  collapsible: z.boolean().optional(),
+  collapsed: z.boolean().optional(),
+  closeableTabs: z.boolean().optional(),
+  showTabStrip: z.boolean().optional(),
+  showTabStripWhenCollapsed: z.boolean().optional(),
+  draggable: z.boolean().optional(),
+  savedPercentages: z.array(z.number()).optional(),
 });
 export type MosaicLayoutTabsNode = z.infer<typeof MosaicLayoutTabsNode>;
 

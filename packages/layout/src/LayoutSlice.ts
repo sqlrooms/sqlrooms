@@ -1,8 +1,9 @@
 import {
   DEFAULT_MOSAIC_LAYOUT,
+  isMosaicLayoutSplitNode,
   LayoutConfig,
   MAIN_VIEW,
-  isMosaicLayoutSplitNode,
+  MosaicLayoutTabsNode,
 } from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
@@ -16,7 +17,12 @@ import {produce} from 'immer';
 import React from 'react';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
-import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
+import {
+  findAreaById,
+  findParentSplit,
+  makeMosaicStack,
+  removeMosaicNodeByKey,
+} from './mosaic';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
 const ToggleLayoutPanelCommandInput = z.object({
@@ -34,16 +40,38 @@ type ToggleLayoutPanelCommandInput = z.infer<
   typeof ToggleLayoutPanelCommandInput
 >;
 
-const ToggleLayoutPanelPinInput = z.object({
-  panelId: z.string().describe('ID of the panel to pin/unpin.'),
+const AreaSetActivePanelInput = z.object({
+  areaId: z.string().describe('ID of the area.'),
+  panelId: z.string().describe('ID of the panel to make active.'),
 });
-type ToggleLayoutPanelPinInput = z.infer<typeof ToggleLayoutPanelPinInput>;
+type AreaSetActivePanelInput = z.infer<typeof AreaSetActivePanelInput>;
+
+const AreaCollapseInput = z.object({
+  areaId: z.string().describe('ID of the area to collapse/expand.'),
+  collapsed: z.boolean().describe('True to collapse, false to expand.'),
+});
+type AreaCollapseInput = z.infer<typeof AreaCollapseInput>;
+
+const AreaAddPanelInput = z.object({
+  areaId: z.string().describe('ID of the area.'),
+  panelId: z.string().describe('ID of the panel to add.'),
+});
+type AreaAddPanelInput = z.infer<typeof AreaAddPanelInput>;
+
+const AreaRemovePanelInput = z.object({
+  areaId: z.string().describe('ID of the area.'),
+  panelId: z.string().describe('ID of the panel to remove.'),
+});
+type AreaRemovePanelInput = z.infer<typeof AreaRemovePanelInput>;
 
 export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
   component: React.ComponentType;
-  placement: 'sidebar' | 'sidebar-bottom' | 'main' | string;
+  /** @deprecated Use `area` instead */
+  placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
+  /** Named area this panel belongs to (e.g. 'left', 'main', 'bottom') */
+  area?: string;
 };
 
 export const LayoutSliceConfig = LayoutConfig;
@@ -63,8 +91,28 @@ export type LayoutSliceState = {
     setConfig(layout: LayoutConfig): void;
     /** @deprecated Use setConfig instead */
     setLayout(layout: LayoutConfig): void;
+
+    /** @deprecated Use setActivePanel / addPanelToArea / removePanelFromArea instead */
     togglePanel: (panel: string, show?: boolean) => void;
+    /** @deprecated */
     togglePanelPin: (panel: string) => void;
+
+    /** Set the active (visible) panel in a named area */
+    setActivePanel: (areaId: string, panelId: string) => void;
+    /** Add a panel as a new tab in a named area */
+    addPanelToArea: (areaId: string, panelId: string) => void;
+    /** Remove a panel tab from its area */
+    removePanelFromArea: (areaId: string, panelId: string) => void;
+    /** Collapse or expand a named area */
+    setAreaCollapsed: (areaId: string, collapsed: boolean) => void;
+    /** Toggle collapse state of a named area */
+    toggleAreaCollapsed: (areaId: string) => void;
+    /** Get the list of panel IDs in a named area */
+    getAreaPanels: (areaId: string) => string[];
+    /** Get the active panel ID in a named area */
+    getActivePanel: (areaId: string) => string | undefined;
+    /** Check if a named area is currently collapsed */
+    isAreaCollapsed: (areaId: string) => boolean;
   };
 };
 
@@ -72,6 +120,15 @@ export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
 };
+
+const COLLAPSE_MIN_PERCENT = 0;
+
+function findAreaInConfig(
+  config: LayoutSliceConfig,
+  areaId: string,
+): {node: MosaicLayoutTabsNode; path: number[]} | undefined {
+  return findAreaById(config.nodes, areaId);
+}
 
 export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
@@ -110,9 +167,12 @@ export function createLayoutSlice({
               }),
             ),
           setLayout: (layout) => get().layout.setConfig(layout),
+
+          // ---------------------------------------------------------------
+          // Deprecated panel toggle (kept for backward compat)
+          // ---------------------------------------------------------------
           togglePanel: (panel, show) => {
             if (get().layout.config?.nodes === panel) {
-              // don't hide the view if it's the only one
               return;
             }
             const result = removeMosaicNodeByKey(
@@ -121,7 +181,7 @@ export function createLayoutSlice({
             );
             const isShown = result.success;
             if (isShown) {
-              if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
+              if (show || panel === MAIN_VIEW) {
                 return;
               }
               set((state) =>
@@ -143,7 +203,8 @@ export function createLayoutSlice({
                 produce(state, (draft) => {
                   const layout = draft.layout.config;
                   const root = layout.nodes;
-                  const placement = draft.layout.panels[panel]?.placement;
+                  const panelInfo = draft.layout.panels[panel];
+                  const placement = panelInfo?.area ?? panelInfo?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';
                   const childIdx = isMosaicLayoutSplitNode(root)
                     ? side === 'first'
@@ -168,7 +229,6 @@ export function createLayoutSlice({
                       node: draft.layout.config?.nodes,
                       weight: 3,
                     };
-                    // add to to the left
                     layout.nodes = makeMosaicStack(
                       placement === 'sidebar-bottom' ? 'column' : 'row',
                       side === 'first'
@@ -181,10 +241,6 @@ export function createLayoutSlice({
             }
           },
 
-          /**
-           * Toggle the pin state of a panel.
-           * @param panel - The panel to toggle the pin state of.
-           */
           togglePanelPin: (panel: string) => {
             set((state) =>
               produce(state, (draft) => {
@@ -198,6 +254,136 @@ export function createLayoutSlice({
               }),
             );
           },
+
+          // ---------------------------------------------------------------
+          // New area-aware API
+          // ---------------------------------------------------------------
+
+          setActivePanel: (areaId: string, panelId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const found = findAreaInConfig(draft.layout.config, areaId);
+                if (!found) return;
+                const idx = found.node.tabs.indexOf(panelId);
+                if (idx >= 0) {
+                  found.node.activeTabIndex = idx;
+                }
+              }),
+            );
+            if (get().layout.isAreaCollapsed(areaId)) {
+              get().layout.setAreaCollapsed(areaId, false);
+            }
+          },
+
+          addPanelToArea: (areaId: string, panelId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const found = findAreaInConfig(draft.layout.config, areaId);
+                if (!found) return;
+                if (!found.node.tabs.includes(panelId)) {
+                  found.node.tabs.push(panelId);
+                }
+                found.node.activeTabIndex = found.node.tabs.indexOf(panelId);
+              }),
+            );
+          },
+
+          removePanelFromArea: (areaId: string, panelId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const found = findAreaInConfig(draft.layout.config, areaId);
+                if (!found) return;
+                const idx = found.node.tabs.indexOf(panelId);
+                if (idx < 0) return;
+                if (found.node.tabs.length <= 1) return;
+                found.node.tabs.splice(idx, 1);
+                if (found.node.activeTabIndex >= found.node.tabs.length) {
+                  found.node.activeTabIndex = found.node.tabs.length - 1;
+                }
+              }),
+            );
+          },
+
+          setAreaCollapsed: (areaId: string, collapsed: boolean) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const found = findAreaInConfig(draft.layout.config, areaId);
+                if (!found || !found.node.collapsible) return;
+
+                const parentSplit = findParentSplit(
+                  draft.layout.config.nodes,
+                  found.path,
+                );
+                if (!parentSplit) return;
+
+                const minPercent = COLLAPSE_MIN_PERCENT;
+
+                if (collapsed && !found.node.collapsed) {
+                  found.node.savedPercentages = parentSplit.node
+                    .splitPercentages
+                    ? [...parentSplit.node.splitPercentages]
+                    : undefined;
+                  const childCount = parentSplit.node.children.length;
+                  const newPercentages = parentSplit.node.splitPercentages
+                    ? [...parentSplit.node.splitPercentages]
+                    : Array(childCount).fill(Math.round(100 / childCount));
+                  const collapsedAmount =
+                    newPercentages[parentSplit.childIndex]! - minPercent;
+                  newPercentages[parentSplit.childIndex] = minPercent;
+                  const remainingIndices = Array.from(
+                    {length: childCount},
+                    (_, i) => i,
+                  ).filter((i) => i !== parentSplit.childIndex);
+                  const remainingTotal = remainingIndices.reduce(
+                    (sum, i) => sum + newPercentages[i]!,
+                    0,
+                  );
+                  for (const i of remainingIndices) {
+                    newPercentages[i] = Math.round(
+                      (newPercentages[i]! / remainingTotal) *
+                        (remainingTotal + collapsedAmount),
+                    );
+                  }
+                  parentSplit.node.splitPercentages = newPercentages;
+                  found.node.collapsed = true;
+                } else if (!collapsed && found.node.collapsed) {
+                  if (found.node.savedPercentages) {
+                    parentSplit.node.splitPercentages =
+                      found.node.savedPercentages;
+                    found.node.savedPercentages = undefined;
+                  } else {
+                    const childCount = parentSplit.node.children.length;
+                    parentSplit.node.splitPercentages = Array(childCount).fill(
+                      Math.round(100 / childCount),
+                    );
+                  }
+                  found.node.collapsed = false;
+                }
+              }),
+            );
+          },
+
+          toggleAreaCollapsed: (areaId: string) => {
+            const found = findAreaInConfig(get().layout.config, areaId);
+            if (!found) return;
+            get().layout.setAreaCollapsed(areaId, !found.node.collapsed);
+          },
+
+          getAreaPanels: (areaId: string): string[] => {
+            const found = findAreaInConfig(get().layout.config, areaId);
+            return found ? [...found.node.tabs] : [];
+          },
+
+          getActivePanel: (areaId: string): string | undefined => {
+            const found = findAreaInConfig(get().layout.config, areaId);
+            if (!found) return undefined;
+            return found.node.tabs[found.node.activeTabIndex];
+          },
+
+          isAreaCollapsed: (areaId: string): boolean => {
+            const found = findAreaInConfig(get().layout.config, areaId);
+            return found?.node.collapsed === true;
+          },
         },
       };
     },
@@ -210,14 +396,13 @@ function createLayoutPanelCommands(
   panels: Record<string, RoomPanelInfo>,
 ): RoomCommand<LayoutCommandStoreState>[] {
   const byIdCommand: RoomCommand<LayoutCommandStoreState> = {
-    id: 'layout.panel.toggle',
-    name: 'Toggle panel by ID',
-    description: 'Show or hide a panel by its ID',
+    id: 'layout.panel.show',
+    name: 'Show panel by ID',
+    description: 'Activate a panel in its area (expands the area if collapsed)',
     group: 'Layout',
-    keywords: ['layout', 'panel', 'toggle', 'show', 'hide', 'id'],
+    keywords: ['layout', 'panel', 'show', 'activate', 'open', 'id'],
     inputSchema: ToggleLayoutPanelCommandInput,
-    inputDescription:
-      'Provide panelId and optional show. If show is omitted, the panel visibility is toggled.',
+    inputDescription: 'Provide panelId to activate it in its area.',
     metadata: {
       readOnly: false,
       idempotent: true,
@@ -230,42 +415,16 @@ function createLayoutPanelCommands(
       }
     },
     execute: ({getState}, input) => {
-      const {panelId, show} = input as ToggleLayoutPanelCommandInput;
-      getState().layout.togglePanel(panelId, show);
-      return {
-        success: true,
-        commandId: 'layout.panel.toggle',
-        message: `Toggled panel "${panelId}".`,
-      };
-    },
-  };
-
-  const pinByIdCommand: RoomCommand<LayoutCommandStoreState> = {
-    id: 'layout.panel.toggle-pin',
-    name: 'Toggle panel pin by ID',
-    description: 'Pin or unpin a panel by its ID',
-    group: 'Layout',
-    keywords: ['layout', 'panel', 'pin', 'unpin', 'id'],
-    inputSchema: ToggleLayoutPanelPinInput,
-    inputDescription: 'Provide panelId to toggle pin state.',
-    metadata: {
-      readOnly: false,
-      idempotent: true,
-      riskLevel: 'low',
-    },
-    validateInput: (input, {getState}) => {
-      const {panelId} = input as ToggleLayoutPanelPinInput;
-      if (!getState().layout.panels[panelId]) {
-        throw new Error(`Unknown panel ID "${panelId}".`);
+      const {panelId} = input as ToggleLayoutPanelCommandInput;
+      const panelInfo = getState().layout.panels[panelId];
+      const areaId = panelInfo?.area ?? panelInfo?.placement;
+      if (areaId) {
+        getState().layout.setActivePanel(areaId, panelId);
       }
-    },
-    execute: ({getState}, input) => {
-      const {panelId} = input as ToggleLayoutPanelPinInput;
-      getState().layout.togglePanelPin(panelId);
       return {
         success: true,
-        commandId: 'layout.panel.toggle-pin',
-        message: `Toggled pin state for panel "${panelId}".`,
+        commandId: 'layout.panel.show',
+        message: `Activated panel "${panelId}"${areaId ? ` in area "${areaId}"` : ''}.`,
       };
     },
   };
@@ -273,13 +432,17 @@ function createLayoutPanelCommands(
   const panelShortcutCommands: RoomCommand<LayoutCommandStoreState>[] =
     Object.entries(panels).map(([panelId, panelInfo]) => {
       const title = panelInfo.title ?? panelId;
-      const keywords = [panelId, panelInfo.title, panelInfo.placement].filter(
-        (value): value is string => Boolean(value),
-      );
+      const areaId = panelInfo.area ?? panelInfo.placement;
+      const keywords = [
+        panelId,
+        panelInfo.title,
+        panelInfo.area,
+        panelInfo.placement,
+      ].filter((value): value is string => Boolean(value));
       return {
-        id: `layout.panel.toggle.${panelId}`,
-        name: `Toggle panel: ${title}`,
-        description: `Show or hide the ${title} panel`,
+        id: `layout.panel.show.${panelId}`,
+        name: `Show panel: ${title}`,
+        description: `Activate the ${title} panel in its area`,
         group: 'Layout',
         keywords,
         metadata: {
@@ -288,17 +451,108 @@ function createLayoutPanelCommands(
           riskLevel: 'low',
         },
         execute: ({getState}) => {
-          getState().layout.togglePanel(panelId);
+          if (areaId) {
+            getState().layout.setActivePanel(areaId, panelId);
+          }
           return {
             success: true,
-            commandId: `layout.panel.toggle.${panelId}`,
-            message: `Toggled panel "${panelId}".`,
+            commandId: `layout.panel.show.${panelId}`,
+            message: `Activated panel "${panelId}".`,
           };
         },
       };
     });
 
-  return [byIdCommand, pinByIdCommand, ...panelShortcutCommands];
+  // --- Area commands ---
+
+  const setActivePanelCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.area.set-active',
+    name: 'Set active panel in area',
+    description: 'Set which panel is visible in a named area',
+    group: 'Layout',
+    keywords: ['layout', 'area', 'tab', 'active', 'panel', 'select'],
+    inputSchema: AreaSetActivePanelInput,
+    inputDescription: 'Provide areaId and panelId.',
+    metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
+    execute: ({getState}, input) => {
+      const {areaId, panelId} = input as AreaSetActivePanelInput;
+      getState().layout.setActivePanel(areaId, panelId);
+      return {
+        success: true,
+        commandId: 'layout.area.set-active',
+        message: `Set active panel in "${areaId}" to "${panelId}".`,
+      };
+    },
+  };
+
+  const collapseAreaCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.area.collapse',
+    name: 'Collapse or expand area',
+    description: 'Collapse or expand a named layout area',
+    group: 'Layout',
+    keywords: ['layout', 'area', 'collapse', 'expand', 'toggle'],
+    inputSchema: AreaCollapseInput,
+    inputDescription: 'Provide areaId and collapsed (true/false).',
+    metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
+    execute: ({getState}, input) => {
+      const {areaId, collapsed} = input as AreaCollapseInput;
+      getState().layout.setAreaCollapsed(areaId, collapsed);
+      return {
+        success: true,
+        commandId: 'layout.area.collapse',
+        message: `${collapsed ? 'Collapsed' : 'Expanded'} area "${areaId}".`,
+      };
+    },
+  };
+
+  const addPanelToAreaCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.area.add-panel',
+    name: 'Add panel to area',
+    description: 'Add a panel as a new tab in a named area',
+    group: 'Layout',
+    keywords: ['layout', 'area', 'add', 'panel', 'tab'],
+    inputSchema: AreaAddPanelInput,
+    inputDescription: 'Provide areaId and panelId.',
+    metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
+    execute: ({getState}, input) => {
+      const {areaId, panelId} = input as AreaAddPanelInput;
+      getState().layout.addPanelToArea(areaId, panelId);
+      return {
+        success: true,
+        commandId: 'layout.area.add-panel',
+        message: `Added panel "${panelId}" to area "${areaId}".`,
+      };
+    },
+  };
+
+  const removePanelFromAreaCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.area.remove-panel',
+    name: 'Remove panel from area',
+    description: 'Remove a panel tab from a named area',
+    group: 'Layout',
+    keywords: ['layout', 'area', 'remove', 'panel', 'tab', 'close'],
+    inputSchema: AreaRemovePanelInput,
+    inputDescription: 'Provide areaId and panelId.',
+    metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
+    execute: ({getState}, input) => {
+      const {areaId, panelId} = input as AreaRemovePanelInput;
+      getState().layout.removePanelFromArea(areaId, panelId);
+      return {
+        success: true,
+        commandId: 'layout.area.remove-panel',
+        message: `Removed panel "${panelId}" from area "${areaId}".`,
+      };
+    },
+  };
+
+  return [
+    byIdCommand,
+    ...panelShortcutCommands,
+    setActivePanelCommand,
+    collapseAreaCommand,
+    addPanelToAreaCommand,
+    removePanelFromAreaCommand,
+  ];
 }
 
 export function useStoreWithLayout<T>(
