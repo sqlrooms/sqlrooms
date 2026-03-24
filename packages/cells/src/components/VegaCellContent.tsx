@@ -19,6 +19,7 @@ import type {
   Cell,
   CellContainerProps,
   CrossFilterSelection,
+  SqlCellStatus,
   VegaCell,
 } from '../types';
 import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
@@ -173,7 +174,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   const lastRunTime =
     selectedSqlStatus?.type === 'sql'
-      ? selectedSqlStatus.lastRunTime
+      ? (selectedSqlStatus as SqlCellStatus).lastRunTime
       : undefined;
 
   const handleSqlIdChange = (value: string) => {

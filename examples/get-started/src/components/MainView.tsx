@@ -41,7 +41,7 @@ export function MainView() {
   }
   if (error) {
     return (
-      <div className="whitespace-pre-wrap p-4 font-mono text-xs text-red-500">
+      <div className="p-4 font-mono text-xs whitespace-pre-wrap text-red-500">
         Error: {error.message}
       </div>
     );

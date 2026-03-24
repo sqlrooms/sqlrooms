@@ -72,7 +72,9 @@ Example middleware for feature flags:
 
 ```typescript
 const featureFlagMiddleware = async (command, input, context, next) => {
-  const enabled = context.getState().features.enabledCommands.includes(command.id);
+  const enabled = context
+    .getState()
+    .features.enabledCommands.includes(command.id);
   if (!enabled) {
     return {
       success: false,

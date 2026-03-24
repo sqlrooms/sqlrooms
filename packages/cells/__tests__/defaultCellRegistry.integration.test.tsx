@@ -1,6 +1,14 @@
 import React from 'react';
 import {createDefaultCellRegistry} from '../src/defaultCellRegistry';
-import type {Cell, SqlCell} from '../src/types';
+import type {Cell, CellsRootState, SqlCell} from '../src/types';
+
+const mockArgs = (id: string) => ({
+  id,
+  get: (() => ({})) as () => CellsRootState,
+  set: (() => {}) as (
+    updater: (state: CellsRootState) => CellsRootState,
+  ) => void,
+});
 
 describe('default cell registry integration', () => {
   it('registers the expected built-in cell types', () => {
@@ -17,10 +25,10 @@ describe('default cell registry integration', () => {
   it('creates cells with expected defaults', () => {
     const registry = createDefaultCellRegistry();
 
-    const sqlCell = registry.sql?.createCell('sql-1');
-    const textCell = registry.text?.createCell('text-1');
-    const vegaCell = registry.vega?.createCell('vega-1');
-    const inputCell = registry.input?.createCell('input-1');
+    const sqlCell = registry.sql?.createCell(mockArgs('sql-1'));
+    const textCell = registry.text?.createCell(mockArgs('text-1'));
+    const vegaCell = registry.vega?.createCell(mockArgs('vega-1'));
+    const inputCell = registry.input?.createCell(mockArgs('input-1'));
 
     expect(sqlCell.type).toBe('sql');
     expect(sqlCell.data.title).toBe('Untitled Query');
@@ -62,28 +70,28 @@ describe('default cell registry integration', () => {
     expect(
       registry.sql?.renderCell({
         id: 'sql-1',
-        cell: registry.sql.createCell('sql-1'),
+        cell: registry.sql.createCell(mockArgs('sql-1')),
         renderContainer,
       }),
     ).toBeTruthy();
     expect(
       registry.text?.renderCell({
         id: 'text-1',
-        cell: registry.text.createCell('text-1'),
+        cell: registry.text.createCell(mockArgs('text-1')),
         renderContainer,
       }),
     ).toBeTruthy();
     expect(
       registry.vega?.renderCell({
         id: 'vega-1',
-        cell: registry.vega.createCell('vega-1'),
+        cell: registry.vega.createCell(mockArgs('vega-1')),
         renderContainer,
       }),
     ).toBeTruthy();
     expect(
       registry.input?.renderCell({
         id: 'input-1',
-        cell: registry.input.createCell('input-1'),
+        cell: registry.input.createCell(mockArgs('input-1')),
         renderContainer,
       }),
     ).toBeTruthy();

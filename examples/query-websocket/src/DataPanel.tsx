@@ -1,11 +1,16 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {TableStructurePanel} from '@sqlrooms/sql-editor';
+import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {RoomPanelTypes} from './store';
 
 export const DataPanel = () => {
   return (
     <RoomPanel type={RoomPanelTypes.enum['data']}>
-      <TableStructurePanel />
+      <SchemaExplorer>
+        <SchemaExplorer.Header>
+          <SchemaExplorer.RefreshButton />
+        </SchemaExplorer.Header>
+        <SchemaExplorer.Tree className="h-full" />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

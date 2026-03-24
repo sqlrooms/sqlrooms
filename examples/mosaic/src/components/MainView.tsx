@@ -34,10 +34,10 @@ export const MainView = () => {
     <div className="flex w-full flex-col items-center justify-center gap-4 p-4">
       <div className="mb-6">
         <h1 className="mb-2 text-2xl font-bold">{chartSpec?.meta?.title}</h1>
-        <p className="whitespace-pre-line text-sm text-gray-400">
+        <p className="text-sm whitespace-pre-line text-gray-400">
           {chartSpec?.meta?.description}
         </p>
-        <p className="mt-2 text-sm italic text-gray-500">
+        <p className="mt-2 text-sm text-gray-500 italic">
           {chartSpec?.meta?.credit?.replace(/\[(.*?)\]\((.*?)\)/, '$1')}
         </p>
       </div>

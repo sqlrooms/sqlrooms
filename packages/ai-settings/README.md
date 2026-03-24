@@ -86,9 +86,7 @@ function MaxStepsControl() {
   const maxSteps = useRoomStore(
     (state) => state.aiSettings.config.modelParameters.maxSteps,
   );
-  const setMaxSteps = useRoomStore(
-    (state) => state.aiSettings.setMaxSteps,
-  );
+  const setMaxSteps = useRoomStore((state) => state.aiSettings.setMaxSteps);
 
   return (
     <Button onClick={() => setMaxSteps(maxSteps + 5)}>

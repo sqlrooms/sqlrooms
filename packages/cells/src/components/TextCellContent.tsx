@@ -1,10 +1,10 @@
-import React, {useState, useCallback, useRef, useEffect} from 'react';
+import {produce} from 'immer';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, TextCell} from '../types';
-import {produce} from 'immer';
 
 export type TextCellContentProps = {
   id: string;

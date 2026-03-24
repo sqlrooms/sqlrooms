@@ -15,11 +15,11 @@ uv sync
 
 ## Packages
 
-| Package | Purpose |
-|---|---|
-| `sqlrooms-cli` | Interactive CLI powered by DuckDB |
+| Package           | Purpose                                    |
+| ----------------- | ------------------------------------------ |
+| `sqlrooms-cli`    | Interactive CLI powered by DuckDB          |
 | `sqlrooms-server` | HTTP server exposing DuckDB over WebSocket |
-| `sqlrooms-rag` | RAG pipeline for document-grounded queries |
+| `sqlrooms-rag`    | RAG pipeline for document-grounded queries |
 
 ## Running Packages
 

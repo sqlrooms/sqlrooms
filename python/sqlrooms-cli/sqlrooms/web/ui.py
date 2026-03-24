@@ -35,5 +35,3 @@ class DirectoryUiProvider:
 
     def index_html(self) -> Path:
         return self._dir / "index.html"
-
-
