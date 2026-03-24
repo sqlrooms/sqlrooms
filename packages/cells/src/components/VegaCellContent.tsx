@@ -3,7 +3,12 @@ import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
 import React, {useCallback, useState} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, VegaCell, SqlCell} from '../types';
+import type {
+  CellContainerProps,
+  VegaCell,
+  SqlCell,
+  SqlCellStatus,
+} from '../types';
 import {VegaConfigPanel} from './VegaConfigPanel';
 import {VegaCellDatasetSelector} from './VegaCellDatasetSelector';
 
@@ -45,7 +50,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   const lastRunTime =
     selectedSqlStatus?.type === 'sql'
-      ? selectedSqlStatus.lastRunTime
+      ? (selectedSqlStatus as SqlCellStatus).lastRunTime
       : undefined;
 
   const saveSpec = useCallback(() => {

@@ -49,7 +49,7 @@ export async function executeSqlCell(
   if (!cell || cell.type !== 'sql') return;
   const previousStatus =
     state.cells.status[cellId]?.type === 'sql'
-      ? state.cells.status[cellId]
+      ? (state.cells.status[cellId] as SqlCellStatus)
       : undefined;
 
   const {schemaName, cascade = true, signal, setCellResult} = options;
@@ -194,7 +194,8 @@ export async function executeSqlCell(
       getSqlResultName: (id) => {
         const s = getState().cells.status[id];
         if (s?.type !== 'sql') return undefined;
-        const fromStatus = getUnqualifiedSqlIdentifier(s.resultName);
+        const sqlStatus = s as SqlCellStatus;
+        const fromStatus = getUnqualifiedSqlIdentifier(sqlStatus.resultName);
         if (fromStatus) return fromStatus;
 
         const currentCell = getState().cells.config.data[id];

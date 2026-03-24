@@ -129,7 +129,7 @@ export function createNotebookSlice(props?: {
             const reg = get().cells.cellRegistry[type];
             if (!reg) return id;
 
-            const cell = reg.createCell(id) as Cell;
+            const cell = reg.createCell({id, get, set}) as Cell;
 
             // Assign a readable unique name using shared utility
             const allCells = Object.values(get().cells.config.data);

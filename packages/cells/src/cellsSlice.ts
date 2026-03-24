@@ -8,9 +8,9 @@ import {
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
-  buildGraphCacheFromEdges,
   buildDependencyGraph,
   buildDependencyGraphAsync,
+  buildGraphCacheFromEdges,
   collectReachable,
   ensureGraphCache,
   removeCellFromCache,
@@ -24,7 +24,6 @@ import {
   resolveDependencies,
 } from './helpers';
 import {dropResultRelation} from './resultRelationPolicy';
-import {getEffectiveResultName} from './utils';
 import type {
   Cell,
   CellResultData,
@@ -32,13 +31,13 @@ import type {
   CellsSliceConfig,
   CellsSliceOptions,
   CellsSliceState,
-  SqlCell,
   Edge,
   SheetType,
+  SqlCell,
   SqlCellData,
 } from './types';
 import {isInputCell, isSqlCell} from './types';
-import {getSheetSchemaName, isDefined} from './utils';
+import {getEffectiveResultName, getSheetSchemaName, isDefined} from './utils';
 
 function createDefaultCellsConfig(
   config: Partial<CellsSliceConfig> | undefined,
@@ -91,13 +90,24 @@ export function createCellsSlice(props: CellsSliceOptions) {
   // Keep result data outside Immer drafts, but scoped per slice instance.
   const cellResultCache = new Map<string, CellResultData>();
   return createSlice<CellsSliceState, CellsRootState>((set, get) => {
-    const dropSqlResultRelation = async (resultName?: string) => {
+    const dropRelationBestEffort = async (relationName: string) => {
       try {
         const connector = await get().db.getConnector();
-        await dropResultRelation({connector, relationName: resultName});
+        await dropResultRelation({connector, relationName});
       } catch {
-        // Best-effort cleanup: relation might already be gone or connector
-        // might be unavailable during teardown.
+        // Best-effort cleanup
+      }
+    };
+
+    const dropRelationsForStatus = async (
+      cellType: string,
+      status: {type: string; [key: string]: unknown} | undefined,
+    ) => {
+      if (!status) return;
+      const registryItem = cellRegistry[cellType];
+      const names = registryItem?.getRelationsToDrop?.(status) ?? [];
+      for (const name of names) {
+        await dropRelationBestEffort(name);
       }
     };
 
@@ -110,6 +120,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
         activeAbortControllers: {},
         resultVersion: {},
         pageVersion: {},
+        async initialize() {
+          for (const [cellId, cell] of Object.entries(
+            get().cells.config.data,
+          )) {
+            const registryItem = cellRegistry[cell.type];
+            if (registryItem?.onInitialize) {
+              registryItem.onInitialize({
+                id: cellId,
+                status: get().cells.status[cellId],
+                get,
+                set,
+              });
+            }
+          }
+        },
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
@@ -149,15 +174,10 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[cell.id] = cell;
-              if (cell.type === 'sql') {
-                draft.cells.status[cell.id] = {
-                  type: 'sql',
-                  status: 'idle',
-                  referencedTables: [],
-                };
-              } else {
-                draft.cells.status[cell.id] = {type: 'other'};
-              }
+              const registryItem = cellRegistry[cell.type];
+              draft.cells.status[cell.id] = registryItem?.createStatus?.(
+                cell.id,
+              ) ?? {type: 'other'};
 
               // Single-owner invariant: a cell can belong to one sheet only.
               for (const [existingSheetId, existingSheet] of Object.entries(
@@ -227,6 +247,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
         },
 
         removeCell: (id: string) => {
+          const cell = get().cells.config.data[id];
           const previousStatus = get().cells.status[id];
           cellResultCache.delete(id);
           set((state) =>
@@ -251,8 +272,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
               }
             }),
           );
-          if (previousStatus?.type === 'sql') {
-            void dropSqlResultRelation(previousStatus.resultView);
+          if (cell) {
+            const registryItem = cellRegistry[cell.type];
+            if (registryItem?.onRemove) {
+              void registryItem.onRemove({
+                id,
+                status: previousStatus,
+                get,
+                set,
+              });
+            } else {
+              void dropRelationsForStatus(cell.type, previousStatus);
+            }
           }
         },
 
@@ -278,18 +309,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const updatedCell = updater(cell);
           scopedCells[id] = updatedCell;
 
-          // Check if resultName changed for SQL cells with successful execution
-          const resultNameChanged =
-            isSqlCell(cell) &&
-            isSqlCell(updatedCell) &&
-            cell.data.resultName !== updatedCell.data.resultName;
+          const registryItem = cellRegistry[cell.type];
 
           const existingStatus = get().cells.status[id];
-          const hasExistingView =
-            resultNameChanged &&
-            existingStatus?.type === 'sql' &&
-            existingStatus.status === 'success' &&
-            existingStatus.resultView;
+          const oldResultRelation =
+            existingStatus && registryItem?.getResultRelation
+              ? registryItem.getResultRelation(existingStatus)
+              : undefined;
 
           const semanticInputChanged =
             isInputCell(cell) &&
@@ -301,6 +327,9 @@ export function createCellsSlice(props: CellsSliceOptions) {
             isSqlCell(updatedCell) &&
             cell.data.sql !== updatedCell.data.sql;
 
+          const semanticChanged =
+            registryItem?.hasSemanticChange?.(cell, updatedCell) ?? false;
+
           // Apply cell data to the store immediately so that other
           // actions (e.g. runCell triggered via Cmd+Enter) always see
           // the latest value. Edge/dependency updates follow
@@ -308,6 +337,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[id] = updatedCell;
+              if (semanticChanged) {
+                const status = draft.cells.status[id];
+                if (status && registryItem?.invalidateStatus) {
+                  draft.cells.status[id] =
+                    registryItem.invalidateStatus(status);
+                }
+              }
             }),
           );
 
@@ -355,23 +391,27 @@ export function createCellsSlice(props: CellsSliceOptions) {
             );
           }
 
-          // If we have an existing view, rename it instead of invalidating
-          if (hasExistingView && existingStatus?.resultView) {
-            const registryItem = cellRegistry[cell.type];
-            if (registryItem?.renameResult) {
-              void registryItem.renameResult({
-                id,
-                oldResultView: existingStatus.resultView,
-                get,
-                set,
-              });
-            }
+          // If the result relation changed name (e.g. SQL resultName changed), rename it
+          const newStatus = get().cells.status[id];
+          const newResultRelation =
+            newStatus && registryItem?.getResultRelation
+              ? registryItem.getResultRelation(newStatus)
+              : undefined;
+          const resultRelationChanged =
+            oldResultRelation && newResultRelation !== oldResultRelation;
+          if (resultRelationChanged && registryItem?.renameResult) {
+            void registryItem.renameResult({
+              id,
+              oldResultView: oldResultRelation,
+              get,
+              set,
+            });
           }
 
           // After update, trigger cascade only if explicitly requested
           // or if semantic execution inputs changed.
           const shouldCascade =
-            opts?.cascade || resultNameChanged || semanticInputChanged;
+            opts?.cascade || resultRelationChanged || semanticInputChanged;
           if (shouldCascade) {
             if (ownerSheetId) {
               void get().cells.runDownstreamCascade(ownerSheetId, id);
@@ -418,10 +458,11 @@ export function createCellsSlice(props: CellsSliceOptions) {
           if (!sheet) return;
           const ownedCellIds = [...sheet.cellIds];
           const relationNamesToDrop = ownedCellIds.flatMap((cellId) => {
+            const cell = get().cells.config.data[cellId];
             const status = get().cells.status[cellId];
-            return status?.type === 'sql' && status.resultView
-              ? [status.resultView]
-              : [];
+            if (!cell || !status) return [];
+            const registryItem = cellRegistry[cell.type];
+            return registryItem?.getRelationsToDrop?.(status) ?? [];
           });
           set((state) =>
             produce(state, (draft) => {
@@ -464,7 +505,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             }),
           );
           for (const relationName of relationNamesToDrop) {
-            void dropSqlResultRelation(relationName);
+            void dropRelationBestEffort(relationName);
           }
         },
 
@@ -653,16 +694,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
         invalidateCellStatus: (id: string) => {
+          const cell = get().cells.config.data[id];
+          if (!cell) return;
+          const registryItem = cellRegistry[cell.type];
           set((state) =>
             produce(state, (draft) => {
               const status = draft.cells.status[id];
-              if (status?.type === 'sql') {
-                // Reset to idle, clearing the result so user knows to re-run
-                draft.cells.status[id] = {
-                  type: 'sql',
-                  status: 'idle',
-                  referencedTables: status.referencedTables || [],
-                };
+              if (status && registryItem?.invalidateStatus) {
+                draft.cells.status[id] = registryItem.invalidateStatus(status);
               }
             }),
           );
@@ -709,11 +748,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
           sorting?: {id: string; desc: boolean}[],
         ) => {
           const state = get();
+          const cell = state.cells.config.data[id];
+          if (!cell) return;
+          const registryItem = cellRegistry[cell.type];
           const status = state.cells.status[id];
-          if (status?.type !== 'sql' || !status.resultView) return;
+          const resultRelation =
+            status && registryItem?.getResultRelation
+              ? registryItem.getResultRelation(status)
+              : undefined;
+          if (!resultRelation) return;
 
           const connector = await state.db.getConnector();
-          const baseQuery = sanitizeQuery(`SELECT * FROM ${status.resultView}`);
+          const baseQuery = sanitizeQuery(`SELECT * FROM ${resultRelation}`);
           const pagedQuery = makePagedQuery(
             baseQuery,
             sorting ?? [],
@@ -722,7 +768,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
 
           const arrowTable = await connector.query(pagedQuery);
           const countResult = await connector.query(
-            `SELECT COUNT(*)::int AS count FROM ${status.resultView}`,
+            `SELECT COUNT(*)::int AS count FROM ${resultRelation}`,
           );
           const totalRows = countResult.toArray()[0]?.count ?? 0;
 
@@ -784,15 +830,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : String(error);
-              set((state) =>
-                produce(state, (draft) => {
-                  const status = draft.cells.status[cellId];
-                  if (status?.type === 'sql') {
-                    status.status = 'error';
-                    status.lastError = message;
-                  }
-                }),
-              );
+              const failedCell = get().cells.config.data[cellId];
+              const failedRegistryItem = failedCell
+                ? cellRegistry[failedCell.type]
+                : undefined;
+              if (failedRegistryItem?.recordError) {
+                set((state) =>
+                  produce(state, (draft) => {
+                    const status = draft.cells.status[cellId];
+                    if (status) {
+                      draft.cells.status[cellId] =
+                        failedRegistryItem.recordError!(status, message);
+                    }
+                  }),
+                );
+              }
             }
           }
         },
@@ -834,15 +886,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : String(error);
-              set((state) =>
-                produce(state, (draft) => {
-                  const status = draft.cells.status[cellId];
-                  if (status?.type === 'sql') {
-                    status.status = 'error';
-                    status.lastError = message;
-                  }
-                }),
-              );
+              const failedCell = get().cells.config.data[cellId];
+              const failedRegistryItem = failedCell
+                ? cellRegistry[failedCell.type]
+                : undefined;
+              if (failedRegistryItem?.recordError) {
+                set((state) =>
+                  produce(state, (draft) => {
+                    const status = draft.cells.status[cellId];
+                    if (status) {
+                      draft.cells.status[cellId] =
+                        failedRegistryItem.recordError!(status, message);
+                    }
+                  }),
+                );
+              }
             }
           }
         },

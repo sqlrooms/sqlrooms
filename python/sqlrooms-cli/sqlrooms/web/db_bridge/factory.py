@@ -17,12 +17,22 @@ ENGINE_CONFIG_FIELDS: dict[str, list[dict[str, Any]]] = {
     "postgres": [
         {"key": "host", "label": "Host", "placeholder": "localhost", "required": True},
         {"key": "port", "label": "Port", "placeholder": "5432"},
-        {"key": "database", "label": "Database", "placeholder": "my_db", "required": True},
+        {
+            "key": "database",
+            "label": "Database",
+            "placeholder": "my_db",
+            "required": True,
+        },
         {"key": "user", "label": "User", "placeholder": "postgres", "required": True},
         {"key": "password", "label": "Password", "placeholder": "", "secret": True},
     ],
     "snowflake": [
-        {"key": "account", "label": "Account", "placeholder": "xy12345.us-east-1", "required": True},
+        {
+            "key": "account",
+            "label": "Account",
+            "placeholder": "xy12345.us-east-1",
+            "required": True,
+        },
         {"key": "user", "label": "User", "placeholder": "my_user", "required": True},
         {"key": "password", "label": "Password", "placeholder": "", "secret": True},
         {"key": "warehouse", "label": "Warehouse", "placeholder": "COMPUTE_WH"},
@@ -51,7 +61,8 @@ def build_cli_db_bridge_registry(
 
 
 def build_ephemeral_connector(
-    engine: str, config: dict[str, str],
+    engine: str,
+    config: dict[str, str],
 ) -> BaseSqlBridgeConnector:
     """Create a throwaway connector from raw config for ad-hoc connection tests."""
     if engine == "postgres":
