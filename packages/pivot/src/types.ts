@@ -1,6 +1,6 @@
 import {SliceFunctions} from '@sqlrooms/room-store';
 import {z} from 'zod';
-import type {PivotInstanceStore} from './PivotCoreSlice';
+import type {StoreApi} from 'zustand/vanilla';
 
 export const PIVOT_RENDERER_NAMES = [
   'Table',
@@ -206,6 +206,62 @@ export type PivotSliceState = {
       },
     ) => Promise<void>;
   };
+};
+
+export type PivotEditorUiState = {
+  sectionOpenState: Record<string, boolean>;
+};
+
+export type PivotInstanceSnapshot = {
+  source?: PivotSource;
+  config: PivotConfig;
+  status: PivotStatus;
+  querySource?: PivotQuerySource;
+  fields: PivotField[];
+  availableTables: string[];
+};
+
+export type PivotInstanceCallbacks = {
+  setSource?: (source: PivotSource | undefined) => void;
+  setConfig?: (config: PivotConfig) => void;
+  run?: () => void | Promise<void>;
+};
+
+export type PivotInstanceState = PivotInstanceSnapshot & {
+  ui: PivotEditorUiState;
+  setSource: (source: PivotSource | undefined) => void;
+  setConfig: (config: PivotConfig) => void;
+  patchConfig: (config: Partial<PivotConfig>) => void;
+  setRendererName: (rendererName: PivotConfig['rendererName']) => void;
+  setAggregatorName: (aggregatorName: string) => void;
+  setVals: (vals: string[]) => void;
+  moveField: (
+    field: string,
+    destination: PivotDropZone,
+    index?: number,
+  ) => void;
+  cycleRowOrder: () => void;
+  cycleColOrder: () => void;
+  setAttributeFilterValues: (attribute: string, values: string[]) => void;
+  addAttributeFilterValues: (attribute: string, values: string[]) => void;
+  removeAttributeFilterValues: (attribute: string, values: string[]) => void;
+  clearAttributeFilter: (attribute: string) => void;
+  setSectionOpen: (section: string, isOpen: boolean) => void;
+  run: () => Promise<void>;
+};
+
+export type PivotInstanceStore = StoreApi<PivotInstanceState> & {
+  destroy: () => void;
+};
+
+export type CreatePivotCoreStoreProps = {
+  source?: PivotSource;
+  config?: Partial<PivotConfig>;
+  status?: Partial<PivotStatus>;
+  querySource?: PivotQuerySource;
+  fields?: PivotField[];
+  availableTables?: string[];
+  callbacks?: PivotInstanceCallbacks;
 };
 
 export type PivotOutputCell = {

@@ -89,11 +89,11 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
     () => toNumericValues(Array.from(cellMap.values())),
     [cellMap],
   );
-  const rowScale = useMemo(
+  const colTotalsScale = useMemo(
     () => toNumericValues(Array.from(colTotalsMap.values())),
     [colTotalsMap],
   );
-  const colScale = useMemo(
+  const rowTotalsScale = useMemo(
     () => toNumericValues(Array.from(rowTotalsMap.values())),
     [rowTotalsMap],
   );
@@ -240,7 +240,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
                   className="bg-muted/30 border px-3 py-2 text-right font-semibold"
                   style={
                     heatmapMode
-                      ? makeHeatColor(Number(totalValue), colScale)
+                      ? makeHeatColor(Number(totalValue), rowTotalsScale)
                       : undefined
                   }
                 >
@@ -264,7 +264,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
                   className="bg-muted/30 border px-3 py-2 text-right font-semibold"
                   style={
                     heatmapMode
-                      ? makeHeatColor(Number(totalValue), rowScale)
+                      ? makeHeatColor(Number(totalValue), colTotalsScale)
                       : undefined
                   }
                 >

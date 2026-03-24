@@ -320,13 +320,13 @@ const PivotEditorDndProvider: React.FC<{
       return;
     }
 
-    const containerId =
-      parseContainerId(overId) ??
-      parseContainerId(
-        String(event.over?.data.current?.sortable?.containerId ?? ''),
-      );
+    const directContainerId = parseContainerId(overId);
+    const sortableContainerId = parseContainerId(
+      String(event.over?.data.current?.sortable?.containerId ?? ''),
+    );
     const destination =
-      containerId ??
+      directContainerId ??
+      sortableContainerId ??
       (Object.entries(zoneItems).find(([, items]) =>
         items.includes(overId),
       )?.[0] as PivotDropZone | undefined);
@@ -335,7 +335,7 @@ const PivotEditorDndProvider: React.FC<{
       return;
     }
 
-    const index = containerId
+    const index = directContainerId
       ? zoneItems[destination].length
       : zoneItems[destination].indexOf(overId);
     moveField(activeId, destination, index);
