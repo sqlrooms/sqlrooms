@@ -113,6 +113,10 @@ export type LayoutSliceState = {
     getActivePanel: (areaId: string) => string | undefined;
     /** Check if a named area is currently collapsed */
     isAreaCollapsed: (areaId: string) => boolean;
+    /** Register a panel dynamically (adds to panels registry) */
+    registerPanel: (panelId: string, info: RoomPanelInfo) => void;
+    /** Unregister a dynamically added panel */
+    unregisterPanel: (panelId: string) => void;
   };
 };
 
@@ -383,6 +387,22 @@ export function createLayoutSlice({
           isAreaCollapsed: (areaId: string): boolean => {
             const found = findAreaInConfig(get().layout.config, areaId);
             return found?.node.collapsed === true;
+          },
+
+          registerPanel: (panelId: string, info: RoomPanelInfo) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.layout.panels[panelId] = info;
+              }),
+            );
+          },
+
+          unregisterPanel: (panelId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.layout.panels[panelId];
+              }),
+            );
           },
         },
       };

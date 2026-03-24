@@ -68,6 +68,7 @@ export interface MosaicLayoutProps {
   onTabSelect?: (path: MosaicPath, tabId: string) => void;
   onTabClose?: (path: MosaicPath, tabId: string) => void;
   onTabReorder?: (path: MosaicPath, tabIds: string[]) => void;
+  onTabCreate?: (areaId: string) => void;
   onAreaCollapse?: (areaId: string) => void;
   onAreaExpand?: (areaId: string, panelId?: string) => void;
 }
@@ -86,6 +87,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     onTabSelect,
     onTabClose,
     onTabReorder,
+    onTabCreate,
     onAreaCollapse,
     onAreaExpand,
   } = props;
@@ -147,6 +149,8 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       const isCollapsed = tabsNode?.collapsed === true;
       const isCollapsible = tabsNode?.collapsible === true;
       const closeableTabs = tabsNode?.closeableTabs === true;
+      const creatableTabs = tabsNode?.creatableTabs === true;
+      const searchableTabs = tabsNode?.searchableTabs === true;
       const areaId = tabsNode?.id;
 
       if (isCollapsed) {
@@ -168,7 +172,14 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
         return <div />;
       }
 
-      const tabDescriptors: TabDescriptor[] = tabs.map((id) => ({
+      // All panels for this area (for the searchable dropdown)
+      const allAreaPanelIds = areaId
+        ? Object.entries(panels ?? {})
+            .filter(([, info]) => (info.area ?? info.placement) === areaId)
+            .map(([id]) => id)
+        : tabs;
+
+      const allTabDescriptors: TabDescriptor[] = allAreaPanelIds.map((id) => ({
         id,
         name: panels?.[id]?.title ?? id,
       }));
@@ -177,7 +188,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
 
       return (
         <TabStrip
-          tabs={tabDescriptors}
+          tabs={allTabDescriptors}
           openTabs={tabs}
           selectedTabId={selectedTabId}
           preventCloseLastTab
@@ -187,9 +198,14 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             closeableTabs ? (tabId) => onTabClose?.(path, tabId) : undefined
           }
           onOpenTabsChange={(tabIds) => onTabReorder?.(path, tabIds)}
+          onCreate={
+            creatableTabs && areaId ? () => onTabCreate?.(areaId) : undefined
+          }
           renderTabLabel={renderTabLabel}
         >
+          {searchableTabs && <TabStrip.SearchDropdown />}
           <TabStrip.Tabs />
+          {creatableTabs && <TabStrip.NewButton />}
           {isCollapsible && areaId && (
             <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
           )}
@@ -202,6 +218,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       onTabSelect,
       onTabClose,
       onTabReorder,
+      onTabCreate,
       onAreaCollapse,
       renderTabLabel,
     ],

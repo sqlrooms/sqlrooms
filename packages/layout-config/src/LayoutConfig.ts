@@ -40,6 +40,8 @@ export const MosaicLayoutTabsNode = z.object({
   collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
   closeableTabs: z.boolean().optional(),
+  creatableTabs: z.boolean().optional(),
+  searchableTabs: z.boolean().optional(),
   showTabStrip: z.boolean().optional(),
   showTabStripWhenCollapsed: z.boolean().optional(),
   draggable: z.boolean().optional(),

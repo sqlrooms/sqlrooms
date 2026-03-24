@@ -123,7 +123,8 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
 export const LayoutComposer: FC<{
   className?: string;
   tileClassName?: string;
-}> = ({className, tileClassName}) => {
+  onTabCreate?: (areaId: string) => void;
+}> = ({className, tileClassName, onTabCreate}) => {
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
@@ -234,6 +235,7 @@ export const LayoutComposer: FC<{
           onTabReorder={handleTabReorder}
           onAreaCollapse={handleAreaCollapse}
           onAreaExpand={handleAreaExpand}
+          onTabCreate={onTabCreate}
         />
       ) : null}
     </div>

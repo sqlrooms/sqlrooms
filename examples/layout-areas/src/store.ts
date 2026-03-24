@@ -48,7 +48,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                     id: 'main',
                     tabs: ['editor', 'chart'],
                     activeTabIndex: 0,
-                    // draggable: true,
+                    closeableTabs: true,
+                    creatableTabs: true,
+                    searchableTabs: true,
                   },
                   {
                     type: 'tabs',
