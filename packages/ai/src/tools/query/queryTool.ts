@@ -134,7 +134,7 @@ export function createQueryTool(
         };
       }
     },
-    toModelOutput: (output) => ({
+    toModelOutput: ({output}) => ({
       type: 'text',
       value: JSON.stringify({
         success: output.success,

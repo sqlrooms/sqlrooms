@@ -6,9 +6,15 @@ import {
   AiSettingsSliceConfig,
   AnalysisResultSchema,
   AnalysisSessionSchema,
+  DynamicToolUIPart,
+  ToolUIPart,
   UIMessagePart,
 } from '@sqlrooms/ai-config';
-import {DynamicToolUIPart, TextUIPart, ToolUIPart, UIMessage} from 'ai';
+import {
+  TextUIPart,
+  UIMessage,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from 'ai';
 import {
   ABORT_EVENT,
   ANALYSIS_PENDING_ID,
@@ -300,6 +306,49 @@ export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
 }
 
 /**
+ * Determines whether the analysis should end based on completed messages.
+ *
+ * The analysis should continue (return false) when the last assistant message
+ * has tool calls that the agent loop needs to process. It should end (return true)
+ * when the assistant has finished responding with no pending tool work.
+ *
+ * @param messages - The completed messages to evaluate
+ * @returns True if the analysis should end, false if it should continue
+ */
+export function shouldEndAnalysis(messages: UIMessage[]): boolean {
+  const shouldAutoSendNext = lastAssistantMessageIsCompleteWithToolCalls({
+    messages,
+  });
+
+  const lastMessage = messages[messages.length - 1];
+  const isLastMessageAssistant = lastMessage?.role === 'assistant';
+
+  let tailHasTool = false;
+  if (isLastMessageAssistant) {
+    const parts = lastMessage?.parts ?? [];
+    // Find the last step-start boundary to inspect only the final step's parts
+    let lastStepStartIndex = -1;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i]?.type === 'step-start') {
+        lastStepStartIndex = i;
+        break;
+      }
+    }
+    const tailParts = parts.slice(lastStepStartIndex + 1);
+    tailHasTool = tailParts.some(
+      (part) =>
+        typeof part?.type === 'string' &&
+        (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
+    );
+  }
+
+  return (
+    (isLastMessageAssistant && !shouldAutoSendNext && !tailHasTool) ||
+    (!shouldAutoSendNext && !isLastMessageAssistant)
+  );
+}
+
+/**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
  * Assumes sequential tool execution (only one tool runs at a time).
@@ -346,8 +395,11 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       }
       sawAnyTool = true;
       const toolPart = current as ToolPart;
-      const hasOutput = toolPart.state?.startsWith('output');
-      if (hasOutput) {
+      const isCompleted =
+        toolPart.state?.startsWith('output') ||
+        toolPart.state === 'approval-responded' ||
+        toolPart.state === 'approval-requested';
+      if (isCompleted) {
         // Completed tool; continue checking earlier parts just in case
         continue;
       }

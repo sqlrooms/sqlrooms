@@ -1,7 +1,7 @@
 import {StoreApi} from '@sqlrooms/room-store';
-import {Experimental_Agent as Agent, stepCountIs, tool} from 'ai';
+import {ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
-import {AiSliceState, processAgentStream} from '@sqlrooms/ai-core';
+import {AiSliceState, streamSubAgent} from '@sqlrooms/ai-core';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
 export function weatherAgentTool(store: StoreApi<AiSliceState>) {
@@ -26,9 +26,8 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
           state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
       }).chatModel(modelId);
 
-      const weatherAgent = new Agent({
+      const weatherAgent = new ToolLoopAgent({
         model,
-        abortSignal: options?.abortSignal,
         tools: {
           weather: tool({
             description: 'Get the weather in a location (in Fahrenheit)',
@@ -56,15 +55,11 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
         stopWhen: stepCountIs(20),
       });
 
-      const agentResult = await weatherAgent.stream({
-        prompt: prompt,
-      });
-
       // Process the agent stream and get the final result
-      const resultText = await processAgentStream(
-        agentResult,
-        store,
-        options?.toolCallId || '',
+      const resultText = await streamSubAgent(
+        weatherAgent,
+        prompt,
+        options?.abortSignal,
       );
 
       return {

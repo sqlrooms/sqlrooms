@@ -33,9 +33,11 @@ export {
   cleanupPendingAnalysisResults,
   ToolAbortError,
   extractModelsFromSettings,
+  shouldEndAnalysis,
 } from './utils';
 export type {
-  AddToolResult,
+  AddToolApprovalResponse,
+  AddToolOutput,
   StoredTool,
   StoredToolSet,
   ToolRendererProps,
@@ -45,10 +47,9 @@ export type {
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 
-export {processAgentStream} from './agents/AgentUtils';
+export {streamSubAgent, updateAgentToolCallData} from './agents/AgentUtils';
 export type {
-  AgentStreamResult,
-  UIMessageChunk,
   AgentToolCall,
+  AgentToolCallAdditionalData,
 } from './agents/AgentUtils';
 export {ReasoningBox} from './components/ReasoningBox';

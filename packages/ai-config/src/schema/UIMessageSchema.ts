@@ -1,6 +1,6 @@
 import {z} from 'zod';
 
-// AI SDK v5 UIMessage schemas
+// AI SDK v6 UIMessage schemas
 const ProviderMetadataSchema = z.unknown();
 
 const TextUIPartSchema = z.object({
@@ -54,11 +54,44 @@ const ToolUIPartOutputErrorSchema = ToolUIPartBaseSchema.extend({
   callProviderMetadata: ProviderMetadataSchema.optional(),
 });
 
+const ToolUIPartApprovalSchema = z.object({
+  id: z.string(),
+  approved: z.boolean().optional(),
+  reason: z.string().optional(),
+});
+
+const ToolUIPartApprovalRequestedSchema = ToolUIPartBaseSchema.extend({
+  state: z.literal('approval-requested'),
+  input: z.unknown(),
+  callProviderMetadata: ProviderMetadataSchema.optional(),
+  providerExecuted: z.boolean().optional(),
+  approval: ToolUIPartApprovalSchema,
+});
+
+const ToolUIPartApprovalRespondedSchema = ToolUIPartBaseSchema.extend({
+  state: z.literal('approval-responded'),
+  input: z.unknown(),
+  callProviderMetadata: ProviderMetadataSchema.optional(),
+  providerExecuted: z.boolean().optional(),
+  approval: ToolUIPartApprovalSchema,
+});
+
+const ToolUIPartOutputDeniedSchema = ToolUIPartBaseSchema.extend({
+  state: z.literal('output-denied'),
+  input: z.unknown(),
+  callProviderMetadata: ProviderMetadataSchema.optional(),
+  providerExecuted: z.boolean().optional(),
+  approval: ToolUIPartApprovalSchema,
+});
+
 const ToolUIPartSchema = z.union([
   ToolUIPartInputStreamingSchema,
   ToolUIPartInputAvailableSchema,
   ToolUIPartOutputAvailableSchema,
   ToolUIPartOutputErrorSchema,
+  ToolUIPartApprovalRequestedSchema,
+  ToolUIPartApprovalRespondedSchema,
+  ToolUIPartOutputDeniedSchema,
 ]);
 
 export type ToolUIPart = z.infer<typeof ToolUIPartSchema>;
@@ -95,14 +128,38 @@ const DynamicToolOutputErrorSchema = DynamicToolUIPartBaseSchema.extend({
   errorText: z.string(),
 });
 
+const DynamicToolApprovalRequestedSchema = DynamicToolUIPartBaseSchema.extend({
+  state: z.literal('approval-requested'),
+  input: z.unknown(),
+  callProviderMetadata: ProviderMetadataSchema.optional(),
+  approval: ToolUIPartApprovalSchema,
+});
+
+const DynamicToolApprovalRespondedSchema = DynamicToolUIPartBaseSchema.extend({
+  state: z.literal('approval-responded'),
+  input: z.unknown(),
+  callProviderMetadata: ProviderMetadataSchema.optional(),
+  approval: ToolUIPartApprovalSchema,
+});
+
+const DynamicToolOutputDeniedSchema = DynamicToolUIPartBaseSchema.extend({
+  state: z.literal('output-denied'),
+  input: z.unknown(),
+  callProviderMetadata: ProviderMetadataSchema.optional(),
+  approval: ToolUIPartApprovalSchema,
+});
+
 const DynamicToolUIPartSchema = z.union([
   DynamicToolInputStreamingSchema,
   DynamicToolInputAvailableSchema,
   DynamicToolOutputAvailableSchema,
   DynamicToolOutputErrorSchema,
+  DynamicToolApprovalRequestedSchema,
+  DynamicToolApprovalRespondedSchema,
+  DynamicToolOutputDeniedSchema,
 ]);
 
-// Additional UIPart types from AI SDK v5
+// Additional UIPart types from AI SDK v6
 const StepStartUIPartSchema = z.object({
   type: z.literal('step-start'),
 });
@@ -152,7 +209,7 @@ export const UIMessagePartSchema = z.union([
   DataUIPartSchema,
 ]);
 
-// Create a Zod schema for UIMessage (AI SDK v5)
+// Create a Zod schema for UIMessage (AI SDK v6)
 export const UIMessageSchema = z.object({
   id: z.string(),
   role: z.enum(['system', 'user', 'assistant']),
@@ -162,3 +219,6 @@ export const UIMessageSchema = z.object({
 
 // Export the type for UIMessagePart
 export type UIMessagePart = z.infer<typeof UIMessagePartSchema>;
+
+// Export DynamicToolUIPart type (union of all dynamic-tool states)
+export type DynamicToolUIPart = z.infer<typeof DynamicToolUIPartSchema>;

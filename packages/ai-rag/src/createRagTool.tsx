@@ -96,7 +96,7 @@ function RagToolResult({output}: ToolRendererProps<RagToolOutput>) {
     );
   }
 
-  const {query, results, database} = output;
+  const {results} = output;
 
   return (
     <ReasoningBox title={`Found ${results?.length || 0} results`}>
@@ -202,7 +202,7 @@ The search uses vector embeddings to find semantically similar content, not just
 
     inputSchema: RagToolParameters,
 
-    toModelOutput: (output: RagToolOutput) => ({
+    toModelOutput: ({output}) => ({
       type: 'text',
       value: JSON.stringify({
         success: output.success,

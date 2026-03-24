@@ -14,7 +14,10 @@ type ToolResultProps = {
     | 'input-streaming'
     | 'input-available'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'approval-requested'
+    | 'approval-responded'
+    | 'output-denied';
   errorText?: string;
 };
 

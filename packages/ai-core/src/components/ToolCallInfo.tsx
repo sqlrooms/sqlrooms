@@ -18,7 +18,10 @@ type ToolCallInfoProps = {
     | 'input-streaming'
     | 'input-available'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'approval-requested'
+    | 'approval-responded'
+    | 'output-denied';
 };
 
 /**
@@ -37,7 +40,6 @@ type ToolCallInfoProps = {
 export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
   toolName,
   input,
-  isCompleted,
   state,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);

@@ -10,6 +10,54 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
+
+The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
+
+#### Sub-agent composition
+
+The tool-as-agent pattern now uses `ToolLoopAgent` + `streamSubAgent`:
+
+```ts
+// Before (v5)
+const result = await streamText({
+  model,
+  system: instructions,
+  messages: [{role: 'user', content: prompt}],
+  tools,
+  maxSteps: 10,
+});
+
+// After (v6)
+import {ToolLoopAgent, stepCountIs} from 'ai';
+import {streamSubAgent} from '@sqlrooms/ai';
+
+const agent = new ToolLoopAgent({
+  model, instructions, tools,
+  stopWhen: stepCountIs(10),
+  temperature: 0,
+});
+const resultText = await streamSubAgent(agent, prompt, store, toolCallId, abortSignal);
+```
+
+#### `addToolResult` → `addToolOutput`
+
+```ts
+// Before
+addToolResult({toolCallId, result: {...}});
+
+// After
+addToolOutput({tool: toolName, toolCallId, output: {...}});
+```
+
+#### `ToolRendererProps` new states
+
+Tool renderers may now receive three additional states for approval workflows: `approval-requested`, `approval-responded`, and `output-denied`. Update any exhaustive switch/if-else on `state` in custom renderers.
+
+#### Remote transport
+
+If you use `createRemoteChatTransportFactory`, your server-side route must migrate from `streamText` to `ToolLoopAgent` + `createAgentUIStreamResponse`. The transport now sends `instructions`, `maxSteps`, and `temperature` in the request body. See the [`ai-nextjs` example](../examples/ai-nextjs/src/app/api/chat/route.ts) for a complete implementation.
+
 ### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
 
 `createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
@@ -124,7 +172,7 @@ const myTool = tool({
     processed: text,
   }),
   // optional: control what the LLM sees (defaults to full JSON)
-  toModelOutput: (output) => ({type: 'text', value: output.details}),
+  toModelOutput: ({output}) => ({type: 'text', value: output.details}),
 });
 // renderer is registered separately — see toolRenderers below
 ```

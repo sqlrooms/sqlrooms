@@ -48,7 +48,7 @@ const AgentProgressRenderer: React.FC<{
               className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}
             >
               <div className="mb-1 flex items-start">
-                <span className="mr-2 min-w-[16px]">
+                <span className="mr-2 min-w-4">
                   {isSuccess && '✓'}
                   {isError && '✗'}
                   {toolCall.state === 'pending' && '○'}
@@ -111,25 +111,34 @@ export const ToolPartRenderer = ({
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
   const {type, state, input} = part;
-  const toolName =
-    type === 'dynamic-tool'
-      ? part.toolName || 'unknown'
-      : type.replace(/^tool-/, '') || 'unknown';
+  const toolName = isDynamicToolPart(part)
+    ? part.toolName
+    : type.replace(/^tool-/, '') || 'unknown';
 
   const output = state === 'output-available' ? part.output : undefined;
   const errorText = state === 'output-error' ? part.errorText : undefined;
   const isCompleted = state === 'output-available' || state === 'output-error';
+  const isApprovalState =
+    state === 'approval-requested' ||
+    state === 'approval-responded' ||
+    state === 'output-denied';
+  const approvalId =
+    isApprovalState && 'approval' in part ? part.approval?.id : undefined;
 
   const hasExecute = !!tools[toolName]?.execute;
   // Look up directly from the registry object (stable reference) to avoid
   // the react-hooks/static-components lint rule flagging a function call.
   const ToolComponent = toolRenderers[toolName];
 
+  // Render the ToolComponent directly for:
+  // - Tools without execute (legacy no-execute pattern)
+  // - Tools in approval states (needsApproval pattern)
   if (
-    !hasExecute &&
-    (state === 'input-streaming' ||
-      state === 'input-available' ||
-      state === 'output-available')
+    (!hasExecute &&
+      (state === 'input-streaming' ||
+        state === 'input-available' ||
+        state === 'output-available')) ||
+    (isApprovalState && ToolComponent)
   ) {
     return (
       <div>
@@ -140,6 +149,7 @@ export const ToolPartRenderer = ({
             toolCallId={toolCallId}
             state={state}
             errorText={errorText}
+            approvalId={approvalId}
           />
         )}
       </div>

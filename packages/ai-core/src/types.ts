@@ -6,12 +6,8 @@ import type {
   Tool,
   InferToolOutput,
   InferToolInput,
+  ToolLoopAgentSettings,
 } from 'ai';
-import {streamText} from 'ai';
-
-export type ProviderOptions = NonNullable<
-  Parameters<typeof streamText>[0]['providerOptions']
->;
 
 /**
  * Shallow tool representation stored in state.
@@ -43,13 +39,13 @@ export type StoredToolSet = Record<string, StoredTool>;
 export type GetProviderOptions = (args: {
   provider: string;
   modelId: string;
-}) => ProviderOptions | null | undefined;
+}) => ToolLoopAgentSettings['providerOptions'];
 
 /**
- * Type for adding tool results to the chat.
+ * Type for adding tool outputs to the chat.
  * Extracted to a separate file to avoid circular dependencies.
  */
-export type AddToolResult = (
+export type AddToolOutput = (
   options:
     | {tool: string; toolCallId: string; output: unknown}
     | {
@@ -59,6 +55,11 @@ export type AddToolResult = (
         errorText: string;
       },
 ) => void;
+
+export type AddToolApprovalResponse = (options: {
+  id: string;
+  approved: boolean;
+}) => void;
 
 export type AiChatSendMessage = (message: {text: string}) => void;
 
@@ -87,11 +88,6 @@ export interface AiStateForTransport {
     sessionId: string | undefined,
   ) => void;
   getToolCallSession: (toolCallId: string) => string | undefined;
-  waitForToolResult: (
-    sessionId: string,
-    toolCallId: string,
-    abortSignal?: AbortSignal,
-  ) => Promise<void>;
   getFullInstructions: () => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;
@@ -99,6 +95,8 @@ export interface AiStateForTransport {
   getBaseUrlFromSettings: () => string | undefined;
   /** Set API key error flag for a provider */
   setApiKeyError: (provider: string, hasError: boolean) => void;
+  /** Get the maximum number of agent steps from settings */
+  getMaxStepsFromSettings: () => number;
 }
 
 /**
@@ -119,8 +117,13 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
     | 'input-streaming'
     | 'input-available'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'approval-requested'
+    | 'approval-responded'
+    | 'output-denied';
   errorText?: string;
+  /** Approval ID for tools with `needsApproval`. Present when state is approval-related. */
+  approvalId?: string;
 };
 
 /**

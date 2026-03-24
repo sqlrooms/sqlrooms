@@ -26,10 +26,8 @@ import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
-  ToolCall,
 } from './chatTransport';
 import {
-  ABORT_EVENT,
   AI_DEFAULT_TEMPERATURE,
   ANALYSIS_CANCELLED,
   ANALYSIS_PENDING_ID,
@@ -38,7 +36,8 @@ import {
 } from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import type {
-  AddToolResult,
+  AddToolApprovalResponse,
+  AddToolOutput,
   AiChatSendMessage,
   GetProviderOptions,
   StoredToolSet,
@@ -51,6 +50,7 @@ import {
   ToolAbortError,
   fixIncompleteToolCalls,
 } from './utils';
+
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
 
@@ -85,16 +85,18 @@ export type AiSliceState = {
       sendMessage: AiChatSendMessage | undefined,
     ) => void;
     getChatSendMessage: (sessionId: string) => AiChatSendMessage | undefined;
-    setAddToolResult: (
+    setAddToolOutput: (
       sessionId: string,
-      addToolResult: AddToolResult | undefined,
+      addToolOutput: AddToolOutput | undefined,
     ) => void;
-    getAddToolResult: (sessionId: string) => AddToolResult | undefined;
-    waitForToolResult: (
+    getAddToolOutput: (sessionId: string) => AddToolOutput | undefined;
+    setAddToolApprovalResponse: (
       sessionId: string,
-      toolCallId: string,
-      abortSignal?: AbortSignal,
-    ) => Promise<void>;
+      fn: AddToolApprovalResponse | undefined,
+    ) => void;
+    getAddToolApprovalResponse: (
+      sessionId: string,
+    ) => AddToolApprovalResponse | undefined;
     /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
     setToolCallSession: (
       toolCallId: string,
@@ -155,11 +157,6 @@ export type AiSliceState = {
       messages: UIMessage[];
       isError?: boolean;
     }) => void;
-    onChatToolCall: (args: {
-      sessionId: string;
-      toolCall: ToolCall;
-      addToolResult?: AddToolResult;
-    }) => Promise<void> | void;
     onChatError: (sessionId: string, error: unknown) => void;
   };
 };
@@ -243,16 +240,15 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       : params.config;
 
     // Create persistent Maps (outside of immer draft)
-    const pendingToolCallResolvers = new Map<
-      string,
-      {resolve: () => void; reject: (error: Error) => void}
-    >();
-
     const toolCallToSessionId = new Map<string, string>();
     const sessionAbortControllers = new Map<string, AbortController>();
     const sessionChatStops = new Map<string, () => void>();
     const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
-    const sessionAddToolResults = new Map<string, AddToolResult>();
+    const sessionAddToolOutputs = new Map<string, AddToolOutput>();
+    const sessionAddToolApprovalResponses = new Map<
+      string,
+      AddToolApprovalResponse
+    >();
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -297,51 +293,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         tools,
         toolRenderers: params.toolRenderers ?? {},
         getProviderOptions,
-        waitForToolResult: (
-          sessionId: string,
-          toolCallId: string,
-          abortSignal?: AbortSignal,
-        ) => {
-          const key = `${sessionId}:${toolCallId}`;
-          return new Promise<void>((resolve, reject) => {
-            // Set up abort handler
-            const abortHandler = () => {
-              const resolver = pendingToolCallResolvers.get(key);
-              if (resolver) {
-                pendingToolCallResolvers.delete(key);
-                resolver.reject(new Error(TOOL_CALL_CANCELLED));
-              }
-            };
-
-            if (abortSignal) {
-              if (abortSignal.aborted) {
-                reject(new Error(TOOL_CALL_CANCELLED));
-                return;
-              }
-              abortSignal.addEventListener(ABORT_EVENT, abortHandler, {
-                once: true,
-              });
-            }
-
-            // Store resolver (overwrites any existing one, which is fine for our use case)
-            pendingToolCallResolvers.set(key, {
-              resolve: () => {
-                if (abortSignal) {
-                  abortSignal.removeEventListener(ABORT_EVENT, abortHandler);
-                }
-                pendingToolCallResolvers.delete(key);
-                resolve();
-              },
-              reject: (error: Error) => {
-                if (abortSignal) {
-                  abortSignal.removeEventListener(ABORT_EVENT, abortHandler);
-                }
-                pendingToolCallResolvers.delete(key);
-                reject(error);
-              },
-            });
-          });
-        },
 
         setToolCallSession: (
           toolCallId: string,
@@ -398,29 +349,32 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return sessionChatSendMessages.get(sessionId);
         },
 
-        setAddToolResult: (
+        setAddToolOutput: (
           sessionId: string,
-          addToolResultFn: AddToolResult | undefined,
+          addToolOutputFn: AddToolOutput | undefined,
         ) => {
-          if (addToolResultFn) {
-            // Wrap addToolResult to intercept calls and resolve pending promises
-            const wrappedAddToolResult: AddToolResult = (options) => {
-              addToolResultFn(options);
-              const key = `${sessionId}:${options.toolCallId}`;
-              const resolver = pendingToolCallResolvers.get(key);
-              if (resolver) {
-                resolver.resolve();
-              }
-              // Tool is complete (success or error), we can drop toolCall->session mapping.
-              toolCallToSessionId.delete(options.toolCallId);
-            };
-            sessionAddToolResults.set(sessionId, wrappedAddToolResult);
+          if (addToolOutputFn) {
+            sessionAddToolOutputs.set(sessionId, addToolOutputFn);
           } else {
-            sessionAddToolResults.delete(sessionId);
+            sessionAddToolOutputs.delete(sessionId);
           }
         },
-        getAddToolResult: (sessionId: string) => {
-          return sessionAddToolResults.get(sessionId);
+        getAddToolOutput: (sessionId: string) => {
+          return sessionAddToolOutputs.get(sessionId);
+        },
+
+        setAddToolApprovalResponse: (
+          sessionId: string,
+          fn: AddToolApprovalResponse | undefined,
+        ) => {
+          if (fn) {
+            sessionAddToolApprovalResponses.set(sessionId, fn);
+          } else {
+            sessionAddToolApprovalResponses.delete(sessionId);
+          }
+        },
+        getAddToolApprovalResponse: (sessionId: string) => {
+          return sessionAddToolApprovalResponses.get(sessionId);
         },
 
         setConfig: (config: AiSliceConfig) => {
@@ -652,7 +606,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionAbortControllers.delete(sessionId);
           sessionChatStops.delete(sessionId);
           sessionChatSendMessages.delete(sessionId);
-          sessionAddToolResults.delete(sessionId);
+          sessionAddToolOutputs.delete(sessionId);
           const now = Date.now();
 
           set((state) =>
@@ -700,7 +654,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (session) {
                 // store the latest UI messages from the chat hook
                 // Create a deep copy to avoid read-only property issues
-                session.uiMessages = JSON.parse(JSON.stringify(uiMessages));
+                session.uiMessages = structuredClone(uiMessages);
               }
             }),
           );
@@ -1099,6 +1053,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             defaultProvider,
             defaultModel,
             sessionId,
+            getInstructions: () => store.getState().ai.getFullInstructions(),
           })(endpoint, headers),
 
         ...createChatHandlers({store}),

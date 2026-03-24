@@ -4,10 +4,10 @@ import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {LanguageModel, ToolSet} from 'ai';
 import {
-  convertToModelMessages,
+  createAgentUIStreamResponse,
   DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-  streamText,
+  stepCountIs,
+  ToolLoopAgent,
   UIMessage,
 } from 'ai';
 import {produce} from 'immer';
@@ -17,20 +17,12 @@ import {
   TOOL_CALL_CANCELLED,
 } from './constants';
 import type {AiSliceStateForTransport} from './types';
-import {AddToolResult} from './types';
 import {
   fixIncompleteToolCalls,
   mergeAbortSignals,
   sanitizeMessagesForLLM,
-  ToolAbortError,
+  shouldEndAnalysis,
 } from './utils';
-
-export type ToolCall = {
-  input: string;
-  toolCallId: string;
-  toolName: string;
-  type: 'tool-input-available';
-};
 
 export type ChatTransportConfig = {
   sessionId: string;
@@ -53,21 +45,9 @@ function getSessionById(
   sessionId: string | undefined,
 ): AnalysisSessionSchema | undefined {
   if (!sessionId) return undefined;
-
-  const sessions = store.getState().ai.config.sessions;
-  const session = sessions.find(
-    (s: AnalysisSessionSchema) => s.id === sessionId,
-  );
-
-  if (!session) {
-    return undefined;
-  }
-
-  if (session.id !== sessionId) {
-    return undefined;
-  }
-
-  return session;
+  return store
+    .getState()
+    .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
 }
 
 export function createLocalChatTransportFactory({
@@ -119,15 +99,11 @@ export function createLocalChatTransportFactory({
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      // Clone tools without execute for the model call.
-      // Tool invocations are handled exclusively by onChatToolCall.
+      // Pass tools with their execute functions — the ToolLoopAgent runs the
+      // full tool loop server-side. UI-approval tools (no execute) are paused
+      // by the agent and resumed via addToolOutput from the client.
       // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
-      const tools = Object.fromEntries(
-        Object.entries(state.ai.tools || {}).map(([name, t]) => [
-          name,
-          {...t, execute: undefined},
-        ]),
-      ) as ToolSet;
+      const tools = (state.ai.tools || {}) as ToolSet;
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
@@ -145,17 +121,22 @@ export function createLocalChatTransportFactory({
         sessionAbortSignal,
       ]);
 
-      const result = streamText({
+      const maxSteps = state.ai.getMaxStepsFromSettings();
+
+      const agent = new ToolLoopAgent({
         model,
-        messages: convertToModelMessages(sanitizeMessagesForLLM(messagesCopy)),
+        instructions: systemInstructions,
         tools,
-        system: systemInstructions,
-        abortSignal,
+        stopWhen: stepCountIs(maxSteps),
         temperature: AI_DEFAULT_TEMPERATURE,
         ...(providerOptions ? {providerOptions} : {}),
       });
 
-      return result.toUIMessageStreamResponse();
+      return createAgentUIStreamResponse({
+        agent,
+        uiMessages: sanitizeMessagesForLLM(messagesCopy),
+        abortSignal,
+      });
     };
 
     return new DefaultChatTransport({fetch: fetchImpl});
@@ -167,14 +148,16 @@ export function createRemoteChatTransportFactory(params: {
   defaultProvider: string;
   defaultModel: string;
   sessionId: string;
+  getInstructions: () => string;
 }) {
   return (endpoint: string, headers?: Record<string, string>) => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const {store, defaultProvider, defaultModel, sessionId} = params;
-      // Get current session's model and provider at request time
+      const {store, defaultProvider, defaultModel, sessionId, getInstructions} =
+        params;
+      // Resolve provider/model/instructions at call time to pick up latest settings.
       const state = store.getState();
 
-      // Parse the existing body and add model information (defensive parsing)
+      // Parse caller-supplied body defensively to avoid breaking the stream
       const body = init?.body as string;
       let parsed: unknown = {};
       try {
@@ -195,6 +178,9 @@ export function createRemoteChatTransportFactory(params: {
         ...parsedObj,
         modelProvider,
         model,
+        instructions: getInstructions(),
+        maxSteps: state.ai.getMaxStepsFromSettings(),
+        temperature: AI_DEFAULT_TEMPERATURE,
       };
 
       // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)
@@ -227,91 +213,6 @@ export function createChatHandlers({
   store: StoreApi<AiSliceStateForTransport>;
 }) {
   return {
-    onChatToolCall: async ({
-      sessionId,
-      toolCall,
-      addToolResult,
-    }: {
-      sessionId: string;
-      toolCall: ToolCall;
-      addToolResult?: AddToolResult;
-    }) => {
-      const {input, toolCallId, toolName} = toolCall;
-      try {
-        const state = store.getState();
-        const session = getSessionById(store, sessionId);
-        state.ai.setToolCallSession(toolCallId, sessionId);
-
-        const abortController = sessionId
-          ? state.ai.getAbortController(sessionId)
-          : undefined;
-        if (abortController?.signal.aborted) {
-          addToolResult?.({
-            tool: toolName,
-            toolCallId,
-            state: 'output-error',
-            errorText: TOOL_CALL_CANCELLED,
-          });
-          return;
-        }
-
-        const tool = state.ai.tools[toolName];
-        if (tool?.execute) {
-          const sessionMessages = (session?.uiMessages ?? []) as UIMessage[];
-          const result = await tool.execute(input, {
-            toolCallId,
-            messages: convertToModelMessages(
-              sanitizeMessagesForLLM(sessionMessages),
-            ),
-            abortSignal: abortController?.signal,
-          });
-
-          addToolResult?.({
-            tool: toolName,
-            toolCallId,
-            output: result,
-          });
-          state.ai.setToolCallSession(toolCallId, undefined);
-        } else {
-          // Tool has no execute function - wait for UI component to call addToolResult
-          const hasToolRenderer = !!state.ai.findToolRenderer(toolName);
-          if (hasToolRenderer && state.ai.waitForToolResult) {
-            try {
-              await state.ai.waitForToolResult(
-                sessionId,
-                toolCallId,
-                abortController?.signal,
-              );
-              state.ai.setToolCallSession(toolCallId, undefined);
-            } catch (error) {
-              if (addToolResult && error instanceof Error) {
-                addToolResult({
-                  tool: toolName,
-                  toolCallId,
-                  state: 'output-error',
-                  errorText: error.message,
-                });
-              }
-              throw error;
-            }
-          }
-        }
-        // If no ToolComponent, we still return (no-op) - the UI won't render anything
-        // and the tool call will remain incomplete, which is fine for error handling
-      } catch (error) {
-        const isAbortError = error instanceof ToolAbortError;
-        addToolResult?.({
-          tool: toolName,
-          toolCallId,
-          state: 'output-error',
-          errorText: isAbortError
-            ? TOOL_CALL_CANCELLED
-            : getErrorMessageForDisplay(error),
-        });
-        // ensure mapping cleared on error too
-        store.getState().ai.setToolCallSession(toolCallId, undefined);
-      }
-    },
     onChatFinish: ({
       sessionId,
       messages,
@@ -431,35 +332,7 @@ export function createChatHandlers({
           }),
         );
 
-        const shouldAutoSendNext = lastAssistantMessageIsCompleteWithToolCalls({
-          messages: completedMessages,
-        });
-
-        const lastMessage = completedMessages[completedMessages.length - 1];
-        const isLastMessageAssistant = lastMessage?.role === 'assistant';
-        let tailHasTool = false;
-        if (isLastMessageAssistant) {
-          const parts = lastMessage?.parts ?? [];
-          let lastStepStartIndex = -1;
-          for (let i = parts.length - 1; i >= 0; i--) {
-            if (parts[i]?.type === 'step-start') {
-              lastStepStartIndex = i;
-              break;
-            }
-          }
-          const tailParts = parts.slice(lastStepStartIndex + 1);
-          tailHasTool = tailParts.some(
-            (part) =>
-              typeof part?.type === 'string' &&
-              (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
-          );
-        }
-
-        const shouldEndAnalysis =
-          (isLastMessageAssistant && !shouldAutoSendNext && !tailHasTool) ||
-          (!shouldAutoSendNext && !isLastMessageAssistant);
-
-        if (shouldEndAnalysis) {
+        if (shouldEndAnalysis(completedMessages)) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
         }
