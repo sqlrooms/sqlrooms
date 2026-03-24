@@ -31,6 +31,7 @@
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
