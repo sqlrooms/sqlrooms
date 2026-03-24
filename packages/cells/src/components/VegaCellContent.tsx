@@ -1,17 +1,11 @@
-import {
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {useCellsStore} from '../hooks';
-import type {Cell, CellContainerProps, VegaCell} from '../types';
+import type {CellContainerProps, VegaCell, SqlCell} from '../types';
 import {VegaConfigPanel} from './VegaConfigPanel';
+import {VegaCellDatasetSelector} from './VegaCellDatasetSelector';
 
 export type VegaCellContentProps = {
   id: string;
@@ -27,19 +21,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   const updateCell = useCellsStore((s) => s.cells.updateCell);
   const cellsData = useCellsStore((s) => s.cells.config.data);
   const cellsStatus = useCellsStore((s) => s.cells.status);
-
-  // Find available SQL cells in the same sheet
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const sheetCellIds = useCellsStore((s) =>
-    currentSheetId ? s.cells.config.sheets[currentSheetId]?.cellIds : undefined,
-  );
-
-  const availableSqlCells = useMemo(() => {
-    if (!sheetCellIds) return [];
-    return sheetCellIds
-      .map((cid) => cellsData[cid])
-      .filter((c): c is Cell & {type: 'sql'} => c?.type === 'sql');
-  }, [sheetCellIds, cellsData]);
 
   const selectedSqlId = cell.data.sqlId;
   const selectedSqlStatus = selectedSqlId
@@ -59,21 +40,13 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
     selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
       ? `SELECT * FROM ${selectedSqlStatus.resultView}`
       : selectedSqlId && cellsData[selectedSqlId]?.type === 'sql'
-        ? (cellsData[selectedSqlId] as any).data.sql
+        ? (cellsData[selectedSqlId] as SqlCell).data.sql
         : '';
 
   const lastRunTime =
     selectedSqlStatus?.type === 'sql'
       ? selectedSqlStatus.lastRunTime
       : undefined;
-
-  const handleSqlIdChange = (value: string) => {
-    updateCell(id, (c) =>
-      produce(c, (draft) => {
-        if (draft.type === 'vega') draft.data.sqlId = value;
-      }),
-    );
-  };
 
   const saveSpec = useCallback(() => {
     updateCell(id, (c) =>
@@ -86,18 +59,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   const header = (
     <div className="flex items-center gap-2">
-      <Select value={selectedSqlId} onValueChange={handleSqlIdChange}>
-        <SelectTrigger className="h-6 w-[150px] text-xs shadow-none">
-          <SelectValue placeholder="Select data source" />
-        </SelectTrigger>
-        <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-          {availableSqlCells.map((sql) => (
-            <SelectItem className="text-xs" key={sql.id} value={sql.id}>
-              {sql.data.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <VegaCellDatasetSelector cellId={id} />
       <Button
         size="xs"
         variant="secondary"
@@ -107,9 +69,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
       >
         {isEditing ? 'Save' : 'Edit chart'}
       </Button>
-      <span className="text-[10px] font-bold text-gray-400 uppercase">
-        Vega
-      </span>
     </div>
   );
 
