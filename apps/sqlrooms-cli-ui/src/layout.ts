@@ -14,10 +14,10 @@ export const LAYOUT: CreateLayoutSliceProps = {
   config: {
     type: LayoutTypes.enum.mosaic,
     nodes: {
+      type: 'split',
       direction: 'row',
-      first: RoomPanelTypes.enum['data-sources'],
-      second: 'main',
-      splitPercentage: 20,
+      children: [RoomPanelTypes.enum['data-sources'], 'main'],
+      splitPercentages: [20, 80],
     },
   },
   panels: {

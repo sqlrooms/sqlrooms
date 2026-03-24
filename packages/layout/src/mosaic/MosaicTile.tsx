@@ -1,13 +1,13 @@
 import {MAIN_VIEW} from '@sqlrooms/layout-config';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
-import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';
+import {MosaicPath, MosaicWindow} from 'react-mosaic-component';
 
 const ENABLE_LAYOUT_REARRANGE = false;
 
 const MosaicTile: FC<{
   id: string;
-  path: MosaicBranch[];
+  path: MosaicPath;
   content: React.ReactNode;
   isDragging: boolean;
   className?: string;
@@ -30,12 +30,7 @@ const MosaicTile: FC<{
   return (
     <MosaicWindow<string>
       title={id}
-      // additionalControls={
-      // }
-      // createNode={() => genRandomStr(6)}
       path={path}
-      // onDragStart={() => console.log('MosaicWindow.onDragStart')}
-      // onDragEnd={(type) => console.log('MosaicWindow.onDragEnd', type)}
       renderToolbar={() =>
         id === MAIN_VIEW ? (
           <div />

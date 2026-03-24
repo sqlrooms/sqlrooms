@@ -7,7 +7,8 @@ import {
 } from 'react-mosaic-component';
 import {
   MosaicLayoutNode,
-  isMosaicLayoutParent,
+  isMosaicLayoutSplitNode,
+  isMosaicLayoutTabsNode,
   DEFAULT_MOSAIC_LAYOUT,
 } from '@sqlrooms/layout-config';
 
@@ -26,37 +27,37 @@ export function makeMosaicStack(
     return childrenWithoutEmpty[0]?.node ?? null;
   }
 
-  let stack = childrenWithoutEmpty[0]?.node;
-  if (!stack) return null;
-  let accumulatedWeight = childrenWithoutEmpty[0]?.weight ?? 0;
-  for (let i = 1; i < childrenWithoutEmpty.length; i++) {
-    const child = childrenWithoutEmpty[i];
-    if (!child) continue;
-    const {node, weight} = child;
-    const splitPercentage =
-      (accumulatedWeight * 100) / (accumulatedWeight + weight);
-    accumulatedWeight += weight;
-    stack = {
-      direction,
-      first: stack,
-      second: node,
-      splitPercentage: Math.round(splitPercentage),
-    };
-  }
-  return stack;
+  const totalWeight = childrenWithoutEmpty.reduce(
+    (acc, {weight}) => acc + weight,
+    0,
+  );
+  const splitPercentages = childrenWithoutEmpty.map(({weight}) =>
+    Math.round((weight * 100) / totalWeight),
+  );
+
+  return {
+    type: 'split',
+    direction,
+    children: childrenWithoutEmpty.map(({node}) => node),
+    splitPercentages,
+  };
 }
 
 export function visitMosaicLeafNodes<T = void>(
   root: MosaicLayoutNode | undefined | null,
-  visitor: (node: string, path: MosaicPath) => T, // return a truthy value to stop visiting
+  visitor: (node: string, path: MosaicPath) => T,
   path: MosaicPath = [],
 ): T | undefined {
   if (!root) return undefined;
-  if (isMosaicLayoutParent(root)) {
-    if (root.direction) {
-      const rv: T | undefined =
-        visitMosaicLeafNodes(root.first, visitor, [...path, 'first']) ||
-        visitMosaicLeafNodes(root.second, visitor, [...path, 'second']);
+  if (isMosaicLayoutSplitNode(root)) {
+    for (let i = 0; i < root.children.length; i++) {
+      const rv = visitMosaicLeafNodes(root.children[i], visitor, [...path, i]);
+      if (rv) return rv;
+    }
+    return undefined;
+  } else if (isMosaicLayoutTabsNode(root)) {
+    for (let i = 0; i < root.tabs.length; i++) {
+      const rv = visitor(root.tabs[i]!, [...path, i]);
       if (rv) return rv;
     }
     return undefined;
@@ -97,13 +98,12 @@ export function removeMosaicNodeByKey(
   try {
     return {
       success: true,
-      nextTree: updateTree<string>(root, [
-        createRemoveUpdate<string>(root, path),
+      nextTree: updateTree<string>(root as MosaicNode<string>, [
+        createRemoveUpdate<string>(root as MosaicNode<string>, path),
       ]),
     };
   } catch (err) {
     console.error(err);
-    // might happen when removing main view
     return {success: false};
   }
 }

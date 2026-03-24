@@ -9,7 +9,7 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
-import {MosaicNode} from 'react-mosaic-component';
+import type {MosaicLayoutNode} from '@sqlrooms/layout-config';
 import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
   RoomShellSidebarButtons,
@@ -68,7 +68,7 @@ export const LayoutComposer: FC<{
   );
 
   const handleLayoutChange = useCallback(
-    (nodes: MosaicNode<string> | null) => {
+    (nodes: MosaicLayoutNode | null) => {
       // Keep layout properties, e.g. 'pinned' and 'fixed'
       setLayout({...layout, nodes});
     },

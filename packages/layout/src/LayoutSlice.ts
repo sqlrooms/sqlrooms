@@ -2,7 +2,7 @@ import {
   DEFAULT_MOSAIC_LAYOUT,
   LayoutConfig,
   MAIN_VIEW,
-  isMosaicLayoutParent,
+  isMosaicLayoutSplitNode,
 } from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
@@ -145,19 +145,23 @@ export function createLayoutSlice({
                   const root = layout.nodes;
                   const placement = draft.layout.panels[panel]?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';
-                  const toReplace = isMosaicLayoutParent(root)
-                    ? root[side]
+                  const childIdx = isMosaicLayoutSplitNode(root)
+                    ? side === 'first'
+                      ? 0
+                      : root.children.length - 1
+                    : -1;
+                  const toReplace = isMosaicLayoutSplitNode(root)
+                    ? root.children[childIdx]
                     : undefined;
                   if (
                     toReplace &&
-                    isMosaicLayoutParent(root) &&
-                    !isMosaicLayoutParent(toReplace) &&
+                    typeof toReplace === 'string' &&
+                    isMosaicLayoutSplitNode(root) &&
                     toReplace !== MAIN_VIEW &&
                     !layout.fixed?.includes(toReplace) &&
                     !layout.pinned?.includes(toReplace)
                   ) {
-                    // replace first un-pinned leaf
-                    root[side] = panel;
+                    root.children[childIdx] = panel;
                   } else {
                     const panelNode = {node: panel, weight: 1};
                     const restNode = {

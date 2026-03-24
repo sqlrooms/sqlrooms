@@ -38,7 +38,7 @@
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
-    "react-mosaic-component": "^6.1.1",
+    "react-mosaic-component": "^7.0.0-beta0",
     "zod": "^4.1.13",
     "zustand": "^5.0.8"
   },

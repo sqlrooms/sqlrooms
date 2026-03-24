@@ -4,7 +4,6 @@ import 'react-mosaic-component/react-mosaic-component.css';
 import MosaicTile from './MosaicTile';
 import {cn} from '@sqlrooms/ui';
 
-// Add custom styles for the mosaic split line hover effect
 const customMosaicStyles = `
   .mosaic-split {
     background-color: hsl(var(--border) / 0.2);
