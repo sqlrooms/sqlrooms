@@ -4,7 +4,12 @@ import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, CellsRootState, SqlCell} from '../types';
+import type {
+  CellContainerProps,
+  CellsRootState,
+  SqlCell,
+  SqlCellStatus,
+} from '../types';
 import {SqlCellConnectionSelector} from './SqlCellConnectionSelector';
 import {SqlCellDependentsMenu} from './SqlCellDependentsMenu';
 import {SqlCellEditor} from './SqlCellEditor';
@@ -118,10 +123,12 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const status =
     cellStatus?.type === 'sql'
       ? {
-          state: cellStatus.status,
-          message: cellStatus.lastError,
-          resultName: cellStatus.resultView || cellStatus.resultName,
-          lastRunTime: cellStatus.lastRunTime,
+          state: (cellStatus as SqlCellStatus).status,
+          message: (cellStatus as SqlCellStatus).lastError,
+          resultName:
+            (cellStatus as SqlCellStatus).resultView ||
+            (cellStatus as SqlCellStatus).resultName,
+          lastRunTime: (cellStatus as SqlCellStatus).lastRunTime,
         }
       : undefined;
 

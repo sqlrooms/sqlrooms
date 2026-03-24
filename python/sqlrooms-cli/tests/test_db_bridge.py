@@ -109,7 +109,9 @@ def test_snowflake_dependency_diagnostics_handles_find_spec_errors(monkeypatch):
 
 
 def test_postgres_catalog_requires_current_database_result(monkeypatch):
-    connector = PostgresBridgeConnector(settings=PostgresConnectorSettings(host="localhost", database="x", user="x"))
+    connector = PostgresBridgeConnector(
+        settings=PostgresConnectorSettings(host="localhost", database="x", user="x")
+    )
 
     class _FakeCursor:
         def __enter__(self):
