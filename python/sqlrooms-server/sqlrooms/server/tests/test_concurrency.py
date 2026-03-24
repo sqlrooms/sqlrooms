@@ -729,7 +729,9 @@ async def test_concurrent_updates_same_table(server_proc):
         # Concurrent updates to different ranges
         async def update_range(start: int, end: int, new_val: int, idx: int):
             qid = f"upd_{idx}_{int(time.time() * 1000)}"
-            sql = f"UPDATE {table} SET val = {new_val} WHERE id >= {start} AND id < {end}"
+            sql = (
+                f"UPDATE {table} SET val = {new_val} WHERE id >= {start} AND id < {end}"
+            )
             async with session.ws_connect(f"ws://localhost:{port}") as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})

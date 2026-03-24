@@ -80,6 +80,13 @@ export const EditableText: FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [internalValue, setInternalValue] = useState(value);
   const internalValueRef = useRef(internalValue);
+  const valueRef = useRef(value);
+  const skipBlurHandlerRef = useRef(false);
+
+  // Keep valueRef in sync
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     internalValueRef.current = internalValue;
@@ -138,19 +145,30 @@ export const EditableText: FC<{
   );
 
   const handleBlur = useCallback(() => {
+    // Skip if blur was triggered by Enter/Escape key
+    if (skipBlurHandlerRef.current) {
+      skipBlurHandlerRef.current = false;
+      return;
+    }
+
+    const trimmedValue = internalValueRef.current?.trim();
+    onChange(trimmedValue);
+
+    // After onChange, sync internal value back to the prop
+    // If parent rejected the change, value prop stays the same and we reset
+    // If parent accepted the change, value prop updates and we sync to it
+    setInternalValue(valueRef.current);
+    internalValueRef.current = valueRef.current;
+
     handleSetEditing(false);
-    onChange(internalValueRef.current?.trim());
   }, [handleSetEditing, onChange]);
 
-  const handleClick = useCallback(
-    (event: React.MouseEvent<HTMLInputElement>) => {
-      if (!isInternalEditing) {
-        inputRef.current?.select();
-        handleSetEditing(true);
-      }
-    },
-    [isInternalEditing, handleSetEditing],
-  );
+  const handleClick = useCallback(() => {
+    if (!isInternalEditing) {
+      inputRef.current?.select();
+      handleSetEditing(true);
+    }
+  }, [isInternalEditing, handleSetEditing]);
 
   const handleFocus = useCallback(() => {
     if (selectOnFocus && isInternalEditing) {
@@ -178,17 +196,28 @@ export const EditableText: FC<{
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
         case 'Escape':
-          // Reset the internal value to the original value
-          setInternalValue(value);
-          internalValueRef.current = value;
+          // Reset the internal value to the prop value
+          setInternalValue(valueRef.current);
+          internalValueRef.current = valueRef.current;
           handleSetEditing(false);
+          skipBlurHandlerRef.current = true;
           inputRef.current?.blur();
           break;
-        case 'Enter':
+        case 'Enter': {
+          const trimmedValue = internalValueRef.current.trim();
+          onChange(trimmedValue);
+
+          // After onChange, sync internal value back to the prop
+          // If parent rejected the change, value prop stays the same and we reset
+          // If parent accepted the change, value prop updates and we sync to it
+          setInternalValue(valueRef.current);
+          internalValueRef.current = valueRef.current;
+
           handleSetEditing(false);
-          onChange(internalValueRef.current.trim());
+          skipBlurHandlerRef.current = true;
           inputRef.current?.blur();
           break;
+        }
       }
     };
     if (isInternalEditing) {
@@ -197,7 +226,7 @@ export const EditableText: FC<{
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isInternalEditing, onChange, handleSetEditing, value]);
+  }, [isInternalEditing, onChange, handleSetEditing]);
 
   return (
     <Input

@@ -79,8 +79,12 @@ import {useRoomStore} from './store';
 import {Button} from '@sqlrooms/ui';
 
 function RunQueryButton() {
-  const parseAndRunQuery = useRoomStore((state) => state.sqlEditor.parseAndRunQuery);
-  const createQueryTab = useRoomStore((state) => state.sqlEditor.createQueryTab);
+  const parseAndRunQuery = useRoomStore(
+    (state) => state.sqlEditor.parseAndRunQuery,
+  );
+  const createQueryTab = useRoomStore(
+    (state) => state.sqlEditor.createQueryTab,
+  );
 
   const run = async () => {
     createQueryTab('SELECT COUNT(*) AS total FROM earthquakes');
@@ -101,7 +105,13 @@ import {useState} from 'react';
 
 export function StandaloneEditor() {
   const [sql, setSql] = useState('SELECT 1');
-  return <SqlMonacoEditor value={sql} onChange={(v) => setSql(v ?? '')} height="320px" />;
+  return (
+    <SqlMonacoEditor
+      value={sql}
+      onChange={(v) => setSql(v ?? '')}
+      height="320px"
+    />
+  );
 }
 ```
 

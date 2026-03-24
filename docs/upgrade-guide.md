@@ -87,6 +87,224 @@ legacyToast({
 });
 ```
 
+### `@sqlrooms/ai`, `@sqlrooms/vega`, `@sqlrooms/ai-rag`: Tools migrated to native AI SDK format (breaking)
+
+All built-in tools and the tool authoring API now use the AI SDK's `tool()` factory instead of the OpenAssistant format. The `@openassistant/utils` dependency has been removed.
+
+#### Custom tools: before
+
+```ts
+import {z} from 'zod';
+
+const myTool = {
+  name: 'my_tool',
+  description: 'Does something',
+  parameters: z.object({text: z.string()}),
+  execute: async ({text}) => ({
+    llmResult: {success: true, details: `Result: ${text}`},
+    additionalData: {processed: text},
+  }),
+  component: MyToolResult, // renderer attached to tool
+};
+```
+
+#### Custom tools: after
+
+```ts
+import {tool} from 'ai';
+import {z} from 'zod';
+
+const myTool = tool({
+  description: 'Does something',
+  inputSchema: z.object({text: z.string()}),
+  execute: async ({text}) => ({
+    // flat output — no llmResult / additionalData nesting
+    success: true,
+    details: `Result: ${text}`,
+    processed: text,
+  }),
+  // optional: control what the LLM sees (defaults to full JSON)
+  toModelOutput: (output) => ({type: 'text', value: output.details}),
+});
+// renderer is registered separately — see toolRenderers below
+```
+
+### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Tool renderers decoupled from tools (breaking)
+
+Tool renderers (`component`) are no longer attached to individual tools. They are now registered once in `createAiSlice` via the new `toolRenderers` option, typed against the tools map.
+
+#### Before
+
+```ts
+createAiSlice({
+  tools: {
+    query: createQueryTool(store), // had component: QueryToolResult
+    chart: createVegaChartTool(), // had component: VegaChartToolResult
+  },
+  // ...
+});
+```
+
+#### After
+
+```ts
+import {createDefaultAiTools, createDefaultAiToolRenderers} from '@sqlrooms/ai';
+import {VegaChartToolResult} from '@sqlrooms/vega';
+
+createAiSlice({
+  tools: {
+    ...createDefaultAiTools(store),
+    chart: createVegaChartTool(),
+  },
+  toolRenderers: {
+    ...createDefaultAiToolRenderers(), // includes QueryToolResult
+    chart: VegaChartToolResult,
+    // myCustomTool: MyCustomToolResult,
+  },
+  // ...
+});
+```
+
+### `@sqlrooms/ai`: Tool output type renames (breaking)
+
+The `llmResult`/`additionalData` split has been replaced with a single flat output type per tool.
+
+| Package            | Old type                                                 | New type                                |
+| ------------------ | -------------------------------------------------------- | --------------------------------------- |
+| `@sqlrooms/ai`     | `QueryToolLlmResult` + `QueryToolAdditionalData`         | `QueryToolOutput`                       |
+| `@sqlrooms/ai`     | `QueryToolOutput.errorMessage`                           | `QueryToolOutput.error`                 |
+| `@sqlrooms/vega`   | `VegaChartToolLlmResult` + `VegaChartToolAdditionalData` | `VegaChartToolOutput`                   |
+| `@sqlrooms/vega`   | `VegaChartToolArgs` (type alias)                         | removed — use `VegaChartToolParameters` |
+| `@sqlrooms/vega`   | `VegaChartToolContext`                                   | removed                                 |
+| `@sqlrooms/ai-rag` | `RagToolAdditionalData` + `RagToolContext`               | removed — use `RagToolOutput`           |
+
+### `@sqlrooms/ai`: `QueryToolResult` props changed (breaking)
+
+`QueryToolResult` now receives `ToolRendererProps<QueryToolOutput, QueryToolParameters>` instead of standalone props. If you render it directly, update the call-site:
+
+#### Before
+
+```tsx
+<QueryToolResult
+  title="My query"
+  sqlQuery={sql}
+  showSql={false}
+  formatValue={myFormatter}
+/>
+```
+
+#### After
+
+Use `createQueryToolRenderer` and register it in `toolRenderers`:
+
+```ts
+import {createQueryToolRenderer} from '@sqlrooms/ai';
+
+toolRenderers: {
+  query: createQueryToolRenderer({showSql: false, formatValue: myFormatter}),
+}
+```
+
+### `@sqlrooms/vega`: `createVegaChartTool` options removed (breaking)
+
+The `embedOptions`, `editable`, and `editorMode` options have been removed from `createVegaChartTool`. Pass them directly as props to `VegaChartToolResult` instead.
+
+#### Before
+
+```ts
+createVegaChartTool({editable: false, editorMode: 'sql'});
+```
+
+#### After
+
+```tsx
+import {VegaChartToolResult} from '@sqlrooms/vega';
+
+// In your toolRenderers:
+toolRenderers: {
+  chart: (props) => <VegaChartToolResult {...props} editable={false} editorMode="sql" />,
+}
+```
+
+### `@sqlrooms/ai-rag`: `ragToolRenderer` exported separately (breaking)
+
+The RAG tool renderer is no longer attached to the tool. Import and register it explicitly.
+
+#### Before
+
+```ts
+// renderer was bundled inside createRagTool() as `component`
+tools: {
+  search_documentation: createRagTool();
+}
+```
+
+#### After
+
+```ts
+import {createRagTool, ragToolRenderer} from '@sqlrooms/ai-rag';
+
+tools: {search_documentation: createRagTool()},
+toolRenderers: {search_documentation: ragToolRenderer},
+```
+
+### `@sqlrooms/ai-core`: In-chat tool result editing removed (breaking)
+
+The `setSessionToolAdditionalData` API and the `toolAdditionalData` session field have been removed. In-chat editing of tool results (e.g. inline Vega chart spec editing) is no longer supported — charts and other tool outputs are now rendered read-only within the chat.
+
+```ts
+// Before
+state.ai.setSessionToolAdditionalData(sessionId, toolCallId, data);
+
+// After — remove the call entirely; no replacement needed.
+```
+
+If you were using `toolAdditionalData` to persist user edits to charts, extract the chart into a first-class entity stored independently of the chat instead. Persisted sessions with `toolAdditionalData` are automatically cleaned up on load.
+
+### `@sqlrooms/ai`: Remote transport — drop `data-tool-additional-output` custom chunk (breaking)
+
+If you have a custom Next.js (or other server-side) route that manually wrote `data-tool-additional-output` data chunks to ferry `additionalData` to the client, you can remove that code entirely.
+
+#### Before
+
+```ts
+// app/api/chat/route.ts
+result.pipeThrough(
+  new TransformStream({
+    async onChunk({chunk}) {
+      if (chunk.type === 'tool-result') {
+        writer.write({
+          type: 'data-tool-additional-output',
+          transient: true,
+          data: {
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            output: getToolAdditionalData(chunk.toolCallId),
+          },
+        });
+      }
+    },
+  }),
+);
+```
+
+#### After
+
+Remove the `onChunk` handler. The AI SDK's `toUIMessageStream()` now embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
+
+```ts
+// app/api/chat/route.ts
+writer.merge(result.toUIMessageStream({originalMessages: messages}));
+```
+
+**Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.
+
+### `@sqlrooms/ai-core`: Removed exports
+
+- `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
+- `findToolComponent` — replaced by `findToolRenderer`
+- `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
+
 ## 0.28.0
 
 ### Tailwind v3 to v4

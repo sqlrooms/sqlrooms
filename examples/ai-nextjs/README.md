@@ -20,7 +20,7 @@ The client-side code is similar to the `ai-core` example but configured to use a
 - `app/store.ts`: Creates the room store with AI slice, pointing to `/api/chat` endpoint
 - `components/main-view.tsx`: Main UI with chat interface and settings panel
 - `components/WebSearchToolResult.tsx`: Custom component for displaying web search tool results
-- `app/lib/tools.ts`: Defines both client-side and server-side tools using OpenAssistant utils
+- `app/lib/tools.ts`: Defines both client-side and server-side tools using AI SDK `tool()` helper
 
 ### Server-Side
 
@@ -127,4 +127,3 @@ The main UI components are in the `components/` directory:
 - [SQLRooms Documentation](https://sqlrooms.dev)
 - [Vercel AI SDK v5](https://sdk.vercel.ai)
 - [Next.js Documentation](https://nextjs.org/docs)
-- [OpenAssistant Utils](https://github.com/openassistant/utils) - Tool system utilities

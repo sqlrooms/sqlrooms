@@ -8,7 +8,7 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 ## 0.29.0 (upcoming)
 
-### Sonner toast integration**
+### Sonner toast integration\*\*
 
 `Toaster` now renders [Sonner](https://sonner.emilkowal.ski/) with SQLRooms theme-aware styling, and examples now use Sonner notifications instead of `useToast` in file-upload flows. `@sqlrooms/ui` also exports Sonner's `toast` function directly for app-level notifications.
 

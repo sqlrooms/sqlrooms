@@ -11,7 +11,7 @@ export type ErrorMessageComponentProps = {
 export function ErrorMessage(props: ErrorMessageComponentProps) {
   return (
     <MessageContainer isSuccess={false} type="error" content={props}>
-      <div className="prose dark:prose-invert max-w-none text-sm">
+      <div className="prose dark:prose-invert text-foreground max-w-none text-sm">
         <Markdown remarkPlugins={[remarkGfm]} components={props.components}>
           {props.errorMessage}
         </Markdown>

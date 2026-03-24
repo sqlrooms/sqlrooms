@@ -14,7 +14,7 @@ import {
   rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
-import {arrowTableToJson, type DataTable, useSql} from '@sqlrooms/duckdb';
+import {arrowTableToJson, useSql} from '@sqlrooms/duckdb';
 import {
   Badge,
   Button,
@@ -57,10 +57,10 @@ import React, {
 import {useStore} from 'zustand';
 import {PIVOT_AGGREGATORS, getPivotAggregator} from './aggregators';
 import {
-  createPivotCoreStore,
   type CreatePivotCoreStoreProps,
   type PivotInstanceState,
   type PivotInstanceStore,
+  createPivotCoreStore,
 } from './PivotCoreSlice';
 import {PivotResults} from './PivotResults';
 import {buildDistinctValuesQuery} from './sql';
@@ -68,8 +68,6 @@ import {
   PIVOT_RENDERER_NAMES,
   type PivotDropZone,
   type PivotField,
-  type PivotQuerySource,
-  type PivotSource,
 } from './types';
 
 type PivotEditorProps = CreatePivotCoreStoreProps & {
@@ -259,21 +257,21 @@ const PivotEditorRoot: React.FC<PivotEditorProps> = ({
   className,
   children,
 }) => {
-  const internalStoreRef = useRef<PivotInstanceStore | null>(null);
+  const [internalStore] = useState(() =>
+    store
+      ? null
+      : createPivotCoreStore({
+          source,
+          config,
+          status,
+          querySource,
+          fields,
+          availableTables,
+          callbacks,
+        }),
+  );
 
-  if (!store && !internalStoreRef.current) {
-    internalStoreRef.current = createPivotCoreStore({
-      source,
-      config,
-      status,
-      querySource,
-      fields,
-      availableTables,
-      callbacks,
-    });
-  }
-
-  const resolvedStore = store ?? internalStoreRef.current;
+  const resolvedStore = store ?? internalStore;
   if (!resolvedStore) {
     return null;
   }
@@ -582,15 +580,16 @@ const PivotFieldFilter: React.FC<{
     [field.name, menuLimit, querySource],
   );
   const valuesResult = useSql({query, enabled: open && Boolean(query)});
+  const valuesData = valuesResult.data;
   const values = useMemo(
     () =>
-      valuesResult.data?.arrowTable
-        ? (arrowTableToJson(valuesResult.data.arrowTable) as Array<{
+      valuesData?.arrowTable
+        ? (arrowTableToJson(valuesData.arrowTable) as Array<{
             value: string;
             count: number;
           }>)
         : [],
-    [valuesResult.data?.arrowTable],
+    [valuesData],
   );
   const shownValues = values.filter((item) =>
     String(item.value).toLowerCase().includes(search.trim().toLowerCase()),
@@ -818,7 +817,7 @@ const PivotZone: React.FC<{
 const PivotRowsHeader: React.FC = () => {
   const cycleRowOrder = usePivotEditorStore((state) => state.cycleRowOrder);
   const rowOrder = usePivotEditorStore((state) => state.config.rowOrder);
-  const Icon = getSortIcon(rowOrder);
+  const icon = getSortIcon(rowOrder);
 
   return (
     <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
@@ -829,7 +828,7 @@ const PivotRowsHeader: React.FC = () => {
         </div>
       </div>
       <Button size="icon" variant="ghost" onClick={cycleRowOrder}>
-        <Icon className="h-4 w-4" />
+        {React.createElement(icon, {className: 'h-4 w-4'})}
       </Button>
     </CardHeader>
   );
@@ -860,7 +859,7 @@ const PivotRowsBase: React.FC<{children?: React.ReactNode}> = ({children}) => (
 const PivotColumnsHeader: React.FC = () => {
   const cycleColOrder = usePivotEditorStore((state) => state.cycleColOrder);
   const colOrder = usePivotEditorStore((state) => state.config.colOrder);
-  const Icon = getSortIcon(colOrder);
+  const icon = getSortIcon(colOrder);
 
   return (
     <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
@@ -871,7 +870,7 @@ const PivotColumnsHeader: React.FC = () => {
         </div>
       </div>
       <Button size="icon" variant="ghost" onClick={cycleColOrder}>
-        <Icon className="h-4 w-4" />
+        {React.createElement(icon, {className: 'h-4 w-4'})}
       </Button>
     </CardHeader>
   );

@@ -1,60 +1,41 @@
-# AGENTS Usage Guide
+# SQLRooms
 
-This repository is a monorepo managed with pnpm and Turbo. The top-level directories are:
+SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based analytics apps powered by DuckDB.
 
-- `packages/` – individual packages that make up the SQLRooms framework
-- `examples/` – runnable sample applications
-- `docs/` – VitePress documentation source and generated API docs
+## Requirements
 
-Each package under `packages/` contains its own `README.md` and `tsconfig.json` for TypeScript configuration.
+- Node.js `>=22`
+- Package manager: `pnpm`
 
-## Key scripts
+## Key Commands
 
-The root `package.json` exposes several important scripts:
+| Command          | Purpose                      |
+| ---------------- | ---------------------------- |
+| `pnpm install`   | Install all dependencies     |
+| `pnpm build`     | Build all packages via Turbo |
+| `pnpm test`      | Run Jest tests               |
+| `pnpm typecheck` | TypeScript type checking     |
+| `pnpm lint`      | ESLint                       |
+| `pnpm format`    | Prettier                     |
+| `pnpm docs:dev`  | Local docs with hot reload   |
 
-- `pnpm build` – builds all packages via Turbo
-- `pnpm typecheck` - runs typescript --noEmit
-- `pnpm test` – runs Jest tests across packages
-- `pnpm lint` – checks code with ESLint
-- `pnpm format` – formats files using Prettier
-- `pnpm docs:dev` – starts local documentation with hot reload
-- `pnpm docs:build` – builds the documentation site
+## Gotchas
 
-Node.js version **>=22** is required.
+- **Always run `pnpm build` first.** Example apps depend on built `@sqlrooms/*` packages via `workspace:*` links and will not work otherwise.
+- **To run an example:** `pnpm dev <name>-example` (<name> is the example/<name> directory name, Vite defaults to port 5173+)
+- **`pnpm dev` at the root** watches packages for rebuilds — it does NOT start an app. You still need `pnpm dev` inside an example directory.
+- **Lint baseline:** warnings only; 0 errors is the expected state.
+- **AI examples** (e.g. `examples/ai`) require `OPENAI_API_KEY`. Core examples (`minimal`, `query`) do not.
+- When using Zustand/room-store selectors in React, do not create derived arrays/objects/functions inside the selector (for example `state.items.filter(...)`). That returns a new reference on every read and can trigger `useSyncExternalStore` snapshot loops (`The result of getSnapshot should be cached`) and max update depth errors. Select stable raw state first, then derive with `React.useMemo` in the component.
 
-## Running example apps
+## Further Reading
 
-To run an example application:
+Load these only when you need them:
 
-```bash
-pnpm build          # build all sqlrooms packages
-pnpm build:examples # build all examples
-pnpm build:all      # build all sqlrooms packages and examples
-cd examples/ai      # or another example directory
-pnpm dev            # start the example
-```
-
-## Contributing
-
-When adding features, update the relevant documentation and verify that example applications work with your changes. See `CONTRIBUTING.md` for full guidelines.
-
-## Cursor Cloud specific instructions
-
-### Environment
-
-- Node.js >= 22 and pnpm 10.29.3 are provided via nvm (pre-installed).
-- The update script runs `pnpm install` and `pnpm build` on startup. All `@sqlrooms/*` packages will be built and ready.
-
-### Running services
-
-- **Example apps**: `cd examples/<name> && pnpm dev`. The `minimal` example is a lightweight "hello-world"; the `query` example provides a full SQL workbench with Monaco editor and data table.
-- Example Vite dev servers default to ports 5173+. Use `--port` and `--host` flags if needed.
-- No Docker, databases, or external services are required for core development. DuckDB runs in-browser via WASM.
-
-### Gotchas
-
-- `pnpm build` must complete before any example app will work, since examples depend on built `@sqlrooms/*` packages via `workspace:*` links.
-- The `arrow2csv` bin warnings during `pnpm install` are benign and can be ignored.
-- Tests only exist in 5 packages (`utils`, `duckdb`, `duckdb-core`, `duckdb-node`, `crdt`). Running `pnpm test` is fast (~10s).
-- Lint produces warnings only (no errors) in the current codebase; 0 errors is the expected baseline.
-- AI-related examples (e.g. `examples/ai`) require an `OPENAI_API_KEY` environment variable at runtime; core examples like `minimal` and `query` do not need any API keys.
+- [Architecture & core concepts](contributing/architecture.md)
+- [State patterns (produce, selectors, lifecycle)](contributing/patterns.md)
+- [Adding features (packages, visualizations, schema)](contributing/adding-features.md)
+- [Troubleshooting](contributing/troubleshooting.md)
+- [Python workspace](contributing/python.md)
+- [Cursor Cloud setup](contributing/cursor-cloud.md)
+- [Contributing guidelines](CONTRIBUTING.md) _(human contributor process: PRs, code of conduct)_

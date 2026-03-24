@@ -40,7 +40,10 @@ export function SchemaExplorer() {
 
 ```tsx
 import {DbSchemaNode} from '@sqlrooms/duckdb';
-import {defaultRenderTableSchemaNode, TableSchemaTree} from '@sqlrooms/schema-tree';
+import {
+  defaultRenderTableSchemaNode,
+  TableSchemaTree,
+} from '@sqlrooms/schema-tree';
 
 const renderNode = (node: DbSchemaNode, isOpen: boolean) => (
   <div className={isOpen ? 'opacity-100' : 'opacity-90'}>

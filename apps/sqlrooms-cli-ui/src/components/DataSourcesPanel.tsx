@@ -1,7 +1,19 @@
+import {DbSettings} from '@sqlrooms/db-settings';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {TableStructurePanel} from '@sqlrooms/sql-editor';
-import {useToast} from '@sqlrooms/ui';
+import {SchemaExplorer} from '@sqlrooms/sql-editor';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  toast,
+} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {RoomPanelTypes} from '../layout';
 import {useRoomStore} from '../store';
@@ -11,7 +23,6 @@ export const DataSourcesPanel = () => {
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const {toast} = useToast();
 
   return (
     <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
@@ -28,15 +39,11 @@ export const DataSourcesPanel = () => {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
               await connector.loadFile(file, tableName);
-              toast({
-                variant: 'default',
-                title: 'Table created',
+              toast.success('Table created', {
                 description: `File ${file.name} loaded as ${tableName}`,
               });
             } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Error',
+              toast.error('Error', {
                 description: `Error loading file ${file.name}: ${error}`,
               });
             }
@@ -45,10 +52,63 @@ export const DataSourcesPanel = () => {
         }}
       >
         <div className="text-muted-foreground text-xs">
-          Files are loaded directly from your local filesystem by DuckDB.
+          Files stay on your machine and are loaded into DuckDB locally.
         </div>
       </FileDropzone>
-      <TableStructurePanel />
+
+      <Dialog>
+        <SchemaExplorer>
+          <SchemaExplorer.Header>
+            <DialogTrigger asChild>
+              <DbSettings.TriggerButton />
+            </DialogTrigger>
+            <SchemaExplorer.RefreshButton />
+          </SchemaExplorer.Header>
+          <SchemaExplorer.Tree className="h-full" />
+        </SchemaExplorer>
+
+        <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col">
+          <DialogHeader>
+            <DialogTitle>Database Settings</DialogTitle>
+          </DialogHeader>
+          <Tabs
+            defaultValue="connections"
+            className="flex min-h-0 w-full flex-col"
+          >
+            <TabsList className="w-full shrink-0">
+              <TabsTrigger value="connections" className="flex-1">
+                Connections
+              </TabsTrigger>
+              <TabsTrigger value="drivers" className="flex-1">
+                <DbSettings.DriversTabLabel />
+              </TabsTrigger>
+            </TabsList>
+            <div className="mt-4 grid min-h-0 overflow-y-auto [&>*]:col-start-1 [&>*]:row-start-1">
+              <TabsContent
+                value="connections"
+                forceMount
+                className="space-y-4 data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible"
+              >
+                <DbSettings.Connections />
+              </TabsContent>
+              <TabsContent
+                value="drivers"
+                forceMount
+                className="data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible"
+              >
+                <DbSettings.Diagnostics />
+              </TabsContent>
+            </div>
+            <TabsContent
+              value="connections"
+              forceMount
+              className="flex shrink-0 justify-end pt-4 data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible"
+            >
+              <DbSettings.SaveButton />
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </RoomPanel>
   );
 };

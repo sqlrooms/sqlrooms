@@ -73,7 +73,7 @@ export const pivotCellRegistryEntry: CellRegistryItem<PivotCell> = {
     />
   ),
 
-  findDependencies: async ({cell, cells}) => {
+  findDependencies: async () => {
     // We can't access PivotSlice from here (only cell data + cells map).
     // Pivot source info lives in PivotSlice, not in cell data.
     // TODO: if dependency tracking is needed, extend findDependencies args

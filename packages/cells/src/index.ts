@@ -30,7 +30,6 @@ export {
   runSqlWithCallbacks,
 } from './sqlHelpers';
 export * from './types';
-export {getEffectiveResultName, isValidSqlIdentifier} from './utils';
 
 export const SqlCell = {
   RunButton: SqlCellRunButtonComponent,

@@ -1,18 +1,18 @@
-import React, {useCallback} from 'react';
 import {
   EditableText,
   Input,
-  Slider,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Slider,
 } from '@sqlrooms/ui';
-import {useCellsStore, type CellsStoreState} from '../hooks';
-import type {CellContainerProps, InputCell, InputUnion, Cell} from '../types';
-import {InputConfigPanel} from './Input/ConfigPanel/InputConfigPanel';
 import {produce} from 'immer';
+import React, {useCallback} from 'react';
+import {useCellsStore, type CellsStoreState} from '../hooks';
+import type {Cell, CellContainerProps, InputCell, InputUnion} from '../types';
+import {InputConfigPanel} from './Input/ConfigPanel/InputConfigPanel';
 
 export type InputCellContentProps = {
   id: string;
@@ -103,9 +103,9 @@ export const InputCellContent: React.FC<InputCellContentProps> = ({
         <EditableText
           value={input.varName}
           onChange={(varName) => updateInput({varName})}
-          className="h-6 text-xs font-semibold shadow-none outline-none ring-0"
+          className="h-6 text-xs font-semibold shadow-none ring-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
         />
-        <span className="text-[10px] font-bold uppercase text-gray-400">
+        <span className="text-[10px] font-bold text-gray-400 uppercase">
           Input
         </span>
       </div>

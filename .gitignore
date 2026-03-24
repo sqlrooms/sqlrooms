@@ -24,3 +24,10 @@ docs/.vitepress/cache
 .pnpm-store/
 
 .cursor/plans/
+
+.worktrees/
+
+.venv/
+
+packages/*/CHANGELOG.md
+examples/*/CHANGELOG.md

@@ -1,7 +1,7 @@
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
-import {TableStructurePanel} from '@sqlrooms/sql-editor';
+import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {useRoomStore, RoomPanelTypes} from './store';
-import {useToast} from '@sqlrooms/ui';
+import {toast} from '@sqlrooms/ui';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
 
@@ -10,7 +10,6 @@ export const DataSourcesPanel = () => {
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const {toast} = useToast();
 
   return (
     <RoomPanel type={RoomPanelTypes.enum['data']}>
@@ -27,15 +26,11 @@ export const DataSourcesPanel = () => {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
               await connector.loadFile(file, tableName);
-              toast({
-                variant: 'default',
-                title: 'Table created',
+              toast.success('Table created', {
                 description: `File ${file.name} loaded as ${tableName}`,
               });
             } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Error',
+              toast.error('Error', {
                 description: `Error loading file ${file.name}: ${error}`,
               });
             }
@@ -47,7 +42,12 @@ export const DataSourcesPanel = () => {
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
-      <TableStructurePanel />
+      <SchemaExplorer>
+        <SchemaExplorer.Header>
+          <SchemaExplorer.RefreshButton />
+        </SchemaExplorer.Header>
+        <SchemaExplorer.Tree className="h-full" />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

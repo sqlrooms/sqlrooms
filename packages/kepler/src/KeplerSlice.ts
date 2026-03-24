@@ -2,6 +2,7 @@ import {
   addDataToMap,
   addLayer as addLayerAction,
   deleteEntry,
+  interactionConfigChange,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   removeDataset,
@@ -257,6 +258,11 @@ export type KeplerSliceState = {
      */
     syncKeplerDatasets: () => Promise<void>;
     addLayer: (mapId: string, layer: Layer, datasetId: string) => void;
+    updateTooltipFields: (
+      mapId: string,
+      datasetId: string,
+      fieldNames: string[],
+    ) => void;
     addTableToMap: (
       mapId: string,
       tableName: string,
@@ -318,6 +324,13 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
+  let syncKeplerPromise: Promise<void> | null = null;
+  // When a caller arrives while a sync is already in-flight, the in-flight run
+  // may have captured a stale snapshot of db.tables/kepler.map (missing maps or
+  // tables added by createMap, duplicateMap, etc.). Setting this flag tells the
+  // active run to loop once more with a fresh snapshot after it finishes, so
+  // late mutations are never silently dropped.
+  let pendingKeplerSync = false;
   const updateMapLastOpenedAt = (
     maps: KeplerSliceConfig['maps'],
     mapId: string,
@@ -460,6 +473,49 @@ export function createKeplerSlice({
           get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
         },
 
+        updateTooltipFields: (mapId, datasetId, fieldNames) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          const mapState = get().kepler.map[mapId];
+          const tooltipConfig = mapState?.visState?.interactionConfig?.tooltip;
+          if (!tooltipConfig) return;
+          const currentFieldsToShow = tooltipConfig.config?.fieldsToShow || {};
+          const existingFields = currentFieldsToShow[datasetId] || [];
+          const existingByName = new Map(
+            existingFields.map(
+              (field: {name: string; format: string | null}) => [
+                field.name,
+                field,
+              ],
+            ),
+          );
+          const nextFields = Array.from(new Set(fieldNames)).map(
+            (name) => existingByName.get(name) ?? {name, format: null},
+          );
+          if (
+            nextFields.length === existingFields.length &&
+            nextFields.every(
+              (field, index) =>
+                field.name === existingFields[index]?.name &&
+                field.format === existingFields[index]?.format,
+            )
+          ) {
+            return;
+          }
+          get().kepler.dispatchAction(
+            mapId,
+            interactionConfigChange({
+              ...tooltipConfig,
+              config: {
+                ...tooltipConfig.config,
+                fieldsToShow: {
+                  ...currentFieldsToShow,
+                  [datasetId]: nextFields,
+                },
+              },
+            }),
+          );
+        },
+
         addTableToMap: async (mapId, tableName, options = {}) => {
           const connector = await get().db.getConnector();
           const duckDbColumns = await getDuckDBColumnTypes(
@@ -537,23 +593,37 @@ export function createKeplerSlice({
         },
 
         async syncKeplerDatasets() {
-          for (const mapId of Object.keys(get().kepler.map)) {
-            const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
-            for (const {table} of get().db.tables) {
-              // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
-              // const qualifiedTable = table.toString();
-              if (
-                // !table.schema?.startsWith('__') && // skip internal schemas
-                // !keplerDatasets?.[qualifiedTable]
-                table.schema === 'main' &&
-                !keplerDatasets?.[table.table]
-              ) {
-                await get().kepler.addTableToMap(mapId, table.table, {
-                  autoCreateLayers: false,
-                  centerMap: false,
-                });
+          if (syncKeplerPromise) {
+            pendingKeplerSync = true;
+            return syncKeplerPromise;
+          }
+          syncKeplerPromise = (async () => {
+            // Loop until no new sync was requested during the current pass.
+            // Each iteration reads a fresh snapshot of db.tables and kepler.map,
+            // so tables/maps added concurrently are picked up on the next pass.
+            do {
+              pendingKeplerSync = false;
+              for (const mapId of Object.keys(get().kepler.map)) {
+                const keplerDatasets =
+                  get().kepler.map[mapId]?.visState.datasets;
+                for (const {table} of get().db.tables) {
+                  if (
+                    table.schema === 'main' &&
+                    !keplerDatasets?.[table.table]
+                  ) {
+                    await get().kepler.addTableToMap(mapId, table.table, {
+                      autoCreateLayers: false,
+                      centerMap: false,
+                    });
+                  }
+                }
               }
-            }
+            } while (pendingKeplerSync);
+          })();
+          try {
+            await syncKeplerPromise;
+          } finally {
+            syncKeplerPromise = null;
           }
         },
 
