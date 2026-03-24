@@ -10,7 +10,7 @@ export function Room() {
         <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
       </RoomShell.Sidebar>
-      <RoomShell.LayoutComposer tileClassName="p-0" />
+      <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
       <RoomShell.CommandPalette />
       <InputApiKey className="absolute top-5 right-15 z-10" />
