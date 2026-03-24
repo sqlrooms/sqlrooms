@@ -305,6 +305,45 @@ writer.merge(result.toUIMessageStream({originalMessages: messages}));
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
 
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Mosaic tree migrated from binary to n-ary (breaking)
+
+`react-mosaic-component` has been upgraded from v6 to v7. The mosaic tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`).
+
+**Existing persisted layouts are migrated automatically.** The Zod schema for `MosaicLayoutNode` uses `z.preprocess` to detect legacy `{first, second}` nodes and convert them to the new `{type: 'split', children: [...]}` format on parse. No manual migration of saved state is required.
+
+If you construct layout trees in code, update them to the new format:
+
+#### Before
+
+```ts
+nodes: {
+  direction: 'row',
+  first: 'data',
+  second: 'main',
+  splitPercentage: 30,
+},
+```
+
+#### After
+
+```ts
+nodes: {
+  type: 'split',
+  direction: 'row',
+  children: ['data', 'main'],
+  splitPercentages: [30, 70],
+},
+```
+
+Key changes:
+
+- `first` / `second` replaced by `children: MosaicLayoutNode[]` (supports 2+ children)
+- `splitPercentage: number` replaced by `splitPercentages: number[]` (must sum to 100)
+- Every non-leaf node now has a `type` discriminant (`'split'` or `'tabs'`)
+- `MosaicLayoutSplitNode` replaces `MosaicLayoutParent` (the old name is kept as a deprecated alias)
+- `isMosaicLayoutSplitNode()` replaces `isMosaicLayoutParent()` (the old name is kept as a deprecated alias)
+- `MosaicPath` is now `number[]` (numeric child indices) instead of `('first' | 'second')[]`
+
 ## 0.28.0
 
 ### Tailwind v3 to v4
