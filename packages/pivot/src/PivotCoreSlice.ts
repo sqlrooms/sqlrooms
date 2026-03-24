@@ -15,7 +15,6 @@ import {
   PivotConfig as PivotConfigSchema,
   PivotSortOrder,
 } from './types';
-import type {PivotHostBinding, PivotPersistedState} from './PivotBinding';
 
 export function createDefaultPivotConfig(
   props?: Partial<PivotConfig>,
@@ -149,7 +148,6 @@ export type PivotInstanceState = PivotInstanceSnapshot & {
 
 export type PivotInstanceStore = StoreApi<PivotInstanceState> & {
   destroy: () => void;
-  startSync?: () => void;
 };
 
 export type CreatePivotCoreStoreProps = {
@@ -161,34 +159,6 @@ export type CreatePivotCoreStoreProps = {
   availableTables?: string[];
   callbacks?: PivotInstanceCallbacks;
 };
-
-function sameJson(a: unknown, b: unknown) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function sameStringArray(a: string[], b: string[]) {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
-function samePivotFields(a: PivotField[], b: PivotField[]) {
-  return (
-    a.length === b.length &&
-    a.every(
-      (field, index) =>
-        field.name === b[index]?.name && field.type === b[index]?.type,
-    )
-  );
-}
-
-function sameQuerySource(
-  a: PivotQuerySource | undefined,
-  b: PivotQuerySource | undefined,
-) {
-  if (a?.tableRef !== b?.tableRef) {
-    return false;
-  }
-  return samePivotFields(a?.columns ?? [], b?.columns ?? []);
-}
 
 function defaultStatus(status?: Partial<PivotStatus>): PivotStatus {
   return {
@@ -266,26 +236,6 @@ function createPivotInstanceSnapshot(
     fields,
     availableTables: props?.availableTables ?? [],
   };
-}
-
-function createDefaultPivotPersistedState(
-  partial?: Partial<PivotPersistedState>,
-): PivotPersistedState {
-  return {
-    source: partial?.source,
-    config: createDefaultPivotConfig(partial?.config),
-  };
-}
-
-function samePivotSnapshot(a: PivotInstanceSnapshot, b: PivotInstanceSnapshot) {
-  return (
-    sameJson(a.source, b.source) &&
-    sameJson(a.config, b.config) &&
-    sameJson(a.status, b.status) &&
-    sameQuerySource(a.querySource, b.querySource) &&
-    samePivotFields(a.fields, b.fields) &&
-    sameStringArray(a.availableTables, b.availableTables)
-  );
 }
 
 type PivotInstanceInternalOps = {
@@ -394,6 +344,10 @@ function createPivotInstanceActions(
   };
 }
 
+/**
+ * Create a standalone pivot instance store (not backed by a room store).
+ * Used by PivotEditor when no external store is provided.
+ */
 export function createPivotCoreStore(
   props?: CreatePivotCoreStoreProps,
 ): PivotInstanceStore {
@@ -436,111 +390,5 @@ export function createPivotCoreStore(
 
   return Object.assign(store, {
     destroy: () => undefined,
-  });
-}
-
-function getBoundPivotSnapshot<RootState, Id extends string>(
-  rootStore: StoreApi<RootState>,
-  id: Id,
-  binding: PivotHostBinding<RootState, Id>,
-): PivotInstanceSnapshot {
-  const rootState = rootStore.getState();
-  const persistedState = createDefaultPivotPersistedState(
-    binding.getPersistedState(rootState, id),
-  );
-  const runtimeState = binding.getRuntimeState(rootState, id);
-  const fields = runtimeState.querySource?.columns ?? runtimeState.fields;
-
-  return {
-    source: persistedState.source,
-    config: normalizePivotConfig(persistedState.config, fields),
-    status: defaultStatus(runtimeState.status),
-    querySource: runtimeState.querySource,
-    fields,
-    availableTables: runtimeState.availableTables,
-  };
-}
-
-export function createPivotBoundStore<RootState, Id extends string>(args: {
-  rootStore: StoreApi<RootState>;
-  id: Id;
-  binding: PivotHostBinding<RootState, Id>;
-}): PivotInstanceStore {
-  let currentSnapshot = getBoundPivotSnapshot(
-    args.rootStore,
-    args.id,
-    args.binding,
-  );
-  const store = createStore<PivotInstanceState>((set, get) => ({
-    ...currentSnapshot,
-    ui: {
-      sectionOpenState: {},
-    },
-    ...createPivotInstanceActions(get, set, {
-      setSourceImpl: (source) => {
-        set((state) => ({
-          ...state,
-          source,
-          config: createDefaultPivotConfig(),
-          status: {...state.status, stale: true},
-        }));
-        args.binding.setPersistedState(args.id, () =>
-          createDefaultPivotPersistedState({source}),
-        );
-      },
-      setConfigImpl: (config) => {
-        set((state) => ({
-          ...state,
-          config,
-          status: {...state.status, stale: true},
-        }));
-        args.binding.setPersistedState(args.id, (current) => ({
-          ...current,
-          config,
-        }));
-      },
-      runImpl: async () => {
-        await args.binding.run(args.id);
-      },
-    }),
-  }));
-
-  let unsubscribe: (() => void) | undefined;
-
-  function startSync() {
-    stopSync();
-    currentSnapshot = getBoundPivotSnapshot(
-      args.rootStore,
-      args.id,
-      args.binding,
-    );
-    store.setState((state) => ({...state, ...currentSnapshot}));
-    unsubscribe = args.binding.subscribe(() => {
-      const nextSnapshot = getBoundPivotSnapshot(
-        args.rootStore,
-        args.id,
-        args.binding,
-      );
-      if (samePivotSnapshot(currentSnapshot, nextSnapshot)) {
-        return;
-      }
-      currentSnapshot = nextSnapshot;
-      store.setState((state) => ({
-        ...state,
-        ...nextSnapshot,
-      }));
-    });
-  }
-
-  function stopSync() {
-    unsubscribe?.();
-    unsubscribe = undefined;
-  }
-
-  startSync();
-
-  return Object.assign(store, {
-    destroy: stopSync,
-    startSync,
   });
 }

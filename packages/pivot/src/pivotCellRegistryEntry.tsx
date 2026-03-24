@@ -1,32 +1,70 @@
-import type {Cell, CellRegistryItem, CellStatus} from '@sqlrooms/cells';
-import {produce} from 'immer';
-import {createDefaultPivotConfig, normalizePivotConfig} from './PivotCoreSlice';
-import {createOrReplacePivotRelations} from './pivotExecution';
-import {PivotCellContent} from './PivotCellContent';
-import {
-  isPivotCell,
-  type PivotCell,
-  type PivotCellStatus,
-} from './pivotCellTypes';
-import {getPivotQuerySourceForCell} from './pivotCellHelpers';
+import type {
+  Cell,
+  CellRegistryItem,
+  CellsRootState,
+  CellStatus,
+  SqlCellStatus,
+} from '@sqlrooms/cells';
 import {findSheetIdForCell, resolveSheetSchemaName} from '@sqlrooms/cells';
-import {dropPivotRelations} from './pivotExecution';
+import {produce} from 'immer';
+import {PivotCellContent} from './PivotCellContent';
+import {isPivotCell, type PivotCell} from './pivotCellTypes';
+import {createPivotQuerySource} from './sql';
+import type {PivotQuerySource, PivotSliceState, PivotStatus} from './types';
 
-function isDefined<T>(value: T | undefined | null): value is T {
-  return value != null;
+type PivotRootState = CellsRootState & PivotSliceState;
+
+function pivotStatusToCellStatus(pivotStatus: PivotStatus): CellStatus {
+  const statusMap: Record<string, string> = {
+    idle: 'idle',
+    running: 'running',
+    success: 'success',
+    error: 'error',
+  };
+  return {
+    type: 'pivot',
+    status: statusMap[pivotStatus.state] ?? 'idle',
+    stale: pivotStatus.stale,
+    lastError: pivotStatus.lastError,
+    lastRunTime: pivotStatus.lastRunTime,
+  };
+}
+
+function resolveSqlQuerySource(
+  state: CellsRootState,
+  sqlId: string,
+): PivotQuerySource | undefined {
+  const sourceStatus = state.cells.status[sqlId];
+  const resultView =
+    sourceStatus?.type === 'sql'
+      ? (sourceStatus as SqlCellStatus).resultView
+      : undefined;
+  if (!resultView) return undefined;
+
+  const sourceResult = state.cells.getCellResult(sqlId)?.arrowTable;
+  const columns = sourceResult?.schema.fields.map((field) => ({
+    name: field.name,
+    type: String(field.type),
+  }));
+  if (!columns?.length) return undefined;
+
+  return createPivotQuerySource(resultView, columns);
 }
 
 export const pivotCellRegistryEntry: CellRegistryItem<PivotCell> = {
   type: 'pivot',
   title: 'Pivot Table',
-  createCell: (id: string): PivotCell => ({
-    id,
-    type: 'pivot',
-    data: {
-      title: 'Pivot',
-      pivotConfig: createDefaultPivotConfig(),
-    },
-  }),
+
+  createCell: ({id, get}) => {
+    const state = get() as PivotRootState;
+    const pivotId = state.pivot.addPivot({title: 'Pivot'});
+    return {
+      id,
+      type: 'pivot',
+      data: {pivotId},
+    };
+  },
+
   renderCell: ({id, cell, renderContainer}) => (
     <PivotCellContent
       id={id}
@@ -34,159 +72,101 @@ export const pivotCellRegistryEntry: CellRegistryItem<PivotCell> = {
       renderContainer={renderContainer}
     />
   ),
-  findDependencies: async ({cell}) => {
-    const source = (cell as PivotCell).data.source;
-    return source?.kind === 'sql' ? [source.sqlId] : [];
+
+  findDependencies: async ({cell, cells}) => {
+    // We can't access PivotSlice from here (only cell data + cells map).
+    // Pivot source info lives in PivotSlice, not in cell data.
+    // TODO: if dependency tracking is needed, extend findDependencies args
+    // to include the full store, or store the source kind in cell data.
+    return [];
   },
+
   createStatus: (): CellStatus => ({
     type: 'pivot',
     status: 'idle',
     stale: true,
   }),
-  onInitialize: ({id, status, set}) => {
-    if (status?.type !== 'pivot') return;
-    const pivotStatus = status as PivotCellStatus;
-    set((state) =>
-      produce(state, (draft) => {
-        draft.cells.status[id] = {
-          type: 'pivot',
-          status: 'idle',
-          stale: true,
-          lastRunTime: pivotStatus.lastRunTime,
-          resultViews: undefined,
-          sourceRelation: undefined,
-        };
-      }),
-    );
+
+  onInitialize: () => {
+    // PivotSlice.initialize() handles runtime resets.
   },
-  onRemove: async ({status, get}) => {
-    if (status?.type !== 'pivot') return;
-    const pivotStatus = status as PivotCellStatus;
-    if (!pivotStatus.resultViews) return;
-    try {
-      const connector = await get().db.getConnector();
-      await dropPivotRelations({connector, relations: pivotStatus.resultViews});
-    } catch {
-      // best-effort
-    }
+
+  onRemove: async ({id, get}) => {
+    const state = get() as PivotRootState;
+    const cell = state.cells.config.data[id];
+    if (!cell || !isPivotCell(cell)) return;
+    state.pivot.removePivot(cell.data.pivotId);
   },
+
   hasSemanticChange: (oldCell: Cell, newCell: Cell): boolean => {
     if (!isPivotCell(oldCell) || !isPivotCell(newCell)) return false;
-    return (
-      JSON.stringify(oldCell.data.source) !==
-        JSON.stringify(newCell.data.source) ||
-      JSON.stringify(oldCell.data.pivotConfig) !==
-        JSON.stringify(newCell.data.pivotConfig)
-    );
+    return oldCell.data.pivotId !== newCell.data.pivotId;
   },
+
   invalidateStatus: (currentStatus): CellStatus => ({
     type: 'pivot',
     status: 'idle',
     stale: true,
-    lastRunTime: (currentStatus as PivotCellStatus).lastRunTime,
+    lastRunTime: (currentStatus as {lastRunTime?: number}).lastRunTime,
   }),
-  getRelationsToDrop: (status): string[] => {
-    const pivotStatus = status as PivotCellStatus;
-    return pivotStatus.resultViews
-      ? Object.values(pivotStatus.resultViews).filter(isDefined)
-      : [];
+
+  getRelationsToDrop: (): string[] => {
+    // PivotSlice.removePivot() handles relation cleanup
+    return [];
   },
+
   recordError: (currentStatus, message): CellStatus => ({
     ...currentStatus,
     status: 'error',
     stale: true,
     lastError: message,
   }),
+
   runCell: async ({id, opts, get, set}) => {
-    const state = get();
+    const state = get() as PivotRootState;
     const cell = state.cells.config.data[id];
-    if (!cell || cell.type !== 'pivot') {
-      return;
-    }
+    if (!cell || !isPivotCell(cell)) return;
+
+    const pivotId = cell.data.pivotId;
+    const pivot = state.pivot.config.pivots[pivotId];
+    if (!pivot) return;
 
     const sheetId = findSheetIdForCell(state, id);
     const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
     const schemaName = sheet
       ? resolveSheetSchemaName(sheet)
-      : opts?.schemaName || 'main';
-    const controller = new AbortController();
-    set((s) =>
-      produce(s, (draft) => {
-        draft.cells.activeAbortControllers[id] = controller;
-        draft.cells.status[id] = {
-          type: 'pivot',
-          status: 'running',
-          stale: true,
-          resultViews:
-            draft.cells.status[id]?.type === 'pivot'
-              ? (draft.cells.status[id] as PivotCellStatus).resultViews
-              : undefined,
-        };
-      }),
-    );
+      : opts?.schemaName || '__sqlrooms_pivot';
 
-    try {
-      const runtime = getPivotQuerySourceForCell(get(), cell as PivotCell);
-      if (!runtime.querySource || !runtime.sourceRelation) {
-        throw new Error(
-          'Pivot source is not ready. Run the source query first.',
+    let querySource: PivotQuerySource | undefined;
+    if (pivot.source?.kind === 'sql') {
+      querySource = resolveSqlQuerySource(state, pivot.source.sqlId);
+      if (!querySource) {
+        set((s) =>
+          produce(s, (draft) => {
+            draft.cells.status[id] = {
+              type: 'pivot',
+              status: 'error',
+              stale: true,
+              lastError: 'Pivot source SQL cell has no results. Run it first.',
+            };
+          }),
         );
+        return;
       }
+    }
 
-      const connector = await state.db.getConnector();
-      const normalizedConfig = normalizePivotConfig(
-        (cell as PivotCell).data.pivotConfig,
-        runtime.querySource.columns,
-      );
-      const resultViews = await createOrReplacePivotRelations({
-        connector,
-        source: runtime.querySource,
-        config: normalizedConfig,
-        relationBaseName: `pivot_${id}`,
-        schemaName,
-        signal: controller.signal,
-      });
+    await state.pivot.runPivot(pivotId, {
+      cascade: opts?.cascade,
+      schemaName,
+      querySource,
+    });
 
+    const updatedState = get() as PivotRootState;
+    const updatedPivot = updatedState.pivot.config.pivots[pivotId];
+    if (updatedPivot) {
       set((s) =>
         produce(s, (draft) => {
-          draft.cells.status[id] = {
-            type: 'pivot',
-            status: 'success',
-            stale: false,
-            resultViews,
-            sourceRelation: runtime.sourceRelation,
-            lastRunTime: Date.now(),
-          };
-        }),
-      );
-
-      void get().db.refreshTableSchemas();
-      if (opts?.cascade && sheetId) {
-        await get().cells.runDownstreamCascade(sheetId, id);
-      }
-    } catch (error) {
-      set((s) =>
-        produce(s, (draft) => {
-          draft.cells.status[id] = {
-            type: 'pivot',
-            status: controller.signal.aborted ? 'cancel' : 'error',
-            stale: true,
-            resultViews:
-              draft.cells.status[id]?.type === 'pivot'
-                ? (draft.cells.status[id] as PivotCellStatus).resultViews
-                : undefined,
-            sourceRelation:
-              draft.cells.status[id]?.type === 'pivot'
-                ? (draft.cells.status[id] as PivotCellStatus).sourceRelation
-                : undefined,
-            lastError: error instanceof Error ? error.message : String(error),
-          };
-        }),
-      );
-    } finally {
-      set((s) =>
-        produce(s, (draft) => {
-          delete draft.cells.activeAbortControllers[id];
+          draft.cells.status[id] = pivotStatusToCellStatus(updatedPivot.status);
         }),
       );
     }

@@ -32,7 +32,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     sql: {
       type: 'sql',
       title: 'SQL Query',
-      createCell: (id: string): SqlCell => ({
+      createCell: ({id}): SqlCell => ({
         id,
         type: 'sql',
         data: {title: 'Untitled Query', sql: ''},
@@ -204,7 +204,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     text: {
       type: 'text',
       title: 'Text / Markdown',
-      createCell: (id: string): TextCell => ({
+      createCell: ({id}): TextCell => ({
         id,
         type: 'text',
         data: {title: 'Text', text: ''},
@@ -221,7 +221,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     vega: {
       type: 'vega',
       title: 'Visualization',
-      createCell: (id: string): VegaCell => ({
+      createCell: ({id}): VegaCell => ({
         id,
         type: 'vega',
         data: {
@@ -248,7 +248,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     input: {
       type: 'input',
       title: 'Input / Parameter',
-      createCell: (id: string): InputCell => ({
+      createCell: ({id}): InputCell => ({
         id,
         type: 'input',
         data: {

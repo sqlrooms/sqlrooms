@@ -5,7 +5,7 @@ import {
   findSheetIdForCell,
   useCellsStore,
 } from '@sqlrooms/cells';
-import {useRoomStoreApi} from '@sqlrooms/room-store';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
 import {
   Label,
   Select,
@@ -14,13 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import React, {useEffect, useMemo} from 'react';
+import React, {useMemo} from 'react';
 import {useStore} from 'zustand';
-import {createPivotBoundStore} from './PivotCoreSlice';
 import {PivotEditor} from './PivotEditor';
 import type {PivotInstanceStore} from './PivotCoreSlice';
-import type {PivotSource} from './types';
-import {createNotebookPivotBinding} from './pivotCellBinding';
+import type {PivotSource, PivotSliceState} from './types';
 import type {PivotCell} from './pivotCellTypes';
 
 const EMPTY_CELL_IDS: string[] = [];
@@ -83,12 +81,22 @@ function PivotSourceSelect({
   );
 }
 
+type PivotRootState = PivotSliceState & {db: {tables: {tableName: string}[]}};
+
 export const PivotCellContent: React.FC<PivotCellContentProps> = ({
   id,
-  cell: _cell,
+  cell,
   renderContainer,
 }) => {
-  const roomStore = useRoomStoreApi<CellsRootState>();
+  const pivotId = cell.data.pivotId;
+  const getPivotStore = useBaseRoomStore(
+    (state: PivotRootState) => state.pivot.getPivotStore,
+  );
+  const pivotStore = useMemo(
+    () => getPivotStore(pivotId),
+    [getPivotStore, pivotId],
+  );
+
   const ownerSheetId = useCellsStore((state) =>
     findSheetIdForCell(state as CellsRootState, id),
   );
@@ -98,24 +106,6 @@ export const PivotCellContent: React.FC<PivotCellContentProps> = ({
   );
   const cellsData = useCellsStore((state) => state.cells.config.data);
   const cellsStatus = useCellsStore((state) => state.cells.status);
-  const pivotBinding = useMemo(
-    () => createNotebookPivotBinding(roomStore),
-    [roomStore],
-  );
-  const pivotStore = useMemo(
-    () =>
-      createPivotBoundStore({
-        rootStore: roomStore,
-        id,
-        binding: pivotBinding,
-      }),
-    [id, pivotBinding, roomStore],
-  );
-
-  useEffect(() => {
-    pivotStore.startSync?.();
-    return () => pivotStore.destroy();
-  }, [pivotStore]);
 
   const sqlOptions = useMemo(
     () =>

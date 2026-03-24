@@ -9,7 +9,12 @@ import {
   CellsSliceConfig,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {pivotCellRegistryEntry} from '@sqlrooms/pivot';
+import {
+  pivotCellRegistryEntry,
+  PivotSliceConfig,
+  PivotSliceState,
+  createPivotSlice,
+} from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -28,7 +33,8 @@ import {NotebookPanel} from './NotebookPanel';
 
 export type RoomState = RoomShellSliceState &
   NotebookSliceState &
-  CellsSliceState & {
+  CellsSliceState &
+  PivotSliceState & {
     apiKey: string;
     setApiKey: (apiKey: string) => void;
   };
@@ -83,6 +89,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         supportedSheetTypes: ['notebook'],
       })(set, get, store),
       ...createNotebookSlice()(set, get, store),
+      ...createPivotSlice()(set, get, store),
 
       apiKey: '',
       setApiKey: (apiKey: string) => set({apiKey}),
@@ -98,6 +105,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         layout: LayoutConfig,
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
+        pivot: PivotSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

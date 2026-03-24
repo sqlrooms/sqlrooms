@@ -197,7 +197,14 @@ export type PivotSliceState = {
       values: string[],
     ) => void;
     clearAttributeFilter: (pivotId: string, attribute: string) => void;
-    runPivot: (pivotId: string, opts?: {cascade?: boolean}) => Promise<void>;
+    runPivot: (
+      pivotId: string,
+      opts?: {
+        cascade?: boolean;
+        schemaName?: string;
+        querySource?: PivotQuerySource;
+      },
+    ) => Promise<void>;
   };
 };
 

@@ -145,10 +145,16 @@ export type SqlSelectToJsonFn = (sql: string) => Promise<{
   statements?: unknown[];
 }>;
 
+export type CreateCellArgs = {
+  id: string;
+  get: () => CellsRootState;
+  set: (updater: (state: CellsRootState) => CellsRootState) => void;
+};
+
 export type CellRegistryItem<TCell extends Cell = Cell> = {
   type: string;
   title: string;
-  createCell: (id: string) => TCell;
+  createCell: (args: CreateCellArgs) => TCell;
   renderCell: (props: {
     id: string;
     cell: TCell;

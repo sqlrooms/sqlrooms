@@ -8,7 +8,6 @@ export {
   addAttributeFilterValuesInConfig,
   clearAttributeFilterInConfig,
   createDefaultPivotConfig,
-  createPivotBoundStore,
   createPivotCoreStore,
   normalizePivotConfig,
   removeAttributeFilterValuesInConfig,
@@ -44,18 +43,12 @@ export {
 
 export {pivotCellRegistryEntry} from './pivotCellRegistryEntry';
 export {PivotCellContent} from './PivotCellContent';
-export {createNotebookPivotBinding} from './pivotCellBinding';
 export {
   PivotCellData,
   PivotCell,
   PivotCellSchema,
-  PivotCellStatus,
   isPivotCell,
 } from './pivotCellTypes';
-export {
-  getPivotQuerySourceForCell,
-  getPivotSqlSourceOptions,
-} from './pivotCellHelpers';
 
 export type {PivotAggregatorDefinition} from './aggregators';
 export type {
@@ -63,11 +56,6 @@ export type {
   PivotInstanceState,
   PivotInstanceStore,
 } from './PivotCoreSlice';
-export type {
-  PivotHostBinding,
-  PivotPersistedState,
-  PivotRuntimeState,
-} from './PivotBinding';
 export type {
   PivotConfig,
   PivotRelationViews,
