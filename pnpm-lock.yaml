@@ -2855,6 +2855,9 @@ importers:
       '@dnd-kit/sortable':
         specifier: ^10.0.0
         version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react@19.2.1)
+      '@paralleldrive/cuid2':
+        specifier: ^3.0.0
+        version: 3.0.4
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../cells
@@ -2867,6 +2870,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../vega
@@ -2889,8 +2895,8 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
       zustand:
-        specifier: 5.0.9
-        version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+        specifier: ^5.0.8
+        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
       '@sqlrooms/preset-jest':
         specifier: workspace:*
