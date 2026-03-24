@@ -11,6 +11,7 @@ When a markdown document is chunked, each section's header can be prepended to t
 ### Example
 
 **Original markdown:**
+
 ```markdown
 # Authentication
 
@@ -19,6 +20,7 @@ Users must include the token in the Authorization header.
 ```
 
 **With `header_weight=3`:**
+
 ```
 Authentication
 Authentication
@@ -29,6 +31,7 @@ Users must include the token in the Authorization header.
 ```
 
 This makes the embedding vector heavily weighted toward "Authentication", improving retrieval for queries like:
+
 - "How do I authenticate?"
 - "What is the authentication method?"
 - "Authentication setup"
@@ -68,21 +71,23 @@ prepare-embeddings docs/ -o kb.duckdb --no-header-weighting
 
 ## Choosing the Right Weight
 
-| Weight | Use Case |
-|--------|----------|
-| 1 | Minimal header emphasis, content-focused retrieval |
-| 3 | **Default** - Balanced header and content retrieval |
-| 5 | Strong header emphasis for documentation/API references |
-| 7-10 | Maximum header weight for highly structured docs |
+| Weight | Use Case                                                |
+| ------ | ------------------------------------------------------- |
+| 1      | Minimal header emphasis, content-focused retrieval      |
+| 3      | **Default** - Balanced header and content retrieval     |
+| 5      | Strong header emphasis for documentation/API references |
+| 7-10   | Maximum header weight for highly structured docs        |
 
 ## Trade-offs
 
 **Benefits:**
+
 - Better retrieval for header-based queries
 - Improved semantic matching for topic searches
 - Helps with hierarchical document navigation
 
 **Considerations:**
+
 - Increases chunk token count (may reduce content per chunk)
 - Very high weights (>10) may over-emphasize headers
 - Not needed for documents without clear header structure
@@ -90,7 +95,7 @@ prepare-embeddings docs/ -o kb.duckdb --no-header-weighting
 ## Performance Impact
 
 Header weighting adds negligible overhead during embedding preparation:
+
 - No additional API calls or embeddings generated
 - Only increases text length within each chunk
 - Final database size remains similar
-

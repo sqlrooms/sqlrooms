@@ -1,18 +1,18 @@
-import React, {useCallback} from 'react';
 import {
   EditableText,
   Input,
-  Slider,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Slider,
 } from '@sqlrooms/ui';
-import {useCellsStore, type CellsStoreState} from '../hooks';
-import type {CellContainerProps, InputCell, InputUnion, Cell} from '../types';
-import {InputConfigPanel} from './Input/ConfigPanel/InputConfigPanel';
 import {produce} from 'immer';
+import React, {useCallback} from 'react';
+import {useCellsStore, type CellsStoreState} from '../hooks';
+import type {Cell, CellContainerProps, InputCell, InputUnion} from '../types';
+import {InputConfigPanel} from './Input/ConfigPanel/InputConfigPanel';
 
 export type InputCellContentProps = {
   id: string;

@@ -132,7 +132,10 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
-    setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
+    setSessionUiMessages: (
+      sessionId: string,
+      uiMessages: UIMessage[],
+    ) => boolean;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
@@ -645,19 +648,29 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         /**
          * Save the Ai SDK UI messages for a session
          */
-        setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
-              );
-              if (session) {
-                // store the latest UI messages from the chat hook
-                // Create a deep copy to avoid read-only property issues
-                session.uiMessages = structuredClone(uiMessages);
-              }
-            }),
-          );
+        setSessionUiMessages: (
+          sessionId: string,
+          uiMessages: UIMessage[],
+        ): boolean => {
+          try {
+            set((state) =>
+              produce(state, (draft) => {
+                const session = draft.ai.config.sessions.find(
+                  (s: AnalysisSessionSchema) => s.id === sessionId,
+                );
+                if (session) {
+                  session.uiMessages = structuredClone(uiMessages);
+                }
+              }),
+            );
+            return true;
+          } catch (error) {
+            console.warn(
+              'Failed to persist UI messages:',
+              error instanceof Error ? error.message : error,
+            );
+            return false;
+          }
         },
 
         findToolRenderer: (toolName: string) => {

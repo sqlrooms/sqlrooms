@@ -23,7 +23,7 @@ export const MainView: FC = () => {
   });
   return (
     <>
-      <div className="flex h-full flex-col bg-muted">
+      <div className="bg-muted flex h-full flex-col">
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={50}>
             <QueryEditorPanel />

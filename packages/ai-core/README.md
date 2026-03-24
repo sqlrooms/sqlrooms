@@ -23,7 +23,11 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
 ```tsx
-import {createAiSlice, type AiSliceState, type ToolRendererRegistry} from '@sqlrooms/ai-core';
+import {
+  createAiSlice,
+  type AiSliceState,
+  type ToolRendererRegistry,
+} from '@sqlrooms/ai-core';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
@@ -32,9 +36,11 @@ import {
 import {tool} from 'ai';
 import {z} from 'zod';
 
-const EchoResult = ({output}: {output: {success: boolean; text: string} | undefined}) => (
-  <div>{output?.text}</div>
-);
+const EchoResult = ({
+  output,
+}: {
+  output: {success: boolean; text: string} | undefined;
+}) => <div>{output?.text}</div>;
 
 type State = BaseRoomStoreState & AiSliceState;
 

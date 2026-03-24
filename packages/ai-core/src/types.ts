@@ -79,7 +79,7 @@ export interface AiStateForTransport {
   ) => void;
   getIsRunning: (sessionId: string) => boolean;
   setIsRunning: (sessionId: string, isRunning: boolean) => void;
-  setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
+  setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => boolean;
   toolRenderers: ToolRendererRegistry;
   findToolRenderer: (toolName: string) => ToolRenderer | undefined;
   /** Map toolCallId -> sessionId for long-running tool streams (e.g. agents) */

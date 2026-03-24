@@ -1,12 +1,5 @@
-import {
-  Button,
-  cn,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@sqlrooms/ui';
+import {RunButton, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {isMacOS} from '@sqlrooms/utils';
-import {Loader2, OctagonXIcon} from 'lucide-react';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
@@ -30,62 +23,21 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
     selectedQueryResult?.status === 'loading' &&
     selectedQueryResult.isBeingAborted;
 
-  const handleClick = () => {
-    if (isLoading) {
-      abortCurrentQuery();
-    } else {
-      runCurrentQuery();
-    }
-  };
-
-  const getButtonContent = (): {
-    icon?: React.ReactNode;
-    text: string;
-    disabled: boolean;
-    rightIcon?: React.ReactNode;
-  } => {
-    if (isLoading) {
-      if (isAborted) {
-        return {
-          icon: <Loader2 className="h-3 w-3 animate-spin" />,
-          text: 'Cancelling...',
-          disabled: true,
-        };
-      } else {
-        return {
-          icon: <Loader2 className="h-3 w-3 animate-spin" />,
-          text: 'Cancel',
-          disabled: false,
-          rightIcon: <OctagonXIcon className="h-3 w-3" />,
-        };
-      }
-    } else {
-      return {
-        text: 'Run',
-        disabled: false,
-      };
-    }
-  };
-
-  const buttonContent = getButtonContent();
+  const state = isAborted ? 'cancelling' : isLoading ? 'running' : 'idle';
 
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <Button
-          className={cn(
-            'flex h-6 items-center justify-center gap-2 px-4',
-            className,
-          )}
-          variant="default"
-          size="xs"
-          onClick={handleClick}
-          disabled={buttonContent.disabled}
-        >
-          {buttonContent?.icon}
-          <span>{buttonContent.text}</span>
-          {buttonContent.rightIcon}
-        </Button>
+        <div>
+          <RunButton
+            state={state}
+            onRun={runCurrentQuery}
+            onCancel={abortCurrentQuery}
+            variant="default"
+            cancelVariant="default"
+            className={className}
+          />
+        </div>
       </TooltipTrigger>
       <TooltipContent align="end">
         {isLoading

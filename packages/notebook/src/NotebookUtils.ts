@@ -38,6 +38,7 @@ export const getCellTypeLabel = (type: string, registry?: CellRegistry) => {
     vega: 'Chart',
     text: 'Text',
     input: 'Input',
+    pivot: 'Pivot',
   };
   return typeToLabel[type] || type.charAt(0).toUpperCase() + type.slice(1);
 };

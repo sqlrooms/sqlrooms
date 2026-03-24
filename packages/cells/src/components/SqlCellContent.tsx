@@ -1,12 +1,15 @@
 import {getCoreDuckDbConnectionId} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, CellsRootState, SqlCell} from '../types';
-import {getEffectiveResultName} from '../utils';
+import type {
+  CellContainerProps,
+  CellsRootState,
+  SqlCell,
+  SqlCellStatus,
+} from '../types';
 import {SqlCellConnectionSelector} from './SqlCellConnectionSelector';
 import {SqlCellDependentsMenu} from './SqlCellDependentsMenu';
 import {SqlCellEditor} from './SqlCellEditor';
@@ -113,25 +116,22 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     [id, updateCell],
   );
 
-  const effectiveResultName = getEffectiveResultName(
-    cell.data,
-    convertToValidColumnOrTableName,
-  );
-  const explicitResultName = cell.data.resultName || '';
+  const resultName = cell.data.resultName || '';
   const selectedConnectorId =
     cell.data.connectorId || getCoreDuckDbConnectionId();
 
   const status =
     cellStatus?.type === 'sql'
       ? {
-          state: cellStatus.status,
-          message: cellStatus.lastError,
-          resultName: cellStatus.resultView || cellStatus.resultName,
-          lastRunTime: cellStatus.lastRunTime,
+          state: (cellStatus as SqlCellStatus).status,
+          message: (cellStatus as SqlCellStatus).lastError,
+          resultName:
+            (cellStatus as SqlCellStatus).resultView ||
+            (cellStatus as SqlCellStatus).resultName,
+          lastRunTime: (cellStatus as SqlCellStatus).lastRunTime,
         }
       : undefined;
 
-  const resultName = status?.resultName;
   const isRunning = status?.state === 'running';
 
   const handleRunRef = useRef(handleRun);
@@ -171,8 +171,8 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
         getDownstream={getDownstream}
       />
       <SqlCellResultNameEditor
-        value={explicitResultName}
-        placeholder={effectiveResultName}
+        cellId={id}
+        value={resultName}
         onChange={handleResultNameChange}
       />
     </div>

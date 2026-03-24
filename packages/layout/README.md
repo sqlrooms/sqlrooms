@@ -87,7 +87,9 @@ function PanelButtons() {
   return (
     <div className="flex gap-2">
       <Button onClick={() => togglePanel('data')}>Toggle Data Panel</Button>
-      <Button onClick={() => togglePanelPin('data')}>Pin/Unpin Data Panel</Button>
+      <Button onClick={() => togglePanelPin('data')}>
+        Pin/Unpin Data Panel
+      </Button>
     </div>
   );
 }

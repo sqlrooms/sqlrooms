@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+@import '@sqlrooms/ui/tailwind-preset.css';
+
+@source '../index.html';
+@source 'src/**/*.{ts,tsx}';
+@source '../../../packages/*/src/**/*.{ts,tsx}';
+@source '../node_modules/@sqlrooms/*/dist/';
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}

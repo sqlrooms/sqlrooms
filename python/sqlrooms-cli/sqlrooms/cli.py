@@ -13,7 +13,11 @@ from typing import Any
 import duckdb
 import typer
 
-from .web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
+from .web.db_bridge import (
+    SUPPORTED_ENGINES,
+    PostgresConnectorSettings,
+    SnowflakeConnectorSettings,
+)
 from .web.launcher import SqlroomsHttpServer
 
 logging.basicConfig(
@@ -28,68 +32,33 @@ app = typer.Typer(
     invoke_without_command=True,
 )
 
+if sys.platform.startswith("win"):
+    _config_base = Path(os.environ.get("APPDATA", "")) / "sqlrooms"
+else:
+    _config_base = Path.home() / ".config" / "sqlrooms"
+DEFAULT_CONFIG_PATH = _config_base / "config.toml"
+
 
 def _normalize_config_string(value: Any) -> str | None:
+    if isinstance(value, (int, float)):
+        return str(value)
     if not isinstance(value, str):
         return None
     normalized = value.strip()
     return normalized or None
 
 
-def _default_config_candidates() -> list[Path]:
-    home = Path.home()
-    candidates: list[Path] = []
-    if sys.platform.startswith("win"):
-        appdata = os.environ.get("APPDATA")
-        if appdata:
-            candidates.append(Path(appdata) / "sqlrooms" / "sqlrooms.toml")
-        candidates.append(home / ".sqlrooms" / "sqlrooms.toml")
-        return candidates
-
-    xdg_home = os.environ.get("XDG_CONFIG_HOME")
-    if xdg_home:
-        candidates.append(Path(xdg_home) / "sqlrooms" / "sqlrooms.toml")
-    else:
-        candidates.append(Path(home) / ".config" / "sqlrooms" / "sqlrooms.toml")
-    candidates.append(home / ".sqlrooms" / "sqlrooms.toml")
-    return candidates
-
-
-def _default_local_config_candidates() -> list[Path]:
-    cwd = Path.cwd()
-    return [cwd / "sqlrooms.toml"]
-
-
-def _resolve_config_paths(explicit_path: str | None, no_config: bool) -> list[Path]:
+def _resolve_config_path(explicit_path: str | None, no_config: bool) -> Path | None:
     if no_config:
-        return []
+        return None
     if explicit_path:
         candidate = Path(explicit_path).expanduser()
         if candidate.exists():
-            return [candidate]
+            return candidate
         raise RuntimeError(f"SQLRooms config file not found: {candidate}")
-
-    resolved_paths: list[Path] = []
-    for candidate in _default_config_candidates():
-        expanded = candidate.expanduser()
-        if expanded.exists():
-            resolved_paths.append(expanded)
-            break
-    for candidate in _default_local_config_candidates():
-        if candidate.exists():
-            resolved_paths.append(candidate)
-            break
-
-    # Keep order stable while deduplicating.
-    deduped: list[Path] = []
-    seen: set[str] = set()
-    for path in resolved_paths:
-        key = str(path.resolve())
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(path)
-    return deduped
+    if DEFAULT_CONFIG_PATH.exists():
+        return DEFAULT_CONFIG_PATH
+    return None
 
 
 def _read_toml(path: Path) -> dict[str, Any]:
@@ -116,50 +85,52 @@ def _require_config_string(
 
 
 def _load_connector_config(
-    paths: list[Path],
+    path: Path | None,
 ) -> list[PostgresConnectorSettings | SnowflakeConnectorSettings]:
-    if not paths:
+    if path is None:
         return []
-    by_id: dict[str, PostgresConnectorSettings | SnowflakeConnectorSettings] = {}
-    for path in paths:
-        raw = _read_toml(path)
-        connectors = raw.get("connectors") or []
-        if not isinstance(connectors, list):
-            raise RuntimeError(
-                f"'connectors' must be an array in SQLRooms config: {path}"
-            )
-        seen_in_file: set[str] = set()
-        for idx, item in enumerate(connectors):
-            if not isinstance(item, dict):
-                raise RuntimeError(
-                    f"Connector entry at index {idx} must be an object in {path}."
-                )
-            engine = _normalize_config_string(item.get("engine"))
-            if engine not in {"postgres", "snowflake"}:
-                raise RuntimeError(
-                    f"Connector entry at index {idx} has unsupported engine: {engine!r}"
-                )
-            connection_id = _require_config_string(
-                item, "id", connector_id=f"#{idx}", engine=engine
-            )
-            if connection_id in seen_in_file:
-                raise RuntimeError(
-                    f"Duplicate connector id in config file {path}: {connection_id}"
-                )
-            seen_in_file.add(connection_id)
+    raw = _read_toml(path)
+    db = raw.get("db")
+    if not isinstance(db, dict):
+        db = {}
+    connectors = db.get("connectors") or []
+    if not isinstance(connectors, list):
+        raise RuntimeError("'db.connectors' must be an array in SQLRooms config.")
 
-            title = _normalize_config_string(item.get("title")) or connection_id
-            if engine == "postgres":
-                by_id[connection_id] = PostgresConnectorSettings(
-                    dsn=_require_config_string(
-                        item, "dsn", connector_id=connection_id, engine=engine
-                    ),
+    out: list[PostgresConnectorSettings | SnowflakeConnectorSettings] = []
+    seen_ids: set[str] = set()
+    for idx, item in enumerate(connectors):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"Connector entry at index {idx} must be an object.")
+        engine = _normalize_config_string(item.get("engine"))
+        if engine not in SUPPORTED_ENGINES:
+            raise RuntimeError(
+                f"Connector entry at index {idx} has unsupported engine: {engine!r}"
+            )
+        connection_id = _require_config_string(
+            item, "id", connector_id=f"#{idx}", engine=engine
+        )
+        if connection_id in seen_ids:
+            raise RuntimeError(f"Duplicate connector id in config: {connection_id}")
+        seen_ids.add(connection_id)
+
+        title = _normalize_config_string(item.get("title")) or connection_id
+        if engine == "postgres":
+            out.append(
+                PostgresConnectorSettings(
+                    host=_normalize_config_string(item.get("host")) or "localhost",
+                    port=_normalize_config_string(item.get("port")) or "5432",
+                    database=_normalize_config_string(item.get("database")) or "",
+                    user=_normalize_config_string(item.get("user")) or "",
+                    password=_normalize_config_string(item.get("password")),
                     connection_id=connection_id,
                     title=title,
                 )
-                continue
+            )
+            continue
 
-            by_id[connection_id] = SnowflakeConnectorSettings(
+        out.append(
+            SnowflakeConnectorSettings(
                 account=_normalize_config_string(item.get("account")),
                 user=_normalize_config_string(item.get("user")),
                 password=_normalize_config_string(item.get("password")),
@@ -171,70 +142,56 @@ def _load_connector_config(
                 connection_id=connection_id,
                 title=title,
             )
-    out = list(by_id.values())
-    if paths:
-        logger.info("Loaded SQLRooms connector config from %s", ", ".join(map(str, paths)))
+        )
+    logger.info("Loaded SQLRooms connector config from %s", path)
     return out
 
 
 def _load_ai_runtime_config(
-    paths: list[Path],
+    path: Path | None,
 ) -> tuple[str | None, str | None, dict[str, dict[str, Any]]]:
-    if not paths:
+    if path is None:
         return (None, None, {})
-    default_provider: str | None = None
-    default_model: str | None = None
+    raw = _read_toml(path)
+    ai = raw.get("ai")
+    if not isinstance(ai, dict):
+        return (None, None, {})
+
+    default_provider = _normalize_config_string(ai.get("default_provider"))
+    default_model = _normalize_config_string(ai.get("default_model"))
+    providers_raw = ai.get("providers") or []
+    if not isinstance(providers_raw, list):
+        raise RuntimeError("'ai.providers' must be an array in SQLRooms config.")
 
     providers: dict[str, dict[str, Any]] = {}
-    for path in paths:
-        raw = _read_toml(path)
-        ai = raw.get("ai")
-        if not isinstance(ai, dict):
-            continue
-        candidate_default_provider = _normalize_config_string(ai.get("default_provider"))
-        candidate_default_model = _normalize_config_string(ai.get("default_model"))
-        if candidate_default_provider:
-            default_provider = candidate_default_provider
-        if candidate_default_model:
-            default_model = candidate_default_model
-
-        providers_raw = ai.get("providers") or []
-        if not isinstance(providers_raw, list):
-            raise RuntimeError(f"'ai.providers' must be an array in SQLRooms config: {path}")
-        seen_provider_ids: set[str] = set()
-        for idx, item in enumerate(providers_raw):
-            if not isinstance(item, dict):
-                raise RuntimeError(
-                    f"AI provider entry at index {idx} must be an object in {path}."
-                )
-            provider_id = _require_config_string(
-                item, "id", connector_id=f"ai#{idx}", engine="ai"
+    for idx, item in enumerate(providers_raw):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"AI provider entry at index {idx} must be an object.")
+        provider_id = _require_config_string(
+            item, "id", connector_id=f"ai#{idx}", engine="ai"
+        )
+        if provider_id in providers:
+            raise RuntimeError(f"Duplicate AI provider id in config: {provider_id}")
+        base_url = _normalize_config_string(item.get("base_url")) or ""
+        api_key = _normalize_config_string(item.get("api_key")) or ""
+        api_key_env = _normalize_config_string(item.get("api_key_env"))
+        if api_key_env and not api_key:
+            api_key = os.environ.get(api_key_env, "")
+        models_raw = item.get("models") or []
+        if not isinstance(models_raw, list):
+            raise RuntimeError(
+                f"AI provider '{provider_id}' has invalid 'models' (must be an array)."
             )
-            if provider_id in seen_provider_ids:
-                raise RuntimeError(
-                    f"Duplicate AI provider id in config file {path}: {provider_id}"
-                )
-            seen_provider_ids.add(provider_id)
-            base_url = _normalize_config_string(item.get("base_url")) or ""
-            api_key = _normalize_config_string(item.get("api_key")) or ""
-            api_key_env = _normalize_config_string(item.get("api_key_env"))
-            if api_key_env and not api_key:
-                api_key = os.environ.get(api_key_env, "")
-            models_raw = item.get("models") or []
-            if not isinstance(models_raw, list):
-                raise RuntimeError(
-                    f"AI provider '{provider_id}' has invalid 'models' (must be an array)."
-                )
-            models = []
-            for model in models_raw:
-                model_name = _normalize_config_string(model)
-                if model_name:
-                    models.append({"modelName": model_name})
-            providers[provider_id] = {
-                "baseUrl": base_url,
-                "apiKey": api_key,
-                "models": models,
-            }
+        models = []
+        for model in models_raw:
+            model_name = _normalize_config_string(model)
+            if model_name:
+                models.append({"modelName": model_name})
+        providers[provider_id] = {
+            "baseUrl": base_url,
+            "apiKey": api_key,
+            "models": models,
+        }
 
     if default_provider and default_provider not in providers:
         raise RuntimeError(
@@ -248,8 +205,7 @@ def _load_ai_runtime_config(
         models = provider.get("models") or []
         if models:
             default_model = models[0].get("modelName")
-    if paths:
-        logger.info("Loaded SQLRooms AI config from %s", ", ".join(map(str, paths)))
+    logger.info("Loaded SQLRooms AI config from %s", path)
     return (default_provider, default_model, providers)
 
 
@@ -319,9 +275,9 @@ def export_project(
                 ch for ch in str(sheet_id) if ch.isalnum() or ch in ("-", "_")
             )
             if not safe_sheet_id:
-                safe_sheet_id = hashlib.sha1(
-                    str(sheet_id).encode("utf-8")
-                ).hexdigest()[:8]
+                safe_sheet_id = hashlib.sha1(str(sheet_id).encode("utf-8")).hexdigest()[
+                    :8
+                ]
             name = str((sheet_app or {}).get("name") or sheet_id)
             safe_name = "".join(
                 ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
@@ -345,9 +301,7 @@ def export_project(
                 "template": (sheet_app or {}).get("template", ""),
                 "updatedAt": (sheet_app or {}).get("updatedAt"),
             }
-            (root / "app.json").write_text(
-                json.dumps(meta, indent=2), encoding="utf-8"
-            )
+            (root / "app.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
             for path, content in files.items():
                 rel = Path(str(path).lstrip("/"))
                 target = (root / rel).resolve()
@@ -394,12 +348,12 @@ def main(
         None,
         "--config",
         envvar="SQLROOMS_CONFIG",
-        help="Path to a SQLRooms TOML config file. Defaults to platform config paths when present.",
+        help="Path to a SQLRooms TOML config file. Defaults to ~/.config/sqlrooms/config.toml (%%APPDATA%%\\sqlrooms\\config.toml on Windows).",
     ),
     no_config: bool = typer.Option(
         False,
         "--no-config",
-        help="Disable loading connector settings from config file.",
+        help="Disable loading settings from config file.",
     ),
     no_open_browser: bool = typer.Option(
         False, "--no-open-browser", help="Skip automatically opening the browser."
@@ -431,12 +385,18 @@ def main(
     - Serves the AI example UI with persisted state stored in DuckDB.
     """
     try:
-        config_paths = _resolve_config_paths(config, no_config=no_config)
-        connector_settings = _load_connector_config(config_paths)
-        llm_provider, llm_model, ai_providers = _load_ai_runtime_config(config_paths)
+        config_path = _resolve_config_path(config, no_config=no_config)
+        connector_settings = _load_connector_config(config_path)
+        llm_provider, llm_model, ai_providers = _load_ai_runtime_config(config_path)
     except Exception as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
+
+    # config_path may be None when the file doesn't exist yet; for saving we
+    # still want a writable target unless the user explicitly opted out.
+    save_config_path = (
+        config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
+    )
 
     resolved_db_path = db_path if db_path is not None else db_path_option
     selected_api_key = (
@@ -459,9 +419,9 @@ def main(
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
+        config_path=save_config_path,
     )
     try:
         asyncio.run(server.start())
     except KeyboardInterrupt:
         sys.stderr.write("\nShutting down...\n")
-

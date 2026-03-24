@@ -1,4 +1,3 @@
-import React from 'react';
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
 import {roomStore} from './store';
@@ -9,7 +8,7 @@ export function Room() {
       <RoomShell.Sidebar>
         <ThemeSwitch />
       </RoomShell.Sidebar>
-      <RoomShell.LayoutComposer tileClassName="p-0" />
+      <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
     </RoomShell>
   );

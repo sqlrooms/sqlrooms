@@ -9,7 +9,7 @@ export const InputApiKey: FC<{className?: string}> = ({className}) => {
   return (
     <div
       className={cn(
-        'relative flex items-center rounded-md bg-muted',
+        'bg-muted relative flex items-center rounded-md',
         className,
       )}
     >

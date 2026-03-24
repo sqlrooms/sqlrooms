@@ -8,15 +8,17 @@ All state mutations must go through Immer's `produce()`. Never mutate state dire
 
 ```typescript
 // Correct
-set((state) => produce(state, (draft) => {
-  draft.db.tables.push(newTable);
-}))
+set((state) =>
+  produce(state, (draft) => {
+    draft.db.tables.push(newTable);
+  }),
+);
 
 // Incorrect — will not trigger re-renders
 set((state) => {
   state.db.tables.push(newTable);
   return state;
-})
+});
 ```
 
 ## Zustand Selectors for Performance

@@ -17,7 +17,11 @@ export {TextCellContent} from './components/TextCellContent';
 export {VegaCellContent} from './components/VegaCellContent';
 export {createDefaultCellRegistry} from './defaultCellRegistry';
 export {getRenderableDependencyEdges} from './dagUtils';
-export {findSheetIdForCell, getSheetsByType} from './helpers';
+export {
+  findSheetIdForCell,
+  getSheetsByType,
+  resolveSheetSchemaName,
+} from './helpers';
 export {useCellsStore} from './hooks';
 export {
   findSqlDependencies,
@@ -26,7 +30,6 @@ export {
   runSqlWithCallbacks,
 } from './sqlHelpers';
 export * from './types';
-export {getEffectiveResultName, isValidSqlIdentifier} from './utils';
 
 export const SqlCell = {
   RunButton: SqlCellRunButtonComponent,

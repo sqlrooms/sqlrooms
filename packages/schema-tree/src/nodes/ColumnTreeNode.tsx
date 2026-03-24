@@ -26,7 +26,7 @@ export const ColumnTreeNode: FC<{
           typeCategory={nodeObject.columnTypeCategory}
         />
         <span
-          className="truncate whitespace-nowrap text-xs"
+          className="truncate text-xs whitespace-nowrap"
           title={nodeObject.name}
         >
           {nodeObject.name}
