@@ -238,112 +238,6 @@ function createPivotInstanceSnapshot(
   };
 }
 
-type PivotInstanceInternalOps = {
-  setSourceImpl: (source: PivotSource | undefined) => void;
-  setConfigImpl: (config: PivotConfig) => void;
-  runImpl: () => Promise<void>;
-};
-
-function createPivotInstanceActions(
-  get: () => PivotInstanceState,
-  set: (
-    partial:
-      | Partial<PivotInstanceState>
-      | ((state: PivotInstanceState) => Partial<PivotInstanceState>),
-  ) => void,
-  ops: PivotInstanceInternalOps,
-): Omit<PivotInstanceState, keyof PivotInstanceSnapshot | 'ui'> {
-  const applyConfigChange = (updater: (config: PivotConfig) => PivotConfig) => {
-    const nextConfig = normalizePivotConfig(
-      updater(get().config),
-      get().fields,
-    );
-    ops.setConfigImpl(nextConfig);
-  };
-
-  return {
-    setSource: (source) => ops.setSourceImpl(source),
-    setConfig: (config) => {
-      const nextConfig = normalizePivotConfig(config, get().fields);
-      ops.setConfigImpl(nextConfig);
-    },
-    patchConfig: (config) => {
-      applyConfigChange((current) => ({
-        ...current,
-        ...config,
-      }));
-    },
-    setRendererName: (rendererName) => {
-      applyConfigChange((current) => ({
-        ...current,
-        rendererName,
-      }));
-    },
-    setAggregatorName: (aggregatorName) => {
-      applyConfigChange((current) => ({
-        ...current,
-        aggregatorName,
-      }));
-    },
-    setVals: (vals) => {
-      applyConfigChange((current) => ({
-        ...current,
-        vals,
-      }));
-    },
-    moveField: (field, destination, index) => {
-      applyConfigChange((current) =>
-        moveFieldInConfig(current, field, destination, index),
-      );
-    },
-    cycleRowOrder: () => {
-      applyConfigChange((current) => ({
-        ...current,
-        rowOrder: nextSortOrder(current.rowOrder),
-      }));
-    },
-    cycleColOrder: () => {
-      applyConfigChange((current) => ({
-        ...current,
-        colOrder: nextSortOrder(current.colOrder),
-      }));
-    },
-    setAttributeFilterValues: (attribute, values) => {
-      applyConfigChange((current) =>
-        setAttributeFilterValuesInConfig(current, attribute, values),
-      );
-    },
-    addAttributeFilterValues: (attribute, values) => {
-      applyConfigChange((current) =>
-        addAttributeFilterValuesInConfig(current, attribute, values),
-      );
-    },
-    removeAttributeFilterValues: (attribute, values) => {
-      applyConfigChange((current) =>
-        removeAttributeFilterValuesInConfig(current, attribute, values),
-      );
-    },
-    clearAttributeFilter: (attribute) => {
-      applyConfigChange((current) =>
-        clearAttributeFilterInConfig(current, attribute),
-      );
-    },
-    setSectionOpen: (section, isOpen) =>
-      set((state) => ({
-        ui: {
-          ...state.ui,
-          sectionOpenState: {
-            ...state.ui.sectionOpenState,
-            [section]: isOpen,
-          },
-        },
-      })),
-    run: async () => {
-      await ops.runImpl();
-    },
-  };
-}
-
 /**
  * Create a standalone pivot instance store (not backed by a room store).
  * Used by PivotEditor when no external store is provided.
@@ -353,42 +247,87 @@ export function createPivotCoreStore(
 ): PivotInstanceStore {
   const snapshot = createPivotInstanceSnapshot(props);
   const callbacks = props?.callbacks;
+
+  const updateConfig = (
+    get: () => PivotInstanceState,
+    set: (
+      partial:
+        | Partial<PivotInstanceState>
+        | ((s: PivotInstanceState) => Partial<PivotInstanceState>),
+    ) => void,
+    updater: (config: PivotConfig) => PivotConfig,
+  ) => {
+    const nextConfig = normalizePivotConfig(
+      updater(get().config),
+      get().fields,
+    );
+    set((state) => ({
+      config: nextConfig,
+      status: {...state.status, stale: true},
+    }));
+    callbacks?.setConfig?.(nextConfig);
+  };
+
   const store = createStore<PivotInstanceState>((set, get) => ({
     ...snapshot,
-    ui: {
-      sectionOpenState: {},
+    ui: {sectionOpenState: {}},
+    setSource: (source) => {
+      const nextConfig = createDefaultPivotConfig();
+      set((state) => ({
+        source,
+        config: nextConfig,
+        status: {...state.status, stale: true},
+      }));
+      callbacks?.setSource?.(source);
+      callbacks?.setConfig?.(nextConfig);
     },
-    ...createPivotInstanceActions(get, set, {
-      setSourceImpl: (source) => {
-        const nextConfig = createDefaultPivotConfig();
-        set((state) => ({
-          source,
-          config: nextConfig,
-          status: {
-            ...state.status,
-            stale: true,
-          },
-        }));
-        callbacks?.setSource?.(source);
-        callbacks?.setConfig?.(nextConfig);
-      },
-      setConfigImpl: (config) => {
-        set((state) => ({
-          config,
-          status: {
-            ...state.status,
-            stale: true,
-          },
-        }));
-        callbacks?.setConfig?.(config);
-      },
-      runImpl: async () => {
-        await callbacks?.run?.();
-      },
-    }),
+    setConfig: (config) => updateConfig(get, set, () => config),
+    patchConfig: (partial) =>
+      updateConfig(get, set, (c) => ({...c, ...partial})),
+    setRendererName: (rendererName) =>
+      updateConfig(get, set, (c) => ({...c, rendererName})),
+    setAggregatorName: (aggregatorName) =>
+      updateConfig(get, set, (c) => ({...c, aggregatorName})),
+    setVals: (vals) => updateConfig(get, set, (c) => ({...c, vals})),
+    moveField: (field, destination, index) =>
+      updateConfig(get, set, (c) =>
+        moveFieldInConfig(c, field, destination, index),
+      ),
+    cycleRowOrder: () =>
+      updateConfig(get, set, (c) => ({
+        ...c,
+        rowOrder: nextSortOrder(c.rowOrder),
+      })),
+    cycleColOrder: () =>
+      updateConfig(get, set, (c) => ({
+        ...c,
+        colOrder: nextSortOrder(c.colOrder),
+      })),
+    setAttributeFilterValues: (attr, vals) =>
+      updateConfig(get, set, (c) =>
+        setAttributeFilterValuesInConfig(c, attr, vals),
+      ),
+    addAttributeFilterValues: (attr, vals) =>
+      updateConfig(get, set, (c) =>
+        addAttributeFilterValuesInConfig(c, attr, vals),
+      ),
+    removeAttributeFilterValues: (attr, vals) =>
+      updateConfig(get, set, (c) =>
+        removeAttributeFilterValuesInConfig(c, attr, vals),
+      ),
+    clearAttributeFilter: (attr) =>
+      updateConfig(get, set, (c) => clearAttributeFilterInConfig(c, attr)),
+    setSectionOpen: (section, isOpen) =>
+      set((state) => ({
+        ui: {
+          ...state.ui,
+          sectionOpenState: {...state.ui.sectionOpenState, [section]: isOpen},
+        },
+      })),
+    run: async () => {
+      await callbacks?.run?.();
+    },
   }));
 
-  return Object.assign(store, {
-    destroy: () => undefined,
-  });
+  return Object.assign(store, {destroy: () => undefined});
 }
