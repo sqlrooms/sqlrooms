@@ -1,4 +1,5 @@
 import {
+  cn,
   Select,
   SelectContent,
   SelectItem,
@@ -33,6 +34,10 @@ export const VegaCellDatasetSelector: React.FC<
   const cell = cellsData[cellId];
   const selectedSqlId = cell?.type === 'vega' ? cell.data.sqlId : undefined;
 
+  if (!cell || cell.type !== 'vega') {
+    return null;
+  }
+
   const handleSqlIdChange = (value: string) => {
     updateCell(cellId, (c) =>
       produce(c, (draft) => {
@@ -43,7 +48,12 @@ export const VegaCellDatasetSelector: React.FC<
 
   return (
     <Select value={selectedSqlId} onValueChange={handleSqlIdChange}>
-      <SelectTrigger className="h-6 w-[150px] text-xs shadow-none [&>span]:font-mono [&>span]:text-green-500">
+      <SelectTrigger
+        className={cn('h-6 w-[150px] text-xs shadow-none', {
+          '[&>span]:font-mono [&>span]:text-green-500':
+            selectedSqlId && availableSqlCells.length > 0,
+        })}
+      >
         <SelectValue placeholder="Select data source" />
       </SelectTrigger>
       <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
