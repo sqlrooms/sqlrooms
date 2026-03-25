@@ -31,3 +31,4 @@ docs/.vitepress/cache
 
 packages/*/CHANGELOG.md
 examples/*/CHANGELOG.md
+.worktrees/
