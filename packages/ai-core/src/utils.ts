@@ -397,6 +397,7 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       const toolPart = current as ToolPart;
       const isCompleted =
         toolPart.state?.startsWith('output') ||
+        toolPart.state === 'approval-requested' ||
         toolPart.state === 'approval-responded';
       if (isCompleted) {
         // Completed tool; continue checking earlier parts just in case
