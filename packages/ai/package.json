@@ -26,7 +26,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "ai": "^6.0.132",
+    "ai": "^6.0.138",
     "lucide-react": "^0.556.0",
     "zod": "^4.1.8"
   },
