@@ -342,12 +342,14 @@ describe('DuckDbSlice', () => {
       const tables = await store.getState().db.loadTableSchemas();
 
       // Should not include the internal table
-      expect(tables.find((t) => t.tableName === '__sqlrooms_internal')).toBe(
+      expect(tables.find((t) => t.table.table === '__sqlrooms_internal')).toBe(
         undefined,
       );
 
       // Should include the normal table
-      expect(tables.find((t) => t.tableName === 'normal_table')).toBeDefined();
+      expect(
+        tables.find((t) => t.table.table === 'normal_table'),
+      ).toBeDefined();
     });
 
     it('should allow addTable with internal table names', async () => {
@@ -362,7 +364,7 @@ describe('DuckDbSlice', () => {
         .db.addTable('__sqlrooms_users', data);
 
       expect(table).toBeDefined();
-      expect(table.tableName).toBe('__sqlrooms_users');
+      expect(table.table.table).toBe('__sqlrooms_users');
 
       // Verify it exists in the database
       const connector = await store.getState().db.getConnector();
@@ -456,14 +458,17 @@ describe('DuckDbSlice', () => {
       expect(
         tables.find(
           (t) =>
-            t.schema === '__sqlrooms_schema' && t.tableName === 'test_table',
+            t.table.schema === '__sqlrooms_schema' &&
+            t.table.table === 'test_table',
         ),
       ).toBe(undefined);
 
       // Should include tables from normal schema
       expect(
         tables.find(
-          (t) => t.schema === 'normal_schema' && t.tableName === 'test_table',
+          (t) =>
+            t.table.schema === 'normal_schema' &&
+            t.table.table === 'test_table',
         ),
       ).toBeDefined();
     });
@@ -478,12 +483,10 @@ describe('DuckDbSlice', () => {
       );
 
       // checkTableExists should find it with qualified name
-      const exists = await store
-        .getState()
-        .db.checkTableExists({
-          schema: '__sqlrooms_test_schema',
-          table: 'my_table',
-        });
+      const exists = await store.getState().db.checkTableExists({
+        schema: '__sqlrooms_test_schema',
+        table: 'my_table',
+      });
 
       expect(exists).toBe(true);
     });
