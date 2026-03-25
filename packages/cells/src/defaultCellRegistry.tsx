@@ -7,22 +7,24 @@ import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
 import {executeSqlCell} from './execution';
 import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
+import {dropResultRelation, renameResultRelation} from './resultRelationPolicy';
 import {
   findSqlDependenciesFromAst,
   qualifySheetLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
-import {renameResultRelation} from './resultRelationPolicy';
 import type {
   Cell,
   CellRegistry,
+  CellStatus,
   InputCell,
   SqlCell,
   SqlCellData,
+  SqlCellStatus,
   TextCell,
   VegaCell,
 } from './types';
-import {isInputCell} from './types';
+import {isInputCell, isSqlCell} from './types';
 import {getEffectiveResultName, isDefined} from './utils';
 
 export function createDefaultCellRegistry(): CellRegistry {
@@ -30,7 +32,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     sql: {
       type: 'sql',
       title: 'SQL Query',
-      createCell: (id: string): SqlCell => ({
+      createCell: ({id}): SqlCell => ({
         id,
         type: 'sql',
         data: {title: 'Untitled Query', sql: ''},
@@ -49,11 +51,51 @@ export function createDefaultCellRegistry(): CellRegistry {
           sqlSelectToJson,
         });
       },
+      createStatus: (): CellStatus => ({
+        type: 'sql',
+        status: 'idle',
+        referencedTables: [],
+      }),
+      onRemove: async ({status, get}) => {
+        if (status?.type === 'sql' && (status as SqlCellStatus).resultView) {
+          try {
+            const connector = await get().db.getConnector();
+            await dropResultRelation({
+              connector,
+              relationName: (status as SqlCellStatus).resultView,
+            });
+          } catch {
+            // best-effort
+          }
+        }
+      },
+      hasSemanticChange: (oldCell, newCell) => {
+        const oldSql = isSqlCell(oldCell) ? oldCell.data.sql : undefined;
+        const newSql = isSqlCell(newCell) ? newCell.data.sql : undefined;
+        return oldSql !== newSql;
+      },
+      invalidateStatus: (currentStatus): CellStatus => ({
+        type: 'sql',
+        status: 'idle',
+        referencedTables:
+          (currentStatus as SqlCellStatus).referencedTables || [],
+      }),
+      getRelationsToDrop: (status): string[] => {
+        const sqlStatus = status as SqlCellStatus;
+        return sqlStatus.resultView ? [sqlStatus.resultView] : [];
+      },
+      recordError: (currentStatus, message): CellStatus => ({
+        ...currentStatus,
+        status: 'error',
+        lastError: message,
+      }),
+      getResultRelation: (status): string | undefined => {
+        const sqlStatus = status as SqlCellStatus;
+        return sqlStatus.resultView;
+      },
       runCell: async ({id, opts, get, set}) => {
         const ownerSheetId = findSheetIdForCell(get(), id);
         if (ownerSheetId) {
-          // Recompute this SQL cell's dependencies on explicit run so graph state
-          // stays current without paying the cost on every keystroke.
           await get().cells.updateEdgesFromSql(ownerSheetId, id);
         }
 
@@ -71,7 +113,6 @@ export function createDefaultCellRegistry(): CellRegistry {
           setCellResult: get().cells.setCellResult,
         });
 
-        // Refresh table schemas after execution (fire and forget)
         void get().db.refreshTableSchemas();
       },
       renameResult: async ({id, oldResultView, get, set}) => {
@@ -80,8 +121,9 @@ export function createDefaultCellRegistry(): CellRegistry {
         if (!cell || cell.type !== 'sql') return;
         const status = state.cells.status[id];
         const previousRelationType =
-          (status?.type === 'sql' ? status.resultRelationType : undefined) ??
-          'view';
+          (status?.type === 'sql'
+            ? (status as SqlCellStatus).resultRelationType
+            : undefined) ?? 'view';
 
         const sheetId = findSheetIdForCell(state, id);
         const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
@@ -101,8 +143,6 @@ export function createDefaultCellRegistry(): CellRegistry {
           return;
         }
 
-        // Re-create the relation under the new name. For materialized results
-        // keep table semantics, otherwise keep view semantics.
         const connector = await state.db.getConnector();
         const sql = (cell.data as SqlCellData).sql;
         const scopedCellIds =
@@ -114,7 +154,6 @@ export function createDefaultCellRegistry(): CellRegistry {
             .map((candidate) => [candidate.id, candidate]),
         ) as Record<string, Cell>;
 
-        // Gather inputs for SQL rendering
         const inputs = Object.values(scopedCells)
           .filter((c) => isInputCell(c))
           .map((c) => ({
@@ -139,8 +178,6 @@ export function createDefaultCellRegistry(): CellRegistry {
           },
         });
 
-        // Rename must preserve whichever mode execution selected (view/table).
-        // We clear any stale object at the destination name first.
         await renameResultRelation({
           connector,
           oldRelationName: oldResultView,
@@ -149,26 +186,25 @@ export function createDefaultCellRegistry(): CellRegistry {
           viewSql: rewrittenSql,
         });
 
-        // Update status with new view name
         set((s) =>
           produce(s, (draft) => {
-            const status = draft.cells.status[id];
-            if (status?.type === 'sql') {
-              status.resultName = newTableName;
-              status.resultView = newTableName;
-              status.resultRelationType = previousRelationType;
+            const draftStatus = draft.cells.status[id];
+            if (draftStatus?.type === 'sql') {
+              (draftStatus as SqlCellStatus).resultName = newTableName;
+              (draftStatus as SqlCellStatus).resultView = newTableName;
+              (draftStatus as SqlCellStatus).resultRelationType =
+                previousRelationType;
             }
           }),
         );
 
-        // Refresh schema tree
         void get().db.refreshTableSchemas();
       },
     },
     text: {
       type: 'text',
       title: 'Text / Markdown',
-      createCell: (id: string): TextCell => ({
+      createCell: ({id}): TextCell => ({
         id,
         type: 'text',
         data: {title: 'Text', text: ''},
@@ -185,7 +221,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     vega: {
       type: 'vega',
       title: 'Visualization',
-      createCell: (id: string): VegaCell => ({
+      createCell: ({id}): VegaCell => ({
         id,
         type: 'vega',
         data: {
@@ -212,7 +248,7 @@ export function createDefaultCellRegistry(): CellRegistry {
     input: {
       type: 'input',
       title: 'Input / Parameter',
-      createCell: (id: string): InputCell => ({
+      createCell: ({id}): InputCell => ({
         id,
         type: 'input',
         data: {

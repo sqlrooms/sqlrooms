@@ -58,7 +58,7 @@ export function Room() {
           <ThemeSwitch />
         </div>
       </div>
-      <RoomShell.LayoutComposer tileClassName="p-0" />
+      <RoomShell.LayoutComposer />
       {/* <RoomShell.LoadingProgress /> */}
       <RoomShell.CommandPalette />
       <InputApiKey className="absolute top-5 right-15 z-10" />

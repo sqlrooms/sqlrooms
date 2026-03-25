@@ -1,5 +1,5 @@
 import type {DbSliceState} from '@sqlrooms/db';
-import type {BaseRoomStoreState} from '@sqlrooms/room-store';
+import type {BaseRoomStoreState, SliceFunctions} from '@sqlrooms/room-store';
 import type * as arrow from 'apache-arrow';
 import type React from 'react';
 import {z} from 'zod';
@@ -146,10 +146,16 @@ export type SqlSelectToJsonFn = (sql: string) => Promise<{
   statements?: unknown[];
 }>;
 
+export type CreateCellArgs = {
+  id: string;
+  get: () => CellsRootState;
+  set: (updater: (state: CellsRootState) => CellsRootState) => void;
+};
+
 export type CellRegistryItem<TCell extends Cell = Cell> = {
   type: string;
   title: string;
-  createCell: (id: string) => TCell;
+  createCell: (args: CreateCellArgs) => TCell;
   renderCell: (props: {
     id: string;
     cell: TCell;
@@ -176,6 +182,33 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     get: () => CellsRootState;
     set: (updater: (state: CellsRootState) => CellsRootState) => void;
   }) => Promise<void>;
+
+  /** Return initial CellStatus when a cell is first added. Default: {type:'other'} */
+  createStatus?: (id: string) => CellStatus;
+  /** Called once during cells.initialize() for each cell of this type. Reset ephemeral runtime state after hydration. */
+  onInitialize?: (args: {
+    id: string;
+    status: CellStatus | undefined;
+    get: () => CellsRootState;
+    set: (updater: (state: CellsRootState) => CellsRootState) => void;
+  }) => void;
+  /** Called when cell is removed. Clean up DuckDB relations, caches, etc. */
+  onRemove?: (args: {
+    id: string;
+    status: CellStatus | undefined;
+    get: () => CellsRootState;
+    set: (updater: (state: CellsRootState) => CellsRootState) => void;
+  }) => Promise<void> | void;
+  /** Detect whether an updateCell change is semantically significant for this cell type. */
+  hasSemanticChange?: (oldCell: TCell, newCell: TCell) => boolean;
+  /** Reset status to idle/stale. Called by invalidateCellStatus. If not provided, status is set to {type:'other'}. */
+  invalidateStatus?: (currentStatus: CellStatus) => CellStatus;
+  /** Collect DuckDB relation names that should be dropped when this cell is removed. */
+  getRelationsToDrop?: (status: CellStatus) => string[];
+  /** Record an error on the cell status during cascade execution. */
+  recordError?: (currentStatus: CellStatus, message: string) => CellStatus;
+  /** Return the query relation name for paged fetches, if applicable. */
+  getResultRelation?: (status: CellStatus) => string | undefined;
 };
 
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
@@ -231,8 +264,8 @@ export const OtherCellStatus = z.object({
 });
 export type OtherCellStatus = z.infer<typeof OtherCellStatus>;
 
-export const CellStatus = z.union([SqlCellStatus, OtherCellStatus]);
-export type CellStatus = z.infer<typeof CellStatus>;
+/** Extensible cell status -- each cell type defines its own shape with a discriminating `type` field. */
+export type CellStatus = {type: string; [key: string]: unknown};
 
 /** SQL execution results */
 export type SqlRunResult = {
@@ -287,7 +320,7 @@ export type CellResultData = {
 };
 
 export type CellsSliceState = {
-  cells: {
+  cells: SliceFunctions & {
     config: CellsSliceConfig;
     status: Record<string, CellStatus>;
     activeAbortControllers: Record<string, AbortController>;

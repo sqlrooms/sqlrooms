@@ -48,6 +48,7 @@ export function makeDefaultVegaLiteOptions(
 ): EmbedOptions {
   return {
     mode: 'vega-lite',
+    renderer: 'svg',
     theme: undefined,
     tooltip: true,
     actions: false,

@@ -180,7 +180,7 @@ export function createCanvasSlice(
           if (!reg) return newId;
 
           // 1. Create the cell in CellsSlice
-          const cell = reg.createCell(newId) as Cell;
+          const cell = reg.createCell({id: newId, get, set}) as Cell;
 
           const existingTitles = Object.values(get().cells.config.data).map(
             (c) => {
