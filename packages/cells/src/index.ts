@@ -23,6 +23,12 @@ export {
   getSheetsByType,
   normalizeCellDependencies,
   resolveSheetSchemaName,
+  toDataSourceCell,
+  toDataSourceTable,
+  isDataSourceCell,
+  isDataSourceTable,
+  fromDataSourceCell,
+  fromDataSourceTable,
 } from './helpers';
 export {useCellsStore} from './hooks';
 export {

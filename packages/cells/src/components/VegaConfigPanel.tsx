@@ -76,12 +76,18 @@ function readSpecValues(spec: any): {
 function buildCrossFilterSpec(opts: {
   mark: string;
   xField?: string;
+  xFieldType?: BrushFieldType;
   yField?: string;
   yAggregate?: string;
   color?: string;
 }): any {
-  const {mark, xField, yField, yAggregate, color} = opts;
-  const xEnc: any = xField ? {field: xField, bin: {maxbins: 20}} : undefined;
+  const {mark, xField, xFieldType, yField, yAggregate, color} = opts;
+  const xEnc: any = xField
+    ? {
+        field: xField,
+        ...(xFieldType === 'numeric' ? {bin: {maxbins: 20}} : {}),
+      }
+    : undefined;
   const yEnc: any = yField
     ? {field: yField, aggregate: yAggregate ?? 'sum'}
     : yAggregate === 'count'
@@ -184,6 +190,7 @@ export const VegaConfigPanel: React.FC<{
       builder({
         mark: merged.mark ?? 'bar',
         xField: merged.xField,
+        xFieldType: merged.xField ? detectFieldType(merged.xField) : undefined,
         yField: merged.yField,
         yAggregate: merged.yAggregate,
         color: merged.color,

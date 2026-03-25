@@ -456,3 +456,9 @@ export function isVegaCell(cell: Cell): cell is VegaCell {
 export function isInputCell(cell: Cell): cell is InputCell {
   return cell.type === 'input';
 }
+
+export function isSqlCellStatus(
+  status: CellStatus | undefined,
+): status is SqlCellStatus {
+  return status?.type === 'sql';
+}

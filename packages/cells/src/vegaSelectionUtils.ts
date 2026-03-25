@@ -7,6 +7,98 @@ import type {CrossFilterSelection} from './types';
 export const BRUSH_PARAM_NAME = 'brush';
 
 /**
+ * Escapes a field name for use in SQL by wrapping in double quotes
+ * and escaping embedded double quotes.
+ */
+function escapeFieldName(field: string): string {
+  return `"${field.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Escapes a string value for use in SQL by escaping single quotes.
+ */
+function escapeSqlString(str: string): string {
+  return str.replace(/'/g, "''");
+}
+
+/**
+ * Formats a value for use in SQL (numbers as-is, strings quoted and escaped).
+ */
+function formatSqlValue(value: unknown): string {
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return `'${escapeSqlString(String(value))}'`;
+}
+
+/**
+ * Builds a SQL BETWEEN clause for interval selections.
+ * Returns null if the range is invalid.
+ */
+function buildIntervalClause(
+  quotedField: string,
+  selection: CrossFilterSelection,
+): string | null {
+  const range = selection.value;
+  if (!Array.isArray(range) || range.length !== 2) {
+    return null;
+  }
+
+  const [lo, hi] = range;
+
+  if (typeof lo === 'number' && typeof hi === 'number') {
+    if (selection.fieldType === 'temporal') {
+      return `${quotedField} BETWEEN epoch_ms(${Math.round(lo)}) AND epoch_ms(${Math.round(hi)})`;
+    }
+    return `${quotedField} BETWEEN ${lo} AND ${hi}`;
+  }
+
+  if (typeof lo === 'string' && typeof hi === 'string') {
+    const loEsc = escapeSqlString(lo);
+    const hiEsc = escapeSqlString(hi);
+    return `${quotedField} BETWEEN '${loEsc}' AND '${hiEsc}'`;
+  }
+
+  return null;
+}
+
+/**
+ * Builds a SQL IN clause for point selections.
+ * Returns null if the values array is empty or invalid.
+ */
+function buildPointClause(
+  quotedField: string,
+  selection: CrossFilterSelection,
+): string | null {
+  const values = selection.value;
+  if (!Array.isArray(values) || values.length === 0) {
+    return null;
+  }
+
+  const commaSeparated = values.map(formatSqlValue).join(', ');
+
+  return `${quotedField} IN (${commaSeparated})`;
+}
+
+/**
+ * Builds a SQL clause for a single selection based on its type.
+ * Returns null if the selection type is unknown or the clause cannot be built.
+ */
+function buildClause(
+  quotedField: string,
+  selection: CrossFilterSelection,
+): string | null {
+  switch (selection.type) {
+    case 'interval':
+      return buildIntervalClause(quotedField, selection);
+    case 'point':
+      return buildPointClause(quotedField, selection);
+    default:
+      return null;
+  }
+}
+
+/**
  * Build a SQL WHERE clause fragment from an array of sibling cross-filter
  * selections. Returns `null` when there are no active selections.
  *
@@ -17,40 +109,16 @@ export function buildCrossFilterPredicate(
 ): string | null {
   const clauses: string[] = [];
 
-  for (const sel of selections) {
-    if (!sel || sel.value == null) continue;
+  for (const selection of selections) {
+    if (!selection || selection.value == null) {
+      continue;
+    }
 
-    const quotedField = `"${sel.field}"`;
+    const quotedField = escapeFieldName(selection.field);
+    const clause = buildClause(quotedField, selection);
 
-    if (sel.type === 'interval') {
-      const range = sel.value as [unknown, unknown];
-      if (!Array.isArray(range) || range.length !== 2) continue;
-      const [lo, hi] = range;
-      if (lo == null || hi == null) continue;
-
-      if (typeof lo === 'number' && typeof hi === 'number') {
-        if (sel.fieldType === 'temporal') {
-          clauses.push(
-            `${quotedField} BETWEEN epoch_ms(${Math.round(lo)}) AND epoch_ms(${Math.round(hi)})`,
-          );
-        } else {
-          clauses.push(`${quotedField} BETWEEN ${lo} AND ${hi}`);
-        }
-      } else if (typeof lo === 'string' && typeof hi === 'string') {
-        const loEsc = lo.replace(/'/g, "''");
-        const hiEsc = hi.replace(/'/g, "''");
-        clauses.push(`${quotedField} BETWEEN '${loEsc}' AND '${hiEsc}'`);
-      }
-    } else if (sel.type === 'point') {
-      const values = sel.value as unknown[];
-      if (!Array.isArray(values) || values.length === 0) continue;
-
-      const formatted = values.map((v) => {
-        if (typeof v === 'number') return String(v);
-        const s = String(v).replace(/'/g, "''");
-        return `'${s}'`;
-      });
-      clauses.push(`${quotedField} IN (${formatted.join(', ')})`);
+    if (clause) {
+      clauses.push(clause);
     }
   }
 

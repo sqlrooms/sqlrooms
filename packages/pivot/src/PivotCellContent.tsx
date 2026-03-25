@@ -1,4 +1,11 @@
-import {type CellContainerProps, CellSourceSelector} from '@sqlrooms/cells';
+import {
+  type CellContainerProps,
+  CellSourceSelector,
+  toDataSourceCell,
+  toDataSourceTable,
+  fromDataSourceCell,
+  fromDataSourceTable,
+} from '@sqlrooms/cells';
 import {useBaseRoomStore} from '@sqlrooms/room-store';
 import {Label} from '@sqlrooms/ui';
 import React, {useCallback, useMemo} from 'react';
@@ -14,22 +21,26 @@ export type PivotCellContentProps = {
   renderContainer: (props: CellContainerProps) => React.ReactElement;
 };
 
-function PivotSourceSelect({store}: {store: PivotInstanceStore}) {
+const PivotSourceSelect: React.FC<{store: PivotInstanceStore}> = ({store}) => {
   const source = useStore(store, (state) => state.source);
 
   const value = source
     ? source.kind === 'table'
-      ? `table:${source.tableName}`
-      : `cell:${source.sqlId}`
+      ? toDataSourceTable(source.tableName)
+      : toDataSourceCell(source.sqlId)
     : undefined;
 
   const handleValueChange = useCallback(
     (nextValue: string) => {
-      const nextSource: PivotSource | undefined = nextValue.startsWith('table:')
-        ? {kind: 'table', tableName: nextValue.slice(6)}
-        : nextValue.startsWith('cell:')
-          ? {kind: 'sql', sqlId: nextValue.slice(5)}
+      const tableRef = fromDataSourceTable(nextValue);
+      const cellId = fromDataSourceCell(nextValue);
+
+      const nextSource: PivotSource | undefined = tableRef
+        ? {kind: 'table', tableName: tableRef}
+        : cellId
+          ? {kind: 'sql', sqlId: cellId}
           : undefined;
+
       store.getState().setSource(nextSource);
     },
     [store],
@@ -45,12 +56,11 @@ function PivotSourceSelect({store}: {store: PivotInstanceStore}) {
       />
     </div>
   );
-}
+};
 
 type PivotRootState = PivotSliceState & {db: {tables: {tableName: string}[]}};
 
 export const PivotCellContent: React.FC<PivotCellContentProps> = ({
-  id,
   cell,
   renderContainer,
 }) => {

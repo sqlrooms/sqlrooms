@@ -1,3 +1,4 @@
+import {QualifiedTableName} from '@sqlrooms/db';
 import {
   Cell,
   CellDependencies,
@@ -6,6 +7,7 @@ import {
   CellsSliceConfig,
   Sheet,
   SheetType,
+  SqlCell,
   SqlSelectToJsonFn,
 } from './types';
 import {getSheetSchemaName} from './utils';
@@ -187,4 +189,42 @@ export function resolveSheetSchemaName(
   sheet: Pick<Sheet, 'id' | 'schemaName'>,
 ) {
   return sheet.schemaName || getSheetSchemaName(sheet.id);
+}
+
+const DATA_SOURCE_CELL_PREFIX = 'cell:';
+const DATA_SOURCE_TABLE_PREFIX = 'table:';
+
+export function toDataSourceCell(cell: SqlCell | string): string {
+  const id = typeof cell === 'string' ? cell : cell.id;
+
+  return `${DATA_SOURCE_CELL_PREFIX}${id}`;
+}
+
+export function toDataSourceTable(table: QualifiedTableName | string): string {
+  const qualifiedName =
+    typeof table === 'string' ? table : `${table.schema}.${table.table}`;
+
+  return `${DATA_SOURCE_TABLE_PREFIX}${qualifiedName}`;
+}
+
+export function isDataSourceCell(value: string): boolean {
+  return value.startsWith(DATA_SOURCE_CELL_PREFIX);
+}
+
+export function isDataSourceTable(value: string): boolean {
+  return value.startsWith(DATA_SOURCE_TABLE_PREFIX);
+}
+
+export function fromDataSourceCell(value: string): string | undefined {
+  if (isDataSourceCell(value)) {
+    return value.slice(DATA_SOURCE_CELL_PREFIX.length);
+  }
+  return undefined;
+}
+
+export function fromDataSourceTable(value: string): string | undefined {
+  if (isDataSourceTable(value)) {
+    return value.slice(DATA_SOURCE_TABLE_PREFIX.length);
+  }
+  return undefined;
 }

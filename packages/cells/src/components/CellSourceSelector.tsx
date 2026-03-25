@@ -11,8 +11,9 @@ import {
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import React, {useMemo} from 'react';
 import {useCellsStore} from '../hooks';
-import type {Cell, SqlCellData} from '../types';
+import {isSqlCell, SqlCell, type SqlCellData} from '../types';
 import {getEffectiveResultName} from '../utils';
+import {toDataSourceCell, toDataSourceTable} from '../helpers';
 
 export type CellSourceSelectorProps = {
   /** Current value in `cell:<id>` or `table:<schema.table>` format. */
@@ -41,9 +42,10 @@ export const CellSourceSelector: React.FC<CellSourceSelectorProps> = ({
 
   const availableSqlCells = useMemo(() => {
     if (!sheetCellIds) return [];
+
     return sheetCellIds
       .map((cid) => cellsData[cid])
-      .filter((c): c is Cell & {type: 'sql'} => c?.type === 'sql');
+      .filter((c): c is SqlCell => Boolean(c && isSqlCell(c)));
   }, [sheetCellIds, cellsData]);
 
   const availableTables = useMemo(() => {
@@ -74,7 +76,7 @@ export const CellSourceSelector: React.FC<CellSourceSelectorProps> = ({
               <SelectItem
                 className={GREEN_ITEM}
                 key={sql.id}
-                value={`cell:${sql.id}`}
+                value={toDataSourceCell(sql)}
               >
                 {getEffectiveResultName(
                   sql.data as SqlCellData,
@@ -90,14 +92,15 @@ export const CellSourceSelector: React.FC<CellSourceSelectorProps> = ({
               Tables
             </SelectLabel>
             {availableTables.map((t) => {
-              const qualName = `${t.table.schema}.${t.table.table}`;
+              const qualifiedName = `${t.table.schema}.${t.table.table}`;
+
               return (
                 <SelectItem
                   className={GREEN_ITEM}
-                  key={qualName}
-                  value={`table:${qualName}`}
+                  key={qualifiedName}
+                  value={toDataSourceTable(t.table)}
                 >
-                  {qualName}
+                  {qualifiedName}
                 </SelectItem>
               );
             })}
