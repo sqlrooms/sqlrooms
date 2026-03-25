@@ -59,11 +59,13 @@ function createDefaultCellsConfig(
           dependencies: {},
           dependents: {},
           contentHashByCell: {},
+          tableDependencies: {},
         },
       },
     },
     sheetOrder: [sheetId],
     currentSheetId: sheetId,
+    tableDepSchemas: ['main'],
   };
 
   if (!config) {
@@ -91,7 +93,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
   const initialConfig = createDefaultCellsConfig(props?.config);
   // Keep result data outside Immer drafts, but scoped per slice instance.
   const cellResultCache = new Map<string, CellResultData>();
-  return createSlice<CellsSliceState, CellsRootState>((set, get) => {
+  return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
     const dropRelationBestEffort = async (relationName: string) => {
       try {
         const connector = await get().db.getConnector();
@@ -112,6 +114,35 @@ export function createCellsSlice(props: CellsSliceOptions) {
         await dropRelationBestEffort(name);
       }
     };
+
+    // Mark cells stale when their dependent database tables change (schema-level).
+    store.subscribe((state, prevState) => {
+      if (state.db.tables === prevState.db.tables) return;
+      const toName = (t: {table: {schema?: string; table: string}}) =>
+        `${t.table.schema ?? 'main'}.${t.table.table}`;
+      const oldNames = new Set(prevState.db.tables.map(toName));
+      const newNames = new Set(state.db.tables.map(toName));
+      const changed = new Set<string>();
+      for (const n of oldNames) {
+        if (!newNames.has(n)) changed.add(n);
+      }
+      for (const n of newNames) {
+        if (!oldNames.has(n)) changed.add(n);
+      }
+      if (!changed.size) return;
+
+      for (const sheet of Object.values(state.cells.config.sheets)) {
+        const cache = sheet.graphCache;
+        if (!cache?.tableDependencies) continue;
+        for (const [cellId, tables] of Object.entries(
+          cache.tableDependencies,
+        )) {
+          if (tables.some((t) => changed.has(t))) {
+            state.cells.invalidateCellStatus(cellId);
+          }
+        }
+      }
+    });
 
     return {
       cells: {
@@ -244,6 +275,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                     dependencies: {},
                     dependents: {},
                     contentHashByCell: {},
+                    tableDependencies: {},
                   },
                 };
                 draft.cells.config.sheets[sheetId] = sheet;
@@ -267,7 +299,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   edge.id !== `${edge.source}-${cell.id}`,
               );
               const localCellIds = new Set(sheet.cellIds);
-              for (const depId of deps) {
+              for (const depId of deps.cellIds) {
                 if (!localCellIds.has(depId) || depId === cell.id) continue;
                 sheet.edges.push({
                   id: `${depId}-${cell.id}`,
@@ -278,7 +310,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
               replaceCellDependenciesInCache(
                 sheet,
                 cell.id,
-                deps.filter((depId) => localCellIds.has(depId)),
+                deps.cellIds.filter((depId) => localCellIds.has(depId)),
+                deps.tableNames,
               );
             }),
           );
@@ -411,7 +444,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   ownerSheet.edges = ownerSheet.edges.filter(
                     (e) => e.target !== id,
                   );
-                  for (const depId of newDeps) {
+                  for (const depId of newDeps.cellIds) {
                     if (!localCellIds.has(depId) || depId === id) continue;
                     ownerSheet.edges.push({
                       id: `${depId}-${id}`,
@@ -422,7 +455,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   replaceCellDependenciesInCache(
                     ownerSheet,
                     id,
-                    newDeps.filter((depId) => localCellIds.has(depId)),
+                    newDeps.cellIds.filter((depId) => localCellIds.has(depId)),
+                    newDeps.tableNames,
                   );
                 }
               }),
@@ -482,6 +516,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   dependencies: {},
                   dependents: {},
                   contentHashByCell: {},
+                  tableDependencies: {},
                 },
               };
               draft.cells.config.sheetOrder.push(id);
@@ -616,6 +651,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                     dependencies: {},
                     dependents: {},
                     contentHashByCell: {},
+                    tableDependencies: {},
                   },
                 };
                 draft.cells.config.sheets[sheetId] = sheet;
@@ -687,7 +723,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                   (e) => e.target !== cellId,
                 );
                 const localCellIds = new Set(draftSheet.cellIds);
-                for (const depId of deps) {
+                for (const depId of deps.cellIds) {
                   if (!localCellIds.has(depId) || depId === cellId) continue;
                   draftSheet.edges.push({
                     id: `${depId}-${cellId}`,
@@ -698,7 +734,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
                 replaceCellDependenciesInCache(
                   draftSheet,
                   cellId,
-                  deps.filter((depId) => localCellIds.has(depId)),
+                  deps.cellIds.filter((depId) => localCellIds.has(depId)),
+                  deps.tableNames,
                 );
               }
             }),

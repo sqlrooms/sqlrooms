@@ -243,7 +243,11 @@ export function createDefaultCellRegistry(): CellRegistry {
       ),
       findDependencies: async ({cell}) => {
         const sqlId = (cell as VegaCell).data.sqlId;
-        return sqlId ? [sqlId] : [];
+        const tableRef = (cell as VegaCell).data.tableRef;
+        return {
+          cellIds: sqlId ? [sqlId] : [],
+          tableNames: tableRef ? [tableRef] : [],
+        };
       },
     },
     input: {

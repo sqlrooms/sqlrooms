@@ -1,5 +1,6 @@
 import type {
   Cell,
+  CellDependencies,
   CellsRootState,
   Edge,
   EdgeKind,
@@ -8,10 +9,12 @@ import type {
   SqlSelectToJsonFn,
 } from './types';
 import {isDefined} from './utils';
+import {normalizeCellDependencies} from './helpers';
 
 export type DependencyGraph = {
   dependencies: Record<string, string[]>;
   dependents: Record<string, string[]>;
+  tableDependencies?: Record<string, string[]>;
 };
 
 function dedupe(values: string[]): string[] {
@@ -58,6 +61,7 @@ export function buildGraphCacheFromEdges(sheet: Sheet): SheetGraphCache {
     dependencies,
     dependents,
     contentHashByCell: sheet.graphCache?.contentHashByCell || {},
+    tableDependencies: sheet.graphCache?.tableDependencies || {},
   };
 }
 
@@ -106,6 +110,7 @@ export function replaceCellDependenciesInCache(
   sheet: Sheet,
   cellId: string,
   deps: string[],
+  tableNames?: string[],
 ) {
   const cache = ensureGraphCache(sheet);
   const localCellIds = new Set(sheet.cellIds);
@@ -125,6 +130,11 @@ export function replaceCellDependenciesInCache(
   for (const depId of nextDeps) {
     const children = cache.dependents[depId] || (cache.dependents[depId] = []);
     if (!children.includes(cellId)) children.push(cellId);
+  }
+
+  if (tableNames !== undefined) {
+    cache.tableDependencies = cache.tableDependencies || {};
+    cache.tableDependencies[cellId] = tableNames;
   }
 }
 
@@ -147,6 +157,9 @@ export function removeCellFromCache(sheet: Sheet, cellId: string) {
   delete cache.dependents[cellId];
   if (cache.contentHashByCell) {
     delete cache.contentHashByCell[cellId];
+  }
+  if (cache.tableDependencies) {
+    delete cache.tableDependencies[cellId];
   }
 }
 
@@ -247,11 +260,15 @@ export async function buildDependencyGraphAsync(
     return {
       dependencies: {...cache.dependencies},
       dependents: {...cache.dependents},
+      tableDependencies: cache.tableDependencies
+        ? {...cache.tableDependencies}
+        : undefined,
     };
   }
 
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
+  const tableDependencies: Record<string, string[]> = {};
   const sheetCellIds = new Set(sheet.cellIds);
   const scopedCells = Object.fromEntries(
     sheet.cellIds
@@ -260,41 +277,54 @@ export async function buildDependencyGraphAsync(
       .map((cell) => [cell.id, cell]),
   ) as Record<string, Cell>;
 
-  // Process all cells in parallel
   const cellDeps = await Promise.all(
     sheet.cellIds.map(async (cellId) => {
       const cell = state.cells.config.data[cellId];
-      if (!cell) return {cellId, deps: []};
+      if (!cell)
+        return {
+          cellId,
+          cellIds: [] as string[],
+          tableNames: undefined as string[] | undefined,
+        };
 
       const registryItem = registry[cell.type];
-      if (!registryItem) return {cellId, deps: []};
+      if (!registryItem)
+        return {
+          cellId,
+          cellIds: [] as string[],
+          tableNames: undefined as string[] | undefined,
+        };
 
-      const deps = await registryItem.findDependencies({
+      const raw = await registryItem.findDependencies({
         cell,
         cells: scopedCells,
         sheetId,
         sqlSelectToJson,
       });
+      const normalized = normalizeCellDependencies(raw);
 
       return {
         cellId,
-        deps: Array.from(new Set(deps)).filter((depId) =>
+        cellIds: Array.from(new Set(normalized.cellIds)).filter((depId) =>
           sheetCellIds.has(depId),
         ),
+        tableNames: normalized.tableNames,
       };
     }),
   );
 
-  // Build the graph from results
-  for (const {cellId, deps} of cellDeps) {
-    dependencies[cellId] = deps;
-    for (const dep of deps) {
+  for (const {cellId, cellIds, tableNames} of cellDeps) {
+    dependencies[cellId] = cellIds;
+    for (const dep of cellIds) {
       const list = dependents[dep] || (dependents[dep] = []);
       if (!list.includes(cellId)) {
         list.push(cellId);
       }
     }
+    if (tableNames && tableNames.length > 0) {
+      tableDependencies[cellId] = tableNames;
+    }
   }
 
-  return {dependencies, dependents};
+  return {dependencies, dependents, tableDependencies};
 }

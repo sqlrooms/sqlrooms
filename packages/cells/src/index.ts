@@ -20,6 +20,7 @@ export {getRenderableDependencyEdges} from './dagUtils';
 export {
   findSheetIdForCell,
   getSheetsByType,
+  normalizeCellDependencies,
   resolveSheetSchemaName,
 } from './helpers';
 export {useCellsStore} from './hooks';

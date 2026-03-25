@@ -1,5 +1,6 @@
 import {
   Cell,
+  CellDependencies,
   CellRegistry,
   CellsRootState,
   CellsSliceConfig,
@@ -10,6 +11,19 @@ import {
 import {getSheetSchemaName} from './utils';
 
 /**
+ * Normalizes the result of `findDependencies` to a `CellDependencies` object.
+ * Accepts either the legacy `string[]` (cell IDs only) or the new `CellDependencies` shape.
+ */
+export function normalizeCellDependencies(
+  result: string[] | CellDependencies,
+): CellDependencies {
+  if (Array.isArray(result)) {
+    return {cellIds: result};
+  }
+  return result;
+}
+
+/**
  * Helper to resolve dependencies using the registry's async AST-based resolver.
  */
 export async function resolveDependencies(
@@ -18,10 +32,16 @@ export async function resolveDependencies(
   sheetId: string,
   registry: CellRegistry,
   sqlSelectToJson: SqlSelectToJsonFn,
-): Promise<string[]> {
+): Promise<CellDependencies> {
   const item = registry[cell.type];
-  if (!item) return [];
-  return item.findDependencies({cell, cells, sheetId, sqlSelectToJson});
+  if (!item) return {cellIds: []};
+  const raw = await item.findDependencies({
+    cell,
+    cells,
+    sheetId,
+    sqlSelectToJson,
+  });
+  return normalizeCellDependencies(raw);
 }
 
 /**

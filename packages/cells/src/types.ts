@@ -78,6 +78,7 @@ export type CrossFilterConfig = z.infer<typeof CrossFilterConfig>;
 export const VegaCellData = z.object({
   title: z.string().default('Chart'),
   sqlId: z.string().optional(), // In notebook, it links to another cell. In canvas, it might be the same.
+  tableRef: z.string().optional(), // Direct table reference, e.g. "main.flights"
   sql: z.string().optional(), // In canvas, it often has its own SQL.
   vegaSpec: z.any().optional(),
   crossFilter: CrossFilterConfig.default({enabled: true}),
@@ -160,6 +161,12 @@ export type SqlSelectToJsonFn = (sql: string) => Promise<{
   statements?: unknown[];
 }>;
 
+/** Return type from findDependencies: cell IDs and optional table names. */
+export type CellDependencies = {
+  cellIds: string[];
+  tableNames?: string[];
+};
+
 export type CreateCellArgs = {
   id: string;
   get: () => CellsRootState;
@@ -181,7 +188,7 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     cells: Record<string, Cell>;
     sheetId: string;
     sqlSelectToJson: SqlSelectToJsonFn;
-  }) => Promise<string[]>;
+  }) => Promise<string[] | CellDependencies>;
   /** Optional: custom execution logic (defaults to SQL execution for sql type) */
   runCell?: (args: {
     id: string;
@@ -246,6 +253,7 @@ export const SheetGraphCache = z.object({
   dependencies: z.record(z.string(), z.array(z.string())).default({}),
   dependents: z.record(z.string(), z.array(z.string())).default({}),
   contentHashByCell: z.record(z.string(), z.string()).optional(),
+  tableDependencies: z.record(z.string(), z.array(z.string())).default({}),
 });
 export type SheetGraphCache = z.infer<typeof SheetGraphCache>;
 
@@ -318,6 +326,8 @@ export const CellsSliceConfig = z.object({
   sheets: z.record(z.string(), Sheet).default({}),
   sheetOrder: z.array(z.string()).default([]),
   currentSheetId: z.string().optional(),
+  /** Which database schemas' tables are eligible for direct table dependencies. */
+  tableDepSchemas: z.array(z.string()).default(['main']),
 });
 export type CellsSliceConfig = z.infer<typeof CellsSliceConfig>;
 

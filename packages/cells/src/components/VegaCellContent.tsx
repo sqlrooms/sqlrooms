@@ -2,13 +2,16 @@ import {
   Button,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {VegaLiteChart, useVegaChartContext} from '@sqlrooms/vega';
 import {produce} from 'immer';
 import {Filter} from 'lucide-react';
@@ -19,9 +22,11 @@ import type {
   Cell,
   CellContainerProps,
   CrossFilterSelection,
+  SqlCellData,
   SqlCellStatus,
   VegaCell,
 } from '../types';
+import {getEffectiveResultName} from '../utils';
 import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
 import {VegaConfigPanel} from './VegaConfigPanel';
 
@@ -117,6 +122,8 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   const getCrossFilterPredicate = useCellsStore(
     (s) => s.cells.getCrossFilterPredicate,
   );
+  const dbTables = useCellsStore((s) => s.db.tables);
+  const tableDepSchemas = useCellsStore((s) => s.cells.config.tableDepSchemas);
 
   // Find available SQL cells in the same sheet
   const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
@@ -126,6 +133,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   // Subscribe to cross-filter selections so we re-render when siblings change
   const selectedSqlId = cell.data.sqlId;
+  const selectedTableRef = cell.data.tableRef;
   const crossFilterGroup = useCellsStore((s) =>
     selectedSqlId ? s.cells.crossFilterSelections[selectedSqlId] : undefined,
   );
@@ -138,6 +146,13 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
       .map((cid) => cellsData[cid])
       .filter((c): c is Cell & {type: 'sql'} => c?.type === 'sql');
   }, [sheetCellIds, cellsData]);
+
+  const availableTables = useMemo(() => {
+    const schemas = new Set(tableDepSchemas ?? ['main']);
+    return dbTables.filter(
+      (t) => !t.isView && t.table.schema != null && schemas.has(t.table.schema),
+    );
+  }, [dbTables, tableDepSchemas]);
 
   const selectedSqlStatus = selectedSqlId
     ? cellsStatus[selectedSqlId]
@@ -156,8 +171,11 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   );
   const [isEditing, setIsEditing] = useState(false);
 
-  const baseSqlQuery =
-    selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
+  const hasDataSource = !!(selectedSqlId || selectedTableRef);
+
+  const baseSqlQuery = selectedTableRef
+    ? `SELECT * FROM ${selectedTableRef}`
+    : selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
       ? `SELECT * FROM ${selectedSqlStatus.resultView}`
       : selectedSqlId && cellsData[selectedSqlId]?.type === 'sql'
         ? (cellsData[selectedSqlId] as any).data.sql
@@ -177,10 +195,24 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
       ? (selectedSqlStatus as SqlCellStatus).lastRunTime
       : undefined;
 
-  const handleSqlIdChange = (value: string) => {
+  // Encode selection value: "cell:<id>" or "table:<schema.table>"
+  const selectValue = selectedSqlId
+    ? `cell:${selectedSqlId}`
+    : selectedTableRef
+      ? `table:${selectedTableRef}`
+      : undefined;
+
+  const handleDataSourceChange = (value: string) => {
     updateCell(id, (c) =>
       produce(c, (draft) => {
-        if (draft.type === 'vega') draft.data.sqlId = value;
+        if (draft.type !== 'vega') return;
+        if (value.startsWith('cell:')) {
+          draft.data.sqlId = value.slice(5);
+          delete draft.data.tableRef;
+        } else if (value.startsWith('table:')) {
+          draft.data.tableRef = value.slice(6);
+          delete draft.data.sqlId;
+        }
       }),
     );
   };
@@ -238,16 +270,49 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   const header = (
     <div className="flex items-center gap-2">
-      <Select value={selectedSqlId} onValueChange={handleSqlIdChange}>
-        <SelectTrigger className="h-6 w-[150px] text-xs shadow-none">
+      <Select value={selectValue} onValueChange={handleDataSourceChange}>
+        <SelectTrigger className="h-6 w-[180px] text-xs shadow-none">
           <SelectValue placeholder="Select data source" />
         </SelectTrigger>
         <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-          {availableSqlCells.map((sql) => (
-            <SelectItem className="text-xs" key={sql.id} value={sql.id}>
-              {sql.data.title}
-            </SelectItem>
-          ))}
+          {availableSqlCells.length > 0 && (
+            <SelectGroup>
+              <SelectLabel className="text-muted-foreground text-[10px]">
+                Cells
+              </SelectLabel>
+              {availableSqlCells.map((sql) => (
+                <SelectItem
+                  className="text-xs"
+                  key={sql.id}
+                  value={`cell:${sql.id}`}
+                >
+                  {getEffectiveResultName(
+                    sql.data as SqlCellData,
+                    convertToValidColumnOrTableName,
+                  )}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+          {availableTables.length > 0 && (
+            <SelectGroup>
+              <SelectLabel className="text-muted-foreground text-[10px]">
+                Tables
+              </SelectLabel>
+              {availableTables.map((t) => {
+                const qualName = `${t.table.schema}.${t.table.table}`;
+                return (
+                  <SelectItem
+                    className="text-xs"
+                    key={qualName}
+                    value={`table:${qualName}`}
+                  >
+                    {qualName}
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          )}
         </SelectContent>
       </Select>
       <Button
@@ -255,7 +320,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         variant="secondary"
         className="h-6"
         onClick={() => (isEditing ? saveSpec() : setIsEditing(true))}
-        disabled={!selectedSqlId}
+        disabled={!hasDataSource}
       >
         {isEditing ? 'Save' : 'Edit chart'}
       </Button>
@@ -301,14 +366,14 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         />
       )}
       <div
-        onDoubleClick={() => selectedSqlId && setIsEditing((prev) => !prev)}
+        onDoubleClick={() => hasDataSource && setIsEditing((prev) => !prev)}
         className="flex h-full w-full p-2"
       >
-        {!selectedSqlId ? (
+        {!hasDataSource ? (
           <div className="flex h-full w-full items-center justify-center text-gray-400">
-            Please select a SQL data source first.
+            Please select a data source first.
           </div>
-        ) : !selectedSqlStatus ? (
+        ) : !selectedSqlStatus && !selectedTableRef ? (
           <div className="flex h-full w-full items-center justify-center text-gray-400">
             No chart data available, please run the SQL cell first.
           </div>
