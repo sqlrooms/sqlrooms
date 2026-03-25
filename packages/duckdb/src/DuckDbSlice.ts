@@ -11,8 +11,12 @@ import {
   QualifiedTableName,
   QueryHandle,
   separateLastStatement,
-  TableColumn,
 } from '@sqlrooms/duckdb-core';
+import {
+  loadTableSchemas,
+  LoadTableSchemasFilter,
+  LoadTableSchemasFilterFunction,
+} from './loadTableSchemas';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -73,23 +77,10 @@ const CreateTableFromQueryCommandInput = z.object({
     .default(false)
     .describe('Allow multiple SQL statements where the final one is SELECT.'),
 });
+
 type CreateTableFromQueryCommandInput = z.infer<
   typeof CreateTableFromQueryCommandInput
 >;
-
-function isDuckDbPlaceholderViewColumn(
-  columnName: string,
-  columnType: string,
-): boolean {
-  return columnName === '__' && columnType.toUpperCase() === 'UNKNOWN';
-}
-
-export type SchemaAndDatabase = {
-  schema?: string;
-  database?: string;
-};
-
-export type SchemaDatabaseAndTable = SchemaAndDatabase & {table?: string};
 
 /**
  * State and actions for the DuckDB slice
@@ -160,7 +151,7 @@ export type DuckDbSliceState = {
     /**
      * Load the schemas of the tables in the database.
      */
-    loadTableSchemas(filter?: SchemaDatabaseAndTable): Promise<DataTable[]>;
+    loadTableSchemas(filter?: LoadTableSchemasFilter): Promise<DataTable[]>;
 
     /**
      * @deprecated Use findTableByName instead
@@ -313,11 +304,10 @@ export type CreateDuckDbSliceProps = {
   /**
    * Optional filter function to control which tables are included when loading schemas.
    * By default, filters out tables/schemas/databases starting with '__sqlrooms_'.
-   * Pass `null` to disable filtering and show all tables.
    * @param table - The qualified table name to evaluate
    * @returns true to include the table, false to exclude it
    */
-  loadTableSchemasFilter?: ((table: QualifiedTableName) => boolean) | null;
+  loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
 };
 
 /**
@@ -332,131 +322,6 @@ export function createDuckDbSlice({
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
       /**
-       * Internal helper to load table schemas with optional filter bypass.
-       * Used for exact lookups where we don't want the visibility filter to hide results.
-       */
-      const loadTableSchemasInternal = async (
-        filter?: SchemaDatabaseAndTable,
-        bypassFilter: boolean = false,
-      ): Promise<DataTable[]> => {
-        const {schema, database, table} = filter || {};
-        const connector = await get().db.getConnector();
-        const buildMetadataWhereClause = (nameColumn: string) =>
-          [
-            database
-              ? `database_name = ${escapeVal(database)}`
-              : `database_name != 'system'`,
-            schema ? `schema_name = ${escapeVal(schema)}` : '',
-            table ? `${nameColumn} = ${escapeVal(table)}` : '',
-          ]
-            .filter(Boolean)
-            .join(' AND ');
-        const sql = `WITH tables_and_views AS (
-          FROM duckdb_tables() SELECT
-            database_name AS database,
-            schema_name AS schema,
-            table_name AS name,
-            sql,
-            comment,
-            estimated_size,
-            FALSE AS isView
-          WHERE ${buildMetadataWhereClause('table_name')}
-          UNION ALL
-          FROM duckdb_views() SELECT
-            database_name AS database,
-            schema_name AS schema,
-            view_name AS name,
-            sql,
-            comment,
-            NULL AS estimated_size,
-            TRUE AS isView
-          WHERE ${buildMetadataWhereClause('view_name')}
-        ),
-        columns AS (
-          FROM duckdb_columns() SELECT
-            database_name AS database,
-            schema_name AS schema,
-            table_name AS name,
-            list(column_name ORDER BY column_index) AS column_names,
-            list(data_type ORDER BY column_index) AS column_types
-          WHERE ${buildMetadataWhereClause('table_name')}
-          GROUP BY database_name, schema_name, table_name
-        )
-        SELECT
-          isView,
-          database,
-          schema,
-          name,
-          column_names,
-          column_types,
-          sql,
-          comment,
-          estimated_size
-        FROM tables_and_views
-        LEFT JOIN columns USING (database, schema, name)
-        ORDER BY isView, database, schema, name`;
-        const describeResults = await connector.query(sql);
-        const newTables: DataTable[] = [];
-        for (let i = 0; i < describeResults.numRows; i++) {
-          const isView = describeResults.getChild('isView')?.get(i);
-          const rowDatabase = describeResults.getChild('database')?.get(i);
-          const rowSchema = describeResults.getChild('schema')?.get(i);
-          const rowTable = describeResults.getChild('name')?.get(i);
-          const sql = describeResults.getChild('sql')?.get(i);
-          const comment = describeResults.getChild('comment')?.get(i);
-          const estimatedSize = describeResults
-            .getChild('estimated_size')
-            ?.get(i);
-          const columnNames = describeResults.getChild('column_names')?.get(i);
-          const columnTypes = describeResults.getChild('column_types')?.get(i);
-          const qualifiedTable = makeQualifiedTableName({
-            database: rowDatabase,
-            schema: rowSchema,
-            table: rowTable,
-          });
-          const columns: TableColumn[] = [];
-          for (let ci = 0; ci < (columnNames?.length ?? 0); ci++) {
-            const columnName = String(columnNames.get(ci));
-            const columnType = String(columnTypes?.get(ci));
-            if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
-              continue;
-            }
-            columns.push({
-              name: columnName,
-              type: columnType,
-            });
-          }
-
-          const dataTable = {
-            table: qualifiedTable,
-            database: rowDatabase,
-            schema: rowSchema,
-            tableName: rowTable,
-            columns,
-            sql,
-            comment,
-            isView: Boolean(isView),
-            rowCount:
-              typeof estimatedSize === 'bigint'
-                ? Number(estimatedSize)
-                : estimatedSize === null
-                  ? undefined
-                  : estimatedSize,
-          };
-
-          // Apply filter (if null, include all tables; bypass filter for exact lookups)
-          if (
-            bypassFilter ||
-            loadTableSchemasFilter === null ||
-            loadTableSchemasFilter(dataTable.table)
-          ) {
-            newTables.push(dataTable);
-          }
-        }
-        return newTables;
-      };
-
-      /**
        * Internal helper to load a table schema by exact name, bypassing the visibility filter.
        * Used when performing exact lookups (e.g., checking if a specific table exists).
        */
@@ -466,8 +331,9 @@ export function createDuckDbSlice({
         const qualifiedName = isQualifiedTableName(tableName)
           ? tableName
           : makeQualifiedTableName({table: tableName});
-        const tables = await loadTableSchemasInternal(qualifiedName, true);
-        return tables[0];
+        const connector = await get().db.getConnector();
+        const [table] = await loadTableSchemas(connector, qualifiedName);
+        return table;
       };
 
       return {
@@ -668,9 +534,13 @@ export function createDuckDbSlice({
           },
 
           async loadTableSchemas(
-            filter?: SchemaAndDatabase & {table?: string},
+            filter?: LoadTableSchemasFilter,
           ): Promise<DataTable[]> {
-            return loadTableSchemasInternal(filter, false);
+            const connector = await get().db.getConnector();
+            return loadTableSchemas(connector, {
+              ...filter,
+              filterFunction: loadTableSchemasFilter,
+            });
           },
 
           async checkTableExists(tableName: string | QualifiedTableName) {
