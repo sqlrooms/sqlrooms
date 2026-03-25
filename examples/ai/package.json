@@ -19,7 +19,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "ai": "6.0.132",
+    "ai": "^6.0.132",
     "lucide-react": "^0.555.0",
     "zod": "^4.1.8"
   },

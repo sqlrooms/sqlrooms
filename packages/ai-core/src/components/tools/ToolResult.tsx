@@ -39,7 +39,10 @@ export const ToolResult: FC<ToolResultProps> = ({
   // check if args has a property called 'reasoning'
   const reason = args.reasoning as string | undefined;
 
-  const isCompleted = state === 'output-available' || state === 'output-error';
+  const isCompleted =
+    state === 'output-available' ||
+    state === 'output-error' ||
+    state === 'output-denied';
 
   // Determine success: non-object outputs (strings, numbers) are always treated
   // as success. Object outputs are success unless they explicitly set `success: false`.

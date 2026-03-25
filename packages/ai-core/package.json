@@ -27,7 +27,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "ai": "6.0.132",
+    "ai": "^6.0.132",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
     "react-markdown": "^10.1.0",

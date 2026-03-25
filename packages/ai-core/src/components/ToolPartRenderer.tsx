@@ -117,7 +117,6 @@ export const ToolPartRenderer = ({
 
   const output = state === 'output-available' ? part.output : undefined;
   const errorText = state === 'output-error' ? part.errorText : undefined;
-  const isCompleted = state === 'output-available' || state === 'output-error';
   const isApprovalState =
     state === 'approval-requested' ||
     state === 'approval-responded' ||
@@ -180,12 +179,7 @@ export const ToolPartRenderer = ({
 
     return (
       <div>
-        <ToolCallInfo
-          toolName={toolName}
-          input={input}
-          isCompleted={isCompleted}
-          state={state}
-        />
+        <ToolCallInfo toolName={toolName} input={input} state={state} />
         <div data-tool-call-id={toolCallId}>
           {hasAgentProgress ? (
             <AgentProgressRenderer

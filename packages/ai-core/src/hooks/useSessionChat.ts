@@ -7,7 +7,6 @@ import {
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import {fixIncompleteToolCalls} from '../utils';
-import type {AddToolOutput} from '../types';
 
 export type {AddToolOutput} from '../types';
 
@@ -104,9 +103,6 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     sessionId,
   ]);
 
-  // Store addToolOutput in a ref for use in tool approval callbacks
-  const addToolOutputRef = useRef<AddToolOutput>(null!);
-
   const initialMessages = useMemo(() => {
     return fixIncompleteToolCalls(
       (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
@@ -127,14 +123,19 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     id: `${sessionId}::${messagesRevision}`,
     transport,
     messages: initialMessages,
-    // Auto-resend after all approval responses are provided (approve/deny).
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    // Auto-resend after all approval responses are provided (approve/deny),
+    // but skip if the session was aborted.
+    sendAutomaticallyWhen: (
+      options: Parameters<
+        typeof lastAssistantMessageIsCompleteWithApprovalResponses
+      >[0],
+    ) => {
+      if (isAbortedRef.current) return false;
+      return lastAssistantMessageIsCompleteWithApprovalResponses(options);
+    },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
     onError: (error) => onChatError?.(sessionId, error),
   });
-
-  // Capture addToolOutput for use in tool approval callbacks
-  addToolOutputRef.current = addToolOutput;
 
   // If user aborts mid-stream, stop the local chat stream immediately
   useEffect(() => {

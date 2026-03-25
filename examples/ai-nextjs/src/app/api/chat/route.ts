@@ -8,14 +8,10 @@ const DEFAULT_TEMPERATURE = 0;
 
 export async function POST(req: Request) {
   try {
-    const {
-      messages,
-      modelProvider,
-      model,
-      instructions,
-      maxSteps,
-      temperature,
-    } = await req.json();
+    // Security: only accept messages, modelProvider, and model from the client.
+    // instructions, maxSteps, and temperature are server-controlled to prevent
+    // malicious clients from overriding the system prompt or resource limits.
+    const {messages, modelProvider, model} = await req.json();
 
     const modelClient = createOpenAICompatible({
       apiKey: process.env.OPENAI_API_KEY,
@@ -28,10 +24,10 @@ export async function POST(req: Request) {
 
     const agent = new ToolLoopAgent({
       model: languageModel,
-      instructions: instructions || DEFAULT_INSTRUCTIONS,
+      instructions: DEFAULT_INSTRUCTIONS,
       tools,
-      stopWhen: stepCountIs(maxSteps ?? DEFAULT_MAX_STEPS),
-      temperature: temperature ?? DEFAULT_TEMPERATURE,
+      stopWhen: stepCountIs(DEFAULT_MAX_STEPS),
+      temperature: DEFAULT_TEMPERATURE,
     });
 
     return createAgentUIStreamResponse({

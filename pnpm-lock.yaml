@@ -200,7 +200,7 @@ importers:
         version: 1.6.1
       ai:
         specifier: ^5.0.155
-        version: 5.0.155(zod@4.1.13)
+        version: 5.0.160(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -272,7 +272,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vega
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
@@ -342,7 +342,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
@@ -415,7 +415,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
@@ -488,7 +488,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
@@ -564,7 +564,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vega
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       lucide-react:
         specifier: ^0.544.0
@@ -2141,7 +2141,7 @@ importers:
         specifier: workspace:*
         version: link:../ui
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
@@ -2195,7 +2195,7 @@ importers:
         specifier: workspace:*
         version: link:../utils
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       immer:
         specifier: ^11.0.1
@@ -2247,7 +2247,7 @@ importers:
         specifier: workspace:*
         version: link:../ui
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
@@ -3672,7 +3672,7 @@ importers:
         specifier: workspace:*
         version: link:../utils
       ai:
-        specifier: 6.0.132
+        specifier: ^6.0.132
         version: 6.0.132(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
@@ -3728,7 +3728,7 @@ importers:
         version: 5.5.0
       ai:
         specifier: ^5.0.155
-        version: 5.0.155(zod@4.1.13)
+        version: 5.0.160(zod@4.1.13)
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -3760,8 +3760,8 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@ai-sdk/gateway@2.0.59':
-    resolution: {integrity: sha512-hmXtD2InGIMoHm3gf1yZM4GURS0/4ZL4ff9O0jkF1tXcKl9V/72omLZlwlOM9r7pgpr/65H7anaV2t8kbip0FQ==}
+  '@ai-sdk/gateway@2.0.64':
+    resolution: {integrity: sha512-j46B1PqvX6XG6R6xHR2YN/2rlnixvvDekFGDnLXkJhEn6BErGRqzt1jFE8UN6ZPVPp4X9a/RkAale7xERWgydQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
@@ -8065,9 +8065,6 @@ packages:
     resolution: {integrity: sha512-4aUIteuyxtBUhVdiQqcDhKFitwfd9hqoSDYY2KRXiWtgoWJ9Bmise+KfEPDiVHWeJepvF8xJO9/9+WDIciMFFw==}
     engines: {node: '>=18.0.0'}
 
-  '@standard-schema/spec@1.0.0':
-    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
-
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -9431,8 +9428,8 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  ai@5.0.155:
-    resolution: {integrity: sha512-lq6PafJobpWyxnQofOukwIBwWNWKpf4AJMWISwHOOXEjMCcsHR1cKw92rQ/cy9O/tneQpP8uXgNWUDU+f+270A==}
+  ai@5.0.160:
+    resolution: {integrity: sha512-gO7E3pDylxaLGZWWFf6n3DbRXtkAcg0QYySFQA6yB9fxG1PA+PSIXA7eLipyAIryfcFBjOS1BO4okRGT1rn1lA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
@@ -16135,7 +16132,7 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/gateway@2.0.59(zod@4.1.13)':
+  '@ai-sdk/gateway@2.0.64(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
       '@ai-sdk/provider-utils': 3.0.22(zod@4.1.13)
@@ -16171,21 +16168,21 @@ snapshots:
   '@ai-sdk/provider-utils@3.0.17(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.1.13
 
   '@ai-sdk/provider-utils@3.0.18(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.1.13
 
   '@ai-sdk/provider-utils@3.0.22(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.1.13
 
@@ -23147,8 +23144,6 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@standard-schema/spec@1.0.0': {}
-
   '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
@@ -24780,9 +24775,9 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@5.0.155(zod@4.1.13):
+  ai@5.0.160(zod@4.1.13):
     dependencies:
-      '@ai-sdk/gateway': 2.0.59(zod@4.1.13)
+      '@ai-sdk/gateway': 2.0.64(zod@4.1.13)
       '@ai-sdk/provider': 2.0.1
       '@ai-sdk/provider-utils': 3.0.22(zod@4.1.13)
       '@opentelemetry/api': 1.9.0

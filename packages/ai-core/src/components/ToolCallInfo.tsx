@@ -13,7 +13,6 @@ import {cn} from '@sqlrooms/ui';
 type ToolCallInfoProps = {
   toolName: string;
   input: unknown;
-  isCompleted: boolean;
   state:
     | 'input-streaming'
     | 'input-available'
@@ -33,7 +32,6 @@ type ToolCallInfoProps = {
  * @param props - Component props
  * @param props.toolName - Name of the tool being called
  * @param props.input - Input arguments passed to the tool
- * @param props.isCompleted - Whether the tool call has completed
  * @param props.state - Current state of the tool call
  * @returns A React component displaying the tool call details
  */
@@ -48,8 +46,12 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 pl-2 text-xs text-gray-700 dark:text-gray-300">
         {/* Loading/Completed Indicator */}
-        {state !== 'output-available' && state !== 'output-error' ? (
+        {state !== 'output-available' &&
+        state !== 'output-error' &&
+        state !== 'output-denied' ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400 dark:text-gray-500" />
+        ) : state === 'output-denied' ? (
+          <CircleArrowRightIcon className="h-4 w-4 shrink-0 text-red-400 dark:text-red-500" />
         ) : (
           <CircleArrowRightIcon className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
         )}

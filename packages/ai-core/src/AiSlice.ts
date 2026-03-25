@@ -211,7 +211,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     tools,
     getApiKey,
     getBaseUrl,
-    maxSteps = 50,
+    maxSteps,
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
@@ -610,6 +610,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionChatStops.delete(sessionId);
           sessionChatSendMessages.delete(sessionId);
           sessionAddToolOutputs.delete(sessionId);
+          sessionAddToolApprovalResponses.delete(sessionId);
           const now = Date.now();
 
           set((state) =>
@@ -652,6 +653,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionId: string,
           uiMessages: UIMessage[],
         ): boolean => {
+          let updated = false;
           try {
             set((state) =>
               produce(state, (draft) => {
@@ -660,10 +662,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 );
                 if (session) {
                   session.uiMessages = structuredClone(uiMessages);
+                  updated = true;
                 }
               }),
             );
-            return true;
+            return updated;
           } catch (error) {
             console.warn(
               'Failed to persist UI messages:',

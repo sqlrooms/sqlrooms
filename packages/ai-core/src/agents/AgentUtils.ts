@@ -81,7 +81,6 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
     }
   };
 
-  const toolEditState = new Map<string, AgentToolCall>();
   let finalText = '';
 
   const stream = await createAgentUIStream({
@@ -99,7 +98,6 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   try {
     for await (const chunk of stream) {
       throwIfAborted();
-      updateAgentToolCallData(toolEditState, chunk);
       if (chunk.type === 'text-delta') {
         finalText += chunk.delta;
       }
