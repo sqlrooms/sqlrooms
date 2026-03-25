@@ -238,6 +238,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             isDragging={isDragging}
             content={tileContent}
             currentTree={currentValue as MosaicNode<string> | null}
+            panelInfo={panels?.[id]}
           />
         );
       }
@@ -258,6 +259,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             isDragging={isDragging}
             content={tileContent}
             currentTree={currentValue as MosaicNode<string> | null}
+            panelInfo={panels?.[id]}
           />
         );
       }
@@ -285,6 +287,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
           isDragging={isDragging}
           content={tileContent}
           currentTree={currentValue as MosaicNode<string> | null}
+          panelInfo={panels?.[id]}
         />
       );
 

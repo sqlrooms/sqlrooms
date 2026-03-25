@@ -2,7 +2,8 @@ import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {MosaicNode, MosaicPath, MosaicWindow} from 'react-mosaic-component';
 import {MosaicLayoutNode} from '@sqlrooms/layout-config';
-import {findParentArea} from './mosaic-utils';
+import {isDraggableTile} from './mosaic-utils';
+import {RoomPanelInfo} from '../LayoutSlice';
 
 const MosaicTile: FC<{
   id: string;
@@ -11,8 +12,10 @@ const MosaicTile: FC<{
   isDragging: boolean;
   className?: string;
   currentTree?: MosaicNode<string> | null;
+  panelInfo?: RoomPanelInfo;
 }> = (props) => {
-  const {id, content, path, isDragging, className, currentTree} = props;
+  const {id, content, path, isDragging, className, currentTree, panelInfo} =
+    props;
   const body = (
     <div
       className={cn(
@@ -25,17 +28,18 @@ const MosaicTile: FC<{
     </div>
   );
 
-  const parentArea = currentTree
-    ? findParentArea(currentTree as MosaicLayoutNode, path)
-    : undefined;
-  const isDraggable = parentArea?.node?.draggable === true;
+  const draggable = currentTree
+    ? isDraggableTile(currentTree as MosaicLayoutNode, path)
+    : false;
 
-  if (!isDraggable) {
+  if (!draggable) {
     return body;
   }
 
+  const title = panelInfo?.title ?? id;
+
   return (
-    <MosaicWindow<string> title={id} path={path} draggable={true}>
+    <MosaicWindow<string> title={title} path={path} draggable={true}>
       {body}
     </MosaicWindow>
   );

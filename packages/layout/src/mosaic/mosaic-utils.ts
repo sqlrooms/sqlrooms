@@ -134,6 +134,26 @@ export function findAreaById(
   return undefined;
 }
 
+/** Find a split node by its `id` field. */
+export function findSplitById(
+  root: MosaicLayoutNode | null | undefined,
+  splitId: string,
+  path: MosaicPath = [],
+): {node: MosaicLayoutSplitNode; path: MosaicPath} | undefined {
+  if (!root || typeof root === 'string') return undefined;
+  if (isMosaicLayoutSplitNode(root)) {
+    if (root.id === splitId) return {node: root, path};
+    for (let i = 0; i < root.children.length; i++) {
+      const result = findSplitById(root.children[i], splitId, [...path, i]);
+      if (result) return result;
+    }
+  }
+  if (isMosaicLayoutTabsNode(root)) {
+    return undefined;
+  }
+  return undefined;
+}
+
 /** Get the node at a given path in the layout tree. */
 export function getNodeAtPath(
   root: MosaicLayoutNode | null | undefined,
@@ -192,6 +212,30 @@ export function findParentSplit(
 }
 
 export type ExpandDirection = 'left' | 'right' | 'up' | 'down';
+
+/**
+ * Check whether a tile at the given path should be draggable.
+ * Walks up ancestors looking for a split or tabs node with `draggable: true`.
+ */
+export function isDraggableTile(
+  root: MosaicLayoutNode | null | undefined,
+  tilePath: MosaicPath,
+): boolean {
+  if (!root) return false;
+  for (let depth = tilePath.length - 1; depth >= 0; depth--) {
+    const ancestorPath = tilePath.slice(0, depth);
+    const ancestor = getNodeAtPath(root, ancestorPath);
+    if (!ancestor || typeof ancestor === 'string') continue;
+    if (
+      (isMosaicLayoutSplitNode(ancestor) || isMosaicLayoutTabsNode(ancestor)) &&
+      'draggable' in ancestor &&
+      ancestor.draggable === true
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Determine which direction a collapsed area should expand toward.

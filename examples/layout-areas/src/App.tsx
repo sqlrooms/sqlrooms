@@ -1,13 +1,11 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeProvider, ThemeSwitch} from '@sqlrooms/ui';
 import {
-  BarChart3Icon,
   PanelBottomCloseIcon,
   PanelBottomOpenIcon,
+  PlusIcon,
 } from 'lucide-react';
-import {useCallback, useRef} from 'react';
 import {roomStore, useRoomStore} from './store';
-import {DynamicChartPanel} from './panels/DynamicChartPanel';
 
 function CollapseBottomButton() {
   const isCollapsed = useRoomStore((s) => s.layout.isAreaCollapsed('bottom'));
@@ -23,30 +21,16 @@ function CollapseBottomButton() {
   );
 }
 
-function LayoutWithCreate() {
-  const registerPanel = useRoomStore((s) => s.layout.registerPanel);
-  const addPanelToArea = useRoomStore((s) => s.layout.addPanelToArea);
-  const counterRef = useRef(0);
-
-  const handleTabCreate = useCallback(
-    (areaId: string) => {
-      counterRef.current += 1;
-      const n = counterRef.current;
-      const panelId = `chart-${n}`;
-      const label = `Chart ${n}`;
-
-      registerPanel(panelId, {
-        title: label,
-        icon: BarChart3Icon,
-        component: () => <DynamicChartPanel label={label} />,
-        area: areaId,
-      });
-      addPanelToArea(areaId, panelId);
-    },
-    [registerPanel, addPanelToArea],
+function AddChartButton() {
+  const addChart = useRoomStore((s) => s.dashboard.addChart);
+  return (
+    <RoomShell.SidebarButton
+      title="Add chart to dashboard"
+      icon={PlusIcon}
+      isSelected={false}
+      onClick={addChart}
+    />
   );
-
-  return <RoomShell.LayoutComposer onTabCreate={handleTabCreate} />;
 }
 
 export const App = () => {
@@ -56,11 +40,12 @@ export const App = () => {
         <RoomShell.SidebarContainer>
           <RoomShell.AreaPanelButtons area="left" />
           <div className="flex-1" />
+          <AddChartButton />
           <CollapseBottomButton />
           <RoomShell.CommandPalette.Button />
           <ThemeSwitch />
         </RoomShell.SidebarContainer>
-        <LayoutWithCreate />
+        <RoomShell.LayoutComposer />
         <RoomShell.CommandPalette />
       </RoomShell>
     </ThemeProvider>

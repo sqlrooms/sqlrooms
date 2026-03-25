@@ -22,6 +22,7 @@ export {
   findMosaicNodePathByKey,
   removeMosaicNodeByKey,
   findAreaById,
+  findSplitById,
   getNodeAtPath,
   findParentArea,
   findParentSplit,

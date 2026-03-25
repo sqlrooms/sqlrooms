@@ -29,7 +29,7 @@ export function DynamicChartPanel({label}: {label: string}) {
         <BarChart3Icon className="h-4 w-4" />
         {label}
       </div>
-      <div className="flex flex-1 items-end gap-1.5 rounded p-4">
+      <div className="flex flex-1 items-end gap-1.5 rounded p-2">
         {data.map((h, i) => (
           <div
             key={i}

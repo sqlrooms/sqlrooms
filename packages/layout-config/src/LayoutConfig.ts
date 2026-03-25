@@ -18,7 +18,9 @@ export type MosaicLayoutNodeKey = z.infer<typeof MosaicLayoutNodeKey>;
 
 const BaseMosaicLayoutSplitNode = z.object({
   type: z.literal('split'),
+  id: z.string().optional(),
   direction: MosaicLayoutDirection,
+  draggable: z.boolean().optional(),
   splitPercentages: z.array(z.number()).optional(),
 });
 

@@ -20,9 +20,10 @@ import {StateCreator} from 'zustand';
 import {
   findAreaById,
   findParentSplit,
+  findSplitById,
   makeMosaicStack,
   removeMosaicNodeByKey,
-} from './mosaic';
+} from './mosaic/mosaic-utils';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
 const ToggleLayoutPanelCommandInput = z.object({
@@ -117,6 +118,8 @@ export type LayoutSliceState = {
     registerPanel: (panelId: string, info: RoomPanelInfo) => void;
     /** Unregister a dynamically added panel */
     unregisterPanel: (panelId: string) => void;
+    /** Add a panel as a child of a named split node */
+    addChildToSplit: (splitId: string, panelId: string) => void;
   };
 };
 
@@ -401,6 +404,22 @@ export function createLayoutSlice({
             set((state) =>
               produce(state, (draft) => {
                 delete draft.layout.panels[panelId];
+              }),
+            );
+          },
+
+          addChildToSplit: (splitId: string, panelId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const found = findSplitById(draft.layout.config.nodes, splitId);
+                if (!found) return;
+                if (!found.node.children.includes(panelId)) {
+                  found.node.children.push(panelId);
+                }
+                const count = found.node.children.length;
+                found.node.splitPercentages = Array(count).fill(
+                  Math.round(100 / count),
+                );
               }),
             );
           },
