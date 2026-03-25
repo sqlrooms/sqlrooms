@@ -322,4 +322,170 @@ describe('DuckDbSlice', () => {
       expect(rowCounts[keys[0] as string]).toBe(100);
     });
   });
+
+  describe('loadTableSchemas filter bypass', () => {
+    it('should filter out internal tables by default', async () => {
+      // Create an internal table
+      await store
+        .getState()
+        .db.createTableFromQuery(
+          '__sqlrooms_internal',
+          'SELECT 1 as id, 2 as value',
+        );
+
+      // Create a normal table
+      await store
+        .getState()
+        .db.createTableFromQuery('normal_table', 'SELECT 1 as id, 2 as value');
+
+      // Load all tables without bypass - should not include internal table
+      const tables = await store.getState().db.loadTableSchemas();
+
+      // Should not include the internal table
+      expect(tables.find((t) => t.tableName === '__sqlrooms_internal')).toBe(
+        undefined,
+      );
+
+      // Should include the normal table
+      expect(tables.find((t) => t.tableName === 'normal_table')).toBeDefined();
+    });
+
+    it('should allow addTable with internal table names', async () => {
+      const data = [
+        {id: 1, name: 'Alice'},
+        {id: 2, name: 'Bob'},
+      ];
+
+      // This should not throw "Failed to add table"
+      const table = await store
+        .getState()
+        .db.addTable('__sqlrooms_users', data);
+
+      expect(table).toBeDefined();
+      expect(table.tableName).toBe('__sqlrooms_users');
+
+      // Verify it exists in the database
+      const connector = await store.getState().db.getConnector();
+      const result = await connector.query(
+        'SELECT * FROM __sqlrooms_users ORDER BY id',
+      );
+      expect(result.numRows).toBe(2);
+    });
+
+    it('should allow checkTableExists with internal table names', async () => {
+      // Create an internal table
+      await store
+        .getState()
+        .db.createTableFromQuery(
+          '__sqlrooms_check',
+          'SELECT 1 as id, 2 as value',
+        );
+
+      // checkTableExists should find it
+      const exists = await store
+        .getState()
+        .db.checkTableExists('__sqlrooms_check');
+
+      expect(exists).toBe(true);
+    });
+
+    it('should allow dropTable with internal table names', async () => {
+      // Create an internal table
+      await store
+        .getState()
+        .db.createTableFromQuery(
+          '__sqlrooms_drop_test',
+          'SELECT 1 as id, 2 as value',
+        );
+
+      // Verify it exists
+      const connector = await store.getState().db.getConnector();
+      const beforeDrop = await connector.query(
+        'SELECT * FROM __sqlrooms_drop_test',
+      );
+      expect(beforeDrop.numRows).toBe(1);
+
+      // Drop it - should not throw
+      await store.getState().db.dropTable('__sqlrooms_drop_test');
+
+      // Verify it's gone
+      await expect(
+        connector.query('SELECT * FROM __sqlrooms_drop_test'),
+      ).rejects.toThrow();
+    });
+
+    it('should allow dropRelation with internal view names', async () => {
+      // Create an internal view
+      await store
+        .getState()
+        .db.createTableFromQuery('__sqlrooms_view', 'SELECT 1 as id', {
+          view: true,
+        });
+
+      // Verify it exists
+      const connector = await store.getState().db.getConnector();
+      const beforeDrop = await connector.query('SELECT * FROM __sqlrooms_view');
+      expect(beforeDrop.numRows).toBe(1);
+
+      // Drop it - should not throw
+      await store.getState().db.dropRelation('__sqlrooms_view');
+
+      // Verify it's gone
+      await expect(
+        connector.query('SELECT * FROM __sqlrooms_view'),
+      ).rejects.toThrow();
+    });
+
+    it('should filter internal schemas by default', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an internal schema and table
+      await connector.query('CREATE SCHEMA __sqlrooms_schema');
+      await connector.query(
+        'CREATE TABLE __sqlrooms_schema.test_table (id INT)',
+      );
+
+      // Create a normal schema and table
+      await connector.query('CREATE SCHEMA normal_schema');
+      await connector.query('CREATE TABLE normal_schema.test_table (id INT)');
+
+      // Load all tables without bypass
+      const tables = await store.getState().db.loadTableSchemas();
+
+      // Should not include tables from internal schema
+      expect(
+        tables.find(
+          (t) =>
+            t.schema === '__sqlrooms_schema' && t.tableName === 'test_table',
+        ),
+      ).toBe(undefined);
+
+      // Should include tables from normal schema
+      expect(
+        tables.find(
+          (t) => t.schema === 'normal_schema' && t.tableName === 'test_table',
+        ),
+      ).toBeDefined();
+    });
+
+    it('should allow exact lookup of tables in internal schemas', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an internal schema and table
+      await connector.query('CREATE SCHEMA __sqlrooms_test_schema');
+      await connector.query(
+        'CREATE TABLE __sqlrooms_test_schema.my_table (id INT)',
+      );
+
+      // checkTableExists should find it with qualified name
+      const exists = await store
+        .getState()
+        .db.checkTableExists({
+          schema: '__sqlrooms_test_schema',
+          table: 'my_table',
+        });
+
+      expect(exists).toBe(true);
+    });
+  });
 });

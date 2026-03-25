@@ -38,6 +38,7 @@ export const createDefaultLoadTableSchemasFilter = (
   table: QualifiedTableName,
 ): boolean => {
   return (
+    !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
     !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
     !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
   );
@@ -87,6 +88,8 @@ export type SchemaAndDatabase = {
   schema?: string;
   database?: string;
 };
+
+export type SchemaDatabaseAndTable = SchemaAndDatabase & {table?: string};
 
 /**
  * State and actions for the DuckDB slice
@@ -157,9 +160,7 @@ export type DuckDbSliceState = {
     /**
      * Load the schemas of the tables in the database.
      */
-    loadTableSchemas(
-      filter?: SchemaAndDatabase & {table?: string},
-    ): Promise<DataTable[]>;
+    loadTableSchemas(filter?: SchemaDatabaseAndTable): Promise<DataTable[]>;
 
     /**
      * @deprecated Use findTableByName instead
@@ -330,6 +331,145 @@ export function createDuckDbSlice({
   let pendingSchemaRefresh = false;
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
+      /**
+       * Internal helper to load table schemas with optional filter bypass.
+       * Used for exact lookups where we don't want the visibility filter to hide results.
+       */
+      const loadTableSchemasInternal = async (
+        filter?: SchemaDatabaseAndTable,
+        bypassFilter: boolean = false,
+      ): Promise<DataTable[]> => {
+        const {schema, database, table} = filter || {};
+        const connector = await get().db.getConnector();
+        const buildMetadataWhereClause = (nameColumn: string) =>
+          [
+            database
+              ? `database_name = ${escapeVal(database)}`
+              : `database_name != 'system'`,
+            schema ? `schema_name = ${escapeVal(schema)}` : '',
+            table ? `${nameColumn} = ${escapeVal(table)}` : '',
+          ]
+            .filter(Boolean)
+            .join(' AND ');
+        const sql = `WITH tables_and_views AS (
+          FROM duckdb_tables() SELECT
+            database_name AS database,
+            schema_name AS schema,
+            table_name AS name,
+            sql,
+            comment,
+            estimated_size,
+            FALSE AS isView
+          WHERE ${buildMetadataWhereClause('table_name')}
+          UNION ALL
+          FROM duckdb_views() SELECT
+            database_name AS database,
+            schema_name AS schema,
+            view_name AS name,
+            sql,
+            comment,
+            NULL AS estimated_size,
+            TRUE AS isView
+          WHERE ${buildMetadataWhereClause('view_name')}
+        ),
+        columns AS (
+          FROM duckdb_columns() SELECT
+            database_name AS database,
+            schema_name AS schema,
+            table_name AS name,
+            list(column_name ORDER BY column_index) AS column_names,
+            list(data_type ORDER BY column_index) AS column_types
+          WHERE ${buildMetadataWhereClause('table_name')}
+          GROUP BY database_name, schema_name, table_name
+        )
+        SELECT
+          isView,
+          database,
+          schema,
+          name,
+          column_names,
+          column_types,
+          sql,
+          comment,
+          estimated_size
+        FROM tables_and_views
+        LEFT JOIN columns USING (database, schema, name)
+        ORDER BY isView, database, schema, name`;
+        const describeResults = await connector.query(sql);
+        const newTables: DataTable[] = [];
+        for (let i = 0; i < describeResults.numRows; i++) {
+          const isView = describeResults.getChild('isView')?.get(i);
+          const rowDatabase = describeResults.getChild('database')?.get(i);
+          const rowSchema = describeResults.getChild('schema')?.get(i);
+          const rowTable = describeResults.getChild('name')?.get(i);
+          const sql = describeResults.getChild('sql')?.get(i);
+          const comment = describeResults.getChild('comment')?.get(i);
+          const estimatedSize = describeResults
+            .getChild('estimated_size')
+            ?.get(i);
+          const columnNames = describeResults.getChild('column_names')?.get(i);
+          const columnTypes = describeResults.getChild('column_types')?.get(i);
+          const qualifiedTable = makeQualifiedTableName({
+            database: rowDatabase,
+            schema: rowSchema,
+            table: rowTable,
+          });
+          const columns: TableColumn[] = [];
+          for (let ci = 0; ci < (columnNames?.length ?? 0); ci++) {
+            const columnName = String(columnNames.get(ci));
+            const columnType = String(columnTypes?.get(ci));
+            if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
+              continue;
+            }
+            columns.push({
+              name: columnName,
+              type: columnType,
+            });
+          }
+
+          const dataTable = {
+            table: qualifiedTable,
+            database: rowDatabase,
+            schema: rowSchema,
+            tableName: rowTable,
+            columns,
+            sql,
+            comment,
+            isView: Boolean(isView),
+            rowCount:
+              typeof estimatedSize === 'bigint'
+                ? Number(estimatedSize)
+                : estimatedSize === null
+                  ? undefined
+                  : estimatedSize,
+          };
+
+          // Apply filter (if null, include all tables; bypass filter for exact lookups)
+          if (
+            bypassFilter ||
+            loadTableSchemasFilter === null ||
+            loadTableSchemasFilter(dataTable.table)
+          ) {
+            newTables.push(dataTable);
+          }
+        }
+        return newTables;
+      };
+
+      /**
+       * Internal helper to load a table schema by exact name, bypassing the visibility filter.
+       * Used when performing exact lookups (e.g., checking if a specific table exists).
+       */
+      const loadTableSchemaByName = async (
+        tableName: string | QualifiedTableName,
+      ): Promise<DataTable | undefined> => {
+        const qualifiedName = isQualifiedTableName(tableName)
+          ? tableName
+          : makeQualifiedTableName({table: tableName});
+        const tables = await loadTableSchemasInternal(qualifiedName, true);
+        return tables[0];
+      };
+
       return {
         db: {
           connector, // Will be initialized during init
@@ -530,135 +670,12 @@ export function createDuckDbSlice({
           async loadTableSchemas(
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
-            const {schema, database, table} = filter || {};
-            const connector = await get().db.getConnector();
-            const buildMetadataWhereClause = (nameColumn: string) =>
-              [
-                database
-                  ? `database_name = ${escapeVal(database)}`
-                  : `database_name != 'system'`,
-                schema ? `schema_name = ${escapeVal(schema)}` : '',
-                table ? `${nameColumn} = ${escapeVal(table)}` : '',
-              ]
-                .filter(Boolean)
-                .join(' AND ');
-            const sql = `WITH tables_and_views AS (
-              FROM duckdb_tables() SELECT
-                database_name AS database,
-                schema_name AS schema,
-                table_name AS name,
-                sql,
-                comment,
-                estimated_size,
-                FALSE AS isView
-              WHERE ${buildMetadataWhereClause('table_name')}
-              UNION ALL
-              FROM duckdb_views() SELECT
-                database_name AS database,
-                schema_name AS schema,
-                view_name AS name,
-                sql,
-                comment,
-                NULL AS estimated_size,
-                TRUE AS isView
-              WHERE ${buildMetadataWhereClause('view_name')}
-            ),
-            columns AS (
-              FROM duckdb_columns() SELECT
-                database_name AS database,
-                schema_name AS schema,
-                table_name AS name,
-                list(column_name ORDER BY column_index) AS column_names,
-                list(data_type ORDER BY column_index) AS column_types
-              WHERE ${buildMetadataWhereClause('table_name')}
-              GROUP BY database_name, schema_name, table_name
-            )
-            SELECT
-              isView,
-              database,
-              schema,
-              name,
-              column_names,
-              column_types,
-              sql,
-              comment,
-              estimated_size
-            FROM tables_and_views
-            LEFT JOIN columns USING (database, schema, name)
-            ORDER BY isView, database, schema, name`;
-            const describeResults = await connector.query(sql);
-            const newTables: DataTable[] = [];
-            for (let i = 0; i < describeResults.numRows; i++) {
-              const isView = describeResults.getChild('isView')?.get(i);
-              const rowDatabase = describeResults.getChild('database')?.get(i);
-              const rowSchema = describeResults.getChild('schema')?.get(i);
-              const rowTable = describeResults.getChild('name')?.get(i);
-              const sql = describeResults.getChild('sql')?.get(i);
-              const comment = describeResults.getChild('comment')?.get(i);
-              const estimatedSize = describeResults
-                .getChild('estimated_size')
-                ?.get(i);
-              const columnNames = describeResults
-                .getChild('column_names')
-                ?.get(i);
-              const columnTypes = describeResults
-                .getChild('column_types')
-                ?.get(i);
-              const qualifiedTable = makeQualifiedTableName({
-                database: rowDatabase,
-                schema: rowSchema,
-                table: rowTable,
-              });
-              const columns: TableColumn[] = [];
-              for (let ci = 0; ci < (columnNames?.length ?? 0); ci++) {
-                const columnName = String(columnNames.get(ci));
-                const columnType = String(columnTypes?.get(ci));
-                if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
-                  continue;
-                }
-                columns.push({
-                  name: columnName,
-                  type: columnType,
-                });
-              }
-
-              const dataTable = {
-                table: qualifiedTable,
-                database: rowDatabase,
-                schema: rowSchema,
-                tableName: rowTable,
-                columns,
-                sql,
-                comment,
-                isView: Boolean(isView),
-                rowCount:
-                  typeof estimatedSize === 'bigint'
-                    ? Number(estimatedSize)
-                    : estimatedSize === null
-                      ? undefined
-                      : estimatedSize,
-              };
-
-              // Apply filter (if null, include all tables)
-              if (
-                loadTableSchemasFilter === null ||
-                loadTableSchemasFilter(dataTable.table)
-              ) {
-                newTables.push(dataTable);
-              }
-            }
-            return newTables;
+            return loadTableSchemasInternal(filter, false);
           },
 
           async checkTableExists(tableName: string | QualifiedTableName) {
-            const qualifiedName = isQualifiedTableName(tableName)
-              ? tableName
-              : makeQualifiedTableName({table: tableName});
-            const table = (await get().db.loadTableSchemas(qualifiedName))[0];
-            if (!table) {
-              return false;
-            }
-            return true;
+            const table = await loadTableSchemaByName(tableName);
+            return Boolean(table);
           },
 
           async dropRelation(tableName): Promise<void> {
@@ -668,7 +685,7 @@ export function createDuckDbSlice({
               : makeQualifiedTableName({table: tableName});
             const table =
               get().db.findTableByName(qualifiedTable) ??
-              (await get().db.loadTableSchemas(qualifiedTable))[0];
+              (await loadTableSchemaByName(qualifiedTable));
             const isView = table?.isView;
             if (isView) {
               await connector.query(`DROP VIEW IF EXISTS ${qualifiedTable};`);
@@ -685,7 +702,7 @@ export function createDuckDbSlice({
               : makeQualifiedTableName({table: tableName});
             const table =
               get().db.findTableByName(qualifiedTable) ??
-              (await get().db.loadTableSchemas(qualifiedTable))[0];
+              (await loadTableSchemaByName(qualifiedTable));
 
             if (table?.isView) {
               throw new Error(
@@ -711,7 +728,7 @@ export function createDuckDbSlice({
                 replace: true,
               });
             }
-            const newTable = (await db.loadTableSchemas(qualifiedName))[0];
+            const newTable = await loadTableSchemaByName(qualifiedName);
             if (!newTable) {
               throw new Error('Failed to add table');
             }
