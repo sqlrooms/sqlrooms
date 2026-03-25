@@ -15,6 +15,7 @@ export {SqlCellContentComponent as SqlCellContent};
 export {SqlCellRunButtonComponent as SqlCellRunButton};
 export {TextCellContent} from './components/TextCellContent';
 export {VegaCellContent} from './components/VegaCellContent';
+export {CellSourceSelector} from './components/CellSourceSelector';
 export {createDefaultCellRegistry} from './defaultCellRegistry';
 export {getRenderableDependencyEdges} from './dagUtils';
 export {

@@ -1,33 +1,18 @@
-import {
-  Button,
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@sqlrooms/ui';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {VegaLiteChart, useVegaChartContext} from '@sqlrooms/vega';
 import {produce} from 'immer';
 import {Filter} from 'lucide-react';
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useCellsStore} from '../hooks';
 import type {
   BrushFieldType,
-  Cell,
   CellContainerProps,
   CrossFilterSelection,
-  SqlCellData,
   SqlCellStatus,
   VegaCell,
 } from '../types';
-import {getEffectiveResultName} from '../utils';
 import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
+import {CellSourceSelector} from './CellSourceSelector';
 import {VegaConfigPanel} from './VegaConfigPanel';
 
 /**
@@ -122,14 +107,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   const getCrossFilterPredicate = useCellsStore(
     (s) => s.cells.getCrossFilterPredicate,
   );
-  const dbTables = useCellsStore((s) => s.db.tables);
-  const tableDepSchemas = useCellsStore((s) => s.cells.config.tableDepSchemas);
-
-  // Find available SQL cells in the same sheet
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const sheetCellIds = useCellsStore((s) =>
-    currentSheetId ? s.cells.config.sheets[currentSheetId]?.cellIds : undefined,
-  );
 
   // Subscribe to cross-filter selections so we re-render when siblings change
   const selectedSqlId = cell.data.sqlId;
@@ -139,20 +116,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   );
   // Needed to satisfy exhaustive-deps for the memoized predicate
   void crossFilterGroup;
-
-  const availableSqlCells = useMemo(() => {
-    if (!sheetCellIds) return [];
-    return sheetCellIds
-      .map((cid) => cellsData[cid])
-      .filter((c): c is Cell & {type: 'sql'} => c?.type === 'sql');
-  }, [sheetCellIds, cellsData]);
-
-  const availableTables = useMemo(() => {
-    const schemas = new Set(tableDepSchemas ?? ['main']);
-    return dbTables.filter(
-      (t) => !t.isView && t.table.schema != null && schemas.has(t.table.schema),
-    );
-  }, [dbTables, tableDepSchemas]);
 
   const selectedSqlStatus = selectedSqlId
     ? cellsStatus[selectedSqlId]
@@ -270,51 +233,10 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   const header = (
     <div className="flex items-center gap-2">
-      <Select value={selectValue} onValueChange={handleDataSourceChange}>
-        <SelectTrigger className="h-6 w-[180px] text-xs shadow-none">
-          <SelectValue placeholder="Select data source" />
-        </SelectTrigger>
-        <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-          {availableSqlCells.length > 0 && (
-            <SelectGroup>
-              <SelectLabel className="text-muted-foreground text-[10px]">
-                Cells
-              </SelectLabel>
-              {availableSqlCells.map((sql) => (
-                <SelectItem
-                  className="text-xs"
-                  key={sql.id}
-                  value={`cell:${sql.id}`}
-                >
-                  {getEffectiveResultName(
-                    sql.data as SqlCellData,
-                    convertToValidColumnOrTableName,
-                  )}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          )}
-          {availableTables.length > 0 && (
-            <SelectGroup>
-              <SelectLabel className="text-muted-foreground text-[10px]">
-                Tables
-              </SelectLabel>
-              {availableTables.map((t) => {
-                const qualName = `${t.table.schema}.${t.table.table}`;
-                return (
-                  <SelectItem
-                    className="text-xs"
-                    key={qualName}
-                    value={`table:${qualName}`}
-                  >
-                    {qualName}
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          )}
-        </SelectContent>
-      </Select>
+      <CellSourceSelector
+        value={selectValue}
+        onValueChange={handleDataSourceChange}
+      />
       <Button
         size="xs"
         variant="secondary"
@@ -342,9 +264,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
           </TooltipContent>
         </Tooltip>
       )}
-      <span className="text-[10px] font-bold text-gray-400 uppercase">
-        Vega
-      </span>
     </div>
   );
 
