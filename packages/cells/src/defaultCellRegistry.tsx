@@ -226,6 +226,7 @@ export function createDefaultCellRegistry(): CellRegistry {
         type: 'vega',
         data: {
           title: 'Chart',
+          crossFilter: {enabled: true},
           vegaSpec: {
             data: {name: 'queryResult'},
             mark: 'bar',
@@ -242,7 +243,11 @@ export function createDefaultCellRegistry(): CellRegistry {
       ),
       findDependencies: async ({cell}) => {
         const sqlId = (cell as VegaCell).data.sqlId;
-        return sqlId ? [sqlId] : [];
+        const tableRef = (cell as VegaCell).data.tableRef;
+        return {
+          cellIds: sqlId ? [sqlId] : [],
+          tableNames: tableRef ? [tableRef] : [],
+        };
       },
     },
     input: {

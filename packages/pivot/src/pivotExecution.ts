@@ -72,9 +72,8 @@ export async function createOrReplacePivotRelations(args: {
     `SELECT DISTINCT col_label FROM ${relations.cells} ORDER BY col_label`,
     {signal},
   );
-  const colKeys = Array.from(
-    {length: colLabels.numRows},
-    (_, index) => String(colLabels.getChild('col_label')?.get(index) ?? ''),
+  const colKeys = Array.from({length: colLabels.numRows}, (_, index) =>
+    String(colLabels.getChild('col_label')?.get(index) ?? ''),
   );
   const exportQuery = buildPivotExportQuery(config, source, colKeys);
   await connector.query(
