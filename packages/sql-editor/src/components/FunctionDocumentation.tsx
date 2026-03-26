@@ -2,6 +2,8 @@
 
 import type {FC} from 'react';
 import {zip, uniq} from 'es-toolkit';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type {FunctionSuggestion} from '@sqlrooms/db';
 
 export interface FunctionDocumentationProps {
@@ -21,7 +23,11 @@ export const FunctionDocumentation: FC<FunctionDocumentationProps> = ({
   return (
     <div className="max-h-[400px] max-w-[600px] overflow-auto p-2 text-sm">
       <FunctionSignatures functions={functions} overloadsToShow={3} />
-      {description && <p className="mt-2 italic">{description}</p>}
+      {description && (
+        <div className="prose dark:prose-invert prose-sm mt-2">
+          <Markdown remarkPlugins={[remarkGfm]}>{description}</Markdown>
+        </div>
+      )}
       {examples.length > 0 && (
         <FunctionExamples examples={examples} examplesToShow={3} />
       )}

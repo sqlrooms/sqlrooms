@@ -54,6 +54,8 @@
     "lucide-react": "^0.556.0",
     "monaco-editor": "^0.55.1",
     "react-hook-form": "^7.63.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

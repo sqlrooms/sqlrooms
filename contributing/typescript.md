@@ -18,3 +18,7 @@
 # Vega
 
 - Use typings for Vega-specs
+
+# es-toolkit
+
+- Prefer utils from `es-toolkit` package over complex built-in functions chaining
