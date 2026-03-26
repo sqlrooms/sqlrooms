@@ -43,7 +43,7 @@ export const SelectionListener: React.FC<SelectionListenerProps> = ({
           return;
         }
 
-        const fieldValue = value[brushField];
+        const fieldValue = value.x ?? value[brushField];
 
         if (Array.isArray(fieldValue) && fieldValue.length === 2) {
           const selection: CrossFilterSelection = {

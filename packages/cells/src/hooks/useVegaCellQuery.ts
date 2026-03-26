@@ -35,7 +35,7 @@ export function useVegaCellQuery(params: {
       : null;
 
   const selectedSqlQuery = crossFilterPredicate
-    ? `SELECT * FROM (${baseSqlQuery}) AS _cells_base WHERE ${crossFilterPredicate}`
+    ? `SELECT * FROM (${baseSqlQuery.replace(/;\s*$/, '')}) AS _cells_base WHERE ${crossFilterPredicate}`
     : baseSqlQuery;
 
   return {

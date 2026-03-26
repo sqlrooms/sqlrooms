@@ -201,8 +201,19 @@ export function toDataSourceCell(cell: SqlCell | string): string {
 }
 
 export function toDataSourceTable(table: QualifiedTableName | string): string {
-  const qualifiedName =
-    typeof table === 'string' ? table : `${table.schema}.${table.table}`;
+  if (typeof table === 'string') {
+    return `${DATA_SOURCE_TABLE_PREFIX}${table}`;
+  }
+
+  // Escape each identifier segment: double any internal quotes, then wrap in quotes
+  const escapeIdentifier = (id: string) => `"${id.replace(/"/g, '""')}"`;
+
+  const qualifiedName = [
+    table.schema ? escapeIdentifier(table.schema) : null,
+    escapeIdentifier(table.table),
+  ]
+    .filter(Boolean)
+    .join('.');
 
   return `${DATA_SOURCE_TABLE_PREFIX}${qualifiedName}`;
 }
