@@ -77,5 +77,8 @@ export function createCompletion({
   // Override default SQL completions with our custom completion source
   return autocompletion({
     override: [completionSource],
+    // Don't auto-select the first item when completion list opens
+    // This prevents the info tooltip from showing immediately
+    selectOnOpen: false,
   });
 }
