@@ -1,12 +1,9 @@
-import {MosaicLayoutNode} from '@sqlrooms/layout-config';
 import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   RoomShellSliceState,
-  RoomPanelInfo,
 } from '@sqlrooms/room-shell';
-import {produce} from 'immer';
 import {
   BarChart3Icon,
   DatabaseIcon,
@@ -16,22 +13,29 @@ import {
   TerminalIcon,
 } from 'lucide-react';
 import {ConsolePanel} from './panels/ConsolePanel';
-import {DashboardPanel} from './panels/DashboardPanel';
 import {DataSourcesPanel} from './panels/DataSourcesPanel';
 import {DynamicChartPanel} from './panels/DynamicChartPanel';
 import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 
 export type RoomState = RoomShellSliceState & {
-  dashboard: {
-    nodes: MosaicLayoutNode | null;
-    panels: Record<string, RoomPanelInfo>;
-    setNodes: (nodes: MosaicLayoutNode | null) => void;
-    addChart: () => void;
-  };
+  addDashboard: (areaId?: string) => void;
 };
 
-let chartCounter = 0;
+const CHART_LABELS = [
+  'Revenue',
+  'Users',
+  'Conversions',
+  'Sessions',
+  'Bounce Rate',
+  'Retention',
+  'Signups',
+  'Churn',
+  'MRR',
+  'ARPU',
+];
+
+let dashboardCounter = 0;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
@@ -55,7 +59,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 type: 'split',
                 direction: 'column',
                 children: [
-                  'dashboard',
+                  {
+                    type: 'tabs',
+                    id: 'main',
+                    tabs: ['dashboard-overview', 'dashboard-growth'],
+                    activeTabIndex: 0,
+                    showTabStrip: true,
+                    creatableTabs: true,
+                    closeableTabs: true,
+                    searchableTabs: true,
+                  },
                   {
                     type: 'tabs',
                     id: 'bottom',
@@ -85,10 +98,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             icon: TableIcon,
             area: 'left',
           },
-          dashboard: {
-            title: 'Dashboard',
+          'dashboard-overview': {
+            title: 'Overview',
+            component: () => <DynamicChartPanel label="Overview" />,
             icon: LayoutDashboardIcon,
-            component: DashboardPanel,
+            area: 'main',
+          },
+          'dashboard-growth': {
+            title: 'Growth',
+            component: () => <DynamicChartPanel label="Growth" />,
+            icon: LayoutDashboardIcon,
+            area: 'main',
           },
           console: {
             title: 'Console',
@@ -106,70 +126,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     })(set, get, store),
 
-    dashboard: {
-      nodes: {
-        type: 'split',
-        direction: 'row',
-        draggable: true,
-        children: ['chart-a', 'chart-b', 'chart-c'],
-        splitPercentages: [34, 33, 33],
-      },
-      panels: {
-        'chart-a': {
-          title: 'Revenue',
-          component: () => <DynamicChartPanel label="Revenue" />,
-          icon: BarChart3Icon,
-        },
-        'chart-b': {
-          title: 'Users',
-          component: () => <DynamicChartPanel label="Users" />,
-          icon: BarChart3Icon,
-        },
-        'chart-c': {
-          title: 'Conversions',
-          component: () => <DynamicChartPanel label="Conversions" />,
-          icon: BarChart3Icon,
-        },
-      },
-      setNodes: (nodes) =>
-        set((state) =>
-          produce(state, (draft) => {
-            draft.dashboard.nodes = nodes;
-          }),
-        ),
-      addChart: () => {
-        chartCounter += 1;
-        const n = chartCounter;
-        const panelId = `chart-${n}`;
-        const label = `Chart ${n}`;
+    addDashboard: (areaId = 'main') => {
+      dashboardCounter += 1;
+      const label = CHART_LABELS[(dashboardCounter - 1) % CHART_LABELS.length]!;
+      const panelId = `dashboard-${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;
 
-        set((state) =>
-          produce(state, (draft) => {
-            draft.dashboard.panels[panelId] = {
-              title: label,
-              icon: BarChart3Icon,
-              component: () => <DynamicChartPanel label={label} />,
-            };
-            const nodes = draft.dashboard.nodes;
-            if (!nodes) {
-              draft.dashboard.nodes = panelId;
-            } else if (typeof nodes === 'string') {
-              draft.dashboard.nodes = {
-                type: 'split',
-                direction: 'row',
-                children: [nodes, panelId],
-                splitPercentages: [50, 50],
-              };
-            } else if ('children' in nodes) {
-              nodes.children.push(panelId);
-              const count = nodes.children.length;
-              nodes.splitPercentages = Array(count).fill(
-                Math.round(100 / count),
-              );
-            }
-          }),
-        );
-      },
+      get().layout.registerPanel(panelId, {
+        title: label,
+        icon: BarChart3Icon,
+        component: () => <DynamicChartPanel label={label} />,
+        area: areaId,
+      });
+      get().layout.addPanelToArea(areaId, panelId);
     },
   }),
 );

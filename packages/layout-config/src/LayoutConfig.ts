@@ -51,6 +51,24 @@ export const MosaicLayoutTabsNode = z.object({
 });
 export type MosaicLayoutTabsNode = z.infer<typeof MosaicLayoutTabsNode>;
 
+const BaseMosaicLayoutMosaicNode = z.object({
+  type: z.literal('mosaic'),
+  id: z.string(),
+  draggable: z.boolean().optional(),
+  direction: MosaicLayoutDirection.optional(),
+  splitPercentages: z.array(z.number()).optional(),
+});
+
+export const MosaicLayoutMosaicNode: z.ZodType<MosaicLayoutMosaicNode> =
+  BaseMosaicLayoutMosaicNode.extend({
+    nodes: z.lazy(() => MosaicLayoutNode.nullable()),
+  });
+export type MosaicLayoutMosaicNode = z.infer<
+  typeof BaseMosaicLayoutMosaicNode
+> & {
+  nodes: MosaicLayoutNode | null;
+};
+
 // ---------------------------------------------------------------------------
 // Legacy binary tree types (react-mosaic-component v6) — for migration only
 // ---------------------------------------------------------------------------
@@ -76,7 +94,10 @@ function convertLegacyNode(node: unknown): unknown {
   const obj = node as Record<string, unknown>;
 
   // Already in n-ary format
-  if ('type' in obj && (obj.type === 'split' || obj.type === 'tabs')) {
+  if (
+    'type' in obj &&
+    (obj.type === 'split' || obj.type === 'tabs' || obj.type === 'mosaic')
+  ) {
     return node;
   }
 
@@ -108,11 +129,17 @@ function convertLegacyNode(node: unknown): unknown {
 export type MosaicLayoutNode =
   | MosaicLayoutNodeKey
   | MosaicLayoutSplitNode
-  | MosaicLayoutTabsNode;
+  | MosaicLayoutTabsNode
+  | MosaicLayoutMosaicNode;
 
 export const MosaicLayoutNode: z.ZodType<MosaicLayoutNode> = z.preprocess(
   convertLegacyNode,
-  z.union([MosaicLayoutNodeKey, MosaicLayoutSplitNode, MosaicLayoutTabsNode]),
+  z.union([
+    MosaicLayoutNodeKey,
+    MosaicLayoutSplitNode,
+    MosaicLayoutTabsNode,
+    MosaicLayoutMosaicNode,
+  ]),
 ) as z.ZodType<MosaicLayoutNode>;
 
 // ---------------------------------------------------------------------------
@@ -138,6 +165,17 @@ export function isMosaicLayoutTabsNode(
     typeof node === 'object' &&
     'type' in node &&
     node.type === 'tabs'
+  );
+}
+
+export function isMosaicLayoutMosaicNode(
+  node: MosaicLayoutNode | null | undefined,
+): node is MosaicLayoutMosaicNode {
+  return (
+    node != null &&
+    typeof node === 'object' &&
+    'type' in node &&
+    node.type === 'mosaic'
   );
 }
 

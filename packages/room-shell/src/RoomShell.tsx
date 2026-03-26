@@ -14,7 +14,7 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
-import {MosaicPath} from 'react-mosaic-component';
+import {MosaicNode, MosaicPath} from 'react-mosaic-component';
 import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
   AreaPanelButtons,
@@ -226,7 +226,7 @@ export const LayoutComposer: FC<{
       {layout ? (
         <MosaicLayout
           renderTile={renderTile}
-          value={layout.nodes}
+          value={layout.nodes as MosaicNode<string> | null}
           onChange={handleLayoutChange}
           tileClassName={tileClassName}
           panels={panels}

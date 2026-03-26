@@ -1,4 +1,4 @@
-import React, {FC, useCallback, useEffect, useRef} from 'react';
+import React, {FC, useCallback, useEffect, useMemo, useRef} from 'react';
 import {
   Mosaic,
   MosaicNode,
@@ -26,6 +26,11 @@ import {
   getNodeAtPath,
   findCollapsedSiblings,
   findParentArea,
+  findMosaicNodeById,
+  convertToMosaicTree,
+  convertFromMosaicTree,
+  updateMosaicSubtree,
+  MOSAIC_NODE_KEY_PREFIX,
   ExpandDirection,
   CollapsedAreaInfo,
 } from './mosaic-utils';
@@ -65,6 +70,8 @@ const CHEVRON_ICONS: Record<
 export interface MosaicLayoutProps {
   tileClassName?: string;
   panels?: Record<string, RoomPanelInfo>;
+  /** When true, all tiles in this mosaic are draggable (used for nested mosaics) */
+  forceDraggable?: boolean;
   onTabSelect?: (path: MosaicPath, tabId: string) => void;
   onTabClose?: (path: MosaicPath, tabId: string) => void;
   onTabReorder?: (path: MosaicPath, tabIds: string[]) => void;
@@ -84,6 +91,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     renderTile,
     tileClassName,
     panels,
+    forceDraggable,
     onTabSelect,
     onTabClose,
     onTabReorder,
@@ -98,10 +106,19 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     treeRef.current = currentValue;
   }, [currentValue]);
 
+  const mosaicValue = useMemo(
+    () => convertToMosaicTree(currentValue as MosaicLayoutNode | null),
+    [currentValue],
+  );
+
   const handleLayoutChange = useCallback(
     (nodes: MosaicNode<string> | null) => {
       setDragging(true);
-      onChange?.(nodes);
+      const restored = convertFromMosaicTree(
+        nodes,
+        treeRef.current as MosaicLayoutNode | null,
+      );
+      onChange?.(restored as MosaicNode<string> | null);
     },
     [onChange],
   );
@@ -110,15 +127,30 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     (newNode: MosaicNode<string> | null) => {
       setDragging(false);
 
-      // Detect resize-based uncollapse: if a collapsed area's percentage
-      // grew past the threshold, auto-expand it.
-      if (newNode) {
-        checkResizeUncollapse(newNode as MosaicLayoutNode, onAreaExpand);
+      const restored = convertFromMosaicTree(
+        newNode,
+        treeRef.current as MosaicLayoutNode | null,
+      ) as MosaicLayoutNode | null;
+
+      if (restored) {
+        checkResizeUncollapse(restored, onAreaExpand);
       }
 
-      onRelease?.(newNode);
+      onRelease?.(restored as MosaicNode<string> | null);
     },
     [onRelease, onAreaExpand],
+  );
+
+  const handleNestedMosaicChange = useCallback(
+    (mosaicId: string, newNodes: MosaicLayoutNode | null) => {
+      const updated = updateMosaicSubtree(
+        currentValue as MosaicLayoutNode | null,
+        mosaicId,
+        newNodes,
+      );
+      onChange?.(updated as MosaicNode<string> | null);
+    },
+    [currentValue, onChange],
   );
 
   const renderTabLabel = useCallback(
@@ -227,6 +259,20 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
   const renderTileWithCollapsedStrips = useCallback(
     (id: string, path: MosaicPath) => {
       const tree = currentValue as MosaicLayoutNode | undefined;
+
+      if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
+        const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
+        return (
+          <NestedMosaicTile
+            mosaicId={mosaicId}
+            rootTree={tree ?? null}
+            panels={panels}
+            renderTile={renderTile}
+            onChange={handleNestedMosaicChange}
+          />
+        );
+      }
+
       const tileContent = renderTile(id, path);
 
       if (!tree) {
@@ -239,6 +285,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             content={tileContent}
             currentTree={currentValue as MosaicNode<string> | null}
             panelInfo={panels?.[id]}
+            forceDraggable={forceDraggable}
           />
         );
       }
@@ -260,6 +307,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             content={tileContent}
             currentTree={currentValue as MosaicNode<string> | null}
             panelInfo={panels?.[id]}
+            forceDraggable={forceDraggable}
           />
         );
       }
@@ -288,6 +336,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
           content={tileContent}
           currentTree={currentValue as MosaicNode<string> | null}
           panelInfo={panels?.[id]}
+          forceDraggable={forceDraggable}
         />
       );
 
@@ -343,7 +392,16 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
         </div>
       );
     },
-    [currentValue, renderTile, tileClassName, isDragging, panels, onAreaExpand],
+    [
+      currentValue,
+      renderTile,
+      tileClassName,
+      isDragging,
+      panels,
+      onAreaExpand,
+      handleNestedMosaicChange,
+      forceDraggable,
+    ],
   );
 
   return (
@@ -351,6 +409,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       <style>{customMosaicStyles}</style>
       <Mosaic<string>
         {...props}
+        value={mosaicValue}
         className=""
         onChange={handleLayoutChange}
         onRelease={handleLayoutRelease}
@@ -360,6 +419,49 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     </div>
   );
 };
+
+/**
+ * Renders a nested MosaicLayout for a `type: 'mosaic'` node.
+ * This creates a separate react-mosaic Mosaic instance, providing drag containment.
+ */
+function NestedMosaicTile({
+  mosaicId,
+  rootTree,
+  panels,
+  renderTile,
+  onChange,
+}: {
+  mosaicId: string;
+  rootTree: MosaicLayoutNode | null;
+  panels?: Record<string, RoomPanelInfo>;
+  renderTile: (id: string, path: MosaicPath) => React.JSX.Element;
+  onChange: (mosaicId: string, newNodes: MosaicLayoutNode | null) => void;
+}) {
+  const mosaicNode = rootTree
+    ? findMosaicNodeById(rootTree, mosaicId)
+    : undefined;
+
+  const handleChange = useCallback(
+    (newNodes: MosaicNode<string> | null) => {
+      onChange(mosaicId, newNodes as MosaicLayoutNode | null);
+    },
+    [mosaicId, onChange],
+  );
+
+  if (!mosaicNode) return null;
+
+  const draggable = mosaicNode.draggable !== false;
+
+  return (
+    <MosaicLayout
+      renderTile={renderTile}
+      value={mosaicNode.nodes as MosaicNode<string> | null}
+      onChange={handleChange}
+      panels={panels}
+      forceDraggable={draggable}
+    />
+  );
+}
 
 /**
  * Walk the tree looking for collapsed areas whose split percentage

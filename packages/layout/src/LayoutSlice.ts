@@ -15,10 +15,12 @@ import {
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import React from 'react';
+import {MosaicNode} from 'react-mosaic-component';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {
   findAreaById,
+  findMosaicNodeById,
   findParentSplit,
   findSplitById,
   makeMosaicStack,
@@ -120,6 +122,8 @@ export type LayoutSliceState = {
     unregisterPanel: (panelId: string) => void;
     /** Add a panel as a child of a named split node */
     addChildToSplit: (splitId: string, panelId: string) => void;
+    /** Add a panel as a child of a named nested mosaic node */
+    addChildToMosaic: (mosaicId: string, panelId: string) => void;
   };
 };
 
@@ -233,7 +237,8 @@ export function createLayoutSlice({
                   } else {
                     const panelNode = {node: panel, weight: 1};
                     const restNode = {
-                      node: draft.layout.config?.nodes,
+                      node: draft.layout.config
+                        ?.nodes as MosaicNode<string> | null,
                       weight: 3,
                     };
                     layout.nodes = makeMosaicStack(
@@ -420,6 +425,36 @@ export function createLayoutSlice({
                 found.node.splitPercentages = Array(count).fill(
                   Math.round(100 / count),
                 );
+              }),
+            );
+          },
+
+          addChildToMosaic: (mosaicId: string, panelId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const found = findMosaicNodeById(
+                  draft.layout.config.nodes,
+                  mosaicId,
+                );
+                if (!found) return;
+                const nodes = found.nodes;
+                const dir = found.direction ?? 'row';
+                if (!nodes) {
+                  found.nodes = panelId;
+                } else if (typeof nodes === 'string') {
+                  found.nodes = {
+                    type: 'split',
+                    direction: dir,
+                    children: [nodes, panelId],
+                    splitPercentages: [50, 50],
+                  };
+                } else if ('children' in nodes) {
+                  nodes.children.push(panelId);
+                  const count = nodes.children.length;
+                  nodes.splitPercentages = Array(count).fill(
+                    Math.round(100 / count),
+                  );
+                }
               }),
             );
           },

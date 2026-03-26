@@ -1,10 +1,6 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeProvider, ThemeSwitch} from '@sqlrooms/ui';
-import {
-  PanelBottomCloseIcon,
-  PanelBottomOpenIcon,
-  PlusIcon,
-} from 'lucide-react';
+import {PanelBottomCloseIcon, PanelBottomOpenIcon} from 'lucide-react';
 import {roomStore, useRoomStore} from './store';
 
 function CollapseBottomButton() {
@@ -21,31 +17,19 @@ function CollapseBottomButton() {
   );
 }
 
-function AddChartButton() {
-  const addChart = useRoomStore((s) => s.dashboard.addChart);
-  return (
-    <RoomShell.SidebarButton
-      title="Add chart to dashboard"
-      icon={PlusIcon}
-      isSelected={false}
-      onClick={addChart}
-    />
-  );
-}
-
 export const App = () => {
+  const addDashboard = useRoomStore((s) => s.addDashboard);
   return (
     <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>
         <RoomShell.SidebarContainer>
           <RoomShell.AreaPanelButtons area="left" />
           <div className="flex-1" />
-          <AddChartButton />
           <CollapseBottomButton />
           <RoomShell.CommandPalette.Button />
           <ThemeSwitch />
         </RoomShell.SidebarContainer>
-        <RoomShell.LayoutComposer />
+        <RoomShell.LayoutComposer onTabCreate={addDashboard} />
         <RoomShell.CommandPalette />
       </RoomShell>
     </ThemeProvider>

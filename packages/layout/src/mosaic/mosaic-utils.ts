@@ -9,10 +9,20 @@ import {
   MosaicLayoutNode,
   MosaicLayoutTabsNode,
   MosaicLayoutSplitNode,
+  MosaicLayoutMosaicNode,
   isMosaicLayoutSplitNode,
   isMosaicLayoutTabsNode,
+  isMosaicLayoutMosaicNode,
   DEFAULT_MOSAIC_LAYOUT,
 } from '@sqlrooms/layout-config';
+
+/** Prefix for synthetic panel keys generated for nested mosaic nodes */
+export const MOSAIC_NODE_KEY_PREFIX = '__mosaic__';
+
+/** Generate the synthetic panel key for a mosaic node */
+export function getMosaicNodeKey(mosaicId: string): string {
+  return `${MOSAIC_NODE_KEY_PREFIX}${mosaicId}`;
+}
 
 export function makeMosaicStack(
   direction: MosaicDirection,
@@ -63,6 +73,8 @@ export function visitMosaicLeafNodes<T = void>(
       if (rv) return rv;
     }
     return undefined;
+  } else if (isMosaicLayoutMosaicNode(root)) {
+    return visitor(getMosaicNodeKey(root.id), path);
   } else {
     return visitor(root, path);
   }
@@ -131,6 +143,9 @@ export function findAreaById(
       if (result) return result;
     }
   }
+  if (isMosaicLayoutMosaicNode(root)) {
+    return root.nodes ? findAreaById(root.nodes, areaId, path) : undefined;
+  }
   return undefined;
 }
 
@@ -148,8 +163,8 @@ export function findSplitById(
       if (result) return result;
     }
   }
-  if (isMosaicLayoutTabsNode(root)) {
-    return undefined;
+  if (isMosaicLayoutMosaicNode(root)) {
+    return root.nodes ? findSplitById(root.nodes, splitId, path) : undefined;
   }
   return undefined;
 }
@@ -293,6 +308,111 @@ export function findCollapsedSiblings(
     }
   }
   return result;
+}
+
+/** Find a mosaic node by its `id` field. */
+export function findMosaicNodeById(
+  root: MosaicLayoutNode | null | undefined,
+  mosaicId: string,
+): MosaicLayoutMosaicNode | undefined {
+  if (!root || typeof root === 'string') return undefined;
+  if (isMosaicLayoutMosaicNode(root)) {
+    if (root.id === mosaicId) return root;
+    return root.nodes ? findMosaicNodeById(root.nodes, mosaicId) : undefined;
+  }
+  if (isMosaicLayoutSplitNode(root)) {
+    for (const child of root.children) {
+      const result = findMosaicNodeById(child, mosaicId);
+      if (result) return result;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Return a new tree with the nested mosaic node's sub-tree replaced.
+ * Used when a nested MosaicLayout's onChange fires.
+ */
+export function updateMosaicSubtree(
+  root: MosaicLayoutNode | null,
+  mosaicId: string,
+  newNodes: MosaicLayoutNode | null,
+): MosaicLayoutNode | null {
+  if (!root) return root;
+  if (typeof root === 'string') return root;
+  if (isMosaicLayoutMosaicNode(root)) {
+    if (root.id === mosaicId) {
+      return {...root, nodes: newNodes};
+    }
+    if (root.nodes) {
+      const updated = updateMosaicSubtree(root.nodes, mosaicId, newNodes);
+      return updated !== root.nodes ? {...root, nodes: updated} : root;
+    }
+    return root;
+  }
+  if (isMosaicLayoutSplitNode(root)) {
+    let changed = false;
+    const newChildren = root.children.map((child) => {
+      const updated = updateMosaicSubtree(child, mosaicId, newNodes);
+      if (updated !== child) changed = true;
+      return updated;
+    });
+    return changed
+      ? {...root, children: newChildren as MosaicLayoutNode[]}
+      : root;
+  }
+  return root;
+}
+
+/**
+ * Convert our extended layout tree to react-mosaic's MosaicNode<string>.
+ * Replaces MosaicLayoutMosaicNode instances with their synthetic panel key.
+ */
+export function convertToMosaicTree(
+  node: MosaicLayoutNode | null,
+): MosaicNode<string> | null {
+  if (!node) return null;
+  if (typeof node === 'string') return node;
+  if (isMosaicLayoutMosaicNode(node)) {
+    return getMosaicNodeKey(node.id);
+  }
+  if (isMosaicLayoutTabsNode(node)) {
+    return node as unknown as MosaicNode<string>;
+  }
+  if (isMosaicLayoutSplitNode(node)) {
+    return {
+      ...node,
+      children: node.children.map((c) => convertToMosaicTree(c)!),
+    } as unknown as MosaicNode<string>;
+  }
+  return node as unknown as MosaicNode<string>;
+}
+
+/**
+ * Convert a react-mosaic MosaicNode<string> back to our MosaicLayoutNode,
+ * restoring MosaicLayoutMosaicNode instances from the original tree.
+ */
+export function convertFromMosaicTree(
+  mosaicNode: MosaicNode<string> | null,
+  originalTree: MosaicLayoutNode | null,
+): MosaicLayoutNode | null {
+  if (!mosaicNode) return null;
+  if (typeof mosaicNode === 'string') {
+    if (mosaicNode.startsWith(MOSAIC_NODE_KEY_PREFIX) && originalTree) {
+      const mosaicId = mosaicNode.slice(MOSAIC_NODE_KEY_PREFIX.length);
+      const original = findMosaicNodeById(originalTree, mosaicId);
+      if (original) return original;
+    }
+    return mosaicNode;
+  }
+  const obj = mosaicNode as unknown as Record<string, unknown>;
+  if (obj.type === 'split' && 'children' in obj) {
+    const children = (obj.children as MosaicNode<string>[]).map((c) =>
+      convertFromMosaicTree(c, originalTree),
+    );
+    return {...mosaicNode, children} as unknown as MosaicLayoutNode;
+  }
+  return mosaicNode as unknown as MosaicLayoutNode;
 }
 
 function pathsEqual(a: MosaicPath, b: MosaicPath): boolean {

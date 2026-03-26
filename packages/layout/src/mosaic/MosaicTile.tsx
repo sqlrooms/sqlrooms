@@ -13,9 +13,18 @@ const MosaicTile: FC<{
   className?: string;
   currentTree?: MosaicNode<string> | null;
   panelInfo?: RoomPanelInfo;
+  forceDraggable?: boolean;
 }> = (props) => {
-  const {id, content, path, isDragging, className, currentTree, panelInfo} =
-    props;
+  const {
+    id,
+    content,
+    path,
+    isDragging,
+    className,
+    currentTree,
+    panelInfo,
+    forceDraggable,
+  } = props;
   const body = (
     <div
       className={cn(
@@ -28,9 +37,11 @@ const MosaicTile: FC<{
     </div>
   );
 
-  const draggable = currentTree
-    ? isDraggableTile(currentTree as MosaicLayoutNode, path)
-    : false;
+  const draggable =
+    forceDraggable ||
+    (currentTree
+      ? isDraggableTile(currentTree as MosaicLayoutNode, path)
+      : false);
 
   if (!draggable) {
     return body;
