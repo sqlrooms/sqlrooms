@@ -21,10 +21,10 @@ export const FunctionDocumentation: FC<FunctionDocumentationProps> = ({
   }
 
   return (
-    <div className="max-h-[400px] max-w-[600px] overflow-auto p-2 text-sm">
+    <div className="max-h-[400px] max-w-[600px] overflow-auto p-2 text-xs">
       <FunctionSignatures functions={functions} overloadsToShow={3} />
       {description && (
-        <div className="prose dark:prose-invert prose-sm mt-2">
+        <div className="prose dark:prose-invert prose-xs mt-2 text-xs [&>*]:text-xs">
           <Markdown remarkPlugins={[remarkGfm]}>{description}</Markdown>
         </div>
       )}
