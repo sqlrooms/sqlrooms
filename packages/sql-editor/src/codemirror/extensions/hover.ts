@@ -2,6 +2,7 @@ import {hoverTooltip} from '@codemirror/view';
 import type {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
 import {syntaxTree} from '@codemirror/language';
+import {completionStatus} from '@codemirror/autocomplete';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
@@ -21,6 +22,11 @@ export function createHover({
 }: HoverContext): Extension {
   return hoverTooltip(async (view: EditorView, pos: number, side) => {
     if (!getFunctionDocumentation) {
+      return null;
+    }
+
+    // Don't show hover tooltip if autocomplete is active
+    if (completionStatus(view.state) !== null) {
       return null;
     }
 

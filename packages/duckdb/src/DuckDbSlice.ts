@@ -359,6 +359,8 @@ export function createDuckDbSlice({
 
           initialize: async () => {
             await get().db.connector.initialize();
+
+            await get().db.connector.query(`INSTALL spatial;LOAD spatial;`);
             // No await here, we want to continue initializing the room even
             // if the table schemas are not refreshed yet
             get().db.refreshTableSchemas();
