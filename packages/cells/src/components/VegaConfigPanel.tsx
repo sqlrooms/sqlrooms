@@ -1,10 +1,5 @@
 import React from 'react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Tabs,
   TabsContent,
   TabsList,
@@ -13,7 +8,6 @@ import {
   Separator,
   Switch,
 } from '@sqlrooms/ui';
-import {ChartColumnBig, ChartLine} from 'lucide-react';
 import {useSql} from '@sqlrooms/duckdb';
 import {getArrowColumnTypeCategory} from '@sqlrooms/duckdb';
 import type {BrushFieldType} from '../types';
@@ -24,17 +18,8 @@ import {
 } from '../vegaSpecBuilder';
 import {FieldSelector} from './FieldSelector';
 import {ColorSelector, colorOptions} from './ColorSelector';
-
-const markOptions = [
-  {value: 'bar', label: 'Bar', icon: ChartColumnBig},
-  {value: 'line', label: 'Line', icon: ChartLine},
-];
-
-const aggregationOptions = [
-  {value: 'sum', label: 'Sum'},
-  {value: 'mean', label: 'Mean'},
-  {value: 'count', label: 'Count'},
-];
+import {ChartTypeSelector} from './ChartTypeSelector';
+import {AggregationSelector} from './AggregationSelector';
 
 export const VegaConfigPanel: React.FC<{
   spec: any;
@@ -126,37 +111,10 @@ export const VegaConfigPanel: React.FC<{
   return (
     <div className="w-80 border-r p-4 text-xs">
       <div className="space-y-3">
-        <Select value={current.mark} onValueChange={handleMarkChange}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Select chart type">
-              {current.mark && (
-                <div className="flex items-center gap-2">
-                  {React.createElement(
-                    markOptions.find((opt) => opt.value === current.mark)
-                      ?.icon || ChartColumnBig,
-                    {className: 'h-4 w-4'},
-                  )}
-                  <span>
-                    {
-                      markOptions.find((opt) => opt.value === current.mark)
-                        ?.label
-                    }
-                  </span>
-                </div>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-            {markOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex items-center gap-2">
-                  <option.icon className="h-4 w-4" />
-                  <span>{option.label}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ChartTypeSelector
+          value={current.mark}
+          onValueChange={handleMarkChange}
+        />
 
         <Separator />
 
@@ -192,21 +150,10 @@ export const VegaConfigPanel: React.FC<{
                   onValueChange={handleYFieldChange}
                 />
 
-                <Select
+                <AggregationSelector
                   value={current.yAggregate}
                   onValueChange={handleYAggregationChange}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {aggregationOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </div>
 
