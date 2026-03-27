@@ -30,6 +30,7 @@ import {
   convertToMosaicTree,
   convertFromMosaicTree,
   updateMosaicSubtree,
+  getChildKey,
   MOSAIC_NODE_KEY_PREFIX,
   ExpandDirection,
   CollapsedAreaInfo,
@@ -155,7 +156,11 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
 
   const renderTabLabel = useCallback(
     (tab: TabDescriptor) => {
-      const Icon = panels?.[tab.id]?.icon;
+      let panelId = tab.id;
+      if (panelId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
+        panelId = panelId.slice(MOSAIC_NODE_KEY_PREFIX.length);
+      }
+      const Icon = panels?.[panelId]?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}
@@ -211,9 +216,27 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             .map(([id]) => id)
         : tabs;
 
+      // Also include mosaic-keyed tabs not in the panels registry
+      for (const t of tabs) {
+        if (
+          t.startsWith(MOSAIC_NODE_KEY_PREFIX) &&
+          !allAreaPanelIds.includes(t)
+        ) {
+          allAreaPanelIds.push(t);
+        }
+      }
+
+      const resolveTabName = (id: string): string => {
+        if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
+          const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
+          return panels?.[mosaicId]?.title ?? mosaicId;
+        }
+        return panels?.[id]?.title ?? id;
+      };
+
       const allTabDescriptors: TabDescriptor[] = allAreaPanelIds.map((id) => ({
         id,
-        name: panels?.[id]?.title ?? id,
+        name: resolveTabName(id),
       }));
 
       const selectedTabId = tabs[activeTabIndex];
@@ -509,7 +532,11 @@ function CollapsedHorizontalStrip({
   const areaId = node.id!;
   const ChevronIcon = CHEVRON_ICONS[expandDirection];
 
-  const tabDescriptors: TabDescriptor[] = node.tabs.map((id) => ({
+  const tabKeys = node.children
+    .map((c) => getChildKey(c))
+    .filter((k): k is string => k != null);
+
+  const tabDescriptors: TabDescriptor[] = tabKeys.map((id) => ({
     id,
     name: panels?.[id]?.title ?? id,
   }));
@@ -531,7 +558,7 @@ function CollapsedHorizontalStrip({
     <div className="border-border shrink-0 border-t">
       <TabStrip
         tabs={tabDescriptors}
-        openTabs={node.tabs}
+        openTabs={tabKeys}
         selectedTabId={undefined}
         preventCloseLastTab
         closeable={false}

@@ -36,6 +36,7 @@ export {DataSourceStatus} from './types';
 export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 
 export type {RoomPanelInfo} from '@sqlrooms/layout';
+export {getChildKey, getMosaicNodeKey} from '@sqlrooms/layout';
 
 // Re-export from @sqlrooms/room-store
 export {

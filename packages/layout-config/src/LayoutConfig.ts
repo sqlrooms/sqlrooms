@@ -34,10 +34,9 @@ export type MosaicLayoutSplitNode = z.infer<
   children: MosaicLayoutNode[];
 };
 
-export const MosaicLayoutTabsNode = z.object({
+const BaseMosaicLayoutTabsNode = z.object({
   type: z.literal('tabs'),
   id: z.string().optional(),
-  tabs: z.array(MosaicLayoutNodeKey),
   activeTabIndex: z.number(),
   collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
@@ -49,7 +48,14 @@ export const MosaicLayoutTabsNode = z.object({
   draggable: z.boolean().optional(),
   savedPercentages: z.array(z.number()).optional(),
 });
-export type MosaicLayoutTabsNode = z.infer<typeof MosaicLayoutTabsNode>;
+
+export const MosaicLayoutTabsNode: z.ZodType<MosaicLayoutTabsNode> =
+  BaseMosaicLayoutTabsNode.extend({
+    children: z.lazy(() => z.array(MosaicLayoutNode)),
+  });
+export type MosaicLayoutTabsNode = z.infer<typeof BaseMosaicLayoutTabsNode> & {
+  children: MosaicLayoutNode[];
+};
 
 const BaseMosaicLayoutMosaicNode = z.object({
   type: z.literal('mosaic'),
@@ -98,6 +104,11 @@ function convertLegacyNode(node: unknown): unknown {
     'type' in obj &&
     (obj.type === 'split' || obj.type === 'tabs' || obj.type === 'mosaic')
   ) {
+    // Migrate legacy tabs property -> children
+    if (obj.type === 'tabs' && 'tabs' in obj && !('children' in obj)) {
+      const {tabs, ...rest} = obj;
+      return {...rest, children: tabs};
+    }
     return node;
   }
 

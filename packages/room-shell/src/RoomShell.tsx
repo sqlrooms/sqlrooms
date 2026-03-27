@@ -1,4 +1,4 @@
-import {getNodeAtPath, MosaicLayout} from '@sqlrooms/layout';
+import {getChildKey, getNodeAtPath, MosaicLayout} from '@sqlrooms/layout';
 import type {MosaicLayoutNode} from '@sqlrooms/layout-config';
 import {
   isMosaicLayoutTabsNode,
@@ -43,11 +43,22 @@ function updateTabsOrder(
   if (path.length === 0) {
     if (typeof root === 'object' && 'type' in root && root.type === 'tabs') {
       const tabsNode = root as MosaicLayoutTabsNode;
-      const activeTab = tabsNode.tabs[tabsNode.activeTabIndex];
-      const newActiveIndex = activeTab ? newTabIds.indexOf(activeTab) : 0;
+      const activeChild = tabsNode.children[tabsNode.activeTabIndex];
+      const activeKey =
+        activeChild != null ? getChildKey(activeChild) : undefined;
+      // Re-order children: match each newTabId to the original child by key
+      const childByKey = new Map<string, MosaicLayoutNode>();
+      for (const child of tabsNode.children) {
+        const key = getChildKey(child);
+        if (key) childByKey.set(key, child);
+      }
+      const newChildren = newTabIds
+        .map((id) => childByKey.get(id))
+        .filter((c): c is MosaicLayoutNode => c != null);
+      const newActiveIndex = activeKey ? newTabIds.indexOf(activeKey) : 0;
       return {
         ...tabsNode,
-        tabs: newTabIds,
+        children: newChildren,
         activeTabIndex: Math.max(0, newActiveIndex),
       };
     }
@@ -142,8 +153,8 @@ export const LayoutComposer: FC<{
   );
 
   const handleLayoutChange = useCallback(
-    (nodes: MosaicLayoutNode | null) => {
-      setLayout({...layout, nodes});
+    (nodes: MosaicNode<string> | null) => {
+      setLayout({...layout, nodes: nodes as MosaicLayoutNode | null});
     },
     [setLayout, layout],
   );

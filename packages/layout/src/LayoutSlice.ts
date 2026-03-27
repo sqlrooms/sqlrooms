@@ -3,6 +3,7 @@ import {
   isMosaicLayoutSplitNode,
   LayoutConfig,
   MAIN_VIEW,
+  MosaicLayoutNode,
   MosaicLayoutTabsNode,
 } from '@sqlrooms/layout-config';
 import {
@@ -23,6 +24,7 @@ import {
   findMosaicNodeById,
   findParentSplit,
   findSplitById,
+  getChildKey,
   makeMosaicStack,
   removeMosaicNodeByKey,
 } from './mosaic/mosaic-utils';
@@ -246,7 +248,7 @@ export function createLayoutSlice({
                       side === 'first'
                         ? [panelNode, restNode]
                         : [restNode, panelNode],
-                    );
+                    ) as MosaicLayoutNode | null;
                   }
                 }),
               );
@@ -276,7 +278,9 @@ export function createLayoutSlice({
               produce(state, (draft) => {
                 const found = findAreaInConfig(draft.layout.config, areaId);
                 if (!found) return;
-                const idx = found.node.tabs.indexOf(panelId);
+                const idx = found.node.children.findIndex(
+                  (c) => getChildKey(c) === panelId,
+                );
                 if (idx >= 0) {
                   found.node.activeTabIndex = idx;
                 }
@@ -292,10 +296,14 @@ export function createLayoutSlice({
               produce(state, (draft) => {
                 const found = findAreaInConfig(draft.layout.config, areaId);
                 if (!found) return;
-                if (!found.node.tabs.includes(panelId)) {
-                  found.node.tabs.push(panelId);
+                if (
+                  !found.node.children.some((c) => getChildKey(c) === panelId)
+                ) {
+                  found.node.children.push(panelId);
                 }
-                found.node.activeTabIndex = found.node.tabs.indexOf(panelId);
+                found.node.activeTabIndex = found.node.children.findIndex(
+                  (c) => getChildKey(c) === panelId,
+                );
               }),
             );
           },
@@ -305,12 +313,14 @@ export function createLayoutSlice({
               produce(state, (draft) => {
                 const found = findAreaInConfig(draft.layout.config, areaId);
                 if (!found) return;
-                const idx = found.node.tabs.indexOf(panelId);
+                const idx = found.node.children.findIndex(
+                  (c) => getChildKey(c) === panelId,
+                );
                 if (idx < 0) return;
-                if (found.node.tabs.length <= 1) return;
-                found.node.tabs.splice(idx, 1);
-                if (found.node.activeTabIndex >= found.node.tabs.length) {
-                  found.node.activeTabIndex = found.node.tabs.length - 1;
+                if (found.node.children.length <= 1) return;
+                found.node.children.splice(idx, 1);
+                if (found.node.activeTabIndex >= found.node.children.length) {
+                  found.node.activeTabIndex = found.node.children.length - 1;
                 }
               }),
             );
@@ -383,13 +393,17 @@ export function createLayoutSlice({
 
           getAreaPanels: (areaId: string): string[] => {
             const found = findAreaInConfig(get().layout.config, areaId);
-            return found ? [...found.node.tabs] : [];
+            if (!found) return [];
+            return found.node.children
+              .map((c) => getChildKey(c))
+              .filter((k): k is string => k != null);
           },
 
           getActivePanel: (areaId: string): string | undefined => {
             const found = findAreaInConfig(get().layout.config, areaId);
             if (!found) return undefined;
-            return found.node.tabs[found.node.activeTabIndex];
+            const child = found.node.children[found.node.activeTabIndex];
+            return child != null ? getChildKey(child) : undefined;
           },
 
           isAreaCollapsed: (areaId: string): boolean => {
@@ -448,7 +462,7 @@ export function createLayoutSlice({
                     children: [nodes, panelId],
                     splitPercentages: [50, 50],
                   };
-                } else if ('children' in nodes) {
+                } else if (isMosaicLayoutSplitNode(nodes)) {
                   nodes.children.push(panelId);
                   const count = nodes.children.length;
                   nodes.splitPercentages = Array(count).fill(

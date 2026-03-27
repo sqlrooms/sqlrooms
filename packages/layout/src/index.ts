@@ -34,6 +34,7 @@ export {
   updateMosaicSubtree,
   convertToMosaicTree,
   convertFromMosaicTree,
+  getChildKey,
 } from './mosaic/mosaic-utils';
 export type {ExpandDirection, CollapsedAreaInfo} from './mosaic/mosaic-utils';
 
