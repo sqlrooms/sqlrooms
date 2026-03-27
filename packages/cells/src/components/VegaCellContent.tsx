@@ -1,4 +1,10 @@
-import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useDebouncedCallback,
+} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
 import {Filter, Settings} from 'lucide-react';
@@ -128,16 +134,13 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
     [id, updateCell],
   );
 
-  const handleSpecChange = useCallback(
-    (spec: any) => {
-      updateCell(id, (c) =>
-        produce(c, (draft) => {
-          if (draft.type === 'vega') draft.data.vegaSpec = spec;
-        }),
-      );
-    },
-    [id, updateCell],
-  );
+  const handleSpecChange = useDebouncedCallback((spec: any) => {
+    updateCell(id, (c) =>
+      produce(c, (draft) => {
+        if (draft.type === 'vega') draft.data.vegaSpec = spec;
+      }),
+    );
+  }, 300);
 
   const header = (
     <div className="flex items-center gap-2">
