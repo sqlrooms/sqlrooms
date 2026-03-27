@@ -9,6 +9,7 @@ import {
   LayoutMosaicNode,
   LayoutNode,
   LayoutTabsNode,
+  PanelRenderContext,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -19,6 +20,7 @@ import {
   TableRowsSplitIcon,
   TerminalIcon,
 } from 'lucide-react';
+import React from 'react';
 import {ConsolePanel} from './panels/ConsolePanel';
 import {DataSourcesPanel} from './panels/DataSourcesPanel';
 import {DynamicChartPanel} from './panels/DynamicChartPanel';
@@ -108,6 +110,34 @@ const CHART_LABELS = [
 
 let dashboardCounter = 0;
 
+/**
+ * Derive a human-readable label from a panel ID.
+ * "chart-revenue" → "Revenue", "dashboard-overview" → "Overview"
+ */
+function labelFromId(id: string): string {
+  const raw = id.replace(/^(chart|dashboard)-/, '').replace(/-\d+$/, '');
+  return raw
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function isDynamicPanel(panelId: string): boolean {
+  return panelId.startsWith('dashboard-') || panelId.startsWith('chart-');
+}
+
+function renderDynamicPanel(
+  ctx: PanelRenderContext,
+): React.ReactNode | undefined {
+  if (!isDynamicPanel(ctx.panelId)) return undefined;
+  const label = labelFromId(ctx.panelId);
+  return (
+    <div className="h-full w-full overflow-hidden p-2">
+      <DynamicChartPanel label={label} />
+    </div>
+  );
+}
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     ...createRoomShellSlice({
@@ -179,6 +209,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         } satisfies LayoutConfig,
+        renderPanel: renderDynamicPanel,
         panels: {
           'data-sources': {
             title: 'Data Sources',
@@ -194,34 +225,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
           'dashboard-overview': {
             title: 'Overview',
-            component: () => <DynamicChartPanel label="Overview Dashboard" />,
             icon: LayoutDashboardIcon,
             area: 'main',
           },
           'dashboard-growth': {
             title: 'Growth',
-            component: () => <DynamicChartPanel label="Growth Dashboard" />,
             icon: LayoutDashboardIcon,
             area: 'main',
           },
           'chart-revenue': {
             title: 'Revenue',
-            component: () => <DynamicChartPanel label="Revenue" />,
             icon: BarChart3Icon,
           },
           'chart-users': {
             title: 'Users',
-            component: () => <DynamicChartPanel label="Users" />,
             icon: BarChart3Icon,
           },
           'chart-conversions': {
             title: 'Conversions',
-            component: () => <DynamicChartPanel label="Conversions" />,
             icon: BarChart3Icon,
           },
           'chart-sessions': {
             title: 'Sessions',
-            component: () => <DynamicChartPanel label="Sessions" />,
             icon: BarChart3Icon,
           },
           console: {
@@ -246,19 +271,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       const mosaicId = `dashboard-${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;
       const chartId = `chart-${mosaicId}`;
 
-      // Register a panel entry for the mosaic node (used for tab display)
       get().layout.registerPanel(mosaicId, {
         title: `${label} Dashboard`,
         icon: LayoutDashboardIcon,
-        component: () => <DynamicChartPanel label={`${label} Dashboard`} />,
         area: areaId,
       });
 
-      // Register the initial chart panel within the dashboard
       get().layout.registerPanel(chartId, {
         title: label,
         icon: BarChart3Icon,
-        component: () => <DynamicChartPanel label={label} />,
       });
 
       // Create a mosaic node and add it directly to the area's children

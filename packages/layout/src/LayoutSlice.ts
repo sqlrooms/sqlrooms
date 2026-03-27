@@ -90,7 +90,7 @@ export type TabStripRenderContext = {
 export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
-  component: React.ComponentType<Partial<PanelRenderContext>>;
+  component?: React.ComponentType<Partial<PanelRenderContext>>;
   /** @deprecated Use `area` instead */
   placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
   /** Named area this panel belongs to (e.g. 'left', 'main', 'bottom') */
