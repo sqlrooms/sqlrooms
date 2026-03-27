@@ -1,6 +1,7 @@
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import type {
   Cell,
+  CellDependencies,
   Edge,
   SqlCellData,
   SqlDependencyOptions,
@@ -182,7 +183,7 @@ function extractTablesFromAst(statements: unknown[]): Set<string> {
 
 /**
  * Find SQL cell dependencies using AST-based parsing.
- * This provides more accurate detection than text-based matching.
+ * Returns cell dependencies and unmatched table references.
  */
 export async function findSqlDependenciesFromAst(opts: {
   sql: string;
@@ -191,17 +192,18 @@ export async function findSqlDependenciesFromAst(opts: {
     error: boolean;
     statements?: unknown[];
   }>;
-}): Promise<string[]> {
+}): Promise<CellDependencies> {
   const {sql, cells, sqlSelectToJson} = opts;
 
   try {
     const parsed = await sqlSelectToJson(sql);
     if (parsed.error || !parsed.statements) {
-      return []; // Fall back to empty deps on parse error
+      return {cellIds: []};
     }
 
     const referencedTables = extractTablesFromAst(parsed.statements);
     const deps: string[] = [];
+    const matchedNames = new Set<string>();
 
     for (const [id, cell] of Object.entries(cells)) {
       if (cell.type === 'sql') {
@@ -211,19 +213,24 @@ export async function findSqlDependenciesFromAst(opts: {
           cellData,
           convertToValidColumnOrTableName,
         ).toLowerCase();
-        // Match on either title or effective result name
         if (
           (title && referencedTables.has(title)) ||
           referencedTables.has(effectiveName)
         ) {
           deps.push(id);
+          if (title) matchedNames.add(title);
+          matchedNames.add(effectiveName);
         }
       }
     }
 
-    return deps;
+    const tableNames = Array.from(referencedTables).filter(
+      (t) => !matchedNames.has(t),
+    );
+
+    return {cellIds: deps, tableNames};
   } catch {
-    return [];
+    return {cellIds: []};
   }
 }
 

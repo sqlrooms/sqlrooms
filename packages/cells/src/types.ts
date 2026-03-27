@@ -61,12 +61,27 @@ export const TextCellData = z.object({
 });
 export type TextCellData = z.infer<typeof TextCellData>;
 
+/** Field type category for cross-filter predicates */
+export type BrushFieldType = 'numeric' | 'temporal' | 'string';
+
+/** Cross-filter configuration for Vega chart cells */
+export const CrossFilterConfig = z.object({
+  enabled: z.boolean().default(true),
+  brushField: z.string().optional(),
+  brushFieldType: z
+    .enum(['numeric', 'temporal', 'string'])
+    .optional() as z.ZodOptional<z.ZodType<BrushFieldType>>,
+});
+export type CrossFilterConfig = z.infer<typeof CrossFilterConfig>;
+
 /** Vega Cell */
 export const VegaCellData = z.object({
   title: z.string().default('Chart'),
   sqlId: z.string().optional(), // In notebook, it links to another cell. In canvas, it might be the same.
+  tableRef: z.string().optional(), // Direct table reference, e.g. "main.flights"
   sql: z.string().optional(), // In canvas, it often has its own SQL.
   vegaSpec: z.any().optional(),
+  crossFilter: CrossFilterConfig.default({enabled: true}),
 });
 export type VegaCellData = z.infer<typeof VegaCellData>;
 
@@ -146,6 +161,12 @@ export type SqlSelectToJsonFn = (sql: string) => Promise<{
   statements?: unknown[];
 }>;
 
+/** Return type from findDependencies: cell IDs and optional table names. */
+export type CellDependencies = {
+  cellIds: string[];
+  tableNames?: string[];
+};
+
 export type CreateCellArgs = {
   id: string;
   get: () => CellsRootState;
@@ -167,7 +188,7 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     cells: Record<string, Cell>;
     sheetId: string;
     sqlSelectToJson: SqlSelectToJsonFn;
-  }) => Promise<string[]>;
+  }) => Promise<string[] | CellDependencies>;
   /** Optional: custom execution logic (defaults to SQL execution for sql type) */
   runCell?: (args: {
     id: string;
@@ -232,6 +253,7 @@ export const SheetGraphCache = z.object({
   dependencies: z.record(z.string(), z.array(z.string())).default({}),
   dependents: z.record(z.string(), z.array(z.string())).default({}),
   contentHashByCell: z.record(z.string(), z.string()).optional(),
+  tableDependencies: z.record(z.string(), z.array(z.string())).default({}),
 });
 export type SheetGraphCache = z.infer<typeof SheetGraphCache>;
 
@@ -304,6 +326,8 @@ export const CellsSliceConfig = z.object({
   sheets: z.record(z.string(), Sheet).default({}),
   sheetOrder: z.array(z.string()).default([]),
   currentSheetId: z.string().optional(),
+  /** Which database schemas' tables are eligible for direct table dependencies. */
+  tableDepSchemas: z.array(z.string()).default(['main']),
 });
 export type CellsSliceConfig = z.infer<typeof CellsSliceConfig>;
 
@@ -319,6 +343,14 @@ export type CellResultData = {
   totalRows: number;
 };
 
+/** Cross-filter selection value emitted by a Vega chart brush */
+export type CrossFilterSelection = {
+  field: string;
+  fieldType?: BrushFieldType;
+  type: 'interval' | 'point';
+  value: unknown;
+};
+
 export type CellsSliceState = {
   cells: SliceFunctions & {
     config: CellsSliceConfig;
@@ -330,6 +362,25 @@ export type CellsSliceState = {
     resultVersion: Record<string, number>;
     /** Monotonic counter per cell, incremented when a pagination/sorting fetch completes. Used to trigger re-render without resetting pagination. */
     pageVersion: Record<string, number>;
+
+    /**
+     * Ephemeral cross-filter selections (not persisted).
+     * Outer key: sqlId (the shared data source), inner key: chartCellId.
+     */
+    crossFilterSelections: Record<
+      string,
+      Record<string, CrossFilterSelection | null>
+    >;
+    setCrossFilterSelection: (
+      chartCellId: string,
+      sqlId: string,
+      selection: CrossFilterSelection | null,
+    ) => void;
+    getCrossFilterPredicate: (
+      chartCellId: string,
+      sqlId: string,
+    ) => string | null;
+    clearCrossFilterGroup: (sqlId: string) => void;
 
     // Cell CRUD
     addCell: (sheetId: string, cell: Cell, index?: number) => Promise<void>;
@@ -404,4 +455,10 @@ export function isVegaCell(cell: Cell): cell is VegaCell {
 
 export function isInputCell(cell: Cell): cell is InputCell {
   return cell.type === 'input';
+}
+
+export function isSqlCellStatus(
+  status: CellStatus | undefined,
+): status is SqlCellStatus {
+  return status?.type === 'sql';
 }
