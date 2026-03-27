@@ -13,14 +13,15 @@ import {
   Separator,
   Switch,
 } from '@sqlrooms/ui';
+import {ChartColumnBig, ChartLine} from 'lucide-react';
 import {useSql} from '@sqlrooms/duckdb';
 import {getArrowColumnTypeCategory} from '@sqlrooms/duckdb';
 import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
 import type {BrushFieldType} from '../types';
 
 const markOptions = [
-  {value: 'bar', label: 'Bar'},
-  {value: 'line', label: 'Line'},
+  {value: 'bar', label: 'Bar', icon: ChartColumnBig},
+  {value: 'line', label: 'Line', icon: ChartLine},
 ];
 
 const colorOptions = [
@@ -226,21 +227,37 @@ export const VegaConfigPanel: React.FC<{
   return (
     <div className="w-80 border-r p-4 text-xs">
       <div className="space-y-3">
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-400">Type</Label>
-          <Select value={current.mark} onValueChange={handleMarkChange}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Select chart type" />
-            </SelectTrigger>
-            <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-              {markOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={current.mark} onValueChange={handleMarkChange}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Select chart type">
+              {current.mark && (
+                <div className="flex items-center gap-2">
+                  {React.createElement(
+                    markOptions.find((opt) => opt.value === current.mark)
+                      ?.icon || ChartColumnBig,
+                    {className: 'h-4 w-4'},
+                  )}
+                  <span>
+                    {
+                      markOptions.find((opt) => opt.value === current.mark)
+                        ?.label
+                    }
+                  </span>
+                </div>
+              )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
+            {markOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <div className="flex items-center gap-2">
+                  <option.icon className="h-4 w-4" />
+                  <span>{option.label}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Separator />
 
