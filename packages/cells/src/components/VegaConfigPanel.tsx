@@ -23,18 +23,11 @@ import {
   buildFlatSpec,
 } from '../vegaSpecBuilder';
 import {FieldSelector} from './FieldSelector';
+import {ColorSelector, colorOptions} from './ColorSelector';
 
 const markOptions = [
   {value: 'bar', label: 'Bar', icon: ChartColumnBig},
   {value: 'line', label: 'Line', icon: ChartLine},
-];
-
-const colorOptions = [
-  {value: '#077A9D', label: 'Blue'},
-  {value: '#FFAB00', label: 'Orange'},
-  {value: '#00A972', label: 'Green'},
-  {value: '#85b6b2', label: 'Teal'},
-  {value: '#919191', label: 'Gray'},
 ];
 
 const aggregationOptions = [
@@ -98,7 +91,7 @@ export const VegaConfigPanel: React.FC<{
           : undefined,
         yField: merged.yField,
         yAggregate: merged.yAggregate,
-        color: merged.color,
+        color: merged.color ?? colorOptions[0]?.value,
       }),
     );
     if ('xField' in overrides) {
@@ -232,19 +225,11 @@ export const VegaConfigPanel: React.FC<{
 
           <TabsContent value="styles" className="mt-4 space-y-4">
             <div className="space-y-1">
-              <Label className="font-medium">Color</Label>
-              <Select value={current.color} onValueChange={handleColorChange}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select color" />
-                </SelectTrigger>
-                <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {colorOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-gray-400">Color</Label>
+              <ColorSelector
+                value={current.color}
+                onValueChange={handleColorChange}
+              />
             </div>
           </TabsContent>
         </Tabs>
