@@ -6,17 +6,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
+import {getArrowColumnTypeCategory} from '@sqlrooms/duckdb';
+import {FieldTypeIcon} from './FieldTypeIcon';
+import {Field} from 'apache-arrow';
 
 interface FieldSelectorProps {
   value: string | undefined;
-  fieldNames: string[];
+  fields: Field<any>[];
   placeholder?: string;
   onValueChange: (value: string) => void;
 }
 
 export const FieldSelector: React.FC<FieldSelectorProps> = ({
   value,
-  fieldNames,
+  fields,
   placeholder = 'Select field',
   onValueChange,
 }) => {
@@ -26,11 +29,17 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-        {fieldNames.map((field: string) => (
-          <SelectItem key={field} value={field}>
-            {field}
-          </SelectItem>
-        ))}
+        {fields.map((field) => {
+          const typeCategory = getArrowColumnTypeCategory(field.type);
+          return (
+            <SelectItem key={field.name} value={field.name}>
+              <div className="flex items-center gap-2">
+                <FieldTypeIcon typeCategory={typeCategory} />
+                <span>{field.name}</span>
+              </div>
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );

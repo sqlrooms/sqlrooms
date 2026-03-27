@@ -64,8 +64,7 @@ export const VegaConfigPanel: React.FC<{
 }) => {
   const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
-  const fieldNames =
-    arrowTable?.schema?.fields?.map((field) => field.name) || [];
+  const fields = arrowTable?.schema?.fields || [];
 
   const detectBrushFieldType = (fieldName: string): BrushFieldType => {
     const arrowField = arrowTable?.schema?.fields?.find(
@@ -185,7 +184,7 @@ export const VegaConfigPanel: React.FC<{
               </Label>
               <FieldSelector
                 value={current.xField}
-                fieldNames={fieldNames}
+                fields={fields}
                 onValueChange={handleXFieldChange}
               />
             </div>
@@ -196,7 +195,7 @@ export const VegaConfigPanel: React.FC<{
               <div className="grid grid-cols-[2fr_1fr] gap-2">
                 <FieldSelector
                   value={current.yField}
-                  fieldNames={fieldNames}
+                  fields={fields}
                   onValueChange={handleYFieldChange}
                 />
 
