@@ -129,6 +129,13 @@ export const ToolPartRenderer = ({
   // the react-hooks/static-components lint rule flagging a function call.
   const ToolComponent = toolRenderers[toolName];
 
+  if (isApprovalState && !ToolComponent) {
+    console.error(
+      `Tool "${toolName}" is requesting approval but has no renderer configured.`,
+    );
+    return null;
+  }
+
   // Render the ToolComponent directly for:
   // - Tools without execute (legacy no-execute pattern)
   // - Tools in approval states (needsApproval pattern)

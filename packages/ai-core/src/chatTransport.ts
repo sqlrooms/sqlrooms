@@ -66,7 +66,11 @@ export function createLocalChatTransportFactory({
       let parsed: unknown = {};
       try {
         parsed = body ? JSON.parse(body) : {};
-      } catch {
+      } catch (parseError) {
+        console.error(
+          'Failed to parse chat transport body. Messages will be empty.',
+          {bodyType: typeof body, bodyLength: body?.length, parseError},
+        );
         parsed = {};
       }
       const parsedObj = (parsed as {messages?: unknown}) || {};
@@ -134,7 +138,9 @@ export function createLocalChatTransportFactory({
 
       return createAgentUIStreamResponse({
         agent,
-        uiMessages: sanitizeMessagesForLLM(messagesCopy),
+        uiMessages: sanitizeMessagesForLLM(
+          fixIncompleteToolCalls(messagesCopy),
+        ),
         abortSignal,
       });
     };
@@ -162,7 +168,11 @@ export function createRemoteChatTransportFactory(params: {
       let parsed: unknown = {};
       try {
         parsed = body ? JSON.parse(body) : {};
-      } catch {
+      } catch (parseError) {
+        console.error(
+          'Failed to parse remote chat transport body. Messages will be empty.',
+          {bodyType: typeof body, bodyLength: body?.length, parseError},
+        );
         parsed = {};
       }
 
@@ -237,6 +247,18 @@ export function createChatHandlers({
 
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
+
+          // Force useChat to reinitialize with the fixed messages
+          store.setState((s: AiSliceStateForTransport) =>
+            produce(s, (draft: AiSliceStateForTransport) => {
+              const sess = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (sess) {
+                sess.messagesRevision = (sess.messagesRevision || 0) + 1;
+              }
+            }),
+          );
 
           // Ensure an analysis result exists and is marked as cancelled
           store.setState((stateToUpdate: AiSliceStateForTransport) =>
@@ -409,6 +431,18 @@ export function createChatHandlers({
                   }
                 }
               }
+            }
+          }),
+        );
+
+        // Force useChat to reinitialize with the fixed messages
+        store.setState((s: AiSliceStateForTransport) =>
+          produce(s, (draft: AiSliceStateForTransport) => {
+            const sess = draft.ai.config.sessions.find(
+              (s: AnalysisSessionSchema) => s.id === sessionId,
+            );
+            if (sess) {
+              sess.messagesRevision = (sess.messagesRevision || 0) + 1;
             }
           }),
         );

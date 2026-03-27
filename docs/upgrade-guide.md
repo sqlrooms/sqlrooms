@@ -340,11 +340,15 @@ result.pipeThrough(
 
 #### After
 
-Remove the `onChunk` handler. The AI SDK's `toUIMessageStream()` now embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
+Remove the `onChunk` handler. `createAgentUIStreamResponse` embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
 
 ```ts
-// app/api/chat/route.ts
-writer.merge(result.toUIMessageStream({originalMessages: messages}));
+// chatTransport.ts — inside the local transport factory
+return createAgentUIStreamResponse({
+  agent,
+  uiMessages: sanitizeMessagesForLLM(fixIncompleteToolCalls(messagesCopy)),
+  abortSignal,
+});
 ```
 
 **Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.

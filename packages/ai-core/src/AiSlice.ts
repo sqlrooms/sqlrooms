@@ -668,7 +668,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             );
             return updated;
           } catch (error) {
-            console.warn(
+            console.error(
               'Failed to persist UI messages:',
               error instanceof Error ? error.message : error,
             );

@@ -105,7 +105,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
 
   const initialMessages = useMemo(() => {
     return fixIncompleteToolCalls(
-      (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+      (currentSession?.uiMessages ?? []) as UIMessage[],
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);

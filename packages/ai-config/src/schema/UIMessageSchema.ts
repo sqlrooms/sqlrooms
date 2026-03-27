@@ -84,7 +84,7 @@ const ToolUIPartOutputDeniedSchema = ToolUIPartBaseSchema.extend({
   approval: ToolUIPartApprovalSchema,
 });
 
-const ToolUIPartSchema = z.union([
+const ToolUIPartSchema = z.discriminatedUnion('state', [
   ToolUIPartInputStreamingSchema,
   ToolUIPartInputAvailableSchema,
   ToolUIPartOutputAvailableSchema,
@@ -149,7 +149,7 @@ const DynamicToolOutputDeniedSchema = DynamicToolUIPartBaseSchema.extend({
   approval: ToolUIPartApprovalSchema,
 });
 
-const DynamicToolUIPartSchema = z.union([
+const DynamicToolUIPartSchema = z.discriminatedUnion('state', [
   DynamicToolInputStreamingSchema,
   DynamicToolInputAvailableSchema,
   DynamicToolOutputAvailableSchema,

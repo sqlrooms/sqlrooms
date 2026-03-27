@@ -44,12 +44,20 @@ export function updateAgentToolCallData(
     if (existing) {
       existing.output = chunk.output;
       existing.state = 'success';
+    } else {
+      console.warn(
+        `Received tool-output-available for unknown toolCallId: ${chunk.toolCallId}`,
+      );
     }
   } else if (chunk.type === 'tool-output-error') {
     const existing = toolEditState.get(chunk.toolCallId);
     if (existing) {
       existing.errorText = chunk.errorText;
       existing.state = 'error';
+    } else {
+      console.warn(
+        `Received tool-output-error for unknown toolCallId: ${chunk.toolCallId}`,
+      );
     }
   } else if (chunk.type === 'tool-input-error') {
     toolEditState.set(chunk.toolCallId, {
