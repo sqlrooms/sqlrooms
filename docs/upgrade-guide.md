@@ -10,6 +10,40 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `ResizablePanel` sizing and direction (breaking)
+
+`react-resizable-panels` was upgraded from v3 to v4. Two important breaking changes affect every usage:
+
+**`direction` → `orientation`** — `PanelGroup`'s `direction` prop has been renamed to `orientation`. The accepted values (`"horizontal"` | `"vertical"`) are unchanged.
+
+**Size values are now parsed differently** — In v3, all size props (`defaultSize`, `minSize`, `maxSize`, `collapsedSize`) accepted a plain `number` interpreted as a **percentage** (0–100). In v4, a plain `number` is interpreted as **pixels**, while a `string` without a unit suffix is treated as a percentage. To keep percentage-based sizes, pass a string like `"50"` or `"50%"`.
+
+v4 also supports CSS units: `"200px"`, `"1rem"`, `"50vh"`, etc.
+
+#### Before
+
+```tsx
+<ResizablePanelGroup direction="vertical">
+  <ResizablePanel defaultSize={30} minSize={10}>
+    {/* ... */}
+  </ResizablePanel>
+  <ResizableHandle />
+  <ResizablePanel defaultSize={70}>{/* ... */}</ResizablePanel>
+</ResizablePanelGroup>
+```
+
+#### After
+
+```tsx
+<ResizablePanelGroup orientation="vertical">
+  <ResizablePanel defaultSize="30" minSize="10">
+    {/* ... */}
+  </ResizablePanel>
+  <ResizableHandle />
+  <ResizablePanel defaultSize="70">{/* ... */}</ResizablePanel>
+</ResizablePanelGroup>
+```
+
 ### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
 
 `createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
