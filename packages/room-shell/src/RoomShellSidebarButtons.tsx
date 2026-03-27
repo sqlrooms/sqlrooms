@@ -54,6 +54,9 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const resolvePanelInfo = useBaseRoomShellStore(
+    (state) => state.layout.resolvePanelInfo,
+  );
   const visibleRoomPanels = useMemo(
     () => getVisibleLayoutPanels(layout),
     [layout],
@@ -61,15 +64,15 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
   );
-  const {icon: Icon, title} = panels[roomPanelType] ?? {};
+  const info = panels[roomPanelType] ?? resolvePanelInfo?.(roomPanelType);
 
   return (
     <SidebarButton
       key={roomPanelType}
-      title={title ?? ''}
+      title={info?.title ?? ''}
       isSelected={visibleRoomPanels.includes(roomPanelType)}
       isDisabled={!initialized}
-      icon={Icon ?? (() => null)}
+      icon={info?.icon ?? (() => null)}
       onClick={() => togglePanel(roomPanelType)}
     />
   );
@@ -111,6 +114,9 @@ const AreaPanelButtons: FC<{
   className?: string;
 }> = ({area, className}) => {
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const resolvePanelInfo = useBaseRoomShellStore(
+    (state) => state.layout.resolvePanelInfo,
+  );
   const activePanel = useBaseRoomShellStore((state) =>
     state.layout.getActivePanel(area),
   );
@@ -135,13 +141,14 @@ const AreaPanelButtons: FC<{
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      {areaPanels.map(([panelId, info]) => {
+      {areaPanels.map(([panelId, staticInfo]) => {
+        const info = staticInfo ?? resolvePanelInfo?.(panelId);
         const isSelected = activePanel === panelId && !isCollapsed;
         return (
           <SidebarButton
             key={panelId}
-            title={info.title ?? panelId}
-            icon={info.icon ?? (() => null)}
+            title={info?.title ?? panelId}
+            icon={info?.icon ?? (() => null)}
             isSelected={isSelected}
             isDisabled={!initialized}
             onClick={() => {

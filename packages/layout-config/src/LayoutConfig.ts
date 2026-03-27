@@ -18,6 +18,7 @@ const LayoutSize = z.union([z.number(), z.string()]);
 export const LayoutPanelNode = z.object({
   type: z.literal('panel'),
   id: z.string(),
+  title: z.string().optional(),
   defaultSize: LayoutSize.optional(),
   minSize: LayoutSize.optional(),
   maxSize: LayoutSize.optional(),

@@ -78,6 +78,7 @@ export interface LayoutRendererProps {
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
+  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (areaId: string, tabId: string) => void;
   onTabClose?: (areaId: string, tabId: string) => void;
@@ -97,6 +98,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
   className,
   renderPanel,
   renderTabStrip,
+  resolvePanelInfo,
   onLayoutChange,
   onTabSelect,
   onTabClose,
@@ -117,6 +119,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
         rootLayout={layout}
         renderPanel={renderPanel}
         renderTabStrip={renderTabStrip}
+        resolvePanelInfo={resolvePanelInfo}
         onLayoutChange={onLayoutChange}
         onTabSelect={onTabSelect}
         onTabClose={onTabClose}
@@ -146,6 +149,7 @@ interface NodeRenderProps {
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
+  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (areaId: string, tabId: string) => void;
   onTabClose?: (areaId: string, tabId: string) => void;
@@ -153,6 +157,18 @@ interface NodeRenderProps {
   onTabCreate?: (areaId: string) => void;
   onAreaCollapse?: (areaId: string) => void;
   onAreaExpand?: (areaId: string, panelId?: string) => void;
+}
+
+/**
+ * Resolve panel info by checking the static panels registry first,
+ * then falling back to the resolvePanelInfo callback.
+ */
+function lookupPanelInfo(
+  panelId: string,
+  panels: Record<string, RoomPanelInfo>,
+  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined,
+): RoomPanelInfo | undefined {
+  return panels[panelId] ?? resolvePanelInfo?.(panelId);
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +204,7 @@ const LeafRenderer: FC<Omit<NodeRenderProps, 'node'> & {panelId: string}> = ({
   containerType,
   containerId,
   panels,
+  resolvePanelInfo,
   renderPanel: renderPanelOverride,
 }) => {
   const context: PanelRenderContext = {
@@ -204,7 +221,7 @@ const LeafRenderer: FC<Omit<NodeRenderProps, 'node'> & {panelId: string}> = ({
     }
   }
 
-  const info = panels[panelId];
+  const info = lookupPanelInfo(panelId, panels, resolvePanelInfo);
   if (!info?.component) return null;
 
   const PanelComp = info.component;
@@ -453,6 +470,7 @@ const TabsRenderer: FC<
   rootLayout,
   renderPanel,
   renderTabStrip: renderTabStripOverride,
+  resolvePanelInfo,
   onLayoutChange,
   onTabSelect,
   onTabClose,
@@ -480,16 +498,17 @@ const TabsRenderer: FC<
   const activeChild = node.children[node.activeTabIndex];
   const activeTabId = tabKeys[node.activeTabIndex];
 
-  // Resolve tab name from panels registry
   const resolveTabName = useCallback(
     (id: string): string => {
       if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
-        return panels[mosaicId]?.title ?? mosaicId;
+        return (
+          lookupPanelInfo(mosaicId, panels, resolvePanelInfo)?.title ?? mosaicId
+        );
       }
-      return panels[id]?.title ?? id;
+      return lookupPanelInfo(id, panels, resolvePanelInfo)?.title ?? id;
     },
-    [panels],
+    [panels, resolvePanelInfo],
   );
 
   // Build tab descriptors for the strip
@@ -520,7 +539,7 @@ const TabsRenderer: FC<
       if (panelId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         panelId = panelId.slice(MOSAIC_NODE_KEY_PREFIX.length);
       }
-      const Icon = panels[panelId]?.icon;
+      const Icon = lookupPanelInfo(panelId, panels, resolvePanelInfo)?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}
@@ -528,7 +547,7 @@ const TabsRenderer: FC<
         </span>
       );
     },
-    [panels],
+    [panels, resolvePanelInfo],
   );
 
   // Allow render override for the entire tab strip
@@ -649,7 +668,14 @@ const TabsRenderer: FC<
 
 const MosaicRenderer: FC<
   Omit<NodeRenderProps, 'node'> & {node: LayoutMosaicNode}
-> = ({node, panels, rootLayout, renderPanel, onLayoutChange}) => {
+> = ({
+  node,
+  panels,
+  rootLayout,
+  renderPanel,
+  resolvePanelInfo,
+  onLayoutChange,
+}) => {
   const treeRef = useRef(node.nodes);
   useEffect(() => {
     treeRef.current = node.nodes;
@@ -687,7 +713,7 @@ const MosaicRenderer: FC<
         }
       }
 
-      const info = panels[panelId];
+      const info = lookupPanelInfo(panelId, panels, resolvePanelInfo);
       if (!info?.component) return <></>;
 
       const PanelComp = info.component;
@@ -709,7 +735,7 @@ const MosaicRenderer: FC<
         </MosaicWindow>
       );
     },
-    [panels, renderPanel, draggable, node.id],
+    [panels, renderPanel, resolvePanelInfo, draggable, node.id],
   );
 
   return (

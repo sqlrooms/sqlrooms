@@ -122,6 +122,7 @@ export type LayoutSliceState = {
     renderTabStrip?: (
       context: TabStripRenderContext,
     ) => React.ReactNode | undefined;
+    resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
     setConfig(layout: LayoutConfig): void;
     /** @deprecated Use setConfig instead */
     setLayout(layout: LayoutConfig): void;
@@ -165,6 +166,7 @@ export type CreateLayoutSliceProps = {
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
+  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
 };
 
 function findAreaInConfig(
@@ -179,6 +181,7 @@ export function createLayoutSlice({
   panels = {},
   renderPanel,
   renderTabStrip,
+  resolvePanelInfo,
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
   return createSlice<LayoutSliceState, BaseRoomStoreState & LayoutSliceState>(
     (set, get, store) => {
@@ -208,6 +211,7 @@ export function createLayoutSlice({
           panels,
           renderPanel,
           renderTabStrip,
+          resolvePanelInfo,
           setConfig: (config) =>
             set((state) =>
               produce(state, (draft) => {

@@ -10,6 +10,7 @@ import {
   LayoutNode,
   LayoutTabsNode,
   PanelRenderContext,
+  RoomPanelInfo,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -126,6 +127,16 @@ function isDynamicPanel(panelId: string): boolean {
   return panelId.startsWith('dashboard-') || panelId.startsWith('chart-');
 }
 
+function resolveDynamicPanelInfo(panelId: string): RoomPanelInfo | undefined {
+  if (panelId.startsWith('dashboard-')) {
+    return {title: labelFromId(panelId), icon: LayoutDashboardIcon};
+  }
+  if (panelId.startsWith('chart-')) {
+    return {title: labelFromId(panelId), icon: BarChart3Icon};
+  }
+  return undefined;
+}
+
 function renderDynamicPanel(
   ctx: PanelRenderContext,
 ): React.ReactNode | undefined {
@@ -210,6 +221,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           ],
         } satisfies LayoutConfig,
         renderPanel: renderDynamicPanel,
+        resolvePanelInfo: resolveDynamicPanelInfo,
         panels: {
           'data-sources': {
             title: 'Data Sources',
@@ -222,32 +234,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             component: SchemaPanel,
             icon: TableIcon,
             area: 'left',
-          },
-          'dashboard-overview': {
-            title: 'Overview',
-            icon: LayoutDashboardIcon,
-            area: 'main',
-          },
-          'dashboard-growth': {
-            title: 'Growth',
-            icon: LayoutDashboardIcon,
-            area: 'main',
-          },
-          'chart-revenue': {
-            title: 'Revenue',
-            icon: BarChart3Icon,
-          },
-          'chart-users': {
-            title: 'Users',
-            icon: BarChart3Icon,
-          },
-          'chart-conversions': {
-            title: 'Conversions',
-            icon: BarChart3Icon,
-          },
-          'chart-sessions': {
-            title: 'Sessions',
-            icon: BarChart3Icon,
           },
           console: {
             title: 'Console',
@@ -271,18 +257,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       const mosaicId = `dashboard-${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;
       const chartId = `chart-${mosaicId}`;
 
-      get().layout.registerPanel(mosaicId, {
-        title: `${label} Dashboard`,
-        icon: LayoutDashboardIcon,
-        area: areaId,
-      });
-
-      get().layout.registerPanel(chartId, {
-        title: label,
-        icon: BarChart3Icon,
-      });
-
-      // Create a mosaic node and add it directly to the area's children
       const mosaicNode: LayoutMosaicNode = {
         type: 'mosaic',
         id: mosaicId,
@@ -291,7 +265,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         nodes: chartId,
       };
 
-      // Add to the area using the store's produce-based mutation
       const {layout} = get();
       const found = layout.config
         ? findAreaInState(layout.config, areaId)
