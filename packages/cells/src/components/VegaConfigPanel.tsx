@@ -226,7 +226,7 @@ export const VegaConfigPanel: React.FC<{
   return (
     <div className="w-80 border-r p-4 text-xs">
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
+        <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-400">Type</Label>
           <Select value={current.mark} onValueChange={handleMarkChange}>
             <SelectTrigger className="h-8 text-xs">

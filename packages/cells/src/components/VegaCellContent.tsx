@@ -1,7 +1,7 @@
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
-import {Filter} from 'lucide-react';
+import {Filter, Settings} from 'lucide-react';
 import React, {useCallback, useState} from 'react';
 import {useCellsStore} from '../hooks';
 import {useVegaCellQuery} from '../hooks/useVegaCellQuery';
@@ -34,15 +34,13 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   const brushField = cell.data.crossFilter?.brushField;
   const brushFieldType = cell.data.crossFilter?.brushFieldType;
 
-  const [draftSpec, setDraftSpec] = useState(
-    cell.data.vegaSpec ?? {
-      data: {name: 'queryResult'},
-      mark: 'bar',
-      padding: 20,
-    },
-  );
-
   const [isEditing, setIsEditing] = useState(false);
+
+  const vegaSpec = cell.data.vegaSpec ?? {
+    data: {name: 'queryResult'},
+    mark: 'bar',
+    padding: 20,
+  };
 
   const {
     selectedSqlId,
@@ -130,14 +128,16 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
     [id, updateCell],
   );
 
-  const saveSpec = useCallback(() => {
-    updateCell(id, (c) =>
-      produce(c, (draft) => {
-        if (draft.type === 'vega') draft.data.vegaSpec = draftSpec;
-      }),
-    );
-    setIsEditing(false);
-  }, [id, draftSpec, updateCell]);
+  const handleSpecChange = useCallback(
+    (spec: any) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') draft.data.vegaSpec = spec;
+        }),
+      );
+    },
+    [id, updateCell],
+  );
 
   const header = (
     <div className="flex items-center gap-2">
@@ -149,10 +149,10 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         size="xs"
         variant="secondary"
         className="h-6"
-        onClick={() => (isEditing ? saveSpec() : setIsEditing(true))}
+        onClick={() => setIsEditing((prev) => !prev)}
         disabled={!hasDataSource}
       >
-        {isEditing ? 'Save' : 'Edit chart'}
+        <Settings className="h-4 w-4" />
       </Button>
       {crossFilterEnabled && brushField && (
         <Tooltip>
@@ -184,9 +184,9 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         <VegaConfigPanel
           sqlQuery={baseSqlQuery}
           lastRunTime={lastRunTime}
-          spec={draftSpec}
+          spec={vegaSpec}
           crossFilterEnabled={crossFilterEnabled}
-          onSpecChange={setDraftSpec}
+          onSpecChange={handleSpecChange}
           onCrossFilterToggle={handleCrossFilterToggle}
           onBrushFieldChange={handleBrushFieldChange}
           onBrushFieldTypeChange={handleBrushFieldTypeChange}
@@ -207,7 +207,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         ) : (
           <VegaLiteChart
             sqlQuery={selectedSqlQuery}
-            spec={draftSpec}
+            spec={vegaSpec}
             className="h-full w-full"
             aspectRatio={isEditing ? undefined : 3 / 2}
           >
