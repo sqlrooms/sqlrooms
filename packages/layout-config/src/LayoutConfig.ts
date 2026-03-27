@@ -3,38 +3,58 @@ import {z} from 'zod';
 /** Main view room panel key */
 export const MAIN_VIEW = 'main';
 
-export const LayoutTypes = z.enum(['mosaic']);
-export type LayoutTypes = z.infer<typeof LayoutTypes>;
+export const LayoutDirection = z.enum(['row', 'column']);
+export type LayoutDirection = z.infer<typeof LayoutDirection>;
 
-export const MosaicLayoutDirection = z.enum(['row', 'column']);
-export type MosaicLayoutDirection = z.infer<typeof MosaicLayoutDirection>;
+export const LayoutNodeKey = z.string();
+export type LayoutNodeKey = z.infer<typeof LayoutNodeKey>;
 
-export const MosaicLayoutNodeKey = z.string();
-export type MosaicLayoutNodeKey = z.infer<typeof MosaicLayoutNodeKey>;
+const LayoutSize = z.union([z.number(), z.string()]);
 
 // ---------------------------------------------------------------------------
-// N-ary tree types (react-mosaic-component v7)
+// Panel node — leaf with optional sizing constraints
 // ---------------------------------------------------------------------------
 
-const BaseMosaicLayoutSplitNode = z.object({
+export const LayoutPanelNode = z.object({
+  type: z.literal('panel'),
+  id: z.string(),
+  defaultSize: LayoutSize.optional(),
+  minSize: LayoutSize.optional(),
+  maxSize: LayoutSize.optional(),
+  collapsedSize: LayoutSize.optional(),
+  collapsible: z.boolean().optional(),
+});
+export type LayoutPanelNode = z.infer<typeof LayoutPanelNode>;
+
+// ---------------------------------------------------------------------------
+// Split node — resizable panel group
+// ---------------------------------------------------------------------------
+
+const BaseLayoutSplitNode = z.object({
   type: z.literal('split'),
   id: z.string().optional(),
-  direction: MosaicLayoutDirection,
+  direction: LayoutDirection,
   draggable: z.boolean().optional(),
-  splitPercentages: z.array(z.number()).optional(),
+  defaultSize: LayoutSize.optional(),
+  minSize: LayoutSize.optional(),
+  maxSize: LayoutSize.optional(),
+  collapsedSize: LayoutSize.optional(),
+  collapsible: z.boolean().optional(),
 });
 
-export const MosaicLayoutSplitNode: z.ZodType<MosaicLayoutSplitNode> =
-  BaseMosaicLayoutSplitNode.extend({
-    children: z.lazy(() => z.array(MosaicLayoutNode)),
+export const LayoutSplitNode: z.ZodType<LayoutSplitNode> =
+  BaseLayoutSplitNode.extend({
+    children: z.lazy(() => z.array(LayoutNode)),
   });
-export type MosaicLayoutSplitNode = z.infer<
-  typeof BaseMosaicLayoutSplitNode
-> & {
-  children: MosaicLayoutNode[];
+export type LayoutSplitNode = z.infer<typeof BaseLayoutSplitNode> & {
+  children: LayoutNode[];
 };
 
-const BaseMosaicLayoutTabsNode = z.object({
+// ---------------------------------------------------------------------------
+// Tabs node — tabbed container
+// ---------------------------------------------------------------------------
+
+const BaseLayoutTabsNode = z.object({
   type: z.literal('tabs'),
   id: z.string().optional(),
   activeTabIndex: z.number(),
@@ -46,52 +66,62 @@ const BaseMosaicLayoutTabsNode = z.object({
   showTabStrip: z.boolean().optional(),
   showTabStripWhenCollapsed: z.boolean().optional(),
   draggable: z.boolean().optional(),
-  savedPercentages: z.array(z.number()).optional(),
+  defaultSize: LayoutSize.optional(),
+  minSize: LayoutSize.optional(),
+  maxSize: LayoutSize.optional(),
+  collapsedSize: LayoutSize.optional(),
 });
 
-export const MosaicLayoutTabsNode: z.ZodType<MosaicLayoutTabsNode> =
-  BaseMosaicLayoutTabsNode.extend({
-    children: z.lazy(() => z.array(MosaicLayoutNode)),
+export const LayoutTabsNode: z.ZodType<LayoutTabsNode> =
+  BaseLayoutTabsNode.extend({
+    children: z.lazy(() => z.array(LayoutNode)),
   });
-export type MosaicLayoutTabsNode = z.infer<typeof BaseMosaicLayoutTabsNode> & {
-  children: MosaicLayoutNode[];
+export type LayoutTabsNode = z.infer<typeof BaseLayoutTabsNode> & {
+  children: LayoutNode[];
 };
 
-const BaseMosaicLayoutMosaicNode = z.object({
+// ---------------------------------------------------------------------------
+// Mosaic node — drag-and-drop sub-layout (rendered via react-mosaic)
+// ---------------------------------------------------------------------------
+
+const BaseLayoutMosaicNode = z.object({
   type: z.literal('mosaic'),
   id: z.string(),
   draggable: z.boolean().optional(),
-  direction: MosaicLayoutDirection.optional(),
-  splitPercentages: z.array(z.number()).optional(),
+  direction: LayoutDirection.optional(),
+  defaultSize: LayoutSize.optional(),
+  minSize: LayoutSize.optional(),
+  maxSize: LayoutSize.optional(),
+  collapsedSize: LayoutSize.optional(),
+  collapsible: z.boolean().optional(),
 });
 
-export const MosaicLayoutMosaicNode: z.ZodType<MosaicLayoutMosaicNode> =
-  BaseMosaicLayoutMosaicNode.extend({
-    nodes: z.lazy(() => MosaicLayoutNode.nullable()),
+export const LayoutMosaicNode: z.ZodType<LayoutMosaicNode> =
+  BaseLayoutMosaicNode.extend({
+    nodes: z.lazy(() => LayoutNode.nullable()),
   });
-export type MosaicLayoutMosaicNode = z.infer<
-  typeof BaseMosaicLayoutMosaicNode
-> & {
-  nodes: MosaicLayoutNode | null;
+export type LayoutMosaicNode = z.infer<typeof BaseLayoutMosaicNode> & {
+  nodes: LayoutNode | null;
 };
 
 // ---------------------------------------------------------------------------
-// Legacy binary tree types (react-mosaic-component v6) — for migration only
+// Legacy types — for migration only
 // ---------------------------------------------------------------------------
 
-interface LegacyMosaicLayoutParent {
-  direction: MosaicLayoutDirection;
-  first: LegacyMosaicLayoutNode;
-  second: LegacyMosaicLayoutNode;
+interface LegacyBinaryNode {
+  direction: LayoutDirection;
+  first: unknown;
+  second: unknown;
   splitPercentage?: number;
 }
 
-type LegacyMosaicLayoutNode = MosaicLayoutNodeKey | LegacyMosaicLayoutParent;
-
 /**
- * Recursively convert a legacy binary mosaic tree node to the new n-ary format.
- * Leaf nodes (strings) pass through unchanged. Already-converted nodes
- * (those with a `type` field) also pass through.
+ * Recursively migrate legacy layout formats to the current schema.
+ * Handles:
+ * 1. Legacy binary tree (v6): { first, second, direction } -> { type: 'split', children }
+ * 2. Outer wrapper unwrap: { type: 'mosaic', nodes } -> nodes (the inner tree)
+ * 3. Legacy tabs prop: { type: 'tabs', tabs: [...] } -> { type: 'tabs', children: [...] }
+ * 4. Strip removed fields: splitPercentages, savedPercentages
  */
 function convertLegacyNode(node: unknown): unknown {
   if (typeof node === 'string' || node == null) return node;
@@ -99,26 +129,39 @@ function convertLegacyNode(node: unknown): unknown {
 
   const obj = node as Record<string, unknown>;
 
-  // Already in n-ary format
+  // Unwrap the outer { type: 'mosaic', nodes: ... } wrapper
+  if (obj.type === 'mosaic' && 'nodes' in obj && !('id' in obj)) {
+    return convertLegacyNode(obj.nodes);
+  }
+
+  // Already in typed format — apply field migrations
   if (
     'type' in obj &&
-    (obj.type === 'split' || obj.type === 'tabs' || obj.type === 'mosaic')
+    (obj.type === 'split' ||
+      obj.type === 'tabs' ||
+      obj.type === 'mosaic' ||
+      obj.type === 'panel')
   ) {
+    let result = obj;
+
     // Migrate legacy tabs property -> children
     if (obj.type === 'tabs' && 'tabs' in obj && !('children' in obj)) {
-      const {tabs, ...rest} = obj;
-      return {...rest, children: tabs};
+      const {tabs, ...rest} = result;
+      result = {...rest, children: tabs};
     }
-    return node;
+
+    // Strip removed fields
+    if ('splitPercentages' in result || 'savedPercentages' in result) {
+      const {splitPercentages, savedPercentages, ...rest} = result;
+      result = rest;
+    }
+
+    return result;
   }
 
   // Legacy binary format detected
   if ('first' in obj && 'second' in obj) {
-    const legacy = obj as unknown as LegacyMosaicLayoutParent;
-    const splitPercentages =
-      legacy.splitPercentage !== undefined
-        ? [legacy.splitPercentage, 100 - legacy.splitPercentage]
-        : undefined;
+    const legacy = obj as unknown as LegacyBinaryNode;
     return {
       type: 'split' as const,
       direction: legacy.direction,
@@ -126,7 +169,6 @@ function convertLegacyNode(node: unknown): unknown {
         convertLegacyNode(legacy.first),
         convertLegacyNode(legacy.second),
       ],
-      ...(splitPercentages ? {splitPercentages} : {}),
     };
   }
 
@@ -134,32 +176,45 @@ function convertLegacyNode(node: unknown): unknown {
 }
 
 // ---------------------------------------------------------------------------
-// Composite MosaicLayoutNode — accepts both legacy and n-ary formats via preprocess
+// Composite LayoutNode union — accepts legacy formats via preprocess
 // ---------------------------------------------------------------------------
 
-export type MosaicLayoutNode =
-  | MosaicLayoutNodeKey
-  | MosaicLayoutSplitNode
-  | MosaicLayoutTabsNode
-  | MosaicLayoutMosaicNode;
+export type LayoutNode =
+  | LayoutNodeKey
+  | LayoutPanelNode
+  | LayoutSplitNode
+  | LayoutTabsNode
+  | LayoutMosaicNode;
 
-export const MosaicLayoutNode: z.ZodType<MosaicLayoutNode> = z.preprocess(
+export const LayoutNode: z.ZodType<LayoutNode> = z.preprocess(
   convertLegacyNode,
   z.union([
-    MosaicLayoutNodeKey,
-    MosaicLayoutSplitNode,
-    MosaicLayoutTabsNode,
-    MosaicLayoutMosaicNode,
+    LayoutNodeKey,
+    LayoutPanelNode,
+    LayoutSplitNode,
+    LayoutTabsNode,
+    LayoutMosaicNode,
   ]),
-) as z.ZodType<MosaicLayoutNode>;
+) as z.ZodType<LayoutNode>;
 
 // ---------------------------------------------------------------------------
 // Type guards
 // ---------------------------------------------------------------------------
 
-export function isMosaicLayoutSplitNode(
-  node: MosaicLayoutNode | null | undefined,
-): node is MosaicLayoutSplitNode {
+export function isLayoutPanelNode(
+  node: LayoutNode | null | undefined,
+): node is LayoutPanelNode {
+  return (
+    node != null &&
+    typeof node === 'object' &&
+    'type' in node &&
+    node.type === 'panel'
+  );
+}
+
+export function isLayoutSplitNode(
+  node: LayoutNode | null | undefined,
+): node is LayoutSplitNode {
   return (
     node != null &&
     typeof node === 'object' &&
@@ -168,9 +223,9 @@ export function isMosaicLayoutSplitNode(
   );
 }
 
-export function isMosaicLayoutTabsNode(
-  node: MosaicLayoutNode | null | undefined,
-): node is MosaicLayoutTabsNode {
+export function isLayoutTabsNode(
+  node: LayoutNode | null | undefined,
+): node is LayoutTabsNode {
   return (
     node != null &&
     typeof node === 'object' &&
@@ -179,9 +234,9 @@ export function isMosaicLayoutTabsNode(
   );
 }
 
-export function isMosaicLayoutMosaicNode(
-  node: MosaicLayoutNode | null | undefined,
-): node is MosaicLayoutMosaicNode {
+export function isLayoutMosaicNode(
+  node: LayoutNode | null | undefined,
+): node is LayoutMosaicNode {
   return (
     node != null &&
     typeof node === 'object' &&
@@ -190,50 +245,86 @@ export function isMosaicLayoutMosaicNode(
   );
 }
 
-/**
- * @deprecated Use `isMosaicLayoutSplitNode` instead.
- * Kept for backward compatibility — now checks for `MosaicLayoutSplitNode`.
- */
-export function isMosaicLayoutParent(
-  node: MosaicLayoutNode | null | undefined,
-): node is MosaicLayoutSplitNode {
-  return isMosaicLayoutSplitNode(node);
+// ---------------------------------------------------------------------------
+// LayoutConfig — the top-level config is just LayoutNode | null
+// ---------------------------------------------------------------------------
+
+export const LayoutConfig: z.ZodType<LayoutConfig> = z.preprocess(
+  convertLegacyNode,
+  LayoutNode.nullable(),
+) as z.ZodType<LayoutConfig>;
+export type LayoutConfig = LayoutNode | null;
+
+export function createDefaultLayout(): LayoutConfig {
+  return MAIN_VIEW;
 }
 
-/**
- * @deprecated Use `MosaicLayoutSplitNode` instead.
- */
-export type MosaicLayoutParent = MosaicLayoutSplitNode;
-/**
- * @deprecated Use `MosaicLayoutSplitNode` instead.
- */
-export const MosaicLayoutParent: z.ZodType<MosaicLayoutSplitNode> =
-  MosaicLayoutSplitNode;
-
 // ---------------------------------------------------------------------------
-// Layout config
+// Deprecated re-exports for backward compatibility
 // ---------------------------------------------------------------------------
 
+/** @deprecated Use `LayoutDirection` instead. */
+export const MosaicLayoutDirection = LayoutDirection;
+/** @deprecated Use `LayoutDirection` instead. */
+export type MosaicLayoutDirection = LayoutDirection;
+
+/** @deprecated Use `LayoutNodeKey` instead. */
+export const MosaicLayoutNodeKey = LayoutNodeKey;
+/** @deprecated Use `LayoutNodeKey` instead. */
+export type MosaicLayoutNodeKey = LayoutNodeKey;
+
+/** @deprecated Use `LayoutSplitNode` instead. */
+export const MosaicLayoutSplitNode = LayoutSplitNode;
+/** @deprecated Use `LayoutSplitNode` instead. */
+export type MosaicLayoutSplitNode = LayoutSplitNode;
+
+/** @deprecated Use `LayoutTabsNode` instead. */
+export const MosaicLayoutTabsNode = LayoutTabsNode;
+/** @deprecated Use `LayoutTabsNode` instead. */
+export type MosaicLayoutTabsNode = LayoutTabsNode;
+
+/** @deprecated Use `LayoutMosaicNode` instead. */
+export const MosaicLayoutMosaicNode = LayoutMosaicNode;
+/** @deprecated Use `LayoutMosaicNode` instead. */
+export type MosaicLayoutMosaicNode = LayoutMosaicNode;
+
+/** @deprecated Use `LayoutNode` instead. */
+export const MosaicLayoutNode = LayoutNode;
+/** @deprecated Use `LayoutNode` instead. */
+export type MosaicLayoutNode = LayoutNode;
+
+/** @deprecated Use `isLayoutSplitNode` instead. */
+export const isMosaicLayoutSplitNode = isLayoutSplitNode;
+/** @deprecated Use `isLayoutTabsNode` instead. */
+export const isMosaicLayoutTabsNode = isLayoutTabsNode;
+/** @deprecated Use `isLayoutMosaicNode` instead. */
+export const isMosaicLayoutMosaicNode = isLayoutMosaicNode;
+
+/** @deprecated Use `isLayoutSplitNode` instead. */
+export const isMosaicLayoutParent = isLayoutSplitNode;
+/** @deprecated Use `LayoutSplitNode` instead. */
+export type MosaicLayoutParent = LayoutSplitNode;
+/** @deprecated Use `LayoutSplitNode` instead. */
+export const MosaicLayoutParent = LayoutSplitNode;
+
+/** @deprecated Use `createDefaultLayout` instead. */
+export const createDefaultMosaicLayout = createDefaultLayout;
+
+/** @deprecated No longer needed — LayoutConfig is now LayoutNode | null directly. */
 export const MosaicLayoutConfig = z.object({
-  type: z.literal(LayoutTypes.enum.mosaic),
-  nodes: MosaicLayoutNode.nullable(),
-  pinned: z.array(MosaicLayoutNodeKey).optional(),
-  fixed: z.array(MosaicLayoutNodeKey).optional(),
+  type: z.literal('mosaic'),
+  nodes: LayoutNode.nullable(),
 });
+/** @deprecated No longer needed — LayoutConfig is now LayoutNode | null directly. */
 export type MosaicLayoutConfig = z.infer<typeof MosaicLayoutConfig>;
 
-/** @deprecated Use createDefaultMosaicLayout instead */
+/** @deprecated Use `createDefaultLayout` instead. */
 export const DEFAULT_MOSAIC_LAYOUT: MosaicLayoutConfig = {
-  type: LayoutTypes.enum.mosaic,
+  type: 'mosaic' as const,
   nodes: MAIN_VIEW,
 };
 
-export function createDefaultMosaicLayout(): MosaicLayoutConfig {
-  return {
-    type: LayoutTypes.enum.mosaic,
-    nodes: MAIN_VIEW,
-  };
-}
-
-export const LayoutConfig = z.discriminatedUnion('type', [MosaicLayoutConfig]);
-export type LayoutConfig = z.infer<typeof LayoutConfig>;
+/** @deprecated No longer needed — use LayoutConfig directly. */
+export const LayoutTypes = z.enum(['mosaic']);
+/** @deprecated No longer needed — use LayoutConfig directly. */
+export type LayoutTypes = z.infer<typeof LayoutTypes>;

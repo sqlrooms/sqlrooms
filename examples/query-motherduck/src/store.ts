@@ -1,9 +1,5 @@
 import {createWasmMotherDuckDbConnector} from '@sqlrooms/motherduck';
-import {
-  createRoomShellSlice,
-  LayoutTypes,
-  RoomShellSliceState,
-} from '@sqlrooms/room-shell';
+import {createRoomShellSlice, RoomShellSliceState} from '@sqlrooms/room-shell';
 import {
   BaseRoomConfig,
   createRoomStoreCreator,
@@ -46,16 +42,13 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
           }),
           layout: {
             config: {
-              type: LayoutTypes.enum.mosaic,
-              nodes: {
-                type: 'split',
-                direction: 'row',
-                children: [
-                  RoomPanelTypes.enum['data'],
-                  RoomPanelTypes.enum['main'],
-                ],
-                splitPercentages: [30, 70],
-              },
+              type: 'split',
+              direction: 'row',
+              children: [
+                RoomPanelTypes.enum['data'],
+                RoomPanelTypes.enum['main'],
+              ],
+              splitPercentages: [30, 70],
             },
             panels: {
               [RoomPanelTypes.enum['main']]: {

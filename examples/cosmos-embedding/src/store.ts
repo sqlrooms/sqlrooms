@@ -2,7 +2,6 @@ import {CosmosSliceState, createCosmosSlice} from '@sqlrooms/cosmos';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -40,10 +39,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ],
       },
       layout: {
-        config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: MAIN_VIEW,
-        },
+        config: MAIN_VIEW,
         panels: {
           [RoomPanelTypes.enum['data-sources']]: {
             title: 'Data Sources',

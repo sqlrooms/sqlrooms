@@ -3,7 +3,6 @@ import {createKeplerSlice, KeplerSliceState} from '@sqlrooms/kepler';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
   LoadFileOptions,
   MAIN_VIEW,
   RoomShellSliceState,
@@ -70,13 +69,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         }),
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              type: 'split',
-              direction: 'row',
-              children: [RoomPanelTypes.enum['data'], MAIN_VIEW],
-              splitPercentages: [30, 70],
-            },
+            type: 'split',
+            direction: 'row',
+            children: [RoomPanelTypes.enum['data'], MAIN_VIEW],
+            splitPercentages: [30, 70],
           },
           panels: {
             [RoomPanelTypes.enum['data']]: {

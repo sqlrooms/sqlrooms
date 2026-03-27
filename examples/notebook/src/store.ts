@@ -21,7 +21,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
@@ -47,13 +46,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         config: {
           layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              type: 'split',
-              direction: 'row',
-              children: ['data', 'main'],
-              splitPercentages: [20, 80],
-            },
+            type: 'split',
+            direction: 'row',
+            children: ['data', 'main'],
+            splitPercentages: [20, 80],
           },
           dataSources: [
             {

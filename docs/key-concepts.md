@@ -167,27 +167,25 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            // Data panel (30%) and main view (70%)
-            type: 'split',
-            direction: 'row',
-            children: ['data-panel', MAIN_VIEW],
-            splitPercentages: [30, 70],
-          },
+          type: 'split',
+          direction: 'row',
+          children: [
+            {type: 'panel', id: 'data-panel', defaultSize: '30%'},
+            MAIN_VIEW,
+          ],
         },
         panels: {
           'data-panel': {
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            placement: 'sidebar',
+            area: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            placement: 'main',
+            area: 'main',
           },
         },
       },
@@ -196,7 +194,7 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
-Layout composer renders the mosaic layout with panels:
+Layout composer renders the layout with panels:
 
 ```tsx
 function App() {

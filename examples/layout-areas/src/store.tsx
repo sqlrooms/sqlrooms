@@ -1,12 +1,12 @@
 import {
   createRoomShellSlice,
   createRoomStore,
-  isMosaicLayoutTabsNode,
-  isMosaicLayoutSplitNode,
+  isLayoutTabsNode,
+  isLayoutSplitNode,
   LayoutConfig,
-  MosaicLayoutMosaicNode,
-  MosaicLayoutNode,
-  MosaicLayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutTabsNode,
   RoomShellSliceState,
   getChildKey,
   getMosaicNodeKey,
@@ -26,18 +26,18 @@ import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 
 function findAreaInState(
-  root: MosaicLayoutNode | null,
+  root: LayoutNode | null,
   areaId: string,
-): MosaicLayoutTabsNode | undefined {
+): LayoutTabsNode | undefined {
   if (!root || typeof root === 'string') return undefined;
-  if (isMosaicLayoutTabsNode(root) && root.id === areaId) return root;
-  if (isMosaicLayoutSplitNode(root)) {
+  if (isLayoutTabsNode(root) && root.id === areaId) return root;
+  if (isLayoutSplitNode(root)) {
     for (const child of root.children) {
       const result = findAreaInState(child, areaId);
       if (result) return result;
     }
   }
-  if (isMosaicLayoutTabsNode(root)) {
+  if (isLayoutTabsNode(root)) {
     for (const child of root.children) {
       const result = findAreaInState(child, areaId);
       if (result) return result;
@@ -47,14 +47,14 @@ function findAreaInState(
 }
 
 function addMosaicChildToArea(
-  root: MosaicLayoutNode | null,
+  root: LayoutNode | null,
   areaId: string,
-  mosaicNode: MosaicLayoutMosaicNode,
-): MosaicLayoutNode | null {
+  mosaicNode: LayoutMosaicNode,
+): LayoutNode | null {
   if (!root) return root;
   if (typeof root === 'string') return root;
 
-  if (isMosaicLayoutTabsNode(root) && root.id === areaId) {
+  if (isLayoutTabsNode(root) && root.id === areaId) {
     const key = getMosaicNodeKey(mosaicNode.id);
     const alreadyExists = root.children.some((c) => getChildKey(c) === key);
     if (alreadyExists) return root;
@@ -66,28 +66,24 @@ function addMosaicChildToArea(
     };
   }
 
-  if (isMosaicLayoutSplitNode(root)) {
+  if (isLayoutSplitNode(root)) {
     let changed = false;
     const newChildren = root.children.map((child) => {
       const updated = addMosaicChildToArea(child, areaId, mosaicNode);
       if (updated !== child) changed = true;
       return updated;
     });
-    return changed
-      ? {...root, children: newChildren as MosaicLayoutNode[]}
-      : root;
+    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
   }
 
-  if (isMosaicLayoutTabsNode(root)) {
+  if (isLayoutTabsNode(root)) {
     let changed = false;
     const newChildren = root.children.map((child) => {
       const updated = addMosaicChildToArea(child, areaId, mosaicNode);
       if (updated !== child) changed = true;
       return updated;
     });
-    return changed
-      ? {...root, children: newChildren as MosaicLayoutNode[]}
-      : root;
+    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
   }
 
   return root;
@@ -117,73 +113,68 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     ...createRoomShellSlice({
       layout: {
         config: {
-          type: 'mosaic',
-          nodes: {
-            type: 'split',
-            direction: 'row',
-            children: [
-              {
-                type: 'tabs',
-                id: 'left',
-                children: ['data-sources', 'schema'],
-                activeTabIndex: 0,
-                collapsible: true,
-                showTabStrip: false,
-              },
-              {
-                type: 'split',
-                direction: 'column',
-                children: [
-                  {
-                    type: 'tabs',
-                    id: 'main',
-                    children: [
-                      {
-                        type: 'mosaic',
-                        id: 'dashboard-overview',
-                        draggable: true,
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'tabs',
+              id: 'left',
+              defaultSize: '22%',
+              children: ['data-sources', 'schema'],
+              activeTabIndex: 0,
+              collapsible: true,
+              showTabStrip: false,
+            },
+            {
+              type: 'split',
+              direction: 'column',
+              children: [
+                {
+                  type: 'tabs',
+                  id: 'main',
+                  children: [
+                    {
+                      type: 'mosaic',
+                      id: 'dashboard-overview',
+                      draggable: true,
+                      direction: 'row',
+                      nodes: {
+                        type: 'split',
                         direction: 'row',
-                        nodes: {
-                          type: 'split',
-                          direction: 'row',
-                          children: ['chart-revenue', 'chart-users'],
-                          splitPercentages: [50, 50],
-                        },
+                        children: ['chart-revenue', 'chart-users'],
                       },
-                      {
-                        type: 'mosaic',
-                        id: 'dashboard-growth',
-                        draggable: true,
+                    },
+                    {
+                      type: 'mosaic',
+                      id: 'dashboard-growth',
+                      draggable: true,
+                      direction: 'row',
+                      nodes: {
+                        type: 'split',
                         direction: 'row',
-                        nodes: {
-                          type: 'split',
-                          direction: 'row',
-                          children: ['chart-conversions', 'chart-sessions'],
-                          splitPercentages: [50, 50],
-                        },
+                        children: ['chart-conversions', 'chart-sessions'],
                       },
-                    ],
-                    activeTabIndex: 0,
-                    showTabStrip: true,
-                    creatableTabs: true,
-                    closeableTabs: true,
-                    searchableTabs: true,
-                  },
-                  {
-                    type: 'tabs',
-                    id: 'bottom',
-                    children: ['console', 'results'],
-                    activeTabIndex: 0,
-                    collapsible: true,
-                    showTabStrip: true,
-                    showTabStripWhenCollapsed: true,
-                  },
-                ],
-                splitPercentages: [70, 30],
-              },
-            ],
-            splitPercentages: [22, 78],
-          },
+                    },
+                  ],
+                  activeTabIndex: 0,
+                  showTabStrip: true,
+                  creatableTabs: true,
+                  closeableTabs: true,
+                  searchableTabs: true,
+                },
+                {
+                  type: 'tabs',
+                  id: 'bottom',
+                  defaultSize: '30%',
+                  children: ['console', 'results'],
+                  activeTabIndex: 0,
+                  collapsible: true,
+                  showTabStrip: true,
+                  showTabStripWhenCollapsed: true,
+                },
+              ],
+            },
+          ],
         } satisfies LayoutConfig,
         panels: {
           'data-sources': {
@@ -268,7 +259,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       });
 
       // Create a mosaic node and add it directly to the area's children
-      const mosaicNode: MosaicLayoutMosaicNode = {
+      const mosaicNode: LayoutMosaicNode = {
         type: 'mosaic',
         id: mosaicId,
         draggable: true,
@@ -278,14 +269,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       // Add to the area using the store's produce-based mutation
       const {layout} = get();
-      const found = layout.config.nodes
-        ? findAreaInState(layout.config.nodes, areaId)
+      const found = layout.config
+        ? findAreaInState(layout.config, areaId)
         : undefined;
       if (found) {
-        layout.setConfig({
-          ...layout.config,
-          nodes: addMosaicChildToArea(layout.config.nodes, areaId, mosaicNode),
-        });
+        layout.setConfig(
+          addMosaicChildToArea(layout.config, areaId, mosaicNode),
+        );
       }
     },
   }),

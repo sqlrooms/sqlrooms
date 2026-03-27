@@ -9,7 +9,6 @@ import {
 import 'react-mosaic-component/react-mosaic-component.css';
 import {
   isMosaicLayoutTabsNode,
-  isMosaicLayoutSplitNode,
   MosaicLayoutTabsNode,
   MosaicLayoutNode,
 } from '@sqlrooms/layout-config';
@@ -83,8 +82,6 @@ export interface MosaicLayoutProps {
 
 type CombinedProps = MosaicProps<string> & MosaicLayoutProps;
 
-const UNCOLLAPSE_THRESHOLD = 8;
-
 const MosaicLayout: FC<CombinedProps> = (props) => {
   const {
     onChange,
@@ -134,7 +131,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       ) as MosaicLayoutNode | null;
 
       if (restored) {
-        checkResizeUncollapse(restored, onAreaExpand);
+        checkResizeUncollapse();
       }
 
       onRelease?.(restored as MosaicNode<string> | null);
@@ -487,36 +484,10 @@ function NestedMosaicTile({
 }
 
 /**
- * Walk the tree looking for collapsed areas whose split percentage
- * has been manually resized past the threshold — auto-uncollapse them.
+ * @deprecated splitPercentages removed; collapse is handled by react-resizable-panels.
  */
-function checkResizeUncollapse(
-  root: MosaicLayoutNode,
-  onAreaExpand?: (areaId: string) => void,
-) {
-  if (!onAreaExpand) return;
-  (function walk(node: MosaicLayoutNode, path: MosaicPath) {
-    if (!node || typeof node === 'string') return;
-    if (isMosaicLayoutSplitNode(node)) {
-      for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
-        if (
-          child &&
-          typeof child !== 'string' &&
-          isMosaicLayoutTabsNode(child) &&
-          child.collapsed &&
-          child.id &&
-          node.splitPercentages
-        ) {
-          const pct = node.splitPercentages[i] ?? 0;
-          if (pct > UNCOLLAPSE_THRESHOLD) {
-            onAreaExpand(child.id);
-          }
-        }
-        walk(node.children[i]!, [...path, i]);
-      }
-    }
-  })(root, []);
+function checkResizeUncollapse() {
+  // No-op
 }
 
 function CollapsedHorizontalStrip({

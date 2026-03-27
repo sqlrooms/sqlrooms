@@ -1,4 +1,4 @@
-import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import {getVisibleLayoutPanels} from '@sqlrooms/layout';
 import {
   Button,
   cn,
@@ -55,7 +55,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const visibleRoomPanels = useMemo(
-    () => getVisibleMosaicLayoutPanels(layout?.nodes),
+    () => getVisibleLayoutPanels(layout),
     [layout],
   );
   const togglePanel = useBaseRoomShellStore(

@@ -1,7 +1,6 @@
 import {
   BaseRoomConfig,
   LayoutConfig,
-  LayoutTypes,
   createRoomShellSlice,
   createRoomStore,
   persistSliceConfigs,
@@ -47,13 +46,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              type: 'split',
-              direction: 'row',
-              children: [RoomPanelTypes.enum.data, RoomPanelTypes.enum.main],
-              splitPercentages: [24, 76],
-            },
+            type: 'split',
+            direction: 'row',
+            children: [RoomPanelTypes.enum.data, RoomPanelTypes.enum.main],
+            splitPercentages: [24, 76],
           },
           panels: {
             [RoomPanelTypes.enum.data]: {

@@ -3,7 +3,6 @@ import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
@@ -26,13 +25,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       config: {
         ...createDefaultDiscussConfig(),
         layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            type: 'split',
-            direction: 'row',
-            children: ['data', 'main'],
-            splitPercentages: [30, 70],
-          },
+          type: 'split',
+          direction: 'row',
+          children: ['data', 'main'],
+          splitPercentages: [30, 70],
         },
         dataSources: [
           {

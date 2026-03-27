@@ -1,5 +1,5 @@
-import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
-import {FC, useMemo} from 'react';
+import {XIcon} from 'lucide-react';
+import {FC} from 'react';
 import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {PanelHeaderButton} from './RoomHeaderButton';
 
@@ -13,16 +13,6 @@ const RoomPanelHeader: FC<{
   const {icon: Icon, title} = panels[type] ?? {};
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
-  );
-  const togglePanelPin = useBaseRoomShellStore(
-    (state) => state.layout.togglePanelPin,
-  );
-  const pinnedPanels = useBaseRoomShellStore(
-    (state) => state.layout.config.pinned,
-  );
-  const isPinned = useMemo(
-    () => pinnedPanels?.includes(type),
-    [pinnedPanels, type],
   );
 
   return (
@@ -39,18 +29,6 @@ const RoomPanelHeader: FC<{
         {children}
       </div>
       <div className="bg-secondary/50 flex gap-0">
-        <PanelHeaderButton
-          isPinned={isPinned}
-          icon={
-            isPinned ? (
-              <PinIcon className="w-[18px]" />
-            ) : (
-              <PinOffIcon className="w-[18px]" />
-            )
-          }
-          onClick={() => togglePanelPin(type)}
-          label="Pin panel"
-        />
         <PanelHeaderButton
           icon={<XIcon className="w-[18px]" />}
           onClick={() => togglePanel(type)}

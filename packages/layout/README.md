@@ -1,6 +1,6 @@
-Layout slice and mosaic utilities for SQLRooms panel-based UIs.
+Layout slice and renderer for SQLRooms panel-based UIs.
 
-This package uses `react-mosaic` to compose resizable panel layouts.
+This package renders layout trees using `react-resizable-panels` for split/tabs and `react-mosaic-component` for drag-and-drop mosaic nodes.
 
 ## Installation
 
@@ -11,24 +11,21 @@ npm install @sqlrooms/layout
 ## Main exports
 
 - `createLayoutSlice()`, `useStoreWithLayout()`
-- `MosaicLayout` component
-- mosaic helpers:
-  - `makeMosaicStack`
-  - `visitMosaicLeafNodes`
-  - `getVisibleMosaicLayoutPanels`
-  - `findMosaicNodePathByKey`
-  - `removeMosaicNodeByKey`
-- layout config schemas/types re-exported from `@sqlrooms/layout-config`
+- `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels and tabs
+- `MosaicLayout` component — legacy mosaic-only renderer (kept for backward compat)
+- Layout helpers:
+  - `makeLayoutStack`
+  - `visitLayoutLeafNodes`
+  - `getVisibleLayoutPanels`
+  - `findLayoutNodePathByKey`
+  - `removeLayoutNodeByKey`
+  - `findAreaById`, `findSplitById`, `findMosaicNodeById`
+- Layout config schemas/types re-exported from `@sqlrooms/layout-config`
 
 ## Store usage
 
 ```tsx
-import {
-  LayoutSliceState,
-  LayoutTypes,
-  MAIN_VIEW,
-  createLayoutSlice,
-} from '@sqlrooms/layout';
+import {LayoutSliceState, MAIN_VIEW, createLayoutSlice} from '@sqlrooms/layout';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
@@ -50,24 +47,20 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
     ...createBaseRoomSlice()(set, get, store),
     ...createLayoutSlice({
       config: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          type: 'split',
-          direction: 'row',
-          children: ['data', MAIN_VIEW],
-          splitPercentages: [30, 70],
-        },
+        type: 'split',
+        direction: 'row',
+        children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
       },
       panels: {
         data: {
           title: 'Data',
           component: DataPanel,
-          placement: 'sidebar',
+          area: 'sidebar',
         },
         main: {
           title: 'Main',
           component: MainPanel,
-          placement: 'main',
+          area: 'main',
         },
       },
     })(set, get, store),
@@ -75,20 +68,51 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
 );
 ```
 
-## Programmatic panel visibility
+## Render callbacks
+
+`createLayoutSlice` accepts optional render callbacks for custom panel and tab strip rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
+  },
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to fall back to the default renderer
+  },
+  renderTabStrip: (context) => {
+    // Return custom tab strip JSX or undefined for default
+  },
+});
+```
+
+## Area-based panel management
+
+Named `tabs` nodes (with an `id`) act as **areas** that can be managed programmatically:
 
 ```tsx
 import {Button} from '@sqlrooms/ui';
 
 function PanelButtons() {
-  const togglePanel = useRoomStore((state) => state.layout.togglePanel);
-  const togglePanelPin = useRoomStore((state) => state.layout.togglePanelPin);
+  const setActivePanel = useRoomStore((state) => state.layout.setActivePanel);
+  const addPanelToArea = useRoomStore((state) => state.layout.addPanelToArea);
+  const setAreaCollapsed = useRoomStore(
+    (state) => state.layout.setAreaCollapsed,
+  );
 
   return (
     <div className="flex gap-2">
-      <Button onClick={() => togglePanel('data')}>Toggle Data Panel</Button>
-      <Button onClick={() => togglePanelPin('data')}>
-        Pin/Unpin Data Panel
+      <Button onClick={() => setActivePanel('sidebar', 'data')}>
+        Show Data Panel
+      </Button>
+      <Button onClick={() => addPanelToArea('sidebar', 'schema')}>
+        Add Schema Tab
+      </Button>
+      <Button onClick={() => setAreaCollapsed('sidebar', true)}>
+        Collapse Sidebar
       </Button>
     </div>
   );
@@ -97,4 +121,4 @@ function PanelButtons() {
 
 ## Note
 
-`@sqlrooms/layout` (react-mosaic layout) is different from `@sqlrooms/mosaic` (UW IDL data visualization package).
+`@sqlrooms/layout` (panel layout system) is different from `@sqlrooms/mosaic` (UW IDL data visualization package).

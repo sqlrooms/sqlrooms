@@ -181,7 +181,7 @@ export type RoomState = RoomShellSliceState & {
 2. Create your room store:
 
 ```typescript
-import {LayoutTypes} from '@sqlrooms/room-shell';
+import {MAIN_VIEW} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {MainView} from './components/MainView';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -205,26 +205,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            type: 'split',
-            direction: 'row',
-            children: ['data-sources', 'main'],
-            splitPercentages: [30, 70],
-          },
+          type: 'split',
+          direction: 'row',
+          children: [
+            {type: 'panel', id: 'data-sources', defaultSize: '30%'},
+            'main',
+          ],
         },
         panels: {
           'data-sources': {
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            placement: 'sidebar',
+            area: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            placement: 'main',
+            area: 'main',
           },
         },
       },
@@ -265,10 +264,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              // layout configuration
-            },
+            type: 'split',
+            direction: 'row',
+            children: [
+              {type: 'panel', id: 'data-sources', defaultSize: '30%'},
+              'main',
+            ],
           },
           panels: {
             // Panel definitions

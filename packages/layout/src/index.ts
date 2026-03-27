@@ -13,14 +13,17 @@ export type {
   RoomPanelInfo,
   LayoutSliceState,
   CreateLayoutSliceProps,
+  PanelRenderContext,
+  TabStripRenderContext,
 } from './LayoutSlice';
 
+// New primary exports from mosaic-utils
 export {
-  makeMosaicStack,
-  visitMosaicLeafNodes,
-  getVisibleMosaicLayoutPanels,
-  findMosaicNodePathByKey,
-  removeMosaicNodeByKey,
+  makeLayoutStack,
+  visitLayoutLeafNodes,
+  getVisibleLayoutPanels,
+  findLayoutNodePathByKey,
+  removeLayoutNodeByKey,
   findAreaById,
   findSplitById,
   findMosaicNodeById,
@@ -35,16 +38,47 @@ export {
   convertToMosaicTree,
   convertFromMosaicTree,
   getChildKey,
+  isDraggableTile,
 } from './mosaic/mosaic-utils';
 export type {ExpandDirection, CollapsedAreaInfo} from './mosaic/mosaic-utils';
 
+// Deprecated re-exports from mosaic-utils (old names)
+export {
+  makeMosaicStack,
+  visitMosaicLeafNodes,
+  getVisibleMosaicLayoutPanels,
+  findMosaicNodePathByKey,
+  removeMosaicNodeByKey,
+} from './mosaic/mosaic-utils';
+
+// New LayoutRenderer component
+export {default as LayoutRenderer} from './LayoutRenderer';
+export type {LayoutRendererProps} from './LayoutRenderer';
+
+// Old MosaicLayout component (kept for mosaic node rendering, but no longer the top-level renderer)
 export {default as MosaicLayout} from './mosaic/MosaicLayout';
 export type {MosaicLayoutProps} from './mosaic/MosaicLayout';
 
-// Re-export from @sqlrooms/layout-config
-// Values also export their corresponding types automatically
+// New primary exports from @sqlrooms/layout-config
 export {
   MAIN_VIEW,
+  LayoutDirection,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  isLayoutMosaicNode,
+  createDefaultLayout,
+} from '@sqlrooms/layout-config';
+
+// Deprecated re-exports from @sqlrooms/layout-config (old Mosaic* names)
+export {
   LayoutTypes,
   DEFAULT_MOSAIC_LAYOUT,
   createDefaultMosaicLayout,
@@ -60,5 +94,4 @@ export {
   MosaicLayoutNodeKey,
   MosaicLayoutNode,
   MosaicLayoutConfig,
-  LayoutConfig,
 } from '@sqlrooms/layout-config';

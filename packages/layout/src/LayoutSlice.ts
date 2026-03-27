@@ -1,10 +1,9 @@
 import {
-  DEFAULT_MOSAIC_LAYOUT,
-  isMosaicLayoutSplitNode,
+  isLayoutSplitNode,
   LayoutConfig,
+  LayoutNode,
+  LayoutTabsNode,
   MAIN_VIEW,
-  MosaicLayoutNode,
-  MosaicLayoutTabsNode,
 } from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
@@ -22,11 +21,10 @@ import {StateCreator} from 'zustand';
 import {
   findAreaById,
   findMosaicNodeById,
-  findParentSplit,
   findSplitById,
   getChildKey,
-  makeMosaicStack,
-  removeMosaicNodeByKey,
+  makeLayoutStack,
+  removeLayoutNodeByKey,
 } from './mosaic/mosaic-utils';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
@@ -69,23 +67,50 @@ const AreaRemovePanelInput = z.object({
 });
 type AreaRemovePanelInput = z.infer<typeof AreaRemovePanelInput>;
 
+// ---------------------------------------------------------------------------
+// Render callback types
+// ---------------------------------------------------------------------------
+
+export type PanelRenderContext = {
+  panelId: string;
+  containerType: 'tabs' | 'mosaic' | 'split' | 'root';
+  containerId?: string;
+  path: number[];
+};
+
+export type TabStripRenderContext = {
+  node: LayoutTabsNode;
+  path: number[];
+};
+
+// ---------------------------------------------------------------------------
+// Panel info
+// ---------------------------------------------------------------------------
+
 export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
-  component: React.ComponentType;
+  component: React.ComponentType<Partial<PanelRenderContext>>;
   /** @deprecated Use `area` instead */
   placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
   /** Named area this panel belongs to (e.g. 'left', 'main', 'bottom') */
   area?: string;
 };
 
-export const LayoutSliceConfig = LayoutConfig;
+// ---------------------------------------------------------------------------
+// Config types — LayoutConfig is now LayoutNode | null directly
+// ---------------------------------------------------------------------------
 
-export type LayoutSliceConfig = z.infer<typeof LayoutSliceConfig>;
+export const LayoutSliceConfig = LayoutConfig;
+export type LayoutSliceConfig = LayoutConfig;
 
 export function createDefaultLayoutConfig(): LayoutSliceConfig {
-  return DEFAULT_MOSAIC_LAYOUT;
+  return MAIN_VIEW;
 }
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 
 export type LayoutSliceState = {
   layout: {
@@ -93,6 +118,10 @@ export type LayoutSliceState = {
     destroy?: () => Promise<void>;
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
+    renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+    renderTabStrip?: (
+      context: TabStripRenderContext,
+    ) => React.ReactNode | undefined;
     setConfig(layout: LayoutConfig): void;
     /** @deprecated Use setConfig instead */
     setLayout(layout: LayoutConfig): void;
@@ -132,20 +161,24 @@ export type LayoutSliceState = {
 export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
+  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  renderTabStrip?: (
+    context: TabStripRenderContext,
+  ) => React.ReactNode | undefined;
 };
-
-const COLLAPSE_MIN_PERCENT = 0;
 
 function findAreaInConfig(
   config: LayoutSliceConfig,
   areaId: string,
-): {node: MosaicLayoutTabsNode; path: number[]} | undefined {
-  return findAreaById(config.nodes, areaId);
+): {node: LayoutTabsNode; path: number[]} | undefined {
+  return findAreaById(config, areaId);
 }
 
 export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
+  renderPanel,
+  renderTabStrip,
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
   return createSlice<LayoutSliceState, BaseRoomStoreState & LayoutSliceState>(
     (set, get, store) => {
@@ -173,6 +206,8 @@ export function createLayoutSlice({
           },
           config: initialConfig,
           panels,
+          renderPanel,
+          renderTabStrip,
           setConfig: (config) =>
             set((state) =>
               produce(state, (draft) => {
@@ -185,13 +220,10 @@ export function createLayoutSlice({
           // Deprecated panel toggle (kept for backward compat)
           // ---------------------------------------------------------------
           togglePanel: (panel, show) => {
-            if (get().layout.config?.nodes === panel) {
+            if (get().layout.config === panel) {
               return;
             }
-            const result = removeMosaicNodeByKey(
-              get().layout.config?.nodes,
-              panel,
-            );
+            const result = removeLayoutNodeByKey(get().layout.config, panel);
             const isShown = result.success;
             if (isShown) {
               if (show || panel === MAIN_VIEW) {
@@ -199,13 +231,7 @@ export function createLayoutSlice({
               }
               set((state) =>
                 produce(state, (draft) => {
-                  const layout = draft.layout.config;
-                  layout.nodes = result.nextTree;
-                  if (layout.pinned?.includes(panel)) {
-                    layout.pinned = layout.pinned.filter(
-                      (p: string) => p !== panel,
-                    );
-                  }
+                  draft.layout.config = result.nextTree;
                 }),
               );
             } else {
@@ -214,63 +240,49 @@ export function createLayoutSlice({
               }
               set((state) =>
                 produce(state, (draft) => {
-                  const layout = draft.layout.config;
-                  const root = layout.nodes;
+                  const root = draft.layout.config;
                   const panelInfo = draft.layout.panels[panel];
                   const placement = panelInfo?.area ?? panelInfo?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';
-                  const childIdx = isMosaicLayoutSplitNode(root)
+                  const childIdx = isLayoutSplitNode(root)
                     ? side === 'first'
                       ? 0
                       : root.children.length - 1
                     : -1;
-                  const toReplace = isMosaicLayoutSplitNode(root)
+                  const toReplace = isLayoutSplitNode(root)
                     ? root.children[childIdx]
                     : undefined;
                   if (
                     toReplace &&
                     typeof toReplace === 'string' &&
-                    isMosaicLayoutSplitNode(root) &&
-                    toReplace !== MAIN_VIEW &&
-                    !layout.fixed?.includes(toReplace) &&
-                    !layout.pinned?.includes(toReplace)
+                    isLayoutSplitNode(root) &&
+                    toReplace !== MAIN_VIEW
                   ) {
                     root.children[childIdx] = panel;
                   } else {
                     const panelNode = {node: panel, weight: 1};
                     const restNode = {
-                      node: draft.layout.config
-                        ?.nodes as MosaicNode<string> | null,
+                      node: draft.layout.config as MosaicNode<string> | null,
                       weight: 3,
                     };
-                    layout.nodes = makeMosaicStack(
+                    draft.layout.config = makeLayoutStack(
                       placement === 'sidebar-bottom' ? 'column' : 'row',
                       side === 'first'
                         ? [panelNode, restNode]
                         : [restNode, panelNode],
-                    ) as MosaicLayoutNode | null;
+                    ) as LayoutNode | null;
                   }
                 }),
               );
             }
           },
 
-          togglePanelPin: (panel: string) => {
-            set((state) =>
-              produce(state, (draft) => {
-                const layout = draft.layout.config;
-                const pinned = layout.pinned ?? [];
-                if (pinned.includes(panel)) {
-                  layout.pinned = pinned.filter((p: string) => p !== panel);
-                } else {
-                  layout.pinned = [...pinned, panel];
-                }
-              }),
-            );
+          togglePanelPin: () => {
+            // No-op: pinned/fixed have been removed
           },
 
           // ---------------------------------------------------------------
-          // New area-aware API
+          // Area-aware API
           // ---------------------------------------------------------------
 
           setActivePanel: (areaId: string, panelId: string) => {
@@ -331,56 +343,7 @@ export function createLayoutSlice({
               produce(state, (draft) => {
                 const found = findAreaInConfig(draft.layout.config, areaId);
                 if (!found || !found.node.collapsible) return;
-
-                const parentSplit = findParentSplit(
-                  draft.layout.config.nodes,
-                  found.path,
-                );
-                if (!parentSplit) return;
-
-                const minPercent = COLLAPSE_MIN_PERCENT;
-
-                if (collapsed && !found.node.collapsed) {
-                  found.node.savedPercentages = parentSplit.node
-                    .splitPercentages
-                    ? [...parentSplit.node.splitPercentages]
-                    : undefined;
-                  const childCount = parentSplit.node.children.length;
-                  const newPercentages = parentSplit.node.splitPercentages
-                    ? [...parentSplit.node.splitPercentages]
-                    : Array(childCount).fill(Math.round(100 / childCount));
-                  const collapsedAmount =
-                    newPercentages[parentSplit.childIndex]! - minPercent;
-                  newPercentages[parentSplit.childIndex] = minPercent;
-                  const remainingIndices = Array.from(
-                    {length: childCount},
-                    (_, i) => i,
-                  ).filter((i) => i !== parentSplit.childIndex);
-                  const remainingTotal = remainingIndices.reduce(
-                    (sum, i) => sum + newPercentages[i]!,
-                    0,
-                  );
-                  for (const i of remainingIndices) {
-                    newPercentages[i] = Math.round(
-                      (newPercentages[i]! / remainingTotal) *
-                        (remainingTotal + collapsedAmount),
-                    );
-                  }
-                  parentSplit.node.splitPercentages = newPercentages;
-                  found.node.collapsed = true;
-                } else if (!collapsed && found.node.collapsed) {
-                  if (found.node.savedPercentages) {
-                    parentSplit.node.splitPercentages =
-                      found.node.savedPercentages;
-                    found.node.savedPercentages = undefined;
-                  } else {
-                    const childCount = parentSplit.node.children.length;
-                    parentSplit.node.splitPercentages = Array(childCount).fill(
-                      Math.round(100 / childCount),
-                    );
-                  }
-                  found.node.collapsed = false;
-                }
+                found.node.collapsed = collapsed;
               }),
             );
           },
@@ -430,15 +393,11 @@ export function createLayoutSlice({
           addChildToSplit: (splitId: string, panelId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findSplitById(draft.layout.config.nodes, splitId);
+                const found = findSplitById(draft.layout.config, splitId);
                 if (!found) return;
                 if (!found.node.children.includes(panelId)) {
                   found.node.children.push(panelId);
                 }
-                const count = found.node.children.length;
-                found.node.splitPercentages = Array(count).fill(
-                  Math.round(100 / count),
-                );
               }),
             );
           },
@@ -446,10 +405,7 @@ export function createLayoutSlice({
           addChildToMosaic: (mosaicId: string, panelId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findMosaicNodeById(
-                  draft.layout.config.nodes,
-                  mosaicId,
-                );
+                const found = findMosaicNodeById(draft.layout.config, mosaicId);
                 if (!found) return;
                 const nodes = found.nodes;
                 const dir = found.direction ?? 'row';
@@ -460,14 +416,9 @@ export function createLayoutSlice({
                     type: 'split',
                     direction: dir,
                     children: [nodes, panelId],
-                    splitPercentages: [50, 50],
                   };
-                } else if (isMosaicLayoutSplitNode(nodes)) {
+                } else if (isLayoutSplitNode(nodes)) {
                   nodes.children.push(panelId);
-                  const count = nodes.children.length;
-                  nodes.splitPercentages = Array(count).fill(
-                    Math.round(100 / count),
-                  );
                 }
               }),
             );
@@ -550,8 +501,6 @@ function createLayoutPanelCommands(
         },
       };
     });
-
-  // --- Area commands ---
 
   const setActivePanelCommand: RoomCommand<LayoutCommandStoreState> = {
     id: 'layout.area.set-active',

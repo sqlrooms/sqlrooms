@@ -3,9 +3,26 @@
  * @packageDocumentation
  */
 
-// Values also export their corresponding types automatically (Zod pattern)
+// New names (primary exports)
 export {
   MAIN_VIEW,
+  LayoutDirection,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  isLayoutMosaicNode,
+  createDefaultLayout,
+} from './LayoutConfig';
+
+// Deprecated re-exports (old Mosaic* names)
+export {
   LayoutTypes,
   DEFAULT_MOSAIC_LAYOUT,
   createDefaultMosaicLayout,
@@ -21,5 +38,4 @@ export {
   MosaicLayoutNodeKey,
   MosaicLayoutNode,
   MosaicLayoutConfig,
-  LayoutConfig,
 } from './LayoutConfig';

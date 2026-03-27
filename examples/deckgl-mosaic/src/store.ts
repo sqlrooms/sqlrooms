@@ -6,7 +6,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -59,10 +58,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           ],
         },
         layout: {
-          config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: 'main',
-          },
+          config: 'main',
           panels: {
             data: {
               title: 'Data',

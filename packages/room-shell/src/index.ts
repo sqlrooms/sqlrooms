@@ -35,8 +35,14 @@ export type {StateCreator, StoreApi} from 'zustand';
 export {DataSourceStatus} from './types';
 export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 
-export type {RoomPanelInfo} from '@sqlrooms/layout';
+export type {
+  RoomPanelInfo,
+  PanelRenderContext,
+  TabStripRenderContext,
+} from '@sqlrooms/layout';
 export {getChildKey, getMosaicNodeKey} from '@sqlrooms/layout';
+export {LayoutRenderer} from '@sqlrooms/layout';
+export type {LayoutRendererProps} from '@sqlrooms/layout';
 
 // Re-export from @sqlrooms/room-store
 export {
@@ -116,29 +122,17 @@ export {useShallow} from 'zustand/react/shallow';
 export {createDbSlice} from '@sqlrooms/db';
 export type {DbSliceState} from '@sqlrooms/db';
 
-// Re-export from @sqlrooms/room-config (via room-store)
-// Values also export their corresponding types automatically (Zod pattern)
+// Re-export from @sqlrooms/room-store — room-config types
 export {
   BaseDataSource,
   BaseRoomConfig,
-  DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_ROOM_TITLE,
   DataSource,
   DataSourceTypes,
   FileDataSource,
-  LayoutConfig,
-  LayoutTypes,
   LoadFile,
   LoadFileOptions,
   MAIN_VIEW,
-  MosaicLayoutConfig,
-  MosaicLayoutDirection,
-  MosaicLayoutNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutParent,
-  MosaicLayoutSplitNode,
-  MosaicLayoutTabsNode,
-  MosaicLayoutMosaicNode,
   SpatialLoadFileOptions,
   SpatialLoadOptions,
   SqlQueryDataSource,
@@ -146,13 +140,38 @@ export {
   StandardLoadOptions,
   UrlDataSource,
   createDefaultBaseRoomConfig,
-  createDefaultMosaicLayout,
   isFileDataSource,
+  isSpatialLoadFileOptions,
+  isSqlQueryDataSource,
+  isUrlDataSource,
+  // New layout names
+  LayoutDirection,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  isLayoutMosaicNode,
+  createDefaultLayout,
+  // Deprecated layout names
+  LayoutTypes,
+  DEFAULT_MOSAIC_LAYOUT,
+  createDefaultMosaicLayout,
+  MosaicLayoutDirection,
+  MosaicLayoutSplitNode,
+  MosaicLayoutTabsNode,
+  MosaicLayoutMosaicNode,
+  MosaicLayoutParent,
   isMosaicLayoutParent,
   isMosaicLayoutSplitNode,
   isMosaicLayoutTabsNode,
   isMosaicLayoutMosaicNode,
-  isSpatialLoadFileOptions,
-  isSqlQueryDataSource,
-  isUrlDataSource,
+  MosaicLayoutNodeKey,
+  MosaicLayoutNode,
+  MosaicLayoutConfig,
 } from '@sqlrooms/room-store';

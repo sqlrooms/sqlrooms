@@ -16,7 +16,6 @@ import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {setAutoFreeze} from 'immer';
@@ -54,10 +53,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         connector: createWebSocketDuckDbConnector({wsUrl: SERVER_URL}),
         layout: {
-          config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: 'main',
-          },
+          config: 'main',
           panels: {
             main: {
               title: 'Canvas',

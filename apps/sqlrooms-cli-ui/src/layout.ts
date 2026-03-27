@@ -1,5 +1,4 @@
 import {CreateLayoutSliceProps} from '@sqlrooms/layout';
-import {LayoutTypes} from '@sqlrooms/layout-config';
 import {SpinnerPane} from '@sqlrooms/ui';
 import {DatabaseIcon} from 'lucide-react';
 import {createElement, Suspense} from 'react';
@@ -12,13 +11,10 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const LAYOUT: CreateLayoutSliceProps = {
   config: {
-    type: LayoutTypes.enum.mosaic,
-    nodes: {
-      type: 'split',
-      direction: 'row',
-      children: [RoomPanelTypes.enum['data-sources'], 'main'],
-      splitPercentages: [20, 80],
-    },
+    type: 'split',
+    direction: 'row',
+    children: [RoomPanelTypes.enum['data-sources'], 'main'],
+    splitPercentages: [20, 80],
   },
   panels: {
     [RoomPanelTypes.enum['data-sources']]: {

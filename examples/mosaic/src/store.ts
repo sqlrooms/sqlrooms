@@ -3,7 +3,6 @@ import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -50,13 +49,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            type: 'split',
-            direction: 'row',
-            children: [RoomPanelTypes.enum['data-sources'], MAIN_VIEW],
-            splitPercentages: [30, 70],
-          },
+          type: 'split',
+          direction: 'row',
+          children: [RoomPanelTypes.enum['data-sources'], MAIN_VIEW],
+          splitPercentages: [30, 70],
         },
         panels: {
           [RoomPanelTypes.enum['room-details']]: {
