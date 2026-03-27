@@ -19,7 +19,7 @@ import type {
  *
  * Tools are still accepted as the full `ToolSet` in `AiSliceOptions` for
  * type-safe tool creation. Internal call-sites that pass tools to
- * `streamText()` / `generateText()` cast back to `ToolSet`.
+ * `ToolLoopAgent` cast back to `ToolSet`.
  */
 export interface StoredTool {
   description?: string;
@@ -43,7 +43,7 @@ export type GetProviderOptions = (args: {
 
 /**
  * Type for adding tool outputs to the chat.
- * Extracted to a separate file to avoid circular dependencies.
+ * Defined here (in types.ts) to avoid circular dependencies.
  */
 export type AddToolOutput = (
   options:
@@ -122,7 +122,12 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
     | 'approval-responded'
     | 'output-denied';
   errorText?: string;
-  /** Approval ID for tools with `needsApproval`. Present when state is approval-related. */
+  /**
+   * Approval ID for tools with `needsApproval`.
+   * Always defined when `state` is `'approval-requested'`, `'approval-responded'`,
+   * or `'output-denied'`. Renderers handling those states can safely assert
+   * this value is a `string` without additional null checks.
+   */
   approvalId?: string;
 };
 

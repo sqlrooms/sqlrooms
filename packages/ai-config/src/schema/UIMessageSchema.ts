@@ -54,9 +54,15 @@ const ToolUIPartOutputErrorSchema = ToolUIPartBaseSchema.extend({
   callProviderMetadata: ProviderMetadataSchema.optional(),
 });
 
-const ToolUIPartApprovalSchema = z.object({
+const ToolUIPartApprovalPendingSchema = z.object({
   id: z.string(),
   approved: z.boolean().optional(),
+  reason: z.string().optional(),
+});
+
+const ToolUIPartApprovalResolvedSchema = z.object({
+  id: z.string(),
+  approved: z.boolean(),
   reason: z.string().optional(),
 });
 
@@ -65,7 +71,7 @@ const ToolUIPartApprovalRequestedSchema = ToolUIPartBaseSchema.extend({
   input: z.unknown(),
   callProviderMetadata: ProviderMetadataSchema.optional(),
   providerExecuted: z.boolean().optional(),
-  approval: ToolUIPartApprovalSchema,
+  approval: ToolUIPartApprovalPendingSchema,
 });
 
 const ToolUIPartApprovalRespondedSchema = ToolUIPartBaseSchema.extend({
@@ -73,7 +79,7 @@ const ToolUIPartApprovalRespondedSchema = ToolUIPartBaseSchema.extend({
   input: z.unknown(),
   callProviderMetadata: ProviderMetadataSchema.optional(),
   providerExecuted: z.boolean().optional(),
-  approval: ToolUIPartApprovalSchema,
+  approval: ToolUIPartApprovalResolvedSchema,
 });
 
 const ToolUIPartOutputDeniedSchema = ToolUIPartBaseSchema.extend({
@@ -81,7 +87,7 @@ const ToolUIPartOutputDeniedSchema = ToolUIPartBaseSchema.extend({
   input: z.unknown(),
   callProviderMetadata: ProviderMetadataSchema.optional(),
   providerExecuted: z.boolean().optional(),
-  approval: ToolUIPartApprovalSchema,
+  approval: ToolUIPartApprovalResolvedSchema,
 });
 
 const ToolUIPartSchema = z.discriminatedUnion('state', [
@@ -132,21 +138,21 @@ const DynamicToolApprovalRequestedSchema = DynamicToolUIPartBaseSchema.extend({
   state: z.literal('approval-requested'),
   input: z.unknown(),
   callProviderMetadata: ProviderMetadataSchema.optional(),
-  approval: ToolUIPartApprovalSchema,
+  approval: ToolUIPartApprovalPendingSchema,
 });
 
 const DynamicToolApprovalRespondedSchema = DynamicToolUIPartBaseSchema.extend({
   state: z.literal('approval-responded'),
   input: z.unknown(),
   callProviderMetadata: ProviderMetadataSchema.optional(),
-  approval: ToolUIPartApprovalSchema,
+  approval: ToolUIPartApprovalResolvedSchema,
 });
 
 const DynamicToolOutputDeniedSchema = DynamicToolUIPartBaseSchema.extend({
   state: z.literal('output-denied'),
   input: z.unknown(),
   callProviderMetadata: ProviderMetadataSchema.optional(),
-  approval: ToolUIPartApprovalSchema,
+  approval: ToolUIPartApprovalResolvedSchema,
 });
 
 const DynamicToolUIPartSchema = z.discriminatedUnion('state', [

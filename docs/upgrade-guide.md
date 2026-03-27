@@ -48,7 +48,7 @@ const resultText = await streamSubAgent(agent, prompt, abortSignal);
 // Before
 addToolResult({toolCallId, result: {...}});
 
-// After
+// After — note: `tool` is a new required field in v6
 addToolOutput({tool: toolName, toolCallId, output: {...}});
 ```
 
@@ -58,7 +58,9 @@ Tool renderers may now receive three additional states for approval workflows: `
 
 #### Remote transport
 
-If you use `createRemoteChatTransportFactory`, your server-side route must migrate from `streamText` to `ToolLoopAgent` + `createAgentUIStreamResponse`. The transport now sends `instructions`, `maxSteps`, and `temperature` in the request body. See the [`ai-nextjs` example](../examples/ai-nextjs/src/app/api/chat/route.ts) for a complete implementation.
+If you use `createRemoteChatTransportFactory`, your server-side route must migrate from `streamText` to `ToolLoopAgent` + `createAgentUIStreamResponse`. The transport now sends `instructions`, `maxSteps`, and `temperature` in the request body.
+
+> **Note:** The [`ai-nextjs` example](https://github.com/sqlrooms/sqlrooms/blob/main/examples/ai-nextjs/src/app/api/chat/route.ts) shows a reference implementation that intentionally ignores these client-supplied fields and uses server-controlled defaults for security. Production endpoints should decide whether to trust client-supplied values for `instructions`, `maxSteps`, and `temperature` based on their security model.
 
 ### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
 
