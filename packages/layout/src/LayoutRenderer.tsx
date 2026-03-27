@@ -1,5 +1,11 @@
 import React, {FC, useCallback, useEffect, useMemo, useRef} from 'react';
-import {Group, Panel, Separator} from 'react-resizable-panels';
+import {
+  Group,
+  Panel,
+  Separator,
+  type PanelImperativeHandle,
+  type PanelSize,
+} from 'react-resizable-panels';
 import {
   Mosaic,
   MosaicNode,
@@ -18,7 +24,13 @@ import {
   LayoutMosaicNode,
 } from '@sqlrooms/layout-config';
 import {TabStrip, TabDescriptor, cn, Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
+import {
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  ChevronsUpIcon,
+  ChevronsDownIcon,
+  XIcon,
+} from 'lucide-react';
 import {
   getChildKey,
   MOSAIC_NODE_KEY_PREFIX,
@@ -126,6 +138,8 @@ interface NodeRenderProps {
   path: number[];
   containerType: PanelRenderContext['containerType'];
   containerId?: string;
+  /** Direction of the parent split, used for expand button icon orientation */
+  parentDirection?: 'row' | 'column';
   panels: Record<string, RoomPanelInfo>;
   rootLayout: LayoutNode;
   renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
@@ -229,6 +243,116 @@ function getPanelId(node: LayoutNode, index: number): string {
 // Split renderer — uses react-resizable-panels Group/Panel/Separator
 // ---------------------------------------------------------------------------
 
+/**
+ * Determine if a child node wants to be collapsed.
+ * Only tabs nodes have a `collapsed` flag.
+ */
+function isChildCollapsed(child: LayoutNode): boolean {
+  return isLayoutTabsNode(child) && child.collapsed === true;
+}
+
+/**
+ * Determine if a child node is collapsible.
+ */
+function isChildCollapsible(child: LayoutNode): boolean {
+  if (typeof child === 'string') return false;
+  return 'collapsible' in child && child.collapsible === true;
+}
+
+/**
+ * Get the area id for a child node (if it's a tabs or mosaic node with an id).
+ */
+function getChildAreaId(child: LayoutNode): string | undefined {
+  if (typeof child === 'string') return undefined;
+  if ('id' in child) return child.id;
+  return undefined;
+}
+
+/**
+ * Default minSize for collapsible panels that don't specify one.
+ * This ensures react-resizable-panels snaps between collapsed and expanded
+ * states instead of allowing intermediate sizes.
+ */
+const DEFAULT_COLLAPSIBLE_MIN_SIZE = '10%';
+
+/**
+ * Panel wrapper that syncs the collapsed state from the layout config
+ * with react-resizable-panels' imperative collapse/expand API.
+ */
+const CollapsiblePanelWrapper: FC<{
+  id: string;
+  collapsed: boolean;
+  collapsible: boolean;
+  collapsedSize?: number | string;
+  defaultSize?: number | string;
+  minSize?: number | string;
+  maxSize?: number | string;
+  areaId?: string;
+  onAreaExpand?: (areaId: string, panelId?: string) => void;
+  onAreaCollapse?: (areaId: string) => void;
+  children: React.ReactNode;
+}> = ({
+  id,
+  collapsed,
+  collapsible,
+  collapsedSize,
+  defaultSize,
+  minSize,
+  maxSize,
+  areaId,
+  onAreaExpand,
+  onAreaCollapse,
+  children,
+}) => {
+  const panelRef = useRef<PanelImperativeHandle | null>(null);
+
+  useEffect(() => {
+    const handle = panelRef.current;
+    if (!handle) return;
+    if (collapsed && !handle.isCollapsed()) {
+      handle.collapse();
+    } else if (!collapsed && handle.isCollapsed()) {
+      handle.expand();
+    }
+  }, [collapsed]);
+
+  const handleResize = useCallback(
+    (
+      _panelSize: PanelSize,
+      _id: string | number | undefined,
+      _prevSize: PanelSize | undefined,
+    ) => {
+      if (!areaId) return;
+      const handle = panelRef.current;
+      if (!handle) return;
+      if (collapsed && !handle.isCollapsed()) {
+        onAreaExpand?.(areaId);
+      } else if (!collapsed && handle.isCollapsed()) {
+        onAreaCollapse?.(areaId);
+      }
+    },
+    [areaId, collapsed, onAreaExpand, onAreaCollapse],
+  );
+
+  const effectiveMinSize =
+    minSize ?? (collapsible ? DEFAULT_COLLAPSIBLE_MIN_SIZE : undefined);
+
+  return (
+    <Panel
+      id={id}
+      panelRef={panelRef}
+      collapsible={collapsible}
+      collapsedSize={collapsedSize ?? 0}
+      defaultSize={defaultSize}
+      minSize={effectiveMinSize}
+      maxSize={maxSize}
+      onResize={handleResize}
+    >
+      {children}
+    </Panel>
+  );
+};
+
 const SplitRenderer: FC<
   Omit<NodeRenderProps, 'node'> & {node: LayoutSplitNode}
 > = ({
@@ -254,28 +378,57 @@ const SplitRenderer: FC<
         const key = getPanelId(child, i);
         const sizeProps = getSizeProps(child);
         const isLast = i === node.children.length - 1;
+        const collapsible = isChildCollapsible(child);
+        const collapsed = isChildCollapsed(child);
+        const areaId = getChildAreaId(child);
+
+        const childContent = (
+          <NodeRenderer
+            node={child}
+            path={[...path, i]}
+            containerType="split"
+            containerId={node.id}
+            parentDirection={node.direction}
+            panels={panels}
+            rootLayout={rootLayout}
+            renderPanel={renderPanel}
+            renderTabStrip={renderTabStrip}
+            onLayoutChange={onLayoutChange}
+            onTabSelect={onTabSelect}
+            onTabClose={onTabClose}
+            onTabReorder={onTabReorder}
+            onTabCreate={onTabCreate}
+            onAreaCollapse={onAreaCollapse}
+            onAreaExpand={onAreaExpand}
+          />
+        );
+
+        const panelElement = collapsible ? (
+          <CollapsiblePanelWrapper
+            id={key}
+            collapsed={collapsed}
+            collapsible
+            collapsedSize={
+              sizeProps.collapsedSize as string | number | undefined
+            }
+            defaultSize={sizeProps.defaultSize as string | number | undefined}
+            minSize={sizeProps.minSize as string | number | undefined}
+            maxSize={sizeProps.maxSize as string | number | undefined}
+            areaId={areaId}
+            onAreaExpand={onAreaExpand}
+            onAreaCollapse={onAreaCollapse}
+          >
+            {childContent}
+          </CollapsiblePanelWrapper>
+        ) : (
+          <Panel id={key} {...sizeProps}>
+            {childContent}
+          </Panel>
+        );
 
         return (
           <React.Fragment key={key}>
-            <Panel id={key} {...sizeProps}>
-              <NodeRenderer
-                node={child}
-                path={[...path, i]}
-                containerType="split"
-                containerId={node.id}
-                panels={panels}
-                rootLayout={rootLayout}
-                renderPanel={renderPanel}
-                renderTabStrip={renderTabStrip}
-                onLayoutChange={onLayoutChange}
-                onTabSelect={onTabSelect}
-                onTabClose={onTabClose}
-                onTabReorder={onTabReorder}
-                onTabCreate={onTabCreate}
-                onAreaCollapse={onAreaCollapse}
-                onAreaExpand={onAreaExpand}
-              />
-            </Panel>
+            {panelElement}
             {!isLast && (
               <Separator className="bg-border/20 hover:bg-primary/40 data-[resize-handle-active]:bg-primary/60 transition-colors" />
             )}
@@ -295,6 +448,7 @@ const TabsRenderer: FC<
 > = ({
   node,
   path,
+  parentDirection,
   panels,
   rootLayout,
   renderPanel,
@@ -385,12 +539,21 @@ const TabsRenderer: FC<
     }
   }
 
-  // Collapsed state: show a minimal strip if configured
+  // Collapsed state: show expand button (with optional tab strip)
   if (isCollapsed) {
-    if (!node.showTabStripWhenCollapsed) return null;
+    if (!node.showTabStripWhenCollapsed) {
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <ExpandButton
+            direction={parentDirection}
+            onClick={() => areaId && onAreaExpand?.(areaId)}
+          />
+        </div>
+      );
+    }
 
     return (
-      <div className="border-border shrink-0 border-t">
+      <div className="flex h-full w-full items-center">
         <TabStrip
           tabs={tabDescriptors}
           openTabs={tabKeys}
@@ -405,6 +568,10 @@ const TabsRenderer: FC<
           renderTabLabel={renderTabLabel}
         >
           <TabStrip.Tabs />
+          <ExpandButton
+            direction={parentDirection}
+            onClick={() => areaId && onAreaExpand?.(areaId)}
+          />
         </TabStrip>
       </div>
     );
@@ -572,6 +739,32 @@ function CollapseButton({onClick}: {onClick: () => void}) {
       aria-label="Collapse"
     >
       <XIcon className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
+
+function ExpandButton({
+  direction,
+  onClick,
+}: {
+  direction?: 'row' | 'column';
+  onClick: () => void;
+}) {
+  const Icon =
+    direction === 'column'
+      ? ChevronsUpIcon
+      : direction === 'row'
+        ? ChevronsRightIcon
+        : ChevronsRightIcon;
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="hover:bg-primary/10 h-7 w-7 shrink-0"
+      onClick={onClick}
+      aria-label="Expand"
+    >
+      <Icon className="h-3.5 w-3.5" />
     </Button>
   );
 }

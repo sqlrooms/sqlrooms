@@ -1,15 +1,15 @@
 import {
   createRoomShellSlice,
   createRoomStore,
-  isLayoutTabsNode,
+  getChildKey,
+  getMosaicNodeKey,
   isLayoutSplitNode,
+  isLayoutTabsNode,
   LayoutConfig,
   LayoutMosaicNode,
   LayoutNode,
   LayoutTabsNode,
   RoomShellSliceState,
-  getChildKey,
-  getMosaicNodeKey,
 } from '@sqlrooms/room-shell';
 import {
   BarChart3Icon,
@@ -120,9 +120,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               type: 'tabs',
               id: 'left',
               defaultSize: '22%',
+              minSize: 300,
               children: ['data-sources', 'schema'],
               activeTabIndex: 0,
               collapsible: true,
+              collapsedSize: 0,
               showTabStrip: false,
             },
             {
@@ -169,6 +171,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   children: ['console', 'results'],
                   activeTabIndex: 0,
                   collapsible: true,
+                  collapsedSize: 32,
                   showTabStrip: true,
                   showTabStripWhenCollapsed: true,
                 },
