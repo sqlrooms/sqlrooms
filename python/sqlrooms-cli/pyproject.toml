@@ -18,6 +18,7 @@ classifiers = [
 dependencies = [
   "duckdb>=1.4.0,<1.5.0",
   "fastapi>=0.115.0",
+  "httpx>=0.28.0",
   "jinja2>=3.1.0",
   "pyarrow>=17.0.0",
   "python-multipart>=0.0.9",
@@ -67,4 +68,3 @@ include = ["README.md", "LICENSE", "sqlrooms"]
 [tool.hatch.version]
 path = "package.json"
 pattern = "\"version\": \"(?P<version>.+?)\""
-

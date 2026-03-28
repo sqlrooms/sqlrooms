@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+import httpx
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi import Request
@@ -30,6 +31,13 @@ from .db_bridge import (
     UnknownBridgeConnectionError,
     build_cli_db_bridge_registry,
     build_ephemeral_connector,
+)
+from .ai_settings import (
+    AiAuthManager,
+    HTML_ERROR,
+    HTML_SUCCESS,
+    _prefix_anthropic_mcp_body,
+    _strip_mcp_prefix_stream,
 )
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
@@ -232,6 +240,7 @@ class SqlroomsHttpServer:
         open_browser: bool = True,
         ui_dir: str | None = None,
         config_path: Path | None = None,
+        auth_path: Path | None = None,
     ):
         db_path_str = str(db_path)
         self.is_in_memory = db_path_str == ":memory:"
@@ -256,6 +265,7 @@ class SqlroomsHttpServer:
         self.llm_model = llm_model
         self.api_key = api_key
         self.ai_providers = ai_providers or {}
+        self._legacy_ai_config = bool(llm_provider or llm_model or ai_providers)
         self.open_browser = open_browser
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -275,6 +285,10 @@ class SqlroomsHttpServer:
         self.upload_dir = base_dir / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self._duckdb_thread: threading.Thread | None = None
+        self.ai_auth_manager = AiAuthManager(
+            config_path=config_path,
+            auth_path=auth_path,
+        )
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
@@ -315,6 +329,16 @@ class SqlroomsHttpServer:
     def _public_host(self) -> str:
         return "localhost" if self.host in ("0.0.0.0", "::") else self.host
 
+    def _api_base_url(self) -> str:
+        return f"http://{self._public_host()}:{self.port}"
+
+    def _runtime_ai_config(
+        self,
+    ) -> tuple[str | None, str | None, dict[str, dict[str, Any]]]:
+        if self._legacy_ai_config:
+            return self.llm_provider, self.llm_model, self.ai_providers
+        return self.ai_auth_manager.get_runtime_providers(self._api_base_url())
+
     def _start_duckdb_backend(self) -> None:
         thread = threading.Thread(
             target=self._run_duckdb_server,
@@ -330,13 +354,14 @@ class SqlroomsHttpServer:
         )
 
     def _runtime_config(self) -> Dict[str, Any]:
+        llm_provider, llm_model, ai_providers = self._runtime_ai_config()
         return {
             "wsUrl": f"ws://{self._public_host()}:{self.ws_port}",
             "apiBaseUrl": "",
-            "llmProvider": self.llm_provider,
-            "llmModel": self.llm_model,
+            "llmProvider": llm_provider,
+            "llmModel": llm_model,
             "apiKey": self.api_key or "",
-            "aiProviders": self.ai_providers,
+            "aiProviders": ai_providers,
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
             "dbBridge": {
@@ -409,6 +434,181 @@ class SqlroomsHttpServer:
                 )
                 return JSONResponse({"error": str(exc)}, status_code=500)
             return {"ok": True, "configPath": str(self.config_path)}
+
+        @app.get("/api/ai/settings")
+        async def get_ai_settings():
+            return self.ai_auth_manager.get_settings(self._api_base_url())
+
+        @app.put("/api/ai/settings")
+        async def put_ai_settings(payload: Dict[str, Any]):
+            try:
+                config = self.ai_auth_manager.save_settings(payload)
+                return {"ok": True, "config": config}
+            except Exception as exc:
+                logger.error("Failed to save ai settings: %s", exc)
+                return JSONResponse({"error": str(exc)}, status_code=500)
+
+        @app.get("/api/ai/auth/providers")
+        async def get_ai_auth_providers():
+            settings = self.ai_auth_manager.get_settings(self._api_base_url())
+            return {"providers": (settings.get("config") or {}).get("providers") or {}}
+
+        @app.get("/api/ai/auth/status")
+        async def get_ai_auth_status(providerId: str | None = None):
+            return self.ai_auth_manager.status(self._api_base_url(), providerId)
+
+        @app.post("/api/ai/auth/start")
+        async def post_ai_auth_start(payload: Dict[str, Any], request: Request):
+            provider_id = payload.get("providerId")
+            auth_method_id = payload.get("authMethodId")
+            if not isinstance(provider_id, str) or not provider_id.strip():
+                return JSONResponse(
+                    {"error": "providerId is required"}, status_code=400
+                )
+            if not isinstance(auth_method_id, str) or not auth_method_id.strip():
+                return JSONResponse(
+                    {"error": "authMethodId is required"}, status_code=400
+                )
+            public_base_url = str(request.base_url).rstrip("/")
+            try:
+                return await self.ai_auth_manager.start_auth(
+                    provider_id,
+                    auth_method_id,
+                    public_base_url,
+                )
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+
+        @app.post("/api/ai/auth/complete")
+        async def post_ai_auth_complete(payload: Dict[str, Any]):
+            provider_id = payload.get("providerId")
+            auth_method_id = payload.get("authMethodId")
+            if not isinstance(provider_id, str) or not provider_id.strip():
+                return JSONResponse(
+                    {"error": "providerId is required"}, status_code=400
+                )
+            if not isinstance(auth_method_id, str) or not auth_method_id.strip():
+                return JSONResponse(
+                    {"error": "authMethodId is required"}, status_code=400
+                )
+            try:
+                return await self.ai_auth_manager.complete_auth(
+                    provider_id,
+                    auth_method_id,
+                    payload,
+                )
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+
+        @app.post("/api/ai/auth/logout")
+        async def post_ai_auth_logout(payload: Dict[str, Any]):
+            provider_id = payload.get("providerId")
+            if not isinstance(provider_id, str) or not provider_id.strip():
+                return JSONResponse(
+                    {"error": "providerId is required"}, status_code=400
+                )
+            try:
+                self.ai_auth_manager.logout(provider_id)
+                return {"ok": True}
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+
+        @app.post("/api/ai/auth/test")
+        async def post_ai_auth_test(payload: Dict[str, Any]):
+            provider_id = payload.get("providerId")
+            if not isinstance(provider_id, str) or not provider_id.strip():
+                return JSONResponse(
+                    {"error": "providerId is required"}, status_code=400
+                )
+            try:
+                return self.ai_auth_manager.test_auth(
+                    provider_id,
+                    self._api_base_url(),
+                )
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+
+        @app.get("/api/ai/auth/callback/{provider_id}/{auth_method_id}")
+        async def get_ai_auth_callback(
+            provider_id: str,
+            auth_method_id: str,
+            request: Request,
+        ):
+            try:
+                await self.ai_auth_manager.complete_oauth_callback(
+                    provider_id,
+                    auth_method_id,
+                    dict(request.query_params),
+                )
+                return Response(content=HTML_SUCCESS, media_type="text/html")
+            except Exception as exc:
+                return Response(
+                    content=HTML_ERROR.format(error=str(exc)),
+                    media_type="text/html",
+                    status_code=400,
+                )
+
+        @app.api_route(
+            "/api/ai/proxy/{provider_id}/{path:path}",
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        )
+        async def ai_proxy(provider_id: str, path: str, request: Request):
+            try:
+                request_body = await request.body()
+                prepared = await self.ai_auth_manager.prepare_proxy_request(
+                    provider_id=provider_id,
+                    path=path,
+                    headers=dict(request.headers),
+                    body=request_body,
+                    query=dict(request.query_params),
+                )
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+
+            proxy_body = prepared.body
+            if prepared.response_transform == "anthropic_mcp":
+                proxy_body = _prefix_anthropic_mcp_body(proxy_body)
+
+            try:
+                client = httpx.AsyncClient(timeout=None, follow_redirects=True)
+                upstream = await client.send(
+                    client.build_request(
+                        request.method,
+                        prepared.url,
+                        params=prepared.query,
+                        headers=prepared.headers,
+                        content=proxy_body,
+                    ),
+                    stream=True,
+                )
+                response_headers = {}
+                content_type = upstream.headers.get("content-type")
+                cache_control = upstream.headers.get("cache-control")
+                if content_type:
+                    response_headers["content-type"] = content_type
+                if cache_control:
+                    response_headers["cache-control"] = cache_control
+
+                async def iter_upstream():
+                    try:
+                        async for chunk in upstream.aiter_bytes():
+                            if prepared.response_transform == "anthropic_mcp":
+                                yield _strip_mcp_prefix_stream(chunk)
+                            else:
+                                yield chunk
+                    finally:
+                        await upstream.aclose()
+                        await client.aclose()
+
+                return StreamingResponse(
+                    iter_upstream(),
+                    status_code=upstream.status_code,
+                    headers=response_headers,
+                    media_type=content_type,
+                )
+            except Exception as exc:
+                logger.error("AI proxy failed for %s/%s: %s", provider_id, path, exc)
+                return JSONResponse({"error": str(exc)}, status_code=502)
 
         @app.post("/api/upload")
         async def upload_file(file: UploadFile = File(...)):

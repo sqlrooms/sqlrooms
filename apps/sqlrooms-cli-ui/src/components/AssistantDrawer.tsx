@@ -1,4 +1,9 @@
-import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
+import {
+  AiConnectDialog,
+  AiProviderConnectButton,
+  AiSettingsPanel,
+  Chat,
+} from '@sqlrooms/ai';
 import {
   Button,
   Dialog,
@@ -21,7 +26,7 @@ import {
 } from '@sqlrooms/ui';
 import {Settings, XIcon} from 'lucide-react';
 import React from 'react';
-import {useRoomStore} from '../store';
+import {runtimeConfig, useRoomStore} from '../store';
 
 export const AssistantDrawer: React.FC<{
   children?: React.ReactNode;
@@ -29,8 +34,21 @@ export const AssistantDrawer: React.FC<{
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
+  const currentProviderId = useRoomStore(
+    (s) =>
+      s.ai.getCurrentSession()?.modelProvider ||
+      s.aiSettings.config.defaultProvider,
+  );
+  const currentProviderHasCredentials = useRoomStore((s) => {
+    const providerId =
+      s.ai.getCurrentSession()?.modelProvider ||
+      s.aiSettings.config.defaultProvider;
+    if (!providerId) return false;
+    return Boolean(
+      s.aiSettings.config.providers[providerId]?.status?.hasCredentials,
+    );
+  });
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
-  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
   const settingsPanelOpen = useDisclosure();
   const isAssistantOpen = useRoomStore((state) => state.isAssistantOpen);
   const setAssistantOpen = useRoomStore((state) => state.setAssistantOpen);
@@ -61,6 +79,7 @@ export const AssistantDrawer: React.FC<{
             </DrawerClose>
           </DrawerHeader>
           <Chat.Root>
+            <AiConnectDialog apiBaseUrl={runtimeConfig.apiBaseUrl || ''} />
             <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-4">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <Chat.Sessions className="w-full" />
@@ -90,10 +109,11 @@ export const AssistantDrawer: React.FC<{
                         <DialogTitle>AI Assistant Settings</DialogTitle>
                       </DialogHeader>
                       <Tabs
-                        defaultValue="providers"
+                        defaultValue="connect"
                         className="flex min-h-0 flex-1 flex-col"
                       >
-                        <TabsList className="grid w-full shrink-0 grid-cols-3">
+                        <TabsList className="grid w-full shrink-0 grid-cols-4">
+                          <TabsTrigger value="connect">Connect</TabsTrigger>
                           <TabsTrigger value="providers">Providers</TabsTrigger>
                           <TabsTrigger value="models">Models</TabsTrigger>
                           <TabsTrigger value="parameters">
@@ -101,10 +121,20 @@ export const AssistantDrawer: React.FC<{
                           </TabsTrigger>
                         </TabsList>
                         <TabsContent
+                          value="connect"
+                          className="flex-1 overflow-y-auto"
+                        >
+                          <AiSettingsPanel.ConnectSettings
+                            apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
+                          />
+                        </TabsContent>
+                        <TabsContent
                           value="providers"
                           className="flex-1 overflow-y-auto"
                         >
-                          <AiSettingsPanel.ProvidersSettings />
+                          <AiSettingsPanel.ProvidersSettings
+                            apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
+                          />
                         </TabsContent>
                         <TabsContent
                           value="models"
@@ -147,17 +177,35 @@ export const AssistantDrawer: React.FC<{
                 <Chat.PromptSuggestions.Item text="What are the key trends?" />
                 <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
               </Chat.PromptSuggestions>
-              <Chat.Composer placeholder="What would you like to learn about the data?">
-                <Chat.InlineApiKeyInput
-                  onSaveApiKey={(provider, apiKey) => {
-                    updateProvider(provider, {apiKey});
-                  }}
-                />
-                <div className="flex items-center justify-end gap-2">
-                  <Chat.PromptSuggestions.VisibilityToggle />
-                  <Chat.ModelSelector />
+              {currentProviderHasCredentials ? (
+                <Chat.Composer placeholder="What would you like to learn about the data?">
+                  <div className="flex items-center justify-end gap-2">
+                    <Chat.PromptSuggestions.VisibilityToggle />
+                    <Chat.ModelSelector />
+                  </div>
+                </Chat.Composer>
+              ) : (
+                <div className="border-border bg-muted/30 mt-3 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Connect a provider</p>
+                      <p className="text-muted-foreground text-sm">
+                        The assistant needs credentials for{' '}
+                        <span className="font-mono">{currentProviderId}</span>{' '}
+                        before it can chat.
+                      </p>
+                    </div>
+                    <AiProviderConnectButton
+                      providerId={currentProviderId || undefined}
+                      apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-end gap-2">
+                    <Chat.PromptSuggestions.VisibilityToggle />
+                    <Chat.ModelSelector />
+                  </div>
                 </div>
-              </Chat.Composer>
+              )}
             </div>
           </Chat.Root>
         </div>

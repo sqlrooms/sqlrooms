@@ -24,6 +24,7 @@ import {
   sanitizeMessagesForLLM,
   ToolAbortError,
 } from './utils';
+import type {CustomModelArgs} from './types';
 
 export type ToolCall = {
   input: string;
@@ -42,10 +43,10 @@ export type ChatTransportConfig = {
   /**
    * Optional: supply a pre-configured custom model.
    * e.g. import {anthropic} from "@ai-sdk/anthropic";
-   * getCustomModel: () => anthropic('claude-sonnet-4-5')
+   * getCustomModel: ({ modelId }) => anthropic('claude-sonnet-4-5')
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
-  getCustomModel?: () => LanguageModel | undefined;
+  getCustomModel?: (args: CustomModelArgs) => LanguageModel | undefined;
 };
 
 function getSessionById(
@@ -102,7 +103,12 @@ export function createLocalChatTransportFactory({
       const baseUrl = state.ai.getBaseUrlFromSettings();
 
       // Prefer a user-supplied model if available
-      let model: LanguageModel | undefined = getCustomModel?.();
+      let model: LanguageModel | undefined = getCustomModel?.({
+        provider,
+        modelId,
+        apiKey,
+        baseUrl,
+      });
 
       // Fallback to OpenAI-compatible if no custom model provided
       if (!model) {

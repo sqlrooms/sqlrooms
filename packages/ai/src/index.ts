@@ -96,9 +96,17 @@ export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 // From @sqlrooms/ai-settings - State/Logic
 export {
   createAiSettingsSlice,
+  createAiConnectSlice,
+  createAiAssistantSettingsSlices,
   useStoreWithAiSettings,
+  useStoreWithAiConnect,
 } from '@sqlrooms/ai-settings';
-export type {AiSettingsSliceState} from '@sqlrooms/ai-settings';
+export type {
+  AiSettingsSliceState,
+  AiConnectSliceState,
+  AiConnectStep,
+  AiProviderAuthInstructions,
+} from '@sqlrooms/ai-settings';
 export {createDefaultAiSettingsConfig} from '@sqlrooms/ai-settings';
 
 // From @sqlrooms/ai-settings - Components
@@ -107,4 +115,10 @@ export {AiProvidersSettings} from '@sqlrooms/ai-settings';
 export {AiModelsSettings} from '@sqlrooms/ai-settings';
 export {AiModelParameters} from '@sqlrooms/ai-settings';
 export {AiModelUsage} from '@sqlrooms/ai-settings';
+export {
+  AiConnectDialog,
+  AiProviderConnectButton,
+  AiProviderStatusList,
+  useAiProviderAuth,
+} from '@sqlrooms/ai-settings';
 export type {ModelUsageData} from '@sqlrooms/ai-settings';

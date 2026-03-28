@@ -40,6 +40,7 @@ import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import type {
   AddToolResult,
   AiChatSendMessage,
+  CustomModelArgs,
   GetProviderOptions,
   StoredToolSet,
   ToolRenderer,
@@ -195,11 +196,11 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   defaultProvider?: string;
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
-  getCustomModel?: () => LanguageModel | undefined;
+  getCustomModel?: (args: CustomModelArgs) => LanguageModel | undefined;
   getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
-  getBaseUrl?: () => string;
+  getBaseUrl?: (modelProvider: string) => string | undefined;
   /** Optional remote endpoint to use for chat; if empty, local transport is used */
   chatEndPoint?: string;
   /** Optional headers to send with remote endpoint */
@@ -724,16 +725,19 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         getBaseUrlFromSettings: () => {
+          const store = get();
+          const currentSession = getCurrentSessionFromState(store);
+          const currentProvider =
+            currentSession?.modelProvider || defaultProvider;
+
           // First try the getBaseUrl function if provided
-          const baseUrlFromFunction = getBaseUrl?.();
+          const baseUrlFromFunction = getBaseUrl?.(currentProvider);
           if (baseUrlFromFunction) {
             return baseUrlFromFunction;
           }
 
           // Fall back to settings
-          const store = get();
           if (hasAiSettingsConfig(store)) {
-            const currentSession = getCurrentSessionFromState(store);
             if (currentSession) {
               if (currentSession.modelProvider === 'custom') {
                 const customModel = store.aiSettings.config.customModels.find(
@@ -854,11 +858,19 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(),
-            name: provider,
-            baseURL,
-          }).chatModel(modelId);
+          const apiKey = state.ai.getApiKeyFromSettings();
+          const model =
+            getCustomModel?.({
+              provider,
+              modelId,
+              apiKey,
+              baseUrl: baseURL,
+            }) ??
+            createOpenAICompatible({
+              apiKey,
+              name: provider,
+              baseURL,
+            }).chatModel(modelId);
 
           try {
             const response = await generateText({

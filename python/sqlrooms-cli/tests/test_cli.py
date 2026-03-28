@@ -71,6 +71,7 @@ title = "Local Snowflake"
 
 def test_load_ai_runtime_config_toml(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "env-openai-key")
+    monkeypatch.setattr("sqlrooms.cli.DEFAULT_AUTH_PATH", tmp_path / "auth.toml")
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         """
@@ -80,15 +81,35 @@ default_model = "gpt-5"
 
 [[ai.providers]]
 id = "openai"
+title = "OpenAI"
+kind = "builtin"
 base_url = "https://api.openai.com/v1"
-api_key_env = "OPENAI_API_KEY"
+default_auth_method = "env_api_key"
 models = ["gpt-5", "gpt-4.1"]
+
+[[ai.providers.auth_methods]]
+id = "env_api_key"
+type = "env_api_key"
+label = "Use OPENAI_API_KEY"
+env_var = "OPENAI_API_KEY"
+
+[[ai.providers.auth_methods]]
+id = "manual_api_key"
+type = "api_key"
+label = "Manually enter API Key"
 
 [[ai.providers]]
 id = "anthropic"
+title = "Anthropic"
+kind = "builtin"
 base_url = "https://api.anthropic.com"
-api_key = "anthropic-key"
+default_auth_method = "manual_api_key"
 models = ["claude-4-sonnet"]
+
+[[ai.providers.auth_methods]]
+id = "manual_api_key"
+type = "api_key"
+label = "Manually enter API Key"
 """.strip(),
         encoding="utf-8",
     )
@@ -96,9 +117,12 @@ models = ["claude-4-sonnet"]
     default_provider, default_model, providers = _load_ai_runtime_config(config_path)
     assert default_provider == "openai"
     assert default_model == "gpt-5"
-    assert providers["openai"]["apiKey"] == "env-openai-key"
+    assert providers["openai"]["baseUrl"] == "/api/ai/proxy/openai/v1"
     assert providers["openai"]["models"][0]["modelName"] == "gpt-5"
-    assert providers["anthropic"]["apiKey"] == "anthropic-key"
+    assert providers["openai"]["status"]["hasCredentials"] is True
+    assert providers["openai"]["status"]["selectedAuthMethod"] == "env_api_key"
+    assert providers["anthropic"]["baseUrl"] == "/api/ai/proxy/anthropic"
+    assert providers["anthropic"]["status"]["hasCredentials"] is False
 
 
 def test_load_connector_config_rejects_duplicate_ids(tmp_path):

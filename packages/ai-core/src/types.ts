@@ -13,6 +13,13 @@ export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
 >;
 
+export type CustomModelArgs = {
+  provider: string;
+  modelId: string;
+  apiKey?: string;
+  baseUrl?: string;
+};
+
 /**
  * Shallow tool representation stored in state.
  *

@@ -63,6 +63,88 @@ def test_api_config_with_ai_provider_metadata(tmp_path):
     assert "openai" in data["aiProviders"]
 
 
+def test_ai_settings_routes_and_manual_auth(tmp_path):
+    db_path = tmp_path / "test.db"
+    config_path = tmp_path / "config.toml"
+    auth_path = tmp_path / "auth.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "openai"
+default_model = "gpt-5"
+
+[[ai.providers]]
+id = "openai"
+title = "OpenAI"
+kind = "builtin"
+base_url = "https://api.openai.com/v1"
+default_auth_method = "manual_api_key"
+models = ["gpt-5"]
+
+[[ai.providers.auth_methods]]
+id = "manual_api_key"
+type = "api_key"
+label = "Manually enter API Key"
+""".strip(),
+        encoding="utf-8",
+    )
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=4173,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+        auth_path=auth_path,
+    )
+    client = TestClient(server._build_app())
+
+    settings_response = client.get("/api/ai/settings")
+    assert settings_response.status_code == 200
+    settings = settings_response.json()
+    assert settings["config"]["defaultProvider"] == "openai"
+    assert (
+        settings["config"]["providers"]["openai"]["status"]["hasCredentials"] is False
+    )
+
+    start_response = client.post(
+        "/api/ai/auth/start",
+        json={"providerId": "openai", "authMethodId": "manual_api_key"},
+    )
+    assert start_response.status_code == 200
+    assert start_response.json()["flowType"] == "api_key"
+
+    complete_response = client.post(
+        "/api/ai/auth/complete",
+        json={
+            "providerId": "openai",
+            "authMethodId": "manual_api_key",
+            "apiKey": "test-openai-key",
+        },
+    )
+    assert complete_response.status_code == 200
+    assert auth_path.exists()
+    assert "test-openai-key" in auth_path.read_text(encoding="utf-8")
+
+    status_response = client.get("/api/ai/auth/status", params={"providerId": "openai"})
+    assert status_response.status_code == 200
+    assert status_response.json()["provider"]["status"]["hasCredentials"] is True
+
+    test_response = client.post("/api/ai/auth/test", json={"providerId": "openai"})
+    assert test_response.status_code == 200
+    assert test_response.json()["ok"] is True
+
+    logout_response = client.post("/api/ai/auth/logout", json={"providerId": "openai"})
+    assert logout_response.status_code == 200
+
+    status_after_logout = client.get(
+        "/api/ai/auth/status",
+        params={"providerId": "openai"},
+    )
+    assert status_after_logout.status_code == 200
+    assert status_after_logout.json()["provider"]["status"]["hasCredentials"] is False
+
+
 def test_api_upload(server, tmp_path):
     app = server._build_app()
     file_content = b"test content"

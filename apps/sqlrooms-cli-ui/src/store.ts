@@ -1,8 +1,11 @@
+import {createAnthropic} from '@ai-sdk/anthropic';
 import {
   AiSettingsSliceConfig,
+  AiConnectSliceState,
   AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
+  createAiConnectSlice,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
@@ -106,6 +109,7 @@ export type RoomState = RoomShellSliceState &
   MosaicSliceState &
   AiSliceState &
   SqlEditorSliceState &
+  AiConnectSliceState &
   AiSettingsSliceState &
   CellsSliceState &
   NotebookSliceState &
@@ -144,14 +148,27 @@ export type RoomState = RoomShellSliceState &
   };
 
 export const runtimeConfig = await fetchRuntimeConfig();
-const runtimeAiProviders =
-  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
+type RuntimeAiProviders = NonNullable<typeof runtimeConfig.aiProviders>;
+const runtimeAiProviders = (runtimeConfig.aiProviders ||
+  {}) as RuntimeAiProviders;
 const defaultProviderFromConfig =
   runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
 const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+const proxyPlaceholderKey = 'sqlrooms-local-proxy';
+const initialAiSettingsConfig: AiSettingsSliceConfig = {
+  defaultProvider: defaultProviderFromConfig,
+  defaultModel: defaultModelFromConfig,
+  providers:
+    runtimeAiProviders as unknown as AiSettingsSliceConfig['providers'],
+  customModels: [],
+  modelParameters: {
+    maxSteps: 50,
+    additionalInstruction: '',
+  },
+};
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -370,7 +387,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createAiSettingsSlice({
-          config: {providers: runtimeAiProviders},
+          config: initialAiSettingsConfig,
+        })(set, get, store),
+
+        ...createAiConnectSlice({
+          apiBaseUrl: runtimeConfig.apiBaseUrl || '',
         })(set, get, store),
 
         ...(() => {
@@ -379,11 +400,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
-            getApiKey: (provider) =>
-              runtimeAiProviders[provider]?.apiKey ||
-              runtimeConfig.apiKey ||
-              '',
-            getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
+            getApiKey: (provider) => {
+              const providerConfig = runtimeAiProviders[provider];
+              if (providerConfig?.proxyEnabled) {
+                return providerConfig.apiKey || proxyPlaceholderKey;
+              }
+              return providerConfig?.apiKey || runtimeConfig.apiKey || '';
+            },
+            getCustomModel: ({provider, modelId, apiKey, baseUrl}) => {
+              if (provider !== 'anthropic') {
+                return undefined;
+              }
+              const anthropic = createAnthropic({
+                apiKey: apiKey || proxyPlaceholderKey,
+                baseURL: baseUrl,
+              });
+              return anthropic.messages(modelId) as any;
+            },
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,
             tools: {
@@ -413,3 +446,6 @@ if (bridgeConfig) {
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
 syncConnectionsToDb(roomStore);
+void roomStore
+  .getState()
+  .aiSettings.loadFromServer(runtimeConfig.apiBaseUrl || '');

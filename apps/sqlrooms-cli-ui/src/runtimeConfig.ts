@@ -7,9 +7,44 @@ export type RuntimeConfig = {
   aiProviders?: Record<
     string,
     {
+      title?: string;
+      kind?: string;
       baseUrl: string;
-      apiKey: string;
+      apiKey?: string;
       models: Array<{modelName: string}>;
+      defaultAuthMethod?: string;
+      authMethods?: Array<{
+        id: string;
+        type:
+          | 'api_key'
+          | 'env_api_key'
+          | 'oauth_auto'
+          | 'oauth_code'
+          | 'device_code'
+          | 'local'
+          | 'external_credentials'
+          | 'oauth_to_api_key';
+        label: string;
+        description?: string;
+        experimental?: boolean;
+        envVar?: string;
+        metadata?: Record<string, string>;
+      }>;
+      experimental?: boolean;
+      status?: {
+        hasCredentials?: boolean;
+        credentialType?: string;
+        expiresAt?: number;
+        selectedAuthMethod?: string;
+        status?: string;
+      };
+      selectedAuthMethod?: string;
+      hasCredentials?: boolean;
+      credentialType?: string;
+      expiresAt?: number;
+      proxyEnabled?: boolean;
+      upstreamBaseUrl?: string;
+      authMethodType?: string;
     }
   >;
   dbPath?: string;

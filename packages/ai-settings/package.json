@@ -4,6 +4,18 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./connect": {
+      "types": "./dist/connect.d.ts",
+      "import": "./dist/connect.js",
+      "default": "./dist/connect.js"
+    }
+  },
   "type": "module",
   "sideEffects": false,
   "author": "SQLRooms Contributors",
