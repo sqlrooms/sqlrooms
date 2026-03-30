@@ -1,27 +1,15 @@
-import {
-  Button,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  useDebouncedValue,
-} from '@sqlrooms/ui';
+import {useDebouncedValue} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
-import {Filter, Settings} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {useCellsStore} from '../hooks';
 import {useVegaCellQuery} from '../hooks/useVegaCellQuery';
 import {useVegaCellDataSource} from '../hooks/useVegaCellDataSource';
 import type {CellContainerProps, VegaCell} from '../types';
-import {CellSourceSelector} from './CellSourceSelector';
 import {SelectionListener} from './SelectionListener';
 import {VegaConfigPanel} from './VegaConfigPanel';
-import {
-  toDataSourceCell,
-  toDataSourceTable,
-  fromDataSourceCell,
-  fromDataSourceTable,
-} from '../helpers';
+import {VegaCellHeader} from './VegaCellHeader';
+import {toDataSourceCell, toDataSourceTable} from '../helpers';
 
 const DEFAULT_ASPECT_RATIO = 3 / 2;
 const DEFAULT_SPEC = {
@@ -85,27 +73,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
       ? toDataSourceTable(selectedTableRef)
       : undefined;
 
-  const handleDataSourceChange = (value: string) => {
-    updateCell(id, (c) =>
-      produce(c, (draft) => {
-        if (draft.type !== 'vega') {
-          return;
-        }
-
-        const cellId = fromDataSourceCell(value);
-        const tableRef = fromDataSourceTable(value);
-
-        if (cellId) {
-          draft.data.sqlId = cellId;
-          delete draft.data.tableRef;
-        } else if (tableRef) {
-          draft.data.tableRef = tableRef;
-          delete draft.data.sqlId;
-        }
-      }),
-    );
-  };
-
   const handleCrossFilterToggle = useCallback(
     (enabled: boolean) => {
       updateCell(id, (c) =>
@@ -149,39 +116,15 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   );
 
   const header = (
-    <div className="flex items-center gap-2">
-      <CellSourceSelector
-        value={selectValue}
-        onValueChange={handleDataSourceChange}
-      />
-      <Button
-        size="xs"
-        variant="secondary"
-        className="h-6"
-        onClick={() => setIsEditing((prev) => !prev)}
-        disabled={!hasDataSource}
-      >
-        <Settings className="h-4 w-4" />
-      </Button>
-      {crossFilterEnabled && brushField && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center">
-              <Filter
-                className={`h-3.5 w-3.5 ${crossFilterPredicate ? 'text-blue-500' : 'text-gray-400'}`}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p className="text-xs">
-              {crossFilterPredicate
-                ? `Filtered: ${crossFilterPredicate}`
-                : `Cross-filter on ${brushField}`}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      )}
-    </div>
+    <VegaCellHeader
+      cellId={id}
+      selectValue={selectValue}
+      onEditToggle={() => setIsEditing((prev) => !prev)}
+      hasDataSource={hasDataSource}
+      crossFilterEnabled={crossFilterEnabled}
+      brushField={brushField}
+      crossFilterPredicate={crossFilterPredicate}
+    />
   );
 
   const showSelectionListener =
