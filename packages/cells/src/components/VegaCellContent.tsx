@@ -3,12 +3,12 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  useDebouncedCallback,
+  useDebouncedValue,
 } from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
 import {Filter, Settings} from 'lucide-react';
-import React, {useCallback, useState} from 'react';
+import {useCallback, useState} from 'react';
 import {useCellsStore} from '../hooks';
 import {useVegaCellQuery} from '../hooks/useVegaCellQuery';
 import {useVegaCellDataSource} from '../hooks/useVegaCellDataSource';
@@ -22,6 +22,13 @@ import {
   fromDataSourceCell,
   fromDataSourceTable,
 } from '../helpers';
+
+const DEFAULT_ASPECT_RATIO = 3 / 2;
+const DEFAULT_SPEC = {
+  data: {name: 'queryResult'},
+  mark: 'bar',
+  padding: 20,
+} as const;
 
 export type VegaCellContentProps = {
   id: string;
@@ -42,11 +49,18 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const vegaSpec = cell.data.vegaSpec ?? {
-    data: {name: 'queryResult'},
-    mark: 'bar',
-    padding: 20,
-  };
+  // Local state with debounced persistence
+  const [localSpec, handleSpecChange] = useDebouncedValue(
+    cell.data.vegaSpec ?? DEFAULT_SPEC,
+    (spec) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') draft.data.vegaSpec = spec;
+        }),
+      );
+    },
+    300,
+  );
 
   const {
     selectedSqlId,
@@ -134,14 +148,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
     [id, updateCell],
   );
 
-  const handleSpecChange = useDebouncedCallback((spec: any) => {
-    updateCell(id, (c) =>
-      produce(c, (draft) => {
-        if (draft.type === 'vega') draft.data.vegaSpec = spec;
-      }),
-    );
-  }, 300);
-
   const header = (
     <div className="flex items-center gap-2">
       <CellSourceSelector
@@ -187,7 +193,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         <VegaConfigPanel
           sqlQuery={baseSqlQuery}
           lastRunTime={lastRunTime}
-          spec={vegaSpec}
+          spec={localSpec}
           crossFilterEnabled={crossFilterEnabled}
           onSpecChange={handleSpecChange}
           onCrossFilterToggle={handleCrossFilterToggle}
@@ -210,9 +216,9 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         ) : (
           <VegaLiteChart
             sqlQuery={selectedSqlQuery}
-            spec={vegaSpec}
+            spec={localSpec}
             className="h-full w-full"
-            aspectRatio={isEditing ? undefined : 3 / 2}
+            aspectRatio={isEditing ? undefined : DEFAULT_ASPECT_RATIO}
           >
             {showSelectionListener && (
               <SelectionListener
