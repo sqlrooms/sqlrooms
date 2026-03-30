@@ -9,7 +9,6 @@ import {
   LayoutMosaicNode,
   LayoutNode,
   LayoutTabsNode,
-  PanelRenderContext,
   RoomPanelInfo,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -21,7 +20,6 @@ import {
   TableRowsSplitIcon,
   TerminalIcon,
 } from 'lucide-react';
-import React from 'react';
 import {ConsolePanel} from './panels/ConsolePanel';
 import {DataSourcesPanel} from './panels/DataSourcesPanel';
 import {DynamicChartPanel} from './panels/DynamicChartPanel';
@@ -123,30 +121,36 @@ function labelFromId(id: string): string {
     .join(' ');
 }
 
-function isDynamicPanel(panelId: string): boolean {
-  return panelId.startsWith('dashboard-') || panelId.startsWith('chart-');
-}
-
-function resolveDynamicPanelInfo(panelId: string): RoomPanelInfo | undefined {
+function resolveDynamicPanel(panelId: string): RoomPanelInfo | undefined {
   if (panelId.startsWith('dashboard-')) {
-    return {title: labelFromId(panelId), icon: LayoutDashboardIcon};
+    return {
+      title: labelFromId(panelId),
+      icon: LayoutDashboardIcon,
+      render: () => {
+        const label = labelFromId(panelId);
+        return (
+          <div className="h-full w-full overflow-hidden p-2">
+            <DynamicChartPanel label={label} />
+          </div>
+        );
+      },
+    };
   }
   if (panelId.startsWith('chart-')) {
-    return {title: labelFromId(panelId), icon: BarChart3Icon};
+    return {
+      title: labelFromId(panelId),
+      icon: BarChart3Icon,
+      render: () => {
+        const label = labelFromId(panelId);
+        return (
+          <div className="h-full w-full overflow-hidden p-2">
+            <DynamicChartPanel label={label} />
+          </div>
+        );
+      },
+    };
   }
   return undefined;
-}
-
-function renderDynamicPanel(
-  ctx: PanelRenderContext,
-): React.ReactNode | undefined {
-  if (!isDynamicPanel(ctx.panelId)) return undefined;
-  const label = labelFromId(ctx.panelId);
-  return (
-    <div className="h-full w-full overflow-hidden p-2">
-      <DynamicChartPanel label={label} />
-    </div>
-  );
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -220,8 +224,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         } satisfies LayoutConfig,
-        renderPanel: renderDynamicPanel,
-        resolvePanelInfo: resolveDynamicPanelInfo,
+        resolvePanel: resolveDynamicPanel,
         panels: {
           'data-sources': {
             title: 'Data Sources',

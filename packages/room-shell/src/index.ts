@@ -39,6 +39,7 @@ export type {
   RoomPanelInfo,
   PanelRenderContext,
   TabStripRenderContext,
+  LayoutPath,
 } from '@sqlrooms/layout';
 export {getChildKey, getMosaicNodeKey} from '@sqlrooms/layout';
 export {LayoutRenderer} from '@sqlrooms/layout';

@@ -71,16 +71,19 @@ type AreaRemovePanelInput = z.infer<typeof AreaRemovePanelInput>;
 // Render callback types
 // ---------------------------------------------------------------------------
 
+/** Path segments use node IDs when available, numeric indices otherwise. */
+export type LayoutPath = (string | number)[];
+
 export type PanelRenderContext = {
   panelId: string;
   containerType: 'tabs' | 'mosaic' | 'split' | 'root';
   containerId?: string;
-  path: number[];
+  path: LayoutPath;
 };
 
 export type TabStripRenderContext = {
   node: LayoutTabsNode;
-  path: number[];
+  path: LayoutPath;
 };
 
 // ---------------------------------------------------------------------------
@@ -91,6 +94,8 @@ export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
   component?: React.ComponentType<Partial<PanelRenderContext>>;
+  /** Render function for dynamic panels — takes priority over component */
+  render?: (context: PanelRenderContext) => React.ReactNode;
   /** @deprecated Use `area` instead */
   placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
   /** Named area this panel belongs to (e.g. 'left', 'main', 'bottom') */
@@ -118,10 +123,14 @@ export type LayoutSliceState = {
     destroy?: () => Promise<void>;
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
-    renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+    /** Resolve panel metadata and/or render function for dynamic panels */
+    resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
     renderTabStrip?: (
       context: TabStripRenderContext,
     ) => React.ReactNode | undefined;
+    /** @deprecated Use resolvePanel instead */
+    renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+    /** @deprecated Use resolvePanel instead */
     resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
     setConfig(layout: LayoutConfig): void;
     /** @deprecated Use setConfig instead */
@@ -162,10 +171,14 @@ export type LayoutSliceState = {
 export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
-  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  /** Resolve panel metadata and/or render function for dynamic panels */
+  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
+  /** @deprecated Use resolvePanel with a render field instead */
+  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  /** @deprecated Use resolvePanel instead */
   resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
 };
 
@@ -179,6 +192,7 @@ function findAreaInConfig(
 export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
+  resolvePanel,
   renderPanel,
   renderTabStrip,
   resolvePanelInfo,
@@ -209,6 +223,7 @@ export function createLayoutSlice({
           },
           config: initialConfig,
           panels,
+          resolvePanel,
           renderPanel,
           renderTabStrip,
           resolvePanelInfo,

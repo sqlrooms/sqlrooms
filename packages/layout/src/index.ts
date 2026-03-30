@@ -15,6 +15,7 @@ export type {
   CreateLayoutSliceProps,
   PanelRenderContext,
   TabStripRenderContext,
+  LayoutPath,
 } from './LayoutSlice';
 
 // New primary exports from mosaic-utils

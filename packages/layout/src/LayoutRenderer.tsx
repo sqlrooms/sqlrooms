@@ -42,6 +42,7 @@ import type {
   RoomPanelInfo,
   PanelRenderContext,
   TabStripRenderContext,
+  LayoutPath,
 } from './LayoutSlice';
 
 // ---------------------------------------------------------------------------
@@ -74,10 +75,14 @@ export interface LayoutRendererProps {
   layout: LayoutNode | null;
   panels: Record<string, RoomPanelInfo>;
   className?: string;
-  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  /** Resolve panel metadata and/or render function for dynamic panels */
+  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
+  /** @deprecated Use resolvePanel with a render field instead */
+  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  /** @deprecated Use resolvePanel instead */
   resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (areaId: string, tabId: string) => void;
@@ -96,6 +101,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
   layout,
   panels,
   className,
+  resolvePanel,
   renderPanel,
   renderTabStrip,
   resolvePanelInfo,
@@ -117,6 +123,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
         containerType="root"
         panels={panels}
         rootLayout={layout}
+        resolvePanel={resolvePanel}
         renderPanel={renderPanel}
         renderTabStrip={renderTabStrip}
         resolvePanelInfo={resolvePanelInfo}
@@ -138,17 +145,20 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
 
 interface NodeRenderProps {
   node: LayoutNode;
-  path: number[];
+  path: LayoutPath;
   containerType: PanelRenderContext['containerType'];
   containerId?: string;
   /** Direction of the parent split, used for expand button icon orientation */
   parentDirection?: 'row' | 'column';
   panels: Record<string, RoomPanelInfo>;
   rootLayout: LayoutNode;
-  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
+  /** @deprecated Use resolvePanel */
+  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
+  /** @deprecated Use resolvePanel */
   resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (areaId: string, tabId: string) => void;
@@ -161,14 +171,17 @@ interface NodeRenderProps {
 
 /**
  * Resolve panel info by checking the static panels registry first,
- * then falling back to the resolvePanelInfo callback.
+ * then falling back to resolvePanel (or deprecated resolvePanelInfo).
  */
 function lookupPanelInfo(
   panelId: string,
   panels: Record<string, RoomPanelInfo>,
+  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined,
   resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined,
 ): RoomPanelInfo | undefined {
-  return panels[panelId] ?? resolvePanelInfo?.(panelId);
+  return (
+    panels[panelId] ?? resolvePanel?.(panelId) ?? resolvePanelInfo?.(panelId)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -204,8 +217,9 @@ const LeafRenderer: FC<Omit<NodeRenderProps, 'node'> & {panelId: string}> = ({
   containerType,
   containerId,
   panels,
-  resolvePanelInfo,
+  resolvePanel,
   renderPanel: renderPanelOverride,
+  resolvePanelInfo,
 }) => {
   const context: PanelRenderContext = {
     panelId,
@@ -214,6 +228,12 @@ const LeafRenderer: FC<Omit<NodeRenderProps, 'node'> & {panelId: string}> = ({
     path,
   };
 
+  const info = lookupPanelInfo(panelId, panels, resolvePanel, resolvePanelInfo);
+
+  if (info?.render) {
+    return <>{info.render(context)}</>;
+  }
+
   if (renderPanelOverride) {
     const override = renderPanelOverride(context);
     if (override !== undefined) {
@@ -221,7 +241,6 @@ const LeafRenderer: FC<Omit<NodeRenderProps, 'node'> & {panelId: string}> = ({
     }
   }
 
-  const info = lookupPanelInfo(panelId, panels, resolvePanelInfo);
   if (!info?.component) return null;
 
   const PanelComp = info.component;
@@ -377,8 +396,10 @@ const SplitRenderer: FC<
   path,
   panels,
   rootLayout,
+  resolvePanel,
   renderPanel,
   renderTabStrip,
+  resolvePanelInfo,
   onLayoutChange,
   onTabSelect,
   onTabClose,
@@ -398,18 +419,21 @@ const SplitRenderer: FC<
         const collapsible = isChildCollapsible(child);
         const collapsed = isChildCollapsed(child);
         const areaId = getChildAreaId(child);
+        const childPathSegment = areaId ?? key ?? i;
 
         const childContent = (
           <NodeRenderer
             node={child}
-            path={[...path, i]}
+            path={[...path, childPathSegment]}
             containerType="split"
             containerId={node.id}
             parentDirection={node.direction}
             panels={panels}
             rootLayout={rootLayout}
+            resolvePanel={resolvePanel}
             renderPanel={renderPanel}
             renderTabStrip={renderTabStrip}
+            resolvePanelInfo={resolvePanelInfo}
             onLayoutChange={onLayoutChange}
             onTabSelect={onTabSelect}
             onTabClose={onTabClose}
@@ -468,6 +492,7 @@ const TabsRenderer: FC<
   parentDirection,
   panels,
   rootLayout,
+  resolvePanel,
   renderPanel,
   renderTabStrip: renderTabStripOverride,
   resolvePanelInfo,
@@ -503,12 +528,15 @@ const TabsRenderer: FC<
       if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
         return (
-          lookupPanelInfo(mosaicId, panels, resolvePanelInfo)?.title ?? mosaicId
+          lookupPanelInfo(mosaicId, panels, resolvePanel, resolvePanelInfo)
+            ?.title ?? mosaicId
         );
       }
-      return lookupPanelInfo(id, panels, resolvePanelInfo)?.title ?? id;
+      return (
+        lookupPanelInfo(id, panels, resolvePanel, resolvePanelInfo)?.title ?? id
+      );
     },
-    [panels, resolvePanelInfo],
+    [panels, resolvePanel, resolvePanelInfo],
   );
 
   // Build tab descriptors for the strip
@@ -539,7 +567,12 @@ const TabsRenderer: FC<
       if (panelId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         panelId = panelId.slice(MOSAIC_NODE_KEY_PREFIX.length);
       }
-      const Icon = lookupPanelInfo(panelId, panels, resolvePanelInfo)?.icon;
+      const Icon = lookupPanelInfo(
+        panelId,
+        panels,
+        resolvePanel,
+        resolvePanelInfo,
+      )?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}
@@ -547,7 +580,7 @@ const TabsRenderer: FC<
         </span>
       );
     },
-    [panels, resolvePanelInfo],
+    [panels, resolvePanel, resolvePanelInfo],
   );
 
   // Allow render override for the entire tab strip
@@ -641,13 +674,15 @@ const TabsRenderer: FC<
         {activeChild != null && (
           <NodeRenderer
             node={activeChild}
-            path={[...path, node.activeTabIndex]}
+            path={[...path, activeTabId ?? node.activeTabIndex]}
             containerType="tabs"
             containerId={areaId}
             panels={panels}
             rootLayout={rootLayout}
+            resolvePanel={resolvePanel}
             renderPanel={renderPanel}
             renderTabStrip={renderTabStripOverride}
+            resolvePanelInfo={resolvePanelInfo}
             onLayoutChange={onLayoutChange}
             onTabSelect={onTabSelect}
             onTabClose={onTabClose}
@@ -672,6 +707,7 @@ const MosaicRenderer: FC<
   node,
   panels,
   rootLayout,
+  resolvePanel,
   renderPanel,
   resolvePanelInfo,
   onLayoutChange,
@@ -706,6 +742,17 @@ const MosaicRenderer: FC<
         path: tilePath,
       };
 
+      const info = lookupPanelInfo(
+        panelId,
+        panels,
+        resolvePanel,
+        resolvePanelInfo,
+      );
+
+      if (info?.render) {
+        return <>{info.render(context)}</>;
+      }
+
       if (renderPanel) {
         const override = renderPanel(context);
         if (override !== undefined) {
@@ -713,7 +760,6 @@ const MosaicRenderer: FC<
         }
       }
 
-      const info = lookupPanelInfo(panelId, panels, resolvePanelInfo);
       if (!info?.component) return <></>;
 
       const PanelComp = info.component;
@@ -735,7 +781,7 @@ const MosaicRenderer: FC<
         </MosaicWindow>
       );
     },
-    [panels, renderPanel, resolvePanelInfo, draggable, node.id],
+    [panels, resolvePanel, renderPanel, resolvePanelInfo, draggable, node.id],
   );
 
   return (

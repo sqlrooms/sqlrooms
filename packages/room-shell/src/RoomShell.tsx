@@ -77,6 +77,9 @@ export const LayoutComposer: FC<{
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setConfig);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const resolvePanel = useBaseRoomShellStore(
+    (state) => state.layout.resolvePanel,
+  );
   const renderPanel = useBaseRoomShellStore(
     (state) => state.layout.renderPanel,
   );
@@ -157,6 +160,7 @@ export const LayoutComposer: FC<{
         <LayoutRenderer
           layout={layout}
           panels={panels}
+          resolvePanel={resolvePanel}
           renderPanel={renderPanel}
           renderTabStrip={renderTabStrip}
           resolvePanelInfo={resolvePanelInfo}
