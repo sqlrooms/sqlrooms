@@ -9,6 +9,7 @@ import {
   LayoutMosaicNode,
   LayoutNode,
   LayoutTabsNode,
+  ResolvePanelContext,
   RoomPanelInfo,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -109,48 +110,27 @@ const CHART_LABELS = [
 
 let dashboardCounter = 0;
 
-/**
- * Derive a human-readable label from a panel ID.
- * "chart-revenue" → "Revenue", "dashboard-overview" → "Overview"
- */
-function labelFromId(id: string): string {
-  const raw = id.replace(/^(chart|dashboard)-/, '').replace(/-\d+$/, '');
-  return raw
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
-
-function resolveDynamicPanel(panelId: string): RoomPanelInfo | undefined {
-  if (panelId.startsWith('dashboard-')) {
+function resolveDynamicPanel({
+  panelId,
+  path,
+}: ResolvePanelContext): RoomPanelInfo | undefined {
+  if (path?.includes('main')) {
     return {
-      title: labelFromId(panelId),
+      title: panelId,
       icon: LayoutDashboardIcon,
-      render: () => {
-        const label = labelFromId(panelId);
-        return (
-          <div className="h-full w-full overflow-hidden p-2">
-            <DynamicChartPanel label={label} />
-          </div>
-        );
-      },
     };
   }
-  if (panelId.startsWith('chart-')) {
-    return {
-      title: labelFromId(panelId),
-      icon: BarChart3Icon,
-      render: () => {
-        const label = labelFromId(panelId);
-        return (
-          <div className="h-full w-full overflow-hidden p-2">
-            <DynamicChartPanel label={label} />
-          </div>
-        );
-      },
-    };
-  }
-  return undefined;
+
+  const label = panelId;
+  return {
+    title: label,
+    icon: BarChart3Icon,
+    render: () => (
+      <div className="h-full w-full overflow-hidden p-2">
+        <DynamicChartPanel label={label} />
+      </div>
+    ),
+  };
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -182,24 +162,24 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   children: [
                     {
                       type: 'mosaic',
-                      id: 'dashboard-overview',
+                      id: 'overview',
                       draggable: true,
                       direction: 'row',
                       nodes: {
                         type: 'split',
                         direction: 'row',
-                        children: ['chart-revenue', 'chart-users'],
+                        children: ['revenue', 'users'],
                       },
                     },
                     {
                       type: 'mosaic',
-                      id: 'dashboard-growth',
+                      id: 'growth',
                       draggable: true,
                       direction: 'row',
                       nodes: {
                         type: 'split',
                         direction: 'row',
-                        children: ['chart-conversions', 'chart-sessions'],
+                        children: ['conversions', 'sessions'],
                       },
                     },
                   ],
@@ -257,8 +237,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     addDashboard: (areaId = 'main') => {
       dashboardCounter += 1;
       const label = CHART_LABELS[(dashboardCounter - 1) % CHART_LABELS.length]!;
-      const mosaicId = `dashboard-${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;
-      const chartId = `chart-${mosaicId}`;
+      const mosaicId = `${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;
+      const chartId = `${mosaicId}-chart`;
 
       const mosaicNode: LayoutMosaicNode = {
         type: 'mosaic',

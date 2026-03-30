@@ -2,6 +2,7 @@ import {isLayoutTabsNode, LayoutNode} from '@sqlrooms/layout-config';
 import type {
   LayoutPath,
   PanelRenderContext,
+  ResolvePanelContext,
   RoomPanelInfo,
   TabStripRenderContext,
 } from '../LayoutSlice';
@@ -15,7 +16,7 @@ export interface NodeRenderProps {
   parentDirection?: 'row' | 'column';
   panels: Record<string, RoomPanelInfo>;
   rootLayout: LayoutNode;
-  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
+  resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
@@ -30,14 +31,14 @@ export interface NodeRenderProps {
 
 /**
  * Resolve panel info by checking the static panels registry first,
- * then falling back to resolvePanel.
+ * then falling back to resolvePanel with context.
  */
 export function lookupPanelInfo(
-  panelId: string,
+  context: ResolvePanelContext,
   panels: Record<string, RoomPanelInfo>,
-  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined,
+  resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined,
 ): RoomPanelInfo | undefined {
-  return panels[panelId] ?? resolvePanel?.(panelId);
+  return panels[context.panelId] ?? resolvePanel?.(context);
 }
 
 // ---------------------------------------------------------------------------

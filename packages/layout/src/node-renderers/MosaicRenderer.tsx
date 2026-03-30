@@ -66,7 +66,7 @@ export const MosaicRenderer: FC<
         path: tilePath,
       };
 
-      const info = lookupPanelInfo(panelId, panels, resolvePanel);
+      const info = lookupPanelInfo(context, panels, resolvePanel);
 
       if (info?.render) {
         return <>{info.render(context)}</>;

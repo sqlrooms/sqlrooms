@@ -64,7 +64,8 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
   );
-  const info = panels[roomPanelType] ?? resolvePanel?.(roomPanelType);
+  const info =
+    panels[roomPanelType] ?? resolvePanel?.({panelId: roomPanelType});
 
   return (
     <SidebarButton
@@ -142,7 +143,7 @@ const AreaPanelButtons: FC<{
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {areaPanels.map(([panelId, staticInfo]) => {
-        const info = staticInfo ?? resolvePanel?.(panelId);
+        const info = staticInfo ?? resolvePanel?.({panelId});
         const isSelected = activePanel === panelId && !isCollapsed;
         return (
           <SidebarButton

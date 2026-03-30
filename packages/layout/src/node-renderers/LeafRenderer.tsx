@@ -12,7 +12,7 @@ export const LeafRenderer: FC<
     path,
   };
 
-  const info = lookupPanelInfo(panelId, panels, resolvePanel);
+  const info = lookupPanelInfo(context, panels, resolvePanel);
 
   if (info?.render) {
     return <>{info.render(context)}</>;

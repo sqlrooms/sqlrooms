@@ -81,6 +81,17 @@ export type PanelRenderContext = {
   path: LayoutPath;
 };
 
+/**
+ * Context passed to resolvePanel. All fields except panelId are optional
+ * because some callsites (e.g. sidebar buttons) only know the panel ID.
+ */
+export type ResolvePanelContext = {
+  panelId: string;
+  containerType?: PanelRenderContext['containerType'];
+  containerId?: string;
+  path?: LayoutPath;
+};
+
 export type TabStripRenderContext = {
   node: LayoutTabsNode;
   path: LayoutPath;
@@ -124,7 +135,7 @@ export type LayoutSliceState = {
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
     /** Resolve panel metadata and/or render function for dynamic panels */
-    resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
+    resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined;
     renderTabStrip?: (
       context: TabStripRenderContext,
     ) => React.ReactNode | undefined;
@@ -168,7 +179,7 @@ export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
   /** Resolve panel metadata and/or render function for dynamic panels */
-  resolvePanel?: (panelId: string) => RoomPanelInfo | undefined;
+  resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;

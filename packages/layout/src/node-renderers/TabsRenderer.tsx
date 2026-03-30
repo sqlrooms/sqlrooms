@@ -93,15 +93,22 @@ export const TabsRenderer: FC<
 
   const resolveTabName = useCallback(
     (id: string): string => {
+      const ctx = {
+        panelId: id,
+        containerType: 'tabs' as const,
+        containerId: areaId,
+        path,
+      };
       if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
         return (
-          lookupPanelInfo(mosaicId, panels, resolvePanel)?.title ?? mosaicId
+          lookupPanelInfo({...ctx, panelId: mosaicId}, panels, resolvePanel)
+            ?.title ?? mosaicId
         );
       }
-      return lookupPanelInfo(id, panels, resolvePanel)?.title ?? id;
+      return lookupPanelInfo(ctx, panels, resolvePanel)?.title ?? id;
     },
-    [panels, resolvePanel],
+    [panels, resolvePanel, areaId, path],
   );
 
   const allAreaPanelIds = useMemo(() => {
@@ -131,7 +138,11 @@ export const TabsRenderer: FC<
       if (panelId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         panelId = panelId.slice(MOSAIC_NODE_KEY_PREFIX.length);
       }
-      const Icon = lookupPanelInfo(panelId, panels, resolvePanel)?.icon;
+      const Icon = lookupPanelInfo(
+        {panelId, containerType: 'tabs', containerId: areaId, path},
+        panels,
+        resolvePanel,
+      )?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}
@@ -139,7 +150,7 @@ export const TabsRenderer: FC<
         </span>
       );
     },
-    [panels, resolvePanel],
+    [panels, resolvePanel, areaId, path],
   );
 
   if (renderTabStripOverride) {
