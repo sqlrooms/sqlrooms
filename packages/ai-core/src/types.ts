@@ -8,6 +8,7 @@ import type {
   InferToolInput,
 } from 'ai';
 import {streamText} from 'ai';
+import type {AgentToolCall} from './agents/AgentUtils';
 
 export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
@@ -87,6 +88,13 @@ export interface AiStateForTransport {
     sessionId: string | undefined,
   ) => void;
   getToolCallSession: (toolCallId: string) => string | undefined;
+  /** Live progress for sub-agent tool calls, keyed by parent toolCallId */
+  agentProgress: Record<string, AgentToolCall[]>;
+  updateAgentProgress: (
+    parentToolCallId: string,
+    toolCalls: AgentToolCall[],
+  ) => void;
+  clearAgentProgress: (parentToolCallId: string) => void;
   waitForToolResult: (
     sessionId: string,
     toolCallId: string,
