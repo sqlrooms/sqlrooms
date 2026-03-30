@@ -1,11 +1,16 @@
-import React, {FC, useCallback, useEffect, useMemo, useRef} from 'react';
 import {
-  Group,
-  Panel,
-  Separator,
-  type PanelImperativeHandle,
-  type PanelSize,
-} from 'react-resizable-panels';
+  isLayoutMosaicNode,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+} from '@sqlrooms/layout-config';
+import {Button, cn, TabDescriptor, TabStrip} from '@sqlrooms/ui';
+import {ChevronsRightIcon, ChevronsUpIcon, XIcon} from 'lucide-react';
+import React, {FC, useCallback, useEffect, useMemo, useRef} from 'react';
 import {
   Mosaic,
   MosaicNode,
@@ -14,36 +19,25 @@ import {
 } from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
 import {
-  isLayoutSplitNode,
-  isLayoutTabsNode,
-  isLayoutMosaicNode,
-  isLayoutPanelNode,
-  LayoutNode,
-  LayoutTabsNode,
-  LayoutSplitNode,
-  LayoutMosaicNode,
-} from '@sqlrooms/layout-config';
-import {TabStrip, TabDescriptor, cn, Button} from '@sqlrooms/ui';
+  Group,
+  Panel,
+  Separator,
+  type PanelImperativeHandle,
+  type PanelSize,
+} from 'react-resizable-panels';
+import type {
+  LayoutPath,
+  PanelRenderContext,
+  RoomPanelInfo,
+  TabStripRenderContext,
+} from './LayoutSlice';
 import {
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-  ChevronsUpIcon,
-  ChevronsDownIcon,
-  XIcon,
-} from 'lucide-react';
-import {
+  convertFromMosaicTree,
+  convertToMosaicTree,
   getChildKey,
   MOSAIC_NODE_KEY_PREFIX,
-  convertToMosaicTree,
-  convertFromMosaicTree,
   updateMosaicSubtree,
 } from './mosaic/mosaic-utils';
-import type {
-  RoomPanelInfo,
-  PanelRenderContext,
-  TabStripRenderContext,
-  LayoutPath,
-} from './LayoutSlice';
 
 // ---------------------------------------------------------------------------
 // Mosaic-specific styles (only applied inside nested mosaic containers)
@@ -116,7 +110,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
   if (!layout) return null;
 
   return (
-    <div className={cn('h-full w-full', className)}>
+    <div className={cn('h-full min-w-0 flex-1', className)}>
       <NodeRenderer
         node={layout}
         path={[]}
@@ -620,6 +614,7 @@ const TabsRenderer: FC<
           renderTabLabel={renderTabLabel}
         >
           <TabStrip.Tabs />
+          <div className="flex-1" />
           <ExpandButton
             direction={parentDirection}
             onClick={() => areaId && onAreaExpand?.(areaId)}
@@ -658,17 +653,20 @@ const TabsRenderer: FC<
       <TabStrip.Tabs />
       {creatableTabs && <TabStrip.NewButton />}
       {isCollapsible && areaId && (
-        <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
+        <>
+          <div className="flex-1" />
+          <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
+        </>
       )}
     </TabStrip>
   ) : isCollapsible && areaId ? (
-    <div className="flex h-7 items-center justify-end px-1">
+    <div className="bg-background absolute right-0 rounded-md p-1">
       <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
     </div>
   ) : null;
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="relative flex h-full w-full flex-col">
       {tabStripContent}
       <div className="min-h-0 flex-1">
         {activeChild != null && (
