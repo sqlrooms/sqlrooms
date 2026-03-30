@@ -319,6 +319,10 @@ export {
   type UseDisclosureReturnValue,
 } from './hooks/useDisclosure';
 
+export {useDebounce} from './hooks/useDebounce';
+export {useDebouncedCallback} from './hooks/useDebouncedCallback';
+export {useDebouncedValue} from './hooks/useDebouncedValue';
+
 export {useIsMobile} from './hooks/use-mobile';
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 
