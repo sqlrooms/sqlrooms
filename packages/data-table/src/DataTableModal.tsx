@@ -7,6 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Textarea,
   UseDisclosureReturnValue,
 } from '@sqlrooms/ui';
 import {FC} from 'react';
@@ -14,6 +15,7 @@ import QueryDataTable from './QueryDataTable';
 import * as arrow from 'apache-arrow';
 import {DataTableArrowPaginated} from './DataTableArrowPaginated';
 import {ArrowDataTableValueFormatter} from './useArrowDataTable';
+import {SquareTerminal} from 'lucide-react';
 
 /**
  * A modal component for displaying a table with data from a SQL query.
@@ -47,6 +49,8 @@ export type DataTableModalProps = {
   tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;
+  /** Optional callback to create a new SQL tab with the query */
+  onCreateSqlTab?: (query: string) => void;
 } & (
   | {
       query: string | undefined;
@@ -59,7 +63,7 @@ export type DataTableModalProps = {
 );
 
 const DataTableModal: FC<DataTableModalProps> = (props) => {
-  const {className, title, tableModal, formatValue} = props;
+  const {className, title, tableModal, formatValue, onCreateSqlTab} = props;
   return (
     <Dialog
       open={tableModal.isOpen}
@@ -74,6 +78,34 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
           <DialogTitle>{title ?? ''}</DialogTitle>
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
+        {'query' in props && props.query && (
+          <div className="space-y-2 px-1">
+            <div className="flex items-center justify-between">
+              <div className="text-muted-foreground text-xs font-medium">
+                Query
+              </div>
+              {onCreateSqlTab && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1"
+                  onClick={() => {
+                    onCreateSqlTab(props.query!);
+                    tableModal.onClose();
+                  }}
+                >
+                  <SquareTerminal className="h-3 w-3" />
+                  <span className="text-xs">Open in SQL Editor</span>
+                </Button>
+              )}
+            </div>
+            <Textarea
+              value={props.query}
+              readOnly
+              className="bg-muted h-24 resize-none font-mono text-xs"
+            />
+          </div>
+        )}
         <div className="bg-muted flex-1 overflow-hidden">
           {tableModal.isOpen && (
             <>

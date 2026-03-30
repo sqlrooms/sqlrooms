@@ -12,6 +12,8 @@ export type QueryToolRendererOptions = {
   showSql?: boolean;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;
+  /** Optional callback to create a new SQL tab with the query */
+  onCreateSqlTab?: (query: string) => void;
 };
 
 /**
@@ -23,6 +25,9 @@ export type QueryToolRendererOptions = {
  *   query: createQueryToolRenderer({
  *     showSql: false,
  *     formatValue: myGeomFormatter,
+ *     onCreateSqlTab: (query) => {
+ *       store.getState().sqlEditor.createQueryTab(query);
+ *     },
  *   }),
  * }
  * ```
@@ -30,7 +35,7 @@ export type QueryToolRendererOptions = {
 export function createQueryToolRenderer(
   options?: QueryToolRendererOptions,
 ): ToolRenderer<QueryToolOutput, QueryToolParameters> {
-  const {showSql = true, formatValue} = options ?? {};
+  const {showSql = true, formatValue, onCreateSqlTab} = options ?? {};
 
   return function QueryToolResultRenderer({
     output,
@@ -75,6 +80,7 @@ export function createQueryToolRenderer(
               query={sqlQuery}
               tableModal={tableModal}
               formatValue={formatValue}
+              onCreateSqlTab={onCreateSqlTab}
             />
           </>
         )}
