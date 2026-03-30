@@ -23,7 +23,6 @@ export type UIMessageChunk = {
   delta?: string;
   id?: string;
   providerMetadata?: unknown;
-  input?: unknown;
 };
 
 /**
@@ -77,8 +76,7 @@ export async function processAgentStream(
   parentToolCallId: string,
   abortSignal?: AbortSignal,
 ): Promise<AgentStreamOutput> {
-  const state = store.getState();
-  const sessionId = state.ai.getToolCallSession?.(parentToolCallId);
+  const sessionId = store.getState().ai.getToolCallSession?.(parentToolCallId);
 
   if (!sessionId) {
     throw new Error(
