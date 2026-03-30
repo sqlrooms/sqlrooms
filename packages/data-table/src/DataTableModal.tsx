@@ -70,7 +70,7 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
       onOpenChange={(isOpen: boolean) => !isOpen && tableModal.onClose()}
     >
       <DialogContent
-        className={cn('h-[80vh] max-w-[75vw]', className)}
+        className={cn('flex h-[80vh] max-w-[75vw] flex-col', className)}
         aria-describedby="data-table-modal"
         onClick={(e) => e.stopPropagation()}
       >
@@ -79,7 +79,7 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
         {'query' in props && props.query && (
-          <div className="space-y-2 px-1">
+          <div className="flex min-h-0 flex-col gap-2 px-1">
             <div className="flex items-center justify-between">
               <div className="text-muted-foreground text-xs font-medium">
                 Query
@@ -102,11 +102,11 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
             <Textarea
               value={props.query}
               readOnly
-              className="bg-muted h-24 resize-none font-mono text-xs"
+              className="bg-muted max-h-[200px] min-h-[120px] resize-none font-mono text-xs"
             />
           </div>
         )}
-        <div className="bg-muted flex-1 overflow-hidden">
+        <div className="bg-muted min-h-0 flex-1 overflow-hidden">
           {tableModal.isOpen && (
             <>
               {'query' in props && props.query ? (
