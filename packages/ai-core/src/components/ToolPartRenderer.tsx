@@ -1,8 +1,9 @@
-import React, {useState, useRef} from 'react';
+import React from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {InfoIcon} from 'lucide-react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
+import {HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
 import {useStoreWithAi} from '../AiSlice';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
@@ -17,66 +18,48 @@ const ToolCallDetailPopup: React.FC<{
     state: 'pending' | 'success' | 'error';
   };
 }> = ({toolCall}) => {
-  const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showPopup = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setVisible(true);
-  };
-
-  const hidePopup = () => {
-    timeoutRef.current = setTimeout(() => setVisible(false), 150);
-  };
-
   return (
-    <span
-      className="relative ml-1 inline-flex cursor-pointer"
-      onMouseEnter={showPopup}
-      onMouseLeave={hidePopup}
-    >
-      <InfoIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600" />
-      {visible && (
-        <div
-          className="absolute bottom-full left-1/2 z-50 mb-1.5 w-72 -translate-x-1/2 rounded-md border border-gray-200 bg-white p-2.5 shadow-lg dark:border-gray-700 dark:bg-gray-800"
-          onMouseEnter={showPopup}
-          onMouseLeave={hidePopup}
-        >
-          <div className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
-            {toolCall.toolName}
-          </div>
-          <div className="text-[10px] text-gray-500 dark:text-gray-400">
-            ID: {toolCall.toolCallId}
-          </div>
-          <div className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
-            State:{' '}
-            <span
-              className={
-                toolCall.state === 'success'
-                  ? 'text-green-600'
-                  : toolCall.state === 'error'
-                    ? 'text-red-600'
-                    : 'text-yellow-600'
-              }
-            >
-              {toolCall.state}
-            </span>
-          </div>
-          {toolCall.output != null && (
-            <pre className="mt-1.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-              {typeof toolCall.output === 'string'
-                ? toolCall.output
-                : JSON.stringify(toolCall.output, null, 2)}
-            </pre>
-          )}
-          {toolCall.errorText && (
-            <div className="mt-1.5 text-[10px] text-red-600">
-              {toolCall.errorText}
-            </div>
-          )}
+    <HoverCard openDelay={0} closeDelay={150}>
+      <HoverCardTrigger asChild>
+        <span className="ml-1 inline-flex cursor-pointer">
+          <InfoIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600" />
+        </span>
+      </HoverCardTrigger>
+      <HoverCardContent side="top" className="w-72 p-2.5">
+        <div className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
+          {toolCall.toolName}
         </div>
-      )}
-    </span>
+        <div className="text-[10px] text-gray-500 dark:text-gray-400">
+          ID: {toolCall.toolCallId}
+        </div>
+        <div className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          State:{' '}
+          <span
+            className={
+              toolCall.state === 'success'
+                ? 'text-green-600'
+                : toolCall.state === 'error'
+                  ? 'text-red-600'
+                  : 'text-yellow-600'
+            }
+          >
+            {toolCall.state}
+          </span>
+        </div>
+        {toolCall.output != null && (
+          <pre className="mt-1.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+            {typeof toolCall.output === 'string'
+              ? toolCall.output
+              : JSON.stringify(toolCall.output, null, 2)}
+          </pre>
+        )}
+        {toolCall.errorText && (
+          <div className="mt-1.5 text-[10px] text-red-600">
+            {toolCall.errorText}
+          </div>
+        )}
+      </HoverCardContent>
+    </HoverCard>
   );
 };
 
