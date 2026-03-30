@@ -19,10 +19,6 @@ export interface NodeRenderProps {
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
-  /** @deprecated Use resolvePanel */
-  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
-  /** @deprecated Use resolvePanel */
-  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (areaId: string, tabId: string) => void;
   onTabClose?: (areaId: string, tabId: string) => void;
@@ -34,17 +30,14 @@ export interface NodeRenderProps {
 
 /**
  * Resolve panel info by checking the static panels registry first,
- * then falling back to resolvePanel (or deprecated resolvePanelInfo).
+ * then falling back to resolvePanel.
  */
 export function lookupPanelInfo(
   panelId: string,
   panels: Record<string, RoomPanelInfo>,
   resolvePanel?: (panelId: string) => RoomPanelInfo | undefined,
-  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined,
 ): RoomPanelInfo | undefined {
-  return (
-    panels[panelId] ?? resolvePanel?.(panelId) ?? resolvePanelInfo?.(panelId)
-  );
+  return panels[panelId] ?? resolvePanel?.(panelId);
 }
 
 // ---------------------------------------------------------------------------

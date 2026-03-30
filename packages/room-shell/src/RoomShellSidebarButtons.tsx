@@ -54,8 +54,8 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const resolvePanelInfo = useBaseRoomShellStore(
-    (state) => state.layout.resolvePanelInfo,
+  const resolvePanel = useBaseRoomShellStore(
+    (state) => state.layout.resolvePanel,
   );
   const visibleRoomPanels = useMemo(
     () => getVisibleLayoutPanels(layout),
@@ -64,7 +64,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
   );
-  const info = panels[roomPanelType] ?? resolvePanelInfo?.(roomPanelType);
+  const info = panels[roomPanelType] ?? resolvePanel?.(roomPanelType);
 
   return (
     <SidebarButton
@@ -114,8 +114,8 @@ const AreaPanelButtons: FC<{
   className?: string;
 }> = ({area, className}) => {
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const resolvePanelInfo = useBaseRoomShellStore(
-    (state) => state.layout.resolvePanelInfo,
+  const resolvePanel = useBaseRoomShellStore(
+    (state) => state.layout.resolvePanel,
   );
   const activePanel = useBaseRoomShellStore((state) =>
     state.layout.getActivePanel(area),
@@ -142,7 +142,7 @@ const AreaPanelButtons: FC<{
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {areaPanels.map(([panelId, staticInfo]) => {
-        const info = staticInfo ?? resolvePanelInfo?.(panelId);
+        const info = staticInfo ?? resolvePanel?.(panelId);
         const isSelected = activePanel === panelId && !isCollapsed;
         return (
           <SidebarButton

@@ -1,11 +1,7 @@
 import {LayoutNode} from '@sqlrooms/layout-config';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
-import type {
-  PanelRenderContext,
-  RoomPanelInfo,
-  TabStripRenderContext,
-} from './LayoutSlice';
+import type {RoomPanelInfo, TabStripRenderContext} from './LayoutSlice';
 import {NodeRenderer} from './node-renderers/NodeRenderer';
 
 // ---------------------------------------------------------------------------
@@ -21,10 +17,6 @@ export interface LayoutRendererProps {
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
-  /** @deprecated Use resolvePanel with a render field instead */
-  renderPanel?: (context: PanelRenderContext) => React.ReactNode | undefined;
-  /** @deprecated Use resolvePanel instead */
-  resolvePanelInfo?: (panelId: string) => RoomPanelInfo | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (areaId: string, tabId: string) => void;
   onTabClose?: (areaId: string, tabId: string) => void;
@@ -43,9 +35,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
   panels,
   className,
   resolvePanel,
-  renderPanel,
   renderTabStrip,
-  resolvePanelInfo,
   onLayoutChange,
   onTabSelect,
   onTabClose,
@@ -65,9 +55,7 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
         panels={panels}
         rootLayout={layout}
         resolvePanel={resolvePanel}
-        renderPanel={renderPanel}
         renderTabStrip={renderTabStrip}
-        resolvePanelInfo={resolvePanelInfo}
         onLayoutChange={onLayoutChange}
         onTabSelect={onTabSelect}
         onTabClose={onTabClose}

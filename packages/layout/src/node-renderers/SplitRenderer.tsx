@@ -106,9 +106,7 @@ export const SplitRenderer: FC<
   panels,
   rootLayout,
   resolvePanel,
-  renderPanel,
   renderTabStrip,
-  resolvePanelInfo,
   onLayoutChange,
   onTabSelect,
   onTabClose,
@@ -140,9 +138,7 @@ export const SplitRenderer: FC<
             panels={panels}
             rootLayout={rootLayout}
             resolvePanel={resolvePanel}
-            renderPanel={renderPanel}
             renderTabStrip={renderTabStrip}
-            resolvePanelInfo={resolvePanelInfo}
             onLayoutChange={onLayoutChange}
             onTabSelect={onTabSelect}
             onTabClose={onTabClose}

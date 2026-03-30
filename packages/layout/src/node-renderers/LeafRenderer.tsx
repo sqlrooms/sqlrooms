@@ -4,16 +4,7 @@ import {lookupPanelInfo, NodeRenderProps} from './types';
 
 export const LeafRenderer: FC<
   Omit<NodeRenderProps, 'node'> & {panelId: string}
-> = ({
-  panelId,
-  path,
-  containerType,
-  containerId,
-  panels,
-  resolvePanel,
-  renderPanel: renderPanelOverride,
-  resolvePanelInfo,
-}) => {
+> = ({panelId, path, containerType, containerId, panels, resolvePanel}) => {
   const context: PanelRenderContext = {
     panelId,
     containerType,
@@ -21,17 +12,10 @@ export const LeafRenderer: FC<
     path,
   };
 
-  const info = lookupPanelInfo(panelId, panels, resolvePanel, resolvePanelInfo);
+  const info = lookupPanelInfo(panelId, panels, resolvePanel);
 
   if (info?.render) {
     return <>{info.render(context)}</>;
-  }
-
-  if (renderPanelOverride) {
-    const override = renderPanelOverride(context);
-    if (override !== undefined) {
-      return <>{override}</>;
-    }
   }
 
   if (!info?.component) return null;

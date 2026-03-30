@@ -80,14 +80,8 @@ export const LayoutComposer: FC<{
   const resolvePanel = useBaseRoomShellStore(
     (state) => state.layout.resolvePanel,
   );
-  const renderPanel = useBaseRoomShellStore(
-    (state) => state.layout.renderPanel,
-  );
   const renderTabStrip = useBaseRoomShellStore(
     (state) => state.layout.renderTabStrip,
-  );
-  const resolvePanelInfo = useBaseRoomShellStore(
-    (state) => state.layout.resolvePanelInfo,
   );
   const setActivePanel = useBaseRoomShellStore(
     (state) => state.layout.setActivePanel,
@@ -161,9 +155,7 @@ export const LayoutComposer: FC<{
           layout={layout}
           panels={panels}
           resolvePanel={resolvePanel}
-          renderPanel={renderPanel}
           renderTabStrip={renderTabStrip}
-          resolvePanelInfo={resolvePanelInfo}
           onLayoutChange={handleLayoutChange}
           onTabSelect={handleTabSelect}
           onTabClose={handleTabClose}

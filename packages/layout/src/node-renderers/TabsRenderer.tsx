@@ -63,9 +63,7 @@ export const TabsRenderer: FC<
   panels,
   rootLayout,
   resolvePanel,
-  renderPanel,
   renderTabStrip: renderTabStripOverride,
-  resolvePanelInfo,
   onLayoutChange,
   onTabSelect,
   onTabClose,
@@ -98,15 +96,12 @@ export const TabsRenderer: FC<
       if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
         return (
-          lookupPanelInfo(mosaicId, panels, resolvePanel, resolvePanelInfo)
-            ?.title ?? mosaicId
+          lookupPanelInfo(mosaicId, panels, resolvePanel)?.title ?? mosaicId
         );
       }
-      return (
-        lookupPanelInfo(id, panels, resolvePanel, resolvePanelInfo)?.title ?? id
-      );
+      return lookupPanelInfo(id, panels, resolvePanel)?.title ?? id;
     },
-    [panels, resolvePanel, resolvePanelInfo],
+    [panels, resolvePanel],
   );
 
   const allAreaPanelIds = useMemo(() => {
@@ -136,12 +131,7 @@ export const TabsRenderer: FC<
       if (panelId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         panelId = panelId.slice(MOSAIC_NODE_KEY_PREFIX.length);
       }
-      const Icon = lookupPanelInfo(
-        panelId,
-        panels,
-        resolvePanel,
-        resolvePanelInfo,
-      )?.icon;
+      const Icon = lookupPanelInfo(panelId, panels, resolvePanel)?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}
@@ -149,7 +139,7 @@ export const TabsRenderer: FC<
         </span>
       );
     },
-    [panels, resolvePanel, resolvePanelInfo],
+    [panels, resolvePanel],
   );
 
   if (renderTabStripOverride) {
@@ -252,9 +242,7 @@ export const TabsRenderer: FC<
             panels={panels}
             rootLayout={rootLayout}
             resolvePanel={resolvePanel}
-            renderPanel={renderPanel}
             renderTabStrip={renderTabStripOverride}
-            resolvePanelInfo={resolvePanelInfo}
             onLayoutChange={onLayoutChange}
             onTabSelect={onTabSelect}
             onTabClose={onTabClose}
