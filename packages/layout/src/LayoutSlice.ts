@@ -20,6 +20,7 @@ import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {
   findAreaById,
+  findAreaForPanel,
   findMosaicNodeById,
   findSplitById,
   getChildKey,
@@ -102,10 +103,8 @@ export type RoomPanelInfo = {
    * the path and calls the first ancestor's resolveChild it finds.
    */
   resolveChild?: (context: PanelRenderContext) => RoomPanelInfo | undefined;
-  /** @deprecated Use `area` instead */
+  /** @deprecated No longer used — panel area is determined by the layout tree */
   placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
-  /** Named area this panel belongs to (e.g. 'left', 'main', 'bottom') */
-  area?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -249,7 +248,7 @@ export function createLayoutSlice({
                 produce(state, (draft) => {
                   const root = draft.layout.config;
                   const panelInfo = draft.layout.panels[panel];
-                  const placement = panelInfo?.area ?? panelInfo?.placement;
+                  const placement = panelInfo?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';
                   const childIdx = isLayoutSplitNode(root)
                     ? side === 'first'
@@ -297,9 +296,20 @@ export function createLayoutSlice({
               produce(state, (draft) => {
                 const found = findAreaInConfig(draft.layout.config, areaId);
                 if (!found) return;
-                const idx = found.node.children.findIndex(
+                let idx = found.node.children.findIndex(
                   (c) => getChildKey(c) === panelId,
                 );
+                if (idx < 0) {
+                  if (found.node.closedChildren) {
+                    const closedIdx =
+                      found.node.closedChildren.indexOf(panelId);
+                    if (closedIdx >= 0) {
+                      found.node.closedChildren.splice(closedIdx, 1);
+                      found.node.children.push(panelId);
+                      idx = found.node.children.length - 1;
+                    }
+                  }
+                }
                 if (idx >= 0) {
                   found.node.activeTabIndex = idx;
                 }
@@ -323,6 +333,12 @@ export function createLayoutSlice({
                 found.node.activeTabIndex = found.node.children.findIndex(
                   (c) => getChildKey(c) === panelId,
                 );
+                if (found.node.closedChildren) {
+                  const closedIdx = found.node.closedChildren.indexOf(panelId);
+                  if (closedIdx >= 0) {
+                    found.node.closedChildren.splice(closedIdx, 1);
+                  }
+                }
               }),
             );
           },
@@ -340,6 +356,12 @@ export function createLayoutSlice({
                 found.node.children.splice(idx, 1);
                 if (found.node.activeTabIndex >= found.node.children.length) {
                   found.node.activeTabIndex = found.node.children.length - 1;
+                }
+                if (!found.node.closedChildren) {
+                  found.node.closedChildren = [];
+                }
+                if (!found.node.closedChildren.includes(panelId)) {
+                  found.node.closedChildren.push(panelId);
                 }
               }),
             );
@@ -364,9 +386,15 @@ export function createLayoutSlice({
           getAreaPanels: (areaId: string): string[] => {
             const found = findAreaInConfig(get().layout.config, areaId);
             if (!found) return [];
-            return found.node.children
+            const ids = found.node.children
               .map((c) => getChildKey(c))
               .filter((k): k is string => k != null);
+            if (found.node.closedChildren) {
+              for (const id of found.node.closedChildren) {
+                if (!ids.includes(id)) ids.push(id);
+              }
+            }
+            return ids;
           },
 
           getActivePanel: (areaId: string): string | undefined => {
@@ -462,8 +490,7 @@ function createLayoutPanelCommands(
     },
     execute: ({getState}, input) => {
       const {panelId} = input as ToggleLayoutPanelCommandInput;
-      const panelInfo = getState().layout.panels[panelId];
-      const areaId = panelInfo?.area ?? panelInfo?.placement;
+      const areaId = findAreaForPanel(getState().layout.config, panelId);
       if (areaId) {
         getState().layout.setActivePanel(areaId, panelId);
       }
@@ -478,13 +505,9 @@ function createLayoutPanelCommands(
   const panelShortcutCommands: RoomCommand<LayoutCommandStoreState>[] =
     Object.entries(panels).map(([panelId, panelInfo]) => {
       const title = panelInfo.title ?? panelId;
-      const areaId = panelInfo.area ?? panelInfo.placement;
-      const keywords = [
-        panelId,
-        panelInfo.title,
-        panelInfo.area,
-        panelInfo.placement,
-      ].filter((value): value is string => Boolean(value));
+      const keywords = [panelId, panelInfo.title].filter(
+        (value): value is string => Boolean(value),
+      );
       return {
         id: `layout.panel.show.${panelId}`,
         name: `Show panel: ${title}`,
@@ -497,6 +520,7 @@ function createLayoutPanelCommands(
           riskLevel: 'low',
         },
         execute: ({getState}) => {
+          const areaId = findAreaForPanel(getState().layout.config, panelId);
           if (areaId) {
             getState().layout.setActivePanel(areaId, panelId);
           }

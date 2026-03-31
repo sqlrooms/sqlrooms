@@ -112,19 +112,15 @@ export const TabsRenderer: FC<
 
   const allAreaPanelIds = useMemo(() => {
     const ids = [...tabKeys];
-    if (areaId) {
-      for (const [id, info] of Object.entries(panels)) {
-        if (
-          (info.area ?? (info as Record<string, unknown>).placement) ===
-            areaId &&
-          !ids.includes(id)
-        ) {
+    if (node.closedChildren) {
+      for (const id of node.closedChildren) {
+        if (!ids.includes(id)) {
           ids.push(id);
         }
       }
     }
     return ids;
-  }, [tabKeys, areaId, panels]);
+  }, [tabKeys, node.closedChildren]);
 
   const tabDescriptors: TabDescriptor[] = useMemo(
     () => allAreaPanelIds.map((id) => ({id, name: resolveTabName(id)})),
@@ -215,7 +211,13 @@ export const TabsRenderer: FC<
           : undefined
       }
       onOpenTabsChange={(tabIds) => {
-        if (areaId) onTabReorder?.(areaId, tabIds);
+        if (!areaId) return;
+        const reopened = tabIds.find((id) => !tabKeys.includes(id));
+        if (reopened) {
+          onTabSelect?.(areaId, reopened);
+        } else {
+          onTabReorder?.(areaId, tabIds);
+        }
       }}
       onCreate={
         creatableTabs && areaId ? () => onTabCreate?.(areaId) : undefined

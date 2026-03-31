@@ -111,6 +111,10 @@ const AreaPanelButtons: FC<{
   className?: string;
 }> = ({area, className}) => {
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const config = useBaseRoomShellStore((state) => state.layout.config);
+  const getAreaPanels = useBaseRoomShellStore(
+    (state) => state.layout.getAreaPanels,
+  );
   const activePanel = useBaseRoomShellStore((state) =>
     state.layout.getActivePanel(area),
   );
@@ -125,17 +129,15 @@ const AreaPanelButtons: FC<{
   );
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
 
-  const areaPanels = useMemo(
-    () =>
-      Object.entries(panels).filter(
-        ([, info]) => info.area === area || info.placement === area,
-      ),
-    [panels, area],
+  const areaPanelIds = useMemo(
+    () => getAreaPanels(area),
+    [getAreaPanels, area, config],
   );
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      {areaPanels.map(([panelId, info]) => {
+      {areaPanelIds.map((panelId) => {
+        const info = panels[panelId];
         const isSelected = activePanel === panelId && !isCollapsed;
         return (
           <SidebarButton

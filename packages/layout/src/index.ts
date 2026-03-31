@@ -26,6 +26,7 @@ export {
   findLayoutNodePathByKey,
   removeLayoutNodeByKey,
   findAreaById,
+  findAreaForPanel,
   findSplitById,
   findMosaicNodeById,
   getNodeAtPath,

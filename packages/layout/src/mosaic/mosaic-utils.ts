@@ -161,6 +161,38 @@ export function findAreaById(
   return undefined;
 }
 
+/**
+ * Find the tabs node whose children or closedChildren contain a panel with
+ * the given ID. Returns the tabs node's id (area id) if found.
+ */
+export function findAreaForPanel(
+  root: LayoutNode | null | undefined,
+  panelId: string,
+): string | undefined {
+  if (!root || typeof root === 'string') return undefined;
+  if (isLayoutPanelNode(root)) return undefined;
+  if (isLayoutTabsNode(root)) {
+    const inChildren = root.children.some((c) => getChildKey(c) === panelId);
+    const inClosed = root.closedChildren?.includes(panelId);
+    if ((inChildren || inClosed) && root.id) return root.id;
+    for (const child of root.children) {
+      const result = findAreaForPanel(child, panelId);
+      if (result) return result;
+    }
+    return undefined;
+  }
+  if (isLayoutSplitNode(root)) {
+    for (const child of root.children) {
+      const result = findAreaForPanel(child, panelId);
+      if (result) return result;
+    }
+  }
+  if (isLayoutMosaicNode(root)) {
+    return root.nodes ? findAreaForPanel(root.nodes, panelId) : undefined;
+  }
+  return undefined;
+}
+
 /** Find a split node by its `id` field. */
 export function findSplitById(
   root: LayoutNode | null | undefined,

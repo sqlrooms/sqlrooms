@@ -207,11 +207,14 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       }
 
       // All panels for this area (for the searchable dropdown)
-      const allAreaPanelIds = areaId
-        ? Object.entries(panels ?? {})
-            .filter(([, info]) => (info.area ?? info.placement) === areaId)
-            .map(([id]) => id)
-        : tabs;
+      const allAreaPanelIds = [...tabs];
+      if (tabsNode?.closedChildren) {
+        for (const id of tabsNode.closedChildren) {
+          if (!allAreaPanelIds.includes(id)) {
+            allAreaPanelIds.push(id);
+          }
+        }
+      }
 
       // Also include mosaic-keyed tabs not in the panels registry
       for (const t of tabs) {
