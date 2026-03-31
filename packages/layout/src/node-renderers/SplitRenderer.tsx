@@ -108,7 +108,6 @@ export const SplitRenderer: FC<
   path,
   panels,
   rootLayout,
-  resolvePanel,
   renderTabStrip,
   onLayoutChange,
   onTabSelect,
@@ -140,7 +139,6 @@ export const SplitRenderer: FC<
             parentDirection={node.direction}
             panels={panels}
             rootLayout={rootLayout}
-            resolvePanel={resolvePanel}
             renderTabStrip={renderTabStrip}
             onLayoutChange={onLayoutChange}
             onTabSelect={onTabSelect}

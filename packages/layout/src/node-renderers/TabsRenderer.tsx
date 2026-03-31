@@ -62,7 +62,6 @@ export const TabsRenderer: FC<
   parentDirection,
   panels,
   rootLayout,
-  resolvePanel,
   renderTabStrip: renderTabStripOverride,
   onLayoutChange,
   onTabSelect,
@@ -102,13 +101,13 @@ export const TabsRenderer: FC<
       if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
         return (
-          lookupPanelInfo({...ctx, panelId: mosaicId}, panels, resolvePanel)
-            ?.title ?? mosaicId
+          lookupPanelInfo({...ctx, panelId: mosaicId}, panels)?.title ??
+          mosaicId
         );
       }
-      return lookupPanelInfo(ctx, panels, resolvePanel)?.title ?? id;
+      return lookupPanelInfo(ctx, panels)?.title ?? id;
     },
-    [panels, resolvePanel, areaId, path],
+    [panels, areaId, path],
   );
 
   const allAreaPanelIds = useMemo(() => {
@@ -141,7 +140,6 @@ export const TabsRenderer: FC<
       const Icon = lookupPanelInfo(
         {panelId, containerType: 'tabs', containerId: areaId, path},
         panels,
-        resolvePanel,
       )?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
@@ -150,7 +148,7 @@ export const TabsRenderer: FC<
         </span>
       );
     },
-    [panels, resolvePanel, areaId, path],
+    [panels, areaId, path],
   );
 
   if (renderTabStripOverride) {
@@ -252,7 +250,6 @@ export const TabsRenderer: FC<
             containerId={areaId}
             panels={panels}
             rootLayout={rootLayout}
-            resolvePanel={resolvePanel}
             renderTabStrip={renderTabStripOverride}
             onLayoutChange={onLayoutChange}
             onTabSelect={onTabSelect}

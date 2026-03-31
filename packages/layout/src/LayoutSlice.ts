@@ -81,17 +81,6 @@ export type PanelRenderContext = {
   path: LayoutPath;
 };
 
-/**
- * Context passed to resolvePanel. All fields except panelId are optional
- * because some callsites (e.g. sidebar buttons) only know the panel ID.
- */
-export type ResolvePanelContext = {
-  panelId: string;
-  containerType?: PanelRenderContext['containerType'];
-  containerId?: string;
-  path?: LayoutPath;
-};
-
 export type TabStripRenderContext = {
   node: LayoutTabsNode;
   path: LayoutPath;
@@ -107,6 +96,12 @@ export type RoomPanelInfo = {
   component?: React.ComponentType<Partial<PanelRenderContext>>;
   /** Render function for dynamic panels — takes priority over component */
   render?: (context: PanelRenderContext) => React.ReactNode;
+  /**
+   * Resolve metadata and/or render function for descendant panels
+   * that aren't in the static panels registry. The renderer walks up
+   * the path and calls the first ancestor's resolveChild it finds.
+   */
+  resolveChild?: (context: PanelRenderContext) => RoomPanelInfo | undefined;
   /** @deprecated Use `area` instead */
   placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
   /** Named area this panel belongs to (e.g. 'left', 'main', 'bottom') */
@@ -134,8 +129,6 @@ export type LayoutSliceState = {
     destroy?: () => Promise<void>;
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
-    /** Resolve panel metadata and/or render function for dynamic panels */
-    resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined;
     renderTabStrip?: (
       context: TabStripRenderContext,
     ) => React.ReactNode | undefined;
@@ -178,8 +171,6 @@ export type LayoutSliceState = {
 export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
-  /** Resolve panel metadata and/or render function for dynamic panels */
-  resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
@@ -195,7 +186,6 @@ function findAreaInConfig(
 export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
-  resolvePanel,
   renderTabStrip,
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
   return createSlice<LayoutSliceState, BaseRoomStoreState & LayoutSliceState>(
@@ -224,7 +214,6 @@ export function createLayoutSlice({
           },
           config: initialConfig,
           panels,
-          resolvePanel,
           renderTabStrip,
           setConfig: (config) =>
             set((state) =>

@@ -9,12 +9,9 @@ import {
   LayoutMosaicNode,
   LayoutNode,
   LayoutTabsNode,
-  ResolvePanelContext,
-  RoomPanelInfo,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
-  BarChart3Icon,
   DatabaseIcon,
   LayoutDashboardIcon,
   TableIcon,
@@ -110,29 +107,6 @@ const CHART_LABELS = [
 
 let dashboardCounter = 0;
 
-function resolveDynamicPanel({
-  panelId,
-  path,
-}: ResolvePanelContext): RoomPanelInfo | undefined {
-  if (path?.includes('main')) {
-    return {
-      title: panelId,
-      icon: LayoutDashboardIcon,
-    };
-  }
-
-  const label = panelId;
-  return {
-    title: label,
-    icon: BarChart3Icon,
-    render: () => (
-      <div className="h-full w-full overflow-hidden p-2">
-        <DynamicChartPanel label={label} />
-      </div>
-    ),
-  };
-}
-
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     ...createRoomShellSlice({
@@ -158,30 +132,30 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               children: [
                 {
                   type: 'tabs',
-                  id: 'main',
+                  id: 'dashboards',
                   children: [
-                    {
-                      type: 'mosaic',
-                      id: 'overview',
-                      draggable: true,
-                      direction: 'row',
-                      nodes: {
-                        type: 'split',
-                        direction: 'row',
-                        children: ['revenue', 'users'],
-                      },
-                    },
-                    {
-                      type: 'mosaic',
-                      id: 'growth',
-                      draggable: true,
-                      direction: 'row',
-                      nodes: {
-                        type: 'split',
-                        direction: 'row',
-                        children: ['conversions', 'sessions'],
-                      },
-                    },
+                    // {
+                    //   type: 'mosaic',
+                    //   id: 'overview',
+                    //   draggable: true,
+                    //   direction: 'row',
+                    //   nodes: {
+                    //     type: 'split',
+                    //     direction: 'row',
+                    //     children: ['revenue', 'users'],
+                    //   },
+                    // },
+                    // {
+                    //   type: 'mosaic',
+                    //   id: 'growth',
+                    //   draggable: true,
+                    //   direction: 'row',
+                    //   nodes: {
+                    //     type: 'split',
+                    //     direction: 'row',
+                    //     children: ['conversions', 'sessions'],
+                    //   },
+                    // },
                   ],
                   activeTabIndex: 0,
                   showTabStrip: true,
@@ -204,8 +178,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         } satisfies LayoutConfig,
-        resolvePanel: resolveDynamicPanel,
         panels: {
+          dashboards: {
+            resolveChild: ({panelId}) => ({
+              title: panelId,
+              icon: LayoutDashboardIcon,
+              render: () => (
+                <div className="h-full w-full overflow-hidden p-2">
+                  <DynamicChartPanel label={panelId} />
+                </div>
+              ),
+            }),
+          },
           'data-sources': {
             title: 'Data Sources',
             component: DataSourcesPanel,
@@ -234,7 +218,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     })(set, get, store),
 
-    addDashboard: (areaId = 'main') => {
+    addDashboard: (areaId = 'dashboards') => {
       dashboardCounter += 1;
       const label = CHART_LABELS[(dashboardCounter - 1) % CHART_LABELS.length]!;
       const mosaicId = `${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;

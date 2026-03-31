@@ -35,7 +35,7 @@ const mosaicStyles = `
 
 export const MosaicRenderer: FC<
   Omit<NodeRenderProps, 'node'> & {node: LayoutMosaicNode}
-> = ({node, panels, rootLayout, resolvePanel, onLayoutChange}) => {
+> = ({node, path, panels, rootLayout, onLayoutChange}) => {
   const treeRef = useRef(node.nodes);
   useEffect(() => {
     treeRef.current = node.nodes;
@@ -63,10 +63,10 @@ export const MosaicRenderer: FC<
         panelId,
         containerType: 'mosaic',
         containerId: node.id,
-        path: tilePath,
+        path: [...path, ...tilePath],
       };
 
-      const info = lookupPanelInfo(context, panels, resolvePanel);
+      const info = lookupPanelInfo(context, panels);
 
       if (info?.render) {
         return <>{info.render(context)}</>;
@@ -93,7 +93,7 @@ export const MosaicRenderer: FC<
         </MosaicWindow>
       );
     },
-    [panels, resolvePanel, draggable, node.id],
+    [panels, draggable, node.id, path],
   );
 
   return (

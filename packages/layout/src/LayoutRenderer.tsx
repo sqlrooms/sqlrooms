@@ -1,11 +1,7 @@
 import {LayoutNode} from '@sqlrooms/layout-config';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
-import type {
-  ResolvePanelContext,
-  RoomPanelInfo,
-  TabStripRenderContext,
-} from './LayoutSlice';
+import type {RoomPanelInfo, TabStripRenderContext} from './LayoutSlice';
 import {NodeRenderer} from './node-renderers/NodeRenderer';
 
 // ---------------------------------------------------------------------------
@@ -16,8 +12,6 @@ export interface LayoutRendererProps {
   layout: LayoutNode | null;
   panels: Record<string, RoomPanelInfo>;
   className?: string;
-  /** Resolve panel metadata and/or render function for dynamic panels */
-  resolvePanel?: (context: ResolvePanelContext) => RoomPanelInfo | undefined;
   renderTabStrip?: (
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
@@ -38,7 +32,6 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
   layout,
   panels,
   className,
-  resolvePanel,
   renderTabStrip,
   onLayoutChange,
   onTabSelect,
@@ -58,7 +51,6 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
         containerType="root"
         panels={panels}
         rootLayout={layout}
-        resolvePanel={resolvePanel}
         renderTabStrip={renderTabStrip}
         onLayoutChange={onLayoutChange}
         onTabSelect={onTabSelect}

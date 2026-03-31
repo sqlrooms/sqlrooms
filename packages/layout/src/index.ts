@@ -14,7 +14,6 @@ export type {
   LayoutSliceState,
   CreateLayoutSliceProps,
   PanelRenderContext,
-  ResolvePanelContext,
   TabStripRenderContext,
   LayoutPath,
 } from './LayoutSlice';

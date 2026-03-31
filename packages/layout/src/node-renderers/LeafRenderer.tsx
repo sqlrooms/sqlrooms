@@ -4,7 +4,7 @@ import {lookupPanelInfo, NodeRenderProps} from './types';
 
 export const LeafRenderer: FC<
   Omit<NodeRenderProps, 'node'> & {panelId: string}
-> = ({panelId, path, containerType, containerId, panels, resolvePanel}) => {
+> = ({panelId, path, containerType, containerId, panels}) => {
   const context: PanelRenderContext = {
     panelId,
     containerType,
@@ -12,7 +12,7 @@ export const LeafRenderer: FC<
     path,
   };
 
-  const info = lookupPanelInfo(context, panels, resolvePanel);
+  const info = lookupPanelInfo(context, panels);
 
   if (info?.render) {
     return <>{info.render(context)}</>;

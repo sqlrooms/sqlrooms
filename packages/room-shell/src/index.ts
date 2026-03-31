@@ -38,7 +38,6 @@ export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 export type {
   RoomPanelInfo,
   PanelRenderContext,
-  ResolvePanelContext,
   TabStripRenderContext,
   LayoutPath,
 } from '@sqlrooms/layout';
