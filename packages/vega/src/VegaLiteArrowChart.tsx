@@ -90,7 +90,9 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [chartError, setChartError] = useState<Error | null>(null);
+
+  // State for Vega rendering errors (set via callback, not during render)
+  const [vegaRenderError, setVegaRenderError] = useState<Error | null>(null);
 
   const data = useMemo(() => {
     if (!arrowTable) return null;
@@ -100,8 +102,6 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   const specWithData = useMemo(() => {
     const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) {
-      // eslint-disable-next-line react-hooks/set-state-in-render
-      setChartError(new Error('Invalid Vega-Lite specification'));
       return null;
     }
 
@@ -116,16 +116,25 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     } as VisualizationSpec;
   }, [spec, data]);
 
-  // Reset chart error whenever spec or data changes
-  useEffect(() => {
-    setChartError(null);
-  }, [spec, data]);
+  // Derive spec parsing error (no state needed)
+  const specParseError =
+    specWithData === null ? new Error('Invalid Vega-Lite specification') : null;
+
+  // Combined error: show parse error first, then render error
+  const chartError = specParseError || vegaRenderError;
 
   const ref = useRef<HTMLDivElement>(null);
   const embed = useVegaEmbed({
     ref,
     spec: specWithData ?? '',
-    onError: () => setChartError,
+    onError: (error) => {
+      // Handle unknown error type from Vega
+      if (error instanceof Error) {
+        setVegaRenderError(error);
+      } else {
+        setVegaRenderError(new Error(String(error)));
+      }
+    },
     options,
   });
 
