@@ -71,7 +71,7 @@ function writeToolTimingsToMetadata(
       const existing = (msg.metadata ?? {}) as AssistantMessageMetadata;
       msg.metadata = {
         ...existing,
-        toolTimings: {...existing.toolTimings, ...timings},
+        toolTimings: {...(existing.toolTimings ?? {}), ...timings},
       };
     }
   }
