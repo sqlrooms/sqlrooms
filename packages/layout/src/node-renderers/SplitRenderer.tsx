@@ -1,12 +1,15 @@
 import {LayoutSplitNode} from '@sqlrooms/layout-config';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@sqlrooms/ui';
 import React, {FC, useCallback, useEffect, useRef} from 'react';
 import {
-  Group,
-  Panel,
-  Separator,
   type PanelImperativeHandle,
   type PanelSize,
 } from 'react-resizable-panels';
+
 import {NodeRenderer} from './NodeRenderer';
 import {
   getChildAreaId,
@@ -83,7 +86,7 @@ const CollapsiblePanelWrapper: FC<{
     minSize ?? (collapsible ? DEFAULT_COLLAPSIBLE_MIN_SIZE : undefined);
 
   return (
-    <Panel
+    <ResizablePanel
       id={id}
       panelRef={panelRef}
       collapsible={collapsible}
@@ -94,7 +97,7 @@ const CollapsiblePanelWrapper: FC<{
       onResize={handleResize}
     >
       {children}
-    </Panel>
+    </ResizablePanel>
   );
 };
 
@@ -118,7 +121,7 @@ export const SplitRenderer: FC<
   const orientation = node.direction === 'column' ? 'vertical' : 'horizontal';
 
   return (
-    <Group orientation={orientation}>
+    <ResizablePanelGroup orientation={orientation}>
       {node.children.map((child, i) => {
         const key = getPanelId(child, i);
         const sizeProps = getSizeProps(child);
@@ -167,20 +170,20 @@ export const SplitRenderer: FC<
             {childContent}
           </CollapsiblePanelWrapper>
         ) : (
-          <Panel id={key} {...sizeProps}>
+          <ResizablePanel id={key} {...sizeProps}>
             {childContent}
-          </Panel>
+          </ResizablePanel>
         );
 
         return (
           <React.Fragment key={key}>
             {panelElement}
             {!isLast && (
-              <Separator className="bg-border/20 hover:bg-primary/40 data-[resize-handle-active]:bg-primary/60 transition-colors" />
+              <ResizableHandle className="bg-border hover:bg-primary/60 transition-colors" />
             )}
           </React.Fragment>
         );
       })}
-    </Group>
+    </ResizablePanelGroup>
   );
 };
