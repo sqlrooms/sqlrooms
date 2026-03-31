@@ -68,8 +68,8 @@ export const TabsRenderer: FC<
   onTabClose,
   onTabReorder,
   onTabCreate,
-  onAreaCollapse,
-  onAreaExpand,
+  onCollapse,
+  onExpand,
 }) => {
   const areaId = node.id;
   const showTabStrip = node.showTabStrip !== false;
@@ -161,7 +161,7 @@ export const TabsRenderer: FC<
         <div className="flex h-full w-full items-center justify-center">
           <ExpandButton
             direction={parentDirection}
-            onClick={() => areaId && onAreaExpand?.(areaId)}
+            onClick={() => areaId && onExpand?.(areaId)}
           />
         </div>
       );
@@ -177,7 +177,7 @@ export const TabsRenderer: FC<
           closeable={false}
           onSelect={(tabId) => {
             if (areaId) {
-              onAreaExpand?.(areaId, tabId);
+              onExpand?.(areaId, tabId);
             }
           }}
           renderTabLabel={renderTabLabel}
@@ -186,7 +186,7 @@ export const TabsRenderer: FC<
           <div className="flex-1" />
           <ExpandButton
             direction={parentDirection}
-            onClick={() => areaId && onAreaExpand?.(areaId)}
+            onClick={() => areaId && onExpand?.(areaId)}
           />
         </TabStrip>
       </div>
@@ -230,13 +230,13 @@ export const TabsRenderer: FC<
       {isCollapsible && areaId && (
         <>
           <div className="flex-1" />
-          <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
+          <CollapseButton onClick={() => onCollapse?.(areaId)} />
         </>
       )}
     </TabStrip>
   ) : isCollapsible && areaId ? (
     <div className="bg-background absolute right-0 rounded-md p-1">
-      <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
+      <CollapseButton onClick={() => onCollapse?.(areaId)} />
     </div>
   ) : null;
 
@@ -258,8 +258,8 @@ export const TabsRenderer: FC<
             onTabClose={onTabClose}
             onTabReorder={onTabReorder}
             onTabCreate={onTabCreate}
-            onAreaCollapse={onAreaCollapse}
-            onAreaExpand={onAreaExpand}
+            onCollapse={onCollapse}
+            onExpand={onExpand}
           />
         )}
       </div>

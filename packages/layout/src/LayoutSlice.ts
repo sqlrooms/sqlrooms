@@ -19,8 +19,8 @@ import {MosaicNode} from 'react-mosaic-component';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {
-  findAreaById,
-  findAreaForPanel,
+  findTabsNodeById,
+  findTabsNodeForPanel,
   findMosaicNodeById,
   findSplitById,
   getChildKey,
@@ -135,26 +135,43 @@ export type LayoutSliceState = {
     /** @deprecated Use setConfig instead */
     setLayout(layout: LayoutConfig): void;
 
-    /** @deprecated Use setActivePanel / addPanelToArea / removePanelFromArea instead */
+    /** @deprecated Use setActiveTab / addTab / removeTab instead */
     togglePanel: (panel: string, show?: boolean) => void;
     /** @deprecated */
     togglePanelPin: (panel: string) => void;
 
-    /** Set the active (visible) panel in a named area */
+    /** Set the active (visible) tab in a tabs node */
+    setActiveTab: (tabsId: string, tabId: string) => void;
+    /** Add a tab to a tabs node */
+    addTab: (tabsId: string, tabId: string) => void;
+    /** Remove (close) a tab from a tabs node */
+    removeTab: (tabsId: string, tabId: string) => void;
+    /** Collapse or expand a collapsible node */
+    setCollapsed: (id: string, collapsed: boolean) => void;
+    /** Toggle collapse state of a collapsible node */
+    toggleCollapsed: (id: string) => void;
+    /** Get the list of tab IDs in a tabs node (including closed tabs) */
+    getTabs: (tabsId: string) => string[];
+    /** Get the active tab ID in a tabs node */
+    getActiveTab: (tabsId: string) => string | undefined;
+    /** Check if a node is currently collapsed */
+    isCollapsed: (id: string) => boolean;
+
+    /** @deprecated Use setActiveTab instead */
     setActivePanel: (areaId: string, panelId: string) => void;
-    /** Add a panel as a new tab in a named area */
+    /** @deprecated Use addTab instead */
     addPanelToArea: (areaId: string, panelId: string) => void;
-    /** Remove a panel tab from its area */
+    /** @deprecated Use removeTab instead */
     removePanelFromArea: (areaId: string, panelId: string) => void;
-    /** Collapse or expand a named area */
+    /** @deprecated Use setCollapsed instead */
     setAreaCollapsed: (areaId: string, collapsed: boolean) => void;
-    /** Toggle collapse state of a named area */
+    /** @deprecated Use toggleCollapsed instead */
     toggleAreaCollapsed: (areaId: string) => void;
-    /** Get the list of panel IDs in a named area */
+    /** @deprecated Use getTabs instead */
     getAreaPanels: (areaId: string) => string[];
-    /** Get the active panel ID in a named area */
+    /** @deprecated Use getActiveTab instead */
     getActivePanel: (areaId: string) => string | undefined;
-    /** Check if a named area is currently collapsed */
+    /** @deprecated Use isCollapsed instead */
     isAreaCollapsed: (areaId: string) => boolean;
     /** Register a panel dynamically (adds to panels registry) */
     registerPanel: (panelId: string, info: RoomPanelInfo) => void;
@@ -175,11 +192,11 @@ export type CreateLayoutSliceProps = {
   ) => React.ReactNode | undefined;
 };
 
-function findAreaInConfig(
+function findTabsNode(
   config: LayoutSliceConfig,
-  areaId: string,
+  tabsId: string,
 ): {node: LayoutTabsNode; path: number[]} | undefined {
-  return findAreaById(config, areaId);
+  return findTabsNodeById(config, tabsId);
 }
 
 export function createLayoutSlice({
@@ -288,24 +305,23 @@ export function createLayoutSlice({
           },
 
           // ---------------------------------------------------------------
-          // Area-aware API
+          // Tab-centric API
           // ---------------------------------------------------------------
 
-          setActivePanel: (areaId: string, panelId: string) => {
+          setActiveTab: (tabsId: string, tabId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findAreaInConfig(draft.layout.config, areaId);
+                const found = findTabsNode(draft.layout.config, tabsId);
                 if (!found) return;
                 let idx = found.node.children.findIndex(
-                  (c) => getChildKey(c) === panelId,
+                  (c) => getChildKey(c) === tabId,
                 );
                 if (idx < 0) {
                   if (found.node.closedChildren) {
-                    const closedIdx =
-                      found.node.closedChildren.indexOf(panelId);
+                    const closedIdx = found.node.closedChildren.indexOf(tabId);
                     if (closedIdx >= 0) {
                       found.node.closedChildren.splice(closedIdx, 1);
-                      found.node.children.push(panelId);
+                      found.node.children.push(tabId);
                       idx = found.node.children.length - 1;
                     }
                   }
@@ -315,26 +331,26 @@ export function createLayoutSlice({
                 }
               }),
             );
-            if (get().layout.isAreaCollapsed(areaId)) {
-              get().layout.setAreaCollapsed(areaId, false);
+            if (get().layout.isCollapsed(tabsId)) {
+              get().layout.setCollapsed(tabsId, false);
             }
           },
 
-          addPanelToArea: (areaId: string, panelId: string) => {
+          addTab: (tabsId: string, tabId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findAreaInConfig(draft.layout.config, areaId);
+                const found = findTabsNode(draft.layout.config, tabsId);
                 if (!found) return;
                 if (
-                  !found.node.children.some((c) => getChildKey(c) === panelId)
+                  !found.node.children.some((c) => getChildKey(c) === tabId)
                 ) {
-                  found.node.children.push(panelId);
+                  found.node.children.push(tabId);
                 }
                 found.node.activeTabIndex = found.node.children.findIndex(
-                  (c) => getChildKey(c) === panelId,
+                  (c) => getChildKey(c) === tabId,
                 );
                 if (found.node.closedChildren) {
-                  const closedIdx = found.node.closedChildren.indexOf(panelId);
+                  const closedIdx = found.node.closedChildren.indexOf(tabId);
                   if (closedIdx >= 0) {
                     found.node.closedChildren.splice(closedIdx, 1);
                   }
@@ -343,13 +359,13 @@ export function createLayoutSlice({
             );
           },
 
-          removePanelFromArea: (areaId: string, panelId: string) => {
+          removeTab: (tabsId: string, tabId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findAreaInConfig(draft.layout.config, areaId);
+                const found = findTabsNode(draft.layout.config, tabsId);
                 if (!found) return;
                 const idx = found.node.children.findIndex(
-                  (c) => getChildKey(c) === panelId,
+                  (c) => getChildKey(c) === tabId,
                 );
                 if (idx < 0) return;
                 if (found.node.children.length <= 1) return;
@@ -360,31 +376,31 @@ export function createLayoutSlice({
                 if (!found.node.closedChildren) {
                   found.node.closedChildren = [];
                 }
-                if (!found.node.closedChildren.includes(panelId)) {
-                  found.node.closedChildren.push(panelId);
+                if (!found.node.closedChildren.includes(tabId)) {
+                  found.node.closedChildren.push(tabId);
                 }
               }),
             );
           },
 
-          setAreaCollapsed: (areaId: string, collapsed: boolean) => {
+          setCollapsed: (id: string, collapsed: boolean) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findAreaInConfig(draft.layout.config, areaId);
+                const found = findTabsNode(draft.layout.config, id);
                 if (!found || !found.node.collapsible) return;
                 found.node.collapsed = collapsed;
               }),
             );
           },
 
-          toggleAreaCollapsed: (areaId: string) => {
-            const found = findAreaInConfig(get().layout.config, areaId);
+          toggleCollapsed: (id: string) => {
+            const found = findTabsNode(get().layout.config, id);
             if (!found) return;
-            get().layout.setAreaCollapsed(areaId, !found.node.collapsed);
+            get().layout.setCollapsed(id, !found.node.collapsed);
           },
 
-          getAreaPanels: (areaId: string): string[] => {
-            const found = findAreaInConfig(get().layout.config, areaId);
+          getTabs: (tabsId: string): string[] => {
+            const found = findTabsNode(get().layout.config, tabsId);
             if (!found) return [];
             const ids = found.node.children
               .map((c) => getChildKey(c))
@@ -397,17 +413,28 @@ export function createLayoutSlice({
             return ids;
           },
 
-          getActivePanel: (areaId: string): string | undefined => {
-            const found = findAreaInConfig(get().layout.config, areaId);
+          getActiveTab: (tabsId: string): string | undefined => {
+            const found = findTabsNode(get().layout.config, tabsId);
             if (!found) return undefined;
             const child = found.node.children[found.node.activeTabIndex];
             return child != null ? getChildKey(child) : undefined;
           },
 
-          isAreaCollapsed: (areaId: string): boolean => {
-            const found = findAreaInConfig(get().layout.config, areaId);
+          isCollapsed: (id: string): boolean => {
+            const found = findTabsNode(get().layout.config, id);
             return found?.node.collapsed === true;
           },
+
+          // Deprecated aliases
+          setActivePanel: (...args) => get().layout.setActiveTab(...args),
+          addPanelToArea: (...args) => get().layout.addTab(...args),
+          removePanelFromArea: (...args) => get().layout.removeTab(...args),
+          setAreaCollapsed: (...args) => get().layout.setCollapsed(...args),
+          toggleAreaCollapsed: (...args) =>
+            get().layout.toggleCollapsed(...args),
+          getAreaPanels: (...args) => get().layout.getTabs(...args),
+          getActivePanel: (...args) => get().layout.getActiveTab(...args),
+          isAreaCollapsed: (...args) => get().layout.isCollapsed(...args),
 
           registerPanel: (panelId: string, info: RoomPanelInfo) => {
             set((state) =>
@@ -490,14 +517,14 @@ function createLayoutPanelCommands(
     },
     execute: ({getState}, input) => {
       const {panelId} = input as ToggleLayoutPanelCommandInput;
-      const areaId = findAreaForPanel(getState().layout.config, panelId);
-      if (areaId) {
-        getState().layout.setActivePanel(areaId, panelId);
+      const tabsId = findTabsNodeForPanel(getState().layout.config, panelId);
+      if (tabsId) {
+        getState().layout.setActiveTab(tabsId, panelId);
       }
       return {
         success: true,
         commandId: 'layout.panel.show',
-        message: `Activated panel "${panelId}"${areaId ? ` in area "${areaId}"` : ''}.`,
+        message: `Activated panel "${panelId}"${tabsId ? ` in "${tabsId}"` : ''}.`,
       };
     },
   };
@@ -520,9 +547,12 @@ function createLayoutPanelCommands(
           riskLevel: 'low',
         },
         execute: ({getState}) => {
-          const areaId = findAreaForPanel(getState().layout.config, panelId);
-          if (areaId) {
-            getState().layout.setActivePanel(areaId, panelId);
+          const tabsId = findTabsNodeForPanel(
+            getState().layout.config,
+            panelId,
+          );
+          if (tabsId) {
+            getState().layout.setActiveTab(tabsId, panelId);
           }
           return {
             success: true,
@@ -533,82 +563,82 @@ function createLayoutPanelCommands(
       };
     });
 
-  const setActivePanelCommand: RoomCommand<LayoutCommandStoreState> = {
-    id: 'layout.area.set-active',
-    name: 'Set active panel in area',
-    description: 'Set which panel is visible in a named area',
+  const setActiveTabCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.tabs.set-active',
+    name: 'Set active tab',
+    description: 'Set which tab is visible in a tabs node',
     group: 'Layout',
-    keywords: ['layout', 'area', 'tab', 'active', 'panel', 'select'],
+    keywords: ['layout', 'tab', 'active', 'panel', 'select'],
     inputSchema: AreaSetActivePanelInput,
     inputDescription: 'Provide areaId and panelId.',
     metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
     execute: ({getState}, input) => {
       const {areaId, panelId} = input as AreaSetActivePanelInput;
-      getState().layout.setActivePanel(areaId, panelId);
+      getState().layout.setActiveTab(areaId, panelId);
       return {
         success: true,
-        commandId: 'layout.area.set-active',
-        message: `Set active panel in "${areaId}" to "${panelId}".`,
+        commandId: 'layout.tabs.set-active',
+        message: `Set active tab in "${areaId}" to "${panelId}".`,
       };
     },
   };
 
-  const collapseAreaCommand: RoomCommand<LayoutCommandStoreState> = {
-    id: 'layout.area.collapse',
-    name: 'Collapse or expand area',
-    description: 'Collapse or expand a named layout area',
+  const collapseCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.tabs.collapse',
+    name: 'Collapse or expand',
+    description: 'Collapse or expand a collapsible layout node',
     group: 'Layout',
-    keywords: ['layout', 'area', 'collapse', 'expand', 'toggle'],
+    keywords: ['layout', 'collapse', 'expand', 'toggle'],
     inputSchema: AreaCollapseInput,
     inputDescription: 'Provide areaId and collapsed (true/false).',
     metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
     execute: ({getState}, input) => {
       const {areaId, collapsed} = input as AreaCollapseInput;
-      getState().layout.setAreaCollapsed(areaId, collapsed);
+      getState().layout.setCollapsed(areaId, collapsed);
       return {
         success: true,
-        commandId: 'layout.area.collapse',
-        message: `${collapsed ? 'Collapsed' : 'Expanded'} area "${areaId}".`,
+        commandId: 'layout.tabs.collapse',
+        message: `${collapsed ? 'Collapsed' : 'Expanded'} "${areaId}".`,
       };
     },
   };
 
-  const addPanelToAreaCommand: RoomCommand<LayoutCommandStoreState> = {
-    id: 'layout.area.add-panel',
-    name: 'Add panel to area',
-    description: 'Add a panel as a new tab in a named area',
+  const addTabCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.tabs.add',
+    name: 'Add tab',
+    description: 'Add a tab to a tabs node',
     group: 'Layout',
-    keywords: ['layout', 'area', 'add', 'panel', 'tab'],
+    keywords: ['layout', 'add', 'panel', 'tab'],
     inputSchema: AreaAddPanelInput,
     inputDescription: 'Provide areaId and panelId.',
     metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
     execute: ({getState}, input) => {
       const {areaId, panelId} = input as AreaAddPanelInput;
-      getState().layout.addPanelToArea(areaId, panelId);
+      getState().layout.addTab(areaId, panelId);
       return {
         success: true,
-        commandId: 'layout.area.add-panel',
-        message: `Added panel "${panelId}" to area "${areaId}".`,
+        commandId: 'layout.tabs.add',
+        message: `Added tab "${panelId}" to "${areaId}".`,
       };
     },
   };
 
-  const removePanelFromAreaCommand: RoomCommand<LayoutCommandStoreState> = {
-    id: 'layout.area.remove-panel',
-    name: 'Remove panel from area',
-    description: 'Remove a panel tab from a named area',
+  const removeTabCommand: RoomCommand<LayoutCommandStoreState> = {
+    id: 'layout.tabs.remove',
+    name: 'Remove tab',
+    description: 'Remove a tab from a tabs node',
     group: 'Layout',
-    keywords: ['layout', 'area', 'remove', 'panel', 'tab', 'close'],
+    keywords: ['layout', 'remove', 'panel', 'tab', 'close'],
     inputSchema: AreaRemovePanelInput,
     inputDescription: 'Provide areaId and panelId.',
     metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
     execute: ({getState}, input) => {
       const {areaId, panelId} = input as AreaRemovePanelInput;
-      getState().layout.removePanelFromArea(areaId, panelId);
+      getState().layout.removeTab(areaId, panelId);
       return {
         success: true,
-        commandId: 'layout.area.remove-panel',
-        message: `Removed panel "${panelId}" from area "${areaId}".`,
+        commandId: 'layout.tabs.remove',
+        message: `Removed tab "${panelId}" from "${areaId}".`,
       };
     },
   };
@@ -616,10 +646,10 @@ function createLayoutPanelCommands(
   return [
     byIdCommand,
     ...panelShortcutCommands,
-    setActivePanelCommand,
-    collapseAreaCommand,
-    addPanelToAreaCommand,
-    removePanelFromAreaCommand,
+    setActiveTabCommand,
+    collapseCommand,
+    addTabCommand,
+    removeTabCommand,
   ];
 }
 

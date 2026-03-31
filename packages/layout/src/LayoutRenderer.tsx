@@ -16,12 +16,12 @@ export interface LayoutRendererProps {
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
-  onTabSelect?: (areaId: string, tabId: string) => void;
-  onTabClose?: (areaId: string, tabId: string) => void;
-  onTabReorder?: (areaId: string, tabIds: string[]) => void;
-  onTabCreate?: (areaId: string) => void;
-  onAreaCollapse?: (areaId: string) => void;
-  onAreaExpand?: (areaId: string, panelId?: string) => void;
+  onTabSelect?: (tabsId: string, tabId: string) => void;
+  onTabClose?: (tabsId: string, tabId: string) => void;
+  onTabReorder?: (tabsId: string, tabIds: string[]) => void;
+  onTabCreate?: (tabsId: string) => void;
+  onCollapse?: (id: string) => void;
+  onExpand?: (id: string, tabId?: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,8 +38,8 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
   onTabClose,
   onTabReorder,
   onTabCreate,
-  onAreaCollapse,
-  onAreaExpand,
+  onCollapse,
+  onExpand,
 }) => {
   if (!layout) return null;
 
@@ -57,8 +57,8 @@ const LayoutRenderer: FC<LayoutRendererProps> = ({
         onTabClose={onTabClose}
         onTabReorder={onTabReorder}
         onTabCreate={onTabCreate}
-        onAreaCollapse={onAreaCollapse}
-        onAreaExpand={onAreaExpand}
+        onCollapse={onCollapse}
+        onExpand={onExpand}
       />
     </div>
   );

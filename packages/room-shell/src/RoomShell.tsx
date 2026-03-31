@@ -13,6 +13,7 @@ import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
 import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
   AreaPanelButtons,
+  TabButtons,
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
@@ -72,7 +73,7 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
 
 export const LayoutComposer: FC<{
   className?: string;
-  onTabCreate?: (areaId: string) => void;
+  onTabCreate?: (tabsId: string) => void;
 }> = ({className, onTabCreate}) => {
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setConfig);
@@ -80,14 +81,12 @@ export const LayoutComposer: FC<{
   const renderTabStrip = useBaseRoomShellStore(
     (state) => state.layout.renderTabStrip,
   );
-  const setActivePanel = useBaseRoomShellStore(
-    (state) => state.layout.setActivePanel,
+  const setActiveTab = useBaseRoomShellStore(
+    (state) => state.layout.setActiveTab,
   );
-  const removePanelFromArea = useBaseRoomShellStore(
-    (state) => state.layout.removePanelFromArea,
-  );
-  const setAreaCollapsed = useBaseRoomShellStore(
-    (state) => state.layout.setAreaCollapsed,
+  const removeTab = useBaseRoomShellStore((state) => state.layout.removeTab);
+  const setCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.setCollapsed,
   );
 
   const handleLayoutChange = useCallback(
@@ -98,46 +97,44 @@ export const LayoutComposer: FC<{
   );
 
   const handleTabSelect = useCallback(
-    (areaId: string, tabId: string) => {
-      setActivePanel(areaId, tabId);
+    (tabsId: string, tabId: string) => {
+      setActiveTab(tabsId, tabId);
     },
-    [setActivePanel],
+    [setActiveTab],
   );
 
   const handleTabClose = useCallback(
-    (areaId: string, tabId: string) => {
-      removePanelFromArea(areaId, tabId);
+    (tabsId: string, tabId: string) => {
+      removeTab(tabsId, tabId);
     },
-    [removePanelFromArea],
+    [removeTab],
   );
 
   const handleTabReorder = useCallback(
-    (areaId: string, tabIds: string[]) => {
-      // Tab reorder is handled via setConfig with updated children order
-      // For now, just set the active tab to preserve selection
+    (tabsId: string, tabIds: string[]) => {
       const activeTab = tabIds[0];
       if (activeTab) {
-        setActivePanel(areaId, activeTab);
+        setActiveTab(tabsId, activeTab);
       }
     },
-    [setActivePanel],
+    [setActiveTab],
   );
 
-  const handleAreaCollapse = useCallback(
-    (areaId: string) => {
-      setAreaCollapsed(areaId, true);
+  const handleCollapse = useCallback(
+    (id: string) => {
+      setCollapsed(id, true);
     },
-    [setAreaCollapsed],
+    [setCollapsed],
   );
 
-  const handleAreaExpand = useCallback(
-    (areaId: string, panelId?: string) => {
-      setAreaCollapsed(areaId, false);
-      if (panelId) {
-        setActivePanel(areaId, panelId);
+  const handleExpand = useCallback(
+    (id: string, tabId?: string) => {
+      setCollapsed(id, false);
+      if (tabId) {
+        setActiveTab(id, tabId);
       }
     },
-    [setAreaCollapsed, setActivePanel],
+    [setCollapsed, setActiveTab],
   );
 
   return (
@@ -157,8 +154,8 @@ export const LayoutComposer: FC<{
           onTabClose={handleTabClose}
           onTabReorder={handleTabReorder}
           onTabCreate={onTabCreate}
-          onAreaCollapse={handleAreaCollapse}
-          onAreaExpand={handleAreaExpand}
+          onCollapse={handleCollapse}
+          onExpand={handleExpand}
         />
       ) : null}
     </div>
@@ -188,6 +185,8 @@ export const RoomShell = Object.assign(RoomShellBase, {
   SidebarContainer: SidebarContainer,
   SidebarButton: SidebarButton,
   SidebarButtons: RoomShellSidebarButtons,
+  TabButtons: TabButtons,
+  /** @deprecated Use TabButtons instead */
   AreaPanelButtons: AreaPanelButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,

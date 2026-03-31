@@ -22,6 +22,7 @@ export {RoomPanelHeader} from './panels/RoomPanelHeader';
 
 export {
   AreaPanelButtons,
+  TabButtons,
   RoomShellSidebarButton,
   RoomShellSidebarButtons,
   SidebarButton,

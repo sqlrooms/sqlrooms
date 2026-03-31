@@ -36,8 +36,8 @@ const CollapsiblePanelWrapper: FC<{
   minSize?: number | string;
   maxSize?: number | string;
   areaId?: string;
-  onAreaExpand?: (areaId: string, panelId?: string) => void;
-  onAreaCollapse?: (areaId: string) => void;
+  onExpand?: (areaId: string, panelId?: string) => void;
+  onCollapse?: (areaId: string) => void;
   children: React.ReactNode;
 }> = ({
   id,
@@ -48,8 +48,8 @@ const CollapsiblePanelWrapper: FC<{
   minSize,
   maxSize,
   areaId,
-  onAreaExpand,
-  onAreaCollapse,
+  onExpand,
+  onCollapse,
   children,
 }) => {
   const panelRef = useRef<PanelImperativeHandle | null>(null);
@@ -74,12 +74,12 @@ const CollapsiblePanelWrapper: FC<{
       const handle = panelRef.current;
       if (!handle) return;
       if (collapsed && !handle.isCollapsed()) {
-        onAreaExpand?.(areaId);
+        onExpand?.(areaId);
       } else if (!collapsed && handle.isCollapsed()) {
-        onAreaCollapse?.(areaId);
+        onCollapse?.(areaId);
       }
     },
-    [areaId, collapsed, onAreaExpand, onAreaCollapse],
+    [areaId, collapsed, onExpand, onCollapse],
   );
 
   const effectiveMinSize =
@@ -114,8 +114,8 @@ export const SplitRenderer: FC<
   onTabClose,
   onTabReorder,
   onTabCreate,
-  onAreaCollapse,
-  onAreaExpand,
+  onCollapse,
+  onExpand,
 }) => {
   const orientation = node.direction === 'column' ? 'vertical' : 'horizontal';
 
@@ -145,8 +145,8 @@ export const SplitRenderer: FC<
             onTabClose={onTabClose}
             onTabReorder={onTabReorder}
             onTabCreate={onTabCreate}
-            onAreaCollapse={onAreaCollapse}
-            onAreaExpand={onAreaExpand}
+            onCollapse={onCollapse}
+            onExpand={onExpand}
           />
         );
 
@@ -162,8 +162,8 @@ export const SplitRenderer: FC<
             minSize={sizeProps.minSize as string | number | undefined}
             maxSize={sizeProps.maxSize as string | number | undefined}
             areaId={areaId}
-            onAreaExpand={onAreaExpand}
-            onAreaCollapse={onAreaCollapse}
+            onExpand={onExpand}
+            onCollapse={onCollapse}
           >
             {childContent}
           </CollapsiblePanelWrapper>

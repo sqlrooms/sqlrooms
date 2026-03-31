@@ -4,8 +4,8 @@ import {PanelBottomCloseIcon, PanelBottomOpenIcon} from 'lucide-react';
 import {roomStore, useRoomStore} from './store';
 
 function CollapseBottomButton() {
-  const isCollapsed = useRoomStore((s) => s.layout.isAreaCollapsed('bottom'));
-  const toggleCollapsed = useRoomStore((s) => s.layout.toggleAreaCollapsed);
+  const isCollapsed = useRoomStore((s) => s.layout.isCollapsed('bottom'));
+  const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const Icon = isCollapsed ? PanelBottomOpenIcon : PanelBottomCloseIcon;
   return (
     <RoomShell.SidebarButton
@@ -23,7 +23,7 @@ export const App = () => {
     <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>
         <RoomShell.SidebarContainer>
-          <RoomShell.AreaPanelButtons area="left" />
+          <RoomShell.TabButtons tabsId="left" />
           <div className="flex-1" />
           <CollapseBottomButton />
           <RoomShell.CommandPalette.Button />

@@ -24,36 +24,36 @@ import {DynamicChartPanel} from './panels/DynamicChartPanel';
 import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 
-function findAreaInState(
+function findTabsNodeInState(
   root: LayoutNode | null,
-  areaId: string,
+  tabsId: string,
 ): LayoutTabsNode | undefined {
   if (!root || typeof root === 'string') return undefined;
-  if (isLayoutTabsNode(root) && root.id === areaId) return root;
+  if (isLayoutTabsNode(root) && root.id === tabsId) return root;
   if (isLayoutSplitNode(root)) {
     for (const child of root.children) {
-      const result = findAreaInState(child, areaId);
+      const result = findTabsNodeInState(child, tabsId);
       if (result) return result;
     }
   }
   if (isLayoutTabsNode(root)) {
     for (const child of root.children) {
-      const result = findAreaInState(child, areaId);
+      const result = findTabsNodeInState(child, tabsId);
       if (result) return result;
     }
   }
   return undefined;
 }
 
-function addMosaicChildToArea(
+function addMosaicChildToTabs(
   root: LayoutNode | null,
-  areaId: string,
+  tabsId: string,
   mosaicNode: LayoutMosaicNode,
 ): LayoutNode | null {
   if (!root) return root;
   if (typeof root === 'string') return root;
 
-  if (isLayoutTabsNode(root) && root.id === areaId) {
+  if (isLayoutTabsNode(root) && root.id === tabsId) {
     const key = getMosaicNodeKey(mosaicNode.id);
     const alreadyExists = root.children.some((c) => getChildKey(c) === key);
     if (alreadyExists) return root;
@@ -68,7 +68,7 @@ function addMosaicChildToArea(
   if (isLayoutSplitNode(root)) {
     let changed = false;
     const newChildren = root.children.map((child) => {
-      const updated = addMosaicChildToArea(child, areaId, mosaicNode);
+      const updated = addMosaicChildToTabs(child, tabsId, mosaicNode);
       if (updated !== child) changed = true;
       return updated;
     });
@@ -78,7 +78,7 @@ function addMosaicChildToArea(
   if (isLayoutTabsNode(root)) {
     let changed = false;
     const newChildren = root.children.map((child) => {
-      const updated = addMosaicChildToArea(child, areaId, mosaicNode);
+      const updated = addMosaicChildToTabs(child, tabsId, mosaicNode);
       if (updated !== child) changed = true;
       return updated;
     });
@@ -89,21 +89,8 @@ function addMosaicChildToArea(
 }
 
 export type RoomState = RoomShellSliceState & {
-  addDashboard: (areaId?: string) => void;
+  addDashboard: (tabsId?: string) => void;
 };
-
-const CHART_LABELS = [
-  'Revenue',
-  'Users',
-  'Conversions',
-  'Sessions',
-  'Bounce Rate',
-  'Retention',
-  'Signups',
-  'Churn',
-  'MRR',
-  'ARPU',
-];
 
 let dashboardCounter = 0;
 
@@ -214,10 +201,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     })(set, get, store),
 
-    addDashboard: (areaId = 'dashboards') => {
+    addDashboard: (tabsId = 'dashboards') => {
       dashboardCounter += 1;
-      const label = CHART_LABELS[(dashboardCounter - 1) % CHART_LABELS.length]!;
-      const mosaicId = `${label.toLowerCase().replace(/\s+/g, '-')}-${dashboardCounter}`;
+      const mosaicId = `dashboard-${dashboardCounter}`;
       const chartId = `${mosaicId}-chart`;
 
       const mosaicNode: LayoutMosaicNode = {
@@ -230,11 +216,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       const {layout} = get();
       const found = layout.config
-        ? findAreaInState(layout.config, areaId)
+        ? findTabsNodeInState(layout.config, tabsId)
         : undefined;
       if (found) {
         layout.setConfig(
-          addMosaicChildToArea(layout.config, areaId, mosaicNode),
+          addMosaicChildToTabs(layout.config, tabsId, mosaicNode),
         );
       }
     },

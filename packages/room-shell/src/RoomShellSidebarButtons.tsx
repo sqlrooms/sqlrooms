@@ -102,56 +102,51 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
 };
 
 /**
- * Renders sidebar buttons for all panels belonging to a named area.
- * Clicking the active panel's button collapses the area;
- * clicking an inactive panel expands the area and switches to that tab.
+ * Renders sidebar buttons for all panels belonging to a tabs node.
+ * Clicking the active tab's button collapses the node;
+ * clicking an inactive tab expands the node and switches to that tab.
  */
-const AreaPanelButtons: FC<{
-  area: string;
+const TabButtons: FC<{
+  tabsId: string;
   className?: string;
-}> = ({area, className}) => {
+}> = ({tabsId, className}) => {
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const config = useBaseRoomShellStore((state) => state.layout.config);
-  const getAreaPanels = useBaseRoomShellStore(
-    (state) => state.layout.getAreaPanels,
+  const getTabs = useBaseRoomShellStore((state) => state.layout.getTabs);
+  const activeTab = useBaseRoomShellStore((state) =>
+    state.layout.getActiveTab(tabsId),
   );
-  const activePanel = useBaseRoomShellStore((state) =>
-    state.layout.getActivePanel(area),
+  const collapsed = useBaseRoomShellStore((state) =>
+    state.layout.isCollapsed(tabsId),
   );
-  const isCollapsed = useBaseRoomShellStore((state) =>
-    state.layout.isAreaCollapsed(area),
+  const setActiveTab = useBaseRoomShellStore(
+    (state) => state.layout.setActiveTab,
   );
-  const setActivePanel = useBaseRoomShellStore(
-    (state) => state.layout.setActivePanel,
-  );
-  const setAreaCollapsed = useBaseRoomShellStore(
-    (state) => state.layout.setAreaCollapsed,
+  const setCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.setCollapsed,
   );
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
 
-  const areaPanelIds = useMemo(
-    () => getAreaPanels(area),
-    [getAreaPanels, area, config],
-  );
+  const tabIds = useMemo(() => getTabs(tabsId), [getTabs, tabsId, config]);
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      {areaPanelIds.map((panelId) => {
-        const info = panels[panelId];
-        const isSelected = activePanel === panelId && !isCollapsed;
+      {tabIds.map((tabId) => {
+        const info = panels[tabId];
+        const isSelected = activeTab === tabId && !collapsed;
         return (
           <SidebarButton
-            key={panelId}
-            title={info?.title ?? panelId}
+            key={tabId}
+            title={info?.title ?? tabId}
             icon={info?.icon ?? (() => null)}
             isSelected={isSelected}
             isDisabled={!initialized}
             onClick={() => {
               if (isSelected) {
-                setAreaCollapsed(area, true);
+                setCollapsed(tabsId, true);
               } else {
-                setAreaCollapsed(area, false);
-                setActivePanel(area, panelId);
+                setCollapsed(tabsId, false);
+                setActiveTab(tabsId, tabId);
               }
             }}
           />
@@ -161,8 +156,12 @@ const AreaPanelButtons: FC<{
   );
 };
 
+/** @deprecated Use TabButtons instead */
+const AreaPanelButtons = TabButtons;
+
 export {
   AreaPanelButtons,
+  TabButtons,
   RoomShellSidebarButton,
   RoomShellSidebarButtons,
   SidebarButton,

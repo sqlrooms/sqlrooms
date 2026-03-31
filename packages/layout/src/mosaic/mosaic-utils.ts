@@ -130,42 +130,42 @@ export function removeLayoutNodeByKey(
 }
 
 // ---------------------------------------------------------------------------
-// Area helpers
+// Tabs node helpers
 // ---------------------------------------------------------------------------
 
 /** Find a tabs node by its `id` field. Returns the node and its path in the tree. */
-export function findAreaById(
+export function findTabsNodeById(
   root: LayoutNode | null | undefined,
-  areaId: string,
+  tabsId: string,
   path: MosaicPath = [],
 ): {node: LayoutTabsNode; path: MosaicPath} | undefined {
   if (!root || typeof root === 'string') return undefined;
   if (isLayoutPanelNode(root)) return undefined;
   if (isLayoutTabsNode(root)) {
-    if (root.id === areaId) return {node: root, path};
+    if (root.id === tabsId) return {node: root, path};
     for (let i = 0; i < root.children.length; i++) {
-      const result = findAreaById(root.children[i], areaId, [...path, i]);
+      const result = findTabsNodeById(root.children[i], tabsId, [...path, i]);
       if (result) return result;
     }
     return undefined;
   }
   if (isLayoutSplitNode(root)) {
     for (let i = 0; i < root.children.length; i++) {
-      const result = findAreaById(root.children[i], areaId, [...path, i]);
+      const result = findTabsNodeById(root.children[i], tabsId, [...path, i]);
       if (result) return result;
     }
   }
   if (isLayoutMosaicNode(root)) {
-    return root.nodes ? findAreaById(root.nodes, areaId, path) : undefined;
+    return root.nodes ? findTabsNodeById(root.nodes, tabsId, path) : undefined;
   }
   return undefined;
 }
 
 /**
  * Find the tabs node whose children or closedChildren contain a panel with
- * the given ID. Returns the tabs node's id (area id) if found.
+ * the given ID. Returns the tabs node's id if found.
  */
-export function findAreaForPanel(
+export function findTabsNodeForPanel(
   root: LayoutNode | null | undefined,
   panelId: string,
 ): string | undefined {
@@ -176,19 +176,19 @@ export function findAreaForPanel(
     const inClosed = root.closedChildren?.includes(panelId);
     if ((inChildren || inClosed) && root.id) return root.id;
     for (const child of root.children) {
-      const result = findAreaForPanel(child, panelId);
+      const result = findTabsNodeForPanel(child, panelId);
       if (result) return result;
     }
     return undefined;
   }
   if (isLayoutSplitNode(root)) {
     for (const child of root.children) {
-      const result = findAreaForPanel(child, panelId);
+      const result = findTabsNodeForPanel(child, panelId);
       if (result) return result;
     }
   }
   if (isLayoutMosaicNode(root)) {
-    return root.nodes ? findAreaForPanel(root.nodes, panelId) : undefined;
+    return root.nodes ? findTabsNodeForPanel(root.nodes, panelId) : undefined;
   }
   return undefined;
 }
@@ -489,7 +489,9 @@ export function convertFromMosaicTree(
     const children = tabs.map((c) => convertFromMosaicTree(c, originalTree));
     const areaId = obj.id as string | undefined;
     const originalArea =
-      areaId && originalTree ? findAreaById(originalTree, areaId) : undefined;
+      areaId && originalTree
+        ? findTabsNodeById(originalTree, areaId)
+        : undefined;
     if (originalArea) {
       return {
         ...originalArea.node,
@@ -534,3 +536,7 @@ export const getVisibleMosaicLayoutPanels = getVisibleLayoutPanels;
 export const findMosaicNodePathByKey = findLayoutNodePathByKey;
 /** @deprecated Use `removeLayoutNodeByKey` */
 export const removeMosaicNodeByKey = removeLayoutNodeByKey;
+/** @deprecated Use `findTabsNodeById` */
+export const findAreaById = findTabsNodeById;
+/** @deprecated Use `findTabsNodeForPanel` */
+export const findAreaForPanel = findTabsNodeForPanel;

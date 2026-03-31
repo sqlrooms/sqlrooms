@@ -75,9 +75,9 @@ export interface MosaicLayoutProps {
   onTabSelect?: (path: MosaicPath, tabId: string) => void;
   onTabClose?: (path: MosaicPath, tabId: string) => void;
   onTabReorder?: (path: MosaicPath, tabIds: string[]) => void;
-  onTabCreate?: (areaId: string) => void;
-  onAreaCollapse?: (areaId: string) => void;
-  onAreaExpand?: (areaId: string, panelId?: string) => void;
+  onTabCreate?: (tabsId: string) => void;
+  onCollapse?: (id: string) => void;
+  onExpand?: (id: string, tabId?: string) => void;
 }
 
 type CombinedProps = MosaicProps<string> & MosaicLayoutProps;
@@ -94,8 +94,8 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     onTabClose,
     onTabReorder,
     onTabCreate,
-    onAreaCollapse,
-    onAreaExpand,
+    onCollapse,
+    onExpand,
   } = props;
   const [isDragging, setDragging] = React.useState(false);
   const currentValue = 'value' in props ? props.value : undefined;
@@ -136,7 +136,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
 
       onRelease?.(restored as MosaicNode<string> | null);
     },
-    [onRelease, onAreaExpand],
+    [onRelease, onExpand],
   );
 
   const handleNestedMosaicChange = useCallback(
@@ -195,7 +195,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
         if (isCollapsible && areaId) {
           return (
             <div className="flex h-7 items-center justify-end px-1">
-              <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
+              <CollapseButton onClick={() => onCollapse?.(areaId)} />
             </div>
           );
         }
@@ -262,7 +262,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
           <TabStrip.Tabs />
           {creatableTabs && <TabStrip.NewButton />}
           {isCollapsible && areaId && (
-            <CollapseButton onClick={() => onAreaCollapse?.(areaId)} />
+            <CollapseButton onClick={() => onCollapse?.(areaId)} />
           )}
         </TabStrip>
       );
@@ -274,7 +274,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       onTabClose,
       onTabReorder,
       onTabCreate,
-      onAreaCollapse,
+      onCollapse,
       renderTabLabel,
     ],
   );
@@ -369,7 +369,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             <CollapsedVerticalStrip
               key={a.node.id}
               area={a}
-              onExpand={onAreaExpand}
+              onExpand={onExpand}
             />
           ))}
           {core}
@@ -377,7 +377,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
             <CollapsedVerticalStrip
               key={a.node.id}
               area={a}
-              onExpand={onAreaExpand}
+              onExpand={onExpand}
             />
           ))}
         </div>
@@ -396,7 +396,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
               key={a.node.id}
               area={a}
               panels={panels}
-              onExpand={onAreaExpand}
+              onExpand={onExpand}
             />
           ))}
           {hasVertical ? (
@@ -409,7 +409,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
               key={a.node.id}
               area={a}
               panels={panels}
-              onExpand={onAreaExpand}
+              onExpand={onExpand}
             />
           ))}
         </div>
@@ -421,7 +421,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
       tileClassName,
       isDragging,
       panels,
-      onAreaExpand,
+      onExpand,
       handleNestedMosaicChange,
       forceDraggable,
     ],

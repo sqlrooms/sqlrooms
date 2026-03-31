@@ -19,12 +19,12 @@ export interface NodeRenderProps {
     context: TabStripRenderContext,
   ) => React.ReactNode | undefined;
   onLayoutChange?: (layout: LayoutNode | null) => void;
-  onTabSelect?: (areaId: string, tabId: string) => void;
-  onTabClose?: (areaId: string, tabId: string) => void;
-  onTabReorder?: (areaId: string, tabIds: string[]) => void;
-  onTabCreate?: (areaId: string) => void;
-  onAreaCollapse?: (areaId: string) => void;
-  onAreaExpand?: (areaId: string, panelId?: string) => void;
+  onTabSelect?: (tabsId: string, tabId: string) => void;
+  onTabClose?: (tabsId: string, tabId: string) => void;
+  onTabReorder?: (tabsId: string, tabIds: string[]) => void;
+  onTabCreate?: (tabsId: string) => void;
+  onCollapse?: (id: string) => void;
+  onExpand?: (id: string, tabId?: string) => void;
 }
 
 /**
