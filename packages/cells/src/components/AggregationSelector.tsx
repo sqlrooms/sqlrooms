@@ -25,11 +25,10 @@ export const AggregationSelector: React.FC<AggregationSelectorProps> = ({
   fieldType,
   onValueChange,
 }) => {
-  // For string and temporal fields, only allow count aggregation
   const availableOptions = useMemo(() => {
-    return fieldType === 'string' || fieldType === 'temporal'
-      ? aggregationOptions.filter((opt) => opt.value === 'count')
-      : aggregationOptions;
+    return fieldType === 'numeric'
+      ? aggregationOptions
+      : aggregationOptions.filter((opt) => opt.value === 'count');
   }, [fieldType]);
 
   const selectedAggregation = useMemo(() => {
