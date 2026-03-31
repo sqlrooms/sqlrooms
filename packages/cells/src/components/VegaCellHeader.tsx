@@ -1,33 +1,34 @@
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {produce} from 'immer';
 import {Filter, Settings} from 'lucide-react';
-import {fromDataSourceCell, fromDataSourceTable} from '../helpers';
+import {
+  fromDataSourceCell,
+  fromDataSourceTable,
+  toDataSourceCell,
+  toDataSourceTable,
+} from '../helpers';
 import {CellSourceSelector} from './CellSourceSelector';
 import {useCellsStore} from '../hooks';
+import {VegaCell} from '../types';
+import {useVegaCrossFilterOptions} from '../hooks/useVegaCrossFilterOptions';
 
 export type VegaCellHeaderProps = {
-  cellId: string;
-  selectValue: string | undefined;
+  cell: VegaCell;
   onEditToggle: () => void;
   hasDataSource: boolean;
-  crossFilterEnabled: boolean;
-  brushField: string | undefined;
-  crossFilterPredicate: string | null;
 };
 
 export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
-  cellId,
-  selectValue,
+  cell,
   onEditToggle,
   hasDataSource,
-  crossFilterEnabled,
-  brushField,
-  crossFilterPredicate,
 }) => {
+  const {crossFilterEnabled, crossFilterPredicate, brushField} =
+    useVegaCrossFilterOptions(cell);
   const updateCell = useCellsStore((s) => s.cells.updateCell);
 
   const handleDataSourceChange = (value: string) => {
-    updateCell(cellId, (c) =>
+    updateCell(cell.id, (c) =>
       produce(c, (draft) => {
         if (draft.type !== 'vega') {
           return;
@@ -47,10 +48,12 @@ export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
     );
   };
 
+  const selectedDataSource = useSelectedDataSource(cell);
+
   return (
     <div className="flex items-center gap-2">
       <CellSourceSelector
-        value={selectValue}
+        value={selectedDataSource}
         onValueChange={handleDataSourceChange}
       />
       <Button
@@ -83,3 +86,14 @@ export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
     </div>
   );
 };
+
+function useSelectedDataSource(cell: VegaCell): string | undefined {
+  const selectedSqlId = cell.data.sqlId;
+  const selectedTableRef = cell.data.tableRef;
+
+  return selectedSqlId
+    ? toDataSourceCell(selectedSqlId)
+    : selectedTableRef
+      ? toDataSourceTable(selectedTableRef)
+      : undefined;
+}

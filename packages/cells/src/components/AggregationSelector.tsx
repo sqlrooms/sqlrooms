@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   Select,
   SelectContent,
@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
+import type {BrushFieldType} from '../types';
 
 const aggregationOptions = [
   {value: 'sum', label: 'Sum'},
@@ -15,16 +16,27 @@ const aggregationOptions = [
 
 interface AggregationSelectorProps {
   value?: string;
+  fieldType?: BrushFieldType;
   onValueChange: (value: string) => void;
 }
 
 export const AggregationSelector: React.FC<AggregationSelectorProps> = ({
   value,
+  fieldType,
   onValueChange,
 }) => {
-  const selectedAggregation =
-    aggregationOptions.find((opt) => opt.value === value) ??
-    aggregationOptions[0];
+  // For string and temporal fields, only allow count aggregation
+  const availableOptions = useMemo(() => {
+    return fieldType === 'string' || fieldType === 'temporal'
+      ? aggregationOptions.filter((opt) => opt.value === 'count')
+      : aggregationOptions;
+  }, [fieldType]);
+
+  const selectedAggregation = useMemo(() => {
+    return (
+      availableOptions.find((opt) => opt.value === value) ?? availableOptions[0]
+    );
+  }, [availableOptions, value]);
 
   return (
     <Select value={selectedAggregation.value} onValueChange={onValueChange}>
@@ -32,7 +44,7 @@ export const AggregationSelector: React.FC<AggregationSelectorProps> = ({
         <SelectValue />
       </SelectTrigger>
       <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-        {aggregationOptions.map((option) => (
+        {availableOptions.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
           </SelectItem>

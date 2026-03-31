@@ -1,5 +1,25 @@
 import {BRUSH_PARAM_NAME} from './vegaSelectionUtils';
-import type {BrushFieldType} from './types';
+import type {BrushFieldType, TimeScale} from './types';
+
+/**
+ * Get Vega-Lite axis format string for a given time scale.
+ */
+function getTemporalAxisFormat(timeScale: string): string {
+  switch (timeScale) {
+    case 'year':
+      return '%Y';
+    case 'month':
+      return '%Y-%m';
+    case 'day':
+      return '%Y-%m-%d';
+    case 'hour':
+      return '%Y-%m-%d %H:00';
+    case 'minute':
+      return '%Y-%m-%d %H:%M';
+    default:
+      return '%Y-%m-%d';
+  }
+}
 
 /**
  * Read the flat encoding/mark values from either a flat spec or a
@@ -41,15 +61,30 @@ export function buildCrossFilterSpec(opts: {
   mark: string;
   xField?: string;
   xFieldType?: BrushFieldType;
+  xTimeScale?: TimeScale;
   yField?: string;
   yAggregate?: string;
   color?: string;
 }): any {
-  const {mark, xField, xFieldType, yField, yAggregate, color} = opts;
+  const {mark, xField, xFieldType, xTimeScale, yField, yAggregate, color} =
+    opts;
+  const isDateTimeBinned = xTimeScale && xTimeScale !== 'none';
   const xEnc: any = xField
     ? {
         field: xField,
-        ...(xFieldType === 'numeric' ? {bin: {maxbins: 20}} : {}),
+        // Apply Vega-side binning only for numeric fields without SQL-side datetime binning
+        ...(xFieldType === 'numeric' && !isDateTimeBinned
+          ? {bin: {maxbins: 20}}
+          : {}),
+        // Set temporal type and axis format when datetime is binned by SQL
+        // Note: xFieldType will be 'string' after CAST AS VARCHAR, but we still need temporal formatting
+        ...(isDateTimeBinned
+          ? {
+              type: 'temporal',
+              scale: {type: 'time'},
+              axis: {format: getTemporalAxisFormat(xTimeScale)},
+            }
+          : {}),
       }
     : undefined;
   const yEnc: any = yField
@@ -62,7 +97,20 @@ export function buildCrossFilterSpec(opts: {
   if (xEnc) encoding.x = xEnc;
   if (yEnc) encoding.y = yEnc;
 
+  // Build data spec with format for parsing ISO date strings from SQL
+  const dataSpec: any = {name: 'queryResult'};
+  if (xField && isDateTimeBinned) {
+    dataSpec.format = {
+      parse: {
+        [xField]: 'date',
+      },
+    };
+  }
+
   return {
+    data: dataSpec,
+    width: 'container',
+    height: 'container',
     layer: [
       {
         params: [
@@ -94,15 +142,49 @@ export function buildCrossFilterSpec(opts: {
 export function buildFlatSpec(opts: {
   mark: string;
   xField?: string;
+  xFieldType?: BrushFieldType;
+  xTimeScale?: TimeScale;
   yField?: string;
   yAggregate?: string;
   color?: string;
 }): any {
-  const {mark, xField, yField, yAggregate, color} = opts;
+  const {mark, xField, xTimeScale, yField, yAggregate, color} = opts;
+  const isDateTimeBinned = xTimeScale && xTimeScale !== 'none';
   const encoding: any = {};
-  if (xField) encoding.x = {field: xField};
+  if (xField) {
+    encoding.x = {
+      field: xField,
+      // Set temporal type and axis format when datetime is binned by SQL
+      // Note: xFieldType will be 'string' after CAST AS VARCHAR, but we still need temporal formatting
+      ...(isDateTimeBinned
+        ? {
+            type: 'temporal',
+            scale: {type: 'time'},
+            axis: {format: getTemporalAxisFormat(xTimeScale)},
+          }
+        : {}),
+    };
+  }
   if (yField) encoding.y = {field: yField, aggregate: yAggregate ?? 'sum'};
   else if (yAggregate === 'count') encoding.y = {aggregate: 'count'};
   if (color) encoding.color = {value: color};
-  return {mark, encoding, padding: 20};
+
+  // Build data spec with format for parsing ISO date strings from SQL
+  const dataSpec: any = {name: 'queryResult'};
+  if (xField && isDateTimeBinned) {
+    dataSpec.format = {
+      parse: {
+        [xField]: 'date',
+      },
+    };
+  }
+
+  return {
+    data: dataSpec,
+    width: 'container',
+    height: 'container',
+    mark,
+    encoding,
+    padding: 20,
+  };
 }

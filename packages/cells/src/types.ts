@@ -74,6 +74,16 @@ export const CrossFilterConfig = z.object({
 });
 export type CrossFilterConfig = z.infer<typeof CrossFilterConfig>;
 
+export const TimeScale = z.enum([
+  'none',
+  'minute',
+  'hour',
+  'day',
+  'month',
+  'year',
+]);
+export type TimeScale = z.infer<typeof TimeScale>;
+
 /** Vega Cell */
 export const VegaCellData = z.object({
   title: z.string().default('Chart'),
@@ -82,6 +92,7 @@ export const VegaCellData = z.object({
   sql: z.string().optional(), // In canvas, it often has its own SQL.
   vegaSpec: z.any().optional(),
   crossFilter: CrossFilterConfig.default({enabled: true}),
+  xTimeScale: TimeScale.default('none'),
 });
 export type VegaCellData = z.infer<typeof VegaCellData>;
 

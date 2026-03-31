@@ -1,26 +1,23 @@
 import {SignalListenerHandler, useVegaChartContext} from '@sqlrooms/vega';
 import React, {useEffect, useRef} from 'react';
 import {useCellsStore} from '../hooks';
-import type {BrushFieldType, CrossFilterSelection} from '../types';
+import type {CrossFilterSelection, VegaCell} from '../types';
 import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
+import {useVegaCrossFilterOptions} from '../hooks/useVegaCrossFilterOptions';
 
 type SelectionListenerProps = {
-  cellId: string;
-  sqlId: string;
-  brushField: string;
-  brushFieldType?: BrushFieldType;
+  cell: VegaCell;
 };
 
 /**
  * Attaches a debounced Vega signal listener for the brush param
  * and reports selection changes to the cross-filter state.
  */
-export const SelectionListener: React.FC<SelectionListenerProps> = ({
-  cellId,
-  sqlId,
-  brushField,
-  brushFieldType,
-}) => {
+export const SelectionListener: React.FC<SelectionListenerProps> = ({cell}) => {
+  const {id: cellId} = cell;
+  const selectedSqlId = cell.data.sqlId!;
+  const {brushField, brushFieldType} = useVegaCrossFilterOptions(cell);
+
   const {embed} = useVegaChartContext();
   const setCrossFilterSelection = useCellsStore(
     (s) => s.cells.setCrossFilterSelection,
@@ -39,22 +36,47 @@ export const SelectionListener: React.FC<SelectionListenerProps> = ({
 
       timerRef.current = setTimeout(() => {
         if (!value || Object.keys(value).length === 0) {
-          setCrossFilterSelection(cellId, sqlId, null);
+          setCrossFilterSelection(cellId, selectedSqlId, null);
+          return;
+        }
+
+        if (!brushField) {
           return;
         }
 
         const fieldValue = value.x ?? value[brushField];
 
-        if (Array.isArray(fieldValue) && fieldValue.length === 2) {
-          const selection: CrossFilterSelection = {
-            field: brushField,
-            fieldType: brushFieldType,
-            type: 'interval',
-            value: fieldValue,
-          };
-          setCrossFilterSelection(cellId, sqlId, selection);
+        if (Array.isArray(fieldValue)) {
+          let interval: [any, any] | null = null;
+
+          if (fieldValue.length === 2) {
+            // Standard interval format [min, max]
+            interval = fieldValue as [any, any];
+          } else if (fieldValue.length > 2) {
+            // For datetime binning, Vega returns array of all selected values
+            // Extract min and max to create interval
+            const sorted = [...fieldValue].sort((a, b) => {
+              // Handle both numeric timestamps and ISO strings
+              const aVal = typeof a === 'string' ? new Date(a).getTime() : a;
+              const bVal = typeof b === 'string' ? new Date(b).getTime() : b;
+              return aVal - bVal;
+            });
+            interval = [sorted[0], sorted[sorted.length - 1]];
+          }
+
+          if (interval) {
+            const selection: CrossFilterSelection = {
+              field: brushField,
+              fieldType: brushFieldType,
+              type: 'interval',
+              value: interval,
+            };
+            setCrossFilterSelection(cellId, selectedSqlId, selection);
+          } else {
+            setCrossFilterSelection(cellId, selectedSqlId, null);
+          }
         } else {
-          setCrossFilterSelection(cellId, sqlId, null);
+          setCrossFilterSelection(cellId, selectedSqlId, null);
         }
       }, 200);
     };
@@ -81,15 +103,15 @@ export const SelectionListener: React.FC<SelectionListenerProps> = ({
       }
 
       // Clear this chart's selection from crossFilterSelections
-      setCrossFilterSelection(cellId, sqlId, null);
+      setCrossFilterSelection(cellId, selectedSqlId, null);
     };
   }, [
     embed,
     cellId,
-    sqlId,
     brushField,
     brushFieldType,
     setCrossFilterSelection,
+    selectedSqlId,
   ]);
 
   return null;

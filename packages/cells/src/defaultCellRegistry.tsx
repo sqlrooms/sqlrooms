@@ -74,12 +74,19 @@ export function createDefaultCellRegistry(): CellRegistry {
         const newSql = isSqlCell(newCell) ? newCell.data.sql : undefined;
         return oldSql !== newSql;
       },
-      invalidateStatus: (currentStatus): CellStatus => ({
-        type: 'sql',
-        status: 'idle',
-        referencedTables:
-          (currentStatus as SqlCellStatus).referencedTables || [],
-      }),
+      invalidateStatus: (currentStatus): CellStatus => {
+        const sqlStatus = currentStatus as SqlCellStatus;
+        return {
+          type: 'sql',
+          status: 'idle',
+          referencedTables: sqlStatus.referencedTables || [],
+          // Preserve the result view so charts can continue showing data
+          resultName: sqlStatus.resultName,
+          resultView: sqlStatus.resultView,
+          resultRelationType: sqlStatus.resultRelationType,
+          lastRunTime: sqlStatus.lastRunTime,
+        };
+      },
       getRelationsToDrop: (status): string[] => {
         const sqlStatus = status as SqlCellStatus;
         return sqlStatus.resultView ? [sqlStatus.resultView] : [];
@@ -227,6 +234,7 @@ export function createDefaultCellRegistry(): CellRegistry {
         data: {
           title: 'Chart',
           crossFilter: {enabled: true},
+          xTimeScale: 'none',
           vegaSpec: {
             data: {name: 'queryResult'},
             mark: 'bar',

@@ -64,7 +64,7 @@ export function makeDefaultVegaLiteOptions(
 
 const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   className,
-  aspectRatio = 16 / 9,
+  aspectRatio,
   spec,
   arrowTable,
   options: propsOptions,
@@ -100,17 +100,18 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   const specWithData = useMemo(() => {
     const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) {
+      // eslint-disable-next-line react-hooks/set-state-in-render
       setChartError(new Error('Invalid Vega-Lite specification'));
       return null;
     }
+
     return {
       padding: 10,
       background: 'transparent',
       ...parsed,
       data: data,
-      // Override the following props to ensure the chart is responsive
-      width: 'container',
-      height: 'container',
+      width: 'container' as const,
+      height: 'container' as const,
       autosize: {contains: 'padding'},
     } as VisualizationSpec;
   }, [spec, data]);
@@ -140,8 +141,13 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     },
     [embed],
   );
+
+  // Always tell Vega when container dimensions change
+  // This is necessary even with 'container' sizing for resize to work
   useEffect(() => {
-    changeDimensions(dimensions.width, dimensions.height);
+    if (dimensions.width > 0 && dimensions.height > 0) {
+      changeDimensions(dimensions.width, dimensions.height);
+    }
   }, [changeDimensions, dimensions.width, dimensions.height]);
 
   return (
@@ -150,7 +156,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
         ref={containerRef}
         className={cn('relative flex h-full w-full flex-col gap-2', className)}
       >
-        <div className="peer relative">
+        <div className={cn('peer relative', !aspectRatio && 'h-full w-full')}>
           {chartError ? (
             <ToolErrorMessage
               error={chartError}
@@ -159,9 +165,8 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
               align="start"
               details={spec}
             />
-          ) : (
-            specWithData &&
-            data && (
+          ) : specWithData && data ? (
+            aspectRatio ? (
               <AspectRatio
                 ratio={aspectRatio}
                 className="overflow-visible"
@@ -169,8 +174,13 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
               >
                 <div ref={ref} className="[&_svg]:overflow-visible" />
               </AspectRatio>
+            ) : (
+              <div
+                ref={ref}
+                className="h-full w-full [&_svg]:overflow-visible"
+              />
             )
-          )}
+          ) : null}
         </div>
         {children}
       </div>

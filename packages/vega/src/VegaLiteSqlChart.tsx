@@ -56,9 +56,12 @@ import {
  * />
  */
 export const VegaLiteSqlChart: React.FC<
-  Omit<VegaLiteArrowChartProps, 'arrowTable'> & {sqlQuery: string}
-> = ({className, sqlQuery, ...props}) => {
-  const result = useSql({query: sqlQuery});
+  Omit<VegaLiteArrowChartProps, 'arrowTable'> & {
+    sqlQuery: string;
+    version?: number;
+  }
+> = ({className, sqlQuery, version, ...props}) => {
+  const result = useSql({query: sqlQuery, version});
   const arrowTable = result.data?.arrowTable;
 
   return (

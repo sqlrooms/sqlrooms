@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {
   Tabs,
   TabsContent,
@@ -8,9 +8,9 @@ import {
   Separator,
   Switch,
 } from '@sqlrooms/ui';
-import {useSql} from '@sqlrooms/duckdb';
-import {getArrowColumnTypeCategory} from '@sqlrooms/duckdb';
-import type {BrushFieldType} from '../types';
+import {produce} from 'immer';
+import {useCellsStore} from '../hooks';
+import type {BrushFieldType, TimeScale, VegaCell, VegaCellData} from '../types';
 import {
   readSpecValues,
   buildCrossFilterSpec,
@@ -20,60 +20,122 @@ import {FieldSelector} from './FieldSelector';
 import {ColorSelector, colorOptions} from './ColorSelector';
 import {ChartTypeSelector} from './ChartTypeSelector';
 import {AggregationSelector} from './AggregationSelector';
+import {TimeScaleSelector} from './TimeScaleSelector';
+import {detectFieldType} from '../utils';
+import {useVegaCellSchema} from '../hooks/useVegaCellSchema';
 
-export const VegaConfigPanel: React.FC<{
+type VegaConfigPanelProps = {
+  cell: VegaCell;
   spec: any;
-  sqlQuery: string;
-  lastRunTime?: number;
-  crossFilterEnabled: boolean;
   onSpecChange: (spec: any) => void;
-  onCrossFilterToggle: (enabled: boolean) => void;
-  onBrushFieldChange: (field: string | undefined) => void;
-  onBrushFieldTypeChange: (fieldType: BrushFieldType | undefined) => void;
-}> = ({
-  sqlQuery,
-  lastRunTime,
+};
+
+export const VegaConfigPanel: React.FC<VegaConfigPanelProps> = ({
+  cell,
   spec,
-  crossFilterEnabled,
   onSpecChange,
-  onCrossFilterToggle,
-  onBrushFieldChange,
-  onBrushFieldTypeChange,
 }) => {
-  const result = useSql({query: sqlQuery, version: lastRunTime});
-  const arrowTable = result.data?.arrowTable;
-  const fields = arrowTable?.schema?.fields || [];
+  const updateCell = useCellsStore((s) => s.cells.updateCell);
+  const crossFilterEnabled = cell.data.crossFilter?.enabled !== false;
+  const xTimeScale = cell.data.xTimeScale;
 
-  const detectBrushFieldType = (fieldName: string): BrushFieldType => {
-    const arrowField = arrowTable?.schema?.fields?.find(
-      (field) => field.name === fieldName,
+  // Query schema using metadata - decoupled from SQL cell cache
+  const {fields: schemaFields} = useVegaCellSchema(cell);
+  const fields = schemaFields ?? [];
+
+  // Helper to detect field type from schema
+  const getFieldType = useCallback(
+    (fieldName: string) => {
+      return schemaFields
+        ? detectFieldType(fieldName, {schema: {fields: schemaFields}})
+        : undefined;
+    },
+    [schemaFields],
+  );
+
+  // Generic updater for cross-filter properties
+  const updateCrossFilter = <
+    K extends keyof NonNullable<VegaCellData['crossFilter']>,
+  >(
+    key: K,
+    value: NonNullable<VegaCellData['crossFilter']>[K],
+  ) => {
+    updateCell(cell.id, (c) =>
+      produce(c, (draft) => {
+        if (draft.type === 'vega') {
+          if (!draft.data.crossFilter) draft.data.crossFilter = {};
+          draft.data.crossFilter[key] = value;
+        }
+      }),
     );
-
-    if (!arrowField) {
-      return 'numeric';
-    }
-
-    const category = getArrowColumnTypeCategory(arrowField.type);
-    if (category === 'datetime') return 'temporal';
-    if (category === 'string') return 'string';
-    return 'numeric';
   };
+
+  // Generic updater for cell data properties
+  const updateVegaData = <K extends keyof VegaCellData>(
+    key: K,
+    value: VegaCellData[K],
+  ) => {
+    updateCell(cell.id, (c) =>
+      produce(c, (draft) => {
+        if (draft.type === 'vega') {
+          draft.data[key] = value;
+        }
+      }),
+    );
+  };
+
+  // Internal handlers that update cell directly
+  const onCrossFilterToggle = (enabled: boolean) =>
+    updateCrossFilter('enabled', enabled);
+  const onBrushFieldChange = (field: string | undefined) =>
+    updateCrossFilter('brushField', field);
+  const onBrushFieldTypeChange = (fieldType: BrushFieldType | undefined) =>
+    updateCrossFilter('brushFieldType', fieldType);
+  const onXTimeScaleChange = (timeScale: TimeScale) =>
+    updateVegaData('xTimeScale', timeScale);
 
   const current = readSpecValues(spec);
 
+  // Pre-compute commonly used field types
+  const fieldTypes = useMemo(
+    () => ({
+      xField: current.xField ? getFieldType(current.xField) : undefined,
+      yField: current.yField ? getFieldType(current.yField) : undefined,
+    }),
+    [current.xField, current.yField, getFieldType],
+  );
+
+  /**
+   * Rebuilds the Vega spec with new values and updates cross-filter settings.
+   *
+   * @param overrides - Partial spec values to override. Use xTimeScale to specify
+   *                    a time scale value that should take precedence over cellData.xTimeScale.
+   *                    This is necessary to avoid race conditions when the time scale is changed
+   *                    but the cellData hasn't been updated yet.
+   * @param cfEnabled - Whether cross-filtering should be enabled in the rebuilt spec
+   */
   const rebuild = (
-    overrides: Partial<ReturnType<typeof readSpecValues>>,
+    overrides: Partial<ReturnType<typeof readSpecValues>> & {
+      xTimeScale?: TimeScale;
+    },
     cfEnabled = crossFilterEnabled,
   ) => {
-    const merged = {...current, ...overrides};
+    // Include xTimeScale from cell.data as part of current state
+    // (readSpecValues doesn't return xTimeScale since it's not stored in spec)
+    const merged = {
+      ...current,
+      xTimeScale, // from cell.data
+      ...overrides, // allow explicit override
+    };
     const builder = cfEnabled ? buildCrossFilterSpec : buildFlatSpec;
+    const xFieldType = merged.xField ? getFieldType(merged.xField) : undefined;
+
     onSpecChange(
       builder({
         mark: merged.mark ?? 'bar',
         xField: merged.xField,
-        xFieldType: merged.xField
-          ? detectBrushFieldType(merged.xField)
-          : undefined,
+        xFieldType,
+        xTimeScale: merged.xTimeScale,
         yField: merged.yField,
         yAggregate: merged.yAggregate,
         color: merged.color ?? colorOptions[0]?.value,
@@ -82,31 +144,52 @@ export const VegaConfigPanel: React.FC<{
     if ('xField' in overrides) {
       onBrushFieldChange(cfEnabled ? overrides.xField : undefined);
       onBrushFieldTypeChange(
-        cfEnabled && overrides.xField
-          ? detectBrushFieldType(overrides.xField)
-          : undefined,
+        cfEnabled && overrides.xField ? xFieldType : undefined,
       );
     }
   };
 
   const handleMarkChange = (mark: string) => rebuild({mark});
-  const handleXFieldChange = (field: string) => rebuild({xField: field});
-  const handleYFieldChange = (field: string) =>
-    rebuild({yField: field, yAggregate: current.yAggregate ?? 'sum'});
+  const handleXFieldChange = (field: string) => {
+    const fieldType = getFieldType(field);
+    // Reset time scale when changing to non-temporal field
+    if (fieldType !== 'temporal') {
+      onXTimeScaleChange('none');
+      rebuild({xField: field, xTimeScale: 'none'}, crossFilterEnabled);
+    } else {
+      rebuild({xField: field});
+    }
+  };
+  const handleYFieldChange = (field: string) => {
+    const fieldType = getFieldType(field);
+    // For string and temporal fields, force count aggregation. For numeric, use current or default to sum
+    const aggregate =
+      fieldType === 'string' || fieldType === 'temporal'
+        ? 'count'
+        : (current.yAggregate ?? 'sum');
+    rebuild({yField: field, yAggregate: aggregate});
+  };
   const handleYAggregationChange = (aggregate: string) =>
     rebuild({yAggregate: aggregate});
   const handleColorChange = (color: string) => rebuild({color});
+  const handleXTimeScaleChange = (xTimeScale: TimeScale) => {
+    onXTimeScaleChange(xTimeScale);
+    // Rebuild spec with new time scale to apply axis formatting
+    rebuild({xTimeScale}, crossFilterEnabled);
+  };
 
   const handleCrossFilterToggle = (enabled: boolean) => {
     onCrossFilterToggle(enabled);
     rebuild({}, enabled);
     onBrushFieldChange(enabled ? current.xField : undefined);
     onBrushFieldTypeChange(
-      enabled && current.xField
-        ? detectBrushFieldType(current.xField)
-        : undefined,
+      enabled && current.xField ? fieldTypes.xField : undefined,
     );
   };
+
+  const isXFieldTemporal = fieldTypes.xField === 'temporal';
+
+  const yFieldType = fieldTypes.yField;
 
   return (
     <div className="w-80 border-r p-4 text-xs">
@@ -133,17 +216,25 @@ export const VegaConfigPanel: React.FC<{
               <Label className="text-xs font-medium text-gray-400">
                 X-Axis
               </Label>
-              <FieldSelector
-                value={current.xField}
-                fields={fields}
-                onValueChange={handleXFieldChange}
-              />
+              <div className="flex gap-2">
+                <FieldSelector
+                  value={current.xField}
+                  fields={fields}
+                  onValueChange={handleXFieldChange}
+                />
+                {isXFieldTemporal && (
+                  <TimeScaleSelector
+                    value={xTimeScale}
+                    onValueChange={handleXTimeScaleChange}
+                  />
+                )}
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium text-gray-400">
                 Y-Axis
               </Label>
-              <div className="grid grid-cols-[2fr_1fr] gap-2">
+              <div className="flex gap-2">
                 <FieldSelector
                   value={current.yField}
                   fields={fields}
@@ -152,6 +243,7 @@ export const VegaConfigPanel: React.FC<{
 
                 <AggregationSelector
                   value={current.yAggregate}
+                  fieldType={yFieldType}
                   onValueChange={handleYAggregationChange}
                 />
               </div>

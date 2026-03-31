@@ -1,7 +1,33 @@
-import type {SqlCellData} from './types';
+import {getArrowColumnTypeCategory} from '@sqlrooms/db';
+import * as arrow from 'apache-arrow';
+import type {BrushFieldType, SqlCellData} from './types';
 
 export function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
+}
+
+/**
+ * Type alias for schema sources used in field type detection.
+ */
+export type SchemaSource = arrow.Table | {schema: {fields: arrow.Field[]}};
+
+/**
+ * Detects the BrushFieldType for a given field in an Arrow table or schema.
+ */
+export function detectFieldType(
+  fieldName: string,
+  source: SchemaSource | undefined,
+): BrushFieldType {
+  const fields =
+    source && 'schema' in source ? source.schema?.fields : undefined;
+
+  const arrowField = fields?.find((field) => field.name === fieldName);
+
+  if (!arrowField) return 'numeric';
+  const category = getArrowColumnTypeCategory(arrowField.type);
+  if (category === 'datetime') return 'temporal';
+  if (category === 'string') return 'string';
+  return 'numeric';
 }
 
 /**
