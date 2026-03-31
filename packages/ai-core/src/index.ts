@@ -48,6 +48,7 @@ export {fixIncompleteToolCalls} from './utils';
 export {processAgentStream} from './agents/AgentUtils';
 export type {
   AgentStreamResult,
+  AgentStreamOutput,
   UIMessageChunk,
   AgentToolCall,
 } from './agents/AgentUtils';
