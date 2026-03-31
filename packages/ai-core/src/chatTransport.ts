@@ -350,6 +350,15 @@ export function createChatHandlers({
         // If no ToolComponent, we still return (no-op) - the UI won't render anything
         // and the tool call will remain incomplete, which is fine for error handling
       } catch (error) {
+        const state = store.getState();
+        const existing = state.ai.getToolTimings()[toolCallId];
+        if (existing?.startedAt && !existing.completedAt) {
+          state.ai.setToolTiming(toolCallId, {
+            ...existing,
+            completedAt: Date.now(),
+          });
+        }
+
         const isAbortError = error instanceof ToolAbortError;
         addToolResult?.({
           tool: toolName,
@@ -360,7 +369,7 @@ export function createChatHandlers({
             : getErrorMessageForDisplay(error),
         });
         // ensure mapping cleared on error too
-        store.getState().ai.setToolCallSession(toolCallId, undefined);
+        state.ai.setToolCallSession(toolCallId, undefined);
       }
     },
     onChatFinish: ({
@@ -542,6 +551,8 @@ export function createChatHandlers({
           store.getState().ai.setApiKeyError(provider, true);
         }
 
+        const toolTimings = store.getState().ai.getToolTimings();
+
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!sessionId) return;
@@ -549,12 +560,13 @@ export function createChatHandlers({
               (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (targetSession) {
-              // fix any incomplete tool-calls before saving (can happen with AbortController)
               const existingMessages = (targetSession.uiMessages ||
                 []) as UIMessage[];
-              targetSession.uiMessages = fixIncompleteToolCalls(
-                existingMessages,
-              ) as AnalysisSessionSchema['uiMessages'];
+              const completedMessages =
+                fixIncompleteToolCalls(existingMessages);
+              writeToolTimingsToMetadata(completedMessages, toolTimings);
+              targetSession.uiMessages =
+                completedMessages as AnalysisSessionSchema['uiMessages'];
 
               const uiMessages = targetSession.uiMessages as UIMessage[];
               const lastUserMessage = uiMessages

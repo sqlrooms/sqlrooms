@@ -4,12 +4,13 @@ import remarkGfm from 'remark-gfm';
 import {InfoIcon} from 'lucide-react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
+import {formatShortDuration} from '@sqlrooms/utils';
 import type {AgentToolCall} from '../agents/AgentUtils';
 import {useStoreWithAi} from '../AiSlice';
+import {useElapsedTime} from '../hooks/useElapsedTime';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
-import {formatShortDuration} from '@sqlrooms/utils';
 
 const ToolCallDetailPopup: React.FC<{
   toolCall: AgentToolCall;
@@ -60,6 +61,31 @@ const ToolCallDetailPopup: React.FC<{
 };
 
 /**
+ * Renders a live-updating elapsed-time badge for a single agent sub-step.
+ * Uses the same useElapsedTime hook as the top-level ToolCallInfo rows so the
+ * timer ticks every second while the step is pending.
+ */
+const AgentStepElapsed: React.FC<{
+  startedAt: number;
+  completedAt?: number;
+}> = ({startedAt, completedAt}) => {
+  const isRunning = completedAt == null;
+  const elapsedText = useElapsedTime(isRunning, startedAt, completedAt);
+
+  if (!isRunning) {
+    return (
+      <span className="ml-1 text-[0.85em] text-gray-400">
+        {formatShortDuration(completedAt - startedAt)}
+      </span>
+    );
+  }
+
+  return elapsedText ? (
+    <span className="ml-1 text-[0.85em] text-gray-400">{elapsedText}</span>
+  ) : null;
+};
+
+/**
  * Component that renders agent tool execution progress.
  * Reads live progress from the store while the agent is running,
  * then falls back to the final output once the tool completes.
@@ -107,18 +133,12 @@ const AgentProgressRenderer: React.FC<{
                 </span>
                 <div className="flex-1">
                   <span className="font-medium">{toolCall.toolName}</span>
-                  {toolCall.startedAt != null &&
-                    (() => {
-                      const elapsed =
-                        (toolCall.completedAt ?? Date.now()) -
-                        toolCall.startedAt;
-                      const showAlways = toolCall.completedAt != null;
-                      return showAlways || elapsed >= 1000 ? (
-                        <span className="ml-1 text-[0.85em] text-gray-400">
-                          {formatShortDuration(elapsed)}
-                        </span>
-                      ) : null;
-                    })()}
+                  {toolCall.startedAt != null && (
+                    <AgentStepElapsed
+                      startedAt={toolCall.startedAt}
+                      completedAt={toolCall.completedAt}
+                    />
+                  )}
                   <ToolCallDetailPopup toolCall={toolCall} />
                   {isError && toolCall.errorText && (
                     <div className="mt-0.5 text-[0.9em] text-red-700">

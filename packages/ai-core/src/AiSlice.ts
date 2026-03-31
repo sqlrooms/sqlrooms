@@ -59,6 +59,28 @@ import {z} from 'zod';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
+function collectToolTimingsFromConfig(
+  config?: Partial<AiSliceConfig>,
+): Record<string, ToolTimingEntry> {
+  const toolTimings: Record<string, ToolTimingEntry> = {};
+
+  for (const session of config?.sessions ?? []) {
+    const uiMessages = (session.uiMessages ?? []) as UIMessage[];
+    for (const msg of uiMessages) {
+      if (msg.role !== 'assistant') continue;
+
+      const meta = msg.metadata as AssistantMessageMetadata | undefined;
+      if (!meta?.toolTimings) continue;
+
+      for (const [toolCallId, entry] of Object.entries(meta.toolTimings)) {
+        toolTimings[toolCallId] = entry;
+      }
+    }
+  }
+
+  return toolTimings;
+}
+
 export type AiSliceState = {
   ai: {
     initialize?: () => Promise<void>;
@@ -67,7 +89,7 @@ export type AiSliceState = {
     promptSuggestionsVisible: boolean;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
-    /** Transient per-tool-call timing (not persisted; rebuilt from message metadata on load) */
+    /** Transient per-tool-call timing, rebuilt from message metadata on load) */
     toolTimings: Record<string, ToolTimingEntry>;
     tools: StoredToolSet;
     toolRenderers: ToolRendererRegistry;
@@ -262,20 +284,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       : params.config;
 
     // Restore tool timings from persisted message metadata
-    const initialToolTimings: Record<string, ToolTimingEntry> = {};
-    if (cleanedConfig?.sessions) {
-      for (const session of cleanedConfig.sessions) {
-        const uiMessages = (session.uiMessages ?? []) as UIMessage[];
-        for (const msg of uiMessages) {
-          if (msg.role !== 'assistant') continue;
-          const meta = msg.metadata as AssistantMessageMetadata | undefined;
-          if (!meta?.toolTimings) continue;
-          for (const [toolCallId, entry] of Object.entries(meta.toolTimings)) {
-            initialToolTimings[toolCallId] = entry;
-          }
-        }
-      }
-    }
+    const initialToolTimings = collectToolTimingsFromConfig(cleanedConfig);
 
     // Create persistent Maps (outside of immer draft)
     const pendingToolCallResolvers = new Map<
@@ -479,9 +488,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         setConfig: (config: AiSliceConfig) => {
+          const restoredToolTimings = collectToolTimingsFromConfig(config);
           set((state) =>
             produce(state, (draft) => {
               draft.ai.config = config;
+              draft.ai.toolTimings = restoredToolTimings;
             }),
           );
         },
