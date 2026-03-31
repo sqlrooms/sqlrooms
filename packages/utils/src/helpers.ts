@@ -1,8 +1,10 @@
 import {timeFormat} from 'd3-time-format';
 
 import dayjs, {ConfigType} from 'dayjs';
+import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
+dayjs.extend(duration);
 dayjs.extend(relativeTime);
 
 /**
@@ -109,3 +111,29 @@ export const getErrorMessageForDisplay = (e: unknown) => {
   const firstNl = msg.indexOf('\n');
   return firstNl >= 0 ? msg.substring(0, firstNl) : msg;
 };
+
+/**
+ * Formats a duration in milliseconds into a compact human-readable string.
+ * @param ms - Duration in milliseconds
+ * @returns Formatted string like "3s", "14m 49s", or "1h 2m 3s"
+ * @example
+ * ```ts
+ * formatShortDuration(889000); // "14m 49s"
+ * formatShortDuration(3000);   // "3s"
+ * formatShortDuration(3723000); // "1h 2m 3s"
+ * ```
+ */
+export function formatShortDuration(ms: number): string {
+  const dur = dayjs.duration(ms);
+  const hours = Math.floor(dur.asHours());
+  const minutes = dur.minutes();
+  const seconds = dur.seconds();
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (dur.asMinutes() >= 1) {
+    return `${Math.floor(dur.asMinutes())}m ${seconds}s`;
+  }
+  return `${Math.floor(dur.asSeconds())}s`;
+}

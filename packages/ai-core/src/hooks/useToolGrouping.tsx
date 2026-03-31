@@ -13,6 +13,10 @@ export type ToolGroup = {
   title?: React.ReactNode;
   /** Whether the ReasoningBox should be expanded by default (default: false) */
   defaultExpanded?: boolean;
+  /** Whether tool calls in this group are still executing */
+  isRunning?: boolean;
+  /** Tool call IDs in this group, used to derive elapsed time from tool-level store entries */
+  toolCallIds?: string[];
 };
 
 /**
@@ -72,12 +76,20 @@ export function useToolGrouping(
       } else if (isAnyToolPart(part)) {
         // If this tool is excluded, render it separately and expand by default
         if (isExcludedTool(part)) {
+          const excludedIsRunning = !(
+            (part as any).state === 'output-available' ||
+            (part as any).state === 'output-error'
+          );
+          const excludedKey = (part as any).toolCallId as string | undefined;
+
           groups.push({
             type: 'tool-group',
             parts: [part],
             startIndex: i,
             title: generateToolGroupTitle([part], false, containerWidth),
-            defaultExpanded: true, // Excluded tools are expanded by default
+            defaultExpanded: true,
+            isRunning: excludedIsRunning,
+            toolCallIds: excludedKey ? [excludedKey] : [],
           });
           i++;
           continue;
@@ -151,11 +163,22 @@ export function useToolGrouping(
           containerWidth,
         );
 
+        const groupIsRunning = toolParts.some((p) => {
+          const s = (p as any).state;
+          return s !== 'output-available' && s !== 'output-error';
+        });
+
+        const groupToolCallIds = toolParts
+          .map((tp) => (tp as any)?.toolCallId as string | undefined)
+          .filter((id): id is string => id != null);
+
         groups.push({
           type: 'tool-group',
           parts: toolParts,
           startIndex: i,
           title,
+          isRunning: groupIsRunning,
+          toolCallIds: groupToolCallIds,
         });
         i = j;
       } else {

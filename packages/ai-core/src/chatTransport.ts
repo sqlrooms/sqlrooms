@@ -16,7 +16,11 @@ import {
   ANALYSIS_PENDING_ID,
   TOOL_CALL_CANCELLED,
 } from './constants';
-import type {AiSliceStateForTransport} from './types';
+import type {
+  AiSliceStateForTransport,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
+} from './types';
 import {AddToolResult} from './types';
 import {
   fixIncompleteToolCalls,
@@ -31,6 +35,47 @@ export type ToolCall = {
   toolName: string;
   type: 'tool-input-available';
 };
+
+/**
+ * Write tool timings from the store into assistant message metadata so they
+ * survive serialization.
+ */
+function writeToolTimingsToMetadata(
+  messages: UIMessage[],
+  allTimings: Record<string, ToolTimingEntry>,
+): void {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg || msg.role !== 'assistant') continue;
+
+    const toolCallIds = msg.parts
+      .filter(
+        (p) =>
+          typeof p.type === 'string' &&
+          (p.type.startsWith('tool-') || p.type === 'dynamic-tool'),
+      )
+      .map((p) => (p as {toolCallId?: string}).toolCallId)
+      .filter((id): id is string => !!id);
+
+    if (toolCallIds.length === 0) continue;
+
+    const timings: Record<string, ToolTimingEntry> = {};
+    for (const id of toolCallIds) {
+      const entry = allTimings[id];
+      if (entry) {
+        timings[id] = entry;
+      }
+    }
+
+    if (Object.keys(timings).length > 0) {
+      const existing = (msg.metadata ?? {}) as AssistantMessageMetadata;
+      msg.metadata = {
+        ...existing,
+        toolTimings: {...existing.toolTimings, ...timings},
+      };
+    }
+  }
+}
 
 export type ChatTransportConfig = {
   sessionId: string;
@@ -258,6 +303,9 @@ export function createChatHandlers({
         const tool = state.ai.tools[toolName];
         if (tool?.execute) {
           const sessionMessages = (session?.uiMessages ?? []) as UIMessage[];
+          const startedAt = Date.now();
+          state.ai.setToolTiming(toolCallId, {startedAt});
+
           const result = await tool.execute(input, {
             toolCallId,
             messages: convertToModelMessages(
@@ -265,6 +313,9 @@ export function createChatHandlers({
             ),
             abortSignal: abortController?.signal,
           });
+
+          const completedAt = Date.now();
+          state.ai.setToolTiming(toolCallId, {startedAt, completedAt});
 
           addToolResult?.({
             tool: toolName,
@@ -332,6 +383,10 @@ export function createChatHandlers({
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
           const completedMessages = fixIncompleteToolCalls(sourceMessages);
+          writeToolTimingsToMetadata(
+            completedMessages,
+            state.ai.getToolTimings(),
+          );
           state.ai.setSessionUiMessages(sessionId, completedMessages);
 
           state.ai.setIsRunning(sessionId, false);
@@ -386,6 +441,10 @@ export function createChatHandlers({
 
         // fix any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = fixIncompleteToolCalls(messages);
+        writeToolTimingsToMetadata(
+          completedMessages,
+          state.ai.getToolTimings(),
+        );
         state.ai.setSessionUiMessages(sessionId, completedMessages);
 
         store.setState((stateToUpdate: AiSliceStateForTransport) =>

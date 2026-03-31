@@ -40,11 +40,13 @@ import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import type {
   AddToolResult,
   AiChatSendMessage,
+  AssistantMessageMetadata,
   GetProviderOptions,
   StoredToolSet,
   ToolRenderer,
   ToolRendererRegistry,
   ToolRenderers,
+  ToolTimingEntry,
 } from './types';
 import type {AgentToolCall} from './agents/AgentUtils';
 import {
@@ -65,6 +67,8 @@ export type AiSliceState = {
     promptSuggestionsVisible: boolean;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
+    /** Transient per-tool-call timing (not persisted; rebuilt from message metadata on load) */
+    toolTimings: Record<string, ToolTimingEntry>;
     tools: StoredToolSet;
     toolRenderers: ToolRendererRegistry;
     getProviderOptions?: GetProviderOptions;
@@ -74,6 +78,10 @@ export type AiSliceState = {
     setApiKeyError: (provider: string, hasError: boolean) => void;
     /** Check if there's an API key error for the current provider */
     hasApiKeyError: () => boolean;
+    /** Record or update timing for a tool call */
+    setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
+    /** Get all tool timings (for reading in components) */
+    getToolTimings: () => Record<string, ToolTimingEntry>;
     getAbortController: (sessionId: string) => AbortController | undefined;
     setAbortController: (
       sessionId: string,
@@ -253,6 +261,22 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         }
       : params.config;
 
+    // Restore tool timings from persisted message metadata
+    const initialToolTimings: Record<string, ToolTimingEntry> = {};
+    if (cleanedConfig?.sessions) {
+      for (const session of cleanedConfig.sessions) {
+        const uiMessages = (session.uiMessages ?? []) as UIMessage[];
+        for (const msg of uiMessages) {
+          if (msg.role !== 'assistant') continue;
+          const meta = msg.metadata as AssistantMessageMetadata | undefined;
+          if (!meta?.toolTimings) continue;
+          for (const [toolCallId, entry] of Object.entries(meta.toolTimings)) {
+            initialToolTimings[toolCallId] = entry;
+          }
+        }
+      }
+    }
+
     // Create persistent Maps (outside of immer draft)
     const pendingToolCallResolvers = new Map<
       string,
@@ -305,6 +329,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         config: baseConfig,
         promptSuggestionsVisible: true,
         apiKeyErrors: {},
+        toolTimings: initialToolTimings,
         tools,
         toolRenderers: params.toolRenderers ?? {},
         getProviderOptions,
@@ -486,6 +511,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const currentSession = state.ai.getCurrentSession();
           const provider = currentSession?.modelProvider || defaultProvider;
           return Boolean(state.ai.apiKeyErrors[provider]);
+        },
+
+        setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.toolTimings[toolCallId] = entry;
+            }),
+          );
+        },
+        getToolTimings: () => {
+          return get().ai.toolTimings;
         },
 
         setPrompt: (sessionId: string, prompt: string) => {

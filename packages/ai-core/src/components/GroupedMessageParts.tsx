@@ -90,6 +90,8 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
               key={`group-${groupIndex}`}
               title={group.title}
               defaultOpen={group.defaultExpanded}
+              isRunning={group.isRunning}
+              toolCallIds={group.toolCallIds}
             >
               {group.parts.map((part, partIndex) =>
                 isToolPart(part) || isDynamicToolPart(part) ? (

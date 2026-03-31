@@ -4,19 +4,15 @@ import remarkGfm from 'remark-gfm';
 import {InfoIcon} from 'lucide-react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
+import type {AgentToolCall} from '../agents/AgentUtils';
 import {useStoreWithAi} from '../AiSlice';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
+import {formatShortDuration} from '@sqlrooms/utils';
 
 const ToolCallDetailPopup: React.FC<{
-  toolCall: {
-    toolCallId: string;
-    toolName: string;
-    output?: unknown;
-    errorText?: string;
-    state: 'pending' | 'success' | 'error';
-  };
+  toolCall: AgentToolCall;
 }> = ({toolCall}) => {
   return (
     <HoverCard openDelay={0} closeDelay={150}>
@@ -70,13 +66,7 @@ const ToolCallDetailPopup: React.FC<{
  */
 const AgentProgressRenderer: React.FC<{
   toolCallId: string;
-  agentToolCalls: Array<{
-    toolCallId: string;
-    toolName: string;
-    output?: unknown;
-    errorText?: string;
-    state: 'pending' | 'success' | 'error';
-  }>;
+  agentToolCalls: AgentToolCall[];
   finalOutput?: string;
   reasoning?: string;
 }> = ({toolCallId, agentToolCalls, finalOutput, reasoning}) => {
@@ -117,6 +107,18 @@ const AgentProgressRenderer: React.FC<{
                 </span>
                 <div className="flex-1">
                   <span className="font-medium">{toolCall.toolName}</span>
+                  {toolCall.startedAt != null &&
+                    (() => {
+                      const elapsed =
+                        (toolCall.completedAt ?? Date.now()) -
+                        toolCall.startedAt;
+                      const showAlways = toolCall.completedAt != null;
+                      return showAlways || elapsed >= 1000 ? (
+                        <span className="ml-1 text-[0.85em] text-gray-400">
+                          {formatShortDuration(elapsed)}
+                        </span>
+                      ) : null;
+                    })()}
                   <ToolCallDetailPopup toolCall={toolCall} />
                   {isError && toolCall.errorText && (
                     <div className="mt-0.5 text-[0.9em] text-red-700">
@@ -171,13 +173,7 @@ const AgentProgressSection: React.FC<{
   const liveProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
   const agentOutput = output as {
-    agentToolCalls?: Array<{
-      toolCallId: string;
-      toolName: string;
-      output?: unknown;
-      errorText?: string;
-      state: 'pending' | 'success' | 'error';
-    }>;
+    agentToolCalls?: AgentToolCall[];
     finalOutput?: string;
   };
 
@@ -251,7 +247,6 @@ export const ToolPartRenderer = ({
 
   const output = state === 'output-available' ? part.output : undefined;
   const errorText = state === 'output-error' ? part.errorText : undefined;
-  const isCompleted = state === 'output-available' || state === 'output-error';
 
   const hasExecute = !!tools[toolName]?.execute;
   // Look up directly from the registry object (stable reference) to avoid
@@ -288,8 +283,9 @@ export const ToolPartRenderer = ({
         <ToolCallInfo
           toolName={toolName}
           input={input}
-          isCompleted={isCompleted}
           state={state}
+          stableKey={toolCallId}
+          hideElapsed={isAgentTool}
         />
         <div data-tool-call-id={toolCallId}>
           {isAgentTool ? (

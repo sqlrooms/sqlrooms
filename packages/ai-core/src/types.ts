@@ -10,6 +10,23 @@ import type {
 import {streamText} from 'ai';
 import type {AgentToolCall} from './agents/AgentUtils';
 
+/**
+ * Per-tool-call timing entry stored in assistant message metadata.
+ * Uses startedAt/completedAt (matching AgentToolCall) so elapsed can
+ * be derived as `completedAt - startedAt`.
+ */
+export type ToolTimingEntry = {
+  startedAt: number;
+  completedAt?: number;
+};
+
+/**
+ * Shape of custom metadata we store on assistant UIMessages.
+ */
+export type AssistantMessageMetadata = {
+  toolTimings?: Record<string, ToolTimingEntry>;
+};
+
 export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
 >;
@@ -107,6 +124,9 @@ export interface AiStateForTransport {
   getBaseUrlFromSettings: () => string | undefined;
   /** Set API key error flag for a provider */
   setApiKeyError: (provider: string, hasError: boolean) => void;
+  /** Per-tool-call timing entries, keyed by toolCallId */
+  setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
+  getToolTimings: () => Record<string, ToolTimingEntry>;
 }
 
 /**

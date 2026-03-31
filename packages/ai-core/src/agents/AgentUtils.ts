@@ -34,6 +34,8 @@ export type AgentToolCall = {
   output?: unknown;
   errorText?: string;
   state: 'pending' | 'success' | 'error';
+  startedAt?: number;
+  completedAt?: number;
 };
 
 /**
@@ -113,6 +115,7 @@ export async function processAgentStream(
           toolCallId: id,
           toolName: chunk.toolName,
           state: 'pending',
+          startedAt: Date.now(),
         });
         changed = true;
       }
@@ -125,6 +128,7 @@ export async function processAgentStream(
           ...entry,
           output: chunk.output,
           state: 'success',
+          completedAt: Date.now(),
         });
         changed = true;
       } else if (
@@ -135,6 +139,7 @@ export async function processAgentStream(
           ...entry,
           errorText: chunk.errorText,
           state: 'error',
+          completedAt: Date.now(),
         });
         changed = true;
       }

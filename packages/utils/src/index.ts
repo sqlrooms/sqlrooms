@@ -15,6 +15,7 @@ export {
   formatTimeOfDay,
   formatTimeRelative,
   formatTimestampForFilename,
+  formatShortDuration,
   getErrorMessageForDisplay,
 } from './helpers';
 
