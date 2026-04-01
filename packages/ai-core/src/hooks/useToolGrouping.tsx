@@ -24,12 +24,14 @@ export type ToolGroup = {
  * @param uiMessageParts - Array of UI message parts from the assistant
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
  * @param exclude - Array of tool names that should not be grouped and must be rendered separately
+ * @param toolDisplayNames - Optional map from tool name to human-readable display name
  * @returns Grouped parts with generated titles for tool groups
  */
 export function useToolGrouping(
   uiMessageParts: UIMessagePart[],
   containerWidth: number = 0,
   exclude: string[] = [],
+  toolDisplayNames: Record<string, string> = {},
 ): ToolGroup[] {
   return useMemo(() => {
     if (!uiMessageParts.length) return [];
@@ -86,7 +88,12 @@ export function useToolGrouping(
             type: 'tool-group',
             parts: [part],
             startIndex: i,
-            title: generateToolGroupTitle([part], false, containerWidth),
+            title: generateToolGroupTitle(
+              [part],
+              false,
+              containerWidth,
+              toolDisplayNames,
+            ),
             defaultExpanded: true,
             isRunning: excludedIsRunning,
             toolCallIds: excludedKey ? [excludedKey] : [],
@@ -156,21 +163,23 @@ export function useToolGrouping(
           // Otherwise (step-start, etc.), keep looking
         }
 
-        // Generate title for this tool group
         const title = generateToolGroupTitle(
           toolParts,
           hasMoreToolsAfter,
           containerWidth,
+          toolDisplayNames,
         );
 
-        const groupIsRunning = toolParts.some((p) => {
-          const s = (p as any).state;
-          return s !== 'output-available' && s !== 'output-error';
-        });
-
+        const groupIsRunning = toolParts.some(
+          (p) =>
+            !(
+              (p as any).state === 'output-available' ||
+              (p as any).state === 'output-error'
+            ),
+        );
         const groupToolCallIds = toolParts
-          .map((tp) => (tp as any)?.toolCallId as string | undefined)
-          .filter((id): id is string => id != null);
+          .map((p) => (p as any).toolCallId as string | undefined)
+          .filter((id): id is string => !!id);
 
         groups.push({
           type: 'tool-group',
@@ -187,7 +196,7 @@ export function useToolGrouping(
     }
 
     return groups;
-  }, [uiMessageParts, containerWidth, exclude]);
+  }, [uiMessageParts, containerWidth, exclude, toolDisplayNames]);
 }
 
 /**
@@ -219,15 +228,28 @@ function getToolIcon(toolName: string): React.ReactNode | null {
 }
 
 /**
+ * Fallback: convert a kebab/camelCase tool name to a readable title.
+ * e.g. "agent-h3hub" -> "Agent H3hub", "createMapLayer" -> "Create Map Layer"
+ */
+function formatToolNameFallback(name: string): string {
+  return name
+    .replace(/-/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
  * Generate a dynamic title for a tool group based on completion status and reasoning
  * @param toolParts - The tool parts in this group
  * @param hasMoreToolsAfter - Whether there are more tool calls after this group
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
+ * @param toolDisplayNames - Optional map from tool name to human-readable display name
  */
 function generateToolGroupTitle(
   toolParts: UIMessagePart[],
   hasMoreToolsAfter: boolean,
   containerWidth: number,
+  toolDisplayNames: Record<string, string> = {},
 ): React.ReactNode {
   // Filter to only tool parts
   const actualToolParts = toolParts.filter(
@@ -237,7 +259,7 @@ function generateToolGroupTitle(
         (typeof p.type === 'string' && p.type === 'dynamic-tool')),
   );
 
-  if (actualToolParts.length === 0) return 'Thought';
+  if (actualToolParts.length === 0) return 'Processing';
 
   // Check if all tools in this group are completed
   const allCompleted = actualToolParts.every((p) => {
@@ -247,12 +269,23 @@ function generateToolGroupTitle(
 
   const toolCount = actualToolParts.length;
 
-  // Collect all unique tool names to determine icons
-  const toolNames = new Set(
-    actualToolParts
-      .map((p) => getToolName(p))
-      .filter((name) => name !== 'unknown'),
-  );
+  // Collect all unique tool names to determine icons and display names
+  const toolNamesList = actualToolParts
+    .map((p) => getToolName(p))
+    .filter((name) => name !== 'unknown');
+  const toolNames = new Set(toolNamesList);
+
+  // Resolve unique display names (preserving insertion order)
+  const uniqueDisplayNames: string[] = [];
+  const seen = new Set<string>();
+  for (const name of toolNamesList) {
+    if (!seen.has(name)) {
+      seen.add(name);
+      uniqueDisplayNames.push(
+        toolDisplayNames[name] ?? formatToolNameFallback(name),
+      );
+    }
+  }
 
   // Check if we have both 'createMapLayer' and 'chart' tools
   const hasMapLayer = toolNames.has('createMapLayer');
@@ -286,14 +319,13 @@ function generateToolGroupTitle(
   const isStillThinking = !allCompleted || hasMoreToolsAfter;
 
   if (isStillThinking) {
-    // For active thinking, show reasoning text if available
     const lastToolPart = actualToolParts[actualToolParts.length - 1];
     const reasoning = lastToolPart
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    const baseTitle =
-      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
+    const toolLabel = uniqueDisplayNames.join(', ');
+    const baseTitle = `Running ${toolLabel}...`;
 
     // Calculate max reasoning length based on container width
     // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
@@ -326,9 +358,9 @@ function generateToolGroupTitle(
       </span>
     );
   } else {
-    // For completed thoughts (and no more tools after), just show tool count without reasoning
+    const toolLabel = uniqueDisplayNames.join(', ');
     const titleText =
-      toolCount === 1 ? 'Thought (1 tool)' : `Thought (${toolCount} tools)`;
+      toolCount === 1 ? toolLabel : `${toolLabel} (${toolCount})`;
     return (
       <span className="flex w-full items-center justify-between">
         <span className="truncate">{titleText}</span>

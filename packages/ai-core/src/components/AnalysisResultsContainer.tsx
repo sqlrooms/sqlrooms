@@ -13,12 +13,15 @@ export const AnalysisResultsContainer: React.FC<{
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   excludeFromGrouping?: string[];
+  /** Map from tool name to human-readable display name for ReasoningBox titles */
+  toolDisplayNames?: Record<string, string>;
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
   enableReasoningBox = false,
   customMarkdownComponents,
   excludeFromGrouping: excludeFromGrouping,
+  toolDisplayNames,
   ErrorMessageComponent,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -62,6 +65,7 @@ export const AnalysisResultsContainer: React.FC<{
             enableReasoningBox={enableReasoningBox}
             customMarkdownComponents={customMarkdownComponents}
             excludeFromGrouping={excludeFromGrouping}
+            toolDisplayNames={toolDisplayNames}
             ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}

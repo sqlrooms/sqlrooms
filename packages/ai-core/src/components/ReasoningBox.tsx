@@ -1,17 +1,17 @@
 import {ChevronDownIcon, ChevronRightIcon} from 'lucide-react';
-import {useState, useMemo} from 'react';
+import {useMemo, useState} from 'react';
 import {cn} from '@sqlrooms/ui';
-import {useElapsedTime} from '../hooks/useElapsedTime';
 import {useStoreWithAi} from '../AiSlice';
+import {useElapsedTime} from '../hooks/useElapsedTime';
 
 type ReasoningBoxProps = {
   children: React.ReactNode;
   className?: string;
   title?: React.ReactNode;
   defaultOpen?: boolean;
-  /** Whether the tool group is still executing (drives the elapsed timer) */
+  /** Whether tool calls in this group are still executing */
   isRunning?: boolean;
-  /** Tool call IDs whose timings should be used to derive the group elapsed */
+  /** Tool call IDs used to derive the group's elapsed time from store timings */
   toolCallIds?: string[];
 };
 export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
@@ -22,50 +22,38 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   isRunning = false,
   toolCallIds,
 }) => {
-  const displayTitle = title ?? 'Thought';
+  const displayTitle = title ?? 'Processing';
   const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  const toolTimings = useStoreWithAi((s) => s.ai.toolTimings);
-
-  const {groupStartedAt, groupCompletedAt} = useMemo(() => {
-    if (!toolCallIds?.length) return {};
-    let earliest: number | undefined;
-    let latestEnd: number | undefined;
-    let allComplete = true;
-
-    for (const tcId of toolCallIds) {
-      const entry = toolTimings[tcId];
-      if (!entry) {
-        allComplete = false;
-        continue;
-      }
-      if (earliest == null || entry.startedAt < earliest) {
-        earliest = entry.startedAt;
-      }
-      if (entry.completedAt != null) {
-        if (latestEnd == null || entry.completedAt > latestEnd) {
-          latestEnd = entry.completedAt;
-        }
-      } else {
-        allComplete = false;
-      }
-    }
-
-    return {
-      groupStartedAt: earliest,
-      groupCompletedAt: allComplete ? latestEnd : undefined,
-    };
-  }, [toolCallIds, toolTimings]);
-
-  const elapsedText = useElapsedTime(
-    isRunning,
-    groupStartedAt,
-    groupCompletedAt,
-  );
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
   };
+
+  const toolTimings = useStoreWithAi((s) => s.ai.toolTimings);
+
+  const {startedAt, completedAt} = useMemo(() => {
+    if (!toolCallIds?.length)
+      return {startedAt: undefined, completedAt: undefined};
+    let earliest: number | undefined;
+    let latest: number | undefined;
+    let allCompleted = true;
+    for (const id of toolCallIds) {
+      const t = toolTimings[id];
+      if (!t) continue;
+      if (earliest == null || t.startedAt < earliest) earliest = t.startedAt;
+      if (t.completedAt != null) {
+        if (latest == null || t.completedAt > latest) latest = t.completedAt;
+      } else {
+        allCompleted = false;
+      }
+    }
+    return {
+      startedAt: earliest,
+      completedAt: allCompleted ? latest : undefined,
+    };
+  }, [toolCallIds, toolTimings]);
+
+  const elapsedText = useElapsedTime(isRunning, startedAt, completedAt);
 
   return (
     <div className={cn('border-muted rounded-md border', className)}>

@@ -24,6 +24,8 @@ type AnalysisResultProps = {
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   excludeFromGrouping?: string[];
+  /** Map from tool name to human-readable display name for ReasoningBox titles */
+  toolDisplayNames?: Record<string, string>;
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
 
@@ -42,6 +44,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   enableReasoningBox = false,
   customMarkdownComponents,
   excludeFromGrouping: userTools,
+  toolDisplayNames,
   ErrorMessageComponent,
 }) => {
   const uiMessages = useStoreWithAi(
@@ -87,8 +90,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     };
   }, []);
 
-  // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
+  const groupedParts = useToolGrouping(
+    uiMessageParts,
+    divWidth,
+    userTools,
+    toolDisplayNames,
+  );
 
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
