@@ -90,7 +90,6 @@ export function useToolGrouping(
             startIndex: i,
             title: generateToolGroupTitle(
               [part],
-              false,
               containerWidth,
               toolDisplayNames,
             ),
@@ -141,31 +140,8 @@ export function useToolGrouping(
           }
         }
 
-        // Check if the next group (before any text/reasoning) has more tool parts
-        // If there's a text or reasoning part before the next tool, this reasoning chain is complete
-        let hasMoreToolsAfter = false;
-        for (let k = j; k < uiMessageParts.length; k++) {
-          const nextPart = uiMessageParts[k];
-          if (!nextPart) continue;
-
-          // If we hit a text or reasoning part, the reasoning chain is broken
-          if (isTextPart(nextPart) || isReasoningPart(nextPart)) {
-            hasMoreToolsAfter = false;
-            break;
-          }
-
-          // If we find another tool part, reasoning continues (but only if it's not excluded)
-          if (isAnyToolPart(nextPart) && !isExcludedTool(nextPart)) {
-            hasMoreToolsAfter = true;
-            break;
-          }
-
-          // Otherwise (step-start, etc.), keep looking
-        }
-
         const title = generateToolGroupTitle(
           toolParts,
-          hasMoreToolsAfter,
           containerWidth,
           toolDisplayNames,
         );
@@ -229,7 +205,7 @@ function getToolIcon(toolName: string): React.ReactNode | null {
 
 /**
  * Fallback: convert a kebab/camelCase tool name to a readable title.
- * e.g. "agent-h3hub" -> "Agent H3hub", "createMapLayer" -> "Create Map Layer"
+ * e.g. "agent-weather" -> "Agent Weather", "createMapLayer" -> "Create Map Layer"
  */
 function formatToolNameFallback(name: string): string {
   return name
@@ -241,13 +217,11 @@ function formatToolNameFallback(name: string): string {
 /**
  * Generate a dynamic title for a tool group based on completion status and reasoning
  * @param toolParts - The tool parts in this group
- * @param hasMoreToolsAfter - Whether there are more tool calls after this group
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
  * @param toolDisplayNames - Optional map from tool name to human-readable display name
  */
 function generateToolGroupTitle(
   toolParts: UIMessagePart[],
-  hasMoreToolsAfter: boolean,
   containerWidth: number,
   toolDisplayNames: Record<string, string> = {},
 ): React.ReactNode {
@@ -275,17 +249,17 @@ function generateToolGroupTitle(
     .filter((name) => name !== 'unknown');
   const toolNames = new Set(toolNamesList);
 
-  // Resolve unique display names (preserving insertion order)
+  // Resolve unique display names (preserving insertion order, dedup by label)
   const uniqueDisplayNames: string[] = [];
-  const seen = new Set<string>();
+  const seenLabels = new Set<string>();
   for (const name of toolNamesList) {
-    if (!seen.has(name)) {
-      seen.add(name);
-      uniqueDisplayNames.push(
-        toolDisplayNames[name] ?? formatToolNameFallback(name),
-      );
+    const label = toolDisplayNames[name] ?? formatToolNameFallback(name);
+    if (!seenLabels.has(label)) {
+      seenLabels.add(label);
+      uniqueDisplayNames.push(label);
     }
   }
+  const toolLabel = uniqueDisplayNames.join(', ') || 'Tool';
 
   // Check if we have both 'createMapLayer' and 'chart' tools
   const hasMapLayer = toolNames.has('createMapLayer');
@@ -313,10 +287,7 @@ function generateToolGroupTitle(
     icon = getToolIcon(firstToolName);
   }
 
-  // Show "Thinking..." if:
-  // 1. Tools are not completed yet, OR
-  // 2. Tools are completed but there are more tool calls coming after
-  const isStillThinking = !allCompleted || hasMoreToolsAfter;
+  const isStillThinking = !allCompleted;
 
   if (isStillThinking) {
     const lastToolPart = actualToolParts[actualToolParts.length - 1];
@@ -324,7 +295,6 @@ function generateToolGroupTitle(
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    const toolLabel = uniqueDisplayNames.join(', ');
     const baseTitle = `Running ${toolLabel}...`;
 
     // Calculate max reasoning length based on container width
@@ -358,7 +328,6 @@ function generateToolGroupTitle(
       </span>
     );
   } else {
-    const toolLabel = uniqueDisplayNames.join(', ');
     const titleText =
       toolCount === 1 ? toolLabel : `${toolLabel} (${toolCount})`;
     return (
