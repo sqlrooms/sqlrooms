@@ -147,7 +147,9 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
-        messages: convertToModelMessages(sanitizeMessagesForLLM(messagesCopy)),
+        messages: convertToModelMessages(sanitizeMessagesForLLM(messagesCopy), {
+          tools: state.ai.tools as ToolSet,
+        }),
         tools,
         system: systemInstructions,
         abortSignal,
@@ -262,6 +264,7 @@ export function createChatHandlers({
             toolCallId,
             messages: convertToModelMessages(
               sanitizeMessagesForLLM(sessionMessages),
+              {tools: state.ai.tools as ToolSet},
             ),
             abortSignal: abortController?.signal,
           });
