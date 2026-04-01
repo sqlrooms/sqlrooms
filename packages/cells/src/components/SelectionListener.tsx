@@ -1,13 +1,54 @@
 import {SignalListenerHandler, useVegaChartContext} from '@sqlrooms/vega';
 import React, {useEffect, useRef} from 'react';
 import {useCellsStore} from '../hooks';
-import type {CrossFilterSelection, VegaCell} from '../types';
+import type {BrushFieldType, CrossFilterSelection, VegaCell} from '../types';
 import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
 import {useVegaCrossFilterOptions} from '../hooks/useVegaCrossFilterOptions';
 
 type SelectionListenerProps = {
   cell: VegaCell;
 };
+
+/**
+ * Converts Vega selection signal value to CrossFilterSelection.
+ * Returns null if the selection is invalid or should be cleared.
+ */
+function buildCrossFilterSelection(
+  brushField: string,
+  brushFieldType: BrushFieldType | undefined,
+  fieldValue: any,
+): CrossFilterSelection | null {
+  if (!Array.isArray(fieldValue)) {
+    return null;
+  }
+
+  // String fields use point selection - return array of selected values
+  if (brushFieldType === 'string') {
+    if (fieldValue.length > 0) {
+      return {
+        field: brushField,
+        fieldType: brushFieldType,
+        type: 'point',
+        value: fieldValue,
+      };
+    }
+    return null;
+  }
+
+  // Numeric/temporal/boolean fields use interval selection
+  // With proper type encodings, Vega always returns [min, max]
+  if (fieldValue.length === 2) {
+    return {
+      field: brushField,
+      fieldType: brushFieldType,
+      type: 'interval',
+      value: fieldValue,
+    };
+  }
+
+  // Invalid interval - clear selection
+  return null;
+}
 
 /**
  * Attaches a debounced Vega signal listener for the brush param
@@ -35,49 +76,18 @@ export const SelectionListener: React.FC<SelectionListenerProps> = ({cell}) => {
       }
 
       timerRef.current = setTimeout(() => {
-        if (!value || Object.keys(value).length === 0) {
+        if (!value || Object.keys(value).length === 0 || !brushField) {
           setCrossFilterSelection(cellId, selectedSqlId, null);
-          return;
-        }
-
-        if (!brushField) {
           return;
         }
 
         const fieldValue = value.x ?? value[brushField];
-
-        if (Array.isArray(fieldValue)) {
-          let interval: [any, any] | null = null;
-
-          if (fieldValue.length === 2) {
-            // Standard interval format [min, max]
-            interval = fieldValue as [any, any];
-          } else if (fieldValue.length > 2) {
-            // For datetime binning, Vega returns array of all selected values
-            // Extract min and max to create interval
-            const sorted = [...fieldValue].sort((a, b) => {
-              // Handle both numeric timestamps and ISO strings
-              const aVal = typeof a === 'string' ? new Date(a).getTime() : a;
-              const bVal = typeof b === 'string' ? new Date(b).getTime() : b;
-              return aVal - bVal;
-            });
-            interval = [sorted[0], sorted[sorted.length - 1]];
-          }
-
-          if (interval) {
-            const selection: CrossFilterSelection = {
-              field: brushField,
-              fieldType: brushFieldType,
-              type: 'interval',
-              value: interval,
-            };
-            setCrossFilterSelection(cellId, selectedSqlId, selection);
-          } else {
-            setCrossFilterSelection(cellId, selectedSqlId, null);
-          }
-        } else {
-          setCrossFilterSelection(cellId, selectedSqlId, null);
-        }
+        const selection = buildCrossFilterSelection(
+          brushField,
+          brushFieldType,
+          fieldValue,
+        );
+        setCrossFilterSelection(cellId, selectedSqlId, selection);
       }, 200);
     };
 

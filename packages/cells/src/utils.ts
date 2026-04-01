@@ -13,6 +13,7 @@ export type SchemaSource = arrow.Table | {schema: {fields: arrow.Field[]}};
 
 /**
  * Detects the BrushFieldType for a given field in an Arrow table or schema.
+ * Returns null for types that don't support cross-filtering (binary, json, struct, geometry).
  */
 export function detectFieldType(
   fieldName: string,
@@ -23,11 +24,25 @@ export function detectFieldType(
 
   const arrowField = fields?.find((field) => field.name === fieldName);
 
-  if (!arrowField) return 'numeric';
+  if (!arrowField) {
+    return null;
+  }
+
   const category = getArrowColumnTypeCategory(arrowField.type);
-  if (category === 'datetime') return 'temporal';
-  if (category === 'string') return 'string';
-  return 'numeric';
+
+  switch (category) {
+    case 'datetime':
+      return 'temporal';
+    case 'string':
+      return 'string';
+    case 'number':
+      return 'numeric';
+    case 'boolean':
+      return 'boolean';
+    // Unsupported types for cross-filtering: binary, json, struct, geometry
+    default:
+      return null;
+  }
 }
 
 /**

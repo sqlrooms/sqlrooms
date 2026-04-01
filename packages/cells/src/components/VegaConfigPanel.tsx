@@ -142,9 +142,11 @@ export const VegaConfigPanel: React.FC<VegaConfigPanelProps> = ({
       }),
     );
     if ('xField' in overrides) {
-      onBrushFieldChange(cfEnabled ? overrides.xField : undefined);
+      // Only set brush field if cross-filter is enabled AND field type supports it
+      const shouldSetBrushField = cfEnabled && xFieldType !== null;
+      onBrushFieldChange(shouldSetBrushField ? overrides.xField : undefined);
       onBrushFieldTypeChange(
-        cfEnabled && overrides.xField ? xFieldType : undefined,
+        shouldSetBrushField && overrides.xField ? xFieldType : undefined,
       );
     }
   };
@@ -152,21 +154,28 @@ export const VegaConfigPanel: React.FC<VegaConfigPanelProps> = ({
   const handleMarkChange = (mark: string) => rebuild({mark});
   const handleXFieldChange = (field: string) => {
     const fieldType = getFieldType(field);
+    // Disable cross-filtering if field type doesn't support it
+    const canCrossFilter = fieldType !== null;
+    const effectiveCrossFilter = crossFilterEnabled && canCrossFilter;
+
     // Reset time scale when changing to non-temporal field
     if (fieldType !== 'temporal') {
       onXTimeScaleChange('none');
-      rebuild({xField: field, xTimeScale: 'none'}, crossFilterEnabled);
+      rebuild({xField: field, xTimeScale: 'none'}, effectiveCrossFilter);
     } else {
-      rebuild({xField: field});
+      rebuild({xField: field}, effectiveCrossFilter);
+    }
+
+    // Auto-disable cross-filtering if field doesn't support it
+    if (!canCrossFilter && crossFilterEnabled) {
+      onCrossFilterToggle(false);
     }
   };
   const handleYFieldChange = (field: string) => {
     const fieldType = getFieldType(field);
-    // For string and temporal fields, force count aggregation. For numeric, use current or default to sum
+    // Only numeric fields support sum/mean, all others force count aggregation
     const aggregate =
-      fieldType === 'string' || fieldType === 'temporal'
-        ? 'count'
-        : (current.yAggregate ?? 'sum');
+      fieldType === 'numeric' ? (current.yAggregate ?? 'sum') : 'count';
     rebuild({yField: field, yAggregate: aggregate});
   };
   const handleYAggregationChange = (aggregate: string) =>
@@ -181,13 +190,16 @@ export const VegaConfigPanel: React.FC<VegaConfigPanelProps> = ({
   const handleCrossFilterToggle = (enabled: boolean) => {
     onCrossFilterToggle(enabled);
     rebuild({}, enabled);
-    onBrushFieldChange(enabled ? current.xField : undefined);
+    // Only set brush field if enabled AND field type supports cross-filtering
+    const shouldSetBrushField = enabled && fieldTypes.xField !== null;
+    onBrushFieldChange(shouldSetBrushField ? current.xField : undefined);
     onBrushFieldTypeChange(
-      enabled && current.xField ? fieldTypes.xField : undefined,
+      shouldSetBrushField && current.xField ? fieldTypes.xField : undefined,
     );
   };
 
   const isXFieldTemporal = fieldTypes.xField === 'temporal';
+  const xFieldSupportsCrossFilter = fieldTypes.xField !== null;
 
   const yFieldType = fieldTypes.yField;
 
@@ -251,14 +263,22 @@ export const VegaConfigPanel: React.FC<VegaConfigPanelProps> = ({
 
             <Separator />
 
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-gray-400">
-                Cross-filter
-              </Label>
-              <Switch
-                checked={crossFilterEnabled}
-                onCheckedChange={handleCrossFilterToggle}
-              />
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-gray-400">
+                  Cross-filter
+                </Label>
+                <Switch
+                  checked={crossFilterEnabled}
+                  onCheckedChange={handleCrossFilterToggle}
+                  disabled={!xFieldSupportsCrossFilter}
+                />
+              </div>
+              {!xFieldSupportsCrossFilter && (
+                <p className="text-xs text-gray-500">
+                  Selected field type does not support cross-filtering
+                </p>
+              )}
             </div>
           </TabsContent>
 

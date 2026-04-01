@@ -26,6 +26,7 @@ export const AggregationSelector: React.FC<AggregationSelectorProps> = ({
   onValueChange,
 }) => {
   const availableOptions = useMemo(() => {
+    // Only numeric fields support sum/mean, all others are count-only
     return fieldType === 'numeric'
       ? aggregationOptions
       : aggregationOptions.filter((opt) => opt.value === 'count');

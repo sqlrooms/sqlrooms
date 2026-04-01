@@ -62,15 +62,16 @@ export const TextCellData = z.object({
 export type TextCellData = z.infer<typeof TextCellData>;
 
 /** Field type category for cross-filter predicates */
-export type BrushFieldType = 'numeric' | 'temporal' | 'string';
+export const BrushFieldType = z
+  .enum(['numeric', 'temporal', 'string', 'boolean'])
+  .nullable();
+export type BrushFieldType = z.infer<typeof BrushFieldType>;
 
 /** Cross-filter configuration for Vega chart cells */
 export const CrossFilterConfig = z.object({
   enabled: z.boolean().default(true),
   brushField: z.string().optional(),
-  brushFieldType: z
-    .enum(['numeric', 'temporal', 'string'])
-    .optional() as z.ZodOptional<z.ZodType<BrushFieldType>>,
+  brushFieldType: BrushFieldType.optional(),
 });
 export type CrossFilterConfig = z.infer<typeof CrossFilterConfig>;
 

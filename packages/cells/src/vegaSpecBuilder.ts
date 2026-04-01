@@ -22,6 +22,23 @@ function getTemporalAxisFormat(timeScale: string): string {
 }
 
 /**
+ * Get Vega-Lite encoding properties for a field type.
+ * Returns type and scale configuration to ensure proper interval selection behavior.
+ */
+function getFieldTypeEncoding(fieldType: BrushFieldType | undefined): any {
+  switch (fieldType) {
+    case 'temporal':
+      return {type: 'temporal', scale: {type: 'time'}};
+    case 'numeric':
+      return {type: 'quantitative'};
+    case 'boolean':
+      return {type: 'quantitative'}; // Booleans map to 0/1
+    default:
+      return {}; // String, null, or undefined - no explicit type
+  }
+}
+
+/**
  * Read the flat encoding/mark values from either a flat spec or a
  * dual-layer cross-filter spec so the config panel dropdowns reflect
  * the current state regardless of spec shape.
@@ -72,18 +89,15 @@ export function buildCrossFilterSpec(opts: {
   const xEnc: any = xField
     ? {
         field: xField,
-        // Apply Vega-side binning only for numeric fields without SQL-side datetime binning
+        // Set explicit type for all field types using helper
+        ...getFieldTypeEncoding(xFieldType),
+        // Apply Vega-side binning only for numeric fields
         ...(xFieldType === 'numeric' && !isDateTimeBinned
           ? {bin: {maxbins: 20}}
           : {}),
-        // Set temporal type and axis format when datetime is binned by SQL
-        // Note: xFieldType will be 'string' after CAST AS VARCHAR, but we still need temporal formatting
+        // Apply axis format only when datetime is SQL-binned
         ...(isDateTimeBinned
-          ? {
-              type: 'temporal',
-              scale: {type: 'time'},
-              axis: {format: getTemporalAxisFormat(xTimeScale)},
-            }
+          ? {axis: {format: getTemporalAxisFormat(xTimeScale)}}
           : {}),
       }
     : undefined;
@@ -99,13 +113,20 @@ export function buildCrossFilterSpec(opts: {
 
   // Build data spec with format for parsing ISO date strings from SQL
   const dataSpec: any = {name: 'queryResult'};
-  if (xField && isDateTimeBinned) {
+  // Parse ALL temporal fields as dates (not just binned ones)
+  if (xField && xFieldType === 'temporal') {
     dataSpec.format = {
       parse: {
         [xField]: 'date',
       },
     };
   }
+
+  // Use point selection for strings (categorical data), interval for numeric/temporal
+  const selectionType =
+    xFieldType === 'string'
+      ? {type: 'point' as const, on: 'click', toggle: true, encodings: ['x']}
+      : {type: 'interval' as const, encodings: ['x']};
 
   return {
     data: dataSpec,
@@ -116,7 +137,7 @@ export function buildCrossFilterSpec(opts: {
         params: [
           {
             name: BRUSH_PARAM_NAME,
-            select: {type: 'interval', encodings: ['x']},
+            select: selectionType,
           },
         ],
         mark,
@@ -148,20 +169,18 @@ export function buildFlatSpec(opts: {
   yAggregate?: string;
   color?: string;
 }): any {
-  const {mark, xField, xTimeScale, yField, yAggregate, color} = opts;
+  const {mark, xField, xFieldType, xTimeScale, yField, yAggregate, color} =
+    opts;
   const isDateTimeBinned = xTimeScale && xTimeScale !== 'none';
   const encoding: any = {};
   if (xField) {
     encoding.x = {
       field: xField,
-      // Set temporal type and axis format when datetime is binned by SQL
-      // Note: xFieldType will be 'string' after CAST AS VARCHAR, but we still need temporal formatting
+      // Use helper function for explicit types
+      ...getFieldTypeEncoding(xFieldType),
+      // Apply axis format only when SQL-binned
       ...(isDateTimeBinned
-        ? {
-            type: 'temporal',
-            scale: {type: 'time'},
-            axis: {format: getTemporalAxisFormat(xTimeScale)},
-          }
+        ? {axis: {format: getTemporalAxisFormat(xTimeScale)}}
         : {}),
     };
   }
@@ -171,7 +190,8 @@ export function buildFlatSpec(opts: {
 
   // Build data spec with format for parsing ISO date strings from SQL
   const dataSpec: any = {name: 'queryResult'};
-  if (xField && isDateTimeBinned) {
+  // Parse ALL temporal fields as dates (not just binned ones)
+  if (xField && xFieldType === 'temporal') {
     dataSpec.format = {
       parse: {
         [xField]: 'date',
