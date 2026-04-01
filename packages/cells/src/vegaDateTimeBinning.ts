@@ -44,9 +44,7 @@ export function wrapQueryWithDateTimeBinning(
   const {precedingStatements, lastStatement} = separateLastStatement(query);
 
   // Build the CTE wrapping the base query
-  const cte = `WITH _vega_base AS (
-  ${lastStatement}
-)`;
+  const cte = `WITH _vega_base AS (${lastStatement})`;
 
   // Build the aggregation expression
   const truncatedXField = `DATE_TRUNC('${timeScale}', ${escapeId(xField)})`;

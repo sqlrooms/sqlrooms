@@ -122,12 +122,6 @@ export function buildCrossFilterSpec(opts: {
     };
   }
 
-  // Use point selection for strings (categorical data), interval for numeric/temporal
-  const selectionType =
-    xFieldType === 'string'
-      ? {type: 'point' as const, on: 'click', toggle: true, encodings: ['x']}
-      : {type: 'interval' as const, encodings: ['x']};
-
   return {
     data: dataSpec,
     width: 'container',
@@ -137,7 +131,7 @@ export function buildCrossFilterSpec(opts: {
         params: [
           {
             name: BRUSH_PARAM_NAME,
-            select: selectionType,
+            select: {type: 'interval' as const, encodings: ['x']},
           },
         ],
         mark,
