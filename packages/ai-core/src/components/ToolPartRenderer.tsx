@@ -1,9 +1,14 @@
 import React from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {InfoIcon} from 'lucide-react';
+import {InfoIcon, CodeIcon} from 'lucide-react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
-import {HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+  Button,
+} from '@sqlrooms/ui';
 import {useStoreWithAi} from '../AiSlice';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
@@ -13,11 +18,45 @@ const ToolCallDetailPopup: React.FC<{
   toolCall: {
     toolCallId: string;
     toolName: string;
+    args?: unknown;
     output?: unknown;
     errorText?: string;
     state: 'pending' | 'success' | 'error';
   };
 }> = ({toolCall}) => {
+  const onOpenSqlEditor = useStoreWithAi((s) => s.ai.onOpenSqlEditor);
+
+  const isQueryTool =
+    toolCall.toolName === 'query' || toolCall.toolName === 'queryTool';
+
+  // Extract sqlQuery from args or output
+  const sqlQuery = (() => {
+    if (
+      toolCall.args &&
+      typeof toolCall.args === 'object' &&
+      'sqlQuery' in toolCall.args
+    ) {
+      return (toolCall.args as {sqlQuery: string}).sqlQuery;
+    }
+    if (
+      toolCall.output &&
+      typeof toolCall.output === 'object' &&
+      'sqlQuery' in toolCall.output
+    ) {
+      return (toolCall.output as {sqlQuery: string}).sqlQuery;
+    }
+    return null;
+  })();
+
+  const hasQueryData =
+    isQueryTool && sqlQuery && toolCall.state === 'success' && onOpenSqlEditor;
+
+  const handleLoadQuery = () => {
+    if (onOpenSqlEditor && sqlQuery) {
+      onOpenSqlEditor(sqlQuery);
+    }
+  };
+
   return (
     <HoverCard openDelay={0} closeDelay={150}>
       <HoverCardTrigger asChild>
@@ -58,6 +97,19 @@ const ToolCallDetailPopup: React.FC<{
             {toolCall.errorText}
           </div>
         )}
+        {hasQueryData && (
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={handleLoadQuery}
+              className="w-full"
+            >
+              <CodeIcon className="mr-1 h-3 w-3" />
+              Open in SQL Editor
+            </Button>
+          </div>
+        )}
       </HoverCardContent>
     </HoverCard>
   );
@@ -73,6 +125,7 @@ const AgentProgressRenderer: React.FC<{
   agentToolCalls: Array<{
     toolCallId: string;
     toolName: string;
+    args?: unknown;
     output?: unknown;
     errorText?: string;
     state: 'pending' | 'success' | 'error';
@@ -174,6 +227,7 @@ const AgentProgressSection: React.FC<{
     agentToolCalls?: Array<{
       toolCallId: string;
       toolName: string;
+      args?: unknown;
       output?: unknown;
       errorText?: string;
       state: 'pending' | 'success' | 'error';

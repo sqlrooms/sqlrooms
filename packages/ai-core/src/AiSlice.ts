@@ -68,6 +68,7 @@ export type AiSliceState = {
     tools: StoredToolSet;
     toolRenderers: ToolRendererRegistry;
     getProviderOptions?: GetProviderOptions;
+    onOpenSqlEditor?: (sqlQuery: string) => void;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
     /** Set API key error flag for a provider */
@@ -212,6 +213,8 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   chatEndPoint?: string;
   /** Optional headers to send with remote endpoint */
   chatHeaders?: Record<string, string>;
+  /** Optional callback when user wants to open a SQL query in the editor */
+  onOpenSqlEditor?: (sqlQuery: string) => void;
 }
 
 export function createAiSlice<TTools extends ToolSet = ToolSet>(
@@ -230,6 +233,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
+    onOpenSqlEditor,
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
@@ -308,6 +312,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         tools,
         toolRenderers: params.toolRenderers ?? {},
         getProviderOptions,
+        onOpenSqlEditor,
         waitForToolResult: (
           sessionId: string,
           toolCallId: string,

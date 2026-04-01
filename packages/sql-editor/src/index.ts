@@ -10,7 +10,7 @@ export type {
 export {default as SqlEditor} from './SqlEditor';
 export type {SqlEditorProps} from './SqlEditor';
 export {default as SqlEditorModal} from './SqlEditorModal';
-export {createSqlEditorSlice} from './SqlEditorSlice';
+export {createSqlEditorSlice, useStoreWithSqlEditor} from './SqlEditorSlice';
 export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
 /**
