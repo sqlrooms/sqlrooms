@@ -125,6 +125,17 @@ const AgentProgressRenderer: React.FC<{
               key={toolCall.toolCallId}
               className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}
             >
+              {toolCall.input instanceof Object &&
+              'reasoning' in toolCall.input &&
+              typeof (toolCall.input as Record<string, unknown>).reasoning ===
+                'string' ? (
+                <div className="mb-1 text-sm text-gray-500">
+                  {
+                    (toolCall.input as Record<string, unknown>)
+                      .reasoning as string
+                  }
+                </div>
+              ) : null}
               <div className="mb-1 flex items-start">
                 <span className="mr-2 min-w-[16px]">
                   {isSuccess && '✓'}
@@ -200,18 +211,9 @@ const AgentProgressSection: React.FC<{
   const hasFinishedAgentProgress =
     agentOutput?.agentToolCalls && agentOutput.agentToolCalls.length > 0;
 
-  const reasoning =
-    input instanceof Object && 'reasoning' in input
-      ? (input.reasoning as string)
-      : undefined;
-
   if (liveProgress && liveProgress.length > 0) {
     return (
-      <AgentProgressRenderer
-        toolCallId={toolCallId}
-        agentToolCalls={[]}
-        reasoning={reasoning}
-      />
+      <AgentProgressRenderer toolCallId={toolCallId} agentToolCalls={[]} />
     );
   }
 
@@ -221,7 +223,6 @@ const AgentProgressSection: React.FC<{
         toolCallId={toolCallId}
         agentToolCalls={agentOutput.agentToolCalls!}
         finalOutput={agentOutput.finalOutput}
-        reasoning={reasoning}
       />
     );
   }
@@ -297,9 +298,18 @@ export const ToolPartRenderer = ({
   // Otherwise, render <ToolResult>
   if (hasExecute) {
     const isAgentTool = toolName.startsWith('agent-');
+    const reasoning =
+      isAgentTool && input instanceof Object && 'reasoning' in input
+        ? (input.reasoning as string)
+        : undefined;
 
     return (
       <div>
+        {reasoning ? (
+          <div className="prose prose-sm dark:prose-invert mb-2 max-w-none px-5 text-sm text-gray-500">
+            <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
+          </div>
+        ) : null}
         <ToolCallInfo
           toolName={toolName}
           input={input}

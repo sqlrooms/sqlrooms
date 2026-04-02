@@ -121,6 +121,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
             customMarkdownComponents={customMarkdownComponents}
+            containerWidth={divWidth}
           />
         ) : (
           <MessagePartsList

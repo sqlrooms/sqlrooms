@@ -3,6 +3,7 @@ import {useMemo, useState} from 'react';
 import {cn} from '@sqlrooms/ui';
 import {useStoreWithAi} from '../AiSlice';
 import {useElapsedTime} from '../hooks/useElapsedTime';
+import {truncateToFit} from '../hooks/useToolGrouping';
 
 type ReasoningBoxProps = {
   children: React.ReactNode;
@@ -13,6 +14,10 @@ type ReasoningBoxProps = {
   isRunning?: boolean;
   /** Tool call IDs used to derive the group's elapsed time from store timings */
   toolCallIds?: string[];
+  /** When set, shows the latest sub-agent tool reasoning as a live subtitle */
+  agentToolCallId?: string;
+  /** Container width in pixels, used to truncate sub-reasoning text */
+  containerWidth?: number;
 };
 export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   children,
@@ -21,6 +26,8 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   defaultOpen = false,
   isRunning = false,
   toolCallIds,
+  agentToolCallId,
+  containerWidth = 0,
 }) => {
   const displayTitle = title ?? 'Processing';
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -30,6 +37,10 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   };
 
   const toolTimings = useStoreWithAi((s) => s.ai.toolTimings);
+
+  const agentProgress = useStoreWithAi((s) =>
+    agentToolCallId ? s.ai.agentProgress[agentToolCallId] : undefined,
+  );
 
   const {startedAt, completedAt} = useMemo(() => {
     if (!toolCallIds?.length)
@@ -55,6 +66,33 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
 
   const elapsedText = useElapsedTime(isRunning, startedAt, completedAt);
 
+  const latestSubReasoning = useMemo(() => {
+    if (!agentProgress || agentProgress.length === 0) return undefined;
+    for (let i = agentProgress.length - 1; i >= 0; i--) {
+      const tc = agentProgress[i];
+      if (
+        tc?.input instanceof Object &&
+        'reasoning' in tc.input &&
+        typeof (tc.input as Record<string, unknown>).reasoning === 'string'
+      ) {
+        const reasoning = (tc.input as Record<string, unknown>)
+          .reasoning as string;
+        const agentName = tc.toolName
+          .replace(/-/g, ' ')
+          .replace(/([a-z])([A-Z])/g, '$1 $2')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        const prefix = `${agentName}: `;
+        const truncated = truncateToFit(
+          reasoning,
+          containerWidth,
+          prefix.length,
+        );
+        return truncated ? `${prefix}${truncated}` : undefined;
+      }
+    }
+    return undefined;
+  }, [agentProgress, containerWidth]);
+
   return (
     <div className={cn('border-muted rounded-md border', className)}>
       <button
@@ -71,7 +109,9 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
         ) : (
           <ChevronRightIcon className="h-3 w-3 shrink-0" />
         )}
-        <span className="flex-1 truncate">{displayTitle}</span>
+        <span className="flex-1 truncate">
+          {isRunning && latestSubReasoning ? latestSubReasoning : displayTitle}
+        </span>
         {elapsedText && (
           <span className="shrink-0 text-gray-400 dark:text-gray-500">
             {elapsedText}

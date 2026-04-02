@@ -21,6 +21,8 @@ type GroupedMessagePartsProps = {
   totalPartsCount: number;
   /** Optional custom components for markdown rendering */
   customMarkdownComponents?: Partial<Components>;
+  /** Container width in pixels, forwarded to ReasoningBox for text truncation */
+  containerWidth?: number;
 };
 
 /**
@@ -35,6 +37,7 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
   groupedParts,
   totalPartsCount,
   customMarkdownComponents,
+  containerWidth,
 }) => {
   return (
     <>
@@ -92,6 +95,8 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
               defaultOpen={group.defaultExpanded}
               isRunning={group.isRunning}
               toolCallIds={group.toolCallIds}
+              agentToolCallId={group.agentToolCallId}
+              containerWidth={containerWidth}
             >
               {group.parts.map((part, partIndex) =>
                 isToolPart(part) || isDynamicToolPart(part) ? (

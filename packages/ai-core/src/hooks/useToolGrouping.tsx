@@ -17,6 +17,8 @@ export type ToolGroup = {
   isRunning?: boolean;
   /** Tool call IDs in this group, used to derive elapsed time from tool-level store entries */
   toolCallIds?: string[];
+  /** If the group contains a single agent tool, its toolCallId for live sub-reasoning */
+  agentToolCallId?: string;
 };
 
 /**
@@ -157,6 +159,13 @@ export function useToolGrouping(
           .map((p) => (p as any).toolCallId as string | undefined)
           .filter((id): id is string => !!id);
 
+        const agentPart = toolParts.find((p) =>
+          getToolName(p).startsWith('agent-'),
+        );
+        const agentToolCallId = agentPart
+          ? ((agentPart as any).toolCallId as string | undefined)
+          : undefined;
+
         groups.push({
           type: 'tool-group',
           parts: toolParts,
@@ -164,6 +173,7 @@ export function useToolGrouping(
           title,
           isRunning: groupIsRunning,
           toolCallIds: groupToolCallIds,
+          agentToolCallId,
         });
         i = j;
       } else {
@@ -212,6 +222,48 @@ function formatToolNameFallback(name: string): string {
     .replace(/-/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const AVG_CHAR_WIDTH_PX = 7;
+const ICON_WIDTH_PX = 24;
+const PADDING_PX = 16;
+const DEFAULT_MAX_CHARS = 40;
+const MIN_MAX_CHARS = 20;
+const ABSOLUTE_MAX_CHARS = 150;
+
+/**
+ * Truncate a string to fit within available container width, accounting for
+ * a fixed prefix (e.g. base title) and reserved space for icons/padding.
+ *
+ * @param text - The text to truncate
+ * @param containerWidth - Container width in pixels (0 = use default)
+ * @param prefixLength - Number of characters already consumed by a prefix label
+ * @returns The (possibly truncated) text, or undefined if input was undefined
+ */
+export function truncateToFit(
+  text: string | undefined,
+  containerWidth: number,
+  prefixLength: number = 0,
+): string | undefined {
+  if (!text) return undefined;
+
+  const prefixWidth = prefixLength * AVG_CHAR_WIDTH_PX;
+  const availableWidth =
+    containerWidth > 0
+      ? containerWidth - prefixWidth - ICON_WIDTH_PX - PADDING_PX
+      : 0;
+  const maxChars =
+    containerWidth > 0
+      ? Math.max(
+          MIN_MAX_CHARS,
+          Math.min(
+            ABSOLUTE_MAX_CHARS,
+            Math.floor(availableWidth / AVG_CHAR_WIDTH_PX),
+          ),
+        )
+      : DEFAULT_MAX_CHARS;
+
+  return text.length > maxChars ? `${text.substring(0, maxChars)}…` : text;
 }
 
 /**
@@ -296,27 +348,11 @@ function generateToolGroupTitle(
       : undefined;
 
     const baseTitle = `Running ${toolLabel}...`;
-
-    // Calculate max reasoning length based on container width
-    // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
-    const baseTextWidth = baseTitle.length * 7; // Rough estimate for "Thinking..." or "Thinking... (X tools)"
-    const iconWidth = 24; // Space for icon(s)
-    const padding = 16; // Padding and gaps
-    const availableWidth =
-      containerWidth > 0
-        ? containerWidth - baseTextWidth - iconWidth - padding
-        : 0;
-    // Estimate characters that fit: divide by average char width (~7px), with a minimum of 20 and max of 150
-    // Removed hard cap of 60 to allow scaling with container width
-    const maxReasoningLength =
-      containerWidth > 0
-        ? Math.max(20, Math.min(150, Math.floor(availableWidth / 7)))
-        : 40; // Fallback to 40 if width not available
-
-    const truncatedReasoning =
-      reasoning && reasoning.length > maxReasoningLength
-        ? `${reasoning.substring(0, maxReasoningLength)}...`
-        : reasoning;
+    const truncatedReasoning = truncateToFit(
+      reasoning,
+      containerWidth,
+      baseTitle.length,
+    );
 
     const titleText = truncatedReasoning
       ? `${baseTitle} ${truncatedReasoning}`

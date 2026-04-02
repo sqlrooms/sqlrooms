@@ -18,6 +18,7 @@ export type UIMessageChunk = {
   type: string;
   toolCallId?: string;
   toolName?: string;
+  input?: unknown;
   output?: unknown;
   errorText?: string;
   delta?: string;
@@ -31,6 +32,7 @@ export type UIMessageChunk = {
 export type AgentToolCall = {
   toolCallId: string;
   toolName: string;
+  input?: unknown;
   output?: unknown;
   errorText?: string;
   state: 'pending' | 'success' | 'error';
@@ -123,7 +125,18 @@ export async function processAgentStream(
       const entry = toolCallMap.get(id);
       if (!entry) continue;
 
-      if (chunk.type === 'tool-output-available') {
+      if (chunk.type === 'tool-input-available' && chunk.input) {
+        if (typeof chunk.input === 'string') {
+          try {
+            entry.input = JSON.parse(chunk.input);
+          } catch {
+            entry.input = chunk.input;
+          }
+        } else {
+          entry.input = chunk.input;
+        }
+        changed = true;
+      } else if (chunk.type === 'tool-output-available') {
         toolCallMap.set(id, {
           ...entry,
           output: chunk.output,
