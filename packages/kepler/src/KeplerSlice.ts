@@ -124,6 +124,10 @@ function createDefaultMapKeplerState(
           show: true,
           active: false,
         },
+        mapDraw: {
+          show: true,
+          active: false,
+        },
       },
     },
   };
