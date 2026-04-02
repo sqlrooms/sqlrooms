@@ -68,28 +68,25 @@ export const MosaicRenderer: FC<
 
       const info = lookupPanelInfo(context, panels);
 
-      if (info?.render) {
-        return <>{info.render(context)}</>;
-      }
-
-      if (!info?.component) return <></>;
-
-      const PanelComp = info.component;
-      const body = (
+      const content = info?.render ? (
+        info.render(context)
+      ) : info?.component ? (
         <div className="h-full w-full overflow-hidden p-2">
-          <PanelComp {...context} />
+          <info.component {...context} />
         </div>
-      );
+      ) : null;
 
-      if (!draggable) return body;
+      if (!content) return <></>;
+
+      if (!draggable) return <>{content}</>;
 
       return (
         <MosaicWindow<string>
-          title={info.title ?? panelId}
+          title={info?.title ?? panelId}
           path={tilePath}
           draggable
         >
-          {body}
+          {content}
         </MosaicWindow>
       );
     },

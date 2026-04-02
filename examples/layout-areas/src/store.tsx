@@ -121,28 +121,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   type: 'tabs',
                   id: 'dashboards',
                   children: [
-                    // {
-                    //   type: 'mosaic',
-                    //   id: 'overview',
-                    //   draggable: true,
-                    //   direction: 'row',
-                    //   nodes: {
-                    //     type: 'split',
-                    //     direction: 'row',
-                    //     children: ['revenue', 'users'],
-                    //   },
-                    // },
-                    // {
-                    //   type: 'mosaic',
-                    //   id: 'growth',
-                    //   draggable: true,
-                    //   direction: 'row',
-                    //   nodes: {
-                    //     type: 'split',
-                    //     direction: 'row',
-                    //     children: ['conversions', 'sessions'],
-                    //   },
-                    // },
+                    {
+                      type: 'mosaic',
+                      id: 'overview',
+                      draggable: true,
+                      direction: 'row',
+                      nodes: {
+                        type: 'split',
+                        direction: 'row',
+                        children: ['revenue', 'users'],
+                      },
+                    },
+                    {
+                      type: 'mosaic',
+                      id: 'growth',
+                      draggable: true,
+                      direction: 'row',
+                      nodes: {
+                        type: 'split',
+                        direction: 'row',
+                        children: ['conversions', 'sessions'],
+                      },
+                    },
                   ],
                   activeTabIndex: 0,
                   showTabStrip: true,
