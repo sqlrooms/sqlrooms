@@ -61,7 +61,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
       });
 
       // Process the agent stream and get the final result
-      const resultText = await processAgentStream(
+      const result = await processAgentStream(
         agentResult,
         store,
         options?.toolCallId || '',
@@ -69,7 +69,9 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
 
       return {
         success: true,
-        details: resultText,
+        details: result.finalOutput,
+        agentToolCalls: result.agentToolCalls,
+        finalOutput: result.finalOutput,
       };
     },
   });

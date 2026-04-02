@@ -51,6 +51,7 @@ export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {processAgentStream} from '@sqlrooms/ai-core';
 export type {
   AgentStreamResult,
+  AgentStreamOutput,
   UIMessageChunk,
   AgentToolCall,
   ToolRenderers,

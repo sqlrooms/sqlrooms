@@ -1,10 +1,5 @@
 import React from 'react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Tabs,
   TabsContent,
   TabsList,
@@ -15,133 +10,16 @@ import {
 } from '@sqlrooms/ui';
 import {useSql} from '@sqlrooms/duckdb';
 import {getArrowColumnTypeCategory} from '@sqlrooms/duckdb';
-import {BRUSH_PARAM_NAME} from '../vegaSelectionUtils';
 import type {BrushFieldType} from '../types';
-
-const markOptions = [
-  {value: 'bar', label: 'Bar'},
-  {value: 'line', label: 'Line'},
-];
-
-const colorOptions = [
-  {value: '#077A9D', label: 'Blue'},
-  {value: '#FFAB00', label: 'Orange'},
-  {value: '#00A972', label: 'Green'},
-  {value: '#85b6b2', label: 'Teal'},
-  {value: '#919191', label: 'Gray'},
-];
-
-const aggregationOptions = [
-  {value: 'sum', label: 'Sum'},
-  {value: 'mean', label: 'Mean'},
-  {value: 'count', label: 'Count'},
-];
-
-/**
- * Read the flat encoding/mark values from either a flat spec or a
- * dual-layer cross-filter spec so the config panel dropdowns reflect
- * the current state regardless of spec shape.
- */
-function readSpecValues(spec: any): {
-  mark: string | undefined;
-  xField: string | undefined;
-  yField: string | undefined;
-  yAggregate: string | undefined;
-  color: string | undefined;
-} {
-  if (spec?.layer && Array.isArray(spec.layer)) {
-    const fg = spec.layer[1] ?? spec.layer[0];
-    const bg = spec.layer[0];
-    return {
-      mark: fg?.mark ?? bg?.mark,
-      xField: fg?.encoding?.x?.field ?? bg?.encoding?.x?.field,
-      yField: fg?.encoding?.y?.field ?? bg?.encoding?.y?.field,
-      yAggregate: fg?.encoding?.y?.aggregate ?? bg?.encoding?.y?.aggregate,
-      color: fg?.encoding?.color?.value,
-    };
-  }
-  return {
-    mark: spec?.mark,
-    xField: spec?.encoding?.x?.field,
-    yField: spec?.encoding?.y?.field,
-    yAggregate: spec?.encoding?.y?.aggregate,
-    color: spec?.encoding?.color?.value,
-  };
-}
-
-/**
- * Build a dual-layer Vega-Lite spec with a brush selection param on the
- * background layer and a filter transform on the foreground layer.
- */
-function buildCrossFilterSpec(opts: {
-  mark: string;
-  xField?: string;
-  xFieldType?: BrushFieldType;
-  yField?: string;
-  yAggregate?: string;
-  color?: string;
-}): any {
-  const {mark, xField, xFieldType, yField, yAggregate, color} = opts;
-  const xEnc: any = xField
-    ? {
-        field: xField,
-        ...(xFieldType === 'numeric' ? {bin: {maxbins: 20}} : {}),
-      }
-    : undefined;
-  const yEnc: any = yField
-    ? {field: yField, aggregate: yAggregate ?? 'sum'}
-    : yAggregate === 'count'
-      ? {aggregate: 'count'}
-      : undefined;
-
-  const encoding: any = {};
-  if (xEnc) encoding.x = xEnc;
-  if (yEnc) encoding.y = yEnc;
-
-  return {
-    layer: [
-      {
-        params: [
-          {
-            name: BRUSH_PARAM_NAME,
-            select: {type: 'interval', encodings: ['x']},
-          },
-        ],
-        mark,
-        encoding: {
-          ...encoding,
-          color: {value: '#ddd'},
-        },
-      },
-      {
-        transform: [{filter: {param: BRUSH_PARAM_NAME}}],
-        mark,
-        encoding: {
-          ...encoding,
-          ...(color ? {color: {value: color}} : {}),
-        },
-      },
-    ],
-    padding: 20,
-  };
-}
-
-/** Build a simple flat spec (no cross-filtering). */
-function buildFlatSpec(opts: {
-  mark: string;
-  xField?: string;
-  yField?: string;
-  yAggregate?: string;
-  color?: string;
-}): any {
-  const {mark, xField, yField, yAggregate, color} = opts;
-  const encoding: any = {};
-  if (xField) encoding.x = {field: xField};
-  if (yField) encoding.y = {field: yField, aggregate: yAggregate ?? 'sum'};
-  else if (yAggregate === 'count') encoding.y = {aggregate: 'count'};
-  if (color) encoding.color = {value: color};
-  return {mark, encoding, padding: 20};
-}
+import {
+  readSpecValues,
+  buildCrossFilterSpec,
+  buildFlatSpec,
+} from '../vegaSpecBuilder';
+import {FieldSelector} from './FieldSelector';
+import {ColorSelector, colorOptions} from './ColorSelector';
+import {ChartTypeSelector} from './ChartTypeSelector';
+import {AggregationSelector} from './AggregationSelector';
 
 export const VegaConfigPanel: React.FC<{
   spec: any;
@@ -164,14 +42,17 @@ export const VegaConfigPanel: React.FC<{
 }) => {
   const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
-  const fieldNames =
-    arrowTable?.schema?.fields?.map((field: any) => field.name) || [];
+  const fields = arrowTable?.schema?.fields || [];
 
-  const detectFieldType = (fieldName: string): BrushFieldType => {
+  const detectBrushFieldType = (fieldName: string): BrushFieldType => {
     const arrowField = arrowTable?.schema?.fields?.find(
-      (f: any) => f.name === fieldName,
+      (field) => field.name === fieldName,
     );
-    if (!arrowField) return 'numeric';
+
+    if (!arrowField) {
+      return 'numeric';
+    }
+
     const category = getArrowColumnTypeCategory(arrowField.type);
     if (category === 'datetime') return 'temporal';
     if (category === 'string') return 'string';
@@ -190,17 +71,19 @@ export const VegaConfigPanel: React.FC<{
       builder({
         mark: merged.mark ?? 'bar',
         xField: merged.xField,
-        xFieldType: merged.xField ? detectFieldType(merged.xField) : undefined,
+        xFieldType: merged.xField
+          ? detectBrushFieldType(merged.xField)
+          : undefined,
         yField: merged.yField,
         yAggregate: merged.yAggregate,
-        color: merged.color,
+        color: merged.color ?? colorOptions[0]?.value,
       }),
     );
     if ('xField' in overrides) {
       onBrushFieldChange(cfEnabled ? overrides.xField : undefined);
       onBrushFieldTypeChange(
         cfEnabled && overrides.xField
-          ? detectFieldType(overrides.xField)
+          ? detectBrushFieldType(overrides.xField)
           : undefined,
       );
     }
@@ -219,28 +102,19 @@ export const VegaConfigPanel: React.FC<{
     rebuild({}, enabled);
     onBrushFieldChange(enabled ? current.xField : undefined);
     onBrushFieldTypeChange(
-      enabled && current.xField ? detectFieldType(current.xField) : undefined,
+      enabled && current.xField
+        ? detectBrushFieldType(current.xField)
+        : undefined,
     );
   };
 
   return (
     <div className="w-80 border-r p-4 text-xs">
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Label className="text-xs font-medium text-gray-400">Type</Label>
-          <Select value={current.mark} onValueChange={handleMarkChange}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Select chart type" />
-            </SelectTrigger>
-            <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-              {markOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ChartTypeSelector
+          value={current.mark}
+          onValueChange={handleMarkChange}
+        />
 
         <Separator />
 
@@ -259,58 +133,27 @@ export const VegaConfigPanel: React.FC<{
               <Label className="text-xs font-medium text-gray-400">
                 X-Axis
               </Label>
-              <Select
-                value={current.xField || ''}
+              <FieldSelector
+                value={current.xField}
+                fields={fields}
                 onValueChange={handleXFieldChange}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select field" />
-                </SelectTrigger>
-                <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {fieldNames.map((field: string) => (
-                    <SelectItem key={field} value={field}>
-                      {field}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium text-gray-400">
                 Y-Axis
               </Label>
               <div className="grid grid-cols-[2fr_1fr] gap-2">
-                <Select
-                  value={current.yField || ''}
+                <FieldSelector
+                  value={current.yField}
+                  fields={fields}
                   onValueChange={handleYFieldChange}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select field" />
-                  </SelectTrigger>
-                  <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {fieldNames.map((field: string) => (
-                      <SelectItem key={field} value={field}>
-                        {field}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
 
-                <Select
+                <AggregationSelector
                   value={current.yAggregate}
                   onValueChange={handleYAggregationChange}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {aggregationOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </div>
 
@@ -329,19 +172,11 @@ export const VegaConfigPanel: React.FC<{
 
           <TabsContent value="styles" className="mt-4 space-y-4">
             <div className="space-y-1">
-              <Label className="font-medium">Color</Label>
-              <Select value={current.color} onValueChange={handleColorChange}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select color" />
-                </SelectTrigger>
-                <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {colorOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-gray-400">Color</Label>
+              <ColorSelector
+                value={current.color}
+                onValueChange={handleColorChange}
+              />
             </div>
           </TabsContent>
         </Tabs>
