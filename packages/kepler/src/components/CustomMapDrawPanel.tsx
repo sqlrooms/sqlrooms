@@ -14,14 +14,10 @@ import {Button} from '@sqlrooms/ui';
 CustomMapDrawPanelFactory.deps = MapDrawPanelFactory.deps;
 
 export function CustomMapDrawPanelFactory(
-  MapControlTooltip: ReturnType<typeof MapControlTooltipFactory>,
-  MapControlToolbar: ReturnType<typeof MapControlToolbarFactory>,
+  ...deps: Parameters<typeof MapDrawPanelFactory>
 ) {
   // Get the original MapDrawPanel component
-  const OriginalMapDrawPanel = MapDrawPanelFactory(
-    MapControlTooltip,
-    MapControlToolbar,
-  );
+  const OriginalMapDrawPanel = MapDrawPanelFactory(...deps);
 
   const CustomMapDrawPanel: React.FC<MapDrawPanelProps> = React.memo(
     (props) => {
