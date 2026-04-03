@@ -42,6 +42,7 @@ export function CustomMapDrawPanelFactory(
               size="xs"
               className="border-border bg-background hover:bg-accent absolute z-50 h-6 w-6 rounded-full border p-0 shadow-sm"
               style={{left: '-35px', top: '-20px'}}
+              aria-label="Close draw panel"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
