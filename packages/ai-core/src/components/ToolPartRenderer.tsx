@@ -95,7 +95,8 @@ const AgentProgressRenderer: React.FC<{
   agentToolCalls: AgentToolCall[];
   finalOutput?: string;
   reasoning?: string;
-}> = ({toolCallId, agentToolCalls, finalOutput, reasoning}) => {
+  depth?: number;
+}> = ({toolCallId, agentToolCalls, finalOutput, reasoning, depth = 0}) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const liveProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
@@ -119,6 +120,16 @@ const AgentProgressRenderer: React.FC<{
             toolCall.output &&
             typeof toolCall.output === 'object' &&
             toolCall.output !== null;
+
+          const nestedAgentOutput = hasObjectOutput
+            ? (toolCall.output as {
+                agentToolCalls?: AgentToolCall[];
+                finalOutput?: string;
+              })
+            : undefined;
+          const isNestedAgent =
+            nestedAgentOutput?.agentToolCalls &&
+            nestedAgentOutput.agentToolCalls.length > 0;
 
           return (
             <div
@@ -159,7 +170,16 @@ const AgentProgressRenderer: React.FC<{
                 </div>
               </div>
 
-              {isSuccess && hasComponent && hasObjectOutput ? (
+              {isSuccess && isNestedAgent ? (
+                <div className="mt-1 ml-6">
+                  <AgentProgressRenderer
+                    toolCallId={toolCall.toolCallId}
+                    agentToolCalls={nestedAgentOutput!.agentToolCalls!}
+                    finalOutput={nestedAgentOutput!.finalOutput}
+                    depth={depth + 1}
+                  />
+                </div>
+              ) : isSuccess && hasComponent && hasObjectOutput ? (
                 <div className="mt-1 ml-6">
                   <ToolComponent
                     output={toolCall.output}
@@ -297,7 +317,10 @@ export const ToolPartRenderer = ({
 
   // Otherwise, render <ToolResult>
   if (hasExecute) {
-    const isAgentTool = toolName.startsWith('agent-');
+    const agentOutput = output as {agentToolCalls?: unknown[]} | undefined;
+    const isAgentTool =
+      toolName.startsWith('agent-') ||
+      (agentOutput?.agentToolCalls && agentOutput.agentToolCalls.length > 0);
     const reasoning =
       isAgentTool && input instanceof Object && 'reasoning' in input
         ? (input.reasoning as string)
