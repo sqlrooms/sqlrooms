@@ -12,6 +12,8 @@ export type QueryToolRendererOptions = {
   showSql?: boolean;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;
+  /** Optional callback to open query in SQL editor tab */
+  onOpenAsSqlEditorTab?: (sqlQuery: string, title: string) => void;
 };
 
 /**
@@ -30,7 +32,7 @@ export type QueryToolRendererOptions = {
 export function createQueryToolRenderer(
   options?: QueryToolRendererOptions,
 ): ToolRenderer<QueryToolOutput, QueryToolParameters> {
-  const {showSql = true, formatValue} = options ?? {};
+  const {showSql = true, formatValue, onOpenAsSqlEditorTab} = options ?? {};
 
   return function QueryToolResultRenderer({
     output,
@@ -41,6 +43,14 @@ export function createQueryToolRenderer(
     const sqlQuery = output.sqlQuery ?? input?.sqlQuery ?? '';
     const title = output.title ?? 'Query Result';
     const shouldShowSql = output.showSql ?? showSql;
+
+    const handleOpenAsSqlEditorTab = onOpenAsSqlEditorTab
+      ? () => {
+          onOpenAsSqlEditorTab(sqlQuery, title);
+          tableModal.onClose();
+        }
+      : undefined;
+
     return (
       <>
         {shouldShowSql && (
@@ -75,6 +85,7 @@ export function createQueryToolRenderer(
               query={sqlQuery}
               tableModal={tableModal}
               formatValue={formatValue}
+              onOpenAsSqlEditorTab={handleOpenAsSqlEditorTab}
             />
           </>
         )}

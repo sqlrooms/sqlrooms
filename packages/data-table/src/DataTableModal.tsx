@@ -47,6 +47,8 @@ export type DataTableModalProps = {
   tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;
+  /** Optional callback to open query in SQL editor tab */
+  onOpenAsSqlEditorTab?: () => void;
 } & (
   | {
       query: string | undefined;
@@ -59,7 +61,16 @@ export type DataTableModalProps = {
 );
 
 const DataTableModal: FC<DataTableModalProps> = (props) => {
-  const {className, title, tableModal, formatValue} = props;
+  const {
+    className,
+    title,
+    tableModal,
+    formatValue,
+    query,
+    arrowTable,
+    onOpenAsSqlEditorTab,
+  } = props as any;
+
   return (
     <Dialog
       open={tableModal.isOpen}
@@ -70,18 +81,33 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
         aria-describedby="data-table-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <DialogHeader>
+        <DialogHeader className="flex-row items-center justify-between space-y-0">
           <DialogTitle>{title ?? ''}</DialogTitle>
+          {onOpenAsSqlEditorTab && (
+            <Button variant="outline" size="sm" onClick={onOpenAsSqlEditorTab}>
+              Open in SQL Editor
+            </Button>
+          )}
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
+        {query && (
+          <div className="border-border bg-muted/50 rounded-md border px-3 py-2">
+            <div className="text-muted-foreground mb-1 text-xs font-medium">
+              SQL Query
+            </div>
+            <pre className="text-foreground overflow-x-auto font-mono text-xs">
+              {query}
+            </pre>
+          </div>
+        )}
         <div className="bg-muted flex-1 overflow-hidden">
           {tableModal.isOpen && (
             <>
-              {'query' in props && props.query ? (
-                <QueryDataTable query={props.query} formatValue={formatValue} />
-              ) : 'arrowTable' in props && props.arrowTable ? (
+              {query ? (
+                <QueryDataTable query={query} formatValue={formatValue} />
+              ) : arrowTable ? (
                 <DataTableArrowPaginated
-                  table={props.arrowTable}
+                  table={arrowTable}
                   formatValue={formatValue}
                 />
               ) : (
