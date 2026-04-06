@@ -49,16 +49,11 @@ export type DataTableModalProps = {
   formatValue?: ArrowDataTableValueFormatter;
   /** Optional callback to open query in SQL editor tab */
   onOpenAsSqlEditorTab?: () => void;
-} & (
-  | {
-      query: string | undefined;
-      arrowTable?: never;
-    }
-  | {
-      arrowTable: arrow.Table | undefined;
-      query?: never;
-    }
-);
+  /** SQL query to execute and display */
+  query?: string;
+  /** Pre-loaded Arrow table to display */
+  arrowTable?: arrow.Table;
+};
 
 const DataTableModal: FC<DataTableModalProps> = (props) => {
   const {
@@ -69,7 +64,7 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
     query,
     arrowTable,
     onOpenAsSqlEditorTab,
-  } = props as any;
+  } = props;
 
   return (
     <Dialog
