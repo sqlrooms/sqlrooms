@@ -18,12 +18,15 @@ import {MosaicCloseButton} from './MosaicCloseButton';
 
 const mosaicStyles = `
   .mosaic-split {
-    background-color: hsl(var(--border) / 0.2);
     z-index: 10;
   }
-  .mosaic-split:hover {
+  .mosaic-split-line {
+    width: 100%;
+    height: 100%;
+    background-color: hsl(var(--border) / 0.2);
+  }
+  .mosaic-split:hover .mosaic-split-line {
     background-color: hsl(var(--primary) / 0.4);
-    z-index: 10;
   }
   .mosaic-root {
     top: 0; left: 0; right: 0; bottom: 0;
