@@ -102,7 +102,7 @@ export const MosaicRenderer: FC<
                 {Icon && <Icon className="mr-2 h-4 w-4" />}
                 {title}
               </div>
-              <div className="mosaic-window-controls">
+              <div className="mosaic-window-controls flex items-center">
                 {showCloseButton && <MosaicCloseButton />}
               </div>
             </div>
