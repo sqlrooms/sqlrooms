@@ -77,7 +77,7 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
       onOpenChange={(isOpen: boolean) => !isOpen && tableModal.onClose()}
     >
       <DialogContent
-        className={cn('h-[80vh] max-w-[75vw]', className)}
+        className={cn('flex h-[80vh] max-w-[75vw] flex-col', className)}
         aria-describedby="data-table-modal"
         onClick={(e) => e.stopPropagation()}
       >
@@ -91,16 +91,16 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
         {query && (
-          <div className="border-border bg-muted/50 rounded-md border px-3 py-2">
-            <div className="text-muted-foreground mb-1 text-xs font-medium">
+          <div className="border-border bg-muted/50 flex min-h-0 flex-[2] flex-col overflow-hidden rounded-md border">
+            <div className="text-muted-foreground border-border shrink-0 border-b px-3 py-2 text-xs font-medium">
               SQL Query
             </div>
-            <pre className="text-foreground overflow-x-auto font-mono text-xs">
+            <pre className="text-foreground flex-1 overflow-auto px-3 py-2 font-mono text-xs">
               {query}
             </pre>
           </div>
         )}
-        <div className="bg-muted flex-1 overflow-hidden">
+        <div className="bg-muted flex min-h-0 flex-[3] overflow-hidden">
           {tableModal.isOpen && (
             <>
               {query ? (
@@ -116,7 +116,7 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
             </>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={tableModal.onClose}>
             Close
           </Button>
