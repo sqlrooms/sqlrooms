@@ -94,6 +94,7 @@ export type TabStripRenderContext = {
 export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
+  closeButton?: boolean;
   component?: React.ComponentType<Partial<PanelRenderContext>>;
   /** Render function for dynamic panels — takes priority over component */
   render?: (context: PanelRenderContext) => React.ReactNode;

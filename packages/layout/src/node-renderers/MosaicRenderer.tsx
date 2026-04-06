@@ -14,6 +14,7 @@ import {
   updateMosaicSubtree,
 } from '../mosaic/mosaic-utils';
 import {lookupPanelInfo, NodeRenderProps} from './types';
+import {MosaicCloseButton} from './MosaicCloseButton';
 
 const mosaicStyles = `
   .mosaic-split {
@@ -74,6 +75,9 @@ export const MosaicRenderer: FC<
 
       const info = lookupPanelInfo(context, panels);
 
+      // Determine if close button should be shown (default: true)
+      const showCloseButton = info?.closeButton ?? true;
+
       const content = info?.render ? (
         info.render(context)
       ) : info?.component ? (
@@ -91,6 +95,7 @@ export const MosaicRenderer: FC<
           title={info?.title ?? panelId}
           path={tilePath}
           draggable
+          toolbarControls={showCloseButton ? <MosaicCloseButton /> : <></>}
         >
           {content}
         </MosaicWindow>
