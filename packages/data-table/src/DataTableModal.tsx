@@ -96,19 +96,17 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
           </div>
         )}
         <div className="bg-muted flex min-h-0 flex-[3] overflow-hidden">
-          {tableModal.isOpen && (
-            <>
-              {query ? (
-                <QueryDataTable query={query} formatValue={formatValue} />
-              ) : arrowTable ? (
-                <DataTableArrowPaginated
-                  table={arrowTable}
-                  formatValue={formatValue}
-                />
-              ) : (
-                <div className="p-4 text-xs">No data</div>
-              )}
-            </>
+          {tableModal.isOpen && query && (
+            <QueryDataTable query={query} formatValue={formatValue} />
+          )}
+          {tableModal.isOpen && !query && arrowTable && (
+            <DataTableArrowPaginated
+              table={arrowTable}
+              formatValue={formatValue}
+            />
+          )}
+          {tableModal.isOpen && !query && !arrowTable && (
+            <div className="p-4 text-xs">No data</div>
           )}
         </div>
         <DialogFooter className="shrink-0">
