@@ -175,19 +175,6 @@ export function findNodeById(
 // Tabs node helpers
 // ---------------------------------------------------------------------------
 
-/** Find a tabs node by its `id` field. Returns the node and its path in the tree. */
-export function findTabsNodeById(
-  root: LayoutNode | null | undefined,
-  tabsId: string,
-  path: MosaicPath = [],
-): {node: LayoutTabsNode; path: MosaicPath} | undefined {
-  const found = findNodeById(root, tabsId, path);
-  if (found && isLayoutTabsNode(found.node)) {
-    return {node: found.node, path: found.path};
-  }
-  return undefined;
-}
-
 /**
  * Find the tabs node whose children or closedChildren contain a panel with
  * the given ID. Returns the tabs node's id if found.
@@ -216,19 +203,6 @@ export function findTabsNodeForPanel(
   }
   if (isLayoutMosaicNode(root)) {
     return root.nodes ? findTabsNodeForPanel(root.nodes, panelId) : undefined;
-  }
-  return undefined;
-}
-
-/** Find a split node by its `id` field. */
-export function findSplitById(
-  root: LayoutNode | null | undefined,
-  splitId: string,
-  path: MosaicPath = [],
-): {node: LayoutSplitNode; path: MosaicPath} | undefined {
-  const found = findNodeById(root, splitId, path);
-  if (found && isLayoutSplitNode(found.node)) {
-    return {node: found.node, path: found.path};
   }
   return undefined;
 }
@@ -369,18 +343,6 @@ export function findCollapsedSiblings(
   return result;
 }
 
-/** Find a mosaic node by its `id` field. */
-export function findMosaicNodeById(
-  root: LayoutNode | null | undefined,
-  mosaicId: string,
-): LayoutMosaicNode | undefined {
-  const found = findNodeById(root, mosaicId);
-  if (found && isLayoutMosaicNode(found.node)) {
-    return found.node;
-  }
-  return undefined;
-}
-
 /**
  * Return a new tree with the nested mosaic node's sub-tree replaced.
  */
@@ -471,8 +433,8 @@ export function convertFromMosaicTree(
   if (typeof mosaicNode === 'string') {
     if (mosaicNode.startsWith(MOSAIC_NODE_KEY_PREFIX) && originalTree) {
       const mosaicId = mosaicNode.slice(MOSAIC_NODE_KEY_PREFIX.length);
-      const original = findMosaicNodeById(originalTree, mosaicId);
-      if (original) return original;
+      const result = findNodeById(originalTree, mosaicId);
+      if (result && isLayoutMosaicNode(result.node)) return result.node;
     }
     return mosaicNode;
   }
@@ -489,7 +451,10 @@ export function convertFromMosaicTree(
     const areaId = obj.id as string | undefined;
     const originalArea =
       areaId && originalTree
-        ? findTabsNodeById(originalTree, areaId)
+        ? (() => {
+            const r = findNodeById(originalTree, areaId);
+            return r && isLayoutTabsNode(r.node) ? r : undefined;
+          })()
         : undefined;
     if (originalArea) {
       return {

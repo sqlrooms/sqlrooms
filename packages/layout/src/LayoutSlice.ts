@@ -1,5 +1,7 @@
 import {
+  isLayoutMosaicNode,
   isLayoutSplitNode,
+  isLayoutTabsNode,
   LayoutConfig,
   LayoutNode,
   LayoutTabsNode,
@@ -19,11 +21,8 @@ import {MosaicNode} from 'react-mosaic-component';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {
-  findTabsNodeById,
   findTabsNodeForPanel,
   findNodeById,
-  findMosaicNodeById,
-  findSplitById,
   getChildKey,
   makeLayoutStack,
   removeLayoutNodeByKey,
@@ -197,7 +196,11 @@ function findTabsNode(
   config: LayoutSliceConfig,
   tabsId: string,
 ): {node: LayoutTabsNode; path: number[]} | undefined {
-  return findTabsNodeById(config, tabsId);
+  const found = findNodeById(config, tabsId);
+  if (found && isLayoutTabsNode(found.node)) {
+    return {node: found.node, path: found.path};
+  }
+  return undefined;
 }
 
 export function createLayoutSlice({
@@ -456,10 +459,10 @@ export function createLayoutSlice({
           addChildToSplit: (splitId: string, panelId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findSplitById(draft.layout.config, splitId);
-                if (!found) return;
-                if (!found.node.children.includes(panelId)) {
-                  found.node.children.push(panelId);
+                const result = findNodeById(draft.layout.config, splitId);
+                if (!result || !isLayoutSplitNode(result.node)) return;
+                if (!result.node.children.includes(panelId)) {
+                  result.node.children.push(panelId);
                 }
               }),
             );
@@ -468,14 +471,14 @@ export function createLayoutSlice({
           addChildToMosaic: (mosaicId: string, panelId: string) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findMosaicNodeById(draft.layout.config, mosaicId);
-                if (!found) return;
-                const nodes = found.nodes;
-                const dir = found.direction ?? 'row';
+                const result = findNodeById(draft.layout.config, mosaicId);
+                if (!result || !isLayoutMosaicNode(result.node)) return;
+                const nodes = result.node.nodes;
+                const dir = result.node.direction ?? 'row';
                 if (!nodes) {
-                  found.nodes = panelId;
+                  result.node.nodes = panelId;
                 } else if (typeof nodes === 'string') {
-                  found.nodes = {
+                  result.node.nodes = {
                     type: 'split',
                     direction: dir,
                     children: [nodes, panelId],

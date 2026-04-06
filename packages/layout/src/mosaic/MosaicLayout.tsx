@@ -9,6 +9,7 @@ import {
 import 'react-mosaic-component/react-mosaic-component.css';
 import {
   isMosaicLayoutTabsNode,
+  isLayoutMosaicNode,
   MosaicLayoutTabsNode,
   MosaicLayoutNode,
 } from '@sqlrooms/layout-config';
@@ -25,7 +26,7 @@ import {
   getNodeAtPath,
   findCollapsedSiblings,
   findParentArea,
-  findMosaicNodeById,
+  findNodeById,
   convertToMosaicTree,
   convertFromMosaicTree,
   updateMosaicSubtree,
@@ -460,9 +461,9 @@ function NestedMosaicTile({
   renderTile: (id: string, path: MosaicPath) => React.JSX.Element;
   onChange: (mosaicId: string, newNodes: MosaicLayoutNode | null) => void;
 }) {
-  const mosaicNode = rootTree
-    ? findMosaicNodeById(rootTree, mosaicId)
-    : undefined;
+  const result = rootTree ? findNodeById(rootTree, mosaicId) : undefined;
+  const mosaicNode =
+    result && isLayoutMosaicNode(result.node) ? result.node : undefined;
 
   const handleChange = useCallback(
     (newNodes: MosaicNode<string> | null) => {
