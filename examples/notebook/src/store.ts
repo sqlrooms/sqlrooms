@@ -48,8 +48,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           layout: {
             type: 'split',
             direction: 'row',
-            children: ['data', 'main'],
-            splitPercentages: [20, 80],
+            children: [
+              {type: 'panel' as const, id: 'data', defaultSize: '20%'},
+              {type: 'panel' as const, id: 'main', defaultSize: '80%'},
+            ],
           },
           dataSources: [
             {

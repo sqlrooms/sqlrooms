@@ -13,8 +13,14 @@ export const LAYOUT: CreateLayoutSliceProps = {
   config: {
     type: 'split',
     direction: 'row',
-    children: [RoomPanelTypes.enum['data-sources'], 'main'],
-    splitPercentages: [20, 80],
+    children: [
+      {
+        type: 'panel',
+        id: RoomPanelTypes.enum['data-sources'],
+        defaultSize: '20%',
+      },
+      {type: 'panel', id: 'main', defaultSize: '80%'},
+    ],
   },
   panels: {
     [RoomPanelTypes.enum['data-sources']]: {

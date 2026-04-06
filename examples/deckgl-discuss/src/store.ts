@@ -74,10 +74,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             type: 'split',
             direction: 'row',
             children: [
-              RoomPanelTypes.enum['discuss'],
-              RoomPanelTypes.enum['main'],
+              {
+                type: 'panel' as const,
+                id: RoomPanelTypes.enum['discuss'],
+                defaultSize: '30%',
+              },
+              {
+                type: 'panel' as const,
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
             ],
-            splitPercentages: [30, 70],
           },
           panels: {
             [RoomPanelTypes.enum['discuss']]: {

@@ -84,8 +84,14 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           config: {
             type: 'split',
             direction: 'row',
-            children: [RoomPanelTypes.enum['data-sources'], MAIN_VIEW],
-            splitPercentages: [30, 70],
+            children: [
+              {
+                type: 'panel' as const,
+                id: RoomPanelTypes.enum['data-sources'],
+                defaultSize: '30%',
+              },
+              {type: 'panel' as const, id: MAIN_VIEW, defaultSize: '70%'},
+            ],
           },
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {

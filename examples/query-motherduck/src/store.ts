@@ -45,10 +45,17 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
               type: 'split',
               direction: 'row',
               children: [
-                RoomPanelTypes.enum['data'],
-                RoomPanelTypes.enum['main'],
+                {
+                  type: 'panel' as const,
+                  id: RoomPanelTypes.enum['data'],
+                  defaultSize: '30%',
+                },
+                {
+                  type: 'panel' as const,
+                  id: RoomPanelTypes.enum['main'],
+                  defaultSize: '70%',
+                },
               ],
-              splitPercentages: [30, 70],
             },
             panels: {
               [RoomPanelTypes.enum['main']]: {

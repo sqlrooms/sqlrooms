@@ -154,9 +154,40 @@ function convertLegacyNode(node: unknown): unknown {
       result = {...rest, children: tabs};
     }
 
-    // Strip removed fields
-    if ('splitPercentages' in result || 'savedPercentages' in result) {
-      const {splitPercentages, savedPercentages, ...rest} = result;
+    // Migrate splitPercentages -> per-child defaultSize
+    if ('splitPercentages' in result) {
+      const pcts = result.splitPercentages as number[] | undefined;
+      const children = (result.children ?? []) as unknown[];
+      if (Array.isArray(pcts) && Array.isArray(children)) {
+        result = {
+          ...result,
+          children: children.map((child, i) => {
+            const size = pcts[i];
+            if (size == null) return child;
+            if (typeof child === 'string') {
+              return {type: 'panel', id: child, defaultSize: `${size}%`};
+            }
+            if (
+              typeof child === 'object' &&
+              child != null &&
+              !('defaultSize' in (child as Record<string, unknown>))
+            ) {
+              return {
+                ...(child as Record<string, unknown>),
+                defaultSize: `${size}%`,
+              };
+            }
+            return child;
+          }),
+        };
+      }
+      const {splitPercentages: _sp, ...rest} = result;
+      result = rest;
+    }
+
+    // Strip other removed fields
+    if ('savedPercentages' in result) {
+      const {savedPercentages, ...rest} = result;
       result = rest;
     }
 
