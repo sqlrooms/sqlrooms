@@ -12,7 +12,7 @@ export type QueryToolRendererOptions = {
   showSql?: boolean;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;
-  /** Optional callback to open query in SQL editor tab */
+  /** Optional callback when open as sql editor tab button is clicked*/
   onOpenAsSqlEditorTab?: (sqlQuery: string, title: string) => void;
 };
 
