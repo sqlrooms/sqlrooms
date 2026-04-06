@@ -48,9 +48,7 @@ const ExportImageDialogContent: FC<{mapId: string; fileName: string}> = ({
   );
 };
 
-export const KeplerMapsContainer: FC<{
-  className?: string;
-}> = () => {
+export const KeplerMapsContainer: FC = () => {
   const maps = useRoomStore((state) => state.kepler.config.maps);
   const openTabs = useRoomStore((state) => state.kepler.config.openTabs);
   const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
