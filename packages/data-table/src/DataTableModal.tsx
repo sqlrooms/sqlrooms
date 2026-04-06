@@ -78,7 +78,7 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
       >
         <DialogHeader className="flex-row items-center justify-between space-y-0">
           <DialogTitle>{title ?? ''}</DialogTitle>
-          {onOpenAsSqlEditorTab && (
+          {query && onOpenAsSqlEditorTab && (
             <Button variant="outline" size="sm" onClick={onOpenAsSqlEditorTab}>
               Open in SQL Editor
             </Button>
