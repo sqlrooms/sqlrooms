@@ -41,6 +41,7 @@ const BaseLayoutSplitNode = z.object({
   maxSize: LayoutSize.optional(),
   collapsedSize: LayoutSize.optional(),
   collapsible: z.boolean().optional(),
+  collapsed: z.boolean().optional(),
 });
 
 export const LayoutSplitNode: z.ZodType<LayoutSplitNode> =
@@ -96,6 +97,7 @@ const BaseLayoutMosaicNode = z.object({
   maxSize: LayoutSize.optional(),
   collapsedSize: LayoutSize.optional(),
   collapsible: z.boolean().optional(),
+  collapsed: z.boolean().optional(),
 });
 
 export const LayoutMosaicNode: z.ZodType<LayoutMosaicNode> =

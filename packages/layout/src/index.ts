@@ -27,6 +27,7 @@ export {
   removeLayoutNodeByKey,
   findTabsNodeById,
   findTabsNodeForPanel,
+  findNodeById,
   findSplitById,
   findMosaicNodeById,
   getNodeAtPath,
@@ -41,11 +42,12 @@ export {
   convertFromMosaicTree,
   getChildKey,
   isDraggableTile,
-  // Deprecated aliases
-  findAreaById,
-  findAreaForPanel,
 } from './mosaic/mosaic-utils';
-export type {ExpandDirection, CollapsedAreaInfo} from './mosaic/mosaic-utils';
+export type {
+  ExpandDirection,
+  CollapsedAreaInfo,
+  IdentifiedLayoutNode,
+} from './mosaic/mosaic-utils';
 
 // Deprecated re-exports from mosaic-utils (old names)
 export {

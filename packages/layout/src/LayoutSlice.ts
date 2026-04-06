@@ -21,6 +21,7 @@ import {StateCreator} from 'zustand';
 import {
   findTabsNodeById,
   findTabsNodeForPanel,
+  findNodeById,
   findMosaicNodeById,
   findSplitById,
   getChildKey,
@@ -386,7 +387,7 @@ export function createLayoutSlice({
           setCollapsed: (id: string, collapsed: boolean) => {
             set((state) =>
               produce(state, (draft) => {
-                const found = findTabsNode(draft.layout.config, id);
+                const found = findNodeById(draft.layout.config, id);
                 if (!found || !found.node.collapsible) return;
                 found.node.collapsed = collapsed;
               }),
@@ -394,7 +395,7 @@ export function createLayoutSlice({
           },
 
           toggleCollapsed: (id: string) => {
-            const found = findTabsNode(get().layout.config, id);
+            const found = findNodeById(get().layout.config, id);
             if (!found) return;
             get().layout.setCollapsed(id, !found.node.collapsed);
           },
@@ -421,7 +422,7 @@ export function createLayoutSlice({
           },
 
           isCollapsed: (id: string): boolean => {
-            const found = findTabsNode(get().layout.config, id);
+            const found = findNodeById(get().layout.config, id);
             return found?.node.collapsed === true;
           },
 

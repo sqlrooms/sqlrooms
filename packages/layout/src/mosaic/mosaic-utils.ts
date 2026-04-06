@@ -1,21 +1,21 @@
 import {
+  isLayoutMosaicNode,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  MAIN_VIEW,
+} from '@sqlrooms/layout-config';
+import {
   createRemoveUpdate,
   MosaicDirection,
   MosaicNode,
   MosaicPath,
   updateTree,
 } from 'react-mosaic-component';
-import {
-  LayoutNode,
-  LayoutTabsNode,
-  LayoutSplitNode,
-  LayoutMosaicNode,
-  isLayoutSplitNode,
-  isLayoutTabsNode,
-  isLayoutMosaicNode,
-  isLayoutPanelNode,
-  MAIN_VIEW,
-} from '@sqlrooms/layout-config';
 
 /** Prefix for synthetic panel keys generated for nested mosaic nodes */
 export const MOSAIC_NODE_KEY_PREFIX = '__mosaic__';
@@ -130,6 +130,48 @@ export function removeLayoutNodeByKey(
 }
 
 // ---------------------------------------------------------------------------
+// Generic node-by-id helpers
+// ---------------------------------------------------------------------------
+
+/** Any non-leaf layout node that has an `id`. */
+export type IdentifiedLayoutNode =
+  | LayoutTabsNode
+  | (LayoutSplitNode & {id: string})
+  | LayoutMosaicNode;
+
+/** Find any node with the given `id`. Returns the node and its path in the tree. */
+export function findNodeById(
+  root: LayoutNode | null | undefined,
+  nodeId: string,
+  path: MosaicPath = [],
+): {node: IdentifiedLayoutNode; path: MosaicPath} | undefined {
+  if (!root || typeof root === 'string') return undefined;
+  if (isLayoutPanelNode(root)) return undefined;
+  if (isLayoutTabsNode(root)) {
+    if (root.id === nodeId) return {node: root, path};
+    for (let i = 0; i < root.children.length; i++) {
+      const result = findNodeById(root.children[i], nodeId, [...path, i]);
+      if (result) return result;
+    }
+    return undefined;
+  }
+  if (isLayoutSplitNode(root)) {
+    if (root.id === nodeId)
+      return {node: root as LayoutSplitNode & {id: string}, path};
+    for (let i = 0; i < root.children.length; i++) {
+      const result = findNodeById(root.children[i], nodeId, [...path, i]);
+      if (result) return result;
+    }
+    return undefined;
+  }
+  if (isLayoutMosaicNode(root)) {
+    if (root.id === nodeId) return {node: root, path};
+    return root.nodes ? findNodeById(root.nodes, nodeId, path) : undefined;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Tabs node helpers
 // ---------------------------------------------------------------------------
 
@@ -139,24 +181,9 @@ export function findTabsNodeById(
   tabsId: string,
   path: MosaicPath = [],
 ): {node: LayoutTabsNode; path: MosaicPath} | undefined {
-  if (!root || typeof root === 'string') return undefined;
-  if (isLayoutPanelNode(root)) return undefined;
-  if (isLayoutTabsNode(root)) {
-    if (root.id === tabsId) return {node: root, path};
-    for (let i = 0; i < root.children.length; i++) {
-      const result = findTabsNodeById(root.children[i], tabsId, [...path, i]);
-      if (result) return result;
-    }
-    return undefined;
-  }
-  if (isLayoutSplitNode(root)) {
-    for (let i = 0; i < root.children.length; i++) {
-      const result = findTabsNodeById(root.children[i], tabsId, [...path, i]);
-      if (result) return result;
-    }
-  }
-  if (isLayoutMosaicNode(root)) {
-    return root.nodes ? findTabsNodeById(root.nodes, tabsId, path) : undefined;
+  const found = findNodeById(root, tabsId, path);
+  if (found && isLayoutTabsNode(found.node)) {
+    return {node: found.node, path: found.path};
   }
   return undefined;
 }
@@ -199,23 +226,9 @@ export function findSplitById(
   splitId: string,
   path: MosaicPath = [],
 ): {node: LayoutSplitNode; path: MosaicPath} | undefined {
-  if (!root || typeof root === 'string') return undefined;
-  if (isLayoutPanelNode(root)) return undefined;
-  if (isLayoutSplitNode(root)) {
-    if (root.id === splitId) return {node: root, path};
-    for (let i = 0; i < root.children.length; i++) {
-      const result = findSplitById(root.children[i], splitId, [...path, i]);
-      if (result) return result;
-    }
-  }
-  if (isLayoutTabsNode(root)) {
-    for (let i = 0; i < root.children.length; i++) {
-      const result = findSplitById(root.children[i], splitId, [...path, i]);
-      if (result) return result;
-    }
-  }
-  if (isLayoutMosaicNode(root)) {
-    return root.nodes ? findSplitById(root.nodes, splitId, path) : undefined;
+  const found = findNodeById(root, splitId, path);
+  if (found && isLayoutSplitNode(found.node)) {
+    return {node: found.node, path: found.path};
   }
   return undefined;
 }
@@ -361,23 +374,9 @@ export function findMosaicNodeById(
   root: LayoutNode | null | undefined,
   mosaicId: string,
 ): LayoutMosaicNode | undefined {
-  if (!root || typeof root === 'string') return undefined;
-  if (isLayoutPanelNode(root)) return undefined;
-  if (isLayoutMosaicNode(root)) {
-    if (root.id === mosaicId) return root;
-    return root.nodes ? findMosaicNodeById(root.nodes, mosaicId) : undefined;
-  }
-  if (isLayoutSplitNode(root)) {
-    for (const child of root.children) {
-      const result = findMosaicNodeById(child, mosaicId);
-      if (result) return result;
-    }
-  }
-  if (isLayoutTabsNode(root)) {
-    for (const child of root.children) {
-      const result = findMosaicNodeById(child, mosaicId);
-      if (result) return result;
-    }
+  const found = findNodeById(root, mosaicId);
+  if (found && isLayoutMosaicNode(found.node)) {
+    return found.node;
   }
   return undefined;
 }
@@ -536,7 +535,3 @@ export const getVisibleMosaicLayoutPanels = getVisibleLayoutPanels;
 export const findMosaicNodePathByKey = findLayoutNodePathByKey;
 /** @deprecated Use `removeLayoutNodeByKey` */
 export const removeMosaicNodeByKey = removeLayoutNodeByKey;
-/** @deprecated Use `findTabsNodeById` */
-export const findAreaById = findTabsNodeById;
-/** @deprecated Use `findTabsNodeForPanel` */
-export const findAreaForPanel = findTabsNodeForPanel;

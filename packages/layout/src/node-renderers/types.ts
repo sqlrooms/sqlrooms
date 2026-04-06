@@ -1,4 +1,4 @@
-import {isLayoutTabsNode, LayoutNode} from '@sqlrooms/layout-config';
+import {LayoutNode} from '@sqlrooms/layout-config';
 import type {
   LayoutPath,
   PanelRenderContext,
@@ -76,7 +76,8 @@ export function getPanelId(node: LayoutNode, index: number): string {
 }
 
 export function isChildCollapsed(child: LayoutNode): boolean {
-  return isLayoutTabsNode(child) && child.collapsed === true;
+  if (typeof child === 'string') return false;
+  return 'collapsed' in child && child.collapsed === true;
 }
 
 export function isChildCollapsible(child: LayoutNode): boolean {
