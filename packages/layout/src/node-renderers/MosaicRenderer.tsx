@@ -25,11 +25,17 @@ const mosaicStyles = `
   .mosaic-root {
     top: 0; left: 0; right: 0; bottom: 0;
   }
+  .mosaic-window-toolbar {
+    background: var(--color-background) !important;
+  }
   .mosaic-tile {
     margin: 0;
   }
   .mosaic-tabs-toolbar {
     display: none !important;
+  }
+  .mosaic-window-body {
+    background: var(--color-background) !important;
   }
 `;
 
