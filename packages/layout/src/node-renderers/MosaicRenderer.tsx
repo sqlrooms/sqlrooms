@@ -75,9 +75,6 @@ export const MosaicRenderer: FC<
 
       const info = lookupPanelInfo(context, panels);
 
-      // Determine if close button should be shown (default: true)
-      const showCloseButton = info?.closeButton ?? true;
-
       const content = info?.render ? (
         info.render(context)
       ) : info?.component ? (
@@ -90,12 +87,26 @@ export const MosaicRenderer: FC<
 
       if (!draggable) return <>{content}</>;
 
+      const title = info?.title ?? panelId;
+      const showCloseButton = info?.closeButton ?? true;
+      const Icon = info?.icon;
+
       return (
         <MosaicWindow<string>
-          title={info?.title ?? panelId}
+          title={title}
           path={tilePath}
           draggable
-          toolbarControls={showCloseButton ? <MosaicCloseButton /> : <></>}
+          renderToolbar={() => (
+            <div className="mosaic-window-toolbar flex w-full items-center justify-between">
+              <div className="mosaic-window-title flex items-center">
+                {Icon && <Icon className="mr-2 h-4 w-4" />}
+                {title}
+              </div>
+              <div className="mosaic-window-controls">
+                {showCloseButton && <MosaicCloseButton />}
+              </div>
+            </div>
+          )}
         >
           {content}
         </MosaicWindow>

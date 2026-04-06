@@ -1,5 +1,4 @@
 import {useMemo} from 'react';
-import {BarChart3Icon} from 'lucide-react';
 
 function generateRandomData(count: number) {
   return Array.from({length: count}, () => Math.round(Math.random() * 90 + 10));
@@ -25,10 +24,6 @@ export function DynamicChartPanel({label}: {label: string}) {
 
   return (
     <div className="flex h-full flex-col gap-3 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <BarChart3Icon className="h-4 w-4" />
-        {label}
-      </div>
       <div className="flex flex-1 items-end gap-1.5 rounded p-2">
         {data.map((h, i) => (
           <div

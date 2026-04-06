@@ -14,12 +14,13 @@ export const MosaicCloseButton: FC = () => {
 
   return (
     <Button
+      size="icon"
       variant="ghost"
-      size="xs"
       onClick={handleClose}
+      className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6"
       aria-label="Close panel"
     >
-      <X />
+      <X className="h-4 w-4" />
     </Button>
   );
 };

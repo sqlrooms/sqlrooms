@@ -12,8 +12,8 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
+  BarChart3Icon,
   DatabaseIcon,
-  LayoutDashboardIcon,
   TableIcon,
   TableRowsSplitIcon,
   TerminalIcon,
@@ -169,7 +169,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           dashboards: {
             resolveChild: ({panelId}) => ({
               title: panelId,
-              icon: LayoutDashboardIcon,
+              icon: BarChart3Icon,
               render: () => (
                 <div className="h-full w-full overflow-hidden p-2">
                   <DynamicChartPanel label={panelId} />
