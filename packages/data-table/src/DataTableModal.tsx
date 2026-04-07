@@ -72,7 +72,6 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
       >
         <DialogHeader>
           <DialogTitle>{title ?? ''}</DialogTitle>
-          <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
         <div className="bg-muted flex-1 overflow-hidden">
           {tableModal.isOpen && (
