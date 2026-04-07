@@ -55,16 +55,19 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
         stopWhen: stepCountIs(20),
       });
 
-      // Process the agent stream and get the final result
-      const resultText = await streamSubAgent(
+      const result = await streamSubAgent(
         weatherAgent,
         prompt,
+        store,
+        options?.toolCallId || '',
         options?.abortSignal,
       );
 
       return {
         success: true,
-        details: resultText,
+        details: result.finalOutput,
+        agentToolCalls: result.agentToolCalls,
+        finalOutput: result.finalOutput,
       };
     },
   });

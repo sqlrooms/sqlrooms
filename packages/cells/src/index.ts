@@ -15,12 +15,20 @@ export {SqlCellContentComponent as SqlCellContent};
 export {SqlCellRunButtonComponent as SqlCellRunButton};
 export {TextCellContent} from './components/TextCellContent';
 export {VegaCellContent} from './components/VegaCellContent';
+export {CellSourceSelector} from './components/CellSourceSelector';
 export {createDefaultCellRegistry} from './defaultCellRegistry';
 export {getRenderableDependencyEdges} from './dagUtils';
 export {
   findSheetIdForCell,
   getSheetsByType,
+  normalizeCellDependencies,
   resolveSheetSchemaName,
+  toDataSourceCell,
+  toDataSourceTable,
+  isDataSourceCell,
+  isDataSourceTable,
+  fromDataSourceCell,
+  fromDataSourceTable,
 } from './helpers';
 export {useCellsStore} from './hooks';
 export {
@@ -29,6 +37,10 @@ export {
   renderSqlWithInputs,
   runSqlWithCallbacks,
 } from './sqlHelpers';
+export {
+  buildCrossFilterPredicate,
+  BRUSH_PARAM_NAME,
+} from './vegaSelectionUtils';
 export * from './types';
 
 export const SqlCell = {

@@ -45,6 +45,7 @@ import type {
   ToolRendererRegistry,
   ToolRenderers,
 } from './types';
+import type {AgentToolCall} from './agents/AgentUtils';
 import {
   cleanupPendingAnalysisResults,
   ToolAbortError,
@@ -103,6 +104,13 @@ export type AiSliceState = {
       sessionId: string | undefined,
     ) => void;
     getToolCallSession: (toolCallId: string) => string | undefined;
+    /** Live progress for sub-agent tool calls, keyed by parent toolCallId */
+    agentProgress: Record<string, AgentToolCall[]>;
+    updateAgentProgress: (
+      parentToolCallId: string,
+      toolCalls: AgentToolCall[],
+    ) => void;
+    clearAgentProgress: (parentToolCallId: string) => void;
     setPrompt: (sessionId: string, prompt: string) => void;
     getPrompt: (sessionId: string) => string;
     setIsRunning: (sessionId: string, isRunning: boolean) => void;
@@ -311,6 +319,25 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         getToolCallSession: (toolCallId: string) => {
           if (!toolCallId) return undefined;
           return toolCallToSessionId.get(toolCallId);
+        },
+
+        agentProgress: {},
+        updateAgentProgress: (
+          parentToolCallId: string,
+          toolCalls: AgentToolCall[],
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.agentProgress[parentToolCallId] = toolCalls;
+            }),
+          );
+        },
+        clearAgentProgress: (parentToolCallId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.ai.agentProgress[parentToolCallId];
+            }),
+          );
         },
 
         getAbortController: (sessionId: string) => {

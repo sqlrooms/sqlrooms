@@ -8,6 +8,7 @@ import type {
   InferToolInput,
   ToolLoopAgentSettings,
 } from 'ai';
+import type {AgentToolCall} from './agents/AgentUtils';
 
 /**
  * Shallow tool representation stored in state.
@@ -88,6 +89,13 @@ export interface AiStateForTransport {
     sessionId: string | undefined,
   ) => void;
   getToolCallSession: (toolCallId: string) => string | undefined;
+  /** Live progress for sub-agent tool calls, keyed by parent toolCallId */
+  agentProgress: Record<string, AgentToolCall[]>;
+  updateAgentProgress: (
+    parentToolCallId: string,
+    toolCalls: AgentToolCall[],
+  ) => void;
+  clearAgentProgress: (parentToolCallId: string) => void;
   getFullInstructions: () => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;

@@ -51,6 +51,7 @@ export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
   AddToolOutput,
+  AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
   ToolRenderers,

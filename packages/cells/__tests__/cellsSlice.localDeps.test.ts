@@ -131,4 +131,22 @@ describe('cells slice local dependency policy', () => {
       store.getState().cells.config.sheets[sheetId]?.graphCache,
     ).toBeUndefined();
   });
+
+  it('stores unmatched table references as tableDependencies in graph cache', async () => {
+    const store = createTestStore();
+    const state = store.getState();
+    const sheetId = state.cells.config.currentSheetId as string;
+
+    // "flights" doesn't match any cell title => it's an external table dependency
+    await state.cells.addCell(
+      sheetId,
+      sqlCell('q1', 'Q1', 'select * from flights'),
+    );
+
+    const graphCache =
+      store.getState().cells.config.sheets[sheetId]?.graphCache;
+    expect(graphCache?.tableDependencies?.q1).toEqual(['flights']);
+    // No cell deps since "flights" is not another cell
+    expect(graphCache?.dependencies.q1).toEqual([]);
+  });
 });

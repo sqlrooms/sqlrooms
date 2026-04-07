@@ -59,7 +59,45 @@ describe('default cell registry integration', () => {
         ({error: false, statements: [{node: {table_name: 'a1'}}]}) as any,
     });
 
-    expect(deps).toEqual(['a1']);
+    expect(deps).toEqual({cellIds: ['a1'], tableNames: []});
+  });
+
+  it('reports unmatched table refs as tableNames in sql.findDependencies', async () => {
+    const registry = createDefaultCellRegistry();
+    const target: SqlCell = {
+      id: 'q1',
+      type: 'sql',
+      data: {title: 'Q1', sql: 'select * from flights'},
+    };
+    const cells: Record<string, Cell> = {q1: target};
+
+    const deps = await registry.sql?.findDependencies({
+      cell: target,
+      cells,
+      sheetId: 'sheet-1',
+      sqlSelectToJson: async () =>
+        ({error: false, statements: [{node: {table_name: 'flights'}}]}) as any,
+    });
+
+    expect(deps).toEqual({cellIds: [], tableNames: ['flights']});
+  });
+
+  it('vega findDependencies returns tableRef when set', async () => {
+    const registry = createDefaultCellRegistry();
+    const vegaCell = {
+      id: 'v1',
+      type: 'vega' as const,
+      data: {title: 'Chart', tableRef: 'main.flights'},
+    };
+
+    const deps = await registry.vega?.findDependencies({
+      cell: vegaCell,
+      cells: {},
+      sheetId: 'sheet-1',
+      sqlSelectToJson: async () => ({error: false, statements: []}),
+    });
+
+    expect(deps).toEqual({cellIds: [], tableNames: ['main.flights']});
   });
 
   it('can render each built-in cell without throwing', () => {

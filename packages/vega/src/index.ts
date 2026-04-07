@@ -10,9 +10,10 @@ import {VegaChartDisplay} from './editor/VegaChartDisplay';
 import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
 import {VegaSqlEditorPanel} from './editor/VegaSqlEditorPanel';
 import {VegaChartEditorActions} from './editor/VegaChartEditorActions';
-
 export {VegaChartToolResult as VegaChartToolResult} from './VegaChartToolResult';
 export type {VisualizationSpec} from 'vega-embed';
+export type {SignalListenerHandler, SignalValue} from 'vega';
+
 export {
   createVegaChartTool,
   VegaChartToolParameters,

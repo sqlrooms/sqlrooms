@@ -49,6 +49,7 @@ export {fixIncompleteToolCalls} from './utils';
 
 export {streamSubAgent, updateAgentToolCallData} from './agents/AgentUtils';
 export type {
+  AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
 } from './agents/AgentUtils';

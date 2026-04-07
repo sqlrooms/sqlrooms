@@ -34,6 +34,7 @@ Load these only when you need them:
 
 - [Architecture & core concepts](contributing/architecture.md)
 - [State patterns (produce, selectors, lifecycle)](contributing/patterns.md)
+- [Typescript and React guidelines](contributing/typescript.md)
 - [Adding features (packages, visualizations, schema)](contributing/adding-features.md)
 - [Troubleshooting](contributing/troubleshooting.md)
 - [Python workspace](contributing/python.md)

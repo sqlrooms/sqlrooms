@@ -1,13 +1,29 @@
+import {QualifiedTableName} from '@sqlrooms/db';
 import {
   Cell,
+  CellDependencies,
   CellRegistry,
   CellsRootState,
   CellsSliceConfig,
   Sheet,
   SheetType,
+  SqlCell,
   SqlSelectToJsonFn,
 } from './types';
 import {getSheetSchemaName} from './utils';
+
+/**
+ * Normalizes the result of `findDependencies` to a `CellDependencies` object.
+ * Accepts either the legacy `string[]` (cell IDs only) or the new `CellDependencies` shape.
+ */
+export function normalizeCellDependencies(
+  result: string[] | CellDependencies,
+): CellDependencies {
+  if (Array.isArray(result)) {
+    return {cellIds: result};
+  }
+  return result;
+}
 
 /**
  * Helper to resolve dependencies using the registry's async AST-based resolver.
@@ -18,10 +34,16 @@ export async function resolveDependencies(
   sheetId: string,
   registry: CellRegistry,
   sqlSelectToJson: SqlSelectToJsonFn,
-): Promise<string[]> {
+): Promise<CellDependencies> {
   const item = registry[cell.type];
-  if (!item) return [];
-  return item.findDependencies({cell, cells, sheetId, sqlSelectToJson});
+  if (!item) return {cellIds: []};
+  const raw = await item.findDependencies({
+    cell,
+    cells,
+    sheetId,
+    sqlSelectToJson,
+  });
+  return normalizeCellDependencies(raw);
 }
 
 /**
@@ -167,4 +189,53 @@ export function resolveSheetSchemaName(
   sheet: Pick<Sheet, 'id' | 'schemaName'>,
 ) {
   return sheet.schemaName || getSheetSchemaName(sheet.id);
+}
+
+const DATA_SOURCE_CELL_PREFIX = 'cell:';
+const DATA_SOURCE_TABLE_PREFIX = 'table:';
+
+export function toDataSourceCell(cell: SqlCell | string): string {
+  const id = typeof cell === 'string' ? cell : cell.id;
+
+  return `${DATA_SOURCE_CELL_PREFIX}${id}`;
+}
+
+export function toDataSourceTable(table: QualifiedTableName | string): string {
+  if (typeof table === 'string') {
+    return `${DATA_SOURCE_TABLE_PREFIX}${table}`;
+  }
+
+  // Escape each identifier segment: double any internal quotes, then wrap in quotes
+  const escapeIdentifier = (id: string) => `"${id.replace(/"/g, '""')}"`;
+
+  const qualifiedName = [
+    table.schema ? escapeIdentifier(table.schema) : null,
+    escapeIdentifier(table.table),
+  ]
+    .filter(Boolean)
+    .join('.');
+
+  return `${DATA_SOURCE_TABLE_PREFIX}${qualifiedName}`;
+}
+
+export function isDataSourceCell(value: string): boolean {
+  return value.startsWith(DATA_SOURCE_CELL_PREFIX);
+}
+
+export function isDataSourceTable(value: string): boolean {
+  return value.startsWith(DATA_SOURCE_TABLE_PREFIX);
+}
+
+export function fromDataSourceCell(value: string): string | undefined {
+  if (isDataSourceCell(value)) {
+    return value.slice(DATA_SOURCE_CELL_PREFIX.length);
+  }
+  return undefined;
+}
+
+export function fromDataSourceTable(value: string): string | undefined {
+  if (isDataSourceTable(value)) {
+    return value.slice(DATA_SOURCE_TABLE_PREFIX.length);
+  }
+  return undefined;
 }

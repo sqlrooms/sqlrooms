@@ -1,17 +1,22 @@
-import {
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@sqlrooms/ui';
+import {useDebouncedValue} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
-import React, {useCallback, useMemo, useState} from 'react';
+import {useCallback, useState} from 'react';
 import {useCellsStore} from '../hooks';
-import type {Cell, CellContainerProps, SqlCellStatus, VegaCell} from '../types';
+import {useVegaCellQuery} from '../hooks/useVegaCellQuery';
+import {useVegaCellDataSource} from '../hooks/useVegaCellDataSource';
+import type {CellContainerProps, VegaCell} from '../types';
+import {SelectionListener} from './SelectionListener';
 import {VegaConfigPanel} from './VegaConfigPanel';
+import {VegaCellHeader} from './VegaCellHeader';
+import {toDataSourceCell, toDataSourceTable} from '../helpers';
+
+const DEFAULT_ASPECT_RATIO = 3 / 2;
+const DEFAULT_SPEC = {
+  data: {name: 'queryResult'},
+  mark: 'bar',
+  padding: 20,
+} as const;
 
 export type VegaCellContentProps = {
   id: string;
@@ -25,128 +30,148 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   renderContainer,
 }) => {
   const updateCell = useCellsStore((s) => s.cells.updateCell);
-  const cellsData = useCellsStore((s) => s.cells.config.data);
-  const cellsStatus = useCellsStore((s) => s.cells.status);
 
-  // Find available SQL cells in the same sheet
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const sheetCellIds = useCellsStore((s) =>
-    currentSheetId ? s.cells.config.sheets[currentSheetId]?.cellIds : undefined,
-  );
+  const crossFilterEnabled = cell.data.crossFilter?.enabled !== false;
+  const brushField = cell.data.crossFilter?.brushField;
+  const brushFieldType = cell.data.crossFilter?.brushFieldType;
 
-  const availableSqlCells = useMemo(() => {
-    if (!sheetCellIds) return [];
-    return sheetCellIds
-      .map((cid) => cellsData[cid])
-      .filter((c): c is Cell & {type: 'sql'} => c?.type === 'sql');
-  }, [sheetCellIds, cellsData]);
-
-  const selectedSqlId = cell.data.sqlId;
-  const selectedSqlStatus = selectedSqlId
-    ? cellsStatus[selectedSqlId]
-    : undefined;
-
-  const [draftSpec, setDraftSpec] = useState(
-    cell.data.vegaSpec ?? {
-      data: {name: 'queryResult'},
-      mark: 'bar',
-      padding: 20,
-    },
-  );
   const [isEditing, setIsEditing] = useState(false);
 
-  const selectedSqlQuery =
-    selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
-      ? `SELECT * FROM ${selectedSqlStatus.resultView}`
-      : selectedSqlId && cellsData[selectedSqlId]?.type === 'sql'
-        ? (cellsData[selectedSqlId] as any).data.sql
-        : '';
+  // Local state with debounced persistence
+  const [localSpec, handleSpecChange] = useDebouncedValue(
+    cell.data.vegaSpec ?? DEFAULT_SPEC,
+    (spec) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') draft.data.vegaSpec = spec;
+        }),
+      );
+    },
+    300,
+  );
 
-  const lastRunTime =
-    selectedSqlStatus?.type === 'sql'
-      ? (selectedSqlStatus as SqlCellStatus).lastRunTime
+  const {
+    selectedSqlId,
+    selectedTableRef,
+    selectedSqlStatus,
+    baseSqlQuery,
+    lastRunTime,
+    hasDataSource,
+  } = useVegaCellDataSource(cell);
+
+  const {selectedSqlQuery, crossFilterPredicate} = useVegaCellQuery({
+    cellId: id,
+    baseSqlQuery,
+    selectedSqlId,
+    crossFilterEnabled,
+  });
+
+  // Encode selection value: "cell:<id>" or "table:<schema.table>"
+  const selectValue = selectedSqlId
+    ? toDataSourceCell(selectedSqlId)
+    : selectedTableRef
+      ? toDataSourceTable(selectedTableRef)
       : undefined;
 
-  const handleSqlIdChange = (value: string) => {
-    updateCell(id, (c) =>
-      produce(c, (draft) => {
-        if (draft.type === 'vega') draft.data.sqlId = value;
-      }),
-    );
-  };
+  const handleCrossFilterToggle = useCallback(
+    (enabled: boolean) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') {
+            if (!draft.data.crossFilter) draft.data.crossFilter = {};
+            draft.data.crossFilter.enabled = enabled;
+          }
+        }),
+      );
+    },
+    [id, updateCell],
+  );
 
-  const saveSpec = useCallback(() => {
-    updateCell(id, (c) =>
-      produce(c, (draft) => {
-        if (draft.type === 'vega') draft.data.vegaSpec = draftSpec;
-      }),
-    );
-    setIsEditing(false);
-  }, [id, draftSpec, updateCell]);
+  const handleBrushFieldChange = useCallback(
+    (field: string | undefined) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') {
+            if (!draft.data.crossFilter) draft.data.crossFilter = {};
+            draft.data.crossFilter.brushField = field;
+          }
+        }),
+      );
+    },
+    [id, updateCell],
+  );
+
+  const handleBrushFieldTypeChange = useCallback(
+    (fieldType: string | undefined) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') {
+            if (!draft.data.crossFilter) draft.data.crossFilter = {};
+            draft.data.crossFilter.brushFieldType = fieldType;
+          }
+        }),
+      );
+    },
+    [id, updateCell],
+  );
 
   const header = (
-    <div className="flex items-center gap-2">
-      <Select value={selectedSqlId} onValueChange={handleSqlIdChange}>
-        <SelectTrigger className="h-6 w-[150px] text-xs shadow-none">
-          <SelectValue placeholder="Select data source" />
-        </SelectTrigger>
-        <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-          {availableSqlCells.map((sql) => (
-            <SelectItem className="text-xs" key={sql.id} value={sql.id}>
-              {sql.data.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        size="xs"
-        variant="secondary"
-        className="h-6"
-        onClick={() => (isEditing ? saveSpec() : setIsEditing(true))}
-        disabled={!selectedSqlId}
-      >
-        {isEditing ? 'Save' : 'Edit chart'}
-      </Button>
-      <span className="text-[10px] font-bold text-gray-400 uppercase">
-        Vega
-      </span>
-    </div>
+    <VegaCellHeader
+      cellId={id}
+      selectValue={selectValue}
+      onEditToggle={() => setIsEditing((prev) => !prev)}
+      hasDataSource={hasDataSource}
+      crossFilterEnabled={crossFilterEnabled}
+      brushField={brushField}
+      crossFilterPredicate={crossFilterPredicate}
+    />
   );
+
+  const showSelectionListener =
+    crossFilterEnabled && brushField && selectedSqlId && selectedSqlStatus;
 
   const content = (
     <div className="flex h-[400px]">
       {isEditing && (
         <VegaConfigPanel
-          sqlQuery={selectedSqlQuery}
+          sqlQuery={baseSqlQuery}
           lastRunTime={lastRunTime}
-          spec={draftSpec}
-          onSpecChange={setDraftSpec}
+          spec={localSpec}
+          crossFilterEnabled={crossFilterEnabled}
+          onSpecChange={handleSpecChange}
+          onCrossFilterToggle={handleCrossFilterToggle}
+          onBrushFieldChange={handleBrushFieldChange}
+          onBrushFieldTypeChange={handleBrushFieldTypeChange}
         />
       )}
       <div
-        onDoubleClick={() => selectedSqlId && setIsEditing((prev) => !prev)}
+        onDoubleClick={() => hasDataSource && setIsEditing((prev) => !prev)}
         className="flex h-full w-full p-2"
       >
-        {!selectedSqlId ? (
+        {!hasDataSource ? (
           <div className="flex h-full w-full items-center justify-center text-gray-400">
-            Please select a SQL data source first.
+            Please select a data source first.
           </div>
-        ) : !selectedSqlStatus ? (
+        ) : !selectedSqlStatus && !selectedTableRef ? (
           <div className="flex h-full w-full items-center justify-center text-gray-400">
             No chart data available, please run the SQL cell first.
           </div>
         ) : (
           <VegaLiteChart
             sqlQuery={selectedSqlQuery}
-            // isLoading={
-            //   selectedSqlStatus?.type === 'sql' &&
-            //   selectedSqlStatus.status === 'running'
-            // }
-            // lastRunTime={lastRunTime}
-            spec={draftSpec}
+            spec={localSpec}
             className="h-full w-full"
-            aspectRatio={isEditing ? undefined : 3 / 2}
-          />
+            aspectRatio={isEditing ? undefined : DEFAULT_ASPECT_RATIO}
+          >
+            {showSelectionListener && (
+              <SelectionListener
+                cellId={id}
+                sqlId={selectedSqlId}
+                brushField={brushField}
+                brushFieldType={brushFieldType}
+              />
+            )}
+          </VegaLiteChart>
         )}
       </div>
     </div>

@@ -23,6 +23,30 @@ export type AgentToolCallAdditionalData = {
 };
 
 /**
+ * Return type from streamSubAgent containing both final text and tool call data.
+ */
+export type AgentStreamOutput = {
+  finalOutput: string;
+  agentToolCalls: AgentToolCall[];
+};
+
+/**
+ * Minimal store interface required by streamSubAgent.
+ */
+interface AgentStreamStore {
+  getState(): {
+    ai: {
+      getToolCallSession?: (toolCallId: string) => string | undefined;
+      updateAgentProgress: (
+        parentToolCallId: string,
+        toolCalls: AgentToolCall[],
+      ) => void;
+      clearAgentProgress: (parentToolCallId: string) => void;
+    };
+  };
+}
+
+/**
  * Updates a tool call entry in the provided toolEditState map based on a stream chunk.
  * Used by renderers to track per-tool-call progress.
  *
@@ -70,19 +94,24 @@ export function updateAgentToolCallData(
 }
 
 /**
- * Streams a sub-agent with the given prompt, iterating chunks to update tool call
- * progress, and returns the final text output.
+ * Streams a sub-agent with the given prompt, collecting tool call progress for
+ * live UI rendering via the store, and returns the final text output along with
+ * the collected tool calls.
  *
  * @param agent - The ToolLoopAgent to run
  * @param prompt - The prompt string to send to the agent
+ * @param store - Store providing updateAgentProgress / clearAgentProgress
+ * @param parentToolCallId - The parent tool call ID for progress tracking
  * @param abortSignal - Optional abort signal for cancellation
- * @returns The final text output from the agent
+ * @returns The final text and collected tool calls from the agent
  */
 export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   agent: ToolLoopAgent<never, TOOLS, never>,
   prompt: string,
+  store: AgentStreamStore,
+  parentToolCallId: string,
   abortSignal?: AbortSignal,
-): Promise<string> {
+): Promise<AgentStreamOutput> {
   const throwIfAborted = () => {
     if (abortSignal?.aborted) {
       throw new ToolAbortError(TOOL_CALL_CANCELLED);
@@ -90,6 +119,14 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   };
 
   let finalText = '';
+  const toolCallMap = new Map<string, AgentToolCall>();
+
+  const pushProgress = () => {
+    store.getState().ai.updateAgentProgress(
+      parentToolCallId,
+      Array.from(toolCallMap.values()).map((tc) => ({...tc})),
+    );
+  };
 
   const stream = await createAgentUIStream({
     agent,
@@ -106,15 +143,62 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   try {
     for await (const chunk of stream) {
       throwIfAborted();
+
       if (chunk.type === 'text-delta') {
         finalText += chunk.delta;
+      }
+
+      if (!chunk.toolCallId) continue;
+
+      const id = chunk.toolCallId;
+      let changed = false;
+
+      if (!toolCallMap.has(id) && chunk.toolName) {
+        toolCallMap.set(id, {
+          toolCallId: id,
+          toolName: chunk.toolName,
+          state: 'pending',
+        });
+        changed = true;
+      }
+
+      const entry = toolCallMap.get(id);
+      if (!entry) continue;
+
+      if (chunk.type === 'tool-output-available') {
+        toolCallMap.set(id, {
+          ...entry,
+          output: chunk.output,
+          state: 'success',
+        });
+        changed = true;
+      } else if (
+        chunk.type === 'tool-output-error' ||
+        chunk.type === 'tool-input-error'
+      ) {
+        toolCallMap.set(id, {
+          ...entry,
+          errorText: chunk.errorText,
+          state: 'error',
+        });
+        changed = true;
+      }
+
+      if (changed) {
+        pushProgress();
       }
     }
   } catch (err) {
     throwIfAborted();
     throw err;
+  } finally {
+    store.getState().ai.clearAgentProgress(parentToolCallId);
   }
 
   throwIfAborted();
-  return finalText;
+
+  return {
+    finalOutput: finalText,
+    agentToolCalls: Array.from(toolCallMap.values()),
+  };
 }

@@ -3465,6 +3465,12 @@ importers:
       react-hook-form:
         specifier: ^7.63.0
         version: 7.68.0(react@19.2.1)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.7)(react@19.2.1)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
       zod:
         specifier: 4.1.13
         version: 4.1.13
