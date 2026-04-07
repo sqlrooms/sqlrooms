@@ -5,6 +5,8 @@ import {InfoIcon} from 'lucide-react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
 import {useStoreWithAi} from '../AiSlice';
+import type {AgentToolCall} from '../agents/AgentUtils';
+import type {ToolRendererRegistry} from '../types';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
@@ -13,9 +15,10 @@ const ToolCallDetailPopup: React.FC<{
   toolCall: {
     toolCallId: string;
     toolName: string;
+    input?: unknown;
     output?: unknown;
     errorText?: string;
-    state: 'pending' | 'success' | 'error';
+    state: 'pending' | 'success' | 'error' | 'approval-requested';
   };
 }> = ({toolCall}) => {
   return (
@@ -40,18 +43,37 @@ const ToolCallDetailPopup: React.FC<{
                 ? 'text-green-600'
                 : toolCall.state === 'error'
                   ? 'text-red-600'
-                  : 'text-yellow-600'
+                  : toolCall.state === 'approval-requested'
+                    ? 'text-amber-600'
+                    : 'text-yellow-600'
             }
           >
             {toolCall.state}
           </span>
         </div>
+        {toolCall.input != null && (
+          <>
+            <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              Input
+            </div>
+            <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+              {typeof toolCall.input === 'string'
+                ? toolCall.input
+                : JSON.stringify(toolCall.input, null, 2)}
+            </pre>
+          </>
+        )}
         {toolCall.output != null && (
-          <pre className="mt-1.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-            {typeof toolCall.output === 'string'
-              ? toolCall.output
-              : JSON.stringify(toolCall.output, null, 2)}
-          </pre>
+          <>
+            <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              Output
+            </div>
+            <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+              {typeof toolCall.output === 'string'
+                ? toolCall.output
+                : JSON.stringify(toolCall.output, null, 2)}
+            </pre>
+          </>
         )}
         {toolCall.errorText && (
           <div className="mt-1.5 text-[10px] text-red-600">
@@ -64,19 +86,155 @@ const ToolCallDetailPopup: React.FC<{
 };
 
 /**
+ * Renders a single tool call entry with:
+ * 1. Reasoning (if present in input)
+ * 2. Status line: ✓/✗/○/⏳ toolName (i)
+ * 3. Inline output (custom renderer or formatted JSON)
+ *
+ * Used for both orchestrator-level and sub-agent tool calls.
+ */
+const AgentToolCallEntry: React.FC<{
+  toolCall: AgentToolCall;
+  toolRenderers: ToolRendererRegistry;
+  nestedCalls?: AgentToolCall[];
+  showOutput?: boolean;
+}> = ({toolCall, toolRenderers, nestedCalls, showOutput = false}) => {
+  const ToolComponent = toolRenderers[toolCall.toolName];
+  const isSuccess = toolCall.state === 'success';
+  const isError = toolCall.state === 'error';
+  const isApprovalRequested = toolCall.state === 'approval-requested';
+  const hasComponent = ToolComponent && typeof ToolComponent === 'function';
+
+  const inputObj =
+    toolCall.input && typeof toolCall.input === 'object'
+      ? (toolCall.input as Record<string, unknown>)
+      : undefined;
+  const reasoning = inputObj?.reasoning as string | undefined;
+
+  const hasNonAgentOutput =
+    isSuccess &&
+    toolCall.output != null &&
+    (typeof toolCall.output !== 'object' ||
+      !('agentToolCalls' in (toolCall.output as Record<string, unknown>)));
+
+  return (
+    <div className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}>
+      {reasoning && (
+        <div className="mb-1 ml-6 text-xs text-gray-500 italic">
+          {reasoning}
+        </div>
+      )}
+      <div className="mb-1 flex items-start">
+        <span className="mr-2 min-w-4">
+          {isSuccess && '✓'}
+          {isError && '✗'}
+          {isApprovalRequested && '⏳'}
+          {toolCall.state === 'pending' && '○'}
+        </span>
+        <div className="flex-1">
+          <span className="font-medium">{toolCall.toolName}</span>
+          <ToolCallDetailPopup toolCall={toolCall} />
+          {isError && toolCall.errorText && (
+            <div className="mt-0.5 text-[0.9em] text-red-700">
+              Error: {toolCall.errorText}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isApprovalRequested && hasComponent ? (
+        <div className="mt-1 ml-6">
+          <ToolComponent
+            output={undefined}
+            input={toolCall.input}
+            toolCallId={toolCall.toolCallId}
+            state="approval-requested"
+            approvalId={toolCall.approvalId}
+          />
+        </div>
+      ) : null}
+
+      {nestedCalls && nestedCalls.length > 0 ? (
+        <div className="ml-6">
+          <AgentToolCallList
+            toolCalls={nestedCalls}
+            toolRenderers={toolRenderers}
+            showOutput={showOutput}
+          />
+        </div>
+      ) : null}
+
+      {(showOutput || isError) && isSuccess && hasComponent ? (
+        <div className="mt-1 ml-6">
+          <ToolComponent
+            output={toolCall.output}
+            input={toolCall.input}
+            toolCallId={toolCall.toolCallId}
+            state="output-available"
+            errorText={toolCall.errorText}
+          />
+        </div>
+      ) : (showOutput && hasNonAgentOutput) ||
+        (isError && toolCall.output != null) ? (
+        <div className="mt-1 ml-6">
+          <pre
+            className={`max-h-32 overflow-auto rounded p-2 font-mono text-[10px] ${
+              isError
+                ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300'
+                : 'bg-gray-50 text-gray-600 dark:bg-gray-900 dark:text-gray-300'
+            }`}
+          >
+            {typeof toolCall.output === 'string'
+              ? toolCall.output
+              : JSON.stringify(toolCall.output, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+/**
+ * Recursively renders a list of agent tool calls.
+ * When a tool call has nested `agentToolCalls` (i.e. it invoked a sub-agent),
+ * those are rendered as an indented sub-list.
+ * During live streaming, also checks `agentProgress` for in-flight nested calls.
+ */
+const AgentToolCallList: React.FC<{
+  toolCalls: AgentToolCall[];
+  toolRenderers: ToolRendererRegistry;
+  showOutput?: boolean;
+}> = ({toolCalls, toolRenderers, showOutput}) => {
+  const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
+
+  return (
+    <>
+      {toolCalls.map((toolCall) => {
+        const nestedCalls =
+          agentProgress[toolCall.toolCallId] ?? toolCall.agentToolCalls;
+
+        return (
+          <AgentToolCallEntry
+            key={toolCall.toolCallId}
+            toolCall={toolCall}
+            toolRenderers={toolRenderers}
+            nestedCalls={nestedCalls}
+            showOutput={showOutput}
+          />
+        );
+      })}
+    </>
+  );
+};
+
+/**
  * Component that renders agent tool execution progress.
  * Reads live progress from the store while the agent is running,
  * then falls back to the final output once the tool completes.
  */
 const AgentProgressRenderer: React.FC<{
   toolCallId: string;
-  agentToolCalls: Array<{
-    toolCallId: string;
-    toolName: string;
-    output?: unknown;
-    errorText?: string;
-    state: 'pending' | 'success' | 'error';
-  }>;
+  agentToolCalls: AgentToolCall[];
   finalOutput?: string;
   reasoning?: string;
 }> = ({toolCallId, agentToolCalls, finalOutput, reasoning}) => {
@@ -93,53 +251,10 @@ const AgentProgressRenderer: React.FC<{
         </div>
       ) : null}
       <div className="ml-3">
-        {displayCalls.map((toolCall) => {
-          const ToolComponent = toolRenderers[toolCall.toolName];
-          const isSuccess = toolCall.state === 'success';
-          const isError = toolCall.state === 'error';
-          const hasComponent =
-            ToolComponent && typeof ToolComponent === 'function';
-          const hasObjectOutput =
-            toolCall.output &&
-            typeof toolCall.output === 'object' &&
-            toolCall.output !== null;
-
-          return (
-            <div
-              key={toolCall.toolCallId}
-              className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}
-            >
-              <div className="mb-1 flex items-start">
-                <span className="mr-2 min-w-4">
-                  {isSuccess && '✓'}
-                  {isError && '✗'}
-                  {toolCall.state === 'pending' && '○'}
-                </span>
-                <div className="flex-1">
-                  <span className="font-medium">{toolCall.toolName}</span>
-                  <ToolCallDetailPopup toolCall={toolCall} />
-                  {isError && toolCall.errorText && (
-                    <div className="mt-0.5 text-[0.9em] text-red-700">
-                      Error: {toolCall.errorText}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="mt-1 ml-6">
-                  <ToolComponent
-                    output={toolCall.output}
-                    input={undefined}
-                    toolCallId={toolCall.toolCallId}
-                    state="output-available"
-                    errorText={toolCall.errorText}
-                  />
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+        <AgentToolCallList
+          toolCalls={displayCalls}
+          toolRenderers={toolRenderers}
+        />
       </div>
       {finalOutput && (
         <div className="mt-3 pt-2">
@@ -154,8 +269,9 @@ const AgentProgressRenderer: React.FC<{
 
 /**
  * Decides whether to show live agent progress or the final tool result.
- * While the agent is running, live progress is read from the store.
- * After completion, the final output (including agentToolCalls) is used.
+ * Reads agent tool call data primarily from the store's agentProgress
+ * (which persists after completion). Falls back to agentToolCalls in the
+ * tool output for backward compatibility with older persisted messages.
  */
 const AgentProgressSection: React.FC<{
   toolCallId: string;
@@ -165,46 +281,39 @@ const AgentProgressSection: React.FC<{
     | 'input-streaming'
     | 'input-available'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'approval-requested'
+    | 'approval-responded'
+    | 'output-denied';
   errorText?: string;
 }> = ({toolCallId, output, input, state, errorText}) => {
-  const liveProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
+  const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
   const agentOutput = output as {
-    agentToolCalls?: Array<{
-      toolCallId: string;
-      toolName: string;
-      output?: unknown;
-      errorText?: string;
-      state: 'pending' | 'success' | 'error';
-    }>;
+    agentToolCalls?: AgentToolCall[];
     finalOutput?: string;
   };
 
-  const hasFinishedAgentProgress =
-    agentOutput?.agentToolCalls && agentOutput.agentToolCalls.length > 0;
+  const finalOutput = agentOutput?.finalOutput;
 
   const reasoning =
     input instanceof Object && 'reasoning' in input
       ? (input.reasoning as string)
       : undefined;
 
-  if (liveProgress && liveProgress.length > 0) {
-    return (
-      <AgentProgressRenderer
-        toolCallId={toolCallId}
-        agentToolCalls={[]}
-        reasoning={reasoning}
-      />
-    );
-  }
+  // Prefer store-based progress (covers both live streaming and completed
+  // agents). Fall back to agentToolCalls embedded in tool output for
+  // backward compat with older persisted messages.
+  const displayCalls =
+    storeProgress ??
+    (agentOutput?.agentToolCalls?.length ? agentOutput.agentToolCalls : null);
 
-  if (hasFinishedAgentProgress) {
+  if (displayCalls && displayCalls.length > 0) {
     return (
       <AgentProgressRenderer
         toolCallId={toolCallId}
-        agentToolCalls={agentOutput.agentToolCalls!}
-        finalOutput={agentOutput.finalOutput}
+        agentToolCalls={displayCalls}
+        finalOutput={state === 'output-available' ? finalOutput : undefined}
         reasoning={reasoning}
       />
     );

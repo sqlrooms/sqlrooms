@@ -51,7 +51,7 @@ export function createQueryTool(
     autoSummary = false,
     numberOfRowsToShareWithLLM = 0,
   } = options || {};
-  return tool<QueryToolParameters, QueryToolOutput>({
+  return tool<QueryToolParameters, QueryToolOutput, Record<string, unknown>>({
     description: `A tool for running SQL queries on the tables in the database.
                   Please only run one query at a time.
                   If a query fails, please don't try to run it again with the same syntax.`,

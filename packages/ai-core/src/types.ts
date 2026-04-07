@@ -8,7 +8,7 @@ import type {
   InferToolInput,
   ToolLoopAgentSettings,
 } from 'ai';
-import type {AgentToolCall} from './agents/AgentUtils';
+import type {AgentToolCall, PendingSubAgentApproval} from './agents/AgentUtils';
 
 /**
  * Shallow tool representation stored in state.
@@ -96,6 +96,11 @@ export interface AiStateForTransport {
     toolCalls: AgentToolCall[],
   ) => void;
   clearAgentProgress: (parentToolCallId: string) => void;
+  /** Pending approval requests from sub-agent tools with needsApproval */
+  pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
+  requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
+  resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
+  clearSubAgentApproval: (approvalId: string) => void;
   getFullInstructions: () => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;

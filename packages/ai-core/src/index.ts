@@ -52,5 +52,6 @@ export type {
   AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
+  PendingSubAgentApproval,
 } from './agents/AgentUtils';
 export {ReasoningBox} from './components/ReasoningBox';

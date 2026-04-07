@@ -45,7 +45,7 @@ import type {
   ToolRendererRegistry,
   ToolRenderers,
 } from './types';
-import type {AgentToolCall} from './agents/AgentUtils';
+import type {AgentToolCall, PendingSubAgentApproval} from './agents/AgentUtils';
 import {
   cleanupPendingAnalysisResults,
   ToolAbortError,
@@ -111,6 +111,11 @@ export type AiSliceState = {
       toolCalls: AgentToolCall[],
     ) => void;
     clearAgentProgress: (parentToolCallId: string) => void;
+    /** Pending approval requests from sub-agent tools with needsApproval */
+    pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
+    requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
+    resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
+    clearSubAgentApproval: (approvalId: string) => void;
     setPrompt: (sessionId: string, prompt: string) => void;
     getPrompt: (sessionId: string) => string;
     setIsRunning: (sessionId: string, isRunning: boolean) => void;
@@ -260,6 +265,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       string,
       AddToolApprovalResponse
     >();
+    const pendingApprovalResolvers = new Map<
+      string,
+      (approved: boolean) => void
+    >();
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -336,6 +345,44 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               delete draft.ai.agentProgress[parentToolCallId];
+            }),
+          );
+        },
+
+        pendingSubAgentApprovals: {},
+        requestSubAgentApproval: (approval: PendingSubAgentApproval) => {
+          set((state) =>
+            produce(state, (draft) => {
+              // Store only serializable fields in state (not the resolve callback)
+              draft.ai.pendingSubAgentApprovals[approval.approvalId] = {
+                toolCallId: approval.toolCallId,
+                approvalId: approval.approvalId,
+                toolName: approval.toolName,
+                input: approval.input,
+                resolve: approval.resolve,
+              } as PendingSubAgentApproval;
+            }),
+          );
+          // Store the resolve callback outside of immer (not serializable)
+          pendingApprovalResolvers.set(approval.approvalId, approval.resolve);
+        },
+        resolveSubAgentApproval: (approvalId: string, approved: boolean) => {
+          const resolver = pendingApprovalResolvers.get(approvalId);
+          if (resolver) {
+            resolver(approved);
+            pendingApprovalResolvers.delete(approvalId);
+          }
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.ai.pendingSubAgentApprovals[approvalId];
+            }),
+          );
+        },
+        clearSubAgentApproval: (approvalId: string) => {
+          pendingApprovalResolvers.delete(approvalId);
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.ai.pendingSubAgentApprovals[approvalId];
             }),
           );
         },
@@ -688,7 +735,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   (s: AnalysisSessionSchema) => s.id === sessionId,
                 );
                 if (session) {
-                  session.uiMessages = structuredClone(uiMessages);
+                  session.uiMessages = structuredClone(
+                    uiMessages,
+                  ) as typeof session.uiMessages;
                   updated = true;
                 }
               }),

@@ -256,11 +256,32 @@ export function cleanupPendingAnalysisResults(
 }
 
 /**
+ * Recursively strips `agentToolCalls` from an object so sub-agent
+ * tool-call trees don't bloat the LLM context window. Keeps `finalOutput`
+ * and other scalar fields intact.
+ */
+function stripAgentToolCalls(output: unknown): unknown {
+  if (!output || typeof output !== 'object') return output;
+  if (Array.isArray(output)) return output.map(stripAgentToolCalls);
+
+  const obj = output as Record<string, unknown>;
+  if (!('agentToolCalls' in obj)) return output;
+
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'agentToolCalls') continue;
+    cleaned[key] = stripAgentToolCalls(value);
+  }
+  return cleaned;
+}
+
+/**
  * Sanitizes UIMessages before sending to LLM APIs to prevent errors from malformed content.
  *
  * This handles issues that can occur when conversations are interrupted mid-stream:
  * - Empty text parts (causes Bedrock error: "text field in ContentBlock is blank")
  * - Assistant messages with no meaningful content after cleanup
+ * - Nested `agentToolCalls` in tool outputs that bloat the LLM context
  *
  * @param messages - The messages to sanitize
  * @returns Sanitized messages safe to send to LLM APIs
@@ -272,18 +293,32 @@ export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
         return message;
       }
 
-      // Filter out empty text parts and empty reasoning parts
-      const sanitizedParts = message.parts.filter((part) => {
-        if (part.type === 'text') {
-          const textPart = part as {type: 'text'; text: string};
-          return textPart.text && textPart.text.trim().length > 0;
-        }
-        if (part.type === 'reasoning') {
-          const reasoningPart = part as {type: 'reasoning'; text: string};
-          return reasoningPart.text && reasoningPart.text.trim().length > 0;
-        }
-        return true;
-      });
+      // Filter out empty text parts and empty reasoning parts,
+      // and strip agentToolCalls from tool outputs
+      const sanitizedParts = message.parts
+        .filter((part) => {
+          if (part.type === 'text') {
+            const textPart = part as {type: 'text'; text: string};
+            return textPart.text && textPart.text.trim().length > 0;
+          }
+          if (part.type === 'reasoning') {
+            const reasoningPart = part as {type: 'reasoning'; text: string};
+            return reasoningPart.text && reasoningPart.text.trim().length > 0;
+          }
+          return true;
+        })
+        .map((part) => {
+          const p = part as Record<string, unknown>;
+          if (
+            p.state === 'output-available' &&
+            p.output &&
+            typeof p.output === 'object' &&
+            'agentToolCalls' in (p.output as Record<string, unknown>)
+          ) {
+            return {...part, output: stripAgentToolCalls(p.output)};
+          }
+          return part;
+        }) as typeof message.parts;
 
       // If all parts were filtered out, add a placeholder for assistant messages
       // to maintain conversation structure (user messages should always have content)

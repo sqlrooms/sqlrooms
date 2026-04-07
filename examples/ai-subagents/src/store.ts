@@ -11,7 +11,8 @@ import {
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {AI_SETTINGS} from './config';
-import {weatherAgentTool} from './agents/WeatherAgent';
+import {travelPlannerAgentTool} from './agents/TravelPlannerAgent';
+import {BookHotelApprovalRenderer} from './components/BookHotelApprovalRenderer';
 
 type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
 
@@ -21,7 +22,7 @@ type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
 export const {roomStore, useRoomStore} = createRoomStore<State>(
   persistSliceConfigs(
     {
-      name: 'ai-agent-example-app-state-storage',
+      name: 'ai-subagents-example-app-state-storage',
       sliceConfigSchemas: {
         ai: AiSliceConfig,
         aiSettings: AiSettingsSliceConfig,
@@ -37,12 +38,16 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
       // Ai slice
       ...createAiSlice({
         getInstructions: () => {
-          return `You are an AI assistant that can answer questions and help with tasks.`;
+          return `You are an AI travel planning assistant. You can help users plan trips by checking weather, finding activities, and booking hotels.`;
         },
 
         tools: {
-          'agent-weather': weatherAgentTool(store),
+          'agent-travel-planner': travelPlannerAgentTool(store),
         },
+
+        toolRenderers: {
+          bookHotel: BookHotelApprovalRenderer,
+        } as Record<string, typeof BookHotelApprovalRenderer>,
       })(set, get, store),
     }),
   ),
