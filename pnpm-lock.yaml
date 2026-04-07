@@ -2195,9 +2195,6 @@ importers:
 
   packages/ai:
     dependencies:
-      '@ai-sdk/provider-utils':
-        specifier: ^4.0.0
-        version: 4.0.23(zod@4.1.13)
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
@@ -2313,9 +2310,6 @@ importers:
 
   packages/ai-rag:
     dependencies:
-      '@ai-sdk/provider-utils':
-        specifier: ^4.0.0
-        version: 4.0.23(zod@4.1.13)
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../ai-core
@@ -3738,9 +3732,6 @@ importers:
 
   packages/vega:
     dependencies:
-      '@ai-sdk/provider-utils':
-        specifier: ^4.0.0
-        version: 4.0.23(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../ai

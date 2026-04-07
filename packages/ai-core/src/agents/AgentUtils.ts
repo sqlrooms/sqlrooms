@@ -153,7 +153,7 @@ function extractNestedAgentToolCalls(
  * @returns The final text and collected tool calls from the agent
  */
 export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
-  agent: ToolLoopAgent<never, TOOLS, any, never>,
+  agent: ToolLoopAgent<never, TOOLS, any>,
   prompt: string,
   store: AgentStreamStore,
   parentToolCallId: string,

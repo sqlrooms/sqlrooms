@@ -35,7 +35,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
       prompt: z.string().describe('The prompt to the weather agent'),
     }),
     execute: async (
-      {prompt},
+      {prompt}: {prompt: string},
       options?: {toolCallId?: string; abortSignal?: AbortSignal},
     ) => {
       const weatherAgent = new ToolLoopAgent({
@@ -51,7 +51,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
                 .string()
                 .describe('The location to get the weather for'),
             }),
-            execute: async ({location}) => ({
+            execute: async ({location}: {location: string}) => ({
               location,
               temperature: 72 + Math.floor(Math.random() * 21) - 10,
             }),
@@ -64,7 +64,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
                 .describe('Reasoning for why this tool is being called'),
               temperature: z.number().describe('Temperature in Fahrenheit'),
             }),
-            execute: async ({temperature}) => ({
+            execute: async ({temperature}: {temperature: number}) => ({
               celsius: Math.round((temperature - 32) * (5 / 9)),
             }),
           }),

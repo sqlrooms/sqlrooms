@@ -60,11 +60,7 @@ export type VegaChartToolOptions = {
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
 }: VegaChartToolOptions = {}) {
-  return tool<
-    VegaChartToolParameters,
-    VegaChartToolOutput,
-    Record<string, unknown>
-  >({
+  return tool({
     description,
     inputSchema: VegaChartToolParameters,
     execute: async (params, options) => {

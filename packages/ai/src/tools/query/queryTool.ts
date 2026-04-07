@@ -51,12 +51,15 @@ export function createQueryTool(
     autoSummary = false,
     numberOfRowsToShareWithLLM = 0,
   } = options || {};
-  return tool<QueryToolParameters, QueryToolOutput, Record<string, unknown>>({
+  return tool({
     description: `A tool for running SQL queries on the tables in the database.
                   Please only run one query at a time.
                   If a query fails, please don't try to run it again with the same syntax.`,
     inputSchema: QueryToolParameters,
-    execute: async (params, options) => {
+    execute: async (
+      params: QueryToolParameters,
+      options?: {abortSignal?: AbortSignal},
+    ) => {
       const {type, sqlQuery} = params;
       const abortSignal = options?.abortSignal;
 
@@ -134,7 +137,7 @@ export function createQueryTool(
         };
       }
     },
-    toModelOutput: ({output}) => ({
+    toModelOutput: ({output}: {output: QueryToolOutput}) => ({
       type: 'text',
       value: JSON.stringify({
         success: output.success,
