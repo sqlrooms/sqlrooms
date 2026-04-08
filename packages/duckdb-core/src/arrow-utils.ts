@@ -18,9 +18,12 @@ export function arrowTableToJson(
 }
 
 /**
- * Converts an Arrow table value to a JSON-compatible value
- * @param value
- * @returns
+ * Converts an Arrow table value to a JSON-compatible value.
+ *
+ * Arrow Decimal types (common from DuckDB AVG, division, CASE expressions)
+ * stringify to numeric-looking strings like "5.2". Without parsing them back
+ * to numbers, Vega-Lite quantitative encodings silently drop the rows,
+ * producing empty charts.
  */
 function convertValue(value: unknown) {
   if (typeof value === 'bigint') {
@@ -32,5 +35,13 @@ function convertValue(value: unknown) {
   if (typeof value === 'number') {
     return value;
   }
-  return String(value);
+  if (value == null) {
+    return null;
+  }
+  const str = String(value);
+  const num = Number(str);
+  if (!isNaN(num) && str.trim() !== '') {
+    return num;
+  }
+  return str;
 }
