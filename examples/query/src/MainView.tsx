@@ -24,12 +24,12 @@ export const MainView: FC = () => {
   return (
     <>
       <div className="bg-muted flex h-full flex-col">
-        <ResizablePanelGroup direction="vertical">
-          <ResizablePanel defaultSize={50}>
+        <ResizablePanelGroup orientation="vertical">
+          <ResizablePanel defaultSize="50">
             <QueryEditorPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={50}>
+          <ResizablePanel defaultSize="50">
             <QueryResultPanel
               renderActions={() => (
                 <div className="flex gap-2">
