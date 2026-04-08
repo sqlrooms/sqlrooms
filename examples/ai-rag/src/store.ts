@@ -155,7 +155,9 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           search_documentation: createRagTool(),
 
           // Add the VegaChart tool from the vega package with a custom description
-          chart: createVegaChartTool(),
+          chart: createVegaChartTool({
+            getConnector: () => store.getState().db.getConnector(),
+          }),
 
           // Example of adding a simple echo tool
           echo: tool({

@@ -390,7 +390,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
               ...webContainerToolkit.tools,
-              chart: createVegaChartTool(),
+              chart: createVegaChartTool({
+                getConnector: () => store.getState().db.getConnector(),
+              }),
             },
             toolRenderers: {
               ...createDefaultAiToolRenderers(),

@@ -1,7 +1,8 @@
-import {tool} from 'ai';
+import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
+import type {DuckDbConnector} from '@sqlrooms/duckdb';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -20,6 +21,7 @@ export type VegaChartToolOutput = {
   sqlQuery: string;
   vegaLiteSpec: TopLevelSpec | null;
   error?: string;
+  rowCount?: number;
 };
 
 /**
@@ -47,19 +49,26 @@ export type VegaChartToolOptions = {
    * Custom description for the tool
    */
   description?: string;
+  /**
+   * Optional function that returns a DuckDbConnector.
+   * When provided, the tool will pre-validate the SQL query during execution
+   * and return an error if the query fails or returns zero rows, giving the
+   * LLM a chance to correct the query before rendering an empty chart.
+   */
+  getConnector?: () => Promise<DuckDbConnector>;
 };
 
 /**
  * Creates a VegaLite chart visualization tool for AI assistants
  * @param options - Configuration options for the VegaChart tool
  * @param options.description - Custom description for the tool (defaults to a standard description)
- * @param options.editable - Whether editing is enabled (defaults to true)
- * @param options.editorMode - Which editors to show ('spec', 'sql', 'both', 'none')
+ * @param options.getConnector - Optional async function returning a DuckDbConnector for SQL pre-validation
  * @returns A tool that can be used with the AI assistant
  */
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
-}: VegaChartToolOptions = {}) {
+  getConnector,
+}: VegaChartToolOptions = {}): Tool<any, any> {
   return tool<VegaChartToolParameters, VegaChartToolOutput>({
     description,
     inputSchema: VegaChartToolParameters,
@@ -67,7 +76,6 @@ export function createVegaChartTool({
       const abortSignal = options?.abortSignal;
       const {sqlQuery, vegaLiteSpec} = params;
       try {
-        // Check if aborted before starting
         if (abortSignal?.aborted) {
           throw new Error('Chart creation was aborted');
         }
@@ -80,9 +88,7 @@ export function createVegaChartTool({
         let vegaWarnings: string[] = [];
         try {
           const compiled = compile(parsedVegaLiteSpec);
-          // vega-lite's compile() may expose warnings at runtime, but types don't include it
           vegaWarnings = (compiled as any).warnings ?? [];
-          // This will throw if the compiled Vega spec is invalid
           vegaParse(compiled.spec);
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
@@ -94,6 +100,44 @@ export function createVegaChartTool({
           };
         }
 
+        // Pre-validate the SQL query if a connector is available.
+        // Uses COUNT(*) wrapper so only a single integer is transferred,
+        // avoiding the cost of materializing the full result set twice
+        // (once here and once in the chart renderer).
+        let rowCount: number | undefined;
+        if (getConnector && sqlQuery) {
+          try {
+            const connector = await getConnector();
+            const countResult = await connector.query(
+              `SELECT COUNT(*) AS cnt FROM (${sqlQuery})`,
+              {signal: abortSignal},
+            );
+            rowCount = Number(countResult.getChildAt(0)?.get(0) ?? 0);
+            if (rowCount === 0) {
+              return {
+                success: false,
+                details:
+                  'The SQL query returned 0 rows. The chart would be empty. ' +
+                  'Please revise the query to return data — check filters, ' +
+                  'date ranges, column names, and table contents.',
+                error: 'SQL query returned empty result set',
+                sqlQuery,
+                vegaLiteSpec: null,
+                rowCount: 0,
+              };
+            }
+          } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            return {
+              success: false,
+              details: `SQL query failed: ${message}. Please fix the query and try again.`,
+              error: message,
+              sqlQuery,
+              vegaLiteSpec: null,
+            };
+          }
+        }
+
         return {
           success: true,
           details:
@@ -102,6 +146,7 @@ export function createVegaChartTool({
               : 'Chart created successfully.',
           sqlQuery,
           vegaLiteSpec: parsedVegaLiteSpec,
+          rowCount,
         };
       } catch (error) {
         return {
@@ -119,6 +164,7 @@ export function createVegaChartTool({
         success: output.success,
         details: output.details,
         ...(output.error ? {error: output.error} : {}),
+        ...(output.rowCount !== undefined ? {rowCount: output.rowCount} : {}),
       }),
     }),
   });
