@@ -175,6 +175,7 @@ export type AiSliceState = {
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
+    updateToolOutput: (toolCallId: string, newOutput: unknown) => boolean;
     findToolRenderer: (toolName: string) => ToolRenderer | undefined;
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
@@ -789,6 +790,48 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               'Failed to persist UI messages:',
               error instanceof Error ? error.message : error,
             );
+            return false;
+          }
+        },
+
+        updateToolOutput: (toolCallId: string, newOutput: unknown): boolean => {
+          const state = get();
+          const currentSession = state.ai.getCurrentSession();
+          if (!currentSession) return false;
+
+          const uiMessages = currentSession.uiMessages as UIMessage[];
+          const msgIndex = uiMessages.findIndex((msg) =>
+            msg.parts?.some(
+              (part: any) =>
+                part.toolCallId === toolCallId &&
+                part.state === 'output-available',
+            ),
+          );
+          if (msgIndex === -1) return false;
+
+          try {
+            set((s) =>
+              produce(s, (draft) => {
+                const session = draft.ai.config.sessions.find(
+                  (sess: AnalysisSessionSchema) =>
+                    sess.id === currentSession.id,
+                );
+                if (!session) return;
+                const msg = (session.uiMessages as UIMessage[])[msgIndex];
+                if (!msg) return;
+                const part = msg.parts.find(
+                  (p: any) =>
+                    p.toolCallId === toolCallId &&
+                    p.state === 'output-available',
+                ) as any;
+                if (part) {
+                  part.output = JSON.parse(JSON.stringify(newOutput));
+                }
+              }),
+            );
+            return true;
+          } catch (error) {
+            console.warn('Failed to update tool output:', error);
             return false;
           }
         },
