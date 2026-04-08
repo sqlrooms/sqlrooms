@@ -16,6 +16,8 @@ export type AgentToolCall = {
   state: 'pending' | 'success' | 'error' | 'approval-requested';
   agentToolCalls?: AgentToolCall[];
   approvalId?: string;
+  startedAt?: number;
+  completedAt?: number;
 };
 
 /**
@@ -268,6 +270,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
             toolCallId: id,
             toolName: chunk.toolName,
             state: 'pending',
+            startedAt: Date.now(),
           });
           changed = true;
         }
@@ -284,6 +287,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
             ...entry,
             output: chunk.output,
             state: 'success',
+            completedAt: Date.now(),
             ...(nestedCalls ? {agentToolCalls: nestedCalls} : {}),
           });
           changed = true;
@@ -301,6 +305,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
             ...entry,
             errorText: chunk.errorText,
             state: 'error',
+            completedAt: Date.now(),
           });
           changed = true;
         } else if (chunk.type === 'tool-output-denied') {
@@ -308,6 +313,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
             ...entry,
             state: 'error',
             errorText: 'Denied by user',
+            completedAt: Date.now(),
           });
           changed = true;
         }

@@ -12,6 +12,7 @@ export {AnalysisResult} from './components/AnalysisResult';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
+export {useElapsedTime} from './hooks/useElapsedTime';
 export {Chat} from './components/Chat';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
@@ -44,6 +45,8 @@ export type {
   ToolRenderer,
   ToolRendererRegistry,
   ToolRenderers,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 

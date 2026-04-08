@@ -4,8 +4,10 @@ import remarkGfm from 'remark-gfm';
 import {InfoIcon} from 'lucide-react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
+import {formatShortDuration} from '@sqlrooms/utils';
 import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../agents/AgentUtils';
+import {useElapsedTime} from '../hooks/useElapsedTime';
 import type {ToolRendererRegistry} from '../types';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
@@ -86,9 +88,32 @@ const ToolCallDetailPopup: React.FC<{
 };
 
 /**
+ * Renders a live-updating elapsed-time badge for a single agent sub-step.
+ */
+const AgentStepElapsed: React.FC<{
+  startedAt: number;
+  completedAt?: number;
+}> = ({startedAt, completedAt}) => {
+  const isRunning = completedAt == null;
+  const elapsedText = useElapsedTime(isRunning, startedAt, completedAt);
+
+  if (!isRunning) {
+    return (
+      <span className="ml-1 text-[0.85em] text-gray-400">
+        {formatShortDuration(completedAt - startedAt)}
+      </span>
+    );
+  }
+
+  return elapsedText ? (
+    <span className="ml-1 text-[0.85em] text-gray-400">{elapsedText}</span>
+  ) : null;
+};
+
+/**
  * Renders a single tool call entry with:
  * 1. Reasoning (if present in input)
- * 2. Status line: ✓/✗/○/⏳ toolName (i)
+ * 2. Status line: ✓/✗/○/⏳ toolName elapsed (i)
  * 3. Inline output (custom renderer or formatted JSON)
  *
  * Used for both orchestrator-level and sub-agent tool calls.
@@ -133,6 +158,12 @@ const AgentToolCallEntry: React.FC<{
         </span>
         <div className="flex-1">
           <span className="font-medium">{toolCall.toolName}</span>
+          {toolCall.startedAt != null && (
+            <AgentStepElapsed
+              startedAt={toolCall.startedAt}
+              completedAt={toolCall.completedAt}
+            />
+          )}
           <ToolCallDetailPopup toolCall={toolCall} />
           {isError && toolCall.errorText && (
             <div className="mt-0.5 text-[0.9em] text-red-700">
@@ -410,7 +441,13 @@ export const ToolPartRenderer = ({
 
     return (
       <div>
-        <ToolCallInfo toolName={toolName} input={input} state={state} />
+        <ToolCallInfo
+          toolName={toolName}
+          input={input}
+          state={state}
+          stableKey={toolCallId}
+          hideElapsed={isAgentTool}
+        />
         <div data-tool-call-id={toolCallId}>
           {isAgentTool ? (
             <AgentProgressSection

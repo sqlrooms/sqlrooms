@@ -44,6 +44,8 @@ import type {
   ToolRenderer,
   ToolRendererRegistry,
   ToolRenderers,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
 } from './types';
 import type {AgentToolCall, PendingSubAgentApproval} from './agents/AgentUtils';
 import {
@@ -116,6 +118,10 @@ export type AiSliceState = {
     requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
     resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
     clearSubAgentApproval: (approvalId: string) => void;
+    /** Per-tool-call timing entries, keyed by toolCallId */
+    toolTimings: Record<string, ToolTimingEntry>;
+    setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
+    getToolTimings: () => Record<string, ToolTimingEntry>;
     setPrompt: (sessionId: string, prompt: string) => void;
     getPrompt: (sessionId: string) => string;
     setIsRunning: (sessionId: string, isRunning: boolean) => void;
@@ -255,6 +261,38 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         }
       : params.config;
 
+    /**
+     * Extract toolTimings from UIMessage metadata and agentProgress from
+     * the session field so the UI can render elapsed times and nested
+     * sub-agent trees after reload.
+     */
+    function rehydrateFromSessions(config: AiSliceConfig) {
+      const timings: Record<string, ToolTimingEntry> = {};
+      const progress: Record<string, AgentToolCall[]> = {};
+
+      for (const session of config.sessions) {
+        // Restore agentProgress from the session-level field
+        if (session.agentProgress) {
+          Object.assign(
+            progress,
+            session.agentProgress as Record<string, AgentToolCall[]>,
+          );
+        }
+
+        // Restore toolTimings from assistant message metadata
+        const msgs = (session.uiMessages ?? []) as UIMessage[];
+        for (const msg of msgs) {
+          if (msg.role !== 'assistant') continue;
+          const meta = msg.metadata as AssistantMessageMetadata | undefined;
+          if (meta?.toolTimings) {
+            Object.assign(timings, meta.toolTimings);
+          }
+        }
+      }
+
+      return {timings, progress};
+    }
+
     // Create persistent Maps (outside of immer draft)
     const toolCallToSessionId = new Map<string, string>();
     const sessionAbortControllers = new Map<string, AbortController>();
@@ -299,10 +337,22 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         : [];
     }
 
+    // Rehydrate toolTimings and agentProgress from persisted messages
+    const initialRehydrated = rehydrateFromSessions(baseConfig);
+
     return {
       ai: {
         initialize: async () => {
           registerCommandsForOwner(store, AI_COMMAND_OWNER, createAiCommands());
+
+          // Recompute derived runtime state after persist hydration.
+          const rehydrated = rehydrateFromSessions(get().ai.config);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.toolTimings = rehydrated.timings;
+              draft.ai.agentProgress = rehydrated.progress;
+            }),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
@@ -330,7 +380,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return toolCallToSessionId.get(toolCallId);
         },
 
-        agentProgress: {},
+        agentProgress: initialRehydrated.progress,
         updateAgentProgress: (
           parentToolCallId: string,
           toolCalls: AgentToolCall[],
@@ -385,6 +435,18 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               delete draft.ai.pendingSubAgentApprovals[approvalId];
             }),
           );
+        },
+
+        toolTimings: initialRehydrated.timings,
+        setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.toolTimings[toolCallId] = entry;
+            }),
+          );
+        },
+        getToolTimings: () => {
+          return get().ai.toolTimings;
         },
 
         getAbortController: (sessionId: string) => {
@@ -455,9 +517,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         setConfig: (config: AiSliceConfig) => {
+          const rehydrated = rehydrateFromSessions(config);
+
           set((state) =>
             produce(state, (draft) => {
               draft.ai.config = config;
+              draft.ai.toolTimings = rehydrated.timings;
+              draft.ai.agentProgress = rehydrated.progress;
             }),
           );
         },

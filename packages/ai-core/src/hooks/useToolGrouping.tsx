@@ -13,6 +13,10 @@ export type ToolGroup = {
   title?: React.ReactNode;
   /** Whether the ReasoningBox should be expanded by default (default: false) */
   defaultExpanded?: boolean;
+  /** Whether this group is still running (has incomplete tool calls or more tools after) */
+  isRunning?: boolean;
+  /** The toolCallIds in this group (for elapsed time) */
+  toolCallIds?: string[];
 };
 
 /**
@@ -151,11 +155,29 @@ export function useToolGrouping(
           containerWidth,
         );
 
+        // Extract toolCallIds for elapsed time tracking
+        const actualToolPartsForIds = toolParts.filter(
+          (p) =>
+            isToolPart(p) ||
+            (typeof p.type === 'string' && p.type === 'dynamic-tool'),
+        );
+        const toolCallIds = actualToolPartsForIds
+          .map((p) => (p as {toolCallId?: string}).toolCallId)
+          .filter((id): id is string => !!id);
+
+        const allCompleted = actualToolPartsForIds.every((p) => {
+          const state = (p as any).state;
+          return state === 'output-available' || state === 'output-error';
+        });
+        const groupIsRunning = !allCompleted || hasMoreToolsAfter;
+
         groups.push({
           type: 'tool-group',
           parts: toolParts,
           startIndex: i,
           title,
+          isRunning: groupIsRunning,
+          toolCallIds,
         });
         i = j;
       } else {

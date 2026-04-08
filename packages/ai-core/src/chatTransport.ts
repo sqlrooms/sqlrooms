@@ -16,13 +16,57 @@ import {
   ANALYSIS_PENDING_ID,
   TOOL_CALL_CANCELLED,
 } from './constants';
-import type {AiSliceStateForTransport} from './types';
+import type {
+  AiSliceStateForTransport,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
+} from './types';
 import {
   fixIncompleteToolCalls,
   mergeAbortSignals,
   sanitizeMessagesForLLM,
   shouldEndAnalysis,
 } from './utils';
+
+/**
+ * Write tool timings from the store into assistant message metadata so they
+ * survive serialization. Mutates `messages` in place — callers should pass
+ * cloned messages (e.g., from `fixIncompleteToolCalls`).
+ */
+function writeToolTimingsToMetadata(
+  messages: UIMessage[],
+  allTimings: Record<string, ToolTimingEntry>,
+): void {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg || msg.role !== 'assistant') continue;
+
+    const toolCallIds = msg.parts
+      .filter(
+        (p) =>
+          typeof p.type === 'string' &&
+          (p.type.startsWith('tool-') || p.type === 'dynamic-tool'),
+      )
+      .map((p) => (p as {toolCallId?: string}).toolCallId)
+      .filter((id): id is string => !!id);
+
+    if (toolCallIds.length === 0) continue;
+
+    const timings: Record<string, ToolTimingEntry> = {};
+    for (const id of toolCallIds) {
+      const entry = allTimings[id];
+      if (entry) timings[id] = entry;
+    }
+
+    if (Object.keys(timings).length > 0) {
+      const existing = (msg.metadata ?? {}) as AssistantMessageMetadata;
+      msg.metadata = {
+        ...existing,
+        toolTimings: {...(existing.toolTimings ?? {}), ...timings},
+      };
+    }
+  }
+}
 
 export type ChatTransportConfig = {
   sessionId: string;
@@ -243,6 +287,10 @@ export function createChatHandlers({
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
           const completedMessages = fixIncompleteToolCalls(sourceMessages);
+          writeToolTimingsToMetadata(
+            completedMessages,
+            state.ai.getToolTimings(),
+          );
           state.ai.setSessionUiMessages(sessionId, completedMessages);
 
           state.ai.setIsRunning(sessionId, false);
@@ -256,6 +304,9 @@ export function createChatHandlers({
               );
               if (sess) {
                 sess.messagesRevision = (sess.messagesRevision || 0) + 1;
+                sess.agentProgress = structuredClone(
+                  state.ai.agentProgress,
+                ) as AnalysisSessionSchema['agentProgress'];
               }
             }),
           );
@@ -309,6 +360,10 @@ export function createChatHandlers({
 
         // fix any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = fixIncompleteToolCalls(messages);
+        writeToolTimingsToMetadata(
+          completedMessages,
+          state.ai.getToolTimings(),
+        );
         state.ai.setSessionUiMessages(sessionId, completedMessages);
 
         store.setState((stateToUpdate: AiSliceStateForTransport) =>
@@ -317,6 +372,10 @@ export function createChatHandlers({
               (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (!targetSession) return;
+
+            targetSession.agentProgress = structuredClone(
+              state.ai.agentProgress,
+            ) as AnalysisSessionSchema['agentProgress'];
 
             const lastUserMessage = completedMessages
               .filter((msg) => msg.role === 'user')
@@ -378,6 +437,9 @@ export function createChatHandlers({
           store.getState().ai.setApiKeyError(provider, true);
         }
 
+        const toolTimings = store.getState().ai.getToolTimings();
+        const currentAgentProgress = store.getState().ai.agentProgress;
+
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!sessionId) return;
@@ -385,12 +447,17 @@ export function createChatHandlers({
               (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (targetSession) {
-              // fix any incomplete tool-calls before saving (can happen with AbortController)
               const existingMessages = (targetSession.uiMessages ||
                 []) as UIMessage[];
-              targetSession.uiMessages = fixIncompleteToolCalls(
-                existingMessages,
-              ) as AnalysisSessionSchema['uiMessages'];
+              const completedMessages =
+                fixIncompleteToolCalls(existingMessages);
+              writeToolTimingsToMetadata(completedMessages, toolTimings);
+              targetSession.uiMessages =
+                completedMessages as AnalysisSessionSchema['uiMessages'];
+              targetSession.agentProgress = structuredClone(
+                currentAgentProgress,
+              ) as AnalysisSessionSchema['agentProgress'];
+                completedMessages as AnalysisSessionSchema['uiMessages'];
 
               const uiMessages = targetSession.uiMessages as UIMessage[];
               const lastUserMessage = uiMessages

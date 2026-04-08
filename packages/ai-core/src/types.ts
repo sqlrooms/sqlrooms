@@ -11,6 +11,21 @@ import type {
 import type {AgentToolCall, PendingSubAgentApproval} from './agents/AgentUtils';
 
 /**
+ * Per-tool-call timing entry stored in assistant message metadata.
+ */
+export type ToolTimingEntry = {
+  startedAt: number;
+  completedAt?: number;
+};
+
+/**
+ * Shape of custom metadata stored on assistant UIMessages.
+ */
+export type AssistantMessageMetadata = {
+  toolTimings?: Record<string, ToolTimingEntry>;
+};
+
+/**
  * Shallow tool representation stored in state.
  *
  * The AI SDK's `ToolSet` type contains deeply recursive Zod generics that
@@ -110,6 +125,10 @@ export interface AiStateForTransport {
   setApiKeyError: (provider: string, hasError: boolean) => void;
   /** Get the maximum number of agent steps from settings */
   getMaxStepsFromSettings: () => number;
+  /** Per-tool-call timing entries, keyed by toolCallId */
+  toolTimings: Record<string, ToolTimingEntry>;
+  setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
+  getToolTimings: () => Record<string, ToolTimingEntry>;
 }
 
 /**
