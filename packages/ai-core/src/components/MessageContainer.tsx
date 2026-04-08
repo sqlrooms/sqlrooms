@@ -18,7 +18,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
   className,
   type,
   // borderColor,
-  content,
+  // content,
   children,
   footerActions,
   footerActionsClassName,

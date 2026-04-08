@@ -457,7 +457,6 @@ export function createChatHandlers({
               targetSession.agentProgress = structuredClone(
                 currentAgentProgress,
               ) as AnalysisSessionSchema['agentProgress'];
-                completedMessages as AnalysisSessionSchema['uiMessages'];
 
               const uiMessages = targetSession.uiMessages as UIMessage[];
               const lastUserMessage = uiMessages

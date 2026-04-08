@@ -1,6 +1,6 @@
 import {useEffect, useRef, type RefObject, useState, useCallback} from 'react';
 
-interface ScrollToBottomResult<T extends HTMLElement | null> {
+interface ScrollToBottomResult {
   showScrollButton: boolean;
   scrollToBottom: () => void;
 }
@@ -88,7 +88,7 @@ export function useScrollToBottom<T extends HTMLElement | null>({
   containerRef: RefObject<T | null>;
   endRef: RefObject<T | null>;
   scrollOnInitialLoad?: boolean;
-}): ScrollToBottomResult<T> {
+}): ScrollToBottomResult {
   const [showScrollButton, setShowButton] = useState(false);
 
   // Track if user was at bottom before content changes

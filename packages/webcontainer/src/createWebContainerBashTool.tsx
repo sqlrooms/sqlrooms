@@ -59,14 +59,6 @@ export type WebContainerWriteFileToolOutput = {
   errorMessage?: string;
 };
 
-type ToolResultRendererProps = {
-  toolCallId: string;
-  input: Record<string, unknown>;
-  output: unknown;
-  state: ToolResultState;
-  errorText?: string;
-};
-
 export type WebContainerToolkitResult = {
   bash: Tool<WebContainerBashToolParameters, WebContainerBashToolOutput>;
   readFile: Tool<
@@ -78,7 +70,16 @@ export type WebContainerToolkitResult = {
     WebContainerWriteFileToolOutput
   >;
   tools: Record<string, Tool>;
-  toolRenderers: Record<string, ComponentType<ToolResultRendererProps>>;
+  toolRenderers: Record<string, ComponentType<ToolRendererProps>>;
+};
+
+type ToolRendererProps = {
+  toolCallId: string;
+  input: unknown;
+  output: unknown;
+  state: string;
+  errorText?: string;
+  approvalId?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -176,11 +177,11 @@ export function createWebContainerToolkit(
     writeFile,
     tools: {bash, readFile, writeFile},
     toolRenderers: {
-      bash: WebContainerBashToolResult as ComponentType<ToolResultRendererProps>,
+      bash: WebContainerBashToolResult as ComponentType<ToolRendererProps>,
       readFile:
-        WebContainerReadFileToolResult as ComponentType<ToolResultRendererProps>,
+        WebContainerReadFileToolResult as ComponentType<ToolRendererProps>,
       writeFile:
-        WebContainerWriteFileToolResult as ComponentType<ToolResultRendererProps>,
+        WebContainerWriteFileToolResult as ComponentType<ToolRendererProps>,
     },
   };
 }

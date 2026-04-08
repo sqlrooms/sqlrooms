@@ -1,4 +1,4 @@
-import {cn, CopyButton} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {truncate} from '@sqlrooms/utils';
 import {BrainIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
@@ -23,9 +23,6 @@ type ThinkContent = {
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
-
-const sanitizeThinkTags = (value: string): string =>
-  value.replace(COMPLETE_THINK_REGEX, '').replace(INCOMPLETE_THINK_REGEX, '');
 
 /**
  * Processes content and extracts think content in one pass
@@ -135,9 +132,6 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const copyableText = useMemo(() => sanitizeThinkTags(content), [content]);
-  const hasTextContent = copyableText.trim().length > 0;
-
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
       const newExpanded = new Set(prev);
