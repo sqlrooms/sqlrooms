@@ -68,7 +68,7 @@ const SplitRenderer: FC<NodeRenderProps<LayoutSplitNode>> = ({node, path}) => {
   return (
     <ResizablePanelGroup orientation={orientation}>
       {node.children.map((child, i) => {
-        const key = getPanelId(child, i);
+        const key = getPanelId(child);
         const sizeProps = getSizeProps(child);
         const isLast = i === node.children.length - 1;
         const collapsed = isCollapsed(child);
