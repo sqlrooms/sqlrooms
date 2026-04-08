@@ -131,6 +131,16 @@ function addMosaicChildToMosaic(
           children: newNodes,
         },
       };
+    } else {
+      return {
+        ...root,
+        nodes: {
+          type: 'split',
+          id: `${root.id}-auto-split`,
+          direction: 'row',
+          children: [mosaicNode],
+        },
+      };
     }
 
     return root;
