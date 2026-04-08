@@ -44,7 +44,7 @@ export function getSizeProps(node: LayoutNode): SizeProps {
   };
 }
 
-export function getPanelId(node: LayoutNode, index?: number): string {
+export function getPanelId(node: LayoutNode): string {
   if (isLayoutNodeKey(node)) {
     return node;
   }
