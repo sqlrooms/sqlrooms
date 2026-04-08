@@ -27,6 +27,8 @@ import {
   makeLayoutStack,
   removeLayoutNodeByKey,
 } from './mosaic/mosaic-utils';
+import type {RoomPanelInfo, TabStripRenderContext} from './types';
+import {getPanelId} from './node-renderers/types';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
 const ToggleLayoutPanelCommandInput = z.object({
@@ -69,46 +71,6 @@ const AreaRemovePanelInput = z.object({
 type AreaRemovePanelInput = z.infer<typeof AreaRemovePanelInput>;
 
 // ---------------------------------------------------------------------------
-// Render callback types
-// ---------------------------------------------------------------------------
-
-/** Path segments use node IDs when available, numeric indices otherwise. */
-export type LayoutPath = (string | number)[];
-
-export type PanelRenderContext = {
-  panelId: string;
-  containerType: 'tabs' | 'mosaic' | 'split' | 'root';
-  containerId?: string;
-  path: LayoutPath;
-};
-
-export type TabStripRenderContext = {
-  node: LayoutTabsNode;
-  path: LayoutPath;
-};
-
-// ---------------------------------------------------------------------------
-// Panel info
-// ---------------------------------------------------------------------------
-
-export type RoomPanelInfo = {
-  title?: string;
-  icon?: React.ComponentType<{className?: string}>;
-  closeButton?: boolean;
-  component?: React.ComponentType<Partial<PanelRenderContext>>;
-  /** Render function for dynamic panels — takes priority over component */
-  render?: (context: PanelRenderContext) => React.ReactNode;
-  /**
-   * Resolve metadata and/or render function for descendant panels
-   * that aren't in the static panels registry. The renderer walks up
-   * the path and calls the first ancestor's resolveChild it finds.
-   */
-  resolveChild?: (context: PanelRenderContext) => RoomPanelInfo | undefined;
-  /** @deprecated No longer used — panel area is determined by the layout tree */
-  placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
-};
-
-// ---------------------------------------------------------------------------
 // Config types — LayoutConfig is now LayoutNode | null directly
 // ---------------------------------------------------------------------------
 
@@ -129,9 +91,6 @@ export type LayoutSliceState = {
     destroy?: () => Promise<void>;
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
-    renderTabStrip?: (
-      context: TabStripRenderContext,
-    ) => React.ReactNode | undefined;
     setConfig(layout: LayoutConfig): void;
     /** @deprecated Use setConfig instead */
     setLayout(layout: LayoutConfig): void;
@@ -188,9 +147,6 @@ export type LayoutSliceState = {
 export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
-  renderTabStrip?: (
-    context: TabStripRenderContext,
-  ) => React.ReactNode | undefined;
 };
 
 function findTabsNode(
@@ -207,7 +163,6 @@ function findTabsNode(
 export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
-  renderTabStrip,
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
   return createSlice<LayoutSliceState, BaseRoomStoreState & LayoutSliceState>(
     (set, get, store) => {
@@ -235,7 +190,6 @@ export function createLayoutSlice({
           },
           config: initialConfig,
           panels,
-          renderTabStrip,
           setConfig: (config) =>
             set((state) =>
               produce(state, (draft) => {
@@ -457,7 +411,7 @@ export function createLayoutSlice({
             );
           },
 
-          addChildToSplit: (splitId: string, panelId: string) => {
+          addChildToSplit: (splitId: string, panelId: LayoutNode) => {
             set((state) =>
               produce(state, (draft) => {
                 const result = findNodeById(draft.layout.config, splitId);
@@ -469,23 +423,25 @@ export function createLayoutSlice({
             );
           },
 
-          addChildToMosaic: (mosaicId: string, panelId: string) => {
+          addChildToMosaic: (mosaicId: string, panelId: LayoutNode) => {
             set((state) =>
               produce(state, (draft) => {
                 const result = findNodeById(draft.layout.config, mosaicId);
                 if (!result || !isLayoutMosaicNode(result.node)) return;
-                const nodes = result.node.nodes;
+
                 const dir = result.node.direction ?? 'row';
-                if (!nodes) {
+
+                if (!result.node.nodes) {
                   result.node.nodes = panelId;
-                } else if (typeof nodes === 'string') {
+                } else if (typeof result.node.nodes === 'string') {
                   result.node.nodes = {
+                    id: getPanelId(panelId),
                     type: 'split',
                     direction: dir,
-                    children: [nodes, panelId],
+                    children: [result.node.nodes, panelId],
                   };
-                } else if (isLayoutSplitNode(nodes)) {
-                  nodes.children.push(panelId);
+                } else if (isLayoutSplitNode(result.node.nodes)) {
+                  result.node.nodes.children.push(panelId);
                 }
               }),
             );

@@ -6,15 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "jest",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "lucide-react": "^0.555.0"
   },
   "devDependencies": {
+    "@sqlrooms/preset-jest": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",

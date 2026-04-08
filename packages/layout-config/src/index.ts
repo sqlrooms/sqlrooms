@@ -14,6 +14,7 @@ export {
   LayoutMosaicNode,
   LayoutNode,
   LayoutConfig,
+  isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,

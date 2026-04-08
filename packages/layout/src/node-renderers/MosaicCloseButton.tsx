@@ -1,16 +1,16 @@
 import {Button} from '@sqlrooms/ui';
 import {X} from 'lucide-react';
-import {FC, useContext} from 'react';
+import {FC, useCallback, useContext} from 'react';
 import {MosaicContext, MosaicWindowContext} from 'react-mosaic-component';
 
 export const MosaicCloseButton: FC = () => {
   const {mosaicWindowActions} = useContext(MosaicWindowContext);
   const {mosaicActions} = useContext(MosaicContext);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     const path = mosaicWindowActions.getPath();
     mosaicActions.remove(path);
-  };
+  }, [mosaicWindowActions, mosaicActions]);
 
   return (
     <Button

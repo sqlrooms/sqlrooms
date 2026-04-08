@@ -1,3 +1,4 @@
+import {RoomPanelComponent} from '@sqlrooms/layout';
 import {useMemo} from 'react';
 
 function generateRandomData(count: number) {
@@ -15,11 +16,13 @@ const COLORS = [
   'bg-indigo-500/70',
 ];
 
-export function DynamicChartPanel({label}: {label: string}) {
+export const DynamicChartPanel: RoomPanelComponent = ({
+  panelInfo: {panelId},
+}) => {
   const data = useMemo(() => generateRandomData(12), []);
   const colorClass = useMemo(
-    () => COLORS[Math.abs(hashCode(label)) % COLORS.length],
-    [label],
+    () => COLORS[Math.abs(hashCode(panelId)) % COLORS.length],
+    [panelId],
   );
 
   return (
@@ -35,7 +38,7 @@ export function DynamicChartPanel({label}: {label: string}) {
       </div>
     </div>
   );
-}
+};
 
 function hashCode(s: string): number {
   let h = 0;

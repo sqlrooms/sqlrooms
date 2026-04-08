@@ -1,92 +1,69 @@
-import {LayoutNode} from '@sqlrooms/layout-config';
-import type {
-  LayoutPath,
-  PanelRenderContext,
-  RoomPanelInfo,
-  TabStripRenderContext,
-} from '../LayoutSlice';
+import {
+  isLayoutNodeKey,
+  isLayoutPanelNode,
+  LayoutNode,
+} from '@sqlrooms/layout-config';
+import type {LayoutPath, PanelContainerType} from '../types';
 
-export interface NodeRenderProps {
-  node: LayoutNode;
+export type ParentDirection = 'row' | 'column';
+
+export interface NodeRenderProps<TNode extends LayoutNode = LayoutNode> {
+  node: TNode;
   path: LayoutPath;
-  containerType: PanelRenderContext['containerType'];
+  containerType: PanelContainerType;
   containerId?: string;
   /** Direction of the parent split, used for expand button icon orientation */
-  parentDirection?: 'row' | 'column';
-  panels: Record<string, RoomPanelInfo>;
-  rootLayout: LayoutNode;
-  renderTabStrip?: (
-    context: TabStripRenderContext,
-  ) => React.ReactNode | undefined;
-  onLayoutChange?: (layout: LayoutNode | null) => void;
-  onTabSelect?: (tabsId: string, tabId: string) => void;
-  onTabClose?: (tabsId: string, tabId: string) => void;
-  onTabReorder?: (tabsId: string, tabIds: string[]) => void;
-  onTabCreate?: (tabsId: string) => void;
-  onCollapse?: (id: string) => void;
-  onExpand?: (id: string, tabId?: string) => void;
-}
-
-/**
- * Resolve panel info by checking the static panels registry first,
- * then walking up the path to find the nearest ancestor with resolveChild.
- */
-export function lookupPanelInfo(
-  context: PanelRenderContext,
-  panels: Record<string, RoomPanelInfo>,
-): RoomPanelInfo | undefined {
-  const direct = panels[context.panelId];
-  if (direct) return direct;
-
-  for (let i = context.path.length - 1; i >= 0; i--) {
-    const segment = context.path[i];
-    if (typeof segment === 'string') {
-      const ancestor = panels[segment];
-      if (ancestor?.resolveChild) {
-        const resolved = ancestor.resolveChild(context);
-        if (resolved) return resolved;
-      }
-    }
-  }
-  return undefined;
+  parentDirection?: ParentDirection;
 }
 
 // ---------------------------------------------------------------------------
 // Size / child helpers shared by renderers
 // ---------------------------------------------------------------------------
 
-export function getSizeProps(node: LayoutNode) {
-  if (typeof node === 'string') return {};
-  const result: Record<string, unknown> = {};
-  if ('defaultSize' in node && node.defaultSize != null)
-    result.defaultSize = node.defaultSize;
-  if ('minSize' in node && node.minSize != null) result.minSize = node.minSize;
-  if ('maxSize' in node && node.maxSize != null) result.maxSize = node.maxSize;
-  if ('collapsedSize' in node && node.collapsedSize != null)
-    result.collapsedSize = node.collapsedSize;
-  if ('collapsible' in node && node.collapsible != null)
-    result.collapsible = node.collapsible;
-  return result;
+export type SizeProps = {
+  defaultSize?: number | string;
+  minSize?: number | string;
+  maxSize?: number | string;
+  collapsedSize?: number | string;
+  collapsible: boolean;
+};
+
+export function getSizeProps(node: LayoutNode): SizeProps {
+  if (isLayoutNodeKey(node)) {
+    return {
+      collapsible: false,
+    };
+  }
+
+  return {
+    defaultSize: node.defaultSize,
+    minSize: node.minSize,
+    maxSize: node.maxSize,
+    collapsedSize: node.collapsedSize,
+    collapsible: node.collapsible ?? false,
+  };
 }
 
-export function getPanelId(node: LayoutNode, index: number): string {
-  if (typeof node === 'string') return node;
-  if ('id' in node && node.id) return node.id;
-  return `panel-${index}`;
+export function getPanelId(node: LayoutNode, index?: number): string {
+  if (isLayoutNodeKey(node)) {
+    return node;
+  }
+
+  return node.id;
 }
 
-export function isChildCollapsed(child: LayoutNode): boolean {
-  if (typeof child === 'string') return false;
-  return 'collapsed' in child && child.collapsed === true;
+export function isCollapsed(node: LayoutNode): boolean {
+  if (isLayoutNodeKey(node) || isLayoutPanelNode(node)) {
+    return false;
+  }
+
+  return node.collapsed === true;
 }
 
-export function isChildCollapsible(child: LayoutNode): boolean {
-  if (typeof child === 'string') return false;
-  return 'collapsible' in child && child.collapsible === true;
-}
+export function getChildAreaId(node: LayoutNode): string | undefined {
+  if (isLayoutNodeKey(node)) {
+    return undefined;
+  }
 
-export function getChildAreaId(child: LayoutNode): string | undefined {
-  if (typeof child === 'string') return undefined;
-  if ('id' in child) return child.id;
-  return undefined;
+  return node.id;
 }

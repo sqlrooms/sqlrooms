@@ -83,9 +83,6 @@ createLayoutSlice({
   renderPanel: (context) => {
     // Return custom JSX or undefined to fall back to the default renderer
   },
-  renderTabStrip: (context) => {
-    // Return custom tab strip JSX or undefined for default
-  },
 });
 ```
 

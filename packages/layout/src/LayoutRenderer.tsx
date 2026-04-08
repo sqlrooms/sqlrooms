@@ -1,67 +1,32 @@
 import {LayoutNode} from '@sqlrooms/layout-config';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
-import type {RoomPanelInfo, TabStripRenderContext} from './LayoutSlice';
+import {
+  LayoutRendererContextType,
+  LayoutRendererProvider,
+} from './LayoutRendererContext';
 import {NodeRenderer} from './node-renderers/NodeRenderer';
+import type {RoomPanelInfo} from './types';
 
-// ---------------------------------------------------------------------------
-// Public props
-// ---------------------------------------------------------------------------
-
-export interface LayoutRendererProps {
-  layout: LayoutNode | null;
+export type LayoutRendererProps = {
+  rootLayout: LayoutNode;
   panels: Record<string, RoomPanelInfo>;
   className?: string;
-  renderTabStrip?: (
-    context: TabStripRenderContext,
-  ) => React.ReactNode | undefined;
-  onLayoutChange?: (layout: LayoutNode | null) => void;
-  onTabSelect?: (tabsId: string, tabId: string) => void;
-  onTabClose?: (tabsId: string, tabId: string) => void;
-  onTabReorder?: (tabsId: string, tabIds: string[]) => void;
-  onTabCreate?: (tabsId: string) => void;
-  onCollapse?: (id: string) => void;
-  onExpand?: (id: string, tabId?: string) => void;
-}
+} & LayoutRendererContextType;
 
-// ---------------------------------------------------------------------------
-// Main LayoutRenderer
-// ---------------------------------------------------------------------------
-
-const LayoutRenderer: FC<LayoutRendererProps> = ({
-  layout,
-  panels,
+export const LayoutRenderer: FC<LayoutRendererProps> = ({
   className,
-  renderTabStrip,
-  onLayoutChange,
-  onTabSelect,
-  onTabClose,
-  onTabReorder,
-  onTabCreate,
-  onCollapse,
-  onExpand,
+  ...contextValue
 }) => {
-  if (!layout) return null;
-
   return (
-    <div className={cn('h-full min-w-0 flex-1', className)}>
-      <NodeRenderer
-        node={layout}
-        path={[]}
-        containerType="root"
-        panels={panels}
-        rootLayout={layout}
-        renderTabStrip={renderTabStrip}
-        onLayoutChange={onLayoutChange}
-        onTabSelect={onTabSelect}
-        onTabClose={onTabClose}
-        onTabReorder={onTabReorder}
-        onTabCreate={onTabCreate}
-        onCollapse={onCollapse}
-        onExpand={onExpand}
-      />
-    </div>
+    <LayoutRendererProvider {...contextValue}>
+      <div className={cn('h-full min-w-0 flex-1', className)}>
+        <NodeRenderer
+          node={contextValue.rootLayout}
+          path={[]}
+          containerType="root"
+        />
+      </div>
+    </LayoutRendererProvider>
   );
 };
-
-export default LayoutRenderer;

@@ -1430,6 +1430,9 @@ importers:
 
   examples/layout-areas:
     dependencies:
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -1440,6 +1443,9 @@ importers:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
     devDependencies:
+      '@sqlrooms/preset-jest':
+        specifier: workspace:*
+        version: link:../../packages/preset-jest
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.2.2(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.1)(yaml@2.8.2))
@@ -2939,6 +2945,13 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+    devDependencies:
+      '@sqlrooms/preset-jest':
+        specifier: workspace:*
+        version: link:../preset-jest
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/layout-config:
     dependencies:

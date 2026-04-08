@@ -3,6 +3,7 @@ import {
   createRoomStore,
   getChildKey,
   getMosaicNodeKey,
+  isLayoutMosaicNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
   LayoutConfig,
@@ -23,6 +24,7 @@ import {DataSourcesPanel} from './panels/DataSourcesPanel';
 import {DynamicChartPanel} from './panels/DynamicChartPanel';
 import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
+import {DashboardTabs} from './panels/DashboardTabs';
 
 function findTabsNodeInState(
   root: LayoutNode | null,
@@ -88,8 +90,58 @@ function addMosaicChildToTabs(
   return root;
 }
 
+function addMosaicChildToMosaic(
+  root: LayoutNode | null,
+  tabsId: string,
+  mosaicNode: string,
+): LayoutNode | null {
+  if (!root) return root;
+  if (typeof root === 'string') return root;
+
+  if (isLayoutSplitNode(root)) {
+    let changed = false;
+    const newChildren = root.children.map((child) => {
+      const updated = addMosaicChildToMosaic(child, tabsId, mosaicNode);
+      if (updated !== child) changed = true;
+      return updated;
+    });
+    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
+  }
+
+  if (isLayoutTabsNode(root)) {
+    let changed = false;
+    const newChildren = root.children.map((child) => {
+      const updated = addMosaicChildToMosaic(child, tabsId, mosaicNode);
+      if (updated !== child) changed = true;
+      return updated;
+    });
+    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
+  }
+
+  if (isLayoutMosaicNode(root) && root.id === tabsId) {
+    if (isLayoutSplitNode(root.nodes)) {
+      const alreadyExists = root.nodes.children;
+
+      const newNodes = [...alreadyExists, mosaicNode];
+
+      return {
+        ...root,
+        nodes: {
+          ...root.nodes,
+          children: newNodes,
+        },
+      };
+    }
+
+    return root;
+  }
+
+  return root;
+}
+
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
+  addChartToDashboard: (dashboardId: string) => void;
 };
 
 let dashboardCounter = 0;
@@ -99,6 +151,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     ...createRoomShellSlice({
       layout: {
         config: {
+          id: 'root',
           type: 'split',
           direction: 'row',
           children: [
@@ -114,6 +167,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               showTabStrip: false,
             },
             {
+              id: 'main',
               type: 'split',
               direction: 'column',
               children: [
@@ -127,6 +181,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                       draggable: true,
                       direction: 'row',
                       nodes: {
+                        id: 'overview-charts',
                         type: 'split',
                         direction: 'row',
                         children: ['revenue', 'users'],
@@ -138,6 +193,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                       draggable: true,
                       direction: 'row',
                       nodes: {
+                        id: 'growth-charts',
                         type: 'split',
                         direction: 'row',
                         children: ['conversions', 'sessions'],
@@ -167,20 +223,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         } satisfies LayoutConfig,
         panels: {
           dashboards: {
-            resolveChild: ({panelId}) => ({
-              title: panelId,
-              icon: BarChart3Icon,
-              render: () => (
-                <div className="h-full w-full overflow-hidden p-2">
-                  <DynamicChartPanel label={panelId} />
-                </div>
-              ),
-            }),
+            component: DashboardTabs,
           },
           'data-sources': {
             title: 'Data Sources',
             component: DataSourcesPanel,
             icon: DatabaseIcon,
+          },
+          'dashboards/{dashboardId}': {
+            icon: BarChart3Icon,
+            title: 'Dashboard 123',
+            component: () => {
+              return <div className="p-4">This is a dashboard panel</div>;
+            },
+          },
+          'dashboards/{dashboardId}/{chartId}': {
+            icon: BarChart3Icon,
+            component: DynamicChartPanel,
           },
           schema: {
             title: 'Schema',
@@ -204,6 +263,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     addDashboard: (tabsId = 'dashboards') => {
       dashboardCounter += 1;
       const mosaicId = `dashboard-${dashboardCounter}`;
+      const chartsId = `dashboard-${dashboardCounter}-charts`;
       const chartId = `${mosaicId}-chart`;
 
       const mosaicNode: LayoutMosaicNode = {
@@ -211,18 +271,37 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         id: mosaicId,
         draggable: true,
         direction: 'row',
-        nodes: chartId,
+        nodes: {
+          id: chartsId,
+          type: 'split',
+          direction: 'row',
+          children: [chartId],
+        },
       };
 
       const {layout} = get();
+
       const found = layout.config
         ? findTabsNodeInState(layout.config, tabsId)
         : undefined;
+
       if (found) {
         layout.setConfig(
           addMosaicChildToTabs(layout.config, tabsId, mosaicNode),
         );
       }
+    },
+
+    addChartToDashboard: (dashboardId: string) => {
+      dashboardCounter += 1;
+      const {layout} = get();
+
+      const mosaicId = `dashboard-${dashboardCounter}`;
+      const chartId = `${mosaicId}-chart`;
+
+      layout.setConfig(
+        addMosaicChildToMosaic(layout.config, dashboardId, chartId),
+      );
     },
   }),
 );

@@ -75,12 +75,10 @@ export const LayoutComposer: FC<{
   className?: string;
   onTabCreate?: (tabsId: string) => void;
 }> = ({className, onTabCreate}) => {
-  const layout = useBaseRoomShellStore((state) => state.layout.config);
+  const rootLayout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setConfig);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const renderTabStrip = useBaseRoomShellStore(
-    (state) => state.layout.renderTabStrip,
-  );
+
   const setActiveTab = useBaseRoomShellStore(
     (state) => state.layout.setActiveTab,
   );
@@ -144,11 +142,10 @@ export const LayoutComposer: FC<{
         className,
       )}
     >
-      {layout ? (
+      {rootLayout ? (
         <LayoutRenderer
-          layout={layout}
+          rootLayout={rootLayout}
           panels={panels}
-          renderTabStrip={renderTabStrip}
           onLayoutChange={handleLayoutChange}
           onTabSelect={handleTabSelect}
           onTabClose={handleTabClose}

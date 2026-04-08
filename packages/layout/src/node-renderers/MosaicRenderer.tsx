@@ -1,20 +1,15 @@
 import {LayoutMosaicNode} from '@sqlrooms/layout-config';
 import {FC, useCallback, useEffect, useMemo, useRef} from 'react';
-import {
-  Mosaic,
-  MosaicNode,
-  MosaicPath,
-  MosaicWindow,
-} from 'react-mosaic-component';
+import {Mosaic, MosaicNode, MosaicPath} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
-import type {PanelRenderContext} from '../LayoutSlice';
 import {
   convertFromMosaicTree,
   convertToMosaicTree,
   updateMosaicSubtree,
 } from '../mosaic/mosaic-utils';
-import {lookupPanelInfo, NodeRenderProps} from './types';
-import {MosaicCloseButton} from './MosaicCloseButton';
+import {NodeRenderProps} from './types';
+import {MosaicTileRenderer} from './MosaicTileRenderer';
+import {useLayoutRendererContext} from '../LayoutRendererContext';
 
 const mosaicStyles = `
   .mosaic-split {
@@ -47,10 +42,14 @@ const mosaicStyles = `
   }
 `;
 
-export const MosaicRenderer: FC<
-  Omit<NodeRenderProps, 'node'> & {node: LayoutMosaicNode}
-> = ({node, path, panels, rootLayout, onLayoutChange}) => {
+export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
+  node,
+  path,
+}) => {
   const treeRef = useRef(node.nodes);
+
+  const {onLayoutChange, panels, rootLayout} = useLayoutRendererContext();
+
   useEffect(() => {
     treeRef.current = node.nodes;
   }, [node.nodes]);
@@ -69,57 +68,19 @@ export const MosaicRenderer: FC<
     [rootLayout, node.id, onLayoutChange],
   );
 
-  const draggable = node.draggable !== false;
-
   const renderTile = useCallback(
     (panelId: string, tilePath: MosaicPath) => {
-      const context: PanelRenderContext = {
-        panelId,
-        containerType: 'mosaic',
-        containerId: node.id,
-        path: [...path, ...tilePath],
-      };
-
-      const info = lookupPanelInfo(context, panels);
-
-      const content = info?.render ? (
-        info.render(context)
-      ) : info?.component ? (
-        <div className="h-full w-full overflow-hidden p-2">
-          <info.component {...context} />
-        </div>
-      ) : null;
-
-      if (!content) return <></>;
-
-      if (!draggable) return <>{content}</>;
-
-      const title = info?.title ?? panelId;
-      const showCloseButton = info?.closeButton ?? true;
-      const Icon = info?.icon;
-
       return (
-        <MosaicWindow<string>
-          title={title}
-          path={tilePath}
-          draggable
-          renderToolbar={() => (
-            <div className="mosaic-window-toolbar flex w-full items-center justify-between">
-              <div className="mosaic-window-title flex items-center">
-                {Icon && <Icon className="mr-2 h-4 w-4" />}
-                {title}
-              </div>
-              <div className="mosaic-window-controls flex items-center">
-                {showCloseButton && <MosaicCloseButton />}
-              </div>
-            </div>
-          )}
-        >
-          {content}
-        </MosaicWindow>
+        <MosaicTileRenderer
+          node={node}
+          panels={panels}
+          panelId={panelId}
+          tilePath={tilePath}
+          path={path}
+        />
       );
     },
-    [panels, draggable, node.id, path],
+    [panels, node, path],
   );
 
   return (

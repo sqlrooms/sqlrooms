@@ -4,6 +4,11 @@ import * as ResizablePrimitive from 'react-resizable-panels';
 
 import {cn} from '../lib/utils';
 
+type ResizablePanelOrientation = Exclude<
+  ResizablePrimitive.GroupProps['orientation'],
+  undefined
+>;
+
 function ResizablePanelGroup({
   className,
   ...props
@@ -48,3 +53,4 @@ function ResizableHandle({
 }
 
 export {ResizableHandle, ResizablePanel, ResizablePanelGroup};
+export type {ResizablePanelOrientation};

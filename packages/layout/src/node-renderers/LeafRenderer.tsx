@@ -1,29 +1,15 @@
 import {FC} from 'react';
-import type {PanelRenderContext} from '../LayoutSlice';
-import {lookupPanelInfo, NodeRenderProps} from './types';
+import {NodeRenderProps} from './types';
+import {LayoutNodeKey} from '@sqlrooms/layout-config';
+import {RendererSwitcher} from './RendererSwitcher';
 
-export const LeafRenderer: FC<
-  Omit<NodeRenderProps, 'node'> & {panelId: string}
-> = ({panelId, path, containerType, containerId, panels}) => {
-  const context: PanelRenderContext = {
-    panelId,
-    containerType,
-    containerId,
-    path,
-  };
-
-  const info = lookupPanelInfo(context, panels);
-
-  if (info?.render) {
-    return <>{info.render(context)}</>;
-  }
-
-  if (!info?.component) return null;
-
-  const PanelComp = info.component;
+export const LeafRenderer: FC<NodeRenderProps<LayoutNodeKey>> = ({
+  node,
+  path,
+}) => {
   return (
     <div className="h-full w-full overflow-hidden p-2">
-      <PanelComp {...context} />
+      <RendererSwitcher node={node} path={path} />
     </div>
   );
 };

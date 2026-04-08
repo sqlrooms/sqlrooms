@@ -3,7 +3,7 @@ import {FC} from 'react';
 import {MosaicNode, MosaicPath, MosaicWindow} from 'react-mosaic-component';
 import {MosaicLayoutNode} from '@sqlrooms/layout-config';
 import {isDraggableTile} from './mosaic-utils';
-import {RoomPanelInfo} from '../LayoutSlice';
+import type {RoomPanelInfo} from '../types';
 
 const MosaicTile: FC<{
   id: string;

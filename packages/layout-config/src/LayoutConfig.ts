@@ -33,7 +33,7 @@ export type LayoutPanelNode = z.infer<typeof LayoutPanelNode>;
 
 const BaseLayoutSplitNode = z.object({
   type: z.literal('split'),
-  id: z.string().optional(),
+  id: z.string(),
   direction: LayoutDirection,
   draggable: z.boolean().optional(),
   defaultSize: LayoutSize.optional(),
@@ -42,6 +42,7 @@ const BaseLayoutSplitNode = z.object({
   collapsedSize: LayoutSize.optional(),
   collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
+  resizable: z.boolean().default(true).optional(),
 });
 
 export const LayoutSplitNode: z.ZodType<LayoutSplitNode> =
@@ -58,7 +59,7 @@ export type LayoutSplitNode = z.infer<typeof BaseLayoutSplitNode> & {
 
 const BaseLayoutTabsNode = z.object({
   type: z.literal('tabs'),
-  id: z.string().optional(),
+  id: z.string(),
   activeTabIndex: z.number(),
   collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
@@ -104,6 +105,7 @@ export const LayoutMosaicNode: z.ZodType<LayoutMosaicNode> =
   BaseLayoutMosaicNode.extend({
     nodes: z.lazy(() => LayoutNode.nullable()),
   });
+
 export type LayoutMosaicNode = z.infer<typeof BaseLayoutMosaicNode> & {
   nodes: LayoutNode | null;
 };
@@ -235,6 +237,10 @@ export const LayoutNode: z.ZodType<LayoutNode> = z.preprocess(
 // ---------------------------------------------------------------------------
 // Type guards
 // ---------------------------------------------------------------------------
+
+export function isLayoutNodeKey(node: LayoutNode): node is LayoutNodeKey {
+  return typeof node === 'string';
+}
 
 export function isLayoutPanelNode(
   node: LayoutNode | null | undefined,

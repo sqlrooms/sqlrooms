@@ -1,14 +1,9 @@
-import {Button, ResizablePanel} from '@sqlrooms/ui';
-import {ChevronsRightIcon, ChevronsUpIcon, XIcon} from 'lucide-react';
-import React, {FC, useCallback, useEffect, useRef} from 'react';
+import {ResizablePanel} from '@sqlrooms/ui';
+import {FC, PropsWithChildren, useCallback, useEffect, useRef} from 'react';
 import {
   type PanelImperativeHandle,
   type PanelSize,
 } from 'react-resizable-panels';
-
-// ---------------------------------------------------------------------------
-// CollapsiblePanelWrapper – used by SplitRenderer
-// ---------------------------------------------------------------------------
 
 /**
  * Ensures react-resizable-panels snaps between collapsed and expanded
@@ -16,7 +11,7 @@ import {
  */
 const DEFAULT_COLLAPSIBLE_MIN_SIZE = '10%';
 
-export const CollapsiblePanelWrapper: FC<{
+export type CollapsiblePanelWrapperProps = {
   id: string;
   collapsed: boolean;
   collapsible: boolean;
@@ -27,8 +22,11 @@ export const CollapsiblePanelWrapper: FC<{
   areaId?: string;
   onExpand?: (areaId: string, panelId?: string) => void;
   onCollapse?: (areaId: string) => void;
-  children: React.ReactNode;
-}> = ({
+};
+
+export const CollapsiblePanelWrapper: FC<
+  PropsWithChildren<CollapsiblePanelWrapperProps>
+> = ({
   id,
   collapsed,
   collapsible,
@@ -45,7 +43,11 @@ export const CollapsiblePanelWrapper: FC<{
 
   useEffect(() => {
     const handle = panelRef.current;
-    if (!handle) return;
+
+    if (!handle) {
+      return;
+    }
+
     if (collapsed && !handle.isCollapsed()) {
       handle.collapse();
     } else if (!collapsed && handle.isCollapsed()) {
@@ -59,9 +61,12 @@ export const CollapsiblePanelWrapper: FC<{
       _id: string | number | undefined,
       _prevSize: PanelSize | undefined,
     ) => {
-      if (!areaId) return;
       const handle = panelRef.current;
-      if (!handle) return;
+
+      if (!areaId || !handle) {
+        return;
+      }
+
       if (collapsed && !handle.isCollapsed()) {
         onExpand?.(areaId);
       } else if (!collapsed && handle.isCollapsed()) {
@@ -89,47 +94,3 @@ export const CollapsiblePanelWrapper: FC<{
     </ResizablePanel>
   );
 };
-
-// ---------------------------------------------------------------------------
-// CollapseButton / ExpandButton – used by TabsRenderer
-// ---------------------------------------------------------------------------
-
-export function CollapseButton({onClick}: {onClick: () => void}) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="hover:bg-primary/10 h-7 w-7 shrink-0"
-      onClick={onClick}
-      aria-label="Collapse"
-    >
-      <XIcon className="h-3.5 w-3.5" />
-    </Button>
-  );
-}
-
-export function ExpandButton({
-  direction,
-  onClick,
-}: {
-  direction?: 'row' | 'column';
-  onClick: () => void;
-}) {
-  const Icon =
-    direction === 'column'
-      ? ChevronsUpIcon
-      : direction === 'row'
-        ? ChevronsRightIcon
-        : ChevronsRightIcon;
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="hover:bg-primary/10 h-7 w-7 shrink-0"
-      onClick={onClick}
-      aria-label="Expand"
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </Button>
-  );
-}

@@ -35,7 +35,7 @@ import {
   ExpandDirection,
   CollapsedAreaInfo,
 } from './mosaic-utils';
-import {RoomPanelInfo} from '../LayoutSlice';
+import {RoomPanelInfo} from '../types';
 
 const customMosaicStyles = `
   .mosaic-split {
@@ -137,7 +137,7 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
 
       onRelease?.(restored as MosaicNode<string> | null);
     },
-    [onRelease, onExpand],
+    [onRelease],
   );
 
   const handleNestedMosaicChange = useCallback(
@@ -476,6 +476,7 @@ function NestedMosaicTile({
 
   const draggable = mosaicNode.draggable !== false;
 
+  // TODO: fix typings
   return (
     <MosaicLayout
       renderTile={renderTile}

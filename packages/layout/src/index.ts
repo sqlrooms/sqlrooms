@@ -9,14 +9,15 @@ export {
   createDefaultLayoutConfig,
   LayoutSliceConfig,
 } from './LayoutSlice';
+export type {LayoutSliceState, CreateLayoutSliceProps} from './LayoutSlice';
 export type {
   RoomPanelInfo,
-  LayoutSliceState,
-  CreateLayoutSliceProps,
+  RoomPanelComponent,
   PanelRenderContext,
   TabStripRenderContext,
   LayoutPath,
-} from './LayoutSlice';
+  PanelContainerType,
+} from './types';
 
 // New primary exports from mosaic-utils
 export {
@@ -56,7 +57,7 @@ export {
 } from './mosaic/mosaic-utils';
 
 // New LayoutRenderer component
-export {default as LayoutRenderer} from './LayoutRenderer';
+export {LayoutRenderer} from './LayoutRenderer';
 export type {LayoutRendererProps} from './LayoutRenderer';
 
 // Old MosaicLayout component (kept for mosaic node rendering, but no longer the top-level renderer)
@@ -99,3 +100,12 @@ export {
   MosaicLayoutNode,
   MosaicLayoutConfig,
 } from '@sqlrooms/layout-config';
+
+// Panel matching utility
+export {matchNodePathToPanel} from './matchNodePathToPanel';
+
+// Node renderers
+
+export {TabsLayoutRenderer} from './node-renderers/tabs-node-renderer/TabsLayoutRenderer';
+export {useTabsLayoutRendererContext} from './node-renderers/tabs-node-renderer/TabsLayoutRendererContext';
+export {extractPanelId} from './node-renderers/utils';
