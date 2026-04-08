@@ -73,11 +73,20 @@ export type WebContainerToolkitResult = {
   toolRenderers: Record<string, ComponentType<ToolRendererProps>>;
 };
 
+type ToolCallState =
+  | 'input-streaming'
+  | 'input-available'
+  | 'output-available'
+  | 'output-error'
+  | 'approval-requested'
+  | 'approval-responded'
+  | 'output-denied';
+
 type ToolRendererProps = {
   toolCallId: string;
   input: unknown;
   output: unknown;
-  state: string;
+  state: ToolCallState;
   errorText?: string;
   approvalId?: string;
 };
@@ -202,11 +211,7 @@ export function createWebContainerBashTool(store: WebContainerStoreLike) {
 // Tool result renderers
 // ---------------------------------------------------------------------------
 
-type ToolResultState =
-  | 'input-streaming'
-  | 'input-available'
-  | 'output-available'
-  | 'output-error';
+type ToolResultState = ToolCallState;
 
 type WebContainerBashToolResultProps = {
   toolCallId: string;
