@@ -17,7 +17,6 @@ export const TabsLayoutTabStrip: FC<TabsLayoutTabStripProps> = ({
     useTabsLayoutContext();
 
   const panelId = node.id;
-  const showTabStrip = node.showTabStrip;
   const isCollapsible = node.collapsible;
 
   const handleTabCreate = useCallback(() => {
@@ -52,16 +51,6 @@ export const TabsLayoutTabStrip: FC<TabsLayoutTabStripProps> = ({
     },
     [panelId, onTabSelect, onExpand],
   );
-
-  if (!showTabStrip) {
-    return (
-      isCollapsible && (
-        <div className="bg-background absolute right-0 rounded-md p-1">
-          <TabsLayoutToggleCollapseButton />
-        </div>
-      )
-    );
-  }
 
   return (
     <TabStrip

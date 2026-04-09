@@ -174,7 +174,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               activeTabIndex: 0,
               collapsible: true,
               collapsedSize: 0,
-              showTabStrip: false,
             },
             {
               id: 'main',
@@ -211,10 +210,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                     },
                   ],
                   activeTabIndex: 0,
-                  showTabStrip: true,
-                  // creatableTabs: true,
-                  // closeableTabs: true,
-                  // searchableTabs: true,
                 },
                 {
                   type: 'tabs',
@@ -224,7 +219,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   activeTabIndex: 0,
                   collapsible: true,
                   collapsedSize: 32,
-                  showTabStrip: true,
                 },
               ],
             },

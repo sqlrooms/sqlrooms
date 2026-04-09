@@ -63,7 +63,6 @@ const BaseLayoutTabsNode = z.object({
   activeTabIndex: z.number(),
   collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
-  showTabStrip: z.boolean().optional(),
   draggable: z.boolean().optional(),
   defaultSize: LayoutSize.optional(),
   minSize: LayoutSize.optional(),
