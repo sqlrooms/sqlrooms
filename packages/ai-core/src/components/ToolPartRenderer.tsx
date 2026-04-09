@@ -47,7 +47,10 @@ const AgentProgressSection: React.FC<{
     (agentOutput?.agentToolCalls?.length ? agentOutput.agentToolCalls : null);
 
   if (displayCalls && displayCalls.length > 0) {
-    const isComplete = state === 'output-available' || state === 'output-error';
+    const isComplete =
+      state === 'output-available' ||
+      state === 'output-error' ||
+      state === 'output-denied';
     return (
       <AgentRenderer
         toolCallId={toolCallId}
