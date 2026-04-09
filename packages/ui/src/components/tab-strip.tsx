@@ -36,7 +36,7 @@ import React, {
 const DRAG_MODIFIERS = [restrictToHorizontalAxis, restrictToParentElement];
 
 import {cn} from '../lib/utils';
-import {Button} from './button';
+import {Button, ButtonProps} from './button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -756,16 +756,33 @@ function DropdownTabItems({
   );
 }
 
-interface TabStripNewButtonProps {
-  className?: string;
+/**
+ * Renders a button to create a new tab.
+ */
+function TabStripButton({className, ...props}: ButtonProps) {
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      aria-label="Create new tab"
+      className={cn(
+        ...TAB_STRIP_BUTTON_CLASSNAMES,
+        'h-full shrink-0',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+type TabStripNewButtonProps = ButtonProps & {
   /** Optional tooltip content for the button. */
   tooltip?: React.ReactNode;
-}
+};
 
 /**
  * Renders a button to create a new tab.
  */
-function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
+function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
   const {onCreate} = useTabStripContext();
 
   if (!onCreate) {
@@ -773,19 +790,13 @@ function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
   }
 
   const button = (
-    <Button
-      size="icon"
-      variant="ghost"
+    <TabStripButton
       aria-label="Create new tab"
       onClick={() => onCreate()}
-      className={cn(
-        ...TAB_STRIP_BUTTON_CLASSNAMES,
-        'h-full shrink-0',
-        className,
-      )}
+      {...props}
     >
       <PlusIcon className="h-4 w-4" />
-    </Button>
+    </TabStripButton>
   );
 
   if (tooltip) {
@@ -1102,6 +1113,7 @@ function TabStripRoot({
 export const TabStrip = Object.assign(TabStripRoot, {
   Tabs: TabStripTabs,
   SearchDropdown: TabStripSearchDropdown,
+  Button: TabStripButton,
   NewButton: TabStripNewButton,
   MenuItem: TabStripMenuItem,
   MenuSeparator: TabStripMenuSeparator,

@@ -1,21 +1,21 @@
+import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {Canvas} from '@sqlrooms/canvas';
 import {SheetsTabBar, useCellsStore} from '@sqlrooms/cells';
 import {Notebook} from '@sqlrooms/notebook';
-import {Button, cn} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
 import {SparklesIcon} from 'lucide-react';
-import React from 'react';
 import {AppBuilderSheet} from './AppBuilderSheet';
 import {AssistantDrawer} from './AssistantDrawer';
 import {DashboardSheet} from './DashboardSheet';
 
-export const SheetsPanel: React.FC<{className?: string}> = ({className}) => {
+export const SheetsPanel: RoomPanelComponent = () => {
   const currentSheet = useCellsStore((s) => {
     const id = s.cells.config.currentSheetId;
     return id ? s.cells.config.sheets[id] : undefined;
   });
 
   return (
-    <div className={cn('flex h-full flex-col', className)}>
+    <div className="flex h-full flex-col">
       <div className="bg-muted flex items-center justify-between">
         <SheetsTabBar />
         <div className="flex items-center gap-2 p-1">

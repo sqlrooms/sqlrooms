@@ -1,3 +1,4 @@
+import {useTabsLayoutContext} from '@sqlrooms/layout';
 import {XIcon} from 'lucide-react';
 import {FC} from 'react';
 import {useBaseRoomShellStore} from '../RoomShellSlice';
@@ -8,11 +9,21 @@ const RoomPanelHeader: FC<{
   showHeader?: boolean;
   children?: React.ReactNode;
 }> = (props) => {
-  const {showHeader = true, panelKey: type, children} = props;
+  const {showHeader = true, panelKey, children} = props;
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const {icon: Icon, title} = panels[type] ?? {};
-  const togglePanel = useBaseRoomShellStore(
-    (state) => state.layout.togglePanel,
+  const {icon: Icon, title} = panels[panelKey] ?? {};
+  let panelToCollapse = panelKey;
+  try {
+    const {node} = useTabsLayoutContext();
+    if (node.type === 'tabs') {
+      panelToCollapse = node.id;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  const toggleCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.toggleCollapsed,
   );
 
   return (
@@ -31,7 +42,7 @@ const RoomPanelHeader: FC<{
       <div className="bg-secondary/50 flex gap-0">
         <PanelHeaderButton
           icon={<XIcon className="w-[18px]" />}
-          onClick={() => togglePanel(type)}
+          onClick={() => toggleCollapsed(panelToCollapse)}
           label={`Close panel "${title}"`}
         />
       </div>

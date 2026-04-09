@@ -1,7 +1,6 @@
 import {DbSettings} from '@sqlrooms/db-settings';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,6 @@ import {
   toast,
 } from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
-import {RoomPanelTypes} from '../layout';
 import {useRoomStore} from '../store';
 
 export const DataSourcesPanel = () => {
@@ -25,7 +23,7 @@ export const DataSourcesPanel = () => {
   );
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={'data-sources'}>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{
@@ -57,15 +55,20 @@ export const DataSourcesPanel = () => {
       </FileDropzone>
 
       <Dialog>
-        <SchemaExplorer>
-          <SchemaExplorer.Header>
-            <DialogTrigger asChild>
-              <DbSettings.TriggerButton />
-            </DialogTrigger>
-            <SchemaExplorer.RefreshButton />
-          </SchemaExplorer.Header>
-          <SchemaExplorer.Tree className="h-full" />
-        </SchemaExplorer>
+        <div className="border-border flex items-center justify-between rounded-md border px-3 py-2">
+          <div className="min-w-0">
+            <div className="text-sm font-medium">Connections</div>
+            <div className="text-muted-foreground text-xs">
+              Configure local and bridged database connections.
+            </div>
+          </div>
+          <DialogTrigger asChild>
+            <DbSettings.TriggerButton />
+          </DialogTrigger>
+        </div>
+        <div className="text-muted-foreground px-1 text-xs">
+          Use the Schema panel in the sidebar to browse tables and columns.
+        </div>
 
         <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col">
           <DialogHeader>

@@ -32,7 +32,6 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
-  LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
   RoomShellSliceState,
@@ -180,7 +179,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas: {
         room: BaseRoomConfig,
-        layout: LayoutConfig,
+        // layout: LayoutConfig,
         ai: AiSliceConfig,
         // aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
