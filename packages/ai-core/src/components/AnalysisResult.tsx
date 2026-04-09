@@ -2,13 +2,15 @@ import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {CopyButton} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
 import {SquareTerminalIcon} from 'lucide-react';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolGrouping} from '../hooks/useToolGrouping';
 import {isTextPart, isReasoningPart} from '../utils';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
+import {ExpandableContent} from './ExpandableContent';
+import {ExcludeFromGroupingProvider} from './ExcludeFromGroupingContext';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
 
@@ -90,55 +92,60 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
   const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
 
+  const excludeList = useMemo(() => userTools ?? [], [userTools]);
+
   return (
-    <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
-      <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
-        <div className="group/prompt bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
-          <SquareTerminalIcon className="h-4 w-4" />
-          {/** render prompt */}
-          <div className="min-w-0 flex-1 break-words">
-            {analysisResult.prompt}
-          </div>
-          <div className="opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
-            <CopyButton
-              text={analysisResult.prompt}
-              tooltipLabel="Copy prompt"
-              className="h-6 w-6"
-            />
+    <ExcludeFromGroupingProvider value={excludeList}>
+      <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
+        <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
+          <div className="group/prompt bg-muted flex w-full items-start gap-2 rounded-md border p-2 text-sm">
+            <SquareTerminalIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <ExpandableContent maxHeight={60} showLabels={false}>
+                <div className="break-words">{analysisResult.prompt}</div>
+              </ExpandableContent>
+            </div>
+            <div className="shrink-0 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
+              <CopyButton
+                text={analysisResult.prompt}
+                tooltipLabel="Copy prompt"
+                className="h-6 w-6"
+              />
+            </div>
           </div>
         </div>
-      </div>
-      <div ref={divRef} className="flex w-full flex-col gap-2">
-        {enableReasoningBox ? (
-          <GroupedMessageParts
-            groupedParts={groupedParts}
-            totalPartsCount={uiMessageParts.length}
-            customMarkdownComponents={customMarkdownComponents}
-          />
-        ) : (
-          <MessagePartsList
-            parts={uiMessageParts}
-            customMarkdownComponents={customMarkdownComponents}
-          />
-        )}
-        {analysisResult.errorMessage &&
-          (ErrorMessageComponent ? (
-            <ErrorMessageComponent
-              errorMessage={analysisResult.errorMessage.error}
+        <div ref={divRef} className="flex w-full flex-col gap-2">
+          {enableReasoningBox ? (
+            <GroupedMessageParts
+              groupedParts={groupedParts}
+              totalPartsCount={uiMessageParts.length}
+              customMarkdownComponents={customMarkdownComponents}
             />
           ) : (
-            <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
-          ))}
-        {hasTextContent && (
-          <div className="flex justify-start">
-            <CopyButton
-              text={allTextContent}
-              tooltipLabel="Copy message"
-              className="border-muted border"
+            <MessagePartsList
+              parts={uiMessageParts}
+              customMarkdownComponents={customMarkdownComponents}
             />
-          </div>
-        )}
+          )}
+          {analysisResult.errorMessage &&
+            (ErrorMessageComponent ? (
+              <ErrorMessageComponent
+                errorMessage={analysisResult.errorMessage.error}
+              />
+            ) : (
+              <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
+            ))}
+          {hasTextContent && (
+            <div className="flex justify-start">
+              <CopyButton
+                text={allTextContent}
+                tooltipLabel="Copy message"
+                className="border-muted border"
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </ExcludeFromGroupingProvider>
   );
 };

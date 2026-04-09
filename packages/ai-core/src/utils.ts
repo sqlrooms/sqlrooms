@@ -467,3 +467,96 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Tool name helpers
+// ---------------------------------------------------------------------------
+
+const KNOWN_ACRONYMS = new Set(['fsq', 'h3', 'api', 'sql', 'ui', 'csv', 'db']);
+
+/**
+ * Humanize a tool name like "agent-fsq-visits-chart" → "FSQ Visits Chart".
+ * Strips common prefixes (agent-, skill-) and title-cases each word,
+ * auto-uppercasing known acronyms.
+ */
+export function humanizeToolName(toolName: string): string {
+  const stripped = toolName.replace(/^agent-/, '').replace(/^skill-/, '');
+  return stripped
+    .split(/[-_]+/)
+    .map((w) =>
+      KNOWN_ACRONYMS.has(w.toLowerCase())
+        ? w.toUpperCase()
+        : w.charAt(0).toUpperCase() + w.slice(1),
+    )
+    .join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Shared reasoning-box title generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalized summary of a tool call, used by generateReasoningTitle.
+ * Both UIMessagePart and AgentToolCall should be mapped to this shape.
+ */
+export type ToolCallSummary = {
+  toolName: string;
+  completed: boolean;
+  reasoning?: string;
+};
+
+/**
+ * Descriptor returned by generateReasoningTitle.
+ * - `agent` / `skill`: single-call identity label, render as "Agent · Name"
+ * - `running`: reasoning text or "Thinking..." fallback
+ * - `completed`: "Worked with N tools"
+ */
+export type ReasoningTitleDescriptor =
+  | {kind: 'agent' | 'skill'; humanName: string}
+  | {kind: 'running'; text: string}
+  | {kind: 'completed'; text: string};
+
+/**
+ * Generate a title descriptor for a ReasoningBox given a list of tool call summaries.
+ *
+ * Handles three categories:
+ *  - **Agent / Skill** (single-tool groups): identity label
+ *  - **Running tools**: reasoning from the last call, or "Thinking..."
+ *  - **Completed tools**: "Worked with N tools"
+ */
+export function generateReasoningTitle(
+  calls: ToolCallSummary[],
+  isRunning: boolean,
+): ReasoningTitleDescriptor {
+  if (calls.length === 0) {
+    return {kind: 'completed', text: 'Worked'};
+  }
+
+  const firstCall = calls[0]!;
+  const isAgent = firstCall.toolName.startsWith('agent-');
+  const isSkill = firstCall.toolName.startsWith('skill-');
+
+  if ((isAgent || isSkill) && calls.length === 1) {
+    return {
+      kind: isAgent ? 'agent' : 'skill',
+      humanName: humanizeToolName(firstCall.toolName),
+    };
+  }
+
+  const count = calls.length;
+
+  if (isRunning) {
+    const lastCall = calls[calls.length - 1]!;
+    return {
+      kind: 'running',
+      text:
+        lastCall.reasoning ||
+        (count === 1 ? 'Thinking...' : `Thinking... (${count} tools)`),
+    };
+  }
+
+  return {
+    kind: 'completed',
+    text: count === 1 ? 'Worked with 1 tool' : `Worked with ${count} tools`,
+  };
+}

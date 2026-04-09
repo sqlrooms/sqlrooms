@@ -35,6 +35,8 @@ export {
   ToolAbortError,
   extractModelsFromSettings,
   shouldEndAnalysis,
+  humanizeToolName,
+  generateReasoningTitle,
 } from './utils';
 export type {
   AddToolApprovalResponse,
@@ -49,6 +51,7 @@ export type {
   AssistantMessageMetadata,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
+export type {ToolCallSummary, ReasoningTitleDescriptor} from './utils';
 
 export {streamSubAgent, updateAgentToolCallData} from './agents/AgentUtils';
 export type {
@@ -57,4 +60,5 @@ export type {
   AgentToolCallAdditionalData,
   PendingSubAgentApproval,
 } from './agents/AgentUtils';
-export {ReasoningBox} from './components/ReasoningBox';
+export {ReasoningBox, ReasoningTitle} from './components/ReasoningBox';
+export {ExpandableContent} from './components/ExpandableContent';

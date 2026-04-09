@@ -1,7 +1,14 @@
 import React, {useMemo} from 'react';
 import {MapIcon, BarChart3Icon} from 'lucide-react';
-import {isTextPart, isReasoningPart, isToolPart} from '../utils';
+import {
+  isTextPart,
+  isReasoningPart,
+  isToolPart,
+  generateReasoningTitle,
+} from '../utils';
+import type {ToolCallSummary} from '../utils';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
+import {ReasoningTitle} from '../components/ReasoningBox';
 
 /**
  * Type for a grouped message part (from useToolGrouping hook)
@@ -22,16 +29,16 @@ export type ToolGroup = {
 /**
  * Custom hook to group consecutive tool parts and generate titles
  * @param uiMessageParts - Array of UI message parts from the assistant
- * @param containerWidth - Width of the container in pixels (for calculating truncation)
+ * @param containerWidth - Unused, kept for backward compatibility
  * @param exclude - Array of tool names that should not be grouped and must be rendered separately
  * @returns Grouped parts with generated titles for tool groups
  */
 export function useToolGrouping(
   uiMessageParts: UIMessagePart[],
-  containerWidth: number = 0,
+  _containerWidth: number = 0,
   exclude: string[] = [],
 ): ToolGroup[] {
-  return useMemo(() => {
+  const groups = useMemo(() => {
     if (!uiMessageParts.length) return [];
 
     // Helper function to check if a part is a tool part (including dynamic-tool)
@@ -42,11 +49,13 @@ export function useToolGrouping(
       return typeof part.type === 'string' && part.type === 'dynamic-tool';
     };
 
-    // Helper function to check if a tool part should be excluded from grouping
+    // Helper function to check if a tool part should be excluded from grouping.
+    // Agent tools (name starts with "agent-") are always excluded so they
+    // render outside the ReasoningBox at every nesting level.
     const isExcludedTool = (part: UIMessagePart): boolean => {
       if (!isAnyToolPart(part)) return false;
       const toolName = getToolName(part);
-      return exclude.includes(toolName);
+      return toolName.startsWith('agent-') || exclude.includes(toolName);
     };
 
     const groups: ToolGroup[] = [];
@@ -67,21 +76,28 @@ export function useToolGrouping(
         });
         i++;
       } else if (isReasoningPart(part)) {
+        const isStreaming = (part as {state?: string}).state !== 'done';
         groups.push({
           type: 'reasoning',
           parts: [part],
           startIndex: i,
+          isRunning: isStreaming,
         });
         i++;
       } else if (isAnyToolPart(part)) {
         // If this tool is excluded, render it separately and expand by default
         if (isExcludedTool(part)) {
+          const summaries = partsToSummaries([part]);
+          const partState = (part as any).state as string;
+          const partIsRunning =
+            partState !== 'output-available' && partState !== 'output-error';
+          const titleDesc = generateReasoningTitle(summaries, partIsRunning);
           groups.push({
             type: 'tool-group',
             parts: [part],
             startIndex: i,
-            title: generateToolGroupTitle([part], false, containerWidth),
-            defaultExpanded: true, // Excluded tools are expanded by default
+            title: <ReasoningTitle descriptor={titleDesc} />,
+            defaultExpanded: true,
           });
           i++;
           continue;
@@ -149,11 +165,7 @@ export function useToolGrouping(
         }
 
         // Generate title for this tool group
-        const title = generateToolGroupTitle(
-          toolParts,
-          hasMoreToolsAfter,
-          containerWidth,
-        );
+        const summaries = partsToSummaries(toolParts);
 
         // Extract toolCallIds for elapsed time tracking
         const actualToolPartsForIds = toolParts.filter(
@@ -171,6 +183,17 @@ export function useToolGrouping(
         });
         const groupIsRunning = !allCompleted || hasMoreToolsAfter;
 
+        const titleDesc = generateReasoningTitle(summaries, groupIsRunning);
+        const icon = getToolGroupIcon(summaries);
+        const title = icon ? (
+          <span className="flex w-full items-center justify-between">
+            <ReasoningTitle descriptor={titleDesc} />
+            {icon}
+          </span>
+        ) : (
+          <ReasoningTitle descriptor={titleDesc} />
+        );
+
         groups.push({
           type: 'tool-group',
           parts: toolParts,
@@ -186,7 +209,9 @@ export function useToolGrouping(
     }
 
     return groups;
-  }, [uiMessageParts, containerWidth, exclude]);
+  }, [uiMessageParts, exclude]);
+
+  return groups;
 }
 
 /**
@@ -204,135 +229,49 @@ function getToolName(part: UIMessagePart): string {
   return 'unknown';
 }
 
-/**
- * Get icon component based on tool name
- */
-function getToolIcon(toolName: string): React.ReactNode | null {
-  if (toolName === 'createMapLayer') {
-    return <MapIcon className="h-3 w-3 shrink-0 text-blue-500" />;
-  }
-  if (toolName === 'chart') {
-    return <BarChart3Icon className="h-3 w-3 shrink-0 text-green-500" />;
-  }
-  return null;
+function partsToSummaries(parts: UIMessagePart[]): ToolCallSummary[] {
+  return parts
+    .filter(
+      (p) =>
+        p &&
+        (isToolPart(p) ||
+          (typeof p.type === 'string' && p.type === 'dynamic-tool')),
+    )
+    .map((p) => {
+      const state = (p as any).state as string;
+      return {
+        toolName: getToolName(p),
+        completed: state === 'output-available' || state === 'output-error',
+        reasoning: (p as any).input?.reasoning as string | undefined,
+      };
+    });
 }
 
 /**
- * Generate a dynamic title for a tool group based on completion status and reasoning
- * @param toolParts - The tool parts in this group
- * @param hasMoreToolsAfter - Whether there are more tool calls after this group
- * @param containerWidth - Width of the container in pixels (for calculating truncation)
+ * Get icon(s) for a group of tool call summaries based on tool names.
  */
-function generateToolGroupTitle(
-  toolParts: UIMessagePart[],
-  hasMoreToolsAfter: boolean,
-  containerWidth: number,
-): React.ReactNode {
-  // Filter to only tool parts
-  const actualToolParts = toolParts.filter(
-    (p) =>
-      p &&
-      (isToolPart(p) ||
-        (typeof p.type === 'string' && p.type === 'dynamic-tool')),
-  );
-
-  if (actualToolParts.length === 0) return 'Thought';
-
-  // Check if all tools in this group are completed
-  const allCompleted = actualToolParts.every((p) => {
-    const state = (p as any).state;
-    return state === 'output-available' || state === 'output-error';
-  });
-
-  const toolCount = actualToolParts.length;
-
-  // Collect all unique tool names to determine icons
+function getToolGroupIcon(
+  summaries: ToolCallSummary[],
+): React.ReactNode | null {
   const toolNames = new Set(
-    actualToolParts
-      .map((p) => getToolName(p))
-      .filter((name) => name !== 'unknown'),
+    summaries.map((s) => s.toolName).filter((n) => n !== 'unknown'),
   );
-
-  // Check if we have both 'createMapLayer' and 'chart' tools
   const hasMapLayer = toolNames.has('createMapLayer');
   const hasChart = toolNames.has('chart');
 
-  // Generate icons - show both if both types are present
-  let icon: React.ReactNode | null = null;
   if (hasMapLayer && hasChart) {
-    icon = (
+    return (
       <span className="flex items-center gap-1">
         <MapIcon className="h-3 w-3 shrink-0 text-blue-500" />
         <BarChart3Icon className="h-3 w-3 shrink-0 text-green-500" />
       </span>
     );
-  } else if (hasMapLayer) {
-    icon = <MapIcon className="h-3 w-3 shrink-0 text-blue-500" />;
-  } else if (hasChart) {
-    icon = <BarChart3Icon className="h-3 w-3 shrink-0 text-green-500" />;
-  } else {
-    // Fallback to first tool icon if neither map nor chart
-    const firstToolPart = actualToolParts[0];
-    const firstToolName = firstToolPart
-      ? getToolName(firstToolPart)
-      : 'unknown';
-    icon = getToolIcon(firstToolName);
   }
-
-  // Show "Thinking..." if:
-  // 1. Tools are not completed yet, OR
-  // 2. Tools are completed but there are more tool calls coming after
-  const isStillThinking = !allCompleted || hasMoreToolsAfter;
-
-  if (isStillThinking) {
-    // For active thinking, show reasoning text if available
-    const lastToolPart = actualToolParts[actualToolParts.length - 1];
-    const reasoning = lastToolPart
-      ? ((lastToolPart as any).input?.reasoning as string | undefined)
-      : undefined;
-
-    const baseTitle =
-      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
-
-    // Calculate max reasoning length based on container width
-    // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
-    const baseTextWidth = baseTitle.length * 7; // Rough estimate for "Thinking..." or "Thinking... (X tools)"
-    const iconWidth = 24; // Space for icon(s)
-    const padding = 16; // Padding and gaps
-    const availableWidth =
-      containerWidth > 0
-        ? containerWidth - baseTextWidth - iconWidth - padding
-        : 0;
-    // Estimate characters that fit: divide by average char width (~7px), with a minimum of 20 and max of 150
-    // Removed hard cap of 60 to allow scaling with container width
-    const maxReasoningLength =
-      containerWidth > 0
-        ? Math.max(20, Math.min(150, Math.floor(availableWidth / 7)))
-        : 40; // Fallback to 40 if width not available
-
-    const truncatedReasoning =
-      reasoning && reasoning.length > maxReasoningLength
-        ? `${reasoning.substring(0, maxReasoningLength)}...`
-        : reasoning;
-
-    const titleText = truncatedReasoning
-      ? `${baseTitle} ${truncatedReasoning}`
-      : baseTitle;
-    return (
-      <span className="flex w-full items-center justify-between">
-        <span className="truncate">{titleText}</span>
-        {icon}
-      </span>
-    );
-  } else {
-    // For completed thoughts (and no more tools after), just show tool count without reasoning
-    const titleText =
-      toolCount === 1 ? 'Thought (1 tool)' : `Thought (${toolCount} tools)`;
-    return (
-      <span className="flex w-full items-center justify-between">
-        <span className="truncate">{titleText}</span>
-        {icon}
-      </span>
-    );
+  if (hasMapLayer) {
+    return <MapIcon className="h-3 w-3 shrink-0 text-blue-500" />;
   }
+  if (hasChart) {
+    return <BarChart3Icon className="h-3 w-3 shrink-0 text-green-500" />;
+  }
+  return null;
 }

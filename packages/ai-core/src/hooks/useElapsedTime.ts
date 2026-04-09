@@ -27,6 +27,11 @@ export function useElapsedTime(
     return formatShortDuration(completedAt - startedAt);
   }
 
+  // Not running and no completedAt — this is a reloaded session with no
+  // persisted completion timestamp. Return nothing instead of computing a
+  // misleading elapsed time from the old startedAt to now.
+  if (!isRunning) return undefined;
+
   const elapsed = now - startedAt;
   if (elapsed < 1000) return undefined;
   return formatShortDuration(elapsed);

@@ -10,6 +10,20 @@ import {
   isToolPart,
 } from '../utils';
 import type {ToolGroup} from '../hooks/useToolGrouping';
+import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
+
+/**
+ * Headless component that records tool timing regardless of whether the
+ * parent ReasoningBox is expanded. Without this, timing data is only
+ * recorded when ToolPartRenderer mounts (i.e. when the box is open).
+ */
+const ToolTimingBridge: React.FC<{
+  toolCallId: string;
+  isComplete: boolean;
+}> = ({toolCallId, isComplete}) => {
+  useToolTimingRecorder(toolCallId, isComplete);
+  return null;
+};
 
 /**
  * Props for the GroupedMessageParts component
@@ -25,7 +39,11 @@ type GroupedMessagePartsProps = {
 
 /**
  * Component that renders message parts with ReasoningBox grouping.
- * Groups consecutive tool parts into collapsible ReasoningBox components.
+ * Every tool-group is wrapped in a ReasoningBox. Groups that contain an
+ * agent or a tool with a visual renderer are expanded by default so
+ * their output is visible immediately, while regular tool groups start
+ * collapsed. This design supports arbitrary nesting — an expanded agent
+ * ReasoningBox can contain child ReasoningBoxes for its own tool calls.
  *
  * @component
  * @param props - Component props
@@ -56,22 +74,39 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
           const part = group.parts[0];
           if (!part || !isReasoningPart(part)) return null;
           return (
-            <div
+            <ReasoningBox
               key={`group-${groupIndex}`}
-              className="text-muted-foreground text-xs"
+              title="Reasoning"
+              isRunning={group.isRunning}
             >
-              {part.text}
-            </div>
+              <div className="text-muted-foreground text-xs">{part.text}</div>
+            </ReasoningBox>
           );
         }
 
         if (group.type === 'tool-group') {
-          // "Excluded" tools (see `useToolGrouping(exclude=...)`) are marked with
-          // `defaultExpanded: true`. Render them inline as part of the normal flow
-          // (not inside a collapsible ReasoningBox), so charts/maps/etc don't get hidden.
-          if (group.defaultExpanded) {
-            return (
-              <div key={`group-${groupIndex}`} className="flex flex-col gap-2">
+          return (
+            <React.Fragment key={`group-${groupIndex}`}>
+              {group.parts.map((part) => {
+                if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
+                const complete =
+                  part.state === 'output-available' ||
+                  part.state === 'output-error' ||
+                  part.state === 'output-denied';
+                return (
+                  <ToolTimingBridge
+                    key={`timing-${part.toolCallId}`}
+                    toolCallId={part.toolCallId}
+                    isComplete={complete}
+                  />
+                );
+              })}
+              <ReasoningBox
+                title={group.title}
+                defaultOpen={group.defaultExpanded}
+                isRunning={group.isRunning}
+                toolCallIds={group.toolCallIds}
+              >
                 {group.parts.map((part, partIndex) =>
                   isToolPart(part) || isDynamicToolPart(part) ? (
                     <ToolPartRenderer
@@ -81,28 +116,8 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
                     />
                   ) : null,
                 )}
-              </div>
-            );
-          }
-
-          return (
-            <ReasoningBox
-              key={`group-${groupIndex}`}
-              title={group.title}
-              defaultOpen={group.defaultExpanded}
-              isRunning={group.isRunning}
-              toolCallIds={group.toolCallIds}
-            >
-              {group.parts.map((part, partIndex) =>
-                isToolPart(part) || isDynamicToolPart(part) ? (
-                  <ToolPartRenderer
-                    key={`tool-call-${groupIndex}-${partIndex}`}
-                    part={part}
-                    toolCallId={part.toolCallId}
-                  />
-                ) : null,
-              )}
-            </ReasoningBox>
+              </ReasoningBox>
+            </React.Fragment>
           );
         }
 

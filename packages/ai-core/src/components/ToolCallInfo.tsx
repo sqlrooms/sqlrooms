@@ -22,9 +22,6 @@ type ToolCallInfoProps = {
     | 'output-denied';
   /** Stable key for elapsed-time lookup (e.g. toolCallId) */
   stableKey?: string;
-  /** When true, suppress the elapsed-time display (e.g. for agent tools whose
-   *  sub-steps already show their own timers). */
-  hideElapsed?: boolean;
 };
 
 /**
@@ -36,7 +33,6 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
   input,
   state,
   stableKey,
-  hideElapsed = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const toggle = useCallback(() => setIsExpanded((v) => !v), []);
@@ -54,7 +50,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
     timing?.startedAt,
     timing?.completedAt,
   );
-  const showElapsed = !hideElapsed && elapsedText;
+  const showElapsed = !!elapsedText;
 
   return (
     <div className="flex flex-col gap-1">
