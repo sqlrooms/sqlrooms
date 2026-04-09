@@ -229,14 +229,17 @@ const AgentProgressSection: React.FC<{
  * @component
  * @param props - Component props
  * @param props.part - The UI message part to render
+ * @param props.isExcludedFromGrouping - Whether this tool is excluded from being grouped in the GroupedMessageParts component
  * @returns A React component displaying the tool part, or null if not a tool part
  */
 export const ToolPartRenderer = ({
   part,
   toolCallId,
+  isExcludedFromGrouping = false,
 }: {
   part: UIMessagePart;
   toolCallId: string;
+  isExcludedFromGrouping?: boolean;
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
@@ -290,6 +293,7 @@ export const ToolPartRenderer = ({
           input={input}
           isCompleted={isCompleted}
           state={state}
+          isExcludedFromGrouping={isExcludedFromGrouping}
         />
         <div data-tool-call-id={toolCallId}>
           {isAgentTool ? (
@@ -308,6 +312,7 @@ export const ToolPartRenderer = ({
               input={input}
               state={state}
               errorText={state === 'output-error' ? errorText : undefined}
+              isExcludedFromGrouping={isExcludedFromGrouping}
             />
           )}
         </div>

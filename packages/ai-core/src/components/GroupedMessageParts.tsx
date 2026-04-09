@@ -78,6 +78,7 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
                       key={`tool-call-${groupIndex}-${partIndex}`}
                       part={part}
                       toolCallId={part.toolCallId}
+                      isExcludedFromGrouping={true}
                     />
                   ) : null,
                 )}

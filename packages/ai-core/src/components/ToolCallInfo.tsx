@@ -19,6 +19,7 @@ type ToolCallInfoProps = {
     | 'input-available'
     | 'output-available'
     | 'output-error';
+  isExcludedFromGrouping?: boolean;
 };
 
 /**
@@ -32,6 +33,7 @@ type ToolCallInfoProps = {
  * @param props.input - Input arguments passed to the tool
  * @param props.isCompleted - Whether the tool call has completed
  * @param props.state - Current state of the tool call
+ * @param props.isExcludedFromGrouping - Whether this tool is excluded from grouping (uses text-foreground instead of gray)
  * @returns A React component displaying the tool call details
  */
 export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
@@ -39,17 +41,39 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
   input,
   isCompleted,
   state,
+  isExcludedFromGrouping = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2 pl-2 text-xs text-gray-700 dark:text-gray-300">
+      <div
+        className={cn(
+          'flex items-center gap-2 pl-2 text-xs',
+          isExcludedFromGrouping
+            ? 'text-foreground'
+            : 'text-gray-700 dark:text-gray-300',
+        )}
+      >
         {/* Loading/Completed Indicator */}
         {state !== 'output-available' && state !== 'output-error' ? (
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400 dark:text-gray-500" />
+          <Loader2
+            className={cn(
+              'h-4 w-4 shrink-0 animate-spin',
+              isExcludedFromGrouping
+                ? 'text-foreground'
+                : 'text-gray-400 dark:text-gray-500',
+            )}
+          />
         ) : (
-          <CircleArrowRightIcon className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
+          <CircleArrowRightIcon
+            className={cn(
+              'h-4 w-4 shrink-0',
+              isExcludedFromGrouping
+                ? 'text-foreground'
+                : 'text-gray-400 dark:text-gray-500',
+            )}
+          />
         )}
 
         {/* Clickable Tool Name */}
@@ -57,7 +81,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
             'flex items-center gap-1 rounded px-1 py-0.5 font-medium transition-colors',
-            'text-gray-700',
+            isExcludedFromGrouping ? 'text-foreground' : 'text-gray-700',
           )}
         >
           {isExpanded ? (

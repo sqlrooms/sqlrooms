@@ -1,5 +1,6 @@
 import type {FC} from 'react';
 import {useEffect} from 'react';
+import {cn} from '@sqlrooms/ui';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
@@ -16,6 +17,7 @@ type ToolResultProps = {
     | 'output-available'
     | 'output-error';
   errorText?: string;
+  isExcludedFromGrouping?: boolean;
 };
 
 export const ToolResult: FC<ToolResultProps> = ({
@@ -25,6 +27,7 @@ export const ToolResult: FC<ToolResultProps> = ({
   input,
   state,
   errorText,
+  isExcludedFromGrouping = false,
 }) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   // Look up directly from the registry object (stable reference) to avoid
@@ -64,7 +67,14 @@ export const ToolResult: FC<ToolResultProps> = ({
   }, [isCompleted, isSuccess, toolName, ToolComponent]);
 
   return !isCompleted ? (
-    <div className="text-sm text-gray-500">{reason ?? ''}</div>
+    <div
+      className={cn(
+        'text-sm',
+        isExcludedFromGrouping ? 'text-foreground' : 'text-gray-500',
+      )}
+    >
+      {reason ?? ''}
+    </div>
   ) : (
     <MessageContainer
       isSuccess={isSuccess}
@@ -76,7 +86,12 @@ export const ToolResult: FC<ToolResultProps> = ({
         isCompleted,
       }}
     >
-      <div className="text-sm text-gray-500">
+      <div
+        className={cn(
+          'text-sm',
+          isExcludedFromGrouping ? 'text-foreground' : 'text-gray-500',
+        )}
+      >
         {reason && <span>{reason}</span>}
         {isCompleted && (errorText || !isSuccess) && (
           <ToolErrorMessage
