@@ -509,12 +509,12 @@ export type ToolCallSummary = {
  * Descriptor returned by generateReasoningTitle.
  * - `agent` / `skill`: single-call identity label, render as "Agent · Name"
  * - `running`: reasoning text or "Thinking..." fallback
- * - `completed`: "Worked with N tools"
+ * - `completed`: descriptive summary with tool names and optional reasoning
  */
 export type ReasoningTitleDescriptor =
   | {kind: 'agent' | 'skill'; humanName: string}
   | {kind: 'running'; text: string}
-  | {kind: 'completed'; text: string};
+  | {kind: 'completed'; text: string; toolNames?: string[]; reasoning?: string};
 
 /**
  * Generate a title descriptor for a ReasoningBox given a list of tool call summaries.
@@ -522,7 +522,7 @@ export type ReasoningTitleDescriptor =
  * Handles three categories:
  *  - **Agent / Skill** (single-tool groups): identity label
  *  - **Running tools**: reasoning from the last call, or "Thinking..."
- *  - **Completed tools**: "Worked with N tools"
+ *  - **Completed tools**: descriptive summary with tool names and reasoning
  */
 export function generateReasoningTitle(
   calls: ToolCallSummary[],
@@ -555,8 +555,37 @@ export function generateReasoningTitle(
     };
   }
 
+  const humanNames = [
+    ...new Set(calls.map((c) => humanizeToolName(c.toolName))),
+  ];
+  const lastReasoning = findLastReasoning(calls);
+
+  let text: string;
+  if (count === 1) {
+    text = lastReasoning ?? `Used ${humanNames[0]}`;
+  } else if (lastReasoning) {
+    text =
+      count === 2
+        ? `${lastReasoning} (+1 more)`
+        : `${lastReasoning} (+${count - 1} more)`;
+  } else {
+    const MAX_NAMES = 3;
+    const shown = humanNames.slice(0, MAX_NAMES).join(', ');
+    text =
+      humanNames.length > MAX_NAMES ? `Used ${shown}, ...` : `Used ${shown}`;
+  }
+
   return {
     kind: 'completed',
-    text: count === 1 ? 'Worked with 1 tool' : `Worked with ${count} tools`,
+    text,
+    toolNames: humanNames,
+    reasoning: lastReasoning,
   };
+}
+
+function findLastReasoning(calls: ToolCallSummary[]): string | undefined {
+  for (let i = calls.length - 1; i >= 0; i--) {
+    if (calls[i]!.reasoning) return calls[i]!.reasoning;
+  }
+  return undefined;
 }

@@ -346,15 +346,15 @@ export function travelPlannerAgentTool(store: StoreApi<AiSliceState>) {
       const travelAgent = new ToolLoopAgent({
         model: getModel(store),
         instructions:
-          'You are a travel planner. Use the checkWeather tool to look up weather, ' +
-          'the findActivities tool to discover things to do, and the bookHotel tool ' +
-          'to reserve accommodation. Always call bookHotel when the user requests ' +
+          'You are a travel planner. Use the agent-check-weather tool to look up weather, ' +
+          'the agent-find-activities tool to discover things to do, and the agent-book-hotel tool ' +
+          'to reserve accommodation. Always call agent-book-hotel when the user requests ' +
           'hotel booking — do NOT ask the user to choose or confirm, the system ' +
           'handles approval automatically. Combine the results to produce a concise travel plan.',
         tools: {
-          checkWeather: weatherAgentTool(store),
-          findActivities: activitiesAgentTool(store),
-          bookHotel: hotelBookingAgentTool(store),
+          'agent-check-weather': weatherAgentTool(store),
+          'agent-find-activities': activitiesAgentTool(store),
+          'agent-book-hotel': hotelBookingAgentTool(store),
         },
         stopWhen: stepCountIs(10),
       });

@@ -26,7 +26,23 @@ export const ReasoningTitle: React.FC<{
         </span>
       );
     case 'running':
+      return <>{descriptor.text}</>;
     case 'completed':
+      if (descriptor.reasoning) {
+        return (
+          <span className="flex items-center gap-1.5">
+            <span className="italic">{descriptor.text}</span>
+          </span>
+        );
+      }
+      if (descriptor.toolNames?.length) {
+        return (
+          <span className="flex items-center gap-1.5">
+            <span className="text-muted-foreground/70">Used</span>
+            <span>{descriptor.toolNames.join(', ')}</span>
+          </span>
+        );
+      }
       return <>{descriptor.text}</>;
   }
 };

@@ -39,9 +39,20 @@ type AgentToolCallGroup = {
 function groupAgentToolCalls(
   toolCalls: AgentToolCall[],
   exclude: string[],
+  toolRenderers: ToolRendererRegistry = {},
+  agentProgress: Record<string, AgentToolCall[]> = {},
 ): AgentToolCallGroup[] {
-  const isStandalone = (tc: AgentToolCall) =>
-    tc.toolName.startsWith('agent-') || exclude.includes(tc.toolName);
+  const isStandalone = (tc: AgentToolCall) => {
+    const hasNestedCalls =
+      (agentProgress[tc.toolCallId]?.length ?? 0) > 0 ||
+      (tc.agentToolCalls?.length ?? 0) > 0;
+    return (
+      tc.toolName.startsWith('agent-') ||
+      hasNestedCalls ||
+      exclude.includes(tc.toolName) ||
+      typeof toolRenderers[tc.toolName] === 'function'
+    );
+  };
 
   const groups: AgentToolCallGroup[] = [];
   let currentGroup: AgentToolCall[] = [];
@@ -177,17 +188,13 @@ const ToolCallEntry: React.FC<{
   const isError = toolCall.state === 'error';
   const isApprovalRequested = toolCall.state === 'approval-requested';
   const hasComponent = ToolComponent && typeof ToolComponent === 'function';
-  const isAgent = toolCall.toolName.startsWith('agent-');
-
-  const inputObj =
-    toolCall.input && typeof toolCall.input === 'object'
-      ? (toolCall.input as Record<string, unknown>)
-      : undefined;
-  const reasoning = inputObj?.reasoning as string | undefined;
 
   // Resolve nested sub-agent calls
   const nestedCalls =
     agentProgress[toolCall.toolCallId] ?? toolCall.agentToolCalls;
+
+  const hasNestedCalls = nestedCalls != null && nestedCalls.length > 0;
+  const isAgent = toolCall.toolName.startsWith('agent-') || hasNestedCalls;
 
   // For agent output, extract finalOutput
   const agentOutput =
@@ -200,11 +207,6 @@ const ToolCallEntry: React.FC<{
 
   return (
     <div className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}>
-      {reasoning && !hideHeader && (
-        <div className="mb-1 ml-6 text-xs text-gray-500 italic">
-          {reasoning}
-        </div>
-      )}
       {!hideHeader && (
         <div className="mb-1 flex items-start">
           <span className="mr-2 min-w-4">
@@ -303,7 +305,8 @@ export const AgentRenderer: React.FC<{
   isComplete?: boolean;
 }> = ({toolCallId, agentToolCalls, finalOutput, reasoning, isComplete}) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
-  const liveProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
+  const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
+  const liveProgress = agentProgress[toolCallId];
   const exclude = useExcludeFromGrouping();
 
   const displayCalls = liveProgress ?? agentToolCalls;
@@ -317,8 +320,9 @@ export const AgentRenderer: React.FC<{
   );
 
   const groups = useMemo(
-    () => groupAgentToolCalls(displayCalls, exclude),
-    [displayCalls, exclude],
+    () =>
+      groupAgentToolCalls(displayCalls, exclude, toolRenderers, agentProgress),
+    [displayCalls, exclude, toolRenderers, agentProgress],
   );
 
   return (

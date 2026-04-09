@@ -2,15 +2,17 @@ import {cn} from '@sqlrooms/ui';
 import {ChevronDown, ChevronsUp} from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 
-const DEFAULT_MAX_HEIGHT = 200;
+const DEFAULT_MAX_HEIGHT = 80;
 
 type ExpandableContentProps = {
   children: React.ReactNode;
-  /** Max collapsed height in px. Defaults to 400. */
+  /** Max collapsed height in px. Defaults to 300. */
   maxHeight?: number;
   className?: string;
   /** Show "Show more" / "Collapse" labels. Defaults to true. */
   showLabels?: boolean;
+  /** Height of the gradient fade overlay in px. Defaults to 112 when showLabels is true, 40 otherwise. */
+  fadeHeight?: number;
 };
 
 /**
@@ -27,7 +29,9 @@ export const ExpandableContent: React.FC<ExpandableContentProps> = ({
   maxHeight = DEFAULT_MAX_HEIGHT,
   className,
   showLabels = true,
+  fadeHeight,
 }) => {
+  const resolvedFadeHeight = fadeHeight ?? (showLabels ? 30 : 40);
   const innerRef = useRef<HTMLDivElement>(null);
   const [naturalHeight, setNaturalHeight] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -86,9 +90,10 @@ export const ExpandableContent: React.FC<ExpandableContentProps> = ({
           <div
             className={cn(
               'pointer-events-none absolute inset-x-0 bottom-0',
-              showLabels ? 'h-28 rounded-b-lg' : 'h-10',
+              showLabels && 'rounded-b-lg',
             )}
             style={{
+              height: `${resolvedFadeHeight}px`,
               background: showLabels
                 ? 'linear-gradient(to bottom, transparent 0%, hsl(var(--background) / 0.7) 40%, hsl(var(--background) / 0.95) 70%, hsl(var(--background)) 100%)'
                 : 'linear-gradient(to bottom, transparent 0%, currentColor 100%)',
