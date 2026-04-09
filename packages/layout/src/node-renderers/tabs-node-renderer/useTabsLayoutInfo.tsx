@@ -1,4 +1,4 @@
-import {LayoutTabsNode} from '@sqlrooms/layout-config';
+import {LayoutNode, LayoutTabsNode} from '@sqlrooms/layout-config';
 import {TabDescriptor} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {getChildKey} from '../../mosaic/mosaic-utils';
@@ -7,17 +7,19 @@ import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {LayoutPath} from '../../types';
 import {matchNodePathToPanel} from '../../matchNodePathToPanel';
 
-type UseLayoutTabsNodeTabsInfoResult = {
-  activeTabId: string | undefined;
+export type TabsLayoutInfo = {
+  activeTabId: string | null;
+  activeChild: LayoutNode | null;
+  activeChildPath: LayoutPath | null;
   visibleTabIds: string[];
   allTabIds: string[];
   tabDescriptors: TabDescriptor[];
 };
 
-export function useLayoutTabsNodeTabsInfo(
+export function useTabsLayoutInfo(
   node: LayoutTabsNode,
   path: LayoutPath,
-): UseLayoutTabsNodeTabsInfoResult {
+): TabsLayoutInfo {
   const {panels} = useLayoutRendererContext();
 
   const visibleTabIds = useMemo(
@@ -41,7 +43,9 @@ export function useLayoutTabsNodeTabsInfo(
     return ids;
   }, [visibleTabIds, node.closedChildren]);
 
-  const activeTabId = visibleTabIds[node.activeTabIndex];
+  const activeTabId = visibleTabIds[node.activeTabIndex] ?? null;
+  const activeChild = node.children[node.activeTabIndex] ?? null;
+  const activeChildPath = activeTabId ? [...path, activeTabId] : null;
 
   const tabDescriptors: TabDescriptor[] = useMemo(
     () =>
@@ -55,5 +59,12 @@ export function useLayoutTabsNodeTabsInfo(
     [allTabIds, panels, path],
   );
 
-  return {activeTabId, visibleTabIds, allTabIds, tabDescriptors};
+  return {
+    activeTabId,
+    activeChild,
+    activeChildPath,
+    visibleTabIds,
+    allTabIds,
+    tabDescriptors,
+  };
 }

@@ -1,15 +1,16 @@
 import {
   extractPanelId,
   RoomPanelComponent,
-  TabsLayoutRenderer,
-  useTabsLayoutRendererContext,
+  TabsLayout,
+  useTabsLayoutContext,
 } from '@sqlrooms/layout';
 import {Button} from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
 import {useCallback} from 'react';
+import {PlusIcon} from 'lucide-react';
 
 export const DashboardTabs: RoomPanelComponent = () => {
-  const {activeTabId} = useTabsLayoutRendererContext();
+  const {activeTabId} = useTabsLayoutContext();
 
   const addChartToDashboard = useRoomStore((s) => s.addChartToDashboard);
 
@@ -23,16 +24,19 @@ export const DashboardTabs: RoomPanelComponent = () => {
 
   return (
     <>
-      <TabsLayoutRenderer.TabStrip />
-      <div className="flex h-full w-full flex-col overflow-hidden p-2">
-        <div>
-          <Button variant="ghost" onClick={handleAddChart}>
-            Add Chart
+      <TabsLayout.TabStrip closeable={true} preventCloseLastTab={false}>
+        <TabsLayout.SearchDropdown />
+        <TabsLayout.Tabs />
+        <TabsLayout.NewButton />
+      </TabsLayout.TabStrip>
+      <TabsLayout.TabContentContainer>
+        <div className="my-1 flex justify-end gap-2 p-1">
+          <Button variant="default" onClick={handleAddChart}>
+            <PlusIcon /> Add Chart
           </Button>
         </div>
-
-        <TabsLayoutRenderer.TabContent />
-      </div>
+        <TabsLayout.TabContent />
+      </TabsLayout.TabContentContainer>
     </>
   );
 };

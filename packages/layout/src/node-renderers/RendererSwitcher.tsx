@@ -1,5 +1,5 @@
 import {LayoutNode} from '@sqlrooms/layout-config';
-import {FC, PropsWithChildren} from 'react';
+import {FC, ReactNode} from 'react';
 import {useLayoutRendererContext} from '../LayoutRendererContext';
 import {matchNodePathToPanel} from '../matchNodePathToPanel';
 import {LayoutPath} from '../types';
@@ -7,12 +7,13 @@ import {LayoutPath} from '../types';
 export type RendererSwitcherProps = {
   node: LayoutNode;
   path: LayoutPath;
+  defaultComponent?: ReactNode;
 };
 
-export const RendererSwitcher: FC<PropsWithChildren<RendererSwitcherProps>> = ({
+export const RendererSwitcher: FC<RendererSwitcherProps> = ({
   path,
   node,
-  children,
+  defaultComponent,
 }) => {
   const {panels} = useLayoutRendererContext();
   const panelInfo = matchNodePathToPanel(path, panels);
@@ -23,5 +24,5 @@ export const RendererSwitcher: FC<PropsWithChildren<RendererSwitcherProps>> = ({
     return <CustomRenderer panelInfo={panelInfo} node={node} path={path} />;
   }
 
-  return children;
+  return defaultComponent;
 };

@@ -106,6 +106,6 @@ export {matchNodePathToPanel} from './matchNodePathToPanel';
 
 // Node renderers
 
-export {TabsLayoutRenderer} from './node-renderers/tabs-node-renderer/TabsLayoutRenderer';
-export {useTabsLayoutRendererContext} from './node-renderers/tabs-node-renderer/TabsLayoutRendererContext';
+export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
+export {useTabsLayoutContext} from './node-renderers/tabs-node-renderer/TabsLayoutProvider';
 export {extractPanelId} from './node-renderers/utils';

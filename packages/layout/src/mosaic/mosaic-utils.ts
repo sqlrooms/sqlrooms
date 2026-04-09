@@ -313,7 +313,7 @@ export interface CollapsedAreaInfo {
 
 /**
  * For a tabs node at `tabsPath`, find any collapsed sibling tabs nodes
- * in the same parent split that have `showTabStripWhenCollapsed`.
+ * in the same parent split.
  */
 export function findCollapsedSiblings(
   root: LayoutNode | null | undefined,
@@ -328,12 +328,7 @@ export function findCollapsedSiblings(
     if (!child || typeof child === 'string') continue;
     const childPath = [...splitPath, i];
     if (pathsEqual(childPath, tabsPath)) continue;
-    if (
-      isLayoutTabsNode(child) &&
-      child.collapsed &&
-      child.showTabStripWhenCollapsed &&
-      child.id
-    ) {
+    if (isLayoutTabsNode(child) && child.collapsed && child.id) {
       const dir = getExpandDirection(root, childPath);
       if (dir) {
         result.push({node: child, path: childPath, expandDirection: dir});

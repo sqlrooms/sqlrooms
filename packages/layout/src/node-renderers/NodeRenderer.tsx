@@ -25,7 +25,7 @@ import {
 } from './types';
 import {convertSizePropsToStyle} from './utils';
 import {useLayoutRendererContext} from '../LayoutRendererContext';
-import {TabsLayoutRenderer} from './tabs-node-renderer/TabsLayoutRenderer';
+import {TabsLayout} from './tabs-node-renderer/TabsLayout';
 
 // ---------------------------------------------------------------------------
 // NodeRenderer – recursive dispatcher
@@ -132,7 +132,7 @@ const TabsRenderer: FC<NodeRenderProps<LayoutTabsNodeType>> = ({
   parentDirection,
 }) => {
   return (
-    <TabsLayoutRenderer.Root
+    <TabsLayout.Root
       node={node}
       path={path}
       parentDirection={parentDirection}

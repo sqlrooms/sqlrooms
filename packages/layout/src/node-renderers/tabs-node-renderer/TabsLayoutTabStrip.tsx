@@ -1,32 +1,29 @@
-import {TabStrip} from '@sqlrooms/ui';
-import {FC, useCallback} from 'react';
-import {CollapseButton} from '../CollapseButton';
+import {TabStrip, TabStripProps} from '@sqlrooms/ui';
+import {FC, PropsWithChildren, useCallback} from 'react';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
-import {TabLabel} from './TabLabel';
-import {useTabsLayoutRendererContext} from './TabsLayoutRendererContext';
+import {TabsLayoutTabLabel} from './TabsLayoutTabLabel';
+import {useTabsLayoutContext} from './TabsLayoutProvider';
+import {TabsLayoutToggleCollapseButton} from './TabsLayoutToggleCollapseButton';
 
-export const ExpandedTabStrip: FC = () => {
-  const {onTabSelect, onTabClose, onTabReorder, onTabCreate, onCollapse} =
+export type TabsLayoutTabStripProps = PropsWithChildren<Partial<TabStripProps>>;
+
+export const TabsLayoutTabStrip: FC<TabsLayoutTabStripProps> = ({
+  children,
+  ...props
+}) => {
+  const {onTabSelect, onTabClose, onTabReorder, onTabCreate, onExpand} =
     useLayoutRendererContext();
   const {node, path, activeTabId, tabDescriptors, visibleTabIds} =
-    useTabsLayoutRendererContext();
+    useTabsLayoutContext();
 
   const panelId = node.id;
   const showTabStrip = node.showTabStrip;
   const isCollapsible = node.collapsible;
-  const closeableTabs = node.closeableTabs;
-  const creatableTabs = node.creatableTabs;
-  const searchableTabs = node.searchableTabs;
-
-  const handleCollapse = useCallback(() => {
-    onCollapse?.(panelId);
-  }, [panelId, onCollapse]);
 
   const handleTabCreate = useCallback(() => {
-    if (creatableTabs) {
-      onTabCreate?.(panelId);
-    }
-  }, [panelId, onTabCreate, creatableTabs]);
+    onExpand?.(panelId);
+    onTabCreate?.(panelId);
+  }, [panelId, onTabCreate, onExpand]);
 
   const handleOpenTabsChange = useCallback(
     (tabIds: string[]) => {
@@ -43,25 +40,24 @@ export const ExpandedTabStrip: FC = () => {
 
   const handleTabClose = useCallback(
     (tabId: string) => {
-      if (closeableTabs) {
-        onTabClose?.(panelId, tabId);
-      }
+      onTabClose?.(panelId, tabId);
     },
-    [panelId, onTabClose, closeableTabs],
+    [panelId, onTabClose],
   );
 
   const handleTabSelect = useCallback(
     (tabId: string) => {
+      onExpand?.(panelId);
       onTabSelect?.(panelId, tabId);
     },
-    [panelId, onTabSelect],
+    [panelId, onTabSelect, onExpand],
   );
 
   if (!showTabStrip) {
     return (
       isCollapsible && (
         <div className="bg-background absolute right-0 rounded-md p-1">
-          <CollapseButton onClick={handleCollapse} />
+          <TabsLayoutToggleCollapseButton />
         </div>
       )
     );
@@ -72,21 +68,20 @@ export const ExpandedTabStrip: FC = () => {
       tabs={tabDescriptors}
       openTabs={visibleTabIds}
       selectedTabId={activeTabId}
-      preventCloseLastTab
-      closeable={closeableTabs}
+      preventCloseLastTab={true}
+      closeable={false}
       onSelect={handleTabSelect}
       onClose={handleTabClose}
       onOpenTabsChange={handleOpenTabsChange}
       onCreate={handleTabCreate}
-      renderTabLabel={(tab) => <TabLabel tab={tab} path={path} />}
+      renderTabLabel={(tab) => <TabsLayoutTabLabel tab={tab} path={path} />}
+      {...props}
     >
-      {searchableTabs && <TabStrip.SearchDropdown />}
-      <TabStrip.Tabs />
-      {creatableTabs && <TabStrip.NewButton />}
+      {children}
       {isCollapsible && (
         <>
           <div className="flex-1" />
-          <CollapseButton onClick={handleCollapse} />
+          <TabsLayoutToggleCollapseButton />
         </>
       )}
     </TabStrip>

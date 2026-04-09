@@ -16,7 +16,6 @@ import {
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import React from 'react';
 import {MosaicNode} from 'react-mosaic-component';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
@@ -27,7 +26,7 @@ import {
   makeLayoutStack,
   removeLayoutNodeByKey,
 } from './mosaic/mosaic-utils';
-import type {RoomPanelInfo, TabStripRenderContext} from './types';
+import type {RoomPanelInfo} from './types';
 import {getPanelId} from './node-renderers/types';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
@@ -327,7 +326,6 @@ export function createLayoutSlice({
                   (c) => getChildKey(c) === tabId,
                 );
                 if (idx < 0) return;
-                if (found.node.children.length <= 1) return;
                 found.node.children.splice(idx, 1);
                 if (found.node.activeTabIndex >= found.node.children.length) {
                   found.node.activeTabIndex = found.node.children.length - 1;

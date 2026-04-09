@@ -5,12 +5,15 @@ import {matchNodePathToPanel} from '../../matchNodePathToPanel';
 import {LayoutPath} from '../../types';
 import {extractPanelId} from '../utils';
 
-interface TabLabelProps {
+interface TabsLayoutTabLabelProps {
   tab: TabDescriptor;
   path: LayoutPath;
 }
 
-export const TabLabel: FC<TabLabelProps> = ({tab, path}) => {
+export const TabsLayoutTabLabel: FC<TabsLayoutTabLabelProps> = ({
+  tab,
+  path,
+}) => {
   const {panels} = useLayoutRendererContext();
 
   const panelId = extractPanelId(tab.id);
