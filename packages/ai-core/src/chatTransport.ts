@@ -2,7 +2,12 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
-import type {LanguageModel, ToolSet} from 'ai';
+import type {
+  LanguageModel,
+  LanguageModelUsage,
+  TextStreamPart,
+  ToolSet,
+} from 'ai';
 import {
   createAgentUIStreamResponse,
   DefaultChatTransport,
@@ -20,6 +25,7 @@ import type {
   AiSliceStateForTransport,
   ToolTimingEntry,
   AssistantMessageMetadata,
+  MessageTokenUsage,
 } from './types';
 import {
   fixIncompleteToolCalls,
@@ -92,6 +98,64 @@ function getSessionById(
   return store
     .getState()
     .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
+}
+
+/**
+ * The AI SDK stream metadata is not reliably surfaced back onto `UIMessage.metadata`
+ * for our local transport setup, so persist token usage per session and stamp it
+ * onto the last assistant message ourselves during `onChatFinish`.
+ */
+const sessionTokenUsage = new Map<string, MessageTokenUsage>();
+
+function rememberSessionTokenUsage(
+  sessionId: string,
+  usage: MessageTokenUsage,
+): void {
+  sessionTokenUsage.set(sessionId, structuredClone(usage));
+}
+
+function consumeSessionTokenUsage(
+  sessionId: string,
+): MessageTokenUsage | undefined {
+  const usage = sessionTokenUsage.get(sessionId);
+  sessionTokenUsage.delete(sessionId);
+  return usage;
+}
+
+function writeTokenUsageToLastAssistantMessage(
+  messages: UIMessage[],
+  usage: MessageTokenUsage | undefined,
+): void {
+  if (!usage || usage.totalTokens <= 0) return;
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg || msg.role !== 'assistant') continue;
+
+    const existing = (msg.metadata ?? {}) as AssistantMessageMetadata;
+    msg.metadata = {
+      ...existing,
+      tokenUsage: usage,
+    };
+    return;
+  }
+}
+
+function toMessageTokenUsage(
+  usage: LanguageModelUsage | undefined,
+): MessageTokenUsage {
+  return {
+    inputTokens: usage?.inputTokens ?? 0,
+    outputTokens: usage?.outputTokens ?? 0,
+    totalTokens: usage?.totalTokens ?? 0,
+    inputTokenDetails: {
+      cacheReadTokens: usage?.inputTokenDetails?.cacheReadTokens,
+      cacheWriteTokens: usage?.inputTokenDetails?.cacheWriteTokens,
+    },
+    outputTokenDetails: {
+      reasoningTokens: usage?.outputTokenDetails?.reasoningTokens,
+    },
+  };
 }
 
 export function createLocalChatTransportFactory({
@@ -177,8 +241,19 @@ export function createLocalChatTransportFactory({
         tools,
         stopWhen: stepCountIs(maxSteps),
         temperature: AI_DEFAULT_TEMPERATURE,
+        onFinish: ({totalUsage, usage}) => {
+          const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
+          rememberSessionTokenUsage(sessionId, finalUsage);
+        },
         ...(providerOptions ? {providerOptions} : {}),
       });
+
+      // Accumulate token usage across steps for this response
+      const accumulatedUsage: MessageTokenUsage = {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+      };
 
       return createAgentUIStreamResponse({
         agent,
@@ -186,6 +261,41 @@ export function createLocalChatTransportFactory({
           fixIncompleteToolCalls(messagesCopy),
         ),
         abortSignal,
+        messageMetadata: ({part}: {part: TextStreamPart<ToolSet>}) => {
+          if (part.type === 'finish-step') {
+            const u = part.usage;
+            accumulatedUsage.inputTokens += u.inputTokens ?? 0;
+            accumulatedUsage.outputTokens += u.outputTokens ?? 0;
+            accumulatedUsage.totalTokens += u.totalTokens ?? 0;
+            if (
+              u.inputTokenDetails?.cacheReadTokens != null ||
+              u.inputTokenDetails?.cacheWriteTokens != null
+            ) {
+              accumulatedUsage.inputTokenDetails = {
+                cacheReadTokens:
+                  (accumulatedUsage.inputTokenDetails?.cacheReadTokens ?? 0) +
+                  (u.inputTokenDetails?.cacheReadTokens ?? 0),
+                cacheWriteTokens:
+                  (accumulatedUsage.inputTokenDetails?.cacheWriteTokens ?? 0) +
+                  (u.inputTokenDetails?.cacheWriteTokens ?? 0),
+              };
+            }
+            if (u.outputTokenDetails?.reasoningTokens != null) {
+              accumulatedUsage.outputTokenDetails = {
+                reasoningTokens:
+                  (accumulatedUsage.outputTokenDetails?.reasoningTokens ?? 0) +
+                  (u.outputTokenDetails.reasoningTokens ?? 0),
+              };
+            }
+          }
+          if (part.type === 'finish') {
+            rememberSessionTokenUsage(sessionId, accumulatedUsage);
+            return {
+              tokenUsage: accumulatedUsage,
+            } satisfies AssistantMessageMetadata;
+          }
+          return undefined;
+        },
       });
     };
 
@@ -287,6 +397,7 @@ export function createChatHandlers({
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
           const completedMessages = fixIncompleteToolCalls(sourceMessages);
+          consumeSessionTokenUsage(sessionId);
           writeToolTimingsToMetadata(
             completedMessages,
             state.ai.getToolTimings(),
@@ -360,6 +471,10 @@ export function createChatHandlers({
 
         // fix any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = fixIncompleteToolCalls(messages);
+        writeTokenUsageToLastAssistantMessage(
+          completedMessages,
+          consumeSessionTokenUsage(sessionId),
+        );
         writeToolTimingsToMetadata(
           completedMessages,
           state.ai.getToolTimings(),
@@ -424,6 +539,7 @@ export function createChatHandlers({
     },
     onChatError: (sessionId: string, error: unknown) => {
       try {
+        consumeSessionTokenUsage(sessionId);
         let errMsg = getErrorMessageForDisplay(error);
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';

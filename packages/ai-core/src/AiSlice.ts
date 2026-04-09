@@ -118,6 +118,9 @@ export type AiSliceState = {
     requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
     resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
     clearSubAgentApproval: (approvalId: string) => void;
+    /** True while "summarize and continue" is in progress */
+    isSummarizing: boolean;
+    setIsSummarizing: (value: boolean) => void;
     /** Per-tool-call timing entries, keyed by toolCallId */
     toolTimings: Record<string, ToolTimingEntry>;
     setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
@@ -433,6 +436,15 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               delete draft.ai.pendingSubAgentApprovals[approvalId];
+            }),
+          );
+        },
+
+        isSummarizing: false,
+        setIsSummarizing: (value: boolean) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.isSummarizing = value;
             }),
           );
         },

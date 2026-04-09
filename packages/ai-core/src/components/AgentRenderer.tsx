@@ -324,7 +324,7 @@ export const AgentRenderer: React.FC<{
   return (
     <div className="mt-2 text-[0.9em]">
       {reasoning ? (
-        <div className="prose prose-sm dark:prose-invert mb-2 max-w-none text-sm text-gray-500">
+        <div className="prose prose-sm dark:prose-invert mb-2 max-w-none min-w-0 overflow-hidden text-sm text-gray-500 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
           <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
         </div>
       ) : null}
@@ -415,7 +415,7 @@ export const AgentRenderer: React.FC<{
       {finalOutput && (
         <div className="mt-3 pt-2">
           <ExpandableContent>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600">
+            <div className="prose prose-sm dark:prose-invert max-w-none min-w-0 overflow-hidden text-gray-600 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
               <Markdown remarkPlugins={[remarkGfm]}>{finalOutput}</Markdown>
             </div>
           </ExpandableContent>

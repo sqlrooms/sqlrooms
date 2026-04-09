@@ -19,10 +19,28 @@ export type ToolTimingEntry = {
 };
 
 /**
+ * Accumulated token usage for an assistant message, sourced from the AI SDK's
+ * LanguageModelUsage reported at the end of each step.
+ */
+export type MessageTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  inputTokenDetails?: {
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+  };
+  outputTokenDetails?: {
+    reasoningTokens?: number;
+  };
+};
+
+/**
  * Shape of custom metadata stored on assistant UIMessages.
  */
 export type AssistantMessageMetadata = {
   toolTimings?: Record<string, ToolTimingEntry>;
+  tokenUsage?: MessageTokenUsage;
 };
 
 /**

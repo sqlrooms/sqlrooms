@@ -49,6 +49,7 @@ export type {
   ToolRenderers,
   ToolTimingEntry,
   AssistantMessageMetadata,
+  MessageTokenUsage,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 export type {ToolCallSummary, ReasoningTitleDescriptor} from './utils';
@@ -62,3 +63,4 @@ export type {
 } from './agents/AgentUtils';
 export {ReasoningBox, ReasoningTitle} from './components/ReasoningBox';
 export {ExpandableContent} from './components/ExpandableContent';
+export {ContextUsageIndicator} from './components/ContextUsageIndicator';
