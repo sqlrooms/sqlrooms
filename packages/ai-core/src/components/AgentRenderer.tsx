@@ -189,6 +189,12 @@ const ToolCallEntry: React.FC<{
   const isApprovalRequested = toolCall.state === 'approval-requested';
   const hasComponent = ToolComponent && typeof ToolComponent === 'function';
 
+  const inputObj =
+    toolCall.input && typeof toolCall.input === 'object'
+      ? (toolCall.input as Record<string, unknown>)
+      : undefined;
+  const reasoning = inputObj?.reasoning as string | undefined;
+
   // Resolve nested sub-agent calls
   const nestedCalls =
     agentProgress[toolCall.toolCallId] ?? toolCall.agentToolCalls;
@@ -207,6 +213,11 @@ const ToolCallEntry: React.FC<{
 
   return (
     <div className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}>
+      {reasoning && !hideHeader && (
+        <div className="mb-1 ml-6 text-xs text-gray-500 italic">
+          {reasoning}
+        </div>
+      )}
       {!hideHeader && (
         <div className="mb-1 flex items-start">
           <span className="mr-2 min-w-4">
@@ -399,7 +410,7 @@ export const AgentRenderer: React.FC<{
           return (
             <ReasoningBox
               key={`group-${idx}`}
-              title={<ReasoningTitle descriptor={groupTitleDesc} />}
+              collapsedTitle={<ReasoningTitle descriptor={groupTitleDesc} />}
               isRunning={showSpinner}
               startedAt={groupStartedAt}
               completedAt={groupCompletedAt}

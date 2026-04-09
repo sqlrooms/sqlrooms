@@ -54,19 +54,23 @@ export const AnalysisResultsContainer: React.FC<{
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        {/* Render analysis results */}
-        {currentAnalysisResults?.map((analysisResult) => (
-          <AnalysisResult
-            key={analysisResult.id}
-            analysisResult={analysisResult}
-            enableReasoningBox={enableReasoningBox}
-            customMarkdownComponents={customMarkdownComponents}
-            excludeFromGrouping={excludeFromGrouping}
-            ErrorMessageComponent={ErrorMessageComponent}
-          />
-        ))}
-        {isRunning && <AiThinkingDots className="text-muted-foreground p-4" />}
-        <div ref={endRef} className="h-10 w-full shrink-0" />
+        <div className="pr-3">
+          {/* Render analysis results */}
+          {currentAnalysisResults?.map((analysisResult) => (
+            <AnalysisResult
+              key={analysisResult.id}
+              analysisResult={analysisResult}
+              enableReasoningBox={enableReasoningBox}
+              customMarkdownComponents={customMarkdownComponents}
+              excludeFromGrouping={excludeFromGrouping}
+              ErrorMessageComponent={ErrorMessageComponent}
+            />
+          ))}
+          {isRunning && (
+            <AiThinkingDots className="text-muted-foreground p-4" />
+          )}
+          <div ref={endRef} className="h-10 w-full shrink-0" />
+        </div>
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

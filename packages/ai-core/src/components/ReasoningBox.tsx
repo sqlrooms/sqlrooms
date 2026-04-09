@@ -51,6 +51,8 @@ type ReasoningBoxProps = {
   children: React.ReactNode;
   className?: string;
   title?: React.ReactNode;
+  /** Alternate title shown only when collapsed; when expanded, `title` is used instead. */
+  collapsedTitle?: React.ReactNode;
   defaultOpen?: boolean;
   isRunning?: boolean;
   /** Tool call IDs in this group, used for computing elapsed time */
@@ -64,6 +66,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   children,
   className,
   title,
+  collapsedTitle,
   defaultOpen = false,
   isRunning = false,
   toolCallIds,
@@ -136,25 +139,27 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
     groupTiming?.completedAt,
   );
 
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   const displayTitle = useMemo(() => {
-    if (title) {
-      if (!elapsedText) return title;
+    const activeTitle = isOpen ? title : (collapsedTitle ?? title);
+    if (activeTitle) {
+      if (!elapsedText) return activeTitle;
       return (
         <span className="flex w-full items-center justify-between gap-2">
-          <span className="min-w-0">{title}</span>
+          <span className="min-w-0">{activeTitle}</span>
           <span className="shrink-0 text-gray-400">{elapsedText}</span>
         </span>
       );
     }
-    const label = isRunning ? 'Processing' : 'Worked';
+    if (elapsedText) return elapsedText;
     if (groupTiming?.completedAt && groupTiming?.startedAt) {
-      return `${label} for ${formatShortDuration(groupTiming.completedAt - groupTiming.startedAt)}`;
+      return formatShortDuration(
+        groupTiming.completedAt - groupTiming.startedAt,
+      );
     }
-    if (elapsedText) return `${label} for ${elapsedText}`;
-    return label;
-  }, [title, isRunning, elapsedText, groupTiming]);
-
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+    return isRunning ? 'Processing' : 'Worked';
+  }, [title, collapsedTitle, isOpen, isRunning, elapsedText, groupTiming]);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
