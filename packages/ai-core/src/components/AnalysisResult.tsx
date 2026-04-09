@@ -97,7 +97,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   return (
     <ExcludeFromGroupingProvider value={excludeList}>
       <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
-        <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
+        <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-md text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
           <div className="group/prompt bg-muted flex w-full items-start gap-2 rounded-md border p-2 text-sm">
             <SquareTerminalIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
