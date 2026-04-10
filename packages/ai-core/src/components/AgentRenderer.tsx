@@ -10,7 +10,12 @@ import {useElapsedTime} from '../hooks/useElapsedTime';
 import type {ToolRendererRegistry} from '../types';
 import {useExcludeFromGrouping} from './ExcludeFromGroupingContext';
 import {ExpandableContent} from './ExpandableContent';
-import {ReasoningBox, ReasoningTitle} from './ReasoningBox';
+import {
+  getReasoningRightLabel,
+  NestingOffsetProvider,
+  ReasoningBox,
+  ReasoningTitle,
+} from './ReasoningBox';
 import {generateReasoningTitle} from '../utils';
 import type {ToolCallSummary} from '../utils';
 
@@ -265,12 +270,14 @@ const ToolCallEntry: React.FC<{
       {/* Sub-agent: recursive AgentRenderer */}
       {isAgent && nestedCalls && nestedCalls.length > 0 ? (
         <div className="ml-6">
-          <AgentRenderer
-            toolCallId={toolCall.toolCallId}
-            agentToolCalls={nestedCalls}
-            finalOutput={agentOutput?.finalOutput}
-            isComplete={isSuccess || isError}
-          />
+          <NestingOffsetProvider additionalOffset={12}>
+            <AgentRenderer
+              toolCallId={toolCall.toolCallId}
+              agentToolCalls={nestedCalls}
+              finalOutput={agentOutput?.finalOutput}
+              isComplete={isSuccess || isError}
+            />
+          </NestingOffsetProvider>
         </div>
       ) : null}
 
@@ -359,6 +366,7 @@ export const AgentRenderer: React.FC<{
               <ReasoningBox
                 key={tc.toolCallId}
                 title={<ReasoningTitle descriptor={titleDesc} />}
+                rightLabel={getReasoningRightLabel(titleDesc)}
                 defaultOpen={isAgent || hasRenderer}
                 isRunning={showSpinner}
                 startedAt={tc.startedAt}
@@ -408,9 +416,14 @@ export const AgentRenderer: React.FC<{
             <ReasoningBox
               key={`group-${idx}`}
               collapsedTitle={<ReasoningTitle descriptor={groupTitleDesc} />}
+              rightLabel={getReasoningRightLabel(groupTitleDesc)}
               isRunning={showSpinner}
               startedAt={groupStartedAt}
               completedAt={groupCompletedAt}
+              hideElapsedTime={
+                groupTitleDesc.kind === 'agent' ||
+                groupTitleDesc.kind === 'skill'
+              }
             >
               {group.calls.map((tc) => (
                 <ToolCallEntry

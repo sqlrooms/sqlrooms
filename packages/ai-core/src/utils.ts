@@ -421,6 +421,18 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
     };
 
     const updatedParts = [...message.parts];
+
+    // Fix incomplete reasoning parts (mark as 'done' if they were mid-stream)
+    for (let i = 0; i < updatedParts.length; i++) {
+      const current = updatedParts[i] as unknown as Record<string, unknown>;
+      if (current?.type === 'reasoning' && current.state !== 'done') {
+        updatedParts[i] = {
+          ...updatedParts[i],
+          state: 'done',
+        } as (typeof message.parts)[number];
+      }
+    }
+
     for (let i = updatedParts.length - 1; i >= 0; i--) {
       const current = updatedParts[i] as unknown;
       if (!isToolPart(current)) {

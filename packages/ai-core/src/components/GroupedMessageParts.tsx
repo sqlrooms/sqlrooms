@@ -103,6 +103,7 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
               })}
               <ReasoningBox
                 title={group.title}
+                rightLabel={group.rightLabel}
                 defaultOpen={group.defaultExpanded}
                 isRunning={group.isRunning}
                 toolCallIds={group.toolCallIds}

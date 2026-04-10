@@ -54,7 +54,7 @@ export const AnalysisResultsContainer: React.FC<{
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        <div className="pr-3">
+        <div>
           {/* Render analysis results */}
           {currentAnalysisResults?.map((analysisResult) => (
             <AnalysisResult

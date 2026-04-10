@@ -8,7 +8,10 @@ import {
 } from '../utils';
 import type {ToolCallSummary} from '../utils';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
-import {ReasoningTitle} from '../components/ReasoningBox';
+import {
+  getReasoningRightLabel,
+  ReasoningTitle,
+} from '../components/ReasoningBox';
 
 /**
  * Type for a grouped message part (from useToolGrouping hook)
@@ -18,6 +21,8 @@ export type ToolGroup = {
   parts: UIMessagePart[];
   startIndex: number;
   title?: React.ReactNode;
+  /** Label pinned to the right edge, aligned across nesting levels. */
+  rightLabel?: React.ReactNode;
   /** Whether the ReasoningBox should be expanded by default (default: false) */
   defaultExpanded?: boolean;
   /** Whether this group is still running (has incomplete tool calls or more tools after) */
@@ -97,6 +102,7 @@ export function useToolGrouping(
             parts: [part],
             startIndex: i,
             title: <ReasoningTitle descriptor={titleDesc} />,
+            rightLabel: getReasoningRightLabel(titleDesc),
             defaultExpanded: true,
           });
           i++;
@@ -142,26 +148,30 @@ export function useToolGrouping(
           }
         }
 
-        // Check if the next group (before any text/reasoning) has more tool parts
-        // If there's a text or reasoning part before the next tool, this reasoning chain is complete
-        let hasMoreToolsAfter = false;
+        // Check if there are incomplete tool parts after this group in the
+        // same reasoning chain (before any text/reasoning break). Only treat
+        // the group as "still running" when those subsequent tools have not
+        // finished yet — otherwise this is a completed multi-step chain.
+        let hasIncompleteToolsAfter = false;
         for (let k = j; k < uiMessageParts.length; k++) {
           const nextPart = uiMessageParts[k];
           if (!nextPart) continue;
 
-          // If we hit a text or reasoning part, the reasoning chain is broken
           if (isTextPart(nextPart) || isReasoningPart(nextPart)) {
-            hasMoreToolsAfter = false;
             break;
           }
 
-          // If we find another tool part, reasoning continues (but only if it's not excluded)
           if (isAnyToolPart(nextPart) && !isExcludedTool(nextPart)) {
-            hasMoreToolsAfter = true;
+            const nextState = (nextPart as any).state as string | undefined;
+            const nextCompleted =
+              nextState === 'output-available' ||
+              nextState === 'output-error' ||
+              nextState === 'output-denied';
+            if (!nextCompleted) {
+              hasIncompleteToolsAfter = true;
+            }
             break;
           }
-
-          // Otherwise (step-start, etc.), keep looking
         }
 
         // Generate title for this tool group
@@ -181,7 +191,7 @@ export function useToolGrouping(
           const state = (p as any).state;
           return state === 'output-available' || state === 'output-error';
         });
-        const groupIsRunning = !allCompleted || hasMoreToolsAfter;
+        const groupIsRunning = !allCompleted || hasIncompleteToolsAfter;
 
         const titleDesc = generateReasoningTitle(summaries, groupIsRunning);
         const icon = getToolGroupIcon(summaries);

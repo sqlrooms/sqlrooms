@@ -1,10 +1,36 @@
 import {ChevronDownIcon, ChevronRightIcon, Loader2} from 'lucide-react';
-import {useMemo, useState} from 'react';
+import {createContext, useContext, useMemo, useState} from 'react';
 import {cn} from '@sqlrooms/ui';
 import {formatShortDuration} from '@sqlrooms/utils';
 import {useStoreWithAi} from '../AiSlice';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 import type {ReasoningTitleDescriptor} from '../utils';
+
+/**
+ * Tracks the cumulative right-side offset (in px) introduced by nesting so
+ * that the elapsed-time badge can be pushed back to the outer right edge.
+ */
+const NestingOffsetContext = createContext<number>(0);
+
+/**
+ * Wrap content that introduces nesting indentation so nested ReasoningBox
+ * badges can compensate and stay right-aligned with the outermost edge.
+ *
+ * @param additionalOffset extra pixels of left indentation this wrapper adds
+ */
+export const NestingOffsetProvider: React.FC<{
+  additionalOffset: number;
+  children: React.ReactNode;
+}> = ({additionalOffset, children}) => {
+  const current = useContext(NestingOffsetContext);
+  return (
+    <NestingOffsetContext.Provider value={current + additionalOffset}>
+      {children}
+    </NestingOffsetContext.Provider>
+  );
+};
+
+export const useNestingOffset = () => useContext(NestingOffsetContext);
 
 /**
  * Renders a ReasoningTitleDescriptor as a React node.
@@ -19,13 +45,7 @@ export const ReasoningTitle: React.FC<{
       return (
         <span className="flex items-center gap-1.5">
           {descriptor.reasoning ? (
-            <>
-              <span className="italic">{descriptor.reasoning}</span>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="text-muted-foreground/70 text-[0.9em]">
-                {descriptor.kind === 'agent' ? 'Agent' : 'Skill'}
-              </span>
-            </>
+            <span className="italic">{descriptor.reasoning}</span>
           ) : (
             <>
               <span className="text-muted-foreground/70 font-medium">
@@ -59,12 +79,30 @@ export const ReasoningTitle: React.FC<{
   }
 };
 
+/**
+ * Extracts the right-aligned label for a descriptor (e.g. "Agent", "Skill")
+ * so it can be positioned independently of nesting depth.
+ */
+export function getReasoningRightLabel(
+  descriptor: ReasoningTitleDescriptor,
+): string | undefined {
+  if (
+    (descriptor.kind === 'agent' || descriptor.kind === 'skill') &&
+    descriptor.reasoning
+  ) {
+    return descriptor.kind === 'agent' ? 'Agent' : 'Skill';
+  }
+  return undefined;
+}
+
 type ReasoningBoxProps = {
   children: React.ReactNode;
   className?: string;
   title?: React.ReactNode;
   /** Alternate title shown only when collapsed; when expanded, `title` is used instead. */
   collapsedTitle?: React.ReactNode;
+  /** Label pinned to the right edge, aligned across nesting levels (e.g. "Agent", "Skill"). */
+  rightLabel?: React.ReactNode;
   defaultOpen?: boolean;
   isRunning?: boolean;
   /** Tool call IDs in this group, used for computing elapsed time */
@@ -81,6 +119,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   className,
   title,
   collapsedTitle,
+  rightLabel,
   defaultOpen = false,
   isRunning = false,
   toolCallIds,
@@ -89,6 +128,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   hideElapsedTime = false,
 }) => {
   const toolTimings = useStoreWithAi((s) => s.ai.toolTimings);
+  const nestingOffset = useNestingOffset();
 
   // Self-managed timing: used only as a live fallback when no persisted timing
   // data exists yet and the group is actively running. Once isRunning becomes
@@ -159,12 +199,28 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   const displayTitle = useMemo(() => {
     const activeTitle = isOpen ? title : (collapsedTitle ?? title);
     const showElapsed = !hideElapsedTime && elapsedText;
+    const badge = rightLabel ?? (showElapsed ? elapsedText : null);
+
     if (activeTitle) {
-      if (!showElapsed) return activeTitle;
+      if (!badge) return activeTitle;
       return (
         <span className="flex w-full items-center justify-between gap-2">
           <span className="min-w-0">{activeTitle}</span>
-          <span className="shrink-0 text-gray-400">{elapsedText}</span>
+          <span
+            className="text-muted-foreground/70 shrink-0 text-[0.9em]"
+            style={
+              nestingOffset > 0 ? {marginRight: -nestingOffset} : undefined
+            }
+          >
+            {rightLabel ? (
+              <>
+                <span className="text-muted-foreground/40 mr-1">·</span>
+                {badge}
+              </>
+            ) : (
+              badge
+            )}
+          </span>
         </span>
       );
     }
@@ -183,6 +239,8 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
     elapsedText,
     groupTiming,
     hideElapsedTime,
+    nestingOffset,
+    rightLabel,
   ]);
 
   const handleToggle = () => {

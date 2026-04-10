@@ -61,6 +61,12 @@ export type {
   AgentToolCallAdditionalData,
   PendingSubAgentApproval,
 } from './agents/AgentUtils';
-export {ReasoningBox, ReasoningTitle} from './components/ReasoningBox';
+export {
+  getReasoningRightLabel,
+  NestingOffsetProvider,
+  ReasoningBox,
+  ReasoningTitle,
+  useNestingOffset,
+} from './components/ReasoningBox';
 export {ExpandableContent} from './components/ExpandableContent';
 export {ContextUsageIndicator} from './components/ContextUsageIndicator';
