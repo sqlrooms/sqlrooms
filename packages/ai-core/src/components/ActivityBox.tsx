@@ -29,6 +29,9 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   const innerRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
   const measure = useCallback(() => {
     const el = innerRef.current;
     if (!el) return;
@@ -36,19 +39,43 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
     setOverflows(h > maxCollapsedHeight);
   }, [maxCollapsedHeight]);
 
+  const updateScrollFlags = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const threshold = 2;
+    setCanScrollUp(el.scrollTop > threshold);
+    setCanScrollDown(
+      el.scrollTop + el.clientHeight < el.scrollHeight - threshold,
+    );
+  }, []);
+
   useEffect(() => {
     const el = innerRef.current;
     if (!el) return;
     measure();
-    const ro = new ResizeObserver(() => measure());
-    const mo = new MutationObserver(() => measure());
+    const ro = new ResizeObserver(() => {
+      measure();
+      updateScrollFlags();
+    });
+    const mo = new MutationObserver(() => {
+      measure();
+      updateScrollFlags();
+    });
     ro.observe(el);
     mo.observe(el, {childList: true, subtree: true, characterData: true});
     return () => {
       ro.disconnect();
       mo.disconnect();
     };
-  }, [measure]);
+  }, [measure, updateScrollFlags]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handler = () => updateScrollFlags();
+    el.addEventListener('scroll', handler, {passive: true});
+    return () => el.removeEventListener('scroll', handler);
+  }, [updateScrollFlags]);
 
   // Auto-scroll to bottom when running and content changes
   useEffect(() => {
@@ -58,6 +85,11 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       container.scrollTop = container.scrollHeight;
     }
   });
+
+  // Re-evaluate scroll flags after expand/collapse or overflow changes
+  useEffect(() => {
+    updateScrollFlags();
+  }, [expanded, overflows, updateScrollFlags]);
 
   const showOverlay = overflows && !expanded;
 
@@ -71,7 +103,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       <div className="relative">
         <div
           ref={scrollRef}
-          className="overflow-y-hidden"
+          className="overflow-y-auto"
           style={{
             ...(expanded ? {} : {maxHeight: `${maxCollapsedHeight}px`}),
           }}
@@ -84,11 +116,21 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
           </div>
         </div>
 
-        {showOverlay && (
+        {showOverlay && canScrollUp && (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 rounded-t-md"
+            style={{
+              height: '32px',
+              background:
+                'linear-gradient(to top, transparent 0%, hsl(var(--background)) 100%)',
+            }}
+          />
+        )}
+        {showOverlay && canScrollDown && (
           <div
             className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-md"
             style={{
-              height: '32px',
+              height: '22px',
               background:
                 'linear-gradient(to bottom, transparent 0%, hsl(var(--background)) 100%)',
             }}
