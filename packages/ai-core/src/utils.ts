@@ -194,6 +194,35 @@ export function isDynamicToolPart(
 }
 
 /**
+ * Returns true when a text part should be suppressed because the next
+ * tool call's `reasoning` field duplicates the text content.
+ *
+ * @param textContent - The trimmed text of the current text part
+ * @param remainingParts - The slice of message parts *after* the current text part
+ */
+export function shouldSuppressTextPart(
+  textContent: string,
+  remainingParts: UIMessagePart[],
+): boolean {
+  if (!textContent) return false;
+  for (const candidate of remainingParts) {
+    if (
+      typeof candidate.type === 'string' &&
+      candidate.type.startsWith('step-')
+    )
+      continue;
+    if (isToolPart(candidate) || isDynamicToolPart(candidate)) {
+      const reasoning = (candidate as Record<string, unknown>).input as
+        | Record<string, unknown>
+        | undefined;
+      return reasoning?.reasoning?.toString().trim() === textContent;
+    }
+    break;
+  }
+  return false;
+}
+
+/**
  * Cleans up pending analysis results from interrupted conversations and restores them
  * with proper IDs from actual user messages. This handles the case where a page refresh
  * occurred during an active analysis, leaving orphaned "__pending__" results.
@@ -505,104 +534,4 @@ export function humanizeToolName(toolName: string): string {
         : w.charAt(0).toUpperCase() + w.slice(1),
     )
     .join(' ');
-}
-
-// ---------------------------------------------------------------------------
-// Shared reasoning-box title generation
-// ---------------------------------------------------------------------------
-
-/**
- * Normalized summary of a tool call, used by generateReasoningTitle.
- * Both UIMessagePart and AgentToolCall should be mapped to this shape.
- */
-export type ToolCallSummary = {
-  toolName: string;
-  completed: boolean;
-  reasoning?: string;
-};
-
-/**
- * Descriptor returned by generateReasoningTitle.
- * - `agent` / `skill`: single-call identity label, render as "Agent · Name"
- * - `running`: reasoning text or "Thinking..." fallback
- * - `completed`: descriptive summary with tool names and optional reasoning
- */
-export type ReasoningTitleDescriptor =
-  | {kind: 'agent' | 'skill'; humanName: string; reasoning?: string}
-  | {kind: 'running'; text: string}
-  | {kind: 'completed'; text: string; toolNames?: string[]; reasoning?: string};
-
-/**
- * Generate a title descriptor for a ReasoningBox given a list of tool call summaries.
- *
- * Handles three categories:
- *  - **Agent / Skill** (single-tool groups): identity label
- *  - **Running tools**: reasoning from the last call, or "Thinking..."
- *  - **Completed tools**: descriptive summary with tool names and reasoning
- */
-export function generateReasoningTitle(
-  calls: ToolCallSummary[],
-  isRunning: boolean,
-): ReasoningTitleDescriptor {
-  if (calls.length === 0) {
-    return {kind: 'completed', text: 'Worked'};
-  }
-
-  const firstCall = calls[0]!;
-  const isAgent = firstCall.toolName.startsWith('agent-');
-  const isSkill = firstCall.toolName.startsWith('skill-');
-
-  if ((isAgent || isSkill) && calls.length === 1) {
-    return {
-      kind: isAgent ? 'agent' : 'skill',
-      humanName: humanizeToolName(firstCall.toolName),
-      reasoning: firstCall.reasoning,
-    };
-  }
-
-  const count = calls.length;
-
-  if (isRunning) {
-    const lastCall = calls[calls.length - 1]!;
-    return {
-      kind: 'running',
-      text:
-        lastCall.reasoning ||
-        (count === 1 ? 'Thinking...' : `Thinking... (${count} tools)`),
-    };
-  }
-
-  const humanNames = [
-    ...new Set(calls.map((c) => humanizeToolName(c.toolName))),
-  ];
-  const lastReasoning = findLastReasoning(calls);
-
-  let text: string;
-  if (count === 1) {
-    text = lastReasoning ?? `Used ${humanNames[0]}`;
-  } else if (lastReasoning) {
-    text =
-      count === 2
-        ? `${lastReasoning} (+1 more)`
-        : `${lastReasoning} (+${count - 1} more)`;
-  } else {
-    const MAX_NAMES = 3;
-    const shown = humanNames.slice(0, MAX_NAMES).join(', ');
-    text =
-      humanNames.length > MAX_NAMES ? `Used ${shown}, ...` : `Used ${shown}`;
-  }
-
-  return {
-    kind: 'completed',
-    text,
-    toolNames: humanNames,
-    reasoning: lastReasoning,
-  };
-}
-
-function findLastReasoning(calls: ToolCallSummary[]): string | undefined {
-  for (let i = calls.length - 1; i >= 0; i--) {
-    if (calls[i]!.reasoning) return calls[i]!.reasoning;
-  }
-  return undefined;
 }

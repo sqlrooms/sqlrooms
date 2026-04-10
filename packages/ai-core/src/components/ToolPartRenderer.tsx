@@ -4,18 +4,18 @@ import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../agents/AgentUtils';
 import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import {isDynamicToolPart, isToolPart} from '../utils';
-import {AgentRenderer} from './AgentRenderer';
+import {FlatAgentRenderer} from './FlatAgentRenderer';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 
 /**
  * Decides whether to show live agent progress or the final tool result.
- * Reads agent tool call data primarily from the store's agentProgress
- * (which persists after completion). Falls back to agentToolCalls in the
+ * Uses FlatAgentRenderer for a flat, user-friendly timeline. Falls back to agentToolCalls in the
  * tool output for backward compatibility with older persisted messages.
  */
 const AgentProgressSection: React.FC<{
   toolCallId: string;
+  toolName: string;
   output: unknown;
   input: unknown;
   state:
@@ -27,7 +27,7 @@ const AgentProgressSection: React.FC<{
     | 'approval-responded'
     | 'output-denied';
   errorText?: string;
-}> = ({toolCallId, output, input, state, errorText}) => {
+}> = ({toolCallId, toolName, output, input, state, errorText}) => {
   const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
   const agentOutput = output as {
@@ -36,11 +36,6 @@ const AgentProgressSection: React.FC<{
   };
 
   const finalOutput = agentOutput?.finalOutput;
-
-  const reasoning =
-    input instanceof Object && 'reasoning' in input
-      ? (input.reasoning as string)
-      : undefined;
 
   const displayCalls =
     storeProgress ??
@@ -52,12 +47,13 @@ const AgentProgressSection: React.FC<{
       state === 'output-error' ||
       state === 'output-denied';
     return (
-      <AgentRenderer
+      <FlatAgentRenderer
         toolCallId={toolCallId}
         agentToolCalls={displayCalls}
         finalOutput={state === 'output-available' ? finalOutput : undefined}
-        reasoning={reasoning}
         isComplete={isComplete}
+        parentToolName={toolName}
+        parentInput={input}
       />
     );
   }
@@ -86,9 +82,11 @@ const AgentProgressSection: React.FC<{
 export const ToolPartRenderer = ({
   part,
   toolCallId,
+  hideToolCallInfo,
 }: {
   part: UIMessagePart;
   toolCallId: string;
+  hideToolCallInfo?: boolean;
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
@@ -161,7 +159,7 @@ export const ToolPartRenderer = ({
 
     return (
       <div>
-        {!isAgentTool && (
+        {!isAgentTool && !hideToolCallInfo && (
           <ToolCallInfo
             toolName={toolName}
             input={input}
@@ -173,11 +171,24 @@ export const ToolPartRenderer = ({
           {isAgentTool ? (
             <AgentProgressSection
               toolCallId={toolCallId}
+              toolName={toolName}
               output={output}
               input={input}
               state={state}
               errorText={errorText}
             />
+          ) : hideToolCallInfo ? (
+            ToolComponent &&
+            typeof ToolComponent === 'function' &&
+            state === 'output-available' ? (
+              <ToolComponent
+                output={output}
+                input={input}
+                toolCallId={toolCallId}
+                state={state}
+                errorText={errorText}
+              />
+            ) : null
           ) : (
             <ToolResult
               toolCallId={toolCallId}

@@ -3,7 +3,7 @@ import {useStoreWithAi} from '../AiSlice';
 
 /**
  * Records start/complete timestamps for a tool call into the store's
- * toolTimings map. This enables the ReasoningBox to show live elapsed
+ * toolTimings map. This enables UI components to show live elapsed
  * time during execution and persist the final duration across reloads.
  *
  * - On first render with a given toolCallId that is not yet complete,

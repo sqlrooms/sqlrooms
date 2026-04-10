@@ -36,7 +36,6 @@ export {
   extractModelsFromSettings,
   shouldEndAnalysis,
   humanizeToolName,
-  generateReasoningTitle,
 } from './utils';
 export type {
   AddToolApprovalResponse,
@@ -52,7 +51,6 @@ export type {
   MessageTokenUsage,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
-export type {ToolCallSummary, ReasoningTitleDescriptor} from './utils';
 
 export {
   streamSubAgent,
@@ -66,12 +64,16 @@ export type {
   AgentToolCallAdditionalData,
   PendingSubAgentApproval,
 } from './agents/AgentUtils';
-export {
-  getReasoningRightLabel,
-  NestingOffsetProvider,
-  ReasoningBox,
-  ReasoningTitle,
-  useNestingOffset,
-} from './components/ReasoningBox';
 export {ExpandableContent} from './components/ExpandableContent';
+export {ActivityBox} from './components/ActivityBox';
+export {
+  FlatAgentRenderer,
+  OrchestratorToolLogLine,
+} from './components/FlatAgentRenderer';
+export {collectHoistableRenderers} from './components/collectHoistableRenderers';
+export type {HoistableToolCall} from './components/collectHoistableRenderers';
 export {ContextUsageIndicator} from './components/ContextUsageIndicator';
+export {
+  HoistedRenderersProvider,
+  useHoistedRenderers,
+} from './components/HoistedRenderersContext';

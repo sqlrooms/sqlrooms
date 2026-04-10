@@ -10,15 +10,13 @@ import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-  enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
-  excludeFromGrouping?: string[];
+  hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
-  enableReasoningBox = false,
   customMarkdownComponents,
-  excludeFromGrouping: excludeFromGrouping,
+  hoistedRenderers,
   ErrorMessageComponent,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -54,15 +52,13 @@ export const AnalysisResultsContainer: React.FC<{
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        <div>
-          {/* Render analysis results */}
+        <div className="pr-3">
           {currentAnalysisResults?.map((analysisResult) => (
             <AnalysisResult
               key={analysisResult.id}
               analysisResult={analysisResult}
-              enableReasoningBox={enableReasoningBox}
               customMarkdownComponents={customMarkdownComponents}
-              excludeFromGrouping={excludeFromGrouping}
+              hoistedRenderers={hoistedRenderers}
               ErrorMessageComponent={ErrorMessageComponent}
             />
           ))}
