@@ -397,9 +397,10 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       return message;
     }
 
-    // Walk backward and complete any TRAILING tool parts that lack output.
-    // This covers multi-tool-step aborts where several tool calls were started
-    // but the stream was cancelled before the outputs were emitted.
+    // Walk through all parts and complete any tool parts that lack output.
+    // This covers aborts where tool calls were started but the stream was
+    // cancelled before the outputs were emitted, as well as stale incomplete
+    // tool parts from persisted sessions.
     type ToolPart = {
       type: string;
       toolCallId: string;
@@ -420,15 +421,11 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
     };
 
     const updatedParts = [...message.parts];
-    let sawAnyTool = false;
     for (let i = updatedParts.length - 1; i >= 0; i--) {
       const current = updatedParts[i] as unknown;
       if (!isToolPart(current)) {
-        // Stop once we exit the trailing tool region
-        if (sawAnyTool) break;
         continue;
       }
-      sawAnyTool = true;
       const toolPart = current as ToolPart;
       const isCompleted =
         toolPart.state?.startsWith('output') ||
@@ -512,7 +509,7 @@ export type ToolCallSummary = {
  * - `completed`: descriptive summary with tool names and optional reasoning
  */
 export type ReasoningTitleDescriptor =
-  | {kind: 'agent' | 'skill'; humanName: string}
+  | {kind: 'agent' | 'skill'; humanName: string; reasoning?: string}
   | {kind: 'running'; text: string}
   | {kind: 'completed'; text: string; toolNames?: string[]; reasoning?: string};
 
@@ -540,6 +537,7 @@ export function generateReasoningTitle(
     return {
       kind: isAgent ? 'agent' : 'skill',
       humanName: humanizeToolName(firstCall.toolName),
+      reasoning: firstCall.reasoning,
     };
   }
 

@@ -244,7 +244,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
-    // Clean up pending analysis results from persisted config
+    // Clean up pending analysis results and reset transient state from persisted config
     const cleanedConfig = params.config?.sessions
       ? {
           ...params.config,
@@ -257,6 +257,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               : [];
             return {
               ...cleaned,
+              isRunning: false,
               uiMessages:
                 completedUiMessages as unknown as AnalysisSessionSchema['uiMessages'],
             };

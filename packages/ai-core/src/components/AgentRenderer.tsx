@@ -314,7 +314,7 @@ export const AgentRenderer: React.FC<{
   reasoning?: string;
   /** When true the agent tool call itself has finished (success or error). */
   isComplete?: boolean;
-}> = ({toolCallId, agentToolCalls, finalOutput, reasoning, isComplete}) => {
+}> = ({toolCallId, agentToolCalls, finalOutput: _finalOutput, isComplete}) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
   const liveProgress = agentProgress[toolCallId];
@@ -338,12 +338,6 @@ export const AgentRenderer: React.FC<{
 
   return (
     <div className="mt-2 text-[0.9em]">
-      {reasoning ? (
-        <div className="prose prose-sm dark:prose-invert mb-2 max-w-none min-w-0 overflow-hidden text-sm text-gray-500 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
-          <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
-        </div>
-      ) : null}
-
       <div className="flex flex-col gap-1">
         {groups.map((group, idx) => {
           const isLastGroup = idx === groups.length - 1;
@@ -369,6 +363,9 @@ export const AgentRenderer: React.FC<{
                 isRunning={showSpinner}
                 startedAt={tc.startedAt}
                 completedAt={tc.completedAt}
+                hideElapsedTime={
+                  titleDesc.kind === 'agent' || titleDesc.kind === 'skill'
+                }
               >
                 <ToolCallEntry
                   toolCall={tc}
@@ -427,7 +424,7 @@ export const AgentRenderer: React.FC<{
         })}
       </div>
 
-      {finalOutput && (
+      {/* {finalOutput && (
         <div className="mt-3 pt-2">
           <ExpandableContent>
             <div className="prose prose-sm dark:prose-invert max-w-none min-w-0 overflow-hidden text-gray-600 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
@@ -435,7 +432,7 @@ export const AgentRenderer: React.FC<{
             </div>
           </ExpandableContent>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

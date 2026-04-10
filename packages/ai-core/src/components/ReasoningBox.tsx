@@ -18,11 +18,23 @@ export const ReasoningTitle: React.FC<{
     case 'skill':
       return (
         <span className="flex items-center gap-1.5">
-          <span className="text-muted-foreground/70 font-medium">
-            {descriptor.kind === 'agent' ? 'Agent' : 'Skill'}
-          </span>
-          <span className="text-muted-foreground/40">·</span>
-          <span>{descriptor.humanName}</span>
+          {descriptor.reasoning ? (
+            <>
+              <span className="italic">{descriptor.reasoning}</span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground/70 text-[0.9em]">
+                {descriptor.kind === 'agent' ? 'Agent' : 'Skill'}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-muted-foreground/70 font-medium">
+                {descriptor.kind === 'agent' ? 'Agent' : 'Skill'}
+              </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span>{descriptor.humanName}</span>
+            </>
+          )}
         </span>
       );
     case 'running':
@@ -61,6 +73,8 @@ type ReasoningBoxProps = {
   startedAt?: number;
   /** Direct completion timestamp (epoch ms), used when toolCallIds are not available */
   completedAt?: number;
+  /** When true, suppress the elapsed-time badge (e.g. for agent/skill labels that already convey status) */
+  hideElapsedTime?: boolean;
 };
 export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   children,
@@ -72,6 +86,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   toolCallIds,
   startedAt: directStartedAt,
   completedAt: directCompletedAt,
+  hideElapsedTime = false,
 }) => {
   const toolTimings = useStoreWithAi((s) => s.ai.toolTimings);
 
@@ -143,8 +158,9 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
 
   const displayTitle = useMemo(() => {
     const activeTitle = isOpen ? title : (collapsedTitle ?? title);
+    const showElapsed = !hideElapsedTime && elapsedText;
     if (activeTitle) {
-      if (!elapsedText) return activeTitle;
+      if (!showElapsed) return activeTitle;
       return (
         <span className="flex w-full items-center justify-between gap-2">
           <span className="min-w-0">{activeTitle}</span>
@@ -152,21 +168,29 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
         </span>
       );
     }
-    if (elapsedText) return elapsedText;
+    if (showElapsed) return elapsedText;
     if (groupTiming?.completedAt && groupTiming?.startedAt) {
       return formatShortDuration(
         groupTiming.completedAt - groupTiming.startedAt,
       );
     }
     return isRunning ? 'Processing' : 'Worked';
-  }, [title, collapsedTitle, isOpen, isRunning, elapsedText, groupTiming]);
+  }, [
+    title,
+    collapsedTitle,
+    isOpen,
+    isRunning,
+    elapsedText,
+    groupTiming,
+    hideElapsedTime,
+  ]);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
   };
 
   return (
-    <div className={cn('border-muted rounded-md border', className)}>
+    <div className={cn('border-muted rounded-md border-none', className)}>
       <button
         onClick={handleToggle}
         className={cn(
