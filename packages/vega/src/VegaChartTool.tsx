@@ -2,6 +2,34 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
+import type {DuckDbConnector} from '@sqlrooms/duckdb';
+
+/**
+ * Creates a SQL validator that checks queries by executing `SELECT 1 FROM (<query>) LIMIT 1`.
+ * Returns an error message if the query fails or produces no rows.
+ */
+export function createSqlValidator(
+  getConnector: () => DuckDbConnector | Promise<DuckDbConnector>,
+): NonNullable<VegaChartToolOptions['validateSql']> {
+  return async (sqlQuery, abortSignal) => {
+    try {
+      const connector = await getConnector();
+      const result = await connector.query(
+        `SELECT 1 FROM (${sqlQuery}) AS __validate LIMIT 1`,
+        {signal: abortSignal},
+      );
+      if (result.numRows === 0) {
+        return {valid: false, error: 'Query returned no rows'};
+      }
+      return {valid: true};
+    } catch (e) {
+      return {
+        valid: false,
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  };
+}
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -47,6 +75,20 @@ export type VegaChartToolOptions = {
    * Custom description for the tool
    */
   description?: string;
+  /**
+   * Optional callback to validate the SQL query before rendering the chart.
+   * When provided, the tool will execute this function to catch SQL errors
+   * or empty results early, so the LLM can fix the query and retry.
+   *
+   * The function receives the SQL query string and an optional AbortSignal,
+   * and should return `{valid: true}` or `{valid: false, error: string}`.
+   *
+   * For performance, implementations should use `LIMIT 1` or equivalent.
+   */
+  validateSql?: (
+    sqlQuery: string,
+    abortSignal?: AbortSignal,
+  ) => Promise<{valid: true} | {valid: false; error: string}>;
 };
 
 /**
@@ -59,6 +101,7 @@ export type VegaChartToolOptions = {
  */
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
+  validateSql,
 }: VegaChartToolOptions = {}) {
   return tool({
     description,
@@ -67,22 +110,28 @@ export function createVegaChartTool({
       const abortSignal = options?.abortSignal;
       const {sqlQuery, vegaLiteSpec} = params;
       try {
-        // Check if aborted before starting
         if (abortSignal?.aborted) {
           throw new Error('Chart creation was aborted');
         }
 
+        if (validateSql) {
+          const validation = await validateSql(sqlQuery, abortSignal);
+          if (!validation.valid) {
+            return {
+              success: false,
+              details: `SQL query failed: ${validation.error}. Please fix the sqlQuery and call this tool again.`,
+              sqlQuery,
+              vegaLiteSpec: null,
+            };
+          }
+        }
+
         const parsedVegaLiteSpec = JSON.parse(vegaLiteSpec) as TopLevelSpec;
 
-        // Validate/spec-check by compiling to Vega and attempting to parse it.
-        // - compile() can throw on invalid Vega-Lite specs
-        // - vegaParse() will throw if the compiled Vega spec is invalid
         let vegaWarnings: string[] = [];
         try {
           const compiled = compile(parsedVegaLiteSpec);
-          // vega-lite's compile() may expose warnings at runtime, but types don't include it
           vegaWarnings = (compiled as any).warnings ?? [];
-          // This will throw if the compiled Vega spec is invalid
           vegaParse(compiled.spec);
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);

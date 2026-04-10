@@ -182,6 +182,8 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
     setIsSummarizing,
   ]);
 
+  if (totalTokens === 0) return null;
+
   const size = 20;
   const strokeWidth = 2;
   const radius = (size - strokeWidth) / 2;

@@ -74,11 +74,42 @@ export function useToolGrouping(
       }
 
       if (isTextPart(part)) {
-        groups.push({
-          type: 'text',
-          parts: [part],
-          startIndex: i,
-        });
+        // Check if the next tool call is an agent/excluded tool whose
+        // reasoning duplicates this text. If so, suppress the text part
+        // to avoid showing the same content both as free text and in
+        // the ReasoningBox title.
+        let suppress = false;
+        const textContent = part.text?.trim();
+        if (textContent) {
+          for (let k = i + 1; k < uiMessageParts.length; k++) {
+            const candidate = uiMessageParts[k];
+            if (!candidate) continue;
+            // Skip step-start / step-finish metadata
+            if (
+              typeof candidate.type === 'string' &&
+              candidate.type.startsWith('step-')
+            )
+              continue;
+            if (isAnyToolPart(candidate)) {
+              const reasoning = (candidate as any).input?.reasoning as
+                | string
+                | undefined;
+              if (reasoning?.trim() === textContent) {
+                suppress = true;
+              }
+              break;
+            }
+            // Any other part type means no adjacent tool — stop looking
+            break;
+          }
+        }
+        if (!suppress) {
+          groups.push({
+            type: 'text',
+            parts: [part],
+            startIndex: i,
+          });
+        }
         i++;
       } else if (isReasoningPart(part)) {
         const isStreaming = (part as {state?: string}).state !== 'done';
