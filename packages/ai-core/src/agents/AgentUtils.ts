@@ -3,6 +3,35 @@ import {ToolAbortError} from '../utils';
 import {TOOL_CALL_CANCELLED} from '../constants';
 
 /**
+ * Structured snapshot of a sub-agent's progress at the time of abort.
+ * Captured recursively: when a child tool is itself an agent, its
+ * `childSnapshot` contains the nested agent's own progress.
+ * Used to give the parent orchestrator enough context to resume
+ * intelligently when the user types "continue".
+ */
+export type AgentProgressSnapshot = {
+  agentName: string;
+  completedTools: Array<{
+    toolName: string;
+    input: unknown;
+    output: unknown;
+    childSnapshot?: AgentProgressSnapshot;
+  }>;
+  failedTools: Array<{
+    toolName: string;
+    input: unknown;
+    errorText: string;
+    childSnapshot?: AgentProgressSnapshot;
+  }>;
+  pendingTools: Array<{
+    toolName: string;
+    input: unknown;
+    childSnapshot?: AgentProgressSnapshot;
+  }>;
+  partialText: string;
+};
+
+/**
  * Represents the state of a single tool call made by an agent.
  * When the tool is itself an agent, `agentToolCalls` contains the
  * nested sub-agent's tool calls so the UI can render them recursively.
@@ -64,6 +93,13 @@ interface AgentStreamStore {
       requestSubAgentApproval?: (approval: PendingSubAgentApproval) => void;
       resolveSubAgentApproval?: (approvalId: string, approved: boolean) => void;
       clearSubAgentApproval?: (approvalId: string) => void;
+      writeAbortSnapshot?: (
+        toolCallId: string,
+        snapshot: AgentProgressSnapshot,
+      ) => void;
+      readAbortSnapshot?: (
+        toolCallId: string,
+      ) => AgentProgressSnapshot | undefined;
     };
   };
 }
@@ -136,6 +172,122 @@ function extractNestedAgentToolCalls(
     return (output as {agentToolCalls: AgentToolCall[]}).agentToolCalls;
   }
   return undefined;
+}
+
+const MAX_OUTPUT_SUMMARY_LENGTH = 200;
+
+/**
+ * Truncate a tool output to a short summary suitable for LLM context.
+ */
+function summarizeOutput(output: unknown): unknown {
+  if (output == null) return output;
+  try {
+    const str = typeof output === 'string' ? output : JSON.stringify(output);
+    if (str.length <= MAX_OUTPUT_SUMMARY_LENGTH) return output;
+    return str.slice(0, MAX_OUTPUT_SUMMARY_LENGTH) + '...';
+  } catch {
+    return '[output too large to summarize]';
+  }
+}
+
+/**
+ * Build an `AgentProgressSnapshot` from the current `toolCallMap` state.
+ * For any entry whose `toolName` starts with `agent-`, reads the child's
+ * abort snapshot from the store (written by the child's `streamSubAgent`
+ * before it threw) and embeds it as `childSnapshot`.
+ */
+function buildAbortSnapshot(
+  agentName: string,
+  toolCallMap: Map<string, AgentToolCall>,
+  finalText: string,
+  store: AgentStreamStore,
+): AgentProgressSnapshot {
+  const completedTools: AgentProgressSnapshot['completedTools'] = [];
+  const failedTools: AgentProgressSnapshot['failedTools'] = [];
+  const pendingTools: AgentProgressSnapshot['pendingTools'] = [];
+
+  for (const tc of toolCallMap.values()) {
+    const childSnapshot = store
+      .getState()
+      .ai.readAbortSnapshot?.(tc.toolCallId);
+
+    if (tc.state === 'success') {
+      completedTools.push({
+        toolName: tc.toolName,
+        input: tc.input,
+        output: summarizeOutput(tc.output),
+        ...(childSnapshot ? {childSnapshot} : {}),
+      });
+    } else if (tc.state === 'error') {
+      failedTools.push({
+        toolName: tc.toolName,
+        input: tc.input,
+        errorText: tc.errorText || 'unknown',
+        ...(childSnapshot ? {childSnapshot} : {}),
+      });
+    } else {
+      pendingTools.push({
+        toolName: tc.toolName,
+        input: tc.input,
+        ...(childSnapshot ? {childSnapshot} : {}),
+      });
+    }
+  }
+
+  return {
+    agentName,
+    completedTools,
+    failedTools,
+    pendingTools,
+    partialText: finalText,
+  };
+}
+
+/**
+ * Format an `AgentProgressSnapshot` into a human-readable string
+ * that can be embedded in error text for LLM visibility.
+ * Recurses into `childSnapshot` to render arbitrarily deep nesting.
+ */
+export function formatAbortSnapshot(
+  snapshot: AgentProgressSnapshot,
+  indent: string = '',
+): string {
+  const lines: string[] = [];
+
+  for (const t of snapshot.completedTools) {
+    const inputStr = t.input != null ? JSON.stringify(t.input) : '';
+    const outputStr =
+      t.output != null
+        ? ` -> ${typeof t.output === 'string' ? t.output : JSON.stringify(t.output)}`
+        : '';
+    lines.push(`${indent}- Completed: ${t.toolName}(${inputStr})${outputStr}`);
+    if (t.childSnapshot) {
+      lines.push(formatAbortSnapshot(t.childSnapshot, indent + '  '));
+    }
+  }
+  for (const t of snapshot.failedTools) {
+    lines.push(`${indent}- Failed: ${t.toolName} (${t.errorText})`);
+    if (t.childSnapshot) {
+      lines.push(formatAbortSnapshot(t.childSnapshot, indent + '  '));
+    }
+  }
+  for (const t of snapshot.pendingTools) {
+    const inputStr = t.input != null ? JSON.stringify(t.input) : '';
+    lines.push(`${indent}- Pending: ${t.toolName}(${inputStr})`);
+    if (t.childSnapshot) {
+      lines.push(formatAbortSnapshot(t.childSnapshot, indent + '  '));
+    }
+  }
+
+  if (snapshot.partialText) {
+    const truncated =
+      snapshot.partialText.length > 200
+        ? snapshot.partialText.slice(0, 200) + '...'
+        : snapshot.partialText;
+    lines.push(`${indent}- Partial response: ${truncated}`);
+  }
+
+  return lines.join('\n');
 }
 
 /**
@@ -323,7 +475,17 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
         }
       }
     } catch (err) {
-      throwIfAborted();
+      if (abortSignal?.aborted) {
+        const snapshot = buildAbortSnapshot(
+          parentToolCallId,
+          toolCallMap,
+          finalText,
+          store,
+        );
+        store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
+        pushProgress();
+        throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
+      }
       throw err;
     }
 
@@ -416,7 +578,16 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   // bloat the main orchestrator's message context).
   pushProgress();
 
-  throwIfAborted();
+  if (abortSignal?.aborted) {
+    const snapshot = buildAbortSnapshot(
+      parentToolCallId,
+      toolCallMap,
+      finalText,
+      store,
+    );
+    store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
+    throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
+  }
 
   return {
     finalOutput: finalText,

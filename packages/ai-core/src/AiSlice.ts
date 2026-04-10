@@ -47,7 +47,11 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
-import type {AgentToolCall, PendingSubAgentApproval} from './agents/AgentUtils';
+import type {
+  AgentToolCall,
+  PendingSubAgentApproval,
+  AgentProgressSnapshot,
+} from './agents/AgentUtils';
 import {
   cleanupPendingAnalysisResults,
   ToolAbortError,
@@ -118,6 +122,15 @@ export type AiSliceState = {
     requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
     resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
     clearSubAgentApproval: (approvalId: string) => void;
+    /** Transient abort snapshots for nested agent progress propagation */
+    writeAbortSnapshot: (
+      toolCallId: string,
+      snapshot: AgentProgressSnapshot,
+    ) => void;
+    readAbortSnapshot: (
+      toolCallId: string,
+    ) => AgentProgressSnapshot | undefined;
+    clearAbortSnapshots: () => void;
     /** True while "summarize and continue" is in progress */
     isSummarizing: boolean;
     setIsSummarizing: (value: boolean) => void;
@@ -311,6 +324,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       string,
       (approved: boolean) => void
     >();
+    const abortSnapshotMap = new Map<string, AgentProgressSnapshot>();
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -439,6 +453,19 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               delete draft.ai.pendingSubAgentApprovals[approvalId];
             }),
           );
+        },
+
+        writeAbortSnapshot: (
+          toolCallId: string,
+          snapshot: AgentProgressSnapshot,
+        ) => {
+          abortSnapshotMap.set(toolCallId, snapshot);
+        },
+        readAbortSnapshot: (toolCallId: string) => {
+          return abortSnapshotMap.get(toolCallId);
+        },
+        clearAbortSnapshots: () => {
+          abortSnapshotMap.clear();
         },
 
         isSummarizing: false,

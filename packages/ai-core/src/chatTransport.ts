@@ -33,6 +33,7 @@ import {
   sanitizeMessagesForLLM,
   shouldEndAnalysis,
 } from './utils';
+import {formatAbortSnapshot} from './agents/AgentUtils';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -70,6 +71,38 @@ function writeToolTimingsToMetadata(
         ...existing,
         toolTimings: {...(existing.toolTimings ?? {}), ...timings},
       };
+    }
+  }
+}
+
+/**
+ * Walk completed messages and enrich any cancelled agent tool calls with
+ * human-readable progress snapshots from the store. Mutates `messages` in place.
+ */
+function enrichMessagesWithAbortSnapshots(
+  messages: UIMessage[],
+  state: AiSliceStateForTransport,
+): void {
+  for (const msg of messages) {
+    if (msg.role !== 'assistant' || !msg.parts) continue;
+    for (let i = 0; i < msg.parts.length; i++) {
+      const part = msg.parts[i] as Record<string, unknown>;
+      if (
+        part.state !== 'output-error' ||
+        !part.toolCallId ||
+        typeof part.toolCallId !== 'string'
+      ) {
+        continue;
+      }
+      const snapshot = state.ai.readAbortSnapshot?.(part.toolCallId as string);
+      if (!snapshot) continue;
+
+      const formatted = formatAbortSnapshot(snapshot);
+      const existingError =
+        typeof part.errorText === 'string'
+          ? part.errorText
+          : TOOL_CALL_CANCELLED;
+      part.errorText = `${existingError}\nProgress before cancellation:\n${formatted}`;
     }
   }
 }
@@ -397,6 +430,11 @@ export function createChatHandlers({
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
           const completedMessages = fixIncompleteToolCalls(sourceMessages);
+
+          // Enrich cancelled agent tool calls with progress snapshots so the
+          // LLM can see what sub-agents accomplished before the abort.
+          enrichMessagesWithAbortSnapshots(completedMessages, state);
+
           consumeSessionTokenUsage(sessionId);
           writeToolTimingsToMetadata(
             completedMessages,
@@ -406,6 +444,8 @@ export function createChatHandlers({
 
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
+          // Clear transient abort snapshots now that they've been embedded
+          state.ai.clearAbortSnapshots?.();
 
           // Force useChat to reinitialize with the fixed messages
           store.setState((s: AiSliceStateForTransport) =>
@@ -631,6 +671,7 @@ export function createChatHandlers({
 
         store.getState().ai.setIsRunning(sessionId, false);
         store.getState().ai.setAbortController(sessionId, undefined);
+        store.getState().ai.clearAbortSnapshots?.();
       } catch (err) {
         console.error('Failed to store chat error:', err);
         throw err;

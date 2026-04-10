@@ -2,6 +2,8 @@
  * Utility functions for AI Chat UI configuration
  */
 
+import type {AgentProgressSnapshot} from './agents/AgentUtils';
+
 import {
   AiSettingsSliceConfig,
   AnalysisResultSchema,
@@ -100,10 +102,15 @@ export function mergeAbortSignals(
  * ```
  */
 export class ToolAbortError extends Error {
-  constructor(message: string = 'Operation was aborted') {
+  public readonly progressSnapshot?: AgentProgressSnapshot;
+
+  constructor(
+    message: string = 'Operation was aborted',
+    snapshot?: AgentProgressSnapshot,
+  ) {
     super(message);
     this.name = 'ToolAbortError';
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    this.progressSnapshot = snapshot;
     if ((Error as any).captureStackTrace) {
       (Error as any).captureStackTrace(this, ToolAbortError);
     }

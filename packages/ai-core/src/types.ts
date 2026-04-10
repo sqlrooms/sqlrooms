@@ -8,7 +8,11 @@ import type {
   InferToolInput,
   ToolLoopAgentSettings,
 } from 'ai';
-import type {AgentToolCall, PendingSubAgentApproval} from './agents/AgentUtils';
+import type {
+  AgentToolCall,
+  PendingSubAgentApproval,
+  AgentProgressSnapshot,
+} from './agents/AgentUtils';
 
 /**
  * Per-tool-call timing entry stored in assistant message metadata.
@@ -134,6 +138,13 @@ export interface AiStateForTransport {
   requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
   resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
   clearSubAgentApproval: (approvalId: string) => void;
+  /** Transient abort snapshots for nested agent progress propagation */
+  writeAbortSnapshot?: (
+    toolCallId: string,
+    snapshot: AgentProgressSnapshot,
+  ) => void;
+  readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
+  clearAbortSnapshots?: () => void;
   getFullInstructions: () => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;

@@ -54,8 +54,13 @@ export type {
 export {fixIncompleteToolCalls} from './utils';
 export type {ToolCallSummary, ReasoningTitleDescriptor} from './utils';
 
-export {streamSubAgent, updateAgentToolCallData} from './agents/AgentUtils';
+export {
+  streamSubAgent,
+  updateAgentToolCallData,
+  formatAbortSnapshot,
+} from './agents/AgentUtils';
 export type {
+  AgentProgressSnapshot,
   AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
