@@ -21,11 +21,13 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@uwdata/mosaic-core": "^0.21.0",
+    "@uwdata/mosaic-plot": "^0.21.0",
     "@uwdata/mosaic-spec": "^0.21.0",
     "@uwdata/mosaic-sql": "^0.21.0",
     "@uwdata/vgplot": "^0.21.0",
@@ -41,6 +43,7 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
