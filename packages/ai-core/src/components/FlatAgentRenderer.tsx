@@ -4,7 +4,7 @@ import {formatShortDuration} from '@sqlrooms/utils';
 import {cn, HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
-import type {AgentToolCall} from '../agents/AgentUtils';
+import type {AgentToolCall} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 import {humanizeToolName, isDynamicToolPart, isToolPart} from '../utils';
 import {useHoistedRenderers} from './HoistedRenderersContext';
@@ -245,7 +245,11 @@ const HoistedRenderer: React.FC<{
   const ToolComponent = toolRenderers[item.toolName];
 
   if (!ToolComponent || typeof ToolComponent !== 'function') return null;
-  if (item.state !== 'success') return null;
+
+  const isApproval = item.state === 'approval-requested';
+  if (item.state !== 'success' && !isApproval) return null;
+
+  const mappedState = isApproval ? 'approval-requested' : 'output-available';
 
   return (
     <ToolCallErrorBoundary>
@@ -253,8 +257,9 @@ const HoistedRenderer: React.FC<{
         output={item.output}
         input={item.input}
         toolCallId={item.toolCallId}
-        state="output-available"
+        state={mappedState}
         errorText={item.errorText}
+        approvalId={item.approvalId}
       />
     </ToolCallErrorBoundary>
   );
@@ -341,7 +346,9 @@ const FlatSegmentList: React.FC<{
     <>
       {segments.map((seg, idx) => {
         if (seg.kind === 'tool-group') {
-          const anyPending = seg.tools.some((t) => t.state === 'pending');
+          const anyPending = seg.tools.some(
+            (t) => t.state === 'pending' || t.state === 'approval-requested',
+          );
 
           return (
             <React.Fragment key={`tg-${idx}`}>
@@ -365,6 +372,7 @@ const FlatSegmentList: React.FC<{
                             input: tc.input,
                             errorText: tc.errorText,
                             state: tc.state,
+                            approvalId: tc.approvalId,
                           }}
                         />
                       )}
@@ -387,6 +395,7 @@ const FlatSegmentList: React.FC<{
                       input: tc.input,
                       errorText: tc.errorText,
                       state: tc.state,
+                      approvalId: tc.approvalId,
                     }}
                   />
                 );

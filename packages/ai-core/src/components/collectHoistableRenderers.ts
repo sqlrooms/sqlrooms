@@ -1,4 +1,4 @@
-import type {AgentToolCall} from '../agents/AgentUtils';
+import type {AgentToolCall} from '../types';
 import type {ToolRendererRegistry} from '../types';
 
 /**
@@ -12,6 +12,7 @@ export type HoistableToolCall = {
   input: unknown;
   errorText?: string;
   state: AgentToolCall['state'];
+  approvalId?: string;
 };
 
 /**
@@ -63,6 +64,7 @@ export function collectHoistableRenderers(
         input: tc.input,
         errorText: tc.errorText,
         state: tc.state,
+        approvalId: tc.approvalId,
       });
     }
   }

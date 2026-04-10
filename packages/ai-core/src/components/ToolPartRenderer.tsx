@@ -1,7 +1,7 @@
 import React from 'react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
-import type {AgentToolCall} from '../agents/AgentUtils';
+import type {AgentToolCall} from '../types';
 import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {FlatAgentRenderer} from './FlatAgentRenderer';

@@ -40,7 +40,10 @@ export const MainView: React.FC = () => {
         ) : (
           <>
             <div className="grow overflow-auto">
-              <Chat.Messages key={currentSessionId} />
+              <Chat.Messages
+                key={currentSessionId}
+                hoistedRenderers={['bookHotel']}
+              />
               <div className="flex h-full w-full flex-col items-center justify-center">
                 <SkeletonPane className="p-4" />
                 <p className="text-muted-foreground mt-4">

@@ -2,7 +2,7 @@
  * Utility functions for AI Chat UI configuration
  */
 
-import type {AgentProgressSnapshot} from './agents/AgentUtils';
+import type {AgentProgressSnapshot} from './types';
 
 import {
   AiSettingsSliceConfig,

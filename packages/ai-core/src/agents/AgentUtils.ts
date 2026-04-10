@@ -1,82 +1,12 @@
 import {ToolLoopAgent, ToolSet, UIMessageChunk, createAgentUIStream} from 'ai';
 import {ToolAbortError} from '../utils';
 import {TOOL_CALL_CANCELLED} from '../constants';
-
-/**
- * Structured snapshot of a sub-agent's progress at the time of abort.
- * Captured recursively: when a child tool is itself an agent, its
- * `childSnapshot` contains the nested agent's own progress.
- * Used to give the parent orchestrator enough context to resume
- * intelligently when the user types "continue".
- */
-export type AgentProgressSnapshot = {
-  agentName: string;
-  completedTools: Array<{
-    toolName: string;
-    input: unknown;
-    output: unknown;
-    childSnapshot?: AgentProgressSnapshot;
-  }>;
-  failedTools: Array<{
-    toolName: string;
-    input: unknown;
-    errorText: string;
-    childSnapshot?: AgentProgressSnapshot;
-  }>;
-  pendingTools: Array<{
-    toolName: string;
-    input: unknown;
-    childSnapshot?: AgentProgressSnapshot;
-  }>;
-  partialText: string;
-};
-
-/**
- * Represents the state of a single tool call made by an agent.
- * When the tool is itself an agent, `agentToolCalls` contains the
- * nested sub-agent's tool calls so the UI can render them recursively.
- */
-export type AgentToolCall = {
-  toolCallId: string;
-  toolName: string;
-  input?: unknown;
-  output?: unknown;
-  errorText?: string;
-  state: 'pending' | 'success' | 'error' | 'approval-requested';
-  agentToolCalls?: AgentToolCall[];
-  approvalId?: string;
-  startedAt?: number;
-  completedAt?: number;
-};
-
-/**
- * Additional data associated with an agent tool call, used by renderers.
- */
-export type AgentToolCallAdditionalData = {
-  input?: unknown;
-  output?: unknown;
-  errorText?: string;
-};
-
-/**
- * Return type from streamSubAgent containing both final text and tool call data.
- */
-export type AgentStreamOutput = {
-  finalOutput: string;
-  agentToolCalls: AgentToolCall[];
-};
-
-/**
- * Pending approval request for a sub-agent tool.
- * Stored in the AI slice state so the UI can render approval prompts.
- */
-export type PendingSubAgentApproval = {
-  toolCallId: string;
-  approvalId: string;
-  toolName: string;
-  input: unknown;
-  resolve: (approved: boolean) => void;
-};
+import type {
+  AgentProgressSnapshot,
+  AgentStreamOutput,
+  AgentToolCall,
+  PendingSubAgentApproval,
+} from '../types';
 
 /**
  * Minimal store interface required by streamSubAgent.

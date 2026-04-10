@@ -38,8 +38,11 @@ import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import type {
   AddToolApprovalResponse,
   AddToolOutput,
+  AgentProgressSnapshot,
+  AgentToolCall,
   AiChatSendMessage,
   GetProviderOptions,
+  PendingSubAgentApproval,
   StoredToolSet,
   ToolRenderer,
   ToolRendererRegistry,
@@ -47,11 +50,6 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
-import type {
-  AgentToolCall,
-  PendingSubAgentApproval,
-  AgentProgressSnapshot,
-} from './agents/AgentUtils';
 import {
   cleanupPendingAnalysisResults,
   ToolAbortError,

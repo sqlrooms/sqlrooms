@@ -40,6 +40,7 @@ export {
 export type {
   AddToolApprovalResponse,
   AddToolOutput,
+  AgentProgressSnapshot,
   StoredTool,
   StoredToolSet,
   ToolRendererProps,
@@ -58,12 +59,11 @@ export {
   formatAbortSnapshot,
 } from './agents/AgentUtils';
 export type {
-  AgentProgressSnapshot,
   AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
   PendingSubAgentApproval,
-} from './agents/AgentUtils';
+} from './types';
 export {ExpandableContent} from './components/ExpandableContent';
 export {ActivityBox} from './components/ActivityBox';
 export {
