@@ -69,6 +69,12 @@ export type {
   MosaicProfilerSummaryState,
   UseMosaicProfilerReturn,
 } from './profiler/types';
+export {
+  getProfilerTableWidth,
+  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
+  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './profiler/layout';
 export type {
   MosaicEditorActions,
   MosaicEditorContextValue,

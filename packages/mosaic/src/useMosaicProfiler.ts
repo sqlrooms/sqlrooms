@@ -59,6 +59,7 @@ type ProfilerQueryState = {
   baseQuery: ReturnType<typeof buildProfilerBaseQuery>;
   fieldNames: string[];
   fields: ProfilerStoreState['schema']['fields'];
+  hasFilters: boolean;
   pageQuery: string;
   rowFilter: ReturnType<Selection['predicate']>;
 };
@@ -195,6 +196,7 @@ function useProfilerQueryState(options: {
     baseQuery,
     fieldNames,
     fields,
+    hasFilters: Array.isArray(filter) ? filter.length > 0 : Boolean(filter),
     pageQuery: buildProfilerPageQuery(pageBaseQuery, pagination).toString(),
     rowFilter,
   };
@@ -388,7 +390,8 @@ function useProfilerStatus(options: {
       schema.isLoading ||
       page.isLoading ||
       filteredCount.isLoading ||
-      totalCount.isLoading,
+      totalCount.isLoading ||
+      Object.values(summaries).some((summary) => summary.isLoading),
     tableError:
       schema.error ??
       page.error ??
@@ -465,7 +468,7 @@ export function useMosaicProfiler(
     initialSorting,
     pageSize,
   });
-  const {baseQuery, fieldNames, fields, pageQuery, rowFilter} =
+  const {baseQuery, fieldNames, fields, hasFilters, pageQuery, rowFilter} =
     useProfilerQueryState({
       pagination,
       rowSelectionVersion,
@@ -509,6 +512,7 @@ export function useMosaicProfiler(
   return {
     columns: profilerColumns,
     filteredRowCount: filteredCount.count,
+    hasFilters,
     isLoading,
     pageQuery,
     pageTable: visiblePage,

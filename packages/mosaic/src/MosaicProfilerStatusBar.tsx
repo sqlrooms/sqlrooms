@@ -8,6 +8,7 @@ export type MosaicProfilerStatusBarProps = {
   profiler: Pick<
     UseMosaicProfilerReturn,
     | 'filteredRowCount'
+    | 'hasFilters'
     | 'pagination'
     | 'reset'
     | 'setPagination'
@@ -23,10 +24,6 @@ export function MosaicProfilerStatusBar({
   renderActions,
 }: MosaicProfilerStatusBarProps) {
   const actions = renderActions?.(profiler.sql);
-  const hasFilters =
-    profiler.filteredRowCount !== undefined &&
-    profiler.totalRowCount !== undefined &&
-    profiler.filteredRowCount !== profiler.totalRowCount;
   const totalPages =
     profiler.filteredRowCount !== undefined
       ? Math.max(
@@ -92,7 +89,7 @@ export function MosaicProfilerStatusBar({
             variant="link"
             size="sm"
             className="h-auto px-0"
-            disabled={!hasFilters}
+            disabled={!profiler.hasFilters}
             onClick={profiler.reset}
           >
             Reset

@@ -155,7 +155,7 @@ describe('profiler summary clients', () => {
     expect(sql).not.toContain('GROUP BY "x1", "x2"');
   });
 
-  it('keeps the previous filtered category counts while a new query is pending', () => {
+  it('avoids mixing filtered category counts with stale total rows while pending', () => {
     const selection = Selection.crossfilter();
     let latest: any;
     const client = new ProfilerCategoryClient({
@@ -189,8 +189,8 @@ describe('profiler summary clients', () => {
         bucket.totalCount,
       ]),
     ).toEqual([
-      ['Mx', 4, 12],
-      ['Md', 2, 8],
+      ['Mx', 4, 4],
+      ['Md', 2, 2],
     ]);
   });
 });

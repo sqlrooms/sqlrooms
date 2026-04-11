@@ -6,6 +6,53 @@ import {ClipboardIcon} from 'lucide-react';
 
 export const MAX_VALUE_LENGTH = 64;
 
+function parseArrowTemporalValue(
+  type: arrow.DataType,
+  value: unknown,
+): number | undefined {
+  if (typeof value !== 'number' && typeof value !== 'bigint') {
+    return undefined;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return undefined;
+  }
+
+  if (arrow.DataType.isDate(type)) {
+    const unit = (type as arrow.Date_).unit;
+    return unit === arrow.DateUnit.DAY
+      ? numericValue * 86_400_000
+      : numericValue;
+  }
+
+  const unit = (type as arrow.Timestamp | arrow.Time).unit;
+  switch (unit) {
+    case arrow.TimeUnit.SECOND:
+      return numericValue * 1000;
+    case arrow.TimeUnit.MICROSECOND:
+      return numericValue / 1_000;
+    case arrow.TimeUnit.NANOSECOND:
+      return numericValue / 1_000_000;
+    case arrow.TimeUnit.MILLISECOND:
+    default:
+      return numericValue;
+  }
+}
+
+function toIsoDateString(value: unknown) {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+  }
+
+  return undefined;
+}
+
 export function isNumericArrowType(type: arrow.DataType): boolean {
   return (
     arrow.DataType.isFloat(type) ||
@@ -31,41 +78,46 @@ export function valueToString(type: arrow.DataType, value: unknown): string {
   }
 
   if (arrow.DataType.isTimestamp(type)) {
-    switch (typeof value) {
-      case 'number':
-      case 'bigint':
-        return new Date(Number(value)).toISOString();
-      case 'string':
-        return new Date(value).toISOString();
+    const isoValue = toIsoDateString(value);
+    if (isoValue) {
+      return isoValue;
     }
+
+    const milliseconds = parseArrowTemporalValue(type, value);
+    if (milliseconds !== undefined) {
+      return new Date(milliseconds).toISOString();
+    }
+
+    return String(value);
   }
 
   if (arrow.DataType.isTime(type)) {
-    switch (typeof value) {
-      case 'number':
-      case 'bigint':
-        return new Date(Number(value) / 1000).toISOString().substring(11, 19);
-      case 'string':
-        return new Date(value).toISOString().substring(11, 19);
+    const isoValue = toIsoDateString(value);
+    if (isoValue) {
+      return isoValue.substring(11, 19);
     }
+
+    const milliseconds = parseArrowTemporalValue(type, value);
+    if (milliseconds !== undefined) {
+      return new Date(milliseconds).toISOString().substring(11, 19);
+    }
+
+    return String(value);
   }
 
   if (arrow.DataType.isDate(type)) {
     if (value instanceof Date) return value.toISOString().slice(0, 10);
 
-    if (typeof value === 'number' || typeof value === 'bigint') {
-      const num = Number(value);
-      if (!Number.isFinite(num)) return String(num);
-
-      const d = new Date(num);
-      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-
-      return String(num);
+    const isoValue = toIsoDateString(value);
+    if (isoValue) {
+      return isoValue.slice(0, 10);
     }
 
-    if (typeof value === 'string') {
-      const d = new Date(value);
+    const milliseconds = parseArrowTemporalValue(type, value);
+    if (milliseconds !== undefined) {
+      const d = new Date(milliseconds);
       if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+      return String(value);
     }
 
     return String(value);
@@ -105,9 +157,13 @@ export function ArrowCellValue({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <span className="cursor-pointer">
+        <button
+          type="button"
+          className="cursor-pointer text-left"
+          aria-label={`Show full value for ${fieldName}`}
+        >
           {shorten(`${valueStr}`, MAX_VALUE_LENGTH)}
-        </span>
+        </button>
       </PopoverTrigger>
 
       <PopoverContent
@@ -144,9 +200,10 @@ export function ArrowCellValue({
             <Button
               variant="ghost"
               size="xs"
+              aria-label={`Copy value for ${fieldName}`}
               onClick={() => navigator.clipboard.writeText(valueStr)}
             >
-              <ClipboardIcon className="h-3 w-3" />
+              <ClipboardIcon className="h-3 w-3" aria-hidden="true" />
             </Button>
           </div>
         </div>

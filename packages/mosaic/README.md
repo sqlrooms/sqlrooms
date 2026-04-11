@@ -100,7 +100,7 @@ The hook accepts the following options:
 
 ### Mosaic Profiler Primitives
 
-The profiler primitives let you build a Quak-style cross-filtered table with
+The profiler primitives let you build a Quake-style cross-filtered table with
 per-column summaries on top of `MosaicSlice`.
 
 ```tsx
@@ -111,6 +111,7 @@ import {
   useMosaicProfiler,
 } from '@sqlrooms/mosaic';
 import {ScrollArea, Table} from '@sqlrooms/ui';
+import {useRoomStore} from './store';
 
 function EarthquakeProfiler() {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));

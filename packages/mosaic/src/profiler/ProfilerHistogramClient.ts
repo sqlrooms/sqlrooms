@@ -109,9 +109,15 @@ export class ProfilerHistogramClient extends MosaicClient {
           column: this.field.name,
           stats: ['min', 'max'],
         },
-      ]).then(([info]) => {
-        this.fieldInfo = info;
-      });
+      ])
+        .then(([info]) => {
+          this.fieldInfo = info;
+        })
+        .catch((error) => {
+          this.fieldInfo = undefined;
+          this.fieldInfoPromise = undefined;
+          throw error;
+        });
     }
 
     await this.fieldInfoPromise;

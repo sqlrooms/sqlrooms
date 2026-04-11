@@ -53,6 +53,7 @@ function createProfilerOverrides(
     Pick<
       UseMosaicProfilerReturn,
       | 'filteredRowCount'
+      | 'hasFilters'
       | 'pagination'
       | 'reset'
       | 'setPagination'
@@ -63,6 +64,7 @@ function createProfilerOverrides(
 ): Pick<
   UseMosaicProfilerReturn,
   | 'filteredRowCount'
+  | 'hasFilters'
   | 'pagination'
   | 'reset'
   | 'setPagination'
@@ -71,6 +73,7 @@ function createProfilerOverrides(
 > {
   return {
     filteredRowCount: 25,
+    hasFilters: false,
     pagination: {pageIndex: 0, pageSize: 10},
     reset: jest.fn(),
     setPagination: jest.fn(),
@@ -95,6 +98,20 @@ describe('MosaicProfilerStatusBar', () => {
     ).toBe(true);
     expect(previousButton?.props.disabled).toBe(true);
     expect(nextButton?.props.disabled).toBe(false);
+  });
+
+  it('enables reset from the explicit filter flag instead of count comparison', () => {
+    const profiler = createProfilerOverrides({
+      filteredRowCount: 100,
+      hasFilters: true,
+      totalRowCount: 100,
+    });
+    const element = MosaicProfilerStatusBar({profiler});
+    const resetButton = collectElements(element).find(
+      (child) => collectText(child) === 'Reset',
+    );
+
+    expect(resetButton?.props.disabled).toBe(false);
   });
 
   it('disables next on the last page and updates page index when clicked', () => {

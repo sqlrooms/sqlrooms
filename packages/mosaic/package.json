@@ -6,6 +6,9 @@
   "module": "dist/index.js",
   "type": "module",
   "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
   "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
@@ -42,6 +45,7 @@
     "react-dom": ">=18"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "ts-jest": "^29.4.4"
   },
   "scripts": {

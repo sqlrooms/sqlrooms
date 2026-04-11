@@ -4,6 +4,7 @@ import {
   buildDistinctCountQuery,
   buildProfilerBaseQuery,
   buildProfilerPageQuery,
+  rowsFromQueryResult,
   splitHistogramBins,
 } from '../src/profiler/utils';
 
@@ -24,6 +25,20 @@ describe('profiler utils', () => {
     const page = buildProfilerPageQuery(base, {pageIndex: 2, pageSize: 25});
     expect(page.toString()).toContain('LIMIT 25');
     expect(page.toString()).toContain('OFFSET 50');
+  });
+
+  it('sanitizes invalid pagination values before generating LIMIT/OFFSET', () => {
+    const base = buildProfilerBaseQuery({
+      columns: ['Magnitude'],
+      tableName: 'earthquakes',
+    });
+
+    const page = buildProfilerPageQuery(base, {
+      pageIndex: -4,
+      pageSize: Number.NaN as unknown as number,
+    });
+    expect(page.toString()).toContain('LIMIT 100');
+    expect(page.toString()).toContain('OFFSET 0');
   });
 
   it('builds category buckets with overflow, unique, and null buckets', () => {
@@ -84,7 +99,9 @@ describe('profiler utils', () => {
   it('sorts histogram bins by ascending lower bound before returning them', () => {
     const result = splitHistogramBins([
       {x1: 10, x2: 20, y: 2},
+      {x1: null, x2: null, y: 3},
       {x1: 0, x2: 10, y: 4},
+      {x1: null, x2: null, y: 2},
       {x1: 20, x2: 30, y: 1},
     ]);
 
@@ -93,5 +110,15 @@ describe('profiler utils', () => {
       [10, 20],
       [20, 30],
     ]);
+    expect(result.nullCount).toBe(5);
+  });
+
+  it('returns rows only when toArray is callable', () => {
+    expect(rowsFromQueryResult<{value: number}>({toArray: 'nope'})).toEqual([]);
+    expect(
+      rowsFromQueryResult<{value: number}>({
+        toArray: () => [{value: 1}, {value: 2}],
+      }),
+    ).toEqual([{value: 1}, {value: 2}]);
   });
 });

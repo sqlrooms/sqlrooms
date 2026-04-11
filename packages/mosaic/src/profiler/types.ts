@@ -83,6 +83,7 @@ export type MosaicProfilerOptions = {
 export type UseMosaicProfilerReturn = {
   columns: MosaicProfilerColumnState[];
   filteredRowCount?: number;
+  hasFilters: boolean;
   isLoading: boolean;
   pageQuery: string;
   pageTable?: Table;

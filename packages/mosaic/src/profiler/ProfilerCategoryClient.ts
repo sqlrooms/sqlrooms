@@ -75,6 +75,11 @@ export class ProfilerCategoryClient extends MosaicClient {
 
   setTotalLoading(isLoading: boolean) {
     this.totalLoading = isLoading;
+    if (isLoading) {
+      this.filteredError = undefined;
+      this.filteredLoading = false;
+      this.filteredRows = undefined;
+    }
     this.emitSummary();
   }
 
@@ -92,6 +97,9 @@ export class ProfilerCategoryClient extends MosaicClient {
 
   override queryPending(): this {
     this.filteredLoading = true;
+    this.totalError = undefined;
+    this.totalLoading = false;
+    this.totalRows = undefined;
     this.emitSummary();
     return this;
   }
@@ -167,7 +175,9 @@ export class ProfilerCategoryTotalClient extends MosaicClient {
   }
 
   override queryResult(data: unknown): this {
-    this.summaryClient.setTotalRows(rowsFromQueryResult<CategoryCountRow>(data));
+    this.summaryClient.setTotalRows(
+      rowsFromQueryResult<CategoryCountRow>(data),
+    );
     return this;
   }
 

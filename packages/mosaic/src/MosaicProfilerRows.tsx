@@ -59,22 +59,17 @@ function EmptyStateRow({
   return (
     <TableRow>
       <TableCell className={ROW_NUMBER_CLASS} />
-      {columns.map((column, index) => (
-        <TableCell
-          key={column.name}
-          className={cn(
-            getColumnWidthClass(column.field),
-            'max-w-[240px] border-r align-top font-mono text-xs',
-            index === 0
-              ? tone === 'error'
-                ? 'p-4 text-sm text-red-500'
-                : 'text-muted-foreground p-4 text-sm'
-              : 'p-4',
-          )}
-        >
-          {index === 0 ? message : ''}
-        </TableCell>
-      ))}
+      <TableCell
+        colSpan={Math.max(columns.length, 1)}
+        className={cn(
+          'max-w-[240px] border-r p-4 align-top font-mono text-xs',
+          tone === 'error'
+            ? 'text-sm text-red-500'
+            : 'text-muted-foreground text-sm',
+        )}
+      >
+        {message}
+      </TableCell>
     </TableRow>
   );
 }

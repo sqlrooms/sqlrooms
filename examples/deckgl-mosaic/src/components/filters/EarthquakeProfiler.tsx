@@ -1,33 +1,23 @@
 import {
+  getProfilerTableWidth,
   MosaicProfilerHeader,
   MosaicProfilerRows,
   MosaicProfilerStatusBar,
   useMosaicProfiler,
 } from '@sqlrooms/mosaic';
 import {cn, Table} from '@sqlrooms/ui';
+import {useMemo} from 'react';
 import {useRoomStore} from '../../store';
 
-const ROW_NUMBER_COLUMN_WIDTH_PX = 40;
-const DEFAULT_PROFILER_COLUMN_WIDTH_PX = 140;
-const UNSUPPORTED_PROFILER_COLUMN_WIDTH_PX = 104;
-
 export function EarthquakeProfiler({className}: {className?: string}) {
-  const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
+  const mosaic = useRoomStore((state) => state.mosaic);
+  const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
   const profiler = useMosaicProfiler({
     pageSize: 25,
     selection: brush,
     tableName: 'earthquakes',
   });
-  const tableWidth =
-    ROW_NUMBER_COLUMN_WIDTH_PX +
-    profiler.columns.reduce(
-      (total, column) =>
-        total +
-        (column.kind === 'unsupported'
-          ? UNSUPPORTED_PROFILER_COLUMN_WIDTH_PX
-          : DEFAULT_PROFILER_COLUMN_WIDTH_PX),
-      0,
-    );
+  const tableWidth = getProfilerTableWidth(profiler.columns);
 
   return (
     <section

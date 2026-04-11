@@ -26,7 +26,9 @@ export function isProfilerHistogramType(type: arrow.DataType): boolean {
   );
 }
 
-export function isProfilerUnsupportedSummaryType(type: arrow.DataType): boolean {
+export function isProfilerUnsupportedSummaryType(
+  type: arrow.DataType,
+): boolean {
   return (
     arrow.DataType.isBinary(type) ||
     type.toString().toLowerCase().includes('geometry')
@@ -136,10 +138,16 @@ export function buildProfilerPageQuery(
   baseQuery: ReturnType<typeof buildProfilerBaseQuery>,
   pagination: MosaicProfilerPaginationState,
 ) {
+  const pageSize = Math.min(
+    1000,
+    Math.max(1, Math.trunc(Number(pagination.pageSize) || 0) || 100),
+  );
+  const pageIndex = Math.max(0, Math.trunc(Number(pagination.pageIndex) || 0));
+
   return baseQuery
     .clone()
-    .limit(pagination.pageSize)
-    .offset(pagination.pageIndex * pagination.pageSize);
+    .limit(pageSize)
+    .offset(pageIndex * pageSize);
 }
 
 export function buildCountQuery(args: {
@@ -180,7 +188,12 @@ export function readCountData(data: unknown): number | undefined {
 }
 
 export function rowsFromQueryResult<T>(data: unknown): T[] {
-  if (!data || typeof data !== 'object' || !('toArray' in data)) {
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    !('toArray' in data) ||
+    typeof (data as {toArray?: unknown}).toArray !== 'function'
+  ) {
     return [];
   }
 
@@ -233,7 +246,7 @@ export function splitHistogramBins(
 
   for (const row of rows) {
     if (row.x1 == null || row.x2 == null) {
-      nullCount = row.y;
+      nullCount += row.y;
       continue;
     }
 
@@ -246,8 +259,7 @@ export function splitHistogramBins(
 
   bins.sort((left, right) => {
     const leftValue = left.x0 instanceof Date ? left.x0.getTime() : left.x0;
-    const rightValue =
-      right.x0 instanceof Date ? right.x0.getTime() : right.x0;
+    const rightValue = right.x0 instanceof Date ? right.x0.getTime() : right.x0;
     return leftValue - rightValue;
   });
 

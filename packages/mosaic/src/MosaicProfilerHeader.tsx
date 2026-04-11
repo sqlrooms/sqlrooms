@@ -1,6 +1,12 @@
 import {Badge, cn, TableHead, TableHeader, TableRow} from '@sqlrooms/ui';
 import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  getProfilerColumnWidthPx,
+  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
+  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './profiler/layout';
 import type {
   MosaicProfilerCategorySummary,
   MosaicProfilerColumnState,
@@ -15,24 +21,14 @@ export type MosaicProfilerHeaderProps = {
   profiler: Pick<UseMosaicProfilerReturn, 'columns' | 'setSorting' | 'sorting'>;
 };
 
-const ROW_NUMBER_COLUMN_WIDTH_PX = 40;
-const DEFAULT_COLUMN_WIDTH_PX = 140;
-const UNSUPPORTED_COLUMN_WIDTH_PX = 104;
-const COLUMN_WIDTH_CLASS = 'min-w-[140px] w-[140px] max-w-[140px]';
-const STICKY_ROW_NUMBER_CLASS =
-  'bg-background sticky left-0 top-0 z-40 min-w-[40px] w-[40px] max-w-[40px] border-r px-1 text-center';
+const COLUMN_WIDTH_CLASS = `min-w-[${PROFILER_DEFAULT_COLUMN_WIDTH_PX}px] w-[${PROFILER_DEFAULT_COLUMN_WIDTH_PX}px] max-w-[${PROFILER_DEFAULT_COLUMN_WIDTH_PX}px]`;
+const STICKY_ROW_NUMBER_CLASS = `bg-background sticky left-0 top-0 z-40 min-w-[${PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}px] w-[${PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}px] max-w-[${PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}px] border-r px-1 text-center`;
 const STICKY_COLUMN_HEADER_CLASS =
   'bg-background sticky top-0 z-30 align-top whitespace-nowrap shadow-[inset_0_-1px_0_hsl(var(--border))]';
 
-function getColumnWidthPx(column: MosaicProfilerColumnState) {
-  return isProfilerUnsupportedSummaryType(column.field.type)
-    ? UNSUPPORTED_COLUMN_WIDTH_PX
-    : DEFAULT_COLUMN_WIDTH_PX;
-}
-
 function getColumnWidthClass(column: MosaicProfilerColumnState) {
   return isProfilerUnsupportedSummaryType(column.field.type)
-    ? 'min-w-[104px] w-[104px] max-w-[104px]'
+    ? `min-w-[${PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX}px] w-[${PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX}px] max-w-[${PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX}px]`
     : COLUMN_WIDTH_CLASS;
 }
 
@@ -135,6 +131,20 @@ type ScaleLike = {
   type: 'linear' | 'utc';
 };
 
+const histogramInteractorIds = new WeakMap<object, number>();
+let nextHistogramInteractorId = 0;
+
+function getHistogramInteractorId(interactor: object) {
+  const cachedId = histogramInteractorIds.get(interactor);
+  if (cachedId !== undefined) {
+    return cachedId;
+  }
+
+  const id = ++nextHistogramInteractorId;
+  histogramInteractorIds.set(interactor, id);
+  return id;
+}
+
 function createScale(
   type: ScaleLike['type'],
   domain: [number | Date, number | Date],
@@ -228,6 +238,7 @@ function HistogramSummaryCell({
     if (!svg || !brushRoot || !interactor || !layout.xScale) return;
 
     const brushKey = [
+      getHistogramInteractorId(interactor),
       summary.valueType,
       layout.xScale.domain
         .map((value) => (value instanceof Date ? value.getTime() : value))
@@ -399,9 +410,12 @@ export function MosaicProfilerHeader({
   return (
     <>
       <colgroup>
-        <col style={{width: ROW_NUMBER_COLUMN_WIDTH_PX}} />
+        <col style={{width: PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}} />
         {profiler.columns.map((column) => (
-          <col key={column.name} style={{width: getColumnWidthPx(column)}} />
+          <col
+            key={column.name}
+            style={{width: getProfilerColumnWidthPx(column)}}
+          />
         ))}
       </colgroup>
       <TableHeader className={cn('sticky top-0 z-30', className)}>
