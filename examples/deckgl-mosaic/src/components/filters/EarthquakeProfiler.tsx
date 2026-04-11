@@ -7,9 +7,9 @@ import {
 import {cn, Table} from '@sqlrooms/ui';
 import {useRoomStore} from '../../store';
 
-const ROW_NUMBER_COLUMN_WIDTH_PX = 48;
-const DEFAULT_PROFILER_COLUMN_WIDTH_PX = 170;
-const UNSUPPORTED_PROFILER_COLUMN_WIDTH_PX = 120;
+const ROW_NUMBER_COLUMN_WIDTH_PX = 40;
+const DEFAULT_PROFILER_COLUMN_WIDTH_PX = 140;
+const UNSUPPORTED_PROFILER_COLUMN_WIDTH_PX = 104;
 
 export function EarthquakeProfiler({className}: {className?: string}) {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));

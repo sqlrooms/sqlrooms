@@ -15,12 +15,12 @@ export type MosaicProfilerHeaderProps = {
   profiler: Pick<UseMosaicProfilerReturn, 'columns' | 'setSorting' | 'sorting'>;
 };
 
-const ROW_NUMBER_COLUMN_WIDTH_PX = 48;
-const DEFAULT_COLUMN_WIDTH_PX = 170;
-const UNSUPPORTED_COLUMN_WIDTH_PX = 120;
-const COLUMN_WIDTH_CLASS = 'min-w-[170px] w-[170px] max-w-[170px]';
+const ROW_NUMBER_COLUMN_WIDTH_PX = 40;
+const DEFAULT_COLUMN_WIDTH_PX = 140;
+const UNSUPPORTED_COLUMN_WIDTH_PX = 104;
+const COLUMN_WIDTH_CLASS = 'min-w-[140px] w-[140px] max-w-[140px]';
 const STICKY_ROW_NUMBER_CLASS =
-  'bg-background sticky left-0 top-0 z-40 min-w-[48px] w-[48px] max-w-[48px] border-r text-center';
+  'bg-background sticky left-0 top-0 z-40 min-w-[40px] w-[40px] max-w-[40px] border-r px-1 text-center';
 const STICKY_COLUMN_HEADER_CLASS =
   'bg-background sticky top-0 z-30 align-top whitespace-nowrap shadow-[inset_0_-1px_0_hsl(var(--border))]';
 
@@ -32,7 +32,7 @@ function getColumnWidthPx(column: MosaicProfilerColumnState) {
 
 function getColumnWidthClass(column: MosaicProfilerColumnState) {
   return isProfilerUnsupportedSummaryType(column.field.type)
-    ? 'min-w-[120px] w-[120px] max-w-[120px]'
+    ? 'min-w-[104px] w-[104px] max-w-[104px]'
     : COLUMN_WIDTH_CLASS;
 }
 
@@ -79,8 +79,8 @@ function CategorySummaryCell({
     : `${summary.bucketCount.toLocaleString()} categories`;
 
   return (
-    <div className="space-y-1 pt-2">
-      <div className="flex h-12 overflow-hidden rounded-sm border">
+    <div className="space-y-0.5 pt-1.5">
+      <div className="flex h-10 overflow-hidden rounded-sm border">
         {summary.buckets.map((bucket) => {
           const width =
             totalCount > 0
@@ -102,7 +102,7 @@ function CategorySummaryCell({
               type="button"
               disabled={!bucket.selectable}
               className={cn(
-                'relative flex h-full items-center justify-center overflow-hidden border-r px-1 text-[11px] font-normal text-white transition-opacity disabled:cursor-default',
+                'relative flex h-full items-center justify-center overflow-hidden border-r px-0.5 text-[10px] font-normal text-white transition-opacity disabled:cursor-default',
                 isSelected && 'ring-ring ring-1 ring-inset',
                 !bucket.selectable && 'text-muted-foreground',
               )}
@@ -120,7 +120,7 @@ function CategorySummaryCell({
           );
         })}
       </div>
-      <div className="text-muted-foreground truncate text-[11px] font-normal">
+      <div className="text-muted-foreground truncate text-[10px] font-normal">
         {footerLabel}
       </div>
     </div>
@@ -182,11 +182,11 @@ function HistogramSummaryCell({
   const initializedBrushRef = useRef<string | undefined>(undefined);
 
   const layout = useMemo(() => {
-    const width = 150;
-    const height = 50;
+    const width = 122;
+    const height = 40;
     const margin = {bottom: 4, left: 4, right: 4, top: 2};
-    const nullBarWidth = summary.totalNullCount > 0 ? 6 : 0;
-    const nullBarGap = nullBarWidth > 0 ? 4 : 0;
+    const nullBarWidth = summary.totalNullCount > 0 ? 5 : 0;
+    const nullBarGap = nullBarWidth > 0 ? 3 : 0;
     const totalBins = summary.totalBins.length
       ? summary.totalBins
       : summary.filteredBins;
@@ -258,7 +258,7 @@ function HistogramSummaryCell({
     layout.xScale?.range[1] ?? layout.width - layout.margin.right;
 
   return (
-    <div className="space-y-0.5 pt-2">
+    <div className="space-y-0 pt-1.5">
       <svg
         ref={svgRef}
         width={layout.width}
@@ -354,7 +354,7 @@ function HistogramSummaryCell({
         ) : null}
         <g ref={brushRootRef} />
       </svg>
-      <div className="text-muted-foreground relative h-4 text-[11px] font-normal">
+      <div className="text-muted-foreground relative h-3.5 text-[10px] font-normal">
         {summary.totalNullCount > 0 ? (
           <span
             className="absolute -translate-x-1/2"
@@ -386,7 +386,7 @@ function SummaryCell({column}: {column: MosaicProfilerColumnState}) {
     return <CategorySummaryCell summary={column.summary} />;
   }
   return (
-    <div className="text-muted-foreground pt-2 text-[11px] font-normal">
+    <div className="text-muted-foreground pt-1.5 text-[10px] font-normal">
       {column.summary.label}
     </div>
   );
@@ -422,7 +422,7 @@ export function MosaicProfilerHeader({
                 <div className="min-w-0">
                   <button
                     type="button"
-                    className="group relative flex w-full items-start gap-2 pr-5 text-left"
+                    className="group relative flex w-full items-start gap-1.5 pr-4 text-left"
                     onClick={() =>
                       setNextSortState(
                         profiler.sorting,
@@ -432,12 +432,12 @@ export function MosaicProfilerHeader({
                     }
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">
+                      <div className="truncate text-[13px] leading-tight font-semibold">
                         {column.name}
                       </div>
                       <Badge
                         variant="outline"
-                        className="mt-1 max-w-full truncate text-[10px] opacity-60"
+                        className="mt-0.5 max-w-full truncate px-2 py-0 text-[9px] opacity-60"
                       >
                         {String(column.field.type)}
                       </Badge>

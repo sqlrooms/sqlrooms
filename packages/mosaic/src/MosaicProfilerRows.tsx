@@ -13,13 +13,13 @@ export type MosaicProfilerRowsProps = {
   >;
 };
 
-const COLUMN_WIDTH_CLASS = 'min-w-[170px] w-[170px] max-w-[170px]';
+const COLUMN_WIDTH_CLASS = 'min-w-[140px] w-[140px] max-w-[140px]';
 const ROW_NUMBER_CLASS =
-  'bg-background text-muted-foreground sticky left-0 z-10 w-[48px] max-w-[48px] min-w-[48px] border-r text-center';
+  'bg-background text-muted-foreground sticky left-0 z-10 w-[40px] max-w-[40px] min-w-[40px] border-r px-1 text-center';
 
 function getColumnWidthClass(field: arrow.Field) {
   return isProfilerUnsupportedSummaryType(field.type)
-    ? 'min-w-[120px] w-[120px] max-w-[120px]'
+    ? 'min-w-[104px] w-[104px] max-w-[104px]'
     : COLUMN_WIDTH_CLASS;
 }
 
@@ -36,7 +36,7 @@ function SizingRow({columns}: {columns: UseMosaicProfilerReturn['columns']}) {
       aria-hidden="true"
       className="pointer-events-none h-0 border-0 opacity-0 hover:bg-transparent"
     >
-      <TableCell className="w-[48px] max-w-[48px] min-w-[48px] border-r p-0" />
+      <TableCell className="w-[40px] max-w-[40px] min-w-[40px] border-r p-0" />
       {columns.map((column) => (
         <TableCell
           key={column.name}
@@ -64,7 +64,7 @@ function EmptyStateRow({
           key={column.name}
           className={cn(
             getColumnWidthClass(column.field),
-            'max-w-[320px] border-r align-top font-mono text-xs',
+            'max-w-[240px] border-r align-top font-mono text-xs',
             index === 0
               ? tone === 'error'
                 ? 'p-4 text-sm text-red-500'
@@ -107,7 +107,7 @@ const DataRow = memo(function DataRow({
             key={column.name}
             className={cn(
               getColumnWidthClass(column.field),
-              'max-w-[320px] overflow-hidden border-r align-top font-mono text-xs',
+              'max-w-[240px] overflow-hidden border-r align-top font-mono text-xs',
               isNumericArrowType(column.field.type) && 'text-right',
             )}
           >
