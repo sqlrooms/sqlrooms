@@ -66,17 +66,17 @@ type ReadyConnection = {
 export function connectProfilerPageClient(options: {
   connection: ReadyConnection;
   fieldNames: string[];
+  filter?: ReturnType<Selection['predicate']>;
   pagination: {pageIndex: number; pageSize: number};
-  selection: Selection;
   sorting: MosaicProfilerSorting;
   store: ProfilerStore;
   tableName: string;
 }) {
   const client = new ProfilerPageClient({
     columns: options.fieldNames,
+    filter: options.filter,
     onStateChange: (state) => options.store.getState().setPage(state),
     pagination: options.pagination,
-    selection: options.selection,
     sorting: options.sorting,
     tableName: options.tableName,
   });

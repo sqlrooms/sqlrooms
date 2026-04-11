@@ -1,6 +1,7 @@
 import {ArrowCellValue, isNumericArrowType} from '@sqlrooms/data-table';
 import {cn, TableBody, TableCell, TableRow} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
+import {memo} from 'react';
 import type {UseMosaicProfilerReturn} from './profiler/types';
 import {isProfilerUnsupportedSummaryType} from './profiler/utils';
 
@@ -13,6 +14,8 @@ export type MosaicProfilerRowsProps = {
 };
 
 const COLUMN_WIDTH_CLASS = 'min-w-[170px] w-[170px] max-w-[170px]';
+const ROW_NUMBER_CLASS =
+  'bg-background text-muted-foreground sticky left-0 z-10 w-[48px] max-w-[48px] min-w-[48px] border-r text-center';
 
 function getColumnWidthClass(field: arrow.Field) {
   return isProfilerUnsupportedSummaryType(field.type)
@@ -55,7 +58,7 @@ function EmptyStateRow({
 }) {
   return (
     <TableRow>
-      <TableCell className="bg-background text-muted-foreground sticky left-0 z-10 w-[48px] max-w-[48px] min-w-[48px] border-r text-center" />
+      <TableCell className={ROW_NUMBER_CLASS} />
       {columns.map((column, index) => (
         <TableCell
           key={column.name}
@@ -76,7 +79,55 @@ function EmptyStateRow({
   );
 }
 
-export function MosaicProfilerRows({
+type DataRowProps = {
+  columns: UseMosaicProfilerReturn['columns'];
+  pageIndex: number;
+  pageSize: number;
+  pageTable: NonNullable<UseMosaicProfilerReturn['pageTable']>;
+  rowIndex: number;
+};
+
+const DataRow = memo(function DataRow({
+  columns,
+  pageIndex,
+  pageSize,
+  pageTable,
+  rowIndex,
+}: DataRowProps) {
+  return (
+    <TableRow>
+      <TableCell className={ROW_NUMBER_CLASS}>
+        {pageIndex * pageSize + rowIndex + 1}
+      </TableCell>
+      {columns.map((column) => {
+        const vector = pageTable.getChild(column.name) as arrow.Vector | null;
+        const value = vector?.get(rowIndex);
+        return (
+          <TableCell
+            key={column.name}
+            className={cn(
+              getColumnWidthClass(column.field),
+              'max-w-[320px] overflow-hidden border-r align-top font-mono text-xs',
+              isNumericArrowType(column.field.type) && 'text-right',
+            )}
+          >
+            <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+              <ArrowCellValue
+                fieldName={column.name}
+                fontSizeClass="text-xs"
+                formatValue={formatProfilerValue}
+                type={column.field.type}
+                value={value}
+              />
+            </span>
+          </TableCell>
+        );
+      })}
+    </TableRow>
+  );
+});
+
+function MosaicProfilerRowsImpl({
   className,
   profiler,
 }: MosaicProfilerRowsProps) {
@@ -106,44 +157,51 @@ export function MosaicProfilerRows({
     {length: profiler.pageTable.numRows},
     (_, index) => index,
   );
+  const pageTable = profiler.pageTable;
 
   return (
     <TableBody className={className}>
       {rows.map((rowIndex) => (
-        <TableRow key={rowIndex}>
-          <TableCell className="bg-background text-muted-foreground sticky left-0 z-10 w-[48px] max-w-[48px] min-w-[48px] border-r text-center">
-            {profiler.pagination.pageIndex * profiler.pagination.pageSize +
-              rowIndex +
-              1}
-          </TableCell>
-          {profiler.columns.map((column) => {
-            const vector = profiler.pageTable!.getChild(
-              column.name,
-            ) as arrow.Vector | null;
-            const value = vector?.get(rowIndex);
-            return (
-              <TableCell
-                key={column.name}
-                className={cn(
-                  getColumnWidthClass(column.field),
-                  'max-w-[320px] overflow-hidden border-r align-top font-mono text-xs',
-                  isNumericArrowType(column.field.type) && 'text-right',
-                )}
-              >
-                <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                  <ArrowCellValue
-                    fieldName={column.name}
-                    fontSizeClass="text-xs"
-                    formatValue={formatProfilerValue}
-                    type={column.field.type}
-                    value={value}
-                  />
-                </span>
-              </TableCell>
-            );
-          })}
-        </TableRow>
+        <DataRow
+          key={rowIndex}
+          columns={profiler.columns}
+          pageIndex={profiler.pagination.pageIndex}
+          pageSize={profiler.pagination.pageSize}
+          pageTable={pageTable}
+          rowIndex={rowIndex}
+        />
       ))}
     </TableBody>
   );
 }
+
+function areRowColumnsEqual(
+  left: UseMosaicProfilerReturn['columns'],
+  right: UseMosaicProfilerReturn['columns'],
+) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((column, index) => {
+    const other = right[index];
+    return (
+      column.name === other?.name &&
+      column.kind === other.kind &&
+      column.field === other.field
+    );
+  });
+}
+
+export const MosaicProfilerRows = memo(
+  MosaicProfilerRowsImpl,
+  (previous, next) =>
+    previous.className === next.className &&
+    previous.profiler.pageTable === next.profiler.pageTable &&
+    previous.profiler.tableError === next.profiler.tableError &&
+    previous.profiler.pagination.pageIndex ===
+      next.profiler.pagination.pageIndex &&
+    previous.profiler.pagination.pageSize ===
+      next.profiler.pagination.pageSize &&
+    areRowColumnsEqual(previous.profiler.columns, next.profiler.columns),
+);

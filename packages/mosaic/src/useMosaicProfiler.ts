@@ -1,4 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
+import {useDebounce} from '@sqlrooms/ui';
 import {type Selection} from '@uwdata/mosaic-core';
 import {
   useEffect,
@@ -42,6 +43,7 @@ type ProfilerSelectionState = {
 
 type ProfilerStoreSlice = {
   filteredCount: ProfilerStoreState['filteredCount'];
+  lastNonEmptyPageTable: ProfilerStoreState['lastNonEmptyPageTable'];
   page: ProfilerStoreState['page'];
   pagination: MosaicProfilerPaginationState;
   profilerStore: ProfilerStore;
@@ -58,6 +60,7 @@ type ProfilerQueryState = {
   fieldNames: string[];
   fields: ProfilerStoreState['schema']['fields'];
   pageQuery: string;
+  rowFilter: ReturnType<Selection['predicate']>;
 };
 
 /**
@@ -119,6 +122,10 @@ function useProfilerStoreState(options: {
 
   return {
     filteredCount: useStore(profilerStore, (state) => state.filteredCount),
+    lastNonEmptyPageTable: useStore(
+      profilerStore,
+      (state) => state.lastNonEmptyPageTable,
+    ),
     page: useStore(profilerStore, (state) => state.page),
     pagination: useStore(profilerStore, (state) => state.pagination),
     profilerStore,
@@ -137,20 +144,32 @@ function useProfilerStoreState(options: {
  */
 function useProfilerQueryState(options: {
   pagination: MosaicProfilerPaginationState;
+  rowSelectionVersion: number;
   schema: ProfilerStoreState['schema'];
   selection: Selection;
   selectionVersion: number;
   sorting: MosaicProfilerSorting;
   tableName: string;
 }): ProfilerQueryState {
-  const {pagination, schema, selection, selectionVersion, sorting, tableName} =
-    options;
+  const {
+    pagination,
+    rowSelectionVersion,
+    schema,
+    selection,
+    selectionVersion,
+    sorting,
+    tableName,
+  } = options;
   const fields = schema.fields;
   const fieldNames = useMemo(() => fields.map((field) => field.name), [fields]);
   const filter = useMemo(() => {
     void selectionVersion;
     return selection.predicate();
   }, [selection, selectionVersion]);
+  const rowFilter = useMemo(() => {
+    void rowSelectionVersion;
+    return selection.predicate();
+  }, [rowSelectionVersion, selection]);
   const baseQuery = useMemo(
     () =>
       buildProfilerBaseQuery({
@@ -161,12 +180,23 @@ function useProfilerQueryState(options: {
       }),
     [fieldNames, filter, sorting, tableName],
   );
+  const pageBaseQuery = useMemo(
+    () =>
+      buildProfilerBaseQuery({
+        columns: fieldNames,
+        filter: rowFilter,
+        sorting,
+        tableName,
+      }),
+    [fieldNames, rowFilter, sorting, tableName],
+  );
 
   return {
     baseQuery,
     fieldNames,
     fields,
-    pageQuery: buildProfilerPageQuery(baseQuery, pagination).toString(),
+    pageQuery: buildProfilerPageQuery(pageBaseQuery, pagination).toString(),
+    rowFilter,
   };
 }
 
@@ -183,6 +213,7 @@ function useProfilerLifecycles(options: {
   pageSize: number;
   pagination: MosaicProfilerPaginationState;
   profilerStore: ProfilerStore;
+  rowFilter: ReturnType<Selection['predicate']>;
   selection: Selection;
   selectionVersion: number;
   sorting: MosaicProfilerSorting;
@@ -198,6 +229,7 @@ function useProfilerLifecycles(options: {
     pageSize,
     pagination,
     profilerStore,
+    rowFilter,
     selection,
     selectionVersion,
     sorting,
@@ -240,8 +272,8 @@ function useProfilerLifecycles(options: {
     return connectProfilerPageClient({
       connection,
       fieldNames,
+      filter: rowFilter,
       pagination,
-      selection,
       sorting,
       store: profilerStore,
       tableName,
@@ -251,7 +283,7 @@ function useProfilerLifecycles(options: {
     fieldNames,
     pagination,
     profilerStore,
-    selection,
+    rowFilter,
     sorting,
     tableName,
   ]);
@@ -367,6 +399,33 @@ function useProfilerStatus(options: {
 }
 
 /**
+ * Keeps the last non-empty page result visible while live brushing has moved
+ * ahead of the deferred row query, avoiding transient "No rows" flashes.
+ */
+function useProfilerVisiblePageState(options: {
+  lastNonEmptyPageTable: ProfilerStoreState['lastNonEmptyPageTable'];
+  page: ProfilerStoreState['page'];
+  rowSelectionVersion: number;
+  selectionVersion: number;
+}) {
+  const {lastNonEmptyPageTable, page, rowSelectionVersion, selectionVersion} =
+    options;
+  const isRowDisplayStale = selectionVersion !== rowSelectionVersion;
+  const hasCurrentRows = !!page.pageTable && page.pageTable.numRows > 0;
+  const canShowStableEmpty =
+    !page.isLoading &&
+    !isRowDisplayStale &&
+    (!page.pageTable || page.pageTable.numRows === 0);
+  const showStableEmpty = useDebounce(canShowStableEmpty, 120);
+
+  if (hasCurrentRows || !lastNonEmptyPageTable) {
+    return page.pageTable;
+  }
+
+  return showStableEmpty ? page.pageTable : lastNonEmptyPageTable;
+}
+
+/**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
  * public profiler API consumed by the React table UI.
  */
@@ -389,8 +448,10 @@ export function useMosaicProfiler(
     selection: providedSelection,
     selectionName,
   });
+  const rowSelectionVersion = useDebounce(selectionVersion, 100);
   const {
     filteredCount,
+    lastNonEmptyPageTable,
     page,
     pagination,
     profilerStore,
@@ -404,14 +465,16 @@ export function useMosaicProfiler(
     initialSorting,
     pageSize,
   });
-  const {baseQuery, fieldNames, fields, pageQuery} = useProfilerQueryState({
-    pagination,
-    schema,
-    selection,
-    selectionVersion,
-    sorting,
-    tableName,
-  });
+  const {baseQuery, fieldNames, fields, pageQuery, rowFilter} =
+    useProfilerQueryState({
+      pagination,
+      rowSelectionVersion,
+      schema,
+      selection,
+      selectionVersion,
+      sorting,
+      tableName,
+    });
   useProfilerLifecycles({
     categoryLimit,
     columns,
@@ -421,6 +484,7 @@ export function useMosaicProfiler(
     pageSize,
     pagination,
     profilerStore,
+    rowFilter,
     selection,
     selectionVersion,
     sorting,
@@ -435,13 +499,19 @@ export function useMosaicProfiler(
     summaries,
     totalCount,
   });
+  const visiblePage = useProfilerVisiblePageState({
+    lastNonEmptyPageTable,
+    page,
+    rowSelectionVersion,
+    selectionVersion,
+  });
 
   return {
     columns: profilerColumns,
     filteredRowCount: filteredCount.count,
     isLoading,
     pageQuery,
-    pageTable: page.pageTable,
+    pageTable: visiblePage,
     pagination,
     reset: () => selection.reset(),
     selection,

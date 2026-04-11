@@ -9,7 +9,6 @@ describe('profiler query clients', () => {
       columns: ['id', 'status'],
       onStateChange: () => {},
       pagination: {pageIndex: 2, pageSize: 25},
-      selection: Selection.crossfilter(),
       sorting: [{desc: true, id: 'status'}],
       tableName: 'issues',
     });
@@ -19,6 +18,26 @@ describe('profiler query clients', () => {
     expect(sql).toContain('ORDER BY "status" DESC');
     expect(sql).toContain('LIMIT 25');
     expect(sql).toContain('OFFSET 50');
+  });
+
+  it('keeps the previous page table while a new row query is pending', () => {
+    let latest: any;
+    const previousPageTable = {numRows: 10};
+    const client = new ProfilerPageClient({
+      columns: ['id'],
+      onStateChange: (state) => {
+        latest = state;
+      },
+      pagination: {pageIndex: 0, pageSize: 10},
+      sorting: [],
+      tableName: 'issues',
+    });
+
+    client.queryResult(previousPageTable);
+    client.queryPending();
+
+    expect(latest.isLoading).toBe(true);
+    expect(latest.pageTable).toBe(previousPageTable);
   });
 
   it('applies the active selection predicate in the filtered count query', () => {
@@ -82,7 +101,6 @@ describe('profiler query clients', () => {
       columns: ['id'],
       onStateChange: () => {},
       pagination: {pageIndex: 0, pageSize: 10},
-      selection,
       sorting: [],
       tableName: 'issues',
     });

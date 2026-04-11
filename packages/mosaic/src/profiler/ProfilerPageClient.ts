@@ -15,9 +15,9 @@ export type ProfilerPageState = {
 
 type ProfilerPageClientOptions = {
   columns: string[];
+  filter?: ReturnType<Selection['predicate']>;
   onStateChange: (state: ProfilerPageState) => void;
   pagination: MosaicProfilerPaginationState;
-  selection: Selection;
   sorting: MosaicProfilerSorting;
   tableName: string;
 };
@@ -25,6 +25,7 @@ type ProfilerPageClientOptions = {
 export class ProfilerPageClient extends MosaicClient {
   private readonly columns: string[];
   private error?: Error;
+  private readonly filter?: ReturnType<Selection['predicate']>;
   private readonly onStateChange: (state: ProfilerPageState) => void;
   private readonly pagination: MosaicProfilerPaginationState;
   private pageTable?: Table;
@@ -32,8 +33,9 @@ export class ProfilerPageClient extends MosaicClient {
   private readonly tableName: string;
 
   constructor(options: ProfilerPageClientOptions) {
-    super(options.selection);
+    super();
     this.columns = options.columns;
+    this.filter = options.filter ?? [];
     this.onStateChange = options.onStateChange;
     this.pagination = options.pagination;
     this.sorting = options.sorting;
@@ -54,10 +56,11 @@ export class ProfilerPageClient extends MosaicClient {
   }
 
   override query(filter: Array<ExprNode> = []): Query {
+    const resolvedFilter = this.filter ?? filter;
     return buildProfilerPageQuery(
       buildProfilerBaseQuery({
         columns: this.columns,
-        filter,
+        filter: resolvedFilter,
         sorting: this.sorting,
         tableName: this.tableName,
       }),
