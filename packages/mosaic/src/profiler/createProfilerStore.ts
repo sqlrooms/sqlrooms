@@ -21,7 +21,10 @@ function resolveSetStateAction<T>(next: SetStateAction<T>, previous: T): T {
 
 export type ProfilerStoreState = {
   filteredCount: ProfilerCountState;
-  lastNonEmptyPageTable?: arrow.Table;
+  lastNonEmptyPageTable?: {
+    datasetId: string;
+    pageTable: arrow.Table;
+  };
   page: ProfilerPageState;
   pagination: MosaicProfilerPaginationState;
   schema: {
@@ -79,8 +82,15 @@ export function createProfilerStore(options: {
       set((state) =>
         produce(state, (draft) => {
           draft.page = castDraft(nextState);
-          if (nextState.pageTable && nextState.pageTable.numRows > 0) {
-            draft.lastNonEmptyPageTable = castDraft(nextState.pageTable);
+          if (
+            nextState.datasetId &&
+            nextState.pageTable &&
+            nextState.pageTable.numRows > 0
+          ) {
+            draft.lastNonEmptyPageTable = {
+              datasetId: nextState.datasetId,
+              pageTable: castDraft(nextState.pageTable),
+            };
           }
         }),
       );

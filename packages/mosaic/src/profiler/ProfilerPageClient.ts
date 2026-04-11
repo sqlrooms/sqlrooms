@@ -8,6 +8,7 @@ import type {
 import {buildProfilerBaseQuery, buildProfilerPageQuery} from './utils';
 
 export type ProfilerPageState = {
+  datasetId?: string;
   error?: Error;
   isLoading: boolean;
   pageTable?: Table;
@@ -24,6 +25,7 @@ type ProfilerPageClientOptions = {
 
 export class ProfilerPageClient extends MosaicClient {
   private readonly columns: string[];
+  private readonly datasetId: string;
   private error?: Error;
   private readonly filter?: ReturnType<Selection['predicate']>;
   private readonly onStateChange: (state: ProfilerPageState) => void;
@@ -35,6 +37,7 @@ export class ProfilerPageClient extends MosaicClient {
   constructor(options: ProfilerPageClientOptions) {
     super();
     this.columns = options.columns;
+    this.datasetId = [options.tableName, ...options.columns].join('\u0001');
     this.filter = options.filter ?? [];
     this.onStateChange = options.onStateChange;
     this.pagination = options.pagination;
@@ -48,6 +51,7 @@ export class ProfilerPageClient extends MosaicClient {
 
   override queryPending(): this {
     this.onStateChange({
+      datasetId: this.datasetId,
       error: this.error,
       isLoading: true,
       pageTable: this.pageTable,
@@ -72,6 +76,7 @@ export class ProfilerPageClient extends MosaicClient {
     this.error = undefined;
     this.pageTable = data as Table;
     this.onStateChange({
+      datasetId: this.datasetId,
       isLoading: false,
       pageTable: this.pageTable,
     });
@@ -81,6 +86,7 @@ export class ProfilerPageClient extends MosaicClient {
   override queryError(error: Error): this {
     this.error = error;
     this.onStateChange({
+      datasetId: this.datasetId,
       error,
       isLoading: false,
       pageTable: this.pageTable,

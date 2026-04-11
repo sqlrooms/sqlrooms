@@ -57,6 +57,7 @@ type ProfilerStoreSlice = {
 
 type ProfilerQueryState = {
   baseQuery: ReturnType<typeof buildProfilerBaseQuery>;
+  datasetId: string;
   fieldNames: string[];
   fields: ProfilerStoreState['schema']['fields'];
   hasFilters: boolean;
@@ -194,6 +195,7 @@ function useProfilerQueryState(options: {
 
   return {
     baseQuery,
+    datasetId: [tableName, ...fieldNames].join('\u0001'),
     fieldNames,
     fields,
     hasFilters: Array.isArray(filter) ? filter.length > 0 : Boolean(filter),
@@ -378,12 +380,15 @@ function useProfilerColumns(options: {
  */
 function useProfilerStatus(options: {
   filteredCount: ProfilerStoreState['filteredCount'];
+  fields: ProfilerStoreState['schema']['fields'];
   page: ProfilerStoreState['page'];
   schema: ProfilerStoreState['schema'];
   summaries: ProfilerStoreState['summaries'];
   totalCount: ProfilerStoreState['totalCount'];
 }) {
-  const {filteredCount, page, schema, summaries, totalCount} = options;
+  const {fields, filteredCount, page, schema, summaries, totalCount} = options;
+  const hasPendingSummaryInitialization =
+    fields.length > 0 && Object.keys(summaries).length < fields.length;
 
   return {
     isLoading:
@@ -391,6 +396,7 @@ function useProfilerStatus(options: {
       page.isLoading ||
       filteredCount.isLoading ||
       totalCount.isLoading ||
+      hasPendingSummaryInitialization ||
       Object.values(summaries).some((summary) => summary.isLoading),
     tableError:
       schema.error ??
@@ -407,25 +413,34 @@ function useProfilerStatus(options: {
  */
 function useProfilerVisiblePageState(options: {
   lastNonEmptyPageTable: ProfilerStoreState['lastNonEmptyPageTable'];
+  pageDatasetId: string;
   page: ProfilerStoreState['page'];
   rowSelectionVersion: number;
   selectionVersion: number;
 }) {
-  const {lastNonEmptyPageTable, page, rowSelectionVersion, selectionVersion} =
-    options;
+  const {
+    lastNonEmptyPageTable,
+    page,
+    pageDatasetId,
+    rowSelectionVersion,
+    selectionVersion,
+  } = options;
   const isRowDisplayStale = selectionVersion !== rowSelectionVersion;
   const hasCurrentRows = !!page.pageTable && page.pageTable.numRows > 0;
+  const canReuseLastNonEmptyPage =
+    !!lastNonEmptyPageTable &&
+    lastNonEmptyPageTable.datasetId === pageDatasetId;
   const canShowStableEmpty =
     !page.isLoading &&
     !isRowDisplayStale &&
     (!page.pageTable || page.pageTable.numRows === 0);
   const showStableEmpty = useDebounce(canShowStableEmpty, 120);
 
-  if (hasCurrentRows || !lastNonEmptyPageTable) {
+  if (hasCurrentRows || !canReuseLastNonEmptyPage) {
     return page.pageTable;
   }
 
-  return showStableEmpty ? page.pageTable : lastNonEmptyPageTable;
+  return showStableEmpty ? page.pageTable : lastNonEmptyPageTable.pageTable;
 }
 
 /**
@@ -468,16 +483,23 @@ export function useMosaicProfiler(
     initialSorting,
     pageSize,
   });
-  const {baseQuery, fieldNames, fields, hasFilters, pageQuery, rowFilter} =
-    useProfilerQueryState({
-      pagination,
-      rowSelectionVersion,
-      schema,
-      selection,
-      selectionVersion,
-      sorting,
-      tableName,
-    });
+  const {
+    baseQuery,
+    datasetId,
+    fieldNames,
+    fields,
+    hasFilters,
+    pageQuery,
+    rowFilter,
+  } = useProfilerQueryState({
+    pagination,
+    rowSelectionVersion,
+    schema,
+    selection,
+    selectionVersion,
+    sorting,
+    tableName,
+  });
   useProfilerLifecycles({
     categoryLimit,
     columns,
@@ -496,6 +518,7 @@ export function useMosaicProfiler(
   });
   const profilerColumns = useProfilerColumns({fields, summaries});
   const {isLoading, tableError} = useProfilerStatus({
+    fields,
     filteredCount,
     page,
     schema,
@@ -505,6 +528,7 @@ export function useMosaicProfiler(
   const visiblePage = useProfilerVisiblePageState({
     lastNonEmptyPageTable,
     page,
+    pageDatasetId: datasetId,
     rowSelectionVersion,
     selectionVersion,
   });
