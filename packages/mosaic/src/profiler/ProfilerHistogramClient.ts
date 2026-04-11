@@ -75,7 +75,7 @@ export class ProfilerHistogramClient extends MosaicClient {
   }
 
   override get filterStable(): boolean {
-    return false;
+    return true;
   }
 
   private emitSummary() {

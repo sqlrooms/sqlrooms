@@ -26,6 +26,7 @@ describe('profiler query clients', () => {
     selection.update(clausePoint('status', 'open', {source: {}}));
 
     const client = new ProfilerCountClient({
+      filterStable: true,
       onStateChange: () => {},
       selection,
       tableName: 'issues',
@@ -74,7 +75,7 @@ describe('profiler query clients', () => {
     expect(sql).toContain('open');
   });
 
-  it('marks reactive profiler clients as not filter-stable', () => {
+  it('marks only the safe profiler query clients as filter-stable', () => {
     const selection = Selection.crossfilter();
 
     const page = new ProfilerPageClient({
@@ -85,9 +86,14 @@ describe('profiler query clients', () => {
       sorting: [],
       tableName: 'issues',
     });
-    const count = new ProfilerCountClient({
+    const filteredCount = new ProfilerCountClient({
+      filterStable: true,
       onStateChange: () => {},
       selection,
+      tableName: 'issues',
+    });
+    const totalCount = new ProfilerCountClient({
+      onStateChange: () => {},
       tableName: 'issues',
     });
     const unsupported = new ProfilerUnsupportedSummaryClient({
@@ -103,7 +109,8 @@ describe('profiler query clients', () => {
     });
 
     expect(page.filterStable).toBe(false);
-    expect(count.filterStable).toBe(false);
+    expect(filteredCount.filterStable).toBe(true);
+    expect(totalCount.filterStable).toBe(false);
     expect(unsupported.filterStable).toBe(false);
   });
 });

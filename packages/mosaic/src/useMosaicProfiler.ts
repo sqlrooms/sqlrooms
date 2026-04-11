@@ -212,6 +212,7 @@ export function useMosaicProfiler(
 
     let active = true;
     const client = new ProfilerCountClient({
+      filterStable: true,
       onStateChange: (state) => {
         if (active) {
           setFilteredCountState(state);

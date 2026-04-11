@@ -9,6 +9,7 @@ export type ProfilerCountState = {
 };
 
 type ProfilerCountClientOptions = {
+  filterStable?: boolean;
   onStateChange: (state: ProfilerCountState) => void;
   selection?: Selection;
   tableName: string;
@@ -17,17 +18,19 @@ type ProfilerCountClientOptions = {
 export class ProfilerCountClient extends MosaicClient {
   private count?: number;
   private error?: Error;
+  private readonly isFilterStable: boolean;
   private readonly onStateChange: (state: ProfilerCountState) => void;
   private readonly tableName: string;
 
   constructor(options: ProfilerCountClientOptions) {
     super(options.selection);
+    this.isFilterStable = options.filterStable ?? false;
     this.onStateChange = options.onStateChange;
     this.tableName = options.tableName;
   }
 
   override get filterStable(): boolean {
-    return false;
+    return this.isFilterStable;
   }
 
   override queryPending(): this {

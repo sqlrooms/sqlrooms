@@ -32,7 +32,7 @@ describe('profiler summary clients', () => {
     expect(latest.selectedKey).toBeUndefined();
   });
 
-  it('does not mark category and histogram summaries as filter-stable', () => {
+  it('marks only histogram summaries as filter-stable', () => {
     const selection = Selection.crossfilter();
     const category = new ProfilerCategoryClient({
       categoryLimit: 5,
@@ -51,7 +51,7 @@ describe('profiler summary clients', () => {
     });
 
     expect(category.filterStable).toBe(false);
-    expect(histogram.filterStable).toBe(false);
+    expect(histogram.filterStable).toBe(true);
   });
 
   it('publishes histogram interval selections through the shared selection', () => {
