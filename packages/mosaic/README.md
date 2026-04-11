@@ -104,40 +104,34 @@ The profiler primitives let you build a Quake-style cross-filtered table with
 per-column summaries on top of `MosaicSlice`.
 
 ```tsx
-import {
-  MosaicProfilerHeader,
-  MosaicProfilerRows,
-  MosaicProfilerStatusBar,
-  useMosaicProfiler,
-} from '@sqlrooms/mosaic';
-import {ScrollArea, Table} from '@sqlrooms/ui';
+import {MosaicProfiler} from '@sqlrooms/mosaic';
+import {ScrollArea} from '@sqlrooms/ui';
+import {useMemo} from 'react';
 import {useRoomStore} from './store';
 
 function EarthquakeProfiler() {
-  const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
-  const profiler = useMosaicProfiler({
-    tableName: 'earthquakes',
-    selection: brush,
-    pageSize: 25,
-  });
+  const mosaic = useRoomStore((state) => state.mosaic);
+  const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
 
   return (
-    <div className="flex min-h-0 flex-col border">
-      <ScrollArea className="min-h-0 flex-1">
-        <Table disableWrapper className="w-max min-w-full table-fixed">
-          <MosaicProfilerHeader profiler={profiler} />
-          <MosaicProfilerRows profiler={profiler} />
-        </Table>
-      </ScrollArea>
-      <MosaicProfilerStatusBar profiler={profiler} />
-    </div>
+    <MosaicProfiler tableName="earthquakes" selection={brush} pageSize={25}>
+      <div className="flex min-h-0 flex-col border">
+        <ScrollArea className="min-h-0 flex-1">
+          <MosaicProfiler.Table>
+            <MosaicProfiler.Header />
+            <MosaicProfiler.Rows />
+          </MosaicProfiler.Table>
+        </ScrollArea>
+        <MosaicProfiler.StatusBar />
+      </div>
+    </MosaicProfiler>
   );
 }
 ```
 
-`useMosaicProfiler` returns the current filtered SQL, pagination and sorting
-state, Arrow row page data, filtered/total counts, the shared `Selection`, and
-column summary state for composing your own profiler UI.
+For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
+is still available when you need direct access to the profiler state for custom
+layout, sizing, or advanced composition.
 
 ### Working with Selections
 

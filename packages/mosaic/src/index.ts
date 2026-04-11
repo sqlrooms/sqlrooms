@@ -23,6 +23,15 @@ export {
   type TrackedClient,
 } from './MosaicSlice';
 export {
+  MosaicProfiler,
+  type MosaicProfilerCompoundHeaderProps,
+  type MosaicProfilerCompoundRowsProps,
+  type MosaicProfilerCompoundStatusBarProps,
+  type MosaicProfilerCompoundTableProps,
+  type MosaicProfilerProps,
+  type MosaicProfilerRootProps,
+} from './profiler/MosaicProfiler';
+export {
   MosaicProfilerHeader,
   type MosaicProfilerHeaderProps,
 } from './profiler/MosaicProfilerHeader';
