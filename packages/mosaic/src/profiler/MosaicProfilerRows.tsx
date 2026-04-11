@@ -2,8 +2,8 @@ import {ArrowCellValue, isNumericArrowType} from '@sqlrooms/data-table';
 import {cn, TableBody, TableCell, TableRow} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {memo} from 'react';
-import type {UseMosaicProfilerReturn} from './profiler/types';
-import {isProfilerUnsupportedSummaryType} from './profiler/utils';
+import type {UseMosaicProfilerReturn} from './types';
+import {isProfilerUnsupportedSummaryType} from './utils';
 
 export type MosaicProfilerRowsProps = {
   className?: string;

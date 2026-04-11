@@ -6,15 +6,15 @@ import {
   PROFILER_DEFAULT_COLUMN_WIDTH_PX,
   PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
   PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
-} from './profiler/layout';
+} from './layout';
 import type {
   MosaicProfilerCategorySummary,
   MosaicProfilerColumnState,
   MosaicProfilerHistogramSummary,
   MosaicProfilerSorting,
   UseMosaicProfilerReturn,
-} from './profiler/types';
-import {isProfilerUnsupportedSummaryType} from './profiler/utils';
+} from './types';
+import {isProfilerUnsupportedSummaryType} from './utils';
 
 export type MosaicProfilerHeaderProps = {
   className?: string;

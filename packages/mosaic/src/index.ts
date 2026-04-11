@@ -25,17 +25,17 @@ export {
 export {
   MosaicProfilerHeader,
   type MosaicProfilerHeaderProps,
-} from './MosaicProfilerHeader';
+} from './profiler/MosaicProfilerHeader';
 export {
   MosaicProfilerRows,
   type MosaicProfilerRowsProps,
-} from './MosaicProfilerRows';
+} from './profiler/MosaicProfilerRows';
 export {
   MosaicProfilerStatusBar,
   type MosaicProfilerStatusBarProps,
-} from './MosaicProfilerStatusBar';
+} from './profiler/MosaicProfilerStatusBar';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
-export {useMosaicProfiler} from './useMosaicProfiler';
+export {useMosaicProfiler} from './profiler/useMosaicProfiler';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components

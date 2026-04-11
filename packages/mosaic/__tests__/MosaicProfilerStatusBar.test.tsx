@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import {isValidElement, type ReactElement, type ReactNode} from 'react';
-import {MosaicProfilerStatusBar} from '../src/MosaicProfilerStatusBar';
+import {MosaicProfilerStatusBar} from '../src/profiler/MosaicProfilerStatusBar';
 import type {UseMosaicProfilerReturn} from '../src/profiler/types';
 
 function collectElements(node: ReactNode): ReactElement[] {

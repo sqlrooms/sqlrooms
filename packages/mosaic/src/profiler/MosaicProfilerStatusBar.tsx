@@ -1,7 +1,7 @@
 import type {ReactNode} from 'react';
 import {Button, cn} from '@sqlrooms/ui';
 import {ChevronLeftIcon, ChevronRightIcon} from 'lucide-react';
-import type {UseMosaicProfilerReturn} from './profiler/types';
+import type {UseMosaicProfilerReturn} from './types';
 
 export type MosaicProfilerStatusBarProps = {
   className?: string;

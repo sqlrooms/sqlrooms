@@ -9,32 +9,32 @@ import {
   type SetStateAction,
 } from 'react';
 import {useStore} from 'zustand';
-import {type MosaicSliceState, useStoreWithMosaic} from './MosaicSlice';
+import {type MosaicSliceState, useStoreWithMosaic} from '../MosaicSlice';
 import type {
   MosaicProfilerColumnState,
   MosaicProfilerOptions,
   MosaicProfilerPaginationState,
   MosaicProfilerSorting,
   UseMosaicProfilerReturn,
-} from './profiler/types';
+} from './types';
 import {
   createProfilerStore,
   type ProfilerStore,
   type ProfilerStoreState,
-} from './profiler/createProfilerStore';
+} from './createProfilerStore';
 import {
   connectProfilerCountClient,
   connectProfilerPageClient,
   connectProfilerSummaryClients,
   loadProfilerSchema,
-} from './profiler/profilerController';
+} from './profilerController';
 import {
   buildProfilerBaseQuery,
   buildProfilerPageQuery,
   createEmptySummaryState,
   isProfilerHistogramType,
   isProfilerUnsupportedSummaryType,
-} from './profiler/utils';
+} from './utils';
 
 type ProfilerSelectionState = {
   selection: Selection;
