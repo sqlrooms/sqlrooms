@@ -17,7 +17,6 @@ import {
   restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
 } from '@kepler.gl/duckdb';
-import {Layer} from '@kepler.gl/layers';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {
   INITIAL_UI_STATE,
@@ -27,7 +26,11 @@ import {
 } from '@kepler.gl/reducers';
 import {KeplerGLSchemaClass} from '@kepler.gl/schemas';
 import {KeplerTable} from '@kepler.gl/table';
-import {AddDataToMapPayload} from '@kepler.gl/types';
+import {
+  AddDataToMapPayload,
+  MinSavedLayer,
+  ParsedLayer,
+} from '@kepler.gl/types';
 import {
   DatabaseConnection,
   initApplicationConfig,
@@ -261,7 +264,11 @@ export type KeplerSliceState = {
      * the latest table schemas in the database
      */
     syncKeplerDatasets: () => Promise<void>;
-    addLayer: (mapId: string, layer: Layer, datasetId: string) => void;
+    addLayer: (
+      mapId: string,
+      layer: ParsedLayer | MinSavedLayer | undefined,
+      datasetId: string,
+    ) => void;
     updateTooltipFields: (
       mapId: string,
       datasetId: string,
@@ -271,6 +278,7 @@ export type KeplerSliceState = {
       mapId: string,
       tableName: string,
       options?: AddDataToMapPayload['options'],
+      config?: AddDataToMapPayload['config'],
     ) => Promise<void>;
     addTileSetToMap: (
       mapId: string,
@@ -520,7 +528,7 @@ export function createKeplerSlice({
           );
         },
 
-        addTableToMap: async (mapId, tableName, options = {}) => {
+        addTableToMap: async (mapId, tableName, options = {}, config = {}) => {
           const connector = await get().db.getConnector();
           const duckDbColumns = await getDuckDBColumnTypes(
             {
@@ -550,7 +558,7 @@ export function createKeplerSlice({
             };
             get().kepler.dispatchAction(
               mapId,
-              addDataToMap({datasets, options}),
+              addDataToMap({datasets, options, config}),
             );
           }
         },

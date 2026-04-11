@@ -121,18 +121,45 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       initialize: async () => {
-        const id = get().kepler.getCurrentMap()?.id;
-        if (id) {
-          await get().kepler.addTableToMap(id, 'earthquakes', {
-            autoCreateLayers: true,
-            centerMap: true,
-          });
+        const mapId = get().kepler.getCurrentMap()?.id;
+        const datasetId = 'earthquakes';
+        const layerId = 'earthquakes';
+        if (mapId) {
+          await get().kepler.addTableToMap(
+            mapId,
+            'earthquakes',
+            {autoCreateLayers: false, centerMap: true},
+            {
+              version: 'v1',
+              config: {
+                visState: {
+                  layers: [
+                    {
+                      id: layerId,
+                      type: 'point',
+                      config: {
+                        dataId: datasetId,
+                        columnMode: 'points',
+                        label: 'Earthquakes',
+                        columns: {lat: 'Latitude', lng: 'Longitude'},
+                      },
+                      visualChannels: {
+                        colorField: {name: 'Depth', type: 'real'},
+                        colorScale: 'quantile',
+                        sizeField: {name: 'Magnitude', type: 'real'},
+                        sizeScale: 'sqrt',
+                      },
+                    },
+                  ],
+                },
+                mapStyle: {topLayerGroups: {label: true}},
+              },
+            },
+          );
         }
       },
 
-      ...createKeplerSlice({
-        actionLogging: false,
-      })(set, get, store),
+      ...createKeplerSlice({actionLogging: false})(set, get, store),
 
       ...createSqlEditorSlice()(set, get, store),
 
