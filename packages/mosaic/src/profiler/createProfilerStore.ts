@@ -48,6 +48,10 @@ export type ProfilerStoreState = {
 
 export type ProfilerStore = ReturnType<typeof createProfilerStore>;
 
+/**
+ * Creates a profiler-local vanilla Zustand store that aggregates schema, row,
+ * count, and summary state for a single `useMosaicProfiler()` instance.
+ */
 export function createProfilerStore(options: {
   initialSorting?: MosaicProfilerSorting;
   pageSize: number;

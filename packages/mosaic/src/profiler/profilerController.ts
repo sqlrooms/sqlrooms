@@ -25,6 +25,10 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
+/**
+ * Loads field metadata for the profiler table and writes the normalized field
+ * definitions into the profiler store.
+ */
 export async function loadProfilerSchema(options: {
   columns?: string[];
   coordinator: Parameters<typeof queryFieldInfo>[0];
@@ -55,6 +59,10 @@ type ReadyConnection = {
   };
 };
 
+/**
+ * Connects the paged row client for the current profiler page and disconnects
+ * it when the caller tears down the lifecycle.
+ */
 export function connectProfilerPageClient(options: {
   connection: ReadyConnection;
   fieldNames: string[];
@@ -80,6 +88,10 @@ export function connectProfilerPageClient(options: {
   };
 }
 
+/**
+ * Connects either the filtered or total count client and routes updates into
+ * the corresponding store slice.
+ */
 export function connectProfilerCountClient(options: {
   connection: ReadyConnection;
   filterStable?: boolean;
@@ -107,6 +119,10 @@ export function connectProfilerCountClient(options: {
   };
 }
 
+/**
+ * Connects all per-column summary clients for the active schema and initializes
+ * matching empty summary state in the profiler store.
+ */
 export function connectProfilerSummaryClients(options: {
   categoryLimit: number;
   connection: ReadyConnection;

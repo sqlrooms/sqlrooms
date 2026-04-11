@@ -1,14 +1,26 @@
 import {createId} from '@paralleldrive/cuid2';
 import {type Selection} from '@uwdata/mosaic-core';
-import {useEffect, useMemo, useState} from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import {useStore} from 'zustand';
-import {useStoreWithMosaic} from './MosaicSlice';
+import {type MosaicSliceState, useStoreWithMosaic} from './MosaicSlice';
 import type {
   MosaicProfilerColumnState,
   MosaicProfilerOptions,
+  MosaicProfilerPaginationState,
+  MosaicProfilerSorting,
   UseMosaicProfilerReturn,
 } from './profiler/types';
-import {createProfilerStore} from './profiler/createProfilerStore';
+import {
+  createProfilerStore,
+  type ProfilerStore,
+  type ProfilerStoreState,
+} from './profiler/createProfilerStore';
 import {
   connectProfilerCountClient,
   connectProfilerPageClient,
@@ -23,6 +35,35 @@ import {
   isProfilerUnsupportedSummaryType,
 } from './profiler/utils';
 
+type ProfilerSelectionState = {
+  selection: Selection;
+  selectionVersion: number;
+};
+
+type ProfilerStoreSlice = {
+  filteredCount: ProfilerStoreState['filteredCount'];
+  page: ProfilerStoreState['page'];
+  pagination: MosaicProfilerPaginationState;
+  profilerStore: ProfilerStore;
+  schema: ProfilerStoreState['schema'];
+  setPagination: Dispatch<SetStateAction<MosaicProfilerPaginationState>>;
+  setSorting: Dispatch<SetStateAction<MosaicProfilerSorting>>;
+  sorting: MosaicProfilerSorting;
+  summaries: ProfilerStoreState['summaries'];
+  totalCount: ProfilerStoreState['totalCount'];
+};
+
+type ProfilerQueryState = {
+  baseQuery: ReturnType<typeof buildProfilerBaseQuery>;
+  fieldNames: string[];
+  fields: ProfilerStoreState['schema']['fields'];
+  pageQuery: string;
+};
+
+/**
+ * Tracks Mosaic selection updates as a monotonically increasing version so
+ * memoized queries and lifecycle effects can respond to crossfilter changes.
+ */
 function useSelectionVersion(selection: Selection) {
   const [version, setVersion] = useState(0);
 
@@ -35,50 +76,134 @@ function useSelectionVersion(selection: Selection) {
   return version;
 }
 
-export function useMosaicProfiler(
-  options: MosaicProfilerOptions,
-): UseMosaicProfilerReturn {
-  const {
-    categoryLimit = 20,
-    columns,
-    initialSorting = [],
-    pageSize = 100,
-    selection: providedSelection,
-    selectionName,
-    summaryBins = 18,
-    tableName,
-  } = options;
-
+/**
+ * Resolves the profiler selection, creating a crossfilter selection when the
+ * caller does not supply one, and exposes a version that changes with it.
+ */
+function useProfilerSelection(
+  options: Pick<MosaicProfilerOptions, 'selection' | 'selectionName'>,
+): ProfilerSelectionState {
+  const {selection: providedSelection, selectionName} = options;
   const generatedSelectionName = useMemo(
     () => `mosaic-profiler-${createId()}`,
     [],
   );
   const getSelection = useStoreWithMosaic((state) => state.mosaic.getSelection);
-  const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const selection = useMemo(
     () =>
       providedSelection ??
       getSelection(selectionName ?? generatedSelectionName, 'crossfilter'),
     [generatedSelectionName, getSelection, providedSelection, selectionName],
   );
-  const selectionVersion = useSelectionVersion(selection);
 
+  return {
+    selection,
+    selectionVersion: useSelectionVersion(selection),
+  };
+}
+
+/**
+ * Creates the per-profiler local store and subscribes to the raw state slices
+ * that the public profiler hook exposes.
+ */
+function useProfilerStoreState(options: {
+  initialSorting: MosaicProfilerSorting;
+  pageSize: number;
+}): ProfilerStoreSlice {
   const [profilerStore] = useState(() =>
     createProfilerStore({
-      initialSorting,
-      pageSize,
+      initialSorting: options.initialSorting,
+      pageSize: options.pageSize,
     }),
   );
 
-  const pagination = useStore(profilerStore, (state) => state.pagination);
-  const setPagination = useStore(profilerStore, (state) => state.setPagination);
-  const sorting = useStore(profilerStore, (state) => state.sorting);
-  const setSorting = useStore(profilerStore, (state) => state.setSorting);
-  const schema = useStore(profilerStore, (state) => state.schema);
-  const page = useStore(profilerStore, (state) => state.page);
-  const filteredCount = useStore(profilerStore, (state) => state.filteredCount);
-  const totalCount = useStore(profilerStore, (state) => state.totalCount);
-  const summaries = useStore(profilerStore, (state) => state.summaries);
+  return {
+    filteredCount: useStore(profilerStore, (state) => state.filteredCount),
+    page: useStore(profilerStore, (state) => state.page),
+    pagination: useStore(profilerStore, (state) => state.pagination),
+    profilerStore,
+    schema: useStore(profilerStore, (state) => state.schema),
+    setPagination: useStore(profilerStore, (state) => state.setPagination),
+    setSorting: useStore(profilerStore, (state) => state.setSorting),
+    sorting: useStore(profilerStore, (state) => state.sorting),
+    summaries: useStore(profilerStore, (state) => state.summaries),
+    totalCount: useStore(profilerStore, (state) => state.totalCount),
+  };
+}
+
+/**
+ * Derives the profiler's field and SQL state from the current schema,
+ * selection, sorting, and pagination state.
+ */
+function useProfilerQueryState(options: {
+  pagination: MosaicProfilerPaginationState;
+  schema: ProfilerStoreState['schema'];
+  selection: Selection;
+  selectionVersion: number;
+  sorting: MosaicProfilerSorting;
+  tableName: string;
+}): ProfilerQueryState {
+  const {pagination, schema, selection, selectionVersion, sorting, tableName} =
+    options;
+  const fields = schema.fields;
+  const fieldNames = useMemo(() => fields.map((field) => field.name), [fields]);
+  const filter = useMemo(() => {
+    void selectionVersion;
+    return selection.predicate();
+  }, [selection, selectionVersion]);
+  const baseQuery = useMemo(
+    () =>
+      buildProfilerBaseQuery({
+        columns: fieldNames,
+        filter,
+        sorting,
+        tableName,
+      }),
+    [fieldNames, filter, sorting, tableName],
+  );
+
+  return {
+    baseQuery,
+    fieldNames,
+    fields,
+    pageQuery: buildProfilerPageQuery(baseQuery, pagination).toString(),
+  };
+}
+
+/**
+ * Owns the coordinator-backed schema, row, count, and summary client
+ * lifecycles for a profiler instance.
+ */
+function useProfilerLifecycles(options: {
+  categoryLimit: number;
+  columns?: string[];
+  connection: MosaicSliceState['mosaic']['connection'];
+  fieldNames: string[];
+  fields: ProfilerStoreState['schema']['fields'];
+  pageSize: number;
+  pagination: MosaicProfilerPaginationState;
+  profilerStore: ProfilerStore;
+  selection: Selection;
+  selectionVersion: number;
+  sorting: MosaicProfilerSorting;
+  summaryBins: number;
+  tableName: string;
+}) {
+  const {
+    categoryLimit,
+    columns,
+    connection,
+    fieldNames,
+    fields,
+    pageSize,
+    pagination,
+    profilerStore,
+    selection,
+    selectionVersion,
+    sorting,
+    summaryBins,
+    tableName,
+  } = options;
 
   useEffect(() => {
     profilerStore.getState().syncPageSize(pageSize);
@@ -98,50 +223,13 @@ export function useMosaicProfiler(
       return;
     }
 
-    let active = true;
-
     void loadProfilerSchema({
       columns,
       coordinator: connection.coordinator,
       store: profilerStore,
       tableName,
-    }).catch(() => {
-      if (!active) {
-        return;
-      }
     });
-
-    return () => {
-      active = false;
-    };
   }, [columns, connection, profilerStore, tableName]);
-
-  const fields = schema.fields;
-  const fieldNames = useMemo(() => fields.map((field) => field.name), [fields]);
-  const fieldSignature = useMemo(
-    () => fields.map((field) => `${field.name}:${field.type}`).join('|'),
-    [fields],
-  );
-
-  const filter = useMemo(() => {
-    void selectionVersion;
-    return selection.predicate();
-  }, [selection, selectionVersion]);
-
-  const baseQuery = useMemo(
-    () =>
-      buildProfilerBaseQuery({
-        columns: fieldNames,
-        filter,
-        sorting,
-        tableName,
-      }),
-    [fieldNames, filter, sorting, tableName],
-  );
-  const pageQuery = useMemo(
-    () => buildProfilerPageQuery(baseQuery, pagination).toString(),
-    [baseQuery, pagination],
-  );
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName || !fieldNames.length) {
@@ -161,7 +249,6 @@ export function useMosaicProfiler(
   }, [
     connection,
     fieldNames,
-    fieldSignature,
     pagination,
     profilerStore,
     selection,
@@ -218,14 +305,24 @@ export function useMosaicProfiler(
     categoryLimit,
     connection,
     fields,
-    fieldSignature,
     profilerStore,
     selection,
     summaryBins,
     tableName,
   ]);
+}
 
-  const profilerColumns = useMemo<MosaicProfilerColumnState[]>(
+/**
+ * Maps the schema fields and summary state into the column model consumed by
+ * the profiler header and summary cells.
+ */
+function useProfilerColumns(options: {
+  fields: ProfilerStoreState['schema']['fields'];
+  summaries: ProfilerStoreState['summaries'];
+}) {
+  const {fields, summaries} = options;
+
+  return useMemo<MosaicProfilerColumnState[]>(
     () =>
       fields.map((field) => ({
         field,
@@ -239,19 +336,105 @@ export function useMosaicProfiler(
       })),
     [fields, summaries],
   );
+}
 
-  const isLoading =
-    schema.isLoading ||
-    page.isLoading ||
-    filteredCount.isLoading ||
-    totalCount.isLoading;
+/**
+ * Collapses the aggregated profiler client state into the loading and error
+ * signals exposed from the public hook.
+ */
+function useProfilerStatus(options: {
+  filteredCount: ProfilerStoreState['filteredCount'];
+  page: ProfilerStoreState['page'];
+  schema: ProfilerStoreState['schema'];
+  summaries: ProfilerStoreState['summaries'];
+  totalCount: ProfilerStoreState['totalCount'];
+}) {
+  const {filteredCount, page, schema, summaries, totalCount} = options;
 
-  const tableError =
-    schema.error ??
-    page.error ??
-    filteredCount.error ??
-    totalCount.error ??
-    Object.values(summaries).find((summary) => summary.error)?.error;
+  return {
+    isLoading:
+      schema.isLoading ||
+      page.isLoading ||
+      filteredCount.isLoading ||
+      totalCount.isLoading,
+    tableError:
+      schema.error ??
+      page.error ??
+      filteredCount.error ??
+      totalCount.error ??
+      Object.values(summaries).find((summary) => summary.error)?.error,
+  };
+}
+
+/**
+ * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
+ * public profiler API consumed by the React table UI.
+ */
+export function useMosaicProfiler(
+  options: MosaicProfilerOptions,
+): UseMosaicProfilerReturn {
+  const {
+    categoryLimit = 20,
+    columns,
+    initialSorting = [],
+    pageSize = 100,
+    selection: providedSelection,
+    selectionName,
+    summaryBins = 18,
+    tableName,
+  } = options;
+
+  const connection = useStoreWithMosaic((state) => state.mosaic.connection);
+  const {selection, selectionVersion} = useProfilerSelection({
+    selection: providedSelection,
+    selectionName,
+  });
+  const {
+    filteredCount,
+    page,
+    pagination,
+    profilerStore,
+    schema,
+    setPagination,
+    setSorting,
+    sorting,
+    summaries,
+    totalCount,
+  } = useProfilerStoreState({
+    initialSorting,
+    pageSize,
+  });
+  const {baseQuery, fieldNames, fields, pageQuery} = useProfilerQueryState({
+    pagination,
+    schema,
+    selection,
+    selectionVersion,
+    sorting,
+    tableName,
+  });
+  useProfilerLifecycles({
+    categoryLimit,
+    columns,
+    connection,
+    fieldNames,
+    fields,
+    pageSize,
+    pagination,
+    profilerStore,
+    selection,
+    selectionVersion,
+    sorting,
+    summaryBins,
+    tableName,
+  });
+  const profilerColumns = useProfilerColumns({fields, summaries});
+  const {isLoading, tableError} = useProfilerStatus({
+    filteredCount,
+    page,
+    schema,
+    summaries,
+    totalCount,
+  });
 
   return {
     columns: profilerColumns,
