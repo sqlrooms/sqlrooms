@@ -11,10 +11,7 @@ import type {
 } from './types';
 import {createEmptySummaryState} from './utils';
 
-function resolveSetStateAction<T>(
-  next: SetStateAction<T>,
-  previous: T,
-): T {
+function resolveSetStateAction<T>(next: SetStateAction<T>, previous: T): T {
   // Preserve React-style setter semantics so hook callers can pass either
   // a concrete value or an updater function to the local profiler store.
   return typeof next === 'function'
@@ -120,6 +117,7 @@ export function createProfilerStore(options: {
       set((state) =>
         produce(state, (draft) => {
           draft.sorting = resolveSetStateAction(next, state.sorting);
+          draft.pagination.pageIndex = 0;
         }),
       );
     },

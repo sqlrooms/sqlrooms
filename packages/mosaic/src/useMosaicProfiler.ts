@@ -1,6 +1,6 @@
 import {createId} from '@paralleldrive/cuid2';
 import {type Selection} from '@uwdata/mosaic-core';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useStore} from 'zustand';
 import {useStoreWithMosaic} from './MosaicSlice';
 import type {
@@ -63,13 +63,12 @@ export function useMosaicProfiler(
   );
   const selectionVersion = useSelectionVersion(selection);
 
-  const storeRef = useRef(
+  const [profilerStore] = useState(() =>
     createProfilerStore({
       initialSorting,
       pageSize,
     }),
   );
-  const profilerStore = storeRef.current;
 
   const pagination = useStore(profilerStore, (state) => state.pagination);
   const setPagination = useStore(profilerStore, (state) => state.setPagination);
@@ -87,13 +86,15 @@ export function useMosaicProfiler(
 
   useEffect(() => {
     profilerStore.getState().resetPageIndex();
-  }, [profilerStore, selectionVersion, sorting, tableName]);
+  }, [profilerStore, selectionVersion, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
       profilerStore.getState().setSchemaSuccess([]);
       profilerStore.getState().setSchemaError(undefined);
-      profilerStore.getState().setSchemaLoading(connection.status === 'loading');
+      profilerStore
+        .getState()
+        .setSchemaLoading(connection.status === 'loading');
       return;
     }
 
@@ -122,15 +123,20 @@ export function useMosaicProfiler(
     [fields],
   );
 
+  const filter = useMemo(() => {
+    void selectionVersion;
+    return selection.predicate();
+  }, [selection, selectionVersion]);
+
   const baseQuery = useMemo(
     () =>
       buildProfilerBaseQuery({
         columns: fieldNames,
-        filter: selection.predicate(),
+        filter,
         sorting,
         tableName,
       }),
-    [fieldNames, selection, selectionVersion, sorting, tableName],
+    [fieldNames, filter, sorting, tableName],
   );
   const pageQuery = useMemo(
     () => buildProfilerPageQuery(baseQuery, pagination).toString(),

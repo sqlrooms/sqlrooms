@@ -20,6 +20,21 @@ describe('createProfilerStore', () => {
     });
   });
 
+  it('resets the page index when sorting changes', () => {
+    const store = createProfilerStore({
+      initialSorting: [],
+      pageSize: 100,
+    });
+
+    store.getState().setPagination({
+      pageIndex: 2,
+      pageSize: 100,
+    });
+    store.getState().setSorting([{desc: true, id: 'value'}]);
+
+    expect(store.getState().pagination.pageIndex).toBe(0);
+  });
+
   it('initializes empty summary state from fields', () => {
     const store = createProfilerStore({
       initialSorting: [],
