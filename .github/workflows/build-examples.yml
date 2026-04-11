@@ -1,7 +1,9 @@
 name: Build examples
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - 'examples/**'
   workflow_dispatch:
