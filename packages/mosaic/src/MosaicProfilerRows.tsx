@@ -12,7 +12,7 @@ export type MosaicProfilerRowsProps = {
   >;
 };
 
-const COLUMN_WIDTH_CLASS = 'min-w-[170px]';
+const COLUMN_WIDTH_CLASS = 'min-w-[170px] w-[170px] max-w-[170px]';
 
 function getColumnWidthClass(field: arrow.Field) {
   return isProfilerUnsupportedSummaryType(field.type)
@@ -27,6 +27,55 @@ function formatProfilerValue(type: arrow.DataType, value: unknown) {
   return undefined;
 }
 
+function SizingRow({columns}: {columns: UseMosaicProfilerReturn['columns']}) {
+  return (
+    <TableRow
+      aria-hidden="true"
+      className="pointer-events-none h-0 border-0 opacity-0 hover:bg-transparent"
+    >
+      <TableCell className="w-[48px] max-w-[48px] min-w-[48px] border-r p-0" />
+      {columns.map((column) => (
+        <TableCell
+          key={column.name}
+          className={cn(getColumnWidthClass(column.field), 'border-r p-0')}
+        />
+      ))}
+    </TableRow>
+  );
+}
+
+function EmptyStateRow({
+  columns,
+  message,
+  tone = 'muted',
+}: {
+  columns: UseMosaicProfilerReturn['columns'];
+  message: string;
+  tone?: 'error' | 'muted';
+}) {
+  return (
+    <TableRow>
+      <TableCell className="bg-background text-muted-foreground sticky left-0 z-10 w-[48px] max-w-[48px] min-w-[48px] border-r text-center" />
+      {columns.map((column, index) => (
+        <TableCell
+          key={column.name}
+          className={cn(
+            getColumnWidthClass(column.field),
+            'max-w-[320px] border-r align-top font-mono text-xs',
+            index === 0
+              ? tone === 'error'
+                ? 'p-4 text-sm text-red-500'
+                : 'text-muted-foreground p-4 text-sm'
+              : 'p-4',
+          )}
+        >
+          {index === 0 ? message : ''}
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+}
+
 export function MosaicProfilerRows({
   className,
   profiler,
@@ -34,14 +83,12 @@ export function MosaicProfilerRows({
   if (profiler.tableError) {
     return (
       <TableBody className={className}>
-        <TableRow>
-          <TableCell
-            colSpan={profiler.columns.length + 1}
-            className="p-4 text-sm text-red-500"
-          >
-            {profiler.tableError.message}
-          </TableCell>
-        </TableRow>
+        <SizingRow columns={profiler.columns} />
+        <EmptyStateRow
+          columns={profiler.columns}
+          message={profiler.tableError.message}
+          tone="error"
+        />
       </TableBody>
     );
   }
@@ -49,14 +96,8 @@ export function MosaicProfilerRows({
   if (!profiler.pageTable || profiler.pageTable.numRows === 0) {
     return (
       <TableBody className={className}>
-        <TableRow>
-          <TableCell
-            colSpan={profiler.columns.length + 1}
-            className="text-muted-foreground p-4 text-sm"
-          >
-            No rows
-          </TableCell>
-        </TableRow>
+        <SizingRow columns={profiler.columns} />
+        <EmptyStateRow columns={profiler.columns} message="No rows" />
       </TableBody>
     );
   }
@@ -70,7 +111,7 @@ export function MosaicProfilerRows({
     <TableBody className={className}>
       {rows.map((rowIndex) => (
         <TableRow key={rowIndex}>
-          <TableCell className="bg-background text-muted-foreground sticky left-0 z-10 min-w-[48px] border-r text-center">
+          <TableCell className="bg-background text-muted-foreground sticky left-0 z-10 w-[48px] max-w-[48px] min-w-[48px] border-r text-center">
             {profiler.pagination.pageIndex * profiler.pagination.pageSize +
               rowIndex +
               1}
@@ -85,17 +126,19 @@ export function MosaicProfilerRows({
                 key={column.name}
                 className={cn(
                   getColumnWidthClass(column.field),
-                  'max-w-[320px] truncate border-r align-top font-mono text-xs',
+                  'max-w-[320px] overflow-hidden border-r align-top font-mono text-xs',
                   isNumericArrowType(column.field.type) && 'text-right',
                 )}
               >
-                <ArrowCellValue
-                  fieldName={column.name}
-                  fontSizeClass="text-xs"
-                  formatValue={formatProfilerValue}
-                  type={column.field.type}
-                  value={value}
-                />
+                <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <ArrowCellValue
+                    fieldName={column.name}
+                    fontSizeClass="text-xs"
+                    formatValue={formatProfilerValue}
+                    type={column.field.type}
+                    value={value}
+                  />
+                </span>
               </TableCell>
             );
           })}

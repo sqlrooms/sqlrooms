@@ -4,9 +4,12 @@ import {
   MosaicProfilerStatusBar,
   useMosaicProfiler,
 } from '@sqlrooms/mosaic';
-import {Button, cn, Table} from '@sqlrooms/ui';
-import {CopyIcon} from 'lucide-react';
+import {cn, Table} from '@sqlrooms/ui';
 import {useRoomStore} from '../../store';
+
+const ROW_NUMBER_COLUMN_WIDTH_PX = 48;
+const DEFAULT_PROFILER_COLUMN_WIDTH_PX = 170;
+const UNSUPPORTED_PROFILER_COLUMN_WIDTH_PX = 120;
 
 export function EarthquakeProfiler({className}: {className?: string}) {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
@@ -15,6 +18,16 @@ export function EarthquakeProfiler({className}: {className?: string}) {
     selection: brush,
     tableName: 'earthquakes',
   });
+  const tableWidth =
+    ROW_NUMBER_COLUMN_WIDTH_PX +
+    profiler.columns.reduce(
+      (total, column) =>
+        total +
+        (column.kind === 'unsupported'
+          ? UNSUPPORTED_PROFILER_COLUMN_WIDTH_PX
+          : DEFAULT_PROFILER_COLUMN_WIDTH_PX),
+      0,
+    );
 
   return (
     <section
@@ -31,27 +44,18 @@ export function EarthquakeProfiler({className}: {className?: string}) {
 
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="h-full w-full overflow-auto">
-          <Table disableWrapper className="w-max min-w-full table-fixed">
+          <Table
+            disableWrapper
+            className="min-w-full table-fixed"
+            style={{width: `${tableWidth}px`}}
+          >
             <MosaicProfilerHeader profiler={profiler} />
             <MosaicProfilerRows profiler={profiler} />
           </Table>
         </div>
       </div>
 
-      <MosaicProfilerStatusBar
-        profiler={profiler}
-        renderActions={(sql) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 px-2 text-xs"
-            onClick={() => navigator.clipboard.writeText(sql)}
-          >
-            <CopyIcon className="h-3 w-3" />
-            Copy SQL
-          </Button>
-        )}
-      />
+      <MosaicProfilerStatusBar profiler={profiler} />
     </section>
   );
 }

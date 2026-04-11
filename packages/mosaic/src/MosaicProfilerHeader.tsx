@@ -15,11 +15,20 @@ export type MosaicProfilerHeaderProps = {
   profiler: Pick<UseMosaicProfilerReturn, 'columns' | 'setSorting' | 'sorting'>;
 };
 
-const COLUMN_WIDTH_CLASS = 'min-w-[170px]';
+const ROW_NUMBER_COLUMN_WIDTH_PX = 48;
+const DEFAULT_COLUMN_WIDTH_PX = 170;
+const UNSUPPORTED_COLUMN_WIDTH_PX = 120;
+const COLUMN_WIDTH_CLASS = 'min-w-[170px] w-[170px] max-w-[170px]';
 const STICKY_ROW_NUMBER_CLASS =
-  'bg-background sticky left-0 top-0 z-40 min-w-[48px] border-r text-center';
+  'bg-background sticky left-0 top-0 z-40 min-w-[48px] w-[48px] max-w-[48px] border-r text-center';
 const STICKY_COLUMN_HEADER_CLASS =
   'bg-background sticky top-0 z-30 align-top whitespace-nowrap shadow-[inset_0_-1px_0_hsl(var(--border))]';
+
+function getColumnWidthPx(column: MosaicProfilerColumnState) {
+  return isProfilerUnsupportedSummaryType(column.field.type)
+    ? UNSUPPORTED_COLUMN_WIDTH_PX
+    : DEFAULT_COLUMN_WIDTH_PX;
+}
 
 function getColumnWidthClass(column: MosaicProfilerColumnState) {
   return isProfilerUnsupportedSummaryType(column.field.type)
@@ -44,6 +53,14 @@ function setNextSortState(
   setSorting([]);
 }
 
+function formatPercentOfTotal(value: number) {
+  const maximumFractionDigits = value >= 0.1 ? 0 : value >= 0.01 ? 1 : 2;
+  return Intl.NumberFormat(undefined, {
+    maximumFractionDigits,
+    style: 'percent',
+  }).format(value);
+}
+
 function CategorySummaryCell({
   summary,
 }: {
@@ -58,7 +75,7 @@ function CategorySummaryCell({
     (bucket) => bucket.key === hoveredKey || bucket.key === summary.selectedKey,
   );
   const footerLabel = activeBucket
-    ? `${activeBucket.label} (${activeBucket.filteredCount.toLocaleString()} / ${activeBucket.totalCount.toLocaleString()})`
+    ? `${activeBucket.label} (${activeBucket.totalCount.toLocaleString()} ${activeBucket.totalCount === 1 ? 'row' : 'rows'}, ${formatPercentOfTotal(totalCount > 0 ? activeBucket.totalCount / totalCount : 0)})`
     : `${summary.bucketCount.toLocaleString()} categories`;
 
   return (
@@ -145,10 +162,6 @@ function createScale(
   };
 }
 
-function toNumber(value: number | Date) {
-  return value instanceof Date ? value.getTime() : value;
-}
-
 function formatDomainValue(value: number | Date, valueType: 'date' | 'number') {
   if (valueType === 'date') {
     const date = value instanceof Date ? value : new Date(value);
@@ -170,17 +183,16 @@ function HistogramSummaryCell({
 
   const layout = useMemo(() => {
     const width = 150;
-    const height = 52;
-    const margin = {bottom: 14, left: 4, right: 4, top: 2};
+    const height = 50;
+    const margin = {bottom: 4, left: 4, right: 4, top: 2};
+    const nullBarWidth = summary.totalNullCount > 0 ? 6 : 0;
+    const nullBarGap = nullBarWidth > 0 ? 4 : 0;
     const totalBins = summary.totalBins.length
       ? summary.totalBins
       : summary.filteredBins;
     const domain: [number | Date, number | Date] | null =
       totalBins.length > 0
-        ? [
-            totalBins[0]!.x0,
-            totalBins[totalBins.length - 1]!.x1,
-          ]
+        ? [totalBins[0]!.x0, totalBins[totalBins.length - 1]!.x1]
         : null;
     const totalMax = Math.max(
       summary.totalNullCount,
@@ -188,18 +200,25 @@ function HistogramSummaryCell({
       1,
     );
     const xScale = domain
-      ? createScale(
-          summary.valueType === 'date' ? 'utc' : 'linear',
-          domain,
-          [margin.left, width - margin.right],
-        )
+      ? createScale(summary.valueType === 'date' ? 'utc' : 'linear', domain, [
+          margin.left + nullBarWidth + nullBarGap,
+          width - margin.right,
+        ])
       : null;
     const yScale = createScale(
       'linear',
       [0, totalMax],
       [height - margin.bottom, margin.top],
     );
-    return {height, margin, width, xScale, yScale};
+    return {
+      height,
+      margin,
+      nullBarGap,
+      nullBarWidth,
+      width,
+      xScale,
+      yScale,
+    };
   }, [summary]);
 
   useEffect(() => {
@@ -211,9 +230,7 @@ function HistogramSummaryCell({
     const brushKey = [
       summary.valueType,
       layout.xScale.domain
-        .map((value) =>
-          value instanceof Date ? value.getTime() : value,
-        )
+        .map((value) => (value instanceof Date ? value.getTime() : value))
         .join(':'),
       layout.xScale.range.join(':'),
     ].join('|');
@@ -234,8 +251,14 @@ function HistogramSummaryCell({
     initializedBrushRef.current = brushKey;
   }, [layout.xScale, layout.yScale, summary.interactor, summary.valueType]);
 
+  const axisY = layout.height - layout.margin.bottom;
+  const nullBarCenter = layout.margin.left + layout.nullBarWidth / 2;
+  const xAxisStart = layout.xScale?.range[0] ?? layout.margin.left;
+  const xAxisEnd =
+    layout.xScale?.range[1] ?? layout.width - layout.margin.right;
+
   return (
-    <div className="space-y-1 pt-2">
+    <div className="space-y-0.5 pt-2">
       <svg
         ref={svgRef}
         width={layout.width}
@@ -243,6 +266,31 @@ function HistogramSummaryCell({
         viewBox={`0 0 ${layout.width} ${layout.height}`}
         className="max-w-full overflow-visible"
       >
+        {summary.totalNullCount > 0 ? (
+          <rect
+            x={layout.margin.left}
+            y={layout.yScale.apply(summary.totalNullCount)}
+            width={layout.nullBarWidth}
+            height={
+              layout.yScale.apply(0) -
+              layout.yScale.apply(summary.totalNullCount)
+            }
+            fill="hsl(var(--muted-foreground) / 0.22)"
+          />
+        ) : null}
+        {summary.totalNullCount > 0 ? (
+          <rect
+            x={layout.margin.left}
+            y={layout.yScale.apply(summary.filteredNullCount)}
+            width={layout.nullBarWidth}
+            height={
+              layout.yScale.apply(0) -
+              layout.yScale.apply(summary.filteredNullCount)
+            }
+            fill="hsl(var(--chart-1))"
+            opacity={0.95}
+          />
+        ) : null}
         {summary.totalBins.map((bin, index) => {
           const x0 = layout.xScale?.apply(bin.x0) ?? 0;
           const x1 = layout.xScale?.apply(bin.x1) ?? 0;
@@ -275,21 +323,52 @@ function HistogramSummaryCell({
           );
         })}
         <line
-          x1={layout.margin.left}
-          x2={layout.width - layout.margin.right}
-          y1={layout.height - layout.margin.bottom}
-          y2={layout.height - layout.margin.bottom}
+          x1={xAxisStart}
+          x2={xAxisEnd}
+          y1={axisY}
+          y2={axisY}
           stroke="hsl(var(--border))"
         />
+        <line
+          x1={xAxisStart}
+          x2={xAxisStart}
+          y1={axisY}
+          y2={axisY + 2.5}
+          stroke="hsl(var(--border))"
+        />
+        <line
+          x1={xAxisEnd}
+          x2={xAxisEnd}
+          y1={axisY}
+          y2={axisY + 2.5}
+          stroke="hsl(var(--border))"
+        />
+        {summary.totalNullCount > 0 ? (
+          <line
+            x1={nullBarCenter}
+            x2={nullBarCenter}
+            y1={axisY}
+            y2={axisY + 2.5}
+            stroke="hsl(var(--chart-1))"
+          />
+        ) : null}
         <g ref={brushRootRef} />
       </svg>
-      <div className="text-muted-foreground flex justify-between text-[11px] font-normal">
-        <span>
+      <div className="text-muted-foreground relative h-4 text-[11px] font-normal">
+        {summary.totalNullCount > 0 ? (
+          <span
+            className="absolute -translate-x-1/2"
+            style={{left: nullBarCenter}}
+          >
+            ∅
+          </span>
+        ) : null}
+        <span className="absolute" style={{left: xAxisStart}}>
           {summary.totalBins[0]
             ? formatDomainValue(summary.totalBins[0].x0, summary.valueType)
             : '0'}
         </span>
-        <span>
+        <span className="absolute -translate-x-full" style={{left: xAxisEnd}}>
           {summary.totalBins.at(-1)
             ? formatDomainValue(summary.totalBins.at(-1)!.x1, summary.valueType)
             : '0'}
@@ -318,58 +397,73 @@ export function MosaicProfilerHeader({
   profiler,
 }: MosaicProfilerHeaderProps) {
   return (
-    <TableHeader className={cn('sticky top-0 z-30', className)}>
-      <TableRow>
-        <TableHead className={STICKY_ROW_NUMBER_CLASS}>#</TableHead>
-        {profiler.columns.map((column) => {
-          const sortState = profiler.sorting.find(
-            (entry) => entry.id === column.name,
-          );
-          return (
-            <TableHead
-              key={column.name}
-              className={cn(
-                getColumnWidthClass(column),
-                STICKY_COLUMN_HEADER_CLASS,
-              )}
-            >
-              <div className="min-w-0">
-                <button
-                  type="button"
-                  className="flex w-full items-start gap-2 text-left"
-                  onClick={() =>
-                    setNextSortState(
-                      profiler.sorting,
-                      column.name,
-                      profiler.setSorting,
-                    )
-                  }
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">
-                      {column.name}
+    <>
+      <colgroup>
+        <col style={{width: ROW_NUMBER_COLUMN_WIDTH_PX}} />
+        {profiler.columns.map((column) => (
+          <col key={column.name} style={{width: getColumnWidthPx(column)}} />
+        ))}
+      </colgroup>
+      <TableHeader className={cn('sticky top-0 z-30', className)}>
+        <TableRow>
+          <TableHead className={STICKY_ROW_NUMBER_CLASS}>#</TableHead>
+          {profiler.columns.map((column) => {
+            const sortState = profiler.sorting.find(
+              (entry) => entry.id === column.name,
+            );
+            return (
+              <TableHead
+                key={column.name}
+                className={cn(
+                  getColumnWidthClass(column),
+                  STICKY_COLUMN_HEADER_CLASS,
+                )}
+              >
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    className="group relative flex w-full items-start gap-2 pr-5 text-left"
+                    onClick={() =>
+                      setNextSortState(
+                        profiler.sorting,
+                        column.name,
+                        profiler.setSorting,
+                      )
+                    }
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">
+                        {column.name}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="mt-1 max-w-full truncate text-[10px] opacity-60"
+                      >
+                        {String(column.field.type)}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="mt-1 max-w-full truncate text-[10px] opacity-60"
-                    >
-                      {String(column.field.type)}
-                    </Badge>
-                  </div>
-                  {sortState ? (
-                    sortState.desc ? (
-                      <ChevronDownIcon className="mt-1 h-4 w-4 shrink-0" />
-                    ) : (
-                      <ChevronUpIcon className="mt-1 h-4 w-4 shrink-0" />
-                    )
-                  ) : null}
-                </button>
-                <SummaryCell column={column} />
-              </div>
-            </TableHead>
-          );
-        })}
-      </TableRow>
-    </TableHeader>
+                    <span className="text-muted-foreground pointer-events-none absolute top-1 right-0 flex h-4 w-4 items-center justify-center">
+                      {sortState ? (
+                        sortState.desc ? (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronUpIcon className="h-4 w-4" />
+                        )
+                      ) : (
+                        <span className="flex h-4 w-4 flex-col items-center justify-center opacity-0 transition-opacity group-hover:opacity-60">
+                          <ChevronUpIcon className="-mb-1 h-3 w-3" />
+                          <ChevronDownIcon className="-mt-1 h-3 w-3" />
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  <SummaryCell column={column} />
+                </div>
+              </TableHead>
+            );
+          })}
+        </TableRow>
+      </TableHeader>
+    </>
   );
 }
