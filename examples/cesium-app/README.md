@@ -5,7 +5,7 @@ A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
 ## Features
 
 - **3D Globe**: Interactive Cesium-powered 3D globe
-- **Earthquake Data**: Real-time visualization of earthquakes magnitude 4.0+
+- **Earthquake Data**: Real-time visualization of earthquakes magnitude 5.0+
 - **Time Animation**: Animate through earthquake timeline with clock controls
 - **SQL Queries**: Data loaded from DuckDB via SQL queries
 - **Camera Persistence**: Camera position saved across page reloads
@@ -42,7 +42,7 @@ A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
 ### Timeline Controls
 
 - **Play/Pause**: Start/stop time animation
-- **Speed slider**: Adjust animation speed (0.1x to 100x)
+- **Speed slider**: Adjust animation speed on a logarithmic scale from 1x up to 1 year/second
 - **Timeline**: Scrub through time range
 
 ### Layers

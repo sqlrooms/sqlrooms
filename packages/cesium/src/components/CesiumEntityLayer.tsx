@@ -86,13 +86,6 @@ export const CesiumEntityLayer: React.FC<CesiumEntityLayerProps> = ({
     const startTime = timeEntities[0]!.time!;
     const stopTime = timeEntities[timeEntities.length - 1]!.time!;
 
-    console.log('[CesiumEntityLayer] Setting clock range:', {
-      startTime,
-      stopTime,
-      entityCount: entities.length,
-      hasAvailability: !!entities[0]?.availability,
-    });
-
     setClockConfig({startTime, stopTime});
     setCurrentTime(startTime);
     hasSetClockRef.current = true;
