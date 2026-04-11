@@ -10,8 +10,9 @@ import type {
 } from './types';
 
 export type CategoryCountRow = {
-  key: string;
+  bucketKind: 'null' | 'unique' | 'value';
   total: number;
+  typedValue: unknown;
 };
 
 type QueryWhereInput = Parameters<ReturnType<typeof Query.from>['where']>[0];
@@ -138,16 +139,24 @@ export function buildProfilerPageQuery(
   baseQuery: ReturnType<typeof buildProfilerBaseQuery>,
   pagination: MosaicProfilerPaginationState,
 ) {
-  const pageSize = Math.min(
-    1000,
-    Math.max(1, Math.trunc(Number(pagination.pageSize) || 0) || 100),
-  );
-  const pageIndex = Math.max(0, Math.trunc(Number(pagination.pageIndex) || 0));
+  const {pageIndex, pageSize} = normalizeProfilerPagination(pagination);
 
   return baseQuery
     .clone()
     .limit(pageSize)
     .offset(pageIndex * pageSize);
+}
+
+export function normalizeProfilerPagination(
+  pagination: Partial<MosaicProfilerPaginationState> | undefined,
+): MosaicProfilerPaginationState {
+  const pageSize = Math.min(
+    1000,
+    Math.max(1, Math.trunc(Number(pagination?.pageSize) || 0) || 100),
+  );
+  const pageIndex = Math.max(0, Math.trunc(Number(pagination?.pageIndex) || 0));
+
+  return {pageIndex, pageSize};
 }
 
 export function buildCountQuery(args: {
@@ -208,30 +217,45 @@ export function buildCategorySummaryQuery(
   const col = column(fieldName);
   const counts = Query.from({source: tableName})
     .select({
-      value: sql`CASE
-        WHEN ${col} IS NULL THEN '__sqlrooms_null__'
-        ELSE CAST(${col} AS VARCHAR)
+      bucket_kind: sql`CASE
+        WHEN ${col} IS NULL THEN 'null'
+        ELSE 'value'
       END`,
+      typed_value: col,
       count: count(),
     })
-    .groupby(
+    .groupby([
       sql`CASE
-      WHEN ${col} IS NULL THEN '__sqlrooms_null__'
-      ELSE CAST(${col} AS VARCHAR)
-    END`,
-    )
+        WHEN ${col} IS NULL THEN 'null'
+        ELSE 'value'
+      END`,
+      col,
+    ])
     .where(filter ?? []);
 
   return Query.with({counts})
     .select({
-      key: sql`CASE
-        WHEN "count" = 1 AND "value" != '__sqlrooms_null__' THEN '__sqlrooms_unique__'
-        ELSE "value"
+      bucketKind: sql`CASE
+        WHEN "count" = 1 AND "bucket_kind" = 'value' THEN 'unique'
+        ELSE "bucket_kind"
+      END`,
+      typedValue: sql`CASE
+        WHEN "count" = 1 AND "bucket_kind" = 'value' THEN NULL
+        ELSE "typed_value"
       END`,
       total: sum('count'),
     })
     .from('counts')
-    .groupby('key');
+    .groupby([
+      sql`CASE
+        WHEN "count" = 1 AND "bucket_kind" = 'value' THEN 'unique'
+        ELSE "bucket_kind"
+      END`,
+      sql`CASE
+        WHEN "count" = 1 AND "bucket_kind" = 'value' THEN NULL
+        ELSE "typed_value"
+      END`,
+    ]);
 }
 
 export function splitHistogramBins(
@@ -272,16 +296,15 @@ export function buildCategoryBuckets(
   categoryLimit: number,
   selectedKey?: string,
 ) {
-  const totalByKey = new Map(totalRows.map((row) => [row.key, row.total]));
+  const totalByKey = new Map(
+    totalRows.map((row) => [serializeCategoryBucketKey(row), row.total]),
+  );
   const filteredByKey = new Map(
-    filteredRows.map((row) => [row.key, row.total]),
+    filteredRows.map((row) => [serializeCategoryBucketKey(row), row.total]),
   );
 
   const baseRows = totalRows
-    .filter(
-      (row) =>
-        row.key !== '__sqlrooms_null__' && row.key !== '__sqlrooms_unique__',
-    )
+    .filter((row) => row.bucketKind === 'value')
     .slice()
     .sort(
       (left: CategoryCountRow, right: CategoryCountRow) =>
@@ -291,10 +314,10 @@ export function buildCategoryBuckets(
   const visibleRows = baseRows.slice(0, categoryLimit);
   const overflowRows = baseRows.slice(categoryLimit);
   const buckets: MosaicProfilerCategoryBucket[] = visibleRows.map((row) => ({
-    filteredCount: filteredByKey.get(row.key) ?? 0,
-    key: row.key,
+    filteredCount: filteredByKey.get(serializeCategoryBucketKey(row)) ?? 0,
+    key: serializeCategoryBucketKey(row),
     kind: 'value',
-    label: row.key,
+    label: String(row.typedValue),
     selectable: true,
     totalCount: row.total,
   }));
@@ -305,13 +328,16 @@ export function buildCategoryBuckets(
   );
   const overflowFilteredCount = overflowRows.reduce(
     (acc: number, row: CategoryCountRow) =>
-      acc + (filteredByKey.get(row.key) ?? 0),
+      acc + (filteredByKey.get(serializeCategoryBucketKey(row)) ?? 0),
     0,
   );
   if (overflowTotalCount > 0) {
     buckets.push({
       filteredCount: overflowFilteredCount,
-      key: '__sqlrooms_overflow__',
+      key: serializeCategoryBucketKey({
+        bucketKind: 'unique',
+        typedValue: '__sqlrooms_overflow__',
+      }),
       kind: 'overflow',
       label: `${overflowRows.length} more`,
       selectable: false,
@@ -319,11 +345,15 @@ export function buildCategoryBuckets(
     });
   }
 
-  const uniqueTotalCount = totalByKey.get('__sqlrooms_unique__') ?? 0;
+  const uniqueKey = serializeCategoryBucketKey({
+    bucketKind: 'unique',
+    typedValue: null,
+  });
+  const uniqueTotalCount = totalByKey.get(uniqueKey) ?? 0;
   if (uniqueTotalCount > 0) {
     buckets.push({
-      filteredCount: filteredByKey.get('__sqlrooms_unique__') ?? 0,
-      key: '__sqlrooms_unique__',
+      filteredCount: filteredByKey.get(uniqueKey) ?? 0,
+      key: uniqueKey,
       kind: 'unique',
       label: 'unique',
       selectable: false,
@@ -331,11 +361,15 @@ export function buildCategoryBuckets(
     });
   }
 
-  const nullTotalCount = totalByKey.get('__sqlrooms_null__') ?? 0;
+  const nullKey = serializeCategoryBucketKey({
+    bucketKind: 'null',
+    typedValue: null,
+  });
+  const nullTotalCount = totalByKey.get(nullKey) ?? 0;
   if (nullTotalCount > 0) {
     buckets.push({
-      filteredCount: filteredByKey.get('__sqlrooms_null__') ?? 0,
-      key: '__sqlrooms_null__',
+      filteredCount: filteredByKey.get(nullKey) ?? 0,
+      key: nullKey,
       kind: 'null',
       label: 'null',
       selectable: true,
@@ -351,12 +385,93 @@ export function buildCategoryBuckets(
 }
 
 export function isSelectableCategoryKey(key: string) {
-  return key !== '__sqlrooms_overflow__' && key !== '__sqlrooms_unique__';
+  const parsedKey = parseCategoryBucketKey(key);
+  return (
+    parsedKey?.bucketKind !== 'unique' &&
+    parsedKey?.typedValue !== '__sqlrooms_overflow__'
+  );
 }
 
 export function categoryKeyToSelectionValue(key?: string) {
   if (key === undefined) return undefined;
-  return key === '__sqlrooms_null__' ? null : key;
+  const parsedKey = parseCategoryBucketKey(key);
+  if (!parsedKey || parsedKey.bucketKind === 'unique') {
+    return undefined;
+  }
+  return parsedKey.bucketKind === 'null' ? null : parsedKey.typedValue;
+}
+
+function normalizeCategoryBucketValue(value: unknown): unknown {
+  if (value instanceof Date) {
+    return {
+      type: 'date',
+      value: value.toISOString(),
+    };
+  }
+  if (typeof value === 'bigint') {
+    return {
+      type: 'bigint',
+      value: value.toString(),
+    };
+  }
+  return value;
+}
+
+function denormalizeCategoryBucketValue(value: unknown): unknown {
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  if (
+    'type' in value &&
+    'value' in value &&
+    value.type === 'date' &&
+    typeof value.value === 'string'
+  ) {
+    return new Date(value.value);
+  }
+
+  if (
+    'type' in value &&
+    'value' in value &&
+    value.type === 'bigint' &&
+    typeof value.value === 'string'
+  ) {
+    return BigInt(value.value);
+  }
+
+  return value;
+}
+
+export function serializeCategoryBucketKey(row: {
+  bucketKind: CategoryCountRow['bucketKind'];
+  typedValue: unknown;
+}) {
+  return JSON.stringify([
+    row.bucketKind,
+    normalizeCategoryBucketValue(row.typedValue),
+  ]);
+}
+
+export function parseCategoryBucketKey(key: string):
+  | {
+      bucketKind: CategoryCountRow['bucketKind'];
+      typedValue: unknown;
+    }
+  | undefined {
+  try {
+    const parsed = JSON.parse(key) as [CategoryCountRow['bucketKind'], unknown];
+    if (!Array.isArray(parsed) || parsed.length !== 2) {
+      return undefined;
+    }
+
+    return {
+      bucketKind: parsed[0],
+      typedValue: denormalizeCategoryBucketValue(parsed[1]),
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 export function createEmptySummaryState(

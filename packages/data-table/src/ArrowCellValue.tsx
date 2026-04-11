@@ -180,9 +180,9 @@ export function ArrowCellValue({
           </div>
 
           <div className="max-h-[300px] min-h-[100px] overflow-auto">
-            {isJsonValue && parsedJson ? (
+            {isJsonValue && parsedJson !== undefined ? (
               <JsonCodeMirrorEditor
-                value={parsedJson}
+                value={parsedJson === null ? 'null' : parsedJson}
                 readOnly={true}
                 options={{
                   lineNumbers: false,

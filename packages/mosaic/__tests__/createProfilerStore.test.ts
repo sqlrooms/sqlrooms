@@ -35,6 +35,28 @@ describe('createProfilerStore', () => {
     expect(store.getState().pagination.pageIndex).toBe(0);
   });
 
+  it('normalizes pagination values before exposing them from the store', () => {
+    const store = createProfilerStore({
+      initialSorting: [],
+      pageSize: 0,
+    });
+
+    expect(store.getState().pagination).toEqual({
+      pageIndex: 0,
+      pageSize: 100,
+    });
+
+    store.getState().setPagination({
+      pageIndex: -5,
+      pageSize: 5000,
+    });
+
+    expect(store.getState().pagination).toEqual({
+      pageIndex: 0,
+      pageSize: 1000,
+    });
+  });
+
   it('initializes empty summary state from fields', () => {
     const store = createProfilerStore({
       initialSorting: [],

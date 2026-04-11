@@ -1,9 +1,12 @@
 import {sql} from '@uwdata/mosaic-sql';
 import {
   buildCategoryBuckets,
+  buildCategorySummaryQuery,
   buildDistinctCountQuery,
   buildProfilerBaseQuery,
   buildProfilerPageQuery,
+  normalizeProfilerPagination,
+  serializeCategoryBucketKey,
   rowsFromQueryResult,
   splitHistogramBins,
 } from '../src/profiler/utils';
@@ -41,40 +44,74 @@ describe('profiler utils', () => {
     expect(page.toString()).toContain('OFFSET 0');
   });
 
+  it('normalizes pagination values for store/query consumers', () => {
+    expect(
+      normalizeProfilerPagination({
+        pageIndex: -3,
+        pageSize: Number.NaN,
+      }),
+    ).toEqual({
+      pageIndex: 0,
+      pageSize: 100,
+    });
+    expect(
+      normalizeProfilerPagination({
+        pageIndex: 2.9,
+        pageSize: 5000,
+      }),
+    ).toEqual({
+      pageIndex: 2,
+      pageSize: 1000,
+    });
+  });
+
   it('builds category buckets with overflow, unique, and null buckets', () => {
     const result = buildCategoryBuckets(
       [
-        {key: 'Mx', total: 8},
-        {key: 'Md', total: 4},
-        {key: '__sqlrooms_unique__', total: 2},
-        {key: '__sqlrooms_null__', total: 1},
-        {key: 'Ml', total: 1},
+        {bucketKind: 'value', total: 8, typedValue: 'Mx'},
+        {bucketKind: 'value', total: 4, typedValue: 'Md'},
+        {bucketKind: 'unique', total: 2, typedValue: null},
+        {bucketKind: 'null', total: 1, typedValue: null},
+        {bucketKind: 'value', total: 1, typedValue: 'Ml'},
       ],
       [
-        {key: 'Mx', total: 10},
-        {key: 'Md', total: 5},
-        {key: 'Ml', total: 3},
-        {key: '__sqlrooms_unique__', total: 2},
-        {key: '__sqlrooms_null__', total: 1},
+        {bucketKind: 'value', total: 10, typedValue: 'Mx'},
+        {bucketKind: 'value', total: 5, typedValue: 'Md'},
+        {bucketKind: 'value', total: 3, typedValue: 'Ml'},
+        {bucketKind: 'unique', total: 2, typedValue: null},
+        {bucketKind: 'null', total: 1, typedValue: null},
       ],
       2,
-      'Mx',
+      serializeCategoryBucketKey({bucketKind: 'value', typedValue: 'Mx'}),
     );
 
     expect(result.bucketCount).toBe(5);
     expect(result.buckets.map((bucket) => bucket.key)).toEqual([
-      'Mx',
-      'Md',
-      '__sqlrooms_overflow__',
-      '__sqlrooms_unique__',
-      '__sqlrooms_null__',
+      serializeCategoryBucketKey({bucketKind: 'value', typedValue: 'Mx'}),
+      serializeCategoryBucketKey({bucketKind: 'value', typedValue: 'Md'}),
+      serializeCategoryBucketKey({
+        bucketKind: 'unique',
+        typedValue: '__sqlrooms_overflow__',
+      }),
+      serializeCategoryBucketKey({bucketKind: 'unique', typedValue: null}),
+      serializeCategoryBucketKey({bucketKind: 'null', typedValue: null}),
     ]);
     expect(
-      result.buckets.find((bucket) => bucket.key === '__sqlrooms_overflow__'),
+      result.buckets.find((bucket) => bucket.kind === 'overflow'),
     ).toMatchObject({
       filteredCount: 1,
       totalCount: 3,
     });
+  });
+
+  it('builds category summary SQL without sentinel key strings', () => {
+    const query = buildCategorySummaryQuery('earthquakes', 'MagType');
+    const sqlText = query.toString();
+
+    expect(sqlText).toContain(`'null'`);
+    expect(sqlText).toContain(`'unique'`);
+    expect(sqlText).not.toContain('__sqlrooms_null__');
+    expect(sqlText).not.toContain('__sqlrooms_unique__');
   });
 
   it('builds a distinct-count query for unsupported summary columns', () => {

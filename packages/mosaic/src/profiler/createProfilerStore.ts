@@ -9,7 +9,7 @@ import type {
   MosaicProfilerSorting,
   MosaicProfilerSummaryState,
 } from './types';
-import {createEmptySummaryState} from './utils';
+import {createEmptySummaryState, normalizeProfilerPagination} from './utils';
 
 function resolveSetStateAction<T>(next: SetStateAction<T>, previous: T): T {
   // Preserve React-style setter semantics so hook callers can pass either
@@ -63,10 +63,7 @@ export function createProfilerStore(options: {
     filteredCount: {isLoading: false},
     lastNonEmptyPageTable: undefined,
     page: {isLoading: false},
-    pagination: {
-      pageIndex: 0,
-      pageSize,
-    },
+    pagination: normalizeProfilerPagination({pageIndex: 0, pageSize}),
     schema: {
       fields: [],
       isLoading: false,
@@ -91,7 +88,9 @@ export function createProfilerStore(options: {
     setPagination: (next) => {
       set((state) =>
         produce(state, (draft) => {
-          draft.pagination = resolveSetStateAction(next, state.pagination);
+          draft.pagination = normalizeProfilerPagination(
+            resolveSetStateAction(next, state.pagination),
+          );
         }),
       );
     },
@@ -152,8 +151,10 @@ export function createProfilerStore(options: {
           if (draft.pagination.pageSize === nextPageSize) {
             return;
           }
-          draft.pagination.pageIndex = 0;
-          draft.pagination.pageSize = nextPageSize;
+          draft.pagination = normalizeProfilerPagination({
+            pageIndex: 0,
+            pageSize: nextPageSize,
+          });
         }),
       );
     },
@@ -177,7 +178,10 @@ export function createProfilerStore(options: {
     resetPageIndex: () => {
       set((state) =>
         produce(state, (draft) => {
-          draft.pagination.pageIndex = 0;
+          draft.pagination = normalizeProfilerPagination({
+            ...draft.pagination,
+            pageIndex: 0,
+          });
         }),
       );
     },

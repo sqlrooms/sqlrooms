@@ -47,8 +47,10 @@ export class ProfilerCategoryClient extends MosaicClient {
   }
 
   private emitSummary() {
-    const filteredRows = this.filteredRows ?? this.totalRows ?? [];
-    const totalRows = this.totalRows ?? filteredRows;
+    const filteredRows =
+      this.filteredRows ?? (this.filteredLoading ? (this.totalRows ?? []) : []);
+    const totalRows =
+      this.totalRows ?? (this.totalLoading ? (this.filteredRows ?? []) : []);
     const {bucketCount, buckets} = buildCategoryBuckets(
       filteredRows,
       totalRows,
@@ -76,9 +78,7 @@ export class ProfilerCategoryClient extends MosaicClient {
   setTotalLoading(isLoading: boolean) {
     this.totalLoading = isLoading;
     if (isLoading) {
-      this.filteredError = undefined;
-      this.filteredLoading = false;
-      this.filteredRows = undefined;
+      this.totalError = undefined;
     }
     this.emitSummary();
   }
@@ -97,9 +97,7 @@ export class ProfilerCategoryClient extends MosaicClient {
 
   override queryPending(): this {
     this.filteredLoading = true;
-    this.totalError = undefined;
-    this.totalLoading = false;
-    this.totalRows = undefined;
+    this.filteredError = undefined;
     this.emitSummary();
     return this;
   }

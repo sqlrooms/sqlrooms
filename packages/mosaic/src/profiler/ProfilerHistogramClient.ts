@@ -79,20 +79,26 @@ export class ProfilerHistogramClient extends MosaicClient {
   }
 
   private emitSummary() {
-    const totalRows = this.totalBins ?? this.filteredBins ?? [];
+    const totalRows =
+      this.totalBins ?? (this.totalLoading ? (this.filteredBins ?? []) : []);
     const total = splitHistogramBins(totalRows);
-    const filteredRows = this.filteredBins ?? totalRows;
+    const filteredRows =
+      this.filteredBins ?? (this.filteredLoading ? (this.totalBins ?? []) : []);
     const filtered = splitHistogramBins(filteredRows);
 
     this.onStateChange({
       error: this.filteredError ?? this.totalError,
       filteredBins: filtered.bins,
-      filteredNullCount: this.filteredNullCount ?? filtered.nullCount,
+      filteredNullCount:
+        this.filteredNullCount ??
+        (this.filteredLoading ? total.nullCount : filtered.nullCount),
       interactor: this.interactor,
       isLoading: this.filteredLoading || this.totalLoading,
       kind: 'histogram',
       totalBins: total.bins,
-      totalNullCount: this.totalNullCount ?? total.nullCount,
+      totalNullCount:
+        this.totalNullCount ??
+        (this.totalLoading ? filtered.nullCount : total.nullCount),
       valueType: this.valueType,
     });
   }
@@ -131,6 +137,9 @@ export class ProfilerHistogramClient extends MosaicClient {
 
   setTotalLoading(isLoading: boolean) {
     this.totalLoading = isLoading;
+    if (isLoading) {
+      this.totalError = undefined;
+    }
     this.emitSummary();
   }
 
@@ -145,6 +154,7 @@ export class ProfilerHistogramClient extends MosaicClient {
 
   override queryPending(): this {
     this.filteredLoading = true;
+    this.filteredError = undefined;
     this.emitSummary();
     return this;
   }

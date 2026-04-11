@@ -1,6 +1,7 @@
 import {Selection} from '@uwdata/mosaic-core';
 import {ProfilerCategoryClient} from '../src/profiler/ProfilerCategoryClient';
 import {ProfilerHistogramClient} from '../src/profiler/ProfilerHistogramClient';
+import {serializeCategoryBucketKey} from '../src/profiler/utils';
 
 describe('profiler summary clients', () => {
   it('updates category selections and resets local state', () => {
@@ -18,15 +19,19 @@ describe('profiler summary clients', () => {
 
     client.queryResult({
       toArray: () => [
-        {key: 'Mx', total: 12},
-        {key: 'Md', total: 8},
-        {key: '__sqlrooms_null__', total: 1},
+        {bucketKind: 'value', total: 12, typedValue: 'Mx'},
+        {bucketKind: 'value', total: 8, typedValue: 'Md'},
+        {bucketKind: 'null', total: 1, typedValue: null},
       ],
     });
 
-    client.toggleValue('Mx');
+    const selectedKey = serializeCategoryBucketKey({
+      bucketKind: 'value',
+      typedValue: 'Mx',
+    });
+    client.toggleValue(selectedKey);
     expect(selection.active.value).toBe('Mx');
-    expect(latest.selectedKey).toBe('Mx');
+    expect(latest.selectedKey).toBe(selectedKey);
 
     selection.reset();
     expect(latest.selectedKey).toBeUndefined();
@@ -169,14 +174,14 @@ describe('profiler summary clients', () => {
     });
 
     (client as any).totalRows = [
-      {key: 'Mx', total: 12},
-      {key: 'Md', total: 8},
+      {bucketKind: 'value', total: 12, typedValue: 'Mx'},
+      {bucketKind: 'value', total: 8, typedValue: 'Md'},
     ];
 
     client.queryResult({
       toArray: () => [
-        {key: 'Mx', total: 4},
-        {key: 'Md', total: 2},
+        {bucketKind: 'value', total: 4, typedValue: 'Mx'},
+        {bucketKind: 'value', total: 2, typedValue: 'Md'},
       ],
     });
 
@@ -189,8 +194,16 @@ describe('profiler summary clients', () => {
         bucket.totalCount,
       ]),
     ).toEqual([
-      ['Mx', 4, 4],
-      ['Md', 2, 2],
+      [
+        serializeCategoryBucketKey({bucketKind: 'value', typedValue: 'Mx'}),
+        4,
+        12,
+      ],
+      [
+        serializeCategoryBucketKey({bucketKind: 'value', typedValue: 'Md'}),
+        2,
+        8,
+      ],
     ]);
   });
 });
