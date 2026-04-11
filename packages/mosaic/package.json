@@ -41,6 +41,9 @@
     "react": ">=18",
     "react-dom": ">=18"
   },
+  "devDependencies": {
+    "ts-jest": "^29.4.4"
+  },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
