@@ -72,14 +72,34 @@ export function useSqlToCesiumEntities(
       }
     }
 
-    return rows.map((row: any, i: number) => {
+    const descriptors: CesiumEntityDescriptor[] = [];
+    rows.forEach((row: any, i: number) => {
       const lon = Number(row[mapping.longitude]);
       const lat = Number(row[mapping.latitude]);
       const alt = mapping.altitude ? Number(row[mapping.altitude]) : 0;
 
-      const timeStr = mapping.time
-        ? toIso8601(String(row[mapping.time]))
-        : undefined;
+      // Skip rows with invalid/missing coordinates — Cartesian3.fromDegrees
+      // silently accepts NaN and produces corrupt entities.
+      if (
+        !Number.isFinite(lon) ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(alt)
+      ) {
+        return;
+      }
+
+      let timeStr: string | undefined;
+      if (mapping.time) {
+        const rawTime = row[mapping.time];
+        if (rawTime == null) return;
+        try {
+          timeStr = toIso8601(String(rawTime));
+          // Validate the ISO string actually parses.
+          JulianDate.fromIso8601(timeStr);
+        } catch {
+          return;
+        }
+      }
 
       // Build availability interval: visible from event time to end of dataset
       let availability: TimeIntervalCollection | undefined;
@@ -94,7 +114,7 @@ export function useSqlToCesiumEntities(
         }
       }
 
-      return {
+      descriptors.push({
         id: `${layerConfig.id}-${i}`,
         position: Cartesian3.fromDegrees(lon, lat, alt),
         label: mapping.label ? String(row[mapping.label]) : undefined,
@@ -102,7 +122,8 @@ export function useSqlToCesiumEntities(
         availability,
         color: mapping.color ? String(row[mapping.color]) : undefined,
         size: mapping.size ? Number(row[mapping.size]) : undefined,
-      };
+      });
     });
+    return descriptors;
   }, [rows, mapping, layerConfig.id]);
 }

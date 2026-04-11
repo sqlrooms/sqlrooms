@@ -10,7 +10,7 @@ import {z} from 'zod';
 
 /**
  * Camera position in cartographic coordinates (serializable).
- * All angles in radians, distances in meters.
+ * Longitude/latitude in degrees; heading/pitch/roll in radians; distances in meters.
  */
 export const CameraPosition = z.object({
   /** Longitude in degrees */
@@ -167,10 +167,9 @@ const DEFAULT_CESIUM_CONFIG: CesiumSliceConfig = {
 
 /**
  * Factory function for creating default Cesium configuration.
- * Provides sensible defaults for initial setup.
- *
- * @returns Default CesiumSliceConfig object
+ * Returns a fresh deep clone so callers can safely mutate the result
+ * without affecting the shared defaults.
  */
 export function createDefaultCesiumConfig(): CesiumSliceConfig {
-  return DEFAULT_CESIUM_CONFIG;
+  return structuredClone(DEFAULT_CESIUM_CONFIG);
 }

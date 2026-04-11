@@ -4,6 +4,7 @@
  */
 
 import {useEffect, useRef} from 'react';
+import {useShallow} from 'zustand/react/shallow';
 import {JulianDate, ClockRange, type Clock, type Viewer} from 'cesium';
 import {useStoreWithCesium} from '../cesium-slice';
 import type {ClockConfig} from '../cesium-config';
@@ -79,7 +80,18 @@ function applyClockConfigToViewer(viewer: Viewer, config: ClockConfig): void {
  */
 export function useClockSync(): void {
   const viewer = useStoreWithCesium((s) => s.cesium.viewer);
-  const clockConfig = useStoreWithCesium((s) => s.cesium.config.clock);
+  // Select only store→Cesium inputs. Excluding currentTime prevents a feedback
+  // loop: the tick handler writes currentTime to the store, which would
+  // otherwise retrigger this effect and overwrite Cesium's live clock.
+  const clockInputs = useStoreWithCesium(
+    useShallow((s) => ({
+      startTime: s.cesium.config.clock.startTime,
+      stopTime: s.cesium.config.clock.stopTime,
+      multiplier: s.cesium.config.clock.multiplier,
+      shouldAnimate: s.cesium.config.clock.shouldAnimate,
+      clockRange: s.cesium.config.clock.clockRange,
+    })),
+  );
   const setCurrentTime = useStoreWithCesium((s) => s.cesium.setCurrentTime);
   const lastSyncRef = useRef(0);
 
@@ -111,12 +123,11 @@ export function useClockSync(): void {
   // Store → Cesium: Apply config changes to viewer clock
   useEffect(() => {
     if (!viewer) return;
-    applyClockConfigToViewer(viewer, clockConfig);
-  }, [viewer, clockConfig]);
+    applyClockConfigToViewer(viewer, clockInputs);
+  }, [viewer, clockInputs]);
 
   // Timeline zoom: only update when startTime/stopTime change (not on every currentTime tick)
-  const startTime = useStoreWithCesium((s) => s.cesium.config.clock.startTime);
-  const stopTime = useStoreWithCesium((s) => s.cesium.config.clock.stopTime);
+  const {startTime, stopTime} = clockInputs;
 
   useEffect(() => {
     if (!viewer || !startTime || !stopTime || !viewer.timeline) return;

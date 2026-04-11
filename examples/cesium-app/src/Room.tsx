@@ -2,7 +2,6 @@
  * Room component for Cesium Earthquake Explorer.
  */
 
-import {useEffect} from 'react';
 import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
@@ -11,11 +10,6 @@ import {roomStore} from './store';
 
 export const Room = () => {
   const sqlEditorDisclosure = useDisclosure();
-
-  // Initialize room on mount
-  useEffect(() => {
-    roomStore.getState().initialize?.();
-  }, []);
 
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
