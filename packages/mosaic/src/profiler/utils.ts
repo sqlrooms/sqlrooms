@@ -1,3 +1,4 @@
+import type {FieldInfo} from '@uwdata/mosaic-core';
 import {asc, column, count, desc, Query, sql, sum} from '@uwdata/mosaic-sql';
 import * as arrow from 'apache-arrow';
 import type {
@@ -57,6 +58,60 @@ export function buildSchemaQuery(
     .limit(1);
 }
 
+function createProfilerArrowType(sqlType: string): arrow.DataType {
+  const type = sqlType.toLowerCase();
+
+  if (/^bool(ean)?/.test(type)) {
+    return new arrow.Bool();
+  }
+
+  if (/^date$/.test(type)) {
+    return new arrow.DateDay();
+  }
+
+  if (/^time$|^timestamp|^timestamptz/.test(type)) {
+    return new arrow.TimestampMillisecond();
+  }
+
+  if (
+    /^(tinyint|smallint|integer|bigint|hugeint|utinyint|usmallint|uinteger|ubigint|uhugeint)/.test(
+      type,
+    )
+  ) {
+    return new arrow.Int64();
+  }
+
+  if (/^(decimal|numeric)/.test(type)) {
+    return new arrow.Decimal(38, 9);
+  }
+
+  if (/^(double|float|real)/.test(type)) {
+    return new arrow.Float64();
+  }
+
+  if (/^(blob|bytea|binary|varbinary)/.test(type)) {
+    return new arrow.Binary();
+  }
+
+  if (/^geometry/.test(type)) {
+    return {
+      toString() {
+        return sqlType;
+      },
+    } as arrow.DataType;
+  }
+
+  return new arrow.Utf8();
+}
+
+export function fieldInfoToProfilerField(info: FieldInfo): arrow.Field {
+  return new arrow.Field(
+    info.column,
+    createProfilerArrowType(info.sqlType),
+    info.nullable,
+  );
+}
+
 export function buildProfilerBaseQuery(args: {
   columns?: string[];
   filter?: QueryWhereInput;
@@ -106,6 +161,30 @@ export function buildDistinctCountQuery(args: {
       count: count(column(args.fieldName)).distinct(),
     })
     .where(args.filter ?? []);
+}
+
+export function readCountData(data: unknown): number | undefined {
+  if (!data || typeof data !== 'object') {
+    return undefined;
+  }
+
+  if ('toArray' in data && typeof data.toArray === 'function') {
+    return (data.toArray() as Array<{count?: number}>)[0]?.count;
+  }
+
+  if ('get' in data && typeof data.get === 'function') {
+    return (data.get(0) as {count?: number} | undefined)?.count;
+  }
+
+  return undefined;
+}
+
+export function rowsFromQueryResult<T>(data: unknown): T[] {
+  if (!data || typeof data !== 'object' || !('toArray' in data)) {
+    return [];
+  }
+
+  return Array.from((data as {toArray(): T[]}).toArray());
 }
 
 export function buildCategorySummaryQuery(

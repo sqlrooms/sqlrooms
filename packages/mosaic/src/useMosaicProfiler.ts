@@ -1,10 +1,28 @@
 import {createId} from '@paralleldrive/cuid2';
-import {useSql} from '@sqlrooms/duckdb';
-import {type MosaicClient, type Selection} from '@uwdata/mosaic-core';
+import {
+  queryFieldInfo,
+  type MosaicClient,
+  type Selection,
+} from '@uwdata/mosaic-core';
+import * as arrow from 'apache-arrow';
 import {useEffect, useMemo, useState} from 'react';
 import {useStoreWithMosaic} from './MosaicSlice';
-import {ProfilerCategoryClient} from './profiler/ProfilerCategoryClient';
-import {ProfilerHistogramClient} from './profiler/ProfilerHistogramClient';
+import {
+  ProfilerCategoryClient,
+  ProfilerCategoryTotalClient,
+} from './profiler/ProfilerCategoryClient';
+import {
+  ProfilerCountClient,
+  type ProfilerCountState,
+} from './profiler/ProfilerCountClient';
+import {
+  ProfilerHistogramClient,
+  ProfilerHistogramTotalClient,
+} from './profiler/ProfilerHistogramClient';
+import {
+  ProfilerPageClient,
+  type ProfilerPageState,
+} from './profiler/ProfilerPageClient';
 import {ProfilerUnsupportedSummaryClient} from './profiler/ProfilerUnsupportedSummaryClient';
 import type {
   MosaicProfilerColumnState,
@@ -15,18 +33,17 @@ import type {
   UseMosaicProfilerReturn,
 } from './profiler/types';
 import {
-  buildCountQuery,
   buildProfilerBaseQuery,
   buildProfilerPageQuery,
-  buildSchemaQuery,
   createEmptySummaryState,
+  fieldInfoToProfilerField,
   getProfilerValueType,
   isProfilerHistogramType,
   isProfilerUnsupportedSummaryType,
 } from './profiler/utils';
 
-function readCount(result?: {getRow(index: number): unknown}) {
-  return (result?.getRow(0) as {count?: number} | undefined)?.count;
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function useSelectionVersion(selection: Selection) {
@@ -74,6 +91,19 @@ export function useMosaicProfiler(
     pageSize,
   });
   const [sorting, setSorting] = useState<MosaicProfilerSorting>(initialSorting);
+  const [fields, setFields] = useState<arrow.Field[]>([]);
+  const [schemaError, setSchemaError] = useState<Error>();
+  const [schemaLoading, setSchemaLoading] = useState(false);
+  const [pageState, setPageState] = useState<ProfilerPageState>({
+    isLoading: false,
+  });
+  const [filteredCountState, setFilteredCountState] =
+    useState<ProfilerCountState>({
+      isLoading: false,
+    });
+  const [totalCountState, setTotalCountState] = useState<ProfilerCountState>({
+    isLoading: false,
+  });
   const [summaries, setSummaries] = useState<
     Record<string, MosaicProfilerSummaryState>
   >({});
@@ -90,15 +120,41 @@ export function useMosaicProfiler(
     );
   }, [selectionVersion, sorting, tableName]);
 
-  const schemaQuery = useMemo(
-    () => buildSchemaQuery(tableName, columns).toString(),
-    [columns, tableName],
-  );
-  const schemaResult = useSql({
-    enabled: !!tableName,
-    query: schemaQuery,
-  });
-  const fields = schemaResult.data?.arrowTable?.schema.fields ?? [];
+  useEffect(() => {
+    if (connection.status !== 'ready' || !tableName) {
+      setFields([]);
+      setSchemaError(undefined);
+      setSchemaLoading(connection.status === 'loading');
+      return;
+    }
+
+    let active = true;
+    setSchemaLoading(true);
+    setSchemaError(undefined);
+
+    queryFieldInfo(
+      connection.coordinator,
+      columns?.length
+        ? columns.map((column) => ({column, table: tableName}))
+        : [{column: '*', table: tableName}],
+    )
+      .then((fieldInfo) => {
+        if (!active) return;
+        setFields(fieldInfo.map(fieldInfoToProfilerField));
+        setSchemaLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setFields([]);
+        setSchemaError(toError(error));
+        setSchemaLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [columns, connection, tableName]);
+
   const fieldNames = useMemo(() => fields.map((field) => field.name), [fields]);
   const fieldSignature = useMemo(
     () => fields.map((field) => `${field.name}:${field.type}`).join('|'),
@@ -119,23 +175,83 @@ export function useMosaicProfiler(
     () => buildProfilerPageQuery(baseQuery, pagination).toString(),
     [baseQuery, pagination],
   );
-  const rowResult = useSql({
-    enabled: fields.length > 0,
-    query: pageQuery,
-    version: selectionVersion,
-  });
-  const filteredCountResult = useSql({
-    enabled: !!tableName,
-    query: buildCountQuery({
-      filter: selection.predicate(),
+
+  useEffect(() => {
+    if (connection.status !== 'ready' || !tableName || !fieldNames.length) {
+      setPageState({isLoading: false});
+      return;
+    }
+
+    let active = true;
+    const client = new ProfilerPageClient({
+      columns: fieldNames,
+      onStateChange: (state) => {
+        if (active) {
+          setPageState(state);
+        }
+      },
+      pagination,
+      selection,
+      sorting,
       tableName,
-    }).toString(),
-    version: selectionVersion,
-  });
-  const totalCountResult = useSql({
-    enabled: !!tableName,
-    query: buildCountQuery({tableName}).toString(),
-  });
+    });
+
+    connection.coordinator.connect(client);
+
+    return () => {
+      active = false;
+      connection.coordinator.disconnect(client);
+    };
+  }, [connection, fieldSignature, fieldNames, pagination, selection, sorting, tableName]);
+
+  useEffect(() => {
+    if (connection.status !== 'ready' || !tableName) {
+      setFilteredCountState({isLoading: false});
+      return;
+    }
+
+    let active = true;
+    const client = new ProfilerCountClient({
+      onStateChange: (state) => {
+        if (active) {
+          setFilteredCountState(state);
+        }
+      },
+      selection,
+      tableName,
+    });
+
+    connection.coordinator.connect(client);
+
+    return () => {
+      active = false;
+      connection.coordinator.disconnect(client);
+    };
+  }, [connection, selection, tableName]);
+
+  useEffect(() => {
+    if (connection.status !== 'ready' || !tableName) {
+      setTotalCountState({isLoading: false});
+      return;
+    }
+
+    let active = true;
+    const client = new ProfilerCountClient({
+      onStateChange: (state) => {
+        if (active) {
+          setTotalCountState(state);
+        }
+      },
+      tableName,
+    });
+
+    connection.coordinator.connect(client);
+
+    return () => {
+      active = false;
+      connection.coordinator.disconnect(client);
+    };
+  }, [connection, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !fields.length) {
@@ -162,26 +278,36 @@ export function useMosaicProfiler(
       }
 
       if (isProfilerHistogramType(field.type)) {
+        const summaryClient = new ProfilerHistogramClient({
+          field,
+          onStateChange: update,
+          selection,
+          steps: summaryBins,
+          tableName,
+          valueType:
+            getProfilerValueType(field.type) === 'date' ? 'date' : 'number',
+        });
+
         return [
-          new ProfilerHistogramClient({
-            field,
-            onStateChange: update,
-            selection,
-            steps: summaryBins,
-            tableName,
-            valueType:
-              getProfilerValueType(field.type) === 'date' ? 'date' : 'number',
+          summaryClient,
+          new ProfilerHistogramTotalClient({
+            summaryClient,
           }),
         ];
       }
 
+      const summaryClient = new ProfilerCategoryClient({
+        field,
+        onStateChange: update,
+        tableName,
+        categoryLimit,
+        selection,
+      });
+
       return [
-        new ProfilerCategoryClient({
-          field,
-          onStateChange: update,
-          tableName,
-          categoryLimit,
-          selection,
+        summaryClient,
+        new ProfilerCategoryTotalClient({
+          summaryClient,
         }),
       ];
     });
@@ -202,6 +328,7 @@ export function useMosaicProfiler(
     categoryLimit,
     connection,
     fieldSignature,
+    fields,
     selection,
     summaryBins,
     tableName,
@@ -224,14 +351,14 @@ export function useMosaicProfiler(
 
   return {
     columns: profilerColumns,
-    filteredRowCount: readCount(filteredCountResult.data),
+    filteredRowCount: filteredCountState.count,
     isLoading:
-      schemaResult.isLoading ||
-      rowResult.isLoading ||
-      filteredCountResult.isLoading ||
-      totalCountResult.isLoading,
+      schemaLoading ||
+      pageState.isLoading ||
+      filteredCountState.isLoading ||
+      totalCountState.isLoading,
     pageQuery,
-    pageTable: rowResult.data?.arrowTable,
+    pageTable: pageState.pageTable,
     pagination,
     reset: () => selection.reset(),
     selection,
@@ -240,11 +367,11 @@ export function useMosaicProfiler(
     sorting,
     sql: baseQuery.toString(),
     tableError:
-      schemaResult.error ??
-      rowResult.error ??
-      filteredCountResult.error ??
-      totalCountResult.error ??
+      schemaError ??
+      pageState.error ??
+      filteredCountState.error ??
+      totalCountState.error ??
       Object.values(summaries).find((summary) => summary.error)?.error,
-    totalRowCount: readCount(totalCountResult.data),
+    totalRowCount: totalCountState.count,
   };
 }

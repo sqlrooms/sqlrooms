@@ -32,6 +32,28 @@ describe('profiler summary clients', () => {
     expect(latest.selectedKey).toBeUndefined();
   });
 
+  it('does not mark category and histogram summaries as filter-stable', () => {
+    const selection = Selection.crossfilter();
+    const category = new ProfilerCategoryClient({
+      categoryLimit: 5,
+      field: {name: 'MagType', type: {toString: () => 'Utf8'}} as any,
+      onStateChange: () => {},
+      selection,
+      tableName: 'earthquakes',
+    });
+    const histogram = new ProfilerHistogramClient({
+      field: {name: 'Magnitude', type: {toString: () => 'Float64'}} as any,
+      onStateChange: () => {},
+      selection,
+      steps: 10,
+      tableName: 'earthquakes',
+      valueType: 'number',
+    });
+
+    expect(category.filterStable).toBe(false);
+    expect(histogram.filterStable).toBe(false);
+  });
+
   it('publishes histogram interval selections through the shared selection', () => {
     const selection = Selection.crossfilter();
     let latest: any;

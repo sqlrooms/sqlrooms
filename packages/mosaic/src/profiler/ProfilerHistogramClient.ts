@@ -4,11 +4,11 @@ import {
   queryFieldInfo,
   type Selection,
 } from '@uwdata/mosaic-core';
-import {count, type ExprNode, Query} from '@uwdata/mosaic-sql';
 import {Interval1D, bin} from '@uwdata/mosaic-plot';
+import {count, type ExprNode, Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import {splitHistogramBins} from './utils';
 import type {MosaicProfilerHistogramSummary} from './types';
+import {rowsFromQueryResult, splitHistogramBins} from './utils';
 
 type HistogramStateChange = (summary: MosaicProfilerHistogramSummary) => void;
 
@@ -29,7 +29,14 @@ type HistogramRow = {
 
 export class ProfilerHistogramClient extends MosaicClient {
   readonly type = 'rectY';
+  private filteredError?: Error;
+  private filteredLoading = true;
   private readonly field: arrow.Field;
+  private fieldInfo?: FieldInfo;
+  private fieldInfoPromise?: Promise<void>;
+  private filteredBins?: HistogramRow[];
+  private filteredNullCount?: number;
+  private readonly interactor: Interval1D;
   private readonly onStateChange: HistogramStateChange;
   private readonly select: {
     x1: ExprNode;
@@ -37,13 +44,11 @@ export class ProfilerHistogramClient extends MosaicClient {
     y: ExprNode;
   };
   private readonly tableName: string;
-  private readonly valueType: 'date' | 'number';
-  private fieldInfo?: FieldInfo;
-  private readonly interactor: Interval1D;
-  private filteredBins?: HistogramRow[];
-  private filteredNullCount?: number;
   private totalBins?: HistogramRow[];
+  private totalError?: Error;
+  private totalLoading = true;
   private totalNullCount?: number;
+  private readonly valueType: 'date' | 'number';
 
   constructor(options: HistogramClientOptions) {
     super(options.selection);
@@ -69,40 +74,77 @@ export class ProfilerHistogramClient extends MosaicClient {
     });
   }
 
-  override queryPending(): this {
-    const totalRows = this.totalBins ?? [];
+  override get filterStable(): boolean {
+    return false;
+  }
+
+  private emitSummary() {
+    const totalRows = this.totalBins ?? this.filteredBins ?? [];
     const total = splitHistogramBins(totalRows);
     const filteredRows = this.filteredBins ?? totalRows;
     const filtered = splitHistogramBins(filteredRows);
+
     this.onStateChange({
+      error: this.filteredError ?? this.totalError,
       filteredBins: filtered.bins,
       filteredNullCount: this.filteredNullCount ?? filtered.nullCount,
       interactor: this.interactor,
-      isLoading: true,
+      isLoading: this.filteredLoading || this.totalLoading,
       kind: 'histogram',
       totalBins: total.bins,
       totalNullCount: this.totalNullCount ?? total.nullCount,
       valueType: this.valueType,
     });
+  }
+
+  async ensureFieldInfo(): Promise<void> {
+    if (this.fieldInfo) {
+      return;
+    }
+
+    if (!this.fieldInfoPromise) {
+      this.fieldInfoPromise = queryFieldInfo(this.coordinator!, [
+        {
+          table: this.tableName,
+          column: this.field.name,
+          stats: ['min', 'max'],
+        },
+      ]).then(([info]) => {
+        this.fieldInfo = info;
+      });
+    }
+
+    await this.fieldInfoPromise;
+  }
+
+  setTotalError(error?: Error) {
+    this.totalError = error;
+    this.totalLoading = false;
+    this.emitSummary();
+  }
+
+  setTotalLoading(isLoading: boolean) {
+    this.totalLoading = isLoading;
+    this.emitSummary();
+  }
+
+  setTotalRows(rows: HistogramRow[]) {
+    const {nullCount} = splitHistogramBins(rows);
+    this.totalBins = rows;
+    this.totalNullCount = nullCount;
+    this.totalError = undefined;
+    this.totalLoading = false;
+    this.emitSummary();
+  }
+
+  override queryPending(): this {
+    this.filteredLoading = true;
+    this.emitSummary();
     return this;
   }
 
   override async prepare(): Promise<void> {
-    const [info] = await queryFieldInfo(this.coordinator!, [
-      {
-        table: this.tableName,
-        column: this.field.name,
-        stats: ['min', 'max'],
-      },
-    ]);
-    this.fieldInfo = info;
-    const totalData = await this.coordinator!.query(this.query([]));
-    const totalRows = Array.from(
-      ((totalData as unknown) as {toArray(): HistogramRow[]}).toArray(),
-    );
-    const {nullCount} = splitHistogramBins(totalRows);
-    this.totalBins = totalRows;
-    this.totalNullCount = nullCount;
+    await this.ensureFieldInfo();
   }
 
   override query(filter: Array<ExprNode> = []): Query {
@@ -113,40 +155,20 @@ export class ProfilerHistogramClient extends MosaicClient {
   }
 
   override queryResult(data: unknown): this {
-    const rows = Array.from((data as {toArray(): HistogramRow[]}).toArray());
-    const {bins, nullCount} = splitHistogramBins(rows);
+    const rows = rowsFromQueryResult<HistogramRow>(data);
+    const {nullCount} = splitHistogramBins(rows);
     this.filteredBins = rows;
     this.filteredNullCount = nullCount;
-
-    const totalRows = this.totalBins ?? rows;
-    const total = splitHistogramBins(totalRows);
-    this.onStateChange({
-      filteredBins: bins,
-      filteredNullCount: nullCount,
-      interactor: this.interactor,
-      isLoading: false,
-      kind: 'histogram',
-      totalBins: total.bins,
-      totalNullCount: this.totalNullCount ?? total.nullCount,
-      valueType: this.valueType,
-    });
+    this.filteredError = undefined;
+    this.filteredLoading = false;
+    this.emitSummary();
     return this;
   }
 
   override queryError(error: Error): this {
-    const total = splitHistogramBins(this.totalBins ?? []);
-    const filtered = splitHistogramBins(this.filteredBins ?? this.totalBins ?? []);
-    this.onStateChange({
-      error,
-      filteredBins: filtered.bins,
-      filteredNullCount: this.filteredNullCount ?? filtered.nullCount,
-      interactor: this.interactor,
-      isLoading: false,
-      kind: 'histogram',
-      totalBins: total.bins,
-      totalNullCount: this.totalNullCount ?? total.nullCount,
-      valueType: this.valueType,
-    });
+    this.filteredError = error;
+    this.filteredLoading = false;
+    this.emitSummary();
     return this;
   }
 
@@ -171,5 +193,41 @@ export class ProfilerHistogramClient extends MosaicClient {
       },
       markSet,
     };
+  }
+}
+
+type ProfilerHistogramTotalClientOptions = {
+  summaryClient: ProfilerHistogramClient;
+};
+
+export class ProfilerHistogramTotalClient extends MosaicClient {
+  private readonly summaryClient: ProfilerHistogramClient;
+
+  constructor(options: ProfilerHistogramTotalClientOptions) {
+    super();
+    this.summaryClient = options.summaryClient;
+  }
+
+  override async prepare(): Promise<void> {
+    await this.summaryClient.ensureFieldInfo();
+  }
+
+  override queryPending(): this {
+    this.summaryClient.setTotalLoading(true);
+    return this;
+  }
+
+  override query(filter: Array<ExprNode> = []): Query {
+    return this.summaryClient.query(filter);
+  }
+
+  override queryResult(data: unknown): this {
+    this.summaryClient.setTotalRows(rowsFromQueryResult<HistogramRow>(data));
+    return this;
+  }
+
+  override queryError(error: Error): this {
+    this.summaryClient.setTotalError(error);
+    return this;
   }
 }

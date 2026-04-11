@@ -2,9 +2,7 @@ import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
 import type {MosaicProfilerUnsupportedSummary} from './types';
-import {buildDistinctCountQuery} from './utils';
-
-type DistinctCountRow = {count?: number};
+import {buildDistinctCountQuery, readCountData} from './utils';
 
 type UnsupportedSummaryClientOptions = {
   field: arrow.Field;
@@ -28,6 +26,10 @@ export class ProfilerUnsupportedSummaryClient extends MosaicClient {
     this.tableName = options.tableName;
   }
 
+  override get filterStable(): boolean {
+    return false;
+  }
+
   override queryPending(): this {
     this.onStateChange({
       isLoading: true,
@@ -46,8 +48,7 @@ export class ProfilerUnsupportedSummaryClient extends MosaicClient {
   }
 
   override queryResult(data: unknown): this {
-    this.count =
-      ((data as {toArray(): DistinctCountRow[]}).toArray()[0]?.count ?? 0);
+    this.count = readCountData(data) ?? 0;
     this.onStateChange({
       isLoading: false,
       kind: 'unsupported',
