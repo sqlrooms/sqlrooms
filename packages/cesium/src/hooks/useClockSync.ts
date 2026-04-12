@@ -18,9 +18,17 @@ const CLOCK_RANGE_MAP = {
 } as const;
 
 /**
- * Imperatively apply clock config to Cesium viewer.
- * Extracted as a module-level function to avoid React Compiler immutability tracking.
+ * Imperatively apply clock config/time to Cesium viewer.
+ * Extracted as module-level functions to avoid React Compiler immutability tracking.
  */
+function applyCurrentTimeToViewer(viewer: Viewer, isoTime: string): void {
+  try {
+    viewer.clock.currentTime = JulianDate.fromIso8601(toIso8601(isoTime));
+  } catch {
+    /* skip invalid date */
+  }
+}
+
 function applyClockConfigToViewer(viewer: Viewer, config: ClockConfig): void {
   const clock = viewer.clock;
 
@@ -92,8 +100,15 @@ export function useClockSync(): void {
       clockRange: s.cesium.config.clock.clockRange,
     })),
   );
+  const currentTime = useStoreWithCesium(
+    (s) => s.cesium.config.clock.currentTime,
+  );
   const setCurrentTime = useStoreWithCesium((s) => s.cesium.setCurrentTime);
   const lastSyncRef = useRef(0);
+  // Tracks the last value the tick handler wrote to the store so the
+  // store→Cesium effect can distinguish tick-originated writes (skip)
+  // from external setCurrentTime calls (apply).
+  const lastTickTimeRef = useRef<string | null>(null);
 
   // Cesium → Store: Throttled clock tick listener
   useEffect(() => {
@@ -102,29 +117,35 @@ export function useClockSync(): void {
 
     const onTick = (clock: Clock) => {
       const now = Date.now();
-      // Throttle to max 2 updates/second (500ms interval)
       if (now - lastSyncRef.current < 500) return;
 
       lastSyncRef.current = now;
-      // Convert JulianDate to ISO 8601 string for storage
-      setCurrentTime(JulianDate.toIso8601(clock.currentTime));
+      const iso = JulianDate.toIso8601(clock.currentTime);
+      lastTickTimeRef.current = iso;
+      setCurrentTime(iso);
     };
 
     v.clock.onTick.addEventListener(onTick);
 
     return () => {
-      // Guard against destroyed viewer on unmount
       if (!v.isDestroyed()) {
         v.clock.onTick.removeEventListener(onTick);
       }
     };
   }, [viewer, setCurrentTime]);
 
-  // Store → Cesium: Apply config changes to viewer clock
+  // Store → Cesium: Apply non-time config changes to viewer clock
   useEffect(() => {
     if (!viewer) return;
     applyClockConfigToViewer(viewer, clockInputs);
   }, [viewer, clockInputs]);
+
+  // Store → Cesium: Apply currentTime only for external changes (not tick echoes).
+  useEffect(() => {
+    if (!viewer || !currentTime) return;
+    if (currentTime === lastTickTimeRef.current) return;
+    applyCurrentTimeToViewer(viewer, currentTime);
+  }, [viewer, currentTime]);
 
   // Timeline zoom: only update when startTime/stopTime change (not on every currentTime tick)
   const {startTime, stopTime} = clockInputs;

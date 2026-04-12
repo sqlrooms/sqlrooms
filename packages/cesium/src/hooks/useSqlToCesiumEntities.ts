@@ -49,25 +49,29 @@ export function useSqlToCesiumEntities(
   rows: any[],
   layerConfig: CesiumLayerConfig,
 ): CesiumEntityDescriptor[] {
-  const mapping = layerConfig.columnMapping ?? {
-    longitude: 'longitude',
-    latitude: 'latitude',
-  };
-
   return useMemo(() => {
     if (!rows || rows.length === 0) return [];
 
-    // Pre-compute the stop time (last row's time) for availability intervals.
+    const mapping = layerConfig.columnMapping ?? {
+      longitude: 'longitude',
+      latitude: 'latitude',
+    };
+
+    // Pre-compute the latest timestamp across all rows for availability intervals.
     // Entities appear at their timestamp and remain visible until the end.
+    // We scan all rows instead of assuming sorted order.
     let stopJd: InstanceType<typeof JulianDate> | undefined;
     if (mapping.time) {
-      const lastRow = rows[rows.length - 1];
-      const lastTimeStr = lastRow ? String(lastRow[mapping.time]) : undefined;
-      if (lastTimeStr) {
+      for (const row of rows) {
+        const raw = row[mapping.time];
+        if (raw == null) continue;
         try {
-          stopJd = JulianDate.fromIso8601(toIso8601(lastTimeStr));
+          const jd = JulianDate.fromIso8601(toIso8601(String(raw)));
+          if (!stopJd || JulianDate.greaterThan(jd, stopJd)) {
+            stopJd = jd;
+          }
         } catch {
-          /* invalid date — skip availability */
+          /* skip unparseable timestamps */
         }
       }
     }
@@ -125,5 +129,5 @@ export function useSqlToCesiumEntities(
       });
     });
     return descriptors;
-  }, [rows, mapping, layerConfig.id]);
+  }, [rows, layerConfig.columnMapping, layerConfig.id]);
 }
