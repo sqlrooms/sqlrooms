@@ -118,14 +118,18 @@ export function useSqlToCesiumEntities(
         }
       }
 
+      const labelVal = mapping.label ? row[mapping.label] : undefined;
+      const colorVal = mapping.color ? row[mapping.color] : undefined;
+      const sizeVal = mapping.size ? Number(row[mapping.size]) : undefined;
+
       descriptors.push({
         id: `${layerConfig.id}-${i}`,
         position: Cartesian3.fromDegrees(lon, lat, alt),
-        label: mapping.label ? String(row[mapping.label]) : undefined,
+        label: labelVal != null ? String(labelVal) : undefined,
         time: timeStr,
         availability,
-        color: mapping.color ? String(row[mapping.color]) : undefined,
-        size: mapping.size ? Number(row[mapping.size]) : undefined,
+        color: colorVal != null ? String(colorVal) : undefined,
+        size: Number.isFinite(sizeVal) ? sizeVal : undefined,
       });
     });
     return descriptors;
