@@ -38,7 +38,7 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
       // Ai slice
       ...createAiSlice({
         getInstructions: () => {
-          return `You are an AI travel planning assistant. You can help users plan trips by checking weather, finding activities, and booking hotels.`;
+          return `You are an AI travel planning assistant. You can help users plan trips by checking weather, finding activities, and booking hotels. Execute the tools one by one, NEVER call them in parallel.`;
         },
 
         tools: {
