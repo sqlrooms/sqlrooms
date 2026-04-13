@@ -6,6 +6,7 @@ import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
+import {FlightsLayerSelectionSync} from './components/FlightsLayerSelectionSync';
 import {roomStore} from './store';
 
 export const Room = () => {
@@ -23,6 +24,7 @@ export const Room = () => {
         <ThemeSwitch />
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />
+      <FlightsLayerSelectionSync />
       <RoomShell.LoadingProgress />
       <SqlEditorModal
         isOpen={sqlEditorDisclosure.isOpen}

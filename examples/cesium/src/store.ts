@@ -11,8 +11,15 @@ import {
 } from '@sqlrooms/cesium';
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
+  createMosaicSlice,
+  Query,
+  sql,
+  type MosaicSliceState,
+} from '@sqlrooms/mosaic';
+import {
   createRoomShellSlice,
   createRoomStore,
+  LayoutTypes,
   MAIN_VIEW,
   type RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -20,12 +27,37 @@ import {
   createSqlEditorSlice,
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {Globe} from 'lucide-react';
+import {FilterIcon, Globe} from 'lucide-react';
+import {FlightsProfilerPanel} from './components/FlightsProfilerPanel';
 
 // Combined room state type
 export type RoomState = RoomShellSliceState &
   CesiumSliceState &
+  MosaicSliceState &
   SqlEditorSliceState;
+
+export const FLIGHT_FILTER_SELECTION_NAME = 'flight_filter';
+
+const MAX_RENDERED_FLIGHTS = 2500;
+
+export const OPENSKY_PROFILER_COLUMNS = [
+  'callsign',
+  'icao24',
+  'departure_airport',
+  'arrival_airport',
+  'est_departure_airport',
+  'est_arrival_airport',
+  'duration_s',
+  'track_points',
+  'first_seen_utc',
+  'last_seen_utc',
+  'takeoff_time_utc',
+  'landing_time_utc',
+  'takeoff_latitude',
+  'takeoff_longitude',
+  'landing_latitude',
+  'landing_longitude',
+] as const;
 
 const OPENSKY_FLIGHTS_URL =
   import.meta.env.VITE_OPENSKY_FLIGHTS_URL ??
@@ -36,6 +68,74 @@ const OPENSKY_FLIGHT_POINTS_URL =
 const AIRLINER_MODEL_URL =
   import.meta.env.VITE_OPENSKY_AIRLINER_MODEL_URL ??
   'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/Airliner.glb';
+
+function appendSelectionFilter(
+  query: ReturnType<typeof Query.from>,
+  filter?: unknown,
+) {
+  if (Array.isArray(filter)) {
+    const clauses = filter.filter(Boolean);
+    if (clauses.length > 0) {
+      query.where(...(clauses as any[]));
+    }
+    return query;
+  }
+
+  if (filter) {
+    query.where(filter as any);
+  }
+
+  return query;
+}
+
+function buildFilteredFlightsSubquery(filter?: unknown) {
+  const query = Query.from('opensky_flights')
+    .select('flight_id')
+    .where(
+      sql`"departure_airport" IS NOT NULL`,
+      sql`"arrival_airport" IS NOT NULL`,
+      sql`"duration_s" >= 1800`,
+      sql`"track_points" >= 40`,
+    )
+    .orderby(sql`"duration_s" DESC`, sql`"track_points" DESC`, sql`"flight_id"`)
+    .limit(MAX_RENDERED_FLIGHTS);
+
+  return appendSelectionFilter(query, filter).toString();
+}
+
+export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
+  return `
+    WITH filtered_flights AS (
+      ${buildFilteredFlightsSubquery(filter)}
+    )
+    SELECT
+      p.flight_id AS entity_id,
+      p.longitude,
+      p.latitude,
+      p.altitude_m AS altitude,
+      strftime(p.point_time_utc, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
+      p.heading,
+      CASE
+        WHEN p.altitude_m >= 10000 THEN '#7dd3fc'
+        WHEN p.altitude_m >= 6000 THEN '#34d399'
+        WHEN p.altitude_m >= 3000 THEN '#fbbf24'
+        ELSE '#f97316'
+      END AS color,
+      greatest(2.8, least(5.2, p.altitude_m / 2800.0)) AS size,
+      p.callsign ||
+        ' ' ||
+        coalesce(p.departure_airport, '???') ||
+        ' -> ' ||
+        coalesce(p.arrival_airport, '???') AS label
+    FROM opensky_flight_points AS p
+    JOIN filtered_flights AS f
+      ON p.flight_id = f.flight_id
+    WHERE
+      p.onground = false
+      AND (p.sampled_point_index % 2) = 1
+    ORDER BY p.point_time_utc
+  `;
+}
 
 // Create default Cesium configuration with a manageable global flights layer.
 const cesiumConfig = createDefaultCesiumConfig();
@@ -65,37 +165,7 @@ const configWithLayers = {
           roll: 0,
         },
         tableName: 'opensky_flight_points',
-        sqlQuery: `
-          SELECT
-            flight_id AS entity_id,
-            longitude,
-            latitude,
-            altitude_m AS altitude,
-            strftime(point_time_utc, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
-            heading,
-            CASE
-              WHEN altitude_m >= 10000 THEN '#7dd3fc'
-              WHEN altitude_m >= 6000 THEN '#34d399'
-              WHEN altitude_m >= 3000 THEN '#fbbf24'
-              ELSE '#f97316'
-            END AS color,
-            greatest(2.8, least(5.2, altitude_m / 2800.0)) AS size,
-            callsign ||
-              ' ' ||
-              coalesce(departure_airport, '???') ||
-              ' -> ' ||
-              coalesce(arrival_airport, '???') AS label
-          FROM opensky_flight_points
-          WHERE
-            departure_airport IS NOT NULL
-            AND arrival_airport IS NOT NULL
-            AND duration_s >= 2700
-            AND track_points >= 60
-            AND onground = false
-            AND (sampled_point_index % 2) = 1
-            AND (flight_id % 5) = 0
-          ORDER BY point_time_utc
-        `,
+        sqlQuery: buildOpenSkyFlightPointsQuery(),
         columnMapping: {
           id: 'entity_id',
           longitude: 'longitude',
@@ -142,7 +212,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ],
       },
       layout: {
+        config: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'column',
+            first: MAIN_VIEW,
+            second: 'filters',
+            splitPercentage: 70,
+          },
+        },
         panels: {
+          filters: {
+            title: 'Flight Filters',
+            icon: FilterIcon,
+            component: FlightsProfilerPanel,
+            placement: 'sidebar',
+          },
           [MAIN_VIEW]: {
             title: '3D Globe',
             icon: Globe,
@@ -152,6 +237,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       },
     })(set, get, store),
+
+    ...createMosaicSlice()(set, get, store),
 
     ...createCesiumSlice(configWithLayers)(set, get, store),
 
