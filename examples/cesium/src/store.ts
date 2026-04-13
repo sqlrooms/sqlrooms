@@ -86,13 +86,14 @@ const configWithLayers = {
               ' -> ' ||
               coalesce(arrival_airport, '???') AS label
           FROM opensky_flight_points
-          WHERE departure_airport IS NOT NULL
+          WHERE
+            departure_airport IS NOT NULL
             AND arrival_airport IS NOT NULL
-            AND duration_s >= 3600
-            AND track_points >= 80
+            AND duration_s >= 2700
+            AND track_points >= 60
             AND onground = false
             AND (sampled_point_index % 2) = 1
-            AND (flight_id % 50) = 0
+            AND (flight_id % 5) = 0
           ORDER BY point_time_utc
         `,
         columnMapping: {
@@ -109,6 +110,7 @@ const configWithLayers = {
       },
     ],
     clock: {
+      currentTime: '2026-03-01T12:00:00Z',
       multiplier: 3600, // 1 hour per second
       shouldAnimate: false,
       clockRange: 'LOOP_STOP' as const,

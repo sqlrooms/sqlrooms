@@ -80,6 +80,9 @@ export const CesiumEntityLayer: React.FC<CesiumEntityLayerProps> = ({
   // Auto-set clock time range from data when a time column is mapped
   const setClockConfig = useStoreWithCesium((s) => s.cesium.setClockConfig);
   const setCurrentTime = useStoreWithCesium((s) => s.cesium.setCurrentTime);
+  const configuredCurrentTime = useStoreWithCesium(
+    (s) => s.cesium.config.clock.currentTime,
+  );
   const hasSetClockRef = useRef(false);
 
   useEffect(() => {
@@ -93,9 +96,9 @@ export const CesiumEntityLayer: React.FC<CesiumEntityLayerProps> = ({
     const stopTime = timeEntities[timeEntities.length - 1]!.time!;
 
     setClockConfig({startTime, stopTime});
-    setCurrentTime(startTime);
+    setCurrentTime(configuredCurrentTime ?? startTime);
     hasSetClockRef.current = true;
-  }, [entities, setClockConfig, setCurrentTime]);
+  }, [configuredCurrentTime, entities, setClockConfig, setCurrentTime]);
 
   // Don't render if loading, error, or no data
   if (isLoading || error || !entities.length) {
