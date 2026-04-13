@@ -11,6 +11,7 @@ import {
   SceneMode,
   Color,
   Ion,
+  JulianDate,
   Terrain,
   EllipsoidTerrainProvider,
   OpenStreetMapImageryProvider,
@@ -58,6 +59,66 @@ function setupTerrainAndImagery(
   }
   // 'ion-default' with a valid token uses Cesium's built-in default imagery (Bing Maps via Ion)
   // 'none' would leave whatever default is configured
+}
+
+const NYC_TIME_ZONE = 'America/New_York';
+
+const nycTimelineFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: NYC_TIME_ZONE,
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
+
+const nycAnimationDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: NYC_TIME_ZONE,
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const nycAnimationTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: NYC_TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+  timeZoneName: 'short',
+});
+
+function applyNycTimeFormatters(viewer: CesiumViewer): void {
+  const timeline = viewer.timeline as
+    | {
+        makeLabel?: (time: JulianDate) => string;
+        updateFromClock?: () => void;
+      }
+    | undefined;
+
+  if (timeline) {
+    timeline.makeLabel = (time: JulianDate) =>
+      nycTimelineFormatter.format(JulianDate.toDate(time));
+    timeline.updateFromClock?.();
+  }
+
+  const animation = (viewer as any).animation as
+    | {
+        viewModel?: {
+          dateFormatter?: (time: JulianDate) => string;
+          timeFormatter?: (time: JulianDate) => string;
+        };
+      }
+    | undefined;
+
+  if (animation?.viewModel) {
+    animation.viewModel.dateFormatter = (time: JulianDate) =>
+      nycAnimationDateFormatter.format(JulianDate.toDate(time));
+    animation.viewModel.timeFormatter = (time: JulianDate) =>
+      nycAnimationTimeFormatter.format(JulianDate.toDate(time));
+  }
 }
 
 const SCENE_MODE_MAP = {
@@ -125,6 +186,7 @@ export const CesiumViewerWrapper: React.FC = () => {
     // Set dark background for space behind the globe
     // Set up terrain based on config and Ion token availability
     setupTerrainAndImagery(viewer, terrainEnabled, baseLayerImagery);
+    applyNycTimeFormatters(viewer);
 
     viewer.scene.backgroundColor = Color.fromCssColorString('#0a0a14');
     viewer.scene.globe.depthTestAgainstTerrain = depthTestAgainstTerrain;

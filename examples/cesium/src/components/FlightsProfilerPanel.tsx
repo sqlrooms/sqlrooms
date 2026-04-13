@@ -12,7 +12,7 @@ export function FlightsProfilerPanel({className}: {className?: string}) {
   const mosaic = useRoomStore((state) => state.mosaic);
   const mosaicConnection = useRoomStore((state) => state.mosaic.connection);
   const flightPointsTable = useRoomStore((state) =>
-    state.db.findTableByName('opensky_flight_points'),
+    state.db.findTableByName('opensky_nyc_flight_points'),
   );
   const selection = useMemo(
     () => mosaic.getSelection(FLIGHT_FILTER_SELECTION_NAME),
@@ -33,18 +33,20 @@ export function FlightsProfilerPanel({className}: {className?: string}) {
         <MosaicProfiler
           pageSize={18}
           selection={selection}
-          tableName="opensky_flight_points"
+          tableName="opensky_nyc_flight_points"
           columns={[...OPENSKY_POINT_PROFILER_COLUMNS]}
         >
           <div className="border-b px-3 py-3">
-            <h2 className="text-sm font-semibold">Flight Point Profiler</h2>
+            <h2 className="text-sm font-semibold">NYC Flight Profiler</h2>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
-              Filter sampled points by altitude, time, heading, and route
-              fields. Matching points promote their
+              Filter a smaller New York area flight dataset by altitude,
+              heading, speed, time, and route fields. Matching points promote
+              their
               <code className="bg-muted ml-1 rounded px-1 py-0.5 text-[11px]">
                 flight_id
               </code>
               s, and the globe renders those flights as complete moving paths.
+              Profiler timestamps are shown in New York local time.
             </p>
           </div>
 
@@ -59,8 +61,8 @@ export function FlightsProfilerPanel({className}: {className?: string}) {
 
           <div className="border-t">
             <div className="text-muted-foreground px-3 py-2 text-[11px] leading-4">
-              Globe rendering is capped to the top 2,500 matching flights to
-              keep Cesium responsive.
+              Globe rendering is capped to the top 2,500 matching flights, but
+              the NYC subset is already much lighter than the world-scale demo.
             </div>
             <MosaicProfiler.StatusBar />
           </div>

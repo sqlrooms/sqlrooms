@@ -4,7 +4,6 @@
  */
 
 import React from 'react';
-import {CesiumClock} from './CesiumClock';
 import {CesiumToolbar} from './CesiumToolbar';
 import {CesiumViewerWrapper} from './CesiumViewerWrapper';
 
@@ -39,7 +38,7 @@ export const CesiumPanel: React.FC = () => {
 
       {/* Control overlays positioned absolutely */}
       <CesiumToolbar className="absolute top-2 right-2 z-10" />
-      <CesiumClock className="absolute right-2 bottom-10 z-10" />
+      {/* <CesiumClock className="absolute right-2 bottom-10 z-10" /> */}
     </div>
   );
 };

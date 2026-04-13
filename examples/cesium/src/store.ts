@@ -38,28 +38,26 @@ export type RoomState = RoomShellSliceState &
 
 export const FLIGHT_FILTER_SELECTION_NAME = 'flight_filter';
 
-const MAX_RENDERED_FLIGHTS = 2500;
+const MAX_RENDERED_FLIGHTS = 2000;
+const OPENSKY_NYC_TABLE_NAME = 'opensky_nyc_flight_points';
 
 export const OPENSKY_POINT_PROFILER_COLUMNS = [
   'callsign',
+  'nyc_role',
   'departure_airport',
   'arrival_airport',
-  'point_time_utc',
+  'point_time_ny',
   'altitude_m',
-  'heading',
+  'heading_deg',
+  'speed_knots',
   'duration_s',
-  'track_points',
-  'sampled_point_index',
-  'first_seen_utc',
-  'last_seen_utc',
+  'first_seen_ny',
+  'last_seen_ny',
 ] as const;
 
-const OPENSKY_FLIGHTS_URL =
-  import.meta.env.VITE_OPENSKY_FLIGHTS_URL ??
-  'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_flights_cesium_mosaic_sampled_every10th.parquet';
 const OPENSKY_FLIGHT_POINTS_URL =
   import.meta.env.VITE_OPENSKY_POINTS_URL ??
-  'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_flight_points_cesium_sampled_every10th.parquet';
+  'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_nyc_area_flight_points_2026-03-01_ny.parquet';
 const AIRLINER_MODEL_URL =
   import.meta.env.VITE_OPENSKY_AIRLINER_MODEL_URL ??
   'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/Airliner.glb';
@@ -84,35 +82,38 @@ function appendSelectionFilter(
 }
 
 function buildMatchedPointFlightsSubquery(filter?: unknown) {
-  const query = Query.from('opensky_flight_points')
+  const query = Query.from(OPENSKY_NYC_TABLE_NAME)
     .select('flight_id')
     .distinct()
-    .where(sql`"onground" = false`);
+    .where(
+      sql`"onground" = false`,
+      sql`"speed_knots" IS NULL OR "speed_knots" <= 700`,
+    );
 
   return appendSelectionFilter(query, filter).toString();
 }
 
-function buildFilteredFlightsSubquery(filter?: unknown) {
+function buildSelectedFlightsSubquery(filter?: unknown) {
   return `
     SELECT flight_id
-    FROM opensky_flights
+    FROM ${OPENSKY_NYC_TABLE_NAME}
     WHERE
       departure_airport IS NOT NULL
       AND arrival_airport IS NOT NULL
-      AND duration_s >= 1800
-      AND track_points >= 40
+      AND duration_s >= 1200
       AND flight_id IN (
         ${buildMatchedPointFlightsSubquery(filter)}
       )
-    ORDER BY duration_s DESC, track_points DESC, flight_id
+    GROUP BY flight_id, duration_s
+    ORDER BY duration_s DESC, flight_id
     LIMIT ${MAX_RENDERED_FLIGHTS}
   `;
 }
 
 export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
   return `
-    WITH filtered_flights AS (
-      ${buildFilteredFlightsSubquery(filter)}
+    WITH selected_flights AS (
+      ${buildSelectedFlightsSubquery(filter)}
     )
     SELECT
       p.flight_id AS entity_id,
@@ -120,7 +121,7 @@ export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
       p.latitude,
       p.altitude_m AS altitude,
       strftime(p.point_time_utc, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
-      p.heading,
+      p.heading_deg AS heading,
       CASE
         WHEN p.altitude_m >= 10000 THEN '#7dd3fc'
         WHEN p.altitude_m >= 6000 THEN '#34d399'
@@ -128,17 +129,23 @@ export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
         ELSE '#f97316'
       END AS color,
       greatest(2.8, least(5.2, p.altitude_m / 2800.0)) AS size,
-      p.callsign ||
+      coalesce(nullif(p.callsign, ''), p.icao24, 'unknown') ||
         ' ' ||
         coalesce(p.departure_airport, '???') ||
         ' -> ' ||
-        coalesce(p.arrival_airport, '???') AS label
-    FROM opensky_flight_points AS p
-    JOIN filtered_flights AS f
+        coalesce(p.arrival_airport, '???') ||
+        CASE
+          WHEN p.speed_knots IS NOT NULL
+            THEN ' • ' || cast(round(p.speed_knots) AS VARCHAR) || ' kt'
+          ELSE ''
+        END AS label
+    FROM ${OPENSKY_NYC_TABLE_NAME} AS p
+    JOIN selected_flights AS f
       ON p.flight_id = f.flight_id
     WHERE
       p.onground = false
-      AND (p.sampled_point_index % 2) = 1
+      AND (p.speed_knots IS NULL OR p.speed_knots <= 700)
+      AND (p.point_index = 1 OR (p.point_index % 2) = 1)
     ORDER BY p.point_time_utc
   `;
 }
@@ -150,6 +157,14 @@ const configWithLayers = {
   ...cesiumConfig,
   cesium: {
     ...cesiumConfig.cesium,
+    camera: {
+      longitude: -73.82,
+      latitude: 37.74,
+      height: 120000,
+      heading: 0,
+      pitch: -0.32,
+      roll: 0,
+    },
     terrain: false,
     baseLayerImagery: 'openstreetmap' as const,
     depthTestAgainstTerrain: false,
@@ -163,14 +178,14 @@ const configWithLayers = {
         billboardScale: 1,
         geometryScale: 1,
         modelUri: AIRLINER_MODEL_URL,
-        modelScale: 24,
-        modelMinimumPixelSize: 24,
+        modelScale: 9,
+        modelMinimumPixelSize: 14,
         modelOrientationOffset: {
           heading: 90,
           pitch: 90,
           roll: 0,
         },
-        tableName: 'opensky_flight_points',
+        tableName: OPENSKY_NYC_TABLE_NAME,
         sqlQuery: buildOpenSkyFlightPointsQuery(),
         columnMapping: {
           id: 'entity_id',
@@ -186,9 +201,9 @@ const configWithLayers = {
       },
     ],
     clock: {
-      currentTime: '2026-03-01T12:00:00Z',
-      multiplier: 3600, // 1 hour per second
-      shouldAnimate: false,
+      currentTime: '2026-03-01T17:00:00Z',
+      multiplier: 60, // 1 minute per second
+      shouldAnimate: true,
       clockRange: 'LOOP_STOP' as const,
     },
   },
@@ -206,12 +221,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         title: 'OpenSky Flights Explorer',
         dataSources: [
           {
-            tableName: 'opensky_flights',
-            type: 'url',
-            url: OPENSKY_FLIGHTS_URL,
-          },
-          {
-            tableName: 'opensky_flight_points',
+            tableName: OPENSKY_NYC_TABLE_NAME,
             type: 'url',
             url: OPENSKY_FLIGHT_POINTS_URL,
           },
