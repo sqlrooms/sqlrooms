@@ -20,14 +20,14 @@ import {MosaicNode} from 'react-mosaic-component';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {
-  findTabsNodeForPanel,
   findNodeById,
+  findTabsNodeForPanel,
   getChildKey,
   makeLayoutStack,
   removeLayoutNodeByKey,
 } from './mosaic/mosaic-utils';
-import type {RoomPanelInfo} from './types';
 import {getPanelId} from './node-renderers/types';
+import type {RoomPanelInfo} from './types';
 
 const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
 const ToggleLayoutPanelCommandInput = z.object({
@@ -116,22 +116,6 @@ export type LayoutSliceState = {
     /** Check if a node is currently collapsed */
     isCollapsed: (id: string) => boolean;
 
-    /** @deprecated Use setActiveTab instead */
-    setActivePanel: (areaId: string, panelId: string) => void;
-    /** @deprecated Use addTab instead */
-    addPanelToArea: (areaId: string, panelId: string) => void;
-    /** @deprecated Use removeTab instead */
-    removePanelFromArea: (areaId: string, panelId: string) => void;
-    /** @deprecated Use setCollapsed instead */
-    setAreaCollapsed: (areaId: string, collapsed: boolean) => void;
-    /** @deprecated Use toggleCollapsed instead */
-    toggleAreaCollapsed: (areaId: string) => void;
-    /** @deprecated Use getTabs instead */
-    getAreaPanels: (areaId: string) => string[];
-    /** @deprecated Use getActiveTab instead */
-    getActivePanel: (areaId: string) => string | undefined;
-    /** @deprecated Use isCollapsed instead */
-    isAreaCollapsed: (areaId: string) => boolean;
     /** Register a panel dynamically (adds to panels registry) */
     registerPanel: (panelId: string, info: RoomPanelInfo) => void;
     /** Unregister a dynamically added panel */
@@ -381,17 +365,6 @@ export function createLayoutSlice({
             const found = findNodeById(get().layout.config, id);
             return found?.node.collapsed === true;
           },
-
-          // Deprecated aliases
-          setActivePanel: (...args) => get().layout.setActiveTab(...args),
-          addPanelToArea: (...args) => get().layout.addTab(...args),
-          removePanelFromArea: (...args) => get().layout.removeTab(...args),
-          setAreaCollapsed: (...args) => get().layout.setCollapsed(...args),
-          toggleAreaCollapsed: (...args) =>
-            get().layout.toggleCollapsed(...args),
-          getAreaPanels: (...args) => get().layout.getTabs(...args),
-          getActivePanel: (...args) => get().layout.getActiveTab(...args),
-          isAreaCollapsed: (...args) => get().layout.isCollapsed(...args),
 
           registerPanel: (panelId: string, info: RoomPanelInfo) => {
             set((state) =>

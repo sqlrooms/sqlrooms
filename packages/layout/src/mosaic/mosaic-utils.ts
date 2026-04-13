@@ -5,6 +5,7 @@ import {
   isLayoutTabsNode,
   LayoutMosaicNode,
   LayoutNode,
+  LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
   MAIN_VIEW,
@@ -133,8 +134,9 @@ export function removeLayoutNodeByKey(
 // Generic node-by-id helpers
 // ---------------------------------------------------------------------------
 
-/** Any non-leaf layout node that has an `id`. */
+/** Any layout node that has an `id`. */
 export type IdentifiedLayoutNode =
+  | LayoutPanelNode
   | LayoutTabsNode
   | (LayoutSplitNode & {id: string})
   | LayoutMosaicNode;
@@ -146,7 +148,9 @@ export function findNodeById(
   path: MosaicPath = [],
 ): {node: IdentifiedLayoutNode; path: MosaicPath} | undefined {
   if (!root || typeof root === 'string') return undefined;
-  if (isLayoutPanelNode(root)) return undefined;
+  if (isLayoutPanelNode(root)) {
+    return root.id === nodeId ? {node: root, path} : undefined;
+  }
   if (isLayoutTabsNode(root)) {
     if (root.id === nodeId) return {node: root, path};
     for (let i = 0; i < root.children.length; i++) {

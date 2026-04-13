@@ -24,6 +24,7 @@ export const LayoutPanelNode = z.object({
   maxSize: LayoutSize.optional(),
   collapsedSize: LayoutSize.optional(),
   collapsible: z.boolean().optional(),
+  collapsed: z.boolean().optional(),
 });
 export type LayoutPanelNode = z.infer<typeof LayoutPanelNode>;
 

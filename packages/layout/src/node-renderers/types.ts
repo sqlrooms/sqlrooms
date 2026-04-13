@@ -1,8 +1,4 @@
-import {
-  isLayoutNodeKey,
-  isLayoutPanelNode,
-  LayoutNode,
-} from '@sqlrooms/layout-config';
+import {isLayoutNodeKey, LayoutNode} from '@sqlrooms/layout-config';
 import type {LayoutPath, PanelContainerType} from '../types';
 
 export type ParentDirection = 'row' | 'column';
@@ -53,7 +49,7 @@ export function getPanelId(node: LayoutNode): string {
 }
 
 export function isCollapsed(node: LayoutNode): boolean {
-  if (isLayoutNodeKey(node) || isLayoutPanelNode(node)) {
+  if (isLayoutNodeKey(node)) {
     return false;
   }
 

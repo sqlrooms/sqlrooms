@@ -14,12 +14,13 @@ const RoomPanelHeader: FC<{
   const {icon: Icon, title} = panels[panelKey] ?? {};
   let panelToCollapse = panelKey;
   try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const {node} = useTabsLayoutContext();
     if (node.type === 'tabs') {
       panelToCollapse = node.id;
     }
-  } catch (error) {
-    console.error(error);
+  } catch (_error) {
+    // ignore error
   }
 
   const toggleCollapsed = useBaseRoomShellStore(
