@@ -20,6 +20,7 @@ import {
 // Using Resium's <Clock> component caused conflicts with imperative updates.
 import {useStoreWithCesium} from '../cesium-slice';
 import {CesiumEntityLayer} from './CesiumEntityLayer';
+import {CesiumTilesetLayer} from './CesiumTilesetLayer';
 import {useClockSync} from '../hooks/useClockSync';
 
 /**
@@ -250,8 +251,10 @@ export const CesiumViewerWrapper: React.FC = () => {
         switch (layer.type) {
           case 'sql-entities':
             return <CesiumEntityLayer key={layer.id} layerConfig={layer} />;
+          case 'tileset':
+            return <CesiumTilesetLayer key={layer.id} layerConfig={layer} />;
 
-          // Future layer types: geojson, czml, tileset
+          // Future layer types: geojson, czml
           default:
             return null;
         }

@@ -4,6 +4,7 @@
  */
 
 import {
+  CesiumLayerConfig,
   CesiumPanel,
   createCesiumSlice,
   createDefaultCesiumConfig,
@@ -57,7 +58,7 @@ export const OPENSKY_POINT_PROFILER_COLUMNS = [
 
 const OPENSKY_FLIGHT_POINTS_URL =
   import.meta.env.VITE_OPENSKY_POINTS_URL ??
-  'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_nyc_area_flight_points_2026-03-01_ny.parquet';
+  'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_nyc_area_flight_points_2026-03-01_ny_sampled_every5th.parquet';
 const AIRLINER_MODEL_URL =
   import.meta.env.VITE_OPENSKY_AIRLINER_MODEL_URL ??
   'https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/Airliner.glb';
@@ -169,12 +170,18 @@ const configWithLayers = {
     baseLayerImagery: 'openstreetmap' as const,
     depthTestAgainstTerrain: false,
     layers: [
-      {
-        id: 'opensky-flights',
-        type: 'sql-entities' as const,
+      CesiumLayerConfig.parse({
+        id: 'osm-buildings',
+        type: 'tileset',
         visible: true,
-        heightReference: 'NONE' as const,
-        entityStyle: 'model' as const,
+        ionAssetId: 96188,
+      }),
+      CesiumLayerConfig.parse({
+        id: 'opensky-flights',
+        type: 'sql-entities',
+        visible: true,
+        heightReference: 'NONE',
+        entityStyle: 'model',
         billboardScale: 1,
         geometryScale: 1,
         modelUri: AIRLINER_MODEL_URL,
@@ -198,7 +205,7 @@ const configWithLayers = {
           heading: 'heading',
           size: 'size',
         },
-      },
+      }),
     ],
     clock: {
       currentTime: '2026-03-01T17:00:00Z',

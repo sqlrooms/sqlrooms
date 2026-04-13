@@ -111,6 +111,8 @@ export const CesiumLayerConfig = z.object({
   dataUrl: z.string().optional(),
   /** URL for 3D Tiles tileset */
   tilesetUrl: z.string().optional(),
+  /** Cesium Ion asset ID for 3D Tiles (e.g. 96188 for OSM Buildings) */
+  ionAssetId: z.number().optional(),
   /** Height reference mode for entity positioning */
   heightReference: z
     .enum(['CLAMP_TO_GROUND', 'RELATIVE_TO_GROUND', 'NONE'])

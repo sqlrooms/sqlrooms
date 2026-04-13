@@ -16,6 +16,8 @@ export {CesiumPanel} from './components/CesiumPanel';
 export {CesiumViewerWrapper} from './components/CesiumViewerWrapper';
 export {CesiumEntityLayer} from './components/CesiumEntityLayer';
 export type {CesiumEntityLayerProps} from './components/CesiumEntityLayer';
+export {CesiumTilesetLayer} from './components/CesiumTilesetLayer';
+export type {CesiumTilesetLayerProps} from './components/CesiumTilesetLayer';
 export {CesiumToolbar} from './components/CesiumToolbar';
 export type {CesiumToolbarProps} from './components/CesiumToolbar';
 export {CesiumClock} from './components/CesiumClock';
