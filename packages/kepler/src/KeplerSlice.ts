@@ -616,14 +616,35 @@ export function createKeplerSlice({
             do {
               pendingKeplerSync = false;
               for (const mapId of Object.keys(get().kepler.map)) {
-                const keplerDatasets =
-                  get().kepler.map[mapId]?.visState.datasets;
-                for (const {table} of get().db.tables) {
+                const mapState = get().kepler.map[mapId];
+                if (!mapState) continue;
+                const keplerDatasets = mapState.visState.datasets;
+
+                // Only sync tables that are referenced by existing layers or filters
+                const referencedDataIds = new Set<string>();
+                for (const layer of mapState.visState.layers ?? []) {
+                  if (layer.config.dataId) {
+                    referencedDataIds.add(layer.config.dataId);
+                  }
+                }
+                for (const filter of mapState.visState.filters ?? []) {
+                  for (const dataId of filter.dataId ?? []) {
+                    referencedDataIds.add(dataId);
+                  }
+                }
+
+                const availableTables = new Set(
+                  get()
+                    .db.tables.filter((t) => t.table.schema === 'main')
+                    .map((t) => t.table.table),
+                );
+
+                for (const dataId of referencedDataIds) {
                   if (
-                    table.schema === 'main' &&
-                    !keplerDatasets?.[table.table]
+                    !keplerDatasets?.[dataId] &&
+                    availableTables.has(dataId)
                   ) {
-                    await get().kepler.addTableToMap(mapId, table.table, {
+                    await get().kepler.addTableToMap(mapId, dataId, {
                       autoCreateLayers: false,
                       centerMap: false,
                     });
