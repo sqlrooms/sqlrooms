@@ -1,13 +1,13 @@
-# Cesium Earthquake Explorer
+# Cesium Flights Explorer
 
-A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
+A 3D globe visualization of OpenSky flight traffic using Cesium and SQLRooms.
 
 ## Features
 
 - **3D Globe**: Interactive Cesium-powered 3D globe
-- **Earthquake Data**: Real-time visualization of earthquakes magnitude 5.0+
-- **Time Animation**: Animate through earthquake timeline with clock controls
-- **SQL Queries**: Data loaded from DuckDB via SQL queries
+- **OpenSky Flights**: Global flight playback from local parquet extracts
+- **Time Animation**: Animate a day of flight traffic with clock controls
+- **SQL Queries**: Flight summaries and point samples loaded through DuckDB
 - **Camera Persistence**: Camera position saved across page reloads
 
 ## Setup
@@ -18,12 +18,14 @@ A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
    pnpm install
    ```
 
-2. **Set Cesium Ion token** (required for imagery):
+2. **Use the hosted OpenSky parquet files**:
 
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your token from https://ion.cesium.com/tokens
-   ```
+   By default the example loads:
+   - `https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_flights_cesium_mosaic_sampled_every10th.parquet`
+   - `https://pub-334685c2155547fab4287d84cae47083.r2.dev/opensky/opensky_flight_points_cesium_sampled_every10th.parquet`
+
+   You can override them with `VITE_OPENSKY_FLIGHTS_URL` and
+   `VITE_OPENSKY_POINTS_URL`.
 
 3. **Run development server**:
    ```bash
@@ -37,7 +39,7 @@ A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
 - **Left-click + drag**: Rotate globe
 - **Right-click + drag**: Pan camera
 - **Scroll wheel**: Zoom in/out
-- **Fit View button**: Zoom to all earthquakes
+- **Fit View button**: Zoom to the sampled global flight set
 
 ### Timeline Controls
 
@@ -49,10 +51,11 @@ A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
 
 - **Eye icon**: Toggle layer visibility
 
-## Data Source
+## Data Sources
 
-Earthquake data from USGS via Hugging Face:
-https://huggingface.co/datasets/sqlrooms/earthquakes
+- `opensky_flights`: per-flight summary rows for SQL exploration
+- `opensky_flight_points`: sampled track points used by the Cesium layer
+- flights are rendered as tinted airplane billboards, colored by altitude band
 
 ## Architecture
 
@@ -60,21 +63,22 @@ This example demonstrates:
 
 - Cesium slice integration with room store
 - SQL-based entity layers (`sql-entities` type)
+- Using local parquet files through Vite's `/@fs` dev route
 - Clock configuration for time-dynamic data
 - Camera persistence via Zod schemas
-- Vite configuration for Cesium assets
+- Vite configuration for Cesium assets and local data access
 
 ## Customization
 
-### Change Data Query
+### Change The Cesium Query
 
 Edit `src/store.ts` to modify the SQL query:
 
 ```typescript
 sqlQuery: `
-  SELECT latitude, longitude, mag, place
-  FROM earthquakes
-  WHERE mag > 5.0  -- Larger earthquakes only
+  SELECT longitude, latitude, altitude_m AS altitude
+  FROM opensky_flight_points
+  WHERE duration_s >= 3600
 `;
 ```
 
@@ -85,10 +89,12 @@ cesiumConfig.cesium.layers.push({
   id: 'my-layer',
   type: 'sql-entities',
   visible: true,
-  sqlQuery: 'SELECT * FROM my_table',
+  sqlQuery: 'SELECT * FROM opensky_flight_points',
   columnMapping: {
-    longitude: 'lon',
-    latitude: 'lat',
+    longitude: 'longitude',
+    latitude: 'latitude',
+    altitude: 'altitude_m',
+    time: 'point_time_utc',
   },
 });
 ```
@@ -108,12 +114,12 @@ cesiumConfig.cesium.camera = {
 ### Globe not rendering
 
 - Check browser console for errors
-- Verify Cesium Ion token is set in `.env`
+- Verify the local parquet files exist at the configured paths
 - Ensure Vite plugin copied assets correctly
 
-### No earthquake data
+### No flight data
 
-- Check network tab for parquet file download
+- Check the `/@fs/...` parquet requests in the network tab
 - Verify DuckDB loaded successfully
 - Check browser console for SQL errors
 
@@ -126,4 +132,4 @@ cesiumConfig.cesium.camera = {
 
 - [Cesium Documentation](https://cesium.com/learn/)
 - [SQLRooms Documentation](../../docs/)
-- [DuckDB Spatial Extension](https://duckdb.org/docs/extensions/spatial.html)
+- [OpenSky Scientific Datasets](https://opensky-network.org/data/scientific)

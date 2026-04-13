@@ -1,5 +1,5 @@
 /**
- * Main App component for Cesium Earthquake Explorer.
+ * Main App component for the Cesium OpenSky flights example.
  */
 
 import React from 'react';
@@ -8,7 +8,7 @@ import {Room} from './Room';
 
 export const App: React.FC = () => {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="cesium-app-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="cesium-example-theme">
       <Room />
     </ThemeProvider>
   );

@@ -1,5 +1,5 @@
 /**
- * Room component for Cesium Earthquake Explorer.
+ * Room component for the Cesium OpenSky flights example.
  */
 
 import {RoomShell} from '@sqlrooms/room-shell';

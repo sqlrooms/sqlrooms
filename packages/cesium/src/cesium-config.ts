@@ -8,6 +8,17 @@
 
 import {z} from 'zod';
 
+export const ModelOrientationOffset = z.object({
+  /** Heading/yaw offset in degrees */
+  heading: z.number().default(0),
+  /** Pitch offset in degrees */
+  pitch: z.number().default(0),
+  /** Roll offset in degrees */
+  roll: z.number().default(0),
+});
+
+export type ModelOrientationOffset = z.infer<typeof ModelOrientationOffset>;
+
 /**
  * Camera position in cartographic coordinates (serializable).
  * Longitude/latitude in degrees; heading/pitch/roll in radians; distances in meters.
@@ -57,6 +68,8 @@ export type ClockConfig = z.infer<typeof ClockConfig>;
  * Maps SQL column names to Cesium entity properties.
  */
 export const ColumnMapping = z.object({
+  /** Column containing a stable entity identifier for time-series rows */
+  id: z.string().optional(),
   /** Column containing longitude in degrees */
   longitude: z.string().default('longitude'),
   /** Column containing latitude in degrees */
@@ -71,6 +84,8 @@ export const ColumnMapping = z.object({
   color: z.string().optional(),
   /** Optional column for point size/scale */
   size: z.string().optional(),
+  /** Optional column for heading in degrees */
+  heading: z.string().optional(),
 });
 
 export type ColumnMapping = z.infer<typeof ColumnMapping>;
@@ -100,6 +115,26 @@ export const CesiumLayerConfig = z.object({
   heightReference: z
     .enum(['CLAMP_TO_GROUND', 'RELATIVE_TO_GROUND', 'NONE'])
     .default('RELATIVE_TO_GROUND'),
+  /** Entity rendering style */
+  entityStyle: z.enum(['point', 'billboard', 'box', 'model']).default('point'),
+  /** Optional billboard image URL or data URI */
+  billboardImage: z.string().optional(),
+  /** Billboard scale multiplier */
+  billboardScale: z.number().default(1),
+  /** Scale multiplier for world-space geometry markers */
+  geometryScale: z.number().default(1),
+  /** Optional glTF/glb model URL */
+  modelUri: z.string().optional(),
+  /** Model scale multiplier */
+  modelScale: z.number().default(1),
+  /** Minimum pixel size for the model */
+  modelMinimumPixelSize: z.number().default(32),
+  /** Fixed orientation offset applied on top of motion-derived orientation */
+  modelOrientationOffset: ModelOrientationOffset.default({
+    heading: 0,
+    pitch: 0,
+    roll: 0,
+  }),
 });
 
 export type CesiumLayerConfig = z.infer<typeof CesiumLayerConfig>;

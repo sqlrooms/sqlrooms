@@ -4,8 +4,14 @@
  */
 
 import React, {useEffect, useRef} from 'react';
-import {Entity, PointGraphics} from 'resium';
-import {Color, HeightReference} from 'cesium';
+import {
+  BillboardGraphics,
+  BoxGraphics,
+  Entity,
+  ModelGraphics,
+  PointGraphics,
+} from 'resium';
+import {Cartesian3, Color, HeightReference, Math as CesiumMath} from 'cesium';
 import {useSql} from '@sqlrooms/duckdb';
 import type {CesiumLayerConfig} from '../cesium-config';
 import {useStoreWithCesium} from '../cesium-slice';
@@ -104,18 +110,81 @@ export const CesiumEntityLayer: React.FC<CesiumEntityLayerProps> = ({
           key={entity.id}
           name={entity.label ?? entity.id}
           position={entity.position}
+          orientation={entity.orientation}
           description={entity.label}
           availability={entity.availability}
         >
-          <PointGraphics
-            pixelSize={entity.size ? entity.size * 2 : 8}
-            color={
-              entity.color ? Color.fromCssColorString(entity.color) : Color.CYAN
-            }
-            heightReference={heightRef}
-            outlineColor={Color.WHITE}
-            outlineWidth={1}
-          />
+          {layerConfig.entityStyle === 'billboard' &&
+          layerConfig.billboardImage ? (
+            <BillboardGraphics
+              image={layerConfig.billboardImage}
+              scale={
+                entity.size
+                  ? layerConfig.billboardScale * (entity.size / 4)
+                  : layerConfig.billboardScale
+              }
+              color={
+                entity.color
+                  ? Color.fromCssColorString(entity.color)
+                  : Color.CYAN
+              }
+              alignedAxis={Cartesian3.UNIT_Z}
+              rotation={
+                entity.rotation ??
+                CesiumMath.toRadians(entity.heading ? -entity.heading : 0)
+              }
+              heightReference={heightRef}
+            />
+          ) : layerConfig.entityStyle === 'box' ? (
+            <BoxGraphics
+              dimensions={
+                new Cartesian3(
+                  (entity.size ? entity.size * 12000 : 36000) *
+                    layerConfig.geometryScale,
+                  (entity.size ? entity.size * 3200 : 9600) *
+                    layerConfig.geometryScale,
+                  (entity.size ? entity.size * 900 : 2700) *
+                    layerConfig.geometryScale,
+                )
+              }
+              material={
+                entity.color
+                  ? Color.fromCssColorString(entity.color)
+                  : Color.CYAN
+              }
+              outline
+              outlineColor={Color.WHITE.withAlpha(0.5)}
+            />
+          ) : layerConfig.entityStyle === 'model' && layerConfig.modelUri ? (
+            <ModelGraphics
+              uri={layerConfig.modelUri}
+              scale={
+                entity.size
+                  ? layerConfig.modelScale * (entity.size / 4)
+                  : layerConfig.modelScale
+              }
+              minimumPixelSize={layerConfig.modelMinimumPixelSize}
+              maximumScale={20000}
+              colorBlendAmount={0.25}
+              color={
+                entity.color
+                  ? Color.fromCssColorString(entity.color)
+                  : undefined
+              }
+            />
+          ) : (
+            <PointGraphics
+              pixelSize={entity.size ? entity.size * 2 : 8}
+              color={
+                entity.color
+                  ? Color.fromCssColorString(entity.color)
+                  : Color.CYAN
+              }
+              heightReference={heightRef}
+              outlineColor={Color.WHITE}
+              outlineWidth={1}
+            />
+          )}
         </Entity>
       ))}
     </>

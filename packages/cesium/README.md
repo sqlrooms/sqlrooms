@@ -215,7 +215,7 @@ SELECT ST_AsGeoJSON(geom) FROM boundaries;
 
 ## Examples
 
-See `examples/cesium-app/` for a complete working example with earthquake visualization.
+See `examples/cesium/` for a complete working example with flight visualization.
 
 ## License
 
