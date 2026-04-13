@@ -43,14 +43,30 @@ function getToolName(part: UIMessagePart): string | undefined {
   return undefined;
 }
 
-function isAgentToolPart(part: UIMessagePart): boolean {
+function isAgentToolPart(
+  part: UIMessagePart,
+  agentProgress: Record<string, unknown[]>,
+): boolean {
   const name = getToolName(part);
-  return !!name && name.startsWith('agent-');
+  if (!name) return false;
+  if (name.startsWith('agent-')) return true;
+
+  const toolCallId = (part as {toolCallId?: string}).toolCallId;
+  if (toolCallId && (agentProgress[toolCallId]?.length ?? 0) > 0) return true;
+
+  const output = (part as {output?: {agentToolCalls?: unknown[]}}).output;
+  if (output?.agentToolCalls?.length) return true;
+
+  return false;
 }
 
-function isNonAgentToolPart(part: UIMessagePart): boolean {
+function isNonAgentToolPart(
+  part: UIMessagePart,
+  agentProgress: Record<string, unknown[]>,
+): boolean {
   return (
-    (isToolPart(part) || isDynamicToolPart(part)) && !isAgentToolPart(part)
+    (isToolPart(part) || isDynamicToolPart(part)) &&
+    !isAgentToolPart(part, agentProgress)
   );
 }
 
@@ -64,6 +80,7 @@ type PartSegment =
 function groupPartsIntoSegments(
   parts: UIMessagePart[],
   suppressedIndices: Set<number>,
+  agentProgress: Record<string, unknown[]>,
 ): PartSegment[] {
   const segments: PartSegment[] = [];
   let pendingTools: Array<{part: ToolPartWithId; index: number}> = [];
@@ -82,9 +99,9 @@ function groupPartsIntoSegments(
     if (typeof part.type === 'string' && part.type.startsWith('step-'))
       continue;
 
-    if (isNonAgentToolPart(part)) {
+    if (isNonAgentToolPart(part, agentProgress)) {
       pendingTools.push({part: part as ToolPartWithId, index: i});
-    } else if (isAgentToolPart(part)) {
+    } else if (isAgentToolPart(part, agentProgress)) {
       flushTools();
       segments.push({
         kind: 'agent-tool',
@@ -128,6 +145,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   const excludeList = useMemo(() => userTools ?? [], [userTools]);
 
+  const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
+
   const suppressedIndices = useMemo(() => {
     const set = new Set<number>();
     for (let i = 0; i < uiMessageParts.length; i++) {
@@ -144,8 +163,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, [uiMessageParts]);
 
   const segments = useMemo(
-    () => groupPartsIntoSegments(uiMessageParts, suppressedIndices),
-    [uiMessageParts, suppressedIndices],
+    () =>
+      groupPartsIntoSegments(uiMessageParts, suppressedIndices, agentProgress),
+    [uiMessageParts, suppressedIndices, agentProgress],
   );
 
   const hoistableSet = useMemo(() => new Set(excludeList), [excludeList]);

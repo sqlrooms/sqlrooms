@@ -90,6 +90,7 @@ export const ToolPartRenderer = ({
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
+  const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
   const isComplete =
     isToolPart(part) || isDynamicToolPart(part)
@@ -124,7 +125,12 @@ export const ToolPartRenderer = ({
     console.error(
       `Tool "${toolName}" is requesting approval but has no renderer configured.`,
     );
-    return null;
+    return (
+      <div className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+        <strong>Approval required:</strong> Tool &ldquo;{toolName}&rdquo; is
+        requesting approval but has no renderer configured.
+      </div>
+    );
   }
 
   // Render the ToolComponent directly for:
@@ -155,7 +161,11 @@ export const ToolPartRenderer = ({
 
   // Otherwise, render <ToolResult>
   if (hasExecute) {
-    const isAgentTool = toolName.startsWith('agent-');
+    const agentOutput = output as {agentToolCalls?: unknown[]} | undefined;
+    const isAgentTool =
+      toolName.startsWith('agent-') ||
+      (storeProgress?.length ?? 0) > 0 ||
+      (agentOutput?.agentToolCalls?.length ?? 0) > 0;
 
     return (
       <div>
