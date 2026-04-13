@@ -158,10 +158,10 @@ const configWithLayers = {
   cesium: {
     ...cesiumConfig.cesium,
     camera: {
-      longitude: -73.82,
-      latitude: 37.74,
-      height: 120000,
-      heading: 0,
+      longitude: -71.82,
+      latitude: 41.74,
+      height: 50000,
+      heading: -90,
       pitch: -0.32,
       roll: 0,
     },
