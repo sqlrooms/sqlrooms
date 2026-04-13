@@ -831,6 +831,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../../packages/mosaic
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell

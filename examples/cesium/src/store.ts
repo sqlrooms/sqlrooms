@@ -40,23 +40,18 @@ export const FLIGHT_FILTER_SELECTION_NAME = 'flight_filter';
 
 const MAX_RENDERED_FLIGHTS = 2500;
 
-export const OPENSKY_PROFILER_COLUMNS = [
+export const OPENSKY_POINT_PROFILER_COLUMNS = [
   'callsign',
-  'icao24',
   'departure_airport',
   'arrival_airport',
-  'est_departure_airport',
-  'est_arrival_airport',
+  'point_time_utc',
+  'altitude_m',
+  'heading',
   'duration_s',
   'track_points',
+  'sampled_point_index',
   'first_seen_utc',
   'last_seen_utc',
-  'takeoff_time_utc',
-  'landing_time_utc',
-  'takeoff_latitude',
-  'takeoff_longitude',
-  'landing_latitude',
-  'landing_longitude',
 ] as const;
 
 const OPENSKY_FLIGHTS_URL =
@@ -88,19 +83,30 @@ function appendSelectionFilter(
   return query;
 }
 
-function buildFilteredFlightsSubquery(filter?: unknown) {
-  const query = Query.from('opensky_flights')
+function buildMatchedPointFlightsSubquery(filter?: unknown) {
+  const query = Query.from('opensky_flight_points')
     .select('flight_id')
-    .where(
-      sql`"departure_airport" IS NOT NULL`,
-      sql`"arrival_airport" IS NOT NULL`,
-      sql`"duration_s" >= 1800`,
-      sql`"track_points" >= 40`,
-    )
-    .orderby(sql`"duration_s" DESC`, sql`"track_points" DESC`, sql`"flight_id"`)
-    .limit(MAX_RENDERED_FLIGHTS);
+    .distinct()
+    .where(sql`"onground" = false`);
 
   return appendSelectionFilter(query, filter).toString();
+}
+
+function buildFilteredFlightsSubquery(filter?: unknown) {
+  return `
+    SELECT flight_id
+    FROM opensky_flights
+    WHERE
+      departure_airport IS NOT NULL
+      AND arrival_airport IS NOT NULL
+      AND duration_s >= 1800
+      AND track_points >= 40
+      AND flight_id IN (
+        ${buildMatchedPointFlightsSubquery(filter)}
+      )
+    ORDER BY duration_s DESC, track_points DESC, flight_id
+    LIMIT ${MAX_RENDERED_FLIGHTS}
+  `;
 }
 
 export function buildOpenSkyFlightPointsQuery(filter?: unknown) {

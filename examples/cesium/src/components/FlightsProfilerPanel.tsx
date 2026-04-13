@@ -4,15 +4,15 @@ import {cn, SpinnerPane} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {
   FLIGHT_FILTER_SELECTION_NAME,
-  OPENSKY_PROFILER_COLUMNS,
+  OPENSKY_POINT_PROFILER_COLUMNS,
   useRoomStore,
 } from '../store';
 
 export function FlightsProfilerPanel({className}: {className?: string}) {
   const mosaic = useRoomStore((state) => state.mosaic);
   const mosaicConnection = useRoomStore((state) => state.mosaic.connection);
-  const flightsTable = useRoomStore((state) =>
-    state.db.findTableByName('opensky_flights'),
+  const flightPointsTable = useRoomStore((state) =>
+    state.db.findTableByName('opensky_flight_points'),
   );
   const selection = useMemo(
     () => mosaic.getSelection(FLIGHT_FILTER_SELECTION_NAME),
@@ -23,7 +23,7 @@ export function FlightsProfilerPanel({className}: {className?: string}) {
     return <SpinnerPane className="h-full w-full" />;
   }
 
-  if (!flightsTable || mosaicConnection.status !== 'ready') {
+  if (!flightPointsTable || mosaicConnection.status !== 'ready') {
     return null;
   }
 
@@ -33,20 +33,20 @@ export function FlightsProfilerPanel({className}: {className?: string}) {
         <MosaicProfiler
           pageSize={18}
           selection={selection}
-          tableName="opensky_flights"
-          columns={[...OPENSKY_PROFILER_COLUMNS]}
+          tableName="opensky_flight_points"
+          columns={[...OPENSKY_POINT_PROFILER_COLUMNS]}
         >
-          {/* <div className="border-b px-3 py-3">
-            <h2 className="text-sm font-semibold">Flight Profiler</h2>
+          <div className="border-b px-3 py-3">
+            <h2 className="text-sm font-semibold">Flight Point Profiler</h2>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
-              Profile and cross-filter flights in the summary table, then render
-              the matching trajectories on the globe through their shared
+              Filter sampled points by altitude, time, heading, and route
+              fields. Matching points promote their
               <code className="bg-muted ml-1 rounded px-1 py-0.5 text-[11px]">
                 flight_id
               </code>
-              .
+              s, and the globe renders those flights as complete moving paths.
             </p>
-          </div> */}
+          </div>
 
           <div className="min-h-0 flex-1">
             <div className="h-full w-full overflow-auto">
