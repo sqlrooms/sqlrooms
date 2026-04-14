@@ -1,12 +1,10 @@
-import {TableIcon} from 'lucide-react';
+import {RoomPanelTypes} from './panel-types';
+import {RoomPanel} from '@sqlrooms/room-shell';
+import {RoomPanelComponent} from '@sqlrooms/layout';
 
-export function SchemaPanel() {
+export const SchemaPanel: RoomPanelComponent = () => {
   return (
-    <div className="flex h-full flex-col gap-3 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <TableIcon className="h-4 w-4" />
-        Schema
-      </div>
+    <RoomPanel type={RoomPanelTypes.enum['schema']}>
       <div className="text-muted-foreground text-xs">
         Browse table schemas and column definitions.
       </div>
@@ -19,6 +17,6 @@ export function SchemaPanel() {
           <div>created_at: TIMESTAMP</div>
         </div>
       </div>
-    </div>
+    </RoomPanel>
   );
-}
+};

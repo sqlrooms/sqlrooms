@@ -1,12 +1,10 @@
-import {DatabaseIcon} from 'lucide-react';
+import {RoomPanel} from '@sqlrooms/room-shell';
+import {RoomPanelTypes} from './panel-types';
+import {RoomPanelComponent} from '@sqlrooms/layout';
 
-export function DataSourcesPanel() {
+export const DataSourcesPanel: RoomPanelComponent = () => {
   return (
-    <div className="flex h-full flex-col gap-3 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <DatabaseIcon className="h-4 w-4" />
-        Data Sources
-      </div>
+    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
       <div className="text-muted-foreground text-xs">
         Manage your data connections and files here.
       </div>
@@ -22,6 +20,6 @@ export function DataSourcesPanel() {
           5,678 rows · 8 columns
         </div>
       </div>
-    </div>
+    </RoomPanel>
   );
-}
+};

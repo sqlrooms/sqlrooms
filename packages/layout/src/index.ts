@@ -28,6 +28,7 @@ export {
   removeLayoutNodeByKey,
   findTabsNodeForPanel,
   findNodeById,
+  findAnyNodeById,
   getNodeAtPath,
   findParentArea,
   findParentSplit,
@@ -80,6 +81,11 @@ export {
   isLayoutTabsNode,
   isLayoutMosaicNode,
   createDefaultLayout,
+  // Tabs node helpers
+  getLayoutNodeId,
+  getChildrenIds,
+  getVisibleTabChildren,
+  getHiddenTabChildren,
 } from '@sqlrooms/layout-config';
 
 // Deprecated re-exports from @sqlrooms/layout-config (old Mosaic* names)
@@ -102,7 +108,8 @@ export {
 } from '@sqlrooms/layout-config';
 
 // Panel matching utility
-export {matchNodePathToPanel} from './matchNodePathToPanel';
+export {getPanelByPath} from './getPanelByPath';
+export {useGetPanelInfoByPath, useGetPanelByPath} from './useGetPanel';
 
 // Node renderers
 

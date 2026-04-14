@@ -6,11 +6,9 @@ import {
   LayoutRendererProvider,
 } from './LayoutRendererContext';
 import {NodeRenderer} from './node-renderers/NodeRenderer';
-import type {RoomPanelInfo} from './types';
 
 export type LayoutRendererProps = {
   rootLayout: LayoutNode;
-  panels: Record<string, RoomPanelInfo>;
   className?: string;
 } & LayoutRendererContextType;
 

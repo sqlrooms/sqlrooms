@@ -1,6 +1,7 @@
+import {RoomPanelComponent} from '@sqlrooms/layout';
 import {TerminalIcon} from 'lucide-react';
 
-export function ConsolePanel() {
+export const ConsolePanel: RoomPanelComponent = () => {
   return (
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
@@ -21,4 +22,4 @@ export function ConsolePanel() {
       </div>
     </div>
   );
-}
+};

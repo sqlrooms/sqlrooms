@@ -3,6 +3,7 @@ import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 import {
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -18,6 +19,7 @@ export const RoomPanelTypes = z.enum([
   'data-sources',
   'data-tables',
   'docs',
+  'left',
   MAIN_VIEW,
 ] as const);
 
@@ -50,16 +52,30 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       layout: {
         config: {
           type: 'split',
+          id: 'root',
           direction: 'row',
           children: [
             {
-              type: 'panel' as const,
-              id: RoomPanelTypes.enum['data-sources'],
+              type: 'tabs',
+              id: RoomPanelTypes.enum['left'],
               defaultSize: '30%',
+              minSize: 300,
+              children: [
+                RoomPanelTypes.enum['data-sources'],
+                RoomPanelTypes.enum['room-details'],
+              ],
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
             },
-            {type: 'panel' as const, id: MAIN_VIEW, defaultSize: '70%'},
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['main'],
+              defaultSize: '70%',
+            },
           ],
-        },
+        } satisfies LayoutConfig,
         panels: {
           [RoomPanelTypes.enum['room-details']]: {
             title: 'Room Details',
@@ -73,7 +89,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             component: DataSourcesPanel,
             placement: 'sidebar',
           },
-          main: {
+          [RoomPanelTypes.enum['main']]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,

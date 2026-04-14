@@ -1,6 +1,7 @@
+import {RoomPanelComponent} from '@sqlrooms/layout';
 import {TableRowsSplitIcon} from 'lucide-react';
 
-export function ResultsPanel() {
+export const ResultsPanel: RoomPanelComponent = () => {
   return (
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
@@ -37,4 +38,4 @@ export function ResultsPanel() {
       </div>
     </div>
   );
-}
+};

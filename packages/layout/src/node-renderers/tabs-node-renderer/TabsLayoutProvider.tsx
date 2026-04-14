@@ -1,33 +1,23 @@
 import {LayoutTabsNode} from '@sqlrooms/layout-config';
 import {createContext, FC, PropsWithChildren, useContext} from 'react';
 import {LayoutPath} from '../../types';
-import {TabsLayoutInfo, useTabsLayoutInfo} from './useTabsLayoutInfo';
 import {ParentDirection} from '../types';
 
 type TabsLayoutContextValue = {
   node: LayoutTabsNode;
   path: LayoutPath;
   parentDirection?: ParentDirection;
-} & TabsLayoutInfo;
+};
 
 const TabsLayoutContext = createContext<TabsLayoutContextValue | null>(null);
 
-interface TabsLayoutProviderProps {
-  node: LayoutTabsNode;
-  path: LayoutPath;
-  parentDirection?: ParentDirection;
-}
-
 export const TabsLayoutProvider: FC<
-  PropsWithChildren<TabsLayoutProviderProps>
+  PropsWithChildren<TabsLayoutContextValue>
 > = ({node, path, parentDirection, children}) => {
-  const info = useTabsLayoutInfo(node, path);
-
   const value: TabsLayoutContextValue = {
     node,
     path,
     parentDirection,
-    ...info,
   };
 
   return (

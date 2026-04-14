@@ -3,14 +3,13 @@ import {FC} from 'react';
 import {MosaicPath, MosaicWindow} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
 import {MosaicCloseButton} from './MosaicCloseButton';
-import {LayoutPath, PanelRenderContext, RoomPanelInfo} from '../types';
-import {matchNodePathToPanel} from '../matchNodePathToPanel';
+import {LayoutPath} from '../types';
 import {RendererSwitcher} from './RendererSwitcher';
+import {useGetPanelByPath} from '../useGetPanel';
 
 export type MosaicTileRendererProps = {
   panelId: string;
   tilePath: MosaicPath;
-  panels: Record<string, RoomPanelInfo>;
   node: LayoutMosaicNode;
   path: LayoutPath;
 };
@@ -18,7 +17,6 @@ export type MosaicTileRendererProps = {
 export const MosaicTileRenderer: FC<MosaicTileRendererProps> = ({
   panelId,
   tilePath,
-  panels,
   node,
   path,
 }) => {
@@ -26,7 +24,7 @@ export const MosaicTileRenderer: FC<MosaicTileRendererProps> = ({
 
   const currentPath = [...path, panelId];
 
-  const panelInfo = matchNodePathToPanel(currentPath, panels);
+  const panel = useGetPanelByPath(currentPath);
 
   const content = (
     <div className="h-full w-full overflow-hidden p-2">
@@ -38,8 +36,8 @@ export const MosaicTileRenderer: FC<MosaicTileRendererProps> = ({
     return <>{content}</>;
   }
 
-  const title = panelInfo?.panel.title ?? panelId;
-  const Icon = panelInfo?.panel.icon;
+  const title = panel?.title ?? panelId;
+  const Icon = panel?.icon;
 
   return (
     <MosaicWindow<string>

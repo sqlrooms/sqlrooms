@@ -48,7 +48,7 @@ export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
 }) => {
   const treeRef = useRef(node.nodes);
 
-  const {onLayoutChange, panels, rootLayout} = useLayoutRendererContext();
+  const {onLayoutChange, rootLayout} = useLayoutRendererContext();
 
   useEffect(() => {
     treeRef.current = node.nodes;
@@ -73,14 +73,13 @@ export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
       return (
         <MosaicTileRenderer
           node={node}
-          panels={panels}
           panelId={panelId}
           tilePath={tilePath}
           path={path}
         />
       );
     },
-    [panels, node, path],
+    [node, path],
   );
 
   return (

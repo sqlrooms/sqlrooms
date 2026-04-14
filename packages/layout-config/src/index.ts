@@ -22,6 +22,14 @@ export {
   createDefaultLayout,
 } from './LayoutConfig';
 
+// Tabs node helpers
+export {
+  getLayoutNodeId,
+  getChildrenIds,
+  getVisibleTabChildren,
+  getHiddenTabChildren,
+} from './tabs-helpers';
+
 // Deprecated re-exports (old Mosaic* names)
 export {
   LayoutTypes,

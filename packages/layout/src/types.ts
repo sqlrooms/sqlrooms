@@ -1,5 +1,5 @@
 import {LayoutNode, LayoutTabsNode} from '@sqlrooms/layout-config';
-import {MatchResult} from './matchNodePathToPanel';
+import {MatchResult} from './getPanelByPath';
 
 export type LayoutPath = (string | number)[];
 
@@ -21,6 +21,7 @@ export type RoomPanelComponentProps = {
   panelInfo: MatchResult<RoomPanelInfo>;
   node: LayoutNode;
   path: LayoutPath;
+  id: string;
 };
 
 export type RoomPanelComponent = React.ComponentType<RoomPanelComponentProps>;
@@ -32,3 +33,5 @@ export type RoomPanelInfo = {
   placement?: 'sidebar' | 'sidebar-bottom' | 'main' | string;
   component?: RoomPanelComponent;
 };
+
+export type Panels = Record<string, RoomPanelInfo>;

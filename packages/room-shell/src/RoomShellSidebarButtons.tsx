@@ -107,11 +107,10 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
  * clicking an inactive tab expands the node and switches to that tab.
  */
 const TabButtons: FC<{
-  tabsId: string;
+  tabsId?: string;
   className?: string;
-}> = ({tabsId, className}) => {
+}> = ({tabsId = 'left', className}) => {
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const config = useBaseRoomShellStore((state) => state.layout.config);
   const getTabs = useBaseRoomShellStore((state) => state.layout.getTabs);
   const activeTab = useBaseRoomShellStore((state) =>
     state.layout.getActiveTab(tabsId),
@@ -127,7 +126,7 @@ const TabButtons: FC<{
   );
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
 
-  const tabIds = useMemo(() => getTabs(tabsId), [getTabs, tabsId, config]);
+  const tabIds = useMemo(() => getTabs(tabsId), [getTabs, tabsId]);
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
