@@ -1,0 +1,34 @@
+{
+  "name": "cesium-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sqlrooms/cesium": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/mosaic": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "cesium": "^1.124.0",
+    "cesium-navigation-es6": "^3.0.9",
+    "lucide-react": "^0.556.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.2",
+    "vite-plugin-cesium": "^1.2.0"
+  }
+}
