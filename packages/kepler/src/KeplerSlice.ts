@@ -432,8 +432,8 @@ export function createKeplerSlice({
           );
           updateMapReduxStates();
           updateForwardDispatch();
-          updateMapConfigs();
           get().kepler.syncKeplerDatasets();
+          updateMapConfigs();
         },
 
         async initialize() {
@@ -467,8 +467,8 @@ export function createKeplerSlice({
             },
           });
           updateForwardDispatch();
-          updateMapConfigs();
           await get().kepler.syncKeplerDatasets();
+          updateMapConfigs();
           requestMapStyle(config.currentMapId);
 
           // Register Kepler commands
