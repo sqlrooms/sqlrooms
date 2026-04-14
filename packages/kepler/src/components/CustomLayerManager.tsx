@@ -125,14 +125,17 @@ const TableListItem: React.FC<{value: TableOption}> = ({value}) => (
 );
 
 /**
- * Dropdown button that lists DuckDB table names. When a table is selected,
- * it is synced to Kepler on demand and a new layer is created for it.
+ * Dropdown button that lists available datasets and DuckDB tables.
+ * When a table is selected, it is synced to Kepler on demand and a new
+ * layer is created for it.
  */
 const AddTableLayerButton: React.FC<{
-  onAdd: (tableName: string) => void;
+  onAdd: (tableName: string) => Promise<void>;
+  keplerDatasetIds: string[];
   disabled?: boolean;
-}> = ({onAdd, disabled}) => {
+}> = ({onAdd, keplerDatasetIds, disabled}) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [menuPos, setMenuPos] = useState<{top: number; right: number}>({
@@ -143,17 +146,30 @@ const AddTableLayerButton: React.FC<{
 
   const dbTables = useStoreWithKepler((state) => state.db.tables);
 
-  const options: TableOption[] = useMemo(
-    () =>
+  const options: TableOption[] = useMemo(() => {
+    const tableNames = new Set(
       dbTables
         .filter((t) => t.table.schema === 'main')
-        .map((t) => ({label: t.table.table, value: t.table.table})),
-    [dbTables],
-  );
+        .map((t) => t.table.table),
+    );
+    for (const id of keplerDatasetIds) {
+      tableNames.add(id);
+    }
+    return Array.from(tableNames)
+      .sort()
+      .map((name) => ({label: name, value: name}));
+  }, [dbTables, keplerDatasetIds]);
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback(async () => {
     if (options.length === 1 && options[0]) {
-      onAdd(options[0].value);
+      setIsAdding(true);
+      try {
+        await onAdd(options[0].value);
+      } catch (e) {
+        console.error('Failed to add layer:', e);
+      } finally {
+        setIsAdding(false);
+      }
       return;
     }
     if (buttonRef.current) {
@@ -169,8 +185,11 @@ const AddTableLayerButton: React.FC<{
   const handleSelect = useCallback(
     (option: TableOption | null) => {
       if (!option) return;
-      onAdd(option.value);
-      setIsOpen(false);
+      setIsAdding(true);
+      onAdd(option.value)
+        .then(() => setIsOpen(false))
+        .catch((e) => console.error('Failed to add layer:', e))
+        .finally(() => setIsAdding(false));
     },
     [onAdd],
   );
@@ -194,10 +213,9 @@ const AddTableLayerButton: React.FC<{
     <DropdownWrapper ref={dropdownRef}>
       <Button
         ref={buttonRef}
-        tabIndex={-1}
         className="add-layer-button"
         onClick={handleClick}
-        disabled={!options.length || disabled}
+        disabled={!options.length || disabled || isAdding}
       >
         <Icons.Add height="12px" />
         {intl.formatMessage({id: 'layerManager.addLayer'})}
@@ -275,6 +293,11 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
 
   const {addLayer} = keplerActions.visStateActions;
 
+  const keplerDatasetIds = useMemo(
+    () => Object.keys(keplerState?.visState.datasets ?? {}),
+    [keplerState?.visState.datasets],
+  );
+
   const onAddTableLayer = useCallback(
     async (tableName: string) => {
       const keplerDatasets = keplerState?.visState.datasets;
@@ -327,7 +350,10 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
               id: layerPanelMetadata?.label || 'Layers',
             })}
           >
-            <AddTableLayerButton onAdd={onAddTableLayer} />
+            <AddTableLayerButton
+              onAdd={onAddTableLayer}
+              keplerDatasetIds={keplerDatasetIds}
+            />
           </PanelTitle>
         </SidePanelSection>
 
