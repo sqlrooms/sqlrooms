@@ -22,6 +22,7 @@ import {
   LAYOUT_COMMAND_OWNER,
 } from './layout-commands';
 import {
+  findAnyNodeById,
   findNodeById,
   IdentifiedLayoutNode,
   makeLayoutStack,
