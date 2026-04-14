@@ -73,6 +73,7 @@ const CustomLayerManagerContainer = styled.div`
 const DropdownWrapper = styled.div`
   position: relative;
   display: inline-block;
+  overflow: visible;
 `;
 
 const DropdownMenu = styled.div`
@@ -80,10 +81,8 @@ const DropdownMenu = styled.div`
   flex-direction: column;
   min-width: 240px;
   max-width: 240px;
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 5;
+  position: fixed;
+  z-index: 100;
 
   .list-selector {
     border-top: 1px solid ${(props) => props.theme.secondaryInputBorderColor};
@@ -135,6 +134,11 @@ const AddTableLayerButton: React.FC<{
 }> = ({onAdd, disabled}) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [menuPos, setMenuPos] = useState<{top: number; right: number}>({
+    top: 0,
+    right: 0,
+  });
   const intl = useIntl();
 
   const dbTables = useStoreWithKepler((state) => state.db.tables);
@@ -151,6 +155,13 @@ const AddTableLayerButton: React.FC<{
     if (options.length === 1 && options[0]) {
       onAdd(options[0].value);
       return;
+    }
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom,
+        right: window.innerWidth - rect.right,
+      });
     }
     setIsOpen((prev) => !prev);
   }, [options, onAdd]);
@@ -182,6 +193,7 @@ const AddTableLayerButton: React.FC<{
   return (
     <DropdownWrapper ref={dropdownRef}>
       <Button
+        ref={buttonRef}
         tabIndex={-1}
         className="add-layer-button"
         onClick={handleClick}
@@ -191,7 +203,7 @@ const AddTableLayerButton: React.FC<{
         {intl.formatMessage({id: 'layerManager.addLayer'})}
       </Button>
       {isOpen && options.length > 1 && (
-        <DropdownMenu>
+        <DropdownMenu style={{top: menuPos.top, right: menuPos.right}}>
           <Typeahead
             className={TYPEAHEAD_CLASS}
             customClasses={{
