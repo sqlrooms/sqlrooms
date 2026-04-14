@@ -5,7 +5,7 @@ import {MosaicLayoutNode} from '@sqlrooms/layout-config';
 import {isDraggableTile} from './mosaic-utils';
 import type {RoomPanelInfo} from '../types';
 
-const MosaicTile: FC<{
+export type MosaicTileProps = {
   id: string;
   path: MosaicPath;
   content: React.ReactNode;
@@ -14,17 +14,18 @@ const MosaicTile: FC<{
   currentTree?: MosaicNode<string> | null;
   panelInfo?: RoomPanelInfo;
   forceDraggable?: boolean;
-}> = (props) => {
-  const {
-    id,
-    content,
-    path,
-    isDragging,
-    className,
-    currentTree,
-    panelInfo,
-    forceDraggable,
-  } = props;
+};
+
+export const MosaicTile: FC<MosaicTileProps> = ({
+  id,
+  content,
+  path,
+  isDragging,
+  className,
+  currentTree,
+  panelInfo,
+  forceDraggable,
+}) => {
   const body = (
     <div
       className={cn(
@@ -55,5 +56,3 @@ const MosaicTile: FC<{
     </MosaicWindow>
   );
 };
-
-export default MosaicTile;

@@ -62,7 +62,7 @@ export {LayoutRenderer} from './LayoutRenderer';
 export type {LayoutRendererProps} from './LayoutRenderer';
 
 // Old MosaicLayout component (kept for mosaic node rendering, but no longer the top-level renderer)
-export {default as MosaicLayout} from './mosaic/MosaicLayout';
+export {MosaicLayout} from './mosaic/MosaicLayout';
 export type {MosaicLayoutProps} from './mosaic/MosaicLayout';
 
 // New primary exports from @sqlrooms/layout-config

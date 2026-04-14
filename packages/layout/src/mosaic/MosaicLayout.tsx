@@ -21,7 +21,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from 'lucide-react';
-import MosaicTile from './MosaicTile';
+import {MosaicTile} from './MosaicTile';
 import {
   getNodeAtPath,
   findCollapsedSiblings,
@@ -83,7 +83,7 @@ export interface MosaicLayoutProps {
 
 type CombinedProps = MosaicProps<string> & MosaicLayoutProps;
 
-const MosaicLayout: FC<CombinedProps> = (props) => {
+export const MosaicLayout: FC<CombinedProps> = (props) => {
   const {
     onChange,
     onRelease,
@@ -616,5 +616,3 @@ function ExpandButton({
     </Button>
   );
 }
-
-export default MosaicLayout;
