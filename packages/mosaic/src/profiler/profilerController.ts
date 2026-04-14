@@ -1,0 +1,204 @@
+import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
+import {queryFieldInfo} from '@uwdata/mosaic-core';
+import type * as arrow from 'apache-arrow';
+import {
+  ProfilerCategoryClient,
+  ProfilerCategoryTotalClient,
+} from './ProfilerCategoryClient';
+import {ProfilerCountClient} from './ProfilerCountClient';
+import {
+  ProfilerHistogramClient,
+  ProfilerHistogramTotalClient,
+} from './ProfilerHistogramClient';
+import {ProfilerPageClient} from './ProfilerPageClient';
+import {ProfilerUnsupportedSummaryClient} from './ProfilerUnsupportedSummaryClient';
+import type {MosaicProfilerSummaryState, MosaicProfilerSorting} from './types';
+import type {ProfilerStore} from './createProfilerStore';
+import {
+  fieldInfoToProfilerField,
+  getProfilerValueType,
+  isProfilerHistogramType,
+  isProfilerUnsupportedSummaryType,
+} from './utils';
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+/**
+ * Loads field metadata for the profiler table and writes the normalized field
+ * definitions into the profiler store.
+ */
+export async function loadProfilerSchema(options: {
+  columns?: string[];
+  coordinator: Parameters<typeof queryFieldInfo>[0];
+  store: ProfilerStore;
+  tableName: string;
+}) {
+  const {columns, coordinator, store, tableName} = options;
+  store.getState().setSchemaLoading(true);
+
+  try {
+    const fieldInfo = await queryFieldInfo(
+      coordinator,
+      columns?.length
+        ? columns.map((column) => ({column, table: tableName}))
+        : [{column: '*', table: tableName}],
+    );
+    store.getState().setSchemaSuccess(fieldInfo.map(fieldInfoToProfilerField));
+  } catch (error: unknown) {
+    store.getState().setSchemaSuccess([]);
+    store.getState().setSchemaError(toError(error));
+  }
+}
+
+type ReadyConnection = {
+  coordinator: {
+    connect: (client: MosaicClient) => void;
+    disconnect: (client: MosaicClient) => void;
+  };
+};
+
+/**
+ * Connects the paged row client for the current profiler page and disconnects
+ * it when the caller tears down the lifecycle.
+ */
+export function connectProfilerPageClient(options: {
+  connection: ReadyConnection;
+  fieldNames: string[];
+  filter?: ReturnType<Selection['predicate']>;
+  pagination: {pageIndex: number; pageSize: number};
+  sorting: MosaicProfilerSorting;
+  store: ProfilerStore;
+  tableName: string;
+}) {
+  const client = new ProfilerPageClient({
+    columns: options.fieldNames,
+    filter: options.filter,
+    onStateChange: (state) => options.store.getState().setPage(state),
+    pagination: options.pagination,
+    sorting: options.sorting,
+    tableName: options.tableName,
+  });
+
+  options.connection.coordinator.connect(client);
+
+  return () => {
+    options.connection.coordinator.disconnect(client);
+  };
+}
+
+/**
+ * Connects either the filtered or total count client and routes updates into
+ * the corresponding store slice.
+ */
+export function connectProfilerCountClient(options: {
+  connection: ReadyConnection;
+  filterStable?: boolean;
+  selection?: Selection;
+  store: ProfilerStore;
+  tableName: string;
+  target: 'filtered' | 'total';
+}) {
+  const setCountState =
+    options.target === 'filtered'
+      ? options.store.getState().setFilteredCount
+      : options.store.getState().setTotalCount;
+
+  const client = new ProfilerCountClient({
+    filterStable: options.filterStable,
+    onStateChange: setCountState,
+    selection: options.selection,
+    tableName: options.tableName,
+  });
+
+  options.connection.coordinator.connect(client);
+
+  return () => {
+    options.connection.coordinator.disconnect(client);
+  };
+}
+
+/**
+ * Connects all per-column summary clients for the active schema and initializes
+ * matching empty summary state in the profiler store.
+ */
+export function connectProfilerSummaryClients(options: {
+  categoryLimit: number;
+  connection: ReadyConnection;
+  fields: arrow.Field[];
+  selection: Selection;
+  store: ProfilerStore;
+  summaryBins: number;
+  tableName: string;
+}) {
+  const {
+    categoryLimit,
+    connection,
+    fields,
+    selection,
+    store,
+    summaryBins,
+    tableName,
+  } = options;
+
+  store.getState().initializeSummaries(fields);
+
+  const clients: MosaicClient[] = fields.flatMap((field): MosaicClient[] => {
+    const update = (summary: MosaicProfilerSummaryState) => {
+      store.getState().setSummary(field.name, summary);
+    };
+
+    if (isProfilerUnsupportedSummaryType(field.type)) {
+      return [
+        new ProfilerUnsupportedSummaryClient({
+          field,
+          onStateChange: update,
+          selection,
+          tableName,
+        }),
+      ];
+    }
+
+    if (isProfilerHistogramType(field.type)) {
+      const summaryClient = new ProfilerHistogramClient({
+        field,
+        onStateChange: update,
+        selection,
+        steps: summaryBins,
+        tableName,
+        valueType:
+          getProfilerValueType(field.type) === 'date' ? 'date' : 'number',
+      });
+
+      return [
+        summaryClient,
+        new ProfilerHistogramTotalClient({
+          summaryClient,
+        }),
+      ];
+    }
+
+    const summaryClient = new ProfilerCategoryClient({
+      categoryLimit,
+      field,
+      onStateChange: update,
+      selection,
+      tableName,
+    });
+
+    return [
+      summaryClient,
+      new ProfilerCategoryTotalClient({
+        summaryClient,
+      }),
+    ];
+  });
+
+  clients.forEach((client) => connection.coordinator.connect(client));
+
+  return () => {
+    clients.forEach((client) => connection.coordinator.disconnect(client));
+    store.getState().clearSummaries();
+  };
+}
