@@ -2,7 +2,7 @@ import {XIcon} from 'lucide-react';
 import {FC, PropsWithChildren} from 'react';
 import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {PanelHeaderButton} from './RoomHeaderButton';
-import {useGetPanel} from '@sqlrooms/layout';
+import {useGetPanelByPath} from '@sqlrooms/layout';
 
 type RoomPanelHeaderProps = PropsWithChildren<{
   panelKey: string;
@@ -14,8 +14,7 @@ const RoomPanelHeader: FC<RoomPanelHeaderProps> = ({
   panelKey,
   children,
 }) => {
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const {icon: Icon, title} = useGetPanel(panels, panelKey) ?? {};
+  const {icon: Icon, title} = useGetPanelByPath(panelKey) ?? {};
 
   const findAncestorOfType = useBaseRoomShellStore(
     (state) => state.layout.findAncestorOfType,

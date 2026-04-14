@@ -1,20 +1,20 @@
 import {FC} from 'react';
 import {NodeRenderer} from '../NodeRenderer';
-import {useTabsLayoutContext} from './TabsLayoutProvider';
+import {useActiveTab} from './useActiveTab';
 
 export const TabsLayoutTabContent: FC = () => {
-  const {activeChild, activeChildPath, node} = useTabsLayoutContext();
+  const {container, node, path} = useActiveTab();
 
-  if (!activeChild || !activeChildPath) {
+  if (!node || !path) {
     return null;
   }
 
   return (
     <NodeRenderer
-      node={activeChild}
-      path={activeChildPath}
+      node={node}
+      path={path}
       containerType="tabs"
-      containerId={node.id}
+      containerId={container.id}
     />
   );
 };

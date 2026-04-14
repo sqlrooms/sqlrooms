@@ -4,6 +4,8 @@ import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {TabsLayoutTabLabel} from './TabsLayoutTabLabel';
 import {useTabsLayoutContext} from './TabsLayoutProvider';
 import {TabsLayoutToggleCollapseButton} from './TabsLayoutToggleCollapseButton';
+import {useStoreWithLayout} from '../../LayoutSlice';
+import {useTabDescriptors} from './useTabDescriptors';
 
 export type TabsLayoutTabStripProps = PropsWithChildren<Partial<TabStripProps>>;
 
@@ -13,11 +15,18 @@ export const TabsLayoutTabStrip: FC<TabsLayoutTabStripProps> = ({
 }) => {
   const {onTabSelect, onTabClose, onTabReorder, onTabCreate, onExpand} =
     useLayoutRendererContext();
-  const {node, path, activeTabId, tabDescriptors, visibleTabIds} =
-    useTabsLayoutContext();
+  const {node, path} = useTabsLayoutContext();
+
+  const getVisibleTabs = useStoreWithLayout((s) => s.layout.getVisibleTabs);
+  const getActiveTab = useStoreWithLayout((s) => s.layout.getActiveTab);
+
+  const visibleTabIds = getVisibleTabs(node.id);
+  const activeTabId = getActiveTab(node.id);
 
   const panelId = node.id;
   const isCollapsible = node.collapsible;
+
+  const tabDescriptors = useTabDescriptors();
 
   const handleTabCreate = useCallback(() => {
     onExpand?.(panelId);

@@ -1,15 +1,12 @@
 import {
   createRoomShellSlice,
   createRoomStore,
-  getChildKey,
-  getMosaicNodeKey,
   isLayoutMosaicNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
   LayoutConfig,
   LayoutMosaicNode,
   LayoutNode,
-  LayoutTabsNode,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -26,70 +23,6 @@ import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 import {DashboardTabs} from './panels/DashboardTabs';
 import {RoomPanelTypes} from './panels/panel-types';
-
-function findTabsNodeInState(
-  root: LayoutNode | null,
-  tabsId: string,
-): LayoutTabsNode | undefined {
-  if (!root || typeof root === 'string') return undefined;
-  if (isLayoutTabsNode(root) && root.id === tabsId) return root;
-  if (isLayoutSplitNode(root)) {
-    for (const child of root.children) {
-      const result = findTabsNodeInState(child, tabsId);
-      if (result) return result;
-    }
-  }
-  if (isLayoutTabsNode(root)) {
-    for (const child of root.children) {
-      const result = findTabsNodeInState(child, tabsId);
-      if (result) return result;
-    }
-  }
-  return undefined;
-}
-
-function addMosaicChildToTabs(
-  root: LayoutNode | null,
-  tabsId: string,
-  mosaicNode: LayoutMosaicNode,
-): LayoutNode | null {
-  if (!root) return root;
-  if (typeof root === 'string') return root;
-
-  if (isLayoutTabsNode(root) && root.id === tabsId) {
-    const key = getMosaicNodeKey(mosaicNode.id);
-    const alreadyExists = root.children.some((c) => getChildKey(c) === key);
-    if (alreadyExists) return root;
-    const newChildren = [...root.children, mosaicNode];
-    return {
-      ...root,
-      children: newChildren,
-      activeTabIndex: newChildren.length - 1,
-    };
-  }
-
-  if (isLayoutSplitNode(root)) {
-    let changed = false;
-    const newChildren = root.children.map((child) => {
-      const updated = addMosaicChildToTabs(child, tabsId, mosaicNode);
-      if (updated !== child) changed = true;
-      return updated;
-    });
-    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
-  }
-
-  if (isLayoutTabsNode(root)) {
-    let changed = false;
-    const newChildren = root.children.map((child) => {
-      const updated = addMosaicChildToTabs(child, tabsId, mosaicNode);
-      if (updated !== child) changed = true;
-      return updated;
-    });
-    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
-  }
-
-  return root;
-}
 
 function addMosaicChildToMosaic(
   root: LayoutNode | null,
@@ -232,7 +165,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         panels: {
           'dashboards/{dashboardId}': {
             icon: BarChart3Icon,
-            title: 'Dashboard 123',
             component: () => {
               return <div className="p-4">This is a dashboard panel</div>;
             },
@@ -271,7 +203,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     addDashboard: (tabsId = 'dashboards') => {
       dashboardCounter += 1;
       const mosaicId = `dashboard-${dashboardCounter}`;
-      const chartsId = `dashboard-${dashboardCounter}-charts`;
+      const chartsId = `${mosaicId}-charts`;
       const chartId = `${mosaicId}-chart`;
 
       const mosaicNode: LayoutMosaicNode = {
@@ -287,17 +219,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       };
 
-      const {layout} = get();
-
-      const found = layout.config
-        ? findTabsNodeInState(layout.config, tabsId)
-        : undefined;
-
-      if (found) {
-        layout.setConfig(
-          addMosaicChildToTabs(layout.config, tabsId, mosaicNode),
-        );
-      }
+      get().layout.addTab(tabsId, mosaicNode);
     },
 
     addChartToDashboard: (dashboardId: string) => {

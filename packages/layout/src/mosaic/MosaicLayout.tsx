@@ -35,7 +35,7 @@ import {
   ExpandDirection,
   CollapsedAreaInfo,
 } from './mosaic-utils';
-import {RoomPanelInfo} from '../types';
+import {Panels} from '../types';
 
 const customMosaicStyles = `
   .mosaic-split {
@@ -70,7 +70,7 @@ const CHEVRON_ICONS: Record<
 
 export interface MosaicLayoutProps {
   tileClassName?: string;
-  panels?: Record<string, RoomPanelInfo>;
+  panels?: Panels;
   /** When true, all tiles in this mosaic are draggable (used for nested mosaics) */
   forceDraggable?: boolean;
   onTabSelect?: (path: MosaicPath, tabId: string) => void;
@@ -180,20 +180,21 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
           ? (areaNode as MosaicLayoutTabsNode)
           : undefined;
 
-      // TODO: fix this
-      const showTabStrip = true; // tabsNode?.showTabStrip !== false;
+      const hideTabStrip = tabsNode?.hideTabStrip;
       const isCollapsed = tabsNode?.collapsed === true;
       const isCollapsible = tabsNode?.collapsible === true;
+      const areaId = tabsNode?.id;
+
+      // TODO: fix this
       const closeableTabs = true; //tabsNode?.closeableTabs === true;
       const creatableTabs = true; //tabsNode?.creatableTabs === true;
       const searchableTabs = true; //tabsNode?.searchableTabs === true;
-      const areaId = tabsNode?.id;
 
       if (isCollapsed) {
         return <div />;
       }
 
-      if (!showTabStrip) {
+      if (hideTabStrip) {
         if (isCollapsible && areaId) {
           return (
             <div className="flex h-7 items-center justify-end px-1">
@@ -204,14 +205,18 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
         return <div />;
       }
 
-      if (!showTabStrip && !(tabs.length > 1 || tabsNode?.id)) {
+      // Only show tab strip if there are multiple tabs or a specific tabs node id
+      if (!(tabs.length > 1 || tabsNode?.id)) {
         return <div />;
       }
 
       // All panels for this area (for the searchable dropdown)
+      // Note: with the new model, children contains ALL children (both visible and hidden)
+      // hiddenChildren tracks which are hidden
       const allAreaPanelIds = [...tabs];
-      if (tabsNode?.closedChildren) {
-        for (const id of tabsNode.closedChildren) {
+
+      if (tabsNode?.hiddenChildren) {
+        for (const id of tabsNode.hiddenChildren) {
           if (!allAreaPanelIds.includes(id)) {
             allAreaPanelIds.push(id);
           }
@@ -271,13 +276,13 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
     },
     [
       currentValue,
+      renderTabLabel,
+      onCollapse,
       panels,
       onTabSelect,
       onTabClose,
       onTabReorder,
       onTabCreate,
-      onCollapse,
-      renderTabLabel,
     ],
   );
 
@@ -458,7 +463,7 @@ function NestedMosaicTile({
 }: {
   mosaicId: string;
   rootTree: MosaicLayoutNode | null;
-  panels?: Record<string, RoomPanelInfo>;
+  panels?: Panels;
   renderTile: (id: string, path: MosaicPath) => React.JSX.Element;
   onChange: (mosaicId: string, newNodes: MosaicLayoutNode | null) => void;
 }) {
@@ -502,7 +507,7 @@ function CollapsedHorizontalStrip({
   onExpand,
 }: {
   area: CollapsedAreaInfo;
-  panels?: Record<string, RoomPanelInfo>;
+  panels?: Panels;
   onExpand?: (areaId: string, panelId?: string) => void;
 }) {
   const {node, expandDirection} = area;

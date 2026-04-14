@@ -231,8 +231,9 @@ export function findAnyNodeById(
 // ---------------------------------------------------------------------------
 
 /**
- * Find the tabs node whose children or closedChildren contain a panel with
- * the given ID. Returns the tabs node's id if found.
+ * Find the tabs node whose children contain a panel with the given ID.
+ * Returns the tabs node's id if found.
+ * Note: children array contains ALL children (both visible and hidden).
  */
 export function findTabsNodeForPanel(
   root: LayoutNode | null | undefined,
@@ -241,9 +242,9 @@ export function findTabsNodeForPanel(
   if (!root || typeof root === 'string') return undefined;
   if (isLayoutPanelNode(root)) return undefined;
   if (isLayoutTabsNode(root)) {
+    // children contains all children (both visible and hidden)
     const inChildren = root.children.some((c) => getChildKey(c) === panelId);
-    const inClosed = root.closedChildren?.includes(panelId);
-    if ((inChildren || inClosed) && root.id) return root.id;
+    if (inChildren && root.id) return root.id;
     for (const child of root.children) {
       const result = findTabsNodeForPanel(child, panelId);
       if (result) return result;

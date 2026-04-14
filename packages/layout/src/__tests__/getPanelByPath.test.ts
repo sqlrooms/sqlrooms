@@ -1,6 +1,6 @@
-import {matchNodePathToPanel} from '../matchNodePathToPanel';
+import {getPanelByPath} from '../getPanelByPath';
 
-describe('matchNodePathToPanel', () => {
+describe('getPanelByPath', () => {
   describe('simple matches', () => {
     test('matches exact panel key', () => {
       const panels = {
@@ -8,11 +8,7 @@ describe('matchNodePathToPanel', () => {
         console: {component: 'ConsoleComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
-        'root',
-        'main',
-        'dashboards',
-      ]);
+      const result = getPanelByPath(panels, ['root', 'main', 'dashboards']);
 
       expect(result).toEqual({
         panelId: 'dashboards',
@@ -26,7 +22,7 @@ describe('matchNodePathToPanel', () => {
         console: {component: 'ConsoleComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'bottom',
@@ -45,7 +41,7 @@ describe('matchNodePathToPanel', () => {
         dashboards: {component: 'DashboardsComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, ['root', 'main', 'unknown']);
+      const result = getPanelByPath(panels, ['root', 'main', 'unknown']);
 
       expect(result).toBeNull();
     });
@@ -57,7 +53,7 @@ describe('matchNodePathToPanel', () => {
         'dashboards/{dashboardId}': {component: 'DashboardComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'dashboards',
@@ -76,7 +72,7 @@ describe('matchNodePathToPanel', () => {
         'dashboards/{dashboardId}/{chartId}': {component: 'ChartComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'dashboards',
@@ -96,7 +92,7 @@ describe('matchNodePathToPanel', () => {
         '{chartId}': {component: 'ChartComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'dashboards',
@@ -117,7 +113,7 @@ describe('matchNodePathToPanel', () => {
         },
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'projects',
@@ -143,7 +139,7 @@ describe('matchNodePathToPanel', () => {
         '{chartId}': {component: 'GenericChartComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'dashboards',
@@ -163,7 +159,7 @@ describe('matchNodePathToPanel', () => {
         '{chartId}': {component: 'GenericChartComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, ['root', 'main', 'revenue']);
+      const result = getPanelByPath(panels, ['root', 'main', 'revenue']);
 
       expect(result?.panelId).toBe('revenue');
       expect(result?.panel.component).toBe('GenericChartComponent');
@@ -175,7 +171,7 @@ describe('matchNodePathToPanel', () => {
         'dashboards/{dashboardId}': {component: 'SpecificComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
+      const result = getPanelByPath(panels, [
         'root',
         'main',
         'dashboards',
@@ -195,7 +191,7 @@ describe('matchNodePathToPanel', () => {
         dashboards: {component: 'DashboardsComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, []);
+      const result = getPanelByPath(panels, []);
 
       expect(result).toBeNull();
     });
@@ -205,7 +201,7 @@ describe('matchNodePathToPanel', () => {
         root: {component: 'RootComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, ['root']);
+      const result = getPanelByPath(panels, ['root']);
 
       expect(result).toEqual({
         panelId: 'root',
@@ -219,7 +215,7 @@ describe('matchNodePathToPanel', () => {
         'a/b/c/d/e': {component: 'DeepComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, ['root', 'a', 'b']);
+      const result = getPanelByPath(panels, ['root', 'a', 'b']);
 
       expect(result).toBeNull();
     });
@@ -227,11 +223,7 @@ describe('matchNodePathToPanel', () => {
     test('handles empty panels object', () => {
       const panels = {};
 
-      const result = matchNodePathToPanel(panels, [
-        'root',
-        'main',
-        'dashboards',
-      ]);
+      const result = getPanelByPath(panels, ['root', 'main', 'dashboards']);
 
       expect(result).toBeNull();
     });
@@ -241,11 +233,7 @@ describe('matchNodePathToPanel', () => {
         'root/main/dashboards': {component: 'DashboardsComponent'},
       };
 
-      const result = matchNodePathToPanel(panels, [
-        'root',
-        'main',
-        'dashboards',
-      ]);
+      const result = getPanelByPath(panels, ['root', 'main', 'dashboards']);
 
       expect(result).toEqual({
         panelId: 'dashboards',
@@ -269,9 +257,7 @@ describe('matchNodePathToPanel', () => {
       };
 
       // Match tabs container
-      expect(
-        matchNodePathToPanel(panels, ['root', 'main', 'dashboards']),
-      ).toEqual({
+      expect(getPanelByPath(panels, ['root', 'main', 'dashboards'])).toEqual({
         panelId: 'dashboards',
         panel: {component: 'DashboardsContainer'},
         params: {},
@@ -279,12 +265,7 @@ describe('matchNodePathToPanel', () => {
 
       // Match dashboard with id
       expect(
-        matchNodePathToPanel(panels, [
-          'root',
-          'main',
-          'dashboards',
-          'overview',
-        ]),
+        getPanelByPath(panels, ['root', 'main', 'dashboards', 'overview']),
       ).toEqual({
         panelId: 'overview',
         panel: {component: 'DashboardPanel'},
@@ -293,7 +274,7 @@ describe('matchNodePathToPanel', () => {
 
       // Match chart within dashboard
       expect(
-        matchNodePathToPanel(panels, [
+        getPanelByPath(panels, [
           'root',
           'main',
           'dashboards',
@@ -307,13 +288,11 @@ describe('matchNodePathToPanel', () => {
       });
 
       // Match standalone chart
-      expect(matchNodePathToPanel(panels, ['root', 'main', 'revenue'])).toEqual(
-        {
-          panelId: 'revenue',
-          panel: {component: 'ChartPanel'},
-          params: {chartId: 'revenue'},
-        },
-      );
+      expect(getPanelByPath(panels, ['root', 'main', 'revenue'])).toEqual({
+        panelId: 'revenue',
+        panel: {component: 'ChartPanel'},
+        params: {chartId: 'revenue'},
+      });
     });
   });
 });

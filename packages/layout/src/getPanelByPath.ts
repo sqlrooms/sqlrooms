@@ -9,32 +9,57 @@ export type MatchResult<T> = {
 };
 
 /**
- * Matches a node path from the layout tree to a panel entry.
+ * Gets a panel by matching a node path from the layout tree to a panel entry.
  *
  * The function tries to match the path suffix against panel keys in the order
  * they are defined, handling placeholder parameters like {dashboardId}, {chartId}, etc.
  *
- * Note: The first matching panel key is returned, so order matters!
- * Define more specific patterns before general ones.
+ * **How it works:**
+ * - Iterates through panel keys in definition order
+ * - Matches each pattern against the END of the path (suffix matching)
+ * - Extracts parameters from segments matching `{paramName}` placeholders
+ * - Returns the first match found
+ *
+ * **Important:** The first matching panel key is returned, so order matters!
+ * Define more specific patterns before general ones to avoid unexpected matches.
+ *
+ * @param panels - Map of panel patterns to panel info objects
+ * @param layoutPath - Path segments from layout tree (can be nested arrays)
+ * @returns Match result with panelId (last path segment), panel info, and extracted params, or null if no match
  *
  * @example
- * // Simple match
- * matchNodePathToPanel(panels, ['root', 'main', 'dashboards'])
- * // Returns: { panelId: 'dashboards', params: {} }
+ * // Simple match - no parameters
+ * const panels = { 'dashboards': {...} };
+ * getPanelByPath(panels, ['root', 'main', 'dashboards'])
+ * // Returns: { panelId: 'dashboards', panel: {...}, params: {} }
  *
  * @example
- * // Match with parameters
- * matchNodePathToPanel(panels, ['root', 'main', 'dashboards', 'overview', 'users'])
+ * // Parameterized match
+ * const panels = { 'dashboards/{dashboardId}/{chartId}': {...} };
+ * getPanelByPath(panels, ['root', 'main', 'dashboards', 'overview', 'users'])
+ * // Pattern 'dashboards/{dashboardId}/{chartId}' matches last 3 segments
  * // Returns: {
- * //   panelId: 'users',
+ * //   panelId: 'users',  // last segment of the matched path
  * //   panel: panels['dashboards/{dashboardId}/{chartId}'],
  * //   params: { dashboardId: 'overview', chartId: 'users' }
  * // }
+ *
+ * @example
+ * // Pattern ordering matters
+ * const panels = {
+ *   'users': {...},           // More general
+ *   'users/{userId}': {...}   // More specific - should come FIRST
+ * };
+ * // If you define them in wrong order, 'users' will match before 'users/{userId}'
  */
-export function matchNodePathToPanel<T>(
+export function getPanelByPath<T>(
   panels: Record<string, T>,
-  path: LayoutPath,
+  layoutPath: LayoutPath | LayoutPath[],
 ): MatchResult<T> | null {
+  const path = layoutPath.flatMap((segment) =>
+    Array.isArray(segment) ? segment : [segment],
+  );
+
   // Try to match each panel key against the path in the order they are defined
   for (const panelId of Object.keys(panels)) {
     const patternSegments = panelId.split('/');

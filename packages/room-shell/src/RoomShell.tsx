@@ -145,7 +145,6 @@ export const LayoutComposer: FC<{
       {rootLayout ? (
         <LayoutRenderer
           rootLayout={rootLayout}
-          panels={panels}
           onLayoutChange={handleLayoutChange}
           onTabSelect={handleTabSelect}
           onTabClose={handleTabClose}

@@ -1,9 +1,7 @@
 import {LayoutNode} from '@sqlrooms/layout-config';
 import {createContext, FC, PropsWithChildren, useContext} from 'react';
-import type {RoomPanelInfo} from './types';
 
 export interface LayoutRendererContextType {
-  panels: Record<string, RoomPanelInfo>;
   rootLayout: LayoutNode;
   onLayoutChange?: (layout: LayoutNode | null) => void;
   onTabSelect?: (tabsId: string, tabId: string) => void;

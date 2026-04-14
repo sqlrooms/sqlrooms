@@ -1,9 +1,8 @@
 import {TabDescriptor} from '@sqlrooms/ui';
 import {FC} from 'react';
-import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {LayoutPath} from '../../types';
 import {extractPanelId} from '../utils';
-import {useGetPanel} from '../../useGetPanel';
+import {useGetPanelByPath} from '../../useGetPanel';
 
 interface TabsLayoutTabLabelProps {
   tab: TabDescriptor;
@@ -14,11 +13,9 @@ export const TabsLayoutTabLabel: FC<TabsLayoutTabLabelProps> = ({
   tab,
   path,
 }) => {
-  const {panels} = useLayoutRendererContext();
-
   const panelId = extractPanelId(tab.id);
 
-  const panel = useGetPanel(panels, ...path, panelId);
+  const panel = useGetPanelByPath(...path, panelId);
 
   const Icon = panel?.icon;
 
