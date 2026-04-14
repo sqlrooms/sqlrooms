@@ -103,7 +103,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       <div className="relative">
         <div
           ref={scrollRef}
-          className="overflow-y-auto"
+          className="overflow-y-hidden"
           style={{
             ...(expanded ? {} : {maxHeight: `${maxCollapsedHeight}px`}),
           }}
