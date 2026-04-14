@@ -7,7 +7,6 @@ const FG_COLOR = '#ec7f5f';
 export interface ChartConfig {
   id: string;
   title: string;
-  selectionField: string;
   spec: Spec;
 }
 
@@ -37,6 +36,8 @@ function categoryBarSpec(field: string, limit = 14): Spec {
         },
       },
       {select: 'toggleY', as: '$brush'},
+      {select: 'toggleY', as: '$highlight'},
+      {select: 'highlight', by: '$highlight', opacity: 0.35},
     ],
     xLabel: 'Flights',
     yLabel: null,
@@ -50,21 +51,18 @@ function categoryBarSpec(field: string, limit = 14): Spec {
 export const departureAirportChart: ChartConfig = {
   id: 'departure-airport',
   title: 'Departure Airport',
-  selectionField: 'departure_airport',
   spec: categoryBarSpec('departure_airport'),
 };
 
 export const arrivalAirportChart: ChartConfig = {
   id: 'arrival-airport',
   title: 'Arrival Airport',
-  selectionField: 'arrival_airport',
   spec: categoryBarSpec('arrival_airport'),
 };
 
 export const airlineCodeChart: ChartConfig = {
   id: 'airline-code',
   title: 'Airline Code',
-  selectionField: 'airline_code',
   spec: {
     plot: [
       {
@@ -91,6 +89,8 @@ export const airlineCodeChart: ChartConfig = {
         },
       },
       {select: 'toggleY', as: '$brush'},
+      {select: 'toggleY', as: '$highlight'},
+      {select: 'highlight', by: '$highlight', opacity: 0.35},
     ],
     xLabel: 'Flights',
     yLabel: null,
