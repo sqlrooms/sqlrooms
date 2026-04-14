@@ -28,6 +28,8 @@ export interface CesiumRuntimeState {
   selectedEntity: Entity | null;
   /** Loading state indicator for data sources */
   isLoadingData: boolean;
+  /** Number of currently active entities per layer at the current clock time */
+  layerEntityCounts: Record<string, number>;
 }
 
 /**
@@ -44,6 +46,7 @@ export interface CesiumSliceState {
     isAnimating: boolean;
     selectedEntity: Entity | null;
     isLoadingData: boolean;
+    layerEntityCounts: Record<string, number>;
 
     // Viewer lifecycle actions
     /**
@@ -134,6 +137,13 @@ export interface CesiumSliceState {
      * @param loading Whether data is currently loading
      */
     setIsLoadingData: (loading: boolean) => void;
+
+    /**
+     * Set the currently active entity count for a given layer.
+     * @param id Layer identifier
+     * @param count Number of currently active entities
+     */
+    setLayerEntityCount: (id: string, count: number) => void;
 
     // Clipping plane actions
     /**

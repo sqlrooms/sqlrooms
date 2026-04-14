@@ -59,6 +59,7 @@ export function createCesiumSlice(
       isAnimating: config.clock.shouldAnimate,
       selectedEntity: null,
       isLoadingData: false,
+      layerEntityCounts: {},
 
       // Viewer lifecycle actions
       setViewer: (viewer: CesiumViewer | null) =>
@@ -201,6 +202,17 @@ export function createCesiumSlice(
       setIsLoadingData: (loading: boolean) =>
         set((state) => ({
           cesium: {...state.cesium, isLoadingData: loading},
+        })),
+
+      setLayerEntityCount: (id: string, count: number) =>
+        set((state) => ({
+          cesium: {
+            ...state.cesium,
+            layerEntityCounts: {
+              ...state.cesium.layerEntityCounts,
+              [id]: count,
+            },
+          },
         })),
 
       // Clipping plane actions

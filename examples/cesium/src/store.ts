@@ -5,7 +5,6 @@
 
 import {
   CesiumLayerConfig,
-  CesiumPanel,
   createCesiumSlice,
   createDefaultCesiumConfig,
   type CesiumSliceState,
@@ -30,6 +29,7 @@ import {
 } from '@sqlrooms/sql-editor';
 import {FilterIcon, Globe} from 'lucide-react';
 import {buildAirlineCodeSql, buildAirlineColorSql} from './airlinePalette';
+import {FlightsGlobePanel} from './components/FlightsGlobePanel';
 import {FlightsChartsPanel} from './components/FlightsProfilerPanel';
 
 // Combined room state type
@@ -41,8 +41,9 @@ export type RoomState = RoomShellSliceState &
 export const FLIGHT_FILTER_SELECTION_NAME = 'flight_filter';
 
 const MAX_RENDERED_FLIGHTS = 2000;
-const OPENSKY_NYC_TABLE_NAME = 'opensky_nyc_flight_points';
+export const OPENSKY_NYC_TABLE_NAME = 'opensky_nyc_flight_points';
 export const OPENSKY_CHART_TABLE_NAME = 'opensky_nyc_chart_points';
+export const OPENSKY_FLIGHT_LAYER_ID = 'opensky-flights';
 
 const OPENSKY_FLIGHT_POINTS_URL =
   import.meta.env.VITE_OPENSKY_POINTS_URL ??
@@ -192,7 +193,7 @@ const configWithLayers = {
         ionAssetId: 96188,
       }),
       CesiumLayerConfig.parse({
-        id: 'opensky-flights',
+        id: OPENSKY_FLIGHT_LAYER_ID,
         type: 'sql-entities',
         visible: true,
         heightReference: 'NONE',
@@ -269,7 +270,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           [MAIN_VIEW]: {
             title: '3D Globe',
             icon: Globe,
-            component: CesiumPanel,
+            component: FlightsGlobePanel,
             placement: 'main',
           },
         },

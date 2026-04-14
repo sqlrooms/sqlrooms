@@ -11,7 +11,13 @@ import {
   ModelGraphics,
   PointGraphics,
 } from 'resium';
-import {Cartesian3, Color, HeightReference, Math as CesiumMath} from 'cesium';
+import {
+  Cartesian3,
+  Color,
+  HeightReference,
+  JulianDate,
+  Math as CesiumMath,
+} from 'cesium';
 import {useSql} from '@sqlrooms/duckdb';
 import type {CesiumLayerConfig} from '../cesium-config';
 import {useStoreWithCesium} from '../cesium-slice';
@@ -80,10 +86,68 @@ export const CesiumEntityLayer: React.FC<CesiumEntityLayerProps> = ({
   // Auto-set clock time range from data when a time column is mapped
   const setClockConfig = useStoreWithCesium((s) => s.cesium.setClockConfig);
   const setCurrentTime = useStoreWithCesium((s) => s.cesium.setCurrentTime);
+  const setIsLoadingData = useStoreWithCesium((s) => s.cesium.setIsLoadingData);
+  const setLayerEntityCount = useStoreWithCesium(
+    (s) => s.cesium.setLayerEntityCount,
+  );
   const configuredCurrentTime = useStoreWithCesium(
     (s) => s.cesium.config.clock.currentTime,
   );
   const hasSetClockRef = useRef(false);
+
+  useEffect(() => {
+    if (!sqlQuery || !table) {
+      setIsLoadingData(false);
+      setLayerEntityCount(layerConfig.id, 0);
+      return;
+    }
+
+    setIsLoadingData(isLoading);
+
+    return () => {
+      setIsLoadingData(false);
+      setLayerEntityCount(layerConfig.id, 0);
+    };
+  }, [
+    isLoading,
+    layerConfig.id,
+    setIsLoadingData,
+    setLayerEntityCount,
+    sqlQuery,
+    table,
+  ]);
+
+  useEffect(() => {
+    if (isLoading || error || entities.length === 0 || !configuredCurrentTime) {
+      setLayerEntityCount(layerConfig.id, 0);
+      return;
+    }
+
+    let currentTime: JulianDate;
+
+    try {
+      currentTime = JulianDate.fromIso8601(configuredCurrentTime);
+    } catch {
+      setLayerEntityCount(layerConfig.id, 0);
+      return;
+    }
+
+    const activeCount = entities.reduce((count, entity) => {
+      if (!entity.availability) {
+        return count + 1;
+      }
+      return entity.availability.contains(currentTime) ? count + 1 : count;
+    }, 0);
+
+    setLayerEntityCount(layerConfig.id, activeCount);
+  }, [
+    configuredCurrentTime,
+    entities,
+    error,
+    isLoading,
+    layerConfig.id,
+    setLayerEntityCount,
+  ]);
 
   useEffect(() => {
     if (hasSetClockRef.current || entities.length === 0) return;
