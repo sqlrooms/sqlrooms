@@ -66,3 +66,27 @@
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
 }
+
+.cesium-widget-cesiumNavigationContainer {
+  position: absolute;
+  right: 5px;
+  bottom: 30px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.cesium-widget-cesiumNavigationContainer #navigationDiv {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.cesium-widget-cesiumNavigationContainer .compass,
+.cesium-widget-cesiumNavigationContainer .navigation-controls,
+.cesium-widget-cesiumNavigationContainer .distance-legend {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+}

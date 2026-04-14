@@ -1,6 +1,7 @@
 import {CesiumPanel} from '@sqlrooms/cesium';
 import {Spinner, cn} from '@sqlrooms/ui';
-import {useMemo} from 'react';
+import {Cartographic} from 'cesium';
+import {useEffect, useMemo, useRef} from 'react';
 import {
   OPENSKY_FLIGHT_LAYER_ID,
   OPENSKY_NYC_TABLE_NAME,
@@ -8,6 +9,7 @@ import {
 } from '../store';
 
 function FlightsMapOverlay() {
+  const viewer = useRoomStore((state) => state.cesium.viewer);
   const isLoadingData = useRoomStore((state) => state.cesium.isLoadingData);
   const visibleFlightCount = useRoomStore(
     (state) => state.cesium.layerEntityCounts[OPENSKY_FLIGHT_LAYER_ID] ?? 0,
@@ -15,11 +17,64 @@ function FlightsMapOverlay() {
   const flightPointsTable = useRoomStore((state) =>
     state.db.findTableByName(OPENSKY_NYC_TABLE_NAME),
   );
+  const cameraConfig = useRoomStore((state) => state.cesium.config.camera);
+  const navigationRef = useRef<{destroy?: () => void} | null>(null);
+  const navigationOptionsRef = useRef({
+    defaultResetView: Cartographic.fromDegrees(
+      cameraConfig.longitude,
+      cameraConfig.latitude,
+      cameraConfig.height,
+    ),
+    orientation: {
+      heading: cameraConfig.heading,
+      pitch: cameraConfig.pitch,
+      roll: cameraConfig.roll,
+    },
+    enableCompass: true,
+    enableZoomControls: false,
+    enableDistanceLegend: false,
+    enableCompassOuterRing: true,
+    resetTooltip: 'Reset view',
+    zoomInTooltip: 'Zoom in',
+    zoomOutTooltip: 'Zoom out',
+  });
 
   const isLoading = useMemo(
     () => !flightPointsTable || isLoadingData,
     [flightPointsTable, isLoadingData],
   );
+
+  useEffect(() => {
+    if (!viewer) {
+      navigationRef.current?.destroy?.();
+      navigationRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const module = await import('cesium-navigation-es6');
+      const CesiumNavigation = (
+        module as {default?: new (...args: any[]) => any}
+      ).default;
+
+      if (!CesiumNavigation || cancelled || navigationRef.current) {
+        return;
+      }
+
+      navigationRef.current = new CesiumNavigation(
+        viewer,
+        navigationOptionsRef.current,
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      navigationRef.current?.destroy?.();
+      navigationRef.current = null;
+    };
+  }, [viewer]);
 
   return (
     <>
