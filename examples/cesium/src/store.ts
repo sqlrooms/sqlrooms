@@ -29,6 +29,7 @@ import {
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {FilterIcon, Globe} from 'lucide-react';
+import {buildAirlineCodeSql, buildAirlineColorSql} from './airlinePalette';
 import {FlightsChartsPanel} from './components/FlightsProfilerPanel';
 
 // Combined room state type
@@ -114,6 +115,9 @@ function buildSelectedFlightsSubquery(filter?: unknown) {
 }
 
 export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
+  const airlineCodeSql = buildAirlineCodeSql('p.callsign');
+  const airlineColorSql = buildAirlineColorSql(airlineCodeSql);
+
   return `
     WITH selected_flights AS (
       ${buildSelectedFlightsSubquery(filter)}
@@ -125,18 +129,15 @@ export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
       p.altitude_m AS altitude,
       strftime(p.point_time_utc, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
       p.heading_deg AS heading,
-      CASE
-        WHEN p.altitude_m >= 10000 THEN '#7dd3fc'
-        WHEN p.altitude_m >= 6000 THEN '#34d399'
-        WHEN p.altitude_m >= 3000 THEN '#fbbf24'
-        ELSE '#f97316'
-      END AS color,
+      ${airlineColorSql} AS color,
       greatest(2.8, least(5.2, p.altitude_m / 2800.0)) AS size,
       coalesce(nullif(p.callsign, ''), p.icao24, 'unknown') ||
         ' ' ||
         coalesce(p.departure_airport, '???') ||
         ' -> ' ||
         coalesce(p.arrival_airport, '???') ||
+        ' • ' ||
+        ${airlineCodeSql} ||
         CASE
           WHEN p.speed_knots IS NOT NULL
             THEN ' • ' || cast(round(p.speed_knots) AS VARCHAR) || ' kt'
@@ -145,25 +146,21 @@ export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
     FROM ${OPENSKY_NYC_TABLE_NAME} AS p
     JOIN selected_flights AS f
       ON p.flight_id = f.flight_id
-    WHERE
-      p.onground = false
-      AND (p.speed_knots IS NULL OR p.speed_knots <= 700)
-      AND (p.point_index = 1 OR (p.point_index % 2) = 1)
     ORDER BY p.point_time_utc
   `;
 }
 
 export function createFlightsChartViewSql() {
+  const airlineCodeSql = buildAirlineCodeSql('callsign');
+  const airlineColorSql = buildAirlineColorSql(airlineCodeSql);
+
   return `
     SELECT
       DISTINCT flight_id,
       coalesce(nullif(departure_airport, ''), 'Unknown') AS departure_airport,
       coalesce(nullif(arrival_airport, ''), 'Unknown') AS arrival_airport,
-      CASE
-        WHEN regexp_extract(coalesce(callsign, ''), '^([A-Z]{3})', 1) <> ''
-          THEN regexp_extract(callsign, '^([A-Z]{3})', 1)
-        ELSE 'Unknown'
-      END AS airline_code
+      ${airlineCodeSql} AS airline_code,
+      ${airlineColorSql} AS airline_color
     FROM ${OPENSKY_NYC_TABLE_NAME}
     WHERE onground = false
   `;

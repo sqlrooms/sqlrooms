@@ -1,4 +1,5 @@
 import type {Spec} from '@sqlrooms/mosaic';
+import {AIRLINE_COLOR_DOMAIN, AIRLINE_COLOR_RANGE} from '../airlinePalette';
 
 const BG_COLOR = '#d8dee8';
 const FG_COLOR = '#ec7f5f';
@@ -60,7 +61,42 @@ export const arrivalAirportChart: ChartConfig = {
 export const airlineCodeChart: ChartConfig = {
   id: 'airline-code',
   title: 'Airline Code',
-  spec: categoryBarSpec('airline_code'),
+  spec: {
+    plot: [
+      {
+        mark: 'barX',
+        data: {from: 'opensky_nyc_chart_points'},
+        x: {count: null},
+        y: 'airline_code',
+        fill: 'airline_code',
+        fillOpacity: 0.28,
+        sort: {
+          y: '-x',
+          limit: 14,
+        },
+      },
+      {
+        mark: 'barX',
+        data: {from: 'opensky_nyc_chart_points', filterBy: '$brush'},
+        x: {count: null},
+        y: 'airline_code',
+        fill: 'airline_code',
+        sort: {
+          y: '-x',
+          limit: 14,
+        },
+      },
+      {select: 'toggleY', as: '$brush'},
+    ],
+    xLabel: 'Flights',
+    yLabel: null,
+    width: 380,
+    height: 190,
+    margins: {left: 72, right: 16, top: 12, bottom: 28},
+    colorDomain: AIRLINE_COLOR_DOMAIN,
+    colorRange: AIRLINE_COLOR_RANGE,
+    params: {brush: {select: 'crossfilter'}},
+  } as Spec,
 };
 
 export const defaultChartConfigs: ChartConfig[] = [
