@@ -8,12 +8,8 @@ import {
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
-import {z} from 'zod';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
-
-export const RoomPanelTypes = z.enum(['data', 'main'] as const);
-export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
@@ -49,23 +45,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           children: [
             {
               type: 'panel',
-              id: RoomPanelTypes.enum['data'],
+              id: 'data',
               defaultSize: '30%',
             },
             {
               type: 'panel',
-              id: RoomPanelTypes.enum['main'],
+              id: 'main',
               defaultSize: '70%',
             },
           ],
         } satisfies LayoutConfig,
         panels: {
-          [RoomPanelTypes.enum['data']]: {
+          data: {
             title: 'Data sources',
             icon: DatabaseIcon,
             component: DataPanel,
           },
-          [RoomPanelTypes.enum['main']]: {
+          main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
