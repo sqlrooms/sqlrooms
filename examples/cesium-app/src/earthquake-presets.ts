@@ -35,11 +35,54 @@ export interface SubductionPreset {
   cameraPitchDeg: number;
   /** Half-width of the slice window, in km. Defaults to 50 km globally. */
   sliceHalfWidthKm?: number;
+
+  /**
+   * Parameters for the parametric Wadati–Benioff slab surface drawn beneath
+   * the seismicity. Optional — presets without slab params don't render a
+   * surface. Numbers are informed by Slab2.0 (Hayes et al., 2018) but
+   * deliberately smoothed for a clean cartoon profile.
+   */
+  slab?: SlabParams;
+}
+
+/**
+ * Parametric slab geometry. We model the slab top as a swept surface with a
+ * dip angle that grows from `dipMinDeg` near the trench to `dipMaxDeg` at
+ * depth, with a smooth transition controlled by `dipScaleKm`. Real Slab2.0
+ * grids vary in detail per zone, but a single-parameter exponential captures
+ * the essential "shallow ramp → steep dive" shape that gives each zone its
+ * character (Cascadia stays nearly flat; Tonga plunges almost vertically).
+ *
+ * Direction is encoded as `dipSide` rather than an absolute azimuth: the
+ * dip direction is always perpendicular to the preset's `strikeDeg`, and
+ * `dipSide` just picks which of the two perpendiculars (the slab side of
+ * the trench) the surface descends into. This keeps strike as the single
+ * source of truth for trench orientation.
+ */
+export interface SlabParams {
+  /**
+   * Which side of the strike line the slab dips toward, viewed from above:
+   * - `'right'` = 90° clockwise from strike (e.g. Chile, Cascadia, Sumatra)
+   * - `'left'` = 90° counter-clockwise from strike (e.g. Tonga, Japan)
+   */
+  dipSide: 'left' | 'right';
+  /** Dip angle near the trench (interface zone), degrees. */
+  dipMinDeg: number;
+  /** Asymptotic dip angle at depth, degrees. */
+  dipMaxDeg: number;
+  /** Arc-length scale for the dip transition, km. */
+  dipScaleKm: number;
+  /** Slab terminates at this depth, km. */
+  maxDepthKm: number;
+  /** Length of the slab segment along strike, km. */
+  alongStrikeKm: number;
 }
 
 export const DEFAULT_SLICE_HALF_WIDTH_KM = 50;
 /** Maximum along-section distance retained in slice filter, in km. */
 const SLICE_ALONG_SECTION_KM = 1500;
+/** Equatorial km per degree of latitude (and longitude at the equator). */
+export const KM_PER_DEG = 111.32;
 
 export const SUBDUCTION_PRESETS: SubductionPreset[] = [
   {
@@ -53,6 +96,14 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     cameraHeight: 900_000,
     cameraHeadingDeg: 20,
     cameraPitchDeg: -25,
+    slab: {
+      dipSide: 'left', // Pacific plate dives west of NNE-trending trench
+      dipMinDeg: 12,
+      dipMaxDeg: 65,
+      dipScaleKm: 200,
+      maxDepthKm: 680,
+      alongStrikeKm: 1500,
+    },
   },
   {
     id: 'japan',
@@ -65,6 +116,14 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     cameraHeight: 900_000,
     cameraHeadingDeg: 20,
     cameraPitchDeg: -25,
+    slab: {
+      dipSide: 'left',
+      dipMinDeg: 10,
+      dipMaxDeg: 45,
+      dipScaleKm: 280,
+      maxDepthKm: 600,
+      alongStrikeKm: 1400,
+    },
   },
   {
     id: 'chile',
@@ -77,6 +136,14 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     cameraHeight: 900_000,
     cameraHeadingDeg: 0,
     cameraPitchDeg: -25,
+    slab: {
+      dipSide: 'right', // Nazca dives east beneath South America
+      dipMinDeg: 8,
+      dipMaxDeg: 30,
+      dipScaleKm: 350,
+      maxDepthKm: 600,
+      alongStrikeKm: 1500,
+    },
   },
   {
     id: 'indonesia',
@@ -89,6 +156,14 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     cameraHeight: 900_000,
     cameraHeadingDeg: 315,
     cameraPitchDeg: -25,
+    slab: {
+      dipSide: 'right', // Indo-Australian plate dives NE
+      dipMinDeg: 10,
+      dipMaxDeg: 50,
+      dipScaleKm: 250,
+      maxDepthKm: 650,
+      alongStrikeKm: 1500,
+    },
   },
   {
     id: 'cascadia',
@@ -101,6 +176,14 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     cameraHeight: 700_000,
     cameraHeadingDeg: 5,
     cameraPitchDeg: -25,
+    slab: {
+      dipSide: 'right', // Juan de Fuca dives east
+      dipMinDeg: 5,
+      dipMaxDeg: 18,
+      dipScaleKm: 300,
+      maxDepthKm: 100,
+      alongStrikeKm: 1100,
+    },
   },
   {
     id: 'hellenic',
@@ -113,6 +196,14 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     cameraHeight: 700_000,
     cameraHeadingDeg: 290,
     cameraPitchDeg: -25,
+    slab: {
+      dipSide: 'right', // African plate dives NNE beneath the Aegean
+      dipMinDeg: 10,
+      dipMaxDeg: 40,
+      dipScaleKm: 200,
+      maxDepthKm: 220,
+      alongStrikeKm: 900,
+    },
   },
 ];
 
@@ -140,8 +231,8 @@ export function buildSliceWhereClause(
 
   // Maps any longitude into [-180, 180) so Tonga (±180° crossing) works.
   const dLonDeg = `((((Longitude - ${preset.longitude}) + 540.0) - FLOOR(((Longitude - ${preset.longitude}) + 540.0) / 360.0) * 360.0) - 180.0)`;
-  const dLonKm = `(${dLonDeg} * 111.32 * ${cosLat})`;
-  const dLatKm = `((Latitude - ${preset.latitude}) * 111.32)`;
+  const dLonKm = `(${dLonDeg} * ${KM_PER_DEG} * ${cosLat})`;
+  const dLatKm = `((Latitude - ${preset.latitude}) * ${KM_PER_DEG})`;
 
   const alongStrikeKm = `(${dLonKm} * ${sinStrike} + ${dLatKm} * ${cosStrike})`;
   const alongSectionKm = `(${dLonKm} * ${cosStrike} - ${dLatKm} * ${sinStrike})`;

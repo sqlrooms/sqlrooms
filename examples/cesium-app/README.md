@@ -14,6 +14,11 @@ subduction zones.
 - **Slab slicer**: Activating a preset rewrites the layer's SQL so only
   events within ±50 km of the section line remain, revealing the
   Wadati–Benioff zone as a curving line of seismicity descending to ~700 km
+- **Parametric slab surface**: A translucent triangle mesh of the
+  subducting slab top is drawn underneath the seismicity, generated from a
+  per-zone analytical dip profile loosely tuned to Slab2.0 (Hayes et al.,
+  2018). Each preset has its own character — Cascadia stays nearly flat,
+  Tonga plunges to 700 km
 - **Mag-vs-depth histogram**: Live stacked histogram of the visible slab,
   showing the bimodal shallow-plus-deep distribution as the time slider is
   scrubbed

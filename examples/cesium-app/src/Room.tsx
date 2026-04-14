@@ -7,6 +7,7 @@ import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 import {roomStore} from './store';
+import {SlabSurfaceController} from './SlabSurfaceController';
 
 export const Room = () => {
   const sqlEditorDisclosure = useDisclosure();
@@ -24,6 +25,7 @@ export const Room = () => {
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <SlabSurfaceController />
       <SqlEditorModal
         isOpen={sqlEditorDisclosure.isOpen}
         onClose={sqlEditorDisclosure.onClose}
