@@ -76,29 +76,27 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel' as const,
+                type: 'panel',
                 id: RoomPanelTypes.enum['discuss'],
                 defaultSize: '30%',
               },
               {
-                type: 'panel' as const,
+                type: 'panel',
                 id: RoomPanelTypes.enum['main'],
                 defaultSize: '70%',
               },
             ],
-          },
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['discuss']]: {
               title: 'Discuss',
               icon: MessageCircleIcon,
               component: DiscussionPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,
-              placement: 'main',
             },
           },
         },

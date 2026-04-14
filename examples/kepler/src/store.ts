@@ -3,6 +3,7 @@ import {createKeplerSlice, KeplerSliceState} from '@sqlrooms/kepler';
 import {
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LoadFileOptions,
   MAIN_VIEW,
   RoomShellSliceState,
@@ -74,50 +75,48 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel' as const,
+                type: 'panel',
                 id: RoomPanelTypes.enum['data'],
                 defaultSize: '30%',
               },
-              {type: 'panel' as const, id: MAIN_VIEW, defaultSize: '70%'},
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
             ],
-          },
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['data']]: {
               title: 'Data Sources',
               icon: DatabaseIcon,
               component: DataPanel,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['layers']]: {
               title: 'Layers',
               icon: Layers,
               component: KeplerSidePanelLayerManager,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['filters']]: {
               title: 'Filters',
               icon: Filter,
               component: KeplerSidePanelFilterManager,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['interactions']]: {
               title: 'Interactions',
               icon: SlidersHorizontal,
               component: KeplerSidePanelInteractionManager,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['basemaps']]: {
               title: 'Base Maps',
               icon: MapIcon,
               component: KeplerSidePanelBaseMapManager,
-              placement: 'sidebar',
             },
             // MapIcon
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: KeplerMapsContainer,
-              placement: 'main',
             },
           },
         },

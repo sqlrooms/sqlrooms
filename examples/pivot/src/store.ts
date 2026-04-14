@@ -51,29 +51,27 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel' as const,
+                type: 'panel',
                 id: RoomPanelTypes.enum.data,
                 defaultSize: '24%',
               },
               {
-                type: 'panel' as const,
+                type: 'panel',
                 id: RoomPanelTypes.enum.main,
                 defaultSize: '76%',
               },
             ],
-          },
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum.data]: {
               title: 'Data',
               component: DataPanel,
               icon: DatabaseIcon,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum.main]: {
               title: 'Pivot',
               component: MainView,
               icon: TablePropertiesIcon,
-              placement: 'main',
             },
           },
         },

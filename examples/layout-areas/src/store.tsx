@@ -76,8 +76,6 @@ function addMosaicChildToMosaic(
         },
       };
     }
-
-    return root;
   }
 
   return root;

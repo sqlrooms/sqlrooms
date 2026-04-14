@@ -68,22 +68,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             type: 'split',
             direction: 'row',
             children: [
-              {type: 'panel' as const, id: 'data', defaultSize: '20%'},
-              {type: 'panel' as const, id: 'main', defaultSize: '80%'},
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data'],
+                defaultSize: '20%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '80%',
+              },
             ],
-          },
+          } satisfies LayoutConfig,
           panels: {
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Canvas',
               icon: () => null,
               component: Canvas,
-              placement: 'main',
             },
-            data: {
+            [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
           },
         },

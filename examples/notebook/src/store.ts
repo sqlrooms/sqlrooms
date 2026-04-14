@@ -45,15 +45,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            id: 'root',
-            type: 'split',
-            direction: 'row',
-            children: [
-              {type: 'panel' as const, id: 'data', defaultSize: '20%'},
-              {type: 'panel' as const, id: 'main', defaultSize: '80%'},
-            ],
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -62,19 +53,34 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data'],
+                defaultSize: '20%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Notebook',
               icon: () => null,
               component: NotebookPanel,
-              placement: 'main',
             },
-            data: {
+            [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
           },
         },

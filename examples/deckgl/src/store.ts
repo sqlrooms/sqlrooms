@@ -3,12 +3,17 @@ import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
+import {z} from 'zod';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
+
+export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
@@ -24,15 +29,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       }),
       config: {
         ...createDefaultDiscussConfig(),
-        layout: {
-          id: 'root',
-          type: 'split',
-          direction: 'row',
-          children: [
-            {type: 'panel' as const, id: 'data', defaultSize: '30%'},
-            {type: 'panel' as const, id: 'main', defaultSize: '70%'},
-          ],
-        },
         dataSources: [
           {
             type: 'url',
@@ -45,19 +41,34 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         ],
       },
-      room: {
+      layout: {
+        config: {
+          id: 'root',
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['data'],
+              defaultSize: '30%',
+            },
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['main'],
+              defaultSize: '70%',
+            },
+          ],
+        } satisfies LayoutConfig,
         panels: {
-          data: {
+          [RoomPanelTypes.enum['data']]: {
             title: 'Data sources',
             icon: DatabaseIcon,
             component: DataPanel,
-            placement: 'sidebar',
           },
-          main: {
+          [RoomPanelTypes.enum['main']]: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            placement: 'main',
           },
         },
       },

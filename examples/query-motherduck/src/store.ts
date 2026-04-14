@@ -47,27 +47,25 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
               direction: 'row',
               children: [
                 {
-                  type: 'panel' as const,
+                  type: 'panel',
                   id: RoomPanelTypes.enum['data'],
                   defaultSize: '30%',
                 },
                 {
-                  type: 'panel' as const,
+                  type: 'panel',
                   id: RoomPanelTypes.enum['main'],
                   defaultSize: '70%',
                 },
               ],
-            },
+            } satisfies LayoutConfig,
             panels: {
               [RoomPanelTypes.enum['main']]: {
                 component: MainView,
-                placement: 'main',
               },
               [RoomPanelTypes.enum['data']]: {
                 title: 'Data',
                 component: DataPanel,
                 icon: DatabaseIcon,
-                placement: 'sidebar',
               },
             },
           },
