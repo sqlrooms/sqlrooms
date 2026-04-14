@@ -29,7 +29,7 @@ import {
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {FilterIcon, Globe} from 'lucide-react';
-import {FlightsProfilerPanel} from './components/FlightsProfilerPanel';
+import {FlightsChartsPanel} from './components/FlightsProfilerPanel';
 
 // Combined room state type
 export type RoomState = RoomShellSliceState &
@@ -41,20 +41,7 @@ export const FLIGHT_FILTER_SELECTION_NAME = 'flight_filter';
 
 const MAX_RENDERED_FLIGHTS = 2000;
 const OPENSKY_NYC_TABLE_NAME = 'opensky_nyc_flight_points';
-
-export const OPENSKY_POINT_PROFILER_COLUMNS = [
-  'callsign',
-  'nyc_role',
-  'departure_airport',
-  'arrival_airport',
-  'point_time_ny',
-  'altitude_m',
-  'heading_deg',
-  'speed_knots',
-  'duration_s',
-  'first_seen_ny',
-  'last_seen_ny',
-] as const;
+export const OPENSKY_CHART_TABLE_NAME = 'opensky_nyc_chart_points';
 
 const OPENSKY_FLIGHT_POINTS_URL =
   import.meta.env.VITE_OPENSKY_POINTS_URL ??
@@ -82,13 +69,28 @@ function appendSelectionFilter(
   return query;
 }
 
+function hasSelectionFilter(filter?: unknown) {
+  if (Array.isArray(filter)) {
+    return filter.some(Boolean);
+  }
+  return Boolean(filter);
+}
+
 function buildMatchedPointFlightsSubquery(filter?: unknown) {
-  const query = Query.from(OPENSKY_NYC_TABLE_NAME)
+  const query = Query.from(
+    hasSelectionFilter(filter)
+      ? OPENSKY_CHART_TABLE_NAME
+      : OPENSKY_NYC_TABLE_NAME,
+  )
     .select('flight_id')
     .distinct()
     .where(
-      sql`"onground" = false`,
-      sql`"speed_knots" IS NULL OR "speed_knots" <= 700`,
+      ...(hasSelectionFilter(filter)
+        ? []
+        : [
+            sql`"onground" = false`,
+            sql`"speed_knots" IS NULL OR "speed_knots" <= 700`,
+          ]),
     );
 
   return appendSelectionFilter(query, filter).toString();
@@ -151,6 +153,22 @@ export function buildOpenSkyFlightPointsQuery(filter?: unknown) {
   `;
 }
 
+export function createFlightsChartViewSql() {
+  return `
+    SELECT
+      DISTINCT flight_id,
+      coalesce(nullif(departure_airport, ''), 'Unknown') AS departure_airport,
+      coalesce(nullif(arrival_airport, ''), 'Unknown') AS arrival_airport,
+      CASE
+        WHEN regexp_extract(coalesce(callsign, ''), '^([A-Z]{3})', 1) <> ''
+          THEN regexp_extract(callsign, '^([A-Z]{3})', 1)
+        ELSE 'Unknown'
+      END AS airline_code
+    FROM ${OPENSKY_NYC_TABLE_NAME}
+    WHERE onground = false
+  `;
+}
+
 // Create default Cesium configuration with a manageable global flights layer.
 const cesiumConfig = createDefaultCesiumConfig();
 
@@ -159,10 +177,10 @@ const configWithLayers = {
   cesium: {
     ...cesiumConfig.cesium,
     camera: {
-      longitude: -71.82,
-      latitude: 41.74,
+      longitude: -73.0,
+      latitude: 40.0,
       height: 50000,
-      heading: -90,
+      heading: -20,
       pitch: -0.32,
       roll: 0,
     },
@@ -238,17 +256,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         config: {
           type: LayoutTypes.enum.mosaic,
           nodes: {
-            direction: 'column',
-            first: MAIN_VIEW,
-            second: 'filters',
-            splitPercentage: 70,
+            direction: 'row',
+            second: MAIN_VIEW,
+            first: 'filters',
+            splitPercentage: 30,
           },
         },
         panels: {
           filters: {
             title: 'Flight Filters',
             icon: FilterIcon,
-            component: FlightsProfilerPanel,
+            component: FlightsChartsPanel,
             placement: 'sidebar',
           },
           [MAIN_VIEW]: {
