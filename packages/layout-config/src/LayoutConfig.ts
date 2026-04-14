@@ -69,6 +69,7 @@ const BaseLayoutTabsNode = z.object({
   maxSize: LayoutSize.optional(),
   collapsedSize: LayoutSize.optional(),
   closedChildren: z.array(z.string()).optional(),
+  hideTabStrip: z.boolean().optional(),
 });
 
 export const LayoutTabsNode: z.ZodType<LayoutTabsNode> =

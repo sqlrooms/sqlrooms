@@ -4,6 +4,7 @@ import {
   isLayoutTabsNode,
   LayoutConfig,
   LayoutNode,
+  LayoutSplitNode,
   LayoutTabsNode,
   MAIN_VIEW,
 } from '@sqlrooms/layout-config';
@@ -22,9 +23,11 @@ import {StateCreator} from 'zustand';
 import {
   findTabsNodeForPanel,
   findNodeById,
+  findAnyNodeById,
   getChildKey,
   makeLayoutStack,
   removeLayoutNodeByKey,
+  IdentifiedLayoutNode,
 } from './mosaic/mosaic-utils';
 import type {RoomPanelInfo} from './types';
 import {getPanelId} from './node-renderers/types';
@@ -140,6 +143,11 @@ export type LayoutSliceState = {
     addChildToSplit: (splitId: string, panelId: string) => void;
     /** Add a panel as a child of a named nested mosaic node */
     addChildToMosaic: (mosaicId: string, panelId: string) => void;
+    /** Find the nearest ancestor of a given type for a node */
+    findAncestorOfType: (
+      nodeId: string,
+      type: 'tabs' | 'split' | 'mosaic',
+    ) => IdentifiedLayoutNode | undefined;
   };
 };
 
@@ -443,6 +451,38 @@ export function createLayoutSlice({
                 }
               }),
             );
+          },
+
+          findAncestorOfType: (
+            nodeId: string,
+            type: 'tabs' | 'split' | 'mosaic',
+          ): IdentifiedLayoutNode | undefined => {
+            const config = get().layout.config;
+            if (!config) return undefined;
+
+            // Find the starting node and its ancestors (including panels)
+            const found = findAnyNodeById(config, nodeId);
+            if (!found) return undefined;
+
+            // Walk backwards through ancestors to find the first match
+            for (let i = found.ancestors.length - 1; i >= 0; i--) {
+              const ancestor = found.ancestors[i];
+
+              if (!ancestor || typeof ancestor === 'string') continue;
+
+              // Check if this ancestor matches the requested type
+              if (type === 'tabs' && isLayoutTabsNode(ancestor)) {
+                return ancestor;
+              }
+              if (type === 'split' && isLayoutSplitNode(ancestor)) {
+                return ancestor as LayoutSplitNode & {id: string};
+              }
+              if (type === 'mosaic' && isLayoutMosaicNode(ancestor)) {
+                return ancestor;
+              }
+            }
+
+            return undefined;
           },
         },
       };

@@ -171,6 +171,61 @@ export function findNodeById(
   return undefined;
 }
 
+/**
+ * Find any node (including panels) with the given `id`.
+ * Unlike findNodeById, this function also finds panel nodes.
+ * Returns the node and an array of ancestor nodes from root to parent.
+ *
+ * TODO: why findNodeById handles panels differently? Can we unify these two functions?
+ */
+export function findAnyNodeById(
+  root: LayoutNode | null | undefined,
+  nodeId: string,
+  ancestors: LayoutNode[] = [],
+): {node: LayoutNode; ancestors: LayoutNode[]} | undefined {
+  if (!root) return undefined;
+
+  // Check string nodes (panel IDs)
+  if (typeof root === 'string') {
+    return root === nodeId ? {node: root, ancestors} : undefined;
+  }
+
+  // Check panel nodes
+  if (isLayoutPanelNode(root)) {
+    return root.id === nodeId ? {node: root, ancestors} : undefined;
+  }
+
+  // Check tabs nodes
+  if (isLayoutTabsNode(root)) {
+    if (root.id === nodeId) return {node: root, ancestors};
+    for (const child of root.children) {
+      const result = findAnyNodeById(child, nodeId, [...ancestors, root]);
+      if (result) return result;
+    }
+    return undefined;
+  }
+
+  // Check split nodes
+  if (isLayoutSplitNode(root)) {
+    if (root.id === nodeId) return {node: root, ancestors};
+    for (const child of root.children) {
+      const result = findAnyNodeById(child, nodeId, [...ancestors, root]);
+      if (result) return result;
+    }
+    return undefined;
+  }
+
+  // Check mosaic nodes
+  if (isLayoutMosaicNode(root)) {
+    if (root.id === nodeId) return {node: root, ancestors};
+    return root.nodes
+      ? findAnyNodeById(root.nodes, nodeId, [...ancestors, root])
+      : undefined;
+  }
+
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Tabs node helpers
 // ---------------------------------------------------------------------------

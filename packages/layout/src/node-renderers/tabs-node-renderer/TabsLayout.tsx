@@ -18,9 +18,11 @@ interface NodeProps {
 const Root: FC<NodeProps> = ({node, path, parentDirection}) => {
   const defaultComponent = (
     <>
-      <TabsLayout.TabStrip>
-        <TabsLayout.Tabs />
-      </TabsLayout.TabStrip>
+      {!node.hideTabStrip && (
+        <TabsLayout.TabStrip>
+          <TabsLayout.Tabs />
+        </TabsLayout.TabStrip>
+      )}
       <TabsLayoutTabContentContainer>
         <TabsLayoutTabContent />
       </TabsLayoutTabContentContainer>

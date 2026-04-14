@@ -19,12 +19,12 @@ export type MatchResult<T> = {
  *
  * @example
  * // Simple match
- * matchNodePathToPanel(['root', 'main', 'dashboards'], panels)
+ * matchNodePathToPanel(panels, ['root', 'main', 'dashboards'])
  * // Returns: { panelId: 'dashboards', params: {} }
  *
  * @example
  * // Match with parameters
- * matchNodePathToPanel(['root', 'main', 'dashboards', 'overview', 'users'], panels)
+ * matchNodePathToPanel(panels, ['root', 'main', 'dashboards', 'overview', 'users'])
  * // Returns: {
  * //   panelId: 'users',
  * //   panel: panels['dashboards/{dashboardId}/{chartId}'],
@@ -32,8 +32,8 @@ export type MatchResult<T> = {
  * // }
  */
 export function matchNodePathToPanel<T>(
-  path: LayoutPath,
   panels: Record<string, T>,
+  path: LayoutPath,
 ): MatchResult<T> | null {
   // Try to match each panel key against the path in the order they are defined
   for (const panelId of Object.keys(panels)) {

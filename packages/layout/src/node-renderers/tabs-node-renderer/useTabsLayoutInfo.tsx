@@ -51,8 +51,7 @@ export function useTabsLayoutInfo(
     () =>
       allTabIds.map((id) => {
         const panelId = extractPanelId(id);
-        const currentPath = [...path, panelId];
-        const panelInfo = matchNodePathToPanel(currentPath, panels);
+        const panelInfo = matchNodePathToPanel(panels, [...path, panelId]);
 
         return {id, name: panelInfo?.panel.title ?? panelId};
       }),

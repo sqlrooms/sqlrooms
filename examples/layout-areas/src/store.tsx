@@ -25,6 +25,7 @@ import {DynamicChartPanel} from './panels/DynamicChartPanel';
 import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 import {DashboardTabs} from './panels/DashboardTabs';
+import {RoomPanelTypes} from './panels/panel-types';
 
 function findTabsNodeInState(
   root: LayoutNode | null,
@@ -167,22 +168,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           children: [
             {
               type: 'tabs',
-              id: 'left',
-              defaultSize: '22%',
+              id: RoomPanelTypes.enum['left'],
+              defaultSize: '30%',
               minSize: 300,
-              children: ['data-sources', 'schema'],
+              children: [
+                RoomPanelTypes.enum['data-sources'],
+                RoomPanelTypes.enum['schema'],
+              ],
               activeTabIndex: 0,
               collapsible: true,
               collapsedSize: 0,
+              hideTabStrip: true,
             },
             {
-              id: 'main',
+              id: RoomPanelTypes.enum['main'],
               type: 'split',
               direction: 'column',
               children: [
                 {
                   type: 'tabs',
-                  id: 'dashboards',
+                  id: RoomPanelTypes.enum['dashboards'],
                   children: [
                     {
                       type: 'mosaic',
@@ -225,14 +230,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           ],
         } satisfies LayoutConfig,
         panels: {
-          dashboards: {
-            component: DashboardTabs,
-          },
-          'data-sources': {
-            title: 'Data Sources',
-            component: DataSourcesPanel,
-            icon: DatabaseIcon,
-          },
           'dashboards/{dashboardId}': {
             icon: BarChart3Icon,
             title: 'Dashboard 123',
@@ -244,17 +241,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             icon: BarChart3Icon,
             component: DynamicChartPanel,
           },
-          schema: {
+          [RoomPanelTypes.enum['dashboards']]: {
+            component: DashboardTabs,
+          },
+          [RoomPanelTypes.enum['data-sources']]: {
+            title: 'Data Sources',
+            component: DataSourcesPanel,
+            icon: DatabaseIcon,
+          },
+          [RoomPanelTypes.enum['schema']]: {
             title: 'Schema',
             component: SchemaPanel,
             icon: TableIcon,
           },
-          console: {
+          [RoomPanelTypes.enum['console']]: {
             title: 'Console',
             component: ConsolePanel,
             icon: TerminalIcon,
           },
-          results: {
+          [RoomPanelTypes.enum['results']]: {
             title: 'Results',
             component: ResultsPanel,
             icon: TableRowsSplitIcon,

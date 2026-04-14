@@ -28,6 +28,7 @@ export {
   removeLayoutNodeByKey,
   findTabsNodeForPanel,
   findNodeById,
+  findAnyNodeById,
   getNodeAtPath,
   findParentArea,
   findParentSplit,
@@ -103,6 +104,7 @@ export {
 
 // Panel matching utility
 export {matchNodePathToPanel} from './matchNodePathToPanel';
+export {useGetPanelInfo, useGetPanel} from './useGetPanel';
 
 // Node renderers
 

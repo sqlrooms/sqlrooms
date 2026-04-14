@@ -23,7 +23,7 @@ export const DataSourcesPanel = () => {
   );
 
   return (
-    <RoomPanel type={'data-sources'}>
+    <RoomPanel type="data-sources">
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{
@@ -86,7 +86,7 @@ export const DataSourcesPanel = () => {
                 <DbSettings.DriversTabLabel />
               </TabsTrigger>
             </TabsList>
-            <div className="mt-4 grid min-h-0 overflow-y-auto [&>*]:col-start-1 [&>*]:row-start-1">
+            <div className="mt-4 grid min-h-0 overflow-y-auto *:col-start-1 *:row-start-1">
               <TabsContent
                 value="connections"
                 forceMount

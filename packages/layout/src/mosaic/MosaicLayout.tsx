@@ -180,12 +180,13 @@ const MosaicLayout: FC<CombinedProps> = (props) => {
           ? (areaNode as MosaicLayoutTabsNode)
           : undefined;
 
-      const showTabStrip = tabsNode?.showTabStrip !== false;
+      // TODO: fix this
+      const showTabStrip = true; // tabsNode?.showTabStrip !== false;
       const isCollapsed = tabsNode?.collapsed === true;
       const isCollapsible = tabsNode?.collapsible === true;
-      const closeableTabs = tabsNode?.closeableTabs === true;
-      const creatableTabs = tabsNode?.creatableTabs === true;
-      const searchableTabs = tabsNode?.searchableTabs === true;
+      const closeableTabs = true; //tabsNode?.closeableTabs === true;
+      const creatableTabs = true; //tabsNode?.creatableTabs === true;
+      const searchableTabs = true; //tabsNode?.searchableTabs === true;
       const areaId = tabsNode?.id;
 
       if (isCollapsed) {
