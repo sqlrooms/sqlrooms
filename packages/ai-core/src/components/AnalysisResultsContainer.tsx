@@ -32,10 +32,8 @@ export const AnalysisResultsContainer: React.FC<{
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
-    endRef,
     dataToObserve: uiMessages,
   });
 
@@ -65,7 +63,7 @@ export const AnalysisResultsContainer: React.FC<{
           {isRunning && (
             <AiThinkingDots className="text-muted-foreground p-4" />
           )}
-          <div ref={endRef} className="h-10 w-full shrink-0" />
+          <div className="h-10 w-full shrink-0" />
         </div>
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
