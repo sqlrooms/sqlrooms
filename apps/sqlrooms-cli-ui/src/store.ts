@@ -19,6 +19,7 @@ import {
   CellsSliceState,
   createCellsSlice,
   createDefaultCellRegistry,
+  SheetType,
 } from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import type {MosaicSliceState} from '@sqlrooms/mosaic';
@@ -32,6 +33,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
   RoomShellSliceState,
@@ -58,6 +60,7 @@ import {
   DbSettingsSliceState,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
+import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
   DASHBOARD_AI_INSTRUCTIONS,
@@ -138,8 +141,6 @@ export type RoomState = RoomShellSliceState &
       createDashboardSheet: (title?: string) => string;
       setCurrentSheetVgPlot: (vgplot: string) => string;
     };
-    isAssistantOpen: boolean;
-    setAssistantOpen: (isAssistantOpen: boolean) => void;
   };
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -179,7 +180,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas: {
         room: BaseRoomConfig,
-        // layout: LayoutConfig,
+        layout: LayoutConfig,
         ai: AiSliceConfig,
         // aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
@@ -315,10 +316,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().appProject.config.appsBySheetId[sheetId],
         },
         dashboard: dashboardSlice,
-        isAssistantOpen: false,
-        setAssistantOpen: (isAssistantOpen: boolean) => {
-          set({isAssistantOpen});
-        },
 
         ...createDbSettingsSlice({
           config: {
@@ -353,7 +350,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCellsSlice({
           cellRegistry: createDefaultCellRegistry(),
-          supportedSheetTypes: ['notebook', 'canvas', 'app', 'dashboard'],
+          supportedSheetTypes: Object.keys(ARTIFACT_TYPES) as SheetType[],
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),
