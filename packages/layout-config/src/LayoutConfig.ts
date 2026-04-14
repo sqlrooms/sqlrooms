@@ -131,11 +131,18 @@ function convertLegacyNode(node: unknown): unknown {
   if (typeof node === 'string' || node == null) return node;
   if (typeof node !== 'object') return node;
 
-  const obj = node as Record<string, unknown>;
+  const obj = {...node} as Record<string, unknown>;
 
   // Unwrap the outer { type: 'mosaic', nodes: ... } wrapper
   if (obj.type === 'mosaic' && 'nodes' in obj && !('id' in obj)) {
-    return convertLegacyNode(obj.nodes);
+    return {
+      ...(convertLegacyNode(obj.nodes) as Record<string, unknown>),
+      id: 'root',
+    };
+  }
+
+  if (!('id' in node)) {
+    obj.id = Math.random().toString(36).substring(2, 15);
   }
 
   // Already in typed format — apply field migrations
