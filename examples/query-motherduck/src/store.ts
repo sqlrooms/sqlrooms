@@ -42,6 +42,7 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
           }),
           layout: {
             config: {
+              id: 'root',
               type: 'split',
               direction: 'row',
               children: [

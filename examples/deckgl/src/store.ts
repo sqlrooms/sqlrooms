@@ -25,6 +25,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       config: {
         ...createDefaultDiscussConfig(),
         layout: {
+          id: 'root',
           type: 'split',
           direction: 'row',
           children: [

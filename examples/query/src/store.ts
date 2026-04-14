@@ -46,6 +46,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         layout: {
           config: {
+            id: 'root',
             type: 'split',
             direction: 'row',
             children: [

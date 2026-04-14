@@ -1,19 +1,19 @@
 import {
+  CellsSliceConfig,
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
   createNotebookSlice,
   NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
-  createCellsSlice,
-  CellsSliceState,
-  CellsSliceConfig,
-  createDefaultCellRegistry,
-} from '@sqlrooms/cells';
-import {
+  createPivotSlice,
   pivotCellRegistryEntry,
   PivotSliceConfig,
   PivotSliceState,
-  createPivotSlice,
 } from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
@@ -46,6 +46,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         config: {
           layout: {
+            id: 'root',
             type: 'split',
             direction: 'row',
             children: [

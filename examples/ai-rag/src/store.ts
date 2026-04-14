@@ -12,10 +12,9 @@ import {
 import {
   createRagSlice,
   createRagTool,
-  ragToolRenderer,
   RagSliceState,
+  ragToolRenderer,
 } from '@sqlrooms/ai-rag';
-import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -38,6 +37,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
+import {createOpenAIEmbeddingProvider} from './embeddings';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -82,6 +82,7 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
+            id: 'root',
             type: 'split',
             direction: 'row',
             children: [
