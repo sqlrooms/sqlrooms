@@ -1,14 +1,25 @@
-# Cesium Earthquake Explorer
+# Wadati–Benioff Explorer
 
-A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
+A 3D globe visualization of global seismicity rendered at true depth, with
+camera presets that cut textbook cross-sections through the world's
+subduction zones.
 
 ## Features
 
-- **3D Globe**: Interactive Cesium-powered 3D globe
-- **Earthquake Data**: Real-time visualization of earthquakes magnitude 5.0+
-- **Time Animation**: Animate through earthquake timeline with clock controls
-- **SQL Queries**: Data loaded from DuckDB via SQL queries
-- **Camera Persistence**: Camera position saved across page reloads
+- **3D depth-aware globe**: Every event renders at `(lon, lat, -depth_m)`
+  inside the Earth (`depthTestAgainstTerrain: false`), colored by magnitude
+  and sized by recency
+- **Subduction zone presets**: One click flies the camera to Tonga, Japan,
+  Chile, Indonesia, Cascadia, or the Hellenic arc with an along-strike view
+- **Slab slicer**: Activating a preset rewrites the layer's SQL so only
+  events within ±50 km of the section line remain, revealing the
+  Wadati–Benioff zone as a curving line of seismicity descending to ~700 km
+- **Mag-vs-depth histogram**: Live stacked histogram of the visible slab,
+  showing the bimodal shallow-plus-deep distribution as the time slider is
+  scrubbed
+- **Time animation**: Cesium clock + timeline controls for scrubbing through
+  the catalog
+- **Camera persistence**: Manual camera position saved across page reloads
 
 ## Setup
 
@@ -42,7 +53,7 @@ A 3D globe visualization of global earthquake data using Cesium and SQLRooms.
 ### Timeline Controls
 
 - **Play/Pause**: Start/stop time animation
-- **Speed slider**: Adjust animation speed on a logarithmic scale from 1x up to 1 year/second
+- **Speed slider**: Adjust animation speed (0.1x to 100x)
 - **Timeline**: Scrub through time range
 
 ### Layers

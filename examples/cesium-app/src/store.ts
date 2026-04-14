@@ -1,6 +1,16 @@
 /**
- * Room store configuration for Cesium Earthquake Explorer example.
- * Demonstrates integration of Cesium slice with room store.
+ * Room store configuration for the Wadati–Benioff Earthquake Explorer.
+ *
+ * Composes four slices:
+ *   - RoomShell slice (config, data sources, tasks)
+ *   - Cesium slice (3D globe, clock, layers, camera)
+ *   - SqlEditor slice (ad-hoc querying)
+ *   - Earthquake slice (subduction-zone presets + slab slice filter)
+ *
+ * The earthquake slice drives the Cesium layer's SQL via updateLayer(), so
+ * activating a preset causes an automatic re-query and re-render. Depth is
+ * projected into altitude_m = -Depth * 1000, and the viewer is configured
+ * with depthTestAgainstTerrain = false so events render inside the Earth.
  */
 
 import {
@@ -8,6 +18,7 @@ import {
   createRoomShellSlice,
   type RoomShellSliceState,
   MAIN_VIEW,
+  LayoutTypes,
 } from '@sqlrooms/room-shell';
 import {
   createCesiumSlice,
@@ -20,69 +31,80 @@ import {
   createSqlEditorSlice,
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {Globe} from 'lucide-react';
+import {BarChart3, Globe, Waves} from 'lucide-react';
+import {
+  buildEarthquakeSql,
+  createEarthquakeSlice,
+  EARTHQUAKE_LAYER_ID,
+  type EarthquakeSliceState,
+} from './earthquake-slice';
+import {PresetPanel} from './PresetPanel';
+import {HistogramPanel} from './HistogramPanel';
+import {EarthquakePanels} from './panel-keys';
 
-// Combined room state type
 export type RoomState = RoomShellSliceState &
   CesiumSliceState &
-  SqlEditorSliceState;
+  SqlEditorSliceState &
+  EarthquakeSliceState;
 
-// Create default Cesium configuration with earthquake layer
 const cesiumConfig = createDefaultCesiumConfig();
 
-// Configure earthquake layer with SQL query (create new object to avoid mutating frozen config)
 const configWithLayers = {
   ...cesiumConfig,
   cesium: {
     ...cesiumConfig.cesium,
+    // Start the camera well above the Pacific Ring of Fire so you immediately
+    // see how seismicity outlines the trenches at a global scale.
+    camera: {
+      longitude: 150,
+      latitude: 0,
+      height: 20_000_000,
+      heading: 0,
+      pitch: -Math.PI / 2,
+      roll: 0,
+    },
+    // CRITICAL: allow sub-surface rendering so depth-positioned points are
+    // not culled by the terrain depth test.
+    depthTestAgainstTerrain: false,
+    // Keep the timeline + animation controls visible for time scrubbing.
+    showTimeline: true,
+    showAnimation: true,
     layers: [
       {
-        id: 'earthquakes',
+        id: EARTHQUAKE_LAYER_ID,
         type: 'sql-entities' as const,
         visible: true,
-        heightReference: 'RELATIVE_TO_GROUND' as const,
         tableName: 'earthquakes',
-        sqlQuery: `
-          SELECT
-            Latitude AS latitude,
-            Longitude AS longitude,
-            0 AS altitude,
-            strftime(DateTime, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
-            Magnitude AS size,
-            'M' || CAST(Magnitude AS VARCHAR) || ' - ' || CAST(DateTime AS VARCHAR) AS label
-          FROM earthquakes
-          WHERE Magnitude >= 5.0
-          ORDER BY DateTime
-        `,
+        sqlQuery: buildEarthquakeSql(''),
+        // `NONE` means the altitude column is used verbatim; no terrain snap.
+        heightReference: 'NONE' as const,
         columnMapping: {
           longitude: 'longitude',
           latitude: 'latitude',
-          altitude: 'altitude',
+          altitude: 'altitude_m',
           time: 'timestamp',
-          label: 'label',
+          color: 'color',
           size: 'size',
+          label: 'label',
         },
       },
     ],
-    // Clock time range is auto-derived from data (see CesiumEntityLayer)
     clock: {
-      multiplier: 86400, // 1 day per second
+      multiplier: 86400 * 7, // 1 week per second — fast enough to see patterns
       shouldAnimate: false,
       clockRange: 'LOOP_STOP' as const,
     },
   },
 };
 
-// Create DuckDB connector
 const connector = createWasmDuckDbConnector();
 
-// Create room store with Cesium slice
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     ...createRoomShellSlice({
       connector,
       config: {
-        title: 'Earthquake Explorer',
+        title: 'Wadati–Benioff Explorer',
         dataSources: [
           {
             tableName: 'earthquakes',
@@ -92,12 +114,38 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ],
       },
       layout: {
+        config: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            splitPercentage: 22,
+            first: EarthquakePanels.Presets,
+            second: {
+              direction: 'column',
+              splitPercentage: 68,
+              first: MAIN_VIEW,
+              second: EarthquakePanels.Histogram,
+            },
+          },
+        },
         panels: {
+          [EarthquakePanels.Presets]: {
+            title: 'Subduction Zones',
+            icon: Waves,
+            component: PresetPanel,
+            placement: 'sidebar',
+          },
           [MAIN_VIEW]: {
             title: '3D Globe',
             icon: Globe,
             component: CesiumPanel,
             placement: 'main',
+          },
+          [EarthquakePanels.Histogram]: {
+            title: 'Mag vs Depth',
+            icon: BarChart3,
+            component: HistogramPanel,
+            placement: 'sidebar-bottom',
           },
         },
       },
@@ -106,5 +154,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     ...createCesiumSlice(configWithLayers)(set, get, store),
 
     ...createSqlEditorSlice()(set, get, store),
+
+    ...createEarthquakeSlice()(set, get, store),
   }),
 );
