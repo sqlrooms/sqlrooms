@@ -8,7 +8,7 @@ const typedocOptions = {
   entryPoints: ['src/index.ts'],
   entryPointStrategy: 'resolve',
   enumMembersFormat: 'table',
-  exclude: ['**/node_modules', '**/dist'],
+  exclude: ['**/node_modules', '**/dist', '**/__tests__'],
   excludeExternals: false,
   excludePrivate: false,
   excludeProtected: false,

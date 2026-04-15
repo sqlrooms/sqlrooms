@@ -22,7 +22,29 @@ export {
   type MosaicSliceState,
   type TrackedClient,
 } from './MosaicSlice';
+export {
+  MosaicProfiler,
+  type MosaicProfilerCompoundHeaderProps,
+  type MosaicProfilerCompoundRowsProps,
+  type MosaicProfilerCompoundStatusBarProps,
+  type MosaicProfilerCompoundTableProps,
+  type MosaicProfilerProps,
+  type MosaicProfilerRootProps,
+} from './profiler/MosaicProfiler';
+export {
+  MosaicProfilerHeader,
+  type MosaicProfilerHeaderProps,
+} from './profiler/MosaicProfilerHeader';
+export {
+  MosaicProfilerRows,
+  type MosaicProfilerRowsProps,
+} from './profiler/MosaicProfilerRows';
+export {
+  MosaicProfilerStatusBar,
+  type MosaicProfilerStatusBarProps,
+} from './profiler/MosaicProfilerStatusBar';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
+export {useMosaicProfiler} from './profiler/useMosaicProfiler';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components
@@ -44,6 +66,24 @@ export type {MosaicChartDisplayProps} from './editor/MosaicChartDisplay';
 export type {MosaicChartEditorActionsProps} from './editor/MosaicChartEditorActions';
 export type {MosaicCodeMirrorEditorProps} from './editor/MosaicCodeMirrorEditor';
 export type {MosaicSpecEditorPanelProps} from './editor/MosaicSpecEditorPanel';
+export type {
+  MosaicProfilerCategoryBucket,
+  MosaicProfilerCategorySummary,
+  MosaicProfilerColumnKind,
+  MosaicProfilerColumnState,
+  MosaicProfilerHistogramSummary,
+  MosaicProfilerOptions,
+  MosaicProfilerPaginationState,
+  MosaicProfilerSorting,
+  MosaicProfilerSummaryState,
+  UseMosaicProfilerReturn,
+} from './profiler/types';
+export {
+  getProfilerTableWidth,
+  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
+  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './profiler/layout';
 export type {
   MosaicEditorActions,
   MosaicEditorContextValue,

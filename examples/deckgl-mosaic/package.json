@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/react": "^9.2.5",
+    "@deck.gl/react": "^9.2.11",
     "@geoarrow/deck.gl-layers": "^0.3.1",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",

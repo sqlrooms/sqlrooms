@@ -28,6 +28,23 @@ SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based an
 - **AI examples** (e.g. `examples/ai`) require `OPENAI_API_KEY`. Core examples (`minimal`, `query`) do not.
 - When using Zustand/room-store selectors in React, do not create derived arrays/objects/functions inside the selector (for example `state.items.filter(...)`). That returns a new reference on every read and can trigger `useSyncExternalStore` snapshot loops (`The result of getSnapshot should be cached`) and max update depth errors. Select stable raw state first, then derive with `React.useMemo` in the component.
 
+## Component API Patterns
+
+- When adding a new grouped UI surface with shared state, prefer a compound component API over repeating the same state prop across multiple siblings.
+- Preferred pattern:
+  - export a top-level compound component that provides context, for example `<Feature>` or `<Feature.Root>`
+  - expose subcomponents like `<Feature.Header />`, `<Feature.Rows />`, `<Feature.StatusBar />`
+  - keep the lower-level hook or prop-based primitives available underneath when advanced composition is still valuable
+- For profiler-style features, prefer the compound form for docs, examples, and new call sites:
+  - use `<MosaicProfiler ...>` or `<MosaicProfiler.Root profiler={...}>`
+  - then render `<MosaicProfiler.Header />`, `<MosaicProfiler.Rows />`, and related subcomponents inside
+- Keep the context layer thin and stable. Avoid turning a compound provider into a second state system; it should usually wrap an existing hook/store API rather than replace it.
+- If the shared state is more complex than a few props, prefer managing it in a Zustand store rather than in large prop bags or deeply nested local React state.
+- State ownership guidance:
+  - use the room Zustand store when the state is app-level, cross-panel, or needs to coordinate with other room features
+  - use an internal feature-local Zustand store when the state is instance-scoped to a component family or compound API
+  - keep the compound context/provider as a thin access layer over that state, not as the primary place where complex state is modeled
+
 ## Further Reading
 
 Load these only when you need them:
