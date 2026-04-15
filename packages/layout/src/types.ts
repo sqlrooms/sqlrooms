@@ -22,7 +22,6 @@ export type RoomPanelComponentProps = {
   panelInfo: MatchResult<RoomPanelInfo>;
   node: LayoutNode;
   path: LayoutPath;
-  id: string;
 };
 
 export type RoomPanelComponent = React.ComponentType<RoomPanelComponentProps>;
