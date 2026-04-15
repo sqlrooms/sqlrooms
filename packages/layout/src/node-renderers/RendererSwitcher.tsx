@@ -1,4 +1,4 @@
-import {getLayoutNodeId, LayoutNode} from '@sqlrooms/layout-config';
+import {LayoutNode} from '@sqlrooms/layout-config';
 import {FC, ReactNode} from 'react';
 import {LayoutPath} from '../types';
 import {useGetPanelInfoByPath} from '../useGetPanel';
@@ -15,14 +15,11 @@ export const RendererSwitcher: FC<RendererSwitcherProps> = ({
   defaultComponent,
 }) => {
   const panelInfo = useGetPanelInfoByPath(path);
-  const id = getLayoutNodeId(node);
 
   const CustomRenderer = panelInfo?.panel.component;
 
   if (CustomRenderer) {
-    return (
-      <CustomRenderer panelInfo={panelInfo} node={node} path={path} id={id} />
-    );
+    return <CustomRenderer panelInfo={panelInfo} />;
   }
 
   return defaultComponent;

@@ -22,10 +22,10 @@ export {RoomPanelHeader} from './panels/RoomPanelHeader';
 
 export {
   AreaPanelButtons,
-  TabButtons,
   RoomShellSidebarButton,
   RoomShellSidebarButtons,
   SidebarButton,
+  TabButtons,
 } from './RoomShellSidebarButtons';
 
 export {createRoomShellSlice, useBaseRoomShellStore} from './RoomShellSlice';
@@ -36,20 +36,15 @@ export type {StateCreator, StoreApi} from 'zustand';
 export {DataSourceStatus} from './types';
 export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 
+export {getChildKey, getMosaicNodeKey, LayoutRenderer} from '@sqlrooms/layout';
 export type {
-  RoomPanelInfo,
-  PanelRenderContext,
-  TabStripRenderContext,
   LayoutPath,
+  LayoutRendererProps,
+  RoomPanelInfo,
 } from '@sqlrooms/layout';
-export {getChildKey, getMosaicNodeKey} from '@sqlrooms/layout';
-export {LayoutRenderer} from '@sqlrooms/layout';
-export type {LayoutRendererProps} from '@sqlrooms/layout';
 
 // Re-export from @sqlrooms/room-store
 export {
-  RoomStateContext,
-  RoomStateProvider,
   createBaseRoomSlice,
   createBaseSlice,
   createCommandCliAdapter,
@@ -74,6 +69,8 @@ export {
   persistSliceConfigs,
   registerCommandsForOwner,
   resolveCommandPolicyMetadata,
+  RoomStateContext,
+  RoomStateProvider,
   unregisterCommandsForOwner,
   useBaseRoomStore,
   useRoomStoreApi,
@@ -128,52 +125,52 @@ export type {DbSliceState} from '@sqlrooms/db';
 export {
   BaseDataSource,
   BaseRoomConfig,
-  DEFAULT_ROOM_TITLE,
+  createDefaultBaseRoomConfig,
+  createDefaultLayout,
+  createDefaultMosaicLayout,
   DataSource,
   DataSourceTypes,
+  DEFAULT_MOSAIC_LAYOUT,
+  DEFAULT_ROOM_TITLE,
   FileDataSource,
+  isFileDataSource,
+  isLayoutMosaicNode,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  isMosaicLayoutMosaicNode,
+  isMosaicLayoutParent,
+  isMosaicLayoutSplitNode,
+  isMosaicLayoutTabsNode,
+  isSpatialLoadFileOptions,
+  isSqlQueryDataSource,
+  isUrlDataSource,
+  LayoutConfig,
+  // New layout names
+  LayoutDirection,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  // Deprecated layout names
+  LayoutTypes,
   LoadFile,
   LoadFileOptions,
   MAIN_VIEW,
+  MosaicLayoutConfig,
+  MosaicLayoutDirection,
+  MosaicLayoutMosaicNode,
+  MosaicLayoutNode,
+  MosaicLayoutNodeKey,
+  MosaicLayoutParent,
+  MosaicLayoutSplitNode,
+  MosaicLayoutTabsNode,
   SpatialLoadFileOptions,
   SpatialLoadOptions,
   SqlQueryDataSource,
   StandardLoadFileOptions,
   StandardLoadOptions,
   UrlDataSource,
-  createDefaultBaseRoomConfig,
-  isFileDataSource,
-  isSpatialLoadFileOptions,
-  isSqlQueryDataSource,
-  isUrlDataSource,
-  // New layout names
-  LayoutDirection,
-  LayoutNodeKey,
-  LayoutPanelNode,
-  LayoutSplitNode,
-  LayoutTabsNode,
-  LayoutMosaicNode,
-  LayoutNode,
-  LayoutConfig,
-  isLayoutPanelNode,
-  isLayoutSplitNode,
-  isLayoutTabsNode,
-  isLayoutMosaicNode,
-  createDefaultLayout,
-  // Deprecated layout names
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutSplitNode,
-  MosaicLayoutTabsNode,
-  MosaicLayoutMosaicNode,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  isMosaicLayoutSplitNode,
-  isMosaicLayoutTabsNode,
-  isMosaicLayoutMosaicNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
 } from '@sqlrooms/room-store';

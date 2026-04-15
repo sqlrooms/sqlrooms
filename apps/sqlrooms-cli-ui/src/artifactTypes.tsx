@@ -1,5 +1,6 @@
 import {Canvas} from '@sqlrooms/canvas';
 import {SheetType} from '@sqlrooms/cells';
+import {RoomPanelComponent} from '@sqlrooms/layout';
 import {Notebook} from '@sqlrooms/notebook';
 import {
   AppWindow,
@@ -14,7 +15,7 @@ export type ArtifactTypeInfo = {
   title: string;
   addCommand: string;
   icon: React.ElementType;
-  component: React.ComponentType;
+  component: RoomPanelComponent;
 };
 export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
   notebook: {

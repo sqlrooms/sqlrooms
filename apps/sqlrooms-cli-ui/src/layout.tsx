@@ -5,12 +5,18 @@ import {
   LayoutDashboardIcon,
   SparklesIcon,
 } from 'lucide-react';
+import {StoreApi} from 'zustand';
+import {ARTIFACT_TYPES} from './artifactTypes';
 import {AssistantPanel} from './components/AssistantPanel';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
-import {ArtifactSheet} from './workspace/ArtifactSheet';
+import {RoomState} from './store-types';
 import {ArtifactsContainerPanel} from './workspace/ArtifactsContainerPanel';
 
-export const LAYOUT: CreateLayoutSliceProps = {
+export const createLayout = ({
+  store,
+}: {
+  store: StoreApi<RoomState>;
+}): CreateLayoutSliceProps => ({
   config: {
     id: 'root',
     type: 'split',
@@ -61,10 +67,24 @@ export const LAYOUT: CreateLayoutSliceProps = {
       title: 'Artifacts',
       icon: FolderIcon,
     },
-    'workspace/{artifactId}': (ctx) => ({
-      component: ArtifactSheet,
-      title: `Artifact ${ctx.params.artifactId}`,
-      icon: LayoutDashboardIcon,
-    }),
+    'workspace/{artifactId}': (ctx) => {
+      const panelId = ctx.params.artifactId;
+      const panelSheet = store.getState().cells.config.sheets[panelId];
+      const types = panelSheet ? ARTIFACT_TYPES[panelSheet.type] : undefined;
+      const component = types?.component;
+      if (!component) {
+        // fallback to a null component
+        return {
+          component: () => null,
+          title: `Unknown panel ${panelId}`,
+          icon: LayoutDashboardIcon,
+        };
+      }
+      return {
+        component,
+        title: panelSheet?.title || `Panel ${panelId}`,
+        icon: LayoutDashboardIcon,
+      };
+    },
   },
-};
+});
