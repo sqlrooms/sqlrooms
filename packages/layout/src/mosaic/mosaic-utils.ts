@@ -406,6 +406,7 @@ export function convertToMosaicTree(
       type: 'split',
       direction: node.direction,
       children,
+      splitPercentages: node.splitPercentages,
     } satisfies MosaicNode<string>;
   }
 
