@@ -14,6 +14,7 @@ import {
 } from '@sqlrooms/duckdb-core';
 import {
   loadTableSchemas,
+  loadAllSchemas,
   LoadTableSchemasFilter,
   LoadTableSchemasFilterFunction,
 } from './loadTableSchemas';
@@ -34,6 +35,8 @@ import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
+const HIDDEN_SCHEMAS = ['fsq_rag', 'temp', 'fsq_spatial'];
+const HIDDEN_TABLES = ['fsq_spatial'];
 
 /**
  * Default filter to exclude internal SQLRooms tables, schemas, and databases
@@ -44,7 +47,9 @@ export const createDefaultLoadTableSchemasFilter = (
   return (
     !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
     !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
+    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+    !HIDDEN_SCHEMAS.includes(table.schema || '') &&
+    !HIDDEN_TABLES.includes(table.table || '')
   );
 };
 
@@ -655,6 +660,7 @@ export function createDuckDbSlice({
             refreshPromise = (async () => {
               try {
                 let newTables: DataTable[];
+                let allSchemas: Array<{database: string; schema: string}>;
                 do {
                   pendingSchemaRefresh = false;
                   const connector = await get().db.getConnector();
@@ -672,12 +678,24 @@ export function createDuckDbSlice({
                     }),
                   );
                   newTables = await get().db.loadTableSchemas();
+                  allSchemas = await loadAllSchemas(connector);
                 } while (pendingSchemaRefresh);
-                if (!deepEquals(newTables, get().db.tables)) {
+
+                const currentTables = get().db.tables;
+                const currentSchemaTrees = get().db.schemaTrees;
+                const newSchemaTrees = createDbSchemaTrees(
+                  newTables,
+                  allSchemas,
+                );
+
+                if (
+                  !deepEquals(newTables, currentTables) ||
+                  !deepEquals(newSchemaTrees, currentSchemaTrees)
+                ) {
                   set((state) =>
                     produce(state, (draft) => {
                       draft.db.tables = newTables;
-                      draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                      draft.db.schemaTrees = newSchemaTrees;
                     }),
                   );
                 }

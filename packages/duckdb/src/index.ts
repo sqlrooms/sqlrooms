@@ -35,7 +35,7 @@ export {
   type DuckDbSliceState,
 } from './DuckDbSlice';
 
-export {type LoadTableSchemasFilter} from './loadTableSchemas';
+export {type LoadTableSchemasFilter, loadAllSchemas} from './loadTableSchemas';
 
 export {useExportToCsv, type UseExportToCsvReturn} from './use-export-to-csv';
 

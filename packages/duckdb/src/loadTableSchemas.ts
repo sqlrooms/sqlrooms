@@ -106,6 +106,40 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
   };
 }
 
+const HIDDEN_SCHEMAS = ['fsq_rag', 'temp', 'fsq_spatial'];
+
+/**
+ * Load all schemas from the database (including empty schemas).
+ * Filters out hidden schemas.
+ * @param connector - The DuckDB connector
+ * @returns An array of {database, schema} objects
+ */
+export async function loadAllSchemas(
+  connector: DuckDbConnector,
+): Promise<Array<{database: string; schema: string}>> {
+  const sql = `
+    SELECT DISTINCT 
+      database_name AS database, 
+      schema_name AS schema
+    FROM duckdb_schemas()
+    WHERE database_name != 'system'
+    AND internal = false
+    ORDER BY database_name, schema_name
+  `;
+  const result = await connector.query(sql);
+  const schemas: Array<{database: string; schema: string}> = [];
+
+  for (let i = 0; i < result.numRows; i++) {
+    const database = result.getChild('database')?.get(i);
+    const schema = result.getChild('schema')?.get(i);
+    if (database && schema && !HIDDEN_SCHEMAS.includes(schema)) {
+      schemas.push({database, schema});
+    }
+  }
+
+  return schemas;
+}
+
 function buildMetadataWhereClause(
   nameColumn: string,
   filter: LoadTableSchemasFilter,
