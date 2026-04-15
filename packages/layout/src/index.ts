@@ -15,6 +15,9 @@ export type {
   RoomPanelComponent,
   PanelRenderContext,
   TabStripRenderContext,
+  PanelDefinitionContext,
+  PanelDefinition,
+  Panels,
   LayoutPath,
   PanelContainerType,
 } from './types';
@@ -110,9 +113,24 @@ export {
 // Panel matching utility
 export {getPanelByPath} from './getPanelByPath';
 export {useGetPanelInfoByPath, useGetPanelByPath} from './useGetPanel';
+export {resolvePanelDefinition} from './resolvePanelDefinition';
+
+// Layout node context
+export {
+  useLayoutNodeContext,
+  useTabsNodeContext,
+  LayoutNodeProvider,
+  getLayoutNodeContextValue,
+} from './LayoutNodeContext';
+export type {
+  LayoutNodeContextValue,
+  LayoutNodeContextTabs,
+  LayoutNodeContextSplit,
+  LayoutNodeContextMosaic,
+  LayoutNodeContextPanel,
+  LayoutNodeContextLeaf,
+} from './LayoutNodeContext';
 
 // Node renderers
-
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
-export {useTabsLayoutContext} from './node-renderers/tabs-node-renderer/TabsLayoutProvider';
 export {extractPanelId} from './node-renderers/utils';

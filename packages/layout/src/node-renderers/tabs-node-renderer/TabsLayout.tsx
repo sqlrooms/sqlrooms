@@ -1,13 +1,13 @@
 import {LayoutTabsNode as LayoutTabsNodeType} from '@sqlrooms/layout-config';
 import {FC} from 'react';
 import {LayoutPath} from '../../types';
-import {TabsLayoutProvider} from './TabsLayoutProvider';
 import {TabsLayoutTabStrip} from './TabsLayoutTabStrip';
 import {TabsLayoutTabContent} from './TabsLayoutTabContent';
 import {ParentDirection} from '../types';
 import {RendererSwitcher} from '../RendererSwitcher';
 import {TabStrip} from '@sqlrooms/ui';
 import {TabsLayoutTabContentContainer} from './TabsLayoutTabContentContainer';
+import {LayoutNodeProvider} from '../../LayoutNodeContext';
 
 interface NodeProps {
   node: LayoutTabsNodeType;
@@ -30,7 +30,8 @@ const Root: FC<NodeProps> = ({node, path, parentDirection}) => {
   );
 
   return (
-    <TabsLayoutProvider
+    <LayoutNodeProvider
+      containerType="tabs"
       node={node}
       path={path}
       parentDirection={parentDirection}
@@ -42,7 +43,7 @@ const Root: FC<NodeProps> = ({node, path, parentDirection}) => {
           defaultComponent={defaultComponent}
         />
       </div>
-    </TabsLayoutProvider>
+    </LayoutNodeProvider>
   );
 };
 

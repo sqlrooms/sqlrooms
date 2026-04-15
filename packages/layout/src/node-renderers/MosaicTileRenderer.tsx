@@ -6,6 +6,7 @@ import {MosaicCloseButton} from './MosaicCloseButton';
 import {LayoutPath} from '../types';
 import {RendererSwitcher} from './RendererSwitcher';
 import {useGetPanelByPath} from '../useGetPanel';
+import {LayoutNodeProvider} from '../LayoutNodeContext';
 
 export type MosaicTileRendererProps = {
   panelId: string;
@@ -27,9 +28,11 @@ export const MosaicTileRenderer: FC<MosaicTileRendererProps> = ({
   const panel = useGetPanelByPath(currentPath);
 
   const content = (
-    <div className="h-full w-full overflow-hidden p-2">
-      <RendererSwitcher node={node} path={currentPath} />
-    </div>
+    <LayoutNodeProvider containerType="mosaic" node={node} path={currentPath}>
+      <div className="h-full w-full overflow-hidden p-2">
+        <RendererSwitcher node={node} path={currentPath} />
+      </div>
+    </LayoutNodeProvider>
   );
 
   if (!draggable) {

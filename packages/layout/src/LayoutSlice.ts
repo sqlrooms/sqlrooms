@@ -30,7 +30,7 @@ import {
 } from './mosaic/mosaic-utils';
 import {getPanelId} from './node-renderers/types';
 import {createTabActions} from './tab-actions';
-import type {Panels, RoomPanelInfo} from './types';
+import type {Panels, PanelDefinition} from './types';
 
 // ---------------------------------------------------------------------------
 // Config types — LayoutConfig is now LayoutNode | null directly
@@ -84,7 +84,7 @@ export type LayoutSliceState = {
     isCollapsed: (id: string) => boolean;
 
     /** Register a panel dynamically (adds to panels registry) */
-    registerPanel: (panelId: string, info: RoomPanelInfo) => void;
+    registerPanel: (panelId: string, info: PanelDefinition) => void;
     /** Unregister a dynamically added panel */
     unregisterPanel: (panelId: string) => void;
     /** Add a panel as a child of a named split node */
@@ -170,7 +170,11 @@ export function createLayoutSlice({
               set((state) =>
                 produce(state, (draft) => {
                   const root = draft.layout.config;
-                  const panelInfo = draft.layout.panels[panel];
+                  const panelDef = draft.layout.panels[panel];
+                  const panelInfo =
+                    typeof panelDef === 'function'
+                      ? panelDef({panelId: panel, params: {}})
+                      : panelDef;
                   const placement = panelInfo?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';
                   const childIdx = isLayoutSplitNode(root)
@@ -215,7 +219,7 @@ export function createLayoutSlice({
           // ---------------------------------------------------------------
           ...tabActions,
 
-          registerPanel: (panelId: string, info: RoomPanelInfo) => {
+          registerPanel: (panelId: string, info: PanelDefinition) => {
             set((state) =>
               produce(state, (draft) => {
                 draft.layout.panels[panelId] = info;

@@ -26,6 +26,7 @@ import {
 import {convertSizePropsToStyle} from './utils';
 import {useLayoutRendererContext} from '../LayoutRendererContext';
 import {TabsLayout} from './tabs-node-renderer/TabsLayout';
+import {LayoutNodeProvider} from '../LayoutNodeContext';
 
 // ---------------------------------------------------------------------------
 // NodeRenderer – recursive dispatcher
@@ -66,59 +67,61 @@ const SplitRenderer: FC<NodeRenderProps<LayoutSplitNode>> = ({node, path}) => {
   const {onCollapse, onExpand} = useLayoutRendererContext();
 
   return (
-    <ResizablePanelGroup orientation={orientation}>
-      {node.children.map((child, i) => {
-        const key = getPanelId(child);
-        const sizeProps = getSizeProps(child);
-        const isLast = i === node.children.length - 1;
-        const collapsed = isCollapsed(child);
-        const areaId = getChildAreaId(child);
-        const childPathSegment = areaId ?? key ?? i;
+    <LayoutNodeProvider containerType="split" node={node} path={path}>
+      <ResizablePanelGroup orientation={orientation}>
+        {node.children.map((child, i) => {
+          const key = getPanelId(child);
+          const sizeProps = getSizeProps(child);
+          const isLast = i === node.children.length - 1;
+          const collapsed = isCollapsed(child);
+          const areaId = getChildAreaId(child);
+          const childPathSegment = areaId ?? key ?? i;
 
-        const childContent = (
-          <NodeRenderer
-            node={child}
-            path={[...path, childPathSegment]}
-            containerType="split"
-            containerId={node.id}
-            parentDirection={node.direction}
-          />
-        );
+          const childContent = (
+            <NodeRenderer
+              node={child}
+              path={[...path, childPathSegment]}
+              containerType="split"
+              containerId={node.id}
+              parentDirection={node.direction}
+            />
+          );
 
-        const panelElement = !isResizable ? (
-          <div
-            className="flex-1"
-            style={convertSizePropsToStyle(sizeProps, orientation)}
-          >
-            {childContent}
-          </div>
-        ) : sizeProps.collapsible ? (
-          <CollapsiblePanelWrapper
-            id={key}
-            collapsed={collapsed}
-            areaId={areaId}
-            onExpand={onExpand}
-            onCollapse={onCollapse}
-            {...sizeProps}
-          >
-            {childContent}
-          </CollapsiblePanelWrapper>
-        ) : (
-          <ResizablePanel id={key} {...sizeProps}>
-            {childContent}
-          </ResizablePanel>
-        );
+          const panelElement = !isResizable ? (
+            <div
+              className="flex-1"
+              style={convertSizePropsToStyle(sizeProps, orientation)}
+            >
+              {childContent}
+            </div>
+          ) : sizeProps.collapsible ? (
+            <CollapsiblePanelWrapper
+              id={key}
+              collapsed={collapsed}
+              areaId={areaId}
+              onExpand={onExpand}
+              onCollapse={onCollapse}
+              {...sizeProps}
+            >
+              {childContent}
+            </CollapsiblePanelWrapper>
+          ) : (
+            <ResizablePanel id={key} {...sizeProps}>
+              {childContent}
+            </ResizablePanel>
+          );
 
-        return (
-          <React.Fragment key={key}>
-            {panelElement}
-            {!isLast && isResizable && (
-              <ResizableHandle className="bg-border hover:bg-primary/60 transition-colors" />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </ResizablePanelGroup>
+          return (
+            <React.Fragment key={key}>
+              {panelElement}
+              {!isLast && isResizable && (
+                <ResizableHandle className="bg-border hover:bg-primary/60 transition-colors" />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </ResizablePanelGroup>
+    </LayoutNodeProvider>
   );
 };
 

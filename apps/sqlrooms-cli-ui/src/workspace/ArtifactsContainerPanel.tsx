@@ -1,7 +1,7 @@
 import {
   RoomPanelComponent,
   TabsLayout,
-  useTabsLayoutContext,
+  useLayoutNodeContext,
 } from '@sqlrooms/layout';
 import {
   DropdownMenu,
@@ -17,7 +17,8 @@ import {useRoomStore} from '../store';
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const executeCommand = useRoomStore((s) => s.commands.executeCommand);
-  const {node} = useTabsLayoutContext();
+  const ctx = useLayoutNodeContext();
+  const nodeId = ctx.containerType === 'tabs' ? ctx.node.id : undefined;
   const addTab = useRoomStore((s) => s.layout.addTab);
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
@@ -28,9 +29,9 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     const result = await executeCommand(info.addCommand, {
       title: `New ${info.title}`,
     });
-    if (result?.success) {
+    if (result?.success && nodeId) {
       const {sheetId} = result.data as {sheetId: string};
-      addTab(node.id, sheetId);
+      addTab(nodeId, sheetId);
     }
   }, []);
 

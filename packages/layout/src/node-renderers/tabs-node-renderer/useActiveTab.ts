@@ -1,4 +1,3 @@
-import {useTabsLayoutContext} from './TabsLayoutProvider';
 import {
   getLayoutNodeId,
   getVisibleTabChildren,
@@ -7,6 +6,7 @@ import {
 } from '@sqlrooms/layout-config';
 import {LayoutPath} from '../../types';
 import {useMemo} from 'react';
+import {useTabsNodeContext} from '../../LayoutNodeContext';
 
 export type ActiveTabInfo = {
   container: LayoutTabsNode;
@@ -16,7 +16,7 @@ export type ActiveTabInfo = {
 };
 
 export function useActiveTab(): ActiveTabInfo {
-  const {node, path} = useTabsLayoutContext();
+  const {node, path} = useTabsNodeContext();
 
   const visibleChildren = useMemo(() => getVisibleTabChildren(node), [node]);
 

@@ -51,7 +51,6 @@ export const LAYOUT: CreateLayoutSliceProps = {
       icon: DatabaseIcon,
       component: DataSourcesPanel,
     },
-
     assistant: {
       component: AssistantPanel,
       title: 'AI Assistant',
@@ -62,10 +61,10 @@ export const LAYOUT: CreateLayoutSliceProps = {
       title: 'Artifacts',
       icon: FolderIcon,
     },
-    'workspace/{artifactId}': {
+    'workspace/{artifactId}': (ctx) => ({
       component: ArtifactSheet,
-      title: 'Artifact',
+      title: `Artifact ${ctx.params.artifactId}`,
       icon: LayoutDashboardIcon,
-    },
+    }),
   },
 };

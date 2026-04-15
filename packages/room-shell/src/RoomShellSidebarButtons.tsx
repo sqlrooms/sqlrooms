@@ -1,4 +1,9 @@
-import {getVisibleLayoutPanels} from '@sqlrooms/layout';
+import {
+  getVisibleLayoutPanels,
+  getPanelByPath,
+  resolvePanelDefinition,
+} from '@sqlrooms/layout';
+import type {RoomPanelInfo} from '@sqlrooms/layout';
 import {
   Button,
   cn,
@@ -61,7 +66,10 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
   );
-  const info = panels[roomPanelType];
+  const panelDef = panels[roomPanelType];
+  const info: RoomPanelInfo | undefined = panelDef
+    ? resolvePanelDefinition(panelDef, {panelId: roomPanelType, params: {}})
+    : undefined;
 
   return (
     <SidebarButton
@@ -83,7 +91,13 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
       <div className="flex flex-col gap-2">
         {panels
           ? Object.keys(panels)
-              .filter((key) => panels[key]?.placement === 'sidebar')
+              .filter((key) => {
+                const def = panels[key];
+                const resolved = def
+                  ? resolvePanelDefinition(def, {panelId: key, params: {}})
+                  : undefined;
+                return resolved?.placement === 'sidebar';
+              })
               .map((type) => (
                 <RoomShellSidebarButton key={type} roomPanelType={type} />
               ))
@@ -92,7 +106,13 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
       <div className="flex-1" />
       <div className="flex flex-col gap-2">
         {Object.keys(panels)
-          .filter((key) => panels[key]?.placement === 'sidebar-bottom')
+          .filter((key) => {
+            const def = panels[key];
+            const resolved = def
+              ? resolvePanelDefinition(def, {panelId: key, params: {}})
+              : undefined;
+            return resolved?.placement === 'sidebar-bottom';
+          })
           .map((type) => (
             <RoomShellSidebarButton key={type} roomPanelType={type} />
           ))}
@@ -131,7 +151,13 @@ const TabButtons: FC<{
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {tabIds.map((tabId) => {
-        const info = panels[tabId];
+        const match = getPanelByPath(panels, [tabId]);
+        const info: RoomPanelInfo | undefined = match
+          ? resolvePanelDefinition(match.panel, {
+              panelId: match.panelId,
+              params: match.params,
+            })
+          : undefined;
         const isSelected = activeTab === tabId && !collapsed;
         return (
           <SidebarButton

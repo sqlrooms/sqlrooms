@@ -84,38 +84,43 @@ export function createLayoutPanelCommands(
   };
 
   const panelShortcutCommands: RoomCommand<LayoutCommandStoreState>[] =
-    Object.entries(panels).map(([panelId, panelInfo]) => {
-      const title = panelInfo.title ?? panelId;
-      const keywords = [panelId, panelInfo.title].filter(
-        (value): value is string => Boolean(value),
-      );
-      return {
-        id: `layout.panel.show.${panelId}`,
-        name: `Show panel: ${title}`,
-        description: `Activate the ${title} panel in its area`,
-        group: 'Layout',
-        keywords,
-        metadata: {
-          readOnly: false,
-          idempotent: true,
-          riskLevel: 'low',
-        },
-        execute: ({getState}) => {
-          const tabsId = findTabsNodeForPanel(
-            getState().layout.config,
-            panelId,
-          );
-          if (tabsId) {
-            getState().layout.setActiveTab(tabsId, panelId);
-          }
-          return {
-            success: true,
-            commandId: `layout.panel.show.${panelId}`,
-            message: `Activated panel "${panelId}".`,
-          };
-        },
-      };
-    });
+    Object.entries(panels)
+      .filter(
+        (entry): entry is [string, RoomPanelInfo] =>
+          typeof entry[1] !== 'function',
+      )
+      .map(([panelId, panelInfo]) => {
+        const title = panelInfo.title ?? panelId;
+        const keywords = [panelId, panelInfo.title].filter(
+          (value): value is string => Boolean(value),
+        );
+        return {
+          id: `layout.panel.show.${panelId}`,
+          name: `Show panel: ${title}`,
+          description: `Activate the ${title} panel in its area`,
+          group: 'Layout',
+          keywords,
+          metadata: {
+            readOnly: false,
+            idempotent: true,
+            riskLevel: 'low',
+          },
+          execute: ({getState}) => {
+            const tabsId = findTabsNodeForPanel(
+              getState().layout.config,
+              panelId,
+            );
+            if (tabsId) {
+              getState().layout.setActiveTab(tabsId, panelId);
+            }
+            return {
+              success: true,
+              commandId: `layout.panel.show.${panelId}`,
+              message: `Activated panel "${panelId}".`,
+            };
+          },
+        };
+      });
 
   const setActiveTabCommand: RoomCommand<LayoutCommandStoreState> = {
     id: 'layout.tabs.set-active',

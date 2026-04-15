@@ -35,7 +35,17 @@ import {
   ExpandDirection,
   CollapsedAreaInfo,
 } from './mosaic-utils';
-import {Panels} from '../types';
+import {Panels, RoomPanelInfo} from '../types';
+import {resolvePanelDefinition} from '../resolvePanelDefinition';
+
+function resolvePanel(
+  panels: Panels | undefined,
+  id: string,
+): RoomPanelInfo | undefined {
+  const def = panels?.[id];
+  if (!def) return undefined;
+  return resolvePanelDefinition(def, {panelId: id, params: {}});
+}
 
 const customMosaicStyles = `
   .mosaic-split {
@@ -158,7 +168,7 @@ export const MosaicLayout: FC<CombinedProps> = (props) => {
       if (panelId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
         panelId = panelId.slice(MOSAIC_NODE_KEY_PREFIX.length);
       }
-      const Icon = panels?.[panelId]?.icon;
+      const Icon = resolvePanel(panels, panelId)?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}
@@ -236,9 +246,9 @@ export const MosaicLayout: FC<CombinedProps> = (props) => {
       const resolveTabName = (id: string): string => {
         if (id.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
           const mosaicId = id.slice(MOSAIC_NODE_KEY_PREFIX.length);
-          return panels?.[mosaicId]?.title ?? mosaicId;
+          return resolvePanel(panels, mosaicId)?.title ?? mosaicId;
         }
-        return panels?.[id]?.title ?? id;
+        return resolvePanel(panels, id)?.title ?? id;
       };
 
       const allTabDescriptors: TabDescriptor[] = allAreaPanelIds.map((id) => ({
@@ -314,7 +324,7 @@ export const MosaicLayout: FC<CombinedProps> = (props) => {
             isDragging={isDragging}
             content={tileContent}
             currentTree={currentValue as MosaicNode<string> | null}
-            panelInfo={panels?.[id]}
+            panelInfo={resolvePanel(panels, id)}
             forceDraggable={forceDraggable}
           />
         );
@@ -336,7 +346,7 @@ export const MosaicLayout: FC<CombinedProps> = (props) => {
             isDragging={isDragging}
             content={tileContent}
             currentTree={currentValue as MosaicNode<string> | null}
-            panelInfo={panels?.[id]}
+            panelInfo={resolvePanel(panels, id)}
             forceDraggable={forceDraggable}
           />
         );
@@ -365,7 +375,7 @@ export const MosaicLayout: FC<CombinedProps> = (props) => {
           isDragging={isDragging}
           content={tileContent}
           currentTree={currentValue as MosaicNode<string> | null}
-          panelInfo={panels?.[id]}
+          panelInfo={resolvePanel(panels, id)}
           forceDraggable={forceDraggable}
         />
       );
@@ -520,12 +530,12 @@ function CollapsedHorizontalStrip({
 
   const tabDescriptors: TabDescriptor[] = tabKeys.map((id) => ({
     id,
-    name: panels?.[id]?.title ?? id,
+    name: resolvePanel(panels, id)?.title ?? id,
   }));
 
   const renderLabel = useCallback(
     (tab: TabDescriptor) => {
-      const Icon = panels?.[tab.id]?.icon;
+      const Icon = resolvePanel(panels, tab.id)?.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" />}

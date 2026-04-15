@@ -1,10 +1,10 @@
 import {FC, PropsWithChildren} from 'react';
-import {useTabsLayoutContext} from './TabsLayoutProvider';
+import {useTabsNodeContext} from '../../LayoutNodeContext';
 
 export const TabsLayoutTabContentContainer: FC<PropsWithChildren> = ({
   children,
 }) => {
-  const {node} = useTabsLayoutContext();
+  const {node} = useTabsNodeContext();
   const activeChild = node.children[node.activeTabIndex];
 
   if (!activeChild || node.collapsed) {

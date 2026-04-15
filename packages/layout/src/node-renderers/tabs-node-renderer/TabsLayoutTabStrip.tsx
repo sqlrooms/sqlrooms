@@ -2,7 +2,7 @@ import {TabStrip, TabStripProps} from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useCallback} from 'react';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {TabsLayoutTabLabel} from './TabsLayoutTabLabel';
-import {useTabsLayoutContext} from './TabsLayoutProvider';
+import {useTabsNodeContext} from '../../LayoutNodeContext';
 import {TabsLayoutToggleCollapseButton} from './TabsLayoutToggleCollapseButton';
 import {useStoreWithLayout} from '../../LayoutSlice';
 import {useTabDescriptors} from './useTabDescriptors';
@@ -15,7 +15,7 @@ export const TabsLayoutTabStrip: FC<TabsLayoutTabStripProps> = ({
 }) => {
   const {onTabSelect, onTabClose, onTabReorder, onTabCreate, onExpand} =
     useLayoutRendererContext();
-  const {node, path} = useTabsLayoutContext();
+  const {node, path} = useTabsNodeContext();
 
   const getVisibleTabs = useStoreWithLayout((s) => s.layout.getVisibleTabs);
   const getActiveTab = useStoreWithLayout((s) => s.layout.getActiveTab);
