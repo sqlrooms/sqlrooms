@@ -1,7 +1,6 @@
 import {Canvas} from '@sqlrooms/canvas';
 import {SheetType} from '@sqlrooms/cells';
 import {RoomPanelComponent} from '@sqlrooms/layout';
-import {Notebook} from '@sqlrooms/notebook';
 import {
   AppWindow,
   BarChart3,
@@ -10,6 +9,7 @@ import {
 } from 'lucide-react';
 import {AppBuilderSheet} from './workspace/AppBuilderSheet';
 import {DashboardSheet} from './workspace/dashboard/DashboardSheet';
+import {NotebookSheet} from './workspace/dashboard/NotebookSheet';
 
 export type ArtifactTypeInfo = {
   title: string;
@@ -22,7 +22,7 @@ export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
     title: 'Notebook',
     addCommand: 'notebook.create-sheet',
     icon: FileText,
-    component: Notebook,
+    component: NotebookSheet,
   },
   canvas: {
     title: 'Canvas',

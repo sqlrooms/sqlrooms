@@ -1,11 +1,10 @@
 import {useCellsStore} from '@sqlrooms/cells';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {useLayoutNodeContext} from '@sqlrooms/layout';
 import {VgPlotChart} from '@sqlrooms/mosaic';
 import type {Spec} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
 import {Trash2Icon} from 'lucide-react';
-import React, {useCallback, useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useRoomStore} from '../../store';
 import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
 
@@ -19,9 +18,8 @@ function toRenderableMosaicSpec(
   return mosaicSpec;
 }
 
-export const DashboardChartPanel: RoomPanelComponent = () => {
-  const ctx = useLayoutNodeContext();
-  const chartId = ctx.panelId;
+export const DashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
+  const chartId = panelInfo.panelId;
 
   const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
   const mosaicConnection = useRoomStore((s) => s.mosaic.connection);

@@ -6,18 +6,19 @@ import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
 import {CellView} from './cells/CellView';
 import {useStoreWithNotebook} from './useStoreWithNotebook';
 
-export const Notebook: React.FC = () => {
-  const currentTabId = useStoreWithNotebook(
+export const Notebook: React.FC<{sheetId?: string}> = (props) => {
+  const currentSheetId = useStoreWithNotebook(
     (s) => s.cells.config.currentSheetId,
   );
+  const sheetId = props.sheetId ?? currentSheetId;
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
   const sheet = useStoreWithNotebook((s) =>
-    currentTabId ? s.notebook.config.sheets[currentTabId] : undefined,
+    sheetId ? s.notebook.config.sheets[sheetId] : undefined,
   );
   const cellsSheet = useStoreWithNotebook((s) =>
-    currentTabId ? s.cells.config.sheets[currentTabId] : undefined,
+    sheetId ? s.cells.config.sheets[sheetId] : undefined,
   );
 
   const cellOrder = useMemo(() => {
@@ -49,15 +50,15 @@ export const Notebook: React.FC = () => {
   );
 
   const handleAddCellAndScroll = (type: string) => {
-    if (!currentTabId) return;
-    addCell(currentTabId, type);
+    if (!sheetId) return;
+    addCell(sheetId, type);
   };
 
   useEffect(() => {
-    if (currentTabId && cellsSheet?.type === 'notebook' && !sheet) {
-      initializeSheet(currentTabId);
+    if (sheetId && cellsSheet?.type === 'notebook' && !sheet) {
+      initializeSheet(sheetId);
     }
-  }, [currentTabId, cellsSheet, sheet, initializeSheet]);
+  }, [sheetId, cellsSheet, sheet, initializeSheet]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
