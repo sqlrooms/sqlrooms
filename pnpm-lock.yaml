@@ -150,9 +150,6 @@ importers:
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../../packages/cells
-      '@sqlrooms/codemirror':
-        specifier: workspace:*
-        version: link:../../packages/codemirror
       '@sqlrooms/db':
         specifier: workspace:*
         version: link:../../packages/db

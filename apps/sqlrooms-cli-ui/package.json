@@ -14,7 +14,6 @@
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
-    "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/db-settings": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
