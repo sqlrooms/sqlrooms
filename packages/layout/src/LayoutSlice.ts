@@ -1,10 +1,14 @@
 import {
   isLayoutMosaicNode,
+  isLayoutMosaicPanelSubNode,
+  isLayoutMosaicSplitSubNode,
+  isLayoutNodeKey,
   isLayoutSplitNode,
-  isLayoutTabsNode,
   LayoutConfig,
+  LayoutMosaicSubNode,
   LayoutNode,
   LayoutSplitNode,
+  LayoutTabsNode,
   MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 import {
@@ -22,13 +26,10 @@ import {
   LAYOUT_COMMAND_OWNER,
 } from './layout-commands';
 import {
-  findAnyNodeById,
   findNodeById,
-  IdentifiedLayoutNode,
   makeLayoutStack,
   removeLayoutNodeByKey,
 } from './mosaic/mosaic-utils';
-import {getPanelId} from './node-renderers/types';
 import {createTabActions} from './tab-actions';
 import type {Panels, PanelDefinition} from './types';
 
@@ -94,8 +95,8 @@ export type LayoutSliceState = {
     /** Find the nearest ancestor of a given type for a node */
     findAncestorOfType: (
       nodeId: string,
-      type: 'tabs' | 'split' | 'mosaic',
-    ) => IdentifiedLayoutNode | undefined;
+      type: 'tabs' | 'split',
+    ) => LayoutTabsNode | LayoutSplitNode | undefined;
   };
 };
 
@@ -247,55 +248,61 @@ export function createLayoutSlice({
             );
           },
 
-          addChildToMosaic: (mosaicId: string, panelId: LayoutNode) => {
+          addChildToMosaic: (
+            mosaicId: string,
+            panelId: LayoutMosaicSubNode,
+          ) => {
             set((state) =>
               produce(state, (draft) => {
                 const result = findNodeById(draft.layout.config, mosaicId);
-                if (!result || !isLayoutMosaicNode(result.node)) return;
+                if (!result || !isLayoutMosaicNode(result.node)) {
+                  return;
+                }
 
                 const dir = result.node.direction ?? 'row';
 
-                if (!result.node.nodes) {
-                  result.node.nodes = panelId;
-                } else if (typeof result.node.nodes === 'string') {
-                  result.node.nodes = {
-                    id: getPanelId(panelId),
+                if (!result.node.layout) {
+                  result.node.layout = panelId;
+                  return;
+                }
+
+                if (isLayoutMosaicPanelSubNode(result.node.layout)) {
+                  result.node.layout = {
                     type: 'split',
                     direction: dir,
-                    children: [result.node.nodes, panelId],
+                    children: [result.node.layout, panelId],
                   };
-                } else if (isLayoutSplitNode(result.node.nodes)) {
-                  result.node.nodes.children.push(panelId);
+
+                  return;
+                }
+
+                if (isLayoutMosaicSplitSubNode(result.node.layout)) {
+                  result.node.layout.children.push(panelId);
+                  return;
                 }
               }),
             );
           },
 
-          findAncestorOfType: (
-            nodeId: string,
-            type: 'tabs' | 'split' | 'mosaic',
-          ): IdentifiedLayoutNode | undefined => {
+          findAncestorOfType: (nodeId, type) => {
             const config = get().layout.config;
-            if (!config) return undefined;
 
             // Find the starting node and its ancestors (including panels)
-            const found = findAnyNodeById(config, nodeId);
-            if (!found) return undefined;
+            const found = findNodeById(config, nodeId);
+            if (!found) {
+              return undefined;
+            }
 
             // Walk backwards through ancestors to find the first match
             for (let i = found.ancestors.length - 1; i >= 0; i--) {
               const ancestor = found.ancestors[i];
 
-              if (!ancestor || typeof ancestor === 'string') continue;
-
               // Check if this ancestor matches the requested type
-              if (type === 'tabs' && isLayoutTabsNode(ancestor)) {
-                return ancestor;
-              }
-              if (type === 'split' && isLayoutSplitNode(ancestor)) {
-                return ancestor as LayoutSplitNode & {id: string};
-              }
-              if (type === 'mosaic' && isLayoutMosaicNode(ancestor)) {
+              if (
+                ancestor &&
+                !isLayoutNodeKey(ancestor) &&
+                type === ancestor.type
+              ) {
                 return ancestor;
               }
             }

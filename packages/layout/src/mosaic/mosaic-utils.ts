@@ -1,11 +1,14 @@
 import {
   isLayoutMosaicNode,
+  isLayoutMosaicPanelSubNode,
+  isLayoutMosaicSplitSubNode,
+  isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-  LayoutMosaicNode,
+  LayoutMosaicSplitSubNode,
+  LayoutMosaicSubNode,
   LayoutNode,
-  LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
   MAIN_VIEW,
@@ -134,97 +137,44 @@ export function removeLayoutNodeByKey(
 // Generic node-by-id helpers
 // ---------------------------------------------------------------------------
 
-/** Any layout node that has an `id`. */
-export type IdentifiedLayoutNode =
-  | LayoutPanelNode
-  | LayoutTabsNode
-  | (LayoutSplitNode & {id: string})
-  | LayoutMosaicNode;
-
-/** Find any node with the given `id`. Returns the node and its path in the tree. */
-export function findNodeById(
-  root: LayoutNode | null | undefined,
-  nodeId: string,
-  path: MosaicPath = [],
-): {node: IdentifiedLayoutNode; path: MosaicPath} | undefined {
-  if (!root || typeof root === 'string') return undefined;
-  if (isLayoutPanelNode(root)) {
-    return root.id === nodeId ? {node: root, path} : undefined;
-  }
-  if (isLayoutTabsNode(root)) {
-    if (root.id === nodeId) return {node: root, path};
-    for (let i = 0; i < root.children.length; i++) {
-      const result = findNodeById(root.children[i], nodeId, [...path, i]);
-      if (result) return result;
-    }
-    return undefined;
-  }
-  if (isLayoutSplitNode(root)) {
-    if (root.id === nodeId)
-      return {node: root as LayoutSplitNode & {id: string}, path};
-    for (let i = 0; i < root.children.length; i++) {
-      const result = findNodeById(root.children[i], nodeId, [...path, i]);
-      if (result) return result;
-    }
-    return undefined;
-  }
-  if (isLayoutMosaicNode(root)) {
-    if (root.id === nodeId) return {node: root, path};
-    return root.nodes ? findNodeById(root.nodes, nodeId, path) : undefined;
-  }
-  return undefined;
-}
+type FindNodeByIdResult = {node: LayoutNode; ancestors: LayoutNode[]};
 
 /**
  * Find any node (including panels) with the given `id`.
  * Unlike findNodeById, this function also finds panel nodes.
  * Returns the node and an array of ancestor nodes from root to parent.
- *
- * TODO: why findNodeById handles panels differently? Can we unify these two functions?
  */
-export function findAnyNodeById(
+export function findNodeById(
   root: LayoutNode | null | undefined,
   nodeId: string,
   ancestors: LayoutNode[] = [],
-): {node: LayoutNode; ancestors: LayoutNode[]} | undefined {
+): FindNodeByIdResult | undefined {
   if (!root) return undefined;
 
   // Check string nodes (panel IDs)
-  if (typeof root === 'string') {
+  if (isLayoutNodeKey(root)) {
     return root === nodeId ? {node: root, ancestors} : undefined;
   }
 
-  // Check panel nodes
-  if (isLayoutPanelNode(root)) {
+  // Check panel and mosaic nodes
+  if (isLayoutPanelNode(root) || isLayoutMosaicNode(root)) {
     return root.id === nodeId ? {node: root, ancestors} : undefined;
   }
 
-  // Check tabs nodes
-  if (isLayoutTabsNode(root)) {
-    if (root.id === nodeId) return {node: root, ancestors};
+  // Check tabs and split nodes
+  if (isLayoutTabsNode(root) || isLayoutSplitNode(root)) {
+    if (root.id === nodeId) {
+      return {node: root, ancestors};
+    }
+
     for (const child of root.children) {
-      const result = findAnyNodeById(child, nodeId, [...ancestors, root]);
-      if (result) return result;
+      const result = findNodeById(child, nodeId, [...ancestors, root]);
+
+      if (result) {
+        return result;
+      }
     }
     return undefined;
-  }
-
-  // Check split nodes
-  if (isLayoutSplitNode(root)) {
-    if (root.id === nodeId) return {node: root, ancestors};
-    for (const child of root.children) {
-      const result = findAnyNodeById(child, nodeId, [...ancestors, root]);
-      if (result) return result;
-    }
-    return undefined;
-  }
-
-  // Check mosaic nodes
-  if (isLayoutMosaicNode(root)) {
-    if (root.id === nodeId) return {node: root, ancestors};
-    return root.nodes
-      ? findAnyNodeById(root.nodes, nodeId, [...ancestors, root])
-      : undefined;
   }
 
   return undefined;
@@ -240,30 +190,41 @@ export function findAnyNodeById(
  * Note: children array contains ALL children (both visible and hidden).
  */
 export function findTabsNodeForPanel(
-  root: LayoutNode | null | undefined,
+  root: LayoutNode,
   panelId: string,
 ): string | undefined {
-  if (!root || typeof root === 'string') return undefined;
-  if (isLayoutPanelNode(root)) return undefined;
-  if (isLayoutTabsNode(root)) {
-    // children contains all children (both visible and hidden)
-    const inChildren = root.children.some((c) => getChildKey(c) === panelId);
-    if (inChildren && root.id) return root.id;
-    for (const child of root.children) {
-      const result = findTabsNodeForPanel(child, panelId);
-      if (result) return result;
-    }
+  if (isLayoutPanelNode(root) || isLayoutNodeKey(root)) {
     return undefined;
   }
+
+  if (isLayoutTabsNode(root)) {
+    const inChildren = root.children.some(
+      (child) => getChildKey(child) === panelId,
+    );
+
+    if (inChildren && root.id) {
+      return root.id;
+    }
+
+    for (const child of root.children) {
+      const result = findTabsNodeForPanel(child, panelId);
+      if (result) {
+        return result;
+      }
+    }
+
+    return undefined;
+  }
+
   if (isLayoutSplitNode(root)) {
     for (const child of root.children) {
       const result = findTabsNodeForPanel(child, panelId);
-      if (result) return result;
+      if (result) {
+        return result;
+      }
     }
   }
-  if (isLayoutMosaicNode(root)) {
-    return root.nodes ? findTabsNodeForPanel(root.nodes, panelId) : undefined;
-  }
+
   return undefined;
 }
 
@@ -372,71 +333,36 @@ export interface CollapsedAreaInfo {
 }
 
 /**
- * For a tabs node at `tabsPath`, find any collapsed sibling tabs nodes
- * in the same parent split.
- */
-export function findCollapsedSiblings(
-  root: LayoutNode | null | undefined,
-  tabsPath: MosaicPath,
-): CollapsedAreaInfo[] {
-  const parent = findParentSplit(root, tabsPath);
-  if (!parent) return [];
-  const {node: splitNode, path: splitPath} = parent;
-  const result: CollapsedAreaInfo[] = [];
-  for (let i = 0; i < splitNode.children.length; i++) {
-    const child = splitNode.children[i];
-    if (!child || typeof child === 'string') continue;
-    const childPath = [...splitPath, i];
-    if (pathsEqual(childPath, tabsPath)) continue;
-    if (isLayoutTabsNode(child) && child.collapsed && child.id) {
-      const dir = getExpandDirection(root, childPath);
-      if (dir) {
-        result.push({node: child, path: childPath, expandDirection: dir});
-      }
-    }
-  }
-  return result;
-}
-
-/**
  * Return a new tree with the nested mosaic node's sub-tree replaced.
  */
 export function updateMosaicSubtree(
-  root: LayoutNode | null,
+  root: LayoutNode,
   mosaicId: string,
-  newNodes: LayoutNode | null,
-): LayoutNode | null {
-  if (!root) return root;
-  if (typeof root === 'string') return root;
-  if (isLayoutPanelNode(root)) return root;
-  if (isLayoutMosaicNode(root)) {
-    if (root.id === mosaicId) {
-      return {...root, nodes: newNodes};
-    }
-    if (root.nodes) {
-      const updated = updateMosaicSubtree(root.nodes, mosaicId, newNodes);
-      return updated !== root.nodes ? {...root, nodes: updated} : root;
-    }
+  newLayout: LayoutMosaicSubNode | null,
+): LayoutNode {
+  if (isLayoutPanelNode(root) || isLayoutNodeKey(root)) {
     return root;
   }
-  if (isLayoutSplitNode(root)) {
+
+  if (isLayoutMosaicNode(root)) {
+    if (root.id === mosaicId) {
+      return {...root, layout: newLayout};
+    }
+
+    return root;
+  }
+
+  if (isLayoutSplitNode(root) || isLayoutTabsNode(root)) {
     let changed = false;
-    const newChildren = root.children.map((child) => {
-      const updated = updateMosaicSubtree(child, mosaicId, newNodes);
-      if (updated !== child) changed = true;
+    const children = root.children.map((child) => {
+      const updated = updateMosaicSubtree(child, mosaicId, newLayout);
+      changed = changed || updated !== child;
       return updated;
     });
-    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
+
+    return changed ? {...root, children} : root;
   }
-  if (isLayoutTabsNode(root)) {
-    let changed = false;
-    const newChildren = root.children.map((child) => {
-      const updated = updateMosaicSubtree(child, mosaicId, newNodes);
-      if (updated !== child) changed = true;
-      return updated;
-    });
-    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
-  }
+
   return root;
 }
 
@@ -445,35 +371,47 @@ export function updateMosaicSubtree(
  * Only used for `type: 'mosaic'` sub-trees.
  */
 export function convertToMosaicTree(
-  node: LayoutNode | null,
+  node: LayoutMosaicSubNode,
 ): MosaicNode<string> | null {
-  if (!node) return null;
-  if (typeof node === 'string') return node;
-  if (isLayoutPanelNode(node)) return node.id;
-  if (isLayoutMosaicNode(node)) {
-    return getMosaicNodeKey(node.id);
+  if (!node) {
+    return null;
   }
-  if (isLayoutTabsNode(node)) {
-    const tabs = node.children.map((c) => {
-      if (typeof c === 'string') return c;
-      if (isLayoutPanelNode(c)) return c.id;
-      if (isLayoutMosaicNode(c)) return getMosaicNodeKey(c.id);
-      return convertToMosaicTree(c)!;
-    });
+
+  if (isLayoutMosaicPanelSubNode(node)) {
+    return node;
+  }
+
+  if (isLayoutMosaicSplitSubNode(node)) {
+    const children = node.children
+      .map((child) => convertToMosaicTree(child))
+      .filter((child): child is MosaicNode<string> => child !== null);
+
+    // If we filtered out all children, return null
+    if (children.length === 0) {
+      console.warn(
+        'convertToMosaicTree: split node has no valid children',
+        node,
+      );
+
+      return null;
+    }
+
+    // If only one child remains, return it directly (no split needed)
+    if (children.length === 1) {
+      return children[0]!;
+    }
+
+    // Only include properties that react-mosaic expects (no id field)
     return {
-      type: 'tabs' as const,
-      id: node.id,
-      tabs,
-      activeTabIndex: node.activeTabIndex,
-    } as unknown as MosaicNode<string>;
+      type: 'split',
+      direction: node.direction,
+      children,
+    } satisfies MosaicNode<string>;
   }
-  if (isLayoutSplitNode(node)) {
-    return {
-      ...node,
-      children: node.children.map((c) => convertToMosaicTree(c)!),
-    } as unknown as MosaicNode<string>;
-  }
-  return node as unknown as MosaicNode<string>;
+
+  console.warn('Invalid mosaic sub-node:', node);
+
+  return null;
 }
 
 /**
@@ -481,54 +419,33 @@ export function convertToMosaicTree(
  * restoring LayoutMosaicNode instances from the original tree.
  */
 export function convertFromMosaicTree(
-  mosaicNode: MosaicNode<string> | null,
-  originalTree: LayoutNode | null,
-): LayoutNode | null {
-  if (!mosaicNode) return null;
+  mosaicNode: MosaicNode<string>,
+  originalTree: LayoutMosaicSubNode | null,
+): LayoutMosaicSubNode | null {
   if (typeof mosaicNode === 'string') {
-    if (mosaicNode.startsWith(MOSAIC_NODE_KEY_PREFIX) && originalTree) {
-      const mosaicId = mosaicNode.slice(MOSAIC_NODE_KEY_PREFIX.length);
-      const result = findNodeById(originalTree, mosaicId);
-      if (result && isLayoutMosaicNode(result.node)) return result.node;
-    }
+    // if (mosaicNode.startsWith(MOSAIC_NODE_KEY_PREFIX) && originalTree) {
+    //   const mosaicId = mosaicNode.slice(MOSAIC_NODE_KEY_PREFIX.length);
+    //   const result = findNodeById(originalTree, mosaicId);
+
+    //   if (result && isLayoutMosaicNode(result.node)) {
+    //     return result.node;
+    //   }
+    // }
+
     return mosaicNode;
   }
-  const obj = mosaicNode as unknown as Record<string, unknown>;
-  if (obj.type === 'split' && 'children' in obj) {
-    const children = (obj.children as MosaicNode<string>[]).map((c) =>
-      convertFromMosaicTree(c, originalTree),
-    );
-    return {...mosaicNode, children} as unknown as LayoutNode;
-  }
-  if (obj.type === 'tabs' && 'tabs' in obj) {
-    const tabs = obj.tabs as MosaicNode<string>[];
-    const children = tabs.map((c) => convertFromMosaicTree(c, originalTree));
-    const areaId = obj.id as string | undefined;
-    const originalArea =
-      areaId && originalTree
-        ? (() => {
-            const r = findNodeById(originalTree, areaId);
-            return r && isLayoutTabsNode(r.node) ? r : undefined;
-          })()
-        : undefined;
-    if (originalArea) {
-      return {
-        ...originalArea.node,
-        children,
-        activeTabIndex: (obj.activeTabIndex as number) ?? 0,
-      } as unknown as LayoutNode;
-    }
-    return {
-      type: 'tabs' as const,
-      children,
-      activeTabIndex: (obj.activeTabIndex as number) ?? 0,
-    } as unknown as LayoutNode;
-  }
-  return mosaicNode as unknown as LayoutNode;
-}
 
-function pathsEqual(a: MosaicPath, b: MosaicPath): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i]);
+  if (mosaicNode.type === 'split') {
+    const children = mosaicNode.children
+      .map((child) => convertFromMosaicTree(child, originalTree))
+      .filter((child): child is LayoutMosaicSubNode => child !== null);
+
+    return {...mosaicNode, children} satisfies LayoutMosaicSplitSubNode;
+  }
+
+  console.warn('Invalid mosaic node:', mosaicNode);
+
+  return null;
 }
 
 /**

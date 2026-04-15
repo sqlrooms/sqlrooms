@@ -71,7 +71,10 @@ export function createLayoutPanelCommands(
     },
     execute: ({getState}, input) => {
       const {panelId} = input as ToggleLayoutPanelCommandInput;
-      const tabsId = findTabsNodeForPanel(getState().layout.config, panelId);
+      const root = getState().layout.config;
+
+      const tabsId = root ? findTabsNodeForPanel(root, panelId) : null;
+
       if (tabsId) {
         getState().layout.setActiveTab(tabsId, panelId);
       }
@@ -106,13 +109,14 @@ export function createLayoutPanelCommands(
             riskLevel: 'low',
           },
           execute: ({getState}) => {
-            const tabsId = findTabsNodeForPanel(
-              getState().layout.config,
-              panelId,
-            );
+            const {config: root, setActiveTab} = getState().layout;
+
+            const tabsId = root ? findTabsNodeForPanel(root, panelId) : null;
+
             if (tabsId) {
-              getState().layout.setActiveTab(tabsId, panelId);
+              setActiveTab(tabsId, panelId);
             }
+
             return {
               success: true,
               commandId: `layout.panel.show.${panelId}`,

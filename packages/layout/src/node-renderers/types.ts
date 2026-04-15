@@ -1,4 +1,8 @@
-import {isLayoutNodeKey, LayoutNode} from '@sqlrooms/layout-config';
+import {
+  isLayoutNodeKey,
+  LayoutNode,
+  LayoutNodeSize,
+} from '@sqlrooms/layout-config';
 import type {LayoutPath, PanelContainerType} from '../types';
 
 export type ParentDirection = 'row' | 'column';
@@ -16,15 +20,7 @@ export interface NodeRenderProps<TNode extends LayoutNode = LayoutNode> {
 // Size / child helpers shared by renderers
 // ---------------------------------------------------------------------------
 
-export type SizeProps = {
-  defaultSize?: number | string;
-  minSize?: number | string;
-  maxSize?: number | string;
-  collapsedSize?: number | string;
-  collapsible: boolean;
-};
-
-export function getSizeProps(node: LayoutNode): SizeProps {
+export function getLayoutNodeSize(node: LayoutNode): LayoutNodeSize {
   if (isLayoutNodeKey(node)) {
     return {
       collapsible: false,

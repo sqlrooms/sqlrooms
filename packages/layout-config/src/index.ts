@@ -6,7 +6,6 @@
 // New names (primary exports)
 export {
   MAIN_VIEW,
-  LayoutDirection,
   LayoutNodeKey,
   LayoutPanelNode,
   LayoutSplitNode,
@@ -20,7 +19,18 @@ export {
   isLayoutTabsNode,
   isLayoutMosaicNode,
   createDefaultLayout,
+  LayoutNodeSize,
 } from './LayoutConfig';
+
+export {LayoutDirection} from './common';
+
+export {
+  LayoutMosaicSubNode,
+  LayoutMosaicPanelSubNode,
+  LayoutMosaicSplitSubNode,
+  isLayoutMosaicPanelSubNode,
+  isLayoutMosaicSplitSubNode,
+} from './LayoutMosaicSubNode';
 
 // Tabs node helpers
 export {

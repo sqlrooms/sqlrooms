@@ -8,6 +8,7 @@ import {
   getChildrenIds,
   getVisibleTabChildren,
   getHiddenTabChildren,
+  isLayoutNodeKey,
 } from '@sqlrooms/layout-config';
 import {findNodeById} from './mosaic/mosaic-utils';
 
@@ -24,10 +25,10 @@ interface LayoutStateShape {
 function findTabsNode(
   config: LayoutSliceConfig,
   tabsId: string,
-): {node: LayoutTabsNode; path: number[]} | undefined {
+): {node: LayoutTabsNode; path: LayoutNode[]} | undefined {
   const found = findNodeById(config, tabsId);
   if (found && isLayoutTabsNode(found.node)) {
-    return {node: found.node, path: found.path};
+    return {node: found.node, path: found.ancestors};
   }
   return undefined;
 }
@@ -156,8 +157,12 @@ export function createTabActions<S extends LayoutStateShape>(
   const setCollapsed = (id: string, collapsed: boolean) => {
     set((state) =>
       produce(state, (draft) => {
-        const found = findNodeById(draft.layout.config, id);
-        if (!found || !found.node.collapsible) return;
+        const found = findNodeById(draft.layout.config, id); // Ensure size is set before collapsing
+
+        if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+          return;
+        }
+
         found.node.collapsed = collapsed;
       }),
     );
@@ -165,7 +170,10 @@ export function createTabActions<S extends LayoutStateShape>(
 
   const toggleCollapsed = (id: string) => {
     const found = findNodeById(get().layout.config, id);
-    if (!found) return;
+    if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+      return;
+    }
+
     setCollapsed(id, !found.node.collapsed);
   };
 
@@ -199,7 +207,12 @@ export function createTabActions<S extends LayoutStateShape>(
 
   const isCollapsed = (id: string): boolean => {
     const found = findNodeById(get().layout.config, id);
-    return found?.node.collapsed === true;
+
+    if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+      return false;
+    }
+
+    return found.node.collapsed === true;
   };
 
   return {

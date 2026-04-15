@@ -1,15 +1,23 @@
 import {z} from 'zod';
+import {LayoutDirection} from './common';
+import {LayoutMosaicSubNode} from './LayoutMosaicSubNode';
 
 /** Main view room panel key */
 export const MAIN_VIEW = 'main';
-
-export const LayoutDirection = z.enum(['row', 'column']);
-export type LayoutDirection = z.infer<typeof LayoutDirection>;
 
 export const LayoutNodeKey = z.string();
 export type LayoutNodeKey = z.infer<typeof LayoutNodeKey>;
 
 const LayoutSize = z.union([z.number(), z.string()]);
+
+export const LayoutNodeSize = z.object({
+  defaultSize: LayoutSize.optional(),
+  minSize: LayoutSize.optional(),
+  maxSize: LayoutSize.optional(),
+  collapsedSize: LayoutSize.optional(),
+  collapsible: z.boolean().optional(),
+});
+export type LayoutNodeSize = z.infer<typeof LayoutNodeSize>;
 
 // ---------------------------------------------------------------------------
 // Panel node — leaf with optional sizing constraints
@@ -19,12 +27,8 @@ export const LayoutPanelNode = z.object({
   type: z.literal('panel'),
   id: z.string(),
   title: z.string().optional(),
-  defaultSize: LayoutSize.optional(),
-  minSize: LayoutSize.optional(),
-  maxSize: LayoutSize.optional(),
-  collapsedSize: LayoutSize.optional(),
-  collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
+  ...LayoutNodeSize.shape,
 });
 export type LayoutPanelNode = z.infer<typeof LayoutPanelNode>;
 
@@ -37,19 +41,14 @@ const BaseLayoutSplitNode = z.object({
   id: z.string(),
   direction: LayoutDirection,
   draggable: z.boolean().optional(),
-  defaultSize: LayoutSize.optional(),
-  minSize: LayoutSize.optional(),
-  maxSize: LayoutSize.optional(),
-  collapsedSize: LayoutSize.optional(),
-  collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
   resizable: z.boolean().default(true).optional(),
+  ...LayoutNodeSize.shape,
 });
 
-export const LayoutSplitNode: z.ZodType<LayoutSplitNode> =
-  BaseLayoutSplitNode.extend({
-    children: z.lazy(() => z.array(LayoutNode)),
-  });
+export const LayoutSplitNode = BaseLayoutSplitNode.extend({
+  children: z.lazy(() => z.array(LayoutNode)),
+});
 export type LayoutSplitNode = z.infer<typeof BaseLayoutSplitNode> & {
   children: LayoutNode[];
 };
@@ -62,22 +61,18 @@ const BaseLayoutTabsNode = z.object({
   type: z.literal('tabs'),
   id: z.string(),
   activeTabIndex: z.number(),
-  collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
   draggable: z.boolean().optional(),
-  defaultSize: LayoutSize.optional(),
-  minSize: LayoutSize.optional(),
-  maxSize: LayoutSize.optional(),
-  collapsedSize: LayoutSize.optional(),
   hideTabStrip: z.boolean().optional(),
   closedChildren: z.array(z.string()).optional(),
   hiddenChildren: z.array(z.string()).optional(),
+  ...LayoutNodeSize.shape,
 });
 
-export const LayoutTabsNode: z.ZodType<LayoutTabsNode> =
-  BaseLayoutTabsNode.extend({
-    children: z.lazy(() => z.array(LayoutNode)),
-  });
+export const LayoutTabsNode = BaseLayoutTabsNode.extend({
+  children: z.lazy(() => z.array(LayoutNode)),
+});
+
 export type LayoutTabsNode = z.infer<typeof BaseLayoutTabsNode> & {
   children: LayoutNode[];
 };
@@ -91,21 +86,16 @@ const BaseLayoutMosaicNode = z.object({
   id: z.string(),
   draggable: z.boolean().optional(),
   direction: LayoutDirection.optional(),
-  defaultSize: LayoutSize.optional(),
-  minSize: LayoutSize.optional(),
-  maxSize: LayoutSize.optional(),
-  collapsedSize: LayoutSize.optional(),
-  collapsible: z.boolean().optional(),
   collapsed: z.boolean().optional(),
+  ...LayoutNodeSize.shape,
 });
 
-export const LayoutMosaicNode: z.ZodType<LayoutMosaicNode> =
-  BaseLayoutMosaicNode.extend({
-    nodes: z.lazy(() => LayoutNode.nullable()),
-  });
+export const LayoutMosaicNode = BaseLayoutMosaicNode.extend({
+  layout: z.lazy(() => LayoutMosaicSubNode.nullable()),
+});
 
 export type LayoutMosaicNode = z.infer<typeof BaseLayoutMosaicNode> & {
-  nodes: LayoutNode | null;
+  layout: LayoutMosaicSubNode | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -228,7 +218,7 @@ export type LayoutNode =
   | LayoutTabsNode
   | LayoutMosaicNode;
 
-export const LayoutNode: z.ZodType<LayoutNode> = z.preprocess(
+export const LayoutNode = z.preprocess(
   convertLegacyNode,
   z.union([
     LayoutNodeKey,
@@ -295,7 +285,7 @@ export function isLayoutMosaicNode(
 // LayoutConfig — the top-level config is just LayoutNode | null
 // ---------------------------------------------------------------------------
 
-export const LayoutConfig: z.ZodType<LayoutConfig> = z.preprocess(
+export const LayoutConfig = z.preprocess(
   convertLegacyNode,
   LayoutNode.nullable(),
 ) as z.ZodType<LayoutConfig>;

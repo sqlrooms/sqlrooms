@@ -31,12 +31,10 @@ export {
   removeLayoutNodeByKey,
   findTabsNodeForPanel,
   findNodeById,
-  findAnyNodeById,
   getNodeAtPath,
   findParentArea,
   findParentSplit,
   getExpandDirection,
-  findCollapsedSiblings,
   MOSAIC_NODE_KEY_PREFIX,
   getMosaicNodeKey,
   updateMosaicSubtree,
@@ -45,11 +43,7 @@ export {
   getChildKey,
   isDraggableTile,
 } from './mosaic/mosaic-utils';
-export type {
-  ExpandDirection,
-  CollapsedAreaInfo,
-  IdentifiedLayoutNode,
-} from './mosaic/mosaic-utils';
+export type {ExpandDirection, CollapsedAreaInfo} from './mosaic/mosaic-utils';
 
 // Deprecated re-exports from mosaic-utils (old names)
 export {
@@ -63,10 +57,6 @@ export {
 // New LayoutRenderer component
 export {LayoutRenderer} from './LayoutRenderer';
 export type {LayoutRendererProps} from './LayoutRenderer';
-
-// Old MosaicLayout component (kept for mosaic node rendering, but no longer the top-level renderer)
-export {MosaicLayout} from './mosaic/MosaicLayout';
-export type {MosaicLayoutProps} from './mosaic/MosaicLayout';
 
 // New primary exports from @sqlrooms/layout-config
 export {

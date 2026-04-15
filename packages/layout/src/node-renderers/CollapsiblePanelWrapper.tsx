@@ -14,7 +14,7 @@ const DEFAULT_COLLAPSIBLE_MIN_SIZE = '10%';
 export type CollapsiblePanelWrapperProps = {
   id: string;
   collapsed: boolean;
-  collapsible: boolean;
+  collapsible?: boolean;
   collapsedSize?: number | string;
   defaultSize?: number | string;
   minSize?: number | string;

@@ -46,22 +46,25 @@ export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
   node,
   path,
 }) => {
-  const treeRef = useRef(node.nodes);
+  const treeRef = useRef(node.layout);
 
   const {onLayoutChange, rootLayout} = useLayoutRendererContext();
 
   useEffect(() => {
-    treeRef.current = node.nodes;
-  }, [node.nodes]);
+    treeRef.current = node.layout;
+  }, [node.layout]);
 
   const mosaicValue = useMemo(
-    () => convertToMosaicTree(node.nodes),
-    [node.nodes],
+    () => (node.layout ? convertToMosaicTree(node.layout) : null),
+    [node.layout],
   );
 
   const handleChange = useCallback(
     (newMosaicNodes: MosaicNode<string> | null) => {
-      const restored = convertFromMosaicTree(newMosaicNodes, treeRef.current);
+      const restored = newMosaicNodes
+        ? convertFromMosaicTree(newMosaicNodes, treeRef.current)
+        : null;
+
       const updated = updateMosaicSubtree(rootLayout, node.id, restored);
       onLayoutChange?.(updated);
     },

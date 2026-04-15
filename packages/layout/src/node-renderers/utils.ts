@@ -1,24 +1,21 @@
+import {LayoutNodeSize} from '@sqlrooms/layout-config';
 import {MOSAIC_NODE_KEY_PREFIX} from '../mosaic/mosaic-utils';
-import {SizeProps} from './types';
 import {ResizablePanelOrientation} from '@sqlrooms/ui';
 
-export function convertSizePropsToStyle(
-  sizeProps: SizeProps,
+export function convertLayoutNodeSizeToStyle(
+  size: LayoutNodeSize,
   orientation: ResizablePanelOrientation,
 ): React.CSSProperties {
   return orientation === 'vertical'
     ? {
-        height: (sizeProps.defaultSize ?? 'auto') as
-          | string
-          | number
-          | undefined,
-        minHeight: sizeProps.minSize,
-        maxHeight: sizeProps.maxSize,
+        height: (size.defaultSize ?? 'auto') as string | number | undefined,
+        minHeight: size.minSize,
+        maxHeight: size.maxSize,
       }
     : {
-        width: sizeProps.defaultSize ?? 'auto',
-        minWidth: sizeProps.minSize,
-        maxWidth: sizeProps.maxSize,
+        width: size.defaultSize ?? 'auto',
+        minWidth: size.minSize,
+        maxWidth: size.maxSize,
       };
 }
 

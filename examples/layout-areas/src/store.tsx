@@ -1,12 +1,8 @@
 import {
   createRoomShellSlice,
   createRoomStore,
-  isLayoutMosaicNode,
-  isLayoutSplitNode,
-  isLayoutTabsNode,
   LayoutConfig,
   LayoutMosaicNode,
-  LayoutNode,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -24,69 +20,23 @@ import {SchemaPanel} from './panels/SchemaPanel';
 import {DashboardTabs} from './panels/DashboardTabs';
 import {RoomPanelTypes} from './panels/panel-types';
 
-function addMosaicChildToMosaic(
-  root: LayoutNode | null,
-  tabsId: string,
-  mosaicNode: string,
-): LayoutNode | null {
-  if (!root) return root;
-  if (typeof root === 'string') return root;
-
-  if (isLayoutSplitNode(root)) {
-    let changed = false;
-    const newChildren = root.children.map((child) => {
-      const updated = addMosaicChildToMosaic(child, tabsId, mosaicNode);
-      if (updated !== child) changed = true;
-      return updated;
-    });
-    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
-  }
-
-  if (isLayoutTabsNode(root)) {
-    let changed = false;
-    const newChildren = root.children.map((child) => {
-      const updated = addMosaicChildToMosaic(child, tabsId, mosaicNode);
-      if (updated !== child) changed = true;
-      return updated;
-    });
-    return changed ? {...root, children: newChildren as LayoutNode[]} : root;
-  }
-
-  if (isLayoutMosaicNode(root) && root.id === tabsId) {
-    if (isLayoutSplitNode(root.nodes)) {
-      const alreadyExists = root.nodes.children;
-
-      const newNodes = [...alreadyExists, mosaicNode];
-
-      return {
-        ...root,
-        nodes: {
-          ...root.nodes,
-          children: newNodes,
-        },
-      };
-    } else {
-      return {
-        ...root,
-        nodes: {
-          type: 'split',
-          id: `${root.id}-auto-split`,
-          direction: 'row',
-          children: [mosaicNode],
-        },
-      };
-    }
-  }
-
-  return root;
-}
-
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
   addChartToDashboard: (dashboardId: string) => void;
 };
 
 let dashboardCounter = 0;
+let chartCounter = 0;
+
+function generateDashboardId(): string {
+  dashboardCounter += 1;
+  return `dashboard-${dashboardCounter}`;
+}
+
+function generateChartId(): string {
+  chartCounter += 1;
+  return `chart-${chartCounter}`;
+}
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
@@ -125,11 +75,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                       id: 'overview',
                       draggable: true,
                       direction: 'row',
-                      nodes: {
-                        id: 'overview-charts',
+                      layout: {
                         type: 'split',
-                        direction: 'row',
-                        children: ['revenue', 'users'],
+                        direction: 'column',
+                        children: ['sessions', 'conversions'],
+                        splitPercentages: [70, 30],
                       },
                     },
                     {
@@ -137,11 +87,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                       id: 'growth',
                       draggable: true,
                       direction: 'row',
-                      nodes: {
-                        id: 'growth-charts',
+                      layout: {
                         type: 'split',
-                        direction: 'row',
-                        children: ['conversions', 'sessions'],
+                        direction: 'column',
+                        children: ['sessions', 'conversions'],
+                        splitPercentages: [70, 30],
                       },
                     },
                   ],
@@ -199,37 +149,24 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     })(set, get, store),
 
     addDashboard: (tabsId = 'dashboards') => {
-      dashboardCounter += 1;
-      const mosaicId = `dashboard-${dashboardCounter}`;
-      const chartsId = `${mosaicId}-charts`;
-      const chartId = `${mosaicId}-chart`;
+      const dashboardId = generateDashboardId();
+      const chartId = generateChartId();
 
       const mosaicNode: LayoutMosaicNode = {
         type: 'mosaic',
-        id: mosaicId,
+        id: dashboardId,
         draggable: true,
         direction: 'row',
-        nodes: {
-          id: chartsId,
-          type: 'split',
-          direction: 'row',
-          children: [chartId],
-        },
+        layout: chartId,
       };
 
       get().layout.addTab(tabsId, mosaicNode);
     },
 
     addChartToDashboard: (dashboardId: string) => {
-      dashboardCounter += 1;
-      const {layout} = get();
+      const chartId = generateChartId();
 
-      const mosaicId = `dashboard-${dashboardCounter}`;
-      const chartId = `${mosaicId}-chart`;
-
-      layout.setConfig(
-        addMosaicChildToMosaic(layout.config, dashboardId, chartId),
-      );
+      get().layout.addChildToMosaic(dashboardId, chartId);
     },
   }),
 );

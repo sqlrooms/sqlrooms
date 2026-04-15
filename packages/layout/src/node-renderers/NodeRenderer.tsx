@@ -19,11 +19,11 @@ import {MosaicRenderer} from './MosaicRenderer';
 import {
   getChildAreaId,
   getPanelId,
-  getSizeProps,
+  getLayoutNodeSize,
   isCollapsed,
   type NodeRenderProps,
 } from './types';
-import {convertSizePropsToStyle} from './utils';
+import {convertLayoutNodeSizeToStyle} from './utils';
 import {useLayoutRendererContext} from '../LayoutRendererContext';
 import {TabsLayout} from './tabs-node-renderer/TabsLayout';
 import {LayoutNodeProvider} from '../LayoutNodeContext';
@@ -71,7 +71,7 @@ const SplitRenderer: FC<NodeRenderProps<LayoutSplitNode>> = ({node, path}) => {
       <ResizablePanelGroup orientation={orientation}>
         {node.children.map((child, i) => {
           const key = getPanelId(child);
-          const sizeProps = getSizeProps(child);
+          const sizeProps = getLayoutNodeSize(child);
           const isLast = i === node.children.length - 1;
           const collapsed = isCollapsed(child);
           const areaId = getChildAreaId(child);
@@ -90,7 +90,7 @@ const SplitRenderer: FC<NodeRenderProps<LayoutSplitNode>> = ({node, path}) => {
           const panelElement = !isResizable ? (
             <div
               className="flex-1"
-              style={convertSizePropsToStyle(sizeProps, orientation)}
+              style={convertLayoutNodeSizeToStyle(sizeProps, orientation)}
             >
               {childContent}
             </div>
