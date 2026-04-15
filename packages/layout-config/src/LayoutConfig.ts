@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {LayoutDirection} from './common';
 import {LayoutMosaicSubNode} from './LayoutMosaicSubNode';
-import {convertLegacyNode} from './migration';
+import {migrate} from './migrate';
 
 /** Main view room panel key */
 export const MAIN_VIEW = 'main';
@@ -111,7 +111,7 @@ export type LayoutNode =
   | LayoutMosaicNode;
 
 export const LayoutNode = z.preprocess(
-  convertLegacyNode,
+  migrate,
   z.union([
     LayoutNodeKey,
     LayoutPanelNode,
@@ -158,7 +158,7 @@ export function isLayoutMosaicNode(
 // ---------------------------------------------------------------------------
 
 export const LayoutConfig = z.preprocess(
-  convertLegacyNode,
+  migrate,
   LayoutNode.nullable(),
 ) as z.ZodType<LayoutConfig>;
 export type LayoutConfig = LayoutNode | null;

@@ -22,6 +22,8 @@
     "zod": "^4.1.8"
   },
   "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
