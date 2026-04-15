@@ -1,0 +1,44 @@
+{
+  "name": "@sqlrooms/cesium",
+  "version": "0.29.0-rc.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "sideEffects": false,
+  "author": "SQLRooms Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "cesium": "^1.124.0",
+    "resium": "^1.18.0",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.556.0",
+    "zod": "^4.1.8",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  }
+}
