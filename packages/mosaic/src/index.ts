@@ -23,6 +23,32 @@ export {
   type TrackedClient,
 } from './MosaicSlice';
 export {
+  createDefaultMosaicDashboardConfig,
+  createMosaicDashboardSlice,
+  DEFAULT_MOSAIC_DASHBOARD_CHART_VGPLOT,
+  getMosaicDashboardMosaicId,
+  getMosaicDashboardPanelId,
+  MosaicDashboardChartConfig,
+  MosaicDashboardEntry,
+  MosaicDashboardSliceConfig,
+  parseMosaicDashboardChartId,
+  useStoreWithMosaicDashboard,
+} from './dashboard/MosaicDashboardSlice';
+export type {
+  MosaicDashboardChartConfig as MosaicDashboardChartConfigType,
+  MosaicDashboardEntry as MosaicDashboardEntryType,
+  MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
+  MosaicDashboardSliceState,
+  MosaicDashboardStoreState,
+} from './dashboard/MosaicDashboardSlice';
+export {
+  MosaicDashboard,
+  MosaicDashboardRoot,
+  type MosaicDashboardProps,
+  type MosaicDashboardRootProps,
+} from './dashboard/MosaicDashboard';
+export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
+export {
   MosaicProfiler,
   type MosaicProfilerCompoundHeaderProps,
   type MosaicProfilerCompoundRowsProps,

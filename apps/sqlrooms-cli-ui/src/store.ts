@@ -1,3 +1,4 @@
+import {createId} from '@paralleldrive/cuid2';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
@@ -15,7 +16,11 @@ import {
   SheetType,
 } from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {
+  createMosaicDashboardSlice,
+  createMosaicSlice,
+  MosaicDashboardSliceConfig,
+} from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
@@ -53,13 +58,10 @@ import {getDefaultScaffoldTree} from './helpers';
 import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {
-  AppBuilderProjectConfig,
-  DashboardChartConfig,
-  DashboardProjectConfig,
-  RoomState,
-} from './store-types';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
+import {AppBuilderProjectConfig, RoomState} from './store-types';
+import {parseVgPlotSpecString} from './vgplot';
+
+export type {RoomState} from './store-types';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -107,7 +109,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         canvas: CanvasSliceConfig,
         webContainer: WebContainerPersistConfig,
         appProject: AppBuilderProjectConfig,
-        dashboard: DashboardProjectConfig,
+        mosaicDashboard: MosaicDashboardSliceConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
@@ -130,24 +132,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
         },
-        config: DashboardProjectConfig.parse({}),
         ensureSheetDashboard: (sheetId) => {
           const sheet = get().cells.config.sheets[sheetId];
           if (!sheet || sheet.type !== 'dashboard') {
             return;
           }
-          set((state) =>
-            produce(state, (draft) => {
-              if (draft.dashboard.config.dashboardsBySheetId[sheetId]) {
-                return;
-              }
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: DEFAULT_DASHBOARD_VGPLOT_SPEC,
-                charts: [],
-                updatedAt: Date.now(),
-              };
-            }),
-          );
+          get().mosaicDashboard.ensureDashboard(sheetId, sheet.title);
         },
         setSheetVgPlot: (sheetId, vgplot) => {
           const sheet = get().cells.config.sheets[sheetId];
@@ -157,21 +147,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           if (sheet.type !== 'dashboard') {
             throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
           }
-          const {formatted} = parseVgPlotSpecString(vgplot);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                ...(draft.dashboard.config.dashboardsBySheetId[sheetId] ?? {
-                  charts: [],
-                }),
-                vgplot: formatted,
-                updatedAt: Date.now(),
-              };
-            }),
-          );
+          const {parsed} = parseVgPlotSpecString(vgplot);
+          get().dashboard.ensureSheetDashboard(sheetId);
+          const dashboard = get().mosaicDashboard.getDashboard(sheetId);
+          const primaryChart = dashboard?.charts[0];
+          if (primaryChart) {
+            get().mosaicDashboard.updateChart(sheetId, primaryChart.id, {
+              vgplot: parsed,
+            });
+            return;
+          }
+          get().mosaicDashboard.addChart(sheetId, {
+            id: createId(),
+            title: 'Chart 1',
+            vgplot: parsed,
+          });
         },
         getSheetVgPlot: (sheetId) =>
-          get().dashboard.config.dashboardsBySheetId[sheetId]?.vgplot,
+          (() => {
+            const spec =
+              get().mosaicDashboard.getDashboard(sheetId)?.charts[0]?.vgplot;
+            return spec ? JSON.stringify(spec, null, 2) : undefined;
+          })(),
         getCurrentDashboardSheetId: () => {
           const currentSheetId = get().cells.config.currentSheetId;
           const currentSheet = currentSheetId
@@ -184,7 +181,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         createDashboardSheet: (title) => {
           const sheetId = get().cells.addSheet(title, 'dashboard');
-          get().dashboard.ensureSheetDashboard(sheetId);
+          const sheet = get().cells.config.sheets[sheetId];
+          get().mosaicDashboard.ensureDashboard(sheetId, sheet?.title);
           return sheetId;
         },
         setCurrentSheetVgPlot: (vgplot) => {
@@ -196,44 +194,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           state.cells.setCurrentSheet(targetSheetId);
           return targetSheetId;
         },
-        addChart: (sheetId, chart) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const entry = draft.dashboard.config.dashboardsBySheetId[sheetId];
-              if (!entry) return;
-              entry.charts.push(chart);
-              entry.updatedAt = Date.now();
-            }),
-          );
-        },
-        removeChart: (sheetId, chartId) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const entry = draft.dashboard.config.dashboardsBySheetId[sheetId];
-              if (!entry) return;
-              entry.charts = entry.charts.filter(
-                (c: DashboardChartConfig) => c.id !== chartId,
-              );
-              entry.updatedAt = Date.now();
-            }),
-          );
-        },
-        updateChart: (sheetId, chartId, patch) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const entry = draft.dashboard.config.dashboardsBySheetId[sheetId];
-              if (!entry) return;
-              const chart = entry.charts.find(
-                (c: DashboardChartConfig) => c.id === chartId,
-              );
-              if (!chart) return;
-              Object.assign(chart, patch);
-              entry.updatedAt = Date.now();
-            }),
-          );
-        },
-        getCharts: (sheetId) =>
-          get().dashboard.config.dashboardsBySheetId[sheetId]?.charts ?? [],
       };
 
       return {
@@ -305,6 +265,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createMosaicSlice()(set, get, store),
+
+        ...createMosaicDashboardSlice()(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),
 

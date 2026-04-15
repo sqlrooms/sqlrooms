@@ -1,11 +1,14 @@
-import {useCellsStore} from '@sqlrooms/cells';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {VgPlotChart} from '@sqlrooms/mosaic';
-import type {Spec} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
+import type {Spec} from '@uwdata/mosaic-spec';
 import {Trash2Icon} from 'lucide-react';
 import {useCallback, useMemo} from 'react';
-import {useRoomStore} from '../../store';
+import {VgPlotChart} from '../VgPlotChart';
+import {useMosaicDashboardContext} from './MosaicDashboardContext';
+import {
+  parseMosaicDashboardChartId,
+  useStoreWithMosaicDashboard,
+} from './MosaicDashboardSlice';
 import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
 
 function toRenderableMosaicSpec(
@@ -18,47 +21,47 @@ function toRenderableMosaicSpec(
   return mosaicSpec;
 }
 
-export const DashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
-  const chartId = panelInfo.panelId;
+export const MosaicDashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
+  const {dashboardId} = useMosaicDashboardContext();
+  const chartId = parseMosaicDashboardChartId(dashboardId, panelInfo.panelId);
 
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const mosaicConnection = useRoomStore((s) => s.mosaic.connection);
-
-  const charts = useRoomStore((s) =>
-    currentSheetId
-      ? s.dashboard.config.dashboardsBySheetId[currentSheetId]?.charts
-      : undefined,
+  const dashboard = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
   );
+  const connection = useStoreWithMosaicDashboard(
+    (state) => state.mosaic.connection,
+  );
+  const updateChart = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updateChart,
+  );
+  const removeChart = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.removeChart,
+  );
+
   const chart = useMemo(
-    () => charts?.find((c) => c.id === chartId),
-    [charts, chartId],
+    () =>
+      chartId
+        ? dashboard?.charts.find((candidate) => candidate.id === chartId)
+        : undefined,
+    [chartId, dashboard?.charts],
   );
 
-  const updateChart = useRoomStore((s) => s.dashboard.updateChart);
-  const removeChart = useRoomStore((s) => s.dashboard.removeChart);
-
-  const spec = useMemo(() => {
-    if (!chart?.vgplot) return null;
-    try {
-      const parsed = JSON.parse(chart.vgplot) as Record<string, unknown>;
-      return toRenderableMosaicSpec(parsed) as unknown as Spec;
-    } catch {
-      return null;
-    }
-  }, [chart?.vgplot]);
+  const spec = chart?.vgplot
+    ? (toRenderableMosaicSpec(chart.vgplot) as unknown as Spec)
+    : null;
 
   const handleSpecApply = useCallback(
-    (newVgplot: string) => {
-      if (!currentSheetId || !chartId) return;
-      updateChart(currentSheetId, chartId, {vgplot: newVgplot});
+    (newVgplot: Record<string, unknown>) => {
+      if (!chartId) return;
+      updateChart(dashboardId, chartId, {vgplot: newVgplot});
     },
-    [currentSheetId, chartId, updateChart],
+    [chartId, dashboardId, updateChart],
   );
 
   const handleRemove = useCallback(() => {
-    if (!currentSheetId || !chartId) return;
-    removeChart(currentSheetId, chartId);
-  }, [currentSheetId, chartId, removeChart]);
+    if (!chartId) return;
+    removeChart(dashboardId, chartId);
+  }, [chartId, dashboardId, removeChart]);
 
   if (!chart) {
     return (
@@ -89,15 +92,15 @@ export const DashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-2">
-        {mosaicConnection.status === 'loading' ? (
+        {connection.status === 'loading' ? (
           <SpinnerPane className="h-full w-full" />
-        ) : mosaicConnection.status === 'ready' && spec ? (
+        ) : connection.status === 'ready' && spec ? (
           <div className="inline-block min-w-full rounded-md bg-white p-2 text-black">
             <VgPlotChart spec={spec} />
           </div>
         ) : (
           <div className="text-muted-foreground text-sm">
-            {mosaicConnection.status === 'error'
+            {connection.status === 'error'
               ? 'Mosaic connection failed'
               : 'No valid chart spec'}
           </div>

@@ -1,36 +1,41 @@
-import {MosaicCodeMirrorEditor} from '@sqlrooms/mosaic';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {PencilIcon} from 'lucide-react';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
+import {MosaicCodeMirrorEditor} from '../editor/MosaicCodeMirrorEditor';
 
 interface VgPlotSpecPopoverEditorProps {
-  value: string;
-  onApply: (value: string) => void;
+  value: Record<string, unknown>;
+  onApply: (value: Record<string, unknown>) => void;
 }
 
 export const VgPlotSpecPopoverEditor: React.FC<
   VgPlotSpecPopoverEditorProps
 > = ({value, onApply}) => {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useState(() => JSON.stringify(value, null, 2));
 
-  useEffect(() => {
-    if (open) {
-      setDraft(value);
-    }
-  }, [open, value]);
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (nextOpen) {
+        setDraft(JSON.stringify(value, null, 2));
+      }
+    },
+    [value],
+  );
 
   const handleApply = useCallback(() => {
     try {
       const parsed = JSON.parse(draft);
-      onApply(JSON.stringify(parsed, null, 2));
+      onApply(parsed as Record<string, unknown>);
       setOpen(false);
     } catch {
-      // invalid JSON — do nothing
+      // Invalid JSON — keep the editor open.
     }
   }, [draft, onApply]);
 
-  const isDirty = draft !== value;
+  const serializedValue = JSON.stringify(value, null, 2);
+  const isDirty = draft !== serializedValue;
   let isValidJson = false;
   try {
     JSON.parse(draft);
@@ -40,7 +45,7 @@ export const VgPlotSpecPopoverEditor: React.FC<
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -55,15 +60,17 @@ export const VgPlotSpecPopoverEditor: React.FC<
         side="bottom"
         align="end"
         className="w-[500px] p-0"
-        onInteractOutside={(e) => {
-          if (isDirty) e.preventDefault();
+        onInteractOutside={(event) => {
+          if (isDirty) event.preventDefault();
         }}
       >
         <div className="flex flex-col">
           <div className="h-72 overflow-hidden">
             <MosaicCodeMirrorEditor
               value={draft}
-              onChange={(v) => setDraft(v ?? '')}
+              onChange={(nextValue: string | undefined) =>
+                setDraft(nextValue ?? '')
+              }
               className="h-full"
               enableSchemaValidation
             />
