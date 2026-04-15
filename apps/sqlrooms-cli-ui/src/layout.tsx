@@ -68,22 +68,23 @@ export const createLayout = ({
       icon: FolderIcon,
     },
     'workspace/{artifactId}': (ctx) => {
-      const panelId = ctx.params.artifactId;
-      const panelSheet = store.getState().cells.config.sheets[panelId];
-      const types = panelSheet ? ARTIFACT_TYPES[panelSheet.type] : undefined;
-      const component = types?.component;
-      if (!component) {
-        // fallback to a null component
+      const artifactId = ctx.params.artifactId;
+      const artifactSheet = store.getState().cells.config.sheets[artifactId];
+      const artifactType = artifactSheet?.type;
+      const artifactMeta = artifactType
+        ? ARTIFACT_TYPES[artifactType]
+        : undefined;
+      if (!artifactMeta) {
         return {
           component: () => null,
-          title: `Unknown panel ${panelId}`,
+          title: `Unknown panel ${artifactId}`,
           icon: LayoutDashboardIcon,
         };
       }
       return {
-        component,
-        title: panelSheet?.title || `Panel ${panelId}`,
-        icon: LayoutDashboardIcon,
+        component: artifactMeta.component,
+        title: artifactSheet?.title || `New ${artifactMeta.title}`,
+        icon: artifactMeta.icon,
       };
     },
   },

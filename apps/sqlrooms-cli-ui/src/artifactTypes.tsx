@@ -14,7 +14,7 @@ import {DashboardSheet} from './workspace/DashboardSheet';
 export type ArtifactTypeInfo = {
   title: string;
   addCommand: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{className?: string}>;
   component: RoomPanelComponent;
 };
 export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
