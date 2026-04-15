@@ -2,7 +2,7 @@ import {useCellsStore} from '@sqlrooms/cells';
 import {LayoutRenderer} from '@sqlrooms/layout';
 import type {LayoutMosaicNode} from '@sqlrooms/layout';
 import type {ChartBuilderColumn, Spec} from '@sqlrooms/mosaic';
-import {MosaicChartBuilder, VgPlotChart} from '@sqlrooms/mosaic';
+import {MosaicChartBuilder, MosaicProfiler} from '@sqlrooms/mosaic';
 import {
   Button,
   Command,
@@ -24,38 +24,6 @@ import type {DashboardChartConfig} from '../../store-types';
 import {DashboardChartPanel} from './DashboardChartPanel';
 
 const DASHBOARD_MOSAIC_ID = 'dashboard-mosaic';
-
-const NUM_PROFILER_COLUMNS = 6;
-const PROFILER_CHART_HEIGHT = 120;
-const PROFILER_CHART_WIDTH = 180;
-
-function buildProfilerSpec(
-  tableName: string,
-  columns: {name: string; type: string}[],
-): Spec | null {
-  if (columns.length === 0) return null;
-  const profileCols = columns.slice(0, NUM_PROFILER_COLUMNS);
-  return {
-    hconcat: profileCols.map((col) => ({
-      plot: [
-        {
-          mark: 'rectY',
-          data: {from: tableName},
-          x: {bin: col.name, maxbins: 20},
-          y: {count: null},
-          fill: '#94a3b8',
-          inset: 0.5,
-        },
-      ],
-      xLabel: col.name,
-      yLabel: null,
-      yAxis: null,
-      height: PROFILER_CHART_HEIGHT,
-      width: PROFILER_CHART_WIDTH,
-      margins: {left: 5, right: 5, top: 5, bottom: 25},
-    })),
-  } as Spec;
-}
 
 export const DashboardSheet: React.FC = () => {
   const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
@@ -102,14 +70,6 @@ export const DashboardSheet: React.FC = () => {
         type: c.type,
       })) ?? [],
     [selectedTableInfo],
-  );
-
-  const profilerSpec = useMemo(
-    () =>
-      selectedTable && builderColumns.length > 0
-        ? buildProfilerSpec(selectedTable, builderColumns)
-        : null,
-    [selectedTable, builderColumns],
   );
 
   useEffect(() => {
@@ -241,15 +201,18 @@ export const DashboardSheet: React.FC = () => {
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
-        {profilerSpec && mosaicConnection.status === 'ready' && (
-          <div className="border-b px-3 py-2">
-            <p className="text-muted-foreground mb-1 text-xs font-medium">
-              Column profiles for {selectedTable}
-            </p>
-            <div className="overflow-x-auto">
-              <VgPlotChart spec={profilerSpec} />
+        {selectedTable && mosaicConnection.status === 'ready' && (
+          <MosaicProfiler tableName={selectedTable} pageSize={10}>
+            <div className="border-b">
+              <div className="min-h-0 overflow-auto">
+                <MosaicProfiler.Table>
+                  <MosaicProfiler.Header />
+                  <MosaicProfiler.Rows />
+                </MosaicProfiler.Table>
+              </div>
+              <MosaicProfiler.StatusBar />
             </div>
-          </div>
+          </MosaicProfiler>
         )}
 
         <div className="min-h-0 flex-1">
