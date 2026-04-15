@@ -55,6 +55,7 @@ import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 import {
   AppBuilderProjectConfig,
+  DashboardChartConfig,
   DashboardProjectConfig,
   RoomState,
 } from './store-types';
@@ -142,6 +143,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }
               draft.dashboard.config.dashboardsBySheetId[sheetId] = {
                 vgplot: DEFAULT_DASHBOARD_VGPLOT_SPEC,
+                charts: [],
                 updatedAt: Date.now(),
               };
             }),
@@ -159,6 +161,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           set((state) =>
             produce(state, (draft) => {
               draft.dashboard.config.dashboardsBySheetId[sheetId] = {
+                ...(draft.dashboard.config.dashboardsBySheetId[sheetId] ?? {
+                  charts: [],
+                }),
                 vgplot: formatted,
                 updatedAt: Date.now(),
               };
@@ -191,6 +196,44 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           state.cells.setCurrentSheet(targetSheetId);
           return targetSheetId;
         },
+        addChart: (sheetId, chart) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const entry = draft.dashboard.config.dashboardsBySheetId[sheetId];
+              if (!entry) return;
+              entry.charts.push(chart);
+              entry.updatedAt = Date.now();
+            }),
+          );
+        },
+        removeChart: (sheetId, chartId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const entry = draft.dashboard.config.dashboardsBySheetId[sheetId];
+              if (!entry) return;
+              entry.charts = entry.charts.filter(
+                (c: DashboardChartConfig) => c.id !== chartId,
+              );
+              entry.updatedAt = Date.now();
+            }),
+          );
+        },
+        updateChart: (sheetId, chartId, patch) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const entry = draft.dashboard.config.dashboardsBySheetId[sheetId];
+              if (!entry) return;
+              const chart = entry.charts.find(
+                (c: DashboardChartConfig) => c.id === chartId,
+              );
+              if (!chart) return;
+              Object.assign(chart, patch);
+              entry.updatedAt = Date.now();
+            }),
+          );
+        },
+        getCharts: (sheetId) =>
+          get().dashboard.config.dashboardsBySheetId[sheetId]?.charts ?? [],
       };
 
       return {

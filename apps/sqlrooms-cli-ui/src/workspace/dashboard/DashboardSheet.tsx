@@ -1,312 +1,166 @@
 import {useCellsStore} from '@sqlrooms/cells';
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import type {Spec} from '@sqlrooms/mosaic';
-import {astToDOM, parseSpec, VgPlotChart} from '@sqlrooms/mosaic';
+import {LayoutRenderer} from '@sqlrooms/layout';
+import type {LayoutMosaicNode} from '@sqlrooms/layout';
+import type {ChartBuilderColumn, Spec} from '@sqlrooms/mosaic';
+import {MosaicChartBuilder} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
-import {AlertCircle} from 'lucide-react';
-import React from 'react';
+import {Plus} from 'lucide-react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
-import {getErrorMessage} from '../../utils';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC} from '../../vgplot';
+import type {DashboardChartConfig} from '../../store-types';
+import {DashboardChartPanel} from './DashboardChartPanel';
 
-const VGPLOT_SCHEMA_URL = 'https://idl.uw.edu/mosaic/schema/latest.json';
-
-type VgPlotSchemaCache = {
-  data: Record<string, unknown> | null;
-  promise: Promise<Record<string, unknown>> | null;
-};
-
-type ParsedVgPlotSpec = {
-  parsed: Spec | null;
-  formatted: string | null;
-  error: string | null;
-};
-
-function toRenderableMosaicSpec(
-  parsedValue: Record<string, unknown>,
-): Record<string, unknown> {
-  const mosaicSpec = {...parsedValue};
-  if ('$schema' in mosaicSpec) {
-    delete mosaicSpec.$schema;
-  }
-  return mosaicSpec;
-}
-
-function parseVgPlotSpec(value: string): ParsedVgPlotSpec {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      Array.isArray(parsed)
-    ) {
-      return {
-        parsed: null,
-        formatted: null,
-        error: 'VgPlot spec must be a JSON object.',
-      };
-    }
-    return {
-      parsed: toRenderableMosaicSpec(
-        parsed as Record<string, unknown>,
-      ) as unknown as Spec,
-      formatted: JSON.stringify(parsed, null, 2),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      parsed: null,
-      formatted: null,
-      error: getErrorMessage(error),
-    };
-  }
-}
-
-async function loadVgPlotSchema(
-  cache: VgPlotSchemaCache,
-): Promise<Record<string, unknown>> {
-  if (cache.data) {
-    return cache.data;
-  }
-  if (!cache.promise) {
-    cache.promise = fetch(VGPLOT_SCHEMA_URL)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load vgplot schema (${response.status} ${response.statusText}).`,
-          );
-        }
-        const data = (await response.json()) as unknown;
-        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-          throw new Error('Received an invalid vgplot schema document.');
-        }
-        cache.data = data as Record<string, unknown>;
-        return cache.data;
-      })
-      .catch((error) => {
-        cache.promise = null;
-        throw error;
-      });
-  }
-  return cache.promise;
-}
+const DASHBOARD_MOSAIC_ID = 'dashboard-mosaic';
 
 export const DashboardSheet: React.FC = () => {
   const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const dashboardEntry = useRoomStore((state) =>
+  const ensureSheetDashboard = useRoomStore(
+    (s) => s.dashboard.ensureSheetDashboard,
+  );
+  const addChart = useRoomStore((s) => s.dashboard.addChart);
+  const mosaicConnection = useRoomStore((s) => s.mosaic.connection);
+  const registerPanel = useRoomStore((s) => s.layout.registerPanel);
+  const unregisterPanel = useRoomStore((s) => s.layout.unregisterPanel);
+
+  const charts = useRoomStore((s) =>
     currentSheetId
-      ? state.dashboard.config.dashboardsBySheetId[currentSheetId]
+      ? s.dashboard.config.dashboardsBySheetId[currentSheetId]?.charts
       : undefined,
   );
-  const ensureSheetDashboard = useRoomStore(
-    (state) => state.dashboard.ensureSheetDashboard,
-  );
-  const setSheetVgPlot = useRoomStore(
-    (state) => state.dashboard.setSheetVgPlot,
-  );
-  const mosaicConnection = useRoomStore((state) => state.mosaic.connection);
+  const tables = useRoomStore((s) => s.db.tables);
 
-  const schemaCacheRef = React.useRef<VgPlotSchemaCache>({
-    data: null,
-    promise: null,
-  });
+  const [builderOpen, setBuilderOpen] = useState(false);
 
-  const persistedSpec = dashboardEntry?.vgplot ?? DEFAULT_DASHBOARD_VGPLOT_SPEC;
-
-  const [editorValue, setEditorValue] = React.useState<string>(persistedSpec);
-  const [lastAppliedValue, setLastAppliedValue] =
-    React.useState<string>(persistedSpec);
-  const [schema, setSchema] = React.useState<
-    Record<string, unknown> | undefined
-  >(undefined);
-  const [schemaError, setSchemaError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
+  useEffect(() => {
     if (!currentSheetId) return;
     ensureSheetDashboard(currentSheetId);
   }, [currentSheetId, ensureSheetDashboard]);
 
-  const prevSheetIdRef = React.useRef(currentSheetId);
-  React.useEffect(() => {
-    const sheetChanged = currentSheetId !== prevSheetIdRef.current;
-    prevSheetIdRef.current = currentSheetId;
-
-    if (sheetChanged) {
-      setEditorValue(persistedSpec);
-      setLastAppliedValue(persistedSpec);
-    } else {
-      setLastAppliedValue((prev) => {
-        if (prev === persistedSpec) return prev;
-        setEditorValue((editorVal) =>
-          editorVal === prev ? persistedSpec : editorVal,
-        );
-        return persistedSpec;
+  // Register a panel for each chart
+  useEffect(() => {
+    if (!charts) return;
+    const registeredIds: string[] = [];
+    for (const chart of charts) {
+      registerPanel(chart.id, {
+        title: chart.title,
+        component: DashboardChartPanel,
       });
+      registeredIds.push(chart.id);
     }
-  }, [currentSheetId, persistedSpec]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    void loadVgPlotSchema(schemaCacheRef.current)
-      .then((loadedSchema) => {
-        if (!cancelled) {
-          setSchema(loadedSchema);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setSchemaError(getErrorMessage(error));
-        }
-      });
     return () => {
-      cancelled = true;
+      for (const id of registeredIds) {
+        unregisterPanel(id);
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [charts, registerPanel, unregisterPanel]);
 
-  const parsedEditorSpec = React.useMemo(
-    () => parseVgPlotSpec(editorValue),
-    [editorValue],
-  );
-  const parsedAppliedSpec = React.useMemo(
-    () => parseVgPlotSpec(lastAppliedValue),
-    [lastAppliedValue],
-  );
-  const previewSpec = parsedEditorSpec.parsed ?? parsedAppliedSpec.parsed;
-  const previewError = parsedEditorSpec.error;
-  const isDirty = editorValue !== lastAppliedValue;
-  const canApply = Boolean(
-    currentSheetId && parsedEditorSpec.formatted && isDirty,
-  );
-  const [compiledPlot, setCompiledPlot] = React.useState<
-    HTMLElement | SVGSVGElement | null
-  >(null);
-  const [isCompilingPlot, setIsCompilingPlot] = React.useState(false);
-  const [plotCompileError, setPlotCompileError] = React.useState<string | null>(
-    null,
-  );
-
-  const applyChanges = React.useCallback(() => {
-    if (!currentSheetId || !parsedEditorSpec.formatted) return;
-    setSheetVgPlot(currentSheetId, parsedEditorSpec.formatted);
-    setLastAppliedValue(parsedEditorSpec.formatted);
-    setEditorValue(parsedEditorSpec.formatted);
-  }, [currentSheetId, parsedEditorSpec.formatted, setSheetVgPlot]);
-
-  React.useEffect(() => {
-    if (mosaicConnection.status !== 'ready' || !previewSpec) {
-      setCompiledPlot(null);
-      setPlotCompileError(null);
-      setIsCompilingPlot(false);
-      return;
+  // Build the mosaic layout tree from the charts list
+  const mosaicNode: LayoutMosaicNode = useMemo(() => {
+    if (!charts || charts.length === 0) {
+      return {
+        type: 'mosaic' as const,
+        id: DASHBOARD_MOSAIC_ID,
+        layout: null,
+      };
     }
-    let cancelled = false;
-    const DEBOUNCE_MS = 300;
-    const timer = setTimeout(() => {
-      setIsCompilingPlot(true);
-      setPlotCompileError(null);
-      void (async () => {
-        try {
-          const ast = await parseSpec(previewSpec);
-          const instantiated = await astToDOM(ast);
-          if (cancelled) return;
-          setCompiledPlot(instantiated.element);
-        } catch (error) {
-          if (cancelled) return;
-          setCompiledPlot(null);
-          setPlotCompileError(getErrorMessage(error));
-        } finally {
-          if (!cancelled) {
-            setIsCompilingPlot(false);
-          }
-        }
-      })();
-    }, DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
+    if (charts.length === 1) {
+      return {
+        type: 'mosaic' as const,
+        id: DASHBOARD_MOSAIC_ID,
+        layout: charts[0].id,
+      };
+    }
+    return {
+      type: 'mosaic' as const,
+      id: DASHBOARD_MOSAIC_ID,
+      layout: {
+        type: 'split' as const,
+        direction: 'row' as const,
+        children: charts.map((c) => c.id),
+      },
     };
-  }, [mosaicConnection.status, previewSpec]);
+  }, [charts]);
+
+  // Pick the first table with columns for the chart builder
+  const firstTableWithColumns = useMemo(
+    () => tables.find((t) => t.columns && t.columns.length > 0),
+    [tables],
+  );
+
+  const builderTableName = firstTableWithColumns?.tableName ?? '';
+  const builderColumns: ChartBuilderColumn[] = useMemo(
+    () =>
+      firstTableWithColumns?.columns?.map((c) => ({
+        name: c.name,
+        type: c.type,
+      })) ?? [],
+    [firstTableWithColumns],
+  );
+
+  const handleCreateChart = useCallback(
+    (spec: Spec, title: string) => {
+      if (!currentSheetId) return;
+      const chartId = `chart-${Date.now()}`;
+      const newChart: DashboardChartConfig = {
+        id: chartId,
+        title,
+        vgplot: JSON.stringify(spec, null, 2),
+      };
+      addChart(currentSheetId, newChart);
+    },
+    [currentSheetId, addChart],
+  );
 
   if (!currentSheetId) {
     return null;
   }
 
+  if (mosaicConnection.status === 'loading') {
+    return <SpinnerPane className="h-full w-full" />;
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b p-2">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-medium">Dashboard</h3>
-            <p className="text-muted-foreground text-xs">
-              Edit vgplot JSON and preview with Mosaic.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <h3 className="text-sm font-medium">Dashboard</h3>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setBuilderOpen(true)}
+          disabled={!builderTableName}
+        >
+          <Plus className="mr-1 h-4 w-4" />
+          Add Chart
+        </Button>
+      </div>
+
+      <div className="min-h-0 flex-1">
+        {!charts || charts.length === 0 ? (
+          <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-sm">
+            <p>No charts yet. Add one to get started.</p>
             <Button
               size="sm"
               variant="outline"
-              disabled={!isDirty}
-              onClick={() => setEditorValue(lastAppliedValue)}
+              onClick={() => setBuilderOpen(true)}
+              disabled={!builderTableName}
             >
-              Reset
-            </Button>
-            <Button size="sm" disabled={!canApply} onClick={applyChanges}>
-              Apply
+              <Plus className="mr-1 h-4 w-4" />
+              Add Chart
             </Button>
           </div>
-        </div>
-        {schemaError && (
-          <p className="text-destructive mt-2 text-xs">
-            Schema completion unavailable: {schemaError}
-          </p>
+        ) : (
+          <LayoutRenderer rootLayout={mosaicNode} />
         )}
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-2">
-        <div className="min-h-0 border-r">
-          <JsonMonacoEditor
-            className="h-full"
-            value={editorValue}
-            schema={schema}
-            onChange={(value) => setEditorValue(value ?? '')}
-            options={{
-              lineNumbers: 'on',
-              minimap: {enabled: false},
-              wordWrap: 'on',
-            }}
-          />
-        </div>
-        <div className="min-h-0 overflow-auto p-3">
-          {mosaicConnection.status === 'loading' && (
-            <SpinnerPane className="h-full w-full" />
-          )}
-          {mosaicConnection.status === 'error' && (
-            <div className="text-destructive text-sm">
-              Mosaic connection failed:{' '}
-              {getErrorMessage(mosaicConnection.error)}
-            </div>
-          )}
-          {mosaicConnection.status === 'ready' &&
-            (isCompilingPlot ? (
-              <SpinnerPane className="h-full w-full" />
-            ) : compiledPlot ? (
-              <div className="inline-block min-w-full rounded-md border bg-white p-2 text-black">
-                <VgPlotChart plot={compiledPlot} />
-              </div>
-            ) : (
-              <div className="text-muted-foreground text-sm">
-                {plotCompileError
-                  ? 'Unable to render dashboard from the current vgplot spec.'
-                  : 'No valid dashboard spec to preview yet.'}
-              </div>
-            ))}
-        </div>
-      </div>
-      {(previewError || plotCompileError) && (
-        <div className="bg-destructive/90 text-destructive-foreground flex items-center gap-2 px-3 py-2 text-xs">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span className="truncate">{previewError ?? plotCompileError}</span>
-        </div>
+
+      {builderTableName && (
+        <MosaicChartBuilder.Dialog
+          open={builderOpen}
+          onOpenChange={setBuilderOpen}
+          tableName={builderTableName}
+          columns={builderColumns}
+          onCreateChart={handleCreateChart}
+        />
       )}
     </div>
   );

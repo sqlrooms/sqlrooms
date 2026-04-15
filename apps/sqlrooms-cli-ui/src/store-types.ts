@@ -27,12 +27,20 @@ export const AppBuilderProjectConfig = z.object({
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
 
+export const DashboardChartConfig = z.object({
+  id: z.string(),
+  title: z.string().default('Chart'),
+  vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
+});
+export type DashboardChartConfig = z.infer<typeof DashboardChartConfig>;
+
 export const DashboardProjectConfig = z.object({
   dashboardsBySheetId: z
     .record(
       z.string(),
       z.object({
         vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
+        charts: z.array(DashboardChartConfig).default([]),
         updatedAt: z.number().default(0),
       }),
     )
@@ -76,5 +84,13 @@ export type RoomState = RoomShellSliceState &
       getCurrentDashboardSheetId: () => string | undefined;
       createDashboardSheet: (title?: string) => string;
       setCurrentSheetVgPlot: (vgplot: string) => string;
+      addChart: (sheetId: string, chart: DashboardChartConfig) => void;
+      removeChart: (sheetId: string, chartId: string) => void;
+      updateChart: (
+        sheetId: string,
+        chartId: string,
+        patch: Partial<Pick<DashboardChartConfig, 'title' | 'vgplot'>>,
+      ) => void;
+      getCharts: (sheetId: string) => DashboardChartConfig[];
     };
   };

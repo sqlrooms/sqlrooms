@@ -63,3 +63,4 @@ export type {
   ChartBuilderField,
   ChartBuilderTemplate,
 } from './chart-builders/types';
+export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
