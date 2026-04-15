@@ -32,7 +32,7 @@ export {
   LoadFileOptions,
 } from './LoadOptions';
 
-// Re-export from @sqlrooms/layout-config — new names
+// Re-export from @sqlrooms/layout-config
 export {
   MAIN_VIEW,
   LayoutDirection,
@@ -48,23 +48,4 @@ export {
   isLayoutTabsNode,
   isLayoutMosaicNode,
   createDefaultLayout,
-} from '@sqlrooms/layout-config';
-
-// Re-export from @sqlrooms/layout-config — deprecated names
-export {
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutSplitNode,
-  MosaicLayoutTabsNode,
-  MosaicLayoutMosaicNode,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  isMosaicLayoutSplitNode,
-  isMosaicLayoutTabsNode,
-  isMosaicLayoutMosaicNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
 } from '@sqlrooms/layout-config';

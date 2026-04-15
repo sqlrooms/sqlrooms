@@ -20,9 +20,9 @@ export {
   isLayoutMosaicNode,
   createDefaultLayout,
   LayoutNodeSize,
-} from './LayoutConfig';
+} from './v2/LayoutConfig';
 
-export {LayoutDirection} from './common';
+export {LayoutDirection} from './v2/common';
 
 export {
   LayoutMosaicSubNode,
@@ -30,7 +30,7 @@ export {
   LayoutMosaicSplitSubNode,
   isLayoutMosaicPanelSubNode,
   isLayoutMosaicSplitSubNode,
-} from './LayoutMosaicSubNode';
+} from './v2/LayoutMosaicSubNode';
 
 // Tabs node helpers
 export {
@@ -39,22 +39,3 @@ export {
   getVisibleTabChildren,
   getHiddenTabChildren,
 } from './tabs-helpers';
-
-// Deprecated re-exports (old Mosaic* names)
-export {
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutSplitNode,
-  MosaicLayoutTabsNode,
-  MosaicLayoutMosaicNode,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  isMosaicLayoutSplitNode,
-  isMosaicLayoutTabsNode,
-  isMosaicLayoutMosaicNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
-} from './LayoutConfig';

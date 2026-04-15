@@ -79,25 +79,6 @@ export {
   MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 
-// Deprecated re-exports from @sqlrooms/layout-config (old Mosaic* names)
-export {
-  createDefaultMosaicLayout,
-  DEFAULT_MOSAIC_LAYOUT,
-  isMosaicLayoutMosaicNode,
-  isMosaicLayoutParent,
-  isMosaicLayoutSplitNode,
-  isMosaicLayoutTabsNode,
-  LayoutTypes,
-  MosaicLayoutConfig,
-  MosaicLayoutDirection,
-  MosaicLayoutMosaicNode,
-  MosaicLayoutNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutParent,
-  MosaicLayoutSplitNode,
-  MosaicLayoutTabsNode,
-} from '@sqlrooms/layout-config';
-
 // Panel matching utility
 export {getPanelByPath} from './getPanelByPath';
 export {resolvePanelDefinition} from './resolvePanelDefinition';
