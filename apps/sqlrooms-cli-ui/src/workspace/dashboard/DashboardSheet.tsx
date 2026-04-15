@@ -5,9 +5,9 @@ import {astToDOM, parseSpec, VgPlotChart} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
 import {AlertCircle} from 'lucide-react';
 import React from 'react';
-import {useRoomStore} from '../store';
-import {getErrorMessage} from '../utils';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC} from '../vgplot';
+import {useRoomStore} from '../../store';
+import {getErrorMessage} from '../../utils';
+import {DEFAULT_DASHBOARD_VGPLOT_SPEC} from '../../vgplot';
 
 const VGPLOT_SCHEMA_URL = 'https://idl.uw.edu/mosaic/schema/latest.json';
 

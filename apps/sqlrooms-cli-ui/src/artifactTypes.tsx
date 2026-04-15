@@ -9,7 +9,7 @@ import {
   LayoutDashboardIcon,
 } from 'lucide-react';
 import {AppBuilderSheet} from './workspace/AppBuilderSheet';
-import {DashboardSheet} from './workspace/DashboardSheet';
+import {DashboardSheet} from './workspace/dashboard/DashboardSheet';
 
 export type ArtifactTypeInfo = {
   title: string;
