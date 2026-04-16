@@ -45,7 +45,7 @@ const TableSchemaTreeRoot: FC<{
       : schemaTrees;
   }, [schemaTrees, skipSingleDatabaseOrSchema]);
 
-  if (!trees?.length || trees.every((tree) => tree.children?.length === 0)) {
+  if (!trees?.length) {
     return (
       <div
         className={cn(
