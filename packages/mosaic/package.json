@@ -22,7 +22,6 @@
     "access": "public"
   },
   "dependencies": {
-    "ai": "^5.0.155",
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",

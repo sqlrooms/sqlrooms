@@ -1,4 +1,8 @@
-import type {ChartBuilderColumn, ChartBuilderField, ChartSpec} from './types';
+import type {
+  ChartBuilderColumn,
+  ChartBuilderField,
+  ChartTypeDefinition,
+} from './types';
 
 function formatFieldConstraints(field: ChartBuilderField): string {
   const parts: string[] = [];
@@ -13,31 +17,32 @@ function formatFieldConstraints(field: ChartBuilderField): string {
   return parts.join(', ');
 }
 
-function formatFieldsBlock(spec: ChartSpec): string {
-  if (spec.fields.length === 0) {
+function formatFieldsBlock(chartType: ChartTypeDefinition): string {
+  if (chartType.fields.length === 0) {
     return '  Fields: none (template spec only; edit manually after creation)';
   }
-  const lines = spec.fields.map((f) => {
+  const lines = chartType.fields.map((f) => {
     const req = f.required !== false ? 'required' : 'optional';
-    return `    - ${f.key} (${f.label}): ${req}; ${formatFieldConstraints(f)}`;
+    const suffix = f.description ? `; ${f.description}` : '';
+    return `    - ${f.key} (${f.label}): ${req}; ${formatFieldConstraints(f)}${suffix}`;
   });
   return `  Fields:\n${lines.join('\n')}`;
 }
 
 /**
- * Serialize chart specs and column metadata into a string suitable for LLM
+ * Serialize chart types and column metadata into a string suitable for LLM
  * system prompts (e.g. alongside dashboard authoring instructions).
  */
-export function describeChartSpecs(
-  specs: ChartSpec[],
+export function describeChartTypes(
+  chartTypes: ChartTypeDefinition[],
   tableName: string,
   columns: ChartBuilderColumn[],
 ): string {
   const header = `Available chart templates for table "${tableName}":`;
-  const body = specs
+  const body = chartTypes
     .map(
-      (spec) =>
-        `- ${spec.id}: ${spec.description}\n${formatFieldsBlock(spec)}`,
+      (chartType) =>
+        `- ${chartType.id}: ${chartType.label ?? chartType.description}\n  Summary: ${chartType.aiDescription ?? chartType.description}\n${formatFieldsBlock(chartType)}`,
     )
     .join('\n');
 
@@ -48,3 +53,6 @@ export function describeChartSpecs(
 
   return `${header}\n${body}\n\nAvailable columns: ${colLine}`;
 }
+
+/** Backward-compatible alias for earlier helper APIs. */
+export const describeChartSpecs = describeChartTypes;

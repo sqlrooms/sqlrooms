@@ -1,14 +1,12 @@
-import type {ChartSpec} from './types';
+import type {ChartTypeDefinition} from './types';
+import {buildChartTypeTitle} from './chartTypeUtils';
 
 /**
- * Human-readable chart title from a spec and selected field values.
- * Matches the logic used in {@link ChartBuilderContent}.
+ * Human-readable chart title from a chart type and selected field values.
  */
 export function buildChartTitleForSpec(
-  spec: Pick<ChartSpec, 'description' | 'fields'>,
+  spec: Pick<ChartTypeDefinition, 'description' | 'buildTitle'>,
   fieldValues: Record<string, string>,
 ): string {
-  return spec.fields.length > 0
-    ? `${spec.description.replace(/^Create (a |an )?/, '')} - ${Object.values(fieldValues).join(', ')}`
-    : spec.description.replace(/^Create (a |an )?/, '');
+  return buildChartTypeTitle(spec, fieldValues);
 }

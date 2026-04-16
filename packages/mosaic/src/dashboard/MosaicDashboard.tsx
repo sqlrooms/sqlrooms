@@ -1,4 +1,3 @@
-import {createId} from '@paralleldrive/cuid2';
 import React, {
   PropsWithChildren,
   ReactElement,
@@ -14,6 +13,7 @@ import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardCharts} from './MosaicDashboardCharts';
 import {MosaicDashboardProfiler} from './MosaicDashboardProfiler';
 import {
+  createMosaicDashboardChartConfig,
   type MosaicDashboardChartConfig,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
@@ -86,11 +86,8 @@ export function MosaicDashboardRoot({
 
   const handleCreateChart = useCallback(
     (spec: Spec, title: string) => {
-      const newChart: MosaicDashboardChartConfig = {
-        id: createId(),
-        title,
-        vgplot: JSON.parse(JSON.stringify(spec)) as Record<string, unknown>,
-      };
+      const newChart: MosaicDashboardChartConfig =
+        createMosaicDashboardChartConfig(spec, title);
       addChart(dashboardId, newChart);
       setBuilderOpen(false);
     },

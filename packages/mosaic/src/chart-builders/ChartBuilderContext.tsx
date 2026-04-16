@@ -1,12 +1,24 @@
 import {createContext, useContext} from 'react';
 import type {Spec} from '@uwdata/mosaic-spec';
-import type {ChartBuilderColumn, ChartBuilderTemplate} from './types';
+import {useStore} from 'zustand';
+import type {
+  ChartBuilderStore,
+  ChartBuilderStoreState,
+} from './createChartBuilderStore';
+import type {
+  ChartBuilderColumn,
+  ChartBuilderTemplate,
+  ChartTypeDefinition,
+} from './types';
 
 export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
   onCreateChart: (spec: Spec, title: string) => void;
-  builders?: ChartBuilderTemplate[];
+  templates: ChartBuilderTemplate[];
+  availableChartTypes: ChartTypeDefinition[];
+  availableTemplates: ChartBuilderTemplate[];
+  store: ChartBuilderStore;
 };
 
 export const ChartBuilderContext =
@@ -20,4 +32,11 @@ export function useChartBuilderContext(): ChartBuilderContextValue {
     );
   }
   return ctx;
+}
+
+export function useChartBuilderStore<T>(
+  selector: (state: ChartBuilderStoreState) => T,
+): T {
+  const {store} = useChartBuilderContext();
+  return useStore(store, selector);
 }

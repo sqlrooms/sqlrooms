@@ -13,6 +13,7 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 import {type MosaicSliceState} from '../MosaicSlice';
+import type {Spec} from '@uwdata/mosaic-spec';
 
 export const DEFAULT_MOSAIC_DASHBOARD_CHART_VGPLOT = JSON.stringify(
   {
@@ -69,6 +70,19 @@ export const MosaicDashboardChartConfig = z.object({
 export type MosaicDashboardChartConfig = z.infer<
   typeof MosaicDashboardChartConfig
 >;
+
+export function createMosaicDashboardChartConfig(
+  spec: Spec | Record<string, unknown>,
+  title: string,
+): MosaicDashboardChartConfig {
+  return {
+    id: createId(),
+    title,
+    vgplot: JSON.parse(
+      JSON.stringify(spec),
+    ) as MosaicDashboardChartConfig['vgplot'],
+  };
+}
 
 export const MosaicDashboardEntry = z.object({
   id: z.string(),

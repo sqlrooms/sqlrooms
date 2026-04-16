@@ -24,6 +24,7 @@ export {
 } from './MosaicSlice';
 export {
   createDefaultMosaicDashboardConfig,
+  createMosaicDashboardChartConfig,
   createMosaicDashboardSlice,
   DEFAULT_MOSAIC_DASHBOARD_CHART_VGPLOT,
   getMosaicDashboardMosaicId,
@@ -123,6 +124,8 @@ export type {
 export {
   boxPlotBuilder,
   bubbleChartBuilder,
+  createChartBuilderTemplate,
+  createChartBuilderTemplates,
   countPlotBuilder,
   createDefaultChartBuilders,
   customSpecBuilder,
@@ -132,30 +135,56 @@ export {
   lineChartBuilder,
   mosaicChartBuilders,
 } from './chart-builders/builders';
+export {
+  boxPlotChartType,
+  bubbleChartChartType,
+  countPlotChartType,
+  createDefaultChartTypes,
+  customSpecChartType,
+  ecdfChartType,
+  heatmapChartType,
+  histogramChartType,
+  lineChartChartType,
+  mosaicChartTypes,
+} from './chart-builders/chartTypes';
+export {
+  buildChartTypeTitle,
+  canCreateChartFromType,
+  columnMatchesFieldTypes,
+  getAvailableChartTypes,
+  getCompatibleColumns,
+  isChartTypeAvailable,
+  NUMERIC_COLUMN_TYPES,
+  QUANTITATIVE_COLUMN_TYPES,
+  TEMPORAL_COLUMN_TYPES,
+} from './chart-builders/chartTypeUtils';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
 export {
-  createMosaicChartTool,
-  DEFAULT_MOSAIC_CHART_TOOL_DESCRIPTION,
-  type CreateMosaicChartToolOptions,
-  type MosaicChartToolOutput,
-  type MosaicChartToolParameters,
-} from './chart-builders/createMosaicChartTool';
-export {describeChartSpecs} from './chart-builders/describeChartSpecs';
-export {useChartBuilderContext} from './chart-builders/ChartBuilderContext';
+  describeChartSpecs,
+  describeChartTypes,
+} from './chart-builders/describeChartSpecs';
+export {
+  useChartBuilderContext,
+  useChartBuilderStore,
+} from './chart-builders/ChartBuilderContext';
 export type {ChartBuilderContextValue} from './chart-builders/ChartBuilderContext';
+export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
 export type {
   ChartBuilderDialogContentProps,
   ChartBuilderDialogProps,
   ChartBuilderRootProps,
   ChartBuilderTriggerProps,
 } from './chart-builders/ChartBuilderDialog';
+export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
+export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
 export type {
   ChartBuilderColumn,
   ChartBuilderField,
   ChartBuilderTemplate,
+  ChartTypeDefinition,
   ChartSpec,
 } from './chart-builders/types';
-export {toChartSpec} from './chart-builders/types';
+export {toChartSpec, toChartTypeDefinition} from './chart-builders/types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';

@@ -1,6 +1,10 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 
+import {
+  createDashboardChartTemplateTool,
+  getDashboardChartTemplateInstructions,
+} from './createDashboardChartTemplateTool';
 import type {RoomState} from './store';
 import {getErrorMessage} from './utils';
 import {toVgPlotSpecString} from './vgplot';
@@ -46,10 +50,15 @@ type DashboardSetVgPlotToolParameters = z.infer<
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
 - Use the dashboard tools to create/update dashboard vgplot specs.
-- Prefer \`set_dashboard_vgplot\` with complete JSON.
+- Prefer \`create_dashboard_chart_from_template\` for simple supported charts.
+- Use \`set_dashboard_vgplot\` with complete JSON only when no template fits.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
 - Use SQL against DuckDB tables when deciding fields, filters, and aggregations in the spec.
 `;
+
+export function getDashboardAiInstructions(store: {getState: () => RoomState}) {
+  return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${getDashboardChartTemplateInstructions(store)}`;
+}
 
 export function createDashboardAiTools(store: {getState: () => RoomState}) {
   return {
@@ -59,7 +68,9 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
       inputSchema: DashboardCreateSheetToolParameters,
       execute: async (params: DashboardCreateSheetToolParameters) => {
         const {title} = params;
-        const sheetId = store.getState().dashboard.createDashboardSheet(title);
+        const state = store.getState();
+        const sheetId = state.dashboard.createDashboardSheet(title);
+        state.cells.setCurrentSheet(sheetId);
         return {
           llmResult: {
             success: true,
@@ -69,6 +80,8 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
         };
       },
     }),
+    create_dashboard_chart_from_template:
+      createDashboardChartTemplateTool(store),
     get_dashboard_vgplot: tool({
       description:
         'Get the current vgplot JSON spec for a dashboard sheet. If sheetId is omitted, uses the current dashboard sheet.',

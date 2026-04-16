@@ -3043,9 +3043,6 @@ importers:
       '@uwdata/vgplot':
         specifier: ^0.21.0
         version: 0.21.1
-      ai:
-        specifier: ^5.0.155
-        version: 5.0.155(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0

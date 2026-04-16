@@ -10,17 +10,20 @@ import {
 } from '@sqlrooms/ui';
 import type {Spec} from '@uwdata/mosaic-spec';
 import {Plus} from 'lucide-react';
-import React, {useCallback, useMemo, useState} from 'react';
-import {ChartBuilderContent} from './ChartBuilderContent';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
-  ChartBuilderContext,
-  useChartBuilderContext,
-} from './ChartBuilderContext';
-import type {ChartBuilderColumn, ChartBuilderTemplate} from './types';
-
-// ---------------------------------------------------------------------------
-// Root
-// ---------------------------------------------------------------------------
+  createChartBuilderTemplates,
+  createDefaultChartBuilders,
+} from './builders';
+import {ChartBuilderContent} from './ChartBuilderContent';
+import {ChartBuilderContext} from './ChartBuilderContext';
+import {createChartBuilderStore} from './createChartBuilderStore';
+import {getAvailableChartTypes} from './chartTypeUtils';
+import type {
+  ChartBuilderColumn,
+  ChartBuilderTemplate,
+  ChartTypeDefinition,
+} from './types';
 
 export interface ChartBuilderRootProps {
   /** Table name to use in generated specs */
@@ -29,7 +32,9 @@ export interface ChartBuilderRootProps {
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (spec: Spec, title: string) => void;
-  /** Custom builders (defaults to all built-in builders) */
+  /** Preferred shared chart-type customization surface */
+  chartTypes?: ChartTypeDefinition[];
+  /** Backward-compatible UI template customization surface */
   builders?: ChartBuilderTemplate[];
   /** Controlled open state */
   open?: boolean;
@@ -48,17 +53,51 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   tableName,
   columns,
   onCreateChart,
+  chartTypes,
   builders,
   open,
   onOpenChange,
   children,
 }) => {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const [store] = useState(() => createChartBuilderStore());
   const isControlled = open !== undefined;
   const resolvedOpen = isControlled ? open : uncontrolledOpen;
   const resolvedOnOpenChange = isControlled
     ? (onOpenChange ?? (() => {}))
     : setUncontrolledOpen;
+
+  const resolvedTemplates = useMemo(() => {
+    if (chartTypes) {
+      return createChartBuilderTemplates(chartTypes);
+    }
+    if (builders) {
+      return builders;
+    }
+    return createDefaultChartBuilders();
+  }, [builders, chartTypes]);
+
+  const availableChartTypes = useMemo(
+    () => getAvailableChartTypes(resolvedTemplates, columns),
+    [columns, resolvedTemplates],
+  );
+  const availableTemplates = useMemo(
+    () =>
+      resolvedTemplates.filter((template) =>
+        availableChartTypes.some((chartType) => chartType.id === template.id),
+      ),
+    [availableChartTypes, resolvedTemplates],
+  );
+
+  useEffect(() => {
+    const {selectedTemplateId, reset} = store.getState();
+    if (
+      selectedTemplateId &&
+      !availableTemplates.some((template) => template.id === selectedTemplateId)
+    ) {
+      reset();
+    }
+  }, [availableTemplates, store]);
 
   const handleCreateChart = useCallback(
     (spec: Spec, title: string) => {
@@ -69,8 +108,24 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   );
 
   const ctx = useMemo(
-    () => ({tableName, columns, onCreateChart: handleCreateChart, builders}),
-    [tableName, columns, handleCreateChart, builders],
+    () => ({
+      tableName,
+      columns,
+      onCreateChart: handleCreateChart,
+      templates: resolvedTemplates,
+      availableChartTypes,
+      availableTemplates,
+      store,
+    }),
+    [
+      availableChartTypes,
+      availableTemplates,
+      columns,
+      handleCreateChart,
+      resolvedTemplates,
+      store,
+      tableName,
+    ],
   );
 
   return (
@@ -82,19 +137,8 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   );
 };
 
-// ---------------------------------------------------------------------------
-// Trigger
-// ---------------------------------------------------------------------------
-
 export type ChartBuilderTriggerProps = ButtonProps;
 
-/**
- * Default trigger button that opens the chart-builder dialog.
- *
- * Renders inside a Radix `DialogTrigger`, so it automatically toggles the
- * dialog. All `ButtonProps` are forwarded, allowing full customization of
- * variant, size, className, children, etc.
- */
 export const ChartBuilderTrigger = React.forwardRef<
   HTMLButtonElement,
   ChartBuilderTriggerProps
@@ -114,16 +158,13 @@ export const ChartBuilderTrigger = React.forwardRef<
 });
 ChartBuilderTrigger.displayName = 'ChartBuilderTrigger';
 
-// ---------------------------------------------------------------------------
-// Dialog (content pane)
-// ---------------------------------------------------------------------------
-
 export interface ChartBuilderDialogContentProps {
   /** Override dialog title (default "Add Chart") */
   title?: string;
   /** Override dialog description */
   description?: string;
   className?: string;
+  children?: React.ReactNode;
 }
 
 /**
@@ -136,29 +177,18 @@ export const ChartBuilderDialogContent: React.FC<
   title = 'Add Chart',
   description = 'Select a chart type to create.',
   className,
+  children,
 }) => {
-  const {tableName, columns, onCreateChart, builders} =
-    useChartBuilderContext();
-
   return (
     <DialogContent className={className ?? 'sm:max-w-lg'}>
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
-      <ChartBuilderContent
-        tableName={tableName}
-        columns={columns}
-        onCreateChart={onCreateChart}
-        builders={builders}
-      />
+      {children ?? <ChartBuilderContent />}
     </DialogContent>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Legacy one-shot component (kept for backward compatibility)
-// ---------------------------------------------------------------------------
 
 export interface ChartBuilderDialogProps {
   /** Whether the dialog is open */
@@ -171,7 +201,9 @@ export interface ChartBuilderDialogProps {
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (spec: Spec, title: string) => void;
-  /** Custom builders (defaults to all built-in builders) */
+  /** Preferred shared chart-type customization surface */
+  chartTypes?: ChartTypeDefinition[];
+  /** Backward-compatible UI template customization surface */
   builders?: ChartBuilderTemplate[];
 }
 
@@ -192,6 +224,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   tableName,
   columns,
   onCreateChart,
+  chartTypes,
   builders,
 }) => (
   <ChartBuilderRoot
@@ -200,6 +233,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     tableName={tableName}
     columns={columns}
     onCreateChart={onCreateChart}
+    chartTypes={chartTypes}
     builders={builders}
   >
     <ChartBuilderDialogContent />

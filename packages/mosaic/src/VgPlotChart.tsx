@@ -43,7 +43,13 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
           } else if (isSpecProps(props)) {
             const ast = await parseSpec(props.spec);
             if (cancelled) return;
-            const options = props.params ? {params: props.params} : undefined;
+            const options = props.params
+              ? ({
+                  // Mosaic selections are valid runtime params for astToDOM,
+                  // but the upstream type currently narrows this map to Param.
+                  params: props.params as unknown as Map<string, Param<any>>,
+                } satisfies {params: Map<string, Param<any>>})
+              : undefined;
             element = (await astToDOM(ast, options)).element;
           } else {
             element = document.createElement('div');

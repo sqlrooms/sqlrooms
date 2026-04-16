@@ -52,7 +52,7 @@ import {
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
-  DASHBOARD_AI_INSTRUCTIONS,
+  getDashboardAiInstructions,
 } from './createDashboardAiTools';
 import {
   createDashboardCommands,
@@ -323,7 +323,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
