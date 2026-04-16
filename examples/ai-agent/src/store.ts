@@ -40,9 +40,7 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
           return `You are an AI assistant that can answer questions and help with tasks.`;
         },
 
-        // Add custom tools
         tools: {
-          // Example of using an agent as a tool
           'agent-weather': weatherAgentTool(store),
         },
       })(set, get, store),

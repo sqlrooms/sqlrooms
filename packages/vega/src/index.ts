@@ -16,6 +16,7 @@ export type {SignalListenerHandler, SignalValue} from 'vega';
 
 export {
   createVegaChartTool,
+  createSqlValidator,
   VegaChartToolParameters,
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';

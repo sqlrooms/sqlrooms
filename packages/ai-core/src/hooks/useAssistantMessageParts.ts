@@ -40,7 +40,7 @@ export function useAssistantMessageParts(
     for (let i = userMessageIndex + 1; i < uiMessages.length; i++) {
       const msg = uiMessages[i];
       if (msg?.role === 'assistant') {
-        return msg.parts;
+        return msg.parts as UIMessagePart[];
       }
       if (msg?.role === 'user') {
         // Hit next user message without finding assistant response
