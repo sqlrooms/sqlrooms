@@ -3,7 +3,7 @@ import {X} from 'lucide-react';
 import {FC, useCallback, useContext} from 'react';
 import {MosaicContext, MosaicWindowContext} from 'react-mosaic-component';
 
-export const MosaicCloseButton: FC = () => {
+export const MosaicLayoutTileCloseButton: FC = () => {
   const {mosaicWindowActions} = useContext(MosaicWindowContext);
   const {mosaicActions} = useContext(MosaicContext);
 

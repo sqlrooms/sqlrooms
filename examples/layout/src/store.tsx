@@ -21,6 +21,7 @@ import {DashboardTabs} from './panels/DashboardTabs';
 import {RoomPanelTypes} from './panels/panel-types';
 import {MainPanel} from './panels/MainPanel';
 import {BottomTabs} from './panels/BottomTabs';
+import {DashboardPanel} from './panels/DashboardPanel';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
@@ -132,6 +133,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         panels: {
           'dashboards/{dashboardId}': {
             icon: BarChart3Icon,
+            component: DashboardPanel,
           },
           'dashboards/{dashboardId}/{chartId}': {
             icon: BarChart3Icon,

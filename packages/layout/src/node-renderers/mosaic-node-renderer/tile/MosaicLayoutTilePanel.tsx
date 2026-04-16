@@ -22,11 +22,11 @@ export const MosaicLayoutTilePanel: FC<MosaicLayoutTilePanelProps> = ({
     const toolbar = toolbarRenderer ? (
       toolbarRenderer()
     ) : (
-      <MosaicLayoutTileToolbar panelId={panelId} />
+      <MosaicLayoutTileToolbar />
     );
 
     return <div className="flex w-full flex-1">{toolbar}</div>;
-  }, [toolbarRenderer, panelId]);
+  }, [toolbarRenderer]);
 
   if (!draggable) {
     return <>{children}</>;

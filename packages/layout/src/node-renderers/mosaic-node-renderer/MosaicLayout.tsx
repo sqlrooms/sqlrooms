@@ -7,6 +7,8 @@ import {MosaicLayoutPanel} from './MosaicLayoutPanel';
 import {MosaicLayoutTileContent} from './tile/MosaicLayoutTileContent';
 import {MosaicLayoutTilePanel} from './tile/MosaicLayoutTilePanel';
 import {MosaicLayoutTileToolbar} from './tile/MosaicLayoutTileToolbar';
+import {MosaicLayoutTileCloseButton} from './tile/MosaicLayoutTileCloseButton';
+import {useMosaicLayoutTileContext} from './tile/MosaicLayoutTileContext';
 
 interface RootProps {
   node: LayoutMosaicNode;
@@ -39,4 +41,6 @@ export const MosaicLayout = {
   TilePanel: MosaicLayoutTilePanel,
   TileContent: MosaicLayoutTileContent,
   TileToolbar: MosaicLayoutTileToolbar,
+  TileCloseButton: MosaicLayoutTileCloseButton,
+  useTileContext: useMosaicLayoutTileContext,
 };

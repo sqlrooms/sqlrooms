@@ -1,32 +1,21 @@
-import {FC, PropsWithChildren} from 'react';
-import {MosaicCloseButton} from './MosaicCloseButton';
-import {useGetPanelByPath} from '../../../useGetPanel';
-import {useMosaicNodeContext} from '../../../LayoutNodeContext';
+import {FC} from 'react';
+import {MosaicLayoutTileCloseButton} from './MosaicLayoutTileCloseButton';
+import {useMosaicLayoutTileContext} from './MosaicLayoutTileContext';
 
-export type MosaicLayoutTilePanelProps = PropsWithChildren<{
-  panelId: string;
-}>;
-
-export const MosaicLayoutTileToolbar: FC<MosaicLayoutTilePanelProps> = ({
-  panelId,
-}) => {
-  const {path} = useMosaicNodeContext();
-
-  const currentPath = [...path, panelId];
-
-  const panel = useGetPanelByPath(currentPath);
+export const MosaicLayoutTileToolbar: FC = () => {
+  const {panel, panelId} = useMosaicLayoutTileContext();
 
   const title = panel?.title ?? panelId;
   const Icon = panel?.icon;
 
   return (
-    <div className="mosaic-window-toolbar flex w-full items-center justify-between">
-      <div className="mosaic-window-title flex items-center">
+    <div className="flex w-full items-center justify-between p-2">
+      <div className="flex items-center">
         {Icon && <Icon className="mr-2 h-4 w-4" />}
         {title}
       </div>
-      <div className="mosaic-window-controls flex items-center">
-        <MosaicCloseButton />
+      <div className="flex items-center">
+        <MosaicLayoutTileCloseButton />
       </div>
     </div>
   );
