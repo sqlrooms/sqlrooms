@@ -19,6 +19,7 @@ import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 import {DashboardTabs} from './panels/DashboardTabs';
 import {RoomPanelTypes} from './panels/panel-types';
+import {MainPanel} from './panels/MainPanel';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
@@ -155,6 +156,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             title: 'Results',
             component: ResultsPanel,
             icon: TableRowsSplitIcon,
+          },
+          [RoomPanelTypes.enum['main']]: {
+            component: MainPanel,
           },
         },
       },

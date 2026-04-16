@@ -102,4 +102,5 @@ export type {
 
 // Node renderers
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
+export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {extractPanelId} from './node-renderers/utils';

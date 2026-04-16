@@ -1,12 +1,11 @@
 import {LayoutNodeSize} from '@sqlrooms/layout-config';
 import {MOSAIC_NODE_KEY_PREFIX} from '../mosaic/mosaic-utils';
-import {ResizablePanelOrientation} from '@sqlrooms/ui';
 
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
-  orientation: ResizablePanelOrientation,
+  direction: 'row' | 'column',
 ): React.CSSProperties {
-  return orientation === 'vertical'
+  return direction === 'column'
     ? {
         height: (size.defaultSize ?? 'auto') as string | number | undefined,
         minHeight: size.minSize,

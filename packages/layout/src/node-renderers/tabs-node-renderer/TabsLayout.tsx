@@ -37,11 +37,7 @@ const Root: FC<NodeProps> = ({node, path, parentDirection}) => {
       parentDirection={parentDirection}
     >
       <div className="relative flex h-full w-full flex-col">
-        <RendererSwitcher
-          node={node}
-          path={path}
-          defaultComponent={defaultComponent}
-        />
+        <RendererSwitcher path={path} defaultComponent={defaultComponent} />
       </div>
     </LayoutNodeProvider>
   );
