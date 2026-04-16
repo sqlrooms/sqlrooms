@@ -2,8 +2,8 @@ import {
   getLayoutNodeId,
   RoomPanelComponent,
   SplitLayout,
+  useSplitNodeContext,
 } from '@sqlrooms/layout';
-import {useSplitNodeContext} from '@sqlrooms/layout/dist/LayoutNodeContext';
 
 export const MainPanel: RoomPanelComponent = () => {
   const {node} = useSplitNodeContext();

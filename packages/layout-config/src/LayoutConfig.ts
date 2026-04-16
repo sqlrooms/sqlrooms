@@ -1,6 +1,5 @@
 import {z} from 'zod';
 import {LayoutDirection} from './common';
-import {LayoutMosaicSubNode} from './LayoutMosaicSubNode';
 import {migrate} from './migrate';
 
 /** Main view room panel key */
@@ -79,27 +78,6 @@ export type LayoutTabsNode = z.infer<typeof BaseLayoutTabsNode> & {
 };
 
 // ---------------------------------------------------------------------------
-// Mosaic node — drag-and-drop sub-layout (rendered via react-mosaic)
-// ---------------------------------------------------------------------------
-
-const BaseLayoutMosaicNode = z.object({
-  type: z.literal('mosaic'),
-  id: z.string(),
-  draggable: z.boolean().optional(),
-  direction: LayoutDirection.optional(),
-  collapsed: z.boolean().optional(),
-  ...LayoutNodeSize.shape,
-});
-
-export const LayoutMosaicNode = BaseLayoutMosaicNode.extend({
-  layout: z.lazy(() => LayoutMosaicSubNode.nullable()),
-});
-
-export type LayoutMosaicNode = z.infer<typeof BaseLayoutMosaicNode> & {
-  layout: LayoutMosaicSubNode | null;
-};
-
-// ---------------------------------------------------------------------------
 // Composite LayoutNode union — accepts legacy formats via preprocess
 // ---------------------------------------------------------------------------
 
@@ -107,18 +85,11 @@ export type LayoutNode =
   | LayoutNodeKey
   | LayoutPanelNode
   | LayoutSplitNode
-  | LayoutTabsNode
-  | LayoutMosaicNode;
+  | LayoutTabsNode;
 
 export const LayoutNode = z.preprocess(
   migrate,
-  z.union([
-    LayoutNodeKey,
-    LayoutPanelNode,
-    LayoutSplitNode,
-    LayoutTabsNode,
-    LayoutMosaicNode,
-  ]),
+  z.union([LayoutNodeKey, LayoutPanelNode, LayoutSplitNode, LayoutTabsNode]),
 ) as z.ZodType<LayoutNode>;
 
 // ---------------------------------------------------------------------------
@@ -145,12 +116,6 @@ export function isLayoutTabsNode(
   node: LayoutNode | null | undefined,
 ): node is LayoutTabsNode {
   return node != null && typeof node === 'object' && node.type === 'tabs';
-}
-
-export function isLayoutMosaicNode(
-  node: LayoutNode | null | undefined,
-): node is LayoutMosaicNode {
-  return node != null && typeof node === 'object' && node.type === 'mosaic';
 }
 
 // ---------------------------------------------------------------------------

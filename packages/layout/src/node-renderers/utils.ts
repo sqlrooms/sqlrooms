@@ -3,7 +3,6 @@ import {
   LayoutNode,
   LayoutNodeSize,
 } from '@sqlrooms/layout-config';
-import {MOSAIC_NODE_KEY_PREFIX} from '../mosaic/mosaic-utils';
 
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
@@ -23,10 +22,6 @@ export function convertLayoutNodeSizeToStyle(
 }
 
 export function extractPanelId(tabId: string): string {
-  if (tabId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
-    return tabId.slice(MOSAIC_NODE_KEY_PREFIX.length);
-  }
-
   return tabId;
 }
 

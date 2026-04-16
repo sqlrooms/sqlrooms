@@ -10,27 +10,17 @@ export {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
-  LayoutMosaicNode,
   LayoutNode,
   LayoutConfig,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-  isLayoutMosaicNode,
   createDefaultLayout,
   LayoutNodeSize,
 } from './LayoutConfig';
 
 export {LayoutDirection} from './common';
-
-export {
-  LayoutMosaicSubNode,
-  LayoutMosaicPanelSubNode,
-  LayoutMosaicSplitSubNode,
-  isLayoutMosaicPanelSubNode,
-  isLayoutMosaicSplitSubNode,
-} from './LayoutMosaicSubNode';
 
 // Tabs node helpers
 export {

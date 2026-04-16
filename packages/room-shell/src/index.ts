@@ -36,7 +36,7 @@ export type {StateCreator, StoreApi} from 'zustand';
 export {DataSourceStatus} from './types';
 export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 
-export {getChildKey, getMosaicNodeKey, LayoutRenderer} from '@sqlrooms/layout';
+export {LayoutRenderer} from '@sqlrooms/layout';
 export type {
   LayoutPath,
   LayoutRendererProps,
@@ -148,12 +148,10 @@ export {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
-  LayoutMosaicNode,
   LayoutNode,
   LayoutConfig,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-  isLayoutMosaicNode,
   createDefaultLayout,
 } from '@sqlrooms/room-store';

@@ -1,10 +1,8 @@
 import {
-  isLayoutMosaicNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-  LayoutMosaicNode,
   LayoutNode,
   LayoutNodeKey,
   LayoutPanelNode,
@@ -28,12 +26,6 @@ export type LayoutNodeContextSplit = {
   parentDirection?: ParentDirection;
 };
 
-export type LayoutNodeContextMosaic = {
-  containerType: 'mosaic';
-  node: LayoutMosaicNode;
-  path: LayoutPath;
-};
-
 export type LayoutNodeContextPanel = {
   containerType: 'panel';
   node: LayoutPanelNode;
@@ -49,7 +41,6 @@ export type LayoutNodeContextLeaf = {
 export type LayoutNodeContextValue =
   | LayoutNodeContextTabs
   | LayoutNodeContextSplit
-  | LayoutNodeContextMosaic
   | LayoutNodeContextPanel
   | LayoutNodeContextLeaf;
 
@@ -97,16 +88,6 @@ export function useSplitNodeContext(): LayoutNodeContextSplit {
   return context;
 }
 
-export function useMosaicNodeContext(): LayoutNodeContextMosaic {
-  const context = useLayoutNodeContext();
-  if (context.containerType !== 'mosaic') {
-    throw new Error(
-      `useMosaicNodeContext expected containerType "mosaic", got "${context.containerType}"`,
-    );
-  }
-  return context;
-}
-
 export function getLayoutNodeContextValue(
   node: LayoutNode,
   path: LayoutPath,
@@ -122,10 +103,6 @@ export function getLayoutNodeContextValue(
 
   if (isLayoutTabsNode(node)) {
     return {containerType: 'tabs', node, path, parentDirection};
-  }
-
-  if (isLayoutMosaicNode(node)) {
-    return {containerType: 'mosaic', node, path};
   }
 
   throw new Error(`Unsupported node type: ${JSON.stringify(node)}`);

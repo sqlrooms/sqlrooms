@@ -10,8 +10,8 @@ npm install @sqlrooms/layout-config
 
 - `MAIN_VIEW`
 - `LayoutConfig` (`LayoutNode | null`)
-- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`, `LayoutMosaicNode`
-- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`, `isLayoutMosaicNode`
+- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`
+- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`
 - `createDefaultLayout()`
 
 ## Basic usage
@@ -48,7 +48,6 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
 | `panel`  | Leaf with sizing constraints (`defaultSize`, `minSize`, etc.) |
 | `split`  | Resizable panel group (rendered via `react-resizable-panels`) |
 | `tabs`   | Tabbed container with collapsible areas                       |
-| `mosaic` | Drag-and-drop sub-layout (rendered via `react-mosaic`)        |
 
 ### Panel node
 
@@ -99,4 +98,4 @@ createRoomShellSlice({
 
 ## Backward compatibility
 
-Deprecated `Mosaic*` type aliases (`MosaicLayoutConfig`, `MosaicLayoutNode`, `MosaicLayoutSplitNode`, etc.) are still exported for backward compatibility. The Zod schema uses `z.preprocess` to automatically migrate legacy formats (binary tree, outer `{ type: 'mosaic', nodes }` wrapper, `splitPercentages`) on parse.
+Legacy binary-tree split configs are still migrated via `z.preprocess`, but the old `mosaic` node shape is no longer part of the public schema.

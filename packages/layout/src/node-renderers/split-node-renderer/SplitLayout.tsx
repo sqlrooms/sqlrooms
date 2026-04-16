@@ -15,17 +15,19 @@ interface RootProps {
 
 const Root: FC<RootProps> = ({node, path}) => {
   const defaultComponent = (
-    <SplitLayout.PanelGroup>
-      {node.children.map((child, i) => {
-        const panelId = getLayoutNodeId(child);
+    <div className="relative h-full w-full" data-layout-split-id={node.id}>
+      <SplitLayout.PanelGroup>
+        {node.children.map((child, i) => {
+          const panelId = getLayoutNodeId(child);
 
-        return (
-          <SplitLayout.Panel key={panelId} node={child} nodeIndex={i}>
-            <SplitLayout.PanelContent node={child} />
-          </SplitLayout.Panel>
-        );
-      })}
-    </SplitLayout.PanelGroup>
+          return (
+            <SplitLayout.Panel key={panelId} node={child} nodeIndex={i}>
+              <SplitLayout.PanelContent node={child} />
+            </SplitLayout.Panel>
+          );
+        })}
+      </SplitLayout.PanelGroup>
+    </div>
   );
 
   return (

@@ -1,5 +1,4 @@
 import {
-  isLayoutMosaicNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
@@ -18,12 +17,6 @@ const SplitLayout = lazy(() =>
 const TabsLayout = lazy(() =>
   import('./tabs-node-renderer/TabsLayout').then((m) => ({
     default: m.TabsLayout.Root,
-  })),
-);
-
-const MosaicLayout = lazy(() =>
-  import('./mosaic-node-renderer/MosaicLayout').then((m) => ({
-    default: m.MosaicLayout.Root,
   })),
 );
 
@@ -51,7 +44,6 @@ export const LayoutNodeRenderer: FC<NodeRenderProps> = ({
       {isLayoutTabsNode(node) && (
         <TabsLayout node={node} path={path} parentDirection={parentDirection} />
       )}
-      {isLayoutMosaicNode(node) && <MosaicLayout node={node} path={path} />}
     </Suspense>
   );
 };

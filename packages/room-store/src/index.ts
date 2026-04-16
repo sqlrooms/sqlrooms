@@ -120,12 +120,10 @@ export {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
-  LayoutMosaicNode,
   LayoutNode,
   LayoutConfig,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-  isLayoutMosaicNode,
   createDefaultLayout,
 } from '@sqlrooms/room-config';

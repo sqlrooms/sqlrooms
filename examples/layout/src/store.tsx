@@ -2,7 +2,7 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutMosaicNode,
+  LayoutNode,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -12,16 +12,15 @@ import {
   TableRowsSplitIcon,
   TerminalIcon,
 } from 'lucide-react';
+import {BottomTabs} from './panels/BottomTabs';
 import {ConsolePanel} from './panels/ConsolePanel';
+import {DashboardTabs} from './panels/DashboardTabs';
 import {DataSourcesPanel} from './panels/DataSourcesPanel';
 import {DynamicChartPanel} from './panels/DynamicChartPanel';
+import {MainPanel} from './panels/MainPanel';
+import {RoomPanelTypes} from './panels/panel-types';
 import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
-import {DashboardTabs} from './panels/DashboardTabs';
-import {RoomPanelTypes} from './panels/panel-types';
-import {MainPanel} from './panels/MainPanel';
-import {BottomTabs} from './panels/BottomTabs';
-import {DashboardPanel} from './panels/DashboardPanel';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
@@ -39,6 +38,19 @@ function generateDashboardId(): string {
 function generateChartId(): string {
   chartCounter += 1;
   return `chart-${chartCounter}`;
+}
+
+function createDashboardNode(
+  dashboardId: string,
+  children: LayoutNode[],
+): LayoutNode {
+  return {
+    type: 'split',
+    id: dashboardId,
+    direction: 'row',
+    draggable: true,
+    children,
+  };
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -73,42 +85,58 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   type: 'tabs',
                   id: RoomPanelTypes.enum['dashboards'],
                   children: [
-                    {
-                      type: 'mosaic',
-                      id: 'overview',
-                      draggable: true,
-                      direction: 'row',
-                      layout: {
+                    createDashboardNode('overview', [
+                      {
                         type: 'split',
-                        direction: 'row',
+                        id: 'overview-left',
+                        direction: 'column',
+                        draggable: true,
                         children: [
                           {
-                            type: 'split',
-                            direction: 'column',
-                            children: ['sessions', 'conversions'],
-                            splitPercentages: [40, 60],
+                            type: 'panel',
+                            id: 'overview-sessions',
+                            defaultSize: '40%',
                           },
                           {
-                            type: 'split',
-                            direction: 'column',
-                            children: ['users', 'visits'],
-                            splitPercentages: [30, 70],
+                            type: 'panel',
+                            id: 'overview-conversions',
+                            defaultSize: '60%',
                           },
                         ],
+                        defaultSize: '50%',
                       },
-                    },
-                    {
-                      type: 'mosaic',
-                      id: 'growth',
-                      draggable: true,
-                      direction: 'row',
-                      layout: {
+                      {
                         type: 'split',
-                        direction: 'row',
-                        children: ['sessions', 'conversions'],
-                        splitPercentages: [60, 40],
+                        id: 'overview-right',
+                        direction: 'column',
+                        draggable: true,
+                        children: [
+                          {
+                            type: 'panel',
+                            id: 'overview-users',
+                            defaultSize: '30%',
+                          },
+                          {
+                            type: 'panel',
+                            id: 'overview-visits',
+                            defaultSize: '70%',
+                          },
+                        ],
+                        defaultSize: '50%',
                       },
-                    },
+                    ]),
+                    createDashboardNode('growth', [
+                      {
+                        type: 'panel',
+                        id: 'growth-sessions',
+                        defaultSize: '60%',
+                      },
+                      {
+                        type: 'panel',
+                        id: 'growth-conversions',
+                        defaultSize: '40%',
+                      },
+                    ]),
                   ],
                   activeTabIndex: 0,
                 },
@@ -133,7 +161,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         panels: {
           'dashboards/{dashboardId}': {
             icon: BarChart3Icon,
-            component: DashboardPanel,
+            title: 'Dashboard',
           },
           'dashboards/{dashboardId}/{chartId}': {
             icon: BarChart3Icon,
@@ -178,23 +206,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       const dashboardId = generateDashboardId();
       const chartId = generateChartId();
 
-      const mosaicNode: LayoutMosaicNode = {
-        type: 'mosaic',
-        id: dashboardId,
-        draggable: true,
-        direction: 'row',
-        layout: chartId,
-      };
-
-      addTab(tabsId, mosaicNode);
+      addTab(tabsId, createDashboardNode(dashboardId, [chartId]));
     },
 
     addChartToDashboard: (dashboardId: string) => {
-      const {addChildToMosaic} = get().layout;
+      const {addChildToSplit} = get().layout;
 
       const chartId = generateChartId();
 
-      addChildToMosaic(dashboardId, chartId);
+      addChildToSplit(dashboardId, chartId);
     },
   }),
 );

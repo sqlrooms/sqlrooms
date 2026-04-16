@@ -1,10 +1,10 @@
-import {LayoutConfig} from '@sqlrooms/layout-config';
 import type {
   LayoutNode,
   LayoutSplitNode,
   LayoutTabsNode,
 } from '@sqlrooms/layout-config';
-import type {Panels, PanelDefinition} from './types';
+import {LayoutConfig} from '@sqlrooms/layout-config';
+import type {PanelDefinition, Panels} from './types';
 
 // ---------------------------------------------------------------------------
 // Config types
@@ -59,8 +59,6 @@ export type LayoutSliceState = {
     unregisterPanel: (panelId: string) => void;
     /** Add a panel as a child of a named split node */
     addChildToSplit: (splitId: string, panelId: string) => void;
-    /** Add a panel as a child of a named nested mosaic node */
-    addChildToMosaic: (mosaicId: string, panelId: string) => void;
     /** Find the nearest ancestor of a given type for a node */
     findAncestorOfType: (
       nodeId: string,

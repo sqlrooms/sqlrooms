@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
-import {findTabsNodeForPanel} from './mosaic/mosaic-utils';
+import {findTabsNodeForPanel} from './layout-tree';
 import type {Panels, RoomPanelInfo} from './types';
 import type {LayoutSliceState} from './layout-slice-types';
 
