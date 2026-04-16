@@ -141,6 +141,9 @@ importers:
 
   apps/sqlrooms-cli-ui:
     dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.0.0
+        version: 3.0.4
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai

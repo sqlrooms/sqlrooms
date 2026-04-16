@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
