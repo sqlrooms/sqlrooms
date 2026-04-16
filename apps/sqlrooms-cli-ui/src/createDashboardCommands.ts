@@ -1,3 +1,4 @@
+import type {SheetType} from '@sqlrooms/cells';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
@@ -6,21 +7,25 @@ import {parseVgPlotSpecString} from './vgplot';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
 
-const DashboardCreateSheetCommandInput = z
+// ---------------------------------------------------------------------------
+// Shared input schemas for generic sheet commands
+// ---------------------------------------------------------------------------
+
+const CreateSheetCommandInput = z
   .object({
-    title: z.string().optional().describe('Optional dashboard sheet title.'),
+    title: z.string().optional().describe('Optional sheet title.'),
   })
   .default({});
-type DashboardCreateSheetCommandInput = z.infer<
-  typeof DashboardCreateSheetCommandInput
->;
+type CreateSheetCommandInput = z.infer<typeof CreateSheetCommandInput>;
 
-const DashboardSelectSheetCommandInput = z.object({
-  sheetId: z.string().describe('Target dashboard sheet ID.'),
+const SelectSheetCommandInput = z.object({
+  sheetId: z.string().describe('Target sheet ID.'),
 });
-type DashboardSelectSheetCommandInput = z.infer<
-  typeof DashboardSelectSheetCommandInput
->;
+type SelectSheetCommandInput = z.infer<typeof SelectSheetCommandInput>;
+
+// ---------------------------------------------------------------------------
+// Dashboard-specific input schemas
+// ---------------------------------------------------------------------------
 
 const DashboardSetVgPlotCommandInput = z.object({
   sheetId: z
@@ -47,67 +52,121 @@ type DashboardGetVgPlotCommandInput = z.infer<
   typeof DashboardGetVgPlotCommandInput
 >;
 
+// ---------------------------------------------------------------------------
+// Generic create-sheet helper per sheet type
+// ---------------------------------------------------------------------------
+
+function createSheetCommand(
+  sheetType: SheetType,
+  group: string,
+): RoomCommand<RoomState> {
+  const id = `${sheetType}.create-sheet`;
+  return {
+    id,
+    name: `Create ${group.toLowerCase()} sheet`,
+    description: `Create a new ${group.toLowerCase()} sheet and select it`,
+    group,
+    keywords: [sheetType, 'sheet', 'create', 'new'],
+    inputSchema: CreateSheetCommandInput,
+    inputDescription: `Optional title for the ${group.toLowerCase()} sheet.`,
+    metadata: {
+      readOnly: false,
+      idempotent: false,
+      riskLevel: 'low',
+    },
+    execute: ({getState}, input) => {
+      const {title} = (input as CreateSheetCommandInput | undefined) ?? {};
+      const sheetId = getState().cells.addSheet(title, sheetType);
+      getState().cells.setCurrentSheet(sheetId);
+      return {
+        success: true,
+        commandId: id,
+        message: `Created ${group.toLowerCase()} sheet "${sheetId}".`,
+        data: {sheetId},
+      };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard-specific create command (uses dashboard slice for extra state)
+// ---------------------------------------------------------------------------
+
+function createDashboardCreateSheetCommand(): RoomCommand<RoomState> {
+  return {
+    id: 'dashboard.create-sheet',
+    name: 'Create dashboard sheet',
+    description: 'Create a new dashboard sheet and select it',
+    group: 'Dashboard',
+    keywords: ['dashboard', 'sheet', 'create', 'new'],
+    inputSchema: CreateSheetCommandInput,
+    inputDescription: 'Optional title for the dashboard sheet.',
+    metadata: {
+      readOnly: false,
+      idempotent: false,
+      riskLevel: 'low',
+    },
+    execute: ({getState}, input) => {
+      const {title} = (input as CreateSheetCommandInput | undefined) ?? {};
+      const sheetId = getState().dashboard.createDashboardSheet(title);
+      return {
+        success: true,
+        commandId: 'dashboard.create-sheet',
+        message: `Created dashboard sheet "${sheetId}".`,
+        data: {sheetId},
+      };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Public factory
+// ---------------------------------------------------------------------------
+
 export function createDashboardCommands(): RoomCommand<RoomState>[] {
   return [
+    // Universal select (works for any sheet type)
     {
-      id: 'dashboard.create-sheet',
-      name: 'Create dashboard sheet',
-      description: 'Create a new dashboard sheet and select it',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'sheet', 'create', 'new'],
-      inputSchema: DashboardCreateSheetCommandInput,
-      inputDescription: 'Optional title for the dashboard sheet.',
-      metadata: {
-        readOnly: false,
-        idempotent: false,
-        riskLevel: 'low',
-      },
-      execute: ({getState}, input) => {
-        const {title} =
-          (input as DashboardCreateSheetCommandInput | undefined) ?? {};
-        const sheetId = getState().dashboard.createDashboardSheet(title);
-        return {
-          success: true,
-          commandId: 'dashboard.create-sheet',
-          message: `Created dashboard sheet "${sheetId}".`,
-          data: {sheetId},
-        };
-      },
-    },
-    {
-      id: 'dashboard.select-sheet',
-      name: 'Select dashboard sheet',
-      description: 'Switch current sheet to a dashboard sheet',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'sheet', 'select', 'switch'],
-      inputSchema: DashboardSelectSheetCommandInput,
-      inputDescription: 'Provide the dashboard sheet ID.',
+      id: 'sheet.select',
+      name: 'Select sheet',
+      description: 'Switch to an existing sheet by ID',
+      group: 'Sheets',
+      keywords: ['sheet', 'select', 'switch'],
+      inputSchema: SelectSheetCommandInput,
+      inputDescription: 'Provide the sheet ID.',
       metadata: {
         readOnly: false,
         idempotent: true,
         riskLevel: 'low',
       },
       validateInput: (input, {getState}) => {
-        const {sheetId} = input as DashboardSelectSheetCommandInput;
+        const {sheetId} = input as SelectSheetCommandInput;
         const sheet = getState().cells.config.sheets[sheetId];
         if (!sheet) {
           throw new Error(`Unknown sheet "${sheetId}".`);
         }
-        if (sheet.type !== 'dashboard') {
-          throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
-        }
       },
       execute: ({getState}, input) => {
-        const {sheetId} = input as DashboardSelectSheetCommandInput;
-        getState().cells.setCurrentSheet(sheetId);
-        getState().dashboard.ensureSheetDashboard(sheetId);
+        const {sheetId} = input as SelectSheetCommandInput;
+        const state = getState();
+        state.cells.setCurrentSheet(sheetId);
+        const sheet = state.cells.config.sheets[sheetId];
+        if (sheet?.type === 'dashboard') {
+          state.dashboard.ensureSheetDashboard(sheetId);
+        }
         return {
           success: true,
-          commandId: 'dashboard.select-sheet',
-          message: `Selected dashboard sheet "${sheetId}".`,
+          commandId: 'sheet.select',
+          message: `Selected sheet "${sheetId}".`,
         };
       },
     },
+
+    // Per-type create commands
+    createSheetCommand('notebook', 'Notebook'),
+    createSheetCommand('canvas', 'Canvas'),
+    createSheetCommand('app', 'App'),
+    createDashboardCreateSheetCommand(),
     {
       id: 'dashboard.set-vgplot',
       name: 'Set dashboard vgplot',

@@ -3,11 +3,11 @@ import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import type {Spec} from '@sqlrooms/mosaic';
 import {astToDOM, parseSpec, VgPlotChart} from '@sqlrooms/mosaic';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
-import {AlertCircle, SparklesIcon} from 'lucide-react';
+import {AlertCircle} from 'lucide-react';
 import React from 'react';
 import {useRoomStore} from '../store';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC} from '../vgplot';
 import {getErrorMessage} from '../utils';
+import {DEFAULT_DASHBOARD_VGPLOT_SPEC} from '../vgplot';
 
 const VGPLOT_SCHEMA_URL = 'https://idl.uw.edu/mosaic/schema/latest.json';
 
@@ -104,7 +104,6 @@ export const DashboardSheet: React.FC = () => {
   const setSheetVgPlot = useRoomStore(
     (state) => state.dashboard.setSheetVgPlot,
   );
-  const setAssistantOpen = useRoomStore((state) => state.setAssistantOpen);
   const mosaicConnection = useRoomStore((state) => state.mosaic.connection);
 
   const schemaCacheRef = React.useRef<VgPlotSchemaCache>({
@@ -244,14 +243,6 @@ export const DashboardSheet: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setAssistantOpen(true)}
-            >
-              <SparklesIcon className="mr-1 h-4 w-4" />
-              Ask assistant
-            </Button>
             <Button
               size="sm"
               variant="outline"

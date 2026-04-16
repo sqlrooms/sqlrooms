@@ -3,7 +3,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -47,24 +46,30 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              first: RoomPanelTypes.enum['data'],
-              second: RoomPanelTypes.enum['main'],
-              direction: 'row',
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data'],
+                defaultSize: '30%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['main']]: {
               component: MainView,
-              placement: 'main',
             },
             [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               component: DataPanel,
               icon: DatabaseIcon,
-              placement: 'sidebar',
             },
           },
         },

@@ -56,16 +56,16 @@ export const MainView: FC = () => {
             url="https://motherduck.com/docs/sql-reference/"
           />
         </div>
-        <ResizablePanelGroup direction="vertical">
+        <ResizablePanelGroup orientation="vertical">
           <ResizablePanel
-            defaultSize={50}
+            defaultSize="50"
             // this is for Monaco's completion menu to not being cut off
             // className="overflow-visible!"
           >
             <QueryEditorPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={50}>
+          <ResizablePanel defaultSize="50">
             <QueryResultPanel
               renderActions={() => (
                 <div className="flex gap-2">

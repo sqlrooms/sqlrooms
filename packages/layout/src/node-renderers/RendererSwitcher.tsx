@@ -1,0 +1,23 @@
+import {FC, ReactNode} from 'react';
+import {LayoutPath} from '../types';
+import {useGetPanelInfoByPath} from '../useGetPanel';
+
+export type RendererSwitcherProps = {
+  path: LayoutPath;
+  defaultComponent?: ReactNode;
+};
+
+export const RendererSwitcher: FC<RendererSwitcherProps> = ({
+  path,
+  defaultComponent,
+}) => {
+  const panelInfo = useGetPanelInfoByPath(path);
+
+  const CustomRenderer = panelInfo?.panel.component;
+
+  if (CustomRenderer) {
+    return <CustomRenderer panelInfo={panelInfo} />;
+  }
+
+  return defaultComponent;
+};

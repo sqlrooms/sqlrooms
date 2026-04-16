@@ -36,7 +36,7 @@ import React, {
 const DRAG_MODIFIERS = [restrictToHorizontalAxis, restrictToParentElement];
 
 import {cn} from '../lib/utils';
-import {Button} from './button';
+import {Button, ButtonProps} from './button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +78,7 @@ interface TabStripContextValue {
   selectedTabId?: string | null;
   openTabs?: string[];
   preventCloseLastTab: boolean;
+  closeable: boolean;
   getLastOpenedAt: (tabId: string) => number | undefined;
 
   // Callbacks
@@ -122,7 +123,7 @@ interface SortableTabProps {
   tab: TabDescriptor;
   tabClassName?: string;
   editingTabId: string | null;
-  hideCloseButton?: boolean;
+  closeable?: boolean;
   onClose: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
@@ -132,6 +133,12 @@ interface SortableTabProps {
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 }
 
+const TAB_STRIP_BUTTON_CLASSNAMES = [
+  'flex h-full min-w-0 min-h-7 items-center',
+  'hover:bg-primary/10 overflow-hidden px-6 py-1 font-normal',
+  'focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-inset',
+];
+
 /**
  * A single sortable tab item.
  */
@@ -139,7 +146,7 @@ function SortableTab({
   tab,
   tabClassName,
   editingTabId,
-  hideCloseButton,
+  closeable = true,
   onClose,
   onStartEditing,
   onStopEditing,
@@ -189,11 +196,9 @@ function SortableTab({
             tabIndex={editingTabId === tab.id ? -1 : undefined}
             data-editing={editingTabId === tab.id ? '' : undefined}
             className={cn(
-              'flex h-full min-w-0 flex-1 items-center justify-start gap-1',
-              'hover:bg-primary/10 overflow-hidden px-6 py-1 font-normal',
-              'min-h-7',
+              ...TAB_STRIP_BUTTON_CLASSNAMES,
+              'flex-1 justify-start gap-1',
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
-              'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-inset',
               editingTabId === tab.id && 'focus-visible:ring-0',
             )}
             onDoubleClick={() => onStartEditing(tab.id)}
@@ -227,7 +232,7 @@ function SortableTab({
                   <button
                     type="button"
                     aria-label="Tab options"
-                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
+                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
                     onMouseDown={(event) => {
                       event.stopPropagation();
                       event.preventDefault();
@@ -245,11 +250,11 @@ function SortableTab({
               </DropdownMenu>
             )}
 
-            {!hideCloseButton && (
+            {closeable && (
               <button
                 type="button"
                 aria-label="Close tab"
-                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
+                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
                 onMouseDown={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
@@ -368,6 +373,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     renderTabMenu,
     renderTabLabel,
     preventCloseLastTab,
+    closeable,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
@@ -411,11 +417,11 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     >
       <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
         <ScrollableRow
-          className="h-full min-w-0 flex-1"
+          className="h-full min-w-0 shrink overflow-hidden"
           scrollRef={scrollContainerRef}
           scrollClassName={cn(
             'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible',
-            'py-1 pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
+            'pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
             className,
           )}
           arrowVisibility="always"
@@ -428,7 +434,9 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               tab={tab}
               tabClassName={tabClassName}
               editingTabId={editingTabId}
-              hideCloseButton={preventCloseLastTab && openTabItems.length === 1}
+              closeable={
+                closeable && !(preventCloseLastTab && openTabItems.length === 1)
+              }
               onClose={handleClose}
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
@@ -575,7 +583,8 @@ function TabStripSearchDropdown({
       <Button
         variant="ghost"
         aria-label="Browse tabs"
-        className={cn('hover:bg-primary/10 h-full shrink-0', triggerClassName)}
+        size="icon"
+        className={cn(...TAB_STRIP_BUTTON_CLASSNAMES, triggerClassName)}
       >
         {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
       </Button>
@@ -747,16 +756,33 @@ function DropdownTabItems({
   );
 }
 
-interface TabStripNewButtonProps {
-  className?: string;
+/**
+ * Renders a button to create a new tab.
+ */
+function TabStripButton({className, ...props}: ButtonProps) {
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      aria-label="Create new tab"
+      className={cn(
+        ...TAB_STRIP_BUTTON_CLASSNAMES,
+        'h-full shrink-0',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+type TabStripNewButtonProps = ButtonProps & {
   /** Optional tooltip content for the button. */
   tooltip?: React.ReactNode;
-}
+};
 
 /**
  * Renders a button to create a new tab.
  */
-function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
+function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
   const {onCreate} = useTabStripContext();
 
   if (!onCreate) {
@@ -764,15 +790,13 @@ function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
   }
 
   const button = (
-    <Button
-      size="icon"
-      variant="ghost"
+    <TabStripButton
       aria-label="Create new tab"
       onClick={() => onCreate()}
-      className={cn('hover:bg-primary/10 h-full shrink-0', className)}
+      {...props}
     >
       <PlusIcon className="h-4 w-4" />
-    </Button>
+    </TabStripButton>
   );
 
   if (tooltip) {
@@ -805,6 +829,8 @@ export interface TabStripProps {
   selectedTabId?: string | null;
   /** If true, hides the close button when only one tab remains open. */
   preventCloseLastTab?: boolean;
+  /** Whether tabs can be closed. Defaults to true. */
+  closeable?: boolean;
   /** Called when a tab is closed (hidden, can be reopened). */
   onClose?: (tabId: string) => void;
   /** Called when the list of open tabs changes (open from dropdown or reorder). */
@@ -854,6 +880,7 @@ function TabStripRoot({
   openTabs,
   selectedTabId,
   preventCloseLastTab = false,
+  closeable = true,
   onClose,
   onOpenTabsChange,
   onSelect,
@@ -1034,6 +1061,7 @@ function TabStripRoot({
     selectedTabId,
     openTabs,
     preventCloseLastTab,
+    closeable,
     getLastOpenedAt: (tabId) => lastOpenedAtRef.current.get(tabId),
     onOpenTabsChange,
     onSelect,
@@ -1064,7 +1092,7 @@ function TabStripRoot({
       <TabStripContext.Provider value={contextValue}>
         <TabsList
           className={cn(
-            'flex h-9 w-full min-w-0 items-center justify-start gap-2 overflow-visible bg-transparent p-0',
+            'flex h-9 w-full min-w-0 items-center justify-start gap-2 overflow-visible bg-transparent p-1',
             tabsListClassName,
           )}
         >
@@ -1085,6 +1113,7 @@ function TabStripRoot({
 export const TabStrip = Object.assign(TabStripRoot, {
   Tabs: TabStripTabs,
   SearchDropdown: TabStripSearchDropdown,
+  Button: TabStripButton,
   NewButton: TabStripNewButton,
   MenuItem: TabStripMenuItem,
   MenuSeparator: TabStripMenuSeparator,

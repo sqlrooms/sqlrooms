@@ -21,9 +21,11 @@ export {RoomPanel} from './panels/RoomPanel';
 export {RoomPanelHeader} from './panels/RoomPanelHeader';
 
 export {
+  AreaPanelButtons,
   RoomShellSidebarButton,
   RoomShellSidebarButtons,
   SidebarButton,
+  TabButtons,
 } from './RoomShellSidebarButtons';
 
 export {createRoomShellSlice, useBaseRoomShellStore} from './RoomShellSlice';
@@ -34,15 +36,20 @@ export type {StateCreator, StoreApi} from 'zustand';
 export {DataSourceStatus} from './types';
 export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 
-export type {RoomPanelInfo} from '@sqlrooms/layout';
+export {getChildKey, getMosaicNodeKey, LayoutRenderer} from '@sqlrooms/layout';
+export type {
+  LayoutPath,
+  LayoutRendererProps,
+  RoomPanelInfo,
+} from '@sqlrooms/layout';
 
 // Re-export from @sqlrooms/room-store
 export {
   createBaseRoomSlice,
   createBaseSlice,
-  createCommandSlice,
   createCommandCliAdapter,
   createCommandMcpAdapter,
+  createCommandSlice,
   createPersistHelpers,
   createRoomCommandExecutionContext,
   createRoomSlice,
@@ -51,8 +58,8 @@ export {
   createSlice,
   doesCommandRequireInput,
   exportCommandInputSchema,
-  getCommandKeystrokes,
   getCommandInputComponent,
+  getCommandKeystrokes,
   getCommandShortcut,
   hasCommandSliceState,
   invokeCommandFromStore,
@@ -66,8 +73,8 @@ export {
   RoomStateProvider,
   unregisterCommandsForOwner,
   useBaseRoomStore,
-  validateCommandInput,
   useRoomStoreApi,
+  validateCommandInput,
 } from '@sqlrooms/room-store';
 export type {
   BaseRoomStore,
@@ -78,32 +85,32 @@ export type {
   CommandMcpAdapterOptions,
   CommandMcpToolDescriptor,
   CommandSliceState,
-  CreateCommandSliceProps,
   CreateBaseRoomSliceProps,
-  RoomCommandDescriptor,
-  RoomCommandExecuteOutput,
-  RoomCommandKeystrokes,
-  RoomCommandInvocation,
-  RoomCommandInvokeFailureEvent,
-  RoomCommandInvokeErrorEvent,
-  RoomCommandInvocationOptions,
-  RoomCommandInvokeStartEvent,
-  RoomCommandInvokeSuccessEvent,
-  RoomCommandMiddleware,
-  RoomCommandMiddlewareNext,
+  CreateCommandSliceProps,
   RegisteredRoomCommand,
   RoomCommand,
+  RoomCommandDescriptor,
+  RoomCommandExecuteOutput,
+  RoomCommandExecutionContext,
   RoomCommandInputComponent,
   RoomCommandInputComponentProps,
+  RoomCommandInvocation,
+  RoomCommandInvocationOptions,
+  RoomCommandInvokeErrorEvent,
+  RoomCommandInvokeFailureEvent,
+  RoomCommandInvokeStartEvent,
+  RoomCommandInvokeSuccessEvent,
+  RoomCommandKeystrokes,
   RoomCommandListOptions,
+  RoomCommandMiddleware,
+  RoomCommandMiddlewareNext,
   RoomCommandPolicyMetadata,
   RoomCommandPortableSchema,
+  RoomCommandPredicate,
   RoomCommandResult,
   RoomCommandRiskLevel,
   RoomCommandSurface,
   RoomCommandUiMetadata,
-  RoomCommandExecutionContext,
-  RoomCommandPredicate,
   RoomStateProviderProps,
   UseRoomStore,
 } from '@sqlrooms/room-store';
@@ -114,37 +121,39 @@ export {useShallow} from 'zustand/react/shallow';
 export {createDbSlice} from '@sqlrooms/db';
 export type {DbSliceState} from '@sqlrooms/db';
 
-// Re-export from @sqlrooms/room-config (via room-store)
-// Values also export their corresponding types automatically (Zod pattern)
+// Re-export from @sqlrooms/room-store — room-config types
 export {
   BaseDataSource,
   BaseRoomConfig,
-  createDefaultBaseRoomConfig,
-  createDefaultMosaicLayout,
   DataSource,
   DataSourceTypes,
-  DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_ROOM_TITLE,
   FileDataSource,
-  isFileDataSource,
-  isMosaicLayoutParent,
-  isSpatialLoadFileOptions,
-  isSqlQueryDataSource,
-  isUrlDataSource,
-  LayoutConfig,
-  LayoutTypes,
   LoadFile,
   LoadFileOptions,
   MAIN_VIEW,
-  MosaicLayoutConfig,
-  MosaicLayoutDirection,
-  MosaicLayoutNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutParent,
   SpatialLoadFileOptions,
   SpatialLoadOptions,
   SqlQueryDataSource,
   StandardLoadFileOptions,
   StandardLoadOptions,
   UrlDataSource,
+  createDefaultBaseRoomConfig,
+  isFileDataSource,
+  isSpatialLoadFileOptions,
+  isSqlQueryDataSource,
+  isUrlDataSource,
+  LayoutDirection,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  isLayoutMosaicNode,
+  createDefaultLayout,
 } from '@sqlrooms/room-store';

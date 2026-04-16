@@ -1,4 +1,9 @@
-import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import {
+  getVisibleLayoutPanels,
+  getPanelByPath,
+  resolvePanelDefinition,
+} from '@sqlrooms/layout';
+import type {RoomPanelInfo} from '@sqlrooms/layout';
 import {
   Button,
   cn,
@@ -33,7 +38,6 @@ const SidebarButton: FC<{
           className={cn(
             'h-10 w-10 rounded-none',
             isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
-            // isDisabled && 'opacity-50 cursor-not-allowed',
             className,
           )}
           disabled={isDisabled}
@@ -56,21 +60,24 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   const layout = useBaseRoomShellStore((state) => state.layout.config);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const visibleRoomPanels = useMemo(
-    () => getVisibleMosaicLayoutPanels(layout?.nodes),
+    () => getVisibleLayoutPanels(layout),
     [layout],
   );
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
   );
-  const {icon: Icon, title} = panels[roomPanelType] ?? {};
+  const panelDef = panels[roomPanelType];
+  const info: RoomPanelInfo | undefined = panelDef
+    ? resolvePanelDefinition(panelDef, {panelId: roomPanelType, params: {}})
+    : undefined;
 
   return (
     <SidebarButton
       key={roomPanelType}
-      title={title ?? ''}
+      title={info?.title ?? ''}
       isSelected={visibleRoomPanels.includes(roomPanelType)}
       isDisabled={!initialized}
-      icon={Icon ?? (() => null)}
+      icon={info?.icon ?? (() => null)}
       onClick={() => togglePanel(roomPanelType)}
     />
   );
@@ -84,7 +91,13 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
       <div className="flex flex-col gap-2">
         {panels
           ? Object.keys(panels)
-              .filter((key) => panels[key]?.placement === 'sidebar')
+              .filter((key) => {
+                const def = panels[key];
+                const resolved = def
+                  ? resolvePanelDefinition(def, {panelId: key, params: {}})
+                  : undefined;
+                return resolved?.placement === 'sidebar';
+              })
               .map((type) => (
                 <RoomShellSidebarButton key={type} roomPanelType={type} />
               ))
@@ -93,7 +106,13 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
       <div className="flex-1" />
       <div className="flex flex-col gap-2">
         {Object.keys(panels)
-          .filter((key) => panels[key]?.placement === 'sidebar-bottom')
+          .filter((key) => {
+            const def = panels[key];
+            const resolved = def
+              ? resolvePanelDefinition(def, {panelId: key, params: {}})
+              : undefined;
+            return resolved?.placement === 'sidebar-bottom';
+          })
           .map((type) => (
             <RoomShellSidebarButton key={type} roomPanelType={type} />
           ))}
@@ -102,4 +121,73 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
   );
 };
 
-export {RoomShellSidebarButton, RoomShellSidebarButtons, SidebarButton};
+/**
+ * Renders sidebar buttons for all panels belonging to a tabs node.
+ * Clicking the active tab's button collapses the node;
+ * clicking an inactive tab expands the node and switches to that tab.
+ */
+const TabButtons: FC<{
+  tabsId?: string;
+  className?: string;
+}> = ({tabsId = 'left', className}) => {
+  const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const getTabs = useBaseRoomShellStore((state) => state.layout.getTabs);
+  const activeTab = useBaseRoomShellStore((state) =>
+    state.layout.getActiveTab(tabsId),
+  );
+  const collapsed = useBaseRoomShellStore((state) =>
+    state.layout.isCollapsed(tabsId),
+  );
+  const setActiveTab = useBaseRoomShellStore(
+    (state) => state.layout.setActiveTab,
+  );
+  const setCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.setCollapsed,
+  );
+  const initialized = useBaseRoomShellStore((state) => state.room.initialized);
+
+  const tabIds = useMemo(() => getTabs(tabsId), [getTabs, tabsId]);
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      {tabIds.map((tabId) => {
+        const match = getPanelByPath(panels, [tabId]);
+        const info: RoomPanelInfo | undefined = match
+          ? resolvePanelDefinition(match.panel, {
+              panelId: match.panelId,
+              params: match.params,
+            })
+          : undefined;
+        const isSelected = activeTab === tabId && !collapsed;
+        return (
+          <SidebarButton
+            key={tabId}
+            title={info?.title ?? tabId}
+            icon={info?.icon ?? (() => null)}
+            isSelected={isSelected}
+            isDisabled={!initialized}
+            onClick={() => {
+              if (isSelected) {
+                setCollapsed(tabsId, true);
+              } else {
+                setCollapsed(tabsId, false);
+                setActiveTab(tabsId, tabId);
+              }
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+/** @deprecated Use TabButtons instead */
+const AreaPanelButtons = TabButtons;
+
+export {
+  AreaPanelButtons,
+  TabButtons,
+  RoomShellSidebarButton,
+  RoomShellSidebarButtons,
+  SidebarButton,
+};

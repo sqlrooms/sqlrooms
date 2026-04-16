@@ -15,7 +15,7 @@ import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
 import {RoomPanelTypes, useRoomStore} from '../store';
 
-const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
+const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const dataSources = useRoomStore((state) => state.room.config.dataSources);
   const queryDataSources = useMemo(
@@ -48,7 +48,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
                 </AccordionContent>
               </AccordionItem>
 
-              {!isReadOnly || queryDataSources.length > 0 ? (
+              {queryDataSources.length > 0 ? (
                 <AccordionItem value="sql">
                   <AccordionTrigger className="gap-1 px-0">
                     <div className="text-muted-foreground flex items-center">

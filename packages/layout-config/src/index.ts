@@ -3,17 +3,39 @@
  * @packageDocumentation
  */
 
-// Values also export their corresponding types automatically (Zod pattern)
+// New names (primary exports)
 export {
   MAIN_VIEW,
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutMosaicNode,
+  LayoutNode,
   LayoutConfig,
+  isLayoutNodeKey,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  isLayoutMosaicNode,
+  createDefaultLayout,
+  LayoutNodeSize,
 } from './LayoutConfig';
+
+export {LayoutDirection} from './common';
+
+export {
+  LayoutMosaicSubNode,
+  LayoutMosaicPanelSubNode,
+  LayoutMosaicSplitSubNode,
+  isLayoutMosaicPanelSubNode,
+  isLayoutMosaicSplitSubNode,
+} from './LayoutMosaicSubNode';
+
+// Tabs node helpers
+export {
+  getLayoutNodeId,
+  getChildrenIds,
+  getVisibleTabChildren,
+  getHiddenTabChildren,
+} from './tabs-helpers';

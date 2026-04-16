@@ -1,17 +1,16 @@
 import {
-  BaseRoomConfig,
-  LayoutConfig,
-  LayoutTypes,
-  createRoomShellSlice,
-  createRoomStore,
-  persistSliceConfigs,
-  RoomShellSliceState,
-} from '@sqlrooms/room-shell';
-import {
   PivotSliceConfig,
   PivotSliceState,
   createPivotSlice,
 } from '@sqlrooms/pivot';
+import {
+  BaseRoomConfig,
+  LayoutConfig,
+  RoomShellSliceState,
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 import {DatabaseIcon, TablePropertiesIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataPanel} from './DataPanel';
@@ -47,26 +46,32 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              first: RoomPanelTypes.enum.data,
-              second: RoomPanelTypes.enum.main,
-              direction: 'row',
-              splitPercentage: 24,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum.data,
+                defaultSize: '24%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum.main,
+                defaultSize: '76%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum.data]: {
               title: 'Data',
               component: DataPanel,
               icon: DatabaseIcon,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum.main]: {
               title: 'Pivot',
               component: MainView,
               icon: TablePropertiesIcon,
-              placement: 'main',
             },
           },
         },

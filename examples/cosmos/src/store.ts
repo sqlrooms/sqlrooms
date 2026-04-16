@@ -2,7 +2,7 @@ import {CosmosSliceState, createCosmosSlice} from '@sqlrooms/cosmos';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -44,21 +44,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: MAIN_VIEW,
-        },
+          type: 'panel',
+          id: RoomPanelTypes.enum['main'],
+        } satisfies LayoutConfig,
         panels: {
           [RoomPanelTypes.enum['data-sources']]: {
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            placement: 'sidebar',
           },
-          main: {
+          [RoomPanelTypes.enum['main']]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,
-            placement: 'main',
           },
         },
       },

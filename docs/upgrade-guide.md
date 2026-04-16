@@ -10,6 +10,40 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `ResizablePanel` sizing and direction (breaking)
+
+`react-resizable-panels` was upgraded from v3 to v4. Two important breaking changes affect every usage:
+
+**`direction` → `orientation`** — `PanelGroup`'s `direction` prop has been renamed to `orientation`. The accepted values (`"horizontal"` | `"vertical"`) are unchanged.
+
+**Size values are now parsed differently** — In v3, all size props (`defaultSize`, `minSize`, `maxSize`, `collapsedSize`) accepted a plain `number` interpreted as a **percentage** (0–100). In v4, a plain `number` is interpreted as **pixels**, while a `string` without a unit suffix is treated as a percentage. To keep percentage-based sizes, pass a string like `"50"` or `"50%"`.
+
+v4 also supports CSS units: `"200px"`, `"1rem"`, `"50vh"`, etc.
+
+#### Before
+
+```tsx
+<ResizablePanelGroup direction="vertical">
+  <ResizablePanel defaultSize={30} minSize={10}>
+    {/* ... */}
+  </ResizablePanel>
+  <ResizableHandle />
+  <ResizablePanel defaultSize={70}>{/* ... */}</ResizablePanel>
+</ResizablePanelGroup>
+```
+
+#### After
+
+```tsx
+<ResizablePanelGroup orientation="vertical">
+  <ResizablePanel defaultSize="30" minSize="10">
+    {/* ... */}
+  </ResizablePanel>
+  <ResizableHandle />
+  <ResizablePanel defaultSize="70">{/* ... */}</ResizablePanel>
+</ResizablePanelGroup>
+```
+
 ### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
 
 `createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
@@ -304,6 +338,190 @@ writer.merge(result.toUIMessageStream({originalMessages: messages}));
 - `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
+
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles split/tabs rendering while `react-mosaic-component` is only used for `type: 'mosaic'` drag-and-drop nodes.
+
+**Existing persisted layouts are migrated automatically.** The Zod schema uses `z.preprocess` to detect and convert legacy formats on parse — including the outer `{ type: 'mosaic', nodes }` wrapper, binary `{first, second}` nodes, `splitPercentages`, and `savedPercentages`. No manual migration of saved state is required.
+
+#### Layout config: remove the outer wrapper
+
+The `{ type: 'mosaic', nodes: ... }` wrapper and `LayoutTypes` enum are no longer needed.
+
+##### Before
+
+```ts
+import {LayoutTypes} from '@sqlrooms/layout-config';
+
+const layout = {
+  type: LayoutTypes.enum.mosaic,
+  nodes: {
+    type: 'split',
+    direction: 'row',
+    children: ['data', 'main'],
+    splitPercentages: [30, 70],
+  },
+};
+```
+
+##### After
+
+```ts
+import {LayoutConfig, MAIN_VIEW} from '@sqlrooms/layout-config';
+
+const layout: LayoutConfig = {
+  type: 'split',
+  direction: 'row',
+  children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
+};
+```
+
+#### `splitPercentages` replaced by per-node sizing
+
+`splitPercentages` and `savedPercentages` on split nodes have been removed. Sizing is now specified on individual child nodes via `defaultSize`, `minSize`, `maxSize`, `collapsedSize`, and `collapsible`.
+
+##### Before
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: ['sidebar', 'main'],
+  splitPercentages: [25, 75],
+}
+```
+
+##### After
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'sidebar', defaultSize: '25%', minSize: '150px'},
+    'main',
+  ],
+}
+```
+
+Size values accept CSS units (`'200px'`, `'25%'`, `'1rem'`). A plain string without a unit suffix is treated as a percentage.
+
+#### New `type: 'panel'` leaf node
+
+A new `panel` node type allows specifying sizing constraints on individual panels:
+
+```ts
+{
+  type: 'panel',
+  id: 'sidebar',
+  defaultSize: '25%',
+  minSize: '150px',
+  maxSize: '50%',
+  collapsedSize: '0px',
+  collapsible: true,
+}
+```
+
+Plain string keys (e.g. `'main'`) still work as leaf nodes without sizing constraints.
+
+#### Type renames
+
+All `MosaicLayout*` types have been renamed to `Layout*`. The old names are still exported as deprecated aliases.
+
+| Old name                      | New name                |
+| ----------------------------- | ----------------------- |
+| `MosaicLayoutConfig`          | `LayoutConfig`          |
+| `MosaicLayoutNode`            | `LayoutNode`            |
+| `MosaicLayoutSplitNode`       | `LayoutSplitNode`       |
+| `MosaicLayoutTabsNode`        | `LayoutTabsNode`        |
+| `MosaicLayoutMosaicNode`      | `LayoutMosaicNode`      |
+| `MosaicLayoutParent`          | `LayoutSplitNode`       |
+| `MosaicLayoutDirection`       | `LayoutDirection`       |
+| `MosaicLayoutNodeKey`         | `LayoutNodeKey`         |
+| `isMosaicLayoutParent()`      | `isLayoutSplitNode()`   |
+| `isMosaicLayoutSplitNode()`   | `isLayoutSplitNode()`   |
+| `isMosaicLayoutTabsNode()`    | `isLayoutTabsNode()`    |
+| `isMosaicLayoutMosaicNode()`  | `isLayoutMosaicNode()`  |
+| `createDefaultMosaicLayout()` | `createDefaultLayout()` |
+| `DEFAULT_MOSAIC_LAYOUT`       | _(removed)_             |
+| `LayoutTypes`                 | _(removed)_             |
+
+Deprecated helper renames in `@sqlrooms/layout`:
+
+| Old name                       | New name                  |
+| ------------------------------ | ------------------------- |
+| `makeMosaicStack`              | `makeLayoutStack`         |
+| `visitMosaicLeafNodes`         | `visitLayoutLeafNodes`    |
+| `getVisibleMosaicLayoutPanels` | `getVisibleLayoutPanels`  |
+| `findMosaicNodePathByKey`      | `findLayoutNodePathByKey` |
+| `removeMosaicNodeByKey`        | `removeLayoutNodeByKey`   |
+
+#### Panel `placement` replaced by `area`
+
+The `placement` property on panel info (`'sidebar'`, `'main'`, etc.) has been replaced by `area`, which references a named `tabs` node `id` in the layout tree. The old `placement` property still works but is deprecated.
+
+##### Before
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel, placement: 'sidebar'},
+}
+```
+
+##### After
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel, area: 'left'},
+}
+```
+
+#### New `LayoutRenderer` component
+
+`LayoutRenderer` is the new top-level renderer that handles all node types (`split`, `tabs`, `mosaic`, `panel`, and string leaves). `MosaicLayout` is still available for rendering mosaic-only sub-trees.
+
+#### Render callbacks API
+
+`createLayoutSlice` now accepts `renderPanel` and `renderTabStrip` callbacks for custom rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
+  },
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to use default
+  },
+  renderTabStrip: (context) => {
+    // Return custom tab strip JSX or undefined for default
+  },
+});
+```
+
+#### Area-based panel management
+
+Named `tabs` nodes (with an `id`) act as areas with new management methods:
+
+```ts
+state.layout.setActivePanel(areaId, panelId);
+state.layout.addPanelToArea(areaId, panelId);
+state.layout.removePanelFromArea(areaId, panelId);
+state.layout.setAreaCollapsed(areaId, collapsed);
+state.layout.toggleAreaCollapsed(areaId);
+state.layout.getAreaPanels(areaId);
+state.layout.getActivePanel(areaId);
+state.layout.isAreaCollapsed(areaId);
+```
+
+#### `react-mosaic-component` upgraded to v7
+
+`react-mosaic-component` has been upgraded from v6 to v7. The mosaic tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`). This is handled automatically by the `z.preprocess` migration.
+
+`MosaicPath` is now `number[]` (numeric child indices) instead of `('first' | 'second')[]`.
 
 ## 0.28.0
 

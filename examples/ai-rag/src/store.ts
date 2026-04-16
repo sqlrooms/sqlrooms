@@ -12,16 +12,14 @@ import {
 import {
   createRagSlice,
   createRagTool,
-  ragToolRenderer,
   RagSliceState,
+  ragToolRenderer,
 } from '@sqlrooms/ai-rag';
-import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
@@ -39,6 +37,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
+import {createOpenAIEmbeddingProvider} from './embeddings';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -83,26 +82,32 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data-sources'],
+                defaultSize: '30%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,
-              placement: 'main',
             },
           },
         },

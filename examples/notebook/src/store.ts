@@ -1,19 +1,19 @@
 import {
+  CellsSliceConfig,
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
   createNotebookSlice,
   NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
-  createCellsSlice,
-  CellsSliceState,
-  CellsSliceConfig,
-  createDefaultCellRegistry,
-} from '@sqlrooms/cells';
-import {
+  createPivotSlice,
   pivotCellRegistryEntry,
   PivotSliceConfig,
   PivotSliceState,
-  createPivotSlice,
 } from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
@@ -21,7 +21,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
@@ -46,15 +45,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -63,19 +53,34 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data'],
+                defaultSize: '20%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Notebook',
               icon: () => null,
               component: NotebookPanel,
-              placement: 'main',
             },
-            data: {
+            [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
           },
         },

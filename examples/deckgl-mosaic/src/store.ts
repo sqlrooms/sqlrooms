@@ -6,7 +6,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -16,6 +15,7 @@ import {
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
+import {z} from 'zod';
 import DataSourcesPanel from './components/data-sources/DataSourcesPanel';
 import {MainView} from './components/MainView';
 import {
@@ -23,6 +23,9 @@ import {
   MapSettingsConfig,
   MapSettingsSliceState,
 } from './MapSettingsSlice';
+
+export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
   SqlEditorSliceState &
@@ -60,21 +63,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: 'main',
-          },
+            type: 'panel',
+            id: RoomPanelTypes.enum['main'],
+          } satisfies LayoutConfig,
           panels: {
-            data: {
+            [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,
-              placement: 'main',
             },
           },
         },

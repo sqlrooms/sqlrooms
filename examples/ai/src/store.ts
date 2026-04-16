@@ -14,7 +14,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
@@ -83,22 +82,31 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data-sources'],
+                defaultSize: '30%',
+                collapsible: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
+            ],
+            collapsible: true,
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               // Wrap in function to prevent immer from freezing the lazy component (which causes errors)
@@ -109,7 +117,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   }),
                   children: createElement(LazyMainView),
                 }),
-              placement: 'main',
             },
           },
         },

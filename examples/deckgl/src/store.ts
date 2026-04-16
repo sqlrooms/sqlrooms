@@ -3,7 +3,7 @@ import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
@@ -25,15 +25,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       }),
       config: {
         ...createDefaultDiscussConfig(),
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: 'data',
-            second: 'main',
-            splitPercentage: 30,
-          },
-        },
         dataSources: [
           {
             type: 'url',
@@ -46,19 +37,34 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         ],
       },
-      room: {
+      layout: {
+        config: {
+          id: 'root',
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'panel',
+              id: 'data',
+              defaultSize: '30%',
+            },
+            {
+              type: 'panel',
+              id: 'main',
+              defaultSize: '70%',
+            },
+          ],
+        } satisfies LayoutConfig,
         panels: {
           data: {
             title: 'Data sources',
             icon: DatabaseIcon,
             component: DataPanel,
-            placement: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            placement: 'main',
           },
         },
       },

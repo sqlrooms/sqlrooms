@@ -4,39 +4,114 @@
  */
 
 export {
+  createDefaultLayoutConfig,
   createLayoutSlice,
   useStoreWithLayout,
-  createDefaultLayoutConfig,
-  LayoutSliceConfig,
 } from './LayoutSlice';
 export type {
-  RoomPanelInfo,
-  LayoutSliceState,
+  LayoutSliceConfig,
   CreateLayoutSliceProps,
-} from './LayoutSlice';
+  LayoutSliceState,
+} from './layout-slice-types';
+export type {
+  LayoutPath,
+  PanelContainerType,
+  PanelDefinition,
+  PanelDefinitionContext,
+  Panels,
+  RoomPanelComponent,
+  RoomPanelInfo,
+} from './types';
+export type {
+  ParentDirection,
+  MatchResult,
+  MatchResultParams,
+} from './layout-base-types';
 
+// New primary exports from mosaic-utils
 export {
-  makeMosaicStack,
-  visitMosaicLeafNodes,
-  getVisibleMosaicLayoutPanels,
+  convertFromMosaicTree,
+  convertToMosaicTree,
+  findLayoutNodePathByKey,
+  findNodeById,
+  findParentArea,
+  findParentSplit,
+  findTabsNodeForPanel,
+  getChildKey,
+  getExpandDirection,
+  getMosaicNodeKey,
+  getNodeAtPath,
+  getVisibleLayoutPanels,
+  isDraggableTile,
+  makeLayoutStack,
+  MOSAIC_NODE_KEY_PREFIX,
+  removeLayoutNodeByKey,
+  updateMosaicSubtree,
+  visitLayoutLeafNodes,
+} from './mosaic/mosaic-utils';
+export type {CollapsedAreaInfo, ExpandDirection} from './mosaic/mosaic-utils';
+
+// Deprecated re-exports from mosaic-utils (old names)
+export {
   findMosaicNodePathByKey,
+  getVisibleMosaicLayoutPanels,
+  makeMosaicStack,
   removeMosaicNodeByKey,
+  visitMosaicLeafNodes,
 } from './mosaic/mosaic-utils';
 
-export {default as MosaicLayout} from './mosaic/MosaicLayout';
+// New LayoutRenderer component
+export {LayoutRenderer} from './LayoutRenderer';
+export type {LayoutRendererProps} from './LayoutRenderer';
 
-// Re-export from @sqlrooms/layout-config
-// Values also export their corresponding types automatically
+// New primary exports from @sqlrooms/layout-config
 export {
-  MAIN_VIEW,
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
+  createDefaultLayout,
+  getChildrenIds,
+  getHiddenTabChildren,
+  // Tabs node helpers
+  getLayoutNodeId,
+  getVisibleTabChildren,
+  isLayoutMosaicNode,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
   LayoutConfig,
+  LayoutDirection,
+  LayoutMosaicNode,
+  LayoutNode,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  MAIN_VIEW,
 } from '@sqlrooms/layout-config';
+
+// Panel matching utility
+export {getPanelByPath} from './getPanelByPath';
+export {resolvePanelDefinition} from './resolvePanelDefinition';
+export {useGetPanelByPath, useGetPanelInfoByPath} from './useGetPanel';
+
+// Layout node context
+export {
+  getLayoutNodeContextValue,
+  LayoutNodeProvider,
+  useLayoutNodeContext,
+  useTabsNodeContext,
+} from './LayoutNodeContext';
+export type {
+  LayoutNodeContextLeaf,
+  LayoutNodeContextMosaic,
+  LayoutNodeContextPanel,
+  LayoutNodeContextSplit,
+  LayoutNodeContextTabs,
+  LayoutNodeContextValue,
+} from './LayoutNodeContext';
+
+// Node renderers
+export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
+export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
+export {LeafLayout} from './node-renderers/leaf-node-renderer/LeafLayout';
+export {MosaicLayout} from './node-renderers/mosaic-node-renderer/MosaicLayout';
+
+export {extractPanelId} from './node-renderers/utils';

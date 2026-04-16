@@ -9,7 +9,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
@@ -72,26 +71,32 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['discuss'],
-              second: RoomPanelTypes.enum['main'],
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['discuss'],
+                defaultSize: '30%',
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['discuss']]: {
               title: 'Discuss',
               icon: MessageCircleIcon,
               component: DiscussionPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,
-              placement: 'main',
             },
           },
         },
