@@ -1,4 +1,4 @@
-import {Param} from '@uwdata/mosaic-core';
+import {Param, Selection} from '@uwdata/mosaic-core';
 import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
 import {FC, memo, useEffect, useRef} from 'react';
 
@@ -10,7 +10,7 @@ type SpecProps = {
    * This allows multiple independently-rendered specs to share the same
    * Selection objects for cross-filtering.
    */
-  params?: Map<string, Param<any>>;
+  params?: Map<string, Param<any> | Selection>;
 };
 type PlotProps = {plot: HTMLElement | SVGSVGElement};
 type VgPlotChartProps = SpecProps | PlotProps;

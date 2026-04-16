@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import {ChartBuilderTemplate} from './types';
 
-const BG_COLOR = '#f5d9a6';
-const FG_COLOR = '#e67f5f';
+const BG_COLOR = 'var(--color-chart-overlay)';
+const FG_COLOR = 'var(--color-chart-1)';
 
 /**
  * Creates a count plot (bar chart with counts) of a field

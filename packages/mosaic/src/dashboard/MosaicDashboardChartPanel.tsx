@@ -1,11 +1,13 @@
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {Button, SpinnerPane} from '@sqlrooms/ui';
+import type {Selection} from '@uwdata/mosaic-core';
 import type {Spec} from '@uwdata/mosaic-spec';
 import {Trash2Icon} from 'lucide-react';
 import {useCallback, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
+  getMosaicDashboardSelectionName,
   parseMosaicDashboardChartId,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
@@ -37,6 +39,9 @@ export const MosaicDashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
   const removeChart = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.removeChart,
   );
+  const getSelection = useStoreWithMosaicDashboard(
+    (state) => state.mosaic.getSelection,
+  );
 
   const chart = useMemo(
     () =>
@@ -49,6 +54,15 @@ export const MosaicDashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
   const spec = chart?.vgplot
     ? (toRenderableMosaicSpec(chart.vgplot) as unknown as Spec)
     : null;
+  const brushSelection = useMemo(
+    () =>
+      getSelection(getMosaicDashboardSelectionName(dashboardId), 'crossfilter'),
+    [dashboardId, getSelection],
+  );
+  const params = useMemo(
+    () => new Map<string, Selection>([['brush', brushSelection]]),
+    [brushSelection],
+  );
 
   const handleSpecApply = useCallback(
     (newVgplot: Record<string, unknown>) => {
@@ -95,8 +109,8 @@ export const MosaicDashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
         {connection.status === 'loading' ? (
           <SpinnerPane className="h-full w-full" />
         ) : connection.status === 'ready' && spec ? (
-          <div className="inline-block min-w-full rounded-md bg-white p-2 text-black">
-            <VgPlotChart spec={spec} />
+          <div className="bg-background text-foreground inline-block min-w-full rounded-md p-2">
+            <VgPlotChart spec={spec} params={params} />
           </div>
         ) : (
           <div className="text-muted-foreground text-sm">

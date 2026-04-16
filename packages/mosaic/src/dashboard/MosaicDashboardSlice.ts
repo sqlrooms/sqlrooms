@@ -201,6 +201,10 @@ export function getMosaicDashboardMosaicId(dashboardId: string): string {
   return `dashboard:${dashboardId}:mosaic`;
 }
 
+export function getMosaicDashboardSelectionName(dashboardId: string): string {
+  return `dashboard:${dashboardId}:brush`;
+}
+
 export function parseMosaicDashboardChartId(
   dashboardId: string,
   panelId: string,

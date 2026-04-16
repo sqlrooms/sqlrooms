@@ -2,7 +2,10 @@ import {SpinnerPane} from '@sqlrooms/ui';
 import React from 'react';
 import {MosaicProfiler} from '../profiler/MosaicProfiler';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
-import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
+import {
+  getMosaicDashboardSelectionName,
+  useStoreWithMosaicDashboard,
+} from './MosaicDashboardSlice';
 
 export const MosaicDashboardProfiler: React.FC = () => {
   const {dashboardId} = useMosaicDashboardContext();
@@ -27,7 +30,11 @@ export const MosaicDashboardProfiler: React.FC = () => {
   }
 
   return (
-    <MosaicProfiler tableName={selectedTable} pageSize={10}>
+    <MosaicProfiler
+      tableName={selectedTable}
+      pageSize={10}
+      selectionName={getMosaicDashboardSelectionName(dashboardId)}
+    >
       <div className="border-b">
         <div className="min-h-0 overflow-auto">
           <MosaicProfiler.Table>
