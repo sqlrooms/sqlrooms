@@ -83,6 +83,16 @@ export function useTabsNodeContext(): LayoutNodeContextTabs {
   return context;
 }
 
+export function useSplitNodeContext(): LayoutNodeContextSplit {
+  const context = useLayoutNodeContext();
+  if (context.containerType !== 'split') {
+    throw new Error(
+      `useSplitNodeContext expected containerType "split", got "${context.containerType}"`,
+    );
+  }
+  return context;
+}
+
 export function getLayoutNodeContextValue(
   node: LayoutNode,
   path: LayoutPath,
