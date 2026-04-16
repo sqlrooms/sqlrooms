@@ -17,14 +17,12 @@ import {CollapsiblePanelWrapper} from './CollapsiblePanelWrapper';
 import {LeafRenderer} from './LeafRenderer';
 import {MosaicRenderer} from './MosaicRenderer';
 import {
-  getChildAreaId,
   getPanelId,
   getLayoutNodeSize,
   isCollapsed,
   type NodeRenderProps,
 } from './types';
 import {convertLayoutNodeSizeToStyle} from './utils';
-import {useLayoutRendererContext} from '../LayoutRendererContext';
 import {TabsLayout} from './tabs-node-renderer/TabsLayout';
 import {LayoutNodeProvider} from '../LayoutNodeContext';
 
@@ -64,18 +62,15 @@ const SplitRenderer: FC<NodeRenderProps<LayoutSplitNode>> = ({node, path}) => {
   const orientation = node.direction === 'column' ? 'vertical' : 'horizontal';
   const isResizable = node.resizable !== false;
 
-  const {onCollapse, onExpand} = useLayoutRendererContext();
-
   return (
     <LayoutNodeProvider containerType="split" node={node} path={path}>
       <ResizablePanelGroup orientation={orientation}>
         {node.children.map((child, i) => {
-          const key = getPanelId(child);
+          const panelId = getPanelId(child);
           const sizeProps = getLayoutNodeSize(child);
           const isLast = i === node.children.length - 1;
           const collapsed = isCollapsed(child);
-          const areaId = getChildAreaId(child);
-          const childPathSegment = areaId ?? key ?? i;
+          const childPathSegment = panelId ?? i;
 
           const childContent = (
             <NodeRenderer
@@ -96,23 +91,20 @@ const SplitRenderer: FC<NodeRenderProps<LayoutSplitNode>> = ({node, path}) => {
             </div>
           ) : sizeProps.collapsible ? (
             <CollapsiblePanelWrapper
-              id={key}
+              panelId={panelId}
               collapsed={collapsed}
-              areaId={areaId}
-              onExpand={onExpand}
-              onCollapse={onCollapse}
               {...sizeProps}
             >
               {childContent}
             </CollapsiblePanelWrapper>
           ) : (
-            <ResizablePanel id={key} {...sizeProps}>
+            <ResizablePanel id={panelId} {...sizeProps}>
               {childContent}
             </ResizablePanel>
           );
 
           return (
-            <React.Fragment key={key}>
+            <React.Fragment key={panelId}>
               {panelElement}
               {!isLast && isResizable && (
                 <ResizableHandle className="bg-border hover:bg-primary/60 transition-colors" />
