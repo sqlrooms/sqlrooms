@@ -8,7 +8,15 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 ## 0.29.0 (upcoming)
 
-### Sonner toast integration\*\*
+### Mosaic profiler primitives
+
+`@sqlrooms/mosaic` now includes composable profiler primitives for building Quake-style cross-filtered data inspectors with per-column summaries, shared Mosaic selections, and paged Arrow row tables.
+
+The new `useMosaicProfiler` hook pairs with `MosaicProfilerHeader`, `MosaicProfilerRows`, and `MosaicProfilerStatusBar` so apps can keep the rendering fully React-driven while staying aligned with Mosaic coordinator updates and crossfilter lifecycle.
+
+<img src="https://github.com/user-attachments/assets/f07e576d-3ab9-4efe-8fe7-7dd37e8b7b46" alt="SQLRooms Mosaic profiler showing cross-filtered earthquake rows with histogram and category summaries" width="700">
+
+### Sonner toast integration
 
 `Toaster` now renders [Sonner](https://sonner.emilkowal.ski/) with SQLRooms theme-aware styling, and examples now use Sonner notifications instead of `useToast` in file-upload flows. `@sqlrooms/ui` also exports Sonner's `toast` function directly for app-level notifications.
 

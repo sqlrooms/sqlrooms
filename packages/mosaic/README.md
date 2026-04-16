@@ -98,6 +98,41 @@ The hook accepts the following options:
 - `queryResult` - Optional callback when query results are received
 - `enabled` - Whether to automatically connect when mosaic is ready (default: `true`)
 
+### Mosaic Profiler Primitives
+
+The profiler primitives let you build a Quake-style cross-filtered table with
+per-column summaries on top of `MosaicSlice`.
+
+```tsx
+import {MosaicProfiler} from '@sqlrooms/mosaic';
+import {ScrollArea} from '@sqlrooms/ui';
+import {useMemo} from 'react';
+import {useRoomStore} from './store';
+
+function EarthquakeProfiler() {
+  const mosaic = useRoomStore((state) => state.mosaic);
+  const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
+
+  return (
+    <MosaicProfiler tableName="earthquakes" selection={brush} pageSize={25}>
+      <div className="flex min-h-0 flex-col border">
+        <ScrollArea className="min-h-0 flex-1">
+          <MosaicProfiler.Table>
+            <MosaicProfiler.Header />
+            <MosaicProfiler.Rows />
+          </MosaicProfiler.Table>
+        </ScrollArea>
+        <MosaicProfiler.StatusBar />
+      </div>
+    </MosaicProfiler>
+  );
+}
+```
+
+For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
+is still available when you need direct access to the profiler state for custom
+layout, sizing, or advanced composition.
+
 ### Working with Selections
 
 Selections enable cross-filtering between multiple visualizations. You can get or create a named selection from the store:

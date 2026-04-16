@@ -6,6 +6,9 @@
   "module": "dist/index.js",
   "type": "module",
   "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
   "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
@@ -21,26 +24,34 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@uwdata/mosaic-core": "^0.21.0",
+    "@uwdata/mosaic-plot": "^0.21.0",
     "@uwdata/mosaic-spec": "^0.21.0",
     "@uwdata/mosaic-sql": "^0.21.0",
     "@uwdata/vgplot": "^0.21.0",
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
-    "zod": "^4.1.8"
+    "zod": "^4.1.8",
+    "zustand": "^5.0.8"
   },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
   },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "ts-jest": "^29.4.4"
+  },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
