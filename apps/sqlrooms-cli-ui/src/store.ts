@@ -106,7 +106,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         room: BaseRoomConfig,
         layout: LayoutConfig,
         ai: AiSliceConfig,
-        // aiSettings: AiSettingsSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
@@ -318,7 +318,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
             getApiKey: (provider) =>
-              runtimeAiProviders[provider]?.apiKey ||
+              get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
