@@ -41,7 +41,7 @@ const typedocOptions = {
     // Only include Node.js ambient types; avoid pulling in every installed
     // `@types/*` package (like `@types/d3-sankey`) which can cause issues
     // for packages that don't actually depend on them.
-    types: ['node'],
+    types: ['node', 'jest'],
   },
 };
 
