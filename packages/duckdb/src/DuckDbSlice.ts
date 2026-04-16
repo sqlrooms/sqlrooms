@@ -678,7 +678,10 @@ export function createDuckDbSlice({
                     }),
                   );
                   newTables = await get().db.loadTableSchemas();
-                  allSchemas = await loadAllSchemas(connector);
+                  allSchemas = await loadAllSchemas(
+                    connector,
+                    loadTableSchemasFilter ?? undefined,
+                  );
                 } while (pendingSchemaRefresh);
 
                 const currentTables = get().db.tables;

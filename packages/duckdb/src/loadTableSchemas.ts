@@ -106,16 +106,16 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
   };
 }
 
-const HIDDEN_SCHEMAS = ['fsq_rag', 'temp', 'fsq_spatial'];
-
 /**
  * Load all schemas from the database (including empty schemas).
- * Filters out hidden schemas.
+ * Applies the same filter as loadTableSchemas to ensure consistency.
  * @param connector - The DuckDB connector
+ * @param filter - Optional filter function to apply to schemas
  * @returns An array of {database, schema} objects
  */
 export async function loadAllSchemas(
   connector: DuckDbConnector,
+  filter?: LoadTableSchemasFilterFunction,
 ): Promise<Array<{database: string; schema: string}>> {
   const sql = `
     SELECT DISTINCT 
@@ -132,9 +132,16 @@ export async function loadAllSchemas(
   for (let i = 0; i < result.numRows; i++) {
     const database = result.getChild('database')?.get(i);
     const schema = result.getChild('schema')?.get(i);
-    if (database && schema && !HIDDEN_SCHEMAS.includes(schema)) {
-      schemas.push({database, schema});
+
+    if (!database || !schema) continue;
+
+    // Apply the same filter function used for tables
+    if (filter) {
+      const shouldInclude = filter({database, schema, table: ''});
+      if (!shouldInclude) continue;
     }
+
+    schemas.push({database, schema});
   }
 
   return schemas;
