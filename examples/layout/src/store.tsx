@@ -43,11 +43,12 @@ function generateChartId(): string {
 function createDashboardNode(
   dashboardId: string,
   children: LayoutNode[],
+  direction: 'row' | 'column' = 'column',
 ): LayoutNode {
   return {
     type: 'split',
     id: dashboardId,
-    direction: 'column',
+    direction,
     draggable: true,
     children,
   };
@@ -86,46 +87,52 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   type: 'tabs',
                   id: RoomPanelTypes.enum['dashboards'],
                   children: [
-                    // createDashboardNode('overview', [
-                    //   {
-                    //     type: 'split',
-                    //     id: 'overview-left',
-                    //     direction: 'column',
-                    //     draggable: true,
-                    //     children: [
-                    //       {
-                    //         type: 'panel',
-                    //         id: 'overview-sessions',
-                    //         defaultSize: '40%',
-                    //       },
-                    //       {
-                    //         type: 'panel',
-                    //         id: 'overview-conversions',
-                    //         defaultSize: '60%',
-                    //       },
-                    //     ],
-                    //     defaultSize: '50%',
-                    //   },
-                    //   {
-                    //     type: 'split',
-                    //     id: 'overview-right',
-                    //     direction: 'column',
-                    //     draggable: true,
-                    //     children: [
-                    //       {
-                    //         type: 'panel',
-                    //         id: 'overview-users',
-                    //         defaultSize: '30%',
-                    //       },
-                    //       {
-                    //         type: 'panel',
-                    //         id: 'overview-visits',
-                    //         defaultSize: '70%',
-                    //       },
-                    //     ],
-                    //     defaultSize: '50%',
-                    //   },
-                    // ]),
+                    createDashboardNode(
+                      'overview',
+                      [
+                        {
+                          type: 'split',
+                          id: 'overview-left',
+                          direction: 'row',
+                          pathSegment: false,
+                          draggable: true,
+                          children: [
+                            {
+                              type: 'panel',
+                              id: 'overview-sessions',
+                              defaultSize: '40%',
+                            },
+                            {
+                              type: 'panel',
+                              id: 'overview-conversions',
+                              defaultSize: '60%',
+                            },
+                          ],
+                          defaultSize: '50%',
+                        },
+                        {
+                          type: 'split',
+                          id: 'overview-right',
+                          direction: 'column',
+                          pathSegment: false,
+                          draggable: true,
+                          children: [
+                            {
+                              type: 'panel',
+                              id: 'overview-users',
+                              defaultSize: '30%',
+                            },
+                            {
+                              type: 'panel',
+                              id: 'overview-visits',
+                              defaultSize: '70%',
+                            },
+                          ],
+                          defaultSize: '50%',
+                        },
+                      ],
+                      'row',
+                    ),
                     createDashboardNode('growth', [
                       {
                         type: 'panel',

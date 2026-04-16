@@ -2,6 +2,7 @@ import {
   getLayoutNodeId,
   isLayoutNodeKey,
   isLayoutSplitNode,
+  isLayoutTabsNode,
   LayoutNode,
   LayoutNodeSize,
 } from '@sqlrooms/layout-config';
@@ -33,6 +34,13 @@ export function appendSemanticLayoutPath(
   path: LayoutPath,
   node: LayoutNode,
 ): LayoutPath {
+  if (
+    (isLayoutSplitNode(node) || isLayoutTabsNode(node)) &&
+    node.pathSegment === false
+  ) {
+    return path;
+  }
+
   if (isLayoutSplitNode(node) && isDockGeneratedSplitId(node.id)) {
     return path;
   }

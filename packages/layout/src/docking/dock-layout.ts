@@ -316,6 +316,7 @@ function replaceTargetWithSplit(
       type: 'split',
       id: createLayoutId('dock'),
       direction: axis,
+      pathSegment: false,
       children,
       ...inherited,
     };
@@ -351,6 +352,7 @@ function replaceSingleChildParentSplit(
     return {
       ...node,
       direction: axis,
+      pathSegment: false,
       children,
     };
   });
