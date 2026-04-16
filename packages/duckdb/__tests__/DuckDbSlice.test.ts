@@ -491,4 +491,160 @@ describe('DuckDbSlice', () => {
       expect(exists).toBe(true);
     });
   });
+
+  describe('empty schemas and hidden schemas visibility', () => {
+    it('should include empty schemas in schemaTrees', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an empty schema
+      await connector.query('CREATE SCHEMA empty_schema');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees;
+
+      // Find the empty schema in the tree
+      const hasEmptySchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === 'empty_schema',
+        ),
+      );
+
+      expect(hasEmptySchema).toBe(true);
+    });
+
+    it('should hide __sqlrooms_* schemas from schemaTrees', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an internal schema (should be hidden)
+      await connector.query('CREATE SCHEMA __sqlrooms_internal');
+      await connector.query(
+        'CREATE TABLE __sqlrooms_internal.test_table (id INT)',
+      );
+
+      // Create a normal schema
+      await connector.query('CREATE SCHEMA visible_schema');
+      await connector.query('CREATE TABLE visible_schema.test_table (id INT)');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees;
+
+      // Should NOT include internal schema
+      const hasInternalSchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === '__sqlrooms_internal',
+        ),
+      );
+      expect(hasInternalSchema).toBe(false);
+
+      // Should include normal schema
+      const hasVisibleSchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === 'visible_schema',
+        ),
+      );
+      expect(hasVisibleSchema).toBe(true);
+    });
+
+    it('should hide reserved schemas (fsq_rag, temp, fsq_spatial) from schemaTrees', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create reserved schemas
+      await connector.query('CREATE SCHEMA fsq_rag');
+      await connector.query('CREATE TABLE fsq_rag.test_table (id INT)');
+
+      await connector.query('CREATE SCHEMA fsq_spatial');
+      await connector.query('CREATE TABLE fsq_spatial.test_table (id INT)');
+
+      // Note: temp schema is special in DuckDB - we'll create a temp table instead
+      await connector.query('CREATE TEMP TABLE temp_test (id INT)');
+
+      // Create a normal schema
+      await connector.query('CREATE SCHEMA my_schema');
+      await connector.query('CREATE TABLE my_schema.test_table (id INT)');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees;
+
+      // Should NOT include reserved schemas
+      const hasReservedSchemas = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) =>
+            schemaNode.object.name === 'fsq_rag' ||
+            schemaNode.object.name === 'temp' ||
+            schemaNode.object.name === 'fsq_spatial',
+        ),
+      );
+      expect(hasReservedSchemas).toBe(false);
+
+      // Should include normal schema
+      const hasMySchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === 'my_schema',
+        ),
+      );
+      expect(hasMySchema).toBe(true);
+    });
+
+    it('should hide fsq_spatial table from schemaTrees', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create fsq_spatial table in main schema
+      await connector.query('CREATE TABLE fsq_spatial (id INT)');
+
+      // Create a normal table
+      await connector.query('CREATE TABLE normal_table (id INT)');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the tables from state
+      const tables = store.getState().db.tables;
+
+      // Should NOT include fsq_spatial table
+      expect(tables.find((t) => t.table.table === 'fsq_spatial')).toBe(
+        undefined,
+      );
+
+      // Should include normal table
+      expect(
+        tables.find((t) => t.table.table === 'normal_table'),
+      ).toBeDefined();
+    });
+
+    it('should show empty schema but hide __sqlrooms_* schemas simultaneously', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create both types of schemas
+      await connector.query('CREATE SCHEMA empty_ok');
+      await connector.query('CREATE SCHEMA __sqlrooms_hidden');
+      await connector.query('CREATE SCHEMA another_empty');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees;
+
+      const schemaNames = schemaTrees.flatMap(
+        (dbNode) =>
+          dbNode.children?.map((schemaNode) => schemaNode.object.name) ?? [],
+      );
+
+      // Should include empty schemas
+      expect(schemaNames).toContain('empty_ok');
+      expect(schemaNames).toContain('another_empty');
+
+      // Should NOT include internal schemas
+      expect(schemaNames).not.toContain('__sqlrooms_hidden');
+    });
+  });
 });

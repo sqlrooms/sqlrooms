@@ -39,7 +39,15 @@ const HIDDEN_SCHEMAS = ['fsq_rag', 'temp', 'fsq_spatial'];
 const HIDDEN_TABLES = ['fsq_spatial'];
 
 /**
- * Default filter to exclude internal SQLRooms tables, schemas, and databases
+ * Default filter to control which tables/schemas/databases are visible in the data source panel.
+ *
+ * Excludes:
+ * - Internal SQLRooms items (prefixed with '__sqlrooms_')
+ * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
+ * - Reserved tables: 'fsq_spatial'
+ *
+ * @param table - The qualified table name to evaluate
+ * @returns true to include the table/schema/database, false to exclude it
  */
 export const createDefaultLoadTableSchemasFilter = (
   table: QualifiedTableName,
@@ -307,10 +315,15 @@ export type DuckDbSliceState = {
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
-   * Optional filter function to control which tables are included when loading schemas.
-   * By default, filters out tables/schemas/databases starting with '__sqlrooms_'.
+   * Optional filter function to control which tables/schemas/databases are visible in the data source panel.
+   *
+   * Default behavior (createDefaultLoadTableSchemasFilter) excludes:
+   * - Internal SQLRooms items (prefixed with '__sqlrooms_')
+   * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
+   * - Reserved tables: 'fsq_spatial'
+   *
    * @param table - The qualified table name to evaluate
-   * @returns true to include the table, false to exclude it
+   * @returns true to include the table/schema/database, false to exclude it
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
 };
