@@ -148,7 +148,12 @@ function normalizeTabsNode(node: LayoutTabsNode): LayoutNode | null {
   };
 }
 
-function normalizeTree(root: LayoutNode | null): LayoutNode | null {
+function normalizeTree(
+  root: LayoutNode | null,
+  options: {collapseSingleSplits?: boolean} = {},
+): LayoutNode | null {
+  const {collapseSingleSplits = true} = options;
+
   if (!root) {
     return null;
   }
@@ -159,7 +164,7 @@ function normalizeTree(root: LayoutNode | null): LayoutNode | null {
 
   if (isLayoutTabsNode(root)) {
     const children = root.children
-      .map((child) => normalizeTree(child))
+      .map((child) => normalizeTree(child, options))
       .filter((child): child is LayoutNode => child !== null);
 
     return normalizeTabsNode({...root, children});
@@ -167,14 +172,18 @@ function normalizeTree(root: LayoutNode | null): LayoutNode | null {
 
   if (isLayoutSplitNode(root)) {
     const children = root.children
-      .map((child) => normalizeTree(child))
+      .map((child) => normalizeTree(child, options))
       .filter((child): child is LayoutNode => child !== null);
 
     if (children.length === 0) {
       return null;
     }
 
-    if (children.length === 1) {
+    if (
+      children.length === 1 &&
+      collapseSingleSplits &&
+      root.draggable !== true
+    ) {
       const [onlyChild] = children;
 
       if (!onlyChild) {
@@ -210,6 +219,7 @@ function normalizeTree(root: LayoutNode | null): LayoutNode | null {
 function removeNode(
   root: LayoutNode | null,
   nodeId: string,
+  options: {collapseSingleSplits?: boolean} = {},
 ): LayoutNode | null {
   if (!root) {
     return null;
@@ -229,7 +239,7 @@ function removeNode(
 
   if (isLayoutTabsNode(root)) {
     const children = root.children
-      .map((child) => removeNode(child, nodeId))
+      .map((child) => removeNode(child, nodeId, options))
       .filter((child): child is LayoutNode => child !== null);
 
     return normalizeTabsNode({...root, children});
@@ -237,10 +247,10 @@ function removeNode(
 
   if (isLayoutSplitNode(root)) {
     const children = root.children
-      .map((child) => removeNode(child, nodeId))
+      .map((child) => removeNode(child, nodeId, options))
       .filter((child): child is LayoutNode => child !== null);
 
-    return normalizeTree({...root, children});
+    return normalizeTree({...root, children}, options);
   }
 
   return root;
@@ -303,6 +313,40 @@ function replaceTargetWithSplit(
       direction: axis,
       children,
       ...inherited,
+    };
+  });
+}
+
+function replaceSingleChildParentSplit(
+  root: LayoutNode | null,
+  parentId: string,
+  targetId: string,
+  sourceNode: LayoutNode,
+  direction: DockDirection,
+): LayoutNode | null {
+  const axis = getDockAxis(direction);
+  const sourceChild = withDefaultSize(stripSizeProps(sourceNode), '50%');
+
+  return updateNode(root, parentId, (node) => {
+    if (!isLayoutSplitNode(node) || node.children.length !== 1) {
+      return node;
+    }
+
+    const [targetNode] = node.children;
+
+    if (!targetNode || getLayoutNodeId(targetNode) !== targetId) {
+      return node;
+    }
+
+    const targetChild = withDefaultSize(stripSizeProps(targetNode), '50%');
+    const children = isBefore(direction)
+      ? [sourceChild, targetChild]
+      : [targetChild, sourceChild];
+
+    return {
+      ...node,
+      direction: axis,
+      children,
     };
   });
 }
@@ -376,7 +420,10 @@ export function movePanel(
 
   const sourceNode = sourceFound.node;
 
-  const withoutSource = normalizeTree(removeNode(root, sourceId));
+  const withoutSource = normalizeTree(
+    removeNode(root, sourceId, {collapseSingleSplits: false}),
+    {collapseSingleSplits: false},
+  );
 
   if (!withoutSource) {
     return root;
@@ -394,6 +441,18 @@ export function movePanel(
   if (parent && isLayoutSplitNode(parent) && parent.direction === axis) {
     return normalizeTree(
       insertIntoSplit(
+        withoutSource,
+        parent.id,
+        targetId,
+        sourceNode,
+        direction,
+      ),
+    );
+  }
+
+  if (parent && isLayoutSplitNode(parent) && parent.children.length === 1) {
+    return normalizeTree(
+      replaceSingleChildParentSplit(
         withoutSource,
         parent.id,
         targetId,

@@ -47,7 +47,7 @@ function createDashboardNode(
   return {
     type: 'split',
     id: dashboardId,
-    direction: 'row',
+    direction: 'column',
     draggable: true,
     children,
   };
@@ -73,6 +73,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ],
               activeTabIndex: 0,
               collapsible: true,
+              collapsed: true,
               collapsedSize: 0,
               hideTabStrip: true,
             },
@@ -85,50 +86,55 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   type: 'tabs',
                   id: RoomPanelTypes.enum['dashboards'],
                   children: [
-                    createDashboardNode('overview', [
-                      {
-                        type: 'split',
-                        id: 'overview-left',
-                        direction: 'column',
-                        draggable: true,
-                        children: [
-                          {
-                            type: 'panel',
-                            id: 'overview-sessions',
-                            defaultSize: '40%',
-                          },
-                          {
-                            type: 'panel',
-                            id: 'overview-conversions',
-                            defaultSize: '60%',
-                          },
-                        ],
-                        defaultSize: '50%',
-                      },
-                      {
-                        type: 'split',
-                        id: 'overview-right',
-                        direction: 'column',
-                        draggable: true,
-                        children: [
-                          {
-                            type: 'panel',
-                            id: 'overview-users',
-                            defaultSize: '30%',
-                          },
-                          {
-                            type: 'panel',
-                            id: 'overview-visits',
-                            defaultSize: '70%',
-                          },
-                        ],
-                        defaultSize: '50%',
-                      },
-                    ]),
+                    // createDashboardNode('overview', [
+                    //   {
+                    //     type: 'split',
+                    //     id: 'overview-left',
+                    //     direction: 'column',
+                    //     draggable: true,
+                    //     children: [
+                    //       {
+                    //         type: 'panel',
+                    //         id: 'overview-sessions',
+                    //         defaultSize: '40%',
+                    //       },
+                    //       {
+                    //         type: 'panel',
+                    //         id: 'overview-conversions',
+                    //         defaultSize: '60%',
+                    //       },
+                    //     ],
+                    //     defaultSize: '50%',
+                    //   },
+                    //   {
+                    //     type: 'split',
+                    //     id: 'overview-right',
+                    //     direction: 'column',
+                    //     draggable: true,
+                    //     children: [
+                    //       {
+                    //         type: 'panel',
+                    //         id: 'overview-users',
+                    //         defaultSize: '30%',
+                    //       },
+                    //       {
+                    //         type: 'panel',
+                    //         id: 'overview-visits',
+                    //         defaultSize: '70%',
+                    //       },
+                    //     ],
+                    //     defaultSize: '50%',
+                    //   },
+                    // ]),
                     createDashboardNode('growth', [
                       {
                         type: 'panel',
-                        id: 'growth-sessions',
+                        id: 'foobar',
+                        defaultSize: '60%',
+                      },
+                      {
+                        type: 'panel',
+                        id: 'growth-sessions-2',
                         defaultSize: '60%',
                       },
                       {

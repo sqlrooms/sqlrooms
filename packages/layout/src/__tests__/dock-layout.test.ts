@@ -54,6 +54,52 @@ describe('movePanel', () => {
     });
   });
 
+  it('preserves a draggable split container when reordering inside a two-child split', () => {
+    const input: LayoutNode = {
+      type: 'split',
+      id: 'dashboard',
+      direction: 'row',
+      draggable: true,
+      children: ['left', 'right'],
+    };
+
+    const result = movePanel(input, 'left', 'right', 'right');
+
+    expect(result).toMatchObject({
+      type: 'split',
+      id: 'dashboard',
+      direction: 'row',
+      draggable: true,
+      children: [
+        {type: 'panel', id: 'right', defaultSize: '50%'},
+        {type: 'panel', id: 'left', defaultSize: '50%'},
+      ],
+    });
+  });
+
+  it('replaces a single-child draggable parent split when a cross-axis drop changes direction', () => {
+    const input: LayoutNode = {
+      type: 'split',
+      id: 'dashboard',
+      direction: 'row',
+      draggable: true,
+      children: ['left', 'right'],
+    };
+
+    const result = movePanel(input, 'left', 'right', 'down');
+
+    expect(result).toMatchObject({
+      type: 'split',
+      id: 'dashboard',
+      direction: 'column',
+      draggable: true,
+      children: [
+        {type: 'panel', id: 'right', defaultSize: '50%'},
+        {type: 'panel', id: 'left', defaultSize: '50%'},
+      ],
+    });
+  });
+
   it('removes the source from tabs and keeps a valid activeTabIndex', () => {
     const input: LayoutNode = {
       type: 'split',
