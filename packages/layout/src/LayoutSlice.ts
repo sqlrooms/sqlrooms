@@ -278,6 +278,7 @@ export function createLayoutSlice({
 
                 if (isLayoutMosaicSplitSubNode(result.node.layout)) {
                   result.node.layout.children.push(panelId);
+                  result.node.layout.splitPercentages = undefined;
                   return;
                 }
               }),
