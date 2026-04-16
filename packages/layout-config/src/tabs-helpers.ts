@@ -5,7 +5,7 @@ import {
   isLayoutMosaicNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-} from './v2/LayoutConfig';
+} from './LayoutConfig';
 
 /**
  * Get the ID of a layout node.
