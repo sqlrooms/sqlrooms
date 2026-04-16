@@ -30,7 +30,7 @@ export const MosaicTileRenderer: FC<MosaicTileRendererProps> = ({
   const content = (
     <LayoutNodeProvider containerType="mosaic" node={node} path={currentPath}>
       <div className="h-full w-full overflow-hidden p-2">
-        <RendererSwitcher node={node} path={currentPath} />
+        <RendererSwitcher path={currentPath} />
       </div>
     </LayoutNodeProvider>
   );

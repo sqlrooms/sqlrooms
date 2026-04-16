@@ -11,7 +11,7 @@ export const LeafRenderer: FC<NodeRenderProps<LayoutNodeKey>> = ({
   return (
     <LayoutNodeProvider containerType="leaf" node={node} path={path}>
       <div className="h-full w-full overflow-hidden p-2">
-        <RendererSwitcher node={node} path={path} />
+        <RendererSwitcher path={path} />
       </div>
     </LayoutNodeProvider>
   );
