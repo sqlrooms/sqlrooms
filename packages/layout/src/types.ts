@@ -1,9 +1,20 @@
-import {MatchResult, MatchResultParams} from './getPanelByPath';
+import type {
+  LayoutPath,
+  PanelContainerType,
+  MatchResult,
+  MatchResultParams,
+  ParentDirection,
+} from './layout-base-types';
 import type {LayoutNodeContextValue} from './LayoutNodeContext';
 
-export type LayoutPath = (string | number)[];
-
-export type PanelContainerType = 'tabs' | 'mosaic' | 'split' | 'root';
+// Re-export for convenience
+export type {
+  LayoutPath,
+  PanelContainerType,
+  MatchResult,
+  MatchResultParams,
+  ParentDirection,
+};
 
 export type RoomPanelComponentProps = {
   panelInfo: MatchResult<RoomPanelInfo>;

@@ -1,9 +1,8 @@
 import {LayoutTabsNode as LayoutTabsNodeType} from '@sqlrooms/layout-config';
 import {FC} from 'react';
-import {LayoutPath} from '../../types';
+import {LayoutPath, ParentDirection} from '../../types';
 import {TabsLayoutTabStrip} from './TabsLayoutTabStrip';
 import {TabsLayoutTabContent} from './TabsLayoutTabContent';
-import {ParentDirection} from '../types';
 import {RendererSwitcher} from '../RendererSwitcher';
 import {TabStrip} from '@sqlrooms/ui';
 import {TabsLayoutTabContentContainer} from './TabsLayoutTabContentContainer';

@@ -6,10 +6,13 @@
 export {
   createDefaultLayoutConfig,
   createLayoutSlice,
-  LayoutSliceConfig,
   useStoreWithLayout,
 } from './LayoutSlice';
-export type {CreateLayoutSliceProps, LayoutSliceState} from './LayoutSlice';
+export type {
+  LayoutSliceConfig,
+  CreateLayoutSliceProps,
+  LayoutSliceState,
+} from './layout-slice-types';
 export type {
   LayoutPath,
   PanelContainerType,
@@ -19,6 +22,11 @@ export type {
   RoomPanelComponent,
   RoomPanelInfo,
 } from './types';
+export type {
+  ParentDirection,
+  MatchResult,
+  MatchResultParams,
+} from './layout-base-types';
 
 // New primary exports from mosaic-utils
 export {

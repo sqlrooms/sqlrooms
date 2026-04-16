@@ -12,8 +12,7 @@ import {
   LayoutTabsNode,
 } from '@sqlrooms/layout-config';
 import {createContext, FC, PropsWithChildren, useContext} from 'react';
-import type {LayoutPath} from './types';
-import {ParentDirection} from './node-renderers/types';
+import type {LayoutPath, ParentDirection} from './layout-base-types';
 
 export type LayoutNodeContextTabs = {
   containerType: 'tabs';

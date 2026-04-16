@@ -1,5 +1,5 @@
 import {FC} from 'react';
-import {NodeRenderer} from '../NodeRenderer';
+import {LayoutNodeRenderer} from '../LayoutNodeRenderer';
 import {useActiveTab} from './useActiveTab';
 
 export const TabsLayoutTabContent: FC = () => {
@@ -10,7 +10,7 @@ export const TabsLayoutTabContent: FC = () => {
   }
 
   return (
-    <NodeRenderer
+    <LayoutNodeRenderer
       node={node}
       path={path}
       containerType="tabs"
