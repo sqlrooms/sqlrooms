@@ -132,9 +132,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         panels: {
           'dashboards/{dashboardId}': {
             icon: BarChart3Icon,
-            component: () => {
-              return <div className="p-4">This is a dashboard panel</div>;
-            },
           },
           'dashboards/{dashboardId}/{chartId}': {
             icon: BarChart3Icon,

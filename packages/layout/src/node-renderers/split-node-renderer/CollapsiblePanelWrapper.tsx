@@ -1,7 +1,7 @@
 import {ResizablePanel} from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useCallback, useEffect, useRef} from 'react';
 import {type PanelImperativeHandle} from 'react-resizable-panels';
-import {useLayoutRendererContext} from '../LayoutRendererContext';
+import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {LayoutNodeSize} from '@sqlrooms/layout-config';
 
 /**

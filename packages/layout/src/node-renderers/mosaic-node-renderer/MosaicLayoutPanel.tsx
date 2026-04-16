@@ -1,11 +1,10 @@
-import {LayoutMosaicNode} from '@sqlrooms/layout-config';
-import {FC, useCallback} from 'react';
-import {MosaicPath} from 'react-mosaic-component';
+import {FC, JSX, useCallback} from 'react';
+import {TileRenderer} from 'react-mosaic-component';
 import {Mosaic} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
-import {NodeRenderProps} from './types';
-import {MosaicTileRenderer} from './MosaicTileRenderer';
 import {useMosaicRendererLayout} from './useMosaicRendererLayout';
+import {useMosaicNodeContext} from '../../LayoutNodeContext';
+import {MosaicLayoutTilePanelProps} from './MosaicLayoutTilePanel';
 
 const mosaicStyles = `
   .mosaic-split {
@@ -38,22 +37,22 @@ const mosaicStyles = `
   }
 `;
 
-export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
-  node,
-  path,
+type MosaicLayoutPanelProps = {
+  tileComponent: (tileProps: MosaicLayoutTilePanelProps) => JSX.Element;
+};
+
+export const MosaicLayoutPanel: FC<MosaicLayoutPanelProps> = ({
+  tileComponent,
 }) => {
+  const {node} = useMosaicNodeContext();
+
   const {value, handleChange} = useMosaicRendererLayout(node);
 
-  const renderTile = useCallback(
-    (panelId: string, tilePath: MosaicPath) => (
-      <MosaicTileRenderer
-        node={node}
-        panelId={panelId}
-        tilePath={tilePath}
-        path={path}
-      />
-    ),
-    [node, path],
+  const renderTile: TileRenderer<string> = useCallback(
+    (id, path) => {
+      return tileComponent({panelId: id, tilePath: path});
+    },
+    [tileComponent],
   );
 
   return (

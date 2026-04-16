@@ -1,8 +1,8 @@
 import {FC, useCallback} from 'react';
-import {CollapseButton} from '../CollapseButton';
+import {CollapseButton} from './CollapseButton';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {useTabsNodeContext} from '../../LayoutNodeContext';
-import {ExpandButton} from '../ExpandButton';
+import {ExpandButton} from './ExpandButton';
 
 export const TabsLayoutToggleCollapseButton: FC = () => {
   const {

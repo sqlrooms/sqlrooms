@@ -1,24 +1,23 @@
 import {FC} from 'react';
 import {LayoutPath} from '../../types';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
-import {LayoutSplitNode} from '@sqlrooms/layout-config';
-import {getPanelId} from '../types';
+import {getLayoutNodeId, LayoutSplitNode} from '@sqlrooms/layout-config';
 import {SplitLayoutPanel} from './SplitLayoutPanel';
 import {SplitLayoutPanelGroup} from './SplitLayoutPanelGroup';
 import {SplitLayoutPanelContent} from './SplitLayoutPanelContent';
 import {RendererSwitcher} from '../RendererSwitcher';
 import {SplitLayoutPanelResizableHandle} from './SplitLayoutPanelResizableHandle';
 
-interface NodeProps {
+interface RootProps {
   node: LayoutSplitNode;
   path: LayoutPath;
 }
 
-const Root: FC<NodeProps> = ({node, path}) => {
+const Root: FC<RootProps> = ({node, path}) => {
   const defaultComponent = (
     <SplitLayout.PanelGroup>
       {node.children.map((child, i) => {
-        const panelId = getPanelId(child);
+        const panelId = getLayoutNodeId(child);
 
         return (
           <SplitLayout.Panel key={panelId} node={child} nodeIndex={i}>

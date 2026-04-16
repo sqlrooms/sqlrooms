@@ -1,10 +1,13 @@
 import {FC, PropsWithChildren, ReactElement} from 'react';
 import {useSplitNodeContext} from '../../LayoutNodeContext';
-import {LayoutNode} from '@sqlrooms/layout-config';
+import {getLayoutNodeId, LayoutNode} from '@sqlrooms/layout-config';
 import {ResizablePanel} from '@sqlrooms/ui';
-import {CollapsiblePanelWrapper} from '../CollapsiblePanelWrapper';
-import {getPanelId, getLayoutNodeSize, isCollapsed} from '../types';
-import {convertLayoutNodeSizeToStyle} from '../utils';
+import {CollapsiblePanelWrapper} from './CollapsiblePanelWrapper';
+import {
+  convertLayoutNodeSizeToStyle,
+  getLayoutNodeSize,
+  isCollapsed,
+} from '../utils';
 import {SplitLayoutPanelResizableHandle} from './SplitLayoutPanelResizableHandle';
 
 export type SplitLayoutPanelProps = PropsWithChildren<{
@@ -21,7 +24,7 @@ export const SplitLayoutPanel: FC<SplitLayoutPanelProps> = ({
 }) => {
   const {node: parentNode} = useSplitNodeContext();
 
-  const panelId = getPanelId(node);
+  const panelId = getLayoutNodeId(node);
   const sizeProps = getLayoutNodeSize(node);
   const collapsed = isCollapsed(node);
   const isLast = nodeIndex === parentNode.children.length - 1;

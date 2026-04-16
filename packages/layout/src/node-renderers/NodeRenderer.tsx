@@ -6,25 +6,19 @@ import {
   isLayoutTabsNode,
 } from '@sqlrooms/layout-config';
 import {FC} from 'react';
-import {LeafRenderer} from './LeafRenderer';
-import {MosaicRenderer} from './MosaicRenderer';
+import {LeafLayout} from './leaf-node-renderer/LeafLayout';
 import {type NodeRenderProps} from './types';
 import {TabsLayout} from './tabs-node-renderer/TabsLayout';
 import {SplitLayout} from './split-node-renderer/SplitLayout';
+import {MosaicLayout} from './mosaic-node-renderer/MosaicLayout';
 
-// ---------------------------------------------------------------------------
-// NodeRenderer – recursive dispatcher
-// ---------------------------------------------------------------------------
-
-export const NodeRenderer: FC<NodeRenderProps> = ({node, ...rest}) => {
-  const {path, parentDirection} = rest;
-
-  if (isLayoutNodeKey(node)) {
-    return <LeafRenderer node={node} {...rest} />;
-  }
-
-  if (isLayoutPanelNode(node)) {
-    return <LeafRenderer node={node.id} {...rest} />;
+export const NodeRenderer: FC<NodeRenderProps> = ({
+  node,
+  path,
+  parentDirection,
+}) => {
+  if (isLayoutNodeKey(node) || isLayoutPanelNode(node)) {
+    return <LeafLayout.Root node={node} path={path} />;
   }
 
   if (isLayoutSplitNode(node)) {
@@ -42,7 +36,7 @@ export const NodeRenderer: FC<NodeRenderProps> = ({node, ...rest}) => {
   }
 
   if (isLayoutMosaicNode(node)) {
-    return <MosaicRenderer node={node} {...rest} />;
+    return <MosaicLayout.Root node={node} path={path} />;
   }
 
   return null;

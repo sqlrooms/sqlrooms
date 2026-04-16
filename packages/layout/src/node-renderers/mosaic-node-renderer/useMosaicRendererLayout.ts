@@ -5,9 +5,9 @@ import {
   convertFromMosaicTree,
   convertToMosaicTree,
   updateMosaicSubtree,
-} from '../mosaic/mosaic-utils';
+} from '../../mosaic/mosaic-utils';
 import {LayoutMosaicNode} from '@sqlrooms/layout-config';
-import {useLayoutRendererContext} from '../LayoutRendererContext';
+import {useLayoutRendererContext} from '../../LayoutRendererContext';
 
 type UseMosaicRendererLayoutReturn = {
   value: MosaicNode<string> | null;
