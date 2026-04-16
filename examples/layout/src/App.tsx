@@ -19,8 +19,9 @@ const CollapseBottomButton: FC = () => {
   );
 };
 
-export const App = () => {
+export const App: FC = () => {
   const addDashboard = useRoomStore((s) => s.addDashboard);
+
   return (
     <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>

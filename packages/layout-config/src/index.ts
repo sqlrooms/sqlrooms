@@ -39,22 +39,3 @@ export {
   getVisibleTabChildren,
   getHiddenTabChildren,
 } from './tabs-helpers';
-
-// Deprecated re-exports (old Mosaic* names)
-export {
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutSplitNode,
-  MosaicLayoutTabsNode,
-  MosaicLayoutMosaicNode,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  isMosaicLayoutSplitNode,
-  isMosaicLayoutTabsNode,
-  isMosaicLayoutMosaicNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
-} from './LayoutConfig';

@@ -21,7 +21,13 @@
   "dependencies": {
     "zod": "^4.1.8"
   },
+  "devDependencies": {
+    "@sqlrooms/preset-jest": "workspace:*",
+    "ts-jest": "^29.4.4"
+  },
   "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",

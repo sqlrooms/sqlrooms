@@ -51,11 +51,3 @@ export function isCollapsed(node: LayoutNode): boolean {
 
   return node.collapsed === true;
 }
-
-export function getChildAreaId(node: LayoutNode): string | undefined {
-  if (isLayoutNodeKey(node)) {
-    return undefined;
-  }
-
-  return node.id;
-}

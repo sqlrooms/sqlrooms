@@ -77,9 +77,21 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                       direction: 'row',
                       layout: {
                         type: 'split',
-                        direction: 'column',
-                        children: ['sessions', 'conversions'],
-                        splitPercentages: [70, 30],
+                        direction: 'row',
+                        children: [
+                          {
+                            type: 'split',
+                            direction: 'column',
+                            children: ['sessions', 'conversions'],
+                            splitPercentages: [40, 60],
+                          },
+                          {
+                            type: 'split',
+                            direction: 'column',
+                            children: ['users', 'visits'],
+                            splitPercentages: [30, 70],
+                          },
+                        ],
                       },
                     },
                     {
@@ -89,9 +101,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                       direction: 'row',
                       layout: {
                         type: 'split',
-                        direction: 'column',
+                        direction: 'row',
                         children: ['sessions', 'conversions'],
-                        splitPercentages: [70, 30],
+                        splitPercentages: [60, 40],
                       },
                     },
                   ],
@@ -149,6 +161,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     })(set, get, store),
 
     addDashboard: (tabsId = 'dashboards') => {
+      const {addTab} = get().layout;
+
       const dashboardId = generateDashboardId();
       const chartId = generateChartId();
 
@@ -160,13 +174,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         layout: chartId,
       };
 
-      get().layout.addTab(tabsId, mosaicNode);
+      addTab(tabsId, mosaicNode);
     },
 
     addChartToDashboard: (dashboardId: string) => {
+      const {addChildToMosaic} = get().layout;
+
       const chartId = generateChartId();
 
-      get().layout.addChildToMosaic(dashboardId, chartId);
+      addChildToMosaic(dashboardId, chartId);
     },
   }),
 );

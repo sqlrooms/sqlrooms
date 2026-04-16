@@ -406,6 +406,7 @@ export function convertToMosaicTree(
       type: 'split',
       direction: node.direction,
       children,
+      splitPercentages: node.splitPercentages,
     } satisfies MosaicNode<string>;
   }
 
@@ -423,15 +424,6 @@ export function convertFromMosaicTree(
   originalTree: LayoutMosaicSubNode | null,
 ): LayoutMosaicSubNode | null {
   if (typeof mosaicNode === 'string') {
-    // if (mosaicNode.startsWith(MOSAIC_NODE_KEY_PREFIX) && originalTree) {
-    //   const mosaicId = mosaicNode.slice(MOSAIC_NODE_KEY_PREFIX.length);
-    //   const result = findNodeById(originalTree, mosaicId);
-
-    //   if (result && isLayoutMosaicNode(result.node)) {
-    //     return result.node;
-    //   }
-    // }
-
     return mosaicNode;
   }
 

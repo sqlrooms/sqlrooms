@@ -1,9 +1,8 @@
 import {ResizablePanel} from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useCallback, useEffect, useRef} from 'react';
-import {
-  type PanelImperativeHandle,
-  type PanelSize,
-} from 'react-resizable-panels';
+import {type PanelImperativeHandle} from 'react-resizable-panels';
+import {useLayoutRendererContext} from '../LayoutRendererContext';
+import {LayoutNodeSize} from '@sqlrooms/layout-config';
 
 /**
  * Ensures react-resizable-panels snaps between collapsed and expanded
@@ -12,33 +11,24 @@ import {
 const DEFAULT_COLLAPSIBLE_MIN_SIZE = '10%';
 
 export type CollapsiblePanelWrapperProps = {
-  id: string;
+  panelId: string;
   collapsed: boolean;
-  collapsible?: boolean;
-  collapsedSize?: number | string;
-  defaultSize?: number | string;
-  minSize?: number | string;
-  maxSize?: number | string;
-  areaId?: string;
-  onExpand?: (areaId: string, panelId?: string) => void;
-  onCollapse?: (areaId: string) => void;
-};
+} & LayoutNodeSize;
 
 export const CollapsiblePanelWrapper: FC<
   PropsWithChildren<CollapsiblePanelWrapperProps>
 > = ({
-  id,
+  panelId,
   collapsed,
   collapsible,
   collapsedSize,
   defaultSize,
   minSize,
   maxSize,
-  areaId,
-  onExpand,
-  onCollapse,
   children,
 }) => {
+  const {onCollapse, onExpand} = useLayoutRendererContext();
+
   const panelRef = useRef<PanelImperativeHandle | null>(null);
 
   useEffect(() => {
@@ -55,33 +45,26 @@ export const CollapsiblePanelWrapper: FC<
     }
   }, [collapsed]);
 
-  const handleResize = useCallback(
-    (
-      _panelSize: PanelSize,
-      _id: string | number | undefined,
-      _prevSize: PanelSize | undefined,
-    ) => {
-      const handle = panelRef.current;
+  const handleResize = useCallback(() => {
+    const handle = panelRef.current;
 
-      if (!areaId || !handle) {
-        return;
-      }
+    if (!panelId || !handle) {
+      return;
+    }
 
-      if (collapsed && !handle.isCollapsed()) {
-        onExpand?.(areaId);
-      } else if (!collapsed && handle.isCollapsed()) {
-        onCollapse?.(areaId);
-      }
-    },
-    [areaId, collapsed, onExpand, onCollapse],
-  );
+    if (collapsed && !handle.isCollapsed()) {
+      onExpand?.(panelId);
+    } else if (!collapsed && handle.isCollapsed()) {
+      onCollapse?.(panelId);
+    }
+  }, [panelId, collapsed, onExpand, onCollapse]);
 
   const effectiveMinSize =
     minSize ?? (collapsible ? DEFAULT_COLLAPSIBLE_MIN_SIZE : undefined);
 
   return (
     <ResizablePanel
-      id={id}
+      id={panelId}
       panelRef={panelRef}
       collapsible={collapsible}
       collapsedSize={collapsedSize ?? 0}

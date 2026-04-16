@@ -244,7 +244,7 @@ describe('getPanelByPath', () => {
   });
 
   describe('real-world scenarios', () => {
-    test('matches complex layout-areas panel structure', () => {
+    test('matches complex layout panel structure', () => {
       const panels = {
         dashboards: {component: 'DashboardsContainer'},
         'data-sources': {component: 'DataSourcesPanel'},
