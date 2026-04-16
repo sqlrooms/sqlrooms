@@ -1,7 +1,7 @@
 import {FC, PropsWithChildren} from 'react';
 import {MosaicCloseButton} from './MosaicCloseButton';
-import {useGetPanelByPath} from '../../useGetPanel';
-import {useMosaicNodeContext} from '../../LayoutNodeContext';
+import {useGetPanelByPath} from '../../../useGetPanel';
+import {useMosaicNodeContext} from '../../../LayoutNodeContext';
 
 export type MosaicLayoutTilePanelProps = PropsWithChildren<{
   panelId: string;

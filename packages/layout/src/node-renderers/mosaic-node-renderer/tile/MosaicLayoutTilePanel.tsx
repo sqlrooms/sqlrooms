@@ -1,39 +1,32 @@
 import {FC, JSX, PropsWithChildren, useCallback} from 'react';
-import {MosaicPath, MosaicWindow} from 'react-mosaic-component';
+import {MosaicWindow} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
-import {useGetPanelByPath} from '../../useGetPanel';
-import {useMosaicNodeContext} from '../../LayoutNodeContext';
+import {useMosaicNodeContext} from '../../../LayoutNodeContext';
 import {MosaicLayoutTileToolbar} from './MosaicLayoutTileToolbar';
+import {useMosaicLayoutTileContext} from './MosaicLayoutTileContext';
 
 export type MosaicLayoutTilePanelProps = PropsWithChildren<{
-  panelId: string;
-  tilePath: MosaicPath;
-  toolbarComponent?: () => JSX.Element;
+  toolbarRenderer?: () => JSX.Element;
 }>;
 
 export const MosaicLayoutTilePanel: FC<MosaicLayoutTilePanelProps> = ({
-  panelId,
-  tilePath,
   children,
-  toolbarComponent,
+  toolbarRenderer,
 }) => {
-  const {node, path} = useMosaicNodeContext();
+  const {node} = useMosaicNodeContext();
+  const {panelId, tilePath, panel} = useMosaicLayoutTileContext();
 
   const draggable = node.draggable !== false;
 
-  const currentPath = [...path, panelId];
-
-  const panel = useGetPanelByPath(currentPath);
-
   const renderToolbar = useCallback(() => {
-    const toolbar = toolbarComponent ? (
-      toolbarComponent()
+    const toolbar = toolbarRenderer ? (
+      toolbarRenderer()
     ) : (
       <MosaicLayoutTileToolbar panelId={panelId} />
     );
 
     return <div className="flex w-full flex-1">{toolbar}</div>;
-  }, [toolbarComponent, panelId]);
+  }, [toolbarRenderer, panelId]);
 
   if (!draggable) {
     return <>{children}</>;

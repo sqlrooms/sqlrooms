@@ -4,7 +4,7 @@ import {Mosaic} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
 import {useMosaicRendererLayout} from './useMosaicRendererLayout';
 import {useMosaicNodeContext} from '../../LayoutNodeContext';
-import {MosaicLayoutTilePanelProps} from './MosaicLayoutTilePanel';
+import {MosaicLayoutTileRoot} from './tile/MosaicLayoutTileRoot';
 
 const mosaicStyles = `
   .mosaic-split {
@@ -38,11 +38,11 @@ const mosaicStyles = `
 `;
 
 type MosaicLayoutPanelProps = {
-  tileComponent: (tileProps: MosaicLayoutTilePanelProps) => JSX.Element;
+  tileRenderer: () => JSX.Element;
 };
 
 export const MosaicLayoutPanel: FC<MosaicLayoutPanelProps> = ({
-  tileComponent,
+  tileRenderer,
 }) => {
   const {node} = useMosaicNodeContext();
 
@@ -50,9 +50,13 @@ export const MosaicLayoutPanel: FC<MosaicLayoutPanelProps> = ({
 
   const renderTile: TileRenderer<string> = useCallback(
     (id, path) => {
-      return tileComponent({panelId: id, tilePath: path});
+      return (
+        <MosaicLayoutTileRoot panelId={id} tilePath={path}>
+          {tileRenderer()}
+        </MosaicLayoutTileRoot>
+      );
     },
-    [tileComponent],
+    [tileRenderer],
   );
 
   return (

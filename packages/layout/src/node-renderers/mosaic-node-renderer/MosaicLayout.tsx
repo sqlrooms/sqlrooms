@@ -4,9 +4,9 @@ import {RendererSwitcher} from '../RendererSwitcher';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
 import {LayoutPath} from '../../types';
 import {MosaicLayoutPanel} from './MosaicLayoutPanel';
-import {MosaicLayoutTilePanel} from './MosaicLayoutTilePanel';
-import {MosaicLayoutTileContent} from './MosaicLayoutTileContent';
-import {MosaicLayoutTileToolbar} from './MosaicLayoutTileToolbar';
+import {MosaicLayoutTileContent} from './tile/MosaicLayoutTileContent';
+import {MosaicLayoutTilePanel} from './tile/MosaicLayoutTilePanel';
+import {MosaicLayoutTileToolbar} from './tile/MosaicLayoutTileToolbar';
 
 interface RootProps {
   node: LayoutMosaicNode;
@@ -16,9 +16,9 @@ interface RootProps {
 export const Root: FC<RootProps> = ({node, path}) => {
   const defaultComponent = (
     <MosaicLayout.Panel
-      tileComponent={(props) => (
-        <MosaicLayout.TilePanel {...props}>
-          <MosaicLayout.TileContent {...props} />
+      tileRenderer={() => (
+        <MosaicLayout.TilePanel>
+          <MosaicLayout.TileContent />
         </MosaicLayout.TilePanel>
       )}
     />
