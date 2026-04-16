@@ -1,11 +1,8 @@
 import {FC} from 'react';
 import {useSplitNodeContext} from '../../LayoutNodeContext';
-import {
-  getLayoutNodeId,
-  isLayoutSplitNode,
-  LayoutNode,
-} from '@sqlrooms/layout-config';
+import {LayoutNode} from '@sqlrooms/layout-config';
 import {LayoutNodeRenderer} from '../LayoutNodeRenderer';
+import {appendSemanticLayoutPath} from '../utils';
 
 type SplitLayoutPanelContentProps = {
   node: LayoutNode;
@@ -16,11 +13,7 @@ export const SplitLayoutPanelContent: FC<SplitLayoutPanelContentProps> = ({
 }) => {
   const {node: parentNode, path} = useSplitNodeContext();
 
-  const panelId = getLayoutNodeId(node);
-  const nextPath =
-    parentNode.draggable === true && isLayoutSplitNode(node)
-      ? path
-      : [...path, panelId];
+  const nextPath = appendSemanticLayoutPath(path, node);
 
   return (
     <LayoutNodeRenderer

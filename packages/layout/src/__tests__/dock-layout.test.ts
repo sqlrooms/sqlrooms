@@ -136,4 +136,63 @@ describe('movePanel', () => {
       ],
     });
   });
+
+  it('keeps the third sibling when chaining cross-axis moves in a three-panel column', () => {
+    const input: LayoutNode = {
+      type: 'split',
+      id: 'dashboard',
+      direction: 'column',
+      draggable: true,
+      children: ['first', 'second', 'third'],
+    };
+
+    const afterFirstMove = movePanel(input, 'third', 'second', 'right');
+    expect(afterFirstMove).toMatchObject({
+      type: 'split',
+      id: 'dashboard',
+      direction: 'column',
+      children: [
+        'first',
+        {
+          type: 'split',
+          direction: 'row',
+          children: [
+            {type: 'panel', id: 'second', defaultSize: '50%'},
+            {type: 'panel', id: 'third', defaultSize: '50%'},
+          ],
+        },
+      ],
+    });
+
+    const afterSecondMove = movePanel(
+      afterFirstMove,
+      'first',
+      'second',
+      'down',
+    );
+
+    expect(afterSecondMove).toMatchObject({
+      type: 'split',
+      id: 'dashboard',
+      direction: 'column',
+      draggable: true,
+      children: [
+        {
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'split',
+              direction: 'column',
+              children: [
+                {type: 'panel', id: 'second', defaultSize: '50%'},
+                {type: 'panel', id: 'first', defaultSize: '50%'},
+              ],
+            },
+            {type: 'panel', id: 'third'},
+          ],
+        },
+      ],
+    });
+  });
 });

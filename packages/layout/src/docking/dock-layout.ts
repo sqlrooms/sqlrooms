@@ -13,6 +13,7 @@ import {createLayoutId, findNodeById} from '../layout-tree';
 
 export type DockDirection = 'left' | 'right' | 'up' | 'down';
 export type DockAxis = 'row' | 'column';
+export const DOCK_SPLIT_ID_PREFIX = 'dock-';
 
 type SizeProps = Pick<
   LayoutPanelNode,
@@ -21,6 +22,10 @@ type SizeProps = Pick<
 
 export function getDockAxis(direction: DockDirection): DockAxis {
   return direction === 'left' || direction === 'right' ? 'row' : 'column';
+}
+
+export function isDockGeneratedSplitId(id: string): boolean {
+  return id.startsWith(DOCK_SPLIT_ID_PREFIX);
 }
 
 function isBefore(direction: DockDirection): boolean {

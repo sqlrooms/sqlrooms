@@ -1,8 +1,12 @@
 import {
+  getLayoutNodeId,
   isLayoutNodeKey,
+  isLayoutSplitNode,
   LayoutNode,
   LayoutNodeSize,
 } from '@sqlrooms/layout-config';
+import {LayoutPath} from '../types';
+import {isDockGeneratedSplitId} from '../docking/dock-layout';
 
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
@@ -23,6 +27,17 @@ export function convertLayoutNodeSizeToStyle(
 
 export function extractPanelId(tabId: string): string {
   return tabId;
+}
+
+export function appendSemanticLayoutPath(
+  path: LayoutPath,
+  node: LayoutNode,
+): LayoutPath {
+  if (isLayoutSplitNode(node) && isDockGeneratedSplitId(node.id)) {
+    return path;
+  }
+
+  return [...path, getLayoutNodeId(node)];
 }
 
 export function getLayoutNodeSize(node: LayoutNode): LayoutNodeSize {
