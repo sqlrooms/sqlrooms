@@ -46,7 +46,7 @@ export const MosaicLayoutPanel: FC<MosaicLayoutPanelProps> = ({
 }) => {
   const {node} = useMosaicNodeContext();
 
-  const {value, handleChange} = useMosaicRendererLayout(node);
+  const {value, handleChange, handleRelease} = useMosaicRendererLayout(node);
 
   const renderTile: TileRenderer<string> = useCallback(
     (id, path) => {
@@ -65,6 +65,7 @@ export const MosaicLayoutPanel: FC<MosaicLayoutPanelProps> = ({
       <Mosaic<string>
         value={value}
         onChange={handleChange}
+        onRelease={handleRelease}
         renderTile={renderTile}
         className=""
       />

@@ -1,6 +1,5 @@
 import {useCallback, useState} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
-import {useDebouncedCallback} from '@sqlrooms/ui';
 import {
   convertFromMosaicTree,
   convertToMosaicTree,
@@ -12,9 +11,8 @@ import {useLayoutRendererContext} from '../../LayoutRendererContext';
 type UseMosaicRendererLayoutReturn = {
   value: MosaicNode<string> | null;
   handleChange: (newMosaicNodes: MosaicNode<string> | null) => void;
+  handleRelease: (newMosaicNodes: MosaicNode<string> | null) => void;
 };
-
-const DEBOUNCE_DELAY = 300;
 
 export function useMosaicRendererLayout({
   layout,
@@ -37,21 +35,6 @@ export function useMosaicRendererLayout({
     });
   }
 
-  const debouncedOnLayoutChange = useDebouncedCallback(() => {
-    // Don't attempt to update if there's no callback provided
-    if (!onLayoutChange) {
-      return;
-    }
-
-    const restored = currentLayout
-      ? convertFromMosaicTree(currentLayout, layout)
-      : null;
-
-    const updated = updateMosaicSubtree(rootLayout, nodeId, restored);
-
-    onLayoutChange(updated);
-  }, DEBOUNCE_DELAY);
-
   const handleChange = useCallback(
     (newMosaicNodes: MosaicNode<string> | null) => {
       // Update visual state immediately
@@ -59,15 +42,31 @@ export function useMosaicRendererLayout({
         ...prev,
         currentLayout: newMosaicNodes,
       }));
-
-      // Trigger debounced store update
-      debouncedOnLayoutChange();
     },
-    [debouncedOnLayoutChange],
+    [],
+  );
+
+  const handleRelease = useCallback(
+    (newMosaicNodes: MosaicNode<string> | null) => {
+      setState((prev) => ({
+        ...prev,
+        currentLayout: newMosaicNodes,
+      }));
+
+      const restored = newMosaicNodes
+        ? convertFromMosaicTree(newMosaicNodes, layout)
+        : null;
+
+      const updated = updateMosaicSubtree(rootLayout, nodeId, restored);
+
+      onLayoutChange?.(updated);
+    },
+    [layout, nodeId, onLayoutChange, rootLayout],
   );
 
   return {
     value: currentLayout,
     handleChange,
+    handleRelease,
   };
 }
