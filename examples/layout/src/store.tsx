@@ -20,6 +20,7 @@ import {SchemaPanel} from './panels/SchemaPanel';
 import {DashboardTabs} from './panels/DashboardTabs';
 import {RoomPanelTypes} from './panels/panel-types';
 import {MainPanel} from './panels/MainPanel';
+import {BottomTabs} from './panels/BottomTabs';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
@@ -112,12 +113,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 },
                 {
                   type: 'tabs',
-                  id: 'bottom',
+                  id: RoomPanelTypes.enum['bottom'],
                   defaultSize: '30%',
-                  children: ['console', 'results'],
+                  children: [
+                    RoomPanelTypes.enum['console'],
+                    RoomPanelTypes.enum['results'],
+                  ],
                   activeTabIndex: 0,
                   collapsible: true,
-                  collapsedSize: 32,
+                  collapsed: true,
+                  collapsedSize: 44,
+                  minSize: 300,
                 },
               ],
             },
@@ -136,6 +142,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
           [RoomPanelTypes.enum['dashboards']]: {
             component: DashboardTabs,
+          },
+          [RoomPanelTypes.enum['bottom']]: {
+            component: BottomTabs,
           },
           [RoomPanelTypes.enum['data-sources']]: {
             title: 'Data Sources',
