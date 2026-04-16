@@ -31,6 +31,9 @@ export const CollapsiblePanelWrapper: FC<
 
   const panelRef = useRef<PanelImperativeHandle | null>(null);
 
+  // Compute the effective defaultSize based on collapsed state
+  const effectiveDefaultSize = collapsed ? (collapsedSize ?? 0) : defaultSize;
+
   useEffect(() => {
     const handle = panelRef.current;
 
@@ -68,7 +71,7 @@ export const CollapsiblePanelWrapper: FC<
       panelRef={panelRef}
       collapsible={collapsible}
       collapsedSize={collapsedSize ?? 0}
-      defaultSize={defaultSize}
+      defaultSize={effectiveDefaultSize}
       minSize={effectiveMinSize}
       maxSize={maxSize}
       onResize={handleResize}
