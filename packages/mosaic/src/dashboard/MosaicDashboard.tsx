@@ -113,13 +113,15 @@ export function MosaicDashboardRoot({
     <MosaicDashboardContext.Provider value={contextValue}>
       {children}
       {dashboard?.selectedTable ? (
-        <MosaicChartBuilder.Dialog
+        <MosaicChartBuilder
           open={builderOpen}
           onOpenChange={setBuilderOpen}
           tableName={dashboard.selectedTable}
           columns={builderColumns}
           onCreateChart={handleCreateChart}
-        />
+        >
+          <MosaicChartBuilder.Dialog />
+        </MosaicChartBuilder>
       ) : null}
     </MosaicDashboardContext.Provider>
   );

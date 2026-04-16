@@ -122,7 +122,14 @@ export type {
 // Chart builder types and utilities
 export {createDefaultChartBuilders} from './chart-builders/builders';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
-export type {ChartBuilderDialogProps} from './chart-builders/ChartBuilderDialog';
+export {useChartBuilderContext} from './chart-builders/ChartBuilderContext';
+export type {ChartBuilderContextValue} from './chart-builders/ChartBuilderContext';
+export type {
+  ChartBuilderDialogContentProps,
+  ChartBuilderDialogProps,
+  ChartBuilderRootProps,
+  ChartBuilderTriggerProps,
+} from './chart-builders/ChartBuilderDialog';
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
 export type {
   ChartBuilderColumn,
