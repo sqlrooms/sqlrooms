@@ -1,15 +1,11 @@
 import {LayoutMosaicNode} from '@sqlrooms/layout-config';
-import {FC, useCallback, useEffect, useMemo, useRef} from 'react';
-import {Mosaic, MosaicNode, MosaicPath} from 'react-mosaic-component';
+import {FC, useCallback} from 'react';
+import {MosaicPath} from 'react-mosaic-component';
+import {Mosaic} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
-import {
-  convertFromMosaicTree,
-  convertToMosaicTree,
-  updateMosaicSubtree,
-} from '../mosaic/mosaic-utils';
 import {NodeRenderProps} from './types';
 import {MosaicTileRenderer} from './MosaicTileRenderer';
-import {useLayoutRendererContext} from '../LayoutRendererContext';
+import {useMosaicRendererLayout} from './useMosaicRendererLayout';
 
 const mosaicStyles = `
   .mosaic-split {
@@ -46,42 +42,17 @@ export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
   node,
   path,
 }) => {
-  const treeRef = useRef(node.layout);
-
-  const {onLayoutChange, rootLayout} = useLayoutRendererContext();
-
-  useEffect(() => {
-    treeRef.current = node.layout;
-  }, [node.layout]);
-
-  const mosaicValue = useMemo(
-    () => (node.layout ? convertToMosaicTree(node.layout) : null),
-    [node.layout],
-  );
-
-  const handleChange = useCallback(
-    (newMosaicNodes: MosaicNode<string> | null) => {
-      const restored = newMosaicNodes
-        ? convertFromMosaicTree(newMosaicNodes, treeRef.current)
-        : null;
-
-      const updated = updateMosaicSubtree(rootLayout, node.id, restored);
-      onLayoutChange?.(updated);
-    },
-    [rootLayout, node.id, onLayoutChange],
-  );
+  const {value, handleChange} = useMosaicRendererLayout(node);
 
   const renderTile = useCallback(
-    (panelId: string, tilePath: MosaicPath) => {
-      return (
-        <MosaicTileRenderer
-          node={node}
-          panelId={panelId}
-          tilePath={tilePath}
-          path={path}
-        />
-      );
-    },
+    (panelId: string, tilePath: MosaicPath) => (
+      <MosaicTileRenderer
+        node={node}
+        panelId={panelId}
+        tilePath={tilePath}
+        path={path}
+      />
+    ),
     [node, path],
   );
 
@@ -89,7 +60,7 @@ export const MosaicRenderer: FC<NodeRenderProps<LayoutMosaicNode>> = ({
     <div className="relative h-full w-full">
       <style>{mosaicStyles}</style>
       <Mosaic<string>
-        value={mosaicValue}
+        value={value}
         onChange={handleChange}
         renderTile={renderTile}
         className=""
