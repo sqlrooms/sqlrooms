@@ -7,6 +7,7 @@ export const RoomPanelTypes = z.enum([
   'console',
   'results',
   'dashboards',
+  'bottom',
   'left',
   MAIN_VIEW,
 ] as const);

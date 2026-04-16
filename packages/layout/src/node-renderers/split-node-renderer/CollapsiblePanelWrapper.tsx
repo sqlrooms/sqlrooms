@@ -1,7 +1,7 @@
 import {ResizablePanel} from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useCallback, useEffect, useRef} from 'react';
 import {type PanelImperativeHandle} from 'react-resizable-panels';
-import {useLayoutRendererContext} from '../LayoutRendererContext';
+import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {LayoutNodeSize} from '@sqlrooms/layout-config';
 
 /**
@@ -30,6 +30,9 @@ export const CollapsiblePanelWrapper: FC<
   const {onCollapse, onExpand} = useLayoutRendererContext();
 
   const panelRef = useRef<PanelImperativeHandle | null>(null);
+
+  // Compute the effective defaultSize based on collapsed state
+  const effectiveDefaultSize = collapsed ? (collapsedSize ?? 0) : defaultSize;
 
   useEffect(() => {
     const handle = panelRef.current;
@@ -68,7 +71,7 @@ export const CollapsiblePanelWrapper: FC<
       panelRef={panelRef}
       collapsible={collapsible}
       collapsedSize={collapsedSize ?? 0}
-      defaultSize={defaultSize}
+      defaultSize={effectiveDefaultSize}
       minSize={effectiveMinSize}
       maxSize={maxSize}
       onResize={handleResize}

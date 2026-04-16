@@ -1,7 +1,7 @@
 import {Button} from '@sqlrooms/ui';
 import {ChevronsRightIcon, ChevronsUpIcon} from 'lucide-react';
 import {FC} from 'react';
-import {ParentDirection} from './types';
+import {ParentDirection} from '../types';
 
 export type ExpandButtonProps = {
   direction?: ParentDirection;

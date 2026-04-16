@@ -1,12 +1,15 @@
-import {LayoutNodeSize} from '@sqlrooms/layout-config';
+import {
+  isLayoutNodeKey,
+  LayoutNode,
+  LayoutNodeSize,
+} from '@sqlrooms/layout-config';
 import {MOSAIC_NODE_KEY_PREFIX} from '../mosaic/mosaic-utils';
-import {ResizablePanelOrientation} from '@sqlrooms/ui';
 
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
-  orientation: ResizablePanelOrientation,
+  direction: 'row' | 'column',
 ): React.CSSProperties {
-  return orientation === 'vertical'
+  return direction === 'column'
     ? {
         height: (size.defaultSize ?? 'auto') as string | number | undefined,
         minHeight: size.minSize,
@@ -25,4 +28,28 @@ export function extractPanelId(tabId: string): string {
   }
 
   return tabId;
+}
+
+export function getLayoutNodeSize(node: LayoutNode): LayoutNodeSize {
+  if (isLayoutNodeKey(node)) {
+    return {
+      collapsible: false,
+    };
+  }
+
+  return {
+    defaultSize: node.defaultSize,
+    minSize: node.minSize,
+    maxSize: node.maxSize,
+    collapsedSize: node.collapsedSize,
+    collapsible: node.collapsible ?? false,
+  };
+}
+
+export function isCollapsed(node: LayoutNode): boolean {
+  if (isLayoutNodeKey(node)) {
+    return false;
+  }
+
+  return node.collapsed === true;
 }

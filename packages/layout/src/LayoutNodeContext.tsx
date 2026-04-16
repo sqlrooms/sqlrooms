@@ -1,4 +1,9 @@
 import {
+  isLayoutMosaicNode,
+  isLayoutNodeKey,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
   LayoutMosaicNode,
   LayoutNode,
   LayoutNodeKey,
@@ -38,7 +43,7 @@ export type LayoutNodeContextPanel = {
 
 export type LayoutNodeContextLeaf = {
   containerType: 'leaf';
-  node: LayoutNodeKey;
+  node: LayoutPanelNode | LayoutNodeKey;
   path: LayoutPath;
 };
 
@@ -83,22 +88,46 @@ export function useTabsNodeContext(): LayoutNodeContextTabs {
   return context;
 }
 
+export function useSplitNodeContext(): LayoutNodeContextSplit {
+  const context = useLayoutNodeContext();
+  if (context.containerType !== 'split') {
+    throw new Error(
+      `useSplitNodeContext expected containerType "split", got "${context.containerType}"`,
+    );
+  }
+  return context;
+}
+
+export function useMosaicNodeContext(): LayoutNodeContextMosaic {
+  const context = useLayoutNodeContext();
+  if (context.containerType !== 'mosaic') {
+    throw new Error(
+      `useMosaicNodeContext expected containerType "mosaic", got "${context.containerType}"`,
+    );
+  }
+  return context;
+}
+
 export function getLayoutNodeContextValue(
   node: LayoutNode,
   path: LayoutPath,
   parentDirection?: ParentDirection,
 ): LayoutNodeContextValue {
-  if (typeof node === 'string') {
+  if (isLayoutNodeKey(node) || isLayoutPanelNode(node)) {
     return {containerType: 'leaf', node, path};
   }
-  switch (node.type) {
-    case 'tabs':
-      return {containerType: 'tabs', node, path, parentDirection};
-    case 'split':
-      return {containerType: 'split', node, path, parentDirection};
-    case 'mosaic':
-      return {containerType: 'mosaic', node, path};
-    case 'panel':
-      return {containerType: 'panel', node, path};
+
+  if (isLayoutSplitNode(node)) {
+    return {containerType: 'split', node, path, parentDirection};
   }
+
+  if (isLayoutTabsNode(node)) {
+    return {containerType: 'tabs', node, path, parentDirection};
+  }
+
+  if (isLayoutMosaicNode(node)) {
+    return {containerType: 'mosaic', node, path};
+  }
+
+  throw new Error(`Unsupported node type: ${JSON.stringify(node)}`);
 }

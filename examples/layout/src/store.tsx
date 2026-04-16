@@ -19,6 +19,9 @@ import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
 import {DashboardTabs} from './panels/DashboardTabs';
 import {RoomPanelTypes} from './panels/panel-types';
+import {MainPanel} from './panels/MainPanel';
+import {BottomTabs} from './panels/BottomTabs';
+import {DashboardPanel} from './panels/DashboardPanel';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
@@ -111,12 +114,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 },
                 {
                   type: 'tabs',
-                  id: 'bottom',
+                  id: RoomPanelTypes.enum['bottom'],
                   defaultSize: '30%',
-                  children: ['console', 'results'],
+                  children: [
+                    RoomPanelTypes.enum['console'],
+                    RoomPanelTypes.enum['results'],
+                  ],
                   activeTabIndex: 0,
                   collapsible: true,
-                  collapsedSize: 32,
+                  collapsed: true,
+                  collapsedSize: 44,
+                  minSize: 300,
                 },
               ],
             },
@@ -125,9 +133,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         panels: {
           'dashboards/{dashboardId}': {
             icon: BarChart3Icon,
-            component: () => {
-              return <div className="p-4">This is a dashboard panel</div>;
-            },
+            component: DashboardPanel,
           },
           'dashboards/{dashboardId}/{chartId}': {
             icon: BarChart3Icon,
@@ -135,6 +141,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
           [RoomPanelTypes.enum['dashboards']]: {
             component: DashboardTabs,
+          },
+          [RoomPanelTypes.enum['bottom']]: {
+            component: BottomTabs,
           },
           [RoomPanelTypes.enum['data-sources']]: {
             title: 'Data Sources',
@@ -155,6 +164,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             title: 'Results',
             component: ResultsPanel,
             icon: TableRowsSplitIcon,
+          },
+          [RoomPanelTypes.enum['main']]: {
+            component: MainPanel,
           },
         },
       },
