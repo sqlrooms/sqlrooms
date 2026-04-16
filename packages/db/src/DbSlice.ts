@@ -22,10 +22,12 @@ import type {
   QueryExecutionResult,
 } from './types';
 
-export function createDbSlice(props?: {
+export type CreateDbSliceProps = {
   duckDb?: CreateDuckDbSliceProps;
   config?: Partial<DbSliceConfig>;
-}) {
+};
+
+export function createDbSlice(props?: CreateDbSliceProps) {
   const initialConfig = createDefaultDbConfig(props?.config);
   return createSlice<DbSliceState, DbRootState>((set, get, store) => {
     const duckDbSlice = createDuckDbSlice(props?.duckDb)(set, get, store);

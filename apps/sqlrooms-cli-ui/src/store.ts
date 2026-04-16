@@ -15,7 +15,11 @@ import {
   createDefaultCellRegistry,
   SheetType,
 } from '@sqlrooms/cells';
-import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+import {
+  createDefaultLoadTableSchemasFilter,
+  createWebSocketDuckDbConnector,
+  QualifiedTableName,
+} from '@sqlrooms/duckdb';
 import {
   createMosaicDashboardSlice,
   createMosaicSlice,
@@ -262,6 +266,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           connector,
           config: {dataSources: []},
           layout: createLayout({store}),
+          createDbProps: {
+            duckDb: {
+              loadTableSchemasFilter: (() => {
+                const filter = createDefaultLoadTableSchemasFilter();
+                return (table: QualifiedTableName) => {
+                  return (
+                    filter(table) &&
+                    !(
+                      table.database === get().db.currentDatabase &&
+                      table.schema === 'mosaic'
+                    )
+                  );
+                };
+              })(),
+            },
+          },
         })(set, get, store),
 
         ...createMosaicSlice()(set, get, store),
