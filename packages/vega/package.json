@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",

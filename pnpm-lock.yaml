@@ -3007,9 +3007,18 @@ importers:
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
+      '@sqlrooms/db':
+        specifier: workspace:*
+        version: link:../db
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@sqlrooms/layout-config':
+        specifier: workspace:*
+        version: link:../layout-config
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -3034,6 +3043,9 @@ importers:
       '@uwdata/vgplot':
         specifier: ^0.21.0
         version: 0.21.1
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.155(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -3744,9 +3756,9 @@ importers:
 
   packages/vega:
     dependencies:
-      '@sqlrooms/ai':
+      '@sqlrooms/ai-core':
         specifier: workspace:*
-        version: link:../ai
+        version: link:../ai-core
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror

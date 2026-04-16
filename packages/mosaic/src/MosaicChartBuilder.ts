@@ -1,4 +1,5 @@
 import type {ReactElement} from 'react';
+import {mosaicChartBuilders} from './chart-builders/builders';
 import {ChartBuilderContent} from './chart-builders/ChartBuilderContent';
 import {
   ChartBuilderDialog,
@@ -54,6 +55,7 @@ import {FieldSelectorInput} from './chart-builders/FieldSelectorInput';
 type MosaicChartBuilderCompoundComponent = ((
   props: ChartBuilderRootProps,
 ) => ReactElement) & {
+  chartBuilders: typeof mosaicChartBuilders;
   Trigger: typeof ChartBuilderTrigger;
   Dialog: typeof ChartBuilderDialogContent;
   Content: typeof ChartBuilderContent;
@@ -65,6 +67,8 @@ export const MosaicChartBuilder: MosaicChartBuilderCompoundComponent =
   Object.assign(
     ChartBuilderRoot as (props: ChartBuilderRootProps) => ReactElement,
     {
+      /** Named built-in chart templates (same objects as default set). */
+      chartBuilders: mosaicChartBuilders,
       /** Default trigger button; customize via ButtonProps or children. */
       Trigger: ChartBuilderTrigger,
       /** Dialog content pane with chart-builder steps. */

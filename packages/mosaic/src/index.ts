@@ -120,8 +120,28 @@ export type {
 } from './editor/types';
 
 // Chart builder types and utilities
-export {createDefaultChartBuilders} from './chart-builders/builders';
+export {
+  boxPlotBuilder,
+  bubbleChartBuilder,
+  countPlotBuilder,
+  createDefaultChartBuilders,
+  customSpecBuilder,
+  ecdfBuilder,
+  heatmapBuilder,
+  histogramBuilder,
+  lineChartBuilder,
+  mosaicChartBuilders,
+} from './chart-builders/builders';
+export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
+export {
+  createMosaicChartTool,
+  DEFAULT_MOSAIC_CHART_TOOL_DESCRIPTION,
+  type CreateMosaicChartToolOptions,
+  type MosaicChartToolOutput,
+  type MosaicChartToolParameters,
+} from './chart-builders/createMosaicChartTool';
+export {describeChartSpecs} from './chart-builders/describeChartSpecs';
 export {useChartBuilderContext} from './chart-builders/ChartBuilderContext';
 export type {ChartBuilderContextValue} from './chart-builders/ChartBuilderContext';
 export type {
@@ -135,5 +155,7 @@ export type {
   ChartBuilderColumn,
   ChartBuilderField,
   ChartBuilderTemplate,
+  ChartSpec,
 } from './chart-builders/types';
+export {toChartSpec} from './chart-builders/types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';

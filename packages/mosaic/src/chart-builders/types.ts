@@ -1,5 +1,5 @@
-import {Spec} from '@uwdata/mosaic-spec';
-import {ComponentType} from 'react';
+import type {Spec} from '@uwdata/mosaic-spec';
+import type {ComponentType} from 'react';
 
 /**
  * Describes a field selector in a chart builder UI
@@ -16,13 +16,12 @@ export interface ChartBuilderField {
 }
 
 /**
- * Describes a chart builder template that generates Mosaic JSON specs
+ * Pure-data chart specification (no React). Use for AI prompts, tools, and
+ * sharing logic with {@link ChartBuilderTemplate}.
  */
-export interface ChartBuilderTemplate {
+export interface ChartSpec {
   /** Unique identifier */
   id: string;
-  /** Icon component */
-  icon: ComponentType<{className?: string}>;
   /** Short description of what this builder creates */
   description: string;
   /** Field selectors the user must fill in */
@@ -32,9 +31,24 @@ export interface ChartBuilderTemplate {
 }
 
 /**
+ * Describes a chart builder template that generates Mosaic JSON specs
+ * (includes an icon for the chart-type grid).
+ */
+export interface ChartBuilderTemplate extends ChartSpec {
+  /** Icon component */
+  icon: ComponentType<{className?: string}>;
+}
+
+/**
  * Column info passed to chart builder UI
  */
 export interface ChartBuilderColumn {
   name: string;
   type: string;
+}
+
+/** Strip UI-only fields from a template for AI / serialization contexts. */
+export function toChartSpec(template: ChartBuilderTemplate): ChartSpec {
+  const {id, description, fields, createSpec} = template;
+  return {id, description, fields, createSpec};
 }

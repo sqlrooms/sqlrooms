@@ -1,6 +1,7 @@
 import {Button, cn} from '@sqlrooms/ui';
 import type {Spec} from '@uwdata/mosaic-spec';
 import React, {useCallback, useMemo, useState} from 'react';
+import {buildChartTitleForSpec} from './chartSpecTitle';
 import {createDefaultChartBuilders} from './builders';
 import {FieldSelectorInput} from './FieldSelectorInput';
 import {ChartBuilderColumn, ChartBuilderTemplate} from './types';
@@ -66,10 +67,7 @@ export const ChartBuilderContent: React.FC<ChartBuilderContentProps> = ({
   const handleCreate = useCallback(() => {
     if (!selectedBuilder || !canCreate) return;
     const spec = selectedBuilder.createSpec(tableName, fieldValues);
-    const title =
-      selectedBuilder.fields.length > 0
-        ? `${selectedBuilder.description.replace(/^Create (a |an )?/, '')} - ${Object.values(fieldValues).join(', ')}`
-        : selectedBuilder.description.replace(/^Create (a |an )?/, '');
+    const title = buildChartTitleForSpec(selectedBuilder, fieldValues);
     onCreateChart(spec, title);
     handleReset();
   }, [

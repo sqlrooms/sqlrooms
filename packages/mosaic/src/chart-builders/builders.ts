@@ -17,7 +17,7 @@ const FG_COLOR = 'var(--color-chart-1)';
 /**
  * Creates a count plot (bar chart with counts) of a field
  */
-const countPlotBuilder: ChartBuilderTemplate = {
+export const countPlotBuilder: ChartBuilderTemplate = {
   id: 'count-plot',
   icon: BarChartHorizontal,
   description: 'Create a count plot of a field',
@@ -56,7 +56,7 @@ const countPlotBuilder: ChartBuilderTemplate = {
 /**
  * Creates a histogram with background/filtered overlay
  */
-const histogramBuilder: ChartBuilderTemplate = {
+export const histogramBuilder: ChartBuilderTemplate = {
   id: 'histogram',
   icon: BarChart3,
   description: 'Create a histogram of a field',
@@ -94,7 +94,7 @@ const histogramBuilder: ChartBuilderTemplate = {
 /**
  * Creates a line chart of two fields
  */
-const lineChartBuilder: ChartBuilderTemplate = {
+export const lineChartBuilder: ChartBuilderTemplate = {
   id: 'line-chart',
   icon: LineChart,
   description: 'Create a line chart of two fields',
@@ -126,7 +126,7 @@ const lineChartBuilder: ChartBuilderTemplate = {
 /**
  * Creates an empirical cumulative distribution (eCDF) chart
  */
-const ecdfBuilder: ChartBuilderTemplate = {
+export const ecdfBuilder: ChartBuilderTemplate = {
   id: 'ecdf',
   icon: TrendingUp,
   description: 'Create an eCDF chart of a field',
@@ -163,7 +163,7 @@ const ecdfBuilder: ChartBuilderTemplate = {
 /**
  * Creates a 2D heatmap of two fields
  */
-const heatmapBuilder: ChartBuilderTemplate = {
+export const heatmapBuilder: ChartBuilderTemplate = {
   id: 'heatmap',
   icon: Grid3X3,
   description: 'Create a 2D heatmap of two fields',
@@ -199,7 +199,7 @@ const heatmapBuilder: ChartBuilderTemplate = {
 /**
  * Creates a box plot
  */
-const boxPlotBuilder: ChartBuilderTemplate = {
+export const boxPlotBuilder: ChartBuilderTemplate = {
   id: 'box-plot',
   icon: AlignHorizontalDistributeCenter,
   description: 'Create a box plot',
@@ -231,7 +231,7 @@ const boxPlotBuilder: ChartBuilderTemplate = {
 /**
  * Creates a bubble chart
  */
-const bubbleChartBuilder: ChartBuilderTemplate = {
+export const bubbleChartBuilder: ChartBuilderTemplate = {
   id: 'bubble-chart',
   icon: BubblesIcon,
   description: 'Create a bubble chart',
@@ -265,7 +265,7 @@ const bubbleChartBuilder: ChartBuilderTemplate = {
 /**
  * Creates a chart with custom spec (empty template)
  */
-const customSpecBuilder: ChartBuilderTemplate = {
+export const customSpecBuilder: ChartBuilderTemplate = {
   id: 'custom-spec',
   icon: Code,
   description: 'Create a chart with custom spec',
@@ -306,3 +306,18 @@ export function createDefaultChartBuilders(): ChartBuilderTemplate[] {
     customSpecBuilder,
   ];
 }
+
+/**
+ * Named built-in chart templates for cherry-picking and
+ * {@link MosaicChartBuilder.chartBuilders}.
+ */
+export const mosaicChartBuilders = {
+  countPlot: countPlotBuilder,
+  histogram: histogramBuilder,
+  lineChart: lineChartBuilder,
+  ecdf: ecdfBuilder,
+  heatmap: heatmapBuilder,
+  boxPlot: boxPlotBuilder,
+  bubbleChart: bubbleChartBuilder,
+  customSpec: customSpecBuilder,
+} as const;
