@@ -1,4 +1,8 @@
-import {DbSliceState, createDbSlice} from '@sqlrooms/db';
+import {
+  createDbSlice,
+  type CreateDbSliceProps,
+  DbSliceState,
+} from '@sqlrooms/db';
 import {DataTable, DuckDbConnector, LoadFileOptions} from '@sqlrooms/duckdb';
 import {
   CreateLayoutSliceProps,
@@ -42,7 +46,6 @@ import {produce} from 'immer';
 import {ReactNode} from 'react';
 import {z} from 'zod';
 import {StateCreator, StoreApi} from 'zustand';
-import {CreateDbSliceProps} from '../../db/dist/DbSlice';
 import {
   DataSourceState,
   DataSourceStatus,
