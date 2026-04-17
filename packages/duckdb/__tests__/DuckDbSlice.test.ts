@@ -1,6 +1,10 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
-import {createDuckDbSlice, DuckDbSliceState} from '../src/DuckDbSlice';
+import {
+  createDefaultLoadTableSchemasFilter,
+  createDuckDbSlice,
+  DuckDbSliceState,
+} from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 
@@ -17,6 +21,48 @@ function createTestStore() {
   return createStore<TestStoreState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     ...createDuckDbSlice({connector})(...args),
+  }));
+}
+
+/**
+ * Test-only composed filter: default sqlrooms rules plus arbitrary extra schema/db/table
+ * exclusions (neutral names — product apps supply their own filters at integration time).
+ */
+function createTestComposedLoadTableSchemasFilter() {
+  const base = createDefaultLoadTableSchemasFilter();
+  return (table) => {
+    if (!base(table)) {
+      return false;
+    }
+    const schema = table.schema || '';
+    if (
+      schema === 'excluded_schema_alpha' ||
+      schema === 'excluded_schema_beta' ||
+      schema === 'temp'
+    ) {
+      return false;
+    }
+    if (table.database === 'excluded_attach_db') {
+      return false;
+    }
+    if (table.table === 'excluded_table_name') {
+      return false;
+    }
+    return true;
+  };
+}
+
+function createTestStoreWithCustomComposedFilter() {
+  const connector = createNodeDuckDbConnector({
+    dbPath: ':memory:',
+  });
+
+  return createStore<TestStoreState>()((...args) => ({
+    ...createBaseRoomSlice()(...args),
+    ...createDuckDbSlice({
+      connector,
+      loadTableSchemasFilter: createTestComposedLoadTableSchemasFilter(),
+    })(...args),
   }));
 }
 
@@ -551,73 +597,71 @@ describe('DuckDbSlice', () => {
       expect(hasVisibleSchema).toBe(true);
     });
 
-    it('should hide reserved schemas (fsq_rag, temp, fsq_spatial) from schemaTrees', async () => {
-      const connector = await store.getState().db.getConnector();
+    describe('with custom composed loadTableSchemasFilter', () => {
+      beforeEach(async () => {
+        await store.getState().db.destroy();
+        store = createTestStoreWithCustomComposedFilter();
+        await store.getState().db.initialize();
+      });
 
-      // Create reserved schemas
-      await connector.query('CREATE SCHEMA fsq_rag');
-      await connector.query('CREATE TABLE fsq_rag.test_table (id INT)');
+      it('should hide schemas excluded by the custom filter from schemaTrees', async () => {
+        const connector = await store.getState().db.getConnector();
 
-      await connector.query('CREATE SCHEMA fsq_spatial');
-      await connector.query('CREATE TABLE fsq_spatial.test_table (id INT)');
+        await connector.query('CREATE SCHEMA excluded_schema_alpha');
+        await connector.query(
+          'CREATE TABLE excluded_schema_alpha.test_table (id INT)',
+        );
 
-      // Note: temp schema is special in DuckDB - we'll create a temp table instead
-      await connector.query('CREATE TEMP TABLE temp_test (id INT)');
+        await connector.query('CREATE SCHEMA excluded_schema_beta');
+        await connector.query(
+          'CREATE TABLE excluded_schema_beta.test_table (id INT)',
+        );
 
-      // Create a normal schema
-      await connector.query('CREATE SCHEMA my_schema');
-      await connector.query('CREATE TABLE my_schema.test_table (id INT)');
+        await connector.query('CREATE TEMP TABLE temp_test (id INT)');
 
-      // Refresh schemas
-      await store.getState().db.refreshTableSchemas();
+        await connector.query('CREATE SCHEMA my_schema');
+        await connector.query('CREATE TABLE my_schema.test_table (id INT)');
 
-      // Get the schema trees
-      const schemaTrees = store.getState().db.schemaTrees;
+        await store.getState().db.refreshTableSchemas();
 
-      // Should NOT include reserved schemas
-      const hasReservedSchemas = schemaTrees.some((dbNode) =>
-        dbNode.children?.some(
-          (schemaNode) =>
-            schemaNode.object.name === 'fsq_rag' ||
-            schemaNode.object.name === 'temp' ||
-            schemaNode.object.name === 'fsq_spatial',
-        ),
-      );
-      expect(hasReservedSchemas).toBe(false);
+        const schemaTrees = store.getState().db.schemaTrees;
 
-      // Should include normal schema
-      const hasMySchema = schemaTrees.some((dbNode) =>
-        dbNode.children?.some(
-          (schemaNode) => schemaNode.object.name === 'my_schema',
-        ),
-      );
-      expect(hasMySchema).toBe(true);
-    });
+        const hasExcludedSchemas = schemaTrees.some((dbNode) =>
+          dbNode.children?.some(
+            (schemaNode) =>
+              schemaNode.object.name === 'excluded_schema_alpha' ||
+              schemaNode.object.name === 'temp' ||
+              schemaNode.object.name === 'excluded_schema_beta',
+          ),
+        );
+        expect(hasExcludedSchemas).toBe(false);
 
-    it('should hide fsq_spatial table from schemaTrees', async () => {
-      const connector = await store.getState().db.getConnector();
+        const hasMySchema = schemaTrees.some((dbNode) =>
+          dbNode.children?.some(
+            (schemaNode) => schemaNode.object.name === 'my_schema',
+          ),
+        );
+        expect(hasMySchema).toBe(true);
+      });
 
-      // Create fsq_spatial table in main schema
-      await connector.query('CREATE TABLE fsq_spatial (id INT)');
+      it('should hide a table name excluded by the custom filter', async () => {
+        const connector = await store.getState().db.getConnector();
 
-      // Create a normal table
-      await connector.query('CREATE TABLE normal_table (id INT)');
+        await connector.query('CREATE TABLE excluded_table_name (id INT)');
+        await connector.query('CREATE TABLE normal_table (id INT)');
 
-      // Refresh schemas
-      await store.getState().db.refreshTableSchemas();
+        await store.getState().db.refreshTableSchemas();
 
-      // Get the tables from state
-      const tables = store.getState().db.tables;
+        const tables = store.getState().db.tables;
 
-      // Should NOT include fsq_spatial table
-      expect(tables.find((t) => t.table.table === 'fsq_spatial')).toBe(
-        undefined,
-      );
+        expect(
+          tables.find((t) => t.table.table === 'excluded_table_name'),
+        ).toBe(undefined);
 
-      // Should include normal table
-      expect(
-        tables.find((t) => t.table.table === 'normal_table'),
-      ).toBeDefined();
+        expect(
+          tables.find((t) => t.table.table === 'normal_table'),
+        ).toBeDefined();
+      });
     });
 
     it('should show empty schema but hide __sqlrooms_* schemas simultaneously', async () => {

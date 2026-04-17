@@ -35,28 +35,18 @@ import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
-const HIDDEN_SCHEMAS = ['fsq_rag', 'temp', 'fsq_spatial'];
-const HIDDEN_TABLES = ['fsq_spatial'];
 
 /**
- * Default filter to control which tables/schemas/databases are visible in the data source panel.
- *
- * Excludes:
- * - Internal SQLRooms items (prefixed with '__sqlrooms_')
- * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
- * - Reserved tables: 'fsq_spatial'
- *
- * @param table - The qualified table name to evaluate
- * @returns true to include the table/schema/database, false to exclude it
+ * Default filter for which tables/schemas/databases appear in the data source panel.
+ * Excludes only SQLRooms-internal names (prefixed with `__sqlrooms_`).
+ * Apps can pass {@link CreateDuckDbSliceProps.loadTableSchemasFilter} to add product-specific rules.
  */
 export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
   return (table: QualifiedTableName): boolean => {
     return (
       !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
       !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-      !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-      !HIDDEN_SCHEMAS.includes(table.schema || '') &&
-      !HIDDEN_TABLES.includes(table.table || '')
+      !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
     );
   };
 }
@@ -315,15 +305,8 @@ export type DuckDbSliceState = {
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
-   * Optional filter function to control which tables/schemas/databases are visible in the data source panel.
-   *
-   * Default behavior (createDefaultLoadTableSchemasFilter) excludes:
-   * - Internal SQLRooms items (prefixed with '__sqlrooms_')
-   * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
-   * - Reserved tables: 'fsq_spatial'
-   *
-   * @param table - The qualified table name to evaluate
-   * @returns true to include the table/schema/database, false to exclude it
+   * Optional filter for which tables/schemas/databases appear in the data source panel.
+   * Defaults to {@link createDefaultLoadTableSchemasFilter} (hides `__sqlrooms_*` only).
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
 };
