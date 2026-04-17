@@ -353,7 +353,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           createDbProps: {
             duckDb: {
               loadTableSchemasFilter: (() => {
-                const filter = createDefaultLoadTableSchemasFilter();
+                const filter = createDefaultLoadTableSchemasFilter;
                 return (table: QualifiedTableName) => {
                   return (
                     filter(table) &&

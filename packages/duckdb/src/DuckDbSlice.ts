@@ -37,25 +37,27 @@ const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
 
 /**
- * Default filter to control which tables/schemas/databases are visible in the data source panel.
- *
- * Excludes:
- * - Internal SQLRooms items (prefixed with '__sqlrooms_')
- * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
- * - Reserved tables: 'fsq_spatial'
- *
- * @returns A filter function that evaluates a qualified table name and returns
- * true to include the table/schema/database, or false to exclude it.
- * The returned function accepts `table`, the qualified table name to evaluate.
+ * Default predicate: which tables/schemas/databases appear in the data source panel.
+ * Excludes only SQLRooms-internal names (prefixed with `__sqlrooms_`).
+ * Apps can pass {@link CreateDuckDbSliceProps.loadTableSchemasFilter} to add more rules.
  */
-export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
-  return (table: QualifiedTableName): boolean => {
-    return (
-      !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-      !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-      !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
-    );
-  };
+export function createDefaultLoadTableSchemasFilter(
+  table: QualifiedTableName,
+): boolean {
+  return (
+    !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+    !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
+  );
+}
+
+/**
+ * Factory form of {@link createDefaultLoadTableSchemasFilter} for APIs that expect
+ * `() => LoadTableSchemasFilterFunction` (e.g. dependency injection). Behavior matches
+ * using the predicate from {@link createDefaultLoadTableSchemasFilter} directly.
+ */
+export function createDefaultLoadTableSchemasFilterFactory(): LoadTableSchemasFilterFunction {
+  return createDefaultLoadTableSchemasFilter;
 }
 
 const DropTableCommandInput = z.object({
@@ -313,7 +315,7 @@ export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
    * Optional filter for which tables/schemas/databases appear in the data source panel.
-   * Defaults to {@link createDefaultLoadTableSchemasFilter} (hides `__sqlrooms_*` only).
+   * Defaults to {@link createDefaultLoadTableSchemasFilter} (predicate; hides `__sqlrooms_*` only).
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
 };
@@ -323,7 +325,7 @@ export type CreateDuckDbSliceProps = {
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
-  loadTableSchemasFilter = createDefaultLoadTableSchemasFilter(),
+  loadTableSchemasFilter = createDefaultLoadTableSchemasFilter,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   let refreshPromise: Promise<DataTable[]> | null = null;
   let pendingSchemaRefresh = false;

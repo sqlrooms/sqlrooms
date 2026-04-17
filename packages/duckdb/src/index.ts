@@ -31,6 +31,7 @@ export {
   createDuckDbSlice,
   useStoreWithDuckDb,
   createDefaultLoadTableSchemasFilter,
+  createDefaultLoadTableSchemasFilterFactory,
   type CreateDuckDbSliceProps,
   type DuckDbSliceState,
 } from './DuckDbSlice';

@@ -29,7 +29,7 @@ function createTestStore() {
  * exclusions (neutral names — product apps supply their own filters at integration time).
  */
 function createTestComposedLoadTableSchemasFilter() {
-  const base = createDefaultLoadTableSchemasFilter();
+  const base = createDefaultLoadTableSchemasFilter;
   return (table) => {
     if (!base(table)) {
       return false;
