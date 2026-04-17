@@ -9,6 +9,9 @@
   "engines": {
     "node": ">=22"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {

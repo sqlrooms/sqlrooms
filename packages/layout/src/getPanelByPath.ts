@@ -1,12 +1,8 @@
-import type {LayoutPath} from './types';
-
-export type MatchResultParams = Record<string, string | number>;
-
-export type MatchResult<T> = {
-  panelId: string;
-  panel: T;
-  params: MatchResultParams;
-};
+import type {
+  LayoutPath,
+  MatchResultParams,
+  MatchResult,
+} from './layout-base-types';
 
 /**
  * Gets a panel by matching a node path from the layout tree to a panel entry.

@@ -1,6 +1,6 @@
 import {useContext, useMemo} from 'react';
-import {getPanelByPath, MatchResult} from './getPanelByPath';
-import {LayoutPath, RoomPanelInfo} from './types';
+import {getPanelByPath} from './getPanelByPath';
+import {LayoutPath, RoomPanelInfo, MatchResult} from './types';
 import {useStoreWithLayout} from './LayoutSlice';
 import {resolvePanelDefinition} from './resolvePanelDefinition';
 import {

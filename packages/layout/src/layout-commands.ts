@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {findTabsNodeForPanel} from './mosaic/mosaic-utils';
 import type {Panels, RoomPanelInfo} from './types';
-import type {LayoutSliceState} from './LayoutSlice';
+import type {LayoutSliceState} from './layout-slice-types';
 
 export const LAYOUT_COMMAND_OWNER = '@sqlrooms/layout/panels';
 

@@ -25,12 +25,14 @@ export const DashboardTabs: RoomPanelComponent = ({panelInfo: {panelId}}) => {
         <TabsLayout.NewButton />
       </TabsLayout.TabStrip>
       <TabsLayout.TabContentContainer>
-        <div className="my-1 flex justify-end gap-2 p-1">
+        <div className="my-1 flex shrink-0 justify-end gap-2 p-1">
           <Button variant="default" onClick={handleAddChart}>
             <PlusIcon /> Add Chart
           </Button>
         </div>
-        <TabsLayout.TabContent />
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <TabsLayout.TabContent />
+        </div>
       </TabsLayout.TabContentContainer>
     </>
   );

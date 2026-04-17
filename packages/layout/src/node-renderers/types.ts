@@ -1,7 +1,9 @@
 import type {LayoutNode} from '@sqlrooms/layout-config';
-import type {LayoutPath, PanelContainerType} from '../types';
-
-export type ParentDirection = 'row' | 'column';
+import type {
+  LayoutPath,
+  PanelContainerType,
+  ParentDirection,
+} from '../layout-base-types';
 
 export interface NodeRenderProps<TNode extends LayoutNode = LayoutNode> {
   node: TNode;

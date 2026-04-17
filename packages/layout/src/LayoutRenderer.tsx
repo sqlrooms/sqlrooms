@@ -5,7 +5,7 @@ import {
   LayoutRendererContextType,
   LayoutRendererProvider,
 } from './LayoutRendererContext';
-import {NodeRenderer} from './node-renderers/NodeRenderer';
+import {LayoutNodeRenderer} from './node-renderers/LayoutNodeRenderer';
 
 export type LayoutRendererProps = {
   rootLayout: LayoutNode;
@@ -19,7 +19,7 @@ export const LayoutRenderer: FC<LayoutRendererProps> = ({
   return (
     <LayoutRendererProvider {...contextValue}>
       <div className={cn('h-full min-w-0 flex-1', className)}>
-        <NodeRenderer
+        <LayoutNodeRenderer
           node={contextValue.rootLayout}
           path={[]}
           containerType="root"
