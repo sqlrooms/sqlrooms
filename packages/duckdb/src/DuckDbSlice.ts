@@ -37,9 +37,16 @@ const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
 
 /**
- * Default filter for which tables/schemas/databases appear in the data source panel.
- * Excludes only SQLRooms-internal names (prefixed with `__sqlrooms_`).
- * Apps can pass {@link CreateDuckDbSliceProps.loadTableSchemasFilter} to add product-specific rules.
+ * Default filter to control which tables/schemas/databases are visible in the data source panel.
+ *
+ * Excludes:
+ * - Internal SQLRooms items (prefixed with '__sqlrooms_')
+ * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
+ * - Reserved tables: 'fsq_spatial'
+ *
+ * @returns A filter function that evaluates a qualified table name and returns
+ * true to include the table/schema/database, or false to exclude it.
+ * The returned function accepts `table`, the qualified table name to evaluate.
  */
 export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
   return (table: QualifiedTableName): boolean => {
