@@ -51,36 +51,23 @@ export {
 } from './MosaicSlice';
 export {
   MosaicProfiler,
-  MosaicProfiler,
-  type MosaicProfilerCompoundHeaderProps,
   type MosaicProfilerCompoundHeaderProps,
   type MosaicProfilerCompoundRowsProps,
-  type MosaicProfilerCompoundRowsProps,
-  type MosaicProfilerCompoundStatusBarProps,
   type MosaicProfilerCompoundStatusBarProps,
   type MosaicProfilerCompoundTableProps,
-  type MosaicProfilerCompoundTableProps,
   type MosaicProfilerProps,
-  type MosaicProfilerProps,
-  type MosaicProfilerRootProps,
   type MosaicProfilerRootProps,
 } from './profiler/MosaicProfiler';
 export {
   MosaicProfilerHeader,
-  MosaicProfilerHeader,
-  type MosaicProfilerHeaderProps,
   type MosaicProfilerHeaderProps,
 } from './profiler/MosaicProfilerHeader';
 export {
   MosaicProfilerRows,
-  MosaicProfilerRows,
-  type MosaicProfilerRowsProps,
   type MosaicProfilerRowsProps,
 } from './profiler/MosaicProfilerRows';
 export {
   MosaicProfilerStatusBar,
-  MosaicProfilerStatusBar,
-  type MosaicProfilerStatusBarProps,
   type MosaicProfilerStatusBarProps,
 } from './profiler/MosaicProfilerStatusBar';
 export {useMosaicProfiler} from './profiler/useMosaicProfiler';
