@@ -9,8 +9,10 @@
  *
  * The earthquake slice drives the Cesium layer's SQL via updateLayer(), so
  * activating a preset causes an automatic re-query and re-render. Depth is
- * projected into altitude_m = -Depth * 1000, and the viewer is configured
- * with depthTestAgainstTerrain = false so events render inside the Earth.
+ * projected into altitude_m = -depth * 1000 so events sit at their true
+ * 3D position inside the Earth; depthTestAgainstTerrain stays on so the
+ * opaque globe occludes them until a preset's section-cut clipping plane
+ * exposes the subsurface.
  */
 
 import {
@@ -36,6 +38,7 @@ import {
   buildEarthquakeSql,
   createEarthquakeSlice,
   EARTHQUAKE_LAYER_ID,
+  EARTHQUAKE_TABLE,
   type EarthquakeSliceState,
 } from './earthquake-slice';
 import {PresetPanel} from './PresetPanel';
@@ -75,7 +78,7 @@ const configWithLayers = {
         id: EARTHQUAKE_LAYER_ID,
         type: 'sql-entities' as const,
         visible: true,
-        tableName: 'earthquakes',
+        tableName: EARTHQUAKE_TABLE,
         sqlQuery: buildEarthquakeSql(''),
         // `NONE` means the altitude column is used verbatim; no terrain snap.
         heightReference: 'NONE' as const,
@@ -108,7 +111,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         title: 'Wadati–Benioff Explorer',
         dataSources: [
           {
-            tableName: 'earthquakes',
+            tableName: EARTHQUAKE_TABLE,
             type: 'url',
             // Pre-built parquet of M5+ global events since 2013 (~17k rows,
             // ~850 KB). Matches the other sqlrooms examples' pattern of

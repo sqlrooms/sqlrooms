@@ -19,7 +19,7 @@ import {
 } from './earthquake-presets';
 
 export const EARTHQUAKE_LAYER_ID = 'earthquakes';
-const EARTHQUAKE_TABLE = 'earthquakes';
+export const EARTHQUAKE_TABLE = 'earthquakes';
 
 /**
  * Magnitude bands used for both the 3D point coloring (via SQL CASE) and the
@@ -73,8 +73,9 @@ function buildMagBandCase(): string {
  *
  * We join a per-dataset min/max time CTE so we can compute a "recency" score
  * in [0, 1] and scale point size by it. Altitude is negative depth (in
- * metres) so events render inside the Earth — `depthTestAgainstTerrain: false`
- * on the viewer prevents terrain culling.
+ * metres) so events sit at their true 3D position inside the Earth;
+ * `depthTestAgainstTerrain = true` on the viewer means the globe occludes
+ * them until a preset's section-cut clipping plane exposes the subsurface.
  */
 export function buildEarthquakeSql(whereFragment: string): string {
   return `

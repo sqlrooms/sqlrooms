@@ -28,6 +28,7 @@ import {useRoomStore} from './store';
 import {EarthquakePanels} from './panel-keys';
 import {
   buildHistogramSql,
+  EARTHQUAKE_TABLE,
   MAG_BANDS,
   whereFragmentFor,
   type MagBandKey,
@@ -49,11 +50,16 @@ export const HistogramPanel: FC = () => {
     return buildHistogramSql(whereFragmentFor(preset, sliceHalfWidthKm));
   }, [presets, activePresetId, sliceHalfWidthKm]);
 
-  // Gate on table existence so the query doesn't fire before the parquet loads.
-  const table = useRoomStore((s) => s.db.findTableByName('earthquakes'));
+  // Gate on table existence so the query doesn't fire before the parquet
+  // loads. Select a stable boolean so unrelated store updates don't retrigger
+  // re-renders (matches the pattern in RenderingStatus and the CLAUDE.md
+  // guidance on selector stability).
+  const tableReady = useRoomStore((s) =>
+    Boolean(s.db.findTableByName(EARTHQUAKE_TABLE)),
+  );
   const {data, isLoading, error} = useSql<HistogramRow>({
     query: sqlQuery,
-    enabled: Boolean(table),
+    enabled: tableReady,
   });
 
   // DuckDB's SUM over INT returns BIGINT/HUGEINT, which Arrow surfaces as

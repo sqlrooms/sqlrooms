@@ -29,8 +29,6 @@ export interface SubductionPreset {
    * The section line is perpendicular to this, cutting across the slab.
    */
   strikeDeg: number;
-  /** Camera height above ellipsoid at fly-to, in meters */
-  cameraHeight: number;
   /** Camera heading in degrees (clockwise from North) */
   cameraHeadingDeg: number;
   /** Camera pitch in degrees (negative = looking down) */
@@ -188,7 +186,6 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     longitude: -174.5,
     latitude: -20.0,
     strikeDeg: 20, // roughly N-NNE
-    cameraHeight: 900_000,
     cameraHeadingDeg: 20,
     cameraPitchDeg: -25,
     slab: {
@@ -208,7 +205,6 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     longitude: 143.5,
     latitude: 38.5,
     strikeDeg: 20,
-    cameraHeight: 900_000,
     cameraHeadingDeg: 20,
     cameraPitchDeg: -25,
     slab: {
@@ -228,7 +224,6 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     longitude: -72.5,
     latitude: -32.0,
     strikeDeg: 0, // nearly N-S
-    cameraHeight: 900_000,
     cameraHeadingDeg: 0,
     cameraPitchDeg: -25,
     slab: {
@@ -248,7 +243,6 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     longitude: 104.5,
     latitude: -5.5,
     strikeDeg: 315, // ~NW-SE
-    cameraHeight: 900_000,
     cameraHeadingDeg: 315,
     cameraPitchDeg: -25,
     slab: {
@@ -268,7 +262,6 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     longitude: -124.5,
     latitude: 45.5,
     strikeDeg: 5, // essentially N-S
-    cameraHeight: 700_000,
     cameraHeadingDeg: 5,
     cameraPitchDeg: -25,
     slab: {
@@ -288,7 +281,6 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
     longitude: 23.5,
     latitude: 35.0,
     strikeDeg: 290, // Greek arc trends ~ESE-WNW
-    cameraHeight: 700_000,
     cameraHeadingDeg: 290,
     cameraPitchDeg: -25,
     slab: {
@@ -307,10 +299,15 @@ export const SUBDUCTION_PRESETS: SubductionPreset[] = [
  * along-strike offset from the preset's section line is within the slice
  * half-width and whose along-section distance stays within the section extent.
  *
- * The math is a small-angle flat-earth approximation: we project (Lon, Lat)
- * offsets into local east/north km using 111.32 km/deg and cos(lat), then
- * rotate into the strike/dip frame via precomputed trig. This is accurate
- * enough for section windows of a few hundred kilometres.
+ * The math is a small-angle flat-earth approximation: we project each row's
+ * (longitude, latitude) offset from the preset center into local east/north
+ * km using 111.32 km/deg, then rotate into the strike/dip frame via
+ * precomputed trig. We evaluate `COS(RADIANS(latitude))` per row rather than
+ * baking in the preset-latitude cosine, so the scale stays accurate at the
+ * edges of a wide `SLICE_ALONG_SECTION_KM` window where latitude drifts by
+ * several degrees from the preset center. Remaining error is the
+ * flat-earth/great-circle gap, which is still under ~1% for the 1500 km
+ * section extent used here.
  *
  * Accepts a longitude wraparound fix so Tonga (±180° crossing) still works.
  */
@@ -318,15 +315,15 @@ export function buildSliceWhereClause(
   preset: SubductionPreset,
   halfWidthKm: number = DEFAULT_SLICE_HALF_WIDTH_KM,
 ): string {
-  const latRad = (preset.latitude * Math.PI) / 180;
   const strikeRad = (preset.strikeDeg * Math.PI) / 180;
-  const cosLat = Math.cos(latRad);
   const sinStrike = Math.sin(strikeRad);
   const cosStrike = Math.cos(strikeRad);
 
   // Maps any longitude into [-180, 180) so Tonga (±180° crossing) works.
   const dLonDeg = `((((longitude - ${preset.longitude}) + 540.0) - FLOOR(((longitude - ${preset.longitude}) + 540.0) / 360.0) * 360.0) - 180.0)`;
-  const dLonKm = `(${dLonDeg} * ${KM_PER_DEG} * ${cosLat})`;
+  // Per-row cosLat — more accurate than a fixed preset-center value when
+  // the section window spans multiple degrees of latitude.
+  const dLonKm = `(${dLonDeg} * ${KM_PER_DEG} * COS(RADIANS(latitude)))`;
   const dLatKm = `((latitude - ${preset.latitude}) * ${KM_PER_DEG})`;
 
   const alongStrikeKm = `(${dLonKm} * ${sinStrike} + ${dLatKm} * ${cosStrike})`;
