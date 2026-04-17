@@ -13,6 +13,7 @@ import type {CesiumSliceState} from '@sqlrooms/cesium';
 import {
   SUBDUCTION_PRESETS,
   DEFAULT_SLICE_HALF_WIDTH_KM,
+  DATA_WIDTH_MULTIPLIER,
   buildSliceWhereClause,
   type SubductionPreset,
 } from './earthquake-presets';
@@ -26,43 +27,43 @@ const EARTHQUAKE_TABLE = 'earthquakes';
  * sync. Bands are listed low → high; `min` is inclusive.
  */
 export const MAG_BANDS = [
-  {key: 'mag4', min: 4.5, label: 'M 4.5–5', color: '#d0e4ff'},
-  {key: 'mag5', min: 5, label: 'M 5–6', color: '#ffe680'},
-  {key: 'mag6', min: 6, label: 'M 6–7', color: '#ffc04a'},
-  {key: 'mag7', min: 7, label: 'M 7+', color: '#ff2a1f'},
+  {key: 'mag5', min: 5, label: 'M 5–6', color: '#d0e4ff'},
+  {key: 'mag6', min: 6, label: 'M 6–7', color: '#ffe680'},
+  {key: 'mag7', min: 7, label: 'M 7–8', color: '#ffc04a'},
+  {key: 'mag8', min: 8, label: 'M 8+', color: '#ff2a1f'},
 ] as const;
 
 export type MagBandKey = (typeof MAG_BANDS)[number]['key'];
 
 /** Lowest magnitude considered an "event" by both queries. */
 const MAG_FLOOR = MAG_BANDS[0].min;
-const BASE_FILTER = `Magnitude >= ${MAG_FLOOR} AND Depth IS NOT NULL`;
+const BASE_FILTER = `mag >= ${MAG_FLOOR} AND depth IS NOT NULL`;
 
 function composeWhere(whereFragment: string): string {
   return whereFragment ? `${BASE_FILTER} AND (${whereFragment})` : BASE_FILTER;
 }
 
 /**
- * SQL CASE expression that maps each row's Magnitude to its band color.
+ * SQL CASE expression that maps each row's magnitude to its band color.
  * Built from MAG_BANDS so the SQL palette and the legend always agree.
  */
 function buildMagColorCase(): string {
   // Walk bands high → low so the first matching threshold wins.
   const branches = [...MAG_BANDS]
     .reverse()
-    .map((b) => `WHEN e.Magnitude >= ${b.min} THEN '${b.color}'`)
+    .map((b) => `WHEN e.mag >= ${b.min} THEN '${b.color}'`)
     .join(' ');
   return `CASE ${branches} ELSE '${MAG_BANDS[0].color}' END`;
 }
 
 /**
- * SQL CASE expression that buckets Magnitude into a band key (mag4/mag5/...).
+ * SQL CASE expression that buckets magnitude into a band key (mag4/mag5/...).
  * Mirrors buildMagColorCase so the histogram bins line up with the colors.
  */
 function buildMagBandCase(): string {
   const branches = [...MAG_BANDS]
     .reverse()
-    .map((b) => `WHEN Magnitude >= ${b.min} THEN '${b.key}'`)
+    .map((b) => `WHEN mag >= ${b.min} THEN '${b.key}'`)
     .join(' ');
   return `CASE ${branches} ELSE '${MAG_BANDS[0].key}' END`;
 }
@@ -70,38 +71,38 @@ function buildMagBandCase(): string {
 /**
  * Base SQL query for the 3D earthquake layer.
  *
- * We join a per-dataset min/max DateTime CTE so we can compute a "recency"
- * score in [0, 1] and scale point size by it. Altitude is negative Depth (in
+ * We join a per-dataset min/max time CTE so we can compute a "recency" score
+ * in [0, 1] and scale point size by it. Altitude is negative depth (in
  * metres) so events render inside the Earth — `depthTestAgainstTerrain: false`
  * on the viewer prevents terrain culling.
  */
 export function buildEarthquakeSql(whereFragment: string): string {
   return `
     WITH stats AS (
-      SELECT MIN(DateTime) AS min_dt, MAX(DateTime) AS max_dt
+      SELECT MIN(time) AS min_dt, MAX(time) AS max_dt
       FROM ${EARTHQUAKE_TABLE}
-      WHERE Magnitude >= ${MAG_FLOOR}
+      WHERE mag >= ${MAG_FLOOR}
     )
     SELECT
-      e.Latitude AS latitude,
-      e.Longitude AS longitude,
-      -e.Depth * 1000.0 AS altitude_m,
-      strftime(e.DateTime, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
+      e.latitude AS latitude,
+      e.longitude AS longitude,
+      -e.depth * 1000.0 AS altitude_m,
+      strftime(e.time, '%Y-%m-%dT%H:%M:%SZ') AS timestamp,
       ${buildMagColorCase()} AS color,
       (
         3.0 + 9.0 * COALESCE(
-          (EPOCH(e.DateTime) - EPOCH(s.min_dt))
+          (EPOCH(e.time) - EPOCH(s.min_dt))
             / NULLIF(EPOCH(s.max_dt) - EPOCH(s.min_dt), 0),
           0
         )
       ) AS size,
-      'M' || CAST(ROUND(e.Magnitude, 1) AS VARCHAR)
-        || '  ·  ' || CAST(ROUND(e.Depth, 0) AS VARCHAR) || ' km'
-        || '  ·  ' || CAST(e.DateTime AS VARCHAR) AS label
+      'M' || CAST(ROUND(e.mag, 1) AS VARCHAR)
+        || '  ·  ' || CAST(ROUND(e.depth, 0) AS VARCHAR) || ' km'
+        || '  ·  ' || CAST(e.time AS VARCHAR) AS label
     FROM ${EARTHQUAKE_TABLE} e
     CROSS JOIN stats s
     WHERE ${composeWhere(whereFragment)}
-    ORDER BY e.DateTime
+    ORDER BY e.time
   `;
 }
 
@@ -116,7 +117,7 @@ export function buildHistogramSql(whereFragment: string): string {
   return `
     WITH bucketed AS (
       SELECT
-        CAST(FLOOR(Depth / 50) * 50 AS INTEGER) AS depth_bin,
+        CAST(FLOOR(depth / 50) * 50 AS INTEGER) AS depth_bin,
         ${buildMagBandCase()} AS mag_band
       FROM ${EARTHQUAKE_TABLE}
       WHERE ${composeWhere(whereFragment)}
@@ -130,12 +131,19 @@ export function buildHistogramSql(whereFragment: string): string {
   `;
 }
 
-/** Compute the slab-filter WHERE fragment for the given preset+width. */
+/**
+ * Compute the slab-filter WHERE fragment for the given preset + slab mesh
+ * half-width. The SQL filter uses a data-point window that's
+ * `DATA_WIDTH_MULTIPLIER` × wider than the mesh window, so the point cloud
+ * has lateral context around the thin slab ribbon.
+ */
 export function whereFragmentFor(
   preset: SubductionPreset | null,
-  halfWidthKm: number,
+  slabHalfWidthKm: number,
 ): string {
-  return preset ? buildSliceWhereClause(preset, halfWidthKm) : '';
+  return preset
+    ? buildSliceWhereClause(preset, slabHalfWidthKm * DATA_WIDTH_MULTIPLIER)
+    : '';
 }
 
 export interface EarthquakeSliceState {

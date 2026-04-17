@@ -56,12 +56,27 @@ export const HistogramPanel: FC = () => {
     enabled: Boolean(table),
   });
 
-  const rows = useMemo(() => (data ? data.toArray() : []), [data]);
+  // DuckDB's SUM over INT returns BIGINT/HUGEINT, which Arrow surfaces as
+  // stringy values (BigInt-safe). We coerce to Number for chart plotting
+  // and totaling — 17k events at counts well under 2^53 is safely in
+  // Number precision.
+  const rows = useMemo<HistogramRow[]>(() => {
+    if (!data) return [];
+    return data.toArray().map((r) => {
+      const coerced: HistogramRow = {
+        depth_bin: Number(r.depth_bin),
+      } as HistogramRow;
+      for (const b of MAG_BANDS) {
+        coerced[b.key] = Number(r[b.key] ?? 0);
+      }
+      return coerced;
+    });
+  }, [data]);
   const total = useMemo(
     () =>
       rows.reduce(
         (acc, r) =>
-          acc + MAG_BANDS.reduce((bandSum, b) => bandSum + (r[b.key] ?? 0), 0),
+          acc + MAG_BANDS.reduce((bandSum, b) => bandSum + r[b.key], 0),
         0,
       ),
     [rows],

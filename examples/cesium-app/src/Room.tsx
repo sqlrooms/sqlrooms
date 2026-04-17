@@ -8,6 +8,9 @@ import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 import {roomStore} from './store';
 import {SlabSurfaceController} from './SlabSurfaceController';
+import {SliceClippingController} from './SliceClippingController';
+import {SceneStyleController} from './SceneStyleController';
+import {RenderingStatus} from './RenderingStatus';
 
 export const Room = () => {
   const sqlEditorDisclosure = useDisclosure();
@@ -25,7 +28,10 @@ export const Room = () => {
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <SceneStyleController />
       <SlabSurfaceController />
+      <SliceClippingController />
+      <RenderingStatus />
       <SqlEditorModal
         isOpen={sqlEditorDisclosure.isOpen}
         onClose={sqlEditorDisclosure.onClose}

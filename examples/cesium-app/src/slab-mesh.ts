@@ -183,5 +183,9 @@ export function buildSlabPrimitive(preset: SubductionPreset): Primitive | null {
       faceForward: true,
     }),
     allowPicking: false,
+    // Custom inline Geometry has no worker; Cesium's default asynchronous
+    // pipeline would fail with "Must define either _workerName or
+    // _workerPath for asynchronous geometry."
+    asynchronous: false,
   });
 }

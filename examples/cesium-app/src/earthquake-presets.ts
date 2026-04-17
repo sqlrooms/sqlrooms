@@ -11,6 +11,8 @@
  * shown when a preset is active, revealing the slab in profile.
  */
 
+import {Cartesian3, Matrix4, Transforms} from 'cesium';
+
 export interface SubductionPreset {
   /** Stable key, used as id in buttons and SQL filter state */
   id: string;
@@ -78,7 +80,100 @@ export interface SlabParams {
   alongStrikeKm: number;
 }
 
+/**
+ * Compute the ECEF strike unit vector and the preset's ECEF center point.
+ * Shared kernel for both the single-plane globe cut and the two-plane slab
+ * clip.
+ */
+function computeStrikeFrame(preset: SubductionPreset): {
+  strikeEcef: {x: number; y: number; z: number};
+  centerEcef: {x: number; y: number; z: number};
+  dot: number;
+} {
+  const centerEcef = Cartesian3.fromDegrees(
+    preset.longitude,
+    preset.latitude,
+    0,
+  );
+  const enuToFixed = Transforms.eastNorthUpToFixedFrame(centerEcef);
+
+  const strikeRad = (preset.strikeDeg * Math.PI) / 180;
+  const strikeLocal = new Cartesian3(
+    Math.sin(strikeRad),
+    Math.cos(strikeRad),
+    0,
+  );
+  const strikeEcef = Matrix4.multiplyByPointAsVector(
+    enuToFixed,
+    strikeLocal,
+    new Cartesian3(),
+  );
+  Cartesian3.normalize(strikeEcef, strikeEcef);
+
+  const dot = Cartesian3.dot(strikeEcef, centerEcef);
+
+  return {
+    strikeEcef: {x: strikeEcef.x, y: strikeEcef.y, z: strikeEcef.z},
+    centerEcef: {x: centerEcef.x, y: centerEcef.y, z: centerEcef.z},
+    dot,
+  };
+}
+
+/**
+ * Compute the section-cut clipping plane for a preset, expressed in ECEF.
+ * The plane is perpendicular to the trench strike and passes through the
+ * preset center, so applying it to the globe exposes a clean cross-section
+ * through the dipping slab.
+ *
+ * Returned shape matches the cesium slice's `enableClippingPlane` argument
+ * convention: `{normal: {x,y,z}, distance}` where `normal · X + distance = 0`
+ * defines the plane in WGS84 ECEF coordinates.
+ */
+export function computePresetClippingPlane(preset: SubductionPreset): {
+  normal: {x: number; y: number; z: number};
+  distance: number;
+} {
+  const {strikeEcef, dot} = computeStrikeFrame(preset);
+  // distance = -dot(strike, center): plane passes through preset center.
+  return {normal: strikeEcef, distance: -dot};
+}
+
+/**
+ * Compute a pair of opposing clipping planes that trim a primitive to a
+ * ±`halfWidthKm` slab centered on the section line (perpendicular to
+ * strike). Used for the slab-surface mesh so the rendered plate reads as
+ * a thin section ribbon rather than a globe-spanning sheet.
+ *
+ * Combine these with `unionClippingRegions: true` on the ClippingPlaneCollection
+ * so the *intersection* of each plane's "inside" half-space is kept.
+ */
+export function computeSlabClippingPlanes(
+  preset: SubductionPreset,
+  halfWidthKm: number,
+): Array<{normal: {x: number; y: number; z: number}; distance: number}> {
+  const {strikeEcef, dot} = computeStrikeFrame(preset);
+  const halfWidthM = halfWidthKm * 1000;
+
+  // Kept region: -halfWidth <= strike·(X - center) <= halfWidth
+  //   Plane A (normal = +strike): keep strike·X >= strike·center - halfWidth
+  //     → distance_A = halfWidth - strike·center
+  //   Plane B (normal = -strike): keep strike·X <= strike·center + halfWidth
+  //     → distance_B = halfWidth + strike·center
+  const negStrike = {x: -strikeEcef.x, y: -strikeEcef.y, z: -strikeEcef.z};
+  return [
+    {normal: strikeEcef, distance: halfWidthM - dot},
+    {normal: negStrike, distance: halfWidthM + dot},
+  ];
+}
+
 export const DEFAULT_SLICE_HALF_WIDTH_KM = 50;
+/**
+ * The SQL data filter keeps events within (DATA_WIDTH_MULTIPLIER × slab
+ * mesh width) of the section line. Giving the point cloud a wider window
+ * than the slab ribbon provides lateral context around the exposed
+ * cross-section without making the slab mesh itself look bloated.
+ */
+export const DATA_WIDTH_MULTIPLIER = 3;
 /** Maximum along-section distance retained in slice filter, in km. */
 const SLICE_ALONG_SECTION_KM = 1500;
 /** Equatorial km per degree of latitude (and longitude at the equator). */
@@ -230,9 +325,9 @@ export function buildSliceWhereClause(
   const cosStrike = Math.cos(strikeRad);
 
   // Maps any longitude into [-180, 180) so Tonga (±180° crossing) works.
-  const dLonDeg = `((((Longitude - ${preset.longitude}) + 540.0) - FLOOR(((Longitude - ${preset.longitude}) + 540.0) / 360.0) * 360.0) - 180.0)`;
+  const dLonDeg = `((((longitude - ${preset.longitude}) + 540.0) - FLOOR(((longitude - ${preset.longitude}) + 540.0) / 360.0) * 360.0) - 180.0)`;
   const dLonKm = `(${dLonDeg} * ${KM_PER_DEG} * ${cosLat})`;
-  const dLatKm = `((Latitude - ${preset.latitude}) * ${KM_PER_DEG})`;
+  const dLatKm = `((latitude - ${preset.latitude}) * ${KM_PER_DEG})`;
 
   const alongStrikeKm = `(${dLonKm} * ${sinStrike} + ${dLatKm} * ${cosStrike})`;
   const alongSectionKm = `(${dLonKm} * ${cosStrike} - ${dLatKm} * ${sinStrike})`;

@@ -10,7 +10,12 @@
  */
 
 import {FC, useCallback} from 'react';
-import {Cartesian3, Math as CesiumMath} from 'cesium';
+import {
+  BoundingSphere,
+  Cartesian3,
+  HeadingPitchRange,
+  Math as CesiumMath,
+} from 'cesium';
 import {Button, Slider, cn} from '@sqlrooms/ui';
 import {useStoreWithCesium} from '@sqlrooms/cesium';
 import {RoomPanel} from '@sqlrooms/room-shell';
@@ -39,17 +44,29 @@ export const PresetPanel: FC = () => {
       activatePreset(preset.id);
 
       if (!viewer || viewer.isDestroyed()) return;
-      viewer.camera.flyTo({
-        destination: Cartesian3.fromDegrees(
-          preset.longitude,
-          preset.latitude,
-          preset.cameraHeight,
+
+      // Aim the camera at a point roughly halfway down the slab so the full
+      // Wadati–Benioff zone is in view. `flyToBoundingSphere` + HPR lets us
+      // say "put the camera at heading H, pitch P, range R FROM this target"
+      // instead of hand-computing a destination that happens to stare at the
+      // right spot. The shallow-slab Cascadia/Hellenic presets still look
+      // reasonable because range scales with slab depth (with a sensible
+      // floor so we don't slam the camera into the ground).
+      const slab = preset.slab;
+      const slabDepthKm = slab?.maxDepthKm ?? 200;
+      const target = Cartesian3.fromDegrees(
+        preset.longitude,
+        preset.latitude,
+        -(slabDepthKm / 2) * 1000,
+      );
+      const rangeKm = Math.max(slabDepthKm * 2.2, 600);
+
+      viewer.camera.flyToBoundingSphere(new BoundingSphere(target, 0), {
+        offset: new HeadingPitchRange(
+          CesiumMath.toRadians(preset.cameraHeadingDeg),
+          CesiumMath.toRadians(preset.cameraPitchDeg),
+          rangeKm * 1000,
         ),
-        orientation: {
-          heading: CesiumMath.toRadians(preset.cameraHeadingDeg),
-          pitch: CesiumMath.toRadians(preset.cameraPitchDeg),
-          roll: 0,
-        },
         duration: 1.8,
       });
     },

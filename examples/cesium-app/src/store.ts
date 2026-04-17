@@ -63,9 +63,10 @@ const configWithLayers = {
       pitch: -Math.PI / 2,
       roll: 0,
     },
-    // CRITICAL: allow sub-surface rendering so depth-positioned points are
-    // not culled by the terrain depth test.
-    depthTestAgainstTerrain: false,
+    // Topography occludes the point cloud: subsurface events are hidden
+    // behind the globe until a preset cuts it open with a clipping plane,
+    // which then exposes a clean cross-section of the seismicity.
+    depthTestAgainstTerrain: true,
     // Keep the timeline + animation controls visible for time scrubbing.
     showTimeline: true,
     showAnimation: true,
@@ -109,7 +110,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           {
             tableName: 'earthquakes',
             type: 'url',
-            url: 'https://huggingface.co/datasets/sqlrooms/earthquakes/resolve/main/earthquakes.parquet',
+            // Pre-built parquet of M5+ global events since 2013 (~17k rows,
+            // ~850 KB). Matches the other sqlrooms examples' pattern of
+            // loading demo data from HuggingFace rather than bundling in
+            // the repo. Regenerate + reupload with
+            // `scripts/fetch-earthquakes.py` when you want fresher data.
+            url: 'https://huggingface.co/datasets/collord/globalearthquakes/resolve/main/earthquakes.parquet',
           },
         ],
       },
