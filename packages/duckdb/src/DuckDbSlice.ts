@@ -46,8 +46,9 @@ const HIDDEN_TABLES = ['fsq_spatial'];
  * - Reserved schemas: 'fsq_rag', 'temp', 'fsq_spatial'
  * - Reserved tables: 'fsq_spatial'
  *
- * @param table - The qualified table name to evaluate
- * @returns true to include the table/schema/database, false to exclude it
+ * @returns A filter function that evaluates a qualified table name and returns
+ * true to include the table/schema/database, or false to exclude it.
+ * The returned function accepts `table`, the qualified table name to evaluate.
  */
 export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
   return (table: QualifiedTableName): boolean => {
