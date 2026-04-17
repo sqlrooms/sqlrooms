@@ -5,15 +5,15 @@ import {
   LayoutRenderer,
 } from '@sqlrooms/layout';
 import {Button} from '@sqlrooms/ui';
-import React, {useCallback, useEffect, useMemo} from 'react';
 import {Plus} from 'lucide-react';
+import React, {useCallback, useEffect, useMemo} from 'react';
+import {MosaicDashboardChartPanel} from './MosaicDashboardChartPanel';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
   getMosaicDashboardMosaicId,
   getMosaicDashboardPanelId,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
-import {MosaicDashboardChartPanel} from './MosaicDashboardChartPanel';
 
 export const MosaicDashboardCharts: React.FC = () => {
   const {dashboardId, canCreateChart, openBuilder} =
@@ -89,11 +89,9 @@ export const MosaicDashboardCharts: React.FC = () => {
   }
 
   return (
-    <div className="min-h-0 flex-1">
-      <LayoutRenderer
-        rootLayout={mosaicNode}
-        onLayoutChange={handleLayoutChange}
-      />
-    </div>
+    <LayoutRenderer
+      rootLayout={mosaicNode}
+      onLayoutChange={handleLayoutChange}
+    />
   );
 };

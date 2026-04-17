@@ -34,9 +34,6 @@ export const MosaicDashboardToolbar: React.FC = () => {
   return (
     <div className="flex items-center justify-between border-b px-3 py-2">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium">
-          {dashboard?.title || 'Dashboard'}
-        </h3>
         <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
           <PopoverTrigger asChild>
             <Button

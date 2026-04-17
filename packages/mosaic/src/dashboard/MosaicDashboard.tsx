@@ -1,4 +1,5 @@
-import React, {
+import type {Spec} from '@uwdata/mosaic-spec';
+import {
   PropsWithChildren,
   ReactElement,
   useCallback,
@@ -8,9 +9,8 @@ import React, {
 } from 'react';
 import type {ChartBuilderColumn} from '../chart-builders/types';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
-import type {Spec} from '@uwdata/mosaic-spec';
-import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardCharts} from './MosaicDashboardCharts';
+import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardProfiler} from './MosaicDashboardProfiler';
 import {
   createMosaicDashboardChartConfig,
@@ -135,7 +135,7 @@ function MosaicDashboardComponent({
     <MosaicDashboardRoot dashboardId={dashboardId}>
       <div className="flex h-full flex-col">
         <MosaicDashboardToolbar />
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="h-full overflow-y-auto">
           <MosaicDashboardProfiler />
           <MosaicDashboardCharts />
         </div>
