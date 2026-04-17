@@ -138,7 +138,7 @@ export async function loadAllSchemas(
     // Apply the same filter function used for tables
     if (filter) {
       const shouldInclude = filter(
-        makeQualifiedTableName(database, schema, ''),
+        makeQualifiedTableName({database, schema, table: ''}),
       );
       if (!shouldInclude) continue;
     }
