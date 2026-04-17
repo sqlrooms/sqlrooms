@@ -3,7 +3,7 @@
  * Bridges DuckDB data to 3D globe visualization.
  */
 
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect} from 'react';
 import {Entity, PointGraphics} from 'resium';
 import {Color, HeightReference} from 'cesium';
 import {useSql} from '@sqlrooms/duckdb';
@@ -71,24 +71,36 @@ export const CesiumEntityLayer: React.FC<CesiumEntityLayerProps> = ({
         ? HeightReference.NONE
         : HeightReference.RELATIVE_TO_GROUND;
 
-  // Auto-set clock time range from data when a time column is mapped
+  // Auto-sync the clock range to the data whenever the data changes. Run on
+  // every data change (not just the first) so that a caller updating the
+  // layer's SQL query — e.g. activating a spatial filter — immediately
+  // reparks the clock on the new dataset's time bounds. Without this, a
+  // stale `currentTime` from the previous dataset can fall outside every new
+  // entity's `[event_time, stopTime]` availability window, hiding all of them.
   const setClockConfig = useStoreWithCesium((s) => s.cesium.setClockConfig);
   const setCurrentTime = useStoreWithCesium((s) => s.cesium.setCurrentTime);
-  const hasSetClockRef = useRef(false);
 
   useEffect(() => {
-    if (hasSetClockRef.current || entities.length === 0) return;
+    if (entities.length === 0) return;
 
-    // Find time bounds from entities (data is ORDER BY time from SQL)
     const timeEntities = entities.filter((e) => e.time);
     if (timeEntities.length === 0) return;
 
-    const startTime = timeEntities[0]!.time!;
-    const stopTime = timeEntities[timeEntities.length - 1]!.time!;
+    // Entities are not guaranteed to arrive sorted; scan for the true range.
+    let startTime = timeEntities[0]!.time!;
+    let stopTime = startTime;
+    for (const e of timeEntities) {
+      const t = e.time!;
+      if (t < startTime) startTime = t;
+      if (t > stopTime) stopTime = t;
+    }
 
     setClockConfig({startTime, stopTime});
-    setCurrentTime(startTime);
-    hasSetClockRef.current = true;
+    // Park the clock at the end of the range so the full cumulative catalog
+    // is visible at load. Entities use `[event_time, stopTime]` availability
+    // (see useSqlToCesiumEntities), so `currentTime = stopTime` keeps every
+    // event in view; scrubbing backward reveals the temporal history.
+    setCurrentTime(stopTime);
   }, [entities, setClockConfig, setCurrentTime]);
 
   // Don't render if loading, error, or no data

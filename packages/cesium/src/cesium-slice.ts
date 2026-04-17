@@ -204,6 +204,14 @@ export function createCesiumSlice(
         })),
 
       // Clipping plane actions
+      //
+      // Implementation note: Cesium's `globe.clippingPlanes` setter
+      // (ClippingPlaneCollection.setOwner) automatically destroys the
+      // previously assigned collection — `owner[key] = owner[key] &&
+      // owner[key].destroy()`. Never call `.destroy()` manually here; doing
+      // so leaves the globe holding a reference to an already-destroyed
+      // object, and the next assignment triggers a double-destroy crash
+      // ("This object was destroyed, i.e., destroy() was called.").
       enableClippingPlane: (
         normal: {x: number; y: number; z: number},
         distance: number,
@@ -213,16 +221,9 @@ export function createCesiumSlice(
 
         const globe = viewer.scene.globe;
 
-        // Remove existing planes first
-        if (globe.clippingPlanes) {
-          globe.clippingPlanes.destroy();
-          globe.clippingPlanes = undefined as any;
-        }
-
-        // Create with enabled=false first, attach to globe, then enable
-        // after one render pass. This avoids the "Expected width > 0"
-        // error from ClippingPlaneCollection.update racing with
-        // ContextLimits initialization.
+        // Create with enabled=false first, then enable after one render
+        // pass. This avoids the "Expected width > 0" error from
+        // ClippingPlaneCollection.update racing with ContextLimits init.
         const collection = new ClippingPlaneCollection({
           planes: [
             new ClippingPlane(
@@ -233,12 +234,21 @@ export function createCesiumSlice(
           edgeWidth: 2.0,
           enabled: false,
         });
+        // Cesium's setter destroys any previously assigned collection.
         globe.clippingPlanes = collection;
 
-        // Enable after one render frame to let the GL context finish setup
+        // Enable after one render frame. Guard against the collection being
+        // destroyed in between (e.g. when the caller switches presets and
+        // triggers another enable before this listener fires — the first
+        // collection gets destroyed by the setter when the second is
+        // assigned).
         const removeListener = viewer.scene.postRender.addEventListener(() => {
           removeListener();
-          if (!viewer.isDestroyed() && collection) {
+          if (
+            !viewer.isDestroyed() &&
+            collection &&
+            !collection.isDestroyed()
+          ) {
             collection.enabled = true;
           }
         });
@@ -247,12 +257,11 @@ export function createCesiumSlice(
       disableClippingPlane: () => {
         const viewer = get().cesium.viewer;
         if (!viewer || viewer.isDestroyed()) return;
-
-        const globe = viewer.scene.globe;
-        if (globe.clippingPlanes) {
-          globe.clippingPlanes.destroy();
-          globe.clippingPlanes = undefined as any;
-        }
+        // Assigning undefined triggers Cesium's setter, which destroys the
+        // existing collection and clears the internal reference. No manual
+        // destroy needed.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (viewer.scene.globe as any).clippingPlanes = undefined;
       },
 
       setClippingPlaneDistance: (distance: number) => {
