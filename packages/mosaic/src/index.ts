@@ -24,7 +24,6 @@ export {
   createDefaultMosaicDashboardConfig,
   createMosaicDashboardChartConfig,
   createMosaicDashboardSlice,
-  DEFAULT_MOSAIC_DASHBOARD_CHART_VGPLOT,
   getMosaicDashboardMosaicId,
   getMosaicDashboardPanelId,
   MosaicDashboardChartConfig,

@@ -1,71 +1,25 @@
 import {createId} from '@paralleldrive/cuid2';
 import {DbSliceState} from '@sqlrooms/db';
 import {type DuckDbSliceState} from '@sqlrooms/duckdb';
+import {LayoutSliceState} from '@sqlrooms/layout';
 import type {LayoutMosaicSubNode} from '@sqlrooms/layout-config';
 import {LayoutMosaicSubNode as LayoutMosaicSubNodeSchema} from '@sqlrooms/layout-config';
-import {LayoutSliceState} from '@sqlrooms/layout';
 import {
   BaseRoomStoreState,
   createSlice,
   SliceFunctions,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
+import type {Spec} from '@uwdata/mosaic-spec';
 import {produce} from 'immer';
 import {z} from 'zod';
 import {type MosaicSliceState} from '../MosaicSlice';
-import type {Spec} from '@uwdata/mosaic-spec';
-
-export const DEFAULT_MOSAIC_DASHBOARD_CHART_VGPLOT = JSON.stringify(
-  {
-    $schema: 'https://idl.uw.edu/mosaic/schema/latest.json',
-    meta: {
-      title: 'New Chart',
-      description:
-        'Use the chart builder or edit the spec directly to visualize DuckDB tables.',
-    },
-    data: {
-      sample: {
-        type: 'table',
-        query: `
-          SELECT * FROM (
-            VALUES
-              ('A', 12),
-              ('B', 26),
-              ('C', 18),
-              ('D', 9)
-          ) AS t(category, amount)
-        `,
-      },
-    },
-    plot: [
-      {
-        mark: 'barY',
-        data: {from: 'sample'},
-        x: 'category',
-        y: 'amount',
-        fill: 'category',
-      },
-    ],
-    xLabel: 'Category',
-    yLabel: 'Amount',
-    width: 560,
-    height: 320,
-  },
-  null,
-  2,
-);
-
-export const DEFAULT_MOSAIC_DASHBOARD_CHART_SPEC = JSON.parse(
-  DEFAULT_MOSAIC_DASHBOARD_CHART_VGPLOT,
-) as Record<string, unknown>;
 
 export const MosaicDashboardChartConfig = z.object({
   id: z.string(),
   title: z.string().default('Chart'),
-  vgplot: z
-    .object({})
-    .passthrough()
-    .default(DEFAULT_MOSAIC_DASHBOARD_CHART_SPEC),
+  // TODO: Add a more specific schema for vgplot
+  vgplot: z.looseObject({}), // Allow any JSON object
 });
 export type MosaicDashboardChartConfig = z.infer<
   typeof MosaicDashboardChartConfig
