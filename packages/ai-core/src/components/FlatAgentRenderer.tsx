@@ -1,8 +1,15 @@
-import React, {useMemo} from 'react';
-import {CircleXIcon, Loader2, CircleDotIcon, CircleIcon} from 'lucide-react';
+import React, {useCallback, useMemo} from 'react';
+import {
+  CircleXIcon,
+  Loader2,
+  CircleDotIcon,
+  CircleIcon,
+  SquareTerminalIcon,
+} from 'lucide-react';
 import {formatShortDuration} from '@sqlrooms/utils';
 import {cn, HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
+import {useRoomStoreApi, type BaseRoomStoreState} from '@sqlrooms/room-store';
 import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
@@ -174,65 +181,100 @@ const ParentSummaryLine: React.FC<{
 
 const ToolCallDetailHover: React.FC<{
   toolCall: AgentToolCall;
-}> = ({toolCall}) => (
-  <HoverCard openDelay={200} closeDelay={100}>
-    <HoverCardTrigger asChild>
-      <button className="text-muted-foreground/40 hover:text-muted-foreground shrink-0 cursor-pointer transition-colors">
-        <CircleDotIcon className="h-3 w-3" />
-      </button>
-    </HoverCardTrigger>
-    <HoverCardContent side="top" className="w-72 p-2.5">
-      <div className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
-        {toolCall.toolName}
-      </div>
-      <div className="text-[10px] text-gray-500 dark:text-gray-400">
-        ID: {toolCall.toolCallId}
-      </div>
-      <div className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
-        State:{' '}
-        <span
-          className={cn(
-            toolCall.state === 'success' && 'text-green-600',
-            toolCall.state === 'error' && 'text-red-600',
-            toolCall.state === 'approval-requested' && 'text-amber-600',
-            toolCall.state === 'pending' && 'text-yellow-600',
-          )}
-        >
-          {toolCall.state}
-        </span>
-      </div>
-      {toolCall.input != null && (
-        <>
-          <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-            Input
-          </div>
-          <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-            {typeof toolCall.input === 'string'
-              ? toolCall.input
-              : JSON.stringify(toolCall.input, null, 2)}
-          </pre>
-        </>
-      )}
-      {toolCall.output != null && (
-        <>
-          <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-            Output
-          </div>
-          <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-            {typeof toolCall.output === 'string'
-              ? toolCall.output
-              : JSON.stringify(toolCall.output, null, 2)}
-          </pre>
-        </>
-      )}
-      {toolCall.errorText && (
-        <div className="mt-1.5 text-[10px] text-red-600">
-          {toolCall.errorText}
+}> = ({toolCall}) => {
+  const storeApi = useRoomStoreApi<BaseRoomStoreState>();
+
+  const inputObj =
+    toolCall.input && typeof toolCall.input === 'object'
+      ? (toolCall.input as Record<string, unknown>)
+      : undefined;
+  const sqlQuery =
+    typeof inputObj?.sqlQuery === 'string' ? inputObj.sqlQuery : undefined;
+
+  const handleCreateSqlQuery = useCallback(() => {
+    if (!sqlQuery) return;
+    const state = storeApi.getState() as Record<string, unknown>;
+    const sqlEditor = state.sqlEditor as
+      | {
+          createQueryTab: (initialQuery?: string) => {id: string; name: string};
+          updateQueryText: (id: string, text: string) => void;
+        }
+      | undefined;
+    if (!sqlEditor) return;
+
+    const newTab = sqlEditor.createQueryTab();
+    sqlEditor.updateQueryText(newTab.id, sqlQuery.trim());
+  }, [storeApi, sqlQuery]);
+
+  return (
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <button className="text-muted-foreground/40 hover:text-muted-foreground shrink-0 cursor-pointer transition-colors">
+          <CircleDotIcon className="h-3 w-3" />
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent side="top" className="w-72 p-2.5">
+        <div className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
+          {toolCall.toolName}
         </div>
-      )}
-    </HoverCardContent>
-  </HoverCard>
-);
+        <div className="text-[10px] text-gray-500 dark:text-gray-400">
+          ID: {toolCall.toolCallId}
+        </div>
+        <div className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          State:{' '}
+          <span
+            className={cn(
+              toolCall.state === 'success' && 'text-green-600',
+              toolCall.state === 'error' && 'text-red-600',
+              toolCall.state === 'approval-requested' && 'text-amber-600',
+              toolCall.state === 'pending' && 'text-yellow-600',
+            )}
+          >
+            {toolCall.state}
+          </span>
+        </div>
+        {sqlQuery && toolCall.state === 'success' && (
+          <button
+            onClick={handleCreateSqlQuery}
+            className="mt-1.5 inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            <SquareTerminalIcon className="h-2.5 w-2.5" />
+            Create SQL Query
+          </button>
+        )}
+        {toolCall.input != null && (
+          <>
+            <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              Input
+            </div>
+            <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+              {typeof toolCall.input === 'string'
+                ? toolCall.input
+                : JSON.stringify(toolCall.input, null, 2)}
+            </pre>
+          </>
+        )}
+        {toolCall.output != null && (
+          <>
+            <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              Output
+            </div>
+            <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+              {typeof toolCall.output === 'string'
+                ? toolCall.output
+                : JSON.stringify(toolCall.output, null, 2)}
+            </pre>
+          </>
+        )}
+        {toolCall.errorText && (
+          <div className="mt-1.5 text-[10px] text-red-600">
+            {toolCall.errorText}
+          </div>
+        )}
+      </HoverCardContent>
+    </HoverCard>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // HoistedRenderer — renders a single hoisted tool component
