@@ -28,9 +28,9 @@ function createTestStore() {
  * Test-only composed filter: default sqlrooms rules plus arbitrary extra schema/db/table
  * exclusions (neutral names — product apps supply their own filters at integration time).
  */
-function createTestComposedLoadTableSchemasFilter() {
+function createTestComposedLoadTableSchemasFilter(): typeof createDefaultLoadTableSchemasFilter {
   const base = createDefaultLoadTableSchemasFilter;
-  return (table) => {
+  return (table: Parameters<typeof createDefaultLoadTableSchemasFilter>[0]) => {
     if (!base(table)) {
       return false;
     }
