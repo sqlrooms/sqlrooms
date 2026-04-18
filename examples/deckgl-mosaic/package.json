@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/react": "^9.2.11",
-    "@geoarrow/deck.gl-layers": "^0.3.1",
+    "@uwdata/flechette": "^2.2.6",
+    "@sqlrooms/deck": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",

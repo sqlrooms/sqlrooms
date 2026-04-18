@@ -1,0 +1,106 @@
+import type * as arrow from 'apache-arrow';
+
+function isValidIdentifier(name: string) {
+  return /^[A-Za-z_$][\w$]*$/.test(name);
+}
+
+const RESERVED_IDENTIFIERS = new Set([
+  'true',
+  'false',
+  'null',
+  'undefined',
+  'NaN',
+  'Infinity',
+  'Math',
+  'Number',
+  'String',
+  'Boolean',
+  'Array',
+  'Object',
+  'Date',
+  'target',
+]);
+
+function unique<T>(values: T[]) {
+  return [...new Set(values)];
+}
+
+function resolveColumnBindings(expression: string, table: arrow.Table) {
+  const schemaFieldNames = table.schema.fields
+    .map((field) => field.name)
+    .filter(isValidIdentifier);
+
+  const identifiers = unique(
+    Array.from(expression.matchAll(/\b[A-Za-z_$][\w$]*\b/g))
+      .map((match) => match[0])
+      .filter((identifier) => !RESERVED_IDENTIFIERS.has(identifier)),
+  );
+
+  return identifiers.map((identifier) => {
+    const exactMatch = schemaFieldNames.find((fieldName) => fieldName === identifier);
+    if (exactMatch) {
+      return {identifier, columnName: exactMatch};
+    }
+
+    const caseInsensitiveMatches = schemaFieldNames.filter(
+      (fieldName) => fieldName.toLowerCase() === identifier.toLowerCase(),
+    );
+
+    return {
+      identifier,
+      columnName:
+        caseInsensitiveMatches.length === 1 ? caseInsensitiveMatches[0]! : undefined,
+    };
+  });
+}
+
+function copyArrayLikeIntoTarget(
+  result: unknown,
+  target: number[] | undefined,
+) {
+  if (!target || !Array.isArray(result) && !ArrayBuffer.isView(result)) {
+    return result;
+  }
+
+  const values = Array.from(result as ArrayLike<number>);
+  for (let i = 0; i < values.length; i += 1) {
+    target[i] = values[i]!;
+  }
+  return target;
+}
+
+export function compileGeoArrowAccessor(
+  expression: string,
+  table: arrow.Table,
+) {
+  const trimmedExpression = expression.trim();
+  if (trimmedExpression === '-') {
+    return ({index, data}: {index: number; data: {data: {get: (i: number) => unknown}}}) =>
+      data.data.get(index);
+  }
+
+  const bindings = resolveColumnBindings(trimmedExpression, table);
+
+  const evaluator = new Function(
+    ...bindings.map((binding) => binding.identifier),
+    'target',
+    `return (${trimmedExpression});`,
+  ) as (...args: unknown[]) => unknown;
+
+  return ({
+    index,
+    data,
+    target,
+  }: {
+    index: number;
+    data: {data: {get: (i: number) => Record<string, unknown>}};
+    target: number[];
+  }) => {
+    const batch = data.data as arrow.Table | arrow.RecordBatch;
+    const args = bindings.map((binding) =>
+      binding.columnName ? batch.getChild(binding.columnName)?.get(index) : undefined,
+    );
+    const result = evaluator(...args, target);
+    return copyArrayLikeIntoTarget(result, target);
+  };
+}

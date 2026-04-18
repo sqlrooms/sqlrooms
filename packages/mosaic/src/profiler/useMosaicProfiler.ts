@@ -1,6 +1,9 @@
 import {createId} from '@paralleldrive/cuid2';
 import {useDebounce} from '@sqlrooms/ui';
-import {type Selection} from '@uwdata/mosaic-core';
+import {
+  Selection as MosaicSelection,
+  type Selection,
+} from '@uwdata/mosaic-core';
 import {
   useEffect,
   useMemo,
@@ -93,13 +96,21 @@ function useProfilerSelection(
     () => `mosaic-profiler-${createId()}`,
     [],
   );
-  const getSelection = useStoreWithMosaic((state) => state.mosaic.getSelection);
-  const selection = useMemo(
-    () =>
-      providedSelection ??
-      getSelection(selectionName ?? generatedSelectionName, 'crossfilter'),
-    [generatedSelectionName, getSelection, providedSelection, selectionName],
+  const selectionKey = selectionName ?? generatedSelectionName;
+  const existingSelection = useStoreWithMosaic(
+    (state) => state.mosaic.selections[selectionKey],
   );
+  const getSelection = useStoreWithMosaic((state) => state.mosaic.getSelection);
+  const [fallbackSelection] = useState(() => MosaicSelection.crossfilter());
+
+  useEffect(() => {
+    if (!providedSelection && !existingSelection) {
+      getSelection(selectionKey, 'crossfilter');
+    }
+  }, [existingSelection, getSelection, providedSelection, selectionKey]);
+
+  const selection =
+    providedSelection ?? existingSelection ?? fallbackSelection;
 
   return {
     selection,
