@@ -14,7 +14,7 @@ import {
   schemeSet2,
   schemeTableau10,
 } from 'd3-scale-chromatic';
-import type {SqlroomsColorScale} from '../types';
+import type {LayerColorScale} from '../types';
 
 const DEFAULT_NULL_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 const DEFAULT_UNKNOWN_COLOR: [number, number, number, number] = [
@@ -41,7 +41,7 @@ const CATEGORICAL_SCHEMES = {
   Accent: schemeAccent,
 } as const;
 
-export type SqlroomsResolvedColorLegend =
+export type ResolvedColorLegend =
   | {
       type: 'continuous';
       title: string;
@@ -252,9 +252,9 @@ function getGeoArrowOrRowValue(options: {
   return getRowValue(value, fieldName);
 }
 
-export function compileSqlroomsColorScale(options: {
+export function compileColorScale(options: {
   table: arrow.Table;
-  colorScale: SqlroomsColorScale;
+  colorScale: LayerColorScale;
 }) {
   const {table, colorScale} = options;
   const {fieldName, vector} = getColumn(table, colorScale.field);
@@ -361,11 +361,11 @@ export function compileSqlroomsColorScale(options: {
   };
 }
 
-export function buildSqlroomsColorScaleLegend(options: {
+export function buildColorScaleLegend(options: {
   table: arrow.Table;
-  colorScale: SqlroomsColorScale;
+  colorScale: LayerColorScale;
   title?: string;
-}): SqlroomsResolvedColorLegend | null {
+}): ResolvedColorLegend | null {
   const {table, colorScale, title} = options;
   const {fieldName, vector} = getColumn(table, colorScale.field);
   const resolvedTitle = title && title.trim() ? title.trim() : fieldName;

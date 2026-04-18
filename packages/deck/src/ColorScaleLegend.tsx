@@ -1,8 +1,8 @@
 import {cn} from '@sqlrooms/ui';
-import type {SqlroomsResolvedColorLegend} from './json/compileSqlroomsColorScale';
+import type {ResolvedColorLegend} from './json/compileColorScale';
 
 type ColorScaleLegendProps = {
-  legends: SqlroomsResolvedColorLegend[];
+  legends: ResolvedColorLegend[];
   className?: string;
 };
 
@@ -14,7 +14,7 @@ export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
   return (
     <div
       className={cn(
-        'pointer-events-none absolute right-4 bottom-4 z-10 flex max-w-56 flex-col gap-3',
+        'pointer-events-none absolute right-4 bottom-4 z-10 flex max-w-56 min-w-24 flex-col gap-3',
         className,
       )}
     >

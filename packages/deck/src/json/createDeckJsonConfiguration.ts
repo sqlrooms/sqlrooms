@@ -1,5 +1,5 @@
 import {JSONConfiguration} from '@deck.gl/json';
-import type {PreparedDeckDatasetState, SqlroomsDeckLayerProps} from '../types';
+import type {LayerExtensionProps, PreparedDeckDatasetState} from '../types';
 import {
   DEFAULT_DECK_JSON_CLASSES,
   DEFAULT_DECK_JSON_CONSTANTS,
@@ -10,15 +10,15 @@ import {
   isSupportedGeoArrowLayerType,
 } from './layerCompatibility';
 import {
-  isSqlroomsManagedLayer,
-  resolveSqlroomsColorScale,
-  resolveSqlroomsDatasetId,
-  resolveSqlroomsGeometryColumn,
-  stripSqlroomsLayerProps,
-} from './isSqlroomsManagedLayer';
+  isManagedLayer,
+  resolveColorScale,
+  resolveDatasetId,
+  resolveGeometryColumn,
+  stripLayerExtensionProps,
+} from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
-import {compileSqlroomsColorScale} from './compileSqlroomsColorScale';
+import {compileColorScale} from './compileColorScale';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -30,13 +30,13 @@ function getLayerName(Class: unknown) {
   return maybeClass.layerName ?? maybeClass.name ?? 'UnknownLayer';
 }
 
-function applySqlroomsColorScale(options: {
+function applyColorScale(options: {
   props: Record<string, unknown>;
-  sqlroomsProps: SqlroomsDeckLayerProps & Record<string, unknown>;
+  layerProps: LayerExtensionProps & Record<string, unknown>;
   table: import('apache-arrow').Table;
 }) {
-  const {props, sqlroomsProps, table} = options;
-  const colorScale = resolveSqlroomsColorScale(sqlroomsProps);
+  const {props, layerProps, table} = options;
+  const colorScale = resolveColorScale(layerProps);
   if (!colorScale) {
     return props;
   }
@@ -48,7 +48,7 @@ function applySqlroomsColorScale(options: {
 
   return {
     ...props,
-    [targetProp]: compileSqlroomsColorScale({
+    [targetProp]: compileColorScale({
       table,
       colorScale,
     }),
@@ -79,11 +79,11 @@ export function createDeckJsonConfiguration(
       }
 
       const layerProps = props as Record<string, unknown>;
-      const sqlroomsProps = layerProps as typeof layerProps &
-        SqlroomsDeckLayerProps;
-      const datasetId = resolveSqlroomsDatasetId(sqlroomsProps, datasetIds);
+      const extensionProps = layerProps as typeof layerProps &
+        LayerExtensionProps;
+      const datasetId = resolveDatasetId(extensionProps, datasetIds);
       const managed =
-        isSqlroomsManagedLayer(sqlroomsProps, datasetIds) ||
+        isManagedLayer(extensionProps, datasetIds) ||
         (datasetIds.length > 1 && layerProps.data === undefined);
 
       if (!managed) {
@@ -104,14 +104,14 @@ export function createDeckJsonConfiguration(
       }
 
       if (datasetState.status !== 'ready') {
-        return stripSqlroomsLayerProps(layerProps);
+        return stripLayerExtensionProps(layerProps);
       }
 
       const prepared = datasetState.prepared;
-      const geometryColumn = resolveSqlroomsGeometryColumn(sqlroomsProps);
-      const baseProps = applySqlroomsColorScale({
-        props: stripSqlroomsLayerProps(layerProps),
-        sqlroomsProps,
+      const geometryColumn = resolveGeometryColumn(extensionProps);
+      const baseProps = applyColorScale({
+        props: stripLayerExtensionProps(layerProps),
+        layerProps: extensionProps,
         table: prepared.table,
       });
 

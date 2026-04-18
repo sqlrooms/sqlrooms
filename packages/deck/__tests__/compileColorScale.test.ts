@@ -8,9 +8,9 @@ import {
   vectorFromArray,
 } from 'apache-arrow';
 import {
-  buildSqlroomsColorScaleLegend,
-  compileSqlroomsColorScale,
-} from '../src/json/compileSqlroomsColorScale';
+  buildColorScaleLegend,
+  compileColorScale,
+} from '../src/json/compileColorScale';
 
 function createScaleTable() {
   const pointField = new Field(
@@ -52,10 +52,10 @@ function createEmptyNumericScaleTable() {
   });
 }
 
-describe('compileSqlroomsColorScale', () => {
+describe('compileColorScale', () => {
   it('maps sequential auto domains to rgba arrays', () => {
     const table = createScaleTable();
-    const accessor = compileSqlroomsColorScale({
+    const accessor = compileColorScale({
       table,
       colorScale: {
         field: 'magnitude',
@@ -71,7 +71,7 @@ describe('compileSqlroomsColorScale', () => {
 
   it('supports categorical schemes with raw row objects', () => {
     const table = createScaleTable();
-    const accessor = compileSqlroomsColorScale({
+    const accessor = compileColorScale({
       table,
       colorScale: {
         field: 'status',
@@ -86,7 +86,7 @@ describe('compileSqlroomsColorScale', () => {
 
   it('uses nullColor for missing values', () => {
     const table = createScaleTable();
-    const accessor = compileSqlroomsColorScale({
+    const accessor = compileColorScale({
       table,
       colorScale: {
         field: 'magnitude',
@@ -102,7 +102,7 @@ describe('compileSqlroomsColorScale', () => {
 
   it('returns nullColor for empty numeric datasets', () => {
     const table = createEmptyNumericScaleTable();
-    const accessor = compileSqlroomsColorScale({
+    const accessor = compileColorScale({
       table,
       colorScale: {
         field: 'magnitude',
@@ -118,7 +118,7 @@ describe('compileSqlroomsColorScale', () => {
 
   it('builds continuous legends for sequential scales', () => {
     const table = createScaleTable();
-    const legend = buildSqlroomsColorScaleLegend({
+    const legend = buildColorScaleLegend({
       table,
       colorScale: {
         field: 'magnitude',
@@ -139,7 +139,7 @@ describe('compileSqlroomsColorScale', () => {
 
   it('builds categorical legends with distinct items', () => {
     const table = createScaleTable();
-    const legend = buildSqlroomsColorScaleLegend({
+    const legend = buildColorScaleLegend({
       table,
       colorScale: {
         field: 'status',
@@ -158,7 +158,7 @@ describe('compileSqlroomsColorScale', () => {
 
   it('skips legends for empty numeric datasets', () => {
     const table = createEmptyNumericScaleTable();
-    const legend = buildSqlroomsColorScaleLegend({
+    const legend = buildColorScaleLegend({
       table,
       colorScale: {
         field: 'magnitude',

@@ -12,11 +12,11 @@ export type {
   DeckDatasetInput,
   DeckMapProps,
   DeckQueryResultLike,
+  LayerColorLegendConfig,
+  LayerColorScale,
+  LayerColorScaleProp,
+  LayerExtensionProps,
   PreparedDeckDatasetState,
-  SqlroomsColorLegendConfig,
-  SqlroomsColorScale,
-  SqlroomsColorScaleProp,
-  SqlroomsDeckLayerProps,
 } from './types';
 export type {
   GeometryEncodingHint,

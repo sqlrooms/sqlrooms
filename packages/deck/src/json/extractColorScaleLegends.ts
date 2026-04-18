@@ -1,19 +1,19 @@
-import type {PreparedDeckDatasetState, SqlroomsDeckLayerProps} from '../types';
+import type {LayerExtensionProps, PreparedDeckDatasetState} from '../types';
 import {
-  buildSqlroomsColorScaleLegend,
-  type SqlroomsResolvedColorLegend,
-} from './compileSqlroomsColorScale';
+  buildColorScaleLegend,
+  type ResolvedColorLegend,
+} from './compileColorScale';
 import {
-  resolveSqlroomsColorLegend,
-  resolveSqlroomsColorScale,
-  resolveSqlroomsDatasetId,
-} from './isSqlroomsManagedLayer';
+  resolveColorLegend,
+  resolveColorScale,
+  resolveDatasetId,
+} from './layerConfig';
 
 function resolveLegendTitle(
   layerProps: Record<string, unknown>,
   fallbackField: string,
 ) {
-  const legend = resolveSqlroomsColorLegend(layerProps);
+  const legend = resolveColorLegend(layerProps);
   if (
     legend &&
     typeof legend === 'object' &&
@@ -25,17 +25,17 @@ function resolveLegendTitle(
   return fallbackField;
 }
 
-export function extractSqlroomsColorScaleLegends(options: {
+export function extractColorScaleLegends(options: {
   spec: Record<string, unknown> | null;
   datasetIds: string[];
   datasetStates: Record<string, PreparedDeckDatasetState>;
 }) {
   const {spec, datasetIds, datasetStates} = options;
   if (!spec || !Array.isArray(spec.layers)) {
-    return [] as SqlroomsResolvedColorLegend[];
+    return [] as ResolvedColorLegend[];
   }
 
-  const legends: SqlroomsResolvedColorLegend[] = [];
+  const legends: ResolvedColorLegend[] = [];
 
   for (const layer of spec.layers) {
     if (!layer || typeof layer !== 'object') {
@@ -43,15 +43,15 @@ export function extractSqlroomsColorScaleLegends(options: {
     }
 
     const layerProps = layer as Record<string, unknown>;
-    const sqlroomsProps = layerProps as SqlroomsDeckLayerProps &
+    const extensionProps = layerProps as LayerExtensionProps &
       Record<string, unknown>;
-    const colorScale = resolveSqlroomsColorScale(sqlroomsProps);
-    const legend = resolveSqlroomsColorLegend(sqlroomsProps);
+    const colorScale = resolveColorScale(extensionProps);
+    const legend = resolveColorLegend(extensionProps);
     if (!colorScale || legend === false) {
       continue;
     }
 
-    const datasetId = resolveSqlroomsDatasetId(layerProps, datasetIds);
+    const datasetId = resolveDatasetId(layerProps, datasetIds);
     if (!datasetId) {
       continue;
     }
@@ -61,7 +61,7 @@ export function extractSqlroomsColorScaleLegends(options: {
       continue;
     }
 
-    const resolvedLegend = buildSqlroomsColorScaleLegend({
+    const resolvedLegend = buildColorScaleLegend({
       table: datasetState.prepared.table,
       colorScale,
       title: resolveLegendTitle(layerProps, colorScale.field),

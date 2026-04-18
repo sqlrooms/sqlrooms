@@ -8,8 +8,8 @@ import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
 import {ColorScaleLegend} from './ColorScaleLegend';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
-import {extractSqlroomsColorScaleLegends} from './json/extractSqlroomsColorScaleLegends';
-import {resolveSqlroomsDatasetId} from './json/isSqlroomsManagedLayer';
+import {extractColorScaleLegends} from './json/extractColorScaleLegends';
+import {resolveDatasetId} from './json/layerConfig';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import type {DeckMapProps, PreparedDeckDatasetState} from './types';
 
@@ -63,7 +63,7 @@ function filterUnavailableLayers(
       return true;
     }
 
-    const datasetId = resolveSqlroomsDatasetId(layerProps, datasetIds);
+    const datasetId = resolveDatasetId(layerProps, datasetIds);
     if (!datasetId) {
       return true;
     }
@@ -235,7 +235,7 @@ export function DeckMap({
   };
   const legends = useMemo(
     () =>
-      extractSqlroomsColorScaleLegends({
+      extractColorScaleLegends({
         spec: availableSpec,
         datasetIds,
         datasetStates,

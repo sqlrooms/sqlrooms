@@ -21,16 +21,16 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
-export type SqlroomsColorScaleProp = 'getFillColor' | 'getLineColor';
-export type SqlroomsColorLegendConfig =
+export type LayerColorScaleProp = 'getFillColor' | 'getLineColor';
+export type LayerColorLegendConfig =
   | false
   | {
       title?: string;
     };
 
-export type SqlroomsColorScale =
+export type LayerColorScale =
   | {
-      prop?: SqlroomsColorScaleProp;
+      prop?: LayerColorScaleProp;
       field: string;
       type: 'sequential';
       scheme: 'Viridis' | 'Plasma' | 'Cividis' | 'YlOrRd' | 'Blues';
@@ -38,10 +38,10 @@ export type SqlroomsColorScale =
       clamp?: boolean;
       reverse?: boolean;
       nullColor?: [number, number, number, number?];
-      legend?: SqlroomsColorLegendConfig;
+      legend?: LayerColorLegendConfig;
     }
   | {
-      prop?: SqlroomsColorScaleProp;
+      prop?: LayerColorScaleProp;
       field: string;
       type: 'diverging';
       scheme: 'RdBu' | 'BrBG' | 'Spectral';
@@ -49,28 +49,28 @@ export type SqlroomsColorScale =
       clamp?: boolean;
       reverse?: boolean;
       nullColor?: [number, number, number, number?];
-      legend?: SqlroomsColorLegendConfig;
+      legend?: LayerColorLegendConfig;
     }
   | {
-      prop?: SqlroomsColorScaleProp;
+      prop?: LayerColorScaleProp;
       field: string;
       type: 'categorical';
       scheme: 'Tableau10' | 'Set2' | 'Accent';
       reverse?: boolean;
       unknownColor?: [number, number, number, number?];
       nullColor?: [number, number, number, number?];
-      legend?: SqlroomsColorLegendConfig;
+      legend?: LayerColorLegendConfig;
     };
 
-export type SqlroomsDeckLayerConfig = {
+export type LayerExtensionConfig = {
   dataset?: string;
   geometryColumn?: string;
   geometryEncodingHint?: GeometryEncodingHint;
-  colorScale?: SqlroomsColorScale;
+  colorScale?: LayerColorScale;
 };
 
-export type SqlroomsDeckLayerProps = {
-  _sqlrooms?: SqlroomsDeckLayerConfig;
+export type LayerExtensionProps = {
+  _sqlrooms?: LayerExtensionConfig;
 };
 
 export type DeckMapProps = {
