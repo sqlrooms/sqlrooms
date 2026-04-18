@@ -12,6 +12,9 @@ import {
   GeoArrowSolidPolygonLayer,
 } from '@geoarrow/deck.gl-layers';
 
+// TODO(geoarrow-upgrade): Revisit this import surface on the next GeoArrow bump.
+// Published 0.3.x uses `@geoarrow/deck.gl-layers`; newer lines may rename the package
+// and/or move the exported layer classes.
 export const DEFAULT_DECK_JSON_CLASSES = {
   MapView,
   FirstPersonView,

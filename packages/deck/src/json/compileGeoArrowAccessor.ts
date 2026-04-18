@@ -37,7 +37,9 @@ function resolveColumnBindings(expression: string, table: arrow.Table) {
   );
 
   return identifiers.map((identifier) => {
-    const exactMatch = schemaFieldNames.find((fieldName) => fieldName === identifier);
+    const exactMatch = schemaFieldNames.find(
+      (fieldName) => fieldName === identifier,
+    );
     if (exactMatch) {
       return {identifier, columnName: exactMatch};
     }
@@ -49,24 +51,23 @@ function resolveColumnBindings(expression: string, table: arrow.Table) {
     return {
       identifier,
       columnName:
-        caseInsensitiveMatches.length === 1 ? caseInsensitiveMatches[0]! : undefined,
+        caseInsensitiveMatches.length === 1
+          ? caseInsensitiveMatches[0]!
+          : undefined,
     };
   });
 }
 
-function copyArrayLikeIntoTarget(
-  result: unknown,
-  target: number[] | undefined,
-) {
-  if (!target || !Array.isArray(result) && !ArrayBuffer.isView(result)) {
+function copyArrayLikeIntoTarget(result: unknown) {
+  if (!Array.isArray(result) && !ArrayBuffer.isView(result)) {
     return result;
   }
 
-  const values = Array.from(result as ArrayLike<number>);
-  for (let i = 0; i < values.length; i += 1) {
-    target[i] = values[i]!;
-  }
-  return target;
+  // TODO(geoarrow-upgrade): Keep returning plain JS arrays for 0.3.x. Reusing deck's
+  // typed `target` buffer here caused `ScatterplotLayer` binary attribute errors
+  // (`Float64Array`) when GeoArrow delegated to deck sublayers. If the next GeoArrow
+  // runtime changes the callback contract, re-evaluate whether target reuse is safe.
+  return Array.from(result as ArrayLike<number>);
 }
 
 export function compileGeoArrowAccessor(
@@ -75,8 +76,13 @@ export function compileGeoArrowAccessor(
 ) {
   const trimmedExpression = expression.trim();
   if (trimmedExpression === '-') {
-    return ({index, data}: {index: number; data: {data: {get: (i: number) => unknown}}}) =>
-      data.data.get(index);
+    return ({
+      index,
+      data,
+    }: {
+      index: number;
+      data: {data: {get: (i: number) => unknown}};
+    }) => data.data.get(index);
   }
 
   const bindings = resolveColumnBindings(trimmedExpression, table);
@@ -87,6 +93,10 @@ export function compileGeoArrowAccessor(
     `return (${trimmedExpression});`,
   ) as (...args: unknown[]) => unknown;
 
+  // TODO(geoarrow-upgrade): This custom evaluator exists because published 0.3.x
+  // GeoArrow callbacks are batch-oriented rather than deck.gl/json row-oriented. If
+  // the next version aligns with deck.gl/json accessors, remove this compiler and
+  // let the standard JSON conversion pipeline handle expressions.
   return ({
     index,
     data,
@@ -98,9 +108,11 @@ export function compileGeoArrowAccessor(
   }) => {
     const batch = data.data as arrow.Table | arrow.RecordBatch;
     const args = bindings.map((binding) =>
-      binding.columnName ? batch.getChild(binding.columnName)?.get(index) : undefined,
+      binding.columnName
+        ? batch.getChild(binding.columnName)?.get(index)
+        : undefined,
     );
     const result = evaluator(...args, target);
-    return copyArrayLikeIntoTarget(result, target);
+    return copyArrayLikeIntoTarget(result);
   };
 }
