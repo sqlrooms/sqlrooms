@@ -2746,6 +2746,15 @@ importers:
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      d3-color:
+        specifier: 3.1.0
+        version: 3.1.0
+      d3-scale:
+        specifier: ^4.0.2
+        version: 4.0.2
+      d3-scale-chromatic:
+        specifier: ^3.1.0
+        version: 3.1.0
       maplibre-gl:
         specifier: ^5.12.0
         version: 5.12.0
@@ -2762,6 +2771,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      geojson:
+        specifier: ^0.5.0
+        version: 0.5.0
       jest:
         specifier: ^30.1.3
         version: 30.3.0(@types/node@24.12.0)
@@ -11320,6 +11332,10 @@ packages:
 
   geojson-vt@4.0.2:
     resolution: {integrity: sha512-AV9ROqlNqoZEIJGfm1ncNjEXfkz2hdFlZf0qkVfmkwdKa8vj7H16YUOT81rJw1rdFhyEDlN2Tds91p/glzbl5A==}
+
+  geojson@0.5.0:
+    resolution: {integrity: sha512-/Bx5lEn+qRF4TfQ5aLu6NH+UKtvIv7Lhc487y/c8BdludrCTpiWf9wyI0RTyqg49MFefIAvFDuEi5Dfd/zgNxQ==}
+    engines: {node: '>= 0.10'}
 
   get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
@@ -26498,6 +26514,8 @@ snapshots:
   geojson-vt@3.2.1: {}
 
   geojson-vt@4.0.2: {}
+
+  geojson@0.5.0: {}
 
   get-caller-file@2.0.5: {}
 
