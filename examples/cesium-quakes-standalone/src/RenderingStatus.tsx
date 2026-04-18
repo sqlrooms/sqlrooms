@@ -14,7 +14,7 @@
 
 import {useEffect, useState} from 'react';
 import {Spinner} from '@sqlrooms/ui';
-import {useStoreWithCesium} from '@sqlrooms/cesium';
+import {useStoreWithCesium} from './cesium';
 import {useRoomStore} from './store';
 import {EARTHQUAKE_LAYER_ID} from './earthquake-slice';
 

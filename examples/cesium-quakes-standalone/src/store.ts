@@ -27,7 +27,7 @@ import {
   type CesiumSliceState,
   createDefaultCesiumConfig,
   CesiumPanel,
-} from '@sqlrooms/cesium';
+} from './cesium';
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createSqlEditorSlice,

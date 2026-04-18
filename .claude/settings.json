@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp -R examples/cesium-app examples/cesium-quakes-standalone)",
+      "Bash(cp -R packages/cesium/src examples/cesium-quakes-standalone/src/cesium)"
+    ]
+  }
+}

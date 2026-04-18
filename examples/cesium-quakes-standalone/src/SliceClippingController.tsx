@@ -7,7 +7,7 @@
  */
 
 import {useEffect} from 'react';
-import {useStoreWithCesium} from '@sqlrooms/cesium';
+import {useStoreWithCesium} from './cesium';
 import {useRoomStore} from './store';
 import {
   SUBDUCTION_PRESETS,

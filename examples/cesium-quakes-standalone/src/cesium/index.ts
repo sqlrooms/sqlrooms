@@ -1,11 +1,11 @@
 /**
- * @sqlrooms/cesium - Cesium 3D globe visualization for SQLRooms
+ * Inlined Cesium integration — barrel of hooks, components, slice actions,
+ * and config types used by this standalone example.
  *
- * Provides time-dynamic 3D geospatial visualization powered by CesiumJS.
- * Integrates with DuckDB for SQL-based data queries and supports
- * camera persistence, clock animation, and layer management.
- *
- * @packageDocumentation
+ * Originally carved out of a workspace package (@sqlrooms/cesium); kept as a
+ * self-contained subfolder so the example demonstrates Cesium + sqlrooms
+ * integration without taking on an additional package as a maintenance
+ * burden for the monorepo.
  */
 
 // ============================================================================

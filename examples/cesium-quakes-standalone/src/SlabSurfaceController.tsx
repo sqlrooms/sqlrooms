@@ -12,7 +12,7 @@
 
 import {useEffect} from 'react';
 import {Cartesian3, ClippingPlane, ClippingPlaneCollection} from 'cesium';
-import {useStoreWithCesium} from '@sqlrooms/cesium';
+import {useStoreWithCesium} from './cesium';
 import {useRoomStore} from './store';
 import {
   SUBDUCTION_PRESETS,

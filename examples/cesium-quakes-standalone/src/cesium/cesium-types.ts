@@ -1,13 +1,9 @@
 /**
- * TypeScript type definitions for @sqlrooms/cesium package.
+ * TypeScript type definitions for the inlined Cesium integration.
  * Defines state interfaces and action signatures for the Cesium slice.
  */
 
-import type {
-  Viewer as CesiumViewer,
-  Entity,
-  ClippingPlaneCollection,
-} from 'cesium';
+import type {Viewer as CesiumViewer, Entity} from 'cesium';
 import type {
   CesiumSliceConfig,
   CameraPosition,

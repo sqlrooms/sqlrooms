@@ -1,5 +1,5 @@
 {
-  "name": "example-cesium-app",
+  "name": "example-cesium-quakes-standalone",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,16 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sqlrooms/cesium": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/recharts": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "cesium": "^1.124.0",
+    "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "resium": "^1.18.0",
+    "zod": "^4.1.8",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",

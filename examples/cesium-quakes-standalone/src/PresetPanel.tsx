@@ -17,7 +17,7 @@ import {
   Math as CesiumMath,
 } from 'cesium';
 import {Button, Slider, cn} from '@sqlrooms/ui';
-import {useStoreWithCesium} from '@sqlrooms/cesium';
+import {useStoreWithCesium} from './cesium';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {useRoomStore} from './store';
 import type {SubductionPreset} from './earthquake-presets';

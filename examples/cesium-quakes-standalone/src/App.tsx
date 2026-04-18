@@ -8,7 +8,7 @@ import {Room} from './Room';
 
 export const App: React.FC = () => {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="cesium-app-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="cesium-quakes-theme">
       <Room />
     </ThemeProvider>
   );

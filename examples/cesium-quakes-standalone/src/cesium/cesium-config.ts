@@ -1,5 +1,5 @@
 /**
- * Zod configuration schemas for @sqlrooms/cesium package.
+ * Zod configuration schemas for the inlined Cesium integration.
  * Defines all persistable state for the Cesium 3D globe visualization.
  *
  * CRITICAL: Only serializable primitives allowed here. No Cesium class instances

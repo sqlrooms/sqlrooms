@@ -9,7 +9,7 @@
  */
 
 import {createSlice, type StateCreator} from '@sqlrooms/room-shell';
-import type {CesiumSliceState} from '@sqlrooms/cesium';
+import type {CesiumSliceState} from './cesium';
 import {
   SUBDUCTION_PRESETS,
   DEFAULT_SLICE_HALF_WIDTH_KM,

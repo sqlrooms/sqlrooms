@@ -10,7 +10,7 @@ the USGS 20,000-row API limit".
 
 Run this whenever you want fresh data:
 
-    examples/cesium-app/scripts/fetch-earthquakes.py
+    examples/cesium-quakes-standalone/scripts/fetch-earthquakes.py
 """
 
 import os

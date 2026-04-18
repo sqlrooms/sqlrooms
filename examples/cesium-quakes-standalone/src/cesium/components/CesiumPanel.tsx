@@ -16,7 +16,7 @@ import {CesiumClock} from './CesiumClock';
  *
  * @example
  * ```typescript
- * import {CesiumPanel} from '@sqlrooms/cesium';
+ * import {CesiumPanel} from './cesium';
  * import {GlobeIcon} from 'lucide-react';
  *
  * layout: {

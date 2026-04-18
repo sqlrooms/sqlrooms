@@ -6,7 +6,7 @@
 
 import {useEffect} from 'react';
 import {Color} from 'cesium';
-import {useStoreWithCesium} from '@sqlrooms/cesium';
+import {useStoreWithCesium} from './cesium';
 
 export function SceneStyleController() {
   const viewer = useStoreWithCesium((s) => s.cesium.viewer);

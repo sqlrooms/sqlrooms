@@ -823,11 +823,8 @@ importers:
         specifier: ^3.5.0
         version: 3.5.0(vite@7.2.2(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.1)(yaml@2.8.2))
 
-  examples/cesium-app:
+  examples/cesium-quakes-standalone:
     dependencies:
-      '@sqlrooms/cesium':
-        specifier: workspace:*
-        version: link:../../packages/cesium
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
@@ -846,6 +843,9 @@ importers:
       cesium:
         specifier: ^1.124.0
         version: 1.140.0
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.1)
@@ -855,6 +855,15 @@ importers:
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
+      resium:
+        specifier: ^1.18.0
+        version: 1.20.1(cesium@1.140.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.1.18
@@ -2467,42 +2476,6 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
-
-  packages/cesium:
-    dependencies:
-      '@sqlrooms/duckdb':
-        specifier: workspace:*
-        version: link:../duckdb
-      '@sqlrooms/room-shell':
-        specifier: workspace:*
-        version: link:../room-shell
-      '@sqlrooms/ui':
-        specifier: workspace:*
-        version: link:../ui
-      cesium:
-        specifier: ^1.124.0
-        version: 1.140.0
-      immer:
-        specifier: ^11.0.1
-        version: 11.0.1
-      lucide-react:
-        specifier: ^0.556.0
-        version: 0.556.0(react@19.2.1)
-      react:
-        specifier: 19.2.1
-        version: 19.2.1
-      react-dom:
-        specifier: 19.2.1
-        version: 19.2.1(react@19.2.1)
-      resium:
-        specifier: ^1.18.0
-        version: 1.20.1(cesium@1.140.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      zod:
-        specifier: 4.1.13
-        version: 4.1.13
-      zustand:
-        specifier: ^5.0.8
-        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
 
   packages/codemirror:
     dependencies:

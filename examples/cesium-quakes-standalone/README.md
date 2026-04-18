@@ -1,14 +1,21 @@
-# Wadati–Benioff Explorer
+# Wadati–Benioff Explorer (standalone)
 
 A 3D globe visualization of global seismicity rendered at true depth, with
 camera presets that cut textbook cross-sections through the world's
 subduction zones.
 
+**Self-contained example.** Cesium + sqlrooms glue code (viewer lifecycle,
+slice, hooks, panel components) lives in [src/cesium/](src/cesium/) rather
+than a workspace package, so anyone can copy this directory to their own
+project and adapt it without pulling in additional sqlrooms internals.
+
 ## Features
 
 - **3D depth-aware globe**: Every event renders at `(lon, lat, -depth_m)`
-  inside the Earth (`depthTestAgainstTerrain: false`), colored by magnitude
-  and sized by recency
+  inside the Earth; `depthTestAgainstTerrain: true` on the viewer means the
+  globe occludes subsurface events until a preset's section-cut clipping
+  plane exposes them. Events are colored by magnitude band and sized by
+  recency
 - **Subduction zone presets**: One click flies the camera to Tonga, Japan,
   Chile, Indonesia, Cascadia, or the Hellenic arc with an along-strike view
 - **Slab slicer**: Activating a preset rewrites the layer's SQL so only
