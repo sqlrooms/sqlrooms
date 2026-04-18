@@ -12,6 +12,7 @@ import {
 import {
   isSqlroomsManagedLayer,
   resolveSqlroomsDatasetId,
+  resolveSqlroomsGeometryColumn,
   stripSqlroomsLayerProps,
 } from './isSqlroomsManagedLayer';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
@@ -64,7 +65,7 @@ export function createDeckJsonConfiguration(
 
       if (!datasetId) {
         throw new Error(
-          `Layer "${layerName}" must declare sqlroomsData when multiple datasets are available.`,
+          `Layer "${layerName}" must declare _sqlrooms.dataset when multiple datasets are available.`,
         );
       }
 
@@ -80,7 +81,7 @@ export function createDeckJsonConfiguration(
       }
 
       const prepared = datasetState.prepared;
-      const geometryColumn = sqlroomsProps.sqlroomsGeometryColumn;
+      const geometryColumn = resolveSqlroomsGeometryColumn(sqlroomsProps);
       const baseProps = stripSqlroomsLayerProps(layerProps);
 
       if (compatibility.representation === 'geojson') {

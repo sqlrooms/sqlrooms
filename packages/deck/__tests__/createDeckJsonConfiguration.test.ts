@@ -50,7 +50,9 @@ function createPreparedDataset(table: Table): PreparedDeckDataset {
       encoding: 'geoarrow.point',
       source: 'native',
     }),
-    getGeoJsonBinaryData: () => ({points: {positions: {value: new Float32Array()}}}),
+    getGeoJsonBinaryData: () => ({
+      points: {positions: {value: new Float32Array()}},
+    }),
   };
 }
 
@@ -101,14 +103,18 @@ describe('createDeckJsonConfiguration', () => {
           {
             '@@type': 'GeoArrowScatterplotLayer',
             id: 'earthquakes',
-            sqlroomsData: 'missing',
+            _sqlrooms: {
+              dataset: 'missing',
+            },
           },
         ],
       }),
-    ).toThrow('Layer "GeoArrowScatterplotLayer" references unknown dataset "missing".');
+    ).toThrow(
+      'Layer "GeoArrowScatterplotLayer" references unknown dataset "missing".',
+    );
   });
 
-  it('requires sqlroomsData when multiple datasets are available', () => {
+  it('requires _sqlrooms.dataset when multiple datasets are available', () => {
     const table = createPointTable();
     const converter = createConverter({
       earthquakes: {
@@ -130,7 +136,7 @@ describe('createDeckJsonConfiguration', () => {
         ],
       }),
     ).toThrow(
-      'Layer "GeoArrowScatterplotLayer" must declare sqlroomsData when multiple datasets are available.',
+      'Layer "GeoArrowScatterplotLayer" must declare _sqlrooms.dataset when multiple datasets are available.',
     );
   });
 

@@ -109,7 +109,9 @@ export default function MapView({className}: {className?: string}) {
         {
           '@@type': 'GeoArrowScatterplotLayer',
           id: 'earthquakes-fill',
-          sqlroomsData: 'earthquakes',
+          _sqlrooms: {
+            dataset: 'earthquakes',
+          },
           filled: true,
           stroked: false,
           pickable: !enableBrushing,

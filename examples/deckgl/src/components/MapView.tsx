@@ -33,7 +33,9 @@ const AIRPORT_MAP_SPEC = {
     {
       '@@type': 'GeoArrowScatterplotLayer',
       id: 'airports',
-      sqlroomsData: 'airports',
+      _sqlrooms: {
+        dataset: 'airports',
+      },
       opacity: 0.7,
       filled: true,
       stroked: true,
@@ -49,7 +51,9 @@ const AIRPORT_MAP_SPEC = {
     {
       '@@type': 'GeoArrowScatterplotLayer',
       id: 'major-airports',
-      sqlroomsData: 'majorAirports',
+      _sqlrooms: {
+        dataset: 'majorAirports',
+      },
       opacity: 0.95,
       filled: true,
       stroked: true,

@@ -21,10 +21,14 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
+export type SqlroomsDeckLayerConfig = {
+  dataset?: string;
+  geometryColumn?: string;
+  geometryEncodingHint?: GeometryEncodingHint;
+};
+
 export type SqlroomsDeckLayerProps = {
-  sqlroomsData?: string;
-  sqlroomsGeometryColumn?: string;
-  sqlroomsGeometryEncodingHint?: GeometryEncodingHint;
+  _sqlrooms?: SqlroomsDeckLayerConfig;
 };
 
 export type DeckMapProps = {

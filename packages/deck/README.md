@@ -25,8 +25,10 @@ const spec = {
     {
       '@@type': 'GeoArrowScatterplotLayer',
       id: 'airports',
-      sqlroomsData: 'airports',
-      sqlroomsGeometryColumn: 'geom',
+      _sqlrooms: {
+        dataset: 'airports',
+        geometryColumn: 'geom',
+      },
       getPosition: '@@=geom',
       getRadius: '@@=6',
       getFillColor: [227, 111, 81, 200],
@@ -67,7 +69,7 @@ Use `datasets` for multi-layer and multi-dataset specs:
 />
 ```
 
-Each SQLRooms-managed layer binds to one dataset via `sqlroomsData`.
+Each SQLRooms-managed layer binds to one dataset via `_sqlrooms.dataset`.
 
 ## Single-dataset sugar
 
