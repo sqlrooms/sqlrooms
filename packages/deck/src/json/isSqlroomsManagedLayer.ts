@@ -1,4 +1,4 @@
-import type {SqlroomsDeckLayerProps} from '../types';
+import type {SqlroomsColorScale, SqlroomsDeckLayerProps} from '../types';
 
 function hasSqlroomsKeys(props: Record<string, unknown>) {
   return '_sqlrooms' in props;
@@ -51,4 +51,11 @@ export function resolveSqlroomsGeometryColumn(props: Record<string, unknown>) {
   return typeof config?.geometryColumn === 'string' && config.geometryColumn
     ? config.geometryColumn
     : undefined;
+}
+
+export function resolveSqlroomsColorScale(
+  props: Record<string, unknown>,
+): SqlroomsColorScale | undefined {
+  const config = getSqlroomsConfig(props);
+  return config?.colorScale;
 }

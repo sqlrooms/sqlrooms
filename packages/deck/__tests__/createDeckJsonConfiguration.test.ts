@@ -176,4 +176,68 @@ describe('createDeckJsonConfiguration', () => {
       }),
     ).toEqual([255, 120, 60, 180]);
   });
+
+  it('injects _sqlrooms.colorScale accessors for GeoArrow layers', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'earthquakes',
+          _sqlrooms: {
+            colorScale: {
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: [0, 10],
+            },
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getFillColor = converted.layers[0]?.props.getFillColor as
+      | ((info: {index: number}) => number[])
+      | undefined;
+
+    expect(getFillColor).toBeTruthy();
+    expect(getFillColor?.({index: 0})).toHaveLength(4);
+  });
+
+  it('keeps explicit getFillColor over _sqlrooms.colorScale', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'earthquakes',
+          getFillColor: [1, 2, 3, 4],
+          _sqlrooms: {
+            colorScale: {
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: [0, 10],
+            },
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.props.getFillColor).toEqual([1, 2, 3, 4]);
+  });
 });

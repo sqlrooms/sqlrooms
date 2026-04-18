@@ -12,6 +12,8 @@ export type {
   DeckMapProps,
   DeckQueryResultLike,
   PreparedDeckDatasetState,
+  SqlroomsColorScale,
+  SqlroomsColorScaleProp,
   SqlroomsDeckLayerProps,
 } from './types';
 export type {

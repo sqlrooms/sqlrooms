@@ -28,10 +28,15 @@ const spec = {
       _sqlrooms: {
         dataset: 'airports',
         geometryColumn: 'geom',
+        colorScale: {
+          field: 'scalerank',
+          type: 'sequential',
+          scheme: 'YlOrRd',
+          domain: 'auto',
+        },
       },
       getPosition: '@@=geom',
       getRadius: '@@=6',
-      getFillColor: [227, 111, 81, 200],
       radiusMinPixels: 2,
     },
   ],
@@ -70,6 +75,37 @@ Use `datasets` for multi-layer and multi-dataset specs:
 ```
 
 Each SQLRooms-managed layer binds to one dataset via `_sqlrooms.dataset`.
+
+## Color scales
+
+Instead of writing long `@@=` color expressions, you can ask SQLRooms to derive
+colors from a field:
+
+```tsx
+{
+  '@@type': 'GeoArrowScatterplotLayer',
+  id: 'earthquakes',
+  _sqlrooms: {
+    dataset: 'earthquakes',
+    colorScale: {
+      field: 'Magnitude',
+      type: 'sequential',
+      scheme: 'YlOrRd',
+      domain: 'auto',
+      clamp: true,
+    },
+  },
+}
+```
+
+Supported v1 schemes:
+
+- sequential: `Viridis`, `Plasma`, `Cividis`, `YlOrRd`, `Blues`
+- diverging: `RdBu`, `BrBG`, `Spectral`
+- categorical: `Tableau10`, `Set2`, `Accent`
+
+When `domain` is set to `'auto'`, the scale domain is computed from the currently
+bound dataset, so colors may shift as filters change.
 
 ## Single-dataset sugar
 

@@ -92,14 +92,6 @@ export default function MapView({className}: {className?: string}) {
         : undefined,
     [arrowData],
   );
-
-  useEffect(() => {
-    console.log('[MapView] datasets identity changed', {
-      hasDatasets: Boolean(datasets),
-      rows: datasets?.earthquakes.arrowTable?.numRows,
-    });
-  }, [datasets]);
-
   const dbReady = !isLoading && arrowData !== null;
 
   const mapSpec = useMemo(
@@ -111,6 +103,13 @@ export default function MapView({className}: {className?: string}) {
           id: 'earthquakes-fill',
           _sqlrooms: {
             dataset: 'earthquakes',
+            colorScale: {
+              field: 'Magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+              clamp: true,
+            },
           },
           filled: true,
           stroked: false,
@@ -120,8 +119,6 @@ export default function MapView({className}: {className?: string}) {
           radiusUnits: 'pixels',
           radiusMinPixels: 1,
           radiusMaxPixels: 10,
-          getFillColor:
-            '@@=[Magnitude >= 6 ? 255 : Magnitude >= 5 ? 235 : Magnitude >= 4 ? 205 : Magnitude >= 3 ? 150 : 95, Magnitude >= 6 ? 60 : Magnitude >= 5 ? 105 : Magnitude >= 4 ? 150 : Magnitude >= 3 ? 195 : 225, Magnitude >= 6 ? 45 : Magnitude >= 5 ? 75 : Magnitude >= 4 ? 110 : Magnitude >= 3 ? 155 : 205, 210]',
           lineWidthMinPixels: 1,
         },
       ],

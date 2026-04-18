@@ -11,12 +11,14 @@ import {
 } from './layerCompatibility';
 import {
   isSqlroomsManagedLayer,
+  resolveSqlroomsColorScale,
   resolveSqlroomsDatasetId,
   resolveSqlroomsGeometryColumn,
   stripSqlroomsLayerProps,
 } from './isSqlroomsManagedLayer';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
+import {compileSqlroomsColorScale} from './compileSqlroomsColorScale';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -26,6 +28,31 @@ type CreateDeckJsonConfigurationOptions = {
 function getLayerName(Class: unknown) {
   const maybeClass = Class as {layerName?: string; name?: string};
   return maybeClass.layerName ?? maybeClass.name ?? 'UnknownLayer';
+}
+
+function applySqlroomsColorScale(options: {
+  props: Record<string, unknown>;
+  sqlroomsProps: SqlroomsDeckLayerProps & Record<string, unknown>;
+  table: import('apache-arrow').Table;
+}) {
+  const {props, sqlroomsProps, table} = options;
+  const colorScale = resolveSqlroomsColorScale(sqlroomsProps);
+  if (!colorScale) {
+    return props;
+  }
+
+  const targetProp = colorScale.prop ?? 'getFillColor';
+  if (props[targetProp] !== undefined) {
+    return props;
+  }
+
+  return {
+    ...props,
+    [targetProp]: compileSqlroomsColorScale({
+      table,
+      colorScale,
+    }),
+  };
 }
 
 export function createDeckJsonConfiguration(
@@ -82,7 +109,11 @@ export function createDeckJsonConfiguration(
 
       const prepared = datasetState.prepared;
       const geometryColumn = resolveSqlroomsGeometryColumn(sqlroomsProps);
-      const baseProps = stripSqlroomsLayerProps(layerProps);
+      const baseProps = applySqlroomsColorScale({
+        props: stripSqlroomsLayerProps(layerProps),
+        sqlroomsProps,
+        table: prepared.table,
+      });
 
       if (compatibility.representation === 'geojson') {
         return {

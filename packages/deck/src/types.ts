@@ -21,10 +21,44 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
+export type SqlroomsColorScaleProp = 'getFillColor' | 'getLineColor';
+
+export type SqlroomsColorScale =
+  | {
+      prop?: SqlroomsColorScaleProp;
+      field: string;
+      type: 'sequential';
+      scheme: 'Viridis' | 'Plasma' | 'Cividis' | 'YlOrRd' | 'Blues';
+      domain: 'auto' | [number, number];
+      clamp?: boolean;
+      reverse?: boolean;
+      nullColor?: [number, number, number, number?];
+    }
+  | {
+      prop?: SqlroomsColorScaleProp;
+      field: string;
+      type: 'diverging';
+      scheme: 'RdBu' | 'BrBG' | 'Spectral';
+      domain: 'auto' | [number, number, number];
+      clamp?: boolean;
+      reverse?: boolean;
+      nullColor?: [number, number, number, number?];
+    }
+  | {
+      prop?: SqlroomsColorScaleProp;
+      field: string;
+      type: 'categorical';
+      scheme: 'Tableau10' | 'Set2' | 'Accent';
+      reverse?: boolean;
+      unknownColor?: [number, number, number, number?];
+      nullColor?: [number, number, number, number?];
+    };
+
 export type SqlroomsDeckLayerConfig = {
   dataset?: string;
   geometryColumn?: string;
   geometryEncodingHint?: GeometryEncodingHint;
+  colorScale?: SqlroomsColorScale;
 };
 
 export type SqlroomsDeckLayerProps = {
