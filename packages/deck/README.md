@@ -98,6 +98,33 @@ colors from a field:
 }
 ```
 
+By default, `DeckMap` renders a small legend overlay for layers that use
+`_sqlrooms.colorScale`. To hide it or override the title:
+
+```tsx
+colorScale: {
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  legend: {
+    title: 'Magnitude (Mw)',
+  },
+}
+```
+
+or
+
+```tsx
+colorScale: {
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  legend: false,
+}
+```
+
 Supported v1 schemes:
 
 - sequential: `Viridis`, `Plasma`, `Cividis`, `YlOrRd`, `Blues`

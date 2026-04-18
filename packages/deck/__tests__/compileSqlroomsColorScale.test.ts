@@ -7,7 +7,10 @@ import {
   Utf8,
   vectorFromArray,
 } from 'apache-arrow';
-import {compileSqlroomsColorScale} from '../src/json/compileSqlroomsColorScale';
+import {
+  buildSqlroomsColorScaleLegend,
+  compileSqlroomsColorScale,
+} from '../src/json/compileSqlroomsColorScale';
 
 function createScaleTable() {
   const pointField = new Field(
@@ -30,6 +33,22 @@ function createScaleTable() {
     ),
     magnitude: vectorFromArray([1.5, 6.5]),
     status: vectorFromArray(['low', 'high']),
+  });
+}
+
+function createEmptyNumericScaleTable() {
+  const pointField = new Field(
+    'geom',
+    new FixedSizeList(2, new Field('xy', new Float64())),
+    true,
+    new Map([['ARROW:extension:name', 'geoarrow.point']]),
+  );
+  const magnitudeField = new Field('magnitude', new Float64());
+  const schema = new Schema([pointField, magnitudeField]);
+
+  return new Table(schema, {
+    geom: vectorFromArray([], pointField.type),
+    magnitude: vectorFromArray([], new Float64()),
   });
 }
 
@@ -79,5 +98,77 @@ describe('compileSqlroomsColorScale', () => {
     });
 
     expect(accessor({magnitude: null})).toEqual([9, 8, 7, 6]);
+  });
+
+  it('returns nullColor for empty numeric datasets', () => {
+    const table = createEmptyNumericScaleTable();
+    const accessor = compileSqlroomsColorScale({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'sequential',
+        scheme: 'Blues',
+        domain: 'auto',
+        nullColor: [9, 8, 7, 6],
+      },
+    });
+
+    expect(accessor({index: 0})).toEqual([9, 8, 7, 6]);
+  });
+
+  it('builds continuous legends for sequential scales', () => {
+    const table = createScaleTable();
+    const legend = buildSqlroomsColorScaleLegend({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'sequential',
+        scheme: 'YlOrRd',
+        domain: 'auto',
+      },
+      title: 'Magnitude',
+    });
+
+    expect(legend.type).toBe('continuous');
+    expect(legend.title).toBe('Magnitude');
+    if (legend.type === 'continuous') {
+      expect(legend.gradient).toContain('linear-gradient');
+      expect(legend.ticks).toHaveLength(3);
+    }
+  });
+
+  it('builds categorical legends with distinct items', () => {
+    const table = createScaleTable();
+    const legend = buildSqlroomsColorScaleLegend({
+      table,
+      colorScale: {
+        field: 'status',
+        type: 'categorical',
+        scheme: 'Tableau10',
+      },
+      title: 'Status',
+    });
+
+    expect(legend.type).toBe('categorical');
+    if (legend.type === 'categorical') {
+      expect(legend.items).toHaveLength(2);
+      expect(legend.items[0]?.color).toHaveLength(4);
+    }
+  });
+
+  it('skips legends for empty numeric datasets', () => {
+    const table = createEmptyNumericScaleTable();
+    const legend = buildSqlroomsColorScaleLegend({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'sequential',
+        scheme: 'YlOrRd',
+        domain: 'auto',
+      },
+      title: 'Magnitude',
+    });
+
+    expect(legend).toBeNull();
   });
 });

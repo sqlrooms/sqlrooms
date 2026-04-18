@@ -6,7 +6,9 @@ import {useEffect, useMemo} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
+import {ColorScaleLegend} from './ColorScaleLegend';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
+import {extractSqlroomsColorScaleLegends} from './json/extractSqlroomsColorScaleLegends';
 import {resolveSqlroomsDatasetId} from './json/isSqlroomsManagedLayer';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import type {DeckMapProps, PreparedDeckDatasetState} from './types';
@@ -231,6 +233,15 @@ export function DeckMap({
     ...extraMapProps,
     mapStyle: mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLE,
   };
+  const legends = useMemo(
+    () =>
+      extractSqlroomsColorScaleLegends({
+        spec: availableSpec,
+        datasetIds,
+        datasetStates,
+      }),
+    [availableSpec, datasetIds, datasetStates],
+  );
 
   return (
     <div className={cn('relative h-full w-full', className)}>
@@ -247,6 +258,7 @@ export function DeckMap({
       </DeckGL>
 
       {renderDatasetStatusOverlay(datasetStates)}
+      {!hasRenderingError ? <ColorScaleLegend legends={legends} /> : null}
     </div>
   );
 }

@@ -22,6 +22,11 @@ export type PreparedDeckDatasetState =
   | {status: 'error'; error: Error};
 
 export type SqlroomsColorScaleProp = 'getFillColor' | 'getLineColor';
+export type SqlroomsColorLegendConfig =
+  | false
+  | {
+      title?: string;
+    };
 
 export type SqlroomsColorScale =
   | {
@@ -33,6 +38,7 @@ export type SqlroomsColorScale =
       clamp?: boolean;
       reverse?: boolean;
       nullColor?: [number, number, number, number?];
+      legend?: SqlroomsColorLegendConfig;
     }
   | {
       prop?: SqlroomsColorScaleProp;
@@ -43,6 +49,7 @@ export type SqlroomsColorScale =
       clamp?: boolean;
       reverse?: boolean;
       nullColor?: [number, number, number, number?];
+      legend?: SqlroomsColorLegendConfig;
     }
   | {
       prop?: SqlroomsColorScaleProp;
@@ -52,6 +59,7 @@ export type SqlroomsColorScale =
       reverse?: boolean;
       unknownColor?: [number, number, number, number?];
       nullColor?: [number, number, number, number?];
+      legend?: SqlroomsColorLegendConfig;
     };
 
 export type SqlroomsDeckLayerConfig = {

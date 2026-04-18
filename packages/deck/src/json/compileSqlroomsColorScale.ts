@@ -41,6 +41,23 @@ const CATEGORICAL_SCHEMES = {
   Accent: schemeAccent,
 } as const;
 
+export type SqlroomsResolvedColorLegend =
+  | {
+      type: 'continuous';
+      title: string;
+      gradient: string;
+      ticks: Array<{label: string; offset: number}>;
+    }
+  | {
+      type: 'categorical';
+      title: string;
+      items: Array<{label: string; color: [number, number, number, number]}>;
+    };
+
+function createNullColorAccessor(nullColor: [number, number, number, number]) {
+  return () => nullColor;
+}
+
 function normalizeColor(
   color: [number, number, number, number?] | undefined,
   fallback: [number, number, number, number],
@@ -65,6 +82,16 @@ function parseColorString(value: string, alpha = 255) {
     number,
     number,
   ];
+}
+
+function toRgbaString(color: [number, number, number, number]) {
+  return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3] / 255})`;
+}
+
+function formatLegendNumber(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+  }).format(value);
 }
 
 function resolveFieldName(table: arrow.Table, requestedField: string) {
@@ -187,6 +214,10 @@ function getDivergingDomain(values: number[]) {
   return [min, (min + max) / 2, max] as [number, number, number];
 }
 
+function unique<T>(values: T[]) {
+  return [...new Set(values)];
+}
+
 function getGeoArrowOrRowValue(options: {
   value: unknown;
   fieldName: string;
@@ -250,9 +281,7 @@ export function compileSqlroomsColorScale(options: {
 
   const numericValues = getNumericValues(vector);
   if (numericValues.length === 0) {
-    throw new Error(
-      `colorScale field "${fieldName}" does not contain any numeric values.`,
-    );
+    return createNullColorAccessor(nullColor);
   }
 
   if (colorScale.type === 'sequential') {
@@ -313,5 +342,117 @@ export function compileSqlroomsColorScale(options: {
     }
 
     return parseColorString(scale(numericValue));
+  };
+}
+
+export function buildSqlroomsColorScaleLegend(options: {
+  table: arrow.Table;
+  colorScale: SqlroomsColorScale;
+  title?: string;
+}): SqlroomsResolvedColorLegend | null {
+  const {table, colorScale, title} = options;
+  const {fieldName, vector} = getColumn(table, colorScale.field);
+  const resolvedTitle = title && title.trim() ? title.trim() : fieldName;
+
+  if (colorScale.type === 'categorical') {
+    const baseRange = CATEGORICAL_SCHEMES[colorScale.scheme];
+    if (!baseRange) {
+      throw new Error(
+        `Unsupported categorical colorScale scheme "${colorScale.scheme}".`,
+      );
+    }
+
+    const range = colorScale.reverse
+      ? [...baseRange].reverse()
+      : [...baseRange];
+    const values = unique(
+      Array.from({length: vector.length}, (_, index) =>
+        vector.get(index),
+      ).filter(
+        (value): value is string | number | boolean =>
+          value != null &&
+          (typeof value === 'string' ||
+            typeof value === 'number' ||
+            typeof value === 'boolean'),
+      ),
+    );
+
+    if (values.length === 0) {
+      return null;
+    }
+
+    return {
+      type: 'categorical',
+      title: resolvedTitle,
+      items: values.map((value, index) => ({
+        label: String(value),
+        color: parseColorString(range[index % range.length]!),
+      })),
+    };
+  }
+
+  const numericValues = getNumericValues(vector);
+  if (numericValues.length === 0) {
+    return null;
+  }
+
+  if (colorScale.type === 'sequential') {
+    const interpolator = SEQUENTIAL_SCHEMES[colorScale.scheme];
+    if (!interpolator) {
+      throw new Error(
+        `Unsupported sequential colorScale scheme "${colorScale.scheme}".`,
+      );
+    }
+
+    const domain =
+      colorScale.domain === 'auto'
+        ? getSequentialDomain(numericValues)
+        : colorScale.domain;
+    const scaleInterpolator = colorScale.reverse
+      ? (t: number) => interpolator(1 - t)
+      : interpolator;
+    const stops = [0, 0.25, 0.5, 0.75, 1]
+      .map((offset) => `${scaleInterpolator(offset)} ${offset * 100}%`)
+      .join(', ');
+
+    return {
+      type: 'continuous',
+      title: resolvedTitle,
+      gradient: `linear-gradient(to right, ${stops})`,
+      ticks: [
+        {label: formatLegendNumber(domain[0]), offset: 0},
+        {label: formatLegendNumber((domain[0] + domain[1]) / 2), offset: 50},
+        {label: formatLegendNumber(domain[1]), offset: 100},
+      ],
+    };
+  }
+
+  const interpolator = DIVERGING_SCHEMES[colorScale.scheme];
+  if (!interpolator) {
+    throw new Error(
+      `Unsupported diverging colorScale scheme "${colorScale.scheme}".`,
+    );
+  }
+
+  const domain =
+    colorScale.domain === 'auto'
+      ? getDivergingDomain(numericValues)
+      : colorScale.domain;
+  const scaleInterpolator = colorScale.reverse
+    ? (t: number) => interpolator(1 - t)
+    : interpolator;
+  const stops = [0, 0.25, 0.5, 0.75, 1]
+    .map((offset) => `${scaleInterpolator(offset)} ${offset * 100}%`)
+    .join(', ');
+
+  return {
+    type: 'continuous',
+    title: resolvedTitle,
+    gradient: `linear-gradient(to right, ${stops})`,
+    ticks: [
+      {label: formatLegendNumber(domain[0]), offset: 0},
+      {label: formatLegendNumber(domain[1]), offset: 50},
+      {label: formatLegendNumber(domain[2]), offset: 100},
+    ],
   };
 }
