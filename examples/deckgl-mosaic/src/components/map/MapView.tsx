@@ -107,8 +107,9 @@ export default function MapView({className}: {className?: string}) {
             colorScale: {
               field: 'Magnitude',
               type: 'sequential',
-              scheme: 'YlOrRd',
+              scheme: 'YlOrBr',
               domain: [0, 8],
+              reverse: false,
               clamp: true,
             },
           },

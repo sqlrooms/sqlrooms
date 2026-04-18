@@ -14,25 +14,25 @@ export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
   return (
     <div
       className={cn(
-        'pointer-events-none absolute right-4 bottom-4 z-10 flex max-w-56 min-w-24 flex-col gap-3',
+        'pointer-events-none absolute bottom-2 left-2 z-10 flex max-w-56 min-w-32 flex-col gap-3',
         className,
       )}
     >
       {legends.map((legend) => (
         <div
           key={`${legend.title}-${legend.type}`}
-          className="rounded-md border border-black/10 bg-white/92 p-3 shadow-sm backdrop-blur-sm"
+          className="bg-background/92 rounded-md border p-3 shadow-sm backdrop-blur-sm"
         >
-          <div className="mb-2 text-xs font-semibold text-slate-800">
+          <div className="text-foreground mb-2 text-xs font-semibold">
             {legend.title}
           </div>
           {legend.type === 'continuous' ? (
             <div>
               <div
-                className="h-3 rounded-sm border border-black/10"
+                className="h-3 rounded-sm border"
                 style={{background: legend.gradient}}
               />
-              <div className="mt-1 flex justify-between gap-2 text-[11px] text-slate-600">
+              <div className="text-muted-foreground mt-1 flex justify-between gap-2 text-[0.6rem]">
                 {legend.ticks.map((tick) => (
                   <span
                     key={`${legend.title}-${tick.offset}-${tick.label}`}
@@ -51,10 +51,10 @@ export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
               {legend.items.map((item) => (
                 <div
                   key={`${legend.title}-${item.label}`}
-                  className="flex items-center gap-2 text-[11px] text-slate-700"
+                  className="text-foreground flex items-center gap-2 text-xs"
                 >
                   <span
-                    className="h-3 w-3 rounded-sm border border-black/10"
+                    className="h-3 w-3 rounded-sm border"
                     style={{
                       backgroundColor: `rgba(${item.color[0]}, ${item.color[1]}, ${item.color[2]}, ${item.color[3] / 255})`,
                     }}
