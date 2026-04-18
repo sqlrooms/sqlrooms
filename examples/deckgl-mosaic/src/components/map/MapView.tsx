@@ -108,7 +108,7 @@ export default function MapView({className}: {className?: string}) {
               field: 'Magnitude',
               type: 'sequential',
               scheme: 'YlOrRd',
-              domain: 'auto',
+              domain: [0, 8],
               clamp: true,
             },
           },
