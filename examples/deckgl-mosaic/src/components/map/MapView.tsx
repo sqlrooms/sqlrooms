@@ -1,5 +1,5 @@
 import {DeckMap} from '@sqlrooms/deck';
-import {Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
+import {asc, column, Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
 import {cn} from '@sqlrooms/ui';
 import type {Table as FlechetteTable} from '@uwdata/flechette';
 import {tableToIPC} from '@uwdata/flechette';
@@ -68,7 +68,8 @@ export default function MapView({className}: {className?: string}) {
           geom: sql`ST_AsWKB(ST_Point(Longitude, Latitude))`,
           dateLabel: sql`strftime(DateTime, '%Y-%m-%d')`,
         })
-        .where(filter),
+        .where(filter)
+        .orderby([asc(column('Magnitude'))]),
   });
 
   const arrowData = useMemo<ArrowTable | null>(() => {
@@ -100,7 +101,7 @@ export default function MapView({className}: {className?: string}) {
       layers: [
         {
           '@@type': 'GeoArrowScatterplotLayer',
-          id: 'earthquakes-fill',
+          id: 'earthquakes',
           _sqlrooms: {
             dataset: 'earthquakes',
             colorScale: {

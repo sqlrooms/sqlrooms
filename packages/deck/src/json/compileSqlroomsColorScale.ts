@@ -94,15 +94,18 @@ function formatLegendNumber(value: number) {
   }).format(value);
 }
 
-function resolveFieldName(table: arrow.Table, requestedField: string) {
-  const exactMatch = table.schema.fields.find(
+function resolveFieldName(
+  schemaOwner: arrow.Table | arrow.RecordBatch,
+  requestedField: string,
+) {
+  const exactMatch = schemaOwner.schema.fields.find(
     (field) => field.name === requestedField,
   )?.name;
   if (exactMatch) {
     return exactMatch;
   }
 
-  const caseInsensitiveMatches = table.schema.fields
+  const caseInsensitiveMatches = schemaOwner.schema.fields
     .map((field) => field.name)
     .filter(
       (fieldName) => fieldName.toLowerCase() === requestedField.toLowerCase(),
@@ -230,7 +233,20 @@ function getGeoArrowOrRowValue(options: {
     'index' in value &&
     typeof (value as {index?: unknown}).index === 'number'
   ) {
-    return vector.get((value as {index: number}).index);
+    const objectInfo = value as {
+      index: number;
+      data?: {data?: arrow.Table | arrow.RecordBatch};
+    };
+    const batch = objectInfo.data?.data;
+    const batchFieldName = batch
+      ? resolveFieldName(batch, fieldName)
+      : undefined;
+
+    if (batch && batchFieldName) {
+      return batch.getChild(batchFieldName)?.get(objectInfo.index);
+    }
+
+    return vector.get(objectInfo.index);
   }
 
   return getRowValue(value, fieldName);

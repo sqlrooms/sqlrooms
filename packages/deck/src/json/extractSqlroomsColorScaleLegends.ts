@@ -22,10 +22,6 @@ function resolveLegendTitle(
     return legend.title;
   }
 
-  if (typeof layerProps.id === 'string' && layerProps.id.trim()) {
-    return layerProps.id;
-  }
-
   return fallbackField;
 }
 
