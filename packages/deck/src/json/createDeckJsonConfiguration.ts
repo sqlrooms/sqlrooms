@@ -1,5 +1,7 @@
 import {JSONConfiguration} from '@deck.gl/json';
+import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
 import type {LayerExtensionProps, PreparedDeckDatasetState} from '../types';
+import {compileColorScale} from './compileColorScale';
 import {
   DEFAULT_DECK_JSON_CLASSES,
   DEFAULT_DECK_JSON_CONSTANTS,
@@ -18,8 +20,6 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
-import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
-import {compileColorScale} from './compileColorScale';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -47,12 +47,23 @@ function applyColorScale(options: {
     return props;
   }
 
+  const updateTriggers =
+    props.updateTriggers &&
+    typeof props.updateTriggers === 'object' &&
+    !Array.isArray(props.updateTriggers)
+      ? (props.updateTriggers as Record<string, unknown>)
+      : {};
+
   return {
     ...props,
     [targetProp]: compileColorScale({
       table,
       colorScale,
     }),
+    updateTriggers: {
+      ...updateTriggers,
+      [targetProp]: JSON.stringify(colorScale),
+    },
   };
 }
 
