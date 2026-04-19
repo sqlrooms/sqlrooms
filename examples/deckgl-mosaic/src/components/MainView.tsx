@@ -1,6 +1,6 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
-import {EarthquakeProfiler} from './filters/EarthquakeProfiler';
+import {EarthquakeProfilerMosaic} from './filters/EarthquakeProfilerMosaic';
 import FiltersPanel from './filters/FiltersPanel';
 import MapView from './map/MapView';
 
@@ -38,7 +38,7 @@ export const MainView = () => {
         <MapView className="relative w-[70%] grow overflow-hidden" />
         <FiltersPanel className="w-[30%] max-w-100" />
       </div>
-      <EarthquakeProfiler className="h-[42%]" />
+      <EarthquakeProfilerMosaic className="h-[42%]" />
     </div>
   );
 };
