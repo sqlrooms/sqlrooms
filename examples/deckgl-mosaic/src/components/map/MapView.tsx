@@ -1,4 +1,4 @@
-import {DeckMap} from '@sqlrooms/deck';
+import {DeckMap, type LayerColorScale} from '@sqlrooms/deck';
 import {asc, column, Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
 import {cn} from '@sqlrooms/ui';
 import type {Table as FlechetteTable} from '@uwdata/flechette';
@@ -10,6 +10,7 @@ import type {ViewState} from 'react-map-gl/maplibre';
 import {useRoomStore} from '../../store';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
+import {MosaicColorLegend} from './MosaicColorLegend';
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -95,6 +96,27 @@ export default function MapView({className}: {className?: string}) {
   );
   const dbReady = !isLoading && arrowData !== null;
 
+  const colorScale = useMemo<LayerColorScale>(
+    () => ({
+      field: 'Magnitude',
+      type: 'sequential',
+      scheme: 'YlOrBr',
+      domain: [0, 8],
+      reverse: false,
+      clamp: true,
+      legend: false,
+    }),
+    [],
+  );
+
+  const legendColorScale = useMemo<LayerColorScale>(
+    () => ({
+      ...colorScale,
+      legend: {title: 'Magnitude'},
+    }),
+    [colorScale],
+  );
+
   const mapSpec = useMemo(
     () => ({
       initialViewState: INITIAL_VIEW_STATE,
@@ -104,14 +126,7 @@ export default function MapView({className}: {className?: string}) {
           id: 'earthquakes',
           _sqlrooms: {
             dataset: 'earthquakes',
-            colorScale: {
-              field: 'Magnitude',
-              type: 'thresholds',
-              scheme: 'YlOrBr',
-              thresholds: [3, 4, 5, 6, 7],
-              reverse: false,
-              clamp: true,
-            },
+            colorScale,
           },
           filled: true,
           stroked: false,
@@ -125,7 +140,7 @@ export default function MapView({className}: {className?: string}) {
         },
       ],
     }),
-    [enableBrushing],
+    [colorScale, enableBrushing],
   );
 
   const onHover = (info: {coordinate?: [number, number]}) => {
@@ -224,6 +239,14 @@ export default function MapView({className}: {className?: string}) {
           setBrushRadius={setBrushRadius}
           clearBrush={clearBrush}
           onShowInfo={() => setShowInfo(true)}
+        />
+
+        <MosaicColorLegend
+          className="absolute bottom-2 left-2 z-10"
+          colorScale={legendColorScale}
+          selection={brush ?? undefined}
+          tickFormat=".1f"
+          width={220}
         />
 
         {showInfo ? <MapInfoModal onClose={() => setShowInfo(false)} /> : null}
