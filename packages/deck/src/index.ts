@@ -4,20 +4,19 @@
  */
 
 export {DeckMap} from './DeckMap';
-export {ColorScaleLegend} from './ColorScaleLegend';
+export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 export {prepareDeckDataset} from './prepare/prepareDeckDataset';
 
 export type {
+  DeckColorScaleProp,
   DeckDatasetInput,
   DeckMapProps,
   DeckQueryResultLike,
-  LayerColorLegendConfig,
-  LayerColorScale,
-  LayerColorScaleProp,
   LayerExtensionProps,
   PreparedDeckDatasetState,
 } from './types';
+export type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
 export type {
   GeometryEncodingHint,
   PreparedDeckDataset,

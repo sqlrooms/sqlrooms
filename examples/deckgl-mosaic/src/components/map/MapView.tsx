@@ -1,6 +1,14 @@
-import {DeckMap, type LayerColorScale} from '@sqlrooms/deck';
-import {asc, column, Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
-import {cn} from '@sqlrooms/ui';
+import type {ColorScaleConfig} from '@sqlrooms/color-scales';
+import {DeckMap} from '@sqlrooms/deck';
+import {
+  asc,
+  column,
+  MosaicColorLegend,
+  Query,
+  sql,
+  useMosaicClient,
+} from '@sqlrooms/mosaic';
+import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import type {Table as FlechetteTable} from '@uwdata/flechette';
 import {tableToIPC} from '@uwdata/flechette';
 import type {Table as ArrowTable} from 'apache-arrow';
@@ -10,10 +18,11 @@ import type {ViewState} from 'react-map-gl/maplibre';
 import {useRoomStore} from '../../store';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
-import {MosaicColorLegend} from './MosaicColorLegend';
 
-const MAP_STYLE =
-  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const MAP_STYLES: Record<ResolvedTheme, string> = {
+  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+};
 
 const INITIAL_VIEW_STATE = {
   longitude: -119.5,
@@ -95,25 +104,24 @@ export default function MapView({className}: {className?: string}) {
     [arrowData],
   );
   const dbReady = !isLoading && arrowData !== null;
-
-  const colorScale = useMemo<LayerColorScale>(
-    () => ({
+  const {resolvedTheme} = useTheme();
+  const colorScale = useMemo(() => {
+    return {
       field: 'Magnitude',
       type: 'sequential',
       scheme: 'YlOrBr',
       domain: [0, 8],
-      reverse: false,
+      reverse: resolvedTheme === 'dark',
       clamp: true,
-      legend: false,
-    }),
-    [],
-  );
+    } satisfies ColorScaleConfig;
+  }, [resolvedTheme]);
 
-  const legendColorScale = useMemo<LayerColorScale>(
-    () => ({
-      ...colorScale,
-      legend: {title: 'Magnitude'},
-    }),
+  const legendColorScale = useMemo(
+    () =>
+      ({
+        ...colorScale,
+        legend: {title: 'Magnitude'},
+      }) satisfies ColorScaleConfig,
     [colorScale],
   );
 
@@ -206,7 +214,8 @@ export default function MapView({className}: {className?: string}) {
             className="h-full w-full"
             spec={mapSpec}
             datasets={datasets}
-            mapStyle={MAP_STYLE}
+            showLegends={false}
+            mapStyle={MAP_STYLES[resolvedTheme]}
             mapProps={{projection: 'mercator'}}
             deckProps={{
               controller: true,

@@ -12,6 +12,7 @@ import {
 import {
   isManagedLayer,
   resolveColorScale,
+  resolveColorScaleProp,
   resolveDatasetId,
   resolveGeometryColumn,
   stripLayerExtensionProps,
@@ -41,7 +42,7 @@ function applyColorScale(options: {
     return props;
   }
 
-  const targetProp = colorScale.prop ?? 'getFillColor';
+  const targetProp = resolveColorScaleProp(layerProps) ?? 'getFillColor';
   if (props[targetProp] !== undefined) {
     return props;
   }

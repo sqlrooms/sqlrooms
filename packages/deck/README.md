@@ -128,13 +128,7 @@ colorScale: {
 or
 
 ```tsx
-colorScale: {
-  field: 'Magnitude',
-  type: 'sequential',
-  scheme: 'YlOrRd',
-  domain: 'auto',
-  legend: false,
-}
+<DeckMap spec={spec} datasets={datasets} showLegends={false} />
 ```
 
 Supported scale types:

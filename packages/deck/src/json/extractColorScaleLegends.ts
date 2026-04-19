@@ -1,8 +1,6 @@
+import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
 import type {LayerExtensionProps, PreparedDeckDatasetState} from '../types';
-import {
-  buildColorScaleLegend,
-  type ResolvedColorLegend,
-} from './compileColorScale';
+import {buildColorScaleLegend} from './compileColorScale';
 import {
   resolveColorLegend,
   resolveColorScale,
@@ -46,8 +44,7 @@ export function extractColorScaleLegends(options: {
     const extensionProps = layerProps as LayerExtensionProps &
       Record<string, unknown>;
     const colorScale = resolveColorScale(extensionProps);
-    const legend = resolveColorLegend(extensionProps);
-    if (!colorScale || legend === false) {
+    if (!colorScale) {
       continue;
     }
 

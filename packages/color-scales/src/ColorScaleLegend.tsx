@@ -1,23 +1,19 @@
 import {cn} from '@sqlrooms/ui';
-import type {ResolvedColorLegend} from './json/compileColorScale';
+import type {ResolvedColorLegend} from './config';
 
 type ColorScaleLegendProps = {
   legends: ResolvedColorLegend[];
   className?: string;
 };
 
+/** TODO: implement nicer legends like in https://observablehq.com/@d3/color-legend */
 export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
   if (!legends.length) {
     return null;
   }
 
   return (
-    <div
-      className={cn(
-        'pointer-events-none absolute bottom-2 left-2 z-10 flex max-w-56 flex-col gap-3',
-        className,
-      )}
-    >
+    <div className={cn('flex flex-col gap-3', className)}>
       {legends.map((legend) => (
         <div
           key={`${legend.title}-${legend.type}`}

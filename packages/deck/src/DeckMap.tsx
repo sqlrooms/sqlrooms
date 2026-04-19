@@ -1,20 +1,22 @@
 import {JSONConverter} from '@deck.gl/json';
 import DeckGL from '@deck.gl/react';
-import {cn} from '@sqlrooms/ui';
+import {ColorScaleLegend} from '@sqlrooms/color-scales';
+import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {useEffect, useMemo} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
-import {ColorScaleLegend} from './ColorScaleLegend';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
-import {resolveDatasetId} from './json/layerConfig';
 import {getLayerCompatibility} from './json/layerCompatibility';
+import {resolveDatasetId} from './json/layerConfig';
 import type {DeckMapProps, PreparedDeckDatasetState} from './types';
 
-const DEFAULT_MAP_STYLE =
-  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
+  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+};
 
 function parseSpec(spec: DeckMapProps['spec']) {
   try {
@@ -131,6 +133,7 @@ export function DeckMap({
   mapStyle,
   deckProps,
   mapProps,
+  showLegends = true,
   className,
   children,
 }: DeckMapProps) {
@@ -229,18 +232,23 @@ export function DeckMap({
         []),
   };
 
+  const {resolvedTheme} = useTheme();
+
   const mergedMapProps = {
     ...extraMapProps,
-    mapStyle: mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLE,
+    mapStyle:
+      mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLES[resolvedTheme],
   };
   const legends = useMemo(
     () =>
-      extractColorScaleLegends({
-        spec: availableSpec,
-        datasetIds,
-        datasetStates,
-      }),
-    [availableSpec, datasetIds, datasetStates],
+      showLegends
+        ? extractColorScaleLegends({
+            spec: availableSpec,
+            datasetIds,
+            datasetStates,
+          })
+        : [],
+    [availableSpec, datasetIds, datasetStates, showLegends],
   );
 
   return (
@@ -258,7 +266,11 @@ export function DeckMap({
       </DeckGL>
 
       {renderDatasetStatusOverlay(datasetStates)}
-      {!hasRenderingError ? <ColorScaleLegend legends={legends} /> : null}
+      {!hasRenderingError && showLegends ? (
+        <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
+          <ColorScaleLegend legends={legends} />
+        </div>
+      ) : null}
     </div>
   );
 }

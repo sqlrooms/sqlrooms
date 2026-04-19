@@ -24,6 +24,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",

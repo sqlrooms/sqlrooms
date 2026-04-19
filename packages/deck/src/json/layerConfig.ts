@@ -1,8 +1,5 @@
-import type {
-  LayerColorLegendConfig,
-  LayerColorScale,
-  LayerExtensionProps,
-} from '../types';
+import type {DeckColorScaleProp, LayerExtensionProps} from '../types';
+import type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
 
 function hasExtensionKeys(props: Record<string, unknown>) {
   return '_sqlrooms' in props;
@@ -56,13 +53,20 @@ export function resolveGeometryColumn(props: Record<string, unknown>) {
 
 export function resolveColorScale(
   props: Record<string, unknown>,
-): LayerColorScale | undefined {
+): ColorScaleConfig | undefined {
   const config = getLayerConfig(props);
   return config?.colorScale;
 }
 
 export function resolveColorLegend(
   props: Record<string, unknown>,
-): LayerColorLegendConfig | undefined {
+): ColorLegendConfig | undefined {
   return resolveColorScale(props)?.legend;
+}
+
+export function resolveColorScaleProp(
+  props: Record<string, unknown>,
+): DeckColorScaleProp | undefined {
+  const config = getLayerConfig(props);
+  return config?.colorScaleProp;
 }

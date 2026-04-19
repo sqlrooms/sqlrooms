@@ -45,6 +45,11 @@ export {
 } from './profiler/MosaicProfilerStatusBar';
 export {useMosaicProfiler} from './profiler/useMosaicProfiler';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
+export {
+  createMosaicColorLegendPlot,
+  MosaicColorLegend,
+  type MosaicColorLegendProps,
+} from './MosaicColorLegend';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components

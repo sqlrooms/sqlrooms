@@ -1,12 +1,15 @@
-import type {LayerColorScale} from '@sqlrooms/deck';
-import {type Selection, vg, VgPlotChart} from '@sqlrooms/mosaic';
+import type {ColorScaleConfig} from '@sqlrooms/color-scales';
+import {resolveColorLegendTitle} from '@sqlrooms/color-scales';
 import {cn, getResolvedTheme, useTheme} from '@sqlrooms/ui';
+import {Selection} from '@uwdata/mosaic-core';
+import * as vg from '@uwdata/vgplot';
 import {useMemo} from 'react';
+import {VgPlotChart} from './VgPlotChart';
 
 type LegendDomainValue = string | number | Date;
 
-type CreateColorLegendPlotOptions = {
-  colorScale: LayerColorScale;
+type CreateMosaicColorLegendPlotOptions = {
+  colorScale: ColorScaleConfig;
   selection?: Selection;
   domain?: ReadonlyArray<LegendDomainValue>;
   title?: string;
@@ -14,7 +17,7 @@ type CreateColorLegendPlotOptions = {
   tickFormat?: string;
 };
 
-export type MosaicColorLegendProps = CreateColorLegendPlotOptions & {
+export type MosaicColorLegendProps = CreateMosaicColorLegendPlotOptions & {
   className?: string;
 };
 
@@ -24,16 +27,8 @@ function isExplicitNumericDomain(
   return domain !== 'auto';
 }
 
-function getLegendTitle(colorScale: LayerColorScale, title?: string) {
-  if (title) return title;
-  if (colorScale.legend && colorScale.legend.title) {
-    return colorScale.legend.title;
-  }
-  return colorScale.field;
-}
-
 function resolveLegendDomain(
-  colorScale: LayerColorScale,
+  colorScale: ColorScaleConfig,
   domain?: ReadonlyArray<LegendDomainValue>,
 ) {
   if (
@@ -44,12 +39,11 @@ function resolveLegendDomain(
   ) {
     return colorScale.domain;
   }
+
   return domain;
 }
 
-// Mosaic interactive legends currently support ramps and swatches,
-// but not interactive threshold / quantize / quantile brushing.
-function getVgColorScaleType(colorScale: LayerColorScale) {
+function getVgColorScaleType(colorScale: ColorScaleConfig) {
   switch (colorScale.type) {
     case 'sequential':
       return 'linear';
@@ -66,20 +60,24 @@ function getVgColorScaleType(colorScale: LayerColorScale) {
   }
 }
 
-export function createColorLegendPlot({
+function supportsInteractiveLegend(colorScale: ColorScaleConfig) {
+  return (
+    colorScale.type === 'sequential' ||
+    colorScale.type === 'diverging' ||
+    colorScale.type === 'categorical'
+  );
+}
+
+export function createMosaicColorLegendPlot({
   colorScale,
   selection,
   domain,
   title,
   width = 220,
   tickFormat = '.1f',
-}: CreateColorLegendPlotOptions) {
-  if (colorScale.legend === false) {
-    return null;
-  }
-
+}: CreateMosaicColorLegendPlotOptions) {
   const resolvedDomain = resolveLegendDomain(colorScale, domain);
-  const legendTitle = getLegendTitle(colorScale, title);
+  const legendTitle = resolveColorLegendTitle(colorScale, title);
   const plotAttributes: Array<(plot: any) => void> = [
     vg.colorScale(getVgColorScaleType(colorScale)),
     vg.colorScheme(colorScale.scheme),
@@ -120,7 +118,7 @@ export function createColorLegendPlot({
   const backingPlot = vg.plot(...plotAttributes);
   return vg.colorLegend({
     for: backingPlot,
-    as: selection,
+    as: supportsInteractiveLegend(colorScale) ? selection : undefined,
     field: colorScale.field,
     width,
     tickFormat,
@@ -147,9 +145,10 @@ export function MosaicColorLegend({
     tickFormat,
   });
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const plot = useMemo(
     () =>
-      createColorLegendPlot({
+      createMosaicColorLegendPlot({
         colorScale,
         selection,
         domain,
@@ -157,6 +156,7 @@ export function MosaicColorLegend({
         width,
         tickFormat,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-equal via serialized key instead of object refs
     [legendSpecKey, selection],
   );
 
