@@ -28,12 +28,96 @@ export type LayerColorLegendConfig =
       title?: string;
     };
 
+export type ContinuousSequentialScheme =
+  | 'Blues'
+  | 'BuGn'
+  | 'BuPu'
+  | 'Cividis'
+  | 'Cool'
+  | 'CubehelixDefault'
+  | 'GnBu'
+  | 'Greens'
+  | 'Greys'
+  | 'Inferno'
+  | 'Magma'
+  | 'OrRd'
+  | 'Oranges'
+  | 'Plasma'
+  | 'PuBu'
+  | 'PuBuGn'
+  | 'PuRd'
+  | 'Purples'
+  | 'RdPu'
+  | 'Reds'
+  | 'Turbo'
+  | 'Viridis'
+  | 'Warm'
+  | 'YlGn'
+  | 'YlGnBu'
+  | 'YlOrBr'
+  | 'YlOrRd'
+  | 'Rainbow'
+  | 'Sinebow';
+
+export type ContinuousDivergingScheme =
+  | 'BrBG'
+  | 'PRGn'
+  | 'PiYG'
+  | 'PuOr'
+  | 'RdBu'
+  | 'RdGy'
+  | 'RdYlBu'
+  | 'RdYlGn'
+  | 'Spectral';
+
+export type BinnedNumericScheme =
+  | 'Blues'
+  | 'BuGn'
+  | 'BuPu'
+  | 'GnBu'
+  | 'Greens'
+  | 'Greys'
+  | 'OrRd'
+  | 'Oranges'
+  | 'PuBu'
+  | 'PuBuGn'
+  | 'PuRd'
+  | 'Purples'
+  | 'RdPu'
+  | 'Reds'
+  | 'YlGn'
+  | 'YlGnBu'
+  | 'YlOrBr'
+  | 'YlOrRd'
+  | 'BrBG'
+  | 'PRGn'
+  | 'PiYG'
+  | 'PuOr'
+  | 'RdBu'
+  | 'RdGy'
+  | 'RdYlBu'
+  | 'RdYlGn'
+  | 'Spectral';
+
+export type CategoricalScheme =
+  | 'Accent'
+  | 'Dark2'
+  | 'Paired'
+  | 'Pastel1'
+  | 'Pastel2'
+  | 'Set1'
+  | 'Set2'
+  | 'Set3'
+  | 'Tableau10'
+  | 'Observable10'
+  | 'Category10';
+
 export type LayerColorScale =
   | {
       prop?: LayerColorScaleProp;
       field: string;
       type: 'sequential';
-      scheme: 'Viridis' | 'Plasma' | 'Cividis' | 'YlOrRd' | 'Blues';
+      scheme: ContinuousSequentialScheme;
       domain: 'auto' | [number, number];
       clamp?: boolean;
       reverse?: boolean;
@@ -44,7 +128,7 @@ export type LayerColorScale =
       prop?: LayerColorScaleProp;
       field: string;
       type: 'diverging';
-      scheme: 'RdBu' | 'BrBG' | 'Spectral';
+      scheme: ContinuousDivergingScheme;
       domain: 'auto' | [number, number, number];
       clamp?: boolean;
       reverse?: boolean;
@@ -54,8 +138,40 @@ export type LayerColorScale =
   | {
       prop?: LayerColorScaleProp;
       field: string;
+      type: 'quantize';
+      scheme: BinnedNumericScheme;
+      domain: 'auto' | [number, number];
+      bins?: number;
+      clamp?: boolean;
+      reverse?: boolean;
+      nullColor?: [number, number, number, number?];
+      legend?: LayerColorLegendConfig;
+    }
+  | {
+      prop?: LayerColorScaleProp;
+      field: string;
+      type: 'quantile';
+      scheme: BinnedNumericScheme;
+      bins?: number;
+      reverse?: boolean;
+      nullColor?: [number, number, number, number?];
+      legend?: LayerColorLegendConfig;
+    }
+  | {
+      prop?: LayerColorScaleProp;
+      field: string;
+      type: 'threshold';
+      scheme: BinnedNumericScheme;
+      thresholds: number[];
+      reverse?: boolean;
+      nullColor?: [number, number, number, number?];
+      legend?: LayerColorLegendConfig;
+    }
+  | {
+      prop?: LayerColorScaleProp;
+      field: string;
       type: 'categorical';
-      scheme: 'Tableau10' | 'Set2' | 'Accent';
+      scheme: CategoricalScheme;
       reverse?: boolean;
       unknownColor?: [number, number, number, number?];
       nullColor?: [number, number, number, number?];

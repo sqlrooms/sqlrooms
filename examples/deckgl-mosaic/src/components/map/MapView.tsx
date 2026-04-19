@@ -106,9 +106,9 @@ export default function MapView({className}: {className?: string}) {
             dataset: 'earthquakes',
             colorScale: {
               field: 'Magnitude',
-              type: 'sequential',
+              type: 'thresholds',
               scheme: 'YlOrBr',
-              domain: [0, 8],
+              thresholds: [3, 4, 5, 6, 7],
               reverse: false,
               clamp: true,
             },

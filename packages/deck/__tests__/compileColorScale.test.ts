@@ -76,7 +76,7 @@ describe('compileColorScale', () => {
       colorScale: {
         field: 'status',
         type: 'categorical',
-        scheme: 'Tableau10',
+        scheme: 'Category10',
       },
     });
 
@@ -144,7 +144,7 @@ describe('compileColorScale', () => {
       colorScale: {
         field: 'status',
         type: 'categorical',
-        scheme: 'Tableau10',
+        scheme: 'Observable10',
       },
       title: 'Status',
     });
@@ -170,5 +170,57 @@ describe('compileColorScale', () => {
     });
 
     expect(legend).toBeNull();
+  });
+
+  it('supports quantize scales with discrete numeric schemes', () => {
+    const table = createScaleTable();
+    const accessor = compileColorScale({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'quantize',
+        scheme: 'PuBuGn',
+        domain: [0, 8],
+        bins: 4,
+      },
+    });
+
+    expect(accessor({index: 0})).toHaveLength(4);
+    expect(accessor({index: 0})).not.toEqual(accessor({index: 1}));
+  });
+
+  it('supports quantile legends as stepped legends', () => {
+    const table = createScaleTable();
+    const legend = buildColorScaleLegend({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'quantile',
+        scheme: 'Blues',
+        bins: 3,
+      },
+      title: 'Magnitude',
+    });
+
+    expect(legend?.type).toBe('stepped');
+    if (legend?.type === 'stepped') {
+      expect(legend.items).toHaveLength(3);
+    }
+  });
+
+  it('supports threshold scales with diverging discrete schemes', () => {
+    const table = createScaleTable();
+    const accessor = compileColorScale({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'threshold',
+        scheme: 'RdYlBu',
+        thresholds: [2, 4, 6],
+      },
+    });
+
+    expect(accessor({index: 0})).toHaveLength(4);
+    expect(accessor({index: 0})).not.toEqual(accessor({index: 1}));
   });
 });

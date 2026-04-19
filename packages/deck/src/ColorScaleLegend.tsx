@@ -14,14 +14,14 @@ export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
   return (
     <div
       className={cn(
-        'pointer-events-none absolute bottom-2 left-2 z-10 flex max-w-56 min-w-32 flex-col gap-3',
+        'pointer-events-none absolute bottom-2 left-2 z-10 flex max-w-56 flex-col gap-3',
         className,
       )}
     >
       {legends.map((legend) => (
         <div
           key={`${legend.title}-${legend.type}`}
-          className="bg-background/92 rounded-md border p-3 shadow-sm backdrop-blur-sm"
+          className="bg-background/70 rounded-md px-3 py-2 shadow-sm backdrop-blur-sm"
         >
           <div className="text-foreground mb-2 text-xs font-semibold">
             {legend.title}

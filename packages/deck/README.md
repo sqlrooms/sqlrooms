@@ -98,6 +98,18 @@ colors from a field:
 }
 ```
 
+Discrete numeric palettes are available too:
+
+```tsx
+colorScale: {
+  field: 'Magnitude',
+  type: 'quantize',
+  scheme: 'PuBuGn',
+  domain: [0, 8],
+  bins: 5,
+}
+```
+
 By default, `DeckMap` renders a small legend overlay for layers that use
 `_sqlrooms.colorScale`. To hide it or override the title:
 
@@ -125,11 +137,14 @@ colorScale: {
 }
 ```
 
-Supported v1 schemes:
+Supported scale types:
 
-- sequential: `Viridis`, `Plasma`, `Cividis`, `YlOrRd`, `Blues`
-- diverging: `RdBu`, `BrBG`, `Spectral`
-- categorical: `Tableau10`, `Set2`, `Accent`
+- `sequential`: continuous sequential/cyclical interpolators from `d3-scale-chromatic`
+- `diverging`: continuous diverging interpolators from `d3-scale-chromatic`
+- `quantize`: equal-width discrete bins using numeric scheme families such as `Blues`, `PuBuGn`, `RdYlBu`
+- `quantile`: equal-count discrete bins using numeric scheme families
+- `threshold`: explicit threshold bins using numeric scheme families
+- `categorical`: categorical palettes such as `Category10`, `Observable10`, `Tableau10`, `Set3`
 
 When `domain` is set to `'auto'`, the scale domain is computed from the currently
 bound dataset, so colors may shift as filters change.
