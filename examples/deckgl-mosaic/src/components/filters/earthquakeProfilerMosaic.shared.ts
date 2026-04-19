@@ -92,6 +92,17 @@ export function buildEarthquakeProfilerPlots(options: {
   );
 }
 
+/**
+ * Creates the Mosaic/VG table element and injects table-scoped CSS directly
+ * onto that generated node.
+ *
+ * This styling can not come from Tailwind classes alone because `vg.table()`
+ * renders its own DOM subtree outside our JSX, with runtime-generated element
+ * ids and internal table markup that React never sees. Injecting CSS against
+ * `#${el.id}` keeps the sticky header, typography, cell truncation, and local
+ * scroll behavior attached to this specific Mosaic table instance without
+ * leaking styles to other tables in the app.
+ */
 export function createEarthquakeProfilerTableEl(options: {
   brush: Selection;
   columns: EarthquakeProfilerColumnDef[];
