@@ -10,7 +10,7 @@ npm install @sqlrooms/deck @sqlrooms/duckdb @sqlrooms/ui
 ## Quick start
 
 ```tsx
-import {DeckMap} from '@sqlrooms/deck';
+import {DeckJsonMap} from '@sqlrooms/deck';
 
 const spec = {
   initialViewState: {
@@ -44,7 +44,7 @@ const spec = {
 
 export function AirportsMap() {
   return (
-    <DeckMap
+    <DeckJsonMap
       spec={spec}
       datasets={{
         airports: {
@@ -65,7 +65,7 @@ export function AirportsMap() {
 Use `datasets` for multi-layer and multi-dataset specs:
 
 ```tsx
-<DeckMap
+<DeckJsonMap
   spec={spec}
   datasets={{
     earthquakes: {sqlQuery: 'SELECT * FROM earthquakes'},
@@ -110,7 +110,7 @@ colorScale: {
 }
 ```
 
-By default, `DeckMap` renders a small legend overlay for layers that use
+By default, `DeckJsonMap` renders a small legend overlay for layers that use
 `_sqlrooms.colorScale`. To hide it or override the title:
 
 ```tsx
@@ -128,7 +128,7 @@ colorScale: {
 or
 
 ```tsx
-<DeckMap spec={spec} datasets={datasets} showLegends={false} />
+<DeckJsonMap spec={spec} datasets={datasets} showLegends={false} />
 ```
 
 Supported scale types:
@@ -145,7 +145,7 @@ bound dataset, so colors may shift as filters change.
 
 ## Single-dataset sugar
 
-For the common case, `DeckMap` accepts `sqlQuery`, `arrowTable`, or `queryResult`
+For the common case, `DeckJsonMap` accepts `sqlQuery`, `arrowTable`, or `queryResult`
 directly and treats them as `datasets.default`.
 
 ## Runtime props

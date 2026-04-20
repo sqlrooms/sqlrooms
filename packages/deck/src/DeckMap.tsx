@@ -6,24 +6,24 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {useEffect, useMemo} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
-import {DeckMapSpec} from './DeckSpec';
+import {DeckJsonMapSpec} from './DeckSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import type {DeckMapProps, PreparedDeckDatasetState} from './types';
+import type {DeckJsonMapProps, PreparedDeckDatasetState} from './types';
 
 const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
   light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 };
 
-function parseSpec(spec: DeckMapProps['spec']) {
+function parseSpec(spec: DeckJsonMapProps['spec']) {
   try {
     const parsedValue = typeof spec === 'string' ? JSON.parse(spec) : spec;
-    const validatedSpec = DeckMapSpec.safeParse(parsedValue);
+    const validatedSpec = DeckJsonMapSpec.safeParse(parsedValue);
     if (!validatedSpec.success) {
       return {
         spec: null,
@@ -49,7 +49,7 @@ function formatSpecValidationError(error: ZodError) {
     return `${path}: ${issue.message}`;
   });
 
-  return `Invalid DeckMap spec. ${issues.join('; ')}`;
+  return `Invalid DeckJsonMap spec. ${issues.join('; ')}`;
 }
 
 function extractFallbackDeckProps(spec: Record<string, unknown> | null) {
@@ -142,7 +142,7 @@ function renderDatasetStatusOverlay(
   );
 }
 
-export function DeckMap({
+export function DeckJsonMap({
   spec,
   datasets,
   sqlQuery,
@@ -156,7 +156,7 @@ export function DeckMap({
   showLegends = true,
   className,
   children,
-}: DeckMapProps) {
+}: DeckJsonMapProps) {
   const normalizedDatasets = useMemo(
     () =>
       normalizeDatasets({

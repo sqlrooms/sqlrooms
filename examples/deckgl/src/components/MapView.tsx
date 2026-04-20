@@ -1,4 +1,4 @@
-import {DeckMap} from '@sqlrooms/deck';
+import {DeckJsonMap} from '@sqlrooms/deck';
 import type {DeckDatasetInput} from '@sqlrooms/deck';
 import {useMemo, useState} from 'react';
 import {NavigationControl, Popup} from 'react-map-gl/maplibre';
@@ -106,7 +106,7 @@ export const MapView = () => {
   );
 
   return (
-    <DeckMap
+    <DeckJsonMap
       className="h-full w-full"
       spec={AIRPORT_MAP_SPEC}
       datasets={datasets}
@@ -139,6 +139,6 @@ export const MapView = () => {
           </div>
         </Popup>
       ) : null}
-    </DeckMap>
+    </DeckJsonMap>
   );
 };

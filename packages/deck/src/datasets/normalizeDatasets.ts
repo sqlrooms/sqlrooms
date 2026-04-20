@@ -1,14 +1,22 @@
 import type * as arrow from 'apache-arrow';
-import type {DeckDatasetInput, DeckMapProps, DeckQueryResultLike} from '../types';
+import type {
+  DeckDatasetInput,
+  DeckJsonMapProps,
+  DeckQueryResultLike,
+} from '../types';
 
-function getArrowTableFromQueryResult(queryResult: DeckQueryResultLike | undefined) {
+function getArrowTableFromQueryResult(
+  queryResult: DeckQueryResultLike | undefined,
+) {
   return queryResult?.arrowTable;
 }
 
 function countDefinedInputs(input: DeckDatasetInput) {
-  return Number(Boolean(input.sqlQuery)) +
+  return (
+    Number(Boolean(input.sqlQuery)) +
     Number(Boolean(input.arrowTable)) +
-    Number(Boolean(input.queryResult));
+    Number(Boolean(input.queryResult))
+  );
 }
 
 function assertArrowTable(value: arrow.Table | undefined, datasetId: string) {
@@ -39,7 +47,10 @@ function normalizeDatasetEntry(
   }
 
   if (normalized.queryResult) {
-    assertArrowTable(getArrowTableFromQueryResult(normalized.queryResult), datasetId);
+    assertArrowTable(
+      getArrowTableFromQueryResult(normalized.queryResult),
+      datasetId,
+    );
   }
 
   return normalized;
@@ -53,7 +64,7 @@ export function resolveArrowTable(
 
 export function normalizeDatasets(
   props: Pick<
-    DeckMapProps,
+    DeckJsonMapProps,
     | 'datasets'
     | 'sqlQuery'
     | 'arrowTable'
@@ -81,7 +92,7 @@ export function normalizeDatasets(
   const definedInputs = countDefinedInputs(singleInput);
   if (definedInputs === 0) {
     throw new Error(
-      'DeckMap requires either datasets or one of sqlQuery, arrowTable, or queryResult.',
+      'DeckJsonMap requires either datasets or one of sqlQuery, arrowTable, or queryResult.',
     );
   }
 

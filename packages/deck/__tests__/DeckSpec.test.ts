@@ -1,8 +1,8 @@
-import {DeckMapSpec, LayerExtensionConfig} from '../src/DeckSpec';
+import {DeckJsonMapSpec, LayerExtensionConfig} from '../src/DeckSpec';
 
-describe('DeckMapSpec', () => {
+describe('DeckJsonMapSpec', () => {
   it('accepts loose deck.gl layer objects while validating _sqlrooms', () => {
-    const parsed = DeckMapSpec.parse({
+    const parsed = DeckJsonMapSpec.parse({
       initialViewState: {
         longitude: -119.5,
         latitude: 37,
@@ -34,7 +34,7 @@ describe('DeckMapSpec', () => {
 
   it('rejects invalid _sqlrooms config', () => {
     expect(() =>
-      DeckMapSpec.parse({
+      DeckJsonMapSpec.parse({
         layers: [
           {
             '@@type': 'GeoArrowScatterplotLayer',

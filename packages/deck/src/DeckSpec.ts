@@ -28,13 +28,13 @@ const JsonAccessor = z.union([
   z.array(z.number()),
 ]);
 
-// Keep the layer spec loose for now because `DeckMap` accepts deck.gl JSON as an
+// Keep the layer spec loose for now because `DeckJsonMap` accepts deck.gl JSON as an
 // external spec format, and that surface is much broader than SQLRooms-owned
 // `_sqlrooms` extensions. We validate the extension config fully and a handful of
 // common deck props we know we rely on, while allowing the rest through.
 // TODO(deck-json-schema): Replace this with fuller schemas when deck.gl/json
 // exposes reusable validators or we decide to maintain a broader local schema.
-export const DeckMapLayerSpec = z.looseObject({
+export const DeckJsonMapLayerSpec = z.looseObject({
   '@@type': z.string().optional(),
   id: z.string().optional(),
   data: z.unknown().optional(),
@@ -58,19 +58,19 @@ export const DeckMapLayerSpec = z.looseObject({
   getPath: JsonAccessor.optional(),
   _sqlrooms: LayerExtensionConfig.optional(),
 });
-export type DeckMapLayerSpec = z.infer<typeof DeckMapLayerSpec>;
+export type DeckJsonMapLayerSpec = z.infer<typeof DeckJsonMapLayerSpec>;
 
-// Keep the top-level spec loose for the same reason as `DeckMapLayerSpec`: deck.gl
+// Keep the top-level spec loose for the same reason as `DeckJsonMapLayerSpec`: deck.gl
 // JSON supports many runtime-level props, and SQLRooms currently only needs a
 // validated subset plus open-ended compatibility with upstream deck specs.
 // TODO(deck-json-schema): Replace this with fuller schemas when we have a more
 // complete upstream or local model of deck.gl/json top-level props.
-export const DeckMapSpec = z.looseObject({
+export const DeckJsonMapSpec = z.looseObject({
   initialViewState: z.record(z.string(), z.unknown()).optional(),
   viewState: z.record(z.string(), z.unknown()).optional(),
   controller: z
     .union([z.boolean(), z.record(z.string(), z.unknown())])
     .optional(),
-  layers: z.array(DeckMapLayerSpec).optional(),
+  layers: z.array(DeckJsonMapLayerSpec).optional(),
 });
-export type DeckMapSpec = z.infer<typeof DeckMapSpec>;
+export type DeckJsonMapSpec = z.infer<typeof DeckJsonMapSpec>;

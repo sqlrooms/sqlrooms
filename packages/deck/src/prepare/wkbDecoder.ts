@@ -7,8 +7,14 @@ import {
 } from 'apache-arrow';
 import type * as arrow from 'apache-arrow';
 import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
-import type {GeometryDecoder, SupportedGeoArrowLayerType} from './geometryDecoder';
-import type {PreparedGeoArrowLayerData, ResolvedGeometryEncoding} from './types';
+import type {
+  GeometryDecoder,
+  SupportedGeoArrowLayerType,
+} from './geometryDecoder';
+import type {
+  PreparedGeoArrowLayerData,
+  ResolvedGeometryEncoding,
+} from './types';
 import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 
 function toArrayBuffer(value: unknown) {
@@ -47,7 +53,7 @@ function parseGeometryValue(
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('WKB: Unsupported geometry type: 0')) {
       throw new Error(
-        'DuckDB GEOMETRY values are not WKB by default. Select ST_AsWKB(geom) AS geom or ST_AsText(geom) AS geom before passing the result to DeckMap.',
+        'DuckDB GEOMETRY values are not WKB by default. Select ST_AsWKB(geom) AS geom or ST_AsText(geom) AS geom before passing the result to DeckJsonMap.',
       );
     }
 

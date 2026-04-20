@@ -2,14 +2,15 @@ import type {DeckProps} from '@deck.gl/core';
 import type * as arrow from 'apache-arrow';
 import type {ReactNode} from 'react';
 import type {MapProps} from 'react-map-gl/maplibre';
-import type {DeckMapSpec} from './DeckSpec';
+import type {DeckJsonMapSpec} from './DeckSpec';
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
 
 export type {
   DeckColorScaleProp,
+  DeckJsonMapLayerSpec,
+  DeckJsonMapSpec,
   LayerExtensionConfig,
   LayerExtensionProps,
-  DeckMapSpec,
 } from './DeckSpec';
 
 export type DeckQueryResultLike = {
@@ -29,8 +30,8 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
-export type DeckMapProps = {
-  spec: string | DeckMapSpec;
+export type DeckJsonMapProps = {
+  spec: string | Record<string, unknown>;
   datasets?: Record<string, DeckDatasetInput>;
   sqlQuery?: string;
   arrowTable?: arrow.Table;

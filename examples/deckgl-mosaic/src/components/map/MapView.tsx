@@ -1,5 +1,5 @@
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
-import {DeckMap} from '@sqlrooms/deck';
+import {DeckJsonMap} from '@sqlrooms/deck';
 import {
   asc,
   column,
@@ -210,7 +210,7 @@ export default function MapView({className}: {className?: string}) {
     <div className={cn('flex h-full w-full', className)}>
       <div className="relative flex-1">
         {arrowData ? (
-          <DeckMap
+          <DeckJsonMap
             className="h-full w-full"
             spec={mapSpec}
             datasets={datasets}
