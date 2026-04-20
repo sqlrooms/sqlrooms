@@ -11,6 +11,7 @@ import {
 import {LayoutNode, isLayoutSplitNode} from '@sqlrooms/layout-config';
 import {
   CSSProperties,
+  FC,
   PropsWithChildren,
   createContext,
   useCallback,
@@ -191,7 +192,11 @@ function buildPreview(
   };
 }
 
-function DockPreviewOverlay({preview}: {preview: DockPreview | null}) {
+interface DockPreviewOverlayProps {
+  preview: DockPreview | null;
+}
+
+const DockPreviewOverlay: FC<DockPreviewOverlayProps> = ({preview}) => {
   if (!preview) {
     return null;
   }
@@ -208,16 +213,18 @@ function DockPreviewOverlay({preview}: {preview: DockPreview | null}) {
       <div className="bg-primary/60 absolute" style={preview.lineStyle} />
     </div>
   );
+};
+
+interface DockingProviderProps {
+  rootLayout: LayoutNode;
+  onLayoutChange?: (layout: LayoutNode | null) => void;
 }
 
-export function DockingProvider({
+export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
   rootLayout,
   onLayoutChange,
   children,
-}: PropsWithChildren<{
-  rootLayout: LayoutNode;
-  onLayoutChange?: (layout: LayoutNode | null) => void;
-}>) {
+}) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -339,7 +346,7 @@ export function DockingProvider({
       </DndContext>
     </DockingContext.Provider>
   );
-}
+};
 
 export function useDockingContext(): DockingContextValue {
   const context = useContext(DockingContext);
