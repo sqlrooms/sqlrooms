@@ -3,8 +3,8 @@ import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect} from 'react';
 import {useRoomStore} from '../../store';
 
-export const DashboardSheet: RoomPanelComponent = ({panelInfo}) => {
-  const sheetId = panelInfo.panelId;
+export const DashboardSheet: RoomPanelComponent = ({panelId, meta}) => {
+  const sheetId = (meta?.artifactId as string) ?? panelId;
   const sheet = useRoomStore((state) => state.cells.config.sheets[sheetId]);
   const ensureSheetDashboard = useRoomStore(
     (state) => state.dashboard.ensureSheetDashboard,

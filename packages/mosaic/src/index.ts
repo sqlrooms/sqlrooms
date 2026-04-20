@@ -24,12 +24,12 @@ export {
   createDefaultMosaicDashboardConfig,
   createMosaicDashboardChartConfig,
   createMosaicDashboardSlice,
-  getMosaicDashboardMosaicId,
+  getMosaicDashboardDockId,
   getMosaicDashboardPanelId,
+  MOSAIC_DASHBOARD_CHART_PANEL,
   MosaicDashboardChartConfig,
   MosaicDashboardEntry,
   MosaicDashboardSliceConfig,
-  parseMosaicDashboardChartId,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
 export type {

@@ -2,13 +2,21 @@
  * Utility functions for AI Chat UI configuration
  */
 
+import type {AgentProgressSnapshot} from './types';
+
 import {
   AiSettingsSliceConfig,
   AnalysisResultSchema,
   AnalysisSessionSchema,
+  DynamicToolUIPart,
+  ToolUIPart,
   UIMessagePart,
 } from '@sqlrooms/ai-config';
-import {DynamicToolUIPart, TextUIPart, ToolUIPart, UIMessage} from 'ai';
+import {
+  TextUIPart,
+  UIMessage,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from 'ai';
 import {
   ABORT_EVENT,
   ANALYSIS_PENDING_ID,
@@ -94,10 +102,15 @@ export function mergeAbortSignals(
  * ```
  */
 export class ToolAbortError extends Error {
-  constructor(message: string = 'Operation was aborted') {
+  public readonly progressSnapshot?: AgentProgressSnapshot;
+
+  constructor(
+    message: string = 'Operation was aborted',
+    snapshot?: AgentProgressSnapshot,
+  ) {
     super(message);
     this.name = 'ToolAbortError';
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    this.progressSnapshot = snapshot;
     if ((Error as any).captureStackTrace) {
       (Error as any).captureStackTrace(this, ToolAbortError);
     }
@@ -181,6 +194,35 @@ export function isDynamicToolPart(
 }
 
 /**
+ * Returns true when a text part should be suppressed because the next
+ * tool call's `reasoning` field duplicates the text content.
+ *
+ * @param textContent - The trimmed text of the current text part
+ * @param remainingParts - The slice of message parts *after* the current text part
+ */
+export function shouldSuppressTextPart(
+  textContent: string,
+  remainingParts: UIMessagePart[],
+): boolean {
+  if (!textContent) return false;
+  for (const candidate of remainingParts) {
+    if (
+      typeof candidate.type === 'string' &&
+      candidate.type.startsWith('step-')
+    )
+      continue;
+    if (isToolPart(candidate) || isDynamicToolPart(candidate)) {
+      const reasoning = (candidate as Record<string, unknown>).input as
+        | Record<string, unknown>
+        | undefined;
+      return reasoning?.reasoning?.toString().trim() === textContent;
+    }
+    break;
+  }
+  return false;
+}
+
+/**
  * Cleans up pending analysis results from interrupted conversations and restores them
  * with proper IDs from actual user messages. This handles the case where a page refresh
  * occurred during an active analysis, leaving orphaned "__pending__" results.
@@ -250,11 +292,32 @@ export function cleanupPendingAnalysisResults(
 }
 
 /**
+ * Recursively strips `agentToolCalls` from an object so sub-agent
+ * tool-call trees don't bloat the LLM context window. Keeps `finalOutput`
+ * and other scalar fields intact.
+ */
+function stripAgentToolCalls(output: unknown): unknown {
+  if (!output || typeof output !== 'object') return output;
+  if (Array.isArray(output)) return output.map(stripAgentToolCalls);
+
+  const obj = output as Record<string, unknown>;
+  if (!('agentToolCalls' in obj)) return output;
+
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'agentToolCalls') continue;
+    cleaned[key] = stripAgentToolCalls(value);
+  }
+  return cleaned;
+}
+
+/**
  * Sanitizes UIMessages before sending to LLM APIs to prevent errors from malformed content.
  *
  * This handles issues that can occur when conversations are interrupted mid-stream:
  * - Empty text parts (causes Bedrock error: "text field in ContentBlock is blank")
  * - Assistant messages with no meaningful content after cleanup
+ * - Nested `agentToolCalls` in tool outputs that bloat the LLM context
  *
  * @param messages - The messages to sanitize
  * @returns Sanitized messages safe to send to LLM APIs
@@ -266,18 +329,32 @@ export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
         return message;
       }
 
-      // Filter out empty text parts and empty reasoning parts
-      const sanitizedParts = message.parts.filter((part) => {
-        if (part.type === 'text') {
-          const textPart = part as {type: 'text'; text: string};
-          return textPart.text && textPart.text.trim().length > 0;
-        }
-        if (part.type === 'reasoning') {
-          const reasoningPart = part as {type: 'reasoning'; text: string};
-          return reasoningPart.text && reasoningPart.text.trim().length > 0;
-        }
-        return true;
-      });
+      // Filter out empty text parts and empty reasoning parts,
+      // and strip agentToolCalls from tool outputs
+      const sanitizedParts = message.parts
+        .filter((part) => {
+          if (part.type === 'text') {
+            const textPart = part as {type: 'text'; text: string};
+            return textPart.text && textPart.text.trim().length > 0;
+          }
+          if (part.type === 'reasoning') {
+            const reasoningPart = part as {type: 'reasoning'; text: string};
+            return reasoningPart.text && reasoningPart.text.trim().length > 0;
+          }
+          return true;
+        })
+        .map((part) => {
+          const p = part as Record<string, unknown>;
+          if (
+            p.state === 'output-available' &&
+            p.output &&
+            typeof p.output === 'object' &&
+            'agentToolCalls' in (p.output as Record<string, unknown>)
+          ) {
+            return {...part, output: stripAgentToolCalls(p.output)};
+          }
+          return part;
+        }) as typeof message.parts;
 
       // If all parts were filtered out, add a placeholder for assistant messages
       // to maintain conversation structure (user messages should always have content)
@@ -300,6 +377,49 @@ export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
 }
 
 /**
+ * Determines whether the analysis should end based on completed messages.
+ *
+ * The analysis should continue (return false) when the last assistant message
+ * has tool calls that the agent loop needs to process. It should end (return true)
+ * when the assistant has finished responding with no pending tool work.
+ *
+ * @param messages - The completed messages to evaluate
+ * @returns True if the analysis should end, false if it should continue
+ */
+export function shouldEndAnalysis(messages: UIMessage[]): boolean {
+  const shouldAutoSendNext = lastAssistantMessageIsCompleteWithToolCalls({
+    messages,
+  });
+
+  const lastMessage = messages[messages.length - 1];
+  const isLastMessageAssistant = lastMessage?.role === 'assistant';
+
+  let tailHasTool = false;
+  if (isLastMessageAssistant) {
+    const parts = lastMessage?.parts ?? [];
+    // Find the last step-start boundary to inspect only the final step's parts
+    let lastStepStartIndex = -1;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i]?.type === 'step-start') {
+        lastStepStartIndex = i;
+        break;
+      }
+    }
+    const tailParts = parts.slice(lastStepStartIndex + 1);
+    tailHasTool = tailParts.some(
+      (part) =>
+        typeof part?.type === 'string' &&
+        (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
+    );
+  }
+
+  return (
+    (isLastMessageAssistant && !shouldAutoSendNext && !tailHasTool) ||
+    (!shouldAutoSendNext && !isLastMessageAssistant)
+  );
+}
+
+/**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
  * Assumes sequential tool execution (only one tool runs at a time).
@@ -313,9 +433,10 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       return message;
     }
 
-    // Walk backward and complete any TRAILING tool parts that lack output.
-    // This covers multi-tool-step aborts where several tool calls were started
-    // but the stream was cancelled before the outputs were emitted.
+    // Walk through all parts and complete any tool parts that lack output.
+    // This covers aborts where tool calls were started but the stream was
+    // cancelled before the outputs were emitted, as well as stale incomplete
+    // tool parts from persisted sessions.
     type ToolPart = {
       type: string;
       toolCallId: string;
@@ -336,18 +457,29 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
     };
 
     const updatedParts = [...message.parts];
-    let sawAnyTool = false;
+
+    // Fix incomplete reasoning parts (mark as 'done' if they were mid-stream)
+    for (let i = 0; i < updatedParts.length; i++) {
+      const current = updatedParts[i] as unknown as Record<string, unknown>;
+      if (current?.type === 'reasoning' && current.state !== 'done') {
+        updatedParts[i] = {
+          ...updatedParts[i],
+          state: 'done',
+        } as (typeof message.parts)[number];
+      }
+    }
+
     for (let i = updatedParts.length - 1; i >= 0; i--) {
       const current = updatedParts[i] as unknown;
       if (!isToolPart(current)) {
-        // Stop once we exit the trailing tool region
-        if (sawAnyTool) break;
         continue;
       }
-      sawAnyTool = true;
       const toolPart = current as ToolPart;
-      const hasOutput = toolPart.state?.startsWith('output');
-      if (hasOutput) {
+      const isCompleted =
+        toolPart.state?.startsWith('output') ||
+        toolPart.state === 'approval-requested' ||
+        toolPart.state === 'approval-responded';
+      if (isCompleted) {
         // Completed tool; continue checking earlier parts just in case
         continue;
       }
@@ -379,4 +511,27 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       parts: updatedParts,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Tool name helpers
+// ---------------------------------------------------------------------------
+
+const KNOWN_ACRONYMS = new Set(['fsq', 'h3', 'api', 'sql', 'ui', 'csv', 'db']);
+
+/**
+ * Humanize a tool name like "agent-fsq-visits-chart" → "FSQ Visits Chart".
+ * Strips common prefixes (agent-, skill-) and title-cases each word,
+ * auto-uppercasing known acronyms.
+ */
+export function humanizeToolName(toolName: string): string {
+  const stripped = toolName.replace(/^agent-/, '').replace(/^skill-/, '');
+  return stripped
+    .split(/[-_]+/)
+    .map((w) =>
+      KNOWN_ACRONYMS.has(w.toLowerCase())
+        ? w.toUpperCase()
+        : w.charAt(0).toUpperCase() + w.slice(1),
+    )
+    .join(' ');
 }

@@ -68,8 +68,10 @@ export const createLayout = ({
       icon: FolderIcon,
     },
     'workspace/{artifactId}': (ctx) => {
-      const artifactId = ctx.params.artifactId;
-      const artifactSheet = store.getState().cells.config.sheets[artifactId];
+      const artifactId = ctx.meta?.artifactId as string | undefined;
+      const artifactSheet = artifactId
+        ? store.getState().cells.config.sheets[artifactId]
+        : undefined;
       const artifactType = artifactSheet?.type;
       const artifactMeta = artifactType
         ? ARTIFACT_TYPES[artifactType]

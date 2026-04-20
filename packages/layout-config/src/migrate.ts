@@ -47,8 +47,7 @@ function wrapWithDefaultSize(node: unknown, size: string): unknown {
  * Handles:
  * 1. Primitives (null, undefined, strings) → pass through
  * 2. Binary tree nodes {first, second, direction, splitPercentage?} → convert to split nodes
- * 3. Outer mosaic wrapper {type: 'mosaic', nodes, no id} → unwrap or add root id
- * 4. V2 nodes → ensure id, clean legacy fields, recurse children
+ * 3. V2 nodes → ensure id, clean legacy fields, recurse children
  *
  * @param node - The node to migrate
  * @returns Migrated v2 node
@@ -65,28 +64,7 @@ export function migrate(node: unknown): unknown {
 
   const obj = node as Record<string, unknown>;
 
-  // CASE 1: Outer mosaic wrapper without id
-  // {type: 'mosaic', nodes: X} where no id present
-  if (obj.type === 'mosaic' && 'nodes' in obj && !('id' in obj)) {
-    const migratedNodes = migrate(obj.nodes);
-
-    // If migrated nodes is an object, unwrap and add root id
-    if (typeof migratedNodes === 'object' && migratedNodes !== null) {
-      return {
-        ...(migratedNodes as Record<string, unknown>),
-        id: 'root',
-      };
-    }
-
-    // If migrated nodes is primitive, keep wrapper with root id
-    return {
-      type: 'mosaic',
-      id: 'root',
-      nodes: migratedNodes,
-    };
-  }
-
-  // CASE 2: Binary tree node (v1 format)
+  // CASE 1: Binary tree node (v1 format)
   // {first, second, direction, splitPercentage?}
   if ('first' in obj && 'second' in obj && 'direction' in obj) {
     // Recursively migrate children
@@ -111,7 +89,7 @@ export function migrate(node: unknown): unknown {
     };
   }
 
-  // CASE 3: Already a v2 node - pass through
+  // CASE 2: Already a v2 node - pass through
   // (v2 nodes have 'type' and 'id' fields)
   return obj;
 }

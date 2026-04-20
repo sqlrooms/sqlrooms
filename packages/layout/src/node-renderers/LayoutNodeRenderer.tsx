@@ -1,9 +1,9 @@
 import {
-  isLayoutMosaicNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
+  isLayoutDockNode,
 } from '@sqlrooms/layout-config';
 import {FC, lazy, Suspense} from 'react';
 import type {NodeRenderProps} from './types';
@@ -21,15 +21,15 @@ const TabsLayout = lazy(() =>
   })),
 );
 
-const MosaicLayout = lazy(() =>
-  import('./mosaic-node-renderer/MosaicLayout').then((m) => ({
-    default: m.MosaicLayout.Root,
-  })),
-);
-
 const LeafLayout = lazy(() =>
   import('./leaf-node-renderer/LeafLayout').then((m) => ({
     default: m.LeafLayout.Root,
+  })),
+);
+
+const DockNodeRenderer = lazy(() =>
+  import('./dock-node-renderer/DockLayout').then((m) => ({
+    default: m.DockLayout.Root,
   })),
 );
 
@@ -51,7 +51,13 @@ export const LayoutNodeRenderer: FC<NodeRenderProps> = ({
       {isLayoutTabsNode(node) && (
         <TabsLayout node={node} path={path} parentDirection={parentDirection} />
       )}
-      {isLayoutMosaicNode(node) && <MosaicLayout node={node} path={path} />}
+      {isLayoutDockNode(node) && (
+        <DockNodeRenderer
+          node={node}
+          path={path}
+          parentDirection={parentDirection}
+        />
+      )}
     </Suspense>
   );
 };

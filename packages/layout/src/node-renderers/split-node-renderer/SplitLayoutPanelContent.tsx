@@ -1,6 +1,6 @@
 import {FC} from 'react';
 import {useSplitNodeContext} from '../../LayoutNodeContext';
-import {getLayoutNodeId, LayoutNode} from '@sqlrooms/layout-config';
+import {LayoutNode} from '@sqlrooms/layout-config';
 import {LayoutNodeRenderer} from '../LayoutNodeRenderer';
 
 type SplitLayoutPanelContentProps = {
@@ -12,12 +12,10 @@ export const SplitLayoutPanelContent: FC<SplitLayoutPanelContentProps> = ({
 }) => {
   const {node: parentNode, path} = useSplitNodeContext();
 
-  const panelId = getLayoutNodeId(node);
-
   return (
     <LayoutNodeRenderer
       node={node}
-      path={[...path, panelId]}
+      path={path}
       containerType="split"
       containerId={parentNode.id}
       parentDirection={parentNode.direction}

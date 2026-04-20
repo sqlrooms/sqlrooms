@@ -2,8 +2,14 @@ import {createId} from '@paralleldrive/cuid2';
 import {DbSliceState} from '@sqlrooms/db';
 import {type DuckDbSliceState} from '@sqlrooms/duckdb';
 import {LayoutSliceState} from '@sqlrooms/layout';
-import type {LayoutMosaicSubNode} from '@sqlrooms/layout-config';
-import {LayoutMosaicSubNode as LayoutMosaicSubNodeSchema} from '@sqlrooms/layout-config';
+import {
+  type LayoutNode,
+  type LayoutPanelNode,
+  LayoutNode as LayoutNodeSchema,
+  isLayoutSplitNode,
+  isLayoutPanelNode,
+  isLayoutNodeKey,
+} from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -14,6 +20,14 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {produce} from 'immer';
 import {z} from 'zod';
 import {type MosaicSliceState} from '../MosaicSlice';
+
+/**
+ * Panel key used for function-form panel definitions registered by
+ * `MosaicDashboardCharts`. Individual chart panels are represented as
+ * `LayoutPanelNode` entries whose `panel` property carries
+ * `{ key: MOSAIC_DASHBOARD_CHART_PANEL, meta: { dashboardId, chartId } }`.
+ */
+export const MOSAIC_DASHBOARD_CHART_PANEL = 'mosaic-dashboard-chart';
 
 export const MosaicDashboardChartConfig = z.object({
   id: z.string(),
@@ -43,7 +57,7 @@ export const MosaicDashboardEntry = z.object({
   title: z.string().default('Dashboard'),
   selectedTable: z.string().optional(),
   charts: z.array(MosaicDashboardChartConfig).default([]),
-  layout: LayoutMosaicSubNodeSchema.nullable().default(null),
+  layout: LayoutNodeSchema.nullable().default(null),
   updatedAt: z.number().default(0),
 });
 export type MosaicDashboardEntry = z.infer<typeof MosaicDashboardEntry>;
@@ -73,10 +87,7 @@ export type MosaicDashboardSliceState = {
       patch: Partial<Pick<MosaicDashboardChartConfig, 'title' | 'vgplot'>>,
     ) => void;
     removeChart: (dashboardId: string, chartId: string) => void;
-    setLayout: (
-      dashboardId: string,
-      layout: LayoutMosaicSubNode | null,
-    ) => void;
+    setLayout: (dashboardId: string, layout: LayoutNode | null) => void;
   };
 };
 
@@ -87,70 +98,103 @@ export type MosaicDashboardStoreState = BaseRoomStoreState &
   MosaicSliceState &
   MosaicDashboardSliceState;
 
+// ---------------------------------------------------------------------------
+// Layout tree helpers (operate on the new LayoutNode types)
+// ---------------------------------------------------------------------------
+
+function createChartPanelNode(
+  dashboardId: string,
+  chartId: string,
+): LayoutPanelNode {
+  return {
+    type: 'panel',
+    id: getMosaicDashboardPanelId(dashboardId, chartId),
+    panel: {
+      key: MOSAIC_DASHBOARD_CHART_PANEL,
+      meta: {dashboardId, chartId},
+    },
+  };
+}
+
 function appendPanelToLayout(
-  layout: LayoutMosaicSubNode | null,
-  panelId: string,
-): LayoutMosaicSubNode {
+  layout: LayoutNode | null,
+  panelNode: LayoutPanelNode,
+): LayoutNode {
   if (!layout) {
-    return panelId;
+    return panelNode;
   }
   return {
     type: 'split',
+    id: `split-${createId()}`,
     direction: 'row',
-    children: [layout, panelId],
+    children: [layout, panelNode],
   };
 }
 
 function removePanelFromLayout(
-  layout: LayoutMosaicSubNode | null,
+  layout: LayoutNode | null,
   panelId: string,
-): LayoutMosaicSubNode | null {
+): LayoutNode | null {
   if (!layout) return null;
-  if (typeof layout === 'string') {
+
+  if (isLayoutNodeKey(layout)) {
     return layout === panelId ? null : layout;
   }
 
-  const nextChildren = layout.children
-    .map((child: LayoutMosaicSubNode) => removePanelFromLayout(child, panelId))
-    .filter((child): child is LayoutMosaicSubNode => child !== null);
-
-  if (nextChildren.length === 0) return null;
-  if (nextChildren.length === 1) {
-    const onlyChild = nextChildren[0];
-    return onlyChild ?? null;
+  if (isLayoutPanelNode(layout)) {
+    return layout.id === panelId ? null : layout;
   }
 
-  return {
-    ...layout,
-    children: nextChildren,
-  };
+  if (isLayoutSplitNode(layout)) {
+    const nextChildren = layout.children
+      .map((child) => removePanelFromLayout(child, panelId))
+      .filter((child): child is LayoutNode => child !== null);
+
+    if (nextChildren.length === 0) return null;
+    if (nextChildren.length === 1) return nextChildren[0] ?? null;
+
+    return {...layout, children: nextChildren};
+  }
+
+  return layout;
 }
 
 function collectPanelIds(
-  layout: LayoutMosaicSubNode | null,
+  layout: LayoutNode | null,
   panelIds = new Set<string>(),
-) {
+): Set<string> {
   if (!layout) return panelIds;
-  if (typeof layout === 'string') {
+  if (isLayoutNodeKey(layout)) {
     panelIds.add(layout);
     return panelIds;
   }
-  for (const child of layout.children) {
-    collectPanelIds(child, panelIds);
+  if (isLayoutPanelNode(layout)) {
+    panelIds.add(layout.id);
+    return panelIds;
+  }
+  if (isLayoutSplitNode(layout)) {
+    for (const child of layout.children) {
+      collectPanelIds(child, panelIds);
+    }
   }
   return panelIds;
 }
 
 function ensureLayoutContainsPanels(
-  layout: LayoutMosaicSubNode | null,
-  panelIds: string[],
-): LayoutMosaicSubNode | null {
+  layout: LayoutNode | null,
+  dashboardId: string,
+  chartIds: string[],
+): LayoutNode | null {
   let nextLayout = layout;
   const existing = collectPanelIds(layout);
 
-  for (const panelId of panelIds) {
+  for (const chartId of chartIds) {
+    const panelId = getMosaicDashboardPanelId(dashboardId, chartId);
     if (!existing.has(panelId)) {
-      nextLayout = appendPanelToLayout(nextLayout, panelId);
+      nextLayout = appendPanelToLayout(
+        nextLayout,
+        createChartPanelNode(dashboardId, chartId),
+      );
       existing.add(panelId);
     }
   }
@@ -165,20 +209,12 @@ export function getMosaicDashboardPanelId(
   return `dashboard:${dashboardId}:chart:${chartId}`;
 }
 
-export function getMosaicDashboardMosaicId(dashboardId: string): string {
-  return `dashboard:${dashboardId}:mosaic`;
+export function getMosaicDashboardDockId(dashboardId: string): string {
+  return `dashboard:${dashboardId}:dock`;
 }
 
 export function getMosaicDashboardSelectionName(dashboardId: string): string {
   return `dashboard:${dashboardId}:brush`;
-}
-
-export function parseMosaicDashboardChartId(
-  dashboardId: string,
-  panelId: string,
-): string | undefined {
-  const prefix = `dashboard:${dashboardId}:chart:`;
-  return panelId.startsWith(prefix) ? panelId.slice(prefix.length) : undefined;
 }
 
 export function createDefaultMosaicDashboardConfig(
@@ -264,7 +300,7 @@ export function createMosaicDashboardSlice(
               dashboard.charts.push(chart);
               dashboard.layout = appendPanelToLayout(
                 dashboard.layout,
-                getMosaicDashboardPanelId(dashboardId, chart.id),
+                createChartPanelNode(dashboardId, chart.id),
               );
               dashboard.updatedAt = Date.now();
             }),
@@ -298,7 +334,7 @@ export function createMosaicDashboardSlice(
               if (!dashboard) return;
 
               dashboard.charts = dashboard.charts.filter(
-                (chart) => chart.id !== chartId,
+                (c) => c.id !== chartId,
               );
               dashboard.layout = removePanelFromLayout(
                 dashboard.layout,
@@ -317,13 +353,11 @@ export function createMosaicDashboardSlice(
                 draft.mosaicDashboard.config.dashboardsById[dashboardId];
               if (!dashboard) return;
 
-              const chartPanelIds = dashboard.charts.map((chart) =>
-                getMosaicDashboardPanelId(dashboardId, chart.id),
-              );
-
+              const chartIds = dashboard.charts.map((chart) => chart.id);
               dashboard.layout = ensureLayoutContainsPanels(
                 layout,
-                chartPanelIds,
+                dashboardId,
+                chartIds,
               );
               dashboard.updatedAt = Date.now();
             }),

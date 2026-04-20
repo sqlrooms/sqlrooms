@@ -26,10 +26,8 @@ import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
-  ToolCall,
 } from './chatTransport';
 import {
-  ABORT_EVENT,
   AI_DEFAULT_TEMPERATURE,
   ANALYSIS_CANCELLED,
   ANALYSIS_PENDING_ID,
@@ -38,20 +36,26 @@ import {
 } from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import type {
-  AddToolResult,
+  AddToolApprovalResponse,
+  AddToolOutput,
+  AgentProgressSnapshot,
+  AgentToolCall,
   AiChatSendMessage,
   GetProviderOptions,
+  PendingSubAgentApproval,
   StoredToolSet,
   ToolRenderer,
   ToolRendererRegistry,
   ToolRenderers,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
 } from './types';
-import type {AgentToolCall} from './agents/AgentUtils';
 import {
   cleanupPendingAnalysisResults,
   ToolAbortError,
   fixIncompleteToolCalls,
 } from './utils';
+
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
 
@@ -86,16 +90,18 @@ export type AiSliceState = {
       sendMessage: AiChatSendMessage | undefined,
     ) => void;
     getChatSendMessage: (sessionId: string) => AiChatSendMessage | undefined;
-    setAddToolResult: (
+    setAddToolOutput: (
       sessionId: string,
-      addToolResult: AddToolResult | undefined,
+      addToolOutput: AddToolOutput | undefined,
     ) => void;
-    getAddToolResult: (sessionId: string) => AddToolResult | undefined;
-    waitForToolResult: (
+    getAddToolOutput: (sessionId: string) => AddToolOutput | undefined;
+    setAddToolApprovalResponse: (
       sessionId: string,
-      toolCallId: string,
-      abortSignal?: AbortSignal,
-    ) => Promise<void>;
+      fn: AddToolApprovalResponse | undefined,
+    ) => void;
+    getAddToolApprovalResponse: (
+      sessionId: string,
+    ) => AddToolApprovalResponse | undefined;
     /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
     setToolCallSession: (
       toolCallId: string,
@@ -109,6 +115,27 @@ export type AiSliceState = {
       toolCalls: AgentToolCall[],
     ) => void;
     clearAgentProgress: (parentToolCallId: string) => void;
+    /** Pending approval requests from sub-agent tools with needsApproval */
+    pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
+    requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
+    resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
+    clearSubAgentApproval: (approvalId: string) => void;
+    /** Transient abort snapshots for nested agent progress propagation */
+    writeAbortSnapshot: (
+      toolCallId: string,
+      snapshot: AgentProgressSnapshot,
+    ) => void;
+    readAbortSnapshot: (
+      toolCallId: string,
+    ) => AgentProgressSnapshot | undefined;
+    clearAbortSnapshots: () => void;
+    /** True while "summarize and continue" is in progress */
+    isSummarizing: boolean;
+    setIsSummarizing: (value: boolean) => void;
+    /** Per-tool-call timing entries, keyed by toolCallId */
+    toolTimings: Record<string, ToolTimingEntry>;
+    setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
+    getToolTimings: () => Record<string, ToolTimingEntry>;
     setPrompt: (sessionId: string, prompt: string) => void;
     getPrompt: (sessionId: string) => string;
     setIsRunning: (sessionId: string, isRunning: boolean) => void;
@@ -166,11 +193,6 @@ export type AiSliceState = {
       messages: UIMessage[];
       isError?: boolean;
     }) => void;
-    onChatToolCall: (args: {
-      sessionId: string;
-      toolCall: ToolCall;
-      addToolResult?: AddToolResult;
-    }) => Promise<void> | void;
     onChatError: (sessionId: string, error: unknown) => void;
   };
 };
@@ -222,7 +244,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     tools,
     getApiKey,
     getBaseUrl,
-    maxSteps = 50,
+    maxSteps,
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
@@ -233,7 +255,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
-    // Clean up pending analysis results from persisted config
+    // Clean up pending analysis results and reset transient state from persisted config
     const cleanedConfig = params.config?.sessions
       ? {
           ...params.config,
@@ -246,6 +268,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               : [];
             return {
               ...cleaned,
+              isRunning: false,
               uiMessages:
                 completedUiMessages as unknown as AnalysisSessionSchema['uiMessages'],
             };
@@ -253,17 +276,53 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         }
       : params.config;
 
-    // Create persistent Maps (outside of immer draft)
-    const pendingToolCallResolvers = new Map<
-      string,
-      {resolve: () => void; reject: (error: Error) => void}
-    >();
+    /**
+     * Extract toolTimings from UIMessage metadata and agentProgress from
+     * the session field so the UI can render elapsed times and nested
+     * sub-agent trees after reload.
+     */
+    function rehydrateFromSessions(config: AiSliceConfig) {
+      const timings: Record<string, ToolTimingEntry> = {};
+      const progress: Record<string, AgentToolCall[]> = {};
 
+      for (const session of config.sessions) {
+        // Restore agentProgress from the session-level field
+        if (session.agentProgress) {
+          Object.assign(
+            progress,
+            session.agentProgress as Record<string, AgentToolCall[]>,
+          );
+        }
+
+        // Restore toolTimings from assistant message metadata
+        const msgs = (session.uiMessages ?? []) as UIMessage[];
+        for (const msg of msgs) {
+          if (msg.role !== 'assistant') continue;
+          const meta = msg.metadata as AssistantMessageMetadata | undefined;
+          if (meta?.toolTimings) {
+            Object.assign(timings, meta.toolTimings);
+          }
+        }
+      }
+
+      return {timings, progress};
+    }
+
+    // Create persistent Maps (outside of immer draft)
     const toolCallToSessionId = new Map<string, string>();
     const sessionAbortControllers = new Map<string, AbortController>();
     const sessionChatStops = new Map<string, () => void>();
     const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
-    const sessionAddToolResults = new Map<string, AddToolResult>();
+    const sessionAddToolOutputs = new Map<string, AddToolOutput>();
+    const sessionAddToolApprovalResponses = new Map<
+      string,
+      AddToolApprovalResponse
+    >();
+    const pendingApprovalResolvers = new Map<
+      string,
+      (approved: boolean) => void
+    >();
+    const abortSnapshotMap = new Map<string, AgentProgressSnapshot>();
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -294,10 +353,22 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         : [];
     }
 
+    // Rehydrate toolTimings and agentProgress from persisted messages
+    const initialRehydrated = rehydrateFromSessions(baseConfig);
+
     return {
       ai: {
         initialize: async () => {
           registerCommandsForOwner(store, AI_COMMAND_OWNER, createAiCommands());
+
+          // Recompute derived runtime state after persist hydration.
+          const rehydrated = rehydrateFromSessions(get().ai.config);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.toolTimings = rehydrated.timings;
+              draft.ai.agentProgress = rehydrated.progress;
+            }),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
@@ -308,51 +379,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         tools,
         toolRenderers: params.toolRenderers ?? {},
         getProviderOptions,
-        waitForToolResult: (
-          sessionId: string,
-          toolCallId: string,
-          abortSignal?: AbortSignal,
-        ) => {
-          const key = `${sessionId}:${toolCallId}`;
-          return new Promise<void>((resolve, reject) => {
-            // Set up abort handler
-            const abortHandler = () => {
-              const resolver = pendingToolCallResolvers.get(key);
-              if (resolver) {
-                pendingToolCallResolvers.delete(key);
-                resolver.reject(new Error(TOOL_CALL_CANCELLED));
-              }
-            };
-
-            if (abortSignal) {
-              if (abortSignal.aborted) {
-                reject(new Error(TOOL_CALL_CANCELLED));
-                return;
-              }
-              abortSignal.addEventListener(ABORT_EVENT, abortHandler, {
-                once: true,
-              });
-            }
-
-            // Store resolver (overwrites any existing one, which is fine for our use case)
-            pendingToolCallResolvers.set(key, {
-              resolve: () => {
-                if (abortSignal) {
-                  abortSignal.removeEventListener(ABORT_EVENT, abortHandler);
-                }
-                pendingToolCallResolvers.delete(key);
-                resolve();
-              },
-              reject: (error: Error) => {
-                if (abortSignal) {
-                  abortSignal.removeEventListener(ABORT_EVENT, abortHandler);
-                }
-                pendingToolCallResolvers.delete(key);
-                reject(error);
-              },
-            });
-          });
-        },
 
         setToolCallSession: (
           toolCallId: string,
@@ -370,7 +396,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return toolCallToSessionId.get(toolCallId);
         },
 
-        agentProgress: {},
+        agentProgress: initialRehydrated.progress,
         updateAgentProgress: (
           parentToolCallId: string,
           toolCalls: AgentToolCall[],
@@ -387,6 +413,78 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               delete draft.ai.agentProgress[parentToolCallId];
             }),
           );
+        },
+
+        pendingSubAgentApprovals: {},
+        requestSubAgentApproval: (approval: PendingSubAgentApproval) => {
+          set((state) =>
+            produce(state, (draft) => {
+              // Store only serializable fields in state (not the resolve callback)
+              draft.ai.pendingSubAgentApprovals[approval.approvalId] = {
+                toolCallId: approval.toolCallId,
+                approvalId: approval.approvalId,
+                toolName: approval.toolName,
+                input: approval.input,
+                resolve: approval.resolve,
+              } as PendingSubAgentApproval;
+            }),
+          );
+          // Store the resolve callback outside of immer (not serializable)
+          pendingApprovalResolvers.set(approval.approvalId, approval.resolve);
+        },
+        resolveSubAgentApproval: (approvalId: string, approved: boolean) => {
+          const resolver = pendingApprovalResolvers.get(approvalId);
+          if (resolver) {
+            resolver(approved);
+            pendingApprovalResolvers.delete(approvalId);
+          }
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.ai.pendingSubAgentApprovals[approvalId];
+            }),
+          );
+        },
+        clearSubAgentApproval: (approvalId: string) => {
+          pendingApprovalResolvers.delete(approvalId);
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.ai.pendingSubAgentApprovals[approvalId];
+            }),
+          );
+        },
+
+        writeAbortSnapshot: (
+          toolCallId: string,
+          snapshot: AgentProgressSnapshot,
+        ) => {
+          abortSnapshotMap.set(toolCallId, snapshot);
+        },
+        readAbortSnapshot: (toolCallId: string) => {
+          return abortSnapshotMap.get(toolCallId);
+        },
+        clearAbortSnapshots: () => {
+          abortSnapshotMap.clear();
+        },
+
+        isSummarizing: false,
+        setIsSummarizing: (value: boolean) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.isSummarizing = value;
+            }),
+          );
+        },
+
+        toolTimings: initialRehydrated.timings,
+        setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.toolTimings[toolCallId] = entry;
+            }),
+          );
+        },
+        getToolTimings: () => {
+          return get().ai.toolTimings;
         },
 
         getAbortController: (sessionId: string) => {
@@ -428,35 +526,42 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return sessionChatSendMessages.get(sessionId);
         },
 
-        setAddToolResult: (
+        setAddToolOutput: (
           sessionId: string,
-          addToolResultFn: AddToolResult | undefined,
+          addToolOutputFn: AddToolOutput | undefined,
         ) => {
-          if (addToolResultFn) {
-            // Wrap addToolResult to intercept calls and resolve pending promises
-            const wrappedAddToolResult: AddToolResult = (options) => {
-              addToolResultFn(options);
-              const key = `${sessionId}:${options.toolCallId}`;
-              const resolver = pendingToolCallResolvers.get(key);
-              if (resolver) {
-                resolver.resolve();
-              }
-              // Tool is complete (success or error), we can drop toolCall->session mapping.
-              toolCallToSessionId.delete(options.toolCallId);
-            };
-            sessionAddToolResults.set(sessionId, wrappedAddToolResult);
+          if (addToolOutputFn) {
+            sessionAddToolOutputs.set(sessionId, addToolOutputFn);
           } else {
-            sessionAddToolResults.delete(sessionId);
+            sessionAddToolOutputs.delete(sessionId);
           }
         },
-        getAddToolResult: (sessionId: string) => {
-          return sessionAddToolResults.get(sessionId);
+        getAddToolOutput: (sessionId: string) => {
+          return sessionAddToolOutputs.get(sessionId);
+        },
+
+        setAddToolApprovalResponse: (
+          sessionId: string,
+          fn: AddToolApprovalResponse | undefined,
+        ) => {
+          if (fn) {
+            sessionAddToolApprovalResponses.set(sessionId, fn);
+          } else {
+            sessionAddToolApprovalResponses.delete(sessionId);
+          }
+        },
+        getAddToolApprovalResponse: (sessionId: string) => {
+          return sessionAddToolApprovalResponses.get(sessionId);
         },
 
         setConfig: (config: AiSliceConfig) => {
+          const rehydrated = rehydrateFromSessions(config);
+
           set((state) =>
             produce(state, (draft) => {
               draft.ai.config = config;
+              draft.ai.toolTimings = rehydrated.timings;
+              draft.ai.agentProgress = rehydrated.progress;
             }),
           );
         },
@@ -682,7 +787,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionAbortControllers.delete(sessionId);
           sessionChatStops.delete(sessionId);
           sessionChatSendMessages.delete(sessionId);
-          sessionAddToolResults.delete(sessionId);
+          sessionAddToolOutputs.delete(sessionId);
+          sessionAddToolApprovalResponses.delete(sessionId);
           const now = Date.now();
 
           set((state) =>
@@ -725,6 +831,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionId: string,
           uiMessages: UIMessage[],
         ): boolean => {
+          let updated = false;
           try {
             set((state) =>
               produce(state, (draft) => {
@@ -732,13 +839,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   (s: AnalysisSessionSchema) => s.id === sessionId,
                 );
                 if (session) {
-                  session.uiMessages = JSON.parse(JSON.stringify(uiMessages));
+                  session.uiMessages = structuredClone(
+                    uiMessages,
+                  ) as typeof session.uiMessages;
+                  updated = true;
                 }
               }),
             );
-            return true;
+            return updated;
           } catch (error) {
-            console.warn(
+            console.error(
               'Failed to persist UI messages:',
               error instanceof Error ? error.message : error,
             );
@@ -1139,6 +1249,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             defaultProvider,
             defaultModel,
             sessionId,
+            getInstructions: () => store.getState().ai.getFullInstructions(),
           })(endpoint, headers),
 
         ...createChatHandlers({store}),

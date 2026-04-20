@@ -8,7 +8,6 @@ import {VgPlotChart} from '../VgPlotChart';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
   getMosaicDashboardSelectionName,
-  parseMosaicDashboardChartId,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
@@ -23,9 +22,9 @@ function toRenderableMosaicSpec(
   return mosaicSpec;
 }
 
-export const MosaicDashboardChartPanel: RoomPanelComponent = ({panelInfo}) => {
+export const MosaicDashboardChartPanel: RoomPanelComponent = ({meta}) => {
   const {dashboardId} = useMosaicDashboardContext();
-  const chartId = parseMosaicDashboardChartId(dashboardId, panelInfo.panelId);
+  const chartId = meta?.chartId as string | undefined;
 
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],

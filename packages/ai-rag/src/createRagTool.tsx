@@ -1,5 +1,4 @@
 import {tool} from 'ai';
-import {ReasoningBox} from '@sqlrooms/ai-core';
 import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {Button} from '@sqlrooms/ui';
 import {useState} from 'react';
@@ -96,10 +95,13 @@ function RagToolResult({output}: ToolRendererProps<RagToolOutput>) {
     );
   }
 
-  const {query, results, database} = output;
+  const {results} = output;
 
   return (
-    <ReasoningBox title={`Found ${results?.length || 0} results`}>
+    <details className="text-xs" open>
+      <summary className="text-muted-foreground cursor-pointer py-1 text-xs font-medium">
+        Found {results?.length || 0} results
+      </summary>
       <div className="space-y-2 p-3">
         <div className="space-y-2">
           {results &&
@@ -108,7 +110,7 @@ function RagToolResult({output}: ToolRendererProps<RagToolOutput>) {
             ))}
         </div>
       </div>
-    </ReasoningBox>
+    </details>
   );
 }
 
@@ -202,7 +204,7 @@ The search uses vector embeddings to find semantically similar content, not just
 
     inputSchema: RagToolParameters,
 
-    toModelOutput: (output: RagToolOutput) => ({
+    toModelOutput: ({output}) => ({
       type: 'text',
       value: JSON.stringify({
         success: output.success,

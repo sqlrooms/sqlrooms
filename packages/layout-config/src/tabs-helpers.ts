@@ -1,8 +1,8 @@
 import {
   LayoutNode,
   LayoutTabsNode,
+  isLayoutDockNode,
   isLayoutPanelNode,
-  isLayoutMosaicNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
 } from './LayoutConfig';
@@ -13,9 +13,9 @@ import {
 export function getLayoutNodeId(node: LayoutNode): string {
   if (typeof node === 'string') return node;
   if (isLayoutPanelNode(node)) return node.id;
-  if (isLayoutMosaicNode(node)) return node.id;
   if (isLayoutSplitNode(node)) return node.id;
   if (isLayoutTabsNode(node)) return node.id;
+  if (isLayoutDockNode(node)) return node.id;
 
   throw new Error('Unknown node type');
 }

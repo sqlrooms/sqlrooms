@@ -1,7 +1,7 @@
 import {
   getVisibleLayoutPanels,
-  getPanelByPath,
   resolvePanelDefinition,
+  resolvePanelIdentity,
 } from '@sqlrooms/layout';
 import type {RoomPanelInfo} from '@sqlrooms/layout';
 import {
@@ -68,7 +68,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   );
   const panelDef = panels[roomPanelType];
   const info: RoomPanelInfo | undefined = panelDef
-    ? resolvePanelDefinition(panelDef, {panelId: roomPanelType, params: {}})
+    ? resolvePanelDefinition(panelDef, {panelId: roomPanelType})
     : undefined;
 
   return (
@@ -94,7 +94,7 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
               .filter((key) => {
                 const def = panels[key];
                 const resolved = def
-                  ? resolvePanelDefinition(def, {panelId: key, params: {}})
+                  ? resolvePanelDefinition(def, {panelId: key})
                   : undefined;
                 return resolved?.placement === 'sidebar';
               })
@@ -109,7 +109,7 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
           .filter((key) => {
             const def = panels[key];
             const resolved = def
-              ? resolvePanelDefinition(def, {panelId: key, params: {}})
+              ? resolvePanelDefinition(def, {panelId: key})
               : undefined;
             return resolved?.placement === 'sidebar-bottom';
           })
@@ -151,12 +151,11 @@ const TabButtons: FC<{
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {tabIds.map((tabId) => {
-        const match = getPanelByPath(panels, [tabId]);
-        const info: RoomPanelInfo | undefined = match
-          ? resolvePanelDefinition(match.panel, {
-              panelId: match.panelId,
-              params: match.params,
-            })
+        // Resolve panel identity from the tab ID (which is a LayoutNodeKey)
+        const {panelId, meta} = resolvePanelIdentity(tabId);
+        const definition = panels[panelId];
+        const info: RoomPanelInfo | undefined = definition
+          ? resolvePanelDefinition(definition, {panelId, meta})
           : undefined;
         const isSelected = activeTab === tabId && !collapsed;
         return (

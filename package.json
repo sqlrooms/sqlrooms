@@ -34,7 +34,7 @@
     "docs:dev": "concurrently \"pnpm typedoc:watch\" \"pnpm docs:vitepress\"",
     "docs:vitepress": "vitepress dev docs --port 6173 --host --open",
     "docs:build:vitepress": "vitepress build docs",
-    "docs:build:typedoc": "turbo typedoc",
+    "docs:build:typedoc": "turbo typedoc --filter=@sqlrooms/*",
     "docs:build": "pnpm run docs:clean && pnpm run docs:build:typedoc && pnpm run docs:build:vitepress",
     "docs:preview": "vitepress preview docs --port 7173 --open",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",

@@ -1,10 +1,10 @@
-import {LayoutConfig} from '@sqlrooms/layout-config';
 import type {
   LayoutNode,
   LayoutSplitNode,
   LayoutTabsNode,
 } from '@sqlrooms/layout-config';
-import type {Panels, PanelDefinition} from './types';
+import {LayoutConfig} from '@sqlrooms/layout-config';
+import type {PanelDefinition, Panels} from './types';
 
 // ---------------------------------------------------------------------------
 // Config types
@@ -36,8 +36,12 @@ export type LayoutSliceState = {
     setActiveTab: (tabsId: string, tabId: string) => void;
     /** Add a tab to a tabs node */
     addTab: (tabsId: string, tabIdOrNode: string | LayoutNode) => void;
-    /** Remove (close) a tab from a tabs node */
+    /** Remove (close/hide) a tab from a tabs node */
     removeTab: (tabsId: string, tabId: string) => void;
+    /** Permanently delete a tab from a tabs node */
+    deleteTab: (tabsId: string, tabId: string) => void;
+    /** Reorder visible tabs within a tabs node */
+    reorderTabs: (tabsId: string, tabIds: string[]) => void;
     /** Collapse or expand a collapsible node */
     setCollapsed: (id: string, collapsed: boolean) => void;
     /** Toggle collapse state of a collapsible node */
@@ -59,8 +63,6 @@ export type LayoutSliceState = {
     unregisterPanel: (panelId: string) => void;
     /** Add a panel as a child of a named split node */
     addChildToSplit: (splitId: string, panelId: string) => void;
-    /** Add a panel as a child of a named nested mosaic node */
-    addChildToMosaic: (mosaicId: string, panelId: string) => void;
     /** Find the nearest ancestor of a given type for a node */
     findAncestorOfType: (
       nodeId: string,

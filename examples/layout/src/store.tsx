@@ -2,7 +2,7 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutMosaicNode,
+  LayoutNode,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -12,16 +12,21 @@ import {
   TableRowsSplitIcon,
   TerminalIcon,
 } from 'lucide-react';
+import {BottomTabs} from './panels/BottomTabs';
 import {ConsolePanel} from './panels/ConsolePanel';
+import {DashboardTabs} from './panels/DashboardTabs';
 import {DataSourcesPanel} from './panels/DataSourcesPanel';
 import {DynamicChartPanel} from './panels/DynamicChartPanel';
+import {MainPanel} from './panels/MainPanel';
+import {RoomPanelTypes} from './panels/panel-types';
 import {ResultsPanel} from './panels/ResultsPanel';
 import {SchemaPanel} from './panels/SchemaPanel';
-import {DashboardTabs} from './panels/DashboardTabs';
-import {RoomPanelTypes} from './panels/panel-types';
-import {MainPanel} from './panels/MainPanel';
-import {BottomTabs} from './panels/BottomTabs';
-import {DashboardPanel} from './panels/DashboardPanel';
+import {
+  findNodeById,
+  isLayoutDockNode,
+  isLayoutSplitNode,
+  LayoutDockNode,
+} from '@sqlrooms/layout';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
@@ -41,6 +46,24 @@ function generateChartId(): string {
   return `chart-${chartCounter}`;
 }
 
+function createDashboardNode(
+  dashboardId: string,
+  children: LayoutNode[],
+  direction: 'row' | 'column' = 'column',
+): LayoutDockNode {
+  return {
+    type: 'dock',
+    id: dashboardId,
+    panel: {key: 'dashboard', meta: {dashboardId}},
+    root: {
+      type: 'split',
+      id: `${dashboardId}-root`,
+      direction,
+      children,
+    },
+  };
+}
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     ...createRoomShellSlice({
@@ -56,11 +79,20 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               defaultSize: '30%',
               minSize: 300,
               children: [
-                RoomPanelTypes.enum['data-sources'],
-                RoomPanelTypes.enum['schema'],
+                {
+                  type: 'panel',
+                  id: 'ds',
+                  panel: RoomPanelTypes.enum['data-sources'],
+                },
+                {
+                  type: 'panel',
+                  id: 'sch',
+                  panel: RoomPanelTypes.enum['schema'],
+                },
               ],
               activeTabIndex: 0,
               collapsible: true,
+              collapsed: true,
               collapsedSize: 0,
               hideTabStrip: true,
             },
@@ -73,42 +105,90 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   type: 'tabs',
                   id: RoomPanelTypes.enum['dashboards'],
                   children: [
-                    {
-                      type: 'mosaic',
-                      id: 'overview',
-                      draggable: true,
-                      direction: 'row',
-                      layout: {
-                        type: 'split',
-                        direction: 'row',
-                        children: [
-                          {
-                            type: 'split',
-                            direction: 'column',
-                            children: ['sessions', 'conversions'],
-                            splitPercentages: [40, 60],
-                          },
-                          {
-                            type: 'split',
-                            direction: 'column',
-                            children: ['users', 'visits'],
-                            splitPercentages: [30, 70],
-                          },
-                        ],
+                    createDashboardNode(
+                      'overview',
+                      [
+                        {
+                          type: 'split',
+                          id: 'overview-left',
+                          direction: 'row',
+                          children: [
+                            {
+                              type: 'panel',
+                              id: 'overview-sessions',
+                              panel: {
+                                key: 'chart',
+                                meta: {chartId: 'overview-sessions'},
+                              },
+                              defaultSize: '40%',
+                            },
+                            {
+                              type: 'panel',
+                              id: 'overview-conversions',
+                              panel: {
+                                key: 'chart',
+                                meta: {chartId: 'overview-conversions'},
+                              },
+                              defaultSize: '60%',
+                            },
+                          ],
+                          defaultSize: '50%',
+                        },
+                        {
+                          type: 'split',
+                          id: 'overview-right',
+                          direction: 'column',
+                          children: [
+                            {
+                              type: 'panel',
+                              id: 'overview-users',
+                              panel: {
+                                key: 'chart',
+                                meta: {chartId: 'overview-users'},
+                              },
+                              defaultSize: '30%',
+                            },
+                            {
+                              type: 'panel',
+                              id: 'overview-visits',
+                              panel: {
+                                key: 'chart',
+                                meta: {chartId: 'overview-visits'},
+                              },
+                              defaultSize: '70%',
+                            },
+                          ],
+                          defaultSize: '50%',
+                        },
+                      ],
+                      'row',
+                    ),
+                    createDashboardNode('growth', [
+                      {
+                        type: 'panel',
+                        id: 'foobar',
+                        panel: {key: 'chart', meta: {chartId: 'foobar'}},
+                        defaultSize: '60%',
                       },
-                    },
-                    {
-                      type: 'mosaic',
-                      id: 'growth',
-                      draggable: true,
-                      direction: 'row',
-                      layout: {
-                        type: 'split',
-                        direction: 'row',
-                        children: ['sessions', 'conversions'],
-                        splitPercentages: [60, 40],
+                      {
+                        type: 'panel',
+                        id: 'growth-sessions-2',
+                        panel: {
+                          key: 'chart',
+                          meta: {chartId: 'growth-sessions-2'},
+                        },
+                        defaultSize: '60%',
                       },
-                    },
+                      {
+                        type: 'panel',
+                        id: 'growth-conversions',
+                        panel: {
+                          key: 'chart',
+                          meta: {chartId: 'growth-conversions'},
+                        },
+                        defaultSize: '40%',
+                      },
+                    ]),
                   ],
                   activeTabIndex: 0,
                 },
@@ -117,8 +197,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   id: RoomPanelTypes.enum['bottom'],
                   defaultSize: '30%',
                   children: [
-                    RoomPanelTypes.enum['console'],
-                    RoomPanelTypes.enum['results'],
+                    {
+                      type: 'panel',
+                      id: 'cons',
+                      panel: RoomPanelTypes.enum['console'],
+                    },
+                    {
+                      type: 'panel',
+                      id: 'res',
+                      panel: RoomPanelTypes.enum['results'],
+                    },
                   ],
                   activeTabIndex: 0,
                   collapsible: true,
@@ -131,14 +219,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           ],
         } satisfies LayoutConfig,
         panels: {
-          'dashboards/{dashboardId}': {
+          dashboard: (ctx) => ({
             icon: BarChart3Icon,
-            component: DashboardPanel,
-          },
-          'dashboards/{dashboardId}/{chartId}': {
+            title: `Dashboard ${ctx.meta?.dashboardId ?? ''}`,
+          }),
+          chart: (ctx) => ({
             icon: BarChart3Icon,
             component: DynamicChartPanel,
-          },
+            title: `Chart ${ctx.meta?.chartId ?? ''}`,
+          }),
           [RoomPanelTypes.enum['dashboards']]: {
             component: DashboardTabs,
           },
@@ -178,23 +267,54 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       const dashboardId = generateDashboardId();
       const chartId = generateChartId();
 
-      const mosaicNode: LayoutMosaicNode = {
-        type: 'mosaic',
-        id: dashboardId,
-        draggable: true,
-        direction: 'row',
-        layout: chartId,
-      };
-
-      addTab(tabsId, mosaicNode);
+      addTab(
+        tabsId,
+        createDashboardNode(dashboardId, [
+          {
+            type: 'panel',
+            id: chartId,
+            panel: {key: 'chart', meta: {chartId}},
+          },
+        ]),
+      );
     },
 
     addChartToDashboard: (dashboardId: string) => {
-      const {addChildToMosaic} = get().layout;
-
+      const {config, setConfig} = get().layout;
       const chartId = generateChartId();
 
-      addChildToMosaic(dashboardId, chartId);
+      // Find the dock node for this dashboard
+      const dockResult = findNodeById(config, dashboardId);
+      if (!dockResult || !isLayoutDockNode(dockResult.node)) {
+        return;
+      }
+
+      const dockNode = dockResult.node;
+
+      // Find the root split of the dock node
+      if (!isLayoutSplitNode(dockNode.root)) {
+        return;
+      }
+
+      // Clone the config and add the new chart panel to the dock's root split
+      const newConfig = JSON.parse(JSON.stringify(config)) as LayoutConfig;
+      const newDockResult = findNodeById(newConfig, dashboardId);
+      if (!newDockResult || !isLayoutDockNode(newDockResult.node)) {
+        return;
+      }
+
+      const newDockNode = newDockResult.node;
+      if (!isLayoutSplitNode(newDockNode.root)) {
+        return;
+      }
+
+      newDockNode.root.children.push({
+        type: 'panel',
+        id: chartId,
+        panel: {key: 'chart', meta: {chartId}},
+      });
+
+      setConfig(newConfig);
     },
   }),
 );

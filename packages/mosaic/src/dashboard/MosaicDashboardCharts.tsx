@@ -1,6 +1,6 @@
 import {
-  isLayoutMosaicNode,
-  LayoutMosaicNode,
+  isLayoutDockNode,
+  LayoutDockNode,
   LayoutNode,
   LayoutRenderer,
 } from '@sqlrooms/layout';
@@ -10,17 +10,14 @@ import React, {useCallback, useEffect, useMemo} from 'react';
 import {MosaicDashboardChartPanel} from './MosaicDashboardChartPanel';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
-  getMosaicDashboardMosaicId,
-  getMosaicDashboardPanelId,
+  getMosaicDashboardDockId,
+  MOSAIC_DASHBOARD_CHART_PANEL,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 
 export const MosaicDashboardCharts: React.FC = () => {
   const {dashboardId, canCreateChart, openBuilder} =
     useMosaicDashboardContext();
-  const dashboard = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
-  );
   const registerPanel = useStoreWithMosaicDashboard(
     (state) => state.layout.registerPanel,
   );
@@ -31,42 +28,40 @@ export const MosaicDashboardCharts: React.FC = () => {
     (state) => state.mosaicDashboard.setLayout,
   );
 
-  const charts = useMemo(() => dashboard?.charts ?? [], [dashboard?.charts]);
+  const charts = useStoreWithMosaicDashboard(
+    (state) =>
+      state.mosaicDashboard.config.dashboardsById[dashboardId]?.charts ?? [],
+  );
+  const dashboardLayout = useStoreWithMosaicDashboard(
+    (state) =>
+      state.mosaicDashboard.config.dashboardsById[dashboardId]?.layout ?? null,
+  );
 
   useEffect(() => {
-    const registeredIds: string[] = [];
-
-    for (const chart of charts) {
-      const panelId = getMosaicDashboardPanelId(dashboardId, chart.id);
-      registerPanel(panelId, {
-        title: chart.title,
-        component: MosaicDashboardChartPanel,
-      });
-      registeredIds.push(panelId);
-    }
+    registerPanel(MOSAIC_DASHBOARD_CHART_PANEL, (context) => ({
+      title: context.meta?.chartTitle as string | undefined,
+      component: MosaicDashboardChartPanel,
+    }));
 
     return () => {
-      for (const id of registeredIds) {
-        unregisterPanel(id);
-      }
+      unregisterPanel(MOSAIC_DASHBOARD_CHART_PANEL);
     };
-  }, [charts, dashboardId, registerPanel, unregisterPanel]);
+  }, [registerPanel, unregisterPanel]);
 
-  const mosaicNode: LayoutMosaicNode = useMemo(
-    () => ({
-      type: 'mosaic',
-      id: getMosaicDashboardMosaicId(dashboardId),
-      layout: dashboard?.layout ?? null,
-    }),
-    [dashboard?.layout, dashboardId],
-  );
+  const dockNode: LayoutDockNode | null = useMemo(() => {
+    if (!dashboardLayout) return null;
+    return {
+      type: 'dock',
+      id: getMosaicDashboardDockId(dashboardId),
+      root: dashboardLayout,
+    };
+  }, [dashboardLayout, dashboardId]);
 
   const handleLayoutChange = useCallback(
     (nextLayout: LayoutNode | null) => {
-      setLayout(
-        dashboardId,
-        nextLayout && isLayoutMosaicNode(nextLayout) ? nextLayout.layout : null,
-      );
+      const innerRoot =
+        nextLayout && isLayoutDockNode(nextLayout) ? nextLayout.root : null;
+      setLayout(dashboardId, innerRoot);
     },
     [dashboardId, setLayout],
   );
@@ -88,10 +83,11 @@ export const MosaicDashboardCharts: React.FC = () => {
     );
   }
 
+  if (!dockNode) {
+    return null;
+  }
+
   return (
-    <LayoutRenderer
-      rootLayout={mosaicNode}
-      onLayoutChange={handleLayoutChange}
-    />
+    <LayoutRenderer rootLayout={dockNode} onLayoutChange={handleLayoutChange} />
   );
 };
