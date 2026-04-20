@@ -1,6 +1,4 @@
 import {useDraggable, useDroppable} from '@dnd-kit/core';
-import {CSS} from '@dnd-kit/utilities';
-import {GripHorizontalIcon} from 'lucide-react';
 import {FC, useCallback} from 'react';
 import {
   getLayoutNodeId,
@@ -13,13 +11,15 @@ import {LayoutPath} from '../../types';
 import {useDockingContext} from '../../docking/DockingContext';
 import {useGetPanel} from '../../useGetPanel';
 import {isDockablePanel} from '../../layout-tree';
+import {LeafLayoutDragHandle} from './LeafLayoutDragHandle';
+import {LeafLayoutContent} from './LeafLayoutContent';
 
 interface RootProps {
   node: LayoutPanelNode | LayoutNodeKey;
   path: LayoutPath;
 }
 
-export const Root: FC<RootProps> = ({node, path}) => {
+const Root: FC<RootProps> = ({node, path}) => {
   const panelId = getLayoutNodeId(node);
   const {rootLayout} = useDockingContext();
   const panelInfo = useGetPanel(node);
@@ -28,7 +28,6 @@ export const Root: FC<RootProps> = ({node, path}) => {
     attributes,
     listeners,
     setNodeRef: setDraggableNodeRef,
-    transform,
     isDragging,
   } = useDraggable({
     id: panelId,
@@ -47,8 +46,7 @@ export const Root: FC<RootProps> = ({node, path}) => {
   );
   const style = dockable
     ? {
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.45 : 1,
+        opacity: isDragging ? 0.3 : 1,
       }
     : undefined;
   const title = panelInfo?.title ?? panelId;
@@ -61,23 +59,16 @@ export const Root: FC<RootProps> = ({node, path}) => {
         className="group relative h-full w-full overflow-hidden"
       >
         {dockable && (
-          <div
-            className="absolute top-0 right-0 left-0 z-10 flex h-8 items-start justify-center"
-            {...attributes}
-            {...listeners}
-          >
-            <div
-              className="border-border/70 bg-background/95 text-muted-foreground mt-1.5 flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
-              aria-label={`Drag ${title}`}
-            >
-              <GripHorizontalIcon className="h-3 w-3" />
-              <span className="max-w-[160px] truncate">{title}</span>
-            </div>
-          </div>
+          <LeafLayout.DragHandle
+            panelId={panelId}
+            title={title}
+            attributes={attributes}
+            listeners={listeners}
+          />
         )}
-        <div className="h-full w-full overflow-hidden p-2">
+        <LeafLayout.Content>
           <RendererSwitcher />
-        </div>
+        </LeafLayout.Content>
       </div>
     </LayoutNodeProvider>
   );
@@ -85,4 +76,6 @@ export const Root: FC<RootProps> = ({node, path}) => {
 
 export const LeafLayout = {
   Root,
+  DragHandle: LeafLayoutDragHandle,
+  Content: LeafLayoutContent,
 };

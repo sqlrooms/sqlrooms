@@ -5,8 +5,8 @@ import {
   LayoutRendererContextType,
   LayoutRendererProvider,
 } from './LayoutRendererContext';
-import {DockingProvider} from './docking/DockingContext';
 import {LayoutNodeRenderer} from './node-renderers/LayoutNodeRenderer';
+import {DockingProvider} from './docking/DockingProvider';
 
 export type LayoutRendererProps = {
   rootLayout: LayoutNode;
