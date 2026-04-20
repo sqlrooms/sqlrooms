@@ -1,9 +1,9 @@
 import {
+  LayoutPanelNode,
   RoomPanelComponent,
   TabsLayout,
   useLayoutNodeContext,
 } from '@sqlrooms/layout';
-import {LayoutPanelNode} from '@sqlrooms/layout-config';
 import {
   Button,
   Dialog,
