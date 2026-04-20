@@ -22,17 +22,13 @@ export type {
   RoomPanelComponent,
   RoomPanelInfo,
 } from './types';
-export type {
-  ParentDirection,
-  MatchResult,
-  MatchResultParams,
-} from './layout-base-types';
+export type {ParentDirection} from './layout-base-types';
 
 export {movePanel} from './docking/dock-layout';
 export type {DockAxis, DockDirection} from './docking/dock-layout';
 export {
   createLayoutId,
-  findNearestDraggableAncestor,
+  findNearestDockAncestor,
   findNodeById,
   findTabsNodeForPanel,
   getVisibleLayoutPanels,
@@ -54,10 +50,11 @@ export {
   getLayoutNodeId,
   getVisibleTabChildren,
   isLayoutPanelNode,
-  isLayoutSplitNode,
   isLayoutTabsNode,
+  isLayoutDockNode,
+  isLayoutSplitNode,
+  LayoutDockNode,
   LayoutConfig,
-  LayoutDirection,
   LayoutNode,
   LayoutNodeKey,
   LayoutPanelNode,
@@ -66,20 +63,25 @@ export {
   MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 
-// Panel matching utility
-export {getPanelByPath} from './getPanelByPath';
+export type {LayoutDirection} from '@sqlrooms/layout-config';
+
+// Panel resolution utilities
 export {resolvePanelDefinition} from './resolvePanelDefinition';
-export {useGetPanelByPath, useGetPanelInfoByPath} from './useGetPanel';
+export {resolvePanelIdentity} from './resolvePanelIdentity';
+export type {PanelIdentityResult} from './resolvePanelIdentity';
+export {useGetPanel} from './useGetPanel';
 
 // Layout node context
 export {
   getLayoutNodeContextValue,
   LayoutNodeProvider,
+  useDockNodeContext,
   useLayoutNodeContext,
   useSplitNodeContext,
   useTabsNodeContext,
 } from './LayoutNodeContext';
 export type {
+  LayoutNodeContextDock,
   LayoutNodeContextLeaf,
   LayoutNodeContextPanel,
   LayoutNodeContextSplit,
@@ -91,5 +93,4 @@ export type {
 export {LeafLayout} from './node-renderers/leaf-node-renderer/LeafLayout';
 export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
-
-export {extractPanelId} from './node-renderers/utils';
+export {DockLayout} from './node-renderers/dock-node-renderer/DockLayout';

@@ -3,6 +3,7 @@ import {
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
+  isLayoutDockNode,
 } from '@sqlrooms/layout-config';
 import {FC, lazy, Suspense} from 'react';
 import type {NodeRenderProps} from './types';
@@ -26,6 +27,12 @@ const LeafLayout = lazy(() =>
   })),
 );
 
+const DockNodeRenderer = lazy(() =>
+  import('./dock-node-renderer/DockLayout').then((m) => ({
+    default: m.DockLayout.Root,
+  })),
+);
+
 /**
  * Recursively renders a layout node.
  * This component is separate from NodeRenderer to avoid circular dependencies.
@@ -43,6 +50,13 @@ export const LayoutNodeRenderer: FC<NodeRenderProps> = ({
       {isLayoutSplitNode(node) && <SplitLayout node={node} path={path} />}
       {isLayoutTabsNode(node) && (
         <TabsLayout node={node} path={path} parentDirection={parentDirection} />
+      )}
+      {isLayoutDockNode(node) && (
+        <DockNodeRenderer
+          node={node}
+          path={path}
+          parentDirection={parentDirection}
+        />
       )}
     </Suspense>
   );

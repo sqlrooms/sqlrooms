@@ -32,7 +32,7 @@ const Root: FC<RootProps> = ({node, path}) => {
 
   return (
     <LayoutNodeProvider containerType="split" node={node} path={path}>
-      <RendererSwitcher path={path} defaultComponent={defaultComponent} />
+      <RendererSwitcher defaultComponent={defaultComponent} />
     </LayoutNodeProvider>
   );
 };

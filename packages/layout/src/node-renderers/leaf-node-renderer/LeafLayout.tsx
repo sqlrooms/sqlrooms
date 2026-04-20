@@ -11,7 +11,7 @@ import {RendererSwitcher} from '../RendererSwitcher';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
 import {LayoutPath} from '../../types';
 import {useDockingContext} from '../../docking/DockingContext';
-import {useGetPanelInfoByPath} from '../../useGetPanel';
+import {useGetPanel} from '../../useGetPanel';
 import {isDockablePanel} from '../../layout-tree';
 
 interface RootProps {
@@ -22,7 +22,7 @@ interface RootProps {
 export const Root: FC<RootProps> = ({node, path}) => {
   const panelId = getLayoutNodeId(node);
   const {rootLayout} = useDockingContext();
-  const panelInfo = useGetPanelInfoByPath(path);
+  const panelInfo = useGetPanel(node);
   const dockable = isDockablePanel(rootLayout, panelId);
   const {
     attributes,
@@ -51,7 +51,7 @@ export const Root: FC<RootProps> = ({node, path}) => {
         opacity: isDragging ? 0.45 : 1,
       }
     : undefined;
-  const title = panelInfo?.panel.title ?? panelInfo?.panelId ?? panelId;
+  const title = panelInfo?.title ?? panelId;
 
   return (
     <LayoutNodeProvider containerType="leaf" node={node} path={path}>
@@ -76,7 +76,7 @@ export const Root: FC<RootProps> = ({node, path}) => {
           </div>
         )}
         <div className="h-full w-full overflow-hidden p-2">
-          <RendererSwitcher path={path} />
+          <RendererSwitcher />
         </div>
       </div>
     </LayoutNodeProvider>

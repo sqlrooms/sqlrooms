@@ -1,15 +1,19 @@
 import {
   getLayoutNodeId,
+  isLayoutDockNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
   LayoutNode,
   LayoutPanelNode,
-  LayoutSplitNode,
   LayoutTabsNode,
 } from '@sqlrooms/layout-config';
-import {createLayoutId, findNodeById} from '../layout-tree';
+import {
+  createLayoutId,
+  findNearestDockAncestor,
+  findNodeById,
+} from '../layout-tree';
 
 export type DockDirection = 'left' | 'right' | 'up' | 'down';
 export type DockAxis = 'row' | 'column';
@@ -184,11 +188,7 @@ function normalizeTree(
       return null;
     }
 
-    if (
-      children.length === 1 &&
-      collapseSingleSplits &&
-      root.draggable !== true
-    ) {
+    if (children.length === 1 && collapseSingleSplits) {
       const [onlyChild] = children;
 
       if (!onlyChild) {
@@ -316,7 +316,6 @@ function replaceTargetWithSplit(
       type: 'split',
       id: createLayoutId('dock'),
       direction: axis,
-      pathSegment: false,
       children,
       ...inherited,
     };
@@ -352,7 +351,6 @@ function replaceSingleChildParentSplit(
     return {
       ...node,
       direction: axis,
-      pathSegment: false,
       children,
     };
   });
@@ -425,10 +423,23 @@ export function movePanel(
     return root;
   }
 
+  // Enforce dock boundary: source and target must be in same dock
+  const sourceDock = findNearestDockAncestor(root, sourceId);
+  const targetDock = findNearestDockAncestor(root, targetId);
+
+  if (sourceDock !== targetDock) {
+    return root;
+  }
+
+  if (!sourceDock) {
+    return root;
+  }
+
+  // Perform the move within the dock's root
   const sourceNode = sourceFound.node;
 
   const withoutSource = normalizeTree(
-    removeNode(root, sourceId, {collapseSingleSplits: false}),
+    removeNode(sourceDock.root, sourceId, {collapseSingleSplits: false}),
     {collapseSingleSplits: false},
   );
 
@@ -436,6 +447,7 @@ export function movePanel(
     return root;
   }
 
+  // Find target within the modified dock root
   const nextTarget = findNodeById(withoutSource, targetId);
 
   if (!nextTarget) {
@@ -445,8 +457,10 @@ export function movePanel(
   const axis = getDockAxis(direction);
   const parent = nextTarget.ancestors[nextTarget.ancestors.length - 1];
 
+  let newDockRoot: LayoutNode | null;
+
   if (parent && isLayoutSplitNode(parent) && parent.direction === axis) {
-    return normalizeTree(
+    newDockRoot = normalizeTree(
       insertIntoSplit(
         withoutSource,
         parent.id,
@@ -455,10 +469,12 @@ export function movePanel(
         direction,
       ),
     );
-  }
-
-  if (parent && isLayoutSplitNode(parent) && parent.children.length === 1) {
-    return normalizeTree(
+  } else if (
+    parent &&
+    isLayoutSplitNode(parent) &&
+    parent.children.length === 1
+  ) {
+    newDockRoot = normalizeTree(
       replaceSingleChildParentSplit(
         withoutSource,
         parent.id,
@@ -467,9 +483,21 @@ export function movePanel(
         direction,
       ),
     );
+  } else {
+    newDockRoot = normalizeTree(
+      replaceTargetWithSplit(withoutSource, targetId, sourceNode, direction),
+    );
   }
 
-  return normalizeTree(
-    replaceTargetWithSplit(withoutSource, targetId, sourceNode, direction),
-  );
+  if (!newDockRoot) {
+    return root;
+  }
+
+  // Update the dock node with the new root
+  return updateNode(root, sourceDock.id, (node) => {
+    if (!isLayoutDockNode(node)) {
+      return node;
+    }
+    return {...node, root: newDockRoot!};
+  });
 }

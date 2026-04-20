@@ -1,10 +1,10 @@
-import {extractPanelId, RoomPanelComponent, TabsLayout} from '@sqlrooms/layout';
+import {RoomPanelComponent, TabsLayout} from '@sqlrooms/layout';
 import {Button} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import {useCallback} from 'react';
 import {useRoomStore} from '../store';
 
-export const DashboardTabs: RoomPanelComponent = ({panelInfo: {panelId}}) => {
+export const DashboardTabs: RoomPanelComponent = ({panelId}) => {
   const addChartToDashboard = useRoomStore((s) => s.addChartToDashboard);
   const getActiveTab = useRoomStore((s) => s.layout.getActiveTab);
 
@@ -14,7 +14,7 @@ export const DashboardTabs: RoomPanelComponent = ({panelInfo: {panelId}}) => {
       return;
     }
 
-    addChartToDashboard(extractPanelId(activeTabId));
+    addChartToDashboard(activeTabId);
   }, [getActiveTab, addChartToDashboard, panelId]);
 
   return (
