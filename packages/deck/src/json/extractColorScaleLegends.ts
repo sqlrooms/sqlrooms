@@ -1,17 +1,16 @@
 import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
-import type {LayerExtensionProps, PreparedDeckDatasetState} from '../types';
+import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {buildColorScaleLegend} from './compileColorScale';
-import {
-  resolveColorLegend,
-  resolveColorScale,
-  resolveDatasetId,
-} from './layerConfig';
+import {resolveColorLegend, resolveDatasetId} from './layerConfig';
+import {getSqlroomsColorScale} from './sqlroomsColorScaleFunction';
 
 function resolveLegendTitle(
   layerProps: Record<string, unknown>,
   fallbackField: string,
 ) {
-  const legend = resolveColorLegend(layerProps);
+  const legend =
+    resolveColorLegend(layerProps, 'getFillColor') ??
+    resolveColorLegend(layerProps, 'getLineColor');
   if (
     legend &&
     typeof legend === 'object' &&
@@ -41,12 +40,13 @@ export function extractColorScaleLegends(options: {
     }
 
     const layerProps = layer as Record<string, unknown>;
-    const extensionProps = layerProps as LayerExtensionProps &
+    const extensionProps = layerProps as LayerBindingProps &
       Record<string, unknown>;
-    const colorScale = resolveColorScale(extensionProps);
-    if (!colorScale) {
+    const resolvedColorScale = getSqlroomsColorScale(layerProps);
+    if (!resolvedColorScale) {
       continue;
     }
+    const {colorScale} = resolvedColorScale;
 
     const datasetId = resolveDatasetId(layerProps, datasetIds);
     if (!datasetId) {

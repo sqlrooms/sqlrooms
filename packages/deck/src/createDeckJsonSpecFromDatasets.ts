@@ -106,7 +106,7 @@ export function createDeckJsonSpecFromDatasets(
     layers: Object.entries(datasets).map(([datasetId, input]) => ({
       '@@type': chooseDefaultLayerType(datasetId, input, hints?.[datasetId]),
       id: datasetId,
-      _sqlrooms: buildLayerConfig({
+      _sqlroomsBinding: buildLayerConfig({
         datasetId,
         input,
         hint: hints?.[datasetId],

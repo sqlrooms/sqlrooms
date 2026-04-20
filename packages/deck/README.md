@@ -15,7 +15,7 @@ npm install @sqlrooms/deck @sqlrooms/duckdb @sqlrooms/ui
 - render a DeckGL map from a serializable `DeckJsonMap` spec
 - bind one or more datasets through a `datasets` registry
 - generate starter JSON specs from datasets with `createDeckJsonSpecFromDatasets`
-- validate SQLRooms-specific layer extensions under `_sqlrooms`
+- validate SQLRooms-specific layer bindings under `_sqlroomsBinding`
 - prepare geometry for GeoArrow-native layers from
   [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers)
   and GeoJSON fallback layers
@@ -42,15 +42,16 @@ const spec = {
     {
       '@@type': 'GeoArrowScatterplotLayer',
       id: 'airports',
-      _sqlrooms: {
+      _sqlroomsBinding: {
         dataset: 'airports',
         geometryColumn: 'geom',
-        colorScale: {
-          field: 'scalerank',
-          type: 'sequential',
-          scheme: 'YlOrRd',
-          domain: 'auto',
-        },
+      },
+      getFillColor: {
+        '@@function': 'sqlroomsColorScale',
+        field: 'scalerank',
+        type: 'sequential',
+        scheme: 'YlOrRd',
+        domain: 'auto',
       },
       getRadius: '@@=6',
       radiusMinPixels: 2,
@@ -144,7 +145,7 @@ or `mapProps`.
 ### Dataset Registry
 
 Each SQLRooms-managed layer binds to exactly one dataset through
-`_sqlrooms.dataset`.
+`_sqlroomsBinding.dataset`.
 
 ```tsx
 <DeckJsonMap
@@ -188,29 +189,30 @@ For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
 data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
 that dataset as loading until a table is provided.
 
-## SQLRooms Layer Extensions
+## SQLRooms Layer Bindings
 
-SQLRooms-specific layer metadata lives under `_sqlrooms`:
+SQLRooms-specific layer metadata lives under `_sqlroomsBinding`:
 
 ```tsx
 {
   '@@type': 'GeoArrowScatterplotLayer',
   id: 'earthquakes',
-  _sqlrooms: {
+  _sqlroomsBinding: {
     dataset: 'earthquakes',
     geometryColumn: 'geom',
     geometryEncodingHint: 'wkb',
-    colorScale: {
-      field: 'Magnitude',
-      type: 'sequential',
-      scheme: 'YlOrRd',
-      domain: 'auto',
-    },
+  },
+  getFillColor: {
+    '@@function': 'sqlroomsColorScale',
+    field: 'Magnitude',
+    type: 'sequential',
+    scheme: 'YlOrRd',
+    domain: 'auto',
   },
 }
 ```
 
-Currently supported SQLRooms extensions are:
+Currently supported SQLRooms binding fields are:
 
 - `dataset`: binds the layer to one dataset id
 - `geometryColumn`: overrides geometry column detection for that layer
@@ -219,18 +221,19 @@ Currently supported SQLRooms extensions are:
 - `targetGeometryColumn`: target point geometry for `GeoArrowArcLayer`
 - `timestampColumn`: timestamp list column for `GeoArrowTripsLayer`
 - `hexagonColumn`: H3 index column for `GeoArrowH3HexagonLayer`
-- `colorScale`: declarative color mapping from `@sqlrooms/color-scales`
 
 The surrounding deck spec remains intentionally loose so normal deck.gl JSON
-props still pass through, while `_sqlrooms` is validated strictly.
+props still pass through, while `_sqlroomsBinding` is validated strictly.
 
 ## Color Scales and Legends
 
-You can ask SQLRooms to derive colors from a field instead of writing long
-`@@=` color expressions:
+You can ask SQLRooms to derive colors from a field with the
+`sqlroomsColorScale` JSON function instead of writing long `@@=` color
+expressions:
 
 ```tsx
-colorScale: {
+getFillColor: {
+  '@@function': 'sqlroomsColorScale',
   field: 'Magnitude',
   type: 'sequential',
   scheme: 'YlOrRd',
@@ -242,7 +245,8 @@ colorScale: {
 Discrete numeric palettes are supported too:
 
 ```tsx
-colorScale: {
+getFillColor: {
+  '@@function': 'sqlroomsColorScale',
   field: 'Magnitude',
   type: 'quantize',
   scheme: 'PuBuGn',
@@ -252,7 +256,7 @@ colorScale: {
 ```
 
 `DeckJsonMap` renders SQLRooms-generated legends by default for layers that use
-`_sqlrooms.colorScale`. To disable them globally:
+`sqlroomsColorScale`. To disable them globally:
 
 ```tsx
 <DeckJsonMap spec={spec} datasets={datasets} showLegends={false} />
@@ -261,7 +265,8 @@ colorScale: {
 To override the title:
 
 ```tsx
-colorScale: {
+getFillColor: {
+  '@@function': 'sqlroomsColorScale',
   field: 'Magnitude',
   type: 'sequential',
   scheme: 'YlOrRd',

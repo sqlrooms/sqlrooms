@@ -4,10 +4,17 @@ import {z} from 'zod';
 export const GeometryEncodingHint = z.enum(['geoarrow', 'wkb', 'wkt']);
 export type GeometryEncodingHint = z.infer<typeof GeometryEncodingHint>;
 
-export const DeckColorScaleProp = z.enum(['getFillColor', 'getLineColor']);
-export type DeckColorScaleProp = z.infer<typeof DeckColorScaleProp>;
+export const SqlroomsColorScaleFunction = z.intersection(
+  z.object({
+    '@@function': z.literal('sqlroomsColorScale'),
+  }),
+  ColorScaleConfig,
+);
+export type SqlroomsColorScaleFunction = z.infer<
+  typeof SqlroomsColorScaleFunction
+>;
 
-export const LayerExtensionConfig = z.object({
+export const LayerBindingConfig = z.object({
   dataset: z.string().min(1).optional(),
   geometryColumn: z.string().min(1).optional(),
   geometryEncodingHint: GeometryEncodingHint.optional(),
@@ -15,26 +22,25 @@ export const LayerExtensionConfig = z.object({
   targetGeometryColumn: z.string().min(1).optional(),
   timestampColumn: z.string().min(1).optional(),
   hexagonColumn: z.string().min(1).optional(),
-  colorScale: ColorScaleConfig.optional(),
-  colorScaleProp: DeckColorScaleProp.optional(),
 });
-export type LayerExtensionConfig = z.infer<typeof LayerExtensionConfig>;
+export type LayerBindingConfig = z.infer<typeof LayerBindingConfig>;
 
-export const LayerExtensionProps = z.object({
-  _sqlrooms: LayerExtensionConfig.optional(),
+export const LayerBindingProps = z.object({
+  _sqlroomsBinding: LayerBindingConfig.optional(),
 });
-export type LayerExtensionProps = z.infer<typeof LayerExtensionProps>;
+export type LayerBindingProps = z.infer<typeof LayerBindingProps>;
 
 const JsonAccessor = z.union([
   z.string(),
   z.number(),
   RGBAColor,
   z.array(z.number()),
+  SqlroomsColorScaleFunction,
 ]);
 
 // Keep the layer spec loose for now because `DeckJsonMap` accepts deck.gl JSON as an
 // external spec format, and that surface is much broader than SQLRooms-owned
-// `_sqlrooms` extensions. We validate the extension config fully and a handful of
+// `_sqlroomsBinding` extensions. We validate the binding config fully and a handful of
 // common deck props we know we rely on, while allowing the rest through.
 // TODO(deck-json-schema): Replace this with fuller schemas when deck.gl/json
 // exposes reusable validators or we decide to maintain a broader local schema.
@@ -72,7 +78,7 @@ export const DeckJsonMapLayerSpec = z.looseObject({
   getPath: JsonAccessor.optional(),
   getHexagon: JsonAccessor.optional(),
   getTimestamps: JsonAccessor.optional(),
-  _sqlrooms: LayerExtensionConfig.optional(),
+  _sqlroomsBinding: LayerBindingConfig.optional(),
 });
 export type DeckJsonMapLayerSpec = z.infer<typeof DeckJsonMapLayerSpec>;
 

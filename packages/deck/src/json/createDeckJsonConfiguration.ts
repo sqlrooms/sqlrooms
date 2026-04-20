@@ -1,6 +1,7 @@
 import {JSONConfiguration} from '@deck.gl/json';
+import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
-import type {LayerExtensionProps, PreparedDeckDatasetState} from '../types';
+import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {compileColorScale} from './compileColorScale';
 import {
   DEFAULT_DECK_JSON_CLASSES,
@@ -10,14 +11,16 @@ import {
 import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
-  resolveColorScale,
-  resolveColorScaleProp,
   resolveConfiguredColumn,
   resolveDatasetId,
   resolveGeometryColumn,
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
+import {
+  createSqlroomsColorScaleMarker,
+  getSqlroomsColorScale,
+} from './sqlroomsColorScaleFunction';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -31,19 +34,15 @@ function getLayerName(Class: unknown) {
 
 function applyColorScale(options: {
   props: Record<string, unknown>;
-  layerProps: LayerExtensionProps & Record<string, unknown>;
   table: import('apache-arrow').Table;
 }) {
-  const {props, layerProps, table} = options;
-  const colorScale = resolveColorScale(layerProps);
-  if (!colorScale) {
+  const {props, table} = options;
+  const resolved = getSqlroomsColorScale(props);
+  if (!resolved) {
     return props;
   }
 
-  const targetProp = resolveColorScaleProp(layerProps) ?? 'getFillColor';
-  if (props[targetProp] !== undefined) {
-    return props;
-  }
+  const {propName, colorScale} = resolved;
 
   const updateTriggers =
     props.updateTriggers &&
@@ -54,13 +53,13 @@ function applyColorScale(options: {
 
   return {
     ...props,
-    [targetProp]: compileColorScale({
+    [propName]: compileColorScale({
       table,
       colorScale,
     }),
     updateTriggers: {
       ...updateTriggers,
-      [targetProp]: JSON.stringify(colorScale),
+      [propName]: JSON.stringify(colorScale),
     },
   };
 }
@@ -70,7 +69,7 @@ function resolveGeoArrowBindings(options: {
   compatibility: NonNullable<ReturnType<typeof getLayerCompatibility>> & {
     representation: 'geoarrow';
   };
-  layerProps: LayerExtensionProps & Record<string, unknown>;
+  layerProps: LayerBindingProps & Record<string, unknown>;
   prepared: Extract<PreparedDeckDatasetState, {status: 'ready'}>['prepared'];
   props: Record<string, unknown>;
 }) {
@@ -87,7 +86,7 @@ function resolveGeoArrowBindings(options: {
       const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
       if (binding.required && !columnName) {
         throw new Error(
-          `Layer "${layerName}" requires _sqlrooms.${binding.configKey}.`,
+          `Layer "${layerName}" requires _sqlroomsBinding.${binding.configKey}.`,
         );
       }
 
@@ -124,7 +123,7 @@ function resolveGeoArrowBindings(options: {
     if (!columnName) {
       if (binding.required) {
         throw new Error(
-          `Layer "${layerName}" requires _sqlrooms.${binding.configKey}.`,
+          `Layer "${layerName}" requires _sqlroomsBinding.${binding.configKey}.`,
         );
       }
       continue;
@@ -153,6 +152,10 @@ export function createDeckJsonConfiguration(
     classes: DEFAULT_DECK_JSON_CLASSES,
     enumerations: DEFAULT_DECK_JSON_ENUMERATIONS,
     constants: DEFAULT_DECK_JSON_CONSTANTS,
+    functions: {
+      sqlroomsColorScale: (props: ColorScaleConfig) =>
+        createSqlroomsColorScaleMarker(props),
+    },
     // TODO(geoarrow-upgrade): In 0.3.x we preserve raw `@@=` strings here because
     // `@deck.gl/json` would otherwise eagerly compile them into row-based accessors
     // before `preProcessClassProps` can rewrite them for GeoArrow. If the next
@@ -169,7 +172,7 @@ export function createDeckJsonConfiguration(
 
       const layerProps = props as Record<string, unknown>;
       const extensionProps = layerProps as typeof layerProps &
-        LayerExtensionProps;
+        LayerBindingProps;
       const datasetId = resolveDatasetId(extensionProps, datasetIds);
       const managed =
         isManagedLayer(extensionProps, datasetIds) ||
@@ -181,7 +184,7 @@ export function createDeckJsonConfiguration(
 
       if (!datasetId) {
         throw new Error(
-          `Layer "${layerName}" must declare _sqlrooms.dataset when multiple datasets are available.`,
+          `Layer "${layerName}" must declare _sqlroomsBinding.dataset when multiple datasets are available.`,
         );
       }
 
@@ -203,7 +206,6 @@ export function createDeckJsonConfiguration(
       if (compatibility.representation === 'geojson') {
         const baseProps = applyColorScale({
           props: strippedProps,
-          layerProps: extensionProps,
           table: prepared.table,
         });
         return {
@@ -221,7 +223,6 @@ export function createDeckJsonConfiguration(
       });
       const baseProps = applyColorScale({
         props: strippedProps,
-        layerProps: extensionProps,
         table,
       });
       const nextProps = {

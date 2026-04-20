@@ -5,11 +5,11 @@ import type {MapProps} from 'react-map-gl/maplibre';
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
 
 export type {
-  DeckColorScaleProp,
   DeckJsonMapLayerSpec,
   DeckJsonMapSpec,
-  LayerExtensionConfig,
-  LayerExtensionProps,
+  LayerBindingConfig,
+  LayerBindingProps,
+  SqlroomsColorScaleFunction,
 } from './DeckJsonMapSpec';
 
 type DeckDatasetBase = {

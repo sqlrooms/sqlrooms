@@ -1,7 +1,7 @@
-import {DeckJsonMapSpec, LayerExtensionConfig} from '../src/DeckJsonMapSpec';
+import {DeckJsonMapSpec, LayerBindingConfig} from '../src/DeckJsonMapSpec';
 
 describe('DeckJsonMapSpec', () => {
-  it('accepts loose deck.gl layer objects while validating _sqlrooms', () => {
+  it('accepts loose deck.gl layer objects while validating _sqlroomsBinding', () => {
     const parsed = DeckJsonMapSpec.parse({
       initialViewState: {
         longitude: -119.5,
@@ -14,32 +14,36 @@ describe('DeckJsonMapSpec', () => {
           id: 'earthquakes',
           filled: true,
           radiusMinPixels: 1,
-          _sqlrooms: {
+          _sqlroomsBinding: {
             dataset: 'earthquakes',
-            colorScale: {
-              field: 'Magnitude',
-              type: 'sequential',
-              scheme: 'YlOrBr',
-              domain: [0, 8],
-            },
-            colorScaleProp: 'getFillColor',
+          },
+          getFillColor: {
+            '@@function': 'sqlroomsColorScale',
+            field: 'Magnitude',
+            type: 'sequential',
+            scheme: 'YlOrBr',
+            domain: [0, 8],
           },
         },
       ],
     });
 
     expect(parsed.layers?.[0]?.id).toBe('earthquakes');
-    expect(parsed.layers?.[0]?._sqlrooms?.dataset).toBe('earthquakes');
+    expect(parsed.layers?.[0]?._sqlroomsBinding?.dataset).toBe('earthquakes');
   });
 
-  it('rejects invalid _sqlrooms config', () => {
+  it('rejects invalid sqlroomsColorScale functions', () => {
     expect(() =>
       DeckJsonMapSpec.parse({
         layers: [
           {
             '@@type': 'GeoArrowScatterplotLayer',
-            _sqlrooms: {
-              colorScaleProp: 'getStrokeColor',
+            getFillColor: {
+              '@@function': 'sqlroomsColorScale',
+              field: 'Magnitude',
+              type: 'sequential',
+              scheme: 'NotAScheme',
+              domain: [0, 8],
             },
           },
         ],
@@ -48,10 +52,10 @@ describe('DeckJsonMapSpec', () => {
   });
 });
 
-describe('LayerExtensionConfig', () => {
-  it('validates the full SQLRooms extension config', () => {
+describe('LayerBindingConfig', () => {
+  it('validates the full SQLRooms binding config', () => {
     expect(
-      LayerExtensionConfig.parse({
+      LayerBindingConfig.parse({
         dataset: 'earthquakes',
         geometryColumn: 'geom',
         geometryEncodingHint: 'wkb',
@@ -59,7 +63,6 @@ describe('LayerExtensionConfig', () => {
         targetGeometryColumn: 'target_geom',
         timestampColumn: 'timestamps',
         hexagonColumn: 'h3',
-        colorScaleProp: 'getFillColor',
       }),
     ).toEqual({
       dataset: 'earthquakes',
@@ -69,7 +72,6 @@ describe('LayerExtensionConfig', () => {
       targetGeometryColumn: 'target_geom',
       timestampColumn: 'timestamps',
       hexagonColumn: 'h3',
-      colorScaleProp: 'getFillColor',
     });
   });
 });

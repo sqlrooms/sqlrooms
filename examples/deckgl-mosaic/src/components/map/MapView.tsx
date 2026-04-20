@@ -129,9 +129,12 @@ export default function MapView({className}: {className?: string}) {
         {
           '@@type': 'GeoArrowScatterplotLayer',
           id: 'earthquakes',
-          _sqlrooms: {
+          _sqlroomsBinding: {
             dataset: 'earthquakes',
-            colorScale,
+          },
+          getFillColor: {
+            '@@function': 'sqlroomsColorScale',
+            ...colorScale,
           },
           filled: true,
           stroked: false,

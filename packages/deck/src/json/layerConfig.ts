@@ -1,25 +1,28 @@
 import type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
 import type {
-  DeckColorScaleProp,
-  LayerExtensionConfig,
-  LayerExtensionProps,
+  LayerBindingConfig,
+  LayerBindingProps,
+  SqlroomsColorScaleFunction,
 } from '../DeckJsonMapSpec';
 
 function hasExtensionKeys(props: Record<string, unknown>) {
-  return '_sqlrooms' in props;
+  return '_sqlroomsBinding' in props;
 }
 
 function getLayerConfig(props: Record<string, unknown>) {
-  const layerProps = props as LayerExtensionProps & {data?: unknown};
-  if (!layerProps._sqlrooms || typeof layerProps._sqlrooms !== 'object') {
+  const layerProps = props as LayerBindingProps & {data?: unknown};
+  if (
+    !layerProps._sqlroomsBinding ||
+    typeof layerProps._sqlroomsBinding !== 'object'
+  ) {
     return undefined;
   }
 
-  return layerProps._sqlrooms;
+  return layerProps._sqlroomsBinding;
 }
 
 export type LayerConfigColumnKey = keyof Pick<
-  LayerExtensionConfig,
+  LayerBindingConfig,
   | 'geometryColumn'
   | 'sourceGeometryColumn'
   | 'targetGeometryColumn'
@@ -31,7 +34,7 @@ export function resolveDatasetId(
   props: Record<string, unknown>,
   datasetIds: string[],
 ) {
-  const layerProps = props as LayerExtensionProps & {data?: unknown};
+  const layerProps = props as LayerBindingProps & {data?: unknown};
   const config = getLayerConfig(props);
   if (typeof config?.dataset === 'string' && config.dataset) {
     return config.dataset;
@@ -53,7 +56,7 @@ export function isManagedLayer(
 
 export function stripLayerExtensionProps(props: Record<string, unknown>) {
   const nextProps = {...props};
-  delete nextProps._sqlrooms;
+  delete nextProps._sqlroomsBinding;
   return nextProps;
 }
 
@@ -73,22 +76,27 @@ export function resolveConfiguredColumn(
   return typeof value === 'string' && value ? value : undefined;
 }
 
+export function isSqlroomsColorScaleFunction(
+  value: unknown,
+): value is SqlroomsColorScaleFunction {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    (value as {'@@function'?: unknown})['@@function'] === 'sqlroomsColorScale',
+  );
+}
+
 export function resolveColorScale(
   props: Record<string, unknown>,
+  key?: string,
 ): ColorScaleConfig | undefined {
-  const config = getLayerConfig(props);
-  return config?.colorScale;
+  const value = key ? props[key] : undefined;
+  return isSqlroomsColorScaleFunction(value) ? value : undefined;
 }
 
 export function resolveColorLegend(
   props: Record<string, unknown>,
+  key?: string,
 ): ColorLegendConfig | undefined {
-  return resolveColorScale(props)?.legend;
-}
-
-export function resolveColorScaleProp(
-  props: Record<string, unknown>,
-): DeckColorScaleProp | undefined {
-  const config = getLayerConfig(props);
-  return config?.colorScaleProp;
+  return resolveColorScale(props, key)?.legend;
 }

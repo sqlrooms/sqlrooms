@@ -133,7 +133,7 @@ describe('createDeckJsonConfiguration', () => {
           {
             '@@type': 'GeoArrowScatterplotLayer',
             id: 'earthquakes',
-            _sqlrooms: {
+            _sqlroomsBinding: {
               dataset: 'missing',
             },
           },
@@ -144,7 +144,7 @@ describe('createDeckJsonConfiguration', () => {
     );
   });
 
-  it('requires _sqlrooms.dataset when multiple datasets are available', () => {
+  it('requires _sqlroomsBinding.dataset when multiple datasets are available', () => {
     const table = createPointTable();
     const converter = createConverter({
       earthquakes: {
@@ -166,7 +166,7 @@ describe('createDeckJsonConfiguration', () => {
         ],
       }),
     ).toThrow(
-      'Layer "GeoArrowScatterplotLayer" must declare _sqlrooms.dataset when multiple datasets are available.',
+      'Layer "GeoArrowScatterplotLayer" must declare _sqlroomsBinding.dataset when multiple datasets are available.',
     );
   });
 
@@ -207,7 +207,7 @@ describe('createDeckJsonConfiguration', () => {
     ).toEqual([255, 120, 60, 180]);
   });
 
-  it('injects _sqlrooms.colorScale accessors for GeoArrow layers', () => {
+  it('injects sqlroomsColorScale accessors for GeoArrow layers', () => {
     const table = createPointTable();
     const converter = createConverter({
       earthquakes: {
@@ -221,13 +221,12 @@ describe('createDeckJsonConfiguration', () => {
         {
           '@@type': 'GeoArrowScatterplotLayer',
           id: 'earthquakes',
-          _sqlrooms: {
-            colorScale: {
-              field: 'magnitude',
-              type: 'sequential',
-              scheme: 'YlOrRd',
-              domain: [0, 10],
-            },
+          getFillColor: {
+            '@@function': 'sqlroomsColorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'YlOrRd',
+            domain: [0, 10],
           },
         },
       ],
@@ -255,7 +254,7 @@ describe('createDeckJsonConfiguration', () => {
         {
           '@@type': 'GeoArrowArcLayer',
           id: 'arcs',
-          _sqlrooms: {
+          _sqlroomsBinding: {
             dataset: 'earthquakes',
             sourceGeometryColumn: 'source_geom',
             targetGeometryColumn: 'target_geom',
@@ -287,7 +286,7 @@ describe('createDeckJsonConfiguration', () => {
         {
           '@@type': 'GeoArrowH3HexagonLayer',
           id: 'hexes',
-          _sqlrooms: {
+          _sqlroomsBinding: {
             dataset: 'earthquakes',
             hexagonColumn: 'h3',
           },
@@ -300,7 +299,7 @@ describe('createDeckJsonConfiguration', () => {
     );
   });
 
-  it('keeps explicit getFillColor over _sqlrooms.colorScale', () => {
+  it('keeps explicit getFillColor while still compiling getLineColor sqlroomsColorScale', () => {
     const table = createPointTable();
     const converter = createConverter({
       earthquakes: {
@@ -315,18 +314,18 @@ describe('createDeckJsonConfiguration', () => {
           '@@type': 'GeoArrowScatterplotLayer',
           id: 'earthquakes',
           getFillColor: [1, 2, 3, 4],
-          _sqlrooms: {
-            colorScale: {
-              field: 'magnitude',
-              type: 'sequential',
-              scheme: 'YlOrRd',
-              domain: [0, 10],
-            },
+          getLineColor: {
+            '@@function': 'sqlroomsColorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'YlOrRd',
+            domain: [0, 10],
           },
         },
       ],
     }) as {layers: Array<{props: Record<string, unknown>}>};
 
     expect(converted.layers[0]?.props.getFillColor).toEqual([1, 2, 3, 4]);
+    expect(typeof converted.layers[0]?.props.getLineColor).toBe('function');
   });
 });

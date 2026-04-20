@@ -52,7 +52,11 @@ So the relationship is:
 The main config exports are both Zod schemas and inferred TypeScript types:
 
 ```ts
-import {ColorScaleConfig, ColorLegendConfig, RGBAColor} from '@sqlrooms/color-scales';
+import {
+  ColorScaleConfig,
+  ColorLegendConfig,
+  RGBAColor,
+} from '@sqlrooms/color-scales';
 
 const parsed = ColorScaleConfig.parse({
   field: 'Magnitude',
@@ -215,7 +219,7 @@ You can render one or more resolved legends with the generic React component:
 ```tsx
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 
-<ColorScaleLegend legends={[legend]} />
+<ColorScaleLegend legends={[legend]} />;
 ```
 
 The current legend renderer is intentionally generic and runtime-neutral. It is
@@ -243,23 +247,20 @@ const colorScale = {
   },
 } satisfies ColorScaleConfig;
 
-<MosaicColorLegend
-  colorScale={colorScale}
-  width={220}
-  tickFormat=".1f"
-/>;
+<MosaicColorLegend colorScale={colorScale} width={220} tickFormat=".1f" />;
 ```
 
 This is the intended compatibility model:
 
 - define one shared `ColorScaleConfig`
-- use it in deck through `_sqlrooms.colorScale`
+- use it in deck through `getFillColor` / `getLineColor` with
+  `{"@@function":"sqlroomsColorScale", ...}`
 - or render it in Mosaic through `MosaicColorLegend`
 
 ## How Other SQLRooms Packages Use This
 
 - `@sqlrooms/deck`
-  - uses `ColorScaleConfig` under `_sqlrooms.colorScale`
+  - uses `ColorScaleConfig` through the `sqlroomsColorScale` JSON function
   - compiles color accessors for deck layers
   - derives deck overlay legends from the shared legend model
 - `@sqlrooms/mosaic`

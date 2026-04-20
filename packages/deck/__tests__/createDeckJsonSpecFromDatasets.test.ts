@@ -139,6 +139,6 @@ describe('createDeckJsonSpecFromDatasets', () => {
       'GeoArrowArcLayer',
       'GeoArrowH3HexagonLayer',
     ]);
-    expect(spec.layers?.[3]?._sqlrooms?.hexagonColumn).toBe('h3');
+    expect(spec.layers?.[3]?._sqlroomsBinding?.hexagonColumn).toBe('h3');
   });
 });
