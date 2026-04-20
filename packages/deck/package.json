@@ -33,6 +33,7 @@
     "@sqlrooms/ui": "workspace:*",
     "maplibre-gl": "^5.12.0",
     "react-map-gl": "^8.1.0",
+    "zustand": "^5.0.8",
     "zod": "^4.1.8"
   },
   "devDependencies": {

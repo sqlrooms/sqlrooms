@@ -91,16 +91,13 @@ export default function MapView({className}: {className?: string}) {
   }, [rawData]);
 
   const datasets = useMemo(
-    () =>
-      arrowData
-        ? {
-            earthquakes: {
-              arrowTable: arrowData,
-              geometryColumn: 'geom',
-              geometryEncodingHint: 'wkb' as const,
-            },
-          }
-        : undefined,
+    () => ({
+      earthquakes: {
+        arrowTable: arrowData ?? undefined,
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb' as const,
+      },
+    }),
     [arrowData],
   );
   const dbReady = !isLoading && arrowData !== null;
@@ -209,34 +206,30 @@ export default function MapView({className}: {className?: string}) {
   return (
     <div className={cn('flex h-full w-full', className)}>
       <div className="relative flex-1">
-        {arrowData ? (
-          <DeckJsonMap
-            className="h-full w-full"
-            spec={mapSpec}
-            datasets={datasets}
-            showLegends={false}
-            mapStyle={MAP_STYLES[resolvedTheme]}
-            mapProps={{projection: 'mercator'}}
-            deckProps={{
-              controller: true,
-              viewState,
-              onViewStateChange: ({viewState: next}: any) =>
-                setViewState(next as ViewState),
-              onHover: onHover as any,
-              getTooltip: ({object}: {object?: any}) =>
-                !enableBrushing &&
-                object && {
-                  html: `<div style="font-family:system-ui; font-size:12px; padding:4px;">
-                      <strong>M ${Number(object.Magnitude).toFixed(1)}</strong><br/>
-                      Depth: ${object.Depth}km<br/>
-                      ${String(object.dateLabel ?? '')}
-                    </div>`,
-                },
-            }}
-          />
-        ) : (
-          <div className="h-full w-full bg-slate-100" />
-        )}
+        <DeckJsonMap
+          className="h-full w-full"
+          spec={mapSpec}
+          datasets={datasets}
+          showLegends={false}
+          mapStyle={MAP_STYLES[resolvedTheme]}
+          mapProps={{projection: 'mercator'}}
+          deckProps={{
+            controller: true,
+            viewState,
+            onViewStateChange: ({viewState: next}: any) =>
+              setViewState(next as ViewState),
+            onHover: onHover as any,
+            getTooltip: ({object}: {object?: any}) =>
+              !enableBrushing &&
+              object && {
+                html: `<div style="font-family:system-ui; font-size:12px; padding:4px;">
+                    <strong>M ${Number(object.Magnitude).toFixed(1)}</strong><br/>
+                    Depth: ${object.Depth}km<br/>
+                    ${String(object.dateLabel ?? '')}
+                  </div>`,
+              },
+          }}
+        />
 
         <MapControls
           dbReady={dbReady}
