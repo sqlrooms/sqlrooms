@@ -19,8 +19,21 @@ let nextSqlSourceIdentity = 0;
 const tableIdentities = new WeakMap<arrow.Table, string>();
 const sqlSourceIdentities = new WeakMap<object, string>();
 
+/**
+ * One cached prepared-dataset entry keyed by resolved dataset identity.
+ *
+ * The entry tracks both lifecycle state and eviction metadata:
+ *
+ * - `consumers` records which hook instances currently reference the entry, so
+ *   live entries are not evicted while a map is still using them
+ * - `lastAccessedAt` drives the internal LRU policy for settled entries
+ * - the discriminated union stores either the in-flight preparation promise,
+ *   the prepared dataset, or the terminal error
+ */
 type PreparedDatasetCacheEntry = {
+  /** Consumer ids currently subscribed to this cache entry. */
   consumers: Set<string>;
+  /** Monotonic access counter used to evict the least-recently-used entry. */
   lastAccessedAt: number;
 } & (
   | {status: 'loading'; promise: Promise<void>}
@@ -28,9 +41,36 @@ type PreparedDatasetCacheEntry = {
   | {status: 'error'; error: Error}
 );
 
+/**
+ * Internal store state for the prepared-dataset cache.
+ *
+ * `DeckJsonMap` never talks to this shape directly; `usePreparedDeckDatasets`
+ * uses it as the backing state machine for preparation, reuse, and eviction.
+ */
 type PreparedDatasetStoreState = {
+  /**
+   * Cache keys currently referenced by each hook consumer.
+   *
+   * This lets the store update consumer memberships incrementally when a map's
+   * dataset registry changes, instead of resetting all cache state.
+   */
   consumerKeys: Record<string, string[]>;
+  /**
+   * Prepared entries keyed by resolved dataset identity.
+   *
+   * Keys are based on query/table identity plus geometry options, not dataset
+   * id, so the same prepared result can be reused across multiple maps or
+   * differently named datasets that point at the same underlying data.
+   */
   entries: Record<string, PreparedDatasetCacheEntry>;
+  /**
+   * Ensure a cache entry exists for the given dataset key.
+   *
+   * If an entry already exists, this is a no-op other than touching its LRU
+   * metadata. Otherwise the store creates a `loading` entry, resolves the
+   * source table through DuckDB if needed, runs `prepareDeckDataset(...)`, and
+   * stores the resulting `ready` or `error` state.
+   */
   ensureEntry: (options: {
     cacheKey: string;
     datasetId: string;
@@ -40,12 +80,28 @@ type PreparedDatasetStoreState = {
     ) => Promise<QueryHandle | null>;
     input: DeckDatasetInput;
   }) => void;
+  /**
+   * Remove all subscriptions for one hook consumer.
+   *
+   * This is called when a `DeckJsonMap` instance unmounts so the store can
+   * release the consumer's references and allow now-unreferenced entries to be
+   * evicted later.
+   */
   removeConsumer: (consumerId: string) => void;
+  /**
+   * Reconcile the set of cache keys referenced by one hook consumer.
+   *
+   * This adds the consumer to newly needed entries, removes it from entries no
+   * longer needed, and preserves existing entries in place so unrelated dataset
+   * states do not get reset during prop changes.
+   */
   syncConsumer: (consumerId: string, keys: string[]) => void;
 };
 
 type PreparedDatasetStoreOptions = {
+  /** Maximum number of settled prepared entries to retain before LRU eviction. */
   maxEntries?: number;
+  /** Injectable preparation function for tests and future specialization. */
   prepareDataset?: (options: {
     datasetId: string;
     geometryColumn?: string;
@@ -59,6 +115,12 @@ function nextAccessTimestamp(): number {
   return nextDatasetAccess;
 }
 
+/**
+ * Assign a stable cache identity to an Arrow table object.
+ *
+ * Table identities are stored in a `WeakMap` so this cache does not extend the
+ * lifetime of tables once they are no longer referenced elsewhere.
+ */
 function getTableIdentity(table: arrow.Table): string {
   const cached = tableIdentities.get(table);
   if (cached) {
@@ -71,6 +133,13 @@ function getTableIdentity(table: arrow.Table): string {
   return identity;
 }
 
+/**
+ * Assign a stable cache identity to the current SQL source object.
+ *
+ * For SQL datasets we include the upstream DuckDB connector identity in the
+ * cache key so two rooms using the same SQL text do not accidentally share
+ * prepared results across different database instances.
+ */
 function getSqlSourceIdentity(sqlSourceIdentity: object): string {
   const cached = sqlSourceIdentities.get(sqlSourceIdentity);
   if (cached) {
@@ -87,6 +156,18 @@ function buildGeometryKey(input: DeckDatasetInput): string {
   return `${input.geometryColumn ?? ''}\u0001${input.geometryEncodingHint ?? ''}`;
 }
 
+/**
+ * Build the canonical cache key for one dataset input.
+ *
+ * The key intentionally ignores the user-facing dataset id and instead uses
+ * the underlying data identity:
+ *
+ * - SQL datasets: DuckDB connector identity + SQL text + geometry options
+ * - Arrow datasets: table object identity + geometry options
+ *
+ * Unresolved Arrow inputs (`arrowTable: undefined`) return `undefined`, which
+ * signals that the dataset should remain in `loading` until a table exists.
+ */
 export function resolvePreparedDatasetCacheKey(options: {
   input: DeckDatasetInput;
   sqlSourceIdentity?: object;
@@ -118,6 +199,13 @@ export function resolvePreparedDatasetCacheKey(options: {
   );
 }
 
+/**
+ * Clone a cache entry while replacing its consumer set and refreshing the
+ * access timestamp.
+ *
+ * This keeps the discriminated union shape intact while centralizing the
+ * bookkeeping needed by consumer reconciliation and LRU tracking.
+ */
 function cloneEntryWithConsumers(
   entry: PreparedDatasetCacheEntry,
   consumers: Set<string>,
@@ -150,12 +238,20 @@ function cloneEntryWithConsumers(
   };
 }
 
+/** Mark an entry as recently used without changing its lifecycle payload. */
 function touchEntry(
   entry: PreparedDatasetCacheEntry,
 ): PreparedDatasetCacheEntry {
   return cloneEntryWithConsumers(entry, new Set(entry.consumers));
 }
 
+/**
+ * Evict least-recently-used settled entries when the cache exceeds capacity.
+ *
+ * Only `ready` and `error` entries participate in eviction. `loading` entries
+ * are preserved so in-flight work is not discarded, and referenced entries are
+ * preserved so active maps never lose their prepared data mid-render.
+ */
 function evictLruEntries(
   entries: Record<string, PreparedDatasetCacheEntry>,
   maxEntries: number,
