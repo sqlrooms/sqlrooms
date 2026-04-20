@@ -1,5 +1,5 @@
 import type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
-import type {DeckColorScaleProp, LayerExtensionProps} from '../DeckSpec';
+import type {DeckColorScaleProp, LayerExtensionProps} from '../DeckJsonMapSpec';
 
 function hasExtensionKeys(props: Record<string, unknown>) {
   return '_sqlrooms' in props;

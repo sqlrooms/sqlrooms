@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {useEffect, useMemo} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
-import {DeckJsonMapSpec} from './DeckSpec';
+import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';

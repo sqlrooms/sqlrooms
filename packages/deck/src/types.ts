@@ -2,7 +2,6 @@ import type {DeckProps} from '@deck.gl/core';
 import type * as arrow from 'apache-arrow';
 import type {ReactNode} from 'react';
 import type {MapProps} from 'react-map-gl/maplibre';
-import type {DeckJsonMapSpec} from './DeckSpec';
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
 
 export type {
@@ -11,7 +10,7 @@ export type {
   DeckJsonMapSpec,
   LayerExtensionConfig,
   LayerExtensionProps,
-} from './DeckSpec';
+} from './DeckJsonMapSpec';
 
 export type DeckQueryResultLike = {
   arrowTable?: arrow.Table | undefined;

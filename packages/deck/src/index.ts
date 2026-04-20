@@ -3,33 +3,19 @@
  * @packageDocumentation
  */
 
+export {ColorScaleLegend} from '@sqlrooms/color-scales';
+export {DeckJsonMap} from './DeckJsonMap';
 export {
   DeckColorScaleProp,
+  GeometryEncodingHint as DeckGeometryEncodingHint,
   DeckJsonMapLayerSpec,
   DeckJsonMapSpec,
-  GeometryEncodingHint as DeckGeometryEncodingHint,
   LayerExtensionConfig,
   LayerExtensionProps,
-} from './DeckSpec';
-export {DeckJsonMap} from './DeckMap';
-export {ColorScaleLegend} from '@sqlrooms/color-scales';
+} from './DeckJsonMapSpec';
 export {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 export {prepareDeckDataset} from './prepare/prepareDeckDataset';
 
-export type {
-  DeckArrowTableDatasetInput,
-  DeckDatasetInput,
-  DeckJsonMapProps,
-  DeckQueryResultLike,
-  DeckQueryResultDatasetInput,
-  DeckSqlDatasetInput,
-  PreparedDeckDatasetState,
-} from './types';
-export {
-  isArrowTableDatasetInput,
-  isQueryResultDatasetInput,
-  isSqlDatasetInput,
-} from './types';
 export type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
 export type {
   GeometryEncodingHint,
@@ -38,3 +24,17 @@ export type {
   ResolvedGeometryColumn,
   ResolvedGeometryEncoding,
 } from './prepare/types';
+export {
+  isArrowTableDatasetInput,
+  isQueryResultDatasetInput,
+  isSqlDatasetInput,
+} from './types';
+export type {
+  DeckArrowTableDatasetInput,
+  DeckDatasetInput,
+  DeckJsonMapProps,
+  DeckQueryResultDatasetInput,
+  DeckQueryResultLike,
+  DeckSqlDatasetInput,
+  PreparedDeckDatasetState,
+} from './types';
