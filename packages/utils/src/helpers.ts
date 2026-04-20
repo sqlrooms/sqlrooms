@@ -109,3 +109,28 @@ export const getErrorMessageForDisplay = (e: unknown) => {
   const firstNl = msg.indexOf('\n');
   return firstNl >= 0 ? msg.substring(0, firstNl) : msg;
 };
+
+/**
+ * Formats a duration in milliseconds into a compact human-readable string.
+ * @param ms - Duration in milliseconds
+ * @returns Compact duration string like "3s", "14m 49s", "1h 2m 3s"
+ * @example
+ * ```ts
+ * formatShortDuration(889000); // "14m 49s"
+ * formatShortDuration(3000);   // "3s"
+ * formatShortDuration(3723000); // "1h 2m 3s"
+ * ```
+ */
+export function formatShortDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+
+  return parts.join(' ');
+}

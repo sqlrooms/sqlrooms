@@ -37,6 +37,13 @@ jobs:
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
 
+      - name: Cache for Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-turbo-
+
       - name: Check circular dependencies
         run: pnpm check-circular-deps
 

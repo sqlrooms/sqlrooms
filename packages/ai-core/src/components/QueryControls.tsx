@@ -1,5 +1,5 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
-import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
+import {ArrowUpIcon, LoaderCircleIcon, OctagonXIcon} from 'lucide-react';
 import {
   PropsWithChildren,
   useCallback,
@@ -11,6 +11,7 @@ import {
   ReactNode,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
 
 type QueryControlsProps = PropsWithChildren<{
@@ -83,6 +84,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const isRunning = useStoreWithAi((s) =>
     sessionId ? s.ai.getIsRunning(sessionId) : false,
   );
+  const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
   const prompt = useStoreWithAi((s) =>
     sessionId ? s.ai.getPrompt(sessionId) : '',
   );
@@ -108,12 +110,18 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         !e.metaKey
       ) {
         e.preventDefault();
-        if (!isRunning && sessionId && model && prompt.trim().length) {
+        if (
+          !isSummarizing &&
+          !isRunning &&
+          sessionId &&
+          model &&
+          prompt.trim().length
+        ) {
           runAnalysis(sessionId);
         }
       }
     },
-    [isRunning, sessionId, model, prompt, runAnalysis],
+    [isSummarizing, isRunning, sessionId, model, prompt, runAnalysis],
   );
 
   const canStart = Boolean(sessionId && model && prompt.trim().length);
@@ -154,10 +162,18 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   return (
     <div
       className={cn(
-        'flex w-full flex-col items-center justify-center gap-2',
+        'relative flex w-full flex-col items-center justify-center gap-2',
         className,
       )}
     >
+      {isSummarizing && (
+        <div className="bg-background/70 absolute inset-0 z-10 flex items-center justify-center rounded-md backdrop-blur-sm">
+          <LoaderCircleIcon className="text-muted-foreground mr-2 h-4 w-4 animate-spin" />
+          <span className="text-muted-foreground text-sm">
+            Summarizing conversation…
+          </span>
+        </div>
+      )}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
@@ -165,6 +181,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
             autoResize
             value={prompt}
+            disabled={isSummarizing}
             onChange={(e) => {
               if (sessionId) {
                 setPrompt(sessionId, e.target.value);
@@ -181,13 +198,14 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   {otherChildren}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 gap-2 p-2">
+              <div className="ml-auto flex shrink-0 items-center gap-1 p-2">
+                <ContextUsageIndicator />
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"
                   size="icon"
                   onClick={handleClickRunOrCancel}
-                  disabled={!isRunning && !canStart}
+                  disabled={isSummarizing || (!isRunning && !canStart)}
                 >
                   {isRunning ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>

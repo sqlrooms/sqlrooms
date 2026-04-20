@@ -16,6 +16,7 @@ export {
   formatTimeRelative,
   formatTimestampForFilename,
   getErrorMessageForDisplay,
+  formatShortDuration,
 } from './helpers';
 
 export {isMacOS} from './browser';
