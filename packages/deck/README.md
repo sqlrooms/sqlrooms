@@ -1,5 +1,6 @@
-Deck.gl integration for SQLRooms with external JSON specs, DuckDB-backed datasets,
-and GeoArrow-first rendering paths.
+Deck.gl integration for SQLRooms with JSON-driven map specs, dataset registry
+binding, DuckDB-backed or in-memory Arrow datasets, and GeoArrow-first geometry
+preparation.
 
 ## Installation
 
@@ -7,7 +8,22 @@ and GeoArrow-first rendering paths.
 npm install @sqlrooms/deck @sqlrooms/duckdb @sqlrooms/ui
 ```
 
-## Quick start
+## What This Package Does
+
+`@sqlrooms/deck` is the JSON-spec bridge between SQLRooms data and deck.gl:
+
+- render a DeckGL map from a serializable `DeckJsonMap` spec
+- bind one or more datasets through a `datasets` registry
+- validate SQLRooms-specific layer extensions under `_sqlrooms`
+- prepare geometry for GeoArrow-native layers from
+  [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers)
+  and GeoJSON fallback layers
+- support shared declarative color scales through `@sqlrooms/color-scales`
+
+Use this package when you want deck.gl layers to be driven by a JSON-like spec
+instead of hand-constructing deck layer instances in React code.
+
+## Quick Start
 
 ```tsx
 import {DeckJsonMap} from '@sqlrooms/deck';
@@ -35,7 +51,6 @@ const spec = {
           domain: 'auto',
         },
       },
-      getPosition: '@@=geom',
       getRadius: '@@=6',
       radiusMinPixels: 2,
     },
@@ -60,9 +75,25 @@ export function AirportsMap() {
 }
 ```
 
-## Dataset registry
+## Core Concepts
 
-Use `datasets` for multi-layer and multi-dataset specs:
+### `DeckJsonMap`
+
+`DeckJsonMap` is the main React component exported by this package. It takes:
+
+- `spec`: a JSON-like deck.gl spec object or JSON string
+- `datasets`: a dataset registry keyed by dataset id
+- `deckProps`: runtime-only deck props such as `getTooltip`, `onHover`, `onClick`
+- `mapProps`: runtime-only MapLibre props
+- `showLegends`: whether SQLRooms-generated color legends should render
+
+`spec` stays serializable; callbacks and runtime behavior belong in `deckProps`
+or `mapProps`.
+
+### Dataset Registry
+
+Each SQLRooms-managed layer binds to exactly one dataset through
+`_sqlrooms.dataset`.
 
 ```tsx
 <DeckJsonMap
@@ -74,12 +105,41 @@ Use `datasets` for multi-layer and multi-dataset specs:
 />
 ```
 
-Each SQLRooms-managed layer binds to one dataset via `_sqlrooms.dataset`.
+Dataset ids are layer-binding labels. Internally, prepared geometry is cached
+by the resolved data identity, not by dataset id, so multiple maps or layers
+can reuse the same preparation work when they point at the same table/query.
 
-## Color scales
+### Dataset Input Kinds
 
-Instead of writing long `@@=` color expressions, you can ask SQLRooms to derive
-colors from a field:
+Each dataset entry is one of:
+
+```tsx
+datasets={{
+  airports: {
+    sqlQuery: 'SELECT * FROM airports',
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+  preview: {
+    arrowTable,
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+}}
+```
+
+- `sqlQuery`
+  Runs through the DuckDB slice execution path.
+- `arrowTable`
+  Uses an already available Arrow table.
+
+For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
+data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
+that dataset as loading until a table is provided.
+
+## SQLRooms Layer Extensions
+
+SQLRooms-specific layer metadata lives under `_sqlrooms`:
 
 ```tsx
 {
@@ -87,18 +147,44 @@ colors from a field:
   id: 'earthquakes',
   _sqlrooms: {
     dataset: 'earthquakes',
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
     colorScale: {
       field: 'Magnitude',
       type: 'sequential',
       scheme: 'YlOrRd',
       domain: 'auto',
-      clamp: true,
     },
   },
 }
 ```
 
-Discrete numeric palettes are available too:
+Currently supported SQLRooms extensions are:
+
+- `dataset`: binds the layer to one dataset id
+- `geometryColumn`: overrides geometry column detection for that layer
+- `geometryEncodingHint`: helps geometry detection when the source table needs it
+- `colorScale`: declarative color mapping from `@sqlrooms/color-scales`
+
+The surrounding deck spec remains intentionally loose so normal deck.gl JSON
+props still pass through, while `_sqlrooms` is validated strictly.
+
+## Color Scales and Legends
+
+You can ask SQLRooms to derive colors from a field instead of writing long
+`@@=` color expressions:
+
+```tsx
+colorScale: {
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  clamp: true,
+}
+```
+
+Discrete numeric palettes are supported too:
 
 ```tsx
 colorScale: {
@@ -110,8 +196,14 @@ colorScale: {
 }
 ```
 
-By default, `DeckJsonMap` renders a small legend overlay for layers that use
-`_sqlrooms.colorScale`. To hide it or override the title:
+`DeckJsonMap` renders SQLRooms-generated legends by default for layers that use
+`_sqlrooms.colorScale`. To disable them globally:
+
+```tsx
+<DeckJsonMap spec={spec} datasets={datasets} showLegends={false} />
+```
+
+To override the title:
 
 ```tsx
 colorScale: {
@@ -125,52 +217,44 @@ colorScale: {
 }
 ```
 
-or
+Supported scale types come from `@sqlrooms/color-scales`:
 
-```tsx
-<DeckJsonMap spec={spec} datasets={datasets} showLegends={false} />
-```
+- `sequential`
+- `diverging`
+- `quantize`
+- `quantile`
+- `threshold`
+- `categorical`
 
-Supported scale types:
+When `domain` is set to `'auto'`, the domain is computed from the currently
+bound dataset, so colors may shift as filters change. Use explicit domains when
+you want colors to stay stable across filtering.
 
-- `sequential`: continuous sequential/cyclical interpolators from `d3-scale-chromatic`
-- `diverging`: continuous diverging interpolators from `d3-scale-chromatic`
-- `quantize`: equal-width discrete bins using numeric scheme families such as `Blues`, `PuBuGn`, `RdYlBu`
-- `quantile`: equal-count discrete bins using numeric scheme families
-- `threshold`: explicit threshold bins using numeric scheme families
-- `categorical`: categorical palettes such as `Category10`, `Observable10`, `Tableau10`, `Set3`
+## Geometry Preparation
 
-When `domain` is set to `'auto'`, the scale domain is computed from the currently
-bound dataset, so colors may shift as filters change.
+`prepareDeckDataset(...)` is the deck-specific preparation step behind the
+scenes. It accepts resolved Arrow tables with geometry stored as:
 
-## Dataset input kinds
+- native GeoArrow
+- WKB / GeoArrow WKB
+- WKT / GeoArrow WKT
 
-Each dataset entry uses its own fields as the discriminator:
+It then produces canonical deck-facing geometry outputs for:
 
-```tsx
-datasets={{
-  airports: {
-    sqlQuery: 'SELECT * FROM airports',
-  },
-  preview: {
-    arrowTable,
-  },
-}}
-```
+- GeoArrow-native layers such as `GeoArrowScatterplotLayer`
+- GeoJSON-binary fallback layers such as `GeoJsonLayer`
 
-For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
-data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
-that dataset as loading until a table is provided.
+This work is cached internally in a module-global prepared dataset store. That
+cache is separate from any upstream query cache:
 
-## Runtime props
+- Mosaic-driven queries already benefit from Mosaic's own query cache
+- DuckDB SQL datasets still use the DuckDB slice execution path
 
-Keep serializable map specs in `spec`, then pass runtime behavior separately:
+Deck caches only the expensive geometry preparation layer on top.
 
-- use `deckProps` for callbacks like `onHover`, `onClick`, and `getTooltip`
-- use `mapProps` for MapLibre props such as `projection`
-- use `children` for map controls and popups rendered inside the underlying map
+## Supported Layers
 
-## Supported layers
+The current curated layer set is:
 
 - `GeoArrowScatterplotLayer`
 - `GeoArrowPathLayer`
@@ -178,9 +262,23 @@ Keep serializable map specs in `spec`, then pass runtime behavior separately:
 - `GeoJsonLayer`
 
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
-back to geometry decoding and binary GeoJSON preparation, with point promotion
-available for point-focused GeoArrow layers.
+back to decoding and GeoJSON-binary preparation, with point promotion available
+for point-focused GeoArrow layers.
 
-When querying DuckDB spatial `GEOMETRY` columns directly, convert them first with
-`ST_AsWKB(...)` or `ST_AsText(...)`. DuckDB's internal geometry payload is not
-the same as standard WKB.
+The GeoArrow layer implementations themselves come from
+[`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers).
+
+When querying DuckDB spatial `GEOMETRY` columns directly, convert them first
+with `ST_AsWKB(...)` or `ST_AsText(...)`. DuckDB's internal geometry payload is
+not the same as standard WKB.
+
+## Runtime Props and Children
+
+Keep the spec serializable, then pass runtime behavior separately:
+
+- `deckProps` for deck callbacks such as `getTooltip`, `onHover`, `onClick`
+- `mapProps` for MapLibre props such as `projection`
+- `children` for controls, overlays, and popups rendered inside the map
+
+This lets the spec stay stable for storage, validation, and future AI-assisted
+generation while still supporting interactive React behavior at runtime.
