@@ -145,11 +145,6 @@ function renderDatasetStatusOverlay(
 export function DeckJsonMap({
   spec,
   datasets,
-  sqlQuery,
-  arrowTable,
-  queryResult,
-  geometryColumn,
-  geometryEncodingHint,
   mapStyle,
   deckProps,
   mapProps,
@@ -158,23 +153,8 @@ export function DeckJsonMap({
   children,
 }: DeckJsonMapProps) {
   const normalizedDatasets = useMemo(
-    () =>
-      normalizeDatasets({
-        datasets,
-        sqlQuery,
-        arrowTable,
-        queryResult,
-        geometryColumn,
-        geometryEncodingHint,
-      }),
-    [
-      datasets,
-      sqlQuery,
-      arrowTable,
-      queryResult,
-      geometryColumn,
-      geometryEncodingHint,
-    ],
+    () => normalizeDatasets(datasets),
+    [datasets],
   );
   const datasetIds = useMemo(
     () => Object.keys(normalizedDatasets),

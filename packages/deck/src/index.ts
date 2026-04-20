@@ -17,10 +17,18 @@ export {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 export {prepareDeckDataset} from './prepare/prepareDeckDataset';
 
 export type {
+  DeckArrowTableDatasetInput,
   DeckDatasetInput,
   DeckJsonMapProps,
   DeckQueryResultLike,
+  DeckQueryResultDatasetInput,
+  DeckSqlDatasetInput,
   PreparedDeckDatasetState,
+} from './types';
+export {
+  isArrowTableDatasetInput,
+  isQueryResultDatasetInput,
+  isSqlDatasetInput,
 } from './types';
 export type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
 export type {

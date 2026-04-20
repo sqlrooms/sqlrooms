@@ -1,6 +1,10 @@
 import {useEffect, useState} from 'react';
 import {useStoreWithDuckDb} from '@sqlrooms/duckdb';
-import type {DeckDatasetInput, PreparedDeckDatasetState} from '../types';
+import {
+  isSqlDatasetInput,
+  type DeckDatasetInput,
+  type PreparedDeckDatasetState,
+} from '../types';
 import {resolveArrowTable} from './normalizeDatasets';
 import {prepareDeckDataset} from '../prepare/prepareDeckDataset';
 
@@ -8,18 +12,18 @@ export function usePreparedDeckDatasets(
   datasets: Record<string, DeckDatasetInput>,
 ): Record<string, PreparedDeckDatasetState> {
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
-  const [states, setStates] = useState<Record<string, PreparedDeckDatasetState>>(
-    {},
-  );
+  const [states, setStates] = useState<
+    Record<string, PreparedDeckDatasetState>
+  >({});
 
   useEffect(() => {
     let cancelled = false;
 
     setStates(
       Object.fromEntries(
-        Object.entries(datasets).map(([datasetId, input]) => [
+        Object.keys(datasets).map((datasetId) => [
           datasetId,
-          input.sqlQuery ? {status: 'loading'} : {status: 'loading'},
+          {status: 'loading'},
         ]),
       ),
     );
@@ -28,16 +32,20 @@ export function usePreparedDeckDatasets(
       const run = async () => {
         try {
           let table = resolveArrowTable(input);
-          if (!table && input.sqlQuery) {
+          if (!table && isSqlDatasetInput(input)) {
             const queryHandle = await executeSql(input.sqlQuery);
             if (!queryHandle) {
-              throw new Error(`Query for dataset "${datasetId}" was cancelled.`);
+              throw new Error(
+                `Query for dataset "${datasetId}" was cancelled.`,
+              );
             }
             table = await queryHandle;
           }
 
           if (!table) {
-            throw new Error(`Dataset "${datasetId}" could not resolve an Arrow table.`);
+            throw new Error(
+              `Dataset "${datasetId}" could not resolve an Arrow table.`,
+            );
           }
 
           const prepared = prepareDeckDataset({
@@ -59,7 +67,8 @@ export function usePreparedDeckDatasets(
               ...current,
               [datasetId]: {
                 status: 'error',
-                error: error instanceof Error ? error : new Error(String(error)),
+                error:
+                  error instanceof Error ? error : new Error(String(error)),
               },
             }));
           }

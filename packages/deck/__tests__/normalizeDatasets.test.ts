@@ -1,57 +1,82 @@
 import {Table, vectorFromArray} from 'apache-arrow';
-import {normalizeDatasets, resolveArrowTable} from '../src/datasets/normalizeDatasets';
+import {
+  normalizeDatasets,
+  resolveArrowTable,
+} from '../src/datasets/normalizeDatasets';
+import {
+  isArrowTableDatasetInput,
+  isQueryResultDatasetInput,
+  isSqlDatasetInput,
+} from '../src/types';
 
 describe('normalizeDatasets', () => {
-  it('normalizes single-dataset props to datasets.default', () => {
+  it('normalizes arrowTable dataset entries', () => {
     const table = new Table({
       value: vectorFromArray([1, 2, 3]),
     });
 
     const datasets = normalizeDatasets({
-      arrowTable: table,
-      geometryColumn: 'geom',
+      default: {
+        source: 'arrowTable',
+        arrowTable: table,
+        geometryColumn: 'geom',
+      },
     });
 
     expect(datasets).toEqual({
       default: {
+        source: 'arrowTable',
         arrowTable: table,
         geometryColumn: 'geom',
         geometryEncodingHint: undefined,
-        queryResult: undefined,
-        sqlQuery: undefined,
       },
     });
     expect(resolveArrowTable(datasets.default!)).toBe(table);
+    expect(isArrowTableDatasetInput(datasets.default!)).toBe(true);
   });
 
-  it('rejects dataset entries that define multiple input sources', () => {
-    const table = new Table({
-      value: vectorFromArray([1]),
+  it('normalizes sql dataset entries', () => {
+    const datasets = normalizeDatasets({
+      earthquakes: {
+        source: 'sql',
+        sqlQuery: 'select 1',
+      },
     });
 
-    expect(() =>
-      normalizeDatasets({
-        datasets: {
-          earthquakes: {
-            sqlQuery: 'select 1',
-            arrowTable: table,
-          },
-        },
-      }),
-    ).toThrow(
-      'Dataset "earthquakes" must provide exactly one of sqlQuery, arrowTable, or queryResult.',
-    );
+    expect(isSqlDatasetInput(datasets.earthquakes!)).toBe(true);
   });
 
   it('rejects query results that do not expose an arrowTable', () => {
     expect(() =>
       normalizeDatasets({
-        datasets: {
-          earthquakes: {
-            queryResult: {},
-          },
+        earthquakes: {
+          source: 'queryResult',
+          queryResult: {},
         },
       }),
-    ).toThrow('Dataset "earthquakes" queryResult did not expose an arrowTable.');
+    ).toThrow(
+      'Dataset "earthquakes" queryResult did not expose an arrowTable.',
+    );
+  });
+
+  it('normalizes queryResult dataset entries', () => {
+    const table = new Table({
+      value: vectorFromArray([1]),
+    });
+    const datasets = normalizeDatasets({
+      earthquakes: {
+        source: 'queryResult',
+        queryResult: {arrowTable: table},
+      },
+    });
+
+    expect(isQueryResultDatasetInput(datasets.earthquakes!)).toBe(true);
+    expect(resolveArrowTable(datasets.earthquakes!)).toBe(table);
+  });
+
+  it('rejects empty dataset registries', () => {
+    expect(() => normalizeDatasets({})).toThrow(
+      'DeckJsonMap requires at least one dataset entry.',
+    );
   });
 });

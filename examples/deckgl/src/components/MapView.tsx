@@ -75,6 +75,7 @@ export const MapView = () => {
   const datasets = useMemo<Record<string, DeckDatasetInput>>(
     () => ({
       airports: {
+        source: 'sql',
         sqlQuery: `
           SELECT
             name,
@@ -88,6 +89,7 @@ export const MapView = () => {
         geometryEncodingHint: 'wkb',
       },
       majorAirports: {
+        source: 'sql',
         sqlQuery: `
           SELECT
             name,

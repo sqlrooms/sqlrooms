@@ -17,13 +17,30 @@ export type DeckQueryResultLike = {
   arrowTable?: arrow.Table | undefined;
 };
 
-export type DeckDatasetInput = {
-  sqlQuery?: string;
-  arrowTable?: arrow.Table;
-  queryResult?: DeckQueryResultLike;
+type DeckDatasetBase = {
   geometryColumn?: string;
   geometryEncodingHint?: GeometryEncodingHint;
 };
+
+export type DeckSqlDatasetInput = DeckDatasetBase & {
+  source: 'sql';
+  sqlQuery: string;
+};
+
+export type DeckArrowTableDatasetInput = DeckDatasetBase & {
+  source: 'arrowTable';
+  arrowTable: arrow.Table;
+};
+
+export type DeckQueryResultDatasetInput = DeckDatasetBase & {
+  source: 'queryResult';
+  queryResult: DeckQueryResultLike;
+};
+
+export type DeckDatasetInput =
+  | DeckSqlDatasetInput
+  | DeckArrowTableDatasetInput
+  | DeckQueryResultDatasetInput;
 
 export type PreparedDeckDatasetState =
   | {status: 'loading'}
@@ -32,12 +49,7 @@ export type PreparedDeckDatasetState =
 
 export type DeckJsonMapProps = {
   spec: string | Record<string, unknown>;
-  datasets?: Record<string, DeckDatasetInput>;
-  sqlQuery?: string;
-  arrowTable?: arrow.Table;
-  queryResult?: DeckQueryResultLike;
-  geometryColumn?: string;
-  geometryEncodingHint?: GeometryEncodingHint;
+  datasets: Record<string, DeckDatasetInput>;
   mapStyle?: string;
   deckProps?: Partial<DeckProps>;
   mapProps?: Partial<MapProps>;
@@ -45,3 +57,21 @@ export type DeckJsonMapProps = {
   className?: string;
   children?: ReactNode;
 };
+
+export function isSqlDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckSqlDatasetInput {
+  return input.source === 'sql';
+}
+
+export function isArrowTableDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckArrowTableDatasetInput {
+  return input.source === 'arrowTable';
+}
+
+export function isQueryResultDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckQueryResultDatasetInput {
+  return input.source === 'queryResult';
+}

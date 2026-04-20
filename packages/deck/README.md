@@ -48,6 +48,7 @@ export function AirportsMap() {
       spec={spec}
       datasets={{
         airports: {
+          source: 'sql',
           sqlQuery:
             'SELECT name, abbrev, scalerank, ST_AsWKB(geom) AS geom FROM airports',
           geometryColumn: 'geom',
@@ -68,8 +69,8 @@ Use `datasets` for multi-layer and multi-dataset specs:
 <DeckJsonMap
   spec={spec}
   datasets={{
-    earthquakes: {sqlQuery: 'SELECT * FROM earthquakes'},
-    faults: {sqlQuery: 'SELECT * FROM faults'},
+    earthquakes: {source: 'sql', sqlQuery: 'SELECT * FROM earthquakes'},
+    faults: {source: 'sql', sqlQuery: 'SELECT * FROM faults'},
   }}
 />
 ```
@@ -143,10 +144,26 @@ Supported scale types:
 When `domain` is set to `'auto'`, the scale domain is computed from the currently
 bound dataset, so colors may shift as filters change.
 
-## Single-dataset sugar
+## Dataset input kinds
 
-For the common case, `DeckJsonMap` accepts `sqlQuery`, `arrowTable`, or `queryResult`
-directly and treats them as `datasets.default`.
+Each dataset entry declares its source explicitly:
+
+```tsx
+datasets={{
+  airports: {
+    source: 'sql',
+    sqlQuery: 'SELECT * FROM airports',
+  },
+  preview: {
+    source: 'arrowTable',
+    arrowTable,
+  },
+  cached: {
+    source: 'queryResult',
+    queryResult,
+  },
+}}
+```
 
 ## Runtime props
 
