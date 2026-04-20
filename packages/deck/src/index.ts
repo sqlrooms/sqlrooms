@@ -7,12 +7,12 @@ export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
 export {DeckJsonMap} from './DeckJsonMap';
 export {
+  ColorScaleFunction,
   GeometryEncodingHint as DeckGeometryEncodingHint,
   DeckJsonMapLayerSpec,
   DeckJsonMapSpec,
   LayerBindingConfig,
   LayerBindingProps,
-  SqlroomsColorScaleFunction,
 } from './DeckJsonMapSpec';
 export {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 export {prepareDeckDataset} from './prepare/prepareDeckDataset';

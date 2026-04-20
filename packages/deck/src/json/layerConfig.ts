@@ -1,8 +1,8 @@
 import type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
 import type {
+  ColorScaleFunction,
   LayerBindingConfig,
   LayerBindingProps,
-  SqlroomsColorScaleFunction,
 } from '../DeckJsonMapSpec';
 
 function hasExtensionKeys(props: Record<string, unknown>) {
@@ -76,13 +76,13 @@ export function resolveConfiguredColumn(
   return typeof value === 'string' && value ? value : undefined;
 }
 
-export function isSqlroomsColorScaleFunction(
+export function isColorScaleFunction(
   value: unknown,
-): value is SqlroomsColorScaleFunction {
+): value is ColorScaleFunction {
   return Boolean(
     value &&
     typeof value === 'object' &&
-    (value as {'@@function'?: unknown})['@@function'] === 'sqlroomsColorScale',
+    (value as {'@@function'?: unknown})['@@function'] === 'colorScale',
   );
 }
 
@@ -91,7 +91,7 @@ export function resolveColorScale(
   key?: string,
 ): ColorScaleConfig | undefined {
   const value = key ? props[key] : undefined;
-  return isSqlroomsColorScaleFunction(value) ? value : undefined;
+  return isColorScaleFunction(value) ? value : undefined;
 }
 
 export function resolveColorLegend(

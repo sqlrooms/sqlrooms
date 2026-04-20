@@ -2,6 +2,7 @@ import {JSONConfiguration} from '@deck.gl/json';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
+import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
 import {compileColorScale} from './compileColorScale';
 import {
   DEFAULT_DECK_JSON_CLASSES,
@@ -17,10 +18,6 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
-import {
-  createSqlroomsColorScaleMarker,
-  getSqlroomsColorScale,
-} from './sqlroomsColorScaleFunction';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -37,7 +34,7 @@ function applyColorScale(options: {
   table: import('apache-arrow').Table;
 }) {
   const {props, table} = options;
-  const resolved = getSqlroomsColorScale(props);
+  const resolved = getColorScale(props);
   if (!resolved) {
     return props;
   }
@@ -153,8 +150,7 @@ export function createDeckJsonConfiguration(
     enumerations: DEFAULT_DECK_JSON_ENUMERATIONS,
     constants: DEFAULT_DECK_JSON_CONSTANTS,
     functions: {
-      sqlroomsColorScale: (props: ColorScaleConfig) =>
-        createSqlroomsColorScaleMarker(props),
+      colorScale: (props: ColorScaleConfig) => createColorScaleMarker(props),
     },
     // TODO(geoarrow-upgrade): In 0.3.x we preserve raw `@@=` strings here because
     // `@deck.gl/json` would otherwise eagerly compile them into row-based accessors

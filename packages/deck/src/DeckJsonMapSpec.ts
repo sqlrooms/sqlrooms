@@ -4,15 +4,13 @@ import {z} from 'zod';
 export const GeometryEncodingHint = z.enum(['geoarrow', 'wkb', 'wkt']);
 export type GeometryEncodingHint = z.infer<typeof GeometryEncodingHint>;
 
-export const SqlroomsColorScaleFunction = z.intersection(
+export const ColorScaleFunction = z.intersection(
   z.object({
-    '@@function': z.literal('sqlroomsColorScale'),
+    '@@function': z.literal('colorScale'),
   }),
   ColorScaleConfig,
 );
-export type SqlroomsColorScaleFunction = z.infer<
-  typeof SqlroomsColorScaleFunction
->;
+export type ColorScaleFunction = z.infer<typeof ColorScaleFunction>;
 
 export const LayerBindingConfig = z.object({
   dataset: z.string().min(1).optional(),
@@ -35,7 +33,7 @@ const JsonAccessor = z.union([
   z.number(),
   RGBAColor,
   z.array(z.number()),
-  SqlroomsColorScaleFunction,
+  ColorScaleFunction,
 ]);
 
 // Keep the layer spec loose for now because `DeckJsonMap` accepts deck.gl JSON as an

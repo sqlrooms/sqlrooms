@@ -207,7 +207,7 @@ describe('createDeckJsonConfiguration', () => {
     ).toEqual([255, 120, 60, 180]);
   });
 
-  it('injects sqlroomsColorScale accessors for GeoArrow layers', () => {
+  it('injects colorScale accessors for GeoArrow layers', () => {
     const table = createPointTable();
     const converter = createConverter({
       earthquakes: {
@@ -222,7 +222,7 @@ describe('createDeckJsonConfiguration', () => {
           '@@type': 'GeoArrowScatterplotLayer',
           id: 'earthquakes',
           getFillColor: {
-            '@@function': 'sqlroomsColorScale',
+            '@@function': 'colorScale',
             field: 'magnitude',
             type: 'sequential',
             scheme: 'YlOrRd',
@@ -299,7 +299,7 @@ describe('createDeckJsonConfiguration', () => {
     );
   });
 
-  it('keeps explicit getFillColor while still compiling getLineColor sqlroomsColorScale', () => {
+  it('keeps explicit getFillColor while still compiling getLineColor colorScale', () => {
     const table = createPointTable();
     const converter = createConverter({
       earthquakes: {
@@ -315,7 +315,7 @@ describe('createDeckJsonConfiguration', () => {
           id: 'earthquakes',
           getFillColor: [1, 2, 3, 4],
           getLineColor: {
-            '@@function': 'sqlroomsColorScale',
+            '@@function': 'colorScale',
             field: 'magnitude',
             type: 'sequential',
             scheme: 'YlOrRd',

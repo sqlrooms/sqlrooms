@@ -133,7 +133,7 @@ export default function MapView({className}: {className?: string}) {
             dataset: 'earthquakes',
           },
           getFillColor: {
-            '@@function': 'sqlroomsColorScale',
+            '@@function': 'colorScale',
             ...colorScale,
           },
           filled: true,

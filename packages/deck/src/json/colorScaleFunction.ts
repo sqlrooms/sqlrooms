@@ -1,27 +1,25 @@
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
-import {isSqlroomsColorScaleFunction} from './layerConfig';
+import {isColorScaleFunction} from './layerConfig';
 
 const SQLROOMS_COLOR_SCALE_MARKER = Symbol.for(
   '@sqlrooms/deck/sqlrooms-color-scale',
 );
 
-export type SqlroomsColorScaleMarker = {
+export type ColorScaleMarker = {
   colorScale: ColorScaleConfig;
   [SQLROOMS_COLOR_SCALE_MARKER]: true;
 };
 
-export function createSqlroomsColorScaleMarker(
+export function createColorScaleMarker(
   value: ColorScaleConfig,
-): SqlroomsColorScaleMarker {
+): ColorScaleMarker {
   return {
     colorScale: value,
     [SQLROOMS_COLOR_SCALE_MARKER]: true,
   };
 }
 
-export function isSqlroomsColorScaleMarker(
-  value: unknown,
-): value is SqlroomsColorScaleMarker {
+export function isColorScaleMarker(value: unknown): value is ColorScaleMarker {
   return Boolean(
     value &&
     typeof value === 'object' &&
@@ -31,20 +29,20 @@ export function isSqlroomsColorScaleMarker(
   );
 }
 
-export function getSqlroomsColorScale(
+export function getColorScale(
   props: Record<string, unknown>,
 ):
   | {propName: 'getFillColor' | 'getLineColor'; colorScale: ColorScaleConfig}
   | undefined {
   for (const propName of ['getFillColor', 'getLineColor'] as const) {
     const value = props[propName];
-    if (isSqlroomsColorScaleMarker(value)) {
+    if (isColorScaleMarker(value)) {
       return {
         propName,
         colorScale: value.colorScale,
       };
     }
-    if (isSqlroomsColorScaleFunction(value)) {
+    if (isColorScaleFunction(value)) {
       return {
         propName,
         colorScale: value,

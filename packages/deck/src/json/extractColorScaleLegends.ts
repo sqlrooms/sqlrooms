@@ -1,8 +1,8 @@
 import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
+import {getColorScale} from './colorScaleFunction';
 import {buildColorScaleLegend} from './compileColorScale';
 import {resolveColorLegend, resolveDatasetId} from './layerConfig';
-import {getSqlroomsColorScale} from './sqlroomsColorScaleFunction';
 
 function resolveLegendTitle(
   layerProps: Record<string, unknown>,
@@ -42,7 +42,7 @@ export function extractColorScaleLegends(options: {
     const layerProps = layer as Record<string, unknown>;
     const extensionProps = layerProps as LayerBindingProps &
       Record<string, unknown>;
-    const resolvedColorScale = getSqlroomsColorScale(layerProps);
+    const resolvedColorScale = getColorScale(layerProps);
     if (!resolvedColorScale) {
       continue;
     }

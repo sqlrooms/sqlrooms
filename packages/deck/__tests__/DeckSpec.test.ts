@@ -18,7 +18,7 @@ describe('DeckJsonMapSpec', () => {
             dataset: 'earthquakes',
           },
           getFillColor: {
-            '@@function': 'sqlroomsColorScale',
+            '@@function': 'colorScale',
             field: 'Magnitude',
             type: 'sequential',
             scheme: 'YlOrBr',
@@ -32,14 +32,14 @@ describe('DeckJsonMapSpec', () => {
     expect(parsed.layers?.[0]?._sqlroomsBinding?.dataset).toBe('earthquakes');
   });
 
-  it('rejects invalid sqlroomsColorScale functions', () => {
+  it('rejects invalid colorScale functions', () => {
     expect(() =>
       DeckJsonMapSpec.parse({
         layers: [
           {
             '@@type': 'GeoArrowScatterplotLayer',
             getFillColor: {
-              '@@function': 'sqlroomsColorScale',
+              '@@function': 'colorScale',
               field: 'Magnitude',
               type: 'sequential',
               scheme: 'NotAScheme',
