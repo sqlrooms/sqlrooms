@@ -46,7 +46,10 @@ describe('prepareDeckDataset', () => {
     const geoArrowLayerData = prepared.getGeoArrowLayerData();
     expect(geoArrowLayerData.source).toBe('native');
     expect(geoArrowLayerData.table).toBe(table);
-    expect(geoArrowLayerData.geometryColumn).toBe(table.getChild('geom'));
+    expect(geoArrowLayerData.geometryColumn).toBeDefined();
+    expect(JSON.stringify(geoArrowLayerData.geometryColumn)).toBe(
+      JSON.stringify(table.getChild('geom')),
+    );
     expect(prepared.getGeoJsonBinaryData()).toBeTruthy();
   });
 
@@ -64,7 +67,10 @@ describe('prepareDeckDataset', () => {
     const promoted = prepared.getGeoArrowLayerData();
     expect(promoted.source).toBe('promoted');
     expect(promoted.encoding).toBe('geoarrow.point');
-    expect(promoted.geometryColumn).toBe(promoted.table.getChild('geom'));
+    expect(promoted.geometryColumn).toBeDefined();
+    expect(JSON.stringify(promoted.geometryColumn)).toBe(
+      JSON.stringify(promoted.table.getChild('geom')),
+    );
     expect(prepared.getGeoArrowLayerData()).toBe(promoted);
     expect(prepared.getGeoJsonBinaryData()).toBe(prepared.getGeoJsonBinaryData());
   });

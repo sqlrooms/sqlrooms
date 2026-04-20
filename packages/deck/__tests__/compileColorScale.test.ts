@@ -2,6 +2,7 @@ import {
   Field,
   FixedSizeList,
   Float64,
+  makeVector,
   Schema,
   Table,
   Utf8,
@@ -46,10 +47,15 @@ function createEmptyNumericScaleTable() {
   const magnitudeField = new Field('magnitude', new Float64());
   const schema = new Schema([pointField, magnitudeField]);
 
-  return new Table(schema, {
-    geom: vectorFromArray([], pointField.type),
-    magnitude: vectorFromArray([], new Float64()),
+  const geomVec = makeVector({
+    type: pointField.type,
+    length: 0,
+    nullCount: 0,
+    children: [{type: new Float64(), length: 0, nullCount: 0}],
   });
+  const magVec = makeVector({type: new Float64(), length: 0, nullCount: 0});
+
+  return new Table(schema, [geomVec, magVec]);
 }
 
 describe('compileColorScale', () => {
