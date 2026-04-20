@@ -1,14 +1,7 @@
 import {
-  isLayoutMosaicNode,
-  isLayoutMosaicPanelSubNode,
-  isLayoutMosaicSplitSubNode,
   isLayoutNodeKey,
   isLayoutSplitNode,
-  LayoutConfig,
-  LayoutMosaicSubNode,
   LayoutNode,
-  LayoutSplitNode,
-  LayoutTabsNode,
   MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 import {
@@ -19,28 +12,23 @@ import {
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import {MosaicNode} from 'react-mosaic-component';
 import {StateCreator} from 'zustand';
 import {
   createLayoutPanelCommands,
   LAYOUT_COMMAND_OWNER,
 } from './layout-commands';
-import {
-  findNodeById,
-  makeLayoutStack,
-  removeLayoutNodeByKey,
-} from './mosaic/mosaic-utils';
-import {createTabActions} from './tab-actions';
-import type {Panels, PanelDefinition} from './types';
 import type {
+  CreateLayoutSliceProps,
   LayoutSliceConfig,
   LayoutSliceState,
-  CreateLayoutSliceProps,
 } from './layout-slice-types';
+import {findNodeById, removeLayoutNodeByKey} from './layout-tree';
+import {createTabActions} from './tab-actions';
+import type {PanelDefinition} from './types';
 
 // Re-export types for convenience
-export type {LayoutSliceConfig, LayoutSliceState, CreateLayoutSliceProps};
 export {LayoutSliceConfig as LayoutSliceConfigSchema} from './layout-slice-types';
+export type {CreateLayoutSliceProps, LayoutSliceConfig, LayoutSliceState};
 
 export function createDefaultLayoutConfig(): LayoutSliceConfig {
   return MAIN_VIEW;
@@ -115,7 +103,7 @@ export function createLayoutSlice({
                   const panelDef = draft.layout.panels[panel];
                   const panelInfo =
                     typeof panelDef === 'function'
-                      ? panelDef({panelId: panel, params: {}})
+                      ? panelDef({panelId: panel})
                       : panelDef;
                   const placement = panelInfo?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';
@@ -135,17 +123,29 @@ export function createLayoutSlice({
                   ) {
                     root.children[childIdx] = panel;
                   } else {
-                    const panelNode = {node: panel, weight: 1};
-                    const restNode = {
-                      node: draft.layout.config as MosaicNode<string> | null,
-                      weight: 3,
+                    const newPanelNode: LayoutNode = {
+                      type: 'panel',
+                      id: panel,
+                      defaultSize: '25%',
                     };
-                    draft.layout.config = makeLayoutStack(
-                      placement === 'sidebar-bottom' ? 'column' : 'row',
-                      side === 'first'
-                        ? [panelNode, restNode]
-                        : [restNode, panelNode],
-                    ) as LayoutNode | null;
+                    const existingLayout =
+                      draft.layout.config &&
+                      !isLayoutNodeKey(draft.layout.config)
+                        ? {
+                            ...draft.layout.config,
+                            defaultSize: '75%',
+                          }
+                        : draft.layout.config;
+                    draft.layout.config = {
+                      type: 'split',
+                      id: 'root-layout',
+                      direction:
+                        placement === 'sidebar-bottom' ? 'column' : 'row',
+                      children:
+                        side === 'first'
+                          ? [newPanelNode, existingLayout ?? MAIN_VIEW]
+                          : [existingLayout ?? MAIN_VIEW, newPanelNode],
+                    };
                   }
                 }),
               );
@@ -184,43 +184,6 @@ export function createLayoutSlice({
                 if (!result || !isLayoutSplitNode(result.node)) return;
                 if (!result.node.children.includes(panelId)) {
                   result.node.children.push(panelId);
-                }
-              }),
-            );
-          },
-
-          addChildToMosaic: (
-            mosaicId: string,
-            panelId: LayoutMosaicSubNode,
-          ) => {
-            set((state) =>
-              produce(state, (draft) => {
-                const result = findNodeById(draft.layout.config, mosaicId);
-                if (!result || !isLayoutMosaicNode(result.node)) {
-                  return;
-                }
-
-                const dir = result.node.direction ?? 'row';
-
-                if (!result.node.layout) {
-                  result.node.layout = panelId;
-                  return;
-                }
-
-                if (isLayoutMosaicPanelSubNode(result.node.layout)) {
-                  result.node.layout = {
-                    type: 'split',
-                    direction: dir,
-                    children: [result.node.layout, panelId],
-                  };
-
-                  return;
-                }
-
-                if (isLayoutMosaicSplitSubNode(result.node.layout)) {
-                  result.node.layout.children.push(panelId);
-                  result.node.layout.splitPercentages = undefined;
-                  return;
                 }
               }),
             );

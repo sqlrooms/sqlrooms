@@ -3,7 +3,6 @@ import {
   LayoutNode,
   LayoutNodeSize,
 } from '@sqlrooms/layout-config';
-import {MOSAIC_NODE_KEY_PREFIX} from '../mosaic/mosaic-utils';
 
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
@@ -11,7 +10,7 @@ export function convertLayoutNodeSizeToStyle(
 ): React.CSSProperties {
   return direction === 'column'
     ? {
-        height: (size.defaultSize ?? 'auto') as string | number | undefined,
+        height: size.defaultSize ?? 'auto',
         minHeight: size.minSize,
         maxHeight: size.maxSize,
       }
@@ -20,14 +19,6 @@ export function convertLayoutNodeSizeToStyle(
         minWidth: size.minSize,
         maxWidth: size.maxSize,
       };
-}
-
-export function extractPanelId(tabId: string): string {
-  if (tabId.startsWith(MOSAIC_NODE_KEY_PREFIX)) {
-    return tabId.slice(MOSAIC_NODE_KEY_PREFIX.length);
-  }
-
-  return tabId;
 }
 
 export function getLayoutNodeSize(node: LayoutNode): LayoutNodeSize {

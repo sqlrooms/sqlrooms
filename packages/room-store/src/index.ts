@@ -114,18 +114,16 @@ export {
   StandardLoadFileOptions,
   StandardLoadOptions,
   UrlDataSource,
-  // New layout names
-  LayoutDirection,
   LayoutNodeKey,
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
-  LayoutMosaicNode,
   LayoutNode,
   LayoutConfig,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
-  isLayoutMosaicNode,
   createDefaultLayout,
 } from '@sqlrooms/room-config';
+
+export type {LayoutDirection} from '@sqlrooms/room-config';

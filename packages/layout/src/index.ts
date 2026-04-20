@@ -22,43 +22,20 @@ export type {
   RoomPanelComponent,
   RoomPanelInfo,
 } from './types';
-export type {
-  ParentDirection,
-  MatchResult,
-  MatchResultParams,
-} from './layout-base-types';
+export type {ParentDirection} from './layout-base-types';
 
-// New primary exports from mosaic-utils
+export {movePanel} from './docking/dock-layout';
+export type {DockAxis, DockDirection} from './docking/dock-layout';
 export {
-  convertFromMosaicTree,
-  convertToMosaicTree,
-  findLayoutNodePathByKey,
+  createLayoutId,
+  findNearestDockAncestor,
   findNodeById,
-  findParentArea,
-  findParentSplit,
   findTabsNodeForPanel,
-  getChildKey,
-  getExpandDirection,
-  getMosaicNodeKey,
-  getNodeAtPath,
   getVisibleLayoutPanels,
-  isDraggableTile,
-  makeLayoutStack,
-  MOSAIC_NODE_KEY_PREFIX,
+  isDockablePanel,
   removeLayoutNodeByKey,
-  updateMosaicSubtree,
   visitLayoutLeafNodes,
-} from './mosaic/mosaic-utils';
-export type {CollapsedAreaInfo, ExpandDirection} from './mosaic/mosaic-utils';
-
-// Deprecated re-exports from mosaic-utils (old names)
-export {
-  findMosaicNodePathByKey,
-  getVisibleMosaicLayoutPanels,
-  makeMosaicStack,
-  removeMosaicNodeByKey,
-  visitMosaicLeafNodes,
-} from './mosaic/mosaic-utils';
+} from './layout-tree';
 
 // New LayoutRenderer component
 export {LayoutRenderer} from './LayoutRenderer';
@@ -72,13 +49,12 @@ export {
   // Tabs node helpers
   getLayoutNodeId,
   getVisibleTabChildren,
-  isLayoutMosaicNode,
   isLayoutPanelNode,
-  isLayoutSplitNode,
   isLayoutTabsNode,
+  isLayoutDockNode,
+  isLayoutSplitNode,
+  LayoutDockNode,
   LayoutConfig,
-  LayoutDirection,
-  LayoutMosaicNode,
   LayoutNode,
   LayoutNodeKey,
   LayoutPanelNode,
@@ -87,21 +63,26 @@ export {
   MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 
-// Panel matching utility
-export {getPanelByPath} from './getPanelByPath';
+export type {LayoutDirection} from '@sqlrooms/layout-config';
+
+// Panel resolution utilities
 export {resolvePanelDefinition} from './resolvePanelDefinition';
-export {useGetPanelByPath, useGetPanelInfoByPath} from './useGetPanel';
+export {resolvePanelIdentity} from './resolvePanelIdentity';
+export type {PanelIdentityResult} from './resolvePanelIdentity';
+export {useGetPanel} from './useGetPanel';
 
 // Layout node context
 export {
   getLayoutNodeContextValue,
   LayoutNodeProvider,
+  useDockNodeContext,
   useLayoutNodeContext,
+  useSplitNodeContext,
   useTabsNodeContext,
 } from './LayoutNodeContext';
 export type {
+  LayoutNodeContextDock,
   LayoutNodeContextLeaf,
-  LayoutNodeContextMosaic,
   LayoutNodeContextPanel,
   LayoutNodeContextSplit,
   LayoutNodeContextTabs,
@@ -109,9 +90,7 @@ export type {
 } from './LayoutNodeContext';
 
 // Node renderers
-export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
-export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {LeafLayout} from './node-renderers/leaf-node-renderer/LeafLayout';
-export {MosaicLayout} from './node-renderers/mosaic-node-renderer/MosaicLayout';
-
-export {extractPanelId} from './node-renderers/utils';
+export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
+export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
+export {DockLayout} from './node-renderers/dock-node-renderer/DockLayout';

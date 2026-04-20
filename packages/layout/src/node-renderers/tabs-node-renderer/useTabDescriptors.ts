@@ -1,36 +1,37 @@
 import {TabDescriptor} from '@sqlrooms/ui';
 import {useMemo} from 'react';
-import {extractPanelId} from '../utils';
-import {getPanelByPath} from '../../getPanelByPath';
+import {getLayoutNodeId} from '@sqlrooms/layout-config';
 import {useStoreWithLayout} from '../../LayoutSlice';
 import {useTabsNodeContext} from '../../LayoutNodeContext';
+import {resolvePanelIdentity} from '../../resolvePanelIdentity';
 import {resolvePanelDefinition} from '../../resolvePanelDefinition';
 
 export function useTabDescriptors(): TabDescriptor[] {
   const tabsContext = useTabsNodeContext();
-  const {
-    node: {id: nodeId},
-    path,
-  } = tabsContext;
+  const {node} = tabsContext;
 
   const panels = useStoreWithLayout((s) => s.layout.panels);
-  const getTabs = useStoreWithLayout((s) => s.layout.getTabs);
 
   const tabDescriptors: TabDescriptor[] = useMemo(() => {
-    return getTabs(nodeId).map((id) => {
-      const panelId = extractPanelId(id);
-      const matchResult = getPanelByPath(panels, [...path, panelId]);
-      if (!matchResult) {
-        return {id, name: panelId};
-      }
-      const resolved = resolvePanelDefinition(matchResult.panel, {
-        panelId: matchResult.panelId,
-        params: matchResult.params,
-        layoutNode: tabsContext,
-      });
-      return {id, name: resolved?.title ?? panelId};
+    return node.children.map((child) => {
+      const id = getLayoutNodeId(child);
+      const {panelId, meta} = resolvePanelIdentity(child);
+      const definition = panels[panelId];
+      const panelInfo = definition
+        ? resolvePanelDefinition(definition, {
+            panelId,
+            meta,
+            layoutNode: tabsContext,
+          })
+        : null;
+
+      return {
+        id,
+        name: panelInfo?.title ?? panelId,
+        icon: panelInfo?.icon,
+      };
     });
-  }, [getTabs, panels, path, nodeId, tabsContext]);
+  }, [node.children, panels, tabsContext]);
 
   return tabDescriptors;
 }

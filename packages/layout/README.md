@@ -1,6 +1,6 @@
 Layout slice and renderer for SQLRooms panel-based UIs.
 
-This package renders layout trees using `react-resizable-panels` for split/tabs and `react-mosaic-component` for drag-and-drop mosaic nodes.
+This package renders layout trees using `react-resizable-panels` for split layouts and `dnd-kit` for dockable panel rearrangement.
 
 ## Installation
 
@@ -11,15 +11,13 @@ npm install @sqlrooms/layout
 ## Main exports
 
 - `createLayoutSlice()`, `useStoreWithLayout()`
-- `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels and tabs
-- `MosaicLayout` component — legacy mosaic-only renderer (kept for backward compat)
+- `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels, tabs, and generic docking
 - Layout helpers:
-  - `makeLayoutStack`
   - `visitLayoutLeafNodes`
   - `getVisibleLayoutPanels`
-  - `findLayoutNodePathByKey`
   - `removeLayoutNodeByKey`
-  - `findAreaById`, `findSplitById`, `findMosaicNodeById`
+  - `findNodeById`, `findTabsNodeForPanel`
+  - `movePanel`
 - Layout config schemas/types re-exported from `@sqlrooms/layout-config`
 
 ## Store usage

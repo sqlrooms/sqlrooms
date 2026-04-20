@@ -10,7 +10,7 @@ import {
   getHiddenTabChildren,
   isLayoutNodeKey,
 } from '@sqlrooms/layout-config';
-import {findNodeById} from './mosaic/mosaic-utils';
+import {findNodeById} from './layout-tree';
 
 export type LayoutSliceConfig = LayoutConfig;
 

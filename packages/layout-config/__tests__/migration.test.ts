@@ -1,8 +1,9 @@
+import {LayoutConfig} from '../src/LayoutConfig';
 import {migrate} from '../src/migrate';
 
 describe('migrateV1ToV2', () => {
-  describe('outer wrapper unwrapping', () => {
-    it('should unwrap nested binary tree inside mosaic wrapper', () => {
+  describe('breaking mosaic removal', () => {
+    it('should no longer unwrap obsolete mosaic wrappers during migration', () => {
       const input = {
         type: 'mosaic',
         nodes: {
@@ -23,85 +24,17 @@ describe('migrateV1ToV2', () => {
         },
       };
       const result = migrate(input);
-      expect(result).toMatchObject({
-        id: 'root',
-        type: 'split',
-        direction: 'column',
-        children: [
-          {
-            type: 'split',
-            direction: 'row',
-            defaultSize: '75%',
-            children: [
-              {
-                type: 'panel',
-                id: 'data-sources',
-                defaultSize: '25%',
-              },
-              {
-                type: 'split',
-                direction: 'row',
-                defaultSize: '75%',
-                children: [
-                  {
-                    type: 'panel',
-                    id: 'main',
-                    defaultSize: '41.30299844187431%',
-                  },
-                  {
-                    type: 'panel',
-                    id: 'assistant',
-                    defaultSize: '58.69700155812569%',
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            type: 'panel',
-            id: 'running-queries',
-            defaultSize: '25%',
-          },
-        ],
-      });
+      expect(result).toEqual(input);
     });
 
-    it('should unwrap {type: "mosaic", nodes: string} to string with id: "root"', () => {
-      const input = {type: 'mosaic', nodes: 'main'};
-      const result = migrate(input);
-      expect(result).toEqual({
-        id: 'root',
+    it('should reject mosaic configs at schema parse time', () => {
+      const result = LayoutConfig.safeParse({
         type: 'mosaic',
-        nodes: 'main',
+        id: 'dashboard',
+        layout: 'chart-1',
       });
-    });
 
-    it('should unwrap {type: "mosaic", nodes: null} to null with id: "root"', () => {
-      const input = {type: 'mosaic', nodes: null};
-      const result = migrate(input);
-      expect(result).toEqual({
-        id: 'root',
-        type: 'mosaic',
-        nodes: null,
-      });
-    });
-
-    it('should unwrap nested binary tree inside mosaic wrapper', () => {
-      const input = {
-        type: 'mosaic',
-        nodes: {
-          direction: 'row',
-          first: 'panel-a',
-          second: 'panel-b',
-        },
-      };
-      const result = migrate(input);
-      expect(result).toMatchObject({
-        id: 'root',
-        type: 'split',
-        direction: 'row',
-        children: expect.arrayContaining(['panel-a', 'panel-b']),
-      });
+      expect(result.success).toBe(false);
     });
   });
 
@@ -462,26 +395,21 @@ describe('migrateV1ToV2', () => {
   describe('integration tests', () => {
     it('should convert complex real-world layout: query 30% | (table 60% / chart 40%)', () => {
       const input = {
-        type: 'mosaic',
-        nodes: {
-          direction: 'row',
-          first: 'query',
-          second: {
-            direction: 'column',
-            first: 'table',
-            second: 'chart',
-            splitPercentage: 60,
-          },
-          splitPercentage: 30,
+        direction: 'row',
+        first: 'query',
+        second: {
+          direction: 'column',
+          first: 'table',
+          second: 'chart',
+          splitPercentage: 60,
         },
+        splitPercentage: 30,
       };
       const result = migrate(input) as any;
 
-      expect(result).toMatchObject({
-        id: 'root',
-        type: 'split',
-        direction: 'row',
-      });
+      expect(result.type).toBe('split');
+      expect(result.direction).toBe('row');
+      expect(typeof result.id).toBe('string');
 
       expect(result.children[0]).toMatchObject({
         type: 'panel',
@@ -510,18 +438,15 @@ describe('migrateV1ToV2', () => {
 
     it('should convert three-way split with percentages', () => {
       const input = {
-        type: 'mosaic',
-        nodes: {
+        direction: 'row',
+        first: 'panel-a',
+        second: {
           direction: 'row',
-          first: 'panel-a',
-          second: {
-            direction: 'row',
-            first: 'panel-b',
-            second: 'panel-c',
-            splitPercentage: 50,
-          },
-          splitPercentage: 33,
+          first: 'panel-b',
+          second: 'panel-c',
+          splitPercentage: 50,
         },
+        splitPercentage: 33,
       };
       const result = migrate(input) as any;
 

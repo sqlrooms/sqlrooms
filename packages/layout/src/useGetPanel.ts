@@ -1,8 +1,9 @@
 import {useContext, useMemo} from 'react';
-import {getPanelByPath} from './getPanelByPath';
-import {LayoutPath, RoomPanelInfo, MatchResult} from './types';
+import {LayoutNode} from '@sqlrooms/layout-config';
+import {RoomPanelInfo} from './types';
 import {useStoreWithLayout} from './LayoutSlice';
 import {resolvePanelDefinition} from './resolvePanelDefinition';
+import {resolvePanelIdentity} from './resolvePanelIdentity';
 import {
   LayoutNodeContext,
   type LayoutNodeContextValue,
@@ -13,49 +14,30 @@ function useOptionalLayoutNodeContext(): LayoutNodeContextValue | null {
 }
 
 /**
- * React hook to get full panel match information from the layout store by path.
+ * React hook to get panel info from a layout node using direct panel identity.
  *
- * Matches the provided path against registered panel patterns and returns
- * the complete match result including the panel info, extracted parameters,
- * and resolved panel ID. Function-form panel definitions are automatically
- * resolved with the match context including the current layout node context.
+ * Reads the `panel` property from panel/dock nodes or falls back to the node's `id`,
+ * looks it up in the panels registry, and resolves function-form definitions.
  *
- * @param path - One or more path segments (variadic) to match against panel patterns.
- *               Can be individual segments or arrays of segments.
- * @returns Match result with panelId, panel info, and params, or null if no match
+ * @param node - The layout node to resolve panel info for
+ * @returns Panel info object, or null if no match in registry
  */
-export function useGetPanelInfoByPath(
-  ...path: LayoutPath | LayoutPath[]
-): MatchResult<RoomPanelInfo> | null {
+export function useGetPanel(node: LayoutNode): RoomPanelInfo | null {
   const panels = useStoreWithLayout((s) => s.layout.panels);
   const layoutNode = useOptionalLayoutNodeContext();
 
   return useMemo(() => {
-    const match = getPanelByPath(panels, path);
-    if (!match) return null;
-    const resolved = resolvePanelDefinition(match.panel, {
-      panelId: match.panelId,
-      params: match.params,
+    const {panelId, meta} = resolvePanelIdentity(node);
+    const definition = panels[panelId];
+
+    if (!definition) {
+      return null;
+    }
+
+    return resolvePanelDefinition(definition, {
+      panelId,
+      meta,
       layoutNode: layoutNode ?? undefined,
     });
-    return {panelId: match.panelId, panel: resolved, params: match.params};
-  }, [path, panels, layoutNode]);
-}
-
-/**
- * React hook to get panel info from the layout store by path.
- *
- * Convenience hook that returns just the panel info without the match metadata.
- * If you need the panelId or extracted parameters, use `useGetPanelInfoByPath` instead.
- *
- * @param path - One or more path segments (variadic) to match against panel patterns.
- *               Can be individual segments or arrays of segments.
- * @returns Panel info object, or null if no match
- */
-export function useGetPanelByPath(
-  ...path: LayoutPath | LayoutPath[]
-): RoomPanelInfo | null {
-  const {panel} = useGetPanelInfoByPath(...path) ?? {};
-
-  return panel ?? null;
+  }, [node, panels, layoutNode]);
 }

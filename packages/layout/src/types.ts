@@ -1,24 +1,13 @@
-import type {
-  LayoutPath,
-  PanelContainerType,
-  MatchResult,
-  MatchResultParams,
-  ParentDirection,
-} from './layout-base-types';
 import type {LayoutNodeContextValue} from './LayoutNodeContext';
+import {PanelIdentityResult} from './resolvePanelIdentity';
 
-// Re-export for convenience
-export type {
-  LayoutPath,
-  PanelContainerType,
-  MatchResult,
-  MatchResultParams,
-  ParentDirection,
-};
+export type LayoutPath = (string | number)[];
+
+export type PanelContainerType = 'tabs' | 'split' | 'root';
 
 export type RoomPanelComponentProps = {
-  panelInfo: MatchResult<RoomPanelInfo>;
-};
+  panelInfo: RoomPanelInfo;
+} & PanelIdentityResult;
 
 export type RoomPanelComponent = React.ComponentType<RoomPanelComponentProps>;
 
@@ -33,13 +22,14 @@ export type RoomPanelInfo = {
 /**
  * Context passed to function-form panel definitions.
  *
- * `panelId` and `params` are always available (from path matching).
+ * `panelId` is the direct panel key from the node's `panel` property.
+ * `meta` is the optional metadata object from `panel: { key, meta }`.
  * `layoutNode` is only available at render time — non-render callers
  * (command palette, sidebar buttons, etc.) pass `undefined`.
  */
 export type PanelDefinitionContext = {
   panelId: string;
-  params: MatchResultParams;
+  meta?: Record<string, unknown>;
   /** The current layout node context, available only at render time. */
   layoutNode?: LayoutNodeContextValue;
 };
