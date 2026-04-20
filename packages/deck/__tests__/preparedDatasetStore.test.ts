@@ -4,9 +4,9 @@ import {jest} from '@jest/globals';
 import type {PreparedDeckDataset} from '../src/prepare/types';
 import {
   createPreparedDatasetStore,
-  resolvePreparedDatasetCacheKey,
   resolvePreparedDeckDatasetState,
-} from '../src/datasets/preparedDatasetStore';
+} from '../src/datasets/PreparedDatasetStore';
+import {resolvePreparedDatasetCacheKey} from '../src/datasets/helpers';
 import type {DeckDatasetInput} from '../src/types';
 
 function createPreparedDataset(datasetId: string, table: Table) {
@@ -36,7 +36,7 @@ async function waitForEntry(
   }
 }
 
-describe('preparedDatasetStore', () => {
+describe('PreparedDatasetStore', () => {
   it('reuses one prepared entry for matching sql datasets', async () => {
     const table = new Table({value: vectorFromArray([1, 2, 3])});
     const connector = {};

@@ -2,11 +2,11 @@ import {useEffect, useMemo, useState} from 'react';
 import {useStoreWithDuckDb} from '@sqlrooms/duckdb';
 import {useStore} from 'zustand';
 import {type DeckDatasetInput, type PreparedDeckDatasetState} from '../types';
+import {resolvePreparedDatasetCacheKey} from './helpers';
 import {
   preparedDatasetStore,
-  resolvePreparedDatasetCacheKey,
   resolvePreparedDeckDatasetState,
-} from './preparedDatasetStore';
+} from './PreparedDatasetStore';
 
 let nextPreparedDatasetConsumerId = 0;
 
