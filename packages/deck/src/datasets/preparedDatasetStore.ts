@@ -12,6 +12,7 @@ import {
   cloneEntryWithConsumers,
   evictLruEntries,
   nextAccessTimestamp,
+  resolvePreparedDatasetCacheKey,
   touchEntry,
 } from './helpers';
 import type {
@@ -22,7 +23,7 @@ import type {
 /**
  * Internal store state for the prepared-dataset cache.
  *
- * `DeckJsonMap` never talks to this shape directly; `usePreparedDeckDatasets`
+ * `DeckJsonMap` never talks to this shape directly; `usePreparedDatasetStates`
  * uses it as the backing state machine for preparation, reuse, and eviction.
  */
 type PreparedDatasetStoreState = {
@@ -74,7 +75,46 @@ type PreparedDatasetStoreState = {
    * states do not get reset during prop changes.
    */
   syncConsumer: (consumerId: string, keys: string[]) => void;
+  /**
+   * Reconcile and ensure all prepared entries needed by one dataset registry.
+   *
+   * This is the store-level orchestration entrypoint used by
+   * `usePreparedDatasetStates`. It computes cache keys for the current dataset
+   * registry, syncs consumer memberships, and eagerly ensures any resolvable
+   * entries exist.
+   */
+  syncDatasetsForConsumer: (options: {
+    consumerId: string;
+    datasets: Record<string, DeckDatasetInput>;
+    executeSql: (
+      query: string,
+      version?: number,
+    ) => Promise<QueryHandle | null>;
+    sqlSourceIdentity: object;
+  }) => void;
 };
+
+type PreparedDatasetDescriptor = {
+  datasetId: string;
+  input: DeckDatasetInput;
+  cacheKey: string | undefined;
+};
+
+function resolvePreparedDatasetDescriptors(options: {
+  datasets: Record<string, DeckDatasetInput>;
+  sqlSourceIdentity: object;
+}): PreparedDatasetDescriptor[] {
+  const {datasets, sqlSourceIdentity} = options;
+
+  return Object.entries(datasets).map(([datasetId, input]) => ({
+    datasetId,
+    input,
+    cacheKey: resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity,
+    }),
+  }));
+}
 
 /**
  * Create a feature-local cache store for prepared deck datasets.
@@ -291,6 +331,31 @@ export function createPreparedDatasetStore(
         };
       });
     },
+
+    syncDatasetsForConsumer({consumerId, datasets, executeSql, sqlSourceIdentity}) {
+      const descriptors = resolvePreparedDatasetDescriptors({
+        datasets,
+        sqlSourceIdentity,
+      });
+      const cacheKeys = descriptors
+        .map((descriptor) => descriptor.cacheKey)
+        .filter((cacheKey): cacheKey is string => Boolean(cacheKey));
+
+      get().syncConsumer(consumerId, cacheKeys);
+
+      for (const descriptor of descriptors) {
+        if (!descriptor.cacheKey) {
+          continue;
+        }
+
+        get().ensureEntry({
+          cacheKey: descriptor.cacheKey,
+          datasetId: descriptor.datasetId,
+          executeSql,
+          input: descriptor.input,
+        });
+      }
+    },
   }));
 }
 
@@ -328,6 +393,33 @@ export function resolvePreparedDeckDatasetState(options: {
             datasetId,
           },
   };
+}
+
+/**
+ * Resolve the full `datasetId -> state` map for a dataset registry.
+ *
+ * This mirrors the lookup logic used by `DeckJsonMap`: unresolved Arrow
+ * datasets remain `loading`, while resolvable datasets reuse shared prepared
+ * entries keyed by data identity rather than by dataset id.
+ */
+export function resolvePreparedDeckDatasetStates(options: {
+  datasets: Record<string, DeckDatasetInput>;
+  entries: Record<string, PreparedDatasetCacheEntry>;
+  sqlSourceIdentity: object;
+}): Record<string, PreparedDeckDatasetState> {
+  const {datasets, entries, sqlSourceIdentity} = options;
+
+  return Object.fromEntries(
+    resolvePreparedDatasetDescriptors({datasets, sqlSourceIdentity}).map(
+      ({datasetId, cacheKey}) => [
+        datasetId,
+        resolvePreparedDeckDatasetState({
+          datasetId,
+          entry: cacheKey ? entries[cacheKey] : undefined,
+        }),
+      ],
+    ),
+  );
 }
 
 /**

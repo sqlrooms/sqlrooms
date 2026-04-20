@@ -8,7 +8,7 @@ import Map from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
-import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
+import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
@@ -160,7 +160,7 @@ export function DeckJsonMap({
     () => Object.keys(normalizedDatasets),
     [normalizedDatasets],
   );
-  const datasetStates = usePreparedDeckDatasets(normalizedDatasets);
+  const datasetStates = usePreparedDatasetStates(normalizedDatasets);
 
   const {spec: parsedSpec, error: specError} = useMemo(
     () => parseSpec(spec),
