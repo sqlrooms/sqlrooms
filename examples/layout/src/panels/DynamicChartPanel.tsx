@@ -16,13 +16,13 @@ const COLORS = [
   'bg-indigo-500/70',
 ];
 
-export const DynamicChartPanel: RoomPanelComponent = ({
-  panelInfo: {panelId},
-}) => {
+export const DynamicChartPanel: RoomPanelComponent = ({meta}) => {
+  const chartId = (meta?.chartId ?? '') as string;
+
   const data = useMemo(() => generateRandomData(12), []);
   const colorClass = useMemo(
-    () => COLORS[Math.abs(hashCode(panelId)) % COLORS.length],
-    [panelId],
+    () => COLORS[Math.abs(hashCode(chartId)) % COLORS.length],
+    [chartId],
   );
 
   return (

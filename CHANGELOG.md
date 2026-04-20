@@ -3,6 +3,88 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.2] (2026-04-20)
+
+## BREAKING CHANGES
+
+This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel resolution system.
+
+### Removed APIs
+
+* **`getPanelByPath`**: Path-based panel lookup function removed
+* **`useGetPanelByPath`**: Hook for path-based panel lookup removed
+* **`useGetPanelInfoByPath`**: Hook for path-based panel info removed
+* **`draggable` property**: Removed from split and tabs nodes
+* **`pathSegment` property**: Removed from split and tabs nodes
+
+### API Changes
+
+* **Panel definitions context**: Panel definitions now receive `{panelId, meta, layoutNode}` instead of `{panelId, params, layoutNode}`
+  * Replace `ctx.params` with `ctx.meta` in all panel definition functions
+* **Docking scope**: Docking operations now only work within `LayoutDockNode` boundaries
+  * Panels cannot be moved across different dock nodes
+  * Use `type: 'dock'` nodes to create docking boundaries
+
+### New Features
+
+* **`LayoutDockNode`**: New node type for creating docking boundaries
+  * Structure: `{type: 'dock', id: string, panel?: PanelIdentity, root: LayoutNode}`
+  * Replaces splits/tabs with `draggable: true`
+* **Explicit panel identity**: Panels now have a direct `panel` property
+  * String form: `panel: 'my-panel'`
+  * Object form: `panel: {key: 'chart', meta: {chartId: '123'}}`
+  * Falls back to node `id` if `panel` property is not provided
+* **Direct panel resolution APIs**:
+  * `resolvePanelIdentity(node)`: Extract `{panelId, meta}` from a node
+  * `resolvePanelDefinition(definition, context)`: Resolve panel info with context
+  * `useGetPanel(node)`: React hook for direct panel resolution
+* **Type exports**: Added `isLayoutDockNode`, `LayoutDockNode`, `PanelIdentity` exports
+
+### Migration Guide
+
+See [contributing/architecture.md](contributing/architecture.md#migration-guide-explicit-panel-identity--dock-boundaries) for detailed migration instructions.
+
+**Quick migration:**
+
+1. Convert `draggable: true` splits to dock nodes:
+   ```typescript
+   // Before
+   {type: 'split', id: 'dashboard', draggable: true, children: [...]}
+
+   // After
+   {type: 'dock', id: 'dashboard', root: {type: 'split', id: 'dashboard-root', children: [...]}}
+   ```
+
+2. Remove `pathSegment` properties from all nodes
+
+3. Update panel definitions to use `meta` instead of `params`:
+   ```typescript
+   // Before
+   panels: {chart: (ctx) => ({title: ctx.params?.chartId})}
+
+   // After
+   panels: {chart: (ctx) => ({title: ctx.meta?.chartId})}
+   ```
+
+4. Replace path-based hooks:
+   ```typescript
+   // Before
+   import {useGetPanelByPath} from '@sqlrooms/layout';
+   const panelInfo = useGetPanelByPath(path);
+
+   // After
+   import {useGetPanel, useLayoutNodeContext} from '@sqlrooms/layout';
+   const context = useLayoutNodeContext();
+   const panelInfo = useGetPanel(context.node);
+   ```
+
+### Affected Packages
+
+* `@sqlrooms/layout-config`: Schema changes, new node types
+* `@sqlrooms/layout`: API changes, new hooks
+* `@sqlrooms/room-shell`: Updated to use new APIs
+* All examples: Migrated to new layout structure
+
 # [0.29.0-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
 
 **Note:** Version bump only for package sqlrooms

@@ -143,7 +143,6 @@ export {
   isSpatialLoadFileOptions,
   isSqlQueryDataSource,
   isUrlDataSource,
-  LayoutDirection,
   LayoutNodeKey,
   LayoutPanelNode,
   LayoutSplitNode,
@@ -155,3 +154,5 @@ export {
   isLayoutTabsNode,
   createDefaultLayout,
 } from '@sqlrooms/room-store';
+
+export type {LayoutDirection} from '@sqlrooms/room-store';

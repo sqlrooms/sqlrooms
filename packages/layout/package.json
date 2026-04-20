@@ -47,6 +47,8 @@
   },
   "devDependencies": {
     "@sqlrooms/preset-jest": "workspace:*",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "*",
     "ts-jest": "^29.4.4"
   }
 }

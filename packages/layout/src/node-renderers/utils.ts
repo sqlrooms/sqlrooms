@@ -1,13 +1,8 @@
 import {
-  getLayoutNodeId,
   isLayoutNodeKey,
-  isLayoutSplitNode,
-  isLayoutTabsNode,
   LayoutNode,
   LayoutNodeSize,
 } from '@sqlrooms/layout-config';
-import {LayoutPath} from '../types';
-import {isDockGeneratedSplitId} from '../docking/dock-layout';
 
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
@@ -15,7 +10,7 @@ export function convertLayoutNodeSizeToStyle(
 ): React.CSSProperties {
   return direction === 'column'
     ? {
-        height: (size.defaultSize ?? 'auto') as string | number | undefined,
+        height: size.defaultSize ?? 'auto',
         minHeight: size.minSize,
         maxHeight: size.maxSize,
       }
@@ -24,28 +19,6 @@ export function convertLayoutNodeSizeToStyle(
         minWidth: size.minSize,
         maxWidth: size.maxSize,
       };
-}
-
-export function extractPanelId(tabId: string): string {
-  return tabId;
-}
-
-export function appendSemanticLayoutPath(
-  path: LayoutPath,
-  node: LayoutNode,
-): LayoutPath {
-  if (
-    (isLayoutSplitNode(node) || isLayoutTabsNode(node)) &&
-    node.pathSegment === false
-  ) {
-    return path;
-  }
-
-  if (isLayoutSplitNode(node) && isDockGeneratedSplitId(node.id)) {
-    return path;
-  }
-
-  return [...path, getLayoutNodeId(node)];
 }
 
 export function getLayoutNodeSize(node: LayoutNode): LayoutNodeSize {

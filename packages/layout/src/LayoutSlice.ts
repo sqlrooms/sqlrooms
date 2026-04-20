@@ -103,7 +103,7 @@ export function createLayoutSlice({
                   const panelDef = draft.layout.panels[panel];
                   const panelInfo =
                     typeof panelDef === 'function'
-                      ? panelDef({panelId: panel, params: {}})
+                      ? panelDef({panelId: panel})
                       : panelDef;
                   const placement = panelInfo?.placement;
                   const side = placement === 'sidebar' ? 'first' : 'second';

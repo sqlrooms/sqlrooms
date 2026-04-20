@@ -1,10 +1,12 @@
 import {
   getLayoutNodeId,
   getVisibleTabChildren,
+  isLayoutDockNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
+  LayoutDockNode,
   LayoutNode,
   LayoutPanelNode,
   LayoutSplitNode,
@@ -108,6 +110,14 @@ function removeNode(
     return null;
   }
 
+  if (isLayoutDockNode(root)) {
+    const newRoot = removeNode(root.root, key);
+    if (newRoot === null) {
+      return null;
+    }
+    return {...root, root: newRoot};
+  }
+
   if (isLayoutTabsNode(root)) {
     const children = root.children
       .map((child) => removeNode(child, key))
@@ -144,6 +154,10 @@ export function visitLayoutLeafNodes<T = void>(
 
   if (isLayoutPanelNode(root)) {
     return visitor(root.id, ancestors);
+  }
+
+  if (isLayoutDockNode(root)) {
+    return visitLayoutLeafNodes(root.root, visitor, [...ancestors, root]);
   }
 
   if (isLayoutSplitNode(root)) {
@@ -195,6 +209,10 @@ export function findNodeById(
     return {node: root, ancestors};
   }
 
+  if (isLayoutDockNode(root)) {
+    return findNodeById(root.root, nodeId, [...ancestors, root]);
+  }
+
   if (isLayoutSplitNode(root) || isLayoutTabsNode(root)) {
     for (const child of root.children) {
       const result = findNodeById(child, nodeId, [...ancestors, root]);
@@ -214,6 +232,10 @@ export function findTabsNodeForPanel(
 ): string | undefined {
   if (isLayoutNodeKey(root) || isLayoutPanelNode(root)) {
     return undefined;
+  }
+
+  if (isLayoutDockNode(root)) {
+    return findTabsNodeForPanel(root.root, panelId);
   }
 
   if (isLayoutTabsNode(root)) {
@@ -247,29 +269,19 @@ export function findTabsNodeForPanel(
   return undefined;
 }
 
-export function findNearestDraggableAncestor(
+export function findNearestDockAncestor(
   root: LayoutNode | null | undefined,
   nodeId: string,
-): LayoutSplitNode | LayoutTabsNode | undefined {
+): LayoutDockNode | undefined {
   const found = findNodeById(root, nodeId);
-
-  if (!found) {
-    return undefined;
-  }
+  if (!found) return undefined;
 
   for (let index = found.ancestors.length - 1; index >= 0; index -= 1) {
     const ancestor = found.ancestors[index];
-
-    if (
-      ancestor &&
-      !isLayoutNodeKey(ancestor) &&
-      (isLayoutSplitNode(ancestor) || isLayoutTabsNode(ancestor)) &&
-      ancestor.draggable === true
-    ) {
+    if (ancestor && isLayoutDockNode(ancestor)) {
       return ancestor;
     }
   }
-
   return undefined;
 }
 
@@ -277,7 +289,7 @@ export function isDockablePanel(
   root: LayoutNode | null | undefined,
   panelId: string,
 ): boolean {
-  return findNearestDraggableAncestor(root, panelId) !== undefined;
+  return findNearestDockAncestor(root, panelId) !== undefined;
 }
 
 export function removeLayoutNodeByKey(

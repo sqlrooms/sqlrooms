@@ -1,12 +1,13 @@
 import {LayoutTabsNode as LayoutTabsNodeType} from '@sqlrooms/layout-config';
 import {FC} from 'react';
-import {LayoutPath, ParentDirection} from '../../types';
+import {LayoutPath} from '../../types';
 import {TabsLayoutTabStrip} from './TabsLayoutTabStrip';
 import {TabsLayoutTabContent} from './TabsLayoutTabContent';
 import {RendererSwitcher} from '../RendererSwitcher';
 import {TabStrip} from '@sqlrooms/ui';
 import {TabsLayoutTabContentContainer} from './TabsLayoutTabContentContainer';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
+import {ParentDirection} from '../../layout-base-types';
 
 interface NodeProps {
   node: LayoutTabsNodeType;
@@ -36,7 +37,7 @@ const Root: FC<NodeProps> = ({node, path, parentDirection}) => {
       parentDirection={parentDirection}
     >
       <div className="relative flex h-full w-full flex-col">
-        <RendererSwitcher path={path} defaultComponent={defaultComponent} />
+        <RendererSwitcher defaultComponent={defaultComponent} />
       </div>
     </LayoutNodeProvider>
   );

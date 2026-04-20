@@ -1,8 +1,10 @@
 import {
+  isLayoutDockNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
+  LayoutDockNode,
   LayoutNode,
   LayoutNodeKey,
   LayoutPanelNode,
@@ -26,6 +28,13 @@ export type LayoutNodeContextSplit = {
   parentDirection?: ParentDirection;
 };
 
+export type LayoutNodeContextDock = {
+  containerType: 'dock';
+  node: LayoutDockNode;
+  path: LayoutPath;
+  parentDirection?: ParentDirection;
+};
+
 export type LayoutNodeContextPanel = {
   containerType: 'panel';
   node: LayoutPanelNode;
@@ -41,6 +50,7 @@ export type LayoutNodeContextLeaf = {
 export type LayoutNodeContextValue =
   | LayoutNodeContextTabs
   | LayoutNodeContextSplit
+  | LayoutNodeContextDock
   | LayoutNodeContextPanel
   | LayoutNodeContextLeaf;
 
@@ -88,6 +98,16 @@ export function useSplitNodeContext(): LayoutNodeContextSplit {
   return context;
 }
 
+export function useDockNodeContext(): LayoutNodeContextDock {
+  const context = useLayoutNodeContext();
+  if (context.containerType !== 'dock') {
+    throw new Error(
+      `useDockNodeContext expected containerType "dock", got "${context.containerType}"`,
+    );
+  }
+  return context;
+}
+
 export function getLayoutNodeContextValue(
   node: LayoutNode,
   path: LayoutPath,
@@ -103,6 +123,10 @@ export function getLayoutNodeContextValue(
 
   if (isLayoutTabsNode(node)) {
     return {containerType: 'tabs', node, path, parentDirection};
+  }
+
+  if (isLayoutDockNode(node)) {
+    return {containerType: 'dock', node, path, parentDirection};
   }
 
   throw new Error(`Unsupported node type: ${JSON.stringify(node)}`);

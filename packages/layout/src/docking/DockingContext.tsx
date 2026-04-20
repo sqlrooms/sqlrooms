@@ -19,7 +19,7 @@ import {
   useState,
 } from 'react';
 import {DockDirection, getDockAxis, movePanel} from './dock-layout';
-import {findNearestDraggableAncestor, findNodeById} from '../layout-tree';
+import {findNearestDockAncestor, findNodeById} from '../layout-tree';
 
 type PreviewMode = 'insert' | 'wrap';
 
@@ -244,12 +244,9 @@ export function DockingProvider({
       }
 
       const targetId = String(over.id);
-      const draggableAncestor = findNearestDraggableAncestor(
-        rootLayout,
-        targetId,
-      );
+      const dockAncestor = findNearestDockAncestor(rootLayout, targetId);
 
-      if (!draggableAncestor) {
+      if (!dockAncestor) {
         setPreview(null);
         return;
       }

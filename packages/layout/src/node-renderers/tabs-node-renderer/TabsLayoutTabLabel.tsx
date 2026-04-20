@@ -1,8 +1,6 @@
 import {TabDescriptor} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {LayoutPath} from '../../types';
-import {extractPanelId} from '../utils';
-import {useGetPanelByPath} from '../../useGetPanel';
 
 interface TabsLayoutTabLabelProps {
   tab: TabDescriptor;
@@ -13,11 +11,9 @@ export const TabsLayoutTabLabel: FC<TabsLayoutTabLabelProps> = ({
   tab,
   path,
 }) => {
-  const panelId = extractPanelId(tab.id);
-
-  const panel = useGetPanelByPath(...path, panelId);
-
-  const Icon = panel?.icon;
+  const Icon = tab.icon as
+    | React.ComponentType<{className?: string}>
+    | undefined;
 
   return (
     <span className="flex items-center gap-1.5 truncate">

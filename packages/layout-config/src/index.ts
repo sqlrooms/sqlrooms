@@ -10,17 +10,21 @@ export {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
+  LayoutDockNode,
   LayoutNode,
   LayoutConfig,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
+  isLayoutDockNode,
   createDefaultLayout,
   LayoutNodeSize,
 } from './LayoutConfig';
 
-export {LayoutDirection} from './common';
+export type {PanelIdentity} from './LayoutConfig';
+
+export type {LayoutDirection} from './common';
 
 // Tabs node helpers
 export {
