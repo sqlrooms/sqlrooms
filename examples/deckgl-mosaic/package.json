@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@uwdata/flechette": "^2.2.6",
+    "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/deck": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",

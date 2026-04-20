@@ -1,4 +1,4 @@
-import {DeckJsonMapSpec, LayerExtensionConfig} from '../src/DeckSpec';
+import {DeckJsonMapSpec, LayerExtensionConfig} from '../src/DeckJsonMapSpec';
 
 describe('DeckJsonMapSpec', () => {
   it('accepts loose deck.gl layer objects while validating _sqlrooms', () => {
