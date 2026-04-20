@@ -17,7 +17,6 @@ describe('normalizeDatasets', () => {
 
     const datasets = normalizeDatasets({
       default: {
-        source: 'arrowTable',
         arrowTable: table,
         geometryColumn: 'geom',
       },
@@ -25,7 +24,6 @@ describe('normalizeDatasets', () => {
 
     expect(datasets).toEqual({
       default: {
-        source: 'arrowTable',
         arrowTable: table,
         geometryColumn: 'geom',
         geometryEncodingHint: undefined,
@@ -38,7 +36,6 @@ describe('normalizeDatasets', () => {
   it('normalizes sql dataset entries', () => {
     const datasets = normalizeDatasets({
       earthquakes: {
-        source: 'sql',
         sqlQuery: 'select 1',
       },
     });
@@ -50,7 +47,6 @@ describe('normalizeDatasets', () => {
     expect(() =>
       normalizeDatasets({
         earthquakes: {
-          source: 'queryResult',
           queryResult: {},
         },
       }),
@@ -65,7 +61,6 @@ describe('normalizeDatasets', () => {
     });
     const datasets = normalizeDatasets({
       earthquakes: {
-        source: 'queryResult',
         queryResult: {arrowTable: table},
       },
     });

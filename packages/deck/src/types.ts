@@ -23,18 +23,21 @@ type DeckDatasetBase = {
 };
 
 export type DeckSqlDatasetInput = DeckDatasetBase & {
-  source: 'sql';
   sqlQuery: string;
+  arrowTable?: never;
+  queryResult?: never;
 };
 
 export type DeckArrowTableDatasetInput = DeckDatasetBase & {
-  source: 'arrowTable';
   arrowTable: arrow.Table;
+  sqlQuery?: never;
+  queryResult?: never;
 };
 
 export type DeckQueryResultDatasetInput = DeckDatasetBase & {
-  source: 'queryResult';
   queryResult: DeckQueryResultLike;
+  sqlQuery?: never;
+  arrowTable?: never;
 };
 
 export type DeckDatasetInput =
@@ -61,17 +64,17 @@ export type DeckJsonMapProps = {
 export function isSqlDatasetInput(
   input: DeckDatasetInput,
 ): input is DeckSqlDatasetInput {
-  return input.source === 'sql';
+  return 'sqlQuery' in input;
 }
 
 export function isArrowTableDatasetInput(
   input: DeckDatasetInput,
 ): input is DeckArrowTableDatasetInput {
-  return input.source === 'arrowTable';
+  return 'arrowTable' in input;
 }
 
 export function isQueryResultDatasetInput(
   input: DeckDatasetInput,
 ): input is DeckQueryResultDatasetInput {
-  return input.source === 'queryResult';
+  return 'queryResult' in input;
 }

@@ -95,7 +95,6 @@ export default function MapView({className}: {className?: string}) {
       arrowData
         ? {
             earthquakes: {
-              source: 'arrowTable',
               arrowTable: arrowData,
               geometryColumn: 'geom',
               geometryEncodingHint: 'wkb' as const,

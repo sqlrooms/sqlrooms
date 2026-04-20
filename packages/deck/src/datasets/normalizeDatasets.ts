@@ -28,7 +28,6 @@ function normalizeDatasetEntry(
 ): DeckDatasetInput {
   if (isSqlDatasetInput(input)) {
     return {
-      source: 'sql',
       sqlQuery: input.sqlQuery,
       geometryColumn: input.geometryColumn,
       geometryEncodingHint: input.geometryEncodingHint,
@@ -37,7 +36,6 @@ function normalizeDatasetEntry(
 
   if (isArrowTableDatasetInput(input)) {
     return {
-      source: 'arrowTable',
       arrowTable: input.arrowTable,
       geometryColumn: input.geometryColumn,
       geometryEncodingHint: input.geometryEncodingHint,
@@ -46,7 +44,6 @@ function normalizeDatasetEntry(
 
   assertArrowTable(getArrowTableFromQueryResult(input.queryResult), datasetId);
   return {
-    source: 'queryResult',
     queryResult: input.queryResult,
     geometryColumn: input.geometryColumn,
     geometryEncodingHint: input.geometryEncodingHint,
