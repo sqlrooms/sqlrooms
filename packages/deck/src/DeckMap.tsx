@@ -5,6 +5,8 @@ import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {useEffect, useMemo} from 'react';
 import Map from 'react-map-gl/maplibre';
+import {ZodError} from 'zod';
+import {DeckMapSpec} from './DeckSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDeckDatasets} from './datasets/usePreparedDeckDatasets';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
@@ -20,8 +22,17 @@ const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
 
 function parseSpec(spec: DeckMapProps['spec']) {
   try {
+    const parsedValue = typeof spec === 'string' ? JSON.parse(spec) : spec;
+    const validatedSpec = DeckMapSpec.safeParse(parsedValue);
+    if (!validatedSpec.success) {
+      return {
+        spec: null,
+        error: new Error(formatSpecValidationError(validatedSpec.error)),
+      };
+    }
+
     return {
-      spec: typeof spec === 'string' ? JSON.parse(spec) : spec,
+      spec: validatedSpec.data,
       error: null,
     };
   } catch (error) {
@@ -30,6 +41,15 @@ function parseSpec(spec: DeckMapProps['spec']) {
       error: error instanceof Error ? error : new Error(String(error)),
     };
   }
+}
+
+function formatSpecValidationError(error: ZodError) {
+  const issues = error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join('.') : 'spec';
+    return `${path}: ${issue.message}`;
+  });
+
+  return `Invalid DeckMap spec. ${issues.join('; ')}`;
 }
 
 function extractFallbackDeckProps(spec: Record<string, unknown> | null) {

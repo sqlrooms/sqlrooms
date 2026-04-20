@@ -32,7 +32,8 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "maplibre-gl": "^5.12.0",
-    "react-map-gl": "^8.1.0"
+    "react-map-gl": "^8.1.0",
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

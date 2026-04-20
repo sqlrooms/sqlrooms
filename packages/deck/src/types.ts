@@ -1,9 +1,16 @@
 import type {DeckProps} from '@deck.gl/core';
-import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import type * as arrow from 'apache-arrow';
 import type {ReactNode} from 'react';
 import type {MapProps} from 'react-map-gl/maplibre';
+import type {DeckMapSpec} from './DeckSpec';
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
+
+export type {
+  DeckColorScaleProp,
+  LayerExtensionConfig,
+  LayerExtensionProps,
+  DeckMapSpec,
+} from './DeckSpec';
 
 export type DeckQueryResultLike = {
   arrowTable?: arrow.Table | undefined;
@@ -22,22 +29,8 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
-export type DeckColorScaleProp = 'getFillColor' | 'getLineColor';
-
-export type LayerExtensionConfig = {
-  dataset?: string;
-  geometryColumn?: string;
-  geometryEncodingHint?: GeometryEncodingHint;
-  colorScale?: ColorScaleConfig;
-  colorScaleProp?: DeckColorScaleProp;
-};
-
-export type LayerExtensionProps = {
-  _sqlrooms?: LayerExtensionConfig;
-};
-
 export type DeckMapProps = {
-  spec: string | Record<string, unknown>;
+  spec: string | DeckMapSpec;
   datasets?: Record<string, DeckDatasetInput>;
   sqlQuery?: string;
   arrowTable?: arrow.Table;
