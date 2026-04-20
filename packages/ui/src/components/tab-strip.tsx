@@ -757,14 +757,13 @@ function DropdownTabItems({
 }
 
 /**
- * Renders a button to create a new tab.
+ * A general-purpose button for the tab strip.
  */
 function TabStripButton({className, ...props}: ButtonProps) {
   return (
     <Button
       size="icon"
       variant="ghost"
-      aria-label="Create new tab"
       className={cn(
         ...TAB_STRIP_BUTTON_CLASSNAMES,
         'h-full shrink-0',
