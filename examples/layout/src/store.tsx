@@ -25,6 +25,7 @@ import {
   findNodeById,
   isLayoutDockNode,
   isLayoutSplitNode,
+  isLayoutNodeKey,
   LayoutDockNode,
 } from '@sqlrooms/layout';
 
@@ -120,7 +121,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                                 key: 'chart',
                                 meta: {chartId: 'overview-sessions'},
                               },
-                              defaultSize: '40%',
+                              defaultSize: 40,
                             },
                             {
                               type: 'panel',
@@ -129,10 +130,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                                 key: 'chart',
                                 meta: {chartId: 'overview-conversions'},
                               },
-                              defaultSize: '60%',
+                              defaultSize: 60,
                             },
                           ],
-                          defaultSize: '50%',
+                          defaultSize: 50,
                         },
                         {
                           type: 'split',
@@ -146,7 +147,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                                 key: 'chart',
                                 meta: {chartId: 'overview-users'},
                               },
-                              defaultSize: '30%',
+                              defaultSize: 30,
                             },
                             {
                               type: 'panel',
@@ -155,10 +156,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                                 key: 'chart',
                                 meta: {chartId: 'overview-visits'},
                               },
-                              defaultSize: '70%',
+                              defaultSize: 70,
                             },
                           ],
-                          defaultSize: '50%',
+                          defaultSize: 50,
                         },
                       ],
                       'row',
@@ -168,7 +169,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                         type: 'panel',
                         id: 'foobar',
                         panel: {key: 'chart', meta: {chartId: 'foobar'}},
-                        defaultSize: '60%',
+                        defaultSize: 60,
                       },
                       {
                         type: 'panel',
@@ -177,7 +178,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                           key: 'chart',
                           meta: {chartId: 'growth-sessions-2'},
                         },
-                        defaultSize: '60%',
+                        defaultSize: 60,
                       },
                       {
                         type: 'panel',
@@ -186,7 +187,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                           key: 'chart',
                           meta: {chartId: 'growth-conversions'},
                         },
-                        defaultSize: '40%',
+                        defaultSize: 40,
                       },
                     ]),
                   ],
@@ -308,10 +309,32 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         return;
       }
 
+      // Add the new chart
       newDockNode.root.children.push({
         type: 'panel',
         id: chartId,
         panel: {key: 'chart', meta: {chartId}},
+      });
+
+      // Recalculate all children sizes equally
+      const totalChildren = newDockNode.root.children.length;
+      const equalSize = Math.floor(100 / totalChildren);
+
+      newDockNode.root.children = newDockNode.root.children.map((child) => {
+        // If child is just a string key, wrap it into a proper panel node
+        if (isLayoutNodeKey(child)) {
+          return {
+            type: 'panel' as const,
+            id: child,
+            defaultSize: equalSize,
+          };
+        }
+
+        // Otherwise, spread existing node and set defaultSize
+        return {
+          ...child,
+          defaultSize: equalSize,
+        };
       });
 
       setConfig(newConfig);
