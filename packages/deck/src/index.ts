@@ -24,17 +24,11 @@ export type {
   ResolvedGeometryColumn,
   ResolvedGeometryEncoding,
 } from './prepare/types';
-export {
-  isArrowTableDatasetInput,
-  isQueryResultDatasetInput,
-  isSqlDatasetInput,
-} from './types';
+export {isArrowTableDatasetInput, isSqlDatasetInput} from './types';
 export type {
   DeckArrowTableDatasetInput,
   DeckDatasetInput,
   DeckJsonMapProps,
-  DeckQueryResultDatasetInput,
-  DeckQueryResultLike,
   DeckSqlDatasetInput,
   PreparedDeckDatasetState,
 } from './types';

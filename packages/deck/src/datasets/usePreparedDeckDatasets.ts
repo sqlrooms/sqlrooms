@@ -43,9 +43,7 @@ export function usePreparedDeckDatasets(
           }
 
           if (!table) {
-            throw new Error(
-              `Dataset "${datasetId}" could not resolve an Arrow table.`,
-            );
+            return;
           }
 
           const prepared = prepareDeckDataset({

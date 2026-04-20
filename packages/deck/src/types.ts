@@ -12,10 +12,6 @@ export type {
   LayerExtensionProps,
 } from './DeckJsonMapSpec';
 
-export type DeckQueryResultLike = {
-  arrowTable?: arrow.Table | undefined;
-};
-
 type DeckDatasetBase = {
   geometryColumn?: string;
   geometryEncodingHint?: GeometryEncodingHint;
@@ -23,26 +19,12 @@ type DeckDatasetBase = {
 
 export type DeckSqlDatasetInput = DeckDatasetBase & {
   sqlQuery: string;
-  arrowTable?: never;
-  queryResult?: never;
 };
 
 export type DeckArrowTableDatasetInput = DeckDatasetBase & {
-  arrowTable: arrow.Table;
-  sqlQuery?: never;
-  queryResult?: never;
+  arrowTable?: arrow.Table | undefined;
 };
-
-export type DeckQueryResultDatasetInput = DeckDatasetBase & {
-  queryResult: DeckQueryResultLike;
-  sqlQuery?: never;
-  arrowTable?: never;
-};
-
-export type DeckDatasetInput =
-  | DeckSqlDatasetInput
-  | DeckArrowTableDatasetInput
-  | DeckQueryResultDatasetInput;
+export type DeckDatasetInput = DeckSqlDatasetInput | DeckArrowTableDatasetInput;
 
 export type PreparedDeckDatasetState =
   | {status: 'loading'}
@@ -70,10 +52,4 @@ export function isArrowTableDatasetInput(
   input: DeckDatasetInput,
 ): input is DeckArrowTableDatasetInput {
   return 'arrowTable' in input;
-}
-
-export function isQueryResultDatasetInput(
-  input: DeckDatasetInput,
-): input is DeckQueryResultDatasetInput {
-  return 'queryResult' in input;
 }

@@ -155,11 +155,12 @@ datasets={{
   preview: {
     arrowTable,
   },
-  cached: {
-    queryResult,
-  },
 }}
 ```
+
+For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
+data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
+that dataset as loading until a table is provided.
 
 ## Runtime props
 
