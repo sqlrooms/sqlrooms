@@ -14,6 +14,7 @@ npm install @sqlrooms/deck @sqlrooms/duckdb @sqlrooms/ui
 
 - render a DeckGL map from a serializable `DeckJsonMap` spec
 - bind one or more datasets through a `datasets` registry
+- generate starter JSON specs from datasets with `createDeckJsonSpecFromDatasets`
 - validate SQLRooms-specific layer extensions under `_sqlrooms`
 - prepare geometry for GeoArrow-native layers from
   [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers)
@@ -73,6 +74,56 @@ export function AirportsMap() {
     />
   );
 }
+```
+
+## Auto Spec Generation
+
+If you want a starter JSON spec instead of writing every layer manually, use
+`createDeckJsonSpecFromDatasets(...)`:
+
+```tsx
+import {createDeckJsonSpecFromDatasets, DeckJsonMap} from '@sqlrooms/deck';
+
+const datasets = {
+  earthquakes: {
+    arrowTable,
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+};
+
+const spec = createDeckJsonSpecFromDatasets({datasets});
+```
+
+By default, the helper is conservative:
+
+- point / multipoint -> `GeoArrowScatterplotLayer`
+- linestring / multilinestring -> `GeoArrowPathLayer`
+- polygon / multipolygon -> `GeoArrowPolygonLayer`
+- mixed, unknown, or unsupported -> `GeoJsonLayer`
+
+You can provide semantic hints for special layers:
+
+```tsx
+const spec = createDeckJsonSpecFromDatasets({
+  datasets,
+  hints: {
+    earthquakes: {prefer: 'heatmap'},
+    trips: {
+      type: 'GeoArrowTripsLayer',
+      timestampColumn: 'timestamps',
+    },
+    flows: {
+      type: 'GeoArrowArcLayer',
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
+    },
+    hexes: {
+      type: 'GeoArrowH3HexagonLayer',
+      hexagonColumn: 'h3',
+    },
+  },
+});
 ```
 
 ## Core Concepts
@@ -164,6 +215,10 @@ Currently supported SQLRooms extensions are:
 - `dataset`: binds the layer to one dataset id
 - `geometryColumn`: overrides geometry column detection for that layer
 - `geometryEncodingHint`: helps geometry detection when the source table needs it
+- `sourceGeometryColumn`: source point geometry for `GeoArrowArcLayer`
+- `targetGeometryColumn`: target point geometry for `GeoArrowArcLayer`
+- `timestampColumn`: timestamp list column for `GeoArrowTripsLayer`
+- `hexagonColumn`: H3 index column for `GeoArrowH3HexagonLayer`
 - `colorScale`: declarative color mapping from `@sqlrooms/color-scales`
 
 The surrounding deck spec remains intentionally loose so normal deck.gl JSON
@@ -244,6 +299,11 @@ It then produces canonical deck-facing geometry outputs for:
 - GeoArrow-native layers such as `GeoArrowScatterplotLayer`
 - GeoJSON-binary fallback layers such as `GeoJsonLayer`
 
+Specialized layers such as `GeoArrowArcLayer`, `GeoArrowTripsLayer`, and
+`GeoArrowH3HexagonLayer` reuse the prepared table but bind additional
+configured columns on top for source/target geometry,
+timestamps, or index cells.
+
 This work is cached internally in a module-global prepared dataset store. That
 cache is separate from any upstream query cache:
 
@@ -257,13 +317,20 @@ Deck caches only the expensive geometry preparation layer on top.
 The current curated layer set is:
 
 - `GeoArrowScatterplotLayer`
+- `GeoArrowHeatmapLayer`
+- `GeoArrowColumnLayer`
 - `GeoArrowPathLayer`
+- `GeoArrowPolygonLayer`
 - `GeoArrowSolidPolygonLayer`
+- `GeoArrowArcLayer`
+- `GeoArrowTripsLayer`
+- `GeoArrowH3HexagonLayer`
 - `GeoJsonLayer`
 
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
 back to decoding and GeoJSON-binary preparation, with point promotion available
-for point-focused GeoArrow layers.
+for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
+`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`.
 
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers).

@@ -7,14 +7,12 @@ import {
   DEFAULT_DECK_JSON_CONSTANTS,
   DEFAULT_DECK_JSON_ENUMERATIONS,
 } from './defaultClasses';
-import {
-  getLayerCompatibility,
-  isSupportedGeoArrowLayerType,
-} from './layerCompatibility';
+import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
   resolveColorScale,
   resolveColorScaleProp,
+  resolveConfiguredColumn,
   resolveDatasetId,
   resolveGeometryColumn,
   stripLayerExtensionProps,
@@ -65,6 +63,85 @@ function applyColorScale(options: {
       [targetProp]: JSON.stringify(colorScale),
     },
   };
+}
+
+function resolveGeoArrowBindings(options: {
+  layerName: string;
+  compatibility: NonNullable<ReturnType<typeof getLayerCompatibility>> & {
+    representation: 'geoarrow';
+  };
+  layerProps: LayerExtensionProps & Record<string, unknown>;
+  prepared: Extract<PreparedDeckDatasetState, {status: 'ready'}>['prepared'];
+  props: Record<string, unknown>;
+}) {
+  const {layerName, compatibility, layerProps, prepared, props} = options;
+  let table = prepared.table;
+  const boundProps: Record<string, unknown> = {};
+
+  for (const binding of compatibility.bindings) {
+    if (props[binding.prop] !== undefined) {
+      continue;
+    }
+
+    if (binding.kind === 'geometry') {
+      const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+      if (binding.required && !columnName) {
+        throw new Error(
+          `Layer "${layerName}" requires _sqlrooms.${binding.configKey}.`,
+        );
+      }
+
+      const resolvedGeometry = prepared.resolveGeometry(columnName);
+      if (!resolvedGeometry.nativeGeoArrow) {
+        if (
+          !compatibility.allowGeoArrowPromotion ||
+          !wkbGeometryDecoder.supportsGeoArrowPromotion(
+            layerName,
+            resolvedGeometry.encoding,
+            prepared.table,
+            resolvedGeometry.columnName,
+          )
+        ) {
+          throw new Error(
+            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".`,
+          );
+        }
+      }
+
+      const layerData = prepared.getGeoArrowLayerData(columnName);
+      if (table !== prepared.table && table !== layerData.table) {
+        throw new Error(
+          `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
+        );
+      }
+
+      table = layerData.table;
+      boundProps[binding.prop] = layerData.geometryColumn;
+      continue;
+    }
+
+    const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+    if (!columnName) {
+      if (binding.required) {
+        throw new Error(
+          `Layer "${layerName}" requires _sqlrooms.${binding.configKey}.`,
+        );
+      }
+      continue;
+    }
+
+    const vector =
+      table.getChild(columnName) ?? prepared.table.getChild(columnName);
+    if (!vector) {
+      throw new Error(
+        `Layer "${layerName}" references unknown column "${columnName}" for ${binding.prop}.`,
+      );
+    }
+
+    boundProps[binding.prop] = vector;
+  }
+
+  return {table, boundProps};
 }
 
 export function createDeckJsonConfiguration(
@@ -121,52 +198,41 @@ export function createDeckJsonConfiguration(
 
       const prepared = datasetState.prepared;
       const geometryColumn = resolveGeometryColumn(extensionProps);
-      const baseProps = applyColorScale({
-        props: stripLayerExtensionProps(layerProps),
-        layerProps: extensionProps,
-        table: prepared.table,
-      });
+      const strippedProps = stripLayerExtensionProps(layerProps);
 
       if (compatibility.representation === 'geojson') {
+        const baseProps = applyColorScale({
+          props: strippedProps,
+          layerProps: extensionProps,
+          table: prepared.table,
+        });
         return {
           ...baseProps,
           data: prepared.getGeoJsonBinaryData(geometryColumn),
         };
       }
 
-      const resolvedGeometry = prepared.resolveGeometry(geometryColumn);
-      if (
-        !resolvedGeometry.nativeGeoArrow &&
-        !(
-          isSupportedGeoArrowLayerType(layerName) &&
-          wkbGeometryDecoder.supportsGeoArrowPromotion(
-            layerName,
-            resolvedGeometry.encoding,
-            prepared.table,
-            resolvedGeometry.columnName,
-          )
-        )
-      ) {
-        throw new Error(
-          `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${datasetId}".`,
-        );
-      }
-
-      const geoArrowLayerData = prepared.getGeoArrowLayerData(geometryColumn);
+      const {table, boundProps} = resolveGeoArrowBindings({
+        layerName,
+        compatibility,
+        layerProps: extensionProps,
+        prepared,
+        props: strippedProps,
+      });
+      const baseProps = applyColorScale({
+        props: strippedProps,
+        layerProps: extensionProps,
+        table,
+      });
       const nextProps = {
         ...baseProps,
-        // TODO(geoarrow-upgrade): 0.3.x expects `data` as an Arrow Table and the
-        // geometry accessor as an Arrow Vector. Re-check this payload contract when
-        // upgrading; newer GeoArrow code may prefer RecordBatch/Data chunks instead.
-        data: geoArrowLayerData.table,
-        [compatibility.geometryProp]:
-          baseProps[compatibility.geometryProp] ??
-          geoArrowLayerData.geometryColumn,
+        data: table,
+        ...boundProps,
       };
 
       return rewriteGeoArrowAccessors({
         props: nextProps,
-        table: geoArrowLayerData.table,
+        table,
         layerName,
       });
     },

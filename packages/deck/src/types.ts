@@ -17,6 +17,17 @@ type DeckDatasetBase = {
   geometryEncodingHint?: GeometryEncodingHint;
 };
 
+export type DeckAutoLayerType =
+  | 'GeoJsonLayer'
+  | 'GeoArrowScatterplotLayer'
+  | 'GeoArrowHeatmapLayer'
+  | 'GeoArrowColumnLayer'
+  | 'GeoArrowPathLayer'
+  | 'GeoArrowPolygonLayer'
+  | 'GeoArrowArcLayer'
+  | 'GeoArrowTripsLayer'
+  | 'GeoArrowH3HexagonLayer';
+
 export type DeckSqlDatasetInput = DeckDatasetBase & {
   sqlQuery: string;
 };
@@ -25,6 +36,20 @@ export type DeckArrowTableDatasetInput = DeckDatasetBase & {
   arrowTable?: arrow.Table | undefined;
 };
 export type DeckDatasetInput = DeckSqlDatasetInput | DeckArrowTableDatasetInput;
+
+export type DeckJsonSpecDatasetHint = {
+  prefer?: 'heatmap';
+  type?: DeckAutoLayerType;
+  sourceGeometryColumn?: string;
+  targetGeometryColumn?: string;
+  timestampColumn?: string;
+  hexagonColumn?: string;
+};
+
+export type CreateDeckJsonSpecFromDatasetsOptions = {
+  datasets: Record<string, DeckDatasetInput>;
+  hints?: Record<string, DeckJsonSpecDatasetHint>;
+};
 
 export type PreparedDeckDatasetState =
   | {status: 'loading'}

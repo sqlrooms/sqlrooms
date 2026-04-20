@@ -1,14 +1,12 @@
 import type * as arrow from 'apache-arrow';
-import type {PreparedGeoArrowLayerData, ResolvedGeometryEncoding} from './types';
-
-export type SupportedGeoArrowLayerType =
-  | 'GeoArrowScatterplotLayer'
-  | 'GeoArrowPathLayer'
-  | 'GeoArrowSolidPolygonLayer';
+import type {
+  PreparedGeoArrowLayerData,
+  ResolvedGeometryEncoding,
+} from './types';
 
 export type GeometryDecoder = {
   supportsGeoArrowPromotion: (
-    layerType: SupportedGeoArrowLayerType,
+    layerType: string,
     encoding: ResolvedGeometryEncoding,
     table: arrow.Table,
     columnName: string,

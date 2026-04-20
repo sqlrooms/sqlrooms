@@ -1,5 +1,9 @@
 import type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
-import type {DeckColorScaleProp, LayerExtensionProps} from '../DeckJsonMapSpec';
+import type {
+  DeckColorScaleProp,
+  LayerExtensionConfig,
+  LayerExtensionProps,
+} from '../DeckJsonMapSpec';
 
 function hasExtensionKeys(props: Record<string, unknown>) {
   return '_sqlrooms' in props;
@@ -13,6 +17,15 @@ function getLayerConfig(props: Record<string, unknown>) {
 
   return layerProps._sqlrooms;
 }
+
+export type LayerConfigColumnKey = keyof Pick<
+  LayerExtensionConfig,
+  | 'geometryColumn'
+  | 'sourceGeometryColumn'
+  | 'targetGeometryColumn'
+  | 'timestampColumn'
+  | 'hexagonColumn'
+>;
 
 export function resolveDatasetId(
   props: Record<string, unknown>,
@@ -49,6 +62,15 @@ export function resolveGeometryColumn(props: Record<string, unknown>) {
   return typeof config?.geometryColumn === 'string' && config.geometryColumn
     ? config.geometryColumn
     : undefined;
+}
+
+export function resolveConfiguredColumn(
+  props: Record<string, unknown>,
+  key: LayerConfigColumnKey,
+) {
+  const config = getLayerConfig(props);
+  const value = config?.[key];
+  return typeof value === 'string' && value ? value : undefined;
 }
 
 export function resolveColorScale(

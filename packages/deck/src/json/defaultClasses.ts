@@ -7,9 +7,15 @@ import {
 } from '@deck.gl/core';
 import {GeoJsonLayer} from '@deck.gl/layers';
 import {
+  GeoArrowArcLayer,
+  GeoArrowColumnLayer,
+  _GeoArrowH3HexagonLayer as GeoArrowH3HexagonLayer,
+  GeoArrowHeatmapLayer,
   GeoArrowPathLayer,
+  GeoArrowPolygonLayer,
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
+  GeoArrowTripsLayer,
 } from '@geoarrow/deck.gl-layers';
 
 // TODO(geoarrow-upgrade): Revisit this import surface on the next GeoArrow bump.
@@ -22,8 +28,14 @@ export const DEFAULT_DECK_JSON_CLASSES = {
   OrthographicView,
   GeoJsonLayer,
   GeoArrowScatterplotLayer,
+  GeoArrowHeatmapLayer,
+  GeoArrowColumnLayer,
   GeoArrowPathLayer,
+  GeoArrowPolygonLayer,
   GeoArrowSolidPolygonLayer,
+  GeoArrowArcLayer,
+  GeoArrowTripsLayer,
+  GeoArrowH3HexagonLayer,
 };
 
 export const DEFAULT_DECK_JSON_ENUMERATIONS = {

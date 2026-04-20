@@ -1,14 +1,22 @@
-import type {SupportedGeoArrowLayerType} from '../prepare/geometryDecoder';
+import type {LayerConfigColumnKey} from './layerConfig';
 
 type GeoJsonCompatibility = {
   representation: 'geojson';
   vectorAccessorProps: string[];
 };
 
+type GeoArrowBinding = {
+  prop: string;
+  kind: 'geometry' | 'column';
+  configKey: LayerConfigColumnKey;
+  required?: boolean;
+};
+
 type GeoArrowCompatibility = {
   representation: 'geoarrow';
-  geometryProp: string;
+  bindings: GeoArrowBinding[];
   vectorAccessorProps: string[];
+  allowGeoArrowPromotion?: boolean;
 };
 
 type LayerCompatibility = GeoJsonCompatibility | GeoArrowCompatibility;
@@ -20,7 +28,13 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
   },
   GeoArrowScatterplotLayer: {
     representation: 'geoarrow',
-    geometryProp: 'getPosition',
+    bindings: [
+      {
+        prop: 'getPosition',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
     vectorAccessorProps: [
       'getPosition',
       'getRadius',
@@ -28,29 +42,144 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       'getLineColor',
       'getLineWidth',
     ],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowHeatmapLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPosition',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: ['getPosition', 'getWeight'],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowColumnLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPosition',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPosition',
+      'getFillColor',
+      'getLineColor',
+      'getLineWidth',
+      'getElevation',
+    ],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowPathLayer: {
     representation: 'geoarrow',
-    geometryProp: 'getPath',
+    bindings: [
+      {
+        prop: 'getPath',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
     vectorAccessorProps: ['getPath', 'getColor', 'getWidth'],
+  },
+  GeoArrowTripsLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPath',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+      {
+        prop: 'getTimestamps',
+        kind: 'column',
+        configKey: 'timestampColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: ['getPath', 'getTimestamps', 'getColor', 'getWidth'],
+  },
+  GeoArrowPolygonLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPolygon',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPolygon',
+      'getFillColor',
+      'getLineColor',
+      'getLineWidth',
+      'getElevation',
+    ],
   },
   GeoArrowSolidPolygonLayer: {
     representation: 'geoarrow',
-    geometryProp: 'getPolygon',
-    vectorAccessorProps: ['getPolygon', 'getElevation', 'getFillColor', 'getLineColor'],
+    bindings: [
+      {
+        prop: 'getPolygon',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPolygon',
+      'getElevation',
+      'getFillColor',
+      'getLineColor',
+    ],
+  },
+  GeoArrowArcLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getSourcePosition',
+        kind: 'geometry',
+        configKey: 'sourceGeometryColumn',
+        required: true,
+      },
+      {
+        prop: 'getTargetPosition',
+        kind: 'geometry',
+        configKey: 'targetGeometryColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: [
+      'getSourcePosition',
+      'getTargetPosition',
+      'getSourceColor',
+      'getTargetColor',
+      'getWidth',
+      'getHeight',
+      'getTilt',
+    ],
+  },
+  GeoArrowH3HexagonLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getHexagon',
+        kind: 'column',
+        configKey: 'hexagonColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: [
+      'getHexagon',
+      'getFillColor',
+      'getLineColor',
+      'getElevation',
+    ],
   },
 };
 
 export function getLayerCompatibility(layerName: string) {
   return LAYER_COMPATIBILITY[layerName];
-}
-
-export function isSupportedGeoArrowLayerType(
-  layerName: string,
-): layerName is SupportedGeoArrowLayerType {
-  return [
-    'GeoArrowScatterplotLayer',
-    'GeoArrowPathLayer',
-    'GeoArrowSolidPolygonLayer',
-  ].includes(layerName);
 }

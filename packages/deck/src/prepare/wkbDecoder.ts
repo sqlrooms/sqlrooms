@@ -7,10 +7,7 @@ import {
 } from 'apache-arrow';
 import type * as arrow from 'apache-arrow';
 import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
-import type {
-  GeometryDecoder,
-  SupportedGeoArrowLayerType,
-} from './geometryDecoder';
+import type {GeometryDecoder} from './geometryDecoder';
 import type {
   PreparedGeoArrowLayerData,
   ResolvedGeometryEncoding,
@@ -133,7 +130,7 @@ function createPromotedPointTable(
 
 export const wkbGeometryDecoder: GeometryDecoder = {
   supportsGeoArrowPromotion(
-    layerType: SupportedGeoArrowLayerType,
+    layerType: string,
     encoding: ResolvedGeometryEncoding,
     table: arrow.Table,
     columnName: string,
@@ -146,7 +143,13 @@ export const wkbGeometryDecoder: GeometryDecoder = {
       return false;
     }
 
-    if (layerType !== 'GeoArrowScatterplotLayer') {
+    if (
+      ![
+        'GeoArrowScatterplotLayer',
+        'GeoArrowHeatmapLayer',
+        'GeoArrowColumnLayer',
+      ].includes(layerType)
+    ) {
       return false;
     }
 

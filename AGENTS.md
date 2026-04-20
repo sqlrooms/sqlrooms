@@ -45,6 +45,10 @@ SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based an
   - use an internal feature-local Zustand store when the state is instance-scoped to a component family or compound API
   - keep the compound context/provider as a thin access layer over that state, not as the primary place where complex state is modeled
 
+## Documentation
+
+When changing the public API of an @sqlrooms/\* package or adding new public API, make sure to update the package's README.md accordingly.
+
 ## Further Reading
 
 Load these only when you need them:

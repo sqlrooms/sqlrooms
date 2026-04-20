@@ -4,6 +4,7 @@
  */
 
 export {ColorScaleLegend} from '@sqlrooms/color-scales';
+export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
 export {DeckJsonMap} from './DeckJsonMap';
 export {
   DeckColorScaleProp,
@@ -26,9 +27,12 @@ export type {
 } from './prepare/types';
 export {isArrowTableDatasetInput, isSqlDatasetInput} from './types';
 export type {
+  CreateDeckJsonSpecFromDatasetsOptions,
   DeckArrowTableDatasetInput,
+  DeckAutoLayerType,
   DeckDatasetInput,
   DeckJsonMapProps,
+  DeckJsonSpecDatasetHint,
   DeckSqlDatasetInput,
   PreparedDeckDatasetState,
 } from './types';

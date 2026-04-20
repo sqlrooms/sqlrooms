@@ -3,8 +3,10 @@ import {
   Field,
   FixedSizeList,
   Float64,
+  List,
   Schema,
   Table,
+  Utf8,
   vectorFromArray,
 } from 'apache-arrow';
 import {createDeckJsonConfiguration} from '../src/json/createDeckJsonConfiguration';
@@ -18,12 +20,40 @@ function createPointTable() {
     true,
     new Map([['ARROW:extension:name', 'geoarrow.point']]),
   );
+  const sourcePointField = new Field(
+    'source_geom',
+    new FixedSizeList(2, new Field('xy', new Float64())),
+    true,
+    new Map([['ARROW:extension:name', 'geoarrow.point']]),
+  );
+  const targetPointField = new Field(
+    'target_geom',
+    new FixedSizeList(2, new Field('xy', new Float64())),
+    true,
+    new Map([['ARROW:extension:name', 'geoarrow.point']]),
+  );
   const magnitudeField = new Field('magnitude', new Float64());
-  const schema = new Schema([pointField, magnitudeField]);
+  const h3Field = new Field('h3', new Utf8());
+  const timestampField = new Field(
+    'timestamps',
+    new List(new Field('item', new Float64())),
+  );
+  const schema = new Schema([
+    pointField,
+    sourcePointField,
+    targetPointField,
+    magnitudeField,
+    h3Field,
+    timestampField,
+  ]);
 
   return new Table(schema, {
     geom: vectorFromArray([[7.4386, 46.9511]], pointField.type),
+    source_geom: vectorFromArray([[7.4386, 46.9511]], sourcePointField.type),
+    target_geom: vectorFromArray([[8.5417, 47.3769]], targetPointField.type),
     magnitude: vectorFromArray([4.4]),
+    h3: vectorFromArray(['8928308280fffff']),
+    timestamps: vectorFromArray([[1, 2, 3]], timestampField.type),
   });
 }
 
@@ -37,16 +67,16 @@ function createPreparedDataset(table: Table): PreparedDeckDataset {
     datasetId: 'earthquakes',
     table,
     datasetGeometryColumn: 'geom',
-    resolveGeometry: () => ({
-      columnName: 'geom',
-      vector: geometryColumn,
+    resolveGeometry: (geometryColumnName = 'geom') => ({
+      columnName: geometryColumnName,
+      vector: table.getChild(geometryColumnName)!,
       encoding: 'geoarrow.point',
       nativeGeoArrow: true,
     }),
-    getGeoArrowLayerData: () => ({
+    getGeoArrowLayerData: (geometryColumnName = 'geom') => ({
       table,
-      geometryColumnName: 'geom',
-      geometryColumn,
+      geometryColumnName,
+      geometryColumn: table.getChild(geometryColumnName)!,
       encoding: 'geoarrow.point',
       source: 'native',
     }),
@@ -209,6 +239,65 @@ describe('createDeckJsonConfiguration', () => {
 
     expect(getFillColor).toBeTruthy();
     expect(getFillColor?.({index: 0})).toHaveLength(4);
+  });
+
+  it('binds explicit source/target geometry columns for GeoArrowArcLayer', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowArcLayer',
+          id: 'arcs',
+          _sqlrooms: {
+            dataset: 'earthquakes',
+            sourceGeometryColumn: 'source_geom',
+            targetGeometryColumn: 'target_geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.props.data).toBe(table);
+    expect(JSON.stringify(converted.layers[0]?.props.getSourcePosition)).toBe(
+      JSON.stringify(table.getChild('source_geom')),
+    );
+    expect(JSON.stringify(converted.layers[0]?.props.getTargetPosition)).toBe(
+      JSON.stringify(table.getChild('target_geom')),
+    );
+  });
+
+  it('binds index columns for GeoArrowH3HexagonLayer', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowH3HexagonLayer',
+          id: 'hexes',
+          _sqlrooms: {
+            dataset: 'earthquakes',
+            hexagonColumn: 'h3',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(JSON.stringify(converted.layers[0]?.props.getHexagon)).toBe(
+      JSON.stringify(table.getChild('h3')),
+    );
   });
 
   it('keeps explicit getFillColor over _sqlrooms.colorScale', () => {

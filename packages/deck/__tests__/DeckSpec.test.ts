@@ -55,12 +55,20 @@ describe('LayerExtensionConfig', () => {
         dataset: 'earthquakes',
         geometryColumn: 'geom',
         geometryEncodingHint: 'wkb',
+        sourceGeometryColumn: 'source_geom',
+        targetGeometryColumn: 'target_geom',
+        timestampColumn: 'timestamps',
+        hexagonColumn: 'h3',
         colorScaleProp: 'getFillColor',
       }),
     ).toEqual({
       dataset: 'earthquakes',
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
+      timestampColumn: 'timestamps',
+      hexagonColumn: 'h3',
       colorScaleProp: 'getFillColor',
     });
   });

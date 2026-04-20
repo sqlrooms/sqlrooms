@@ -1,5 +1,9 @@
 import type * as arrow from 'apache-arrow';
 
+const GEOARROW_COMPILED_ACCESSOR = Symbol.for(
+  '@sqlrooms/deck/compiled-geoarrow-accessor',
+);
+
 function isValidIdentifier(name: string) {
   return /^[A-Za-z_$][\w$]*$/.test(name);
 }
@@ -76,13 +80,18 @@ export function compileGeoArrowAccessor(
 ) {
   const trimmedExpression = expression.trim();
   if (trimmedExpression === '-') {
-    return ({
+    const accessor = ({
       index,
       data,
     }: {
       index: number;
       data: {data: {get: (i: number) => unknown}};
     }) => data.data.get(index);
+    Object.defineProperty(accessor, GEOARROW_COMPILED_ACCESSOR, {
+      value: true,
+      enumerable: false,
+    });
+    return accessor;
   }
 
   const bindings = resolveColumnBindings(trimmedExpression, table);
@@ -97,7 +106,7 @@ export function compileGeoArrowAccessor(
   // GeoArrow callbacks are batch-oriented rather than deck.gl/json row-oriented. If
   // the next version aligns with deck.gl/json accessors, remove this compiler and
   // let the standard JSON conversion pipeline handle expressions.
-  return ({
+  const accessor = ({
     index,
     data,
     target,
@@ -115,4 +124,28 @@ export function compileGeoArrowAccessor(
     const result = evaluator(...args, target);
     return copyArrayLikeIntoTarget(result);
   };
+
+  Object.defineProperty(accessor, GEOARROW_COMPILED_ACCESSOR, {
+    value: true,
+    enumerable: false,
+  });
+
+  return accessor;
+}
+
+export function isCompiledGeoArrowAccessor(
+  value: unknown,
+): value is (info: {
+  index: number;
+  data: {data: unknown};
+  target: number[];
+}) => unknown {
+  return (
+    typeof value === 'function' &&
+    Boolean(
+      (value as {[GEOARROW_COMPILED_ACCESSOR]?: boolean})[
+        GEOARROW_COMPILED_ACCESSOR
+      ],
+    )
+  );
 }
