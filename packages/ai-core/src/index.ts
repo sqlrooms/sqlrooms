@@ -69,6 +69,7 @@ export {ActivityBox} from './components/ActivityBox';
 export {
   FlatAgentRenderer,
   OrchestratorToolLogLine,
+  ShowToolCallDetailsProvider,
 } from './components/FlatAgentRenderer';
 export {collectHoistableRenderers} from './components/collectHoistableRenderers';
 export type {HoistableToolCall} from './components/collectHoistableRenderers';
