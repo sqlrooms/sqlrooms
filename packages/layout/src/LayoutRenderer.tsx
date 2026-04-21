@@ -5,8 +5,9 @@ import {
   LayoutRendererContextType,
   LayoutRendererProvider,
 } from './LayoutRendererContext';
-import {DockingProvider} from './docking/DockingContext';
-import {LayoutNodeRenderer} from './node-renderers/LayoutNodeRenderer';
+import {renderLayoutNode} from './node-renderers/renderLayoutNode';
+import {DockingProvider} from './docking/DockingProvider';
+import {RenderNodeProvider} from './node-renderers/RenderNodeContext';
 
 export type LayoutRendererProps = {
   rootLayout: LayoutNode;
@@ -19,18 +20,20 @@ export const LayoutRenderer: FC<LayoutRendererProps> = ({
 }) => {
   return (
     <LayoutRendererProvider {...contextValue}>
-      <DockingProvider
-        rootLayout={contextValue.rootLayout}
-        onLayoutChange={contextValue.onLayoutChange}
-      >
-        <div className={cn('h-full min-w-0 flex-1', className)}>
-          <LayoutNodeRenderer
-            node={contextValue.rootLayout}
-            path={[]}
-            containerType="root"
-          />
-        </div>
-      </DockingProvider>
+      <RenderNodeProvider renderNode={renderLayoutNode}>
+        <DockingProvider
+          rootLayout={contextValue.rootLayout}
+          onLayoutChange={contextValue.onLayoutChange}
+        >
+          <div className={cn('h-full min-w-0 flex-1', className)}>
+            {renderLayoutNode({
+              node: contextValue.rootLayout,
+              path: [],
+              containerType: 'root',
+            })}
+          </div>
+        </DockingProvider>
+      </RenderNodeProvider>
     </LayoutRendererProvider>
   );
 };

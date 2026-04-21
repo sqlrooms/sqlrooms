@@ -1,5 +1,4 @@
 import {
-  LayoutPanelNode,
   RoomPanelComponent,
   TabsLayout,
   useLayoutNodeContext,
@@ -28,7 +27,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const ctx = useLayoutNodeContext();
   const nodeId = ctx.containerType === 'tabs' ? ctx.node.id : undefined;
   const addTab = useRoomStore((s) => s.layout.addTab);
-  const deleteTab = useRoomStore((s) => s.layout.deleteTab);
+  const removeTab = useRoomStore((s) => s.layout.removeTab);
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
     s.layout.isCollapsed('assistant'),
@@ -39,20 +38,25 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     tabName: string;
   } | null>(null);
 
-  const handleAddSheet = useCallback(async (info: ArtifactTypeInfo) => {
-    const result = await executeCommand(info.addCommand, {
-      title: `New ${info.title}`,
-    });
-    if (result?.success && nodeId) {
-      const {sheetId} = result.data as {sheetId: string};
-      const panelNode: LayoutPanelNode = {
-        type: 'panel',
-        id: sheetId,
-        panel: {key: 'workspace/{artifactId}', meta: {artifactId: sheetId}},
-      };
-      addTab(nodeId, panelNode);
-    }
-  }, []);
+  const handleAddSheet = useCallback(
+    async (info: ArtifactTypeInfo) => {
+      const result = await executeCommand(info.addCommand, {
+        title: `New ${info.title}`,
+      });
+      if (result?.success && nodeId) {
+        const {sheetId} = result.data as {sheetId: string};
+        addTab(nodeId, {
+          type: 'panel',
+          id: sheetId,
+          panel: {
+            key: 'artifact',
+            meta: {artifactId: sheetId},
+          },
+        });
+      }
+    },
+    [addTab, executeCommand, nodeId],
+  );
 
   const handleDeleteTab = useCallback((tabId: string, tabName: string) => {
     setDeleteConfirm({tabId, tabName});
@@ -60,10 +64,10 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
 
   const confirmDelete = useCallback(() => {
     if (deleteConfirm && nodeId) {
-      deleteTab(nodeId, deleteConfirm.tabId);
+      removeTab(nodeId, deleteConfirm.tabId);
     }
     setDeleteConfirm(null);
-  }, [deleteConfirm, nodeId, deleteTab]);
+  }, [deleteConfirm, nodeId, removeTab]);
 
   const handleRenameSheet = useCallback(
     (_sheetId: string, _newName: string) => {
@@ -80,13 +84,15 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
         renderTabMenu={(tab) => (
           <>
             <TabStrip.MenuItem
-              onClick={() => handleRenameSheet(tab.id, tab.name)}
+              disabled
+              // onClick={() => handleRenameSheet(tab.id, tab.name)}
             >
               <PencilIcon className="mr-2 h-4 w-4" />
               Rename
             </TabStrip.MenuItem>
             <TabStrip.MenuSeparator />
             <TabStrip.MenuItem
+              disabled
               variant="destructive"
               onClick={() => handleDeleteTab(tab.id, tab.name)}
             >

@@ -10,6 +10,10 @@ import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
+import {z} from 'zod';
+
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
@@ -44,20 +48,27 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           direction: 'row',
           children: [
             {
-              type: 'panel',
-              id: 'data',
+              type: 'tabs',
+              id: RoomPanelTypes.enum['left'],
+              children: [RoomPanelTypes.enum['data']],
               defaultSize: '30%',
+              maxSize: '50%',
+              minSize: '300px',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsed: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
             },
             {
               type: 'panel',
-              id: 'main',
-              defaultSize: '70%',
+              id: RoomPanelTypes.enum['main'],
             },
           ],
         } satisfies LayoutConfig,
         panels: {
           data: {
-            title: 'Data sources',
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataPanel,
           },

@@ -2,8 +2,8 @@ import type {SheetType} from '@sqlrooms/cells';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
-import type {RoomState} from './store';
 import {parseVgPlotSpecString} from './vgplot';
+import {RoomState} from './store-types';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
 

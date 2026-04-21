@@ -4,6 +4,20 @@ import {
   LayoutNodeSize,
 } from '@sqlrooms/layout-config';
 
+/**
+ * Normalizes a size value for react-resizable-panels.
+ * Numeric values are treated as pixels and converted to strings with 'px' suffix.
+ * String values and undefined are returned as-is.
+ */
+export function normalizePanelSize(
+  size: number | string | undefined,
+): number | string | undefined {
+  if (typeof size === 'number') {
+    return `${size}px`;
+  }
+  return size;
+}
+
 export function convertLayoutNodeSizeToStyle(
   size: LayoutNodeSize,
   direction: 'row' | 'column',
@@ -29,10 +43,10 @@ export function getLayoutNodeSize(node: LayoutNode): LayoutNodeSize {
   }
 
   return {
-    defaultSize: node.defaultSize,
-    minSize: node.minSize,
-    maxSize: node.maxSize,
-    collapsedSize: node.collapsedSize,
+    defaultSize: normalizePanelSize(node.defaultSize),
+    minSize: normalizePanelSize(node.minSize),
+    maxSize: normalizePanelSize(node.maxSize),
+    collapsedSize: normalizePanelSize(node.collapsedSize),
     collapsible: node.collapsible ?? false,
   };
 }

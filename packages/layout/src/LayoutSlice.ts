@@ -1,4 +1,5 @@
 import {
+  getLayoutNodeId,
   isLayoutNodeKey,
   isLayoutSplitNode,
   LayoutNode,
@@ -182,7 +183,11 @@ export function createLayoutSlice({
               produce(state, (draft) => {
                 const result = findNodeById(draft.layout.config, splitId);
                 if (!result || !isLayoutSplitNode(result.node)) return;
-                if (!result.node.children.includes(panelId)) {
+                const newNodeId = getLayoutNodeId(panelId);
+                const alreadyExists = result.node.children.some(
+                  (child) => getLayoutNodeId(child) === newNodeId,
+                );
+                if (!alreadyExists) {
                   result.node.children.push(panelId);
                 }
               }),

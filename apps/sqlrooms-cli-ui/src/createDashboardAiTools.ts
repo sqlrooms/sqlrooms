@@ -5,7 +5,7 @@ import {
   createDashboardChartTemplateTool,
   getDashboardChartTemplateInstructions,
 } from './createDashboardChartTemplateTool';
-import type {RoomState} from './store';
+import {RoomState} from './store-types';
 import {getErrorMessage} from './utils';
 import {toVgPlotSpecString} from './vgplot';
 

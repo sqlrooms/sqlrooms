@@ -15,8 +15,9 @@ import {
 } from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
+import {FC} from 'react';
 
-export const MainView: React.FC = () => {
+export const MainView: FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );

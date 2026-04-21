@@ -40,8 +40,9 @@ import {AI_SETTINGS} from './config';
 import {createOpenAIEmbeddingProvider} from './embeddings';
 
 export const RoomPanelTypes = z.enum([
+  'left',
   'room-details',
-  'data-sources',
+  'data',
   'view-configuration',
   MAIN_VIEW,
 ] as const);
@@ -87,20 +88,27 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel',
-                id: RoomPanelTypes.enum['data-sources'],
-                defaultSize: '30%',
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
               },
               {
                 type: 'panel',
                 id: RoomPanelTypes.enum['main'],
-                defaultSize: '70%',
+                defaultSize: '80%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
+            [RoomPanelTypes.enum['data']]: {
+              title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },

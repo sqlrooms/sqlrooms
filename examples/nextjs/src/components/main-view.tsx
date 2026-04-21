@@ -22,8 +22,9 @@ import {
   CardTitle,
   SpinnerPane,
 } from '@sqlrooms/ui';
+import {FC} from 'react';
 
-export function MainView() {
+export const MainView: FC = () => {
   const table = useRoomStore((state) =>
     state.db.findTableByName('earthquakes'),
   );
@@ -112,4 +113,4 @@ export function MainView() {
       </div>
     </div>
   );
-}
+};

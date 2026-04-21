@@ -17,7 +17,14 @@ export type ArtifactTypeInfo = {
   icon: React.ComponentType<{className?: string}>;
   component: RoomPanelComponent;
 };
+
 export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
+  dashboard: {
+    title: 'Dashboard',
+    addCommand: 'dashboard.create-sheet',
+    icon: BarChart3,
+    component: DashboardSheet,
+  },
   notebook: {
     title: 'Notebook',
     addCommand: 'notebook.create-sheet',
@@ -35,11 +42,5 @@ export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
     addCommand: 'app.create-sheet',
     icon: AppWindow,
     component: AppBuilderSheet,
-  },
-  dashboard: {
-    title: 'Dashboard',
-    addCommand: 'dashboard.create-sheet',
-    icon: BarChart3,
-    component: DashboardSheet,
   },
 };

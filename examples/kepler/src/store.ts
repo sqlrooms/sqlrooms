@@ -28,6 +28,7 @@ import {
 } from './components/KeplerSidePanels';
 
 export const RoomPanelTypes = z.enum([
+  'left',
   'data',
   'layers',
   'filters',
@@ -75,9 +76,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel',
-                id: RoomPanelTypes.enum['data'],
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
                 defaultSize: '30%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
               },
               {
                 type: 'panel',
@@ -88,7 +97,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['data']]: {
-              title: 'Data Sources',
+              title: 'Data',
               icon: DatabaseIcon,
               component: DataPanel,
             },

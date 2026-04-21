@@ -1,5 +1,6 @@
+import type {ComponentType} from 'react';
 import type {LayoutNodeContextValue} from './LayoutNodeContext';
-import {PanelIdentityResult} from './resolvePanelIdentity';
+import type {PanelIdentityResult} from './resolvePanelIdentity';
 
 export type LayoutPath = (string | number)[];
 
@@ -9,11 +10,11 @@ export type RoomPanelComponentProps = {
   panelInfo: RoomPanelInfo;
 } & PanelIdentityResult;
 
-export type RoomPanelComponent = React.ComponentType<RoomPanelComponentProps>;
+export type RoomPanelComponent = ComponentType<RoomPanelComponentProps>;
 
 export type RoomPanelInfo = {
   title?: string;
-  icon?: React.ComponentType<{className?: string}>;
+  icon?: ComponentType<{className?: string}>;
   /** @deprecated No longer used — panel area is determined by the layout tree */
   placement?: string;
   component?: RoomPanelComponent;

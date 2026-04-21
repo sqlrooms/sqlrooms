@@ -49,6 +49,7 @@ export {
   // Tabs node helpers
   getLayoutNodeId,
   getVisibleTabChildren,
+  isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutTabsNode,
   isLayoutDockNode,

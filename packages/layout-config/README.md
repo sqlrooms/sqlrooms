@@ -89,8 +89,8 @@ createRoomShellSlice({
   layout: {
     config: twoPaneLayout,
     panels: {
-      data: {title: 'Data', component: DataPanel, area: 'sidebar'},
-      main: {title: 'Main', component: MainPanel, area: 'main'},
+      data: {title: 'Data', component: DataPanel},
+      main: {title: 'Main', component: MainPanel},
     },
   },
 });

@@ -1,7 +1,7 @@
 import {FC} from 'react';
 import {LayoutDockNode} from '@sqlrooms/layout-config';
 import {useGetPanel} from '../../useGetPanel';
-import {LayoutNodeRenderer} from '../LayoutNodeRenderer';
+import {useRenderNode} from '../RenderNodeContext';
 import {RendererSwitcher} from '../RendererSwitcher';
 import {LayoutPath} from '../../types';
 import {ParentDirection} from '../../layout-base-types';
@@ -15,6 +15,7 @@ interface RootProps {
 
 const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const panelInfo = useGetPanel(node);
+  const renderNode = useRenderNode();
 
   const defaultComponent = (
     <div className="flex h-full w-full flex-col" data-dock-id={node.id}>
@@ -25,12 +26,12 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
         </div>
       )}
       <div className="flex-1 overflow-hidden">
-        <LayoutNodeRenderer
-          node={node.root}
-          path={[...path, node.id]}
-          containerType="root"
-          containerId={node.id}
-        />
+        {renderNode({
+          node: node.root,
+          path: [...path, node.id],
+          containerType: 'root',
+          containerId: node.id,
+        })}
       </div>
     </div>
   );

@@ -41,8 +41,8 @@ const LazyMainView = lazy(() =>
 );
 
 export const RoomPanelTypes = z.enum([
-  'room-details',
-  'data-sources',
+  'left',
+  'data',
   'view-configuration',
   MAIN_VIEW,
 ] as const);
@@ -87,22 +87,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel',
-                id: RoomPanelTypes.enum['data-sources'],
-                defaultSize: '30%',
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
                 collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
               },
               {
                 type: 'panel',
                 id: RoomPanelTypes.enum['main'],
-                defaultSize: '70%',
+                defaultSize: '80%',
               },
             ],
-            collapsible: true,
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
+            [RoomPanelTypes.enum['data']]: {
+              title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },

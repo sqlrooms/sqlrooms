@@ -53,12 +53,10 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
         data: {
           title: 'Data',
           component: DataPanel,
-          area: 'sidebar',
         },
         main: {
           title: 'Main',
           component: MainPanel,
-          area: 'main',
         },
       },
     })(set, get, store),
@@ -100,13 +98,13 @@ function PanelButtons() {
 
   return (
     <div className="flex gap-2">
-      <Button onClick={() => setActivePanel('sidebar', 'data')}>
+      <Button onClick={() => setActiveTab('sidebar', 'data')}>
         Show Data Panel
       </Button>
-      <Button onClick={() => addPanelToArea('sidebar', 'schema')}>
+      <Button onClick={() => addTab('sidebar', 'schema')}>
         Add Schema Tab
       </Button>
-      <Button onClick={() => setAreaCollapsed('sidebar', true)}>
+      <Button onClick={() => setCollapsed('sidebar', true)}>
         Collapse Sidebar
       </Button>
     </div>

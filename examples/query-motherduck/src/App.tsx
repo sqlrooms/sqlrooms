@@ -1,11 +1,11 @@
 import {ThemeProvider} from '@sqlrooms/ui';
-import {useEffect, useState} from 'react';
-import {MdConnectPane} from './MdConnectPane';
+import {FC, useEffect, useState} from 'react';
+import {MdConnectPane} from './components/MdConnectPane';
 import {Room} from './Room';
 
 export const MD_TOKEN_KEY = 'motherduck-token';
 
-export const App = () => {
+export const App: FC = () => {
   const [mdToken, setMdToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
