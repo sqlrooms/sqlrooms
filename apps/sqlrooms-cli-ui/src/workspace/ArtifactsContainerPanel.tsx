@@ -55,9 +55,9 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     [nodeId, removeTab],
   );
 
-  const handleRenameSheet = useCallback((sheetId: string, newName: string) => {
-    // renameSheet(sheetId, newName);
-  }, []);
+  // const handleRenameSheet = useCallback((sheetId: string, newName: string) => {
+  //    renameSheet(sheetId, newName);
+  // }, []);
 
   return (
     <>
@@ -68,7 +68,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
           <>
             <TabStrip.MenuItem
               disabled
-              onClick={() => handleRenameSheet(tab.id, tab.name)}
+              // onClick={() => handleRenameSheet(tab.id, tab.name)}
             >
               <PencilIcon className="mr-2 h-4 w-4" />
               Rename
