@@ -11,7 +11,7 @@ export {
 } from '@uwdata/mosaic-core';
 export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
-export {Query, sql} from '@uwdata/mosaic-sql';
+export {asc, column, desc, Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
 export {
   MosaicDashboard,
@@ -39,6 +39,11 @@ export type {
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
 } from './dashboard/MosaicDashboardSlice';
+export {
+  createMosaicColorLegendPlot,
+  MosaicColorLegend,
+  type MosaicColorLegendProps,
+} from './MosaicColorLegend';
 export {
   createDefaultMosaicConfig,
   createMosaicSlice,

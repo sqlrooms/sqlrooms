@@ -27,6 +27,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
@@ -51,7 +52,7 @@
     "react-dom": ">=18"
   },
   "devDependencies": {
-    "@jest/globals": "^29.7.0",
+    "@jest/globals": "^30.3.0",
     "ts-jest": "^29.4.4"
   },
   "scripts": {

@@ -42,11 +42,13 @@ type ThemeProviderProps = {
  */
 type ThemeProviderState = {
   theme: Theme;
+  resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: DEFAULT_THEME,
+  resolvedTheme: getResolvedTheme(DEFAULT_THEME),
   setTheme: () => null,
 };
 
@@ -144,6 +146,7 @@ export function ThemeProvider({
 
   const value = {
     theme,
+    resolvedTheme: getResolvedTheme(theme),
     setTheme: (theme: Theme) => {
       if (typeof window !== 'undefined') {
         try {
