@@ -55,8 +55,24 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         connector: createWebSocketDuckDbConnector({wsUrl: SERVER_URL}),
         layout: {
           config: {
-            type: 'panel',
-            id: RoomPanelTypes.enum['main'],
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['data'],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '200px',
+                collapsible: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '80%',
+              },
+            ],
           } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['main']]: {

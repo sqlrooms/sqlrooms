@@ -365,7 +365,7 @@ return createAgentUIStreamResponse({
 
 The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles split/tabs rendering while `react-mosaic-component` is only used for `type: 'mosaic'` drag-and-drop nodes.
 
-**Existing persisted layouts are migrated automatically.** The Zod schema uses `z.preprocess` to detect and convert legacy formats on parse — including the outer `{ type: 'mosaic', nodes }` wrapper, binary `{first, second}` nodes, `splitPercentages`, and `savedPercentages`. No manual migration of saved state is required.
+**Binary tree layouts are migrated automatically.** The Zod schema uses `z.preprocess` to detect and convert legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays. The outer `{ type: 'mosaic', nodes }` wrapper is no longer supported and must be removed manually in your code.
 
 #### Layout config: remove the outer wrapper
 

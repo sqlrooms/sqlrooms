@@ -77,20 +77,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             {
               type: 'tabs',
               id: RoomPanelTypes.enum['left'],
-              defaultSize: '30%',
-              minSize: 300,
               children: [
-                {
-                  type: 'panel',
-                  id: 'ds',
-                  panel: RoomPanelTypes.enum['data-sources'],
-                },
-                {
-                  type: 'panel',
-                  id: 'sch',
-                  panel: RoomPanelTypes.enum['schema'],
-                },
+                RoomPanelTypes.enum['data'],
+                RoomPanelTypes.enum['schema'],
               ],
+              maxSize: '50%',
+              minSize: '200px',
               activeTabIndex: 0,
               collapsible: true,
               collapsed: true,
@@ -209,13 +201,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   children: [
                     {
                       type: 'panel',
-                      id: 'cons',
-                      panel: RoomPanelTypes.enum['console'],
+                      id: RoomPanelTypes.enum['console'],
                     },
                     {
                       type: 'panel',
-                      id: 'res',
-                      panel: RoomPanelTypes.enum['results'],
+                      id: RoomPanelTypes.enum['results'],
                     },
                   ],
                   activeTabIndex: 0,
@@ -244,8 +234,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           [RoomPanelTypes.enum['bottom']]: {
             component: BottomTabs,
           },
-          [RoomPanelTypes.enum['data-sources']]: {
-            title: 'Data Sources',
+          [RoomPanelTypes.enum['data']]: {
+            title: 'Data',
             component: DataSourcesPanel,
             icon: DatabaseIcon,
           },
@@ -323,6 +313,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         type: 'panel',
         id: chartId,
         panel: {key: 'chart', meta: {chartId}},
+        minSize: 200,
       });
 
       // Recalculate all children sizes equally

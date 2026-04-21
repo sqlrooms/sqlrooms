@@ -790,9 +790,12 @@ function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
 
   const button = (
     <TabStripButton
-      aria-label="Create new tab"
-      onClick={() => onCreate()}
       {...props}
+      aria-label={props['aria-label'] || 'Create new tab'}
+      onClick={(e) => {
+        onCreate();
+        props.onClick?.(e);
+      }}
     >
       <PlusIcon className="h-4 w-4" />
     </TabStripButton>

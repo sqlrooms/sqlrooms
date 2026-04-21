@@ -44,8 +44,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: 'panel',
-          id: RoomPanelTypes.enum['main'],
+          type: 'split',
+          id: 'root',
+          direction: 'row',
+          children: [
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['data-sources'],
+              defaultSize: 300,
+              minSize: 200,
+              maxSize: 500,
+            },
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['main'],
+            },
+          ],
         } satisfies LayoutConfig,
         panels: {
           [RoomPanelTypes.enum['data-sources']]: {

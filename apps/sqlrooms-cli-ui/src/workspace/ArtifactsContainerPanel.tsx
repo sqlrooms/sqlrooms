@@ -25,15 +25,25 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     s.layout.isCollapsed('assistant'),
   );
 
-  const handleAddSheet = useCallback(async (info: ArtifactTypeInfo) => {
-    const result = await executeCommand(info.addCommand, {
-      title: `New ${info.title}`,
-    });
-    if (result?.success && nodeId) {
-      const {sheetId} = result.data as {sheetId: string};
-      addTab(nodeId, sheetId);
-    }
-  }, []);
+  const handleAddSheet = useCallback(
+    async (info: ArtifactTypeInfo) => {
+      const result = await executeCommand(info.addCommand, {
+        title: `New ${info.title}`,
+      });
+      if (result?.success && nodeId) {
+        const {sheetId} = result.data as {sheetId: string};
+        addTab(nodeId, {
+          type: 'panel',
+          id: sheetId,
+          panel: {
+            key: 'workspace/{artifactId}',
+            meta: {artifactId: sheetId},
+          },
+        });
+      }
+    },
+    [addTab, executeCommand, nodeId],
+  );
 
   const handleDeleteTab = useCallback((sheetId: string) => {
     // deleteTab(sheetId);
@@ -51,6 +61,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
         renderTabMenu={(tab) => (
           <>
             <TabStrip.MenuItem
+              disabled
               onClick={() => handleRenameSheet(tab.id, tab.name)}
             >
               <PencilIcon className="mr-2 h-4 w-4" />
@@ -58,6 +69,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
             </TabStrip.MenuItem>
             <TabStrip.MenuSeparator />
             <TabStrip.MenuItem
+              disabled
               variant="destructive"
               onClick={() => handleDeleteTab(tab.id)}
             >

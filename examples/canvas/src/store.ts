@@ -71,7 +71,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               {
                 type: 'panel',
                 id: RoomPanelTypes.enum['data'],
-                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '200px',
+                collapsible: true,
               },
               {
                 type: 'panel',

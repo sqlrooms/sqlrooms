@@ -5,7 +5,7 @@ import {
   isLayoutTabsNode,
   isLayoutDockNode,
 } from '@sqlrooms/layout-config';
-import {FC, lazy, Suspense} from 'react';
+import {lazy, ReactElement, Suspense} from 'react';
 import type {NodeRenderProps} from './types';
 
 // Lazy load layout components to break circular dependencies
@@ -35,13 +35,10 @@ const DockNodeRenderer = lazy(() =>
 
 /**
  * Recursively renders a layout node.
- * This component is separate from NodeRenderer to avoid circular dependencies.
+ * This function is used via RenderNodeContext to break circular dependencies.
  */
-export const LayoutNodeRenderer: FC<NodeRenderProps> = ({
-  node,
-  path,
-  parentDirection,
-}) => {
+export const renderLayoutNode = (props: NodeRenderProps): ReactElement => {
+  const {node, path, parentDirection} = props;
   return (
     <Suspense fallback={null}>
       {(isLayoutNodeKey(node) || isLayoutPanelNode(node)) && (
