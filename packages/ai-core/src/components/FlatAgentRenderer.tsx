@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {createContext, useContext, useMemo} from 'react';
 import {CircleXIcon, Loader2, CircleDotIcon, CircleIcon} from 'lucide-react';
 import {formatShortDuration} from '@sqlrooms/utils';
 import {cn, HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
@@ -11,6 +11,18 @@ import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
 import {type HoistableToolCall} from './collectHoistableRenderers';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
+
+// ---------------------------------------------------------------------------
+// Context for controlling ToolCallDetailHover visibility
+// ---------------------------------------------------------------------------
+
+const ShowToolCallDetailsContext = createContext(false);
+
+export const ShowToolCallDetailsProvider = ShowToolCallDetailsContext.Provider;
+
+function useShowToolCallDetails() {
+  return useContext(ShowToolCallDetailsContext);
+}
 
 // ---------------------------------------------------------------------------
 // Types for the flattened segment model
@@ -36,6 +48,7 @@ type FlatSegment = AgentSegment | ToolGroupSegment;
 const ActivityLogLine: React.FC<{
   toolCall: AgentToolCall;
 }> = ({toolCall}) => {
+  const showDetails = useShowToolCallDetails();
   const isSuccess = toolCall.state === 'success';
   const isError = toolCall.state === 'error';
   const isPending = toolCall.state === 'pending';
@@ -51,8 +64,10 @@ const ActivityLogLine: React.FC<{
   return (
     <div
       className={cn(
-        'grid min-w-0 grid-cols-[14px_minmax(0,1fr)_auto_auto] items-start gap-x-1.5 overflow-hidden py-0.5',
-        isError && 'text-red-600 dark:text-red-400',
+        'grid min-w-0 items-start gap-x-1.5 overflow-hidden py-0.5',
+        showDetails
+          ? 'grid-cols-[14px_minmax(0,1fr)_auto_auto]'
+          : 'grid-cols-[14px_minmax(0,1fr)_auto]',
         !isError && 'text-muted-foreground',
       )}
     >
@@ -76,7 +91,7 @@ const ActivityLogLine: React.FC<{
       ) : (
         <span />
       )}
-      <ToolCallDetailHover toolCall={toolCall} />
+      {showDetails && <ToolCallDetailHover toolCall={toolCall} />}
     </div>
   );
 };
@@ -123,6 +138,7 @@ const ParentSummaryLine: React.FC<{
   completedAt,
   toolCall,
 }) => {
+  const showDetails = useShowToolCallDetails();
   const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);
   const effectiveStartedAt = timing?.startedAt ?? startedAt;
   const effectiveCompletedAt = timing?.completedAt ?? completedAt;
@@ -136,7 +152,10 @@ const ParentSummaryLine: React.FC<{
   return (
     <div
       className={cn(
-        'grid min-w-0 grid-cols-[16px_minmax(0,1fr)_auto_auto] items-start gap-x-2 py-1 text-xs',
+        'grid min-w-0 items-start gap-x-2 py-1 text-xs',
+        showDetails
+          ? 'grid-cols-[16px_minmax(0,1fr)_auto_auto]'
+          : 'grid-cols-[16px_minmax(0,1fr)_auto]',
       )}
     >
       <span className="flex h-4 w-4 items-center justify-center">
@@ -146,10 +165,20 @@ const ParentSummaryLine: React.FC<{
           <CircleIcon className="text-muted-foreground/30 h-2 w-2 fill-current" />
         )}
       </span>
-      <span className="min-w-0 leading-4 break-words">
-        <span className="font-medium">{displayName}</span>
+      <span className="flex min-w-0 items-baseline leading-4">
+        <span className="shrink-0 font-medium">{displayName}</span>
         {reasoning && (
-          <span className="ml-1.5 font-normal italic">{reasoning}</span>
+          <span
+            className="text-muted-foreground/50 relative ml-1.5 overflow-hidden font-normal whitespace-nowrap italic"
+            style={{
+              maskImage:
+                'linear-gradient(to right, black 80%, transparent 100%)',
+              WebkitMaskImage:
+                'linear-gradient(to right, black 80%, transparent 100%)',
+            }}
+          >
+            {reasoning}
+          </span>
         )}
       </span>
       {elapsed ? (
@@ -163,7 +192,8 @@ const ParentSummaryLine: React.FC<{
       ) : (
         <span />
       )}
-      {toolCall ? <ToolCallDetailHover toolCall={toolCall} /> : <span />}
+      {showDetails &&
+        (toolCall ? <ToolCallDetailHover toolCall={toolCall} /> : <span />)}
     </div>
   );
 };
@@ -464,6 +494,14 @@ export const OrchestratorToolLogLine: React.FC<{
   const reasoning = inputObj?.reasoning as string | undefined;
   const label = reasoning || toolName;
 
+  const toolCall: AgentToolCall = {
+    toolCallId,
+    toolName,
+    input: part.input,
+    output: (part as Record<string, unknown>).output,
+    state: isError ? 'error' : isSuccess ? 'success' : 'pending',
+  };
+
   return (
     <OrchestratorLogLineInner
       toolCallId={toolCallId}
@@ -471,6 +509,7 @@ export const OrchestratorToolLogLine: React.FC<{
       isPending={isPending}
       isSuccess={isSuccess}
       isError={isError}
+      toolCall={toolCall}
     />
   );
 };
@@ -481,7 +520,9 @@ const OrchestratorLogLineInner: React.FC<{
   isPending: boolean;
   isSuccess: boolean;
   isError: boolean;
-}> = ({toolCallId, label, isPending, isSuccess, isError}) => {
+  toolCall: AgentToolCall;
+}> = ({toolCallId, label, isPending, isSuccess, isError, toolCall}) => {
+  const showDetails = useShowToolCallDetails();
   const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);
   const elapsed = useElapsedTime(
     isPending,
@@ -492,8 +533,10 @@ const OrchestratorLogLineInner: React.FC<{
   return (
     <div
       className={cn(
-        'grid min-w-0 grid-cols-[14px_minmax(0,1fr)_auto] items-start gap-x-1.5 overflow-hidden py-0.5',
-        isError && 'text-red-600 dark:text-red-400',
+        'grid min-w-0 items-start gap-x-1.5 overflow-hidden py-0.5',
+        showDetails
+          ? 'grid-cols-[14px_minmax(0,1fr)_auto_auto]'
+          : 'grid-cols-[14px_minmax(0,1fr)_auto]',
         !isError && 'text-muted-foreground',
       )}
     >
@@ -520,6 +563,7 @@ const OrchestratorLogLineInner: React.FC<{
       ) : (
         <span />
       )}
+      {showDetails && <ToolCallDetailHover toolCall={toolCall} />}
     </div>
   );
 };
