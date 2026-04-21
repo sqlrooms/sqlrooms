@@ -6,9 +6,31 @@ import {roomStore} from './store';
 
 export const Room = () => {
   const sqlEditor = useDisclosure();
+
+  // return (
+  //   <RoomShell className="h-screen" roomStore={roomStore}>
+  //     <RoomShell.Sidebar>
+  //       <RoomShell.SidebarButton
+  //         title="SQL Editor"
+  //         onClick={sqlEditor.onToggle}
+  //         isSelected={false}
+  //         icon={TerminalIcon}
+  //       />
+  //       <RoomShell.CommandPalette.Button />
+  //       <ThemeSwitch />
+  //     </RoomShell.Sidebar>
+  //     <RoomShell.LayoutComposer />
+  //     <RoomShell.LoadingProgress />
+  //     <RoomShell.CommandPalette />
+  //     <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
+  //   </RoomShell>
+  // );
+
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
-      <RoomShell.Sidebar>
+      <RoomShell.SidebarContainer>
+        <RoomShell.TabButtons />
+        <div className="flex-1" />
         <RoomShell.SidebarButton
           title="SQL Editor"
           onClick={sqlEditor.onToggle}
@@ -17,7 +39,7 @@ export const Room = () => {
         />
         <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
-      </RoomShell.Sidebar>
+      </RoomShell.SidebarContainer>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
       <RoomShell.CommandPalette />

@@ -1,8 +1,10 @@
 import {
+  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   LayoutNode,
+  persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
@@ -28,23 +30,19 @@ import {
   isLayoutNodeKey,
   LayoutDockNode,
 } from '@sqlrooms/layout';
+import {createId} from '@paralleldrive/cuid2';
 
 export type RoomState = RoomShellSliceState & {
   addDashboard: (tabsId?: string) => void;
   addChartToDashboard: (dashboardId: string) => void;
 };
 
-let dashboardCounter = 0;
-let chartCounter = 0;
-
 function generateDashboardId(): string {
-  dashboardCounter += 1;
-  return `dashboard-${dashboardCounter}`;
+  return `dashboard-${createId()}`;
 }
 
 function generateChartId(): string {
-  chartCounter += 1;
-  return `chart-${chartCounter}`;
+  return `chart-${createId()}`;
 }
 
 function createDashboardNode(
@@ -66,278 +64,288 @@ function createDashboardNode(
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  (set, get, store) => ({
-    ...createRoomShellSlice({
-      layout: {
-        config: {
-          id: 'root',
-          type: 'split',
-          direction: 'row',
-          children: [
-            {
-              type: 'tabs',
-              id: RoomPanelTypes.enum['left'],
-              children: [
-                RoomPanelTypes.enum['data'],
-                RoomPanelTypes.enum['schema'],
-              ],
-              maxSize: '50%',
-              minSize: '200px',
-              activeTabIndex: 0,
-              collapsible: true,
-              collapsed: true,
-              collapsedSize: 0,
-              hideTabStrip: true,
-            },
-            {
-              id: RoomPanelTypes.enum['main'],
-              type: 'split',
-              direction: 'column',
-              children: [
-                {
-                  type: 'tabs',
-                  id: RoomPanelTypes.enum['dashboards'],
-                  children: [
-                    createDashboardNode(
-                      'overview',
-                      [
+  persistSliceConfigs(
+    {
+      name: 'ai-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createRoomShellSlice({
+        layout: {
+          config: {
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [
+                  RoomPanelTypes.enum['data-sources'],
+                  RoomPanelTypes.enum['schema'],
+                ],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '200px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                id: RoomPanelTypes.enum['main'],
+                type: 'split',
+                direction: 'column',
+                children: [
+                  {
+                    type: 'tabs',
+                    id: RoomPanelTypes.enum['dashboards'],
+                    children: [
+                      createDashboardNode(
+                        'overview',
+                        [
+                          {
+                            type: 'split',
+                            id: 'overview-left',
+                            direction: 'row',
+                            children: [
+                              {
+                                type: 'panel',
+                                id: 'overview-sessions',
+                                panel: {
+                                  key: 'chart',
+                                  meta: {chartId: 'overview-sessions'},
+                                },
+                                defaultSize: 40,
+                                minSize: 200,
+                              },
+                              {
+                                type: 'panel',
+                                id: 'overview-conversions',
+                                panel: {
+                                  key: 'chart',
+                                  meta: {chartId: 'overview-conversions'},
+                                },
+                                defaultSize: 60,
+                                minSize: 200,
+                              },
+                            ],
+                            defaultSize: 50,
+                            minSize: 400,
+                          },
+                          {
+                            type: 'split',
+                            id: 'overview-right',
+                            direction: 'column',
+                            children: [
+                              {
+                                type: 'panel',
+                                id: 'overview-users',
+                                panel: {
+                                  key: 'chart',
+                                  meta: {chartId: 'overview-users'},
+                                },
+                                defaultSize: '30%',
+                                minSize: 200,
+                              },
+                              {
+                                type: 'panel',
+                                id: 'overview-visits',
+                                panel: {
+                                  key: 'chart',
+                                  meta: {chartId: 'overview-visits'},
+                                },
+                                defaultSize: '70%',
+                                minSize: 200,
+                              },
+                            ],
+                            defaultSize: '50%',
+                            minSize: 400,
+                          },
+                        ],
+                        'row',
+                      ),
+                      createDashboardNode('growth', [
                         {
-                          type: 'split',
-                          id: 'overview-left',
-                          direction: 'row',
-                          children: [
-                            {
-                              type: 'panel',
-                              id: 'overview-sessions',
-                              panel: {
-                                key: 'chart',
-                                meta: {chartId: 'overview-sessions'},
-                              },
-                              defaultSize: 40,
-                              minSize: 200,
-                            },
-                            {
-                              type: 'panel',
-                              id: 'overview-conversions',
-                              panel: {
-                                key: 'chart',
-                                meta: {chartId: 'overview-conversions'},
-                              },
-                              defaultSize: 60,
-                              minSize: 200,
-                            },
-                          ],
-                          defaultSize: 50,
-                          minSize: 400,
+                          type: 'panel',
+                          id: 'foobar',
+                          panel: {key: 'chart', meta: {chartId: 'foobar'}},
+                          defaultSize: '60%',
+                          minSize: 200,
                         },
                         {
-                          type: 'split',
-                          id: 'overview-right',
-                          direction: 'column',
-                          children: [
-                            {
-                              type: 'panel',
-                              id: 'overview-users',
-                              panel: {
-                                key: 'chart',
-                                meta: {chartId: 'overview-users'},
-                              },
-                              defaultSize: '30%',
-                              minSize: 200,
-                            },
-                            {
-                              type: 'panel',
-                              id: 'overview-visits',
-                              panel: {
-                                key: 'chart',
-                                meta: {chartId: 'overview-visits'},
-                              },
-                              defaultSize: '70%',
-                              minSize: 200,
-                            },
-                          ],
-                          defaultSize: '50%',
-                          minSize: 400,
+                          type: 'panel',
+                          id: 'growth-sessions-2',
+                          panel: {
+                            key: 'chart',
+                            meta: {chartId: 'growth-sessions-2'},
+                          },
+                          defaultSize: '60%',
+                          minSize: 200,
                         },
-                      ],
-                      'row',
-                    ),
-                    createDashboardNode('growth', [
+                        {
+                          type: 'panel',
+                          id: 'growth-conversions',
+                          panel: {
+                            key: 'chart',
+                            meta: {chartId: 'growth-conversions'},
+                          },
+                          defaultSize: '40%',
+                          minSize: 200,
+                        },
+                      ]),
+                    ],
+                    activeTabIndex: 0,
+                  },
+                  {
+                    type: 'tabs',
+                    id: RoomPanelTypes.enum['bottom'],
+                    defaultSize: '30%',
+                    children: [
                       {
                         type: 'panel',
-                        id: 'foobar',
-                        panel: {key: 'chart', meta: {chartId: 'foobar'}},
-                        defaultSize: '60%',
-                        minSize: 200,
+                        id: RoomPanelTypes.enum['console'],
                       },
                       {
                         type: 'panel',
-                        id: 'growth-sessions-2',
-                        panel: {
-                          key: 'chart',
-                          meta: {chartId: 'growth-sessions-2'},
-                        },
-                        defaultSize: '60%',
-                        minSize: 200,
+                        id: RoomPanelTypes.enum['results'],
                       },
-                      {
-                        type: 'panel',
-                        id: 'growth-conversions',
-                        panel: {
-                          key: 'chart',
-                          meta: {chartId: 'growth-conversions'},
-                        },
-                        defaultSize: '40%',
-                        minSize: 200,
-                      },
-                    ]),
-                  ],
-                  activeTabIndex: 0,
-                },
-                {
-                  type: 'tabs',
-                  id: RoomPanelTypes.enum['bottom'],
-                  defaultSize: '30%',
-                  children: [
-                    {
-                      type: 'panel',
-                      id: RoomPanelTypes.enum['console'],
-                    },
-                    {
-                      type: 'panel',
-                      id: RoomPanelTypes.enum['results'],
-                    },
-                  ],
-                  activeTabIndex: 0,
-                  collapsible: true,
-                  collapsed: true,
-                  collapsedSize: 44,
-                  minSize: 300,
-                },
-              ],
+                    ],
+                    activeTabIndex: 0,
+                    collapsible: true,
+                    collapsed: true,
+                    collapsedSize: 44,
+                    minSize: 300,
+                  },
+                ],
+              },
+            ],
+          } satisfies LayoutConfig,
+          panels: {
+            dashboard: (ctx) => ({
+              icon: BarChart3Icon,
+              title: `Dashboard ${ctx.meta?.dashboardId ?? ''}`,
+            }),
+            chart: (ctx) => ({
+              icon: BarChart3Icon,
+              component: DynamicChartPanel,
+              title: `Chart ${ctx.meta?.chartId ?? ''}`,
+            }),
+            [RoomPanelTypes.enum['dashboards']]: {
+              component: DashboardTabs,
             },
-          ],
-        } satisfies LayoutConfig,
-        panels: {
-          dashboard: (ctx) => ({
-            icon: BarChart3Icon,
-            title: `Dashboard ${ctx.meta?.dashboardId ?? ''}`,
-          }),
-          chart: (ctx) => ({
-            icon: BarChart3Icon,
-            component: DynamicChartPanel,
-            title: `Chart ${ctx.meta?.chartId ?? ''}`,
-          }),
-          [RoomPanelTypes.enum['dashboards']]: {
-            component: DashboardTabs,
-          },
-          [RoomPanelTypes.enum['bottom']]: {
-            component: BottomTabs,
-          },
-          [RoomPanelTypes.enum['data']]: {
-            title: 'Data',
-            component: DataSourcesPanel,
-            icon: DatabaseIcon,
-          },
-          [RoomPanelTypes.enum['schema']]: {
-            title: 'Schema',
-            component: SchemaPanel,
-            icon: TableIcon,
-          },
-          [RoomPanelTypes.enum['console']]: {
-            title: 'Console',
-            component: ConsolePanel,
-            icon: TerminalIcon,
-          },
-          [RoomPanelTypes.enum['results']]: {
-            title: 'Results',
-            component: ResultsPanel,
-            icon: TableRowsSplitIcon,
-          },
-          [RoomPanelTypes.enum['main']]: {
-            component: MainPanel,
+            [RoomPanelTypes.enum['bottom']]: {
+              component: BottomTabs,
+            },
+            [RoomPanelTypes.enum['data-sources']]: {
+              title: 'Data',
+              component: DataSourcesPanel,
+              icon: DatabaseIcon,
+            },
+            [RoomPanelTypes.enum['schema']]: {
+              title: 'Schema',
+              component: SchemaPanel,
+              icon: TableIcon,
+            },
+            [RoomPanelTypes.enum['console']]: {
+              title: 'Console',
+              component: ConsolePanel,
+              icon: TerminalIcon,
+            },
+            [RoomPanelTypes.enum['results']]: {
+              title: 'Results',
+              component: ResultsPanel,
+              icon: TableRowsSplitIcon,
+            },
+            [RoomPanelTypes.enum['main']]: {
+              component: MainPanel,
+            },
           },
         },
+      })(set, get, store),
+
+      addDashboard: (tabsId = 'dashboards') => {
+        const {addTab} = get().layout;
+
+        const dashboardId = generateDashboardId();
+        const chartId = generateChartId();
+
+        addTab(
+          tabsId,
+          createDashboardNode(dashboardId, [
+            {
+              type: 'panel',
+              id: chartId,
+              panel: {key: 'chart', meta: {chartId}},
+            },
+          ]),
+        );
       },
-    })(set, get, store),
 
-    addDashboard: (tabsId = 'dashboards') => {
-      const {addTab} = get().layout;
+      addChartToDashboard: (dashboardId: string) => {
+        const {config, setConfig} = get().layout;
+        const chartId = generateChartId();
 
-      const dashboardId = generateDashboardId();
-      const chartId = generateChartId();
-
-      addTab(
-        tabsId,
-        createDashboardNode(dashboardId, [
-          {
-            type: 'panel',
-            id: chartId,
-            panel: {key: 'chart', meta: {chartId}},
-          },
-        ]),
-      );
-    },
-
-    addChartToDashboard: (dashboardId: string) => {
-      const {config, setConfig} = get().layout;
-      const chartId = generateChartId();
-
-      // Find the dock node for this dashboard
-      const dockResult = findNodeById(config, dashboardId);
-      if (!dockResult || !isLayoutDockNode(dockResult.node)) {
-        return;
-      }
-
-      const dockNode = dockResult.node;
-
-      // Find the root split of the dock node
-      if (!isLayoutSplitNode(dockNode.root)) {
-        return;
-      }
-
-      // Clone the config and add the new chart panel to the dock's root split
-      const newConfig = JSON.parse(JSON.stringify(config)) as LayoutConfig;
-      const newDockResult = findNodeById(newConfig, dashboardId);
-      if (!newDockResult || !isLayoutDockNode(newDockResult.node)) {
-        return;
-      }
-
-      const newDockNode = newDockResult.node;
-      if (!isLayoutSplitNode(newDockNode.root)) {
-        return;
-      }
-
-      // Add the new chart
-      newDockNode.root.children.push({
-        type: 'panel',
-        id: chartId,
-        panel: {key: 'chart', meta: {chartId}},
-        minSize: 200,
-      });
-
-      // Recalculate all children sizes equally
-      const totalChildren = newDockNode.root.children.length;
-      const equalSize = Math.floor(100 / totalChildren);
-
-      newDockNode.root.children = newDockNode.root.children.map((child) => {
-        // If child is just a string key, wrap it into a proper panel node
-        if (isLayoutNodeKey(child)) {
-          return {
-            type: 'panel' as const,
-            id: child,
-            defaultSize: equalSize,
-          };
+        // Find the dock node for this dashboard
+        const dockResult = findNodeById(config, dashboardId);
+        if (!dockResult || !isLayoutDockNode(dockResult.node)) {
+          return;
         }
 
-        // Otherwise, spread existing node and set defaultSize
-        return {
-          ...child,
-          defaultSize: equalSize,
-        };
-      });
+        const dockNode = dockResult.node;
 
-      setConfig(newConfig);
-    },
-  }),
+        // Find the root split of the dock node
+        if (!isLayoutSplitNode(dockNode.root)) {
+          return;
+        }
+
+        // Clone the config and add the new chart panel to the dock's root split
+        const newConfig = JSON.parse(JSON.stringify(config)) as LayoutConfig;
+        const newDockResult = findNodeById(newConfig, dashboardId);
+        if (!newDockResult || !isLayoutDockNode(newDockResult.node)) {
+          return;
+        }
+
+        const newDockNode = newDockResult.node;
+        if (!isLayoutSplitNode(newDockNode.root)) {
+          return;
+        }
+
+        // Add the new chart
+        newDockNode.root.children.push({
+          type: 'panel',
+          id: chartId,
+          panel: {key: 'chart', meta: {chartId}},
+          minSize: 200,
+        });
+
+        // Recalculate all children sizes equally
+        const totalChildren = newDockNode.root.children.length;
+        const equalSize = Math.floor(100 / totalChildren);
+
+        newDockNode.root.children = newDockNode.root.children.map((child) => {
+          // If child is just a string key, wrap it into a proper panel node
+          if (isLayoutNodeKey(child)) {
+            return {
+              type: 'panel' as const,
+              id: child,
+              defaultSize: equalSize,
+            };
+          }
+
+          // Otherwise, spread existing node and set defaultSize
+          return {
+            ...child,
+            defaultSize: equalSize,
+          };
+        });
+
+        setConfig(newConfig);
+      },
+    }),
+  ),
 );
