@@ -17,6 +17,7 @@ export type ArtifactTypeInfo = {
   icon: React.ComponentType<{className?: string}>;
   component: RoomPanelComponent;
 };
+
 export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
   notebook: {
     title: 'Notebook',

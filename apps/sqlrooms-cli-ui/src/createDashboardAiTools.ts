@@ -1,9 +1,9 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 
-import type {RoomState} from './store';
 import {getErrorMessage} from './utils';
 import {toVgPlotSpecString} from './vgplot';
+import {RoomState} from './store-types';
 
 const DashboardCreateSheetToolParameters = z
   .object({

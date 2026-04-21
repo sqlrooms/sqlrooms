@@ -12,7 +12,7 @@ import {
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import {FC} from 'react';
-import {useRoomStore} from './store';
+import {useRoomStore} from '../store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();

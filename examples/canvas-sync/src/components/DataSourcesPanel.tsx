@@ -1,11 +1,12 @@
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
-import {useRoomStore, RoomPanelTypes} from './store';
+import {useRoomStore, RoomPanelTypes} from '../store';
 import {toast} from '@sqlrooms/ui';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
+import {FC} from 'react';
 
-export const DataSourcesPanel = () => {
+export const DataSourcesPanel: FC = () => {
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,

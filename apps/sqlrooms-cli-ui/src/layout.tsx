@@ -53,7 +53,7 @@ export const createLayout = ({
   },
   panels: {
     'data-sources': {
-      title: 'Data Sources',
+      title: 'Data',
       icon: DatabaseIcon,
       component: DataSourcesPanel,
     },
@@ -67,13 +67,18 @@ export const createLayout = ({
       title: 'Artifacts',
       icon: FolderIcon,
     },
-    'workspace/{artifactId}': (ctx) => {
+    artifact: (ctx) => {
       const artifactId = ctx.meta?.artifactId as string | undefined;
-      const artifactSheet = store.getState().cells.config.sheets[artifactId];
+
+      const artifactSheet = artifactId
+        ? store.getState().cells.config.sheets[artifactId]
+        : null;
       const artifactType = artifactSheet?.type;
+
       const artifactMeta = artifactType
         ? ARTIFACT_TYPES[artifactType]
         : undefined;
+
       if (!artifactMeta) {
         return {
           component: () => null,
@@ -81,6 +86,7 @@ export const createLayout = ({
           icon: LayoutDashboardIcon,
         };
       }
+
       return {
         component: artifactMeta.component,
         title: artifactSheet?.title || `New ${artifactMeta.title}`,

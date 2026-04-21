@@ -20,7 +20,7 @@ import {
 } from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {DataSourcesPanel} from './DataSourcesPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
 
 // App config schema
 export const AppConfig = z.object({
@@ -36,7 +36,7 @@ export type RoomState = RoomShellSliceState &
       setApiKey: (apiKey: string) => void;
     };
   };
-export const RoomPanelTypes = z.enum(['main', 'data'] as const);
+export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -69,11 +69,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel',
-                id: RoomPanelTypes.enum['data'],
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '20%',
                 maxSize: '50%',
-                minSize: '200px',
+                minSize: '300px',
+                activeTabIndex: 0,
                 collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
               },
               {
                 type: 'panel',

@@ -1,6 +1,6 @@
 import {SheetsTabBar} from '@sqlrooms/cells';
 import {Notebook} from '@sqlrooms/notebook';
-import {useRoomStore} from './store';
+import {useRoomStore} from '../store';
 
 export const NotebookPanel: React.FC = () => {
   const currentSheet = useRoomStore((s) => {

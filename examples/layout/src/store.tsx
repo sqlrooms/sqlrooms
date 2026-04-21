@@ -14,15 +14,15 @@ import {
   TableRowsSplitIcon,
   TerminalIcon,
 } from 'lucide-react';
-import {BottomTabs} from './panels/BottomTabs';
-import {ConsolePanel} from './panels/ConsolePanel';
-import {DashboardTabs} from './panels/DashboardTabs';
-import {DataSourcesPanel} from './panels/DataSourcesPanel';
-import {DynamicChartPanel} from './panels/DynamicChartPanel';
-import {MainPanel} from './panels/MainPanel';
-import {RoomPanelTypes} from './panels/panel-types';
-import {ResultsPanel} from './panels/ResultsPanel';
-import {SchemaPanel} from './panels/SchemaPanel';
+import {BottomTabs} from './components/BottomTabs';
+import {ConsolePanel} from './components/ConsolePanel';
+import {DashboardTabs} from './components/DashboardTabs';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {DynamicChartPanel} from './components/DynamicChartPanel';
+import {MainPanel} from './components/MainPanel';
+import {RoomPanelTypes} from './panel-types';
+import {ResultsPanel} from './components/ResultsPanel';
+import {SchemaPanel} from './components/SchemaPanel';
 import {
   findNodeById,
   isLayoutDockNode,
@@ -84,12 +84,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 type: 'tabs',
                 id: RoomPanelTypes.enum['left'],
                 children: [
-                  RoomPanelTypes.enum['data-sources'],
+                  RoomPanelTypes.enum['data'],
                   RoomPanelTypes.enum['schema'],
                 ],
-                defaultSize: '20%',
+                defaultSize: '30%',
                 maxSize: '50%',
-                minSize: '200px',
+                minSize: '300px',
                 activeTabIndex: 0,
                 collapsible: true,
                 collapsed: true,
@@ -241,7 +241,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             [RoomPanelTypes.enum['bottom']]: {
               component: BottomTabs,
             },
-            [RoomPanelTypes.enum['data-sources']]: {
+            [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               component: DataSourcesPanel,
               icon: DatabaseIcon,

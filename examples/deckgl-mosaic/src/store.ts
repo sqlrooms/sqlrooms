@@ -24,7 +24,7 @@ import {
   MapSettingsSliceState,
 } from './MapSettingsSlice';
 
-export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -63,8 +63,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: 'panel',
-            id: RoomPanelTypes.enum['main'],
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '30%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+              },
+            ],
           } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['data']]: {

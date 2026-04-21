@@ -1,10 +1,10 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {RoomPanelTypes} from './panel-types';
-import {RoomPanelComponent} from '@sqlrooms/layout';
+import {RoomPanelTypes} from '../panel-types';
+import {FC} from 'react';
 
-export const DataSourcesPanel: RoomPanelComponent = () => {
+export const DataSourcesPanel: FC = () => {
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data']}>
       <div className="text-muted-foreground text-xs">
         Manage your data connections and files here.
       </div>

@@ -19,8 +19,8 @@ import {
 } from '@sqlrooms/ui';
 import {PlusIcon, XCircleIcon} from 'lucide-react';
 import {FC} from 'react';
-import {MD_TOKEN_KEY} from './App';
-import {useRoomStore} from './store';
+import {MD_TOKEN_KEY} from '../App';
+import {useRoomStore} from '../store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();

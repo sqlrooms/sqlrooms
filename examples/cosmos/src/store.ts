@@ -12,7 +12,7 @@ import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
@@ -44,16 +44,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: 'split',
           id: 'root',
+          type: 'split',
           direction: 'row',
           children: [
             {
-              type: 'panel',
-              id: RoomPanelTypes.enum['data-sources'],
-              defaultSize: 300,
-              minSize: 200,
-              maxSize: 500,
+              type: 'tabs',
+              id: RoomPanelTypes.enum['left'],
+              children: [RoomPanelTypes.enum['data']],
+              defaultSize: '30%',
+              maxSize: '50%',
+              minSize: '300px',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsed: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
             },
             {
               type: 'panel',
@@ -62,8 +68,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           ],
         } satisfies LayoutConfig,
         panels: {
-          [RoomPanelTypes.enum['data-sources']]: {
-            title: 'Data Sources',
+          [RoomPanelTypes.enum['data']]: {
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
           },

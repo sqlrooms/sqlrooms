@@ -1,6 +1,6 @@
 import {cn, Input} from '@sqlrooms/ui';
 import {KeyIcon} from 'lucide-react';
-import {useRoomStore} from './store';
+import {useRoomStore} from '../store';
 import {FC} from 'react';
 
 export const InputApiKey: FC<{className?: string}> = ({className}) => {

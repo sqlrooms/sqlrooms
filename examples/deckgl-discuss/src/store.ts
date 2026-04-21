@@ -23,11 +23,7 @@ import {z} from 'zod';
 import DiscussionPanel from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum([
-  'data-sources',
-  'discuss',
-  MAIN_VIEW,
-] as const);
+export const RoomPanelTypes = z.enum(['left', 'discuss', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -76,14 +72,21 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             direction: 'row',
             children: [
               {
-                type: 'panel',
-                id: RoomPanelTypes.enum['discuss'],
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['discuss']],
                 defaultSize: '30%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
               },
               {
                 type: 'panel',
                 id: RoomPanelTypes.enum['main'],
-                defaultSize: '70%',
               },
             ],
           } satisfies LayoutConfig,

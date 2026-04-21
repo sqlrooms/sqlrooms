@@ -1,4 +1,4 @@
-import {RoomShell, RoomShellSidebarButtons} from '@sqlrooms/room-shell';
+import {RoomShell} from '@sqlrooms/room-shell';
 import {
   ThemeSwitch,
   Tooltip,
@@ -7,8 +7,9 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {Zap, ZapOff} from 'lucide-react';
-import {InputApiKey} from './InputApiKey';
+import {InputApiKey} from './components/InputApiKey';
 import {roomStore, useRoomStore} from './store';
+import {FC} from 'react';
 
 type ConnectionStatusVisual = {
   label: string;
@@ -47,21 +48,20 @@ function ConnectionStatusIndicator() {
   );
 }
 
-export function Room() {
+export const Room: FC = () => {
   return (
     <RoomShell className="h-screen w-screen" roomStore={roomStore}>
-      <div className="bg-muted/70 flex h-full w-12 flex-col items-center gap-2 px-1 py-4">
+      <RoomShell.SidebarContainer>
         <ConnectionStatusIndicator />
-        <RoomShellSidebarButtons />
-        <div className="flex items-center justify-between gap-3 pr-2">
-          <RoomShell.CommandPalette.Button />
-          <ThemeSwitch />
-        </div>
-      </div>
+        <RoomShell.TabButtons />
+        <div className="flex-1" />
+        <RoomShell.CommandPalette.Button />
+        <ThemeSwitch />
+      </RoomShell.SidebarContainer>
       <RoomShell.LayoutComposer />
-      {/* <RoomShell.LoadingProgress /> */}
+      <RoomShell.LoadingProgress />
       <RoomShell.CommandPalette />
       <InputApiKey className="absolute top-5 right-15 z-10" />
     </RoomShell>
   );
-}
+};

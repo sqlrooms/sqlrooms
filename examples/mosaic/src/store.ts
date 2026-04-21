@@ -10,13 +10,13 @@ import {
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
-import DataSourcesPanel from './components/DataSourcesPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-import RoomDetailsPanel from './components/RoomDetailsPanel';
+import {RoomDetailsPanel} from './components/RoomDetailsPanel';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
-  'data-sources',
+  'data',
   'data-tables',
   'docs',
   'left',
@@ -58,12 +58,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             {
               type: 'tabs',
               id: RoomPanelTypes.enum['left'],
-              defaultSize: '30%',
-              minSize: 300,
               children: [
-                RoomPanelTypes.enum['data-sources'],
+                RoomPanelTypes.enum['data'],
                 RoomPanelTypes.enum['room-details'],
               ],
+              defaultSize: '30%',
+              minSize: '300px',
+              maxSize: '50%',
               activeTabIndex: 0,
               collapsible: true,
               collapsedSize: 0,
@@ -82,8 +83,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             icon: InfoIcon,
             component: RoomDetailsPanel,
           },
-          [RoomPanelTypes.enum['data-sources']]: {
-            title: 'Data Sources',
+          [RoomPanelTypes.enum['data']]: {
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
           },

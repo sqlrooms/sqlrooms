@@ -10,8 +10,8 @@ export const Room = () => {
   const ragTest = useDisclosure();
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
-      <div className="bg-muted/70 flex h-full w-12 flex-col items-center gap-2 px-1 py-4">
-        <RoomShell.SidebarButtons className="h-auto grow-0" />
+      <RoomShell.SidebarContainer>
+        <RoomShell.TabButtons />
         <RoomShell.SidebarButton
           title="Test RAG Search"
           onClick={ragTest.onToggle}
@@ -27,7 +27,7 @@ export const Room = () => {
         />
         <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
-      </div>
+      </RoomShell.SidebarContainer>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
       <RoomShell.CommandPalette />

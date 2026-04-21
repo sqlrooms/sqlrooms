@@ -20,6 +20,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const ctx = useLayoutNodeContext();
   const nodeId = ctx.containerType === 'tabs' ? ctx.node.id : undefined;
   const addTab = useRoomStore((s) => s.layout.addTab);
+  const removeTab = useRoomStore((s) => s.layout.removeTab);
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
     s.layout.isCollapsed('assistant'),
@@ -36,7 +37,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
           type: 'panel',
           id: sheetId,
           panel: {
-            key: 'workspace/{artifactId}',
+            key: 'artifact',
             meta: {artifactId: sheetId},
           },
         });
@@ -45,9 +46,14 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     [addTab, executeCommand, nodeId],
   );
 
-  const handleDeleteTab = useCallback((sheetId: string) => {
-    // deleteTab(sheetId);
-  }, []);
+  const handleDeleteTab = useCallback(
+    (sheetId: string) => {
+      if (nodeId) {
+        removeTab(nodeId, sheetId);
+      }
+    },
+    [nodeId, removeTab],
+  );
 
   const handleRenameSheet = useCallback((sheetId: string, newName: string) => {
     // renameSheet(sheetId, newName);

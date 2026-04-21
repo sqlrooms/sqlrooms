@@ -3,7 +3,7 @@ import {z} from 'zod';
 
 export const RoomPanelTypes = z.enum([
   'schema',
-  'data-sources',
+  'data',
   'console',
   'results',
   'dashboards',

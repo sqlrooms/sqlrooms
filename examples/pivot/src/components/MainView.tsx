@@ -1,6 +1,6 @@
 import {Button, cn} from '@sqlrooms/ui';
 import {PivotView} from '@sqlrooms/pivot';
-import {useRoomStore} from './store';
+import {useRoomStore} from '../store';
 
 export const MainView = () => {
   const pivotConfig = useRoomStore((state) => state.pivot.config);

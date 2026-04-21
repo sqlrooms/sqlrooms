@@ -26,7 +26,7 @@ const DataSourcesPanel: FC = () => {
   const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data']}>
       {isRoomEmpty ? (
         <></>
       ) : (

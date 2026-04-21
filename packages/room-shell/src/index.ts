@@ -41,6 +41,7 @@ export type {
   LayoutPath,
   LayoutRendererProps,
   RoomPanelInfo,
+  RoomPanelComponent,
 } from '@sqlrooms/layout';
 
 // Re-export from @sqlrooms/room-store
