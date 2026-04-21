@@ -1,14 +1,20 @@
 import {
-  AiSettingsSliceConfig,
-  AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
-  createAiSettingsSlice,
   createAiSlice,
   createDefaultAiTools,
   createDefaultAiToolRenderers,
   createDefaultAiInstructions,
 } from '@sqlrooms/ai';
+import {
+  createAiConnectSlice,
+  type AiConnectSliceState,
+} from '@sqlrooms/ai-connect';
+import {
+  AiSettingsSliceConfig,
+  type AiSettingsSliceState,
+  createAiSettingsSlice,
+} from '@sqlrooms/ai-settings';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -32,6 +38,10 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 
 import {AI_SETTINGS} from './config';
+import {
+  createExampleBrowserAiAuthClient,
+  getExampleProviderRuntime,
+} from './auth';
 import exampleSessions from './example-sessions.json';
 import {createElement, lazy, Suspense} from 'react';
 import {SpinnerPane} from '@sqlrooms/ui';
@@ -52,7 +62,8 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
-  AiSettingsSliceState;
+  AiSettingsSliceState &
+  AiConnectSliceState;
 
 /**
  * Create a customized room store
@@ -121,6 +132,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
+      ...createAiConnectSlice({
+        authClient: createExampleBrowserAiAuthClient(
+          () => get().aiSettings.config.providers,
+        ),
+      })(set, get, store),
+
       // Ai slice
       ...createAiSlice({
         config: AiSliceConfig.parse(exampleSessions),
@@ -128,6 +145,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         getInstructions: () => {
           return createDefaultAiInstructions(store);
         },
+
+        getProviderRuntime: ({provider, modelId}) =>
+          getExampleProviderRuntime(
+            provider,
+            modelId,
+            get().aiSettings.config.providers[provider]?.baseUrl,
+          ),
 
         // Add providerOptions here, e.g. to set reasoningEffort for GPT reasoning models GPT-5.1 GPT-5.2
         // getProviderOptions: () => {

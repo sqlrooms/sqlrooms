@@ -1,7 +1,8 @@
 import {createAnthropic} from '@ai-sdk/anthropic';
 import {
-  AiSettingsSliceConfig,
+  HttpAiAuthClient,
   AiConnectSliceState,
+  AiSettingsSliceConfig,
   AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
@@ -158,6 +159,9 @@ const defaultModelFromProvider =
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
 const proxyPlaceholderKey = 'sqlrooms-local-proxy';
+const aiAuthClient = new HttpAiAuthClient({
+  apiBaseUrl: runtimeConfig.apiBaseUrl || '',
+});
 const initialAiSettingsConfig: AiSettingsSliceConfig = {
   defaultProvider: defaultProviderFromConfig,
   defaultModel: defaultModelFromConfig,
@@ -391,7 +395,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createAiConnectSlice({
-          apiBaseUrl: runtimeConfig.apiBaseUrl || '',
+          authClient: aiAuthClient,
         })(set, get, store),
 
         ...(() => {
@@ -400,22 +404,57 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
-            getApiKey: (provider) => {
+            getProviderRuntime: ({provider, modelId}) => {
               const providerConfig = runtimeAiProviders[provider];
+              const settingsProvider =
+                get().aiSettings.config.providers[provider];
+              const upstreamBaseUrl =
+                providerConfig?.upstreamBaseUrl ||
+                providerConfig?.baseUrl ||
+                settingsProvider?.baseUrl;
+
               if (providerConfig?.proxyEnabled) {
-                return providerConfig.apiKey || proxyPlaceholderKey;
+                const proxyBaseUrl = `${
+                  runtimeConfig.apiBaseUrl || ''
+                }/api/ai/proxy/${provider}`;
+                return {
+                  apiKey: proxyPlaceholderKey,
+                  baseUrl: proxyBaseUrl,
+                  customModelFactory:
+                    provider === 'anthropic'
+                      ? (activeModelId) =>
+                          createAnthropic({
+                            apiKey: proxyPlaceholderKey,
+                            baseURL: proxyBaseUrl,
+                          }).messages(activeModelId) as any
+                      : undefined,
+                };
               }
-              return providerConfig?.apiKey || runtimeConfig.apiKey || '';
-            },
-            getCustomModel: ({provider, modelId, apiKey, baseUrl}) => {
-              if (provider !== 'anthropic') {
-                return undefined;
+
+              if (provider === 'anthropic') {
+                const directApiKey =
+                  providerConfig?.apiKey || runtimeConfig.apiKey;
+                if (!directApiKey) {
+                  return {
+                    baseUrl: upstreamBaseUrl,
+                  };
+                }
+                return {
+                  apiKey: directApiKey,
+                  baseUrl: upstreamBaseUrl,
+                  customModelFactory: (activeModelId) =>
+                    createAnthropic({
+                      apiKey: directApiKey,
+                      baseURL: upstreamBaseUrl,
+                    }).messages(activeModelId) as any,
+                };
               }
-              const anthropic = createAnthropic({
-                apiKey: apiKey || proxyPlaceholderKey,
-                baseURL: baseUrl,
-              });
-              return anthropic.messages(modelId) as any;
+
+              return {
+                apiKey: providerConfig?.apiKey || runtimeConfig.apiKey,
+                baseUrl: upstreamBaseUrl,
+                customModelFactory: undefined,
+              };
             },
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,

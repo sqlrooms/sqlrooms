@@ -19,7 +19,7 @@ export const LLM_MODELS = [
   },
   {
     name: 'anthropic',
-    models: ['claude-3-5-sonnet', 'claude-3-5-haiku'],
+    models: ['claude-opus-4-6', 'claude-sonnet-4-6'],
   },
   {
     name: 'google',

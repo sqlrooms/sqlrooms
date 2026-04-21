@@ -1,32 +1,18 @@
-import {AiSettingsSliceState, createAiSettingsSlice} from './AiSettingsSlice';
 import {
-  createSlice,
   useBaseRoomStore,
+  createSlice,
   type StateCreator,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-
-export type AiConnectStep =
-  | 'idle'
-  | 'pick_provider'
-  | 'pick_method'
-  | 'oauth_wait'
-  | 'device_code'
-  | 'enter_code'
-  | 'enter_api_key'
-  | 'success'
-  | 'error';
-
-export type AiProviderAuthInstructions = {
-  providerId: string;
-  authMethodId: string;
-  flowType: string;
-  url?: string;
-  instructions: string;
-  codeFormatHint?: string;
-  pollIntervalMs?: number;
-  userCode?: string;
-};
+import {
+  createAiSettingsSlice,
+  type AiSettingsSliceState,
+} from '@sqlrooms/ai-settings';
+import type {
+  AiAuthClient,
+  AiConnectStep,
+  AiProviderAuthInstructions,
+} from './types';
 
 export type AiConnectSliceState = {
   aiConnect: {
@@ -43,43 +29,49 @@ export type AiConnectSliceState = {
     closeConnect: () => void;
     selectProvider: (providerId: string) => void;
     selectMethod: (methodId: string) => void;
-    startAuth: (
-      apiBaseUrl?: string,
-    ) => Promise<AiProviderAuthInstructions | null>;
-    submitCode: (code: string, apiBaseUrl?: string) => Promise<boolean>;
-    submitApiKey: (apiKey: string, apiBaseUrl?: string) => Promise<boolean>;
+    startAuth: () => Promise<AiProviderAuthInstructions | null>;
+    submitCode: (code: string) => Promise<boolean>;
+    submitApiKey: (apiKey: string) => Promise<boolean>;
     cancelAuth: () => void;
-    logout: (providerId: string, apiBaseUrl?: string) => Promise<boolean>;
-    refreshProviderStatus: (
-      providerId?: string,
-      apiBaseUrl?: string,
-    ) => Promise<boolean>;
+    logout: (providerId: string) => Promise<boolean>;
+    refreshProviderStatus: (providerId?: string) => Promise<boolean>;
     clearError: () => void;
     setApiKeyDraft: (apiKey: string) => void;
     setCodeDraft: (code: string) => void;
   };
 };
 
-type CreateAiConnectSliceParams = {
-  apiBaseUrl?: string;
-};
-
 type AiStateWithConnect = AiSettingsSliceState & AiConnectSliceState;
+
+type CreateAiConnectSliceParams = {
+  authClient: AiAuthClient;
+};
 
 function stepForFlowType(flowType: string): AiConnectStep {
   if (flowType === 'local') return 'success';
   if (flowType === 'oauth_auto') return 'oauth_wait';
+  if (flowType === 'oauth_popup') return 'oauth_wait';
+  if (flowType === 'oauth_redirect') return 'oauth_wait';
   if (flowType === 'external_credentials') return 'oauth_wait';
   if (flowType === 'device_code') return 'device_code';
   if (flowType === 'oauth_code') return 'enter_code';
+  if (flowType === 'oauth_to_api_key') return 'enter_code';
   if (flowType === 'api_key') return 'enter_api_key';
   return 'pick_method';
 }
 
+async function syncProviders(
+  get: () => AiStateWithConnect,
+  authClient: AiAuthClient,
+) {
+  const providers = await authClient.listProviders();
+  get().aiSettings.replaceProviders(providers, false);
+}
+
 export function createAiConnectSlice(
-  props?: CreateAiConnectSliceParams,
+  props: CreateAiConnectSliceParams,
 ): StateCreator<AiConnectSliceState> {
-  const defaultApiBaseUrl = props?.apiBaseUrl || '';
+  const {authClient} = props;
 
   return createSlice<
     AiConnectSliceState,
@@ -106,8 +98,8 @@ export function createAiConnectSlice(
             draft.aiConnect.currentProviderId =
               providerId || draft.aiConnect.currentProviderId;
             draft.aiConnect.currentMethodId =
-              provider?.defaultAuthMethod ||
               provider?.status?.selectedAuthMethod ||
+              provider?.defaultAuthMethod ||
               provider?.authMethods?.[0]?.id;
             draft.aiConnect.step = providerId ? 'pick_method' : 'pick_provider';
             draft.aiConnect.error = null;
@@ -137,8 +129,8 @@ export function createAiConnectSlice(
             const provider = draft.aiSettings.config.providers[providerId];
             draft.aiConnect.currentProviderId = providerId;
             draft.aiConnect.currentMethodId =
-              provider?.defaultAuthMethod ||
               provider?.status?.selectedAuthMethod ||
+              provider?.defaultAuthMethod ||
               provider?.authMethods?.[0]?.id;
             draft.aiConnect.step = 'pick_method';
             draft.aiConnect.error = null;
@@ -156,7 +148,7 @@ export function createAiConnectSlice(
         );
       },
 
-      startAuth: async (apiBaseUrl = defaultApiBaseUrl) => {
+      startAuth: async () => {
         const state = get();
         const providerId = state.aiConnect.currentProviderId;
         const authMethodId = state.aiConnect.currentMethodId;
@@ -178,22 +170,11 @@ export function createAiConnectSlice(
         );
 
         try {
-          const res = await fetch(`${apiBaseUrl}/api/ai/auth/start`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({providerId, authMethodId}),
-          });
-          const body = (await res.json().catch(() => ({}))) as
-            | AiProviderAuthInstructions
-            | {error?: string};
-          if (!res.ok) {
-            throw new Error(
-              'error' in body
-                ? body.error || `Server returned ${res.status}`
-                : `Server returned ${res.status}`,
-            );
-          }
-          const instructions = body as AiProviderAuthInstructions;
+          const instructions = await authClient.startAuth(
+            providerId,
+            authMethodId,
+          );
+          await syncProviders(get, authClient);
           set((draft) =>
             produce(draft, (next) => {
               next.aiConnect.pending = false;
@@ -215,7 +196,7 @@ export function createAiConnectSlice(
         }
       },
 
-      submitCode: async (code, apiBaseUrl = defaultApiBaseUrl) => {
+      submitCode: async (code) => {
         const state = get();
         const providerId = state.aiConnect.currentProviderId;
         const authMethodId = state.aiConnect.currentMethodId;
@@ -230,16 +211,8 @@ export function createAiConnectSlice(
         );
 
         try {
-          const res = await fetch(`${apiBaseUrl}/api/ai/auth/complete`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({providerId, authMethodId, code}),
-          });
-          const body = (await res.json().catch(() => ({}))) as {error?: string};
-          if (!res.ok) {
-            throw new Error(body.error || `Server returned ${res.status}`);
-          }
-          await get().aiSettings.loadFromServer(apiBaseUrl);
+          await authClient.completeAuth(providerId, authMethodId, {code});
+          await syncProviders(get, authClient);
           set((draft) =>
             produce(draft, (next) => {
               next.aiConnect.pending = false;
@@ -261,7 +234,7 @@ export function createAiConnectSlice(
         }
       },
 
-      submitApiKey: async (apiKey, apiBaseUrl = defaultApiBaseUrl) => {
+      submitApiKey: async (apiKey) => {
         const state = get();
         const providerId = state.aiConnect.currentProviderId;
         const authMethodId = state.aiConnect.currentMethodId;
@@ -276,16 +249,8 @@ export function createAiConnectSlice(
         );
 
         try {
-          const res = await fetch(`${apiBaseUrl}/api/ai/auth/complete`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({providerId, authMethodId, apiKey}),
-          });
-          const body = (await res.json().catch(() => ({}))) as {error?: string};
-          if (!res.ok) {
-            throw new Error(body.error || `Server returned ${res.status}`);
-          }
-          await get().aiSettings.loadFromServer(apiBaseUrl);
+          await authClient.completeAuth(providerId, authMethodId, {apiKey});
+          await syncProviders(get, authClient);
           set((draft) =>
             produce(draft, (next) => {
               next.aiConnect.pending = false;
@@ -320,18 +285,10 @@ export function createAiConnectSlice(
         );
       },
 
-      logout: async (providerId, apiBaseUrl = defaultApiBaseUrl) => {
+      logout: async (providerId) => {
         try {
-          const res = await fetch(`${apiBaseUrl}/api/ai/auth/logout`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({providerId}),
-          });
-          const body = (await res.json().catch(() => ({}))) as {error?: string};
-          if (!res.ok) {
-            throw new Error(body.error || `Server returned ${res.status}`);
-          }
-          await get().aiSettings.loadFromServer(apiBaseUrl);
+          await authClient.logout(providerId);
+          await syncProviders(get, authClient);
           return true;
         } catch (error) {
           set((draft) =>
@@ -345,10 +302,7 @@ export function createAiConnectSlice(
         }
       },
 
-      refreshProviderStatus: async (
-        providerId,
-        apiBaseUrl = defaultApiBaseUrl,
-      ) => {
+      refreshProviderStatus: async (providerId) => {
         const state = get();
         const activeProviderId =
           providerId || state.aiConnect.currentProviderId;
@@ -363,21 +317,8 @@ export function createAiConnectSlice(
                 next.aiConnect.error = null;
               }),
             );
-            const res = await fetch(`${apiBaseUrl}/api/ai/auth/complete`, {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({
-                providerId: activeProviderId,
-                authMethodId: activeMethodId,
-              }),
-            });
-            const body = (await res.json().catch(() => ({}))) as {
-              error?: string;
-            };
-            if (!res.ok) {
-              throw new Error(body.error || `Server returned ${res.status}`);
-            }
-            await get().aiSettings.loadFromServer(apiBaseUrl);
+            await authClient.completeAuth(activeProviderId, activeMethodId, {});
+            await syncProviders(get, authClient);
             set((draft) =>
               produce(draft, (next) => {
                 next.aiConnect.pending = false;
@@ -399,23 +340,31 @@ export function createAiConnectSlice(
           }
         }
 
-        const loaded = await get().aiSettings.loadFromServer(apiBaseUrl);
-        if (!loaded) {
+        try {
+          await syncProviders(get, authClient);
+          if (activeProviderId) {
+            const provider =
+              get().aiSettings.config.providers[activeProviderId];
+            if (provider?.status?.hasCredentials) {
+              set((draft) =>
+                produce(draft, (next) => {
+                  next.aiConnect.step = 'success';
+                  next.aiConnect.error = null;
+                }),
+              );
+            }
+          }
+          return true;
+        } catch (error) {
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.error =
+                error instanceof Error ? error.message : String(error);
+              next.aiConnect.step = 'error';
+            }),
+          );
           return false;
         }
-
-        if (activeProviderId) {
-          const provider = get().aiSettings.config.providers[activeProviderId];
-          if (provider?.status?.hasCredentials) {
-            set((draft) =>
-              produce(draft, (next) => {
-                next.aiConnect.step = 'success';
-                next.aiConnect.error = null;
-              }),
-            );
-          }
-        }
-        return true;
       },
 
       clearError: () => {
@@ -451,7 +400,7 @@ export function createAiConnectSlice(
 }
 
 export function createAiAssistantSettingsSlices(
-  props?: CreateAiConnectSliceParams,
+  props: CreateAiConnectSliceParams,
 ) {
   return {
     createAiSettingsSlice,

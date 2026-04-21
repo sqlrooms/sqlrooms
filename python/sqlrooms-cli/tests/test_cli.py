@@ -104,7 +104,7 @@ title = "Anthropic"
 kind = "builtin"
 base_url = "https://api.anthropic.com"
 default_auth_method = "manual_api_key"
-models = ["claude-4-sonnet"]
+models = ["claude-opus-4-6"]
 
 [[ai.providers.auth_methods]]
 id = "manual_api_key"

@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@sqlrooms/ai-config": "workspace:*",
+    "@sqlrooms/ai-connect": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",

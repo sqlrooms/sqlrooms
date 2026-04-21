@@ -36,6 +36,8 @@ export {
 } from './utils';
 export type {
   AddToolResult,
+  CustomModelArgs,
+  ProviderRuntime,
   StoredTool,
   StoredToolSet,
   ToolRendererProps,

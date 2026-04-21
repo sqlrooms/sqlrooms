@@ -20,7 +20,6 @@ import {
 } from '@sqlrooms/ui';
 import {CirclePlus, Cone, Server, Settings, Trash2} from 'lucide-react';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
-import {AiProviderStatusList} from '../connect';
 
 export const AiProvidersSettings: FC<{apiBaseUrl?: string}> = ({
   apiBaseUrl,
@@ -78,7 +77,6 @@ export const AiProvidersSettings: FC<{apiBaseUrl?: string}> = ({
     addProvider(
       newProviderKey.trim(),
       newProviderBaseUrl.trim(),
-      '',
       newProviderTitle.trim() || newProviderKey.trim(),
     );
     setNewProviderKey('');
@@ -90,17 +88,9 @@ export const AiProvidersSettings: FC<{apiBaseUrl?: string}> = ({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <label className="text-md flex items-center gap-2 font-medium">
-          <Cone className="h-4 w-4" />
-          Provider connections
-        </label>
-        <AiProviderStatusList apiBaseUrl={apiBaseUrl} />
-      </div>
-
-      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-md flex items-center gap-2 font-medium">
-            <Settings className="h-4 w-4" />
+            <Cone className="h-4 w-4" />
             Provider manifest
           </label>
           <div className="flex items-center gap-2">

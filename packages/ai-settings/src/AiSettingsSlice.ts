@@ -24,28 +24,22 @@ export type AiSettingsSliceState = {
       provider: string,
       updates: Partial<AiSettingsSliceConfig['providers'][string]>,
     ) => void;
+    replaceProviders: (
+      providers: AiSettingsSliceConfig['providers'],
+      markDirty?: boolean,
+    ) => void;
     setProviderStatus: (
       provider: string,
       status: AiSettingsSliceConfig['providers'][string]['status'],
     ) => void;
-    addProvider: (
-      provider: string,
-      baseUrl: string,
-      apiKey: string,
-      title?: string,
-    ) => void;
+    addProvider: (provider: string, baseUrl: string, title?: string) => void;
     addModelToProvider: (provider: string, modelName: string) => void;
     removeModelFromProvider: (provider: string, modelName: string) => void;
     removeProvider: (provider: string) => void;
-    addCustomModel: (
-      baseUrl: string,
-      apiKey: string,
-      modelName: string,
-    ) => void;
+    addCustomModel: (baseUrl: string, modelName: string) => void;
     updateCustomModel: (
       oldModelName: string,
       baseUrl: string,
-      apiKey: string,
       newModelName: string,
     ) => void;
     removeCustomModel: (modelName: string) => void;
@@ -140,6 +134,18 @@ export function createAiSettingsSlice(
         );
       },
 
+      replaceProviders: (providers, markDirty = false) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.aiSettings.config.providers = providers;
+            if (markDirty) {
+              draft.aiSettings.hasUnsavedChanges =
+                JSON.stringify(draft.aiSettings.config) !== savedSnapshot;
+            }
+          }),
+        );
+      },
+
       setProviderStatus: (provider, status) => {
         set((state) =>
           produce(state, (draft) => {
@@ -150,19 +156,13 @@ export function createAiSettingsSlice(
         );
       },
 
-      addProvider: (
-        provider: string,
-        baseUrl: string,
-        apiKey: string,
-        title,
-      ) => {
+      addProvider: (provider: string, baseUrl: string, title) => {
         set((state) =>
           produce(state, (draft) => {
             draft.aiSettings.config.providers[provider] = {
               title: title || provider,
               kind: 'custom',
               baseUrl,
-              apiKey,
               models: [],
               defaultAuthMethod: 'manual_api_key',
               experimental: false,
@@ -177,10 +177,10 @@ export function createAiSettingsSlice(
                 },
               ],
               status: {
-                hasCredentials: Boolean(apiKey),
-                credentialType: apiKey ? 'api_key' : undefined,
+                hasCredentials: false,
+                credentialType: null,
                 selectedAuthMethod: 'manual_api_key',
-                status: apiKey ? 'connected' : 'disconnected',
+                status: 'disconnected',
               },
             };
             draft.aiSettings.hasUnsavedChanges =
@@ -235,12 +235,11 @@ export function createAiSettingsSlice(
         );
       },
 
-      addCustomModel: (baseUrl: string, apiKey: string, modelName: string) => {
+      addCustomModel: (baseUrl: string, modelName: string) => {
         set((state) =>
           produce(state, (draft) => {
             const newCustomModel = {
               baseUrl,
-              apiKey,
               modelName,
             };
 
@@ -268,7 +267,6 @@ export function createAiSettingsSlice(
       updateCustomModel: (
         oldModelName: string,
         baseUrl: string,
-        apiKey: string,
         newModelName: string,
       ) => {
         set((state) =>
@@ -292,7 +290,6 @@ export function createAiSettingsSlice(
                 // Update the model
                 draft.aiSettings.config.customModels[modelIndex] = {
                   baseUrl,
-                  apiKey,
                   modelName: newModelName,
                 };
                 draft.aiSettings.hasUnsavedChanges =

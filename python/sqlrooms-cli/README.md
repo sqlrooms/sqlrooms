@@ -68,7 +68,7 @@ models = ["gpt-5", "gpt-4.1"]
 id = "anthropic"
 base_url = "https://api.anthropic.com"
 api_key_env = "ANTHROPIC_API_KEY"
-models = ["claude-4-sonnet"]
+models = ["claude-opus-4-6"]
 
 [[db.connectors]]
 id = "postgres-local"

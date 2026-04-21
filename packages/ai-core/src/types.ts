@@ -6,6 +6,7 @@ import type {
   Tool,
   InferToolOutput,
   InferToolInput,
+  LanguageModel,
 } from 'ai';
 import {streamText} from 'ai';
 
@@ -17,7 +18,17 @@ export type CustomModelArgs = {
   provider: string;
   modelId: string;
   apiKey?: string;
+  authToken?: string;
   baseUrl?: string;
+  headers?: Record<string, string>;
+};
+
+export type ProviderRuntime = {
+  apiKey?: string;
+  authToken?: string;
+  baseUrl?: string;
+  headers?: Record<string, string>;
+  customModelFactory?: (modelId: string) => LanguageModel | undefined;
 };
 
 /**
@@ -100,6 +111,10 @@ export interface AiStateForTransport {
     abortSignal?: AbortSignal,
   ) => Promise<void>;
   getFullInstructions: () => string;
+  getProviderRuntime: (
+    provider?: string,
+    modelId?: string,
+  ) => ProviderRuntime | undefined;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;
   /** Get base URL from settings for the current session's provider */

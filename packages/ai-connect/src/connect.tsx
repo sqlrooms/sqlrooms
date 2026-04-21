@@ -19,21 +19,16 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {KeyRound, LinkIcon, LogOut, PlugZap, RefreshCw} from 'lucide-react';
-import {useStoreWithAiSettings} from './AiSettingsSlice';
-import {
-  type AiProviderAuthInstructions,
-  useStoreWithAiConnect,
-} from './AiConnectSlice';
+import {useStoreWithAiSettings} from '@sqlrooms/ai-settings';
+import {useStoreWithAiConnect} from './AiConnectSlice';
+import type {AiProviderAuthInstructions} from './types';
 
 function humanizeProviderTitle(providerId: string, title?: string): string {
   if (title?.trim()) return title;
   return providerId.charAt(0).toUpperCase() + providerId.slice(1);
 }
 
-function StepBody(props: {
-  instructions: AiProviderAuthInstructions | null;
-  apiBaseUrl?: string;
-}) {
+function StepBody(props: {instructions: AiProviderAuthInstructions | null}) {
   const {
     step,
     apiKeyDraft,
@@ -67,7 +62,7 @@ function StepBody(props: {
         )}
         <DialogFooter>
           <Button
-            onClick={() => void submitApiKey(apiKeyDraft, props.apiBaseUrl)}
+            onClick={() => void submitApiKey(apiKeyDraft)}
             disabled={pending || !apiKeyDraft.trim()}
           >
             {pending ? 'Saving…' : 'Save key'}
@@ -114,7 +109,7 @@ function StepBody(props: {
         )}
         <DialogFooter>
           <Button
-            onClick={() => void submitCode(codeDraft, props.apiBaseUrl)}
+            onClick={() => void submitCode(codeDraft)}
             disabled={pending || !codeDraft.trim()}
           >
             {pending ? 'Submitting…' : 'Submit code'}
@@ -157,9 +152,7 @@ function StepBody(props: {
         <DialogFooter>
           <Button
             variant="secondary"
-            onClick={() =>
-              void refreshProviderStatus(undefined, props.apiBaseUrl)
-            }
+            onClick={() => void refreshProviderStatus()}
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh status
@@ -188,7 +181,7 @@ function StepBody(props: {
   return null;
 }
 
-export function AiConnectDialog(props: {apiBaseUrl?: string}) {
+export function AiConnectDialog(_props: {apiBaseUrl?: string}) {
   const providers = useStoreWithAiSettings(
     (s) => s.aiSettings.config.providers,
   );
@@ -279,20 +272,14 @@ export function AiConnectDialog(props: {apiBaseUrl?: string}) {
 
           {(step === 'pick_method' || step === 'pick_provider') && (
             <DialogFooter>
-              <Button
-                onClick={() => void startAuth(props.apiBaseUrl)}
-                disabled={!canStart}
-              >
+              <Button onClick={() => void startAuth()} disabled={!canStart}>
                 Continue
               </Button>
             </DialogFooter>
           )}
 
           {step !== 'pick_method' && step !== 'pick_provider' && (
-            <StepBody
-              instructions={instructions}
-              apiBaseUrl={props.apiBaseUrl}
-            />
+            <StepBody instructions={instructions} />
           )}
         </div>
       </DialogContent>
@@ -322,7 +309,7 @@ export function AiProviderConnectButton(props: {
   );
 }
 
-export function AiProviderStatusList(props: {apiBaseUrl?: string}) {
+export function AiProviderStatusList(_props: {apiBaseUrl?: string}) {
   const providers = useStoreWithAiSettings(
     (s) => s.aiSettings.config.providers,
   );
@@ -375,7 +362,7 @@ export function AiProviderStatusList(props: {apiBaseUrl?: string}) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => void logout(providerId, props.apiBaseUrl)}
+                  onClick={() => void logout(providerId)}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>

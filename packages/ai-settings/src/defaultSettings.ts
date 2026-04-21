@@ -11,7 +11,6 @@ export function createDefaultAiSettingsConfig(
         title: 'OpenAI',
         kind: 'builtin',
         baseUrl: 'https://api.openai.com/v1',
-        apiKey: '',
         models: [
           {
             modelName: 'gpt-4.1',
@@ -37,10 +36,9 @@ export function createDefaultAiSettingsConfig(
         title: 'Anthropic',
         kind: 'builtin',
         baseUrl: 'https://api.anthropic.com/v1',
-        apiKey: '',
         models: [
           {
-            modelName: 'claude-4-sonnet',
+            modelName: 'claude-opus-4-6',
           },
         ],
         defaultAuthMethod: 'manual_api_key',
@@ -60,7 +58,6 @@ export function createDefaultAiSettingsConfig(
     customModels: [
       // {
       //   baseUrl: 'http://localhost:11434/v1',
-      //   apiKey: '',
       //   modelName: 'qwen3',
       // },
     ],

@@ -1,6 +1,7 @@
 import {
   AiConnectDialog,
   AiProviderConnectButton,
+  AiProviderStatusList,
   AiSettingsPanel,
   Chat,
 } from '@sqlrooms/ai';
@@ -79,7 +80,7 @@ export const AssistantDrawer: React.FC<{
             </DrawerClose>
           </DrawerHeader>
           <Chat.Root>
-            <AiConnectDialog apiBaseUrl={runtimeConfig.apiBaseUrl || ''} />
+            <AiConnectDialog />
             <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-4">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <Chat.Sessions className="w-full" />
@@ -124,9 +125,7 @@ export const AssistantDrawer: React.FC<{
                           value="connect"
                           className="flex-1 overflow-y-auto"
                         >
-                          <AiSettingsPanel.ConnectSettings
-                            apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
-                          />
+                          <AiProviderStatusList />
                         </TabsContent>
                         <TabsContent
                           value="providers"
@@ -197,7 +196,6 @@ export const AssistantDrawer: React.FC<{
                     </div>
                     <AiProviderConnectButton
                       providerId={currentProviderId || undefined}
-                      apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-end gap-2">

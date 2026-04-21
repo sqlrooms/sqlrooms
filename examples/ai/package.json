@@ -11,8 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.64",
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/ai-connect": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
+    "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

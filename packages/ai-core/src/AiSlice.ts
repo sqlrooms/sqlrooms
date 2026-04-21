@@ -42,6 +42,7 @@ import type {
   AiChatSendMessage,
   CustomModelArgs,
   GetProviderOptions,
+  ProviderRuntime,
   StoredToolSet,
   ToolRenderer,
   ToolRendererRegistry,
@@ -139,6 +140,10 @@ export type AiSliceState = {
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolRenderer: (toolName: string) => ToolRenderer | undefined;
+    getProviderRuntime: (
+      provider?: string,
+      modelId?: string,
+    ) => ProviderRuntime | undefined;
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
@@ -197,6 +202,11 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: (args: CustomModelArgs) => LanguageModel | undefined;
+  getProviderRuntime?: (args: {
+    provider: string;
+    modelId: string;
+    baseUrl?: string;
+  }) => ProviderRuntime | undefined;
   getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
@@ -220,6 +230,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
     getCustomModel,
+    getProviderRuntime,
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
@@ -257,6 +268,18 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     const sessionChatStops = new Map<string, () => void>();
     const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
     const sessionAddToolResults = new Map<string, AddToolResult>();
+
+    const resolveProviderRuntime = (
+      provider?: string,
+      modelId?: string,
+    ): ProviderRuntime | undefined => {
+      if (!provider) return undefined;
+      return getProviderRuntime?.({
+        provider,
+        modelId: modelId || defaultModel,
+        baseUrl: getBaseUrl?.(provider),
+      });
+    };
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -724,11 +747,26 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return get().ai.toolRenderers[toolName];
         },
 
+        getProviderRuntime: (provider, modelId) => {
+          const store = get();
+          const currentSession = getCurrentSessionFromState(store);
+          const activeProvider =
+            provider || currentSession?.modelProvider || defaultProvider;
+          const activeModel = modelId || currentSession?.model || defaultModel;
+          return resolveProviderRuntime(activeProvider, activeModel);
+        },
+
         getBaseUrlFromSettings: () => {
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
           const currentProvider =
             currentSession?.modelProvider || defaultProvider;
+          const currentModel = currentSession?.model || defaultModel;
+
+          const runtime = resolveProviderRuntime(currentProvider, currentModel);
+          if (runtime?.baseUrl) {
+            return runtime.baseUrl;
+          }
 
           // First try the getBaseUrl function if provided
           const baseUrlFromFunction = getBaseUrl?.(currentProvider);
@@ -758,6 +796,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
           if (currentSession) {
+            const runtime = resolveProviderRuntime(
+              currentSession.modelProvider || defaultProvider,
+              currentSession.model || defaultModel,
+            );
+            if (runtime?.apiKey || runtime?.authToken) {
+              return runtime.apiKey || runtime.authToken || '';
+            }
+
             // First try the getApiKey function if provided
             const apiKeyFromFunction = getApiKey?.(
               currentSession.modelProvider || 'openai',
@@ -769,17 +815,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             // Fall back to settings
             if (hasAiSettingsConfig(store)) {
               if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.apiKey || '';
+                return '';
               } else {
-                const provider =
-                  store.aiSettings.config.providers?.[
-                    currentSession.modelProvider
-                  ];
-                return provider?.apiKey || '';
+                return '';
               }
             }
           }
@@ -851,25 +889,53 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
-          const baseURL = baseUrl ?? state.ai.getBaseUrlFromSettings() ?? '';
+          let settingsBaseUrl: string | undefined;
+          if (hasAiSettingsConfig(state)) {
+            if (provider === 'custom') {
+              settingsBaseUrl = state.aiSettings.config.customModels.find(
+                (m: {modelName: string}) => m.modelName === modelId,
+              )?.baseUrl;
+            } else {
+              settingsBaseUrl =
+                state.aiSettings.config.providers[provider]?.baseUrl;
+            }
+          }
+          const runtime =
+            getProviderRuntime?.({
+              provider,
+              modelId,
+              baseUrl: baseUrl ?? getBaseUrl?.(provider) ?? settingsBaseUrl,
+            }) || undefined;
+          const baseURL =
+            baseUrl ??
+            runtime?.baseUrl ??
+            state.ai.getBaseUrlFromSettings() ??
+            '';
           const tools = state.ai.tools;
 
           const toolsWithoutExecute = Object.fromEntries(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const apiKey = state.ai.getApiKeyFromSettings();
+          const apiKey =
+            runtime?.apiKey ??
+            runtime?.authToken ??
+            state.ai.getApiKeyFromSettings();
           const model =
+            runtime?.customModelFactory?.(modelId) ??
             getCustomModel?.({
               provider,
               modelId,
               apiKey,
+              authToken: runtime?.authToken,
               baseUrl: baseURL,
+              headers: runtime?.headers,
             }) ??
             createOpenAICompatible({
               apiKey,
               name: provider,
               baseURL,
+              headers: runtime?.headers,
             }).chatModel(modelId);
 
           try {

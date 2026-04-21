@@ -4,6 +4,8 @@ export const AiProviderAuthMethodType = z.enum([
   'api_key',
   'env_api_key',
   'oauth_auto',
+  'oauth_popup',
+  'oauth_redirect',
   'oauth_code',
   'device_code',
   'local',
@@ -33,7 +35,6 @@ export const AiProviderSchema = z.object({
   title: z.string().optional().default(''),
   kind: z.string().optional().default('builtin'),
   baseUrl: z.string(),
-  apiKey: z.string().optional().default(''),
   models: z.array(
     z.object({
       modelName: z.string(),
@@ -56,7 +57,6 @@ export const AiSettingsSliceConfig = z.object({
   customModels: z.array(
     z.object({
       baseUrl: z.string(),
-      apiKey: z.string(),
       modelName: z.string(),
     }),
   ),

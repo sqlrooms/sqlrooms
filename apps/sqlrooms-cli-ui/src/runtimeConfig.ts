@@ -19,6 +19,8 @@ export type RuntimeConfig = {
           | 'api_key'
           | 'env_api_key'
           | 'oauth_auto'
+          | 'oauth_popup'
+          | 'oauth_redirect'
           | 'oauth_code'
           | 'device_code'
           | 'local'

@@ -1,4 +1,10 @@
-import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
+import {Chat} from '@sqlrooms/ai';
+import {
+  AiConnectDialog,
+  AiProviderConnectButton,
+  AiProviderStatusList,
+} from '@sqlrooms/ai-connect';
+import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {
   Button,
   Dialog,
@@ -20,14 +26,28 @@ export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
+  const currentProviderId = useRoomStore(
+    (s) =>
+      s.ai.getCurrentSession()?.modelProvider ||
+      s.aiSettings.config.defaultProvider,
+  );
+  const currentProviderHasCredentials = useRoomStore((s) => {
+    const providerId =
+      s.ai.getCurrentSession()?.modelProvider ||
+      s.aiSettings.config.defaultProvider;
+    if (!providerId) return false;
+    return Boolean(
+      s.aiSettings.config.providers[providerId]?.status?.hasCredentials,
+    );
+  });
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const settingsPanelOpen = useDisclosure();
-  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
       <Chat>
+        <AiConnectDialog />
         <div className="mb-4 flex items-center justify-between gap-2">
           <Chat.Sessions className="w-full" />
           {currentSessionId && (
@@ -56,14 +76,26 @@ export const MainView: React.FC = () => {
                   <DialogTitle>AI Assistant Settings</DialogTitle>
                 </DialogHeader>
                 <Tabs
-                  defaultValue="providers"
+                  defaultValue="connect"
                   className="flex min-h-0 flex-1 flex-col"
                 >
-                  <TabsList className="grid w-full shrink-0 grid-cols-3">
+                  <TabsList className="grid w-full shrink-0 grid-cols-4">
+                    <TabsTrigger value="connect">Connect</TabsTrigger>
                     <TabsTrigger value="providers">Providers</TabsTrigger>
                     <TabsTrigger value="models">Models</TabsTrigger>
                     <TabsTrigger value="parameters">Parameters</TabsTrigger>
                   </TabsList>
+                  <TabsContent
+                    value="connect"
+                    className="flex-1 space-y-3 overflow-y-auto"
+                  >
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      Browser demo mode stores provider credentials in local
+                      browser storage. That is convenient for examples, but not
+                      how you should persist production secrets.
+                    </div>
+                    <AiProviderStatusList />
+                  </TabsContent>
                   <TabsContent
                     value="providers"
                     className="flex-1 overflow-y-auto"
@@ -109,15 +141,37 @@ export const MainView: React.FC = () => {
         </Chat.PromptSuggestions>
 
         <Chat.Composer placeholder="What would you like to learn about the data?">
-          <Chat.InlineApiKeyInput
-            onSaveApiKey={(provider, apiKey) => {
-              updateProvider(provider, {apiKey});
-            }}
-          />
-          <div className="flex items-center justify-end gap-2">
-            <Chat.PromptSuggestions.VisibilityToggle />
-            <Chat.ModelSelector />
-          </div>
+          {currentProviderHasCredentials ? (
+            <div className="flex items-center justify-end gap-2">
+              <Chat.PromptSuggestions.VisibilityToggle />
+              <Chat.ModelSelector />
+            </div>
+          ) : (
+            <div className="border-border bg-muted/30 mt-3 rounded-md border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Connect a provider</p>
+                  <p className="text-muted-foreground text-sm">
+                    The browser demo needs credentials for{' '}
+                    <span className="font-mono">{currentProviderId}</span>{' '}
+                    before it can chat.
+                  </p>
+                </div>
+                <AiProviderConnectButton
+                  providerId={currentProviderId || undefined}
+                />
+              </div>
+              <p className="text-muted-foreground mt-3 text-xs">
+                Safe flows work fully in-browser. Experimental login methods are
+                intentionally labeled and may need provider-specific
+                adjustments.
+              </p>
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <Chat.PromptSuggestions.VisibilityToggle />
+                <Chat.ModelSelector />
+              </div>
+            </div>
+          )}
         </Chat.Composer>
       </Chat>
     </div>

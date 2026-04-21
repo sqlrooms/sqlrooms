@@ -16,7 +16,6 @@ import {
   Blocks,
   CirclePlus,
   Cpu,
-  Key,
   Plus,
   Server,
   Settings,
@@ -70,7 +69,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
   } = useDisclosure();
   const [customName, setCustomName] = useState('');
   const [customBaseUrl, setCustomBaseUrl] = useState('');
-  const [customApiKey, setCustomApiKey] = useState('');
   const [baseUrlError, setBaseUrlError] = useState(false);
 
   // Dialog state for editing a custom model
@@ -83,7 +81,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     oldModelName: string;
     modelName: string;
     baseUrl: string;
-    apiKey: string;
   } | null>(null);
   const [editBaseUrlError, setEditBaseUrlError] = useState(false);
 
@@ -131,7 +128,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     const trimmedName = customName.trim();
 
     // Add the custom model to the config
-    addCustomModel(customBaseUrl.trim(), customApiKey.trim(), trimmedName);
+    addCustomModel(customBaseUrl.trim(), trimmedName);
 
     // Update the current session to use this custom model
     setAiModel('custom', trimmedName);
@@ -144,7 +141,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     // Reset form
     setCustomName('');
     setCustomBaseUrl('');
-    setCustomApiKey('');
     setBaseUrlError(false);
     closeCustomModelDialog();
   };
@@ -156,7 +152,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
         oldModelName: modelName,
         modelName: modelName,
         baseUrl: customModel.baseUrl,
-        apiKey: customModel.apiKey,
       });
       setEditBaseUrlError(false);
       openEditCustomModelDialog();
@@ -187,8 +182,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
     const trimmedName = editingModel.modelName.trim();
     const trimmedBaseUrl = editingModel.baseUrl.trim();
-    const trimmedApiKey = editingModel.apiKey.trim();
-
     // Check for duplicate model names (excluding the current model being edited)
     const duplicateModel = customModels.find(
       (cm) =>
@@ -204,12 +197,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     }
 
     // Update the custom model
-    updateCustomModel(
-      editingModel.oldModelName,
-      trimmedBaseUrl,
-      trimmedApiKey,
-      trimmedName,
-    );
+    updateCustomModel(editingModel.oldModelName, trimmedBaseUrl, trimmedName);
 
     // Show success message
     toast.success('Custom Model Updated', {
@@ -376,7 +364,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                 onClick={() => {
                   setCustomName('');
                   setCustomBaseUrl('');
-                  setCustomApiKey('');
                   setBaseUrlError(false);
                   openCustomModelDialog();
                 }}
@@ -450,23 +437,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                     }}
                     placeholder="https://api.example.com"
                     className={`pl-8 ${baseUrlError ? 'border-red-500 focus:border-red-500' : ''}`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Label htmlFor="custom-apiKey" className="w-20 text-sm">
-                  API key
-                </Label>
-                <div className="relative flex-1">
-                  <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-                  <Input
-                    id="custom-apiKey"
-                    type="password"
-                    value={customApiKey}
-                    onChange={(e) => setCustomApiKey(e.target.value)}
-                    placeholder="Optional"
-                    className="pl-8"
                   />
                 </div>
               </div>
@@ -596,27 +566,6 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                     }}
                     placeholder="https://api.example.com"
                     className={`pl-8 ${editBaseUrlError ? 'border-red-500 focus:border-red-500' : ''}`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Label htmlFor="edit-model-apiKey" className="w-20 text-sm">
-                  API key
-                </Label>
-                <div className="relative flex-1">
-                  <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-                  <Input
-                    id="edit-model-apiKey"
-                    type="password"
-                    value={editingModel?.apiKey || ''}
-                    onChange={(e) =>
-                      setEditingModel((prev) =>
-                        prev ? {...prev, apiKey: e.target.value} : null,
-                      )
-                    }
-                    placeholder="Optional"
-                    className="pl-8"
                   />
                 </div>
               </div>

@@ -98,17 +98,25 @@ export function createLocalChatTransportFactory({
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
 
+      const runtime = state.ai.getProviderRuntime(provider, modelId);
       // Fetch API key and base URL dynamically to pick up settings changes
-      const apiKey = state.ai.getApiKeyFromSettings();
-      const baseUrl = state.ai.getBaseUrlFromSettings();
+      const apiKey =
+        runtime?.apiKey ||
+        runtime?.authToken ||
+        state.ai.getApiKeyFromSettings();
+      const baseUrl = runtime?.baseUrl || state.ai.getBaseUrlFromSettings();
 
       // Prefer a user-supplied model if available
-      let model: LanguageModel | undefined = getCustomModel?.({
-        provider,
-        modelId,
-        apiKey,
-        baseUrl,
-      });
+      let model: LanguageModel | undefined =
+        runtime?.customModelFactory?.(modelId) ||
+        getCustomModel?.({
+          provider,
+          modelId,
+          apiKey,
+          authToken: runtime?.authToken,
+          baseUrl,
+          headers: runtime?.headers,
+        });
 
       // Fallback to OpenAI-compatible if no custom model provided
       if (!model) {
@@ -116,7 +124,10 @@ export function createLocalChatTransportFactory({
           apiKey,
           name: provider,
           baseURL: baseUrl ?? 'https://api.openai.com/v1',
-          headers,
+          headers: {
+            ...(headers || {}),
+            ...(runtime?.headers || {}),
+          },
         });
         model = openai.chatModel(modelId);
       }

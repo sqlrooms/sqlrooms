@@ -16,7 +16,6 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import httpx
 import tomlkit
 
-OAUTH_DUMMY_KEY = "sqlrooms-local-proxy"
 OPENAI_CLI_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 OPENAI_AUTH_ISSUER = "https://auth.openai.com"
 OPENAI_CODEX_API_ENDPOINT = "https://chatgpt.com/backend-api/codex/responses"
@@ -106,7 +105,7 @@ def _default_ai_settings_config() -> dict[str, Any]:
                 "kind": "builtin",
                 "baseUrl": "https://api.anthropic.com/v1",
                 "apiKey": "",
-                "models": [{"modelName": "claude-4-sonnet"}],
+                "models": [{"modelName": "claude-opus-4-6"}],
                 "defaultAuthMethod": "manual_api_key",
                 "authMethods": [
                     {
@@ -489,21 +488,16 @@ def _browser_provider(
     method_type = (method or {}).get("type")
     is_server_managed = provider_id in {"openai", "anthropic"}
     base_url = provider.get("baseUrl") or ""
-    api_key = ""
     if is_server_managed:
         upstream_parts = urlsplit(base_url)
         upstream_path = upstream_parts.path.rstrip("/")
         base_url = (f"{api_base_url}/api/ai/proxy/{provider_id}{upstream_path}").rstrip(
             "/"
         )
-        api_key = "" if safe_only else OAUTH_DUMMY_KEY
-    elif not safe_only:
-        api_key = provider.get("apiKey") or ""
     return {
         "title": provider.get("title") or provider_id,
         "kind": provider.get("kind") or "builtin",
         "baseUrl": base_url,
-        "apiKey": api_key,
         "models": provider.get("models") or [],
         "defaultAuthMethod": provider.get("defaultAuthMethod"),
         "authMethods": provider.get("authMethods") or [],

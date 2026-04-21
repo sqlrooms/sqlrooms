@@ -6,7 +6,6 @@ import {AiModelParameters} from './AiModelParameters';
 import {AiModelUsage} from './AiModelUsage';
 import {AiProvidersSettings} from './AiProvidersSettings';
 import {AiModelsSettings} from './AiModelsSettings';
-import {AiProviderStatusList} from '../connect';
 
 interface AiSettingsPanelProps {
   disclosure: UseDisclosureReturnValue;
@@ -37,7 +36,6 @@ export const AiSettingsPanelBase: FC<
 
 export const AiSettingsPanel = Object.assign(AiSettingsPanelBase, {
   ProvidersSettings: AiProvidersSettings,
-  ConnectSettings: AiProviderStatusList,
   ModelsSettings: AiModelsSettings,
   ModelUsage: AiModelUsage,
   ModelParametersSettings: AiModelParameters,

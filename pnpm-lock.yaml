@@ -250,12 +250,21 @@ importers:
 
   examples/ai:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^3.0.64
+        version: 3.0.64(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/ai-connect':
+        specifier: workspace:*
+        version: link:../../packages/ai-connect
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
+      '@sqlrooms/ai-settings':
+        specifier: workspace:*
+        version: link:../../packages/ai-settings
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -2125,6 +2134,9 @@ importers:
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
+      '@sqlrooms/ai-connect':
+        specifier: workspace:*
+        version: link:../ai-connect
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../ai-core
@@ -2170,6 +2182,36 @@ importers:
       zod:
         specifier: 4.1.13
         version: 4.1.13
+
+  packages/ai-connect:
+    dependencies:
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
+      '@sqlrooms/ai-settings':
+        specifier: workspace:*
+        version: link:../ai-settings
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
 
   packages/ai-core:
     dependencies:
@@ -2230,7 +2272,7 @@ importers:
         version: link:../preset-jest
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.0))(typescript@5.9.3)
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
@@ -3655,7 +3697,7 @@ importers:
         version: 4.0.3
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.0))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/vega:
     dependencies:

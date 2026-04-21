@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/ai-settings",
+  "name": "@sqlrooms/ai-connect",
   "version": "0.29.0-rc.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,12 +28,11 @@
   "dependencies": {
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
-    "@sqlrooms/recharts": "workspace:*",
+    "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
-    "lucide-react": "^0.556.0",
-    "recharts": "^2.12.7"
+    "lucide-react": "^0.556.0"
   },
   "peerDependencies": {
     "react": ">=18",
