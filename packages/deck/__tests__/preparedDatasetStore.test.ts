@@ -5,7 +5,7 @@ import type {PreparedDeckDataset} from '../src/prepare/types';
 import {
   createPreparedDatasetStore,
   resolvePreparedDeckDatasetState,
-} from '../src/datasets/PreparedDatasetStore';
+} from '../src/datasets/preparedDatasetStore';
 import {resolvePreparedDatasetCacheKey} from '../src/datasets/helpers';
 import type {DeckDatasetInput} from '../src/types';
 
