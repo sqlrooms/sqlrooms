@@ -46,8 +46,10 @@ export type ToolStructureBehavior = {
  * - `getToolDisplayName`: label for agent summary lines (ParentSummaryLine).
  *   Falls back to the raw tool name.
  * - `getActivityLabel`: label for leaf activity log lines (ActivityLogLine,
- *   OrchestratorLogLineInner). Falls back to `reasoning` input field, then
- *   "Thinking..." while pending, then the raw tool name.
+ *   OrchestratorLogLineInner). Used only when the tool call has no
+ *   `reasoning` input field — a present `reasoning` always wins so that
+ *   model-provided thoughts are never hidden. Falls back to "Thinking..."
+ *   while pending, then to the raw tool name.
  */
 export type ToolDisplayBehavior = {
   getToolDisplayName?: (toolCall: AgentToolCall) => string | undefined;
