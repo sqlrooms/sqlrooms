@@ -1,19 +1,19 @@
 import {
+  CellsSliceConfig,
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
   createNotebookSlice,
   NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
-  createCellsSlice,
-  CellsSliceState,
-  CellsSliceConfig,
-  createDefaultCellRegistry,
-} from '@sqlrooms/cells';
-import {
+  createPivotSlice,
   pivotCellRegistryEntry,
   PivotSliceConfig,
   PivotSliceState,
-  createPivotSlice,
 } from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
@@ -21,15 +21,14 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
-import {DataSourcesPanel} from './DataSourcesPanel';
-import {NotebookPanel} from './NotebookPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {NotebookPanel} from './components/NotebookPanel';
 
 export type RoomState = RoomShellSliceState &
   NotebookSliceState &
@@ -38,7 +37,7 @@ export type RoomState = RoomShellSliceState &
     apiKey: string;
     setApiKey: (apiKey: string) => void;
   };
-export const RoomPanelTypes = z.enum(['main', 'data'] as const);
+export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -46,15 +45,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -63,19 +53,42 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Notebook',
               icon: () => null,
               component: NotebookPanel,
-              placement: 'main',
             },
-            data: {
+            [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
           },
         },

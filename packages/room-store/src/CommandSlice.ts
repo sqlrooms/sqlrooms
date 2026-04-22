@@ -221,7 +221,7 @@ export type CommandSliceState<
       commandId: string,
       input?: unknown,
       invocation?: RoomCommandInvocationOptions,
-    ) => Promise<void>;
+    ) => Promise<RoomCommandResult<unknown>>;
   };
 };
 
@@ -449,6 +449,7 @@ export function createCommandSlice<
                 `Failed to execute ${commandId}`,
             );
           }
+          return result;
         },
       },
     }),

@@ -1,4 +1,4 @@
-Zod schemas and types for SQLRooms layout configuration (Mosaic layout).
+Zod schemas and types for SQLRooms layout configuration.
 
 ## Installation
 
@@ -9,50 +9,93 @@ npm install @sqlrooms/layout-config
 ## Main exports
 
 - `MAIN_VIEW`
-- `LayoutTypes`
-- `MosaicLayoutConfig`, `LayoutConfig`
-- `MosaicLayoutNode`, `MosaicLayoutParent`, `isMosaicLayoutParent`
-- `createDefaultMosaicLayout()`, `DEFAULT_MOSAIC_LAYOUT`
+- `LayoutConfig` (`LayoutNode | null`)
+- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`
+- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`
+- `createDefaultLayout()`
 
 ## Basic usage
 
 ```ts
 import {
   LayoutConfig,
+  LayoutNode,
   MAIN_VIEW,
-  MosaicLayoutConfig,
-  createDefaultMosaicLayout,
+  createDefaultLayout,
 } from '@sqlrooms/layout-config';
 
-const minimalLayout = createDefaultMosaicLayout();
+// Simplest config — just the main view
+const simpleLayout = createDefaultLayout(); // returns MAIN_VIEW
 
-const twoPaneLayout: MosaicLayoutConfig = {
-  type: 'mosaic',
-  nodes: {
-    direction: 'row',
-    first: 'data',
-    second: MAIN_VIEW,
-    splitPercentage: 30,
-  },
+// Two-pane split layout
+const twoPaneLayout: LayoutConfig = {
+  type: 'split',
+  direction: 'row',
+  children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
 };
 
-const validatedMinimal: LayoutConfig = LayoutConfig.parse(minimalLayout);
+// Validated via Zod
 const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
+```
+
+## Layout node types
+
+`LayoutConfig` is `LayoutNode | null`. A `LayoutNode` is one of:
+
+| Type     | Description                                                   |
+| -------- | ------------------------------------------------------------- |
+| `string` | Leaf panel key (e.g. `'main'`, `'data'`)                      |
+| `panel`  | Leaf with sizing constraints (`defaultSize`, `minSize`, etc.) |
+| `split`  | Resizable panel group (rendered via `react-resizable-panels`) |
+| `tabs`   | Tabbed container with collapsible areas                       |
+
+### Panel node
+
+```ts
+{type: 'panel', id: 'sidebar', defaultSize: '25%', minSize: '150px', collapsible: true}
+```
+
+### Split node
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'left', defaultSize: '30%'},
+    {type: 'panel', id: 'right'},
+  ],
+}
+```
+
+### Tabs node
+
+```ts
+{
+  type: 'tabs',
+  id: 'sidebar',
+  children: ['data', 'schema'],
+  activeTabIndex: 0,
+  collapsible: true,
+}
 ```
 
 ## Typical integration
 
 ```ts
 import {createRoomShellSlice} from '@sqlrooms/room-shell';
-// `DataPanel` and `MainPanel` are app-level React components in your project.
 
 createRoomShellSlice({
   layout: {
     config: twoPaneLayout,
     panels: {
-      data: {title: 'Data', component: DataPanel, placement: 'sidebar'},
-      main: {title: 'Main', component: MainPanel, placement: 'main'},
+      data: {title: 'Data', component: DataPanel},
+      main: {title: 'Main', component: MainPanel},
     },
   },
 });
 ```
+
+## Backward compatibility
+
+Legacy binary-tree split configs are still migrated via `z.preprocess`, but the old `mosaic` node shape is no longer part of the public schema.

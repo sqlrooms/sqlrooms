@@ -2,7 +2,7 @@ import {CosmosSliceState, createCosmosSlice} from '@sqlrooms/cosmos';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -12,7 +12,7 @@ import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', MAIN_VIEW] as const);
 
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
@@ -41,21 +41,39 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: MAIN_VIEW,
-        },
+          id: 'root',
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'tabs',
+              id: RoomPanelTypes.enum['left'],
+              children: [RoomPanelTypes.enum['data']],
+              defaultSize: '30%',
+              maxSize: '50%',
+              minSize: '300px',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsed: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
+            },
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['main'],
+            },
+          ],
+        } satisfies LayoutConfig,
         panels: {
-          [RoomPanelTypes.enum['data-sources']]: {
-            title: 'Data Sources',
+          [RoomPanelTypes.enum['data']]: {
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            placement: 'sidebar',
           },
-          main: {
+          [RoomPanelTypes.enum['main']]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,
-            placement: 'main',
           },
         },
       },

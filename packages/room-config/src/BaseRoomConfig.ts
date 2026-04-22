@@ -1,6 +1,5 @@
 import {z} from 'zod';
 import {DataSource} from './DataSource';
-import {DEFAULT_MOSAIC_LAYOUT, LayoutConfig} from '@sqlrooms/layout-config';
 
 export const DEFAULT_ROOM_TITLE = 'Untitled room';
 

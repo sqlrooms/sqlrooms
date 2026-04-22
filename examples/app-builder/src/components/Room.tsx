@@ -13,8 +13,8 @@ export const Room = () => {
   return (
     <RoomStateProvider roomStore={roomStore}>
       <TooltipProvider>
-        <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={30}>
+        <ResizablePanelGroup orientation="horizontal">
+          <ResizablePanel defaultSize="30">
             <AssistantView />
           </ResizablePanel>
           <ResizablePanel>

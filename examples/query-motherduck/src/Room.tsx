@@ -1,13 +1,13 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
-import {useRef} from 'react';
+import {FC, useRef} from 'react';
 import {createRoomStore} from './store';
 
 interface RoomProps {
   mdToken: string;
 }
 
-export const Room = ({mdToken}: RoomProps) => {
+export const Room: FC<RoomProps> = ({mdToken}) => {
   const roomStoreRef = useRef<ReturnType<typeof createRoomStore>>(null);
   if (!roomStoreRef.current) {
     roomStoreRef.current = createRoomStore(mdToken);
@@ -15,11 +15,14 @@ export const Room = ({mdToken}: RoomProps) => {
 
   return (
     <RoomShell className="h-screen" roomStore={roomStoreRef.current}>
-      <RoomShell.Sidebar>
+      <RoomShell.SidebarContainer>
+        <RoomShell.TabButtons />
+        <div className="flex-1" />
         <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
-      </RoomShell.Sidebar>
+      </RoomShell.SidebarContainer>
       <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
     </RoomShell>
   );
 };

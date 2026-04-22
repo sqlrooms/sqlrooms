@@ -3,7 +3,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -14,10 +13,10 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {DataPanel} from './DataPanel';
-import {MainView} from './MainView';
+import {DataPanel} from './components/DataPanel';
+import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
@@ -47,24 +46,38 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRoomShellSlice({
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              first: RoomPanelTypes.enum['data'],
-              second: RoomPanelTypes.enum['main'],
-              direction: 'row',
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '30%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['main']]: {
               component: MainView,
-              placement: 'main',
             },
             [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               component: DataPanel,
               icon: DatabaseIcon,
-              placement: 'sidebar',
             },
           },
         },

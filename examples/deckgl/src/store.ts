@@ -3,13 +3,17 @@ import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
+import {z} from 'zod';
+
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
@@ -25,15 +29,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       }),
       config: {
         ...createDefaultDiscussConfig(),
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: 'data',
-            second: 'main',
-            splitPercentage: 30,
-          },
-        },
         dataSources: [
           {
             type: 'url',
@@ -46,19 +41,41 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         ],
       },
-      room: {
+      layout: {
+        config: {
+          id: 'root',
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'tabs',
+              id: RoomPanelTypes.enum['left'],
+              children: [RoomPanelTypes.enum['data']],
+              defaultSize: '30%',
+              maxSize: '50%',
+              minSize: '300px',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsed: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
+            },
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['main'],
+            },
+          ],
+        } satisfies LayoutConfig,
         panels: {
           data: {
-            title: 'Data sources',
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataPanel,
-            placement: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            placement: 'main',
           },
         },
       },
