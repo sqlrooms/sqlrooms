@@ -28,7 +28,7 @@ import {
   useState,
 } from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
-import {SplitMapIndexContext} from './KeplerMapContainer';
+import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 const defaultActionIcons = {
   expanded: ArrowDown,

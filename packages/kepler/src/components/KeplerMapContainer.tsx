@@ -1,4 +1,4 @@
-import {FC, createContext, useMemo, useRef, useEffect, useState} from 'react';
+import {FC, useMemo, useRef, useEffect, useState} from 'react';
 
 import {
   MapContainerFactory,
@@ -19,15 +19,12 @@ import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
 import {useStoreWithKepler} from '../KeplerSlice';
+import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 const MapContainer = getKeplerFactory(MapContainerFactory);
 const BottomWidget = getKeplerFactory(BottomWidgetFactory);
 const GeoCoderPanel = getKeplerFactory(GeocoderPanelFactory);
 const ModalContainer = getKeplerFactory(ModalContainerFactory);
-
-export const SplitMapIndexContext = createContext<number | undefined>(
-  undefined,
-);
 
 const DEFAULT_DIMENSIONS = {
   width: 0,
