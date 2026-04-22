@@ -92,6 +92,7 @@ export type {
 
 // Node renderers
 export {LeafLayout} from './node-renderers/leaf-node-renderer/LeafLayout';
+export {useLeafLayoutPanelDraggable} from './node-renderers/leaf-node-renderer/LeafLayoutPanelDraggableContext';
 export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
 export {DockLayout} from './node-renderers/dock-node-renderer/DockLayout';
