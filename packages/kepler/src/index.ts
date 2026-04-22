@@ -34,7 +34,10 @@ export type {
   KeplerFactoryRecipe,
   KeplerFactoryRecipeMode,
 } from './components/KeplerInjector';
-export {KeplerMapContainer} from './components/KeplerMapContainer';
+export {
+  KeplerMapContainer,
+  SplitMapIndexContext,
+} from './components/KeplerMapContainer';
 export {KeplerPlotContainer} from './components/KeplerPlotContainer';
 export {KeplerProvider} from './components/KeplerProvider';
 export {KeplerS3Browser} from './components/KeplerS3Browser';

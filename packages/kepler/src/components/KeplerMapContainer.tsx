@@ -1,4 +1,4 @@
-import {FC, useMemo, useRef, useEffect, useState} from 'react';
+import {FC, createContext, useMemo, useRef, useEffect, useState} from 'react';
 
 import {
   MapContainerFactory,
@@ -25,6 +25,10 @@ const BottomWidget = getKeplerFactory(BottomWidgetFactory);
 const GeoCoderPanel = getKeplerFactory(GeocoderPanelFactory);
 const ModalContainer = getKeplerFactory(ModalContainerFactory);
 
+export const SplitMapIndexContext = createContext<number | undefined>(
+  undefined,
+);
+
 const DEFAULT_DIMENSIONS = {
   width: 0,
   height: 0,
@@ -49,6 +53,13 @@ const CustomWidgetcontainer = styled.div`
   .bottom-widget--container .animation-control-container {
     margin-top: 0 !important;
   }
+`;
+
+const SplitMapsContainer = styled.div`
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
 `;
 
 type KeplerGLProps = Parameters<typeof geoCoderPanelSelector>[0];
@@ -97,9 +108,22 @@ const KeplerGl: FC<{
         size || DEFAULT_DIMENSIONS,
       )
     : null;
+
+  const splitMaps = keplerState?.visState?.splitMaps;
+  const isSplit = splitMaps && splitMaps.length > 1;
+
   const mapFields = useMemo(
     () => (keplerState?.visState ? mapFieldsSelector(mergedKeplerProps) : null),
     [keplerState, mergedKeplerProps],
+  );
+  const mapFieldsSplit = useMemo(
+    () =>
+      isSplit && keplerState?.visState
+        ? splitMaps.map((_, index) =>
+            mapFieldsSelector(mergedKeplerProps, index),
+          )
+        : null,
+    [keplerState, mergedKeplerProps, isSplit, splitMaps],
   );
 
   // Check if there are filters or animatable layers (e.g., Trip layers)
@@ -127,7 +151,30 @@ const KeplerGl: FC<{
         ref={containerRef}
         className="kepler-gl relative flex h-full w-full flex-col justify-between"
       >
-        {mapFields?.mapState ? (
+        {isSplit && mapFieldsSplit ? (
+          <SplitMapsContainer>
+            <MapViewStateContextProvider
+              mapState={
+                (mapFieldsSplit[0]?.mapState ??
+                  mapFields?.mapState) as NonNullable<
+                  typeof mapFields
+                >['mapState']
+              }
+            >
+              {mapFieldsSplit.map((fields, index) => (
+                <SplitMapIndexContext.Provider key={index} value={index}>
+                  <MapContainer
+                    index={index}
+                    primary={index === 1}
+                    containerId={index}
+                    {...fields}
+                    mapboxApiAccessToken={mapboxApiAccessToken || ''}
+                  />
+                </SplitMapIndexContext.Provider>
+              ))}
+            </MapViewStateContextProvider>
+          </SplitMapsContainer>
+        ) : mapFields?.mapState ? (
           <MapViewStateContextProvider mapState={mapFields.mapState}>
             <MapContainer
               primary={true}

@@ -11,6 +11,8 @@ import {
   setFilter as setFilterAction,
   setFilterAnimationTime as setFilterAnimationTimeAction,
   setFilterAnimationWindow as setFilterAnimationWindowAction,
+  toggleLayerForMap as toggleLayerForMapAction,
+  toggleSplitMap as toggleSplitMapAction,
   wrapTo,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
@@ -123,6 +125,10 @@ function createDefaultMapKeplerState(
       currentModal: null,
       mapControls: {
         visibleLayers: INITIAL_UI_STATE.mapControls.visibleLayers,
+        splitMap: {
+          show: true,
+          active: false,
+        },
         mapLegend: {
           show: true,
           active: false,
@@ -296,6 +302,12 @@ export type KeplerSliceState = {
       mapId: string,
       datasetId: string,
       fieldNames: string[],
+    ) => void;
+    toggleSplitMap: (mapId: string, index?: number) => void;
+    toggleLayerForMap: (
+      mapId: string,
+      mapIndex: number,
+      layerId: string,
     ) => void;
     addTableToMap: (
       mapId: string,
@@ -577,6 +589,22 @@ export function createKeplerSlice({
                 },
               },
             }),
+          );
+        },
+
+        toggleSplitMap: (mapId, index) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            toggleSplitMapAction(index as number),
+          );
+        },
+
+        toggleLayerForMap: (mapId, mapIndex, layerId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            toggleLayerForMapAction(mapIndex, layerId),
           );
         },
 
