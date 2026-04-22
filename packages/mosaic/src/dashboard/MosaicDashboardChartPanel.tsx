@@ -73,7 +73,7 @@ export const MosaicDashboardChartPanel: RoomPanelComponent = ({meta}) => {
         {connection.status === 'loading' ? (
           <SpinnerPane className="h-full w-full" />
         ) : connection.status === 'ready' && spec ? (
-          <div className="bg-background text-foreground inline-block min-w-full rounded-md p-2">
+          <div className="bg-background text-foreground flex h-full w-full items-center justify-center rounded-md p-2">
             <VgPlotChart spec={spec} params={params} />
           </div>
         ) : (

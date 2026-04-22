@@ -1,6 +1,7 @@
 import {Param, Selection} from '@uwdata/mosaic-core';
 import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
-import {FC, memo, useEffect, useRef} from 'react';
+import {FC, memo, useEffect, useRef, useState} from 'react';
+import {PlotSize, ResponsivePlot} from './ResponsivePlot';
 
 type SpecProps = {
   spec: Spec;
@@ -33,15 +34,24 @@ export function isPlotProps(props: VgPlotChartProps): props is PlotProps {
 export const VgPlotChart: FC<VgPlotChartProps> = memo(
   (props) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [containerSize, setContainerSize] = useState<PlotSize | null>(null);
+
     useEffect(() => {
       let cancelled = false;
       (async () => {
-        if (containerRef.current) {
+        if (containerRef.current && containerSize) {
           let element: HTMLElement | SVGSVGElement;
           if (isPlotProps(props)) {
             element = props.plot;
           } else if (isSpecProps(props)) {
-            const ast = await parseSpec(props.spec);
+            // Inject container dimensions into spec for responsive sizing
+            const responsiveSpec = {
+              ...props.spec,
+              width: containerSize.width,
+              height: containerSize.height,
+            } as Spec;
+
+            const ast = await parseSpec(responsiveSpec);
             if (cancelled) return;
             const options = props.params
               ? ({
@@ -63,9 +73,9 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
       return () => {
         cancelled = true;
       };
-    }, [props]);
+    }, [props, containerSize]);
 
-    return <div ref={containerRef} />;
+    return <ResponsivePlot ref={containerRef} onResize={setContainerSize} />;
   },
   (prevProps, nextProps) => {
     if (isPlotProps(prevProps) && isPlotProps(nextProps)) {
