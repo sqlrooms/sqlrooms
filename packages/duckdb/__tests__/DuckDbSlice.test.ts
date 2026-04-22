@@ -549,7 +549,7 @@ describe('DuckDbSlice', () => {
       await store.getState().db.refreshTableSchemas();
 
       // Get the schema trees
-      const schemaTrees = store.getState().db.schemaTrees;
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
 
       // Find the empty schema in the tree
       const hasEmptySchema = schemaTrees.some((dbNode) =>
@@ -578,7 +578,7 @@ describe('DuckDbSlice', () => {
       await store.getState().db.refreshTableSchemas();
 
       // Get the schema trees
-      const schemaTrees = store.getState().db.schemaTrees;
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
 
       // Should NOT include internal schema
       const hasInternalSchema = schemaTrees.some((dbNode) =>
@@ -624,7 +624,7 @@ describe('DuckDbSlice', () => {
 
         await store.getState().db.refreshTableSchemas();
 
-        const schemaTrees = store.getState().db.schemaTrees;
+        const schemaTrees = store.getState().db.schemaTrees ?? [];
 
         const hasExcludedSchemas = schemaTrees.some((dbNode) =>
           dbNode.children?.some(
@@ -676,7 +676,7 @@ describe('DuckDbSlice', () => {
       await store.getState().db.refreshTableSchemas();
 
       // Get the schema trees
-      const schemaTrees = store.getState().db.schemaTrees;
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
 
       const schemaNames = schemaTrees.flatMap(
         (dbNode) =>
