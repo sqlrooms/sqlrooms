@@ -5,6 +5,7 @@ import {
   createDuckDbSlice,
   DuckDbSliceState,
 } from '../src/DuckDbSlice';
+import {loadAllSchemas} from '../src/loadTableSchemas';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 
@@ -539,6 +540,25 @@ describe('DuckDbSlice', () => {
   });
 
   describe('empty schemas and hidden schemas visibility', () => {
+    it('should include default `main` in schema trees when there are no user tables', async () => {
+      const connector = await store.getState().db.getConnector();
+      const allNames = await loadAllSchemas(
+        connector,
+        createDefaultLoadTableSchemasFilter,
+      );
+      expect(allNames.some((s) => s.schema === 'main')).toBe(true);
+
+      await store.getState().db.refreshTableSchemas();
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
+      expect(schemaTrees.length).toBeGreaterThan(0);
+      const hasMain = schemaTrees.some((dbNode) =>
+        (dbNode.children ?? []).some(
+          (schemaNode) => schemaNode.object.name === 'main',
+        ),
+      );
+      expect(hasMain).toBe(true);
+    });
+
     it('should include empty schemas in schemaTrees', async () => {
       const connector = await store.getState().db.getConnector();
 

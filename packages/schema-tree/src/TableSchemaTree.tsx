@@ -36,13 +36,31 @@ const TableSchemaTreeRoot: FC<{
 }) => {
   const trees = useMemo(() => {
     if (!schemaTrees) return [];
-    return skipSingleDatabaseOrSchema
-      ? schemaTrees.length > 1
-        ? schemaTrees
-        : schemaTrees[0]?.children && schemaTrees[0]?.children?.length > 1
-          ? schemaTrees[0].children
-          : schemaTrees[0]?.children?.[0]?.children
-      : schemaTrees;
+    if (!skipSingleDatabaseOrSchema) {
+      return schemaTrees;
+    }
+    if (schemaTrees.length > 1) {
+      return schemaTrees;
+    }
+    const dbNode = schemaTrees[0];
+    const schemaChildren = dbNode?.children;
+    if (!schemaChildren?.length) {
+      return schemaTrees;
+    }
+    if (schemaChildren.length > 1) {
+      return schemaChildren;
+    }
+    // Single database, single schema: if there are no tables yet, show the schema
+    // node (e.g. empty `main`); otherwise show the table list.
+    const onlySchema = schemaChildren[0];
+    if (!onlySchema) {
+      return schemaTrees;
+    }
+    const tableChildren = onlySchema.children ?? [];
+    if (tableChildren.length === 0) {
+      return [onlySchema];
+    }
+    return tableChildren;
   }, [schemaTrees, skipSingleDatabaseOrSchema]);
 
   if (!trees?.length) {

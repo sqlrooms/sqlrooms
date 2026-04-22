@@ -124,13 +124,17 @@ export async function loadAllSchemas(
   filter?: LoadTableSchemasFilterFunction,
 ): Promise<Array<{database: string; schema: string}>> {
   const sql = `
-    SELECT DISTINCT 
-      database_name AS database, 
-      schema_name AS schema
+    SELECT DISTINCT
+      COALESCE(
+        NULLIF(CAST(database_name AS VARCHAR), ''),
+        current_database()
+      ) AS database,
+      CAST(schema_name AS VARCHAR) AS schema
     FROM duckdb_schemas()
-    WHERE database_name != 'system'
-    AND internal = false
-    ORDER BY database_name, schema_name
+    WHERE (database_name IS NULL OR database_name != 'system')
+      AND (internal = false OR CAST(schema_name AS VARCHAR) = 'main')
+      AND schema_name IS NOT NULL
+    ORDER BY 1, 2
   `;
   const result = await connector.query(sql);
   const schemas: Array<{database: string; schema: string}> = [];
@@ -139,17 +143,26 @@ export async function loadAllSchemas(
     const database = result.getChild('database')?.get(i);
     const schema = result.getChild('schema')?.get(i);
 
-    if (!database || !schema) continue;
+    if (schema == null) continue;
+    const schemaStr = String(schema).trim();
+    if (schemaStr === '') continue;
+    if (database == null) continue;
+    const databaseStr = String(database).trim();
+    if (databaseStr === '') continue;
 
     // Apply the same filter function used for tables
     if (filter) {
       const shouldInclude = filter(
-        makeQualifiedTableName({database, schema, table: ''}),
+        makeQualifiedTableName({
+          database: databaseStr,
+          schema: schemaStr,
+          table: '',
+        }),
       );
       if (!shouldInclude) continue;
     }
 
-    schemas.push({database, schema});
+    schemas.push({database: databaseStr, schema: schemaStr});
   }
 
   return schemas;
