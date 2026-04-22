@@ -14,7 +14,8 @@ import {DockingContext} from './DockingContext';
 import {DockPreview} from './docking-types';
 import {buildPreview, getDockDirection} from './docking-helpers';
 import {movePanel} from './dock-layout';
-import {findNearestDockAncestor, getPanelTitle} from '../layout-tree';
+import {findNearestDockAncestor} from '../layout-tree';
+import {usePanelTitle} from '../usePanelTitle';
 import {DockPreviewOverlay} from './DockPreviewOverlay';
 import {DockDragOverlay} from './DockDragOverlay';
 
@@ -52,15 +53,15 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
     }),
   );
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
-  const [activePanelTitle, setActivePanelTitle] = useState<string | null>(null);
   const [preview, setPreview] = useState<DockPreview | null>(null);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(
     null,
   );
 
+  const activePanelTitle = usePanelTitle(rootLayout, activePanelId ?? '');
+
   const clearDragState = useCallback(() => {
     setActivePanelId(null);
-    setActivePanelTitle(null);
     setPreview(null);
     setCursorPosition(null);
   }, []);
@@ -104,7 +105,6 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
     (event: DragStartEvent) => {
       const panelId = String(event.active.id);
       setActivePanelId(panelId);
-      setActivePanelTitle(getPanelTitle(rootLayout, panelId));
       updatePreview(event);
 
       // Track initial cursor position
@@ -115,7 +115,7 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
         });
       }
     },
-    [updatePreview, rootLayout],
+    [updatePreview],
   );
 
   const handleDragMove = useCallback(

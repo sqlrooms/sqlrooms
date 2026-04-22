@@ -304,15 +304,3 @@ export function removeLayoutNodeByKey(
 
   return {success: true, nextTree};
 }
-
-export function getPanelTitle(root: LayoutNode, panelId: string): string {
-  const found = findNodeById(root, panelId);
-
-  if (found?.node && isLayoutPanelNode(found.node)) {
-    if (typeof found.node.panel === 'object' && found.node.panel.meta?.title) {
-      return String(found.node.panel.meta.title);
-    }
-  }
-
-  return panelId;
-}

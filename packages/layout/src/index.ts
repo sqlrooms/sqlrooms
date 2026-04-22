@@ -71,6 +71,7 @@ export {resolvePanelDefinition} from './resolvePanelDefinition';
 export {resolvePanelIdentity} from './resolvePanelIdentity';
 export type {PanelIdentityResult} from './resolvePanelIdentity';
 export {useGetPanel} from './useGetPanel';
+export {usePanelTitle} from './usePanelTitle';
 
 // Layout node context
 export {
