@@ -682,7 +682,9 @@ export function createDuckDbSlice({
                         ?.get(0);
                     }),
                   );
-                  newTables = await get().db.loadTableSchemas();
+                  newTables = await loadTableSchemas(connector, {
+                    filterFunction: loadTableSchemasFilter ?? undefined,
+                  });
                   allSchemas = await loadAllSchemas(
                     connector,
                     loadTableSchemasFilter ?? undefined,

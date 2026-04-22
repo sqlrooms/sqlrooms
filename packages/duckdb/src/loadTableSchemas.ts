@@ -108,9 +108,15 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
 
 /**
  * Load all schemas from the database (including empty schemas).
- * Applies the same filter as loadTableSchemas to ensure consistency.
+ *
+ * If provided, `filter` reuses the same `LoadTableSchemasFilterFunction` type as
+ * `loadTableSchemas`, but it is invoked with a schema-only qualified name:
+ * `database` and `schema` are populated and `table` is an empty string.
+ * Filters that rely on a real, non-empty table name may therefore behave
+ * differently when used here.
+ *
  * @param connector - The DuckDB connector
- * @param filter - Optional filter function to apply to schemas
+ * @param filter - Optional filter function applied to schema entries via a qualified name with `table: ''`
  * @returns An array of {database, schema} objects
  */
 export async function loadAllSchemas(
