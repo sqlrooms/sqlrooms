@@ -4,7 +4,6 @@ import {
   buildDefaultChartTitle,
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
-  TEMPORAL_COLUMN_TYPES,
 } from './chartTypeUtils';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
@@ -57,7 +56,7 @@ export const countPlotChartType: ChartTypeDefinition = {
       yAxis: null,
       height: 200,
       width: 380,
-      margins: {left: 0, right: 10, top: 10, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
@@ -103,7 +102,7 @@ export const histogramChartType: ChartTypeDefinition = {
       yLabel: 'Count',
       height: 200,
       width: 380,
-      margins: {left: 40, right: 10, top: 10, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
@@ -148,7 +147,7 @@ export const lineChartChartType: ChartTypeDefinition = {
       yLabel: y,
       height: 250,
       width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
@@ -194,7 +193,7 @@ export const ecdfChartType: ChartTypeDefinition = {
       yLabel: 'Cumulative',
       height: 250,
       width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
@@ -242,7 +241,7 @@ export const heatmapChartType: ChartTypeDefinition = {
       yLabel: y,
       height: 250,
       width: 380,
-      margins: {left: 40, right: 10, top: 15, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
@@ -285,7 +284,7 @@ export const boxPlotChartType: ChartTypeDefinition = {
       yLabel: y,
       height: 250,
       width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
@@ -330,7 +329,7 @@ export const bubbleChartChartType: ChartTypeDefinition = {
       yLabel: y,
       height: 250,
       width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
+      margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
     }) as Spec,
 };
