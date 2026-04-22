@@ -406,6 +406,17 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       }
     } catch (err) {
       if (abortSignal?.aborted) {
+        const now = Date.now();
+        for (const [id, tc] of toolCallMap) {
+          if (tc.state === 'pending' || tc.state === 'approval-requested') {
+            toolCallMap.set(id, {
+              ...tc,
+              state: 'error',
+              errorText: TOOL_CALL_CANCELLED,
+              completedAt: now,
+            });
+          }
+        }
         const snapshot = buildAbortSnapshot(
           parentToolCallId,
           toolCallMap,
@@ -506,6 +517,20 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   // AgentProgressSection can render nested tool calls from the store instead
   // of relying on agentToolCalls embedded in the tool output (which would
   // bloat the main orchestrator's message context).
+  if (abortSignal?.aborted) {
+    const now = Date.now();
+    for (const [id, tc] of toolCallMap) {
+      if (tc.state === 'pending' || tc.state === 'approval-requested') {
+        toolCallMap.set(id, {
+          ...tc,
+          state: 'error',
+          errorText: TOOL_CALL_CANCELLED,
+          completedAt: now,
+        });
+      }
+    }
+  }
+
   pushProgress();
 
   if (abortSignal?.aborted) {
