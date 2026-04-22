@@ -109,6 +109,7 @@ function createChartPanelNode(
   return {
     type: 'panel',
     id: getMosaicDashboardPanelId(dashboardId, chartId),
+    minSize: 200,
     panel: {
       key: MOSAIC_DASHBOARD_CHART_PANEL,
       meta: {dashboardId, chartId},
