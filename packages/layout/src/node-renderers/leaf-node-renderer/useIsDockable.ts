@@ -8,5 +8,6 @@ export function useIsDockablePanel(): boolean {
 
   const panelId = getLayoutNodeId(node);
   const {rootLayout} = useDockingContext();
+
   return isDockablePanel(rootLayout, panelId);
 }
