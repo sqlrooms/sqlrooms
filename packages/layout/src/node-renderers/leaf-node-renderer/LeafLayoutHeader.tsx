@@ -4,14 +4,19 @@ import {useIsDockablePanel} from './useIsDockable';
 import {useRemovePanelHandler} from './useRemovePanel';
 import {LeafLayoutDragHandle} from './LeafLayoutDragHandle';
 import {Button} from '@sqlrooms/ui';
+import {getLayoutNodeId} from '@sqlrooms/layout-config';
+import {useGetPanel} from '../../useGetPanel';
+import {useLayoutNodeContext} from '../../LayoutNodeContext';
 
-export interface LeafLayoutDragHandleProps {
-  title: string;
-}
-
-export const LeafLayoutHeader: FC<LeafLayoutDragHandleProps> = ({title}) => {
+export const LeafLayoutHeader: FC = () => {
   const isDockable = useIsDockablePanel();
   const handleRemove = useRemovePanelHandler();
+
+  const {node} = useLayoutNodeContext();
+  const panelId = getLayoutNodeId(node);
+  const panelInfo = useGetPanel(node);
+
+  const title = panelInfo?.title ?? panelId;
 
   if (!isDockable) {
     return null;
