@@ -56,7 +56,7 @@ function getSizeProps(node: LayoutNode): SizeProps {
   };
 }
 
-function stripSizeProps(node: LayoutNode): LayoutNode {
+function stripDefaultSize(node: LayoutNode): LayoutNode {
   if (isLayoutNodeKey(node)) {
     return node;
   }
@@ -64,10 +64,6 @@ function stripSizeProps(node: LayoutNode): LayoutNode {
   return {
     ...node,
     defaultSize: undefined,
-    minSize: undefined,
-    maxSize: undefined,
-    collapsedSize: undefined,
-    collapsible: undefined,
   };
 }
 
@@ -111,7 +107,7 @@ function toPercent(value: number): string {
 function equalizeChildren(children: LayoutNode[]): LayoutNode[] {
   const size = 100 / children.length;
   const result = children.map((child) =>
-    withDefaultSize(stripSizeProps(child), toPercent(size)),
+    withDefaultSize(stripDefaultSize(child), toPercent(size)),
   );
 
   console.log('[Dock Layout] equalizeChildren:', {
@@ -140,7 +136,7 @@ function splitTargetShare(
 
   const result = children.map((child, index) => {
     if (index === targetIndex || index === insertedIndex) {
-      return withDefaultSize(stripSizeProps(child), toPercent(half));
+      return withDefaultSize(stripDefaultSize(child), toPercent(half));
     }
 
     return child;
@@ -337,7 +333,7 @@ function replaceTargetWithSplit(
   direction: DockDirection,
 ): LayoutNode | null {
   const axis = getDockAxis(direction);
-  const sourceChild = withDefaultSize(stripSizeProps(sourceNode), '50%');
+  const sourceChild = withDefaultSize(stripDefaultSize(sourceNode), '50%');
 
   console.log('[Dock Layout] replaceTargetWithSplit (wrap mode):', {
     targetId,
@@ -349,7 +345,7 @@ function replaceTargetWithSplit(
 
   return updateNode(root, targetId, (targetNode) => {
     const inherited = getSizeProps(targetNode);
-    const targetChild = withDefaultSize(stripSizeProps(targetNode), '50%');
+    const targetChild = withDefaultSize(stripDefaultSize(targetNode), '50%');
     const children = isBefore(direction)
       ? [sourceChild, targetChild]
       : [targetChild, sourceChild];
@@ -372,7 +368,7 @@ function replaceSingleChildParentSplit(
   direction: DockDirection,
 ): LayoutNode | null {
   const axis = getDockAxis(direction);
-  const sourceChild = withDefaultSize(stripSizeProps(sourceNode), '50%');
+  const sourceChild = withDefaultSize(stripDefaultSize(sourceNode), '50%');
 
   return updateNode(root, parentId, (node) => {
     if (!isLayoutSplitNode(node) || node.children.length !== 1) {
@@ -385,7 +381,7 @@ function replaceSingleChildParentSplit(
       return node;
     }
 
-    const targetChild = withDefaultSize(stripSizeProps(targetNode), '50%');
+    const targetChild = withDefaultSize(stripDefaultSize(targetNode), '50%');
     const children = isBefore(direction)
       ? [sourceChild, targetChild]
       : [targetChild, sourceChild];
@@ -421,7 +417,7 @@ function insertIntoSplit(
     const insertIndex = isBefore(direction) ? targetIndex : targetIndex + 1;
     const children = [...node.children];
 
-    children.splice(insertIndex, 0, stripSizeProps(sourceNode));
+    children.splice(insertIndex, 0, stripDefaultSize(sourceNode));
 
     const targetIndexAfterInsert = isBefore(direction)
       ? targetIndex + 1

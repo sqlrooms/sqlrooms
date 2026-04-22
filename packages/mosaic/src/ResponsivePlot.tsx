@@ -29,13 +29,22 @@ export const ResponsivePlot = forwardRef<HTMLDivElement, ResponsivePlotProps>(
     ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const lastSizeRef = useRef<PlotSize | null>(null);
 
     // Expose the internal ref to parent
     useImperativeHandle(ref, () => containerRef.current!, []);
 
     // Debounced callback to reduce re-render frequency during resizing
     const onResizeDebounced = useDebouncedCallback((size: PlotSize) => {
-      onResize(size);
+      // Only call onResize if size actually changed
+      if (
+        !lastSizeRef.current ||
+        lastSizeRef.current.width !== size.width ||
+        lastSizeRef.current.height !== size.height
+      ) {
+        lastSizeRef.current = size;
+        onResize(size);
+      }
     }, debounceMs);
 
     // Measure container size with ResizeObserver
