@@ -1,24 +1,48 @@
 import {FC} from 'react';
 import {createPortal} from 'react-dom';
+import {LayoutNode} from '@sqlrooms/layout-config';
+import {useGetPanel} from '../useGetPanel';
 
 const BADGE_OFFSET = 12;
 
 interface DockDragOverlayProps {
-  activePanelTitle: string | null;
+  activePanelId: string | null;
+  activePanelNode: LayoutNode | null;
   cursorPosition: {x: number; y: number} | null;
 }
 
 export const DockDragOverlay: FC<DockDragOverlayProps> = ({
-  activePanelTitle,
+  activePanelId,
+  activePanelNode,
   cursorPosition,
 }) => {
-  if (!activePanelTitle || !cursorPosition || typeof document === 'undefined') {
+  const panelInfo = useGetPanel(activePanelNode ?? activePanelId ?? '');
+  const activePanelTitle = panelInfo?.title ?? activePanelId ?? '';
+
+  if (!activePanelId || !cursorPosition || typeof document === 'undefined') {
     return null;
+  }
+
+  const DragOverlayComponent = panelInfo?.dragOverlay;
+
+  if (DragOverlayComponent && activePanelNode) {
+    return createPortal(
+      <div
+        className="pointer-events-none fixed z-[9999]"
+        style={{
+          left: cursorPosition.x + BADGE_OFFSET,
+          top: cursorPosition.y + BADGE_OFFSET,
+        }}
+      >
+        <DragOverlayComponent node={activePanelNode} />
+      </div>,
+      document.body,
+    );
   }
 
   return createPortal(
     <div
-      className="border-border/70 bg-background/95 text-muted-foreground pointer-events-none fixed z-[9999] inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap shadow-lg"
+      className="border-border bg-background text-foreground pointer-events-none fixed z-[9999] inline-flex items-center gap-1 border px-2 py-1 text-xs whitespace-nowrap shadow-lg"
       style={{
         left: cursorPosition.x + BADGE_OFFSET,
         top: cursorPosition.y + BADGE_OFFSET,

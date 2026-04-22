@@ -8,6 +8,7 @@ import {Button} from '@sqlrooms/ui';
 import {Plus} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo} from 'react';
 import {MosaicDashboardChartPanel} from './MosaicDashboardChartPanel';
+import {MosaicDashboardChartDragOverlay} from './MosaicDashboardChartDragOverlay';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
   getMosaicDashboardDockId,
@@ -41,6 +42,7 @@ export const MosaicDashboardCharts: React.FC = () => {
     registerPanel(MOSAIC_DASHBOARD_CHART_PANEL, (context) => ({
       title: context.meta?.chartTitle as string | undefined,
       component: MosaicDashboardChartPanel,
+      dragOverlay: MosaicDashboardChartDragOverlay,
     }));
 
     return () => {

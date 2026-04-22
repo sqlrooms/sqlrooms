@@ -14,8 +14,7 @@ import {DockingContext} from './DockingContext';
 import {DockPreview} from './docking-types';
 import {buildPreview, getDockDirection} from './docking-helpers';
 import {movePanel} from './dock-layout';
-import {findNearestDockAncestor} from '../layout-tree';
-import {usePanelTitle} from '../usePanelTitle';
+import {findNearestDockAncestor, findNodeById} from '../layout-tree';
 import {DockPreviewOverlay} from './DockPreviewOverlay';
 import {DockDragOverlay} from './DockDragOverlay';
 
@@ -58,7 +57,11 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
     null,
   );
 
-  const activePanelTitle = usePanelTitle(rootLayout, activePanelId ?? '');
+  const activePanelNode = useMemo(() => {
+    if (!activePanelId) return null;
+    const found = findNodeById(rootLayout, activePanelId);
+    return found?.node ?? null;
+  }, [activePanelId, rootLayout]);
 
   const clearDragState = useCallback(() => {
     setActivePanelId(null);
@@ -196,7 +199,8 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
       >
         {children}
         <DockDragOverlay
-          activePanelTitle={activePanelTitle}
+          activePanelId={activePanelId}
+          activePanelNode={activePanelNode}
           cursorPosition={cursorPosition}
         />
         <DockPreviewOverlay preview={preview} />
