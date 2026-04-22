@@ -116,12 +116,12 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
  * differently when used here.
  *
  * @param connector - The DuckDB connector
- * @param filter - Optional filter function applied to schema entries via a qualified name with `table: ''`
+ * @param filter - Optional filter function applied to schema entries via a qualified name with `table: ''`; omit or pass `null` for no filter
  * @returns An array of {database, schema} objects
  */
 export async function loadAllSchemas(
   connector: DuckDbConnector,
-  filter?: LoadTableSchemasFilterFunction,
+  filter?: LoadTableSchemasFilterFunction | null,
 ): Promise<Array<{database: string; schema: string}>> {
   const sql = `
     SELECT DISTINCT
