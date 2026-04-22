@@ -252,7 +252,10 @@ export function createRoomShellSlice(
       ...roomSliceState,
       ...createDbSlice(
         connector
-          ? {...createDbProps, duckDb: {...createDbProps?.duckDb, connector}}
+          ? {
+              ...(createDbProps ?? {}),
+              duckDb: {...(createDbProps?.duckDb ?? {}), connector},
+            }
           : createDbProps,
       )(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
