@@ -48,10 +48,13 @@ export const LeafLayoutPanel: FC<PropsWithChildren> = ({children}) => {
     <LeafLayoutPanelDraggableProvider value={contextValue}>
       <div
         ref={setNodeRef}
-        className={cn('group relative h-full w-full overflow-hidden', {
-          'opacity-30': isDockablePanel && isDragging,
-          'opacity-100': isDockablePanel && !isDragging,
-        })}
+        className={cn(
+          'group relative flex h-full w-full flex-col overflow-hidden',
+          {
+            'opacity-30': isDockablePanel && isDragging,
+            'opacity-100': isDockablePanel && !isDragging,
+          },
+        )}
       >
         {children}
       </div>

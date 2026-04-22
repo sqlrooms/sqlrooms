@@ -4,7 +4,6 @@ import {RendererSwitcher} from '../RendererSwitcher';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
 import {LayoutPath} from '../../types';
 import {LeafLayoutDragHandle} from './LeafLayoutDragHandle';
-import {LeafLayoutContent} from './LeafLayoutContent';
 import {LeafLayoutPanel} from './LeafLayoutPanel';
 import {LeafLayoutHeader} from './LeafLayoutHeader';
 
@@ -16,20 +15,15 @@ interface RootProps {
 const Root: FC<RootProps> = ({node, path}) => {
   return (
     <LayoutNodeProvider containerType="leaf" node={node} path={path}>
-      <LeafLayout.Panel>
-        <LeafLayout.Header />
-        <LeafLayout.Content>
-          <RendererSwitcher />
-        </LeafLayout.Content>
-      </LeafLayout.Panel>
+      <LeafLayoutPanel>
+        <RendererSwitcher />
+      </LeafLayoutPanel>
     </LayoutNodeProvider>
   );
 };
 
 export const LeafLayout = {
   Root,
-  Panel: LeafLayoutPanel,
   Header: LeafLayoutHeader,
   DragHandle: LeafLayoutDragHandle,
-  Content: LeafLayoutContent,
 };
