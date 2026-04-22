@@ -36,19 +36,28 @@ import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
 
+/** DuckDB’s temporary database catalog; never show in the default data source tree. */
+const DUCKDB_TEMP_DATABASE = 'temp';
+
 /**
  * Default predicate: which tables/schemas/databases appear in the data source panel.
- * Excludes only SQLRooms-internal names (prefixed with `__sqlrooms_`).
+ * Hides `__sqlrooms_*` names and DuckDB’s `temp` database.
  * Apps can pass {@link CreateDuckDbSliceProps.loadTableSchemasFilter} to add more rules.
  */
 export function createDefaultLoadTableSchemasFilter(
   table: QualifiedTableName,
 ): boolean {
-  return (
-    !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
-  );
+  if (
+    table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
+    table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
+    table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
+  ) {
+    return false;
+  }
+  if (table.database === DUCKDB_TEMP_DATABASE) {
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -315,7 +324,7 @@ export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
    * Optional filter for which tables/schemas/databases appear in the data source panel.
-   * Defaults to {@link createDefaultLoadTableSchemasFilter} (predicate; hides `__sqlrooms_*` only).
+   * Defaults to {@link createDefaultLoadTableSchemasFilter} (hides `__sqlrooms_*` and the DuckDB `temp` database).
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
 };
