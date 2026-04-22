@@ -1,4 +1,4 @@
-import {useDebouncedCallback} from '@sqlrooms/ui';
+import {cn, useDebouncedCallback} from '@sqlrooms/ui';
 import {
   forwardRef,
   PropsWithChildren,
@@ -24,10 +24,7 @@ export type ResponsivePlotProps = PropsWithChildren<{
  * Exposes ref to the container div for direct DOM access.
  */
 export const ResponsivePlot = forwardRef<HTMLDivElement, ResponsivePlotProps>(
-  (
-    {onResize, debounceMs = 150, className = 'h-full w-full', children},
-    ref,
-  ) => {
+  ({onResize, debounceMs = 150, className, children}, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const lastSizeRef = useRef<PlotSize | null>(null);
 
@@ -66,7 +63,7 @@ export const ResponsivePlot = forwardRef<HTMLDivElement, ResponsivePlotProps>(
     }, [onResizeDebounced]);
 
     return (
-      <div ref={containerRef} className={className}>
+      <div ref={containerRef} className={cn('h-full w-full', className)}>
         {children}
       </div>
     );
