@@ -29,6 +29,8 @@ export {arrowTableToJson} from './arrow-utils';
 export {
   isQualifiedTableName,
   makeQualifiedTableName,
+  buildKeplerUserTableIdMap,
+  keplerDatasetListLabelFromQualifiedSql,
   escapeVal,
   escapeId,
   isNumericDuckType,

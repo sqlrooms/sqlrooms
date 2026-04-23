@@ -79,6 +79,8 @@ export {
   loadSpatial,
   makeLimitQuery,
   makeQualifiedTableName,
+  buildKeplerUserTableIdMap,
+  keplerDatasetListLabelFromQualifiedSql,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,

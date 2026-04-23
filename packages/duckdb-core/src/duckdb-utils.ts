@@ -38,6 +38,50 @@ export function makeQualifiedTableName({
 }
 
 /**
+ * Kepler dataset `dataId` values: fully qualified form from {@link QualifiedTableName#toString},
+ * plus unqualified `main` table names for projects saved before FQN was used.
+ */
+export function buildKeplerUserTableIdMap(
+  tables: {table: QualifiedTableName; isView: boolean}[],
+): Map<string, boolean> {
+  const m = new Map<string, boolean>();
+  for (const t of tables) {
+    m.set(t.table.toString(), t.isView);
+    if ((t.table.schema ?? 'main') === 'main') {
+      m.set(t.table.table, t.isView);
+    }
+  }
+  return m;
+}
+
+const FQN_PART_SEPARATOR = '".';
+
+/**
+ * Unqualified table name for Kepler dataset / layer UI labels. Does not
+ * include database, schema, or double-quoted FQN – only the last identifier
+ * (e.g. `"a"."b"."c"` -> `c`).
+ */
+export function keplerDatasetListLabelFromQualifiedSql(
+  tableSql: string,
+): string {
+  if (!tableSql) {
+    return tableSql;
+  }
+  if (!tableSql.includes(FQN_PART_SEPARATOR)) {
+    if (tableSql.startsWith('"') && tableSql.endsWith('"')) {
+      return tableSql.slice(1, -1).replace(/""/g, '"');
+    }
+    return tableSql;
+  }
+  const parts = tableSql.split(FQN_PART_SEPARATOR);
+  const last = parts[parts.length - 1] ?? tableSql;
+  if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
+    return last.slice(1, -1).replace(/""/g, '"');
+  }
+  return last;
+}
+
+/**
  * Escapes a value for use in DuckDB SQL queries by wrapping it in single quotes
  * and escaping any existing single quotes by doubling them.
  *
