@@ -51,7 +51,6 @@ const TableSchemaTreeRoot: FC<{
       return schemaChildren;
     }
     // Single database, single schema: if there are no tables yet, show the schema
-    // node (e.g. empty `main`); otherwise show the table list.
     const onlySchema = schemaChildren[0];
     if (!onlySchema) {
       return schemaTrees;
