@@ -66,7 +66,7 @@ function createDashboardNode(
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
     {
-      name: 'ai-example-app-state-storage',
+      name: 'layout-example-app-state-storage',
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,

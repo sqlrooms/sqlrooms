@@ -12,7 +12,7 @@ export const DataSourcesPanel = () => {
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col p-2">
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{

@@ -524,6 +524,30 @@ createLayoutSlice({
 });
 ```
 
+#### Panel padding removed from `LeafLayoutPanel` (breaking)
+
+`LeafLayoutPanel` no longer applies `p-2` padding by default. Panel components must now add their own padding.
+
+##### Before
+
+Panel content inherited `p-2` padding from `LeafLayoutPanel`:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div>My content</div>;
+};
+```
+
+##### After
+
+Add `p-2` to your panel component:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div className="p-2">My content</div>;
+};
+```
+
 #### Area-based panel management
 
 Named `tabs` nodes (with an `id`) act as areas with new management methods:

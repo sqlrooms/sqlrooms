@@ -15,7 +15,7 @@ const RoomPanel: FC<RoomPanelProps> = ({
   showHeader = true,
 }) => {
   return (
-    <div className={cn('flex h-full grow flex-col gap-3', className)}>
+    <div className={cn('flex h-full grow flex-col gap-3 p-2', className)}>
       {showHeader && <RoomPanelHeader panelKey={panelKey} />}
       <div className="flex h-full grow flex-col gap-3 overflow-auto">
         {children}
