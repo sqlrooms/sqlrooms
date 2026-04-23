@@ -10,15 +10,13 @@ import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-  enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
-  excludeFromGrouping?: string[];
+  hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
-  enableReasoningBox = false,
   customMarkdownComponents,
-  excludeFromGrouping: excludeFromGrouping,
+  hoistedRenderers,
   ErrorMessageComponent,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -34,10 +32,8 @@ export const AnalysisResultsContainer: React.FC<{
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
-    endRef,
     dataToObserve: uiMessages,
   });
 
@@ -54,19 +50,21 @@ export const AnalysisResultsContainer: React.FC<{
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        {/* Render analysis results */}
-        {currentAnalysisResults?.map((analysisResult) => (
-          <AnalysisResult
-            key={analysisResult.id}
-            analysisResult={analysisResult}
-            enableReasoningBox={enableReasoningBox}
-            customMarkdownComponents={customMarkdownComponents}
-            excludeFromGrouping={excludeFromGrouping}
-            ErrorMessageComponent={ErrorMessageComponent}
-          />
-        ))}
-        {isRunning && <AiThinkingDots className="text-muted-foreground p-4" />}
-        <div ref={endRef} className="h-10 w-full shrink-0" />
+        <div className="pr-3">
+          {currentAnalysisResults?.map((analysisResult) => (
+            <AnalysisResult
+              key={analysisResult.id}
+              analysisResult={analysisResult}
+              customMarkdownComponents={customMarkdownComponents}
+              hoistedRenderers={hoistedRenderers}
+              ErrorMessageComponent={ErrorMessageComponent}
+            />
+          ))}
+          {isRunning && (
+            <AiThinkingDots className="text-muted-foreground p-4" />
+          )}
+          <div className="h-10 w-full shrink-0" />
+        </div>
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

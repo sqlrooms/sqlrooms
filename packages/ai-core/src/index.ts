@@ -12,6 +12,7 @@ export {AnalysisResult} from './components/AnalysisResult';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
+export {useElapsedTime} from './hooks/useElapsedTime';
 export {Chat} from './components/Chat';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
@@ -33,23 +34,47 @@ export {
   cleanupPendingAnalysisResults,
   ToolAbortError,
   extractModelsFromSettings,
+  shouldEndAnalysis,
+  humanizeToolName,
 } from './utils';
 export type {
-  AddToolResult,
+  AddToolApprovalResponse,
+  AddToolOutput,
+  AgentProgressSnapshot,
   StoredTool,
   StoredToolSet,
   ToolRendererProps,
   ToolRenderer,
   ToolRendererRegistry,
   ToolRenderers,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
+  MessageTokenUsage,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 
-export {processAgentStream} from './agents/AgentUtils';
-export type {
-  AgentStreamResult,
-  AgentStreamOutput,
-  UIMessageChunk,
-  AgentToolCall,
+export {
+  streamSubAgent,
+  updateAgentToolCallData,
+  formatAbortSnapshot,
 } from './agents/AgentUtils';
-export {ReasoningBox} from './components/ReasoningBox';
+export type {
+  AgentStreamOutput,
+  AgentToolCall,
+  AgentToolCallAdditionalData,
+  PendingSubAgentApproval,
+} from './types';
+export {ExpandableContent} from './components/ExpandableContent';
+export {ActivityBox} from './components/ActivityBox';
+export {
+  FlatAgentRenderer,
+  OrchestratorToolLogLine,
+  ShowToolCallDetailsProvider,
+} from './components/FlatAgentRenderer';
+export {collectHoistableRenderers} from './components/collectHoistableRenderers';
+export type {HoistableToolCall} from './components/collectHoistableRenderers';
+export {ContextUsageIndicator} from './components/ContextUsageIndicator';
+export {
+  HoistedRenderersProvider,
+  useHoistedRenderers,
+} from './components/HoistedRenderersContext';

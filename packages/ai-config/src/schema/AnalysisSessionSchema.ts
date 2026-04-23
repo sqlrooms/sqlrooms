@@ -44,6 +44,8 @@ const AnalysisSessionBaseSchema = z.object({
   isRunning: z.boolean().default(false),
   /** Last time the session was opened/selected (epoch ms) */
   lastOpenedAt: z.number().optional(),
+  /** Persisted sub-agent tool call trees, keyed by parent toolCallId */
+  agentProgress: z.record(z.string(), z.array(z.unknown())).optional(),
 });
 
 /**

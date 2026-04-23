@@ -10,6 +10,58 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
+
+The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
+
+#### Sub-agent composition
+
+The tool-as-agent pattern now uses `ToolLoopAgent` + `streamSubAgent`:
+
+```ts
+// Before (v5)
+const result = await streamText({
+  model,
+  system: instructions,
+  messages: [{role: 'user', content: prompt}],
+  tools,
+  maxSteps: 10,
+});
+
+// After (v6)
+import {ToolLoopAgent, stepCountIs} from 'ai';
+import {streamSubAgent} from '@sqlrooms/ai';
+
+const agent = new ToolLoopAgent({
+  model,
+  instructions,
+  tools,
+  stopWhen: stepCountIs(10),
+  temperature: 0,
+});
+const resultText = await streamSubAgent(agent, prompt, abortSignal);
+```
+
+#### `addToolResult` → `addToolOutput`
+
+```ts
+// Before
+addToolResult({toolCallId, result: {...}});
+
+// After — note: `tool` is a new required field in v6
+addToolOutput({tool: toolName, toolCallId, output: {...}});
+```
+
+#### `ToolRendererProps` new states
+
+Tool renderers may now receive three additional states for approval workflows: `approval-requested`, `approval-responded`, and `output-denied`. Update any exhaustive switch/if-else on `state` in custom renderers.
+
+#### Remote transport
+
+If you use `createRemoteChatTransportFactory`, your server-side route must migrate from `streamText` to `ToolLoopAgent` + `createAgentUIStreamResponse`. The transport now sends `instructions`, `maxSteps`, and `temperature` in the request body.
+
+> **Note:** The [`ai-nextjs` example](https://github.com/sqlrooms/sqlrooms/blob/main/examples/ai-nextjs/src/app/api/chat/route.ts) shows a reference implementation that intentionally ignores these client-supplied fields and uses server-controlled defaults for security. Production endpoints should decide whether to trust client-supplied values for `instructions`, `maxSteps`, and `temperature` based on their security model.
+
 ### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
 
 `createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
@@ -124,7 +176,7 @@ const myTool = tool({
     processed: text,
   }),
   // optional: control what the LLM sees (defaults to full JSON)
-  toModelOutput: (output) => ({type: 'text', value: output.details}),
+  toModelOutput: ({output}) => ({type: 'text', value: output.details}),
 });
 // renderer is registered separately — see toolRenderers below
 ```
@@ -290,11 +342,15 @@ result.pipeThrough(
 
 #### After
 
-Remove the `onChunk` handler. The AI SDK's `toUIMessageStream()` now embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
+Remove the `onChunk` handler. `createAgentUIStreamResponse` embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
 
 ```ts
-// app/api/chat/route.ts
-writer.merge(result.toUIMessageStream({originalMessages: messages}));
+// chatTransport.ts — inside the local transport factory
+return createAgentUIStreamResponse({
+  agent,
+  uiMessages: sanitizeMessagesForLLM(fixIncompleteToolCalls(messagesCopy)),
+  abortSignal,
+});
 ```
 
 **Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.

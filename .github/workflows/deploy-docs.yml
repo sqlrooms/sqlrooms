@@ -63,6 +63,13 @@ jobs:
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist --no-frozen-lockfile
 
+      - name: Cache for Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-turbo-
+
       - name: Print TypeScript, TypeDoc, and plugin versions
         run: |
           pnpm list typescript typedoc typedoc-vitepress-theme typedoc-plugin-markdown typedoc-plugin-zod || true

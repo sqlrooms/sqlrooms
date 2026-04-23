@@ -2,15 +2,13 @@ import {useEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
 } from 'ai';
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
-import type {ToolCall} from '../chatTransport';
 import {fixIncompleteToolCalls} from '../utils';
-import type {AddToolResult} from '../types';
 
-export type {AddToolResult} from '../types';
+export type {AddToolOutput} from '../types';
 
 /**
  * Return type for the useSessionChat hook.
@@ -22,10 +20,6 @@ export type UseSessionChatResult = {
   status: ChatStatus;
   sessionId: string;
 };
-
-type SendAutoWhenArg = Parameters<
-  typeof lastAssistantMessageIsCompleteWithToolCalls
->[0];
 
 /**
  * Custom hook that provides per-session AI chat functionality.
@@ -71,13 +65,15 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const headers = useStoreWithAi((s) => s.ai.chatHeaders);
 
   // Get chat handlers
-  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
   const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
   const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
   const setChatSendMessage = useStoreWithAi((s) => s.ai.setChatSendMessage);
-  const setAddToolResult = useStoreWithAi((s) => s.ai.setAddToolResult);
+  const setAddToolOutput = useStoreWithAi((s) => s.ai.setAddToolOutput);
+  const setAddToolApprovalResponse = useStoreWithAi(
+    (s) => s.ai.setAddToolApprovalResponse,
+  );
 
   // Get per-session abort controller
   const getAbortController = useStoreWithAi((s) => s.ai.getAbortController);
@@ -85,7 +81,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const isAborted = abortController?.signal.aborted ?? false;
   const isAbortedRef = useRef<boolean>(isAborted);
 
-  // Keep a live ref so sendAutomaticallyWhen sees latest abort state
+  // Keep a live ref so abort checks see the latest state
   useEffect(() => {
     isAbortedRef.current = isAborted;
   }, [isAborted]);
@@ -107,43 +103,39 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     sessionId,
   ]);
 
-  // Store addToolResult in a ref that can be captured by the onToolCall closure
-  const addToolResultRef = useRef<AddToolResult>(null!);
-
-  // Gate auto-send when analysis is aborted or cancelled
-  const shouldAutoSend = (options: SendAutoWhenArg) => {
-    if (isAbortedRef.current) return false;
-    return lastAssistantMessageIsCompleteWithToolCalls(options);
-  };
-
   const initialMessages = useMemo(() => {
     return fixIncompleteToolCalls(
-      (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+      (currentSession?.uiMessages ?? []) as UIMessage[],
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);
 
-  const {messages, sendMessage, addToolResult, stop, status} = useChat({
+  const {
+    messages,
+    sendMessage,
+    addToolOutput,
+    addToolApprovalResponse,
+    stop,
+    status,
+  } = useChat({
     // Unique per-session/per-revision id so each session has an independent chat stream,
     // and we can force a reset when messagesRevision changes.
     id: `${sessionId}::${messagesRevision}`,
     transport,
     messages: initialMessages,
-    onToolCall: async (opts) => {
-      const {toolCall} = opts as {toolCall: unknown};
-      return onChatToolCall?.({
-        sessionId,
-        toolCall: toolCall as ToolCall,
-        addToolResult: addToolResultRef.current,
-      });
+    // Auto-resend after all approval responses are provided (approve/deny),
+    // but skip if the session was aborted.
+    sendAutomaticallyWhen: (
+      options: Parameters<
+        typeof lastAssistantMessageIsCompleteWithApprovalResponses
+      >[0],
+    ) => {
+      if (isAbortedRef.current) return false;
+      return lastAssistantMessageIsCompleteWithApprovalResponses(options);
     },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
     onError: (error) => onChatError?.(sessionId, error),
-    sendAutomaticallyWhen: shouldAutoSend,
   });
-
-  // Capture addToolResult for use in onToolCall
-  addToolResultRef.current = addToolResult;
 
   // If user aborts mid-stream, stop the local chat stream immediately
   useEffect(() => {
@@ -164,11 +156,17 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     return () => setChatSendMessage?.(sessionId, undefined);
   }, [setChatSendMessage, sendMessage, sessionId]);
 
-  // Register addToolResult with the store for this specific session
+  // Register addToolOutput with the store for this specific session
   useEffect(() => {
-    setAddToolResult?.(sessionId, addToolResult);
-    return () => setAddToolResult?.(sessionId, undefined);
-  }, [setAddToolResult, addToolResult, sessionId]);
+    setAddToolOutput?.(sessionId, addToolOutput);
+    return () => setAddToolOutput?.(sessionId, undefined);
+  }, [setAddToolOutput, addToolOutput, sessionId]);
+
+  // Register addToolApprovalResponse with the store for this specific session
+  useEffect(() => {
+    setAddToolApprovalResponse?.(sessionId, addToolApprovalResponse);
+    return () => setAddToolApprovalResponse?.(sessionId, undefined);
+  }, [setAddToolApprovalResponse, addToolApprovalResponse, sessionId]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {

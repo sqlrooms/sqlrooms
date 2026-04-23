@@ -48,12 +48,12 @@ export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
-export {processAgentStream} from '@sqlrooms/ai-core';
+export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
-  AgentStreamResult,
+  AddToolOutput,
   AgentStreamOutput,
-  UIMessageChunk,
   AgentToolCall,
+  AgentToolCallAdditionalData,
   ToolRenderers,
   ToolRenderer,
   ToolRendererProps,
@@ -80,7 +80,7 @@ export {SessionTitle} from '@sqlrooms/ai-core';
 export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
-export {ReasoningBox} from '@sqlrooms/ai-core';
+export {ShowToolCallDetailsProvider} from '@sqlrooms/ai-core';
 export {Chat} from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-config

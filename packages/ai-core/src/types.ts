@@ -6,13 +6,116 @@ import type {
   Tool,
   InferToolOutput,
   InferToolInput,
+  ToolLoopAgentSettings,
 } from 'ai';
-import {streamText} from 'ai';
-import type {AgentToolCall} from './agents/AgentUtils';
+/**
+ * Represents the state of a single tool call made by an agent.
+ * When the tool is itself an agent, `agentToolCalls` contains the
+ * nested sub-agent's tool calls so the UI can render them recursively.
+ */
+export type AgentToolCall = {
+  toolCallId: string;
+  toolName: string;
+  input?: unknown;
+  output?: unknown;
+  errorText?: string;
+  state: 'pending' | 'success' | 'error' | 'approval-requested';
+  agentToolCalls?: AgentToolCall[];
+  approvalId?: string;
+  startedAt?: number;
+  completedAt?: number;
+};
 
-export type ProviderOptions = NonNullable<
-  Parameters<typeof streamText>[0]['providerOptions']
->;
+/**
+ * Additional data associated with an agent tool call, used by renderers.
+ */
+export type AgentToolCallAdditionalData = {
+  input?: unknown;
+  output?: unknown;
+  errorText?: string;
+};
+
+/**
+ * Return type from streamSubAgent containing both final text and tool call data.
+ */
+export type AgentStreamOutput = {
+  finalOutput: string;
+  agentToolCalls: AgentToolCall[];
+};
+
+/**
+ * Pending approval request for a sub-agent tool.
+ * Stored in the AI slice state so the UI can render approval prompts.
+ */
+export type PendingSubAgentApproval = {
+  toolCallId: string;
+  approvalId: string;
+  toolName: string;
+  input: unknown;
+  resolve: (approved: boolean) => void;
+};
+
+/**
+ * Structured snapshot of a sub-agent's progress at the time of abort.
+ * Captured recursively: when a child tool is itself an agent, its
+ * `childSnapshot` contains the nested agent's own progress.
+ * Used to give the parent orchestrator enough context to resume
+ * intelligently when the user types "continue".
+ */
+export type AgentProgressSnapshot = {
+  agentName: string;
+  completedTools: Array<{
+    toolName: string;
+    input: unknown;
+    output: unknown;
+    childSnapshot?: AgentProgressSnapshot;
+  }>;
+  failedTools: Array<{
+    toolName: string;
+    input: unknown;
+    errorText: string;
+    childSnapshot?: AgentProgressSnapshot;
+  }>;
+  pendingTools: Array<{
+    toolName: string;
+    input: unknown;
+    childSnapshot?: AgentProgressSnapshot;
+  }>;
+  partialText: string;
+};
+
+/**
+ * Per-tool-call timing entry stored in assistant message metadata.
+ */
+export type ToolTimingEntry = {
+  startedAt: number;
+  completedAt?: number;
+};
+
+/**
+ * Accumulated token usage for an assistant message, sourced from the AI SDK's
+ * LanguageModelUsage reported at the end of each step.
+ */
+export type MessageTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  inputTokenDetails?: {
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+  };
+  outputTokenDetails?: {
+    reasoningTokens?: number;
+  };
+};
+
+/**
+ * Shape of custom metadata stored on assistant UIMessages.
+ */
+export type AssistantMessageMetadata = {
+  toolTimings?: Record<string, ToolTimingEntry>;
+  tokenUsage?: MessageTokenUsage;
+};
 
 /**
  * Shallow tool representation stored in state.
@@ -24,7 +127,7 @@ export type ProviderOptions = NonNullable<
  *
  * Tools are still accepted as the full `ToolSet` in `AiSliceOptions` for
  * type-safe tool creation. Internal call-sites that pass tools to
- * `streamText()` / `generateText()` cast back to `ToolSet`.
+ * `ToolLoopAgent` cast back to `ToolSet`.
  */
 export interface StoredTool {
   description?: string;
@@ -44,13 +147,13 @@ export type StoredToolSet = Record<string, StoredTool>;
 export type GetProviderOptions = (args: {
   provider: string;
   modelId: string;
-}) => ProviderOptions | null | undefined;
+}) => ToolLoopAgentSettings['providerOptions'];
 
 /**
- * Type for adding tool results to the chat.
- * Extracted to a separate file to avoid circular dependencies.
+ * Type for adding tool outputs to the chat.
+ * Defined here (in types.ts) to avoid circular dependencies.
  */
-export type AddToolResult = (
+export type AddToolOutput = (
   options:
     | {tool: string; toolCallId: string; output: unknown}
     | {
@@ -60,6 +163,11 @@ export type AddToolResult = (
         errorText: string;
       },
 ) => void;
+
+export type AddToolApprovalResponse = (options: {
+  id: string;
+  approved: boolean;
+}) => void;
 
 export type AiChatSendMessage = (message: {text: string}) => void;
 
@@ -79,7 +187,7 @@ export interface AiStateForTransport {
   ) => void;
   getIsRunning: (sessionId: string) => boolean;
   setIsRunning: (sessionId: string, isRunning: boolean) => void;
-  setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
+  setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => boolean;
   toolRenderers: ToolRendererRegistry;
   findToolRenderer: (toolName: string) => ToolRenderer | undefined;
   /** Map toolCallId -> sessionId for long-running tool streams (e.g. agents) */
@@ -95,11 +203,18 @@ export interface AiStateForTransport {
     toolCalls: AgentToolCall[],
   ) => void;
   clearAgentProgress: (parentToolCallId: string) => void;
-  waitForToolResult: (
-    sessionId: string,
+  /** Pending approval requests from sub-agent tools with needsApproval */
+  pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
+  requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
+  resolveSubAgentApproval: (approvalId: string, approved: boolean) => void;
+  clearSubAgentApproval: (approvalId: string) => void;
+  /** Transient abort snapshots for nested agent progress propagation */
+  writeAbortSnapshot?: (
     toolCallId: string,
-    abortSignal?: AbortSignal,
-  ) => Promise<void>;
+    snapshot: AgentProgressSnapshot,
+  ) => void;
+  readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
+  clearAbortSnapshots?: () => void;
   getFullInstructions: () => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;
@@ -107,6 +222,12 @@ export interface AiStateForTransport {
   getBaseUrlFromSettings: () => string | undefined;
   /** Set API key error flag for a provider */
   setApiKeyError: (provider: string, hasError: boolean) => void;
+  /** Get the maximum number of agent steps from settings */
+  getMaxStepsFromSettings: () => number;
+  /** Per-tool-call timing entries, keyed by toolCallId */
+  toolTimings: Record<string, ToolTimingEntry>;
+  setToolTiming: (toolCallId: string, entry: ToolTimingEntry) => void;
+  getToolTimings: () => Record<string, ToolTimingEntry>;
 }
 
 /**
@@ -127,8 +248,18 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
     | 'input-streaming'
     | 'input-available'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'approval-requested'
+    | 'approval-responded'
+    | 'output-denied';
   errorText?: string;
+  /**
+   * Approval ID for tools with `needsApproval`.
+   * Always defined when `state` is `'approval-requested'`, `'approval-responded'`,
+   * or `'output-denied'`. Renderers handling those states can safely assert
+   * this value is a `string` without additional null checks.
+   */
+  approvalId?: string;
 };
 
 /**

@@ -1,6 +1,8 @@
 # SQLRooms AI Agent demo app
 
-Example demonstrating the use of the core AI module with agents
+A simple example demonstrating a single AI agent (weather lookup) using the core AI module.
+
+For a more advanced example with nested sub-agents and approval flows, see [examples/ai-subagents](../ai-subagents/).
 
 [More about SQLRooms examples](https://sqlrooms.org/examples/)
 

@@ -1,8 +1,12 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {Spinner, cn, getTheme} from '@sqlrooms/ui';
+import {Spinner, cn, getResolvedTheme, useTheme} from '@sqlrooms/ui';
 import type {Theme} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef} from 'react';
-import {getJsonEditorTheme, getMenuColors} from '../utils/color-utils';
+import {
+  getJsonEditorTheme,
+  getMarkdownEditorTheme,
+  getMenuColors,
+} from '../utils/color-utils';
 import type * as Monaco from 'monaco-editor';
 import {getCssColor, getMonospaceFont} from '@sqlrooms/utils';
 
@@ -78,9 +82,6 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
-// Module-level singleton to track theme state
-let lastDefinedForDarkMode: boolean | null = null;
-
 function defineMonacoThemes(
   monaco: typeof Monaco,
   isDark: boolean,
@@ -88,11 +89,6 @@ function defineMonacoThemes(
 ) {
   suppressMonacoTextareaFlash();
 
-  // Only redefine if the theme mode has changed or themes haven't been defined yet
-  if (lastDefinedForDarkMode === isDark) return;
-  lastDefinedForDarkMode = isDark;
-
-  // Define both light and dark themes with current CSS variable values
   // Light theme
   monaco.editor.defineTheme('sqlrooms-light', {
     base: 'vs',
@@ -113,6 +109,10 @@ function defineMonacoThemes(
   });
 
   monaco.editor.defineTheme('sqlrooms-json-light', getJsonEditorTheme(false));
+  monaco.editor.defineTheme(
+    'sqlrooms-markdown-light',
+    getMarkdownEditorTheme(false),
+  );
 
   // Dark theme
   monaco.editor.defineTheme('sqlrooms-dark', {
@@ -134,6 +134,10 @@ function defineMonacoThemes(
   });
 
   monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
+  monaco.editor.defineTheme(
+    'sqlrooms-markdown-dark',
+    getMarkdownEditorTheme(true),
+  );
 
   // Apply the correct theme variant (respects JSON-specific themes)
   monaco.editor.setTheme(currentTheme);
@@ -166,16 +170,21 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   beforeMount,
   ...props
 }) => {
-  const isDark = getTheme() === 'dark';
+  const {theme} = useTheme();
+  const isDark = getResolvedTheme(theme) === 'dark';
 
   const monacoTheme =
     language === 'json'
       ? isDark
         ? 'sqlrooms-json-dark'
         : 'sqlrooms-json-light'
-      : isDark
-        ? 'sqlrooms-dark'
-        : 'sqlrooms-light';
+      : language === 'markdown'
+        ? isDark
+          ? 'sqlrooms-markdown-dark'
+          : 'sqlrooms-markdown-light'
+        : isDark
+          ? 'sqlrooms-dark'
+          : 'sqlrooms-light';
 
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
