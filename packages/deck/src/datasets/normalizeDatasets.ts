@@ -8,7 +8,7 @@ import {
 import {toArrowTable} from './tableAdapter';
 
 function normalizeDatasetEntry(
-  _datasetId: string,
+  datasetId: string,
   input: DeckDatasetInput,
 ): DeckDatasetInput {
   if (isSqlDatasetInput(input)) {
@@ -19,11 +19,17 @@ function normalizeDatasetEntry(
     };
   }
 
-  return {
-    arrowTable: input.arrowTable,
-    geometryColumn: input.geometryColumn,
-    geometryEncodingHint: input.geometryEncodingHint,
-  };
+  if (isArrowTableDatasetInput(input)) {
+    return {
+      arrowTable: input.arrowTable,
+      geometryColumn: input.geometryColumn,
+      geometryEncodingHint: input.geometryEncodingHint,
+    };
+  }
+
+  throw new Error(
+    `Dataset "${datasetId}" has an unrecognized input shape. Expected either { sqlQuery } or { arrowTable }.`,
+  );
 }
 
 export function resolveArrowTable(

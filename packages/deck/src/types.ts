@@ -35,7 +35,7 @@ export type DeckSqlDatasetInput = DeckDatasetBase & {
 export type DeckTable = arrow.Table;
 
 export type DeckArrowTableDatasetInput = DeckDatasetBase & {
-  arrowTable?: DeckTable | undefined;
+  arrowTable: DeckTable | undefined;
 };
 export type DeckDatasetInput = DeckSqlDatasetInput | DeckArrowTableDatasetInput;
 

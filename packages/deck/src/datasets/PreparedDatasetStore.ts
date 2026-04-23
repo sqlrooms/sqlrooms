@@ -346,8 +346,6 @@ export function createPreparedDatasetStore(
         .map((descriptor) => descriptor.cacheKey)
         .filter((cacheKey): cacheKey is string => Boolean(cacheKey));
 
-      get().syncConsumer(consumerId, cacheKeys);
-
       for (const descriptor of descriptors) {
         if (!descriptor.cacheKey) {
           continue;
@@ -360,6 +358,8 @@ export function createPreparedDatasetStore(
           input: descriptor.input,
         });
       }
+
+      get().syncConsumer(consumerId, cacheKeys);
     },
   }));
 }

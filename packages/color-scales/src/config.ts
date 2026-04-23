@@ -13,18 +13,11 @@ import {
   continuousSequentialSchemes,
 } from './colorSchemes';
 
+const colorChannel = z.number().int().min(0).max(255);
+
 export const RGBAColor = z.union([
-  z.tuple([
-    z.number().int().min(0).max(255),
-    z.number().int().min(0).max(255),
-    z.number().int().min(0).max(255),
-  ]),
-  z.tuple([
-    z.number().int().min(0).max(255),
-    z.number().int().min(0).max(255),
-    z.number().int().min(0).max(255),
-    z.number().int().min(0).max(255),
-  ]),
+  z.tuple([colorChannel, colorChannel, colorChannel]),
+  z.tuple([colorChannel, colorChannel, colorChannel, colorChannel]),
 ]);
 export type RGBAColor = z.infer<typeof RGBAColor>;
 

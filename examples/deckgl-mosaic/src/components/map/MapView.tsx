@@ -9,7 +9,7 @@ import {
   useMosaicClient,
 } from '@sqlrooms/mosaic';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo, useRef, useState} from 'react';
 import type {ViewState} from 'react-map-gl/maplibre';
 import {useRoomStore} from '../../store';
 import {MapControls} from './MapControls';
@@ -30,7 +30,6 @@ const INITIAL_VIEW_STATE = {
 
 export default function MapView({className}: {className?: string}) {
   const brush = useRoomStore((state) => state.mosaic.selections.brush);
-  const getSelection = useRoomStore((state) => state.mosaic.getSelection);
 
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [showInfo, setShowInfo] = useState(false);
@@ -55,12 +54,6 @@ export default function MapView({className}: {className?: string}) {
   );
 
   const lastUpdateRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (!brush) {
-      getSelection('brush');
-    }
-  }, [brush, getSelection]);
 
   const {
     data: rawData,

@@ -71,7 +71,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
       selection: directSelection,
       query: queryRef.current,
       onQueryResult: (result) => {
-        queryResultRef.current?.(toArrowClientResult(result));
+        queryResultRef.current?.(result);
       },
     });
 

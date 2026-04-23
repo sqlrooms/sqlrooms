@@ -6,7 +6,9 @@ import type {
 } from '../DeckJsonMapSpec';
 
 function hasExtensionKeys(props: Record<string, unknown>) {
-  return '_sqlroomsBinding' in props;
+  return (
+    typeof props._sqlroomsBinding === 'object' && props._sqlroomsBinding != null
+  );
 }
 
 function getLayerConfig(props: Record<string, unknown>) {

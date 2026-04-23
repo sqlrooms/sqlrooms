@@ -28,14 +28,20 @@ export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
                 className="h-3 rounded-sm border"
                 style={{background: legend.gradient}}
               />
-              <div className="text-muted-foreground mt-1 flex justify-between gap-2 text-[0.6rem]">
+              <div className="text-muted-foreground relative mt-1 h-4 text-[0.6rem]">
                 {legend.ticks.map((tick) => (
                   <span
                     key={`${legend.title}-${tick.offset}-${tick.label}`}
-                    className={cn(
-                      tick.offset === 50 ? 'text-center' : '',
-                      tick.offset === 100 ? 'text-right' : '',
-                    )}
+                    className="absolute"
+                    style={{
+                      left: `${tick.offset}%`,
+                      transform:
+                        tick.offset === 0
+                          ? 'none'
+                          : tick.offset === 100
+                            ? 'translateX(-100%)'
+                            : 'translateX(-50%)',
+                    }}
                   >
                     {tick.label}
                   </span>

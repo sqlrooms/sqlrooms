@@ -25,7 +25,9 @@ export function isColorScaleMarker(value: unknown): value is ColorScaleMarker {
     typeof value === 'object' &&
     (value as {[SQLROOMS_COLOR_SCALE_MARKER]?: boolean})[
       SQLROOMS_COLOR_SCALE_MARKER
-    ],
+    ] &&
+    typeof (value as {colorScale?: unknown}).colorScale === 'object' &&
+    (value as {colorScale?: unknown}).colorScale != null,
   );
 }
 

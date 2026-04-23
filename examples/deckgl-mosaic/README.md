@@ -12,7 +12,7 @@ This example is based on the [original demo app](https://github.com/dzole0311/de
 
 An example showcasing integration with [deck.gl](https://deck.gl/) and the [UWData Mosaic](https://github.com/uwdata/mosaic) package for performant cross-filtering, now routed through [`@sqlrooms/deck`](../../packages/deck/README.md).
 
-The architecture uses Mosaic’s global Coordinator to manage state between linked views using SQL predicates. The map spec stays separate from the data, the current Mosaic-filtered Arrow result is passed into `DeckJsonMap`, and multiple JSON layers reuse that same prepared dataset instead of maintaining a local GeoArrow bridge utility.
+The architecture uses Mosaic's global Coordinator to manage state between linked views using SQL predicates. The map spec stays separate from the data, the current Mosaic-filtered Arrow result is passed into `DeckJsonMap`, and multiple JSON layers reuse that same prepared dataset instead of maintaining a local GeoArrow bridge utility.
 
 To create a new project from the deckgl-mosaic example run this:
 

@@ -42,7 +42,8 @@ export function coerceFiniteNumber(value: unknown) {
   }
 
   if (typeof value === 'bigint') {
-    return Number(value);
+    const num = Number(value);
+    return Number.isFinite(num) ? num : undefined;
   }
 
   if (typeof value === 'string' && value.trim() !== '') {
@@ -397,7 +398,10 @@ export function createColorScaleMapper(options: {
   }
 
   const numericValues = getNumericValues(values);
-  if (numericValues.length === 0) {
+  const needsSamples =
+    colorScale.type === 'quantile' ||
+    ('domain' in colorScale && colorScale.domain === 'auto');
+  if (needsSamples && numericValues.length === 0) {
     return createNullColorAccessor(nullColor);
   }
 
@@ -446,7 +450,10 @@ export function buildColorScaleLegend(options: {
   }
 
   const numericValues = getNumericValues(values);
-  if (numericValues.length === 0) {
+  const needsSamples =
+    colorScale.type === 'quantile' ||
+    ('domain' in colorScale && colorScale.domain === 'auto');
+  if (needsSamples && numericValues.length === 0) {
     return null;
   }
 

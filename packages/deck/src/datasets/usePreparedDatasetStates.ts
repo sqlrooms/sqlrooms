@@ -1,13 +1,32 @@
 import {useStoreWithDuckDb} from '@sqlrooms/duckdb';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useId, useMemo, useState} from 'react';
 import {useStore} from 'zustand';
+import {shallow} from 'zustand/shallow';
 import {type DeckDatasetInput, type PreparedDeckDatasetState} from '../types';
 import {
   preparedDatasetStore,
   resolvePreparedDeckDatasetStates,
 } from './PreparedDatasetStore';
 
-let nextPreparedDatasetConsumerId = 0;
+/**
+ * Stabilize a `datasets` record so that a new object reference created on
+ * every render (e.g. an inline `{ earthquakes: { arrowTable } }` literal)
+ * does not cause downstream effects and memos to re-run when nothing
+ * actually changed.  Uses Zustand's `shallow` to compare top-level keys
+ * and per-entry identity.
+ *
+ * Implemented via the "adjusting state during rendering" pattern so the
+ * React compiler does not flag ref access during render.
+ */
+function useStableDatasets(
+  datasets: Record<string, DeckDatasetInput>,
+): Record<string, DeckDatasetInput> {
+  const [stable, setStable] = useState(datasets);
+  if (!shallow(stable, datasets)) {
+    setStable(datasets);
+  }
+  return stable;
+}
 
 /**
  * Subscribe a `DeckJsonMap` instance to prepared dataset state.
@@ -25,18 +44,16 @@ let nextPreparedDatasetConsumerId = 0;
 export function usePreparedDatasetStates(
   datasets: Record<string, DeckDatasetInput>,
 ): Record<string, PreparedDeckDatasetState> {
+  const stableDatasets = useStableDatasets(datasets);
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
   const connector = useStoreWithDuckDb((state) => state.db.connector);
-  const [consumerId] = useState(() => {
-    nextPreparedDatasetConsumerId += 1;
-    return `prepared-dataset-consumer:${nextPreparedDatasetConsumerId}`;
-  });
+  const consumerId = useId();
   const entries = useStore(preparedDatasetStore, (state) => state.entries);
 
   useEffect(() => {
     preparedDatasetStore.getState().syncDatasetsForConsumer({
       consumerId,
-      datasets,
+      datasets: stableDatasets,
       executeSql,
       sqlSourceIdentity: connector,
     });
@@ -44,15 +61,15 @@ export function usePreparedDatasetStates(
     return () => {
       preparedDatasetStore.getState().removeConsumer(consumerId);
     };
-  }, [connector, consumerId, datasets, executeSql]);
+  }, [connector, consumerId, stableDatasets, executeSql]);
 
   return useMemo(
     () =>
       resolvePreparedDeckDatasetStates({
-        datasets,
+        datasets: stableDatasets,
         entries,
         sqlSourceIdentity: connector,
       }),
-    [connector, datasets, entries],
+    [connector, stableDatasets, entries],
   );
 }

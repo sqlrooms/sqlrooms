@@ -310,7 +310,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               isLoading: true,
               data: null,
               selection,
-              queryResultCallback: options.onQueryResult,
+              queryResultCallback: options.onQueryResult
+                ? (result: unknown) =>
+                    options.onQueryResult!(toArrowClientResult(result))
+                : undefined,
             };
           }),
         );

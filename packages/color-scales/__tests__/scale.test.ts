@@ -27,10 +27,9 @@ describe('@sqlrooms/color-scales', () => {
       title: 'Status',
     });
 
+    expect(legend).toBeDefined();
     expect(legend?.type).toBe('categorical');
-    if (legend?.type === 'categorical') {
-      expect(legend.items).toHaveLength(2);
-    }
+    expect(legend!.items).toHaveLength(2);
   });
 
   it('builds stepped legends for quantile scales', () => {
@@ -45,9 +44,8 @@ describe('@sqlrooms/color-scales', () => {
       title: 'Magnitude',
     });
 
+    expect(legend).toBeDefined();
     expect(legend?.type).toBe('stepped');
-    if (legend?.type === 'stepped') {
-      expect(legend.items).toHaveLength(3);
-    }
+    expect(legend!.items).toHaveLength(3);
   });
 });

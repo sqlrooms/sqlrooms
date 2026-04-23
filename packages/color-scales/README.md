@@ -254,13 +254,13 @@ This is the intended compatibility model:
 
 - define one shared `ColorScaleConfig`
 - use it in deck through `getFillColor` / `getLineColor` with
-  `{"@@function":"sqlroomsColorScale", ...}`
+  `{"@@function":"colorScale", ...}`
 - or render it in Mosaic through `MosaicColorLegend`
 
 ## How Other SQLRooms Packages Use This
 
 - `@sqlrooms/deck`
-  - uses `ColorScaleConfig` through the `sqlroomsColorScale` JSON function
+  - uses `ColorScaleConfig` through the `colorScale` JSON function
   - compiles color accessors for deck layers
   - derives deck overlay legends from the shared legend model
 - `@sqlrooms/mosaic`
