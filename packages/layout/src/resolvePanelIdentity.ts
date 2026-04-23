@@ -3,21 +3,23 @@ import {
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutDockNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
 } from '@sqlrooms/layout-config';
 
 export type PanelIdentityResult = {
-  panelId: string;
+  panelId: string | null;
   meta?: Record<string, unknown>;
 };
 
 /**
  * Resolves the panel identity from a layout node.
  *
- * For panel and dock nodes with a `panel` property:
- * - String form: returns the string as panelId
- * - Object form: returns key as panelId and meta
+ * For all object nodes (panel, dock, split, tabs):
+ * - If panel exists (string): returns the string as panelId
+ * - If panel exists (object): returns key as panelId and meta
+ * - If panel is missing: returns null (nothing to render)
  *
- * For nodes without a `panel` property, returns the node's `id`.
  * For string node keys, returns the key as panelId.
  */
 export function resolvePanelIdentity(node: LayoutNode): PanelIdentityResult {
@@ -25,9 +27,14 @@ export function resolvePanelIdentity(node: LayoutNode): PanelIdentityResult {
     return {panelId: node, meta: undefined};
   }
 
-  if (isLayoutPanelNode(node) || isLayoutDockNode(node)) {
+  if (
+    isLayoutPanelNode(node) ||
+    isLayoutDockNode(node) ||
+    isLayoutSplitNode(node) ||
+    isLayoutTabsNode(node)
+  ) {
     if (!node.panel) {
-      return {panelId: node.id, meta: undefined};
+      return {panelId: null, meta: undefined};
     }
 
     if (typeof node.panel === 'string') {
@@ -37,5 +44,6 @@ export function resolvePanelIdentity(node: LayoutNode): PanelIdentityResult {
     return {panelId: node.panel.key, meta: node.panel.meta};
   }
 
-  return {panelId: node.id, meta: undefined};
+  // Unreachable - all node types covered
+  return {panelId: null, meta: undefined};
 }

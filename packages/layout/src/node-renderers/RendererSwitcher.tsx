@@ -18,6 +18,10 @@ export const RendererSwitcher: FC<RendererSwitcherProps> = ({
   if (CustomRenderer) {
     const panelIdentity = resolvePanelIdentity(context.node);
 
+    if (!panelIdentity.panelId) {
+      return defaultComponent;
+    }
+
     return <CustomRenderer panelInfo={panelInfo} {...panelIdentity} />;
   }
 

@@ -27,6 +27,7 @@ function copyPanelNodeWithInheritedSize(
     return {
       type: 'panel',
       id: node,
+      panel: node,
       ...inherited,
     };
   }

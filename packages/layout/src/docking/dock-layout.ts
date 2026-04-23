@@ -71,6 +71,7 @@ function withDefaultSize(
     return {
       type: 'panel',
       id: node,
+      panel: node,
       defaultSize,
     };
   }
@@ -193,6 +194,7 @@ function normalizeTree(
         return {
           type: 'panel',
           id: onlyChild,
+          panel: onlyChild,
           ...inherited,
         };
       }

@@ -153,6 +153,9 @@ const TabButtons: FC<{
       {tabIds.map((tabId) => {
         // Resolve panel identity from the tab ID (which is a LayoutNodeKey)
         const {panelId, meta} = resolvePanelIdentity(tabId);
+        if (!panelId) {
+          return null;
+        }
         const definition = panels[panelId];
         const info: RoomPanelInfo | undefined = definition
           ? resolvePanelDefinition(definition, {panelId, meta})

@@ -1,7 +1,7 @@
 // In packages/layout-config/__tests__/LayoutConfig.test.ts
 import {
-  LayoutNode,
   LayoutDockNode,
+  LayoutNode,
   isLayoutDockNode,
 } from '../src/LayoutConfig';
 
@@ -10,7 +10,8 @@ describe('LayoutDockNode schema', () => {
     const node = {
       type: 'dock',
       id: 'dashboard-1',
-      root: {type: 'panel', id: 'chart-1'},
+      panel: 'dashboard-1',
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
     };
     expect(() => LayoutNode.parse(node)).not.toThrow();
   });
@@ -20,7 +21,7 @@ describe('LayoutDockNode schema', () => {
       type: 'dock',
       id: 'dashboard-1',
       panel: 'dashboard',
-      root: {type: 'panel', id: 'chart-1'},
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
     };
     expect(() => LayoutNode.parse(node)).not.toThrow();
   });
@@ -30,7 +31,7 @@ describe('LayoutDockNode schema', () => {
       type: 'dock',
       id: 'dashboard-1',
       panel: {key: 'dashboard', meta: {dashboardId: 'overview'}},
-      root: {type: 'panel', id: 'chart-1'},
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
     };
     expect(() => LayoutNode.parse(node)).not.toThrow();
   });
@@ -39,7 +40,8 @@ describe('LayoutDockNode schema', () => {
     const node = {
       type: 'dock',
       id: 'dashboard-1',
-      root: {type: 'panel', id: 'chart-1'},
+      panel: 'dashboard-1',
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
       defaultSize: '50%',
       minSize: 300,
       collapsible: true,
@@ -51,6 +53,7 @@ describe('LayoutDockNode schema', () => {
     const node = {
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
     };
     expect(() => LayoutNode.parse(node)).toThrow();
   });
@@ -58,16 +61,20 @@ describe('LayoutDockNode schema', () => {
 
 describe('isLayoutDockNode type guard', () => {
   test('returns true for dock nodes', () => {
-    const node = {
+    const node: LayoutDockNode = {
       type: 'dock',
       id: 'dashboard-1',
-      root: {type: 'panel', id: 'chart-1'},
+      panel: 'dashboard-1',
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
     };
+
     expect(isLayoutDockNode(node)).toBe(true);
   });
 
   test('returns false for other node types', () => {
-    expect(isLayoutDockNode({type: 'panel', id: 'p1'})).toBe(false);
+    expect(isLayoutDockNode({type: 'panel', id: 'p1', panel: 'p1'})).toBe(
+      false,
+    );
     expect(
       isLayoutDockNode({
         type: 'split',
@@ -104,7 +111,7 @@ describe('LayoutPanelNode with panel identity', () => {
     });
   });
 
-  test('accepts panel node without panel (for backward compatibility)', () => {
+  test('accepts panel node without panel property', () => {
     const node = {
       type: 'panel',
       id: 'chart-1',
