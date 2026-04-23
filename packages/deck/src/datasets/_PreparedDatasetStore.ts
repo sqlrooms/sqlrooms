@@ -1,12 +1,11 @@
-import {createStore} from 'zustand/vanilla';
 import type {QueryHandle} from '@sqlrooms/duckdb';
+import {createStore} from 'zustand/vanilla';
+import {prepareDeckDataset} from '../prepare/prepareDeckDataset';
 import {
   isSqlDatasetInput,
   type DeckDatasetInput,
   type PreparedDeckDatasetState,
 } from '../types';
-import {prepareDeckDataset} from '../prepare/prepareDeckDataset';
-import {resolveArrowTable} from './normalizeDatasets';
 import {
   DEFAULT_MAX_PREPARED_DATASET_ENTRIES,
   cloneEntryWithConsumers,
@@ -15,6 +14,7 @@ import {
   resolvePreparedDatasetCacheKey,
   touchEntry,
 } from './helpers';
+import {resolveArrowTable} from './normalizeDatasets';
 import type {
   PreparedDatasetCacheEntry,
   PreparedDatasetStoreOptions,
@@ -332,7 +332,12 @@ export function createPreparedDatasetStore(
       });
     },
 
-    syncDatasetsForConsumer({consumerId, datasets, executeSql, sqlSourceIdentity}) {
+    syncDatasetsForConsumer({
+      consumerId,
+      datasets,
+      executeSql,
+      sqlSourceIdentity,
+    }) {
       const descriptors = resolvePreparedDatasetDescriptors({
         datasets,
         sqlSourceIdentity,
