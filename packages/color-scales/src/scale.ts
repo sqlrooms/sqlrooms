@@ -163,9 +163,18 @@ export function getDiscreteNumericColors(options: {
   return reverse ? colors.reverse() : colors;
 }
 
+function extent(values: number[]): [number, number] {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of values) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  return [min, max];
+}
+
 export function getSequentialDomain(values: number[]) {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const [min, max] = extent(values);
   if (min === max) {
     return [min - 1, max + 1] as [number, number];
   }
@@ -174,8 +183,7 @@ export function getSequentialDomain(values: number[]) {
 }
 
 export function getDivergingDomain(values: number[]) {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const [min, max] = extent(values);
   if (min === max) {
     return [min - 1, min, max + 1] as [number, number, number];
   }

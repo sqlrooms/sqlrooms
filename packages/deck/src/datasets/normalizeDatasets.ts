@@ -42,6 +42,12 @@ export function resolveArrowTable(
   return toArrowTable(input.arrowTable);
 }
 
+/**
+ * Validate and normalize a raw datasets record into canonical
+ * `DeckDatasetInput` entries.
+ *
+ * @throws {Error} If `datasets` is empty (DeckJsonMap requires at least one entry).
+ */
 export function normalizeDatasets(
   datasets: DeckJsonMapProps['datasets'],
 ): Record<string, DeckDatasetInput> {

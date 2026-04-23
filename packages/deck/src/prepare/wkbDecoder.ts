@@ -35,7 +35,11 @@ function parseGeometryValue(
   }
 
   try {
-    if (encoding === 'wkt' || encoding === 'geoarrow.wkt') {
+    if (
+      encoding === 'wkt' ||
+      encoding === 'geoarrow.wkt' ||
+      (encoding === 'unknown' && typeof value === 'string')
+    ) {
       return (
         WKTLoader.parseTextSync?.(String(value), {wkt: {crs: false}}) ?? null
       );
@@ -105,7 +109,18 @@ function tryPromotePointTable(
       return null;
     }
 
-    points.push(geometry.coordinates);
+    const coords = geometry.coordinates;
+    if (
+      !Array.isArray(coords) ||
+      coords.length < 2 ||
+      !Number.isFinite(coords[0]) ||
+      !Number.isFinite(coords[1])
+    ) {
+      points.push(null);
+      continue;
+    }
+
+    points.push([coords[0], coords[1]]);
   }
 
   const coordinateField = new Field('xy', new Float64());
