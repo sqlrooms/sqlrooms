@@ -24,11 +24,13 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
+    "@uwdata/flechette": "^2.2.6",
     "@uwdata/mosaic-core": "^0.21.0",
     "@uwdata/mosaic-plot": "^0.21.0",
     "@uwdata/mosaic-spec": "^0.21.0",
@@ -45,7 +47,7 @@
     "react-dom": ">=18"
   },
   "devDependencies": {
-    "@jest/globals": "^29.7.0",
+    "@jest/globals": "^30.3.0",
     "ts-jest": "^29.4.4"
   },
   "scripts": {

@@ -10,9 +10,9 @@ This example is based on the [original demo app](https://github.com/dzole0311/de
 
 <video src="https://sqlrooms.org/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
 
-An example showcasing integration with [deck.gl](https://deck.gl/) and [@geoarrow/deck.gl-layers](https://www.npmjs.com/package/@geoarrow/deck.gl-layers) libraries for geospatial data visualization combined with the [UWData Mosaic](https://github.com/uwdata/mosaic) package for performant cross-filtering.
+An example showcasing integration with [deck.gl](https://deck.gl/) and the [UWData Mosaic](https://github.com/uwdata/mosaic) package for performant cross-filtering, now routed through [`@sqlrooms/deck`](../../packages/deck/README.md).
 
-The architecture uses Mosaic’s global Coordinator to manage state between linked views using SQL predicates. Because DuckDB-WASM returns standard Arrow tables, the WKB output is [converted to GeoArrow point vectors](./src/components/map/utils.ts#L26) before being passed to the GeoArrowScatterplotLayer for rendering. Ideally, this function can be replaced with a proper GeoArrow Table constructor in the future once [this feature request](https://github.com/geoarrow/geoarrow-js/issues/42) is implemented.
+The architecture uses Mosaic's global Coordinator to manage state between linked views using SQL predicates. The map spec stays separate from the data, the current Mosaic-filtered Arrow result is passed into `DeckJsonMap`, and multiple JSON layers reuse that same prepared dataset instead of maintaining a local GeoArrow bridge utility.
 
 To create a new project from the deckgl-mosaic example run this:
 
