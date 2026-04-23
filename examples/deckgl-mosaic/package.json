@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@uwdata/flechette": "^2.2.6",
     "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/deck": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
@@ -18,7 +17,6 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "maplibre-gl": "^5.12.0",

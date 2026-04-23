@@ -5,7 +5,7 @@ import {type DeckDatasetInput, type PreparedDeckDatasetState} from '../types';
 import {
   preparedDatasetStore,
   resolvePreparedDeckDatasetStates,
-} from './preparedDatasetStore';
+} from './PreparedDatasetStore';
 
 let nextPreparedDatasetConsumerId = 0;
 

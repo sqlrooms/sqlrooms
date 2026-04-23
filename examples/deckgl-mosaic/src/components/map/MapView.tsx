@@ -9,10 +9,6 @@ import {
   useMosaicClient,
 } from '@sqlrooms/mosaic';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
-import type {Table as FlechetteTable} from '@uwdata/flechette';
-import {tableToIPC} from '@uwdata/flechette';
-import type {Table as ArrowTable} from 'apache-arrow';
-import {tableFromIPC} from 'apache-arrow';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ViewState} from 'react-map-gl/maplibre';
 import {useRoomStore} from '../../store';
@@ -70,7 +66,7 @@ export default function MapView({className}: {className?: string}) {
     data: rawData,
     isLoading,
     client,
-  } = useMosaicClient<FlechetteTable>({
+  } = useMosaicClient({
     selectionName: 'brush',
     query: (filter: any) =>
       Query.from('earthquakes')
@@ -82,25 +78,17 @@ export default function MapView({className}: {className?: string}) {
         .orderby([asc(column('Magnitude'))]),
   });
 
-  const arrowData = useMemo<ArrowTable | null>(() => {
-    if (!rawData) {
-      return null;
-    }
-
-    return tableFromIPC(tableToIPC(rawData, {format: 'stream'}));
-  }, [rawData]);
-
   const datasets = useMemo(
     () => ({
       earthquakes: {
-        arrowTable: arrowData ?? undefined,
+        arrowTable: rawData ?? undefined,
         geometryColumn: 'geom',
         geometryEncodingHint: 'wkb' as const,
       },
     }),
-    [arrowData],
+    [rawData],
   );
-  const dbReady = !isLoading && arrowData !== null;
+  const dbReady = !isLoading && rawData !== null;
   const {resolvedTheme} = useTheme();
   const colorScale = useMemo(() => {
     return {

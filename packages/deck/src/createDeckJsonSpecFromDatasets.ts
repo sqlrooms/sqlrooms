@@ -5,6 +5,7 @@ import type {
   DeckJsonSpecDatasetHint,
 } from './types';
 import type {GeometryEncodingHint} from './prepare/types';
+import {toArrowTable} from './datasets/tableAdapter';
 import {prepareDeckDataset} from './prepare/prepareDeckDataset';
 
 function buildLayerConfig(options: {
@@ -63,7 +64,7 @@ function chooseDefaultLayerType(
   try {
     const prepared = prepareDeckDataset({
       datasetId,
-      table: input.arrowTable,
+      table: toArrowTable(input.arrowTable),
       geometryColumn: input.geometryColumn,
       geometryEncodingHint: input.geometryEncodingHint,
     });
@@ -95,7 +96,7 @@ function chooseDefaultLayerType(
  * The helper favors predictable defaults:
  * native point/line/polygon datasets become the matching GeoArrow layer, while
  * mixed or unsupported inputs fall back to `GeoJsonLayer`. Callers can provide
- * semantic hints for special layers such as trips, arcs, H3, A5, or heatmaps.
+ * semantic hints for special layers such as trips, arcs, H3, or heatmaps.
  */
 export function createDeckJsonSpecFromDatasets(
   options: CreateDeckJsonSpecFromDatasetsOptions,

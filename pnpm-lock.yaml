@@ -1299,12 +1299,6 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@uwdata/flechette':
-        specifier: ^2.2.6
-        version: 2.2.6
-      apache-arrow:
-        specifier: 17.0.0
-        version: 17.0.0
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -3241,6 +3235,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      '@uwdata/flechette':
+        specifier: ^2.2.6
+        version: 2.2.6
       '@uwdata/mosaic-core':
         specifier: ^0.21.0
         version: 0.21.1
