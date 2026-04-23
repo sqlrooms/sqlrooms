@@ -12,7 +12,6 @@ import {
 } from '@sqlrooms/room-store';
 import {
   Button,
-  cn,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -26,14 +25,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from '@sqlrooms/ui';
 import {isMacOS} from '@sqlrooms/utils';
 import {CommandIcon} from 'lucide-react';
 import {
-  ComponentProps,
   ComponentType,
   useCallback,
   useEffect,
@@ -42,6 +37,7 @@ import {
   useState,
 } from 'react';
 import {RoomShellSliceState, useBaseRoomShellStore} from './RoomShellSlice';
+import {SidebarButton} from './RoomShellSidebarButtons';
 
 const GENERAL_COMMAND_GROUP = 'General';
 
@@ -514,48 +510,28 @@ function RoomShellCommandPaletteBase({
   );
 }
 
-export type RoomShellCommandPaletteButtonProps = Omit<
-  ComponentProps<typeof Button>,
-  'children'
-> & {
+export type RoomShellCommandPaletteButtonProps = {
+  className?: string;
   icon?: ComponentType<{className?: string}>;
-  iconClassName?: string;
   tooltip?: string;
 };
 
 function RoomShellCommandPaletteButton({
   className,
-  icon: Icon = CommandIcon,
-  iconClassName,
+  icon = CommandIcon,
   tooltip,
-  variant = 'ghost',
-  size = 'icon',
-  onClick,
-  ...buttonProps
 }: RoomShellCommandPaletteButtonProps) {
   const shortcutText = isMacOS() ? 'Cmd+K' : 'Ctrl+K';
   const tooltipText = tooltip ?? `Open command palette (${shortcutText})`;
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant={variant}
-          size={size}
-          className={cn(className)}
-          onClick={(event) => {
-            requestCommandPaletteControl('open');
-            onClick?.(event);
-          }}
-          aria-label="Open command palette"
-          {...buttonProps}
-        >
-          <Icon className={cn('h-5 w-5', iconClassName)} />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="right">{tooltipText}</TooltipContent>
-    </Tooltip>
+    <SidebarButton
+      className={className}
+      title={tooltipText}
+      icon={icon}
+      isSelected={false}
+      onClick={() => requestCommandPaletteControl('open')}
+    />
   );
 }
 

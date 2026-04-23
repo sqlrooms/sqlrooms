@@ -36,8 +36,8 @@ const SidebarButton: FC<{
           variant="ghost"
           size="icon"
           className={cn(
-            'h-10 w-10 rounded-none',
-            isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
+            'h-10 w-10 rounded-md',
+            isSelected && 'bg-secondary',
             className,
           )}
           disabled={isDisabled}
