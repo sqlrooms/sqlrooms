@@ -76,6 +76,11 @@ export {
 } from './profiler/MosaicProfilerStatusBar';
 export {useMosaicProfiler} from './profiler/useMosaicProfiler';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
+export {
+  ResponsivePlot,
+  type PlotSize,
+  type ResponsivePlotProps,
+} from './ResponsivePlot';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components

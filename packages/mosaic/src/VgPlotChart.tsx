@@ -1,6 +1,8 @@
 import {Param, Selection} from '@uwdata/mosaic-core';
 import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
-import {FC, memo, useEffect, useRef} from 'react';
+import {FC, memo, useCallback, useState} from 'react';
+import {CrossFade} from './CrossFade';
+import {PlotSize, ResponsivePlot} from './ResponsivePlot';
 
 type SpecProps = {
   spec: Spec;
@@ -23,6 +25,34 @@ export function isPlotProps(props: VgPlotChartProps): props is PlotProps {
   return 'plot' in props;
 }
 
+async function renderChartElement(
+  props: VgPlotChartProps,
+  size: PlotSize,
+): Promise<HTMLElement | SVGSVGElement> {
+  if (isPlotProps(props)) {
+    return props.plot;
+  }
+
+  if (isSpecProps(props)) {
+    const spec = {
+      ...props.spec,
+      width: size.width,
+      height: size.height,
+    } as Spec;
+
+    const ast = await parseSpec(spec);
+    const options = props.params
+      ? {params: props.params as unknown as Map<string, Param<any>>}
+      : undefined;
+
+    return (await astToDOM(ast, options)).element;
+  }
+
+  const errorElement = document.createElement('div');
+  errorElement.innerHTML = 'Error: Invalid props provided to VgPlotChart';
+  return errorElement;
+}
+
 /**
  * Renders a Vega-Lite chart using the Mosaic library.
  *
@@ -32,40 +62,36 @@ export function isPlotProps(props: VgPlotChartProps): props is PlotProps {
  */
 export const VgPlotChart: FC<VgPlotChartProps> = memo(
   (props) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      let cancelled = false;
-      (async () => {
-        if (containerRef.current) {
-          let element: HTMLElement | SVGSVGElement;
-          if (isPlotProps(props)) {
-            element = props.plot;
-          } else if (isSpecProps(props)) {
-            const ast = await parseSpec(props.spec);
-            if (cancelled) return;
-            const options = props.params
-              ? ({
-                  // Mosaic selections are valid runtime params for astToDOM,
-                  // but the upstream type currently narrows this map to Param.
-                  params: props.params as unknown as Map<string, Param<any>>,
-                } satisfies {params: Map<string, Param<any>>})
-              : undefined;
-            element = (await astToDOM(ast, options)).element;
-          } else {
-            element = document.createElement('div');
-            element.innerHTML = 'Error: Invalid props provided to VgPlotChart';
-          }
-          if (!cancelled) {
-            containerRef.current?.replaceChildren(element);
-          }
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [props]);
+    const [containerSize, setContainerSize] = useState<PlotSize | null>(null);
 
-    return <div ref={containerRef} />;
+    const handleResize = useCallback((size: PlotSize) => {
+      setContainerSize((prev) => {
+        if (prev && prev.width === size.width && prev.height === size.height) {
+          return prev;
+        }
+        return size;
+      });
+    }, []);
+
+    const renderChart = useCallback(
+      async (container: HTMLDivElement) => {
+        if (!containerSize) return;
+        const element = await renderChartElement(props, containerSize);
+        container.replaceChildren(element);
+      },
+      [props, containerSize],
+    );
+
+    return (
+      <ResponsivePlot onResize={handleResize} className="h-full w-full">
+        <CrossFade
+          renderContent={renderChart}
+          contentKey={[props, containerSize]}
+          className="h-full w-full"
+          duration={600}
+        />
+      </ResponsivePlot>
+    );
   },
   (prevProps, nextProps) => {
     if (isPlotProps(prevProps) && isPlotProps(nextProps)) {

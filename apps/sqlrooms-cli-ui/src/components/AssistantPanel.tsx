@@ -27,10 +27,10 @@ export const AssistantPanel: React.FC = () => {
   const settingsPanelOpen = useDisclosure();
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col p-2">
       <RoomPanelHeader panelKey="assistant" />
       <Chat.Root>
-        <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
           <div className="mb-4 flex items-center justify-between gap-2">
             <Chat.Sessions className="w-full" />
             {currentSessionId && (

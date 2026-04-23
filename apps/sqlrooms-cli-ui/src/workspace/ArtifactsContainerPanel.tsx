@@ -69,12 +69,12 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     setDeleteConfirm(null);
   }, [deleteConfirm, nodeId, removeTab]);
 
-  const handleRenameSheet = useCallback(
-    (_sheetId: string, _newName: string) => {
-      // renameSheet(sheetId, newName);
-    },
-    [],
-  );
+  // const handleRenameSheet = useCallback(
+  //   (_sheetId: string, _newName: string) => {
+  //     // renameSheet(sheetId, newName);
+  //   },
+  //   [],
+  // );
 
   return (
     <>

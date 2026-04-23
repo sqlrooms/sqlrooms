@@ -28,10 +28,6 @@ export function getDockAxis(direction: DockDirection): DockAxis {
   return direction === 'left' || direction === 'right' ? 'row' : 'column';
 }
 
-export function isDockGeneratedSplitId(id: string): boolean {
-  return id.startsWith(DOCK_SPLIT_ID_PREFIX);
-}
-
 function isBefore(direction: DockDirection): boolean {
   return direction === 'left' || direction === 'up';
 }
@@ -56,7 +52,7 @@ function getSizeProps(node: LayoutNode): SizeProps {
   };
 }
 
-function stripSizeProps(node: LayoutNode): LayoutNode {
+function stripDefaultSize(node: LayoutNode): LayoutNode {
   if (isLayoutNodeKey(node)) {
     return node;
   }
@@ -64,10 +60,6 @@ function stripSizeProps(node: LayoutNode): LayoutNode {
   return {
     ...node,
     defaultSize: undefined,
-    minSize: undefined,
-    maxSize: undefined,
-    collapsedSize: undefined,
-    collapsible: undefined,
   };
 }
 
@@ -110,24 +102,9 @@ function toPercent(value: number): string {
 
 function equalizeChildren(children: LayoutNode[]): LayoutNode[] {
   const size = 100 / children.length;
-  const result = children.map((child) =>
-    withDefaultSize(stripSizeProps(child), toPercent(size)),
+  return children.map((child) =>
+    withDefaultSize(stripDefaultSize(child), toPercent(size)),
   );
-
-  console.log('[Dock Layout] equalizeChildren:', {
-    childCount: children.length,
-    sizePerChild: toPercent(size),
-    before: children.map((child) => ({
-      id: getLayoutNodeId(child),
-      size: getSizeProps(child).defaultSize,
-    })),
-    after: result.map((child) => ({
-      id: getLayoutNodeId(child),
-      size: getSizeProps(child).defaultSize,
-    })),
-  });
-
-  return result;
 }
 
 function splitTargetShare(
@@ -138,32 +115,13 @@ function splitTargetShare(
 ): LayoutNode[] {
   const half = targetShare / 2;
 
-  const result = children.map((child, index) => {
+  return children.map((child, index) => {
     if (index === targetIndex || index === insertedIndex) {
-      return withDefaultSize(stripSizeProps(child), toPercent(half));
+      return withDefaultSize(stripDefaultSize(child), toPercent(half));
     }
 
     return child;
   });
-
-  console.log('[Dock Layout] splitTargetShare:', {
-    targetShare: `${targetShare}%`,
-    halfShare: toPercent(half),
-    targetIndex,
-    insertedIndex,
-    before: children.map((child, i) => ({
-      id: getLayoutNodeId(child),
-      size: getSizeProps(child).defaultSize,
-      index: i,
-    })),
-    after: result.map((child, i) => ({
-      id: getLayoutNodeId(child),
-      size: getSizeProps(child).defaultSize,
-      index: i,
-    })),
-  });
-
-  return result;
 }
 
 function normalizeTabsNode(node: LayoutTabsNode): LayoutNode | null {
@@ -337,19 +295,11 @@ function replaceTargetWithSplit(
   direction: DockDirection,
 ): LayoutNode | null {
   const axis = getDockAxis(direction);
-  const sourceChild = withDefaultSize(stripSizeProps(sourceNode), '50%');
-
-  console.log('[Dock Layout] replaceTargetWithSplit (wrap mode):', {
-    targetId,
-    sourceId: getLayoutNodeId(sourceNode),
-    direction,
-    axis,
-    result: 'Creating new split with 50/50 distribution',
-  });
+  const sourceChild = withDefaultSize(stripDefaultSize(sourceNode), '50%');
 
   return updateNode(root, targetId, (targetNode) => {
     const inherited = getSizeProps(targetNode);
-    const targetChild = withDefaultSize(stripSizeProps(targetNode), '50%');
+    const targetChild = withDefaultSize(stripDefaultSize(targetNode), '50%');
     const children = isBefore(direction)
       ? [sourceChild, targetChild]
       : [targetChild, sourceChild];
@@ -372,7 +322,7 @@ function replaceSingleChildParentSplit(
   direction: DockDirection,
 ): LayoutNode | null {
   const axis = getDockAxis(direction);
-  const sourceChild = withDefaultSize(stripSizeProps(sourceNode), '50%');
+  const sourceChild = withDefaultSize(stripDefaultSize(sourceNode), '50%');
 
   return updateNode(root, parentId, (node) => {
     if (!isLayoutSplitNode(node) || node.children.length !== 1) {
@@ -385,7 +335,7 @@ function replaceSingleChildParentSplit(
       return node;
     }
 
-    const targetChild = withDefaultSize(stripSizeProps(targetNode), '50%');
+    const targetChild = withDefaultSize(stripDefaultSize(targetNode), '50%');
     const children = isBefore(direction)
       ? [sourceChild, targetChild]
       : [targetChild, sourceChild];
@@ -421,7 +371,7 @@ function insertIntoSplit(
     const insertIndex = isBefore(direction) ? targetIndex : targetIndex + 1;
     const children = [...node.children];
 
-    children.splice(insertIndex, 0, stripSizeProps(sourceNode));
+    children.splice(insertIndex, 0, stripDefaultSize(sourceNode));
 
     const targetIndexAfterInsert = isBefore(direction)
       ? targetIndex + 1
@@ -430,21 +380,6 @@ function insertIntoSplit(
     const targetSize = targetNode
       ? parseSizeValue(getSizeProps(targetNode).defaultSize)
       : undefined;
-
-    console.log('[Dock Layout] insertIntoSplit:', {
-      splitId,
-      sourceId: getLayoutNodeId(sourceNode),
-      targetId,
-      direction,
-      insertIndex,
-      targetIndexAfterInsert,
-      targetSize: targetSize === undefined ? 'undefined' : `${targetSize}%`,
-      strategy: targetSize === undefined ? 'equalize' : 'splitTargetShare',
-      childrenBeforeInsert: node.children.map((child) => ({
-        id: getLayoutNodeId(child),
-        size: getSizeProps(child).defaultSize,
-      })),
-    });
 
     const sizedChildren =
       targetSize === undefined
@@ -469,12 +404,6 @@ export function movePanel(
   targetId: string,
   direction: DockDirection,
 ): LayoutNode | null {
-  console.log('[Dock Layout] movePanel START:', {
-    sourceId,
-    targetId,
-    direction,
-  });
-
   if (!root || sourceId === targetId) {
     return root;
   }
@@ -521,10 +450,8 @@ export function movePanel(
   const parent = nextTarget.ancestors[nextTarget.ancestors.length - 1];
 
   let newDockRoot: LayoutNode | null;
-  let mode: string;
 
   if (parent && isLayoutSplitNode(parent) && parent.direction === axis) {
-    mode = 'insertIntoSplit (same-axis parent)';
     newDockRoot = normalizeTree(
       insertIntoSplit(
         withoutSource,
@@ -539,7 +466,6 @@ export function movePanel(
     isLayoutSplitNode(parent) &&
     parent.children.length === 1
   ) {
-    mode = 'replaceSingleChildParentSplit';
     newDockRoot = normalizeTree(
       replaceSingleChildParentSplit(
         withoutSource,
@@ -550,27 +476,20 @@ export function movePanel(
       ),
     );
   } else {
-    mode = 'replaceTargetWithSplit (wrap)';
     newDockRoot = normalizeTree(
       replaceTargetWithSplit(withoutSource, targetId, sourceNode, direction),
     );
   }
 
-  console.log('[Dock Layout] movePanel MODE:', mode);
-
   if (!newDockRoot) {
-    console.log('[Dock Layout] movePanel FAILED: newDockRoot is null');
     return root;
   }
 
   // Update the dock node with the new root
-  const result = updateNode(root, sourceDock.id, (node) => {
+  return updateNode(root, sourceDock.id, (node) => {
     if (!isLayoutDockNode(node)) {
       return node;
     }
     return {...node, root: newDockRoot!};
   });
-
-  console.log('[Dock Layout] movePanel COMPLETE');
-  return result;
 }
