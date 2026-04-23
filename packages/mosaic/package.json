@@ -30,6 +30,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
+    "@uwdata/flechette": "^2.2.6",
     "@uwdata/mosaic-core": "^0.21.0",
     "@uwdata/mosaic-plot": "^0.21.0",
     "@uwdata/mosaic-spec": "^0.21.0",

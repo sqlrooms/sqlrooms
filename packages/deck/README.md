@@ -47,7 +47,7 @@ const spec = {
         geometryColumn: 'geom',
       },
       getFillColor: {
-        '@@function': 'sqlroomsColorScale',
+        '@@function': 'colorScale',
         field: 'scalerank',
         type: 'sequential',
         scheme: 'YlOrRd',
@@ -183,7 +183,8 @@ datasets={{
 - `sqlQuery`
   Runs through the DuckDB slice execution path.
 - `arrowTable`
-  Uses an already available Arrow table.
+  Uses an already available Apache Arrow table. This is the right input for
+  Arrow-native SQLRooms hooks such as `useSql` and `useMosaicClient`.
 
 For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
 data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
@@ -203,7 +204,7 @@ SQLRooms-specific layer metadata lives under `_sqlroomsBinding`:
     geometryEncodingHint: 'wkb',
   },
   getFillColor: {
-    '@@function': 'sqlroomsColorScale',
+    '@@function': 'colorScale',
     field: 'Magnitude',
     type: 'sequential',
     scheme: 'YlOrRd',
@@ -228,12 +229,12 @@ props still pass through, while `_sqlroomsBinding` is validated strictly.
 ## Color Scales and Legends
 
 You can ask SQLRooms to derive colors from a field with the
-`sqlroomsColorScale` JSON function instead of writing long `@@=` color
+`colorScale` JSON function instead of writing long `@@=` color
 expressions:
 
 ```tsx
 getFillColor: {
-  '@@function': 'sqlroomsColorScale',
+  '@@function': 'colorScale',
   field: 'Magnitude',
   type: 'sequential',
   scheme: 'YlOrRd',
@@ -246,7 +247,7 @@ Discrete numeric palettes are supported too:
 
 ```tsx
 getFillColor: {
-  '@@function': 'sqlroomsColorScale',
+  '@@function': 'colorScale',
   field: 'Magnitude',
   type: 'quantize',
   scheme: 'PuBuGn',
@@ -256,7 +257,7 @@ getFillColor: {
 ```
 
 `DeckJsonMap` renders SQLRooms-generated legends by default for layers that use
-`sqlroomsColorScale`. To disable them globally:
+`colorScale`. To disable them globally:
 
 ```tsx
 <DeckJsonMap spec={spec} datasets={datasets} showLegends={false} />
@@ -266,7 +267,7 @@ To override the title:
 
 ```tsx
 getFillColor: {
-  '@@function': 'sqlroomsColorScale',
+  '@@function': 'colorScale',
   field: 'Magnitude',
   type: 'sequential',
   scheme: 'YlOrRd',

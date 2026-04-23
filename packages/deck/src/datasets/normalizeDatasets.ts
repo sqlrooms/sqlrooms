@@ -5,6 +5,7 @@ import {
   type DeckDatasetInput,
   type DeckJsonMapProps,
 } from '../types';
+import {toArrowTable} from './tableAdapter';
 
 function normalizeDatasetEntry(
   _datasetId: string,
@@ -28,7 +29,11 @@ function normalizeDatasetEntry(
 export function resolveArrowTable(
   input: DeckDatasetInput,
 ): arrow.Table | undefined {
-  return isArrowTableDatasetInput(input) ? input.arrowTable : undefined;
+  if (!isArrowTableDatasetInput(input) || input.arrowTable === undefined) {
+    return undefined;
+  }
+
+  return toArrowTable(input.arrowTable);
 }
 
 export function normalizeDatasets(

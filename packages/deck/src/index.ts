@@ -34,5 +34,6 @@ export type {
   DeckJsonMapProps,
   DeckJsonSpecDatasetHint,
   DeckSqlDatasetInput,
+  DeckTable,
   PreparedDeckDatasetState,
 } from './types';
