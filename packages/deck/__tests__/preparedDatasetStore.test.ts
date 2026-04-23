@@ -1,12 +1,12 @@
-import {Table, vectorFromArray} from 'apache-arrow';
-import type {QueryHandle} from '@sqlrooms/duckdb';
 import {jest} from '@jest/globals';
-import type {PreparedDeckDataset} from '../src/prepare/types';
+import type {QueryHandle} from '@sqlrooms/duckdb';
+import {Table, vectorFromArray} from 'apache-arrow';
 import {
   createPreparedDatasetStore,
   resolvePreparedDeckDatasetState,
-} from '../src/datasets/preparedDatasetStore';
+} from '../src/datasets/PreparedDatasetStore';
 import {resolvePreparedDatasetCacheKey} from '../src/datasets/helpers';
+import type {PreparedDeckDataset} from '../src/prepare/types';
 import type {DeckDatasetInput} from '../src/types';
 
 function createPreparedDataset(datasetId: string, table: Table) {
