@@ -28,12 +28,14 @@ type ChatComponent = FC<RootProps> & {
   ModelSelector: typeof ModelSelector;
 };
 
+const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
+
 /**
  * Local compound component wrapper to reduce the number of @sqlrooms/ai imports
  * and provide a single "root" place to mount SessionChatManager.
  */
-const Root: FC<RootProps> = ({children, toolRenderBehavior = {}}) => (
-  <ToolRenderBehaviorProvider value={toolRenderBehavior}>
+const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
+  <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <SessionChatManager />
     {children}
   </ToolRenderBehaviorProvider>

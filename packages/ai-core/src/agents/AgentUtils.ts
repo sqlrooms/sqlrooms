@@ -121,6 +121,28 @@ function summarizeOutput(output: unknown): unknown {
 }
 
 /**
+ * Transition any tool calls still in `pending` or `approval-requested` state
+ * to `error` with the cancellation message. Clears `approvalId` on the
+ * approval-requested path so downstream consumers don't act on a stale id.
+ */
+function markPendingToolCallsAsCancelled(
+  toolCallMap: Map<string, AgentToolCall>,
+): void {
+  const now = Date.now();
+  for (const [id, tc] of toolCallMap) {
+    if (tc.state === 'pending' || tc.state === 'approval-requested') {
+      toolCallMap.set(id, {
+        ...tc,
+        state: 'error',
+        errorText: TOOL_CALL_CANCELLED,
+        completedAt: now,
+        approvalId: undefined,
+      });
+    }
+  }
+}
+
+/**
  * Build an `AgentProgressSnapshot` from the current `toolCallMap` state.
  * For any entry whose `toolName` starts with `agent-`, reads the child's
  * abort snapshot from the store (written by the child's `streamSubAgent`
@@ -406,17 +428,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       }
     } catch (err) {
       if (abortSignal?.aborted) {
-        const now = Date.now();
-        for (const [id, tc] of toolCallMap) {
-          if (tc.state === 'pending' || tc.state === 'approval-requested') {
-            toolCallMap.set(id, {
-              ...tc,
-              state: 'error',
-              errorText: TOOL_CALL_CANCELLED,
-              completedAt: now,
-            });
-          }
-        }
+        markPendingToolCallsAsCancelled(toolCallMap);
         const snapshot = buildAbortSnapshot(
           parentToolCallId,
           toolCallMap,
@@ -518,17 +530,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   // of relying on agentToolCalls embedded in the tool output (which would
   // bloat the main orchestrator's message context).
   if (abortSignal?.aborted) {
-    const now = Date.now();
-    for (const [id, tc] of toolCallMap) {
-      if (tc.state === 'pending' || tc.state === 'approval-requested') {
-        toolCallMap.set(id, {
-          ...tc,
-          state: 'error',
-          errorText: TOOL_CALL_CANCELLED,
-          completedAt: now,
-        });
-      }
-    }
+    markPendingToolCallsAsCancelled(toolCallMap);
   }
 
   pushProgress();
