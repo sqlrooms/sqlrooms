@@ -27,7 +27,7 @@ export const MosaicDashboardChartDragOverlay: FC<
   const chartTitle = chart?.title ?? 'Chart';
 
   return (
-    <div className="border-border bg-background text-foreground inline-flex items-center gap-1 border px-2 py-1 shadow-lg">
+    <div className="border-border bg-background text-foreground inline-flex items-center gap-1 rounded-none border px-2 py-1 shadow-lg">
       <GripVerticalIcon className="mx-1 h-4 w-4 shrink-0" />
       <span className="truncate text-xs font-medium">{chartTitle}</span>
     </div>
