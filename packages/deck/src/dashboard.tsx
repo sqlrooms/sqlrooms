@@ -20,6 +20,7 @@ import type {Selection} from '@uwdata/mosaic-core';
 import type {Table as ArrowTable} from 'apache-arrow';
 import {FocusIcon, MapIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckJsonMapProps} from './types';
 import {
@@ -243,13 +244,29 @@ function createInitialDeckMapDashboardFitState(
 }
 
 function DeckMapDashboardHeaderActions({
+  dashboardId,
   panel,
 }: MosaicDashboardPanelRendererProps) {
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
+  const handleConfigApply = useCallback(
+    (nextConfig: Record<string, unknown>) => {
+      updatePanel(dashboardId, panel.id, {
+        config: nextConfig,
+      });
+    },
+    [dashboardId, panel.id, updatePanel],
+  );
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center gap-0.5">
+      <DeckMapConfigPopoverEditor
+        value={panel.config}
+        onApply={handleConfigApply}
+      />
       <Button
         variant="ghost"
         size="icon"
