@@ -1,4 +1,3 @@
-import {createId} from '@paralleldrive/cuid2';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
@@ -16,13 +15,24 @@ import {
   SheetType,
 } from '@sqlrooms/cells';
 import {
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  deckMapDashboardPanelRenderer,
+} from '@sqlrooms/deck';
+import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
+  type DataTable,
   QualifiedTableName,
 } from '@sqlrooms/duckdb';
 import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
+  createMosaicDashboardVgPlotPanelConfig,
   createMosaicSlice,
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
@@ -43,6 +53,7 @@ import {
   WebContainerPersistConfig,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
+import {MapIcon} from 'lucide-react';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
@@ -79,6 +90,7 @@ const defaultModelFromConfig =
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
+  initializationQuery: 'INSTALL spatial; LOAD spatial;',
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -97,6 +109,99 @@ function getRuntimeBridgeConfig() {
   }
   return undefined;
 }
+
+const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
+const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
+
+function findColumnByName(table: DataTable, candidates: string[]) {
+  const candidateSet = new Set(candidates);
+  return table.columns.find((column) =>
+    candidateSet.has(column.name.toLowerCase()),
+  )?.name;
+}
+
+function findLongitudeLatitudeColumns(table?: DataTable) {
+  if (!table) return null;
+  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
+  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
+  return longitudeColumn && latitudeColumn
+    ? {longitudeColumn, latitudeColumn}
+    : null;
+}
+
+function quoteSqlIdentifier(identifier: string) {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function quoteTableReference(table: DataTable) {
+  const qualifiedName = table.table;
+  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
+    .filter((part): part is string => Boolean(part))
+    .map(quoteSqlIdentifier)
+    .join('.');
+}
+
+function createDeckMapPanelForTable(table: DataTable) {
+  const coordinates = findLongitudeLatitudeColumns(table);
+  if (!coordinates) return undefined;
+
+  const {longitudeColumn, latitudeColumn} = coordinates;
+  const datasetId = table.tableName;
+  const geometryColumn = '__sqlrooms_geom';
+  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
+  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
+
+  return createDeckMapDashboardPanelConfig({
+    title: `${table.tableName} map`,
+    source: {tableName: table.tableName},
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: datasetId,
+          _sqlroomsBinding: {dataset: datasetId},
+          filled: true,
+          stroked: false,
+          pickable: true,
+          radiusUnits: 'pixels',
+          getRadius: 4,
+          getFillColor: [56, 189, 248, 180],
+        },
+      ],
+    },
+    datasets: {
+      [datasetId]: {
+        source: {
+          sqlQuery: [
+            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
+            `FROM ${quoteTableReference(table)}`,
+            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
+          ].join(' '),
+        },
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+    fitToData: {
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+      padding: 40,
+      maxZoom: 12,
+    },
+  });
+}
+
+const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
+  type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+  label: 'Map',
+  icon: MapIcon,
+  isEnabled: ({selectedTable}) =>
+    Boolean(findLongitudeLatitudeColumns(selectedTable)),
+  createPanel: ({selectedTable}) =>
+    selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
+};
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
@@ -143,6 +248,40 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           get().mosaicDashboard.ensureDashboard(sheetId, sheet.title);
         },
+        addProfilerForTable: (tableName) => {
+          const existingDashboardSheetId =
+            get().dashboard.getCurrentDashboardSheetId();
+          const sheetId =
+            existingDashboardSheetId ??
+            get().dashboard.createDashboardSheet('Dashboard');
+          if (!existingDashboardSheetId) {
+            get().cells.setCurrentSheet(sheetId);
+          }
+          get().dashboard.ensureSheetDashboard(sheetId);
+          const dashboard = get().mosaicDashboard.getDashboard(sheetId);
+          if (!dashboard) return sheetId;
+
+          if (!dashboard.selectedTable) {
+            get().mosaicDashboard.setSelectedTable(sheetId, tableName);
+          }
+
+          const hasProfilerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE &&
+              panel.source?.tableName === tableName,
+          );
+          if (!hasProfilerForTable) {
+            get().mosaicDashboard.addPanel(
+              sheetId,
+              createMosaicDashboardProfilerPanelConfig({
+                title: `${tableName} profiler`,
+                source: {tableName},
+              }),
+            );
+          }
+
+          return sheetId;
+        },
         setSheetVgPlot: (sheetId, vgplot) => {
           const sheet = get().cells.config.sheets[sheetId];
           if (!sheet) {
@@ -154,24 +293,31 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           const {parsed} = parseVgPlotSpecString(vgplot);
           get().dashboard.ensureSheetDashboard(sheetId);
           const dashboard = get().mosaicDashboard.getDashboard(sheetId);
-          const primaryChart = dashboard?.charts[0];
-          if (primaryChart) {
-            get().mosaicDashboard.updateChart(sheetId, primaryChart.id, {
-              vgplot: parsed,
+          const primaryPanel = dashboard?.panels.find(
+            (panel) => panel.type === 'vgplot',
+          );
+          if (primaryPanel) {
+            get().mosaicDashboard.updatePanel(sheetId, primaryPanel.id, {
+              config: {
+                ...primaryPanel.config,
+                vgplot: parsed,
+              },
             });
             return;
           }
-          get().mosaicDashboard.addChart(sheetId, {
-            id: createId(),
-            title: 'Chart 1',
-            vgplot: parsed,
-          });
+          get().mosaicDashboard.addPanel(
+            sheetId,
+            createMosaicDashboardVgPlotPanelConfig(parsed, 'Chart 1'),
+          );
         },
         getSheetVgPlot: (sheetId) =>
           (() => {
-            const spec =
-              get().mosaicDashboard.getDashboard(sheetId)?.charts[0]?.vgplot;
-            return spec ? JSON.stringify(spec, null, 2) : undefined;
+            const spec = get()
+              .mosaicDashboard.getDashboard(sheetId)
+              ?.panels.find((panel) => panel.type === 'vgplot')?.config.vgplot;
+            return spec && typeof spec === 'object'
+              ? JSON.stringify(spec, null, 2)
+              : undefined;
           })(),
         getCurrentDashboardSheetId: () => {
           const currentSheetId = get().cells.config.currentSheetId;
@@ -286,7 +432,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createMosaicSlice()(set, get, store),
 
-        ...createMosaicDashboardSlice()(set, get, store),
+        ...createMosaicDashboardSlice({
+          addPanelActions: [deckMapDashboardAddPanelAction],
+          panelRenderers: createDefaultMosaicDashboardPanelRenderers({
+            [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
+          }),
+        })(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),
 

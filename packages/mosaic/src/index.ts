@@ -20,21 +20,34 @@ export {
   type MosaicDashboardRootProps,
 } from './dashboard/MosaicDashboard';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
+export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
 export {
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardVgPlotPanelConfig,
   createDefaultMosaicDashboardConfig,
-  createMosaicDashboardChartConfig,
   createMosaicDashboardSlice,
   getMosaicDashboardDockId,
   getMosaicDashboardPanelId,
-  MOSAIC_DASHBOARD_CHART_PANEL,
-  MosaicDashboardChartConfig,
+  getMosaicDashboardSelectionName,
+  MOSAIC_DASHBOARD_PANEL,
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   MosaicDashboardEntry,
+  MosaicDashboardPanelConfig,
+  MosaicDashboardPanelSource,
   MosaicDashboardSliceConfig,
+  resolveMosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
 export type {
-  MosaicDashboardChartConfig as MosaicDashboardChartConfigType,
+  MosaicDashboardAddPanelAction,
+  MosaicDashboardAddPanelActionContext,
+  CreateMosaicDashboardSliceProps,
   MosaicDashboardEntry as MosaicDashboardEntryType,
+  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
+  MosaicDashboardPanelRenderer,
+  MosaicDashboardPanelRendererProps,
+  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,

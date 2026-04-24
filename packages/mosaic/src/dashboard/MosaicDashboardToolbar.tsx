@@ -6,14 +6,30 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@sqlrooms/ui';
-import {Check, ChevronsUpDown, Plus} from 'lucide-react';
+import {
+  BarChart3,
+  Check,
+  ChevronsUpDown,
+  Plus,
+  TableProperties,
+} from 'lucide-react';
 import React, {useMemo, useState} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
-import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
+import {
+  type MosaicDashboardAddPanelAction,
+  type MosaicDashboardAddPanelActionContext,
+  createMosaicDashboardProfilerPanelConfig,
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  useStoreWithMosaicDashboard,
+} from './MosaicDashboardSlice';
 
 export const MosaicDashboardToolbar: React.FC = () => {
   const {dashboardId, canCreateChart, openBuilder} =
@@ -24,12 +40,71 @@ export const MosaicDashboardToolbar: React.FC = () => {
   const setSelectedTable = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setSelectedTable,
   );
+  const addPanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.addPanel,
+  );
+  const panelRenderers = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.panelRenderers,
+  );
+  const addPanelActions = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.addPanelActions,
+  );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
   const tablesWithColumns = useMemo(
     () => tables.filter((table) => table.columns && table.columns.length > 0),
     [tables],
   );
+  const selectedTable = useMemo(
+    () =>
+      tablesWithColumns.find(
+        (table) => table.tableName === dashboard?.selectedTable,
+      ),
+    [dashboard?.selectedTable, tablesWithColumns],
+  );
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
+  const canAddProfiler = Boolean(
+    dashboard?.selectedTable &&
+    panelRenderers[MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE],
+  );
+  const addPanelActionContext = useMemo<MosaicDashboardAddPanelActionContext>(
+    () => ({
+      dashboardId,
+      dashboard,
+      selectedTable,
+      tables: tablesWithColumns,
+    }),
+    [dashboard, dashboardId, selectedTable, tablesWithColumns],
+  );
+  const addPanelActionEntries = useMemo(
+    () =>
+      addPanelActions.map((action) => ({
+        action,
+        enabled: action.isEnabled
+          ? action.isEnabled(addPanelActionContext)
+          : true,
+      })),
+    [addPanelActionContext, addPanelActions],
+  );
+  const canAddCustomPanel = addPanelActionEntries.some(
+    (entry) => entry.enabled,
+  );
+  const canAddAnyPanel = canCreateChart || canAddProfiler || canAddCustomPanel;
+
+  const handleAddProfiler = () => {
+    const panel = dashboard?.selectedTable
+      ? createMosaicDashboardProfilerPanelConfig({
+          source: {tableName: dashboard.selectedTable},
+        })
+      : createMosaicDashboardProfilerPanelConfig();
+    addPanel(dashboardId, panel);
+  };
+
+  const handleAddCustomPanel = (action: MosaicDashboardAddPanelAction) => {
+    const panel = action.createPanel(addPanelActionContext);
+    if (panel) {
+      addPanel(dashboardId, panel);
+    }
+  };
 
   return (
     <div className="flex items-center justify-between border-b px-3 py-2">
@@ -76,15 +151,40 @@ export const MosaicDashboardToolbar: React.FC = () => {
           </PopoverContent>
         </Popover>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={openBuilder}
-        disabled={!canCreateChart}
-      >
-        <Plus className="mr-1 h-4 w-4" />
-        Add Chart
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" disabled={!canAddAnyPanel}>
+            <Plus className="mr-1 h-4 w-4" />
+            Add
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={openBuilder} disabled={!canCreateChart}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Chart
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleAddProfiler}
+            disabled={!canAddProfiler}
+          >
+            <TableProperties className="mr-2 h-4 w-4" />
+            Profiler
+          </DropdownMenuItem>
+          {addPanelActionEntries.map(({action, enabled}) => {
+            const Icon = action.icon;
+            return (
+              <DropdownMenuItem
+                key={action.type}
+                onClick={() => handleAddCustomPanel(action)}
+                disabled={!enabled}
+              >
+                {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+                {action.label}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

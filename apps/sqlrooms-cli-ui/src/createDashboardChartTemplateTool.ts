@@ -1,7 +1,7 @@
 import {tool} from 'ai';
 import {
   createDefaultChartTypes,
-  createMosaicDashboardChartConfig,
+  createMosaicDashboardVgPlotPanelConfig,
   describeChartTypes,
   getAvailableChartTypes,
   type ChartBuilderColumn,
@@ -254,9 +254,9 @@ export function createDashboardChartTemplateTool(store: {
         const title = chartType.buildTitle
           ? chartType.buildTitle(params.fieldValues)
           : (chartType.label ?? chartType.description);
-        const chart = createMosaicDashboardChartConfig(spec, title);
+        const panel = createMosaicDashboardVgPlotPanelConfig(spec, title);
 
-        state.mosaicDashboard.addChart(targetSheetId, chart);
+        state.mosaicDashboard.addPanel(targetSheetId, panel);
         state.cells.setCurrentSheet(targetSheetId);
 
         return {
@@ -264,7 +264,7 @@ export function createDashboardChartTemplateTool(store: {
             success: true,
             details: `Created dashboard chart "${title}" on sheet "${targetSheetId}".`,
             data: {
-              chartId: chart.id,
+              panelId: panel.id,
               chartType: chartType.id,
               sheetId: targetSheetId,
               tableName,

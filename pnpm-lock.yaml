@@ -159,6 +159,9 @@ importers:
       '@sqlrooms/db-settings':
         specifier: workspace:*
         version: link:../../packages/db-settings
+      '@sqlrooms/deck':
+        specifier: workspace:*
+        version: link:../../packages/deck
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -2841,6 +2844,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../mosaic
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui

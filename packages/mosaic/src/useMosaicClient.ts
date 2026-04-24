@@ -15,6 +15,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
     selection: directSelection,
     query,
     queryResult,
+    queryError,
     enabled = true,
   } = options;
 
@@ -33,11 +34,13 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
   // Keep query and queryResult in refs so they can be accessed in effect
   const queryRef = useRef(query);
   const queryResultRef = useRef(queryResult);
+  const queryErrorRef = useRef(queryError);
 
   useEffect(() => {
     queryRef.current = query;
     queryResultRef.current = queryResult;
-  }, [query, queryResult]);
+    queryErrorRef.current = queryError;
+  }, [query, queryError, queryResult]);
 
   const clientData = clientState?.data;
   const arrowData = useMemo(() => {
@@ -58,7 +61,10 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
       selection: directSelection,
       query: queryRef.current,
       onQueryResult: (result) => {
-        queryResultRef.current?.(result);
+        queryResultRef.current?.(toArrowClientResult(result));
+      },
+      onQueryError: (error) => {
+        queryErrorRef.current?.(error);
       },
     });
 
@@ -78,6 +84,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
   return {
     data: arrowData,
     isLoading: clientState?.isLoading ?? connectionStatus !== 'ready',
+    error: clientState?.error,
     client: clientState?.client ?? null,
   };
 }

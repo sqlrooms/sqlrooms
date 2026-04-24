@@ -9,12 +9,11 @@ import {
 } from 'react';
 import type {ChartBuilderColumn} from '../chart-builders/types';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
-import {MosaicDashboardCharts} from './MosaicDashboardCharts';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
-import {MosaicDashboardProfiler} from './MosaicDashboardProfiler';
+import {MosaicDashboardPanels} from './MosaicDashboardPanels';
 import {
-  createMosaicDashboardChartConfig,
-  type MosaicDashboardChartConfig,
+  createMosaicDashboardVgPlotPanelConfig,
+  MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardToolbar} from './MosaicDashboardToolbar';
@@ -30,8 +29,8 @@ export function MosaicDashboardRoot({
   const ensureDashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.ensureDashboard,
   );
-  const addChart = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.addChart,
+  const addPanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.addPanel,
   );
   const setSelectedTable = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setSelectedTable,
@@ -40,6 +39,15 @@ export function MosaicDashboardRoot({
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
+  const chartBuilders = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.chartBuilders,
+  );
+  const chartTypes = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.chartTypes,
+  );
+  const panelRenderers = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.panelRenderers,
+  );
   const [builderOpen, setBuilderOpen] = useState(false);
 
   const tablesWithColumns = useMemo(
@@ -86,24 +94,35 @@ export function MosaicDashboardRoot({
 
   const handleCreateChart = useCallback(
     (spec: Spec, title: string) => {
-      const newChart: MosaicDashboardChartConfig =
-        createMosaicDashboardChartConfig(spec, title);
-      addChart(dashboardId, newChart);
+      const panel = createMosaicDashboardVgPlotPanelConfig(spec, title);
+      addPanel(dashboardId, panel);
       setBuilderOpen(false);
     },
-    [addChart, dashboardId],
+    [addPanel, dashboardId],
   );
 
   const contextValue = useMemo(
     () => ({
       dashboardId,
       builderOpen,
-      canCreateChart: Boolean(dashboard?.selectedTable),
+      canCreateChart: Boolean(
+        dashboard?.selectedTable &&
+        panelRenderers[MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE] &&
+        chartBuilders?.length !== 0 &&
+        chartTypes?.length !== 0,
+      ),
       openBuilder: () => setBuilderOpen(true),
       closeBuilder: () => setBuilderOpen(false),
       setBuilderOpen,
     }),
-    [builderOpen, dashboard?.selectedTable, dashboardId],
+    [
+      builderOpen,
+      chartBuilders?.length,
+      chartTypes?.length,
+      dashboard?.selectedTable,
+      dashboardId,
+      panelRenderers,
+    ],
   );
 
   return (
@@ -115,6 +134,8 @@ export function MosaicDashboardRoot({
           onOpenChange={setBuilderOpen}
           tableName={dashboard.selectedTable}
           columns={builderColumns}
+          builders={chartBuilders}
+          chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
         >
           <MosaicChartBuilder.Dialog />
@@ -136,8 +157,7 @@ function MosaicDashboardComponent({
       <div className="flex h-full flex-col">
         <MosaicDashboardToolbar />
         <div className="h-full overflow-y-auto">
-          <MosaicDashboardProfiler />
-          <MosaicDashboardCharts />
+          <MosaicDashboardPanels />
         </div>
       </div>
     </MosaicDashboardRoot>
@@ -149,8 +169,7 @@ type MosaicDashboardCompoundComponent = ((
 ) => ReactElement) & {
   Root: typeof MosaicDashboardRoot;
   Toolbar: typeof MosaicDashboardToolbar;
-  Profiler: typeof MosaicDashboardProfiler;
-  Charts: typeof MosaicDashboardCharts;
+  Panels: typeof MosaicDashboardPanels;
 };
 
 export const MosaicDashboard: MosaicDashboardCompoundComponent = Object.assign(
@@ -158,7 +177,6 @@ export const MosaicDashboard: MosaicDashboardCompoundComponent = Object.assign(
   {
     Root: MosaicDashboardRoot,
     Toolbar: MosaicDashboardToolbar,
-    Profiler: MosaicDashboardProfiler,
-    Charts: MosaicDashboardCharts,
+    Panels: MosaicDashboardPanels,
   },
 );

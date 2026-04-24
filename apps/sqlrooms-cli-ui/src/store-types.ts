@@ -60,6 +60,7 @@ export type RoomState = RoomShellSliceState &
       initialize?: () => Promise<void>;
       destroy?: () => Promise<void>;
       ensureSheetDashboard: (sheetId: string) => void;
+      addProfilerForTable: (tableName: string) => string | undefined;
       setSheetVgPlot: (sheetId: string, vgplot: string) => void;
       getSheetVgPlot: (sheetId: string) => string | undefined;
       getCurrentDashboardSheetId: () => string | undefined;

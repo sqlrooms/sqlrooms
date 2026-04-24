@@ -137,6 +137,46 @@ For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfile
 is still available when you need direct access to the profiler state for custom
 layout, sizing, or advanced composition.
 
+### Mosaic Dashboard Panels
+
+`MosaicDashboard` is a compound dashboard surface backed by generic dashboard
+panels instead of a chart-only list. Configure supported panel renderers and
+runtime add-panel actions when creating the dashboard slice.
+
+```tsx
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardSlice,
+  createMosaicDashboardVgPlotPanelConfig,
+  MosaicDashboard,
+} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice({
+  panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
+  // Optional: pass chartTypes/chartBuilders to customize Add Chart.
+  // Optional: pass addPanelActions to add app-specific menu entries.
+});
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="main" />;
+}
+
+function addProfiler(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardProfilerPanelConfig({
+      source: {tableName: 'earthquakes'},
+    }),
+  );
+}
+```
+
+Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
+panel omits a source it falls back to the dashboard selected table. Panel renderer
+definitions and chart builder definitions are runtime-only and intentionally
+live outside persisted dashboard config.
+
 ### Working with Selections
 
 Selections enable cross-filtering between multiple visualizations. You can get or create a named selection from the store:

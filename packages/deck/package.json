@@ -30,6 +30,7 @@
     "@loaders.gl/wkt": "^4.4.1",
     "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "maplibre-gl": "^5.12.0",
     "react-map-gl": "^8.1.0",

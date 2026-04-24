@@ -10,6 +10,9 @@ export const DataSourcesPanel = () => {
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
+  const addProfilerForTable = useRoomStore(
+    (state) => state.dashboard.addProfilerForTable,
+  );
 
   return (
     <div className="flex h-full flex-col p-2">
@@ -22,10 +25,12 @@ export const DataSourcesPanel = () => {
           'text/json': ['.json'],
         }}
         onDrop={async (files) => {
+          const createdTableNames: string[] = [];
           for (const file of files) {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
               await connector.loadFile(file, tableName);
+              createdTableNames.push(tableName);
               toast.success('Table created', {
                 description: `File ${file.name} loaded as ${tableName}`,
               });
@@ -36,6 +41,9 @@ export const DataSourcesPanel = () => {
             }
           }
           await refreshTableSchemas();
+          for (const tableName of createdTableNames) {
+            addProfilerForTable(tableName);
+          }
         }}
       >
         <div className="text-muted-foreground text-xs">
