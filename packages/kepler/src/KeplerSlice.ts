@@ -11,6 +11,7 @@ import {
   setFilter as setFilterAction,
   setFilterAnimationTime as setFilterAnimationTimeAction,
   setFilterAnimationWindow as setFilterAnimationWindowAction,
+  setFilterView as setFilterViewAction,
   toggleLayerForMap as toggleLayerForMapAction,
   toggleSplitMap as toggleSplitMapAction,
   wrapTo,
@@ -298,6 +299,11 @@ export type KeplerSliceState = {
       filterId: string,
       animationWindow: string,
     ) => void;
+    setFilterView: (
+      mapId: string,
+      filterIdx: number,
+      view: 'side' | 'enlarged' | 'minified',
+    ) => void;
     updateTooltipFields: (
       mapId: string,
       datasetId: string,
@@ -546,6 +552,14 @@ export function createKeplerSlice({
           get().kepler.dispatchAction(
             mapId,
             setFilterAnimationWindowAction({id: filterId, animationWindow}),
+          );
+        },
+
+        setFilterView: (mapId, filterIdx, view) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterViewAction(filterIdx, view),
           );
         },
 
