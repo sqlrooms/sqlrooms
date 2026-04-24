@@ -1,6 +1,6 @@
 import type * as arrow from 'apache-arrow';
-import type {ResolvedGeometryColumn, ResolvedGeometryEncoding} from './types';
 import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
+import type {ResolvedGeometryColumn, ResolvedGeometryEncoding} from './types';
 
 function itemLength(value: unknown) {
   if (Array.isArray(value)) {

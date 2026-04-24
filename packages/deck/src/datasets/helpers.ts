@@ -12,13 +12,11 @@ let nextSqlSourceIdentity = 0;
 const tableIdentities = new WeakMap<arrow.Table, string>();
 const sqlSourceIdentities = new WeakMap<object, string>();
 
-function nextAccessTimestamp(): number {
+/** Return a monotonic access timestamp used by the prepared-dataset LRU. */
+export function nextAccessTimestamp(): number {
   nextDatasetAccess += 1;
   return nextDatasetAccess;
 }
-
-/** Return a monotonic access timestamp used by the prepared-dataset LRU. */
-export {nextAccessTimestamp};
 
 /**
  * Assign a stable cache identity to an Arrow table object.

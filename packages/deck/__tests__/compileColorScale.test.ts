@@ -135,11 +135,12 @@ describe('compileColorScale', () => {
       title: 'Magnitude',
     });
 
-    expect(legend.type).toBe('continuous');
-    expect(legend.title).toBe('Magnitude');
-    if (legend.type === 'continuous') {
-      expect(legend.gradient).toContain('linear-gradient');
-      expect(legend.ticks).toHaveLength(3);
+    expect(legend).not.toBeNull();
+    expect(legend!.type).toBe('continuous');
+    expect(legend!.title).toBe('Magnitude');
+    if (legend!.type === 'continuous') {
+      expect(legend!.gradient).toContain('linear-gradient');
+      expect(legend!.ticks).toHaveLength(3);
     }
   });
 
@@ -155,10 +156,11 @@ describe('compileColorScale', () => {
       title: 'Status',
     });
 
-    expect(legend.type).toBe('categorical');
-    if (legend.type === 'categorical') {
-      expect(legend.items).toHaveLength(2);
-      expect(legend.items[0]?.color).toHaveLength(4);
+    expect(legend).not.toBeNull();
+    expect(legend!.type).toBe('categorical');
+    if (legend!.type === 'categorical') {
+      expect(legend!.items).toHaveLength(2);
+      expect(legend!.items[0]?.color).toHaveLength(4);
     }
   });
 

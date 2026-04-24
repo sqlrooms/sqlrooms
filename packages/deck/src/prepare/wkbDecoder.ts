@@ -1,3 +1,5 @@
+import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
+import type * as arrow from 'apache-arrow';
 import {
   Field,
   FixedSizeList,
@@ -5,14 +7,12 @@ import {
   Table,
   vectorFromArray,
 } from 'apache-arrow';
-import type * as arrow from 'apache-arrow';
-import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
 import type {GeometryDecoder} from './geometryDecoder';
+import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 import type {
   PreparedGeoArrowLayerData,
   ResolvedGeometryEncoding,
 } from './types';
-import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 
 function toArrayBuffer(value: unknown) {
   if (ArrayBuffer.isView(value)) {
@@ -35,7 +35,11 @@ function parseGeometryValue(
   }
 
   try {
-    if (encoding === 'wkt' || encoding === 'geoarrow.wkt') {
+    if (
+      encoding === 'wkt' ||
+      encoding === 'geoarrow.wkt' ||
+      (encoding === 'unknown' && typeof value === 'string')
+    ) {
       return (
         WKTLoader.parseTextSync?.(String(value), {wkt: {crs: false}}) ?? null
       );
@@ -78,14 +82,19 @@ function getSampleGeometry(
   return null;
 }
 
-function createPromotedPointTable(
+/**
+ * Attempt to promote WKB/WKT Point geometries into a native GeoArrow
+ * FixedSizeList column.  Returns `null` if any non-null geometry is not
+ * a Point, so callers can fall back to the GeoJSON binary path.
+ */
+function tryPromotePointTable(
   table: arrow.Table,
   columnName: string,
   encoding: ResolvedGeometryEncoding,
-): PreparedGeoArrowLayerData {
+): PreparedGeoArrowLayerData | null {
   const vector = table.getChild(columnName);
   if (!vector) {
-    throw new Error(`Geometry column "${columnName}" was not found.`);
+    return null;
   }
 
   const points = [];
@@ -97,12 +106,21 @@ function createPromotedPointTable(
     }
 
     if (geometry.type !== 'Point') {
-      throw new Error(
-        `Only Point WKB/WKT geometries can be promoted for GeoArrow point layers. Received ${geometry.type}.`,
-      );
+      return null;
     }
 
-    points.push(geometry.coordinates);
+    const coords = geometry.coordinates;
+    if (
+      !Array.isArray(coords) ||
+      coords.length < 2 ||
+      !Number.isFinite(coords[0]) ||
+      !Number.isFinite(coords[1])
+    ) {
+      points.push(null);
+      continue;
+    }
+
+    points.push([coords[0], coords[1]]);
   }
 
   const coordinateField = new Field('xy', new Float64());
@@ -161,7 +179,13 @@ export const wkbGeometryDecoder: GeometryDecoder = {
     columnName: string,
     encoding: ResolvedGeometryEncoding,
   ) {
-    return createPromotedPointTable(table, columnName, encoding);
+    const result = tryPromotePointTable(table, columnName, encoding);
+    if (!result) {
+      throw new Error(
+        'GeoArrow promotion failed: column contains non-Point geometries.',
+      );
+    }
+    return result;
   },
   toGeoJsonBinary(
     table: arrow.Table,

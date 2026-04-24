@@ -48,7 +48,7 @@ describe('DeckJsonMapSpec', () => {
           },
         ],
       }),
-    ).toThrow();
+    ).toThrow(/scheme/i);
   });
 });
 

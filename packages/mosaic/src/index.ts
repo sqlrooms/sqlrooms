@@ -11,7 +11,18 @@ export {
 } from '@uwdata/mosaic-core';
 export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
-export {asc, column, desc, Query, sql} from '@uwdata/mosaic-sql';
+export {
+  asc,
+  asc,
+  column,
+  column,
+  desc,
+  desc,
+  Query,
+  Query,
+  sql,
+  sql,
+} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
 export {
   MosaicDashboard,
@@ -75,12 +86,12 @@ export {
   type MosaicProfilerStatusBarProps,
 } from './profiler/MosaicProfilerStatusBar';
 export {useMosaicProfiler} from './profiler/useMosaicProfiler';
-export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {
   ResponsivePlot,
   type PlotSize,
   type ResponsivePlotProps,
 } from './ResponsivePlot';
+export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components

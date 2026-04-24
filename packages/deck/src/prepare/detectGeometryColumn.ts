@@ -3,12 +3,12 @@ import {
   getGeometryColumnsFromSchema,
 } from '@loaders.gl/geoarrow';
 import type * as arrow from 'apache-arrow';
+import {isDirectGeoArrowEncoding} from './geoarrow';
 import type {
   GeometryEncodingHint,
   ResolvedGeometryColumn,
   ResolvedGeometryEncoding,
 } from './types';
-import {isDirectGeoArrowEncoding} from './geoarrow';
 
 type DetectGeometryColumnOptions = {
   table: arrow.Table;

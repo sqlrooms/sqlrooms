@@ -16,6 +16,8 @@ export function buildBinaryGeoJsonData(
     .map((field) => field.name)
     .filter((fieldName) => fieldName !== geometryColumnName);
 
+  const propertyVectors = propertyColumns.map((name) => table.getChild(name));
+
   const features: Feature<Geometry>[] = [];
   for (let rowIndex = 0; rowIndex < table.numRows; rowIndex++) {
     const geometry = getGeometryAt(rowIndex);
@@ -24,8 +26,8 @@ export function buildBinaryGeoJsonData(
     }
 
     const properties: Record<string, unknown> = {};
-    for (const fieldName of propertyColumns) {
-      properties[fieldName] = table.getChild(fieldName)?.get(rowIndex);
+    for (let i = 0; i < propertyColumns.length; i++) {
+      properties[propertyColumns[i]!] = propertyVectors[i]?.get(rowIndex);
     }
 
     features.push({

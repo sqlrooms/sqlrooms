@@ -1,8 +1,8 @@
+import {createId} from '@paralleldrive/cuid2';
 import {Selection} from '@uwdata/mosaic-core';
 import {Query} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
 import {useEffect, useMemo, useRef} from 'react';
-import {createId} from '@paralleldrive/cuid2';
 import {useStoreWithMosaic} from './MosaicSlice';
 import {toArrowClientResult} from './tableInterop';
 
@@ -71,7 +71,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
       selection: directSelection,
       query: queryRef.current,
       onQueryResult: (result) => {
-        queryResultRef.current?.(toArrowClientResult(result));
+        queryResultRef.current?.(result);
       },
     });
 

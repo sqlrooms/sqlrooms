@@ -57,6 +57,12 @@ function getVgColorScaleType(colorScale: ColorScaleConfig) {
       return 'threshold';
     case 'categorical':
       return 'categorical';
+    default: {
+      const _exhaustive: never = colorScale;
+      throw new Error(
+        `Unknown color scale type: ${(_exhaustive as ColorScaleConfig).type}`,
+      );
+    }
   }
 }
 

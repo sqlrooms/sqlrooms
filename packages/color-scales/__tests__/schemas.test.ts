@@ -17,4 +17,14 @@ describe('color scale schemas', () => {
       title: 'Magnitude',
     });
   });
+
+  it('rejects invalid color scale config', () => {
+    const result = ColorScaleConfig.safeParse({
+      field: 'Magnitude',
+      type: 'sequential',
+      scheme: 'BadScheme',
+      domain: [0, 8],
+    });
+    expect(result.success).toBe(false);
+  });
 });

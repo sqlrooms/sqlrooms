@@ -1,5 +1,6 @@
 import {
   addDataToMap,
+  addFilter as addFilterAction,
   addLayer as addLayerAction,
   deleteEntry,
   interactionConfigChange,
@@ -7,6 +8,9 @@ import {
   registerEntry,
   removeDataset,
   requestMapStyles,
+  setFilter as setFilterAction,
+  setFilterAnimationTime as setFilterAnimationTimeAction,
+  setFilterAnimationWindow as setFilterAnimationWindowAction,
   wrapTo,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
@@ -269,6 +273,25 @@ export type KeplerSliceState = {
       layer: ParsedLayer | MinSavedLayer | undefined,
       datasetId: string,
     ) => void;
+    addFilter: (mapId: string, datasetId: string) => void;
+    setFilter: (
+      mapId: string,
+      filterIdx: number,
+      prop: string | string[],
+      value: any,
+      valueIndex?: number,
+    ) => void;
+    setFilterAnimationTime: (
+      mapId: string,
+      filterIdx: number,
+      prop: string,
+      value: any,
+    ) => void;
+    setFilterAnimationWindow: (
+      mapId: string,
+      filterId: string,
+      animationWindow: string,
+    ) => void;
     updateTooltipFields: (
       mapId: string,
       datasetId: string,
@@ -483,6 +506,35 @@ export function createKeplerSlice({
         addLayer: (mapId, layer, datasetId) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
+        },
+
+        addFilter: (mapId, datasetId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(mapId, addFilterAction(datasetId));
+        },
+
+        setFilter: (mapId, filterIdx, prop, value, valueIndex) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterAction(filterIdx, prop, value, valueIndex),
+          );
+        },
+
+        setFilterAnimationTime: (mapId, filterIdx, prop, value) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterAnimationTimeAction(filterIdx, prop, value),
+          );
+        },
+
+        setFilterAnimationWindow: (mapId, filterId, animationWindow) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterAnimationWindowAction({id: filterId, animationWindow}),
+          );
         },
 
         updateTooltipFields: (mapId, datasetId, fieldNames) => {

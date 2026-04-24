@@ -19,7 +19,6 @@ import {
   Connector,
   Coordinator,
   coordinator,
-  decodeIPC,
   makeClient,
   Selection,
   wasmConnector,
@@ -310,7 +309,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               isLoading: true,
               data: null,
               selection,
-              queryResultCallback: options.onQueryResult,
+              queryResultCallback: options.onQueryResult
+                ? (result: unknown) =>
+                    options.onQueryResult!(toArrowClientResult(result))
+                : undefined,
             };
           }),
         );
@@ -365,7 +367,7 @@ export function useStoreWithMosaic<T>(
  * Adapts a {@link DuckDbConnector} to the Mosaic {@link Connector} interface.
  *
  * For `'arrow'` queries the Apache Arrow table returned by the connector is
- * serialized to IPC bytes and decoded via {@link decodeIPC} into a flechette
+ * converted via {@link createMosaicTableFromArrowTable} into a flechette
  * `Table`, which is the shape Mosaic consumers expect (with `.toColumns()`).
  * For `'json'` queries, rows are materialized with {@link Array.from} which
  * may have performance/memory implications for very large result sets.

@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": ["**/*.css"],
   "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {

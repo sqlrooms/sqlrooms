@@ -131,6 +131,10 @@ export function ThemeProvider({
     getThemePreference({defaultTheme, storageKey}),
   );
 
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    getResolvedTheme(theme),
+  );
+
   // Apply theme class before paint to avoid a light-theme flash on initial load.
   // (useLayoutEffect on the client, fall back to useEffect in non-DOM environments)
   const useIsomorphicLayoutEffect =
@@ -139,14 +143,28 @@ export function ThemeProvider({
   useIsomorphicLayoutEffect(() => {
     if (typeof window === 'undefined') return;
     const root = window.document.documentElement;
+    const resolved = getResolvedTheme(theme);
 
     root.classList.remove('light', 'dark');
-    root.classList.add(getResolvedTheme(theme));
+    root.classList.add(resolved);
+    setResolvedTheme(resolved);
+
+    if (theme === 'system' && typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = () => {
+        const next = getResolvedTheme(theme);
+        root.classList.remove('light', 'dark');
+        root.classList.add(next);
+        setResolvedTheme(next);
+      };
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
   }, [theme]);
 
   const value = {
     theme,
-    resolvedTheme: getResolvedTheme(theme),
+    resolvedTheme,
     setTheme: (theme: Theme) => {
       if (typeof window !== 'undefined') {
         try {
