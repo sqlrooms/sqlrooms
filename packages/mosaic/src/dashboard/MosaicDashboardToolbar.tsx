@@ -27,6 +27,7 @@ import {
   type MosaicDashboardAddPanelAction,
   type MosaicDashboardAddPanelActionContext,
   createMosaicDashboardProfilerPanelConfig,
+  getMosaicDashboardSelectionName,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
@@ -48,6 +49,10 @@ export const MosaicDashboardToolbar: React.FC = () => {
   );
   const addPanelActions = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.addPanelActions,
+  );
+  const dashboardSelection = useStoreWithMosaicDashboard(
+    (state) =>
+      state.mosaic.selections[getMosaicDashboardSelectionName(dashboardId)],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
   const tablesWithColumns = useMemo(
@@ -89,6 +94,7 @@ export const MosaicDashboardToolbar: React.FC = () => {
     (entry) => entry.enabled,
   );
   const canAddAnyPanel = canCreateChart || canAddProfiler || canAddCustomPanel;
+  const hasActiveFilters = Boolean(dashboardSelection?.clauses.length);
 
   const handleAddProfiler = () => {
     const panel = dashboard?.selectedTable
@@ -104,6 +110,10 @@ export const MosaicDashboardToolbar: React.FC = () => {
     if (panel) {
       addPanel(dashboardId, panel);
     }
+  };
+
+  const handleResetFilters = () => {
+    dashboardSelection?.reset();
   };
 
   return (
@@ -151,40 +161,51 @@ export const MosaicDashboardToolbar: React.FC = () => {
           </PopoverContent>
         </Popover>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="sm" variant="outline" disabled={!canAddAnyPanel}>
-            <Plus className="mr-1 h-4 w-4" />
-            Add
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={openBuilder} disabled={!canCreateChart}>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Chart
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleAddProfiler}
-            disabled={!canAddProfiler}
-          >
-            <TableProperties className="mr-2 h-4 w-4" />
-            Profiler
-          </DropdownMenuItem>
-          {addPanelActionEntries.map(({action, enabled}) => {
-            const Icon = action.icon;
-            return (
-              <DropdownMenuItem
-                key={action.type}
-                onClick={() => handleAddCustomPanel(action)}
-                disabled={!enabled}
-              >
-                {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
-                {action.label}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="link"
+          size="sm"
+          className="h-8 px-0"
+          disabled={!hasActiveFilters}
+          onClick={handleResetFilters}
+        >
+          Reset filters
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" disabled={!canAddAnyPanel}>
+              <Plus className="mr-1 h-4 w-4" />
+              Add
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={openBuilder} disabled={!canCreateChart}>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Chart
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleAddProfiler}
+              disabled={!canAddProfiler}
+            >
+              <TableProperties className="mr-2 h-4 w-4" />
+              Profiler
+            </DropdownMenuItem>
+            {addPanelActionEntries.map(({action, enabled}) => {
+              const Icon = action.icon;
+              return (
+                <DropdownMenuItem
+                  key={action.type}
+                  onClick={() => handleAddCustomPanel(action)}
+                  disabled={!enabled}
+                >
+                  {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+                  {action.label}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 };

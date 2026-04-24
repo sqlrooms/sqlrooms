@@ -14,6 +14,7 @@ import {
   useMosaicClient,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
+import {Spinner} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Table as ArrowTable} from 'apache-arrow';
@@ -211,6 +212,41 @@ function fitViewStateToBounds(options: {
     latitude: fitted.latitude,
     zoom: Math.min(fitted.zoom, maxZoom),
   };
+}
+
+function DeckMapDashboardHeaderActions({
+  panel,
+}: MosaicDashboardPanelRendererProps) {
+  const clients = useStoreWithMosaicDashboard((state) => state.mosaic.clients);
+  const mapConfig = asDeckJsonMapConfig(panel.config);
+  const loadingDatasetCount = useMemo(() => {
+    if (!mapConfig) {
+      return 0;
+    }
+
+    return Object.keys(mapConfig.datasets).reduce((count, datasetId) => {
+      return clients[`${panel.id}:${datasetId}`]?.isLoading ? count + 1 : count;
+    }, 0);
+  }, [clients, mapConfig, panel.id]);
+
+  if (!loadingDatasetCount) {
+    return null;
+  }
+
+  const label =
+    loadingDatasetCount === 1
+      ? 'Loading map data'
+      : `Loading ${loadingDatasetCount} map datasets`;
+
+  return (
+    <div
+      className="text-muted-foreground flex items-center px-1"
+      title={label}
+      aria-label={label}
+    >
+      <Spinner className="h-3.5 w-3.5 text-current" />
+    </div>
+  );
 }
 
 function DeckMapDashboardRenderer({
@@ -513,5 +549,6 @@ function DeckMapDashboardRenderer({
 
 export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
   component: DeckMapDashboardRenderer,
+  headerActions: DeckMapDashboardHeaderActions,
   icon: MapIcon,
 };
