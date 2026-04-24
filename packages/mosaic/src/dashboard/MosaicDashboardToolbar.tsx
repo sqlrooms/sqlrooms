@@ -21,7 +21,7 @@ import {
   Plus,
   TableProperties,
 } from 'lucide-react';
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
   type MosaicDashboardAddPanelAction,
@@ -50,9 +50,12 @@ export const MosaicDashboardToolbar: React.FC = () => {
   const addPanelActions = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.addPanelActions,
   );
+  const getSelection = useStoreWithMosaicDashboard(
+    (state) => state.mosaic.getSelection,
+  );
+  const dashboardSelectionName = getMosaicDashboardSelectionName(dashboardId);
   const dashboardSelection = useStoreWithMosaicDashboard(
-    (state) =>
-      state.mosaic.selections[getMosaicDashboardSelectionName(dashboardId)],
+    (state) => state.mosaic.selections[dashboardSelectionName],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
   const tablesWithColumns = useMemo(
@@ -94,7 +97,33 @@ export const MosaicDashboardToolbar: React.FC = () => {
     (entry) => entry.enabled,
   );
   const canAddAnyPanel = canCreateChart || canAddProfiler || canAddCustomPanel;
-  const hasActiveFilters = Boolean(dashboardSelection?.clauses.length);
+  const [selectionVersion, setSelectionVersion] = useState(0);
+
+  useEffect(() => {
+    if (!dashboardSelection) {
+      getSelection(dashboardSelectionName, 'crossfilter');
+    }
+  }, [dashboardSelection, dashboardSelectionName, getSelection]);
+
+  useEffect(() => {
+    if (!dashboardSelection) {
+      return;
+    }
+
+    const handleSelectionChange = () => {
+      setSelectionVersion((value) => value + 1);
+    };
+
+    dashboardSelection.addEventListener('value', handleSelectionChange);
+    return () => {
+      dashboardSelection.removeEventListener('value', handleSelectionChange);
+    };
+  }, [dashboardSelection]);
+
+  const hasActiveFilters = useMemo(
+    () => Boolean(dashboardSelection?.clauses.length),
+    [dashboardSelection, selectionVersion],
+  );
 
   const handleAddProfiler = () => {
     const panel = dashboard?.selectedTable
@@ -160,8 +189,6 @@ export const MosaicDashboardToolbar: React.FC = () => {
             </Command>
           </PopoverContent>
         </Popover>
-      </div>
-      <div className="flex items-center gap-2">
         <Button
           variant="link"
           size="sm"
@@ -171,6 +198,8 @@ export const MosaicDashboardToolbar: React.FC = () => {
         >
           Reset filters
         </Button>
+      </div>
+      <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" variant="outline" disabled={!canAddAnyPanel}>
