@@ -11,18 +11,7 @@ export {
 } from '@uwdata/mosaic-core';
 export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
-export {
-  asc,
-  asc,
-  column,
-  column,
-  desc,
-  desc,
-  Query,
-  Query,
-  sql,
-  sql,
-} from '@uwdata/mosaic-sql';
+export {asc, column, desc, Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
 export {
   MosaicDashboard,

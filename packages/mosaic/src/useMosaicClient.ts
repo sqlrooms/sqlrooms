@@ -1,22 +1,9 @@
 import {createId} from '@paralleldrive/cuid2';
-import {Selection} from '@uwdata/mosaic-core';
-import {Query} from '@uwdata/mosaic-sql';
-import type {Table as ArrowTable} from 'apache-arrow';
 import {useEffect, useMemo, useRef} from 'react';
-import {useStoreWithMosaic} from './MosaicSlice';
+import {type MosaicClientOptions, useStoreWithMosaic} from './MosaicSlice';
 import {toArrowClientResult} from './tableInterop';
 
-export type UseMosaicClientOptions = {
-  /** Unique id for this client (auto-generated if not provided) */
-  id?: string;
-  /** Selection name for cross-filtering (will create if doesn't exist) */
-  selectionName?: string;
-  /** Or pass a Selection directly */
-  selection?: Selection;
-  /** Query builder - receives current filter predicate */
-  query: (filter: unknown) => ReturnType<typeof Query.from>;
-  /** Callback when query results are received */
-  queryResult?: (result: ArrowTable) => void;
+export type UseMosaicClientOptions = MosaicClientOptions & {
   /** Whether to automatically connect when mosaic is ready */
   enabled?: boolean;
 };
