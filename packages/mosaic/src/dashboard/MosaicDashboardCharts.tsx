@@ -52,9 +52,11 @@ export const MosaicDashboardCharts: React.FC = () => {
 
   const dockNode: LayoutDockNode | null = useMemo(() => {
     if (!dashboardLayout) return null;
+    const dockId = getMosaicDashboardDockId(dashboardId);
     return {
       type: 'dock',
-      id: getMosaicDashboardDockId(dashboardId),
+      id: dockId,
+      panel: dockId,
       root: dashboardLayout,
     };
   }, [dashboardLayout, dashboardId]);
