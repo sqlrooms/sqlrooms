@@ -24,7 +24,7 @@ export const createLayout = ({
     children: [
       {
         type: 'tabs',
-        id: 'left',
+        id: 'left-sidebar',
         defaultSize: '30%',
         minSize: 250,
         maxSize: 400,
@@ -36,13 +36,17 @@ export const createLayout = ({
       {
         type: 'tabs',
         id: 'workspace',
+        panel: 'workspace',
         defaultSize: '70%',
         children: [],
         activeTabIndex: 0,
       },
       {
         type: 'panel',
-        id: 'assistant',
+        id: 'assistant-sidebar',
+        panel: {
+          key: 'assistant',
+        },
         defaultSize: 250,
         minSize: 250,
         maxSize: 600,

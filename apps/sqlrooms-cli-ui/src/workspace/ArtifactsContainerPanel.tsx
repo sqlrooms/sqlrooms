@@ -30,7 +30,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const removeTab = useRoomStore((s) => s.layout.removeTab);
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
-    s.layout.isCollapsed('assistant'),
+    s.layout.isCollapsed('assistant-sidebar'),
   );
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -123,13 +123,15 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
         {isAssistantCollapsed ? (
           <TabStrip.Button
             className="w-auto text-xs uppercase"
-            onClick={() => toggleCollapsed('assistant')}
+            onClick={() => toggleCollapsed('assistant-sidebar')}
           >
             <SparklesIcon className="h-4 w-4" /> AI
           </TabStrip.Button>
         ) : null}
       </TabsLayout.TabStrip>
-      <TabsLayout.TabContent />
+      <TabsLayout.TabContentContainer>
+        <TabsLayout.TabContent />
+      </TabsLayout.TabContentContainer>
       <Dialog
         open={deleteConfirm !== null}
         onOpenChange={(open) => {
