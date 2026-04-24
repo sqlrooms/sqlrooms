@@ -14,11 +14,11 @@ import {
   useMosaicClient,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
-import {Spinner} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Table as ArrowTable} from 'apache-arrow';
-import {MapIcon} from 'lucide-react';
+import {FocusIcon, MapIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckJsonMapProps} from './types';
@@ -214,37 +214,56 @@ function fitViewStateToBounds(options: {
   };
 }
 
+const deckMapDashboardFitRequestTarget = new EventTarget();
+
+function emitDeckMapDashboardFitRequest(panelId: string) {
+  deckMapDashboardFitRequestTarget.dispatchEvent(
+    new CustomEvent('fit-view', {detail: {panelId}}),
+  );
+}
+
+type DeckMapDashboardFitState = {
+  key: string;
+  viewState: DeckProps['viewState'];
+  didAutoFit: boolean;
+  fitRequestVersion: number;
+  handledFitRequestVersion: number;
+};
+
+function createInitialDeckMapDashboardFitState(
+  key: string,
+): DeckMapDashboardFitState {
+  return {
+    key,
+    viewState: null,
+    didAutoFit: false,
+    fitRequestVersion: 0,
+    handledFitRequestVersion: 0,
+  };
+}
+
 function DeckMapDashboardHeaderActions({
   panel,
 }: MosaicDashboardPanelRendererProps) {
-  const clients = useStoreWithMosaicDashboard((state) => state.mosaic.clients);
   const mapConfig = asDeckJsonMapConfig(panel.config);
-  const loadingDatasetCount = useMemo(() => {
-    if (!mapConfig) {
-      return 0;
-    }
-
-    return Object.keys(mapConfig.datasets).reduce((count, datasetId) => {
-      return clients[`${panel.id}:${datasetId}`]?.isLoading ? count + 1 : count;
-    }, 0);
-  }, [clients, mapConfig, panel.id]);
-
-  if (!loadingDatasetCount) {
-    return null;
-  }
-
-  const label =
-    loadingDatasetCount === 1
-      ? 'Loading map data'
-      : `Loading ${loadingDatasetCount} map datasets`;
+  const canFitView = Boolean(mapConfig?.fitToData);
 
   return (
-    <div
-      className="text-muted-foreground flex items-center px-1"
-      title={label}
-      aria-label={label}
-    >
-      <Spinner className="h-3.5 w-3.5 text-current" />
+    <div className="flex items-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        title={
+          canFitView
+            ? 'Fit map view to data'
+            : 'Fit view unavailable for this map'
+        }
+        disabled={!canFitView}
+        onClick={() => emitDeckMapDashboardFitRequest(panel.id)}
+      >
+        <FocusIcon className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
@@ -268,8 +287,6 @@ function DeckMapDashboardRenderer({
     Record<string, DeckMapDashboardDatasetClientState>
   >({});
   const [containerSize, setContainerSize] = useState({width: 0, height: 0});
-  const [viewState, setViewState] = useState<DeckProps['viewState']>(null);
-  const [didAutoFit, setDidAutoFit] = useState(false);
 
   const handleDatasetState = useCallback(
     (
@@ -338,23 +355,57 @@ function DeckMapDashboardRenderer({
         : null,
     [fitToData, fitToDataSource],
   );
-
-  const [prevFitKey, setPrevFitKey] = useState(fitToDataKey);
-  const [prevPanelId, setPrevPanelId] = useState(panel.id);
-  if (prevFitKey !== fitToDataKey || prevPanelId !== panel.id) {
-    setPrevFitKey(fitToDataKey);
-    setPrevPanelId(panel.id);
-    setViewState(null);
-    setDidAutoFit(false);
-  }
+  const fitStateKey = useMemo(
+    () => JSON.stringify({panelId: panel.id, fitToDataKey}),
+    [fitToDataKey, panel.id],
+  );
+  const [fitState, setFitState] = useState<DeckMapDashboardFitState>(() =>
+    createInitialDeckMapDashboardFitState(fitStateKey),
+  );
+  const activeFitState =
+    fitState.key === fitStateKey
+      ? fitState
+      : createInitialDeckMapDashboardFitState(fitStateKey);
+  const {didAutoFit, fitRequestVersion, handledFitRequestVersion, viewState} =
+    activeFitState;
 
   useEffect(() => {
+    const handleFitRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{panelId?: string}>).detail;
+      if (detail?.panelId === panel.id) {
+        setFitState((current) => {
+          const scoped =
+            current.key === fitStateKey
+              ? current
+              : createInitialDeckMapDashboardFitState(fitStateKey);
+          return {
+            ...scoped,
+            fitRequestVersion: scoped.fitRequestVersion + 1,
+          };
+        });
+      }
+    };
+
+    deckMapDashboardFitRequestTarget.addEventListener(
+      'fit-view',
+      handleFitRequest,
+    );
+    return () => {
+      deckMapDashboardFitRequestTarget.removeEventListener(
+        'fit-view',
+        handleFitRequest,
+      );
+    };
+  }, [fitStateKey, panel.id]);
+
+  useEffect(() => {
+    const hasManualFitRequest = fitRequestVersion > handledFitRequestVersion;
     if (
       !fitToData ||
       !fitToDataSource ||
-      didAutoFit ||
       containerSize.width <= 0 ||
-      containerSize.height <= 0
+      containerSize.height <= 0 ||
+      (!hasManualFitRequest && didAutoFit)
     ) {
       return;
     }
@@ -376,23 +427,52 @@ function DeckMapDashboardRenderer({
 
         const bounds = readBoundsFromExtentResult(result);
         if (!bounds) {
-          setDidAutoFit(true);
+          setFitState((current) => {
+            const scoped =
+              current.key === fitStateKey
+                ? current
+                : createInitialDeckMapDashboardFitState(fitStateKey);
+            return {
+              ...scoped,
+              didAutoFit: true,
+              handledFitRequestVersion: fitRequestVersion,
+            };
+          });
           return;
         }
 
-        setViewState(
-          fitViewStateToBounds({
-            bounds,
-            width: containerSize.width,
-            height: containerSize.height,
-            padding: fitToData.padding,
-            maxZoom: fitToData.maxZoom,
-          }),
-        );
-        setDidAutoFit(true);
+        const nextViewState = fitViewStateToBounds({
+          bounds,
+          width: containerSize.width,
+          height: containerSize.height,
+          padding: fitToData.padding,
+          maxZoom: fitToData.maxZoom,
+        });
+        setFitState((current) => {
+          const scoped =
+            current.key === fitStateKey
+              ? current
+              : createInitialDeckMapDashboardFitState(fitStateKey);
+          return {
+            ...scoped,
+            viewState: nextViewState,
+            didAutoFit: true,
+            handledFitRequestVersion: fitRequestVersion,
+          };
+        });
       } catch {
         if (!isCancelled) {
-          setDidAutoFit(true);
+          setFitState((current) => {
+            const scoped =
+              current.key === fitStateKey
+                ? current
+                : createInitialDeckMapDashboardFitState(fitStateKey);
+            return {
+              ...scoped,
+              didAutoFit: true,
+              handledFitRequestVersion: fitRequestVersion,
+            };
+          });
         }
       }
     };
@@ -407,8 +487,11 @@ function DeckMapDashboardRenderer({
     containerSize.width,
     didAutoFit,
     executeSql,
+    fitRequestVersion,
+    fitStateKey,
     fitToData,
     fitToDataSource,
+    handledFitRequestVersion,
   ]);
 
   const handleBrushEvent = useCallback(
@@ -470,12 +553,19 @@ function DeckMapDashboardRenderer({
         return;
       }
 
-      setViewState(nextViewState);
-      if (hasUserInteraction || didAutoFit || !fitToData) {
-        setDidAutoFit(true);
-      }
+      setFitState((current) => {
+        const scoped =
+          current.key === fitStateKey
+            ? current
+            : createInitialDeckMapDashboardFitState(fitStateKey);
+        return {
+          ...scoped,
+          viewState: nextViewState,
+          didAutoFit: hasUserInteraction || scoped.didAutoFit || !fitToData,
+        };
+      });
     },
-    [didAutoFit, fitToData, viewState],
+    [didAutoFit, fitStateKey, fitToData, viewState],
   );
 
   if (!mapConfig) {
