@@ -253,7 +253,7 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL {...(mergedDeckProps as object)}>
+      <DeckGL {...(mergedDeckProps as any)}>
         <Map {...(mergedMapProps as object)}>{children}</Map>
       </DeckGL>
 

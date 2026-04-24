@@ -2,7 +2,7 @@ import {
   AlignHorizontalDistributeCenter,
   BarChart3,
   BarChartHorizontal,
-  BubblesIcon,
+  Workflow as BubblesIcon,
   ChartNoAxesCombined,
   Code,
   Grid3X3,
