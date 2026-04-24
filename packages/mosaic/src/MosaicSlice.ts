@@ -381,13 +381,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyClient(id: string) {
-        const {connection, clients} = get().mosaic;
+        const {clients} = get().mosaic;
         const tracked = clients[id];
         if (!tracked) return;
 
-        if (connection.status === 'ready') {
-          connection.coordinator.disconnect(tracked.client);
-        }
+        tracked.client.destroy();
 
         set((state) =>
           produce(state, (draft) => {
@@ -397,13 +395,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyAllClients() {
-        const {connection, clients} = get().mosaic;
-
-        if (connection.status === 'ready') {
-          Object.values(clients).forEach((tracked) => {
-            connection.coordinator.disconnect(tracked.client);
-          });
-        }
+        const {clients} = get().mosaic;
+        Object.values(clients).forEach((tracked) => {
+          tracked.client.destroy();
+        });
 
         set((state) =>
           produce(state, (draft) => {

@@ -2,7 +2,7 @@ import {Button, SpinnerPane} from '@sqlrooms/ui';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Spec} from '@uwdata/mosaic-spec';
 import {BarChart3Icon} from 'lucide-react';
-import {useCallback, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
 import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
 import {
@@ -64,6 +64,9 @@ function MosaicDashboardVgPlotRenderer({
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
+  const brushSelection = useStoreWithMosaicDashboard(
+    (state) => state.mosaic.selections[selectionName],
+  );
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
   );
@@ -71,12 +74,18 @@ function MosaicDashboardVgPlotRenderer({
   const spec = vgplot
     ? (toRenderableMosaicSpec(vgplot) as unknown as Spec)
     : null;
-  const brushSelection = useMemo(
-    () => getSelection(selectionName, 'crossfilter'),
-    [getSelection, selectionName],
-  );
+
+  useEffect(() => {
+    if (!brushSelection) {
+      getSelection(selectionName, 'crossfilter');
+    }
+  }, [brushSelection, getSelection, selectionName]);
+
   const params = useMemo(
-    () => new Map<string, Selection>([['brush', brushSelection]]),
+    () =>
+      brushSelection
+        ? new Map<string, Selection>([['brush', brushSelection]])
+        : undefined,
     [brushSelection],
   );
 
@@ -84,10 +93,12 @@ function MosaicDashboardVgPlotRenderer({
     <div className="h-full min-h-0 overflow-auto p-2">
       {connection.status === 'loading' ? (
         <SpinnerPane className="h-full w-full" />
-      ) : connection.status === 'ready' && spec ? (
+      ) : connection.status === 'ready' && spec && params ? (
         <div className="bg-background text-foreground flex h-full w-full items-center justify-center rounded-md p-2">
           <VgPlotChart spec={spec} params={params} />
         </div>
+      ) : connection.status === 'ready' && spec ? (
+        <SpinnerPane className="h-full w-full" />
       ) : (
         <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
           {connection.status === 'error'
