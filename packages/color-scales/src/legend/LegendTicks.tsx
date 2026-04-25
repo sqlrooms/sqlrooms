@@ -1,4 +1,4 @@
-import type {LegendTick} from './utils';
+import {LEGEND_TICKS_HEIGHT_CLASS, type LegendTick} from './utils';
 
 function getTickTransform(offset: number) {
   if (offset <= 0) {
@@ -57,7 +57,7 @@ export function LegendTicks({
   width: number;
 }) {
   return (
-    <div className="relative h-8">
+    <div className={`relative ${LEGEND_TICKS_HEIGHT_CLASS}`}>
       {getVisibleTicks(ticks, width).map((tick) => (
         <div
           key={`${tick.offset}-${tick.label}`}

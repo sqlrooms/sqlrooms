@@ -1,6 +1,6 @@
 import type {ResolvedColorLegend} from '../config';
 import {LegendTicks} from './LegendTicks';
-import {getRampStyle, rgba} from './utils';
+import {getRampStyle, LEGEND_TICKS_HEIGHT_CLASS, rgba} from './utils';
 
 export function SteppedLegend({
   legend,
@@ -25,7 +25,7 @@ export function SteppedLegend({
       {legend.ticks?.length ? (
         <LegendTicks ticks={legend.ticks} width={width} />
       ) : (
-        <div className="h-2" />
+        <div className={LEGEND_TICKS_HEIGHT_CLASS} />
       )}
       <div className="mt-1 grid gap-1">
         {legend.items.map((item) => (
