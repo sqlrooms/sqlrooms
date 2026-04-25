@@ -258,6 +258,29 @@ function buildSteppedLegendItems(
   }));
 }
 
+function buildSteppedLegendTicks(
+  scale: DiscreteScaleWithInvertExtent,
+  range: string[],
+) {
+  if (range.length < 2) {
+    return [];
+  }
+
+  return range.slice(0, -1).flatMap((color, index) => {
+    const end = coerceFiniteNumber(scale.invertExtent(color)[1]);
+    if (end === undefined) {
+      return [];
+    }
+
+    return [
+      {
+        label: formatLegendNumber(end),
+        offset: ((index + 1) / range.length) * 100,
+      },
+    ];
+  });
+}
+
 function createNullColorAccessor(nullColor: ResolvedRGBA) {
   return () => nullColor;
 }
@@ -504,5 +527,6 @@ export function buildColorScaleLegend(options: {
     type: 'stepped',
     title: resolvedTitle,
     items: buildSteppedLegendItems(numericScale.scale, numericScale.range),
+    ticks: buildSteppedLegendTicks(numericScale.scale, numericScale.range),
   };
 }
