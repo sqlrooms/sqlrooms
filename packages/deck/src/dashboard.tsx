@@ -1,8 +1,13 @@
-import {type DeckProps, WebMercatorViewport} from '@deck.gl/core';
+import {WebMercatorViewport} from '@deck.gl/core';
+import type {ComponentProps} from 'react';
+import type DeckGLReact from '@deck.gl/react';
+
+type DeckProps = ComponentProps<typeof DeckGLReact>;
 import {
   escapeId,
   getColValAsNumber,
   useStoreWithDuckDb,
+  type DataTable,
 } from '@sqlrooms/duckdb';
 import {
   column,
@@ -27,6 +32,8 @@ import {
   asDeckJsonMapConfig,
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
@@ -206,7 +213,7 @@ function fitViewStateToBounds(options: {
       [bounds[1][0], bounds[1][1]],
     ],
     {padding},
-  );
+  ) as WebMercatorViewport & {longitude: number; latitude: number; zoom: number};
 
   return {
     longitude: fitted.longitude,
@@ -236,7 +243,7 @@ function createInitialDeckMapDashboardFitState(
 ): DeckMapDashboardFitState {
   return {
     key,
-    viewState: null,
+    viewState: undefined,
     didAutoFit: false,
     fitRequestVersion: 0,
     handledFitRequestVersion: 0,
@@ -552,8 +559,8 @@ function DeckMapDashboardRenderer({
       viewState: nextViewState,
       interactionState,
     }: {
-      viewState: NonNullable<DeckProps['viewState']>;
-      interactionState?: Record<string, unknown>;
+      viewState: any;
+      interactionState?: any;
     }) => {
       const hasUserInteraction = Boolean(
         interactionState &&
@@ -659,3 +666,104 @@ export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
   headerActions: DeckMapDashboardHeaderActions,
   icon: MapIcon,
 };
+
+const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
+const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
+
+function findColumnByName(
+  table: DataTable,
+  candidates: string[],
+) {
+  const candidateSet = new Set(candidates);
+  return table.columns.find((column) =>
+    candidateSet.has(column.name.toLowerCase()),
+  )?.name;
+}
+
+function findLongitudeLatitudeColumns(
+  table?: DataTable,
+) {
+  if (!table) return null;
+  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
+  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
+  return longitudeColumn && latitudeColumn
+    ? {longitudeColumn, latitudeColumn}
+    : null;
+}
+
+function quoteSqlIdentifier(identifier: string) {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function quoteTableReference(table: DataTable) {
+  const qualifiedName = table.table;
+  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
+    .filter((part): part is string => Boolean(part))
+    .map(quoteSqlIdentifier)
+    .join('.');
+}
+
+function createDeckMapPanelForTable(
+  table: DataTable,
+) {
+  const coordinates = findLongitudeLatitudeColumns(table);
+  if (!coordinates) return undefined;
+
+  const {longitudeColumn, latitudeColumn} = coordinates;
+  const datasetId = table.tableName;
+  const geometryColumn = '__sqlrooms_geom';
+  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
+  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
+
+  return createDeckMapDashboardPanelConfig({
+    title: `${table.tableName} map`,
+    source: {tableName: table.tableName},
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: datasetId,
+          _sqlroomsBinding: {dataset: datasetId},
+          filled: true,
+          stroked: false,
+          pickable: true,
+          radiusUnits: 'pixels',
+          getRadius: 4,
+          getFillColor: [56, 189, 248, 180],
+        },
+      ],
+    },
+    datasets: {
+      [datasetId]: {
+        source: {
+          sqlQuery: [
+            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
+            `FROM ${quoteTableReference(table)}`,
+            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
+          ].join(' '),
+        },
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+    fitToData: {
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+      padding: 40,
+      maxZoom: 12,
+    },
+  });
+}
+
+export const deckMapDashboardAddPanelAction: import('@sqlrooms/mosaic').MosaicDashboardAddPanelAction =
+  {
+    type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+    label: 'Map',
+    icon: MapIcon,
+    isEnabled: ({selectedTable}) =>
+      Boolean(findLongitudeLatitudeColumns(selectedTable)),
+    createPanel: ({selectedTable}) =>
+      selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
+  };

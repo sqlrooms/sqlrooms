@@ -167,6 +167,14 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         get().mosaic.destroyAllClients();
       },
 
+      setConfig(config: MosaicSliceConfig) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.mosaic.config = config;
+          }),
+        );
+      },
+
       getSelection(
         name: string,
         type: 'crossfilter' | 'single' | 'union' = 'crossfilter',

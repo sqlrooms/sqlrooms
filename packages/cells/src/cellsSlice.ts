@@ -168,6 +168,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
             }
           }
         },
+        setConfig(config: CellsSliceConfig) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cells.config = config;
+            }),
+          );
+        },
         crossFilterSelections: {},
 
         setCrossFilterSelection: (

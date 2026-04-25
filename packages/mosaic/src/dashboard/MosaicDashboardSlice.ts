@@ -448,6 +448,14 @@ export function createMosaicDashboardSlice(
           return get().mosaicDashboard.config.dashboardsById[dashboardId];
         },
 
+        setConfig(config: MosaicDashboardSliceConfig) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.mosaicDashboard.config = config;
+            }),
+          );
+        },
+
         setSelectedTable(dashboardId, tableName) {
           get().mosaicDashboard.ensureDashboard(dashboardId);
           set((state) =>

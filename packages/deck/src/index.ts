@@ -5,7 +5,10 @@
 
 export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
-export {deckMapDashboardPanelRenderer} from './dashboard';
+export {
+  deckMapDashboardAddPanelAction,
+  deckMapDashboardPanelRenderer,
+} from './dashboard';
 export {
   asDeckJsonMapConfig,
   createDeckMapDashboardDatasetQuery,

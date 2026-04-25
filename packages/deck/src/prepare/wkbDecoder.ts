@@ -109,6 +109,11 @@ function tryPromotePointTable(
       return null;
     }
 
+    if (!('coordinates' in geometry)) {
+      points.push(null);
+      continue;
+    }
+
     const coords = geometry.coordinates;
     if (
       !Array.isArray(coords) ||
