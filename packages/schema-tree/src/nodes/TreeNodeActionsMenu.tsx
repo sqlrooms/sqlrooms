@@ -25,7 +25,7 @@ export type TreeNodeActionsMenuProps = PropsWithChildren<{
  * The menu items are passed as children.
  *
  * The menu is hidden by default and is shown when the user hovers over the node.
- * For this to work the parent element must have the `group` class.
+ * For this to work the parent element must have the `group/treenode` class.
  * It should also have classes `relative overflow-hidden`.
  *
  * @param children - The menu items.
@@ -33,7 +33,7 @@ export type TreeNodeActionsMenuProps = PropsWithChildren<{
 export const TreeNodeActionsMenu: FC<TreeNodeActionsMenuProps> = (props) => {
   const {children} = props;
   return (
-    <div className="absolute top-px right-0 h-full opacity-0 outline-hidden group-hover:opacity-100">
+    <div className="absolute top-px right-0 h-full opacity-0 outline-hidden group-hover/treenode:opacity-100">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="bg-muted text-muted-foreground hover:text-foreground flex h-full w-7 items-center justify-center p-0 outline-hidden transition-colors">
