@@ -28,6 +28,10 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const nodeId = ctx.containerType === 'tabs' ? ctx.node.id : undefined;
   const addTab = useRoomStore((s) => s.layout.addTab);
   const removeTab = useRoomStore((s) => s.layout.removeTab);
+  const sheets = useRoomStore((s) => s.cells.config.sheets);
+  const evictDashboardRuntime = useRoomStore(
+    (s) => s.mosaicDashboard.evictDashboardRuntime,
+  );
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
     s.layout.isCollapsed('assistant-sidebar'),
@@ -62,12 +66,24 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     setDeleteConfirm({tabId, tabName});
   }, []);
 
+  const closeTabWithCleanup = useCallback(
+    (tabId: string) => {
+      if (!nodeId) return;
+      const sheet = sheets[tabId];
+      if (sheet?.type === 'dashboard') {
+        evictDashboardRuntime(tabId, {resetSelection: true});
+      }
+      removeTab(nodeId, tabId);
+    },
+    [evictDashboardRuntime, nodeId, removeTab, sheets],
+  );
+
   const confirmDelete = useCallback(() => {
-    if (deleteConfirm && nodeId) {
-      removeTab(nodeId, deleteConfirm.tabId);
+    if (deleteConfirm) {
+      closeTabWithCleanup(deleteConfirm.tabId);
     }
     setDeleteConfirm(null);
-  }, [deleteConfirm, nodeId, removeTab]);
+  }, [closeTabWithCleanup, deleteConfirm]);
 
   // const handleRenameSheet = useCallback(
   //   (_sheetId: string, _newName: string) => {
@@ -81,6 +97,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       <TabsLayout.TabStrip
         closeable={true}
         preventCloseLastTab={false}
+        onClose={closeTabWithCleanup}
         renderTabMenu={(tab) => (
           <>
             <TabStrip.MenuItem

@@ -25,6 +25,10 @@ import type {
   ChartTypeDefinition,
 } from '../chart-builders/types';
 import {type MosaicSliceState} from '../MosaicSlice';
+import {
+  destroyRetainedVgPlotChart,
+  type RetainedVgPlotChart,
+} from '../VgPlotChart';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -140,6 +144,16 @@ export type MosaicDashboardSliceConfig = z.infer<
 export type MosaicDashboardSliceState = {
   mosaicDashboard: SliceFunctions & {
     config: MosaicDashboardSliceConfig;
+    runtime: {
+      /**
+       * Live vgplot chart instances retained across transient dashboard panel
+       * remounts, keyed by `getMosaicDashboardPanelId(dashboardId, panelId)`.
+       *
+       * This is runtime-only state: entries are never serialized with dashboard
+       * config and must be evicted when their panel/dashboard lifecycle ends.
+       */
+      retainedChartsByPanelId: Record<string, RetainedVgPlotChart>;
+    };
     chartBuilders?: ChartBuilderTemplate[];
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
@@ -164,6 +178,21 @@ export type MosaicDashboardSliceState = {
       patch: Partial<Omit<MosaicDashboardPanelConfig, 'id'>>,
     ) => void;
     removePanel: (dashboardId: string, panelId: string) => void;
+    getRetainedChart: (
+      dashboardId: string,
+      panelId: string,
+    ) => RetainedVgPlotChart | undefined;
+    setRetainedChart: (
+      dashboardId: string,
+      panelId: string,
+      chart: RetainedVgPlotChart,
+    ) => void;
+    evictPanelRuntime: (dashboardId: string, panelId: string) => void;
+    evictDashboardRuntime: (
+      dashboardId: string,
+      options?: {resetSelection?: boolean},
+    ) => void;
+    clearAllDashboardRuntime: () => void;
     setLayout: (dashboardId: string, layout: LayoutNode | null) => void;
   };
 };
@@ -295,6 +324,40 @@ export function getMosaicDashboardSelectionName(dashboardId: string): string {
   return `dashboard:${dashboardId}:brush`;
 }
 
+function destroyDashboardRuntimeChart(
+  chart: RetainedVgPlotChart | undefined,
+): void {
+  if (!chart) return;
+  destroyRetainedVgPlotChart(chart);
+}
+
+function evictDashboardSelection(
+  state: MosaicDashboardStoreState,
+  dashboardId: string,
+): void {
+  state.mosaic.selections[
+    getMosaicDashboardSelectionName(dashboardId)
+  ]?.reset();
+}
+
+function shouldEvictPanelRuntimeForPatch(
+  panel: MosaicDashboardPanelConfig,
+  patch: Partial<Omit<MosaicDashboardPanelConfig, 'id'>>,
+): boolean {
+  if (patch.type && patch.type !== panel.type) {
+    return true;
+  }
+
+  if (panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE) {
+    return Boolean(
+      patch.config &&
+      Object.prototype.hasOwnProperty.call(patch.config, 'vgplot'),
+    );
+  }
+
+  return false;
+}
+
 export function resolveMosaicDashboardPanelSource(
   dashboard: MosaicDashboardEntry,
   panel: MosaicDashboardPanelConfig,
@@ -332,6 +395,9 @@ export function createMosaicDashboardSlice(
     (set, get) => ({
       mosaicDashboard: {
         config: createDefaultMosaicDashboardConfig(props.config),
+        runtime: {
+          retainedChartsByPanelId: {},
+        },
         chartBuilders: props.chartBuilders,
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
@@ -368,6 +434,9 @@ export function createMosaicDashboardSlice(
         },
 
         removeDashboard(dashboardId) {
+          get().mosaicDashboard.evictDashboardRuntime(dashboardId, {
+            resetSelection: true,
+          });
           set((state) =>
             produce(state, (draft) => {
               delete draft.mosaicDashboard.config.dashboardsById[dashboardId];
@@ -428,6 +497,12 @@ export function createMosaicDashboardSlice(
         },
 
         updatePanel(dashboardId, panelId, patch) {
+          const existing = get().mosaicDashboard.config.dashboardsById[
+            dashboardId
+          ]?.panels.find((candidate) => candidate.id === panelId);
+          const shouldEvict = existing
+            ? shouldEvictPanelRuntimeForPatch(existing, patch)
+            : false;
           set((state) =>
             produce(state, (draft) => {
               const dashboard =
@@ -443,9 +518,13 @@ export function createMosaicDashboardSlice(
               dashboard.updatedAt = Date.now();
             }),
           );
+          if (shouldEvict) {
+            get().mosaicDashboard.evictPanelRuntime(dashboardId, panelId);
+          }
         },
 
         removePanel(dashboardId, panelId) {
+          get().mosaicDashboard.evictPanelRuntime(dashboardId, panelId);
           set((state) =>
             produce(state, (draft) => {
               const dashboard =
@@ -462,6 +541,117 @@ export function createMosaicDashboardSlice(
               dashboard.updatedAt = Date.now();
             }),
           );
+        },
+
+        getRetainedChart(dashboardId, panelId) {
+          return get().mosaicDashboard.runtime.retainedChartsByPanelId[
+            getMosaicDashboardPanelId(dashboardId, panelId)
+          ];
+        },
+
+        setRetainedChart(dashboardId, panelId, chart) {
+          const runtimePanelId = getMosaicDashboardPanelId(
+            dashboardId,
+            panelId,
+          );
+          const previous =
+            get().mosaicDashboard.runtime.retainedChartsByPanelId[
+              runtimePanelId
+            ];
+          if (previous && previous !== chart) {
+            destroyDashboardRuntimeChart(previous);
+          }
+          set((state) => ({
+            mosaicDashboard: {
+              ...state.mosaicDashboard,
+              runtime: {
+                ...state.mosaicDashboard.runtime,
+                retainedChartsByPanelId: {
+                  ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
+                  [runtimePanelId]: chart,
+                },
+              },
+            },
+          }));
+        },
+
+        evictPanelRuntime(dashboardId, panelId) {
+          const runtimePanelId = getMosaicDashboardPanelId(
+            dashboardId,
+            panelId,
+          );
+          const existing =
+            get().mosaicDashboard.runtime.retainedChartsByPanelId[
+              runtimePanelId
+            ];
+          destroyDashboardRuntimeChart(existing);
+          set((state) => {
+            const nextRetainedChartsByPanelId = {
+              ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
+            };
+            delete nextRetainedChartsByPanelId[runtimePanelId];
+            return {
+              mosaicDashboard: {
+                ...state.mosaicDashboard,
+                runtime: {
+                  ...state.mosaicDashboard.runtime,
+                  retainedChartsByPanelId: nextRetainedChartsByPanelId,
+                },
+              },
+            };
+          });
+        },
+
+        evictDashboardRuntime(dashboardId, options) {
+          const runtimePrefix = `dashboard:${dashboardId}:panel:`;
+          const existingEntries = Object.entries(
+            get().mosaicDashboard.runtime.retainedChartsByPanelId,
+          ).filter(([runtimePanelId]) =>
+            runtimePanelId.startsWith(runtimePrefix),
+          );
+
+          existingEntries.forEach(([, chart]) => {
+            destroyDashboardRuntimeChart(chart);
+          });
+
+          if (options?.resetSelection) {
+            evictDashboardSelection(get(), dashboardId);
+          }
+
+          set((state) => {
+            const nextRetainedChartsByPanelId = {
+              ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
+            };
+            for (const [runtimePanelId] of existingEntries) {
+              delete nextRetainedChartsByPanelId[runtimePanelId];
+            }
+            return {
+              mosaicDashboard: {
+                ...state.mosaicDashboard,
+                runtime: {
+                  ...state.mosaicDashboard.runtime,
+                  retainedChartsByPanelId: nextRetainedChartsByPanelId,
+                },
+              },
+            };
+          });
+        },
+
+        clearAllDashboardRuntime() {
+          Object.values(
+            get().mosaicDashboard.runtime.retainedChartsByPanelId,
+          ).forEach((chart) => {
+            destroyDashboardRuntimeChart(chart);
+          });
+          set((state) => ({
+            mosaicDashboard: {
+              ...state.mosaicDashboard,
+              runtime: {
+                ...state.mosaicDashboard.runtime,
+                retainedChartsByPanelId: {},
+              },
+            },
+          }));
         },
 
         setLayout(dashboardId, layout) {

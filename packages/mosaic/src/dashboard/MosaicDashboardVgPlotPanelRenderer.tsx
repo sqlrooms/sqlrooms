@@ -58,6 +58,7 @@ function MosaicDashboardVgPlotHeaderActions({
 }
 
 function MosaicDashboardVgPlotRenderer({
+  dashboardId,
   panel,
   selectionName,
 }: MosaicDashboardPanelRendererProps) {
@@ -69,6 +70,12 @@ function MosaicDashboardVgPlotRenderer({
   );
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
+  );
+  const retainedChart = useStoreWithMosaicDashboard((state) =>
+    state.mosaicDashboard.getRetainedChart(dashboardId, panel.id),
+  );
+  const setRetainedChart = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.setRetainedChart,
   );
   const vgplot = getVgPlotSpec(panel);
   const spec = vgplot
@@ -88,6 +95,14 @@ function MosaicDashboardVgPlotRenderer({
         : undefined,
     [brushSelection],
   );
+  const retention = useMemo(
+    () => ({
+      chart: retainedChart,
+      setChart: (chart: NonNullable<typeof retainedChart>) =>
+        setRetainedChart(dashboardId, panel.id, chart),
+    }),
+    [dashboardId, panel.id, retainedChart, setRetainedChart],
+  );
 
   return (
     <div className="h-full min-h-0 overflow-auto p-2">
@@ -95,7 +110,7 @@ function MosaicDashboardVgPlotRenderer({
         <SpinnerPane className="h-full w-full" />
       ) : connection.status === 'ready' && spec && params ? (
         <div className="bg-background text-foreground flex h-full w-full items-center justify-center rounded-md p-2">
-          <VgPlotChart spec={spec} params={params} />
+          <VgPlotChart spec={spec} params={params} retention={retention} />
         </div>
       ) : connection.status === 'ready' && spec ? (
         <SpinnerPane className="h-full w-full" />

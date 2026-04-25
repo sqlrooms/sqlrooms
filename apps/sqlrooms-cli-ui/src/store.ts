@@ -350,8 +350,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
           upsertSheetApp: (sheetId, app) => {
-            set(
-              produce((draft: RoomState) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
                 const current = draft.appProject.config.appsBySheetId[
                   sheetId
                 ] ?? {
