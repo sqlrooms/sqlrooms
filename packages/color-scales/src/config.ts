@@ -104,6 +104,7 @@ export type ResolvedColorLegend =
       type: 'stepped';
       title: string;
       items: Array<{label: string; color: ResolvedRGBA}>;
+      ticks?: Array<{label: string; offset: number}>;
     }
   | {
       type: 'categorical';

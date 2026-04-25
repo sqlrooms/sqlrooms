@@ -1,13 +1,22 @@
 import {cn} from '@sqlrooms/ui';
 import type {ResolvedColorLegend} from './config';
+import {CategoricalLegend} from './legend/CategoricalLegend';
+import {ContinuousLegend} from './legend/ContinuousLegend';
+import {SteppedLegend} from './legend/SteppedLegend';
 
 type ColorScaleLegendProps = {
   legends: ResolvedColorLegend[];
   className?: string;
+  width?: number;
+  swatchColumns?: number;
 };
 
-/** TODO: implement nicer legends like in https://observablehq.com/@d3/color-legend */
-export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
+export function ColorScaleLegend({
+  legends,
+  className,
+  width = 280,
+  swatchColumns = 1,
+}: ColorScaleLegendProps) {
   if (!legends.length) {
     return null;
   }
@@ -17,54 +26,22 @@ export function ColorScaleLegend({legends, className}: ColorScaleLegendProps) {
       {legends.map((legend) => (
         <div
           key={`${legend.title}-${legend.type}`}
-          className="bg-background/70 rounded-md px-3 py-2 shadow-sm backdrop-blur-sm"
+          className="border-border/70 bg-background/90 w-fit max-w-full rounded-md border px-3 py-2.5 shadow-sm backdrop-blur-sm"
         >
-          <div className="text-foreground mb-2 text-xs font-semibold">
+          <div className="text-foreground mb-2 text-xs leading-none font-semibold">
             {legend.title}
           </div>
-          {legend.type === 'continuous' ? (
-            <div>
-              <div
-                className="h-3 rounded-sm border"
-                style={{background: legend.gradient}}
-              />
-              <div className="text-muted-foreground relative mt-1 h-4 text-[0.6rem]">
-                {legend.ticks.map((tick) => (
-                  <span
-                    key={`${legend.title}-${tick.offset}-${tick.label}`}
-                    className="absolute"
-                    style={{
-                      left: `${tick.offset}%`,
-                      transform:
-                        tick.offset === 0
-                          ? 'none'
-                          : tick.offset === 100
-                            ? 'translateX(-100%)'
-                            : 'translateX(-50%)',
-                    }}
-                  >
-                    {tick.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {legend.items.map((item) => (
-                <div
-                  key={`${legend.title}-${item.label}`}
-                  className="text-foreground flex items-center gap-2 text-xs"
-                >
-                  <span
-                    className="h-3 w-3 rounded-sm border"
-                    style={{
-                      backgroundColor: `rgba(${item.color[0]}, ${item.color[1]}, ${item.color[2]}, ${item.color[3] / 255})`,
-                    }}
-                  />
-                  <span className="truncate">{item.label}</span>
-                </div>
-              ))}
-            </div>
+          {legend.type === 'continuous' && (
+            <ContinuousLegend legend={legend} width={width} />
+          )}
+          {legend.type === 'stepped' && (
+            <SteppedLegend legend={legend} width={width} />
+          )}
+          {legend.type === 'categorical' && (
+            <CategoricalLegend
+              legend={legend}
+              columns={Math.max(1, Math.round(swatchColumns))}
+            />
           )}
         </div>
       ))}
