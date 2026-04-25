@@ -97,7 +97,7 @@ jobs:
           else
             cmd="prerelease"
           fi
-          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push
+          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push --no-granular-pathspec
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
@@ -108,9 +108,9 @@ jobs:
         run: |
           version_input=${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
           if [ "$version_input" = "auto" ]; then
-            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push
+            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push --no-granular-pathspec
           else
-            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push
+            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push --no-granular-pathspec
           fi
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
