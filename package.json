@@ -46,6 +46,7 @@
     "publish-dry-run": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dry-run",
     "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes",
     "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
+    "setup-trusted-publishing": "node scripts/setup-trusted-publishing.mjs",
     "update-readme": "node scripts/update-readme.mjs",
     "update-deps": "pnpm --filter '*' update --interactive",
     "check-circular-deps": "npx madge --circular packages/*/src/index.ts",
