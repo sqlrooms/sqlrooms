@@ -190,6 +190,17 @@ For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
 data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
 that dataset as loading until a table is provided.
 
+Use `onDatasetStatesChange` when the surrounding UI needs dataset loading,
+ready, or error state:
+
+```tsx
+<DeckJsonMap
+  spec={spec}
+  datasets={datasets}
+  onDatasetStatesChange={(states) => setDatasetStates(states)}
+/>
+```
+
 ## SQLRooms Layer Bindings
 
 SQLRooms-specific layer metadata lives under `_sqlroomsBinding`:
@@ -334,9 +345,10 @@ The current curated layer set is:
 - `GeoJsonLayer`
 
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
-back to decoding and GeoJSON-binary preparation, with point promotion available
+back to decoding and GeoJSON-binary preparation, with promotion available
 for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
-`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`.
+`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus polygon promotion for
+`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`.
 
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers).

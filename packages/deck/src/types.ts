@@ -67,6 +67,9 @@ export type DeckJsonMapProps = {
   showLegends?: boolean;
   className?: string;
   children?: ReactNode;
+  onDatasetStatesChange?: (
+    states: Record<string, PreparedDeckDatasetState>,
+  ) => void;
 };
 
 export function isSqlDatasetInput(
