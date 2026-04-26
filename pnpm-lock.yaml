@@ -2646,10 +2646,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.3.0(@types/node@25.5.0)
+        version: 30.3.0(@types/node@24.12.2)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.2))(typescript@5.9.3)
 
   packages/cosmos:
     dependencies:
@@ -2811,15 +2811,9 @@ importers:
 
   packages/deck:
     dependencies:
-      '@deck.gl/aggregation-layers':
-        specifier: ^9.3.1
-        version: 9.3.1(@deck.gl/core@9.3.1)(@deck.gl/layers@9.3.1(@deck.gl/core@9.3.1)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
       '@deck.gl/core':
         specifier: ^9.3.1
         version: 9.3.1
-      '@deck.gl/geo-layers':
-        specifier: ^9.3.1
-        version: 9.3.1(@deck.gl/core@9.3.1)(@deck.gl/extensions@9.3.1(@deck.gl/core@9.3.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.1(@deck.gl/core@9.3.1)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.1(@deck.gl/core@9.3.1)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
       '@deck.gl/json':
         specifier: ^9.3.1
         version: 9.3.1(@deck.gl/core@9.3.1)
@@ -2829,9 +2823,6 @@ importers:
       '@deck.gl/react':
         specifier: ^9.3.1
         version: 9.3.1(@deck.gl/core@9.3.1)(@deck.gl/widgets@9.3.1(@deck.gl/core@9.3.1)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@deck.gl/widgets':
-        specifier: ^9.3.1
-        version: 9.3.1(@deck.gl/core@9.3.1)(@luma.gl/core@9.3.3)
       '@geoarrow/deck.gl-layers':
         specifier: 0.3.2
         version: 0.3.2(600127656f06c96144b8a0f6992203a7)
@@ -2889,10 +2880,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.3.0(@types/node@24.12.2)
+        version: 30.3.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/discuss:
     dependencies:
