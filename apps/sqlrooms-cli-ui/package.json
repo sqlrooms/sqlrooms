@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/db": "workspace:*",

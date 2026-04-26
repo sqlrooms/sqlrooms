@@ -74,13 +74,13 @@ export const createLayout = ({
     artifact: (ctx) => {
       const artifactId = ctx.meta?.artifactId as string | undefined;
 
-      const artifactSheet = artifactId
-        ? store.getState().cells.config.sheets[artifactId]
+      const artifact = artifactId
+        ? store.getState().artifacts.config.itemsById[artifactId]
         : null;
-      const artifactType = artifactSheet?.type;
+      const artifactType = artifact?.type;
 
       const artifactMeta = artifactType
-        ? ARTIFACT_TYPES[artifactType]
+        ? ARTIFACT_TYPES[artifactType as keyof typeof ARTIFACT_TYPES]
         : undefined;
 
       if (!artifactMeta) {
@@ -93,7 +93,7 @@ export const createLayout = ({
 
       return {
         component: artifactMeta.component,
-        title: artifactSheet?.title || `New ${artifactMeta.title}`,
+        title: artifact?.title || `New ${artifactMeta.title}`,
         icon: artifactMeta.icon,
       };
     },

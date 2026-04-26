@@ -11,13 +11,12 @@ import type {RoomState} from './store';
 
 const aiChartTypes = createDefaultChartTypes({includeCustomSpec: false});
 const aiChartTypeIds = aiChartTypes.map((chartType) => chartType.id);
-
 const DashboardChartTemplateToolParameters = z.object({
-  sheetId: z
+  artifactId: z
     .string()
     .optional()
     .describe(
-      'Optional dashboard sheet ID. Defaults to the current dashboard sheet.',
+      'Optional dashboard artifact ID. Defaults to the current dashboard artifact.',
     ),
   tableName: z
     .string()
@@ -31,12 +30,12 @@ const DashboardChartTemplateToolParameters = z.object({
   fieldValues: z
     .record(z.string(), z.string())
     .describe('Map of chart field key -> selected column name.'),
-  createSheetIfMissing: z
+  createArtifactIfMissing: z
     .boolean()
     .optional()
     .default(true)
     .describe(
-      'If true and no dashboard sheet exists, create one automatically.',
+      'If true and no dashboard artifact exists, create one automatically.',
     ),
   reasoning: z.string().describe('Brief rationale for the chart choice.'),
 });
@@ -65,36 +64,38 @@ function findTableColumns(
   }));
 }
 
-function resolveDashboardSheetId(
+function resolveDashboardArtifactId(
   state: RoomState,
   params: Pick<
     DashboardChartTemplateToolParameters,
-    'sheetId' | 'createSheetIfMissing'
+    'artifactId' | 'createArtifactIfMissing'
   >,
 ): string | null {
-  let targetSheetId =
-    params.sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-  if (!targetSheetId && params.createSheetIfMissing) {
-    targetSheetId = state.dashboard.createDashboardSheet();
+  let targetArtifactId =
+    params.artifactId ?? state.dashboard.getCurrentDashboardArtifactId();
+  if (!targetArtifactId && params.createArtifactIfMissing) {
+    targetArtifactId = state.dashboard.createDashboardArtifact();
   }
-  if (!targetSheetId) return null;
+  if (!targetArtifactId) return null;
 
-  const sheet = state.cells.config.sheets[targetSheetId];
-  if (!sheet || sheet.type !== 'dashboard') {
-    throw new Error(`Sheet "${targetSheetId}" is not a dashboard sheet.`);
+  const artifact = state.artifacts.getItem(targetArtifactId);
+  if (!artifact || artifact.type !== 'dashboard') {
+    throw new Error(
+      `Artifact "${targetArtifactId}" is not a dashboard artifact.`,
+    );
   }
 
-  state.dashboard.ensureSheetDashboard(targetSheetId);
-  return targetSheetId;
+  state.dashboard.ensureDashboardArtifact(targetArtifactId);
+  return targetArtifactId;
 }
 
 function resolveDashboardTable(
   state: RoomState,
-  sheetId: string,
+  artifactId: string,
   tableName?: string,
 ): {tableName: string; columns: ChartBuilderColumn[]} {
   const tables = getTablesWithColumns(state);
-  const dashboard = state.mosaicDashboard.getDashboard(sheetId);
+  const dashboard = state.mosaicDashboard.getDashboard(artifactId);
   const explicitTableName = tableName?.trim() || undefined;
 
   if (explicitTableName) {
@@ -104,7 +105,7 @@ function resolveDashboardTable(
         `Unknown table "${explicitTableName}". Available tables: ${tables.map((table) => table.tableName).join(', ') || '(none)'}.`,
       );
     }
-    state.mosaicDashboard.setSelectedTable(sheetId, explicitTableName);
+    state.mosaicDashboard.setSelectedTable(artifactId, explicitTableName);
     return {tableName: explicitTableName, columns};
   }
 
@@ -120,7 +121,7 @@ function resolveDashboardTable(
     if (!onlyTable?.columns) {
       throw new Error('The only available table has no column metadata.');
     }
-    state.mosaicDashboard.setSelectedTable(sheetId, onlyTable.tableName);
+    state.mosaicDashboard.setSelectedTable(artifactId, onlyTable.tableName);
     return {
       tableName: onlyTable.tableName,
       columns: onlyTable.columns.map((column) => ({
@@ -189,9 +190,9 @@ export function getDashboardChartTemplateInstructions(store: {
   getState: () => RoomState;
 }) {
   const state = store.getState();
-  const currentSheetId = state.dashboard.getCurrentDashboardSheetId();
-  const dashboard = currentSheetId
-    ? state.mosaicDashboard.getDashboard(currentSheetId)
+  const currentArtifactId = state.dashboard.getCurrentDashboardArtifactId();
+  const dashboard = currentArtifactId
+    ? state.mosaicDashboard.getDashboard(currentArtifactId)
     : undefined;
   const tables = getTablesWithColumns(state);
 
@@ -229,20 +230,20 @@ export function createDashboardChartTemplateTool(store: {
     execute: async (params: DashboardChartTemplateToolParameters) => {
       try {
         const state = store.getState();
-        const targetSheetId = resolveDashboardSheetId(state, params);
-        if (!targetSheetId) {
+        const targetArtifactId = resolveDashboardArtifactId(state, params);
+        if (!targetArtifactId) {
           return {
             llmResult: {
               success: false,
               errorMessage:
-                'No dashboard sheet is available. Set createSheetIfMissing=true or create one first.',
+                'No dashboard artifact is available. Set createArtifactIfMissing=true or create one first.',
             },
           };
         }
 
         const {tableName, columns} = resolveDashboardTable(
           state,
-          targetSheetId,
+          targetArtifactId,
           params.tableName,
         );
         const chartType = validateFieldValues(
@@ -256,17 +257,17 @@ export function createDashboardChartTemplateTool(store: {
           : (chartType.label ?? chartType.description);
         const panel = createMosaicDashboardVgPlotPanelConfig(spec, title);
 
-        state.mosaicDashboard.addPanel(targetSheetId, panel);
-        state.cells.setCurrentSheet(targetSheetId);
+        state.mosaicDashboard.addPanel(targetArtifactId, panel);
+        state.artifacts.setCurrentItem(targetArtifactId);
 
         return {
           llmResult: {
             success: true,
-            details: `Created dashboard chart "${title}" on sheet "${targetSheetId}".`,
+            details: `Created dashboard chart "${title}" on artifact "${targetArtifactId}".`,
             data: {
               panelId: panel.id,
               chartType: chartType.id,
-              sheetId: targetSheetId,
+              artifactId: targetArtifactId,
               tableName,
               title,
             },

@@ -1,4 +1,4 @@
-import {useCellsStore} from '@sqlrooms/cells';
+import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {Button} from '@sqlrooms/ui';
 import {WebContainer} from '@sqlrooms/webcontainer';
 import type {FileSystemTree} from '@webcontainer/api';
@@ -16,17 +16,15 @@ function deriveAppName(prompt: string): string {
   return trimmed.split(/\s+/).slice(0, 6).join(' ');
 }
 
-export const AppBuilderSheet: React.FC = () => {
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const renameSheet = useCellsStore((s) => s.cells.renameSheet);
-  const appState = useRoomStore((s) =>
-    currentSheetId
-      ? s.appProject.config.appsBySheetId[currentSheetId]
-      : undefined,
+export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
+  const artifactId = (meta?.artifactId as string) ?? panelId;
+  const appState = useRoomStore(
+    (s) => s.appProject.config.appsByArtifactId[artifactId],
   );
-  const upsertSheetApp = useRoomStore((s) => s.appProject.upsertSheetApp);
-  const updateSheetAppFiles = useRoomStore(
-    (s) => s.appProject.updateSheetAppFiles,
+  const renameArtifact = useRoomStore((s) => s.artifacts.renameItem);
+  const upsertArtifactApp = useRoomStore((s) => s.appProject.upsertArtifactApp);
+  const updateArtifactAppFiles = useRoomStore(
+    (s) => s.appProject.updateArtifactAppFiles,
   );
   const applyFilesTree = useRoomStore((s) => s.webContainer.applyFilesTree);
   const initializeWebContainer = useRoomStore((s) => s.webContainer.initialize);
@@ -39,7 +37,7 @@ export const AppBuilderSheet: React.FC = () => {
   const [busy, setBusy] = React.useState(false);
 
   const loadArtifactRuntime = React.useCallback(
-    async (sheetId: string, filesByPath: Record<string, string>) => {
+    async (artifactId: string, filesByPath: Record<string, string>) => {
       const loaded = Object.entries(filesByPath).map(([path, content]) => ({
         path,
         content,
@@ -48,21 +46,21 @@ export const AppBuilderSheet: React.FC = () => {
       if (patched.length > 0) {
         const merged = {...filesByPath};
         for (const item of patched) merged[item.path] = item.content;
-        updateSheetAppFiles(sheetId, merged);
+        updateArtifactAppFiles(artifactId, merged);
       }
       const tree = toFileSystemTree(files);
       await applyFilesTree({filesTree: tree});
       await initializeWebContainer({force: true});
     },
-    [applyFilesTree, initializeWebContainer, updateSheetAppFiles],
+    [applyFilesTree, initializeWebContainer, updateArtifactAppFiles],
   );
 
   React.useEffect(() => {
-    if (!currentSheetId || !appState?.files) return;
-    void loadArtifactRuntime(currentSheetId, appState.files);
-  }, [currentSheetId, appState?.updatedAt, loadArtifactRuntime]);
+    if (!artifactId || !appState?.files) return;
+    void loadArtifactRuntime(artifactId, appState.files);
+  }, [appState?.updatedAt, artifactId, loadArtifactRuntime]);
 
-  if (!currentSheetId) return null;
+  if (!artifactId) return null;
 
   const onCreate = async () => {
     const finalName = (name || deriveAppName(prompt)).trim();
@@ -73,14 +71,14 @@ export const AppBuilderSheet: React.FC = () => {
       const filesRecord = Object.fromEntries(
         result.files.map((f) => [f.path, f.content]),
       );
-      upsertSheetApp(currentSheetId, {
+      upsertArtifactApp(artifactId, {
         name: finalName,
         prompt,
         template,
         files: filesRecord,
       });
-      renameSheet(currentSheetId, finalName);
-      await loadArtifactRuntime(currentSheetId, filesRecord);
+      renameArtifact(artifactId, finalName);
+      await loadArtifactRuntime(artifactId, filesRecord);
       setStatus(
         result.status === 'ok'
           ? `Generated successfully in ${result.attempts} attempt(s).`
@@ -101,19 +99,16 @@ export const AppBuilderSheet: React.FC = () => {
             <div>
               <h3 className="text-sm font-medium">App Builder</h3>
               <p className="text-muted-foreground text-xs">
-                Stored in project state (`ui_state`) for sheet {currentSheetId}
+                Stored in project state (`ui_state`) for artifact {artifactId}
               </p>
             </div>
             <Button
               size="sm"
               variant="outline"
               onClick={async () => {
-                if (!currentSheetId) return;
+                if (!artifactId) return;
                 try {
-                  await loadArtifactRuntime(
-                    currentSheetId,
-                    appState.files || {},
-                  );
+                  await loadArtifactRuntime(artifactId, appState.files || {});
                 } catch (error) {
                   setStatus(
                     error instanceof Error ? error.message : String(error),

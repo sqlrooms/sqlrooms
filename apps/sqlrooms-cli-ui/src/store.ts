@@ -1,4 +1,9 @@
 import {
+  ArtifactsSliceConfig,
+  createArtifactsSlice,
+  type ArtifactEntryType,
+} from '@sqlrooms/artifacts';
+import {
   AiSettingsSliceConfig,
   AiSliceConfig,
   createAiSettingsSlice,
@@ -38,6 +43,7 @@ import {
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
@@ -60,7 +66,7 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
-import {ARTIFACT_TYPES} from './artifactTypes';
+import {ARTIFACT_TYPES, type CliArtifactType} from './artifactTypes';
 import {
   createDashboardAiTools,
   getDashboardAiInstructions,
@@ -73,7 +79,11 @@ import {getDefaultScaffoldTree} from './helpers';
 import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {AppBuilderProjectConfig, RoomState} from './store-types';
+import {
+  AppBuilderProjectConfig,
+  AppBuilderProjectConfigSchema,
+  RoomState,
+} from './store-types';
 import {parseVgPlotSpecString} from './vgplot';
 
 export type {RoomState} from './store-types';
@@ -203,32 +213,227 @@ const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
     selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
 };
 
+const CELLS_MANAGED_ARTIFACT_TYPES = new Set<CliArtifactType>([
+  'notebook',
+  'canvas',
+]);
+
+function isCliArtifactType(value: string): value is CliArtifactType {
+  return Object.prototype.hasOwnProperty.call(ARTIFACT_TYPES, value);
+}
+
+function normalizeArtifactOrder(
+  itemsById: Record<string, ArtifactEntryType>,
+  order: string[],
+) {
+  const seen = new Set<string>();
+  const normalized = order.filter((id) => {
+    if (!(id in itemsById) || seen.has(id)) {
+      return false;
+    }
+    seen.add(id);
+    return true;
+  });
+  for (const id of Object.keys(itemsById)) {
+    if (!seen.has(id)) {
+      normalized.push(id);
+    }
+  }
+  return normalized;
+}
+
+function deriveArtifactsConfigFromCellsConfig(
+  cellsConfig: Partial<CellsSliceConfig> | undefined,
+) {
+  const itemsById: Record<string, ArtifactEntryType> = {};
+  const rawSheets = cellsConfig?.sheets ?? {};
+  for (const [id, sheet] of Object.entries(rawSheets)) {
+    if (!isCliArtifactType(sheet.type)) continue;
+    itemsById[id] = {
+      id,
+      type: sheet.type,
+      title: sheet.title,
+    };
+  }
+  return ArtifactsSliceConfig.parse({
+    itemsById,
+    order: normalizeArtifactOrder(itemsById, cellsConfig?.sheetOrder ?? []),
+    currentItemId:
+      cellsConfig?.currentSheetId && itemsById[cellsConfig.currentSheetId]
+        ? cellsConfig.currentSheetId
+        : undefined,
+  });
+}
+
+function reconcileArtifactsConfigWithCells(
+  baseConfig: Partial<ArtifactsSliceConfig> | undefined,
+  cellsConfig: CellsSliceConfig,
+) {
+  const base = ArtifactsSliceConfig.parse(baseConfig ?? {});
+  const itemsById = {...base.itemsById};
+
+  for (const [id, sheet] of Object.entries(cellsConfig.sheets)) {
+    if (!CELLS_MANAGED_ARTIFACT_TYPES.has(sheet.type as CliArtifactType)) {
+      continue;
+    }
+    itemsById[id] = {
+      id,
+      type: sheet.type,
+      title: sheet.title,
+    };
+  }
+
+  for (const [id, item] of Object.entries(itemsById)) {
+    if (!CELLS_MANAGED_ARTIFACT_TYPES.has(item.type as CliArtifactType)) {
+      continue;
+    }
+    const sheet = cellsConfig.sheets[id];
+    if (!sheet || sheet.type !== item.type) {
+      delete itemsById[id];
+    }
+  }
+
+  const managedOrder = cellsConfig.sheetOrder.filter((id) => {
+    const sheet = cellsConfig.sheets[id];
+    return Boolean(
+      sheet && CELLS_MANAGED_ARTIFACT_TYPES.has(sheet.type as CliArtifactType),
+    );
+  });
+  const unmanagedOrder = base.order.filter((id) => {
+    const item = itemsById[id];
+    return (
+      item && !CELLS_MANAGED_ARTIFACT_TYPES.has(item.type as CliArtifactType)
+    );
+  });
+  const order = normalizeArtifactOrder(itemsById, [
+    ...unmanagedOrder,
+    ...managedOrder,
+  ]);
+  const currentItemId =
+    base.currentItemId && itemsById[base.currentItemId]
+      ? base.currentItemId
+      : cellsConfig.currentSheetId &&
+          itemsById[cellsConfig.currentSheetId] &&
+          CELLS_MANAGED_ARTIFACT_TYPES.has(
+            itemsById[cellsConfig.currentSheetId].type as CliArtifactType,
+          )
+        ? cellsConfig.currentSheetId
+        : order[0];
+
+  return ArtifactsSliceConfig.parse({
+    itemsById,
+    order,
+    currentItemId,
+  });
+}
+
+function areArtifactsConfigsEqual(
+  left: ArtifactsSliceConfig,
+  right: ArtifactsSliceConfig,
+) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+const sliceConfigSchemas = {
+  room: BaseRoomConfig,
+  layout: LayoutConfig,
+  ai: AiSliceConfig,
+  aiSettings: AiSettingsSliceConfig,
+  sqlEditor: SqlEditorSliceConfig,
+  artifacts: ArtifactsSliceConfig,
+  cells: CellsSliceConfig,
+  notebook: NotebookSliceConfig,
+  canvas: CanvasSliceConfig,
+  webContainer: WebContainerPersistConfig,
+  appProject: AppBuilderProjectConfigSchema,
+  mosaicDashboard: MosaicDashboardSliceConfig,
+} as const;
+
+const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
     {
       name: 'sqlrooms-cli-app-state',
-      sliceConfigSchemas: {
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        ai: AiSliceConfig,
-        aiSettings: AiSettingsSliceConfig,
-        sqlEditor: SqlEditorSliceConfig,
-        cells: CellsSliceConfig,
-        notebook: NotebookSliceConfig,
-        canvas: CanvasSliceConfig,
-        webContainer: WebContainerPersistConfig,
-        appProject: AppBuilderProjectConfig,
-        mosaicDashboard: MosaicDashboardSliceConfig,
-      },
+      sliceConfigSchemas,
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
+      merge: (persistedState, currentState) => {
+        const persistedRecord = (persistedState ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const persistedCells = CellsSliceConfig.parse(
+          persistedRecord.cells ?? currentState.cells.config,
+        );
+        const persistedArtifacts = persistedRecord.artifacts
+          ? reconcileArtifactsConfigWithCells(
+              ArtifactsSliceConfig.parse(persistedRecord.artifacts),
+              persistedCells,
+            )
+          : deriveArtifactsConfigFromCellsConfig(persistedCells);
+
+        return persistHelpers.merge(
+          {
+            ...persistedRecord,
+            artifacts: persistedArtifacts,
+          },
+          currentState,
+        );
+      },
     },
     (set, get, store) => {
-      const getFirstDashboardSheetId = () =>
-        Object.values(get().cells.config.sheets).find(
-          (sheet) => sheet.type === 'dashboard',
+      const getFirstDashboardArtifactId = () =>
+        Object.values(get().artifacts.config.itemsById).find(
+          (artifact) => artifact.type === 'dashboard',
         )?.id;
+
+      const syncArtifactsFromCells = () => {
+        const state = get();
+        const nextConfig = reconcileArtifactsConfigWithCells(
+          state.artifacts.config,
+          state.cells.config,
+        );
+        if (!areArtifactsConfigsEqual(state.artifacts.config, nextConfig)) {
+          state.artifacts.setConfig(nextConfig);
+        }
+      };
+
+      store.subscribe((state, prevState) => {
+        if (
+          state.cells.config.sheets === prevState.cells.config.sheets &&
+          state.cells.config.sheetOrder === prevState.cells.config.sheetOrder
+        ) {
+          return;
+        }
+        syncArtifactsFromCells();
+      });
+
+      store.subscribe((state, prevState) => {
+        if (
+          state.cells.config.currentSheetId ===
+          prevState.cells.config.currentSheetId
+        ) {
+          return;
+        }
+        const currentSheetId = state.cells.config.currentSheetId;
+        if (!currentSheetId) return;
+        const sheet = state.cells.config.sheets[currentSheetId];
+        if (
+          !sheet ||
+          !CELLS_MANAGED_ARTIFACT_TYPES.has(sheet.type as CliArtifactType)
+        ) {
+          return;
+        }
+        if (state.artifacts.config.currentItemId !== currentSheetId) {
+          state.artifacts.setCurrentItem(currentSheetId);
+        }
+      });
+
+      queueMicrotask(() => {
+        syncArtifactsFromCells();
+      });
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -241,28 +446,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
         },
-        ensureSheetDashboard: (sheetId) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet || sheet.type !== 'dashboard') {
+        ensureDashboardArtifact: (artifactId) => {
+          const artifact = get().artifacts.getItem(artifactId);
+          if (!artifact || artifact.type !== 'dashboard') {
             return;
           }
-          get().mosaicDashboard.ensureDashboard(sheetId, sheet.title);
+          get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
         },
         addProfilerForTable: (tableName) => {
-          const existingDashboardSheetId =
-            get().dashboard.getCurrentDashboardSheetId();
-          const sheetId =
-            existingDashboardSheetId ??
-            get().dashboard.createDashboardSheet('Dashboard');
-          if (!existingDashboardSheetId) {
-            get().cells.setCurrentSheet(sheetId);
+          const existingDashboardArtifactId =
+            get().dashboard.getCurrentDashboardArtifactId();
+          const artifactId =
+            existingDashboardArtifactId ??
+            get().dashboard.createDashboardArtifact('Dashboard');
+          if (!existingDashboardArtifactId) {
+            get().artifacts.setCurrentItem(artifactId);
           }
-          get().dashboard.ensureSheetDashboard(sheetId);
-          const dashboard = get().mosaicDashboard.getDashboard(sheetId);
-          if (!dashboard) return sheetId;
+          get().dashboard.ensureDashboardArtifact(artifactId);
+          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
+          if (!dashboard) return artifactId;
 
           if (!dashboard.selectedTable) {
-            get().mosaicDashboard.setSelectedTable(sheetId, tableName);
+            get().mosaicDashboard.setSelectedTable(artifactId, tableName);
           }
 
           const hasProfilerForTable = dashboard.panels.some(
@@ -272,7 +477,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           );
           if (!hasProfilerForTable) {
             get().mosaicDashboard.addPanel(
-              sheetId,
+              artifactId,
               createMosaicDashboardProfilerPanelConfig({
                 title: `${tableName} profiler`,
                 source: {tableName},
@@ -280,24 +485,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             );
           }
 
-          return sheetId;
+          return artifactId;
         },
-        setSheetVgPlot: (sheetId, vgplot) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet) {
-            throw new Error(`Unknown sheet "${sheetId}".`);
+        setDashboardVgPlot: (artifactId, vgplot) => {
+          const artifact = get().artifacts.getItem(artifactId);
+          if (!artifact) {
+            throw new Error(`Unknown artifact "${artifactId}".`);
           }
-          if (sheet.type !== 'dashboard') {
-            throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
+          if (artifact.type !== 'dashboard') {
+            throw new Error(
+              `Artifact "${artifactId}" is not a dashboard artifact.`,
+            );
           }
           const {parsed} = parseVgPlotSpecString(vgplot);
-          get().dashboard.ensureSheetDashboard(sheetId);
-          const dashboard = get().mosaicDashboard.getDashboard(sheetId);
+          get().dashboard.ensureDashboardArtifact(artifactId);
+          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
           const primaryPanel = dashboard?.panels.find(
             (panel) => panel.type === 'vgplot',
           );
           if (primaryPanel) {
-            get().mosaicDashboard.updatePanel(sheetId, primaryPanel.id, {
+            get().mosaicDashboard.updatePanel(artifactId, primaryPanel.id, {
               config: {
                 ...primaryPanel.config,
                 vgplot: parsed,
@@ -306,54 +513,59 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             return;
           }
           get().mosaicDashboard.addPanel(
-            sheetId,
+            artifactId,
             createMosaicDashboardVgPlotPanelConfig(parsed, 'Chart 1'),
           );
         },
-        getSheetVgPlot: (sheetId) =>
+        getDashboardVgPlot: (artifactId) =>
           (() => {
             const spec = get()
-              .mosaicDashboard.getDashboard(sheetId)
+              .mosaicDashboard.getDashboard(artifactId)
               ?.panels.find((panel) => panel.type === 'vgplot')?.config.vgplot;
             return spec && typeof spec === 'object'
               ? JSON.stringify(spec, null, 2)
               : undefined;
           })(),
-        getCurrentDashboardSheetId: () => {
-          const currentSheetId = get().cells.config.currentSheetId;
-          const currentSheet = currentSheetId
-            ? get().cells.config.sheets[currentSheetId]
+        getCurrentDashboardArtifactId: () => {
+          const currentItemId = get().artifacts.config.currentItemId;
+          const currentItem = currentItemId
+            ? get().artifacts.config.itemsById[currentItemId]
             : undefined;
-          if (currentSheet?.type === 'dashboard') {
-            return currentSheetId;
+          if (currentItem?.type === 'dashboard') {
+            return currentItemId;
           }
-          return getFirstDashboardSheetId();
+          return getFirstDashboardArtifactId();
         },
-        createDashboardSheet: (title) => {
-          const sheetId = get().cells.addSheet(title, 'dashboard');
-          const sheet = get().cells.config.sheets[sheetId];
-          get().mosaicDashboard.ensureDashboard(sheetId, sheet?.title);
-          return sheetId;
+        createDashboardArtifact: (title) => {
+          const artifactId = get().artifacts.addItem({
+            type: 'dashboard',
+            title: title ?? 'Dashboard',
+          });
+          get().mosaicDashboard.ensureDashboard(
+            artifactId,
+            title ?? 'Dashboard',
+          );
+          return artifactId;
         },
-        setCurrentSheetVgPlot: (vgplot) => {
+        setCurrentDashboardVgPlot: (vgplot) => {
           const state = get();
-          const targetSheetId =
-            state.dashboard.getCurrentDashboardSheetId() ??
-            state.dashboard.createDashboardSheet();
-          state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
-          state.cells.setCurrentSheet(targetSheetId);
-          return targetSheetId;
+          const targetArtifactId =
+            state.dashboard.getCurrentDashboardArtifactId() ??
+            state.dashboard.createDashboardArtifact();
+          state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
+          state.artifacts.setCurrentItem(targetArtifactId);
+          return targetArtifactId;
         },
       };
 
       return {
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
-          upsertSheetApp: (sheetId, app) => {
+          upsertArtifactApp: (artifactId, app) => {
             set((state) =>
               produce(state, (draft: RoomState) => {
-                const current = draft.appProject.config.appsBySheetId[
-                  sheetId
+                const current = draft.appProject.config.appsByArtifactId[
+                  artifactId
                 ] ?? {
                   name: app.name,
                   prompt: '',
@@ -361,7 +573,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   files: {},
                   updatedAt: 0,
                 };
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   ...app,
                   updatedAt: Date.now(),
@@ -369,12 +581,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          updateSheetAppFiles: (sheetId, files) => {
+          updateArtifactAppFiles: (artifactId, files) => {
             set((state) =>
               produce(state, (draft) => {
-                const current = draft.appProject.config.appsBySheetId[sheetId];
+                const current =
+                  draft.appProject.config.appsByArtifactId[artifactId];
                 if (!current) return;
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   files,
                   updatedAt: Date.now(),
@@ -382,8 +595,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          getSheetApp: (sheetId) =>
-            get().appProject.config.appsBySheetId[sheetId],
+          getArtifactApp: (artifactId) =>
+            get().appProject.config.appsByArtifactId[artifactId],
         },
         dashboard: dashboardSlice,
 
@@ -429,6 +642,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           },
         })(set, get, store),
+
+        ...createArtifactsSlice()(set, get, store),
 
         ...createMosaicSlice()(set, get, store),
 

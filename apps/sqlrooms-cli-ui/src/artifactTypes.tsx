@@ -1,5 +1,3 @@
-import {Canvas} from '@sqlrooms/canvas';
-import {SheetType} from '@sqlrooms/cells';
 import {RoomPanelComponent} from '@sqlrooms/layout';
 import {
   AppWindow,
@@ -7,9 +5,18 @@ import {
   FileText,
   LayoutDashboardIcon,
 } from 'lucide-react';
-import {AppBuilderSheet} from './workspace/AppBuilderSheet';
-import {DashboardSheet} from './workspace/dashboard/DashboardSheet';
-import {NotebookSheet} from './workspace/dashboard/NotebookSheet';
+import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
+import {CanvasArtifact} from './workspace/CanvasArtifact';
+import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
+import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
+
+export const CLI_ARTIFACT_TYPES = [
+  'dashboard',
+  'notebook',
+  'canvas',
+  'app',
+] as const;
+export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
 export type ArtifactTypeInfo = {
   title: string;
@@ -18,29 +25,29 @@ export type ArtifactTypeInfo = {
   component: RoomPanelComponent;
 };
 
-export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
+export const ARTIFACT_TYPES: Record<CliArtifactType, ArtifactTypeInfo> = {
   dashboard: {
     title: 'Dashboard',
-    addCommand: 'dashboard.create-sheet',
+    addCommand: 'dashboard.create-artifact',
     icon: BarChart3,
-    component: DashboardSheet,
+    component: DashboardArtifact,
   },
   notebook: {
     title: 'Notebook',
-    addCommand: 'notebook.create-sheet',
+    addCommand: 'notebook.create-artifact',
     icon: FileText,
-    component: NotebookSheet,
+    component: NotebookArtifact,
   },
   canvas: {
     title: 'Canvas',
-    addCommand: 'canvas.create-sheet',
+    addCommand: 'canvas.create-artifact',
     icon: LayoutDashboardIcon,
-    component: Canvas,
+    component: CanvasArtifact,
   },
   app: {
     title: 'App',
-    addCommand: 'app.create-sheet',
+    addCommand: 'app.create-artifact',
     icon: AppWindow,
-    component: AppBuilderSheet,
+    component: AppBuilderArtifact,
   },
 };

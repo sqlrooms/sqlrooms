@@ -18,7 +18,7 @@ import {
   TabStrip,
 } from '@sqlrooms/ui';
 import {PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
-import {useCallback, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {ARTIFACT_TYPES, ArtifactTypeInfo} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
@@ -27,8 +27,11 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const ctx = useLayoutNodeContext();
   const nodeId = ctx.containerType === 'tabs' ? ctx.node.id : undefined;
   const addTab = useRoomStore((s) => s.layout.addTab);
+  const getActiveTab = useRoomStore((s) => s.layout.getActiveTab);
   const removeTab = useRoomStore((s) => s.layout.removeTab);
-  const sheets = useRoomStore((s) => s.cells.config.sheets);
+  const artifacts = useRoomStore((s) => s.artifacts.config.itemsById);
+  const setCurrentItem = useRoomStore((s) => s.artifacts.setCurrentItem);
+  const setCurrentSheet = useRoomStore((s) => s.cells.setCurrentSheet);
   const evictDashboardRuntime = useRoomStore(
     (s) => s.mosaicDashboard.evictDashboardRuntime,
   );
@@ -42,19 +45,42 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     tabName: string;
   } | null>(null);
 
-  const handleAddSheet = useCallback(
+  const activeArtifactId = nodeId ? getActiveTab(nodeId) : undefined;
+
+  useEffect(() => {
+    if (typeof activeArtifactId !== 'string') {
+      setCurrentItem(undefined);
+      return;
+    }
+    const artifact = artifacts[activeArtifactId];
+    if (!artifact) {
+      setCurrentItem(undefined);
+      return;
+    }
+    setCurrentItem(activeArtifactId);
+    if (artifact.type === 'notebook' || artifact.type === 'canvas') {
+      setCurrentSheet(activeArtifactId);
+    }
+  }, [activeArtifactId, artifacts, setCurrentItem, setCurrentSheet]);
+
+  const handleAddArtifact = useCallback(
     async (info: ArtifactTypeInfo) => {
       const result = await executeCommand(info.addCommand, {
         title: `New ${info.title}`,
       });
       if (result?.success && nodeId) {
-        const {sheetId} = result.data as {sheetId: string};
+        const artifactId = (
+          result.data as {artifactId?: string; sheetId?: string}
+        ).artifactId;
+        if (!artifactId) {
+          return;
+        }
         addTab(nodeId, {
           type: 'panel',
-          id: sheetId,
+          id: artifactId,
           panel: {
             key: 'artifact',
-            meta: {artifactId: sheetId},
+            meta: {artifactId},
           },
         });
       }
@@ -69,13 +95,13 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const closeTabWithCleanup = useCallback(
     (tabId: string) => {
       if (!nodeId) return;
-      const sheet = sheets[tabId];
-      if (sheet?.type === 'dashboard') {
+      const artifact = artifacts[tabId];
+      if (artifact?.type === 'dashboard') {
         evictDashboardRuntime(tabId, {resetSelection: true});
       }
       removeTab(nodeId, tabId);
     },
-    [evictDashboardRuntime, nodeId, removeTab, sheets],
+    [artifacts, evictDashboardRuntime, nodeId, removeTab],
   );
 
   const confirmDelete = useCallback(() => {
@@ -85,9 +111,9 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     setDeleteConfirm(null);
   }, [closeTabWithCleanup, deleteConfirm]);
 
-  // const handleRenameSheet = useCallback(
-  //   (_sheetId: string, _newName: string) => {
-  //     // renameSheet(sheetId, newName);
+  // const handleRenameArtifact = useCallback(
+  //   (_artifactId: string, _newName: string) => {
+  //     // renameArtifact(artifactId, newName);
   //   },
   //   [],
   // );
@@ -102,7 +128,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
           <>
             <TabStrip.MenuItem
               disabled
-              // onClick={() => handleRenameSheet(tab.id, tab.name)}
+              // onClick={() => handleRenameArtifact(tab.id, tab.name)}
             >
               <PencilIcon className="mr-2 h-4 w-4" />
               Rename
@@ -129,7 +155,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
             {Object.values(ARTIFACT_TYPES).map((type) => (
               <DropdownMenuItem
                 key={type.title}
-                onClick={() => handleAddSheet(type)}
+                onClick={() => handleAddArtifact(type)}
               >
                 <type.icon /> {`New ${type.title}`}
               </DropdownMenuItem>
@@ -157,7 +183,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete sheet</DialogTitle>
+            <DialogTitle>Delete artifact tab</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &ldquo;
               {deleteConfirm?.tabName}&rdquo;? This action cannot be undone.
