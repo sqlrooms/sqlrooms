@@ -18,7 +18,7 @@ export const Room = () => {
         <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
       </RoomShell.Sidebar>
-      <RoomShell.LayoutComposer />
+      <RoomShell.LayoutComposer tileClassName="p-0" />
       <RoomShell.LoadingProgress />
       <RoomShell.CommandPalette />
       <SqlEditorModal

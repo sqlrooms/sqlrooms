@@ -10,18 +10,16 @@ import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
+import {BUILDINGS_PARQUET_URL, BUILDINGS_TABLE_NAME} from './dataSources';
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    // Sql editor slice
     ...createSqlEditorSlice()(set, get, store),
-
-    // Room shell slice
     ...createRoomShellSlice({
       connector: createWasmDuckDbConnector({
-        initializationQuery: 'LOAD spatial',
+        initializationQuery: 'LOAD httpfs; LOAD spatial',
       }),
       config: {
         ...createDefaultDiscussConfig(),
@@ -35,6 +33,20 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         },
         dataSources: [
+          {
+            type: 'url',
+            tableName: BUILDINGS_TABLE_NAME,
+            url: BUILDINGS_PARQUET_URL,
+            loadOptions: {
+              method: 'read_parquet',
+              select: [
+                'name',
+                'class',
+                'height',
+                'ST_AsWKB(geometry) AS geometry',
+              ],
+            },
+          },
           {
             type: 'url',
             // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
@@ -55,7 +67,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             placement: 'sidebar',
           },
           main: {
-            title: 'Main view',
+            title: 'Map',
             icon: () => null,
             component: MainView,
             placement: 'main',
