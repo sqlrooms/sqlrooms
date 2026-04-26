@@ -157,8 +157,8 @@ export function createDeckJsonConfiguration(
     // before `preProcessClassProps` can rewrite them for GeoArrow. If the next
     // GeoArrow version can consume deck.gl/json's converted accessors directly, or
     // exposes a cleaner injection seam, remove this shim.
-    convertFunction: (expression: string) => `@@=${expression}`,
-    preProcessClassProps: (Class: unknown, props: unknown) => {
+    convertFunction: ((expression: string) => `@@=${expression}`) as never,
+    preProcessClassProps: (Class: unknown, props: Record<string, unknown>) => {
       const layerName = getLayerName(Class);
       const compatibility = getLayerCompatibility(layerName);
 
