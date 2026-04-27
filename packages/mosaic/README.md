@@ -68,10 +68,9 @@ The `useMosaicClient` hook creates a Mosaic client that automatically queries da
 
 ```tsx
 import {Query, useMosaicClient} from '@sqlrooms/mosaic';
-import {Table} from 'apache-arrow';
 
 function MapView() {
-  const {data, isLoading, client} = useMosaicClient<Table>({
+  const {data, isLoading, client} = useMosaicClient({
     selectionName: 'brush', // Named selection for cross-filtering
     query: (filter: any) => {
       return Query.from('earthquakes')
@@ -88,6 +87,11 @@ function MapView() {
   return <div>Data loaded: {data?.numRows} rows</div>;
 }
 ```
+
+`useMosaicClient` returns an Apache Arrow table. Mosaic still uses its native
+table runtime internally, but that detail is hidden at the hook boundary so
+custom SQLRooms views can work with the same Arrow shape used by the DuckDB and
+deck packages.
 
 The hook accepts the following options:
 
