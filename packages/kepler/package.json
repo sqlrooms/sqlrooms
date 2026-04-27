@@ -34,6 +34,7 @@
     "@kepler.gl/types": "3.3.0-alpha.0",
     "@kepler.gl/utils": "3.3.0-alpha.0",
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/duckdb-core": "workspace:*",
     "@sqlrooms/kepler-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/s3-browser": "workspace:*",

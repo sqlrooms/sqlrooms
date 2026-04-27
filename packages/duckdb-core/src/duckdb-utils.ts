@@ -38,6 +38,66 @@ export function makeQualifiedTableName({
 }
 
 /**
+ * Builds a map where the keys are Kepler dataset IDs and the values indicate their `isView` status.
+ * Each key represents a fully qualified table name.
+ *
+ * Previously, sqlrooms used only the table name as the key. This function maintains backward
+ * compatibility with that behavior.
+ *
+ * If a table is not fully qualified, two entries are created:
+ * - main.{tableName}
+ * - {tableName}
+ */
+export function buildKeplerUserTableIdMap(
+  tables: {table: QualifiedTableName; isView: boolean}[],
+): Map<string, boolean> {
+  const m = new Map<string, boolean>();
+  for (const t of tables) {
+    m.set(t.table.toString(), t.isView);
+    if ((t.table.schema ?? 'main') === 'main') {
+      m.set(t.table.table, t.isView);
+    }
+  }
+  return m;
+}
+
+const SCHEMA_TABLE_SEPARATOR = '".';
+
+/**
+ * Extracts the table name from a fully qualified SQL identifier.
+ * Removes database/schema prefixes and SQL quoting.
+ *
+ * Examples:
+ * - `"db"."schema"."table"` → `table`
+ * - `schema.table` → `table`
+ * - `"my""table"` → `my"table` (unescapes doubled quotes)
+ * - `table` → `table`
+ */
+export function unqualifySqlTableName(tableSql: string): string {
+  if (!tableSql) {
+    return tableSql;
+  }
+
+  // Extract the last segment after the final separator (if any)
+  const lastSegment = tableSql.includes(SCHEMA_TABLE_SEPARATOR)
+    ? (tableSql.split(SCHEMA_TABLE_SEPARATOR).pop() ?? tableSql)
+    : tableSql;
+
+  // Remove SQL quoting and unescape doubled quotes
+  return unquoteSqlIdentifier(lastSegment);
+}
+
+function unquoteSqlIdentifier(identifier: string): string {
+  const isQuoted = identifier.startsWith('"') && identifier.endsWith('"');
+  if (!isQuoted) {
+    return identifier;
+  }
+
+  // Remove outer quotes and unescape doubled quotes
+  return identifier.slice(1, -1).replace(/""/g, '"');
+}
+
+/**
  * Escapes a value for use in DuckDB SQL queries by wrapping it in single quotes
  * and escaping any existing single quotes by doubling them.
  *

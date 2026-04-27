@@ -79,6 +79,8 @@ export {
   loadSpatial,
   makeLimitQuery,
   makeQualifiedTableName,
+  buildKeplerUserTableIdMap,
+  unqualifySqlTableName,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,

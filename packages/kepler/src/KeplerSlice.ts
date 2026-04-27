@@ -41,6 +41,10 @@ import {
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
 import {createId} from '@paralleldrive/cuid2';
+import {
+  buildKeplerUserTableIdMap,
+  unqualifySqlTableName,
+} from '@sqlrooms/duckdb-core';
 import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
   BaseRoomStoreState,
@@ -605,7 +609,10 @@ export function createKeplerSlice({
           if (fields && cols) {
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
-              info: {label: tableName, id: tableName},
+              info: {
+                id: tableName,
+                label: unqualifySqlTableName(String(tableName)),
+              },
               metadata: {tableName},
             };
             get().kepler.dispatchAction(
@@ -667,6 +674,9 @@ export function createKeplerSlice({
             // so tables/maps added concurrently are picked up on the next pass.
             do {
               pendingKeplerSync = false;
+              const availableTableIds = buildKeplerUserTableIdMap(
+                get().db.tables,
+              );
               for (const mapId of Object.keys(get().kepler.map)) {
                 const mapState = get().kepler.map[mapId];
                 if (!mapState) continue;
@@ -685,20 +695,22 @@ export function createKeplerSlice({
                   }
                 }
 
-                const availableTables = new Set(
-                  get()
-                    .db.tables.filter((t) => t.table.schema === 'main')
-                    .map((t) => t.table.table),
-                );
-
                 for (const dataId of referencedDataIds) {
-                  if (
-                    !keplerDatasets?.[dataId] &&
-                    availableTables.has(dataId)
-                  ) {
+                  if (keplerDatasets?.[dataId]) {
+                    continue;
+                  }
+                  if (!availableTableIds.has(dataId)) {
+                    continue;
+                  }
+                  try {
                     await get().kepler.addTableToMap(mapId, dataId, {
                       autoCreateLayers: false,
                       centerMap: false,
+                    });
+                  } catch (e) {
+                    console.error('syncKeplerDatasets: addTableToMap failed', {
+                      dataId,
+                      e,
                     });
                   }
                 }

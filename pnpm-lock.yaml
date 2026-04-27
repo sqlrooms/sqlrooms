@@ -3067,6 +3067,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../duckdb-core
       '@sqlrooms/kepler-config':
         specifier: workspace:*
         version: link:../kepler-config

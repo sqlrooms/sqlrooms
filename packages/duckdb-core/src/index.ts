@@ -29,6 +29,8 @@ export {arrowTableToJson} from './arrow-utils';
 export {
   isQualifiedTableName,
   makeQualifiedTableName,
+  buildKeplerUserTableIdMap,
+  unqualifySqlTableName,
   escapeVal,
   escapeId,
   isNumericDuckType,
