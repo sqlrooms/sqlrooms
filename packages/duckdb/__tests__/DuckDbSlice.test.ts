@@ -1,6 +1,11 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
-import {createDuckDbSlice, DuckDbSliceState} from '../src/DuckDbSlice';
+import {
+  createDefaultLoadTableSchemasFilter,
+  createDuckDbSlice,
+  DuckDbSliceState,
+} from '../src/DuckDbSlice';
+import {loadAllSchemas} from '../src/loadTableSchemas';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 
@@ -17,6 +22,47 @@ function createTestStore() {
   return createStore<TestStoreState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     ...createDuckDbSlice({connector})(...args),
+  }));
+}
+
+/**
+ * Only for testing: custom filter that hides some schemas/tables.
+ */
+function createTestComposedLoadTableSchemasFilter(): typeof createDefaultLoadTableSchemasFilter {
+  const base = createDefaultLoadTableSchemasFilter;
+  return (table: Parameters<typeof createDefaultLoadTableSchemasFilter>[0]) => {
+    if (!base(table)) {
+      return false;
+    }
+    const schema = table.schema || '';
+    if (
+      schema === 'excluded_schema_alpha' ||
+      schema === 'excluded_schema_beta' ||
+      schema === 'temp'
+    ) {
+      return false;
+    }
+    if (table.database === 'excluded_attach_db') {
+      return false;
+    }
+    if (table.table === 'excluded_table_name') {
+      return false;
+    }
+    return true;
+  };
+}
+
+function createTestStoreWithCustomComposedFilter() {
+  const connector = createNodeDuckDbConnector({
+    dbPath: ':memory:',
+  });
+
+  return createStore<TestStoreState>()((...args) => ({
+    ...createBaseRoomSlice()(...args),
+    ...createDuckDbSlice({
+      connector,
+      loadTableSchemasFilter: createTestComposedLoadTableSchemasFilter(),
+    })(...args),
   }));
 }
 
@@ -489,6 +535,179 @@ describe('DuckDbSlice', () => {
       });
 
       expect(exists).toBe(true);
+    });
+  });
+
+  describe('empty schemas and hidden schemas visibility', () => {
+    it('should include default `main` in schema trees when there are no user tables', async () => {
+      const connector = await store.getState().db.getConnector();
+      const allNames = await loadAllSchemas(
+        connector,
+        createDefaultLoadTableSchemasFilter,
+      );
+      expect(allNames.some((s) => s.schema === 'main')).toBe(true);
+
+      await store.getState().db.refreshTableSchemas();
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
+      expect(schemaTrees.length).toBeGreaterThan(0);
+      const hasMain = schemaTrees.some((dbNode) =>
+        (dbNode.children ?? []).some(
+          (schemaNode) => schemaNode.object.name === 'main',
+        ),
+      );
+      expect(hasMain).toBe(true);
+    });
+
+    it('should include empty schemas in schemaTrees', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an empty schema
+      await connector.query('CREATE SCHEMA empty_schema');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
+
+      // Find the empty schema in the tree
+      const hasEmptySchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === 'empty_schema',
+        ),
+      );
+
+      expect(hasEmptySchema).toBe(true);
+    });
+
+    it('should hide __sqlrooms_* schemas from schemaTrees', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an internal schema (should be hidden)
+      await connector.query('CREATE SCHEMA __sqlrooms_internal');
+      await connector.query(
+        'CREATE TABLE __sqlrooms_internal.test_table (id INT)',
+      );
+
+      // Create a normal schema
+      await connector.query('CREATE SCHEMA visible_schema');
+      await connector.query('CREATE TABLE visible_schema.test_table (id INT)');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
+
+      // Should NOT include internal schema
+      const hasInternalSchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === '__sqlrooms_internal',
+        ),
+      );
+      expect(hasInternalSchema).toBe(false);
+
+      // Should include normal schema
+      const hasVisibleSchema = schemaTrees.some((dbNode) =>
+        dbNode.children?.some(
+          (schemaNode) => schemaNode.object.name === 'visible_schema',
+        ),
+      );
+      expect(hasVisibleSchema).toBe(true);
+    });
+
+    describe('with custom composed loadTableSchemasFilter', () => {
+      beforeEach(async () => {
+        await store.getState().db.destroy();
+        store = createTestStoreWithCustomComposedFilter();
+        await store.getState().db.initialize();
+      });
+
+      it('should hide schemas excluded by the custom filter from schemaTrees', async () => {
+        const connector = await store.getState().db.getConnector();
+
+        await connector.query('CREATE SCHEMA excluded_schema_alpha');
+        await connector.query(
+          'CREATE TABLE excluded_schema_alpha.test_table (id INT)',
+        );
+
+        await connector.query('CREATE SCHEMA excluded_schema_beta');
+        await connector.query(
+          'CREATE TABLE excluded_schema_beta.test_table (id INT)',
+        );
+
+        await connector.query('CREATE TEMP TABLE temp_test (id INT)');
+
+        await connector.query('CREATE SCHEMA my_schema');
+        await connector.query('CREATE TABLE my_schema.test_table (id INT)');
+
+        await store.getState().db.refreshTableSchemas();
+
+        const schemaTrees = store.getState().db.schemaTrees ?? [];
+
+        const hasExcludedSchemas = schemaTrees.some((dbNode) =>
+          dbNode.children?.some(
+            (schemaNode) =>
+              schemaNode.object.name === 'excluded_schema_alpha' ||
+              schemaNode.object.name === 'temp' ||
+              schemaNode.object.name === 'excluded_schema_beta',
+          ),
+        );
+        expect(hasExcludedSchemas).toBe(false);
+
+        const hasMySchema = schemaTrees.some((dbNode) =>
+          dbNode.children?.some(
+            (schemaNode) => schemaNode.object.name === 'my_schema',
+          ),
+        );
+        expect(hasMySchema).toBe(true);
+      });
+
+      it('should hide a table name excluded by the custom filter', async () => {
+        const connector = await store.getState().db.getConnector();
+
+        await connector.query('CREATE TABLE excluded_table_name (id INT)');
+        await connector.query('CREATE TABLE normal_table (id INT)');
+
+        await store.getState().db.refreshTableSchemas();
+
+        const tables = store.getState().db.tables;
+
+        expect(
+          tables.find((t) => t.table.table === 'excluded_table_name'),
+        ).toBe(undefined);
+
+        expect(
+          tables.find((t) => t.table.table === 'normal_table'),
+        ).toBeDefined();
+      });
+    });
+
+    it('should show empty schema but hide __sqlrooms_* schemas simultaneously', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create both types of schemas
+      await connector.query('CREATE SCHEMA empty_ok');
+      await connector.query('CREATE SCHEMA __sqlrooms_hidden');
+      await connector.query('CREATE SCHEMA another_empty');
+
+      // Refresh schemas
+      await store.getState().db.refreshTableSchemas();
+
+      // Get the schema trees
+      const schemaTrees = store.getState().db.schemaTrees ?? [];
+
+      const schemaNames = schemaTrees.flatMap(
+        (dbNode) =>
+          dbNode.children?.map((schemaNode) => schemaNode.object.name) ?? [],
+      );
+
+      // Should include empty schemas
+      expect(schemaNames).toContain('empty_ok');
+      expect(schemaNames).toContain('another_empty');
+
+      // Should NOT include internal schemas
+      expect(schemaNames).not.toContain('__sqlrooms_hidden');
     });
   });
 });

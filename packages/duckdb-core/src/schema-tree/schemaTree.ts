@@ -5,11 +5,30 @@ import type {DbSchemaNode} from './types';
 /**
  * Group tables by database, schema and create a tree of databases, schemas, tables, and columns.
  * @param tables - The tables to group
+ * @param schemas - Optional list of all schemas (including empty ones)
  * @returns An array of database nodes containing schemas, tables and columns
  */
-export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
+export function createDbSchemaTrees(
+  tables: DataTable[],
+  schemas?: Array<{database: string; schema: string}>,
+): DbSchemaNode[] {
   const databaseMap = new Map<string, Map<string, DbSchemaNode[]>>();
 
+  // Initialize all schemas first (if provided)
+  if (schemas) {
+    for (const {database, schema} of schemas) {
+      const db = database ?? 'default';
+      if (!databaseMap.has(db)) {
+        databaseMap.set(db, new Map<string, DbSchemaNode[]>());
+      }
+      const schemaMap = databaseMap.get(db)!;
+      if (!schemaMap.has(schema)) {
+        schemaMap.set(schema, []);
+      }
+    }
+  }
+
+  // Add tables to their schemas
   for (const table of tables) {
     const database = table.database ?? 'default';
     const schema = table.schema;

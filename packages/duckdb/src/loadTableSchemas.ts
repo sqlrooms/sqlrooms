@@ -106,6 +106,68 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
   };
 }
 
+/**
+ * Load all schemas from the database (including empty schemas).
+ *
+ * If provided, `filter` reuses the same `LoadTableSchemasFilterFunction` type as
+ * `loadTableSchemas`, but it is invoked with a schema-only qualified name:
+ * `database` and `schema` are populated and `table` is an empty string.
+ * Filters that rely on a real, non-empty table name may therefore behave
+ * differently when used here.
+ *
+ * @param connector - The DuckDB connector
+ * @param filter - Optional filter function applied to schema entries via a qualified name with `table: ''`; omit or pass `null` for no filter
+ * @returns An array of {database, schema} objects
+ */
+export async function loadAllSchemas(
+  connector: DuckDbConnector,
+  filter?: LoadTableSchemasFilterFunction | null,
+): Promise<Array<{database: string; schema: string}>> {
+  const sql = `
+    SELECT DISTINCT
+      COALESCE(
+        NULLIF(CAST(database_name AS VARCHAR), ''),
+        current_database()
+      ) AS database,
+      CAST(schema_name AS VARCHAR) AS schema
+    FROM duckdb_schemas()
+    WHERE (database_name IS NULL OR database_name != 'system')
+      AND (internal = false OR CAST(schema_name AS VARCHAR) = 'main')
+      AND schema_name IS NOT NULL
+    ORDER BY 1, 2
+  `;
+  const result = await connector.query(sql);
+  const schemas: Array<{database: string; schema: string}> = [];
+
+  for (let i = 0; i < result.numRows; i++) {
+    const database = result.getChild('database')?.get(i);
+    const schema = result.getChild('schema')?.get(i);
+
+    if (schema == null) continue;
+    const schemaStr = String(schema).trim();
+    if (schemaStr === '') continue;
+    if (database == null) continue;
+    const databaseStr = String(database).trim();
+    if (databaseStr === '') continue;
+
+    // Apply the same filter function used for tables
+    if (filter) {
+      const shouldInclude = filter(
+        makeQualifiedTableName({
+          database: databaseStr,
+          schema: schemaStr,
+          table: '',
+        }),
+      );
+      if (!shouldInclude) continue;
+    }
+
+    schemas.push({database: databaseStr, schema: schemaStr});
+  }
+
+  return schemas;
+}
+
 function buildMetadataWhereClause(
   nameColumn: string,
   filter: LoadTableSchemasFilter,

@@ -1,4 +1,8 @@
-import {DbSliceState, createDbSlice} from '@sqlrooms/db';
+import {
+  createDbSlice,
+  type CreateDbSliceProps,
+  DbSliceState,
+} from '@sqlrooms/db';
 import {DataTable, DuckDbConnector, LoadFileOptions} from '@sqlrooms/duckdb';
 import {
   CreateLayoutSliceProps,
@@ -169,6 +173,7 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
   CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
   createCommandProps?: CreateCommandSliceProps;
+  createDbProps?: CreateDbSliceProps;
   /** @deprecated Use direct props instead e.g. layout.panels */
   room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
@@ -229,6 +234,7 @@ export function createRoomShellSlice(
       fileDataSourceLoader,
       CustomErrorBoundary = ErrorBoundary,
       createCommandProps,
+      createDbProps,
       captureException = (exception) => console.error(exception),
       ...restProps
     } = props;
@@ -244,7 +250,14 @@ export function createRoomShellSlice(
 
     const sliceState: RoomShellSliceState = {
       ...roomSliceState,
-      ...createDbSlice({duckDb: {connector}})(set, get, store),
+      ...createDbSlice(
+        connector
+          ? {
+              ...(createDbProps ?? {}),
+              duckDb: {...(createDbProps?.duckDb ?? {}), connector},
+            }
+          : createDbProps,
+      )(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
       ...createCommandSlice(createCommandProps)(set, get, store),
       room: {
