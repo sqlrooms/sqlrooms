@@ -37,7 +37,7 @@ export type RoomState = RoomShellSliceState &
 export const PIVOT_ARTIFACT_TYPES = defineArtifactTypes({
   pivot: {
     label: 'Pivot',
-    defaultTitle: 'Pivot 1',
+    defaultTitle: 'Pivot',
     icon: TablePropertiesIcon,
     component: PivotPanel,
     onCreate: ({artifactId, artifact, store}) => {
