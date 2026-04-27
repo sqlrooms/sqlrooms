@@ -9,11 +9,8 @@ import {
   LayoutPanelNode,
   LayoutTabsNode,
 } from '@sqlrooms/layout-config';
-import {
-  createLayoutId,
-  findNearestDockAncestor,
-  findNodeById,
-} from '../layout-tree';
+import {createLayoutId, findNodeById} from '../layout-tree';
+import {validateDockOperation} from './docking-helpers';
 
 export type DockDirection = 'left' | 'right' | 'up' | 'down';
 export type DockAxis = 'row' | 'column';
@@ -406,28 +403,17 @@ export function movePanel(
   targetId: string,
   direction: DockDirection,
 ): LayoutNode | null {
-  if (!root || sourceId === targetId) {
+  if (!root) {
     return root;
   }
 
-  const sourceFound = findNodeById(root, sourceId);
-  const targetFound = findNodeById(root, targetId);
+  const validation = validateDockOperation(root, sourceId, targetId);
 
-  if (!sourceFound || !targetFound) {
+  if (!validation.valid) {
     return root;
   }
 
-  // Enforce dock boundary: source and target must be in same dock
-  const sourceDock = findNearestDockAncestor(root, sourceId);
-  const targetDock = findNearestDockAncestor(root, targetId);
-
-  if (sourceDock !== targetDock) {
-    return root;
-  }
-
-  if (!sourceDock) {
-    return root;
-  }
+  const {sourceFound, sourceDock} = validation;
 
   // Perform the move within the dock's root
   const sourceNode = sourceFound.node;
