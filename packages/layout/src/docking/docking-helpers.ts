@@ -1,10 +1,53 @@
 import {CSSProperties} from 'react';
-import {isLayoutSplitNode, LayoutNode} from '@sqlrooms/layout-config';
+import {
+  isLayoutSplitNode,
+  LayoutDockNode,
+  LayoutNode,
+} from '@sqlrooms/layout-config';
 import {DockDirection, getDockAxis} from './dock-layout';
-import {findNodeById} from '../layout-tree';
+import {
+  findNodeById,
+  findNearestDockAncestor,
+  FindNodeByIdResult,
+} from '../layout-tree';
 import {DockPreview, PreviewMode} from './docking-types';
 
 const EDGE_THRESHOLD = 0.25;
+
+type ValidateDockOperationReturn =
+  | {
+      valid: true;
+      sourceFound: FindNodeByIdResult;
+      targetFound: FindNodeByIdResult;
+      sourceDock: LayoutDockNode;
+    }
+  | {valid: false};
+
+export function validateDockOperation(
+  rootLayout: LayoutNode,
+  sourceId: string,
+  targetId: string,
+): ValidateDockOperationReturn {
+  if (sourceId === targetId) {
+    return {valid: false};
+  }
+
+  const sourceFound = findNodeById(rootLayout, sourceId);
+  const targetFound = findNodeById(rootLayout, targetId);
+
+  if (!sourceFound || !targetFound) {
+    return {valid: false};
+  }
+
+  const sourceDock = findNearestDockAncestor(rootLayout, sourceId);
+  const targetDock = findNearestDockAncestor(rootLayout, targetId);
+
+  if (sourceDock !== targetDock || !sourceDock) {
+    return {valid: false};
+  }
+
+  return {valid: true, sourceFound, targetFound, sourceDock};
+}
 
 export function getDockDirection(
   cursorPosition: {x: number; y: number},
@@ -151,12 +194,14 @@ export function buildPreview(
   direction: DockDirection,
   overRect: {left: number; top: number; width: number; height: number},
 ): DockPreview | null {
-  if (sourceId === targetId) {
+  const validation = validateDockOperation(rootLayout, sourceId, targetId);
+
+  if (!validation.valid) {
     return null;
   }
 
-  const found = findNodeById(rootLayout, targetId);
-  const parent = found?.ancestors[found.ancestors.length - 1];
+  const {targetFound} = validation;
+  const parent = targetFound.ancestors[targetFound.ancestors.length - 1];
   const axis = getDockAxis(direction);
   const sameAxisParent =
     parent && isLayoutSplitNode(parent) && parent.direction === axis
