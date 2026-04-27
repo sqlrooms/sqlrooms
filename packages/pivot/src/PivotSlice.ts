@@ -1,8 +1,14 @@
+import {createId} from '@paralleldrive/cuid2';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import {createId} from '@paralleldrive/cuid2';
+import {createStore} from 'zustand/vanilla';
+import type {
+  PivotInstanceSnapshot,
+  PivotInstanceState,
+  PivotInstanceStore,
+} from './PivotCoreSlice';
 import {
   addAttributeFilterValuesInConfig,
   clearAttributeFilterInConfig,
@@ -13,16 +19,11 @@ import {
   removeAttributeFilterValuesInConfig,
   setAttributeFilterValuesInConfig,
 } from './PivotCoreSlice';
-import type {
-  PivotInstanceSnapshot,
-  PivotInstanceState,
-  PivotInstanceStore,
-} from './PivotCoreSlice';
-import {createPivotQuerySourceFromTable} from './sql';
 import {
   createOrReplacePivotRelations,
   dropPivotRelations,
 } from './pivotExecution';
+import {createPivotQuerySourceFromTable} from './sql';
 import {
   type PivotConfig,
   type PivotSliceConfig as PivotSlicePersistedConfig,
@@ -31,7 +32,6 @@ import {
   PivotSliceConfig,
   PivotSliceState,
 } from './types';
-import {createStore} from 'zustand/vanilla';
 
 function createInitialPivotSliceConfig(props?: {
   config?: Partial<PivotConfig & {tableName?: string}>;
@@ -51,7 +51,7 @@ function createInitialPivotSliceConfig(props?: {
     pivots: {
       [id]: {
         id,
-        title: 'Pivot 1',
+        title: 'Pivot',
         source,
         config,
         status: {state: 'idle', stale: false},
@@ -252,7 +252,7 @@ export function createPivotSlice(props?: {
         addPivot(pivotProps) {
           const id = pivotProps?.id ?? createId();
           const title = generateUniqueName(
-            pivotProps?.title ?? 'Pivot 1',
+            pivotProps?.title ?? 'Pivot',
             Object.values(get().pivot.config.pivots)
               .filter((pivot) => pivot.id !== id)
               .map((pivot) => pivot.title),
