@@ -1851,12 +1851,18 @@ importers:
 
   examples/notebook:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../../packages/cells
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/notebook':
         specifier: workspace:*
         version: link:../../packages/notebook
@@ -1918,6 +1924,9 @@ importers:
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/pivot':
         specifier: workspace:*
         version: link:../../packages/pivot
@@ -2505,9 +2514,9 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
-      '@jest/globals':
-        specifier: ^30.3.0
-        version: 30.3.0
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
 
   packages/canvas:
     dependencies:

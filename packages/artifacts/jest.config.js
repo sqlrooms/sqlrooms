@@ -1,6 +1,6 @@
 import nodeConfig from '@sqlrooms/preset-jest/node.js';
 
-/** @type {import('ts-jest').JestConfigWithTsJest} */
+/** @type {import('jest').Config} */
 export default {
   ...nodeConfig,
 };
