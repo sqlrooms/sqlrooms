@@ -11,6 +11,9 @@ import {
   setFilter as setFilterAction,
   setFilterAnimationTime as setFilterAnimationTimeAction,
   setFilterAnimationWindow as setFilterAnimationWindowAction,
+  setFilterView as setFilterViewAction,
+  toggleLayerForMap as toggleLayerForMapAction,
+  toggleSplitMap as toggleSplitMapAction,
   wrapTo,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
@@ -123,6 +126,10 @@ function createDefaultMapKeplerState(
       currentModal: null,
       mapControls: {
         visibleLayers: INITIAL_UI_STATE.mapControls.visibleLayers,
+        splitMap: {
+          show: true,
+          active: false,
+        },
         mapLegend: {
           show: true,
           active: false,
@@ -292,10 +299,21 @@ export type KeplerSliceState = {
       filterId: string,
       animationWindow: string,
     ) => void;
+    setFilterView: (
+      mapId: string,
+      filterIdx: number,
+      view: 'side' | 'enlarged' | 'minified',
+    ) => void;
     updateTooltipFields: (
       mapId: string,
       datasetId: string,
       fieldNames: string[],
+    ) => void;
+    toggleSplitMap: (mapId: string, index?: number) => void;
+    toggleLayerForMap: (
+      mapId: string,
+      mapIndex: number,
+      layerId: string,
     ) => void;
     addTableToMap: (
       mapId: string,
@@ -537,6 +555,14 @@ export function createKeplerSlice({
           );
         },
 
+        setFilterView: (mapId, filterIdx, view) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterViewAction(filterIdx, view),
+          );
+        },
+
         updateTooltipFields: (mapId, datasetId, fieldNames) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const mapState = get().kepler.map[mapId];
@@ -577,6 +603,22 @@ export function createKeplerSlice({
                 },
               },
             }),
+          );
+        },
+
+        toggleSplitMap: (mapId, index) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            toggleSplitMapAction(index as number),
+          );
+        },
+
+        toggleLayerForMap: (mapId, mapIndex, layerId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            toggleLayerForMapAction(mapIndex, layerId),
           );
         },
 

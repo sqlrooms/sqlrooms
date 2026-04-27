@@ -9,7 +9,9 @@ export function CustomMapLegendPanelFactory(
   ...deps: Parameters<typeof MapLegendPanelFactory>
 ): ReturnType<typeof MapLegendPanelFactory> {
   const MapLegendPanel = MapLegendPanelFactory(...deps);
-  const CustomMapLegendPanel = (props: MapLegendPanelProps) => {
+  const CustomMapLegendPanel = (
+    props: MapLegendPanelProps & {mapIndex?: number},
+  ) => {
     return (
       <>
         <style>{`.draggable-legend .map-control__panel-header { display: none !important; }`}</style>
