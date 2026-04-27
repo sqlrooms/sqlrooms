@@ -64,28 +64,37 @@ export function buildKeplerUserTableIdMap(
 const SCHEMA_TABLE_SEPARATOR = '".';
 
 /**
- * Unqualified table name for Kepler dataset / layer UI labels. Does not
- * include database, schema, or double-quoted FQN – only the last identifier
- * (e.g. `"a"."b"."c"` -> `c`).
+ * Extracts the table name from a fully qualified SQL identifier.
+ * Removes database/schema prefixes and SQL quoting.
+ *
+ * Examples:
+ * - `"db"."schema"."table"` → `table`
+ * - `schema.table` → `table`
+ * - `"my""table"` → `my"table` (unescapes doubled quotes)
+ * - `table` → `table`
  */
-export function keplerDatasetListLabelFromQualifiedSql(
-  tableSql: string,
-): string {
+export function unqualifySqlTableName(tableSql: string): string {
   if (!tableSql) {
     return tableSql;
   }
-  if (!tableSql.includes(SCHEMA_TABLE_SEPARATOR)) {
-    if (tableSql.startsWith('"') && tableSql.endsWith('"')) {
-      return tableSql.slice(1, -1).replace(/""/g, '"');
-    }
-    return tableSql;
+
+  // Extract the last segment after the final separator (if any)
+  const lastSegment = tableSql.includes(SCHEMA_TABLE_SEPARATOR)
+    ? (tableSql.split(SCHEMA_TABLE_SEPARATOR).pop() ?? tableSql)
+    : tableSql;
+
+  // Remove SQL quoting and unescape doubled quotes
+  return unquoteSqlIdentifier(lastSegment);
+}
+
+function unquoteSqlIdentifier(identifier: string): string {
+  const isQuoted = identifier.startsWith('"') && identifier.endsWith('"');
+  if (!isQuoted) {
+    return identifier;
   }
-  const parts = tableSql.split(SCHEMA_TABLE_SEPARATOR);
-  const last = parts[parts.length - 1] ?? tableSql;
-  if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
-    return last.slice(1, -1).replace(/""/g, '"');
-  }
-  return last;
+
+  // Remove outer quotes and unescape doubled quotes
+  return identifier.slice(1, -1).replace(/""/g, '"');
 }
 
 /**
