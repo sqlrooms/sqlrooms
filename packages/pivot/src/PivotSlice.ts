@@ -40,7 +40,6 @@ function createInitialPivotSliceConfig(props?: {
     return PivotSliceConfig.parse({
       pivots: {},
       pivotOrder: [],
-      currentPivotId: undefined,
     });
   }
   const id = createId();
@@ -59,7 +58,6 @@ function createInitialPivotSliceConfig(props?: {
       },
     },
     pivotOrder: [id],
-    currentPivotId: id,
   });
 }
 
@@ -107,14 +105,6 @@ export function createPivotSlice(props?: {
           }
           set((state) =>
             produce(state, (draft) => {
-              if (
-                !draft.pivot.config.currentPivotId &&
-                draft.pivot.config.pivotOrder.length > 0
-              ) {
-                draft.pivot.config.currentPivotId =
-                  draft.pivot.config.pivotOrder[0];
-              }
-
               for (const pivotId of draft.pivot.config.pivotOrder) {
                 const pivot = draft.pivot.config.pivots[pivotId];
                 if (!pivot) continue;
@@ -279,7 +269,6 @@ export function createPivotSlice(props?: {
             produce(state, (draft) => {
               draft.pivot.config.pivots[id] = nextPivot;
               draft.pivot.config.pivotOrder.push(id);
-              draft.pivot.config.currentPivotId = id;
             }),
           );
           return id;
@@ -301,18 +290,6 @@ export function createPivotSlice(props?: {
               delete draft.pivot.config.pivots[pivotId];
               draft.pivot.config.pivotOrder =
                 draft.pivot.config.pivotOrder.filter((id) => id !== pivotId);
-              if (draft.pivot.config.currentPivotId === pivotId) {
-                draft.pivot.config.currentPivotId =
-                  draft.pivot.config.pivotOrder[0];
-              }
-            }),
-          );
-        },
-
-        setCurrentPivot(pivotId) {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.pivot.config.currentPivotId = pivotId;
             }),
           );
         },

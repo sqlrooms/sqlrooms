@@ -1,8 +1,4 @@
-import {
-  ArtifactsSliceConfig,
-  createArtifactsSlice,
-  type ArtifactEntryType,
-} from '@sqlrooms/artifacts';
+import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
@@ -17,7 +13,6 @@ import {
   CellsSliceConfig,
   createCellsSlice,
   createDefaultCellRegistry,
-  SheetType,
 } from '@sqlrooms/cells';
 import {
   createDeckMapDashboardPanelConfig,
@@ -66,7 +61,7 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
-import {ARTIFACT_TYPES, type CliArtifactType} from './artifactTypes';
+import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
   getDashboardAiInstructions,
@@ -213,127 +208,6 @@ const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
     selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
 };
 
-const CELLS_MANAGED_ARTIFACT_TYPES = new Set<CliArtifactType>([
-  'notebook',
-  'canvas',
-]);
-
-function isCliArtifactType(value: string): value is CliArtifactType {
-  return Object.prototype.hasOwnProperty.call(ARTIFACT_TYPES, value);
-}
-
-function normalizeArtifactOrder(
-  itemsById: Record<string, ArtifactEntryType>,
-  order: string[],
-) {
-  const seen = new Set<string>();
-  const normalized = order.filter((id) => {
-    if (!(id in itemsById) || seen.has(id)) {
-      return false;
-    }
-    seen.add(id);
-    return true;
-  });
-  for (const id of Object.keys(itemsById)) {
-    if (!seen.has(id)) {
-      normalized.push(id);
-    }
-  }
-  return normalized;
-}
-
-function deriveArtifactsConfigFromCellsConfig(
-  cellsConfig: Partial<CellsSliceConfig> | undefined,
-) {
-  const itemsById: Record<string, ArtifactEntryType> = {};
-  const rawSheets = cellsConfig?.sheets ?? {};
-  for (const [id, sheet] of Object.entries(rawSheets)) {
-    if (!isCliArtifactType(sheet.type)) continue;
-    itemsById[id] = {
-      id,
-      type: sheet.type,
-      title: sheet.title,
-    };
-  }
-  return ArtifactsSliceConfig.parse({
-    itemsById,
-    order: normalizeArtifactOrder(itemsById, cellsConfig?.sheetOrder ?? []),
-    currentItemId:
-      cellsConfig?.currentSheetId && itemsById[cellsConfig.currentSheetId]
-        ? cellsConfig.currentSheetId
-        : undefined,
-  });
-}
-
-function reconcileArtifactsConfigWithCells(
-  baseConfig: Partial<ArtifactsSliceConfig> | undefined,
-  cellsConfig: CellsSliceConfig,
-) {
-  const base = ArtifactsSliceConfig.parse(baseConfig ?? {});
-  const itemsById = {...base.itemsById};
-
-  for (const [id, sheet] of Object.entries(cellsConfig.sheets)) {
-    if (!CELLS_MANAGED_ARTIFACT_TYPES.has(sheet.type as CliArtifactType)) {
-      continue;
-    }
-    itemsById[id] = {
-      id,
-      type: sheet.type,
-      title: sheet.title,
-    };
-  }
-
-  for (const [id, item] of Object.entries(itemsById)) {
-    if (!CELLS_MANAGED_ARTIFACT_TYPES.has(item.type as CliArtifactType)) {
-      continue;
-    }
-    const sheet = cellsConfig.sheets[id];
-    if (!sheet || sheet.type !== item.type) {
-      delete itemsById[id];
-    }
-  }
-
-  const managedOrder = cellsConfig.sheetOrder.filter((id) => {
-    const sheet = cellsConfig.sheets[id];
-    return Boolean(
-      sheet && CELLS_MANAGED_ARTIFACT_TYPES.has(sheet.type as CliArtifactType),
-    );
-  });
-  const unmanagedOrder = base.order.filter((id) => {
-    const item = itemsById[id];
-    return (
-      item && !CELLS_MANAGED_ARTIFACT_TYPES.has(item.type as CliArtifactType)
-    );
-  });
-  const order = normalizeArtifactOrder(itemsById, [
-    ...unmanagedOrder,
-    ...managedOrder,
-  ]);
-  const currentItemId =
-    base.currentItemId && itemsById[base.currentItemId]
-      ? base.currentItemId
-      : cellsConfig.currentSheetId &&
-          itemsById[cellsConfig.currentSheetId] &&
-          CELLS_MANAGED_ARTIFACT_TYPES.has(
-            itemsById[cellsConfig.currentSheetId].type as CliArtifactType,
-          )
-        ? cellsConfig.currentSheetId
-        : order[0];
-
-  return ArtifactsSliceConfig.parse({
-    itemsById,
-    order,
-    currentItemId,
-  });
-}
-
-function areArtifactsConfigsEqual(
-  left: ArtifactsSliceConfig,
-  right: ArtifactsSliceConfig,
-) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
   layout: LayoutConfig,
@@ -367,17 +241,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         const persistedCells = CellsSliceConfig.parse(
           persistedRecord.cells ?? currentState.cells.config,
         );
-        const persistedArtifacts = persistedRecord.artifacts
-          ? reconcileArtifactsConfigWithCells(
-              ArtifactsSliceConfig.parse(persistedRecord.artifacts),
-              persistedCells,
-            )
-          : deriveArtifactsConfigFromCellsConfig(persistedCells);
+        const persistedArtifacts = ArtifactsSliceConfig.parse(
+          persistedRecord.artifacts ?? currentState.artifacts.config,
+        );
 
         return persistHelpers.merge(
           {
             ...persistedRecord,
             artifacts: persistedArtifacts,
+            cells: persistedCells,
           },
           currentState,
         );
@@ -388,52 +260,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         Object.values(get().artifacts.config.itemsById).find(
           (artifact) => artifact.type === 'dashboard',
         )?.id;
-
-      const syncArtifactsFromCells = () => {
-        const state = get();
-        const nextConfig = reconcileArtifactsConfigWithCells(
-          state.artifacts.config,
-          state.cells.config,
-        );
-        if (!areArtifactsConfigsEqual(state.artifacts.config, nextConfig)) {
-          state.artifacts.setConfig(nextConfig);
-        }
-      };
-
-      store.subscribe((state, prevState) => {
-        if (
-          state.cells.config.sheets === prevState.cells.config.sheets &&
-          state.cells.config.sheetOrder === prevState.cells.config.sheetOrder
-        ) {
-          return;
-        }
-        syncArtifactsFromCells();
-      });
-
-      store.subscribe((state, prevState) => {
-        if (
-          state.cells.config.currentSheetId ===
-          prevState.cells.config.currentSheetId
-        ) {
-          return;
-        }
-        const currentSheetId = state.cells.config.currentSheetId;
-        if (!currentSheetId) return;
-        const sheet = state.cells.config.sheets[currentSheetId];
-        if (
-          !sheet ||
-          !CELLS_MANAGED_ARTIFACT_TYPES.has(sheet.type as CliArtifactType)
-        ) {
-          return;
-        }
-        if (state.artifacts.config.currentItemId !== currentSheetId) {
-          state.artifacts.setCurrentItem(currentSheetId);
-        }
-      });
-
-      queueMicrotask(() => {
-        syncArtifactsFromCells();
-      });
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -658,7 +484,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCellsSlice({
           cellRegistry: createDefaultCellRegistry(),
-          supportedSheetTypes: Object.keys(ARTIFACT_TYPES) as SheetType[],
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),

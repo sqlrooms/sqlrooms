@@ -28,30 +28,30 @@ export const NotebookCell = z.discriminatedUnion('type', [
 export type NotebookCell = z.infer<typeof NotebookCell>;
 export type NotebookCellType = NotebookCell['type'];
 
-/** Notebook View Meta */
-export const NotebookSheetMeta = z.object({
+/** Notebook view metadata for a single artifact. */
+export const NotebookArtifactMeta = z.object({
   cellOrder: z.array(z.string()).default([]),
 });
-export type NotebookSheetMeta = z.infer<typeof NotebookSheetMeta>;
+export type NotebookArtifactMeta = z.infer<typeof NotebookArtifactMeta>;
 
-export const NotebookSheet = z.object({
+export const NotebookArtifact = z.object({
   id: z.string(),
-  meta: NotebookSheetMeta,
+  meta: NotebookArtifactMeta,
 });
-export type NotebookSheet = z.infer<typeof NotebookSheet>;
+export type NotebookArtifact = z.infer<typeof NotebookArtifact>;
 
-/** Notebook Slice Config (View only) */
+/** Notebook Slice Config (view-only artifact runtime metadata). */
 export const NotebookSliceConfig = z.object({
-  sheets: z.record(z.string(), NotebookSheet).default({}),
+  artifacts: z.record(z.string(), NotebookArtifact).default({}),
   currentCellId: z.string().optional(),
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfig>;
 
-export const NotebookTab = z.object({
+export const NotebookArtifactView = z.object({
   id: z.string(),
   cellOrder: z.array(z.string()).default([]),
-  name: z.string(), // Title from CellsSlice
+  name: z.string(),
 });
-export type NotebookTab = z.infer<typeof NotebookTab>;
+export type NotebookArtifactView = z.infer<typeof NotebookArtifactView>;
 
 export type InputUnion = z.infer<typeof import('@sqlrooms/cells').InputUnion>;

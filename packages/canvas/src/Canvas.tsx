@@ -44,7 +44,7 @@ const RegistryNodeRenderer: React.FC<{
   });
 };
 
-export const Canvas: React.FC = () => {
+export const Canvas: React.FC<{artifactId: string}> = ({artifactId}) => {
   const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
   const nodeTypes = useMemo(() => {
     return Object.fromEntries(
@@ -57,19 +57,12 @@ export const Canvas: React.FC = () => {
     );
   }, [registry]);
 
-  const currentSheetId = useStoreWithCanvas(
-    (s) => s.cells.config.currentSheetId,
-  );
-  const addSheet = useStoreWithCanvas((s) => s.cells.addSheet);
-
   const canvasSheet = useStoreWithCanvas((s) => {
-    const sheetId = currentSheetId ?? s.cells.config.sheetOrder[0];
-    return sheetId ? s.canvas.config.sheets[sheetId] : undefined;
+    return s.canvas.config.artifacts[artifactId];
   });
 
   const cellsSheet = useStoreWithCanvas((s) => {
-    const sheetId = currentSheetId ?? s.cells.config.sheetOrder[0];
-    return sheetId ? s.cells.config.sheets[sheetId] : undefined;
+    return s.cells.config.artifacts[artifactId];
   });
 
   const cellsData = useStoreWithCanvas((s) => s.cells.config.data);
@@ -116,10 +109,10 @@ export const Canvas: React.FC = () => {
         clearTimeout(viewportTimeoutRef.current);
       }
       viewportTimeoutRef.current = setTimeout(() => {
-        setViewport(viewport);
+        setViewport(artifactId, viewport);
       }, 150);
     },
-    [setViewport],
+    [artifactId, setViewport],
   );
 
   const empty = nodes.length === 0;
@@ -134,7 +127,7 @@ export const Canvas: React.FC = () => {
       <div className="relative flex-1 overflow-hidden">
         {empty && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
-            <AddNodePopover>
+            <AddNodePopover artifactId={artifactId}>
               <Button size="xs">
                 <PlusIcon className="h-4 w-4" />
                 Add node
@@ -148,7 +141,9 @@ export const Canvas: React.FC = () => {
           nodes={nodes as any}
           edges={edges}
           nodeTypes={nodeTypes}
-          onNodesChange={applyNodeChanges}
+          onNodesChange={(changes) =>
+            applyNodeChanges(artifactId, changes as any)
+          }
           viewport={internalViewport}
           onViewportChange={debouncedSetViewport}
           nodesConnectable={false}

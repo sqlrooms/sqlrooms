@@ -6,19 +6,15 @@ import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
 import {CellView} from './cells/CellView';
 import {useStoreWithNotebook} from './useStoreWithNotebook';
 
-export const Notebook: React.FC<{sheetId?: string}> = (props) => {
-  const currentSheetId = useStoreWithNotebook(
-    (s) => s.cells.config.currentSheetId,
-  );
-  const sheetId = props.sheetId ?? currentSheetId;
+export const Notebook: React.FC<{artifactId: string}> = ({artifactId}) => {
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
-  const sheet = useStoreWithNotebook((s) =>
-    sheetId ? s.notebook.config.sheets[sheetId] : undefined,
+  const sheet = useStoreWithNotebook(
+    (s) => s.notebook.config.artifacts[artifactId],
   );
-  const cellsSheet = useStoreWithNotebook((s) =>
-    sheetId ? s.cells.config.sheets[sheetId] : undefined,
+  const cellsSheet = useStoreWithNotebook(
+    (s) => s.cells.config.artifacts[artifactId],
   );
 
   const cellOrder = useMemo(() => {
@@ -37,28 +33,25 @@ export const Notebook: React.FC<{sheetId?: string}> = (props) => {
     const meta = sheet?.meta || {
       cellOrder: [],
     };
-    return {id: cellsSheet.id, ...meta, name: cellsSheet.title, cellOrder};
-  }, [sheet, cellsSheet, cellOrder]);
+    return {id: cellsSheet.id, ...meta, name: artifactId, cellOrder};
+  }, [artifactId, sheet, cellsSheet, cellOrder]);
 
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
   const runAllCellsCascade = useStoreWithNotebook(
     (s) => s.notebook.runAllCellsCascade,
   );
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
-  const initializeSheet = useStoreWithNotebook(
-    (s) => s.notebook.initializeSheet,
-  );
+  const ensureArtifact = useStoreWithNotebook((s) => s.notebook.ensureArtifact);
 
   const handleAddCellAndScroll = (type: string) => {
-    if (!sheetId) return;
-    addCell(sheetId, type);
+    addCell(artifactId, type);
   };
 
   useEffect(() => {
-    if (sheetId && cellsSheet?.type === 'notebook' && !sheet) {
-      initializeSheet(sheetId);
+    if (!sheet || !cellsSheet) {
+      ensureArtifact(artifactId);
     }
-  }, [sheetId, cellsSheet, sheet, initializeSheet]);
+  }, [artifactId, cellsSheet, ensureArtifact, sheet]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,7 +67,7 @@ export const Notebook: React.FC<{sheetId?: string}> = (props) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentCellId, run]);
 
-  if (!cellsSheet || cellsSheet.type !== 'notebook') {
+  if (!cellsSheet) {
     return null;
   }
 
@@ -89,7 +82,11 @@ export const Notebook: React.FC<{sheetId?: string}> = (props) => {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="mr-0 ml-auto flex items-center gap-1 px-4 pt-2">
-        <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
+        <AddNewCellDropdown
+          artifactId={artifactId}
+          onAdd={handleAddCellAndScroll}
+          enableShortcut
+        />
         <Button
           size="xs"
           variant="secondary"
@@ -107,11 +104,17 @@ export const Notebook: React.FC<{sheetId?: string}> = (props) => {
             // Include the index so moving a cell remounts Monaco cleanly.
             key={`cellOrder-${id}-${index}`}
           >
-            <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />
+            <AddNewCellTabs
+              artifactId={artifactId}
+              onAdd={(type) => addCell(tab.id, type, index)}
+            />
             <CellView id={id} />
           </div>
         ))}
-        <AddNewCellTabs onAdd={(type) => addCell(tab.id, type)} />
+        <AddNewCellTabs
+          artifactId={artifactId}
+          onAdd={(type) => addCell(tab.id, type)}
+        />
       </div>
     </div>
   );

@@ -1,4 +1,9 @@
 import {
+  ArtifactsSliceConfig,
+  ArtifactsSliceState,
+  createArtifactsSlice,
+} from '@sqlrooms/artifacts';
+import {
   CellsSliceConfig,
   CellsSliceState,
   createCellsSlice,
@@ -28,9 +33,13 @@ import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
 import {NotebookPanel} from './components/NotebookPanel';
 
+export const DEFAULT_NOTEBOOK_ARTIFACT_ID = 'notebook';
+
 export type RoomState = RoomShellSliceState &
+  ArtifactsSliceState &
   NotebookSliceState &
   CellsSliceState &
   PivotSliceState & {
@@ -73,9 +82,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 hideTabStrip: true,
               },
               {
-                type: 'panel',
+                type: 'tabs',
                 id: RoomPanelTypes.enum['main'],
                 panel: RoomPanelTypes.enum['main'],
+                children: [],
+                activeTabIndex: 0,
                 defaultSize: '80%',
               },
             ],
@@ -84,7 +95,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             [RoomPanelTypes.enum['main']]: {
               title: 'Notebook',
               icon: () => null,
-              component: NotebookPanel,
+              component: MainView,
             },
             [RoomPanelTypes.enum['data']]: {
               title: 'Data',
@@ -95,12 +106,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
+      ...createArtifactsSlice({
+        config: {
+          itemsById: {
+            [DEFAULT_NOTEBOOK_ARTIFACT_ID]: {
+              id: DEFAULT_NOTEBOOK_ARTIFACT_ID,
+              type: 'notebook',
+              title: 'Notebook',
+            },
+          },
+          order: [DEFAULT_NOTEBOOK_ARTIFACT_ID],
+          currentItemId: DEFAULT_NOTEBOOK_ARTIFACT_ID,
+        },
+      })(set, get, store),
+
       ...createCellsSlice({
         cellRegistry: {
           ...createDefaultCellRegistry(),
           pivot: pivotCellRegistryEntry,
         },
-        supportedSheetTypes: ['notebook'],
       })(set, get, store),
       ...createNotebookSlice()(set, get, store),
       ...createPivotSlice()(set, get, store),
@@ -112,11 +136,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     // Persist settings
     {
       // Local storage key
-      name: 'notebook-example-app-state-storage',
+      name: 'notebook-example-app-state-storage-v2',
       // Subset of the state to persist
       ...createPersistHelpers({
         room: BaseRoomConfig,
         layout: LayoutConfig,
+        artifacts: ArtifactsSliceConfig,
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         pivot: PivotSliceConfig,

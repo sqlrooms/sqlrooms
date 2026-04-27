@@ -12,13 +12,12 @@ import {
   buildDependencyGraphAsync,
   buildGraphCacheFromEdges,
   collectReachable,
-  ensureGraphCache,
   removeCellFromCache,
   replaceCellDependenciesInCache,
   topologicalOrder,
 } from './dagUtils';
 import {
-  findSheetIdForCell,
+  findArtifactIdForCell,
   getRequiredSqlSelectToJson,
   normalizeCellsConfigStructure,
   resolveDependencies,
@@ -33,38 +32,23 @@ import type {
   CellsSliceState,
   CrossFilterSelection,
   Edge,
-  SheetType,
   SqlCell,
   SqlCellData,
 } from './types';
 import {isInputCell, isSqlCell} from './types';
-import {getEffectiveResultName, getSheetSchemaName, isDefined} from './utils';
+import {
+  getArtifactSchemaName,
+  getEffectiveResultName,
+  isDefined,
+} from './utils';
 import {buildCrossFilterPredicate} from './vegaSelectionUtils';
 
 function createDefaultCellsConfig(
   config: Partial<CellsSliceConfig> | undefined,
 ): CellsSliceConfig {
-  const sheetId = createId();
   const defaultConfig: CellsSliceConfig = {
     data: {},
-    sheets: {
-      [sheetId]: {
-        id: sheetId,
-        type: 'notebook',
-        title: 'Sheet',
-        schemaName: getSheetSchemaName(sheetId),
-        cellIds: [],
-        edges: [],
-        graphCache: {
-          dependencies: {},
-          dependents: {},
-          contentHashByCell: {},
-          tableDependencies: {},
-        },
-      },
-    },
-    sheetOrder: [sheetId],
-    currentSheetId: sheetId,
+    artifacts: {},
     tableDepSchemas: ['main'],
   };
 
@@ -72,24 +56,19 @@ function createDefaultCellsConfig(
     return defaultConfig;
   }
 
-  const {sheets, sheetOrder, currentSheetId} = normalizeCellsConfigStructure(
-    config,
-    defaultConfig,
-  );
+  const {artifacts} = normalizeCellsConfigStructure(config);
 
   return {
     ...defaultConfig,
     ...config,
-    sheets,
-    sheetOrder,
-    currentSheetId,
+    artifacts,
   };
 }
 
 // --- Slice Implementation ---
 
 export function createCellsSlice(props: CellsSliceOptions) {
-  const {cellRegistry, supportedSheetTypes = ['notebook', 'canvas']} = props;
+  const {cellRegistry} = props;
   const initialConfig = createDefaultCellsConfig(props?.config);
   // Keep result data outside Immer drafts, but scoped per slice instance.
   const cellResultCache = new Map<string, CellResultData>();
@@ -131,8 +110,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
       }
       if (!changed.size) return;
 
-      for (const sheet of Object.values(state.cells.config.sheets)) {
-        const cache = sheet.graphCache;
+      for (const artifact of Object.values(state.cells.config.artifacts)) {
+        const cache = artifact.graphCache;
         if (!cache?.tableDependencies) continue;
         for (const [cellId, tables] of Object.entries(
           cache.tableDependencies,
@@ -147,7 +126,6 @@ export function createCellsSlice(props: CellsSliceOptions) {
     return {
       cells: {
         cellRegistry,
-        supportedSheetTypes,
         config: initialConfig,
         status: {},
         activeAbortControllers: {},
@@ -212,12 +190,40 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
         },
 
-        addCell: async (sheetId: string, cell: Cell, index?: number) => {
+        ensureArtifact: (artifactId, options) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.cells.config.artifacts[artifactId]) {
+                draft.cells.config.artifacts[artifactId] = {
+                  id: artifactId,
+                  schemaName:
+                    options?.schemaName ?? getArtifactSchemaName(artifactId),
+                  cellIds: [],
+                  edges: [],
+                  graphCache: {
+                    dependencies: {},
+                    dependents: {},
+                    contentHashByCell: {},
+                    tableDependencies: {},
+                  },
+                };
+              } else if (
+                options?.schemaName &&
+                !draft.cells.config.artifacts[artifactId]?.schemaName
+              ) {
+                draft.cells.config.artifacts[artifactId].schemaName =
+                  options.schemaName;
+              }
+            }),
+          );
+        },
+
+        addCell: async (artifactId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
           const sqlSelectToJson = getRequiredSqlSelectToJson(get());
-          const targetSheet = get().cells.config.sheets[sheetId];
+          const targetArtifact = get().cells.config.artifacts[artifactId];
           const scopedCells = Object.fromEntries(
-            (targetSheet?.cellIds ?? [])
+            (targetArtifact?.cellIds ?? [])
               .map((id) => get().cells.config.data[id])
               .filter(isDefined)
               .map((candidate) => [candidate.id, candidate]),
@@ -242,7 +248,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const deps = await resolveDependencies(
             cell,
             scopedCells,
-            sheetId,
+            artifactId,
             cellRegistry,
             sqlSelectToJson,
           );
@@ -255,27 +261,26 @@ export function createCellsSlice(props: CellsSliceOptions) {
                 cell.id,
               ) ?? {type: 'other'};
 
-              // Single-owner invariant: a cell can belong to one sheet only.
-              for (const [existingSheetId, existingSheet] of Object.entries(
-                draft.cells.config.sheets,
-              )) {
-                if (existingSheetId === sheetId) continue;
-                existingSheet.cellIds = existingSheet.cellIds.filter(
+              // Single-owner invariant: a cell can belong to one artifact only.
+              for (const [
+                existingArtifactId,
+                existingArtifact,
+              ] of Object.entries(draft.cells.config.artifacts)) {
+                if (existingArtifactId === artifactId) continue;
+                existingArtifact.cellIds = existingArtifact.cellIds.filter(
                   (cid) => cid !== cell.id,
                 );
-                existingSheet.edges = existingSheet.edges.filter(
+                existingArtifact.edges = existingArtifact.edges.filter(
                   (e) => e.source !== cell.id && e.target !== cell.id,
                 );
-                removeCellFromCache(existingSheet, cell.id);
+                removeCellFromCache(existingArtifact, cell.id);
               }
 
-              let sheet = draft.cells.config.sheets[sheetId];
-              if (!sheet) {
-                sheet = {
-                  id: sheetId,
-                  type: 'notebook',
-                  title: 'Sheet',
-                  schemaName: getSheetSchemaName(sheetId),
+              let artifact = draft.cells.config.artifacts[artifactId];
+              if (!artifact) {
+                artifact = {
+                  id: artifactId,
+                  schemaName: getArtifactSchemaName(artifactId),
                   cellIds: [],
                   edges: [],
                   graphCache: {
@@ -285,37 +290,33 @@ export function createCellsSlice(props: CellsSliceOptions) {
                     tableDependencies: {},
                   },
                 };
-                draft.cells.config.sheets[sheetId] = sheet;
-                if (!draft.cells.config.sheetOrder.includes(sheetId)) {
-                  draft.cells.config.sheetOrder.push(sheetId);
-                }
-                if (!draft.cells.config.currentSheetId) {
-                  draft.cells.config.currentSheetId = sheetId;
-                }
+                draft.cells.config.artifacts[artifactId] = artifact;
               }
 
               const newIndex =
-                index !== undefined ? index : sheet.cellIds.length;
-              sheet.cellIds = sheet.cellIds.filter((cid) => cid !== cell.id);
-              sheet.cellIds.splice(newIndex, 0, cell.id);
+                index !== undefined ? index : artifact.cellIds.length;
+              artifact.cellIds = artifact.cellIds.filter(
+                (cid) => cid !== cell.id,
+              );
+              artifact.cellIds.splice(newIndex, 0, cell.id);
 
               // Add edges from pre-computed dependencies
-              sheet.edges = sheet.edges.filter(
+              artifact.edges = artifact.edges.filter(
                 (edge) =>
                   edge.target !== cell.id &&
                   edge.id !== `${edge.source}-${cell.id}`,
               );
-              const localCellIds = new Set(sheet.cellIds);
+              const localCellIds = new Set(artifact.cellIds);
               for (const depId of deps.cellIds) {
                 if (!localCellIds.has(depId) || depId === cell.id) continue;
-                sheet.edges.push({
+                artifact.edges.push({
                   id: `${depId}-${cell.id}`,
                   source: depId,
                   target: cell.id,
                 });
               }
               replaceCellDependenciesInCache(
-                sheet,
+                artifact,
                 cell.id,
                 deps.cellIds.filter((depId) => localCellIds.has(depId)),
                 deps.tableNames,
@@ -340,13 +341,15 @@ export function createCellsSlice(props: CellsSliceOptions) {
                 delete draft.cells.activeAbortControllers[id];
               }
 
-              // Remove from all sheets
-              for (const sheet of Object.values(draft.cells.config.sheets)) {
-                sheet.cellIds = sheet.cellIds.filter((cid) => cid !== id);
-                sheet.edges = sheet.edges.filter(
+              // Remove from all artifacts
+              for (const artifact of Object.values(
+                draft.cells.config.artifacts,
+              )) {
+                artifact.cellIds = artifact.cellIds.filter((cid) => cid !== id);
+                artifact.edges = artifact.edges.filter(
                   (e) => e.source !== id && e.target !== id,
                 );
-                removeCellFromCache(sheet, id);
+                removeCellFromCache(artifact, id);
               }
             }),
           );
@@ -372,11 +375,11 @@ export function createCellsSlice(props: CellsSliceOptions) {
         ) => {
           const cell = get().cells.config.data[id];
           if (!cell) return;
-          const ownerSheetId = findSheetIdForCell(get(), id);
+          const ownerArtifactId = findArtifactIdForCell(get(), id);
           const scopedCells = Object.fromEntries(
             (
-              (ownerSheetId &&
-                get().cells.config.sheets[ownerSheetId]?.cellIds) ||
+              (ownerArtifactId &&
+                get().cells.config.artifacts[ownerArtifactId]?.cellIds) ||
               []
             )
               .map((cellId) => get().cells.config.data[cellId])
@@ -436,7 +439,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             const newDeps = await resolveDependencies(
               updatedCell,
               scopedCells,
-              ownerSheetId || '',
+              ownerArtifactId || '',
               cellRegistry,
               sqlSelectToJson,
             );
@@ -444,8 +447,8 @@ export function createCellsSlice(props: CellsSliceOptions) {
             set((state) =>
               produce(state, (draft) => {
                 const ownerSheet = Object.values(
-                  draft.cells.config.sheets,
-                ).find((sheet) => sheet.cellIds.includes(id));
+                  draft.cells.config.artifacts,
+                ).find((artifact) => artifact.cellIds.includes(id));
                 if (ownerSheet) {
                   const localCellIds = new Set(ownerSheet.cellIds);
                   ownerSheet.edges = ownerSheet.edges.filter(
@@ -492,51 +495,16 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const shouldCascade =
             opts?.cascade || resultRelationChanged || semanticInputChanged;
           if (shouldCascade) {
-            if (ownerSheetId) {
-              void get().cells.runDownstreamCascade(ownerSheetId, id);
+            if (ownerArtifactId) {
+              void get().cells.runDownstreamCascade(ownerArtifactId, id);
             }
           }
         },
 
-        addSheet: (title?: string, type: SheetType = 'notebook') => {
-          const id = createId();
-          set((state) =>
-            produce(state, (draft) => {
-              const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-              const existingTitles = Object.values(
-                draft.cells.config.sheets,
-              ).map((s) => s.title);
-              const defaultTitle = generateUniqueName(
-                `${typeLabel} 1`,
-                existingTitles,
-                ' ',
-              );
-
-              draft.cells.config.sheets[id] = {
-                id,
-                type,
-                title: title || defaultTitle,
-                schemaName: getSheetSchemaName(id),
-                cellIds: [],
-                edges: [],
-                graphCache: {
-                  dependencies: {},
-                  dependents: {},
-                  contentHashByCell: {},
-                  tableDependencies: {},
-                },
-              };
-              draft.cells.config.sheetOrder.push(id);
-              draft.cells.config.currentSheetId = id;
-            }),
-          );
-          return id;
-        },
-
-        removeSheet: (sheetId: string) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet) return;
-          const ownedCellIds = [...sheet.cellIds];
+        removeArtifact: (artifactId: string) => {
+          const artifact = get().cells.config.artifacts[artifactId];
+          if (!artifact) return;
+          const ownedCellIds = [...artifact.cellIds];
           const relationNamesToDrop = ownedCellIds.flatMap((cellId) => {
             const cell = get().cells.config.data[cellId];
             const status = get().cells.status[cellId];
@@ -560,7 +528,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
               }
 
               for (const existingSheet of Object.values(
-                draft.cells.config.sheets,
+                draft.cells.config.artifacts,
               )) {
                 existingSheet.cellIds = existingSheet.cellIds.filter(
                   (cid) => !ownedCellIds.includes(cid),
@@ -575,13 +543,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                 }
               }
 
-              delete draft.cells.config.sheets[sheetId];
-              draft.cells.config.sheetOrder =
-                draft.cells.config.sheetOrder.filter((id) => id !== sheetId);
-              if (draft.cells.config.currentSheetId === sheetId) {
-                draft.cells.config.currentSheetId =
-                  draft.cells.config.sheetOrder[0];
-              }
+              delete draft.cells.config.artifacts[artifactId];
             }),
           );
           for (const relationName of relationNamesToDrop) {
@@ -589,69 +551,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
 
-        closeSheet: (sheetId: string) => {
+        addEdge: (artifactId: string, edge: Omit<Edge, 'id'>) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.cells.config.sheetOrder =
-                draft.cells.config.sheetOrder.filter((id) => id !== sheetId);
-              if (draft.cells.config.currentSheetId === sheetId) {
-                draft.cells.config.currentSheetId =
-                  draft.cells.config.sheetOrder[0];
-              }
-            }),
-          );
-        },
-
-        openSheet: (sheetId: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              if (!draft.cells.config.sheetOrder.includes(sheetId)) {
-                draft.cells.config.sheetOrder.push(sheetId);
-              }
-              draft.cells.config.currentSheetId = sheetId;
-            }),
-          );
-        },
-
-        setSheetOrder: (sheetOrder: string[]) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.cells.config.sheetOrder = sheetOrder;
-            }),
-          );
-        },
-
-        renameSheet: (sheetId: string, title: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const sheet = draft.cells.config.sheets[sheetId];
-              if (sheet) {
-                // We could add validation here, but usually UI handles it.
-                // For now, we'll just allow it as the primary logic is in view slices.
-                sheet.title = title;
-              }
-            }),
-          );
-        },
-
-        setCurrentSheet: (sheetId: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.cells.config.currentSheetId = sheetId;
-            }),
-          );
-        },
-
-        addEdge: (sheetId: string, edge: Omit<Edge, 'id'>) => {
-          set((state) =>
-            produce(state, (draft) => {
-              let sheet = draft.cells.config.sheets[sheetId];
-              if (!sheet) {
-                sheet = {
-                  id: sheetId,
-                  type: 'notebook',
-                  title: 'Sheet',
-                  schemaName: getSheetSchemaName(sheetId),
+              let artifact = draft.cells.config.artifacts[artifactId];
+              if (!artifact) {
+                artifact = {
+                  id: artifactId,
+                  schemaName: getArtifactSchemaName(artifactId),
                   cellIds: [],
                   edges: [],
                   graphCache: {
@@ -661,26 +568,20 @@ export function createCellsSlice(props: CellsSliceOptions) {
                     tableDependencies: {},
                   },
                 };
-                draft.cells.config.sheets[sheetId] = sheet;
-                if (!draft.cells.config.sheetOrder.includes(sheetId)) {
-                  draft.cells.config.sheetOrder.push(sheetId);
-                }
-                if (!draft.cells.config.currentSheetId) {
-                  draft.cells.config.currentSheetId = sheetId;
-                }
+                draft.cells.config.artifacts[artifactId] = artifact;
               }
               if (
-                !sheet.cellIds.includes(edge.source) ||
-                !sheet.cellIds.includes(edge.target)
+                !artifact.cellIds.includes(edge.source) ||
+                !artifact.cellIds.includes(edge.target)
               ) {
                 return;
               }
               const id = `${edge.source}-${edge.target}`;
-              if (!sheet.edges.find((e) => e.id === id)) {
-                sheet.edges.push({...edge, id});
-                ensureGraphCache(sheet);
-                const deps = sheet.graphCache?.dependencies[edge.target] || [];
-                replaceCellDependenciesInCache(sheet, edge.target, [
+              if (!artifact.edges.find((e) => e.id === id)) {
+                artifact.edges.push({...edge, id});
+                const deps =
+                  artifact.graphCache?.dependencies[edge.target] || [];
+                replaceCellDependenciesInCache(artifact, edge.target, [
                   ...deps,
                   edge.source,
                 ]);
@@ -689,27 +590,27 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
         },
 
-        removeEdge: (sheetId: string, edgeId: string) => {
+        removeEdge: (artifactId: string, edgeId: string) => {
           set((state) =>
             produce(state, (draft) => {
-              const sheet = draft.cells.config.sheets[sheetId];
-              if (sheet) {
-                sheet.edges = sheet.edges.filter((e) => e.id !== edgeId);
-                delete sheet.graphCache;
+              const artifact = draft.cells.config.artifacts[artifactId];
+              if (artifact) {
+                artifact.edges = artifact.edges.filter((e) => e.id !== edgeId);
+                delete artifact.graphCache;
               }
             }),
           );
         },
 
-        updateEdgesFromSql: async (sheetId: string, cellId: string) => {
+        updateEdgesFromSql: async (artifactId: string, cellId: string) => {
           const cell = get().cells.config.data[cellId];
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!cell || !sheet) return;
+          const artifact = get().cells.config.artifacts[artifactId];
+          if (!cell || !artifact) return;
 
           // Pre-compute dependencies outside produce() to support async
           const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const scopedCells = Object.fromEntries(
-            sheet.cellIds
+            artifact.cellIds
               .map((id) => get().cells.config.data[id])
               .filter(isDefined)
               .map((candidate) => [candidate.id, candidate]),
@@ -717,14 +618,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const deps = await resolveDependencies(
             cell,
             scopedCells,
-            sheetId,
+            artifactId,
             cellRegistry,
             sqlSelectToJson,
           );
 
           set((state) =>
             produce(state, (draft) => {
-              const draftSheet = draft.cells.config.sheets[sheetId];
+              const draftSheet = draft.cells.config.artifacts[artifactId];
               if (draftSheet) {
                 draftSheet.edges = draftSheet.edges.filter(
                   (e) => e.target !== cellId,
@@ -858,14 +759,17 @@ export function createCellsSlice(props: CellsSliceOptions) {
         },
 
         // DAG methods (sync versions for UI usage)
-        getRootCells: (sheetId: string) => {
-          const {dependencies} = buildDependencyGraph(sheetId, get());
+        getArtifactIdForCell: (cellId: string) => {
+          return findArtifactIdForCell(get(), cellId);
+        },
+        getRootCells: (artifactId: string) => {
+          const {dependencies} = buildDependencyGraph(artifactId, get());
           const ids = Object.keys(dependencies);
           return ids.filter((id) => (dependencies[id]?.length ?? 0) === 0);
         },
-        getDownstream: (sheetId: string, sourceCellId: string) => {
+        getDownstream: (artifactId: string, sourceCellId: string) => {
           const {dependencies, dependents} = buildDependencyGraph(
-            sheetId,
+            artifactId,
             get(),
           );
           const reachable = collectReachable(sourceCellId, dependents);
@@ -883,22 +787,22 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
         },
         // Async cascade execution using AST-based dependency resolution
-        runAllCellsCascade: async (sheetId: string) => {
-          const cached = buildDependencyGraph(sheetId, get());
+        runAllCellsCascade: async (artifactId: string) => {
+          const cached = buildDependencyGraph(artifactId, get());
           const hasCachedNodes = Object.keys(cached.dependencies).length > 0;
           if (!hasCachedNodes) {
             set((state) =>
               produce(state, (draft) => {
-                const sheet = draft.cells.config.sheets[sheetId];
-                if (sheet) {
-                  sheet.graphCache = buildGraphCacheFromEdges(sheet);
+                const artifact = draft.cells.config.artifacts[artifactId];
+                if (artifact) {
+                  artifact.graphCache = buildGraphCacheFromEdges(artifact);
                 }
               }),
             );
           }
           const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
-            sheetId,
+            artifactId,
             get(),
             sqlSelectToJson,
           );
@@ -930,22 +834,25 @@ export function createCellsSlice(props: CellsSliceOptions) {
             }
           }
         },
-        runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
-          const cached = buildDependencyGraph(sheetId, get());
+        runDownstreamCascade: async (
+          artifactId: string,
+          sourceCellId: string,
+        ) => {
+          const cached = buildDependencyGraph(artifactId, get());
           const hasCachedNodes = Object.keys(cached.dependencies).length > 0;
           if (!hasCachedNodes) {
             set((state) =>
               produce(state, (draft) => {
-                const sheet = draft.cells.config.sheets[sheetId];
-                if (sheet) {
-                  sheet.graphCache = buildGraphCacheFromEdges(sheet);
+                const artifact = draft.cells.config.artifacts[artifactId];
+                if (artifact) {
+                  artifact.graphCache = buildGraphCacheFromEdges(artifact);
                 }
               }),
             );
           }
           const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
-            sheetId,
+            artifactId,
             get(),
             sqlSelectToJson,
           );

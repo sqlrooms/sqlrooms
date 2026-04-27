@@ -14,23 +14,22 @@ import {TriggerButton} from './AddNewCellTrigger';
 import {getCellTypeLabel} from '../NotebookUtils';
 
 type Props = {
+  artifactId: string;
   onAdd: (type: string) => void;
   enableShortcut?: boolean;
   triggerComponent?: React.ReactNode;
 };
 
 export const AddNewCellDropdown: FC<Props> = ({
+  artifactId,
   onAdd,
   enableShortcut = false,
   triggerComponent = <TriggerButton />,
 }) => {
-  const currentTabId = useStoreWithNotebook(
-    (s) => s.cells.config.currentSheetId,
-  );
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!currentTabId || !enableShortcut) {
+    if (!artifactId || !enableShortcut) {
       return;
     }
     const onKeyDown = (e: KeyboardEvent) => {
@@ -50,7 +49,7 @@ export const AddNewCellDropdown: FC<Props> = ({
 
       <AddNewCellDropdownContent
         onAddCell={onAdd}
-        currentTabId={currentTabId}
+        artifactId={artifactId}
         setOpen={setOpen}
       />
     </Popover>
@@ -59,14 +58,14 @@ export const AddNewCellDropdown: FC<Props> = ({
 
 type ContentProps = {
   onAddCell: (type: string) => void;
-  currentTabId?: string | null;
+  artifactId?: string | null;
   align?: 'center' | 'start' | 'end';
   setOpen?: (open: boolean) => void;
 };
 
 export const AddNewCellDropdownContent: FC<ContentProps> = ({
   onAddCell,
-  currentTabId,
+  artifactId,
   align = 'center',
   setOpen,
 }) => {
@@ -86,7 +85,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
               return (
                 <CommandItem
                   key={type}
-                  disabled={!currentTabId}
+                  disabled={!artifactId}
                   onSelect={() => {
                     onAddCell(type);
                     setOpen?.(false);

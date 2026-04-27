@@ -235,23 +235,23 @@ export async function findSqlDependenciesFromAst(opts: {
 }
 
 /**
- * Rewrites unqualified references to known sheet-local result names as
+ * Rewrites unqualified references to known artifact-local result names as
  * schema-qualified references. This keeps SQL ergonomic without mutable
  * connector-level current schema state.
  */
-export function qualifySheetLocalResultNames(opts: {
+export function qualifyArtifactLocalResultNames(opts: {
   sql: string;
-  sheetSchema: string;
-  sheetDatabase?: string;
-  sheetCellIds: string[];
+  artifactSchema: string;
+  artifactDatabase?: string;
+  artifactCellIds: string[];
   cells: Record<string, Cell>;
   getSqlResultName: (cellId: string) => string | undefined;
 }): string {
   const {
     sql,
-    sheetSchema,
-    sheetDatabase,
-    sheetCellIds,
+    artifactSchema,
+    artifactDatabase,
+    artifactCellIds,
     cells,
     getSqlResultName,
   } = opts;
@@ -259,7 +259,7 @@ export function qualifySheetLocalResultNames(opts: {
 
   const names = Array.from(
     new Set(
-      sheetCellIds
+      artifactCellIds
         .map((cellId) => {
           const cell = cells[cellId];
           if (!cell || cell.type !== 'sql') return undefined;
@@ -272,9 +272,9 @@ export function qualifySheetLocalResultNames(opts: {
   ).sort((a, b) => b.length - a.length);
 
   for (const name of names) {
-    const qualified = sheetDatabase
-      ? `${sheetDatabase}.${sheetSchema}.${name}`
-      : `${sheetSchema}.${name}`;
+    const qualified = artifactDatabase
+      ? `${artifactDatabase}.${artifactSchema}.${name}`
+      : `${artifactSchema}.${name}`;
     const pattern = new RegExp(
       `(?<![a-zA-Z0-9_.])${escapeRegExp(name)}(?![a-zA-Z0-9_])`,
       'g',

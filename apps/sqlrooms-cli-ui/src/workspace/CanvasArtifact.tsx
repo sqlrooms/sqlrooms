@@ -5,18 +5,18 @@ import {useRoomStore} from '../store';
 
 export const CanvasArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
-  const sheet = useRoomStore((state) => state.cells.config.sheets[artifactId]);
-  const setCurrentSheet = useRoomStore((state) => state.cells.setCurrentSheet);
+  const artifact = useRoomStore((state) => state.artifacts.getItem(artifactId));
+  const ensureArtifact = useRoomStore((state) => state.canvas.ensureArtifact);
 
   useEffect(() => {
-    if (sheet?.type === 'canvas') {
-      setCurrentSheet(artifactId);
+    if (artifact?.type === 'canvas') {
+      ensureArtifact(artifactId);
     }
-  }, [artifactId, setCurrentSheet, sheet?.type]);
+  }, [artifact?.type, artifactId, ensureArtifact]);
 
-  if (!sheet || sheet.type !== 'canvas') {
+  if (!artifact || artifact.type !== 'canvas') {
     return null;
   }
 
-  return <Canvas />;
+  return <Canvas artifactId={artifactId} />;
 };

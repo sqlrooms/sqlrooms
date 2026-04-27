@@ -29,19 +29,7 @@ export const AppBuilderProjectConfig = z.object({
   appsByArtifactId: AppBuilderProjectEntries.default({}),
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
-export const AppBuilderProjectConfigSchema = z.preprocess((value) => {
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-  const config = value as {
-    appsByArtifactId?: unknown;
-    appsBySheetId?: unknown;
-  };
-  return {
-    ...config,
-    appsByArtifactId: config.appsByArtifactId ?? config.appsBySheetId,
-  };
-}, AppBuilderProjectConfig);
+export const AppBuilderProjectConfigSchema = AppBuilderProjectConfig;
 
 export type RoomState = RoomShellSliceState &
   ArtifactsSliceState &

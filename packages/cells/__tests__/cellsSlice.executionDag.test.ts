@@ -60,6 +60,8 @@ function mockCell(id: string, dependsOn: string[] = []): Cell {
 }
 
 describe('cells slice execution DAG model', () => {
+  const artifactA = 'artifact-a';
+  const artifactB = 'artifact-b';
   let testStore: TestStore;
 
   beforeEach(() => {
@@ -69,13 +71,13 @@ describe('cells slice execution DAG model', () => {
   it('runAllCellsCascade executes cells in topological order', async () => {
     const {store, executed} = testStore;
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
-    await state.cells.addCell(sheetId, mockCell('a'));
-    await state.cells.addCell(sheetId, mockCell('b', ['a']));
-    await state.cells.addCell(sheetId, mockCell('c', ['b']));
+    await state.cells.addCell(artifactA, mockCell('a'));
+    await state.cells.addCell(artifactA, mockCell('b', ['a']));
+    await state.cells.addCell(artifactA, mockCell('c', ['b']));
 
-    await state.cells.runAllCellsCascade(sheetId);
+    await state.cells.runAllCellsCascade(artifactA);
 
     expect(executed).toEqual(['a', 'b', 'c']);
   });
@@ -83,33 +85,33 @@ describe('cells slice execution DAG model', () => {
   it('runDownstreamCascade executes only reachable downstream cells', async () => {
     const {store, executed} = testStore;
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
-    await state.cells.addCell(sheetId, mockCell('a'));
-    await state.cells.addCell(sheetId, mockCell('b', ['a']));
-    await state.cells.addCell(sheetId, mockCell('c', ['b']));
-    await state.cells.addCell(sheetId, mockCell('d'));
+    await state.cells.addCell(artifactA, mockCell('a'));
+    await state.cells.addCell(artifactA, mockCell('b', ['a']));
+    await state.cells.addCell(artifactA, mockCell('c', ['b']));
+    await state.cells.addCell(artifactA, mockCell('d'));
 
-    await state.cells.runDownstreamCascade(sheetId, 'a');
+    await state.cells.runDownstreamCascade(artifactA, 'a');
 
     expect(executed).toEqual(['b', 'c']);
     expect(executed).not.toContain('a');
     expect(executed).not.toContain('d');
   });
 
-  it('does not cascade across sheets even if ids are referenced in SQL/deps text', async () => {
+  it('does not cascade across artifacts even if ids are referenced in deps text', async () => {
     const {store, executed} = testStore;
     const state = store.getState();
-    const sheetA = state.cells.config.currentSheetId as string;
-    const sheetB = state.cells.addSheet('Sheet B', 'notebook');
+    state.cells.ensureArtifact(artifactA);
+    state.cells.ensureArtifact(artifactB);
 
-    await state.cells.addCell(sheetA, mockCell('a'));
-    await state.cells.addCell(sheetA, mockCell('b', ['a']));
+    await state.cells.addCell(artifactA, mockCell('a'));
+    await state.cells.addCell(artifactA, mockCell('b', ['a']));
 
-    // Cross-sheet reference should be ignored by sheet-local graph construction.
-    await state.cells.addCell(sheetB, mockCell('x', ['a']));
+    // Cross-artifact reference should be ignored by artifact-local graph construction.
+    await state.cells.addCell(artifactB, mockCell('x', ['a']));
 
-    await state.cells.runDownstreamCascade(sheetA, 'a');
+    await state.cells.runDownstreamCascade(artifactA, 'a');
 
     expect(executed).toEqual(['b']);
     expect(executed).not.toContain('x');

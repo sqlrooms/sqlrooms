@@ -1,5 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
-import {type Cell, type CellsRootState, getSheetsByType} from '@sqlrooms/cells';
+import {type Cell, type CellsRootState} from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
@@ -32,8 +32,8 @@ export const CanvasNodeMeta = z.object({
 });
 export type CanvasNodeMeta = z.infer<typeof CanvasNodeMeta>;
 
-/** View metadata for a sheet (canvas view) */
-export const CanvasSheetMeta = z.object({
+/** View metadata for a canvas artifact. */
+export const CanvasArtifactMeta = z.object({
   viewport: z.object({
     x: z.number(),
     y: z.number(),
@@ -41,19 +41,16 @@ export const CanvasSheetMeta = z.object({
   }),
   nodeOrder: z.array(z.string()).default([]),
 });
-export type CanvasSheetMeta = z.infer<typeof CanvasSheetMeta>;
+export type CanvasArtifactMeta = z.infer<typeof CanvasArtifactMeta>;
+
+const CanvasArtifactRuntime = z.object({
+  id: z.string(),
+  nodes: z.record(z.string(), CanvasNodeMeta).default({}),
+  meta: CanvasArtifactMeta,
+});
 
 export const CanvasSliceConfig = z.object({
-  sheets: z
-    .record(
-      z.string(),
-      z.object({
-        id: z.string(),
-        nodes: z.record(z.string(), CanvasNodeMeta).default({}),
-        meta: CanvasSheetMeta,
-      }),
-    )
-    .default({}),
+  artifacts: z.record(z.string(), CanvasArtifactRuntime).default({}),
 });
 export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
@@ -62,11 +59,12 @@ export type CanvasSliceState = {
     config: CanvasSliceConfig;
     initialize: () => Promise<void>;
     setConfig: (config: CanvasSliceConfig) => void;
-    setViewport: (viewport: Viewport) => void;
-    getCanvasSheets: () => Record<string, import('@sqlrooms/cells').Sheet>;
+    ensureArtifact: (artifactId: string) => void;
+    removeArtifact: (artifactId: string) => void;
+    setViewport: (artifactId: string, viewport: Viewport) => void;
 
     addNode: (params: {
-      sheetId: string;
+      artifactId: string;
       nodeType?: string;
       initialPosition?: XYPosition;
       parentId?: string;
@@ -79,7 +77,10 @@ export type CanvasSliceState = {
     ) => Promise<void>;
     deleteNode: (nodeId: string) => void;
 
-    applyNodeChanges: (changes: NodeChange<CanvasNodeMeta>[]) => void;
+    applyNodeChanges: (
+      artifactId: string,
+      changes: NodeChange<CanvasNodeMeta>[],
+    ) => void;
     applyEdgeChanges: (changes: EdgeChange<any>[]) => void;
     addEdge: (edge: Connection) => void;
 
@@ -90,28 +91,28 @@ export type CanvasSliceState = {
   };
 };
 
-function getSheet(config: CanvasSliceConfig, sheetId: string) {
-  return config.sheets[sheetId];
+function getArtifact(config: CanvasSliceConfig, artifactId: string) {
+  return config.artifacts[artifactId];
 }
 
-function ensureCanvasSheetMeta(
+function ensureCanvasArtifactMeta(
   config: CanvasSliceConfig,
-  sheetId: string,
+  artifactId: string,
   viewport: Viewport = {x: 0, y: 0, zoom: 1},
 ) {
-  let sheet = config.sheets[sheetId];
-  if (!sheet) {
-    sheet = {
-      id: sheetId,
+  let artifact = config.artifacts[artifactId];
+  if (!artifact) {
+    artifact = {
+      id: artifactId,
       nodes: {},
       meta: {
         viewport,
         nodeOrder: [],
       },
     };
-    config.sheets[sheetId] = sheet;
+    config.artifacts[artifactId] = artifact;
   }
-  return sheet;
+  return artifact;
 }
 
 function isSameViewport(a: Viewport, b: Viewport) {
@@ -126,7 +127,7 @@ export function createDefaultCanvasConfig(
   props?: Partial<CanvasSliceConfig>,
 ): CanvasSliceConfig {
   const base: CanvasSliceConfig = {
-    sheets: {},
+    artifacts: {},
   };
 
   return {...base, ...props};
@@ -152,24 +153,35 @@ export function createCanvasSlice(
           );
         },
 
-        getCanvasSheets: () => getSheetsByType(get(), 'canvas'),
+        ensureArtifact: (artifactId) => {
+          get().cells.ensureArtifact(artifactId);
+          set((state: CanvasRootState) =>
+            produce(state, (draft: CanvasRootState) => {
+              ensureCanvasArtifactMeta(draft.canvas.config, artifactId);
+            }),
+          );
+        },
+
+        removeArtifact: (artifactId) => {
+          get().cells.removeArtifact(artifactId);
+          set((state: CanvasRootState) =>
+            produce(state, (draft: CanvasRootState) => {
+              delete draft.canvas.config.artifacts[artifactId];
+            }),
+          );
+        },
 
         async initialize() {
-          const sheetId =
-            get().cells.config.currentSheetId ||
-            get().cells.config.sheetOrder[0];
-          if (!sheetId) return;
-          // don't await this - it will block the UI
-          get().cells.runAllCellsCascade(sheetId);
+          // no-op: host apps should call artifact-scoped runtime explicitly
         },
 
         addNode: async ({
-          sheetId,
+          artifactId,
           nodeType = 'sql',
           initialPosition,
           parentId,
         }: {
-          sheetId: string;
+          artifactId: string;
           nodeType?: string;
           initialPosition?: XYPosition;
           parentId?: string;
@@ -194,20 +206,26 @@ export function createCanvasSlice(
             ' ',
           );
 
-          await get().cells.addCell(sheetId, cell);
+          get().cells.ensureArtifact(artifactId);
+          await get().cells.addCell(artifactId, cell);
 
           // 2. If parent exists, add an edge in CellsSlice
           if (parentId) {
-            get().cells.addEdge(sheetId, {source: parentId, target: newId});
+            get().cells.addEdge(artifactId, {source: parentId, target: newId});
           }
 
           // 3. Update view-specific metadata
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              let sheet = getSheet(draft.canvas.config, sheetId);
-              sheet = ensureCanvasSheetMeta(draft.canvas.config, sheetId);
+              let artifact = getArtifact(draft.canvas.config, artifactId);
+              artifact = ensureCanvasArtifactMeta(
+                draft.canvas.config,
+                artifactId,
+              );
 
-              const parentNode = parentId ? sheet.nodes[parentId] : undefined;
+              const parentNode = parentId
+                ? artifact.nodes[parentId]
+                : undefined;
               const position: XYPosition = initialPosition
                 ? initialPosition
                 : parentNode
@@ -216,18 +234,18 @@ export function createCanvasSlice(
                       y: parentNode.position.y,
                     }
                   : {
-                      x: sheet.meta.viewport.x + 100,
-                      y: sheet.meta.viewport.y + 100,
+                      x: artifact.meta.viewport.x + 100,
+                      y: artifact.meta.viewport.y + 100,
                     };
 
-              sheet.nodes[newId] = {
+              artifact.nodes[newId] = {
                 id: newId,
                 position,
                 width: DEFAULT_NODE_WIDTH,
                 height: DEFAULT_NODE_HEIGHT,
                 data: {},
               };
-              sheet.meta.nodeOrder.push(newId);
+              artifact.meta.nodeOrder.push(newId);
             }),
           );
           return newId;
@@ -249,9 +267,11 @@ export function createCanvasSlice(
           get().cells.removeCell(nodeId);
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              for (const sheet of Object.values(draft.canvas.config.sheets)) {
-                delete sheet.nodes[nodeId];
-                sheet.meta.nodeOrder = sheet.meta.nodeOrder.filter(
+              for (const artifact of Object.values(
+                draft.canvas.config.artifacts,
+              )) {
+                delete artifact.nodes[nodeId];
+                artifact.meta.nodeOrder = artifact.meta.nodeOrder.filter(
                   (id) => id !== nodeId,
                 );
               }
@@ -259,42 +279,46 @@ export function createCanvasSlice(
           );
         },
 
-        applyNodeChanges: (changes: NodeChange<CanvasNodeMeta>[]) => {
+        applyNodeChanges: (
+          artifactId: string,
+          changes: NodeChange<CanvasNodeMeta>[],
+        ) => {
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              const sheetId = draft.cells.config.currentSheetId;
-              if (!sheetId) return;
-              const sheet = ensureCanvasSheetMeta(draft.canvas.config, sheetId);
+              const artifact = ensureCanvasArtifactMeta(
+                draft.canvas.config,
+                artifactId,
+              );
 
               // Ensure all cells from CellsSlice have a node entry in CanvasSlice
-              const cellsSheet = draft.cells.config.sheets[sheetId];
-              if (cellsSheet) {
-                for (const cellId of cellsSheet.cellIds) {
-                  if (!sheet.nodes[cellId]) {
-                    sheet.nodes[cellId] = {
+              const cellsArtifact = draft.cells.config.artifacts[artifactId];
+              if (cellsArtifact) {
+                for (const cellId of cellsArtifact.cellIds) {
+                  if (!artifact.nodes[cellId]) {
+                    artifact.nodes[cellId] = {
                       id: cellId,
                       position: {x: 100, y: 100},
                       width: DEFAULT_NODE_WIDTH,
                       height: DEFAULT_NODE_HEIGHT,
                       data: {},
                     };
-                    sheet.meta.nodeOrder.push(cellId);
+                    artifact.meta.nodeOrder.push(cellId);
                   }
                 }
               }
 
-              const nodesArray = sheet.meta.nodeOrder
-                .map((id) => sheet.nodes[id])
+              const nodesArray = artifact.meta.nodeOrder
+                .map((id) => artifact.nodes[id])
                 .filter(Boolean) as CanvasNodeMeta[];
               const updated = applyNodeChanges(changes, nodesArray);
-              sheet.nodes = updated.reduce<Record<string, CanvasNodeMeta>>(
+              artifact.nodes = updated.reduce<Record<string, CanvasNodeMeta>>(
                 (acc, node) => {
                   acc[node.id] = node;
                   return acc;
                 },
                 {},
               );
-              sheet.meta.nodeOrder = updated.map((n) => n.id);
+              artifact.meta.nodeOrder = updated.map((n) => n.id);
             }),
           );
         },
@@ -311,22 +335,20 @@ export function createCanvasSlice(
           void connection;
         },
 
-        setViewport: (viewport: Viewport) => {
-          const sheetId = get().cells.config.currentSheetId;
-          if (!sheetId) return;
-          const existing = get().canvas.config.sheets[sheetId];
+        setViewport: (artifactId: string, viewport: Viewport) => {
+          const existing = get().canvas.config.artifacts[artifactId];
           if (existing && isSameViewport(existing.meta.viewport, viewport)) {
             return;
           }
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              let sheet = getSheet(draft.canvas.config, sheetId);
-              sheet = ensureCanvasSheetMeta(
+              let artifact = getArtifact(draft.canvas.config, artifactId);
+              artifact = ensureCanvasArtifactMeta(
                 draft.canvas.config,
-                sheetId,
+                artifactId,
                 viewport,
               );
-              sheet.meta.viewport = viewport;
+              artifact.meta.viewport = viewport;
             }),
           );
         },

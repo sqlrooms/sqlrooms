@@ -1,23 +1,24 @@
 import type {NotebookCell, NotebookSliceConfig} from './cellSchemas';
-import type {Sheet} from '@sqlrooms/cells';
 
 export type NotebookSliceState = {
   notebook: {
     config: NotebookSliceConfig;
     schemaName: string;
     setSchemaName: (name: string) => void;
-    getNotebookSheets: () => Record<string, Sheet>;
-
-    // Sheet actions (delegate to cells for the sheet itself, keep view meta here)
-    addTab: (title?: string) => string;
-    renameTab: (id: string, title: string) => void;
-    setCurrentTab: (id: string) => void;
-    removeTab: (id: string) => void;
-    initializeSheet: (id: string) => void;
+    ensureArtifact: (artifactId: string) => void;
+    removeArtifact: (artifactId: string) => void;
 
     // Cell actions (delegate to cells, keep display order here)
-    addCell: (tabId: string, type: string, index?: number) => Promise<string>;
-    moveCell: (tabId: string, cellId: string, direction: 'up' | 'down') => void;
+    addCell: (
+      artifactId: string,
+      type: string,
+      index?: number,
+    ) => Promise<string>;
+    moveCell: (
+      artifactId: string,
+      cellId: string,
+      direction: 'up' | 'down',
+    ) => void;
     removeCell: (cellId: string) => void;
     renameCell: (cellId: string, name: string) => void;
     updateCell: (
@@ -28,8 +29,8 @@ export type NotebookSliceState = {
 
     // Execution delegates to cells
     runCell: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
-    runAllCells: (tabId: string) => Promise<void>;
-    runAllCellsCascade: (tabId: string) => Promise<void>;
+    runAllCells: (artifactId: string) => Promise<void>;
+    runAllCellsCascade: (artifactId: string) => Promise<void>;
     cancelRunCell: (cellId: string) => void;
   };
 };

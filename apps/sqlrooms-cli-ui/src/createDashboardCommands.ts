@@ -86,22 +86,14 @@ function createArtifactCommand(
     execute: ({getState}, input) => {
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
-      let artifactId: string;
-      if (artifactType === 'app') {
-        artifactId = state.artifacts.addItem({
-          type: artifactType,
-          title: title ?? group,
-        });
-      } else {
-        artifactId = state.cells.addSheet(title, artifactType);
-        const sheet = state.cells.config.sheets[artifactId];
-        if (sheet) {
-          state.artifacts.ensureItem(artifactId, {
-            type: sheet.type,
-            title: sheet.title,
-          });
-        }
-        state.cells.setCurrentSheet(artifactId);
+      const artifactId = state.artifacts.addItem({
+        type: artifactType,
+        title: title ?? group,
+      });
+      if (artifactType === 'notebook') {
+        state.notebook.ensureArtifact(artifactId);
+      } else if (artifactType === 'canvas') {
+        state.canvas.ensureArtifact(artifactId);
       }
       state.artifacts.setCurrentItem(artifactId);
       return {
@@ -187,8 +179,11 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
           throw new Error(`Unknown artifact "${artifactId}".`);
         }
         state.artifacts.setCurrentItem(artifactId);
-        if (artifact.type === 'notebook' || artifact.type === 'canvas') {
-          state.cells.setCurrentSheet(artifactId);
+        if (artifact.type === 'notebook') {
+          state.notebook.ensureArtifact(artifactId);
+        }
+        if (artifact.type === 'canvas') {
+          state.canvas.ensureArtifact(artifactId);
         }
         if (artifact.type === 'dashboard') {
           state.dashboard.ensureDashboardArtifact(artifactId);

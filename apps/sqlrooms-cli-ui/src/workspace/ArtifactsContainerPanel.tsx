@@ -31,7 +31,6 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const removeTab = useRoomStore((s) => s.layout.removeTab);
   const artifacts = useRoomStore((s) => s.artifacts.config.itemsById);
   const setCurrentItem = useRoomStore((s) => s.artifacts.setCurrentItem);
-  const setCurrentSheet = useRoomStore((s) => s.cells.setCurrentSheet);
   const evictDashboardRuntime = useRoomStore(
     (s) => s.mosaicDashboard.evictDashboardRuntime,
   );
@@ -58,10 +57,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       return;
     }
     setCurrentItem(activeArtifactId);
-    if (artifact.type === 'notebook' || artifact.type === 'canvas') {
-      setCurrentSheet(activeArtifactId);
-    }
-  }, [activeArtifactId, artifacts, setCurrentItem, setCurrentSheet]);
+  }, [activeArtifactId, artifacts, setCurrentItem]);
 
   const handleAddArtifact = useCallback(
     async (info: ArtifactTypeInfo) => {
@@ -69,9 +65,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
         title: `New ${info.title}`,
       });
       if (result?.success && nodeId) {
-        const artifactId = (
-          result.data as {artifactId?: string; sheetId?: string}
-        ).artifactId;
+        const artifactId = (result.data as {artifactId?: string}).artifactId;
         if (!artifactId) {
           return;
         }
