@@ -55,6 +55,7 @@ export type RoomState = RoomShellSliceState &
         artifactId: string,
         files: Record<string, string>,
       ) => void;
+      removeArtifactApp: (artifactId: string) => void;
       getArtifactApp: (
         artifactId: string,
       ) => AppBuilderProjectConfig['appsByArtifactId'][string] | undefined;

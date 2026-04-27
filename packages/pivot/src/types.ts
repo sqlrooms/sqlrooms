@@ -155,10 +155,19 @@ export type PivotSliceState = {
     initialize: () => Promise<void>;
     getPivotStore: (pivotId: string) => PivotInstanceStore;
     addPivot: (props?: {
+      id?: string;
       title?: string;
       source?: PivotSource;
       config?: Partial<PivotConfig>;
     }) => string;
+    ensurePivot: (
+      pivotId: string,
+      props?: {
+        title?: string;
+        source?: PivotSource;
+        config?: Partial<PivotConfig>;
+      },
+    ) => void;
     removePivot: (pivotId: string) => void;
     renamePivot: (pivotId: string, title: string) => void;
     setSource: (pivotId: string, source: PivotSource | undefined) => void;

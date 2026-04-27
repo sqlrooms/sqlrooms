@@ -250,12 +250,12 @@ export function createPivotSlice(props?: {
         },
 
         addPivot(pivotProps) {
-          const id = createId();
+          const id = pivotProps?.id ?? createId();
           const title = generateUniqueName(
             pivotProps?.title ?? 'Pivot 1',
-            Object.values(get().pivot.config.pivots).map(
-              (pivot) => pivot.title,
-            ),
+            Object.values(get().pivot.config.pivots)
+              .filter((pivot) => pivot.id !== id)
+              .map((pivot) => pivot.title),
             ' ',
           );
           const nextPivot = {
@@ -272,6 +272,18 @@ export function createPivotSlice(props?: {
             }),
           );
           return id;
+        },
+
+        ensurePivot(pivotId, pivotProps) {
+          if (get().pivot.config.pivots[pivotId]) {
+            return;
+          }
+          get().pivot.addPivot({
+            id: pivotId,
+            title: pivotProps?.title,
+            source: pivotProps?.source,
+            config: pivotProps?.config,
+          });
         },
 
         removePivot(pivotId) {

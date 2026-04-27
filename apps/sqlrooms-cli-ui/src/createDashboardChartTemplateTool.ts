@@ -78,7 +78,7 @@ function resolveDashboardArtifactId(
   }
   if (!targetArtifactId) return null;
 
-  const artifact = state.artifacts.getItem(targetArtifactId);
+  const artifact = state.artifacts.getArtifact(targetArtifactId);
   if (!artifact || artifact.type !== 'dashboard') {
     throw new Error(
       `Artifact "${targetArtifactId}" is not a dashboard artifact.`,
@@ -258,7 +258,7 @@ export function createDashboardChartTemplateTool(store: {
         const panel = createMosaicDashboardVgPlotPanelConfig(spec, title);
 
         state.mosaicDashboard.addPanel(targetArtifactId, panel);
-        state.artifacts.setCurrentItem(targetArtifactId);
+        state.artifacts.setCurrentArtifact(targetArtifactId);
 
         return {
           llmResult: {

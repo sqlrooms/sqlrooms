@@ -1,4 +1,12 @@
 import {
+  ArtifactsSliceConfig,
+  ArtifactsSliceState,
+  createArtifactPanelDefinition,
+  createArtifactsSlice,
+  defineArtifactTypes,
+  type ArtifactTypeDefinition,
+} from '@sqlrooms/artifacts';
+import {
   PivotSliceConfig,
   PivotSliceState,
   createPivotSlice,
@@ -20,7 +28,46 @@ import {PivotPanel} from './components/PivotPanel';
 export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export type RoomState = RoomShellSliceState & PivotSliceState;
+export const DEFAULT_PIVOT_ARTIFACT_ID = 'pivot';
+
+export type RoomState = RoomShellSliceState &
+  ArtifactsSliceState &
+  PivotSliceState;
+
+export const PIVOT_ARTIFACT_TYPES = defineArtifactTypes({
+  pivot: {
+    label: 'Pivot',
+    defaultTitle: 'Pivot 1',
+    icon: TablePropertiesIcon,
+    component: PivotPanel,
+    onCreate: ({artifactId, artifact, store}) => {
+      store.getState().pivot.ensurePivot(artifactId, {
+        title: artifact.title,
+        source: {kind: 'table', tableName: 'cars'},
+      });
+    },
+    onEnsure: ({artifactId, artifact, store}) => {
+      store.getState().pivot.ensurePivot(artifactId, {
+        title: artifact.title,
+        source: {kind: 'table', tableName: 'cars'},
+        config: {
+          rows: ['Cylinders'],
+          cols: ['Origin'],
+          aggregatorName: 'Count',
+          vals: ['MPG'],
+          rendererName: 'Grouped Column Chart',
+          unusedOrder: ['Displacement', 'Horsepower', 'Weight', 'Acceleration'],
+        },
+      });
+    },
+    onRename: ({artifactId, artifact, store}) => {
+      store.getState().pivot.renamePivot(artifactId, artifact.title);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().pivot.removePivot(artifactId);
+    },
+  },
+} satisfies Record<'pivot', ArtifactTypeDefinition<RoomState>>);
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
@@ -29,6 +76,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,
+        artifacts: ArtifactsSliceConfig,
         pivot: PivotSliceConfig,
       },
     },
@@ -85,31 +133,28 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               component: MainView,
               icon: TablePropertiesIcon,
             },
-            pivot: (ctx) => {
-              const pivotId = ctx.meta?.pivotId as string | undefined;
-              const pivot = pivotId
-                ? store.getState().pivot.config.pivots[pivotId]
-                : undefined;
-              return {
-                title: pivot?.title ?? 'Pivot',
-                component: PivotPanel,
-                icon: TablePropertiesIcon,
-              };
-            },
+            artifact: createArtifactPanelDefinition(
+              PIVOT_ARTIFACT_TYPES,
+              store,
+            ),
           },
         },
       })(set, get, store),
-      ...createPivotSlice({
+      ...createArtifactsSlice<RoomState>({
+        artifactTypes: PIVOT_ARTIFACT_TYPES,
         config: {
-          tableName: 'cars',
-          rows: ['Cylinders'],
-          cols: ['Origin'],
-          aggregatorName: 'Count',
-          vals: ['MPG'],
-          rendererName: 'Grouped Column Chart',
-          unusedOrder: ['Displacement', 'Horsepower', 'Weight', 'Acceleration'],
+          artifactsById: {
+            [DEFAULT_PIVOT_ARTIFACT_ID]: {
+              id: DEFAULT_PIVOT_ARTIFACT_ID,
+              type: 'pivot',
+              title: 'Pivot 1',
+            },
+          },
+          artifactOrder: [DEFAULT_PIVOT_ARTIFACT_ID],
+          currentArtifactId: DEFAULT_PIVOT_ARTIFACT_ID,
         },
       })(set, get, store),
+      ...createPivotSlice()(set, get, store),
     }),
   ),
 );

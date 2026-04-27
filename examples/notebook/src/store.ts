@@ -1,7 +1,10 @@
 import {
   ArtifactsSliceConfig,
   ArtifactsSliceState,
+  createArtifactPanelDefinition,
   createArtifactsSlice,
+  defineArtifactTypes,
+  type ArtifactTypeDefinition,
 } from '@sqlrooms/artifacts';
 import {
   CellsSliceConfig,
@@ -29,7 +32,7 @@ import {
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
-import {DatabaseIcon} from 'lucide-react';
+import {DatabaseIcon, FileTextIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -46,6 +49,25 @@ export type RoomState = RoomShellSliceState &
     apiKey: string;
     setApiKey: (apiKey: string) => void;
   };
+
+export const NOTEBOOK_ARTIFACT_TYPES = defineArtifactTypes({
+  notebook: {
+    label: 'Notebook',
+    defaultTitle: 'Notebook',
+    icon: FileTextIcon,
+    component: NotebookPanel,
+    onCreate: ({artifactId, store}) => {
+      store.getState().notebook.ensureArtifact(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().notebook.ensureArtifact(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().notebook.removeArtifact(artifactId);
+    },
+  },
+} satisfies Record<'notebook', ArtifactTypeDefinition<RoomState>>);
+
 export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
@@ -102,21 +124,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },
+            artifact: createArtifactPanelDefinition(
+              NOTEBOOK_ARTIFACT_TYPES,
+              store,
+            ),
           },
         },
       })(set, get, store),
 
-      ...createArtifactsSlice({
+      ...createArtifactsSlice<RoomState>({
+        artifactTypes: NOTEBOOK_ARTIFACT_TYPES,
         config: {
-          itemsById: {
+          artifactsById: {
             [DEFAULT_NOTEBOOK_ARTIFACT_ID]: {
               id: DEFAULT_NOTEBOOK_ARTIFACT_ID,
               type: 'notebook',
               title: 'Notebook',
             },
           },
-          order: [DEFAULT_NOTEBOOK_ARTIFACT_ID],
-          currentItemId: DEFAULT_NOTEBOOK_ARTIFACT_ID,
+          artifactOrder: [DEFAULT_NOTEBOOK_ARTIFACT_ID],
+          currentArtifactId: DEFAULT_NOTEBOOK_ARTIFACT_ID,
         },
       })(set, get, store),
 

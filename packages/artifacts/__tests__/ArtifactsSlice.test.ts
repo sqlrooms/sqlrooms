@@ -3,66 +3,138 @@ import {
   createBaseRoomSlice,
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
-import {createArtifactsSlice} from '../src';
+import {
+  createArtifactLayoutNode,
+  createArtifactPanelDefinition,
+  createArtifactsSlice,
+  defineArtifactTypes,
+  type ArtifactsSliceState,
+} from '../src';
 
-function createTestStore() {
-  return createStore<BaseRoomStoreState & any>()((...args) => ({
+type TestRoomState = BaseRoomStoreState & ArtifactsSliceState;
+
+function createTestStore(events: string[] = []) {
+  const artifactTypes = defineArtifactTypes({
+    notebook: {
+      label: 'Notebook',
+      defaultTitle: 'Notebook',
+      onCreate: ({artifactId}) => events.push(`create:${artifactId}`),
+      onEnsure: ({artifactId}) => events.push(`ensure:${artifactId}`),
+      onRename: ({artifactId, previousTitle, artifact}) =>
+        events.push(`rename:${artifactId}:${previousTitle}:${artifact.title}`),
+      onClose: ({artifactId}) => events.push(`close:${artifactId}`),
+      onDelete: ({artifactId}) => events.push(`delete:${artifactId}`),
+    },
+    dashboard: {
+      label: 'Dashboard',
+      defaultTitle: 'Dashboard',
+    },
+  });
+
+  return createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createArtifactsSlice()(...args),
+    ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
   }));
 }
 
 describe('ArtifactsSlice', () => {
-  it('adds, ensures, renames, and removes items', () => {
-    const store = createTestStore();
-    const firstId = store.getState().artifacts.addItem({
-      type: 'dashboard',
-      title: 'Dashboard',
+  it('creates, ensures, renames, closes, and deletes artifacts', () => {
+    const events: string[] = [];
+    const store = createTestStore(events);
+    const firstId = store.getState().artifacts.createArtifact({
+      type: 'notebook',
     });
 
-    expect(store.getState().artifacts.config.itemsById[firstId]).toMatchObject({
+    expect(
+      store.getState().artifacts.config.artifactsById[firstId],
+    ).toMatchObject({
       id: firstId,
-      type: 'dashboard',
-      title: 'Dashboard',
-    });
-    expect(store.getState().artifacts.config.currentItemId).toBe(firstId);
-
-    store.getState().artifacts.ensureItem('notebook-1', {
       type: 'notebook',
       title: 'Notebook',
     });
-    store.getState().artifacts.renameItem('notebook-1', 'Notebook 2');
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(firstId);
 
-    expect(store.getState().artifacts.getItem('notebook-1')).toMatchObject({
+    store.getState().artifacts.ensureArtifact('notebook-1', {
+      type: 'notebook',
+      title: 'Notebook 1',
+    });
+    store.getState().artifacts.renameArtifact('notebook-1', 'Notebook 2');
+    store.getState().artifacts.closeArtifact('notebook-1');
+
+    expect(store.getState().artifacts.getArtifact('notebook-1')).toMatchObject({
       id: 'notebook-1',
       type: 'notebook',
       title: 'Notebook 2',
     });
 
-    store.getState().artifacts.removeItem(firstId);
+    store.getState().artifacts.deleteArtifact(firstId);
 
-    expect(store.getState().artifacts.getItem(firstId)).toBeUndefined();
-    expect(store.getState().artifacts.config.order).toEqual(['notebook-1']);
+    expect(store.getState().artifacts.getArtifact(firstId)).toBeUndefined();
+    expect(store.getState().artifacts.config.artifactOrder).toEqual([
+      'notebook-1',
+    ]);
+    expect(events).toEqual([
+      `create:${firstId}`,
+      'ensure:notebook-1',
+      'rename:notebook-1:Notebook 1:Notebook 2',
+      'close:notebook-1',
+      `close:${firstId}`,
+      `delete:${firstId}`,
+    ]);
   });
 
-  it('normalizes order and current item', () => {
+  it('normalizes artifactOrder and current artifact', () => {
     const store = createTestStore();
-    store.getState().artifacts.ensureItem('a', {
+    store.getState().artifacts.ensureArtifact('a', {
       type: 'dashboard',
       title: 'A',
     });
-    store.getState().artifacts.ensureItem('b', {
-      type: 'app',
+    store.getState().artifacts.ensureArtifact('b', {
+      type: 'notebook',
       title: 'B',
     });
 
-    store.getState().artifacts.setOrder(['b', 'missing', 'a', 'b']);
-    expect(store.getState().artifacts.config.order).toEqual(['b', 'a']);
+    store.getState().artifacts.setArtifactOrder(['b', 'missing', 'a', 'b']);
+    expect(store.getState().artifacts.config.artifactOrder).toEqual(['b', 'a']);
 
-    store.getState().artifacts.setCurrentItem('b');
-    expect(store.getState().artifacts.config.currentItemId).toBe('b');
+    store.getState().artifacts.setCurrentArtifact('b');
+    expect(store.getState().artifacts.config.currentArtifactId).toBe('b');
 
-    store.getState().artifacts.setCurrentItem('missing');
-    expect(store.getState().artifacts.config.currentItemId).toBeUndefined();
+    store.getState().artifacts.setCurrentArtifact('missing');
+    expect(store.getState().artifacts.config.currentArtifactId).toBeUndefined();
+  });
+
+  it('validates configured artifact types', () => {
+    const store = createTestStore();
+    expect(() =>
+      store.getState().artifacts.createArtifact({type: 'unknown'}),
+    ).toThrow('Unknown artifact type "unknown".');
+  });
+
+  it('creates artifact layout nodes and panel definitions', () => {
+    const store = createTestStore();
+    const artifactId = store
+      .getState()
+      .artifacts.createArtifact({type: 'dashboard'});
+    const node = createArtifactLayoutNode(artifactId);
+    expect(node).toMatchObject({
+      type: 'panel',
+      id: artifactId,
+      panel: {key: 'artifact', meta: {artifactId}},
+    });
+
+    const panelDefinition = createArtifactPanelDefinition(
+      store.getState().artifacts.artifactTypes,
+      store,
+    );
+    const panelInfo =
+      typeof panelDefinition === 'function'
+        ? panelDefinition({
+            panelId: 'artifact',
+            meta: {artifactId},
+          })
+        : panelDefinition;
+
+    expect(panelInfo.title).toBe('Dashboard');
   });
 });

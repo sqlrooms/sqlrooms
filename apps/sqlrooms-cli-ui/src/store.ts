@@ -257,7 +257,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     },
     (set, get, store) => {
       const getFirstDashboardArtifactId = () =>
-        Object.values(get().artifacts.config.itemsById).find(
+        Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
         )?.id;
 
@@ -273,7 +273,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
-          const artifact = get().artifacts.getItem(artifactId);
+          const artifact = get().artifacts.getArtifact(artifactId);
           if (!artifact || artifact.type !== 'dashboard') {
             return;
           }
@@ -286,7 +286,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             existingDashboardArtifactId ??
             get().dashboard.createDashboardArtifact('Dashboard');
           if (!existingDashboardArtifactId) {
-            get().artifacts.setCurrentItem(artifactId);
+            get().artifacts.setCurrentArtifact(artifactId);
           }
           get().dashboard.ensureDashboardArtifact(artifactId);
           const dashboard = get().mosaicDashboard.getDashboard(artifactId);
@@ -314,7 +314,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return artifactId;
         },
         setDashboardVgPlot: (artifactId, vgplot) => {
-          const artifact = get().artifacts.getItem(artifactId);
+          const artifact = get().artifacts.getArtifact(artifactId);
           if (!artifact) {
             throw new Error(`Unknown artifact "${artifactId}".`);
           }
@@ -353,17 +353,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               : undefined;
           })(),
         getCurrentDashboardArtifactId: () => {
-          const currentItemId = get().artifacts.config.currentItemId;
-          const currentItem = currentItemId
-            ? get().artifacts.config.itemsById[currentItemId]
+          const currentArtifactId = get().artifacts.config.currentArtifactId;
+          const currentArtifact = currentArtifactId
+            ? get().artifacts.config.artifactsById[currentArtifactId]
             : undefined;
-          if (currentItem?.type === 'dashboard') {
-            return currentItemId;
+          if (currentArtifact?.type === 'dashboard') {
+            return currentArtifactId;
           }
           return getFirstDashboardArtifactId();
         },
         createDashboardArtifact: (title) => {
-          const artifactId = get().artifacts.addItem({
+          const artifactId = get().artifacts.createArtifact({
             type: 'dashboard',
             title: title ?? 'Dashboard',
           });
@@ -379,7 +379,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             state.dashboard.getCurrentDashboardArtifactId() ??
             state.dashboard.createDashboardArtifact();
           state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
-          state.artifacts.setCurrentItem(targetArtifactId);
+          state.artifacts.setCurrentArtifact(targetArtifactId);
           return targetArtifactId;
         },
       };
@@ -418,6 +418,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   files,
                   updatedAt: Date.now(),
                 };
+              }),
+            );
+          },
+          removeArtifactApp: (artifactId) => {
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.appProject.config.appsByArtifactId[artifactId];
               }),
             );
           },
@@ -469,7 +476,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createArtifactsSlice()(set, get, store),
+        ...createArtifactsSlice<RoomState>({
+          artifactTypes: ARTIFACT_TYPES,
+        })(set, get, store),
 
         ...createMosaicSlice()(set, get, store),
 

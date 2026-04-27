@@ -764,6 +764,9 @@ importers:
 
   examples/canvas:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/canvas':
         specifier: workspace:*
         version: link:../../packages/canvas
@@ -1921,6 +1924,9 @@ importers:
 
   examples/pivot:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -2504,16 +2510,34 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../layout
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
       immer:
         specifier: ^11.0.1
         version: 11.0.1
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
       zod:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
       zustand:
         specifier: ^5.0.8
         version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))

@@ -86,7 +86,7 @@ function createArtifactCommand(
     execute: ({getState}, input) => {
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
-      const artifactId = state.artifacts.addItem({
+      const artifactId = state.artifacts.createArtifact({
         type: artifactType,
         title: title ?? group,
       });
@@ -95,7 +95,7 @@ function createArtifactCommand(
       } else if (artifactType === 'canvas') {
         state.canvas.ensureArtifact(artifactId);
       }
-      state.artifacts.setCurrentItem(artifactId);
+      state.artifacts.setCurrentArtifact(artifactId);
       return {
         success: true,
         commandId: id,
@@ -127,7 +127,7 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
     execute: ({getState}, input) => {
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const artifactId = getState().dashboard.createDashboardArtifact(title);
-      getState().artifacts.setCurrentItem(artifactId);
+      getState().artifacts.setCurrentArtifact(artifactId);
       return {
         success: true,
         commandId: 'dashboard.create-artifact',
@@ -163,7 +163,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         if (!artifactId) {
           throw new Error('No artifactId provided.');
         }
-        const artifact = getState().artifacts.getItem(artifactId);
+        const artifact = getState().artifacts.getArtifact(artifactId);
         if (!artifact) {
           throw new Error(`Unknown artifact "${artifactId}".`);
         }
@@ -174,11 +174,11 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
           throw new Error('No artifactId provided.');
         }
         const state = getState();
-        const artifact = state.artifacts.getItem(artifactId);
+        const artifact = state.artifacts.getArtifact(artifactId);
         if (!artifact) {
           throw new Error(`Unknown artifact "${artifactId}".`);
         }
-        state.artifacts.setCurrentItem(artifactId);
+        state.artifacts.setCurrentArtifact(artifactId);
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
@@ -219,7 +219,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         const {artifactId, vgplot} = input as DashboardSetVgPlotCommandInput;
         parseVgPlotSpecString(vgplot);
         if (!artifactId) return;
-        const artifact = getState().artifacts.getItem(artifactId);
+        const artifact = getState().artifacts.getArtifact(artifactId);
         if (!artifact) {
           throw new Error(`Unknown artifact "${artifactId}".`);
         }
@@ -237,7 +237,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
           state.dashboard.getCurrentDashboardArtifactId() ??
           state.dashboard.createDashboardArtifact();
         state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
-        state.artifacts.setCurrentItem(targetArtifactId);
+        state.artifacts.setCurrentArtifact(targetArtifactId);
         return {
           success: true,
           commandId: 'dashboard.set-vgplot',
@@ -273,7 +273,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
             error: 'No dashboard artifact is available.',
           };
         }
-        const artifact = state.artifacts.getItem(targetArtifactId);
+        const artifact = state.artifacts.getArtifact(targetArtifactId);
         if (!artifact || artifact.type !== 'dashboard') {
           return {
             success: false,

@@ -1,10 +1,6 @@
+import {createArtifactPanelDefinition} from '@sqlrooms/artifacts';
 import {CreateLayoutSliceProps} from '@sqlrooms/layout';
-import {
-  DatabaseIcon,
-  FolderIcon,
-  LayoutDashboardIcon,
-  SparklesIcon,
-} from 'lucide-react';
+import {DatabaseIcon, FolderIcon, SparklesIcon} from 'lucide-react';
 import {StoreApi} from 'zustand';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {AssistantPanel} from './components/AssistantPanel';
@@ -71,31 +67,6 @@ export const createLayout = ({
       title: 'Artifacts',
       icon: FolderIcon,
     },
-    artifact: (ctx) => {
-      const artifactId = ctx.meta?.artifactId as string | undefined;
-
-      const artifact = artifactId
-        ? store.getState().artifacts.config.itemsById[artifactId]
-        : null;
-      const artifactType = artifact?.type;
-
-      const artifactMeta = artifactType
-        ? ARTIFACT_TYPES[artifactType as keyof typeof ARTIFACT_TYPES]
-        : undefined;
-
-      if (!artifactMeta) {
-        return {
-          component: () => null,
-          title: `Unknown panel ${artifactId}`,
-          icon: LayoutDashboardIcon,
-        };
-      }
-
-      return {
-        component: artifactMeta.component,
-        title: artifact?.title || `New ${artifactMeta.title}`,
-        icon: artifactMeta.icon,
-      };
-    },
+    artifact: createArtifactPanelDefinition(ARTIFACT_TYPES, store),
   },
 });

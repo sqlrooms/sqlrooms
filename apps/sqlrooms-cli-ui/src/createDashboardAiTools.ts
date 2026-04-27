@@ -70,7 +70,7 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
         const {title} = params;
         const state = store.getState();
         const artifactId = state.dashboard.createDashboardArtifact(title);
-        state.artifacts.setCurrentItem(artifactId);
+        state.artifacts.setCurrentArtifact(artifactId);
         return {
           llmResult: {
             success: true,
@@ -99,7 +99,7 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
             },
           };
         }
-        const artifact = state.artifacts.getItem(targetArtifactId);
+        const artifact = state.artifacts.getArtifact(targetArtifactId);
         if (!artifact || artifact.type !== 'dashboard') {
           return {
             llmResult: {
@@ -146,7 +146,7 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
         try {
           const vgplotString = toVgPlotSpecString(params.vgplot);
           state.dashboard.setDashboardVgPlot(targetArtifactId, vgplotString);
-          state.artifacts.setCurrentItem(targetArtifactId);
+          state.artifacts.setCurrentArtifact(targetArtifactId);
           return {
             llmResult: {
               success: true,

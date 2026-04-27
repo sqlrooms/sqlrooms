@@ -5,7 +5,9 @@ import {useRoomStore} from '../../store';
 
 export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
-  const artifact = useRoomStore((state) => state.artifacts.getItem(artifactId));
+  const artifact = useRoomStore((state) =>
+    state.artifacts.getArtifact(artifactId),
+  );
   const ensureDashboardArtifact = useRoomStore(
     (state) => state.dashboard.ensureDashboardArtifact,
   );

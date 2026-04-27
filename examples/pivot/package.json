@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",

@@ -21,7 +21,7 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const appState = useRoomStore(
     (s) => s.appProject.config.appsByArtifactId[artifactId],
   );
-  const renameArtifact = useRoomStore((s) => s.artifacts.renameItem);
+  const renameArtifact = useRoomStore((s) => s.artifacts.renameArtifact);
   const upsertArtifactApp = useRoomStore((s) => s.appProject.upsertArtifactApp);
   const updateArtifactAppFiles = useRoomStore(
     (s) => s.appProject.updateArtifactAppFiles,

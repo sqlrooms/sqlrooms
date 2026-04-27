@@ -20,11 +20,19 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
+    "lucide-react": "^0.556.0",
     "zod": "^4.1.8"
   },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
   "devDependencies": {
+    "@types/react": "*",
     "zustand": "^5.0.8"
   },
   "scripts": {
