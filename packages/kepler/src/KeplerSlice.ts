@@ -43,7 +43,7 @@ import {
 import {createId} from '@paralleldrive/cuid2';
 import {
   buildKeplerUserTableIdMap,
-  keplerDatasetListLabelFromQualifiedSql,
+  unqualifySqlTableName,
 } from '@sqlrooms/duckdb-core';
 import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
@@ -611,9 +611,7 @@ export function createKeplerSlice({
               data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {
                 id: tableName,
-                label: keplerDatasetListLabelFromQualifiedSql(
-                  String(tableName),
-                ),
+                label: unqualifySqlTableName(String(tableName)),
               },
               metadata: {tableName},
             };

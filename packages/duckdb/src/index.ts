@@ -80,7 +80,7 @@ export {
   makeLimitQuery,
   makeQualifiedTableName,
   buildKeplerUserTableIdMap,
-  keplerDatasetListLabelFromQualifiedSql,
+  unqualifySqlTableName,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,

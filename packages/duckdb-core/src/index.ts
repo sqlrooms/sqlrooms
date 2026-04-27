@@ -30,7 +30,7 @@ export {
   isQualifiedTableName,
   makeQualifiedTableName,
   buildKeplerUserTableIdMap,
-  keplerDatasetListLabelFromQualifiedSql,
+  unqualifySqlTableName,
   escapeVal,
   escapeId,
   isNumericDuckType,
