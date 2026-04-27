@@ -34,6 +34,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   publish:
@@ -77,11 +78,9 @@ jobs:
 
       - name: Configure NPM
         run: |
-          # Configure npm for the organization scope
           npm config set @sqlrooms:registry https://registry.npmjs.org/
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-          # Ensure packages are published as public
           echo "access=public" >> .npmrc
+          echo "provenance=true" >> .npmrc
 
       - name: Build packages
         run: pnpm build
@@ -97,7 +96,7 @@ jobs:
           else
             cmd="prerelease"
           fi
-          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push
+          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push --no-granular-pathspec
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
@@ -108,9 +107,9 @@ jobs:
         run: |
           version_input=${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
           if [ "$version_input" = "auto" ]; then
-            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push
+            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push --no-granular-pathspec
           else
-            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push
+            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push --no-granular-pathspec
           fi
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}

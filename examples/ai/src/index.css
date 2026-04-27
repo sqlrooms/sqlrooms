@@ -3,7 +3,7 @@
 @import '@sqlrooms/ui/tailwind-preset.css';
 
 @source '../index.html';
-@source 'src/**/*.{ts,tsx}';
+@source './**/*.{ts,tsx}';
 @source '../../../packages/*/src/**/*.{ts,tsx}';
 @source '../node_modules/@sqlrooms/*/dist/';
 

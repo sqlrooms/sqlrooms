@@ -104,6 +104,21 @@ export const MapView = () => {
     }),
     [],
   );
+  const deckProps = useMemo(
+    () => ({
+      onClick: (info: MapPickingInfo) =>
+        setSelected((info.object as AirportRow | null | undefined) ?? null),
+      getTooltip: ({object}: MapPickingInfo) =>
+        object
+          ? {
+              text: `${String((object as AirportRow).name)} (${String(
+                (object as AirportRow).abbrev,
+              )})`,
+            }
+          : null,
+    }),
+    [],
+  );
 
   return (
     <DeckJsonMap
@@ -111,18 +126,7 @@ export const MapView = () => {
       spec={AIRPORT_MAP_SPEC}
       datasets={datasets}
       mapStyle={MAP_STYLE}
-      deckProps={{
-        onClick: (info: MapPickingInfo) =>
-          setSelected((info.object as AirportRow | null | undefined) ?? null),
-        getTooltip: ({object}: MapPickingInfo) =>
-          object
-            ? {
-                text: `${String((object as AirportRow).name)} (${String(
-                  (object as AirportRow).abbrev,
-                )})`,
-              }
-            : null,
-      }}
+      deckProps={deckProps}
     >
       <NavigationControl position="top-left" />
       {selected ? (

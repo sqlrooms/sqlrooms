@@ -210,9 +210,10 @@ const legend = buildColorScaleLegend(colorScale, values);
 
 `buildColorScaleLegend(...)` returns a `ResolvedColorLegend`, which is one of:
 
-- `continuous`
-- `stepped`
-- `categorical`
+- `continuous`: a gradient ramp with positioned tick labels
+- `stepped`: discrete color blocks with range labels and boundary ticks when
+  available
+- `categorical`: swatches for distinct category values
 
 You can render one or more resolved legends with the generic React component:
 
@@ -222,9 +223,26 @@ import {ColorScaleLegend} from '@sqlrooms/color-scales';
 <ColorScaleLegend legends={[legend]} />;
 ```
 
-The current legend renderer is intentionally generic and runtime-neutral. It is
-meant to work in any React environment, while runtime-specific packages can
-choose to render the same config/model through other systems such as
+The React renderer follows the same visual vocabulary as D3's
+[color legend](https://observablehq.com/@d3/color-legend): continuous scales are
+drawn as horizontal ramps with aligned ticks, quantize/quantile/threshold scales
+are drawn as segmented ramps, and categorical scales are drawn as compact
+swatches.
+
+Optional presentation props let callers tune the layout without changing the
+shared legend model:
+
+```tsx
+<ColorScaleLegend
+  legends={[mpgLegend, originLegend]}
+  width={320}
+  swatchColumns={2}
+/>
+```
+
+The renderer is still intentionally generic and runtime-neutral. It works in any
+React environment, while runtime-specific packages can choose to render the same
+config/model through other systems such as
 [Mosaic/VGPlot legends](https://idl.uw.edu/mosaic/examples/legends.html).
 
 ### Using the Same Config With `MosaicColorLegend`
