@@ -38,8 +38,15 @@ export function makeQualifiedTableName({
 }
 
 /**
- * Kepler dataset `dataId` values: fully qualified form from {@link QualifiedTableName#toString},
- * plus unqualified `main` table names for projects saved before FQN was used.
+ * Builds a map where the keys are Kepler dataset IDs and the values indicate their `isView` status.
+ * Each key represents a fully qualified table name.
+ *
+ * Previously, sqlrooms used only the table name as the key. This function maintains backward
+ * compatibility with that behavior.
+ *
+ * If a table is not fully qualified, two entries are created:
+ * - main.{tableName}
+ * - {tableName}
  */
 export function buildKeplerUserTableIdMap(
   tables: {table: QualifiedTableName; isView: boolean}[],
