@@ -54,7 +54,7 @@ export function buildKeplerUserTableIdMap(
   return m;
 }
 
-const FQN_PART_SEPARATOR = '".';
+const SCHEMA_TABLE_SEPARATOR = '".';
 
 /**
  * Unqualified table name for Kepler dataset / layer UI labels. Does not
@@ -67,13 +67,13 @@ export function keplerDatasetListLabelFromQualifiedSql(
   if (!tableSql) {
     return tableSql;
   }
-  if (!tableSql.includes(FQN_PART_SEPARATOR)) {
+  if (!tableSql.includes(SCHEMA_TABLE_SEPARATOR)) {
     if (tableSql.startsWith('"') && tableSql.endsWith('"')) {
       return tableSql.slice(1, -1).replace(/""/g, '"');
     }
     return tableSql;
   }
-  const parts = tableSql.split(FQN_PART_SEPARATOR);
+  const parts = tableSql.split(SCHEMA_TABLE_SEPARATOR);
   const last = parts[parts.length - 1] ?? tableSql;
   if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
     return last.slice(1, -1).replace(/""/g, '"');
