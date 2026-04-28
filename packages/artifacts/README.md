@@ -63,6 +63,10 @@ const store = createRoomStore<RoomState>(
 </ArtifactTabs>
 ```
 
+Use `ArtifactTabs.useActions()` from custom subcomponents when you need access
+to the tab adapter actions, and use `overlay` for dialogs or other elements that
+need that context without being rendered inside the tab strip.
+
 ## Slice API
 
 Config uses artifact terminology throughout:
@@ -92,6 +96,8 @@ removes the artifact registry entry.
   descriptors, open tab ids, selected id, and handlers.
 - `ArtifactTabs` is a compound component over `TabStrip` and
   `TabsLayout.TabContent`.
+- `ArtifactTabs.useActions()` exposes the current tab adapter actions to custom
+  subcomponents rendered under `ArtifactTabs`.
 - `createArtifactLayoutNode(artifactId, panelKey?)` creates a stable layout
   panel node for an artifact.
 - `createArtifactPanelDefinition(artifactTypes, store)` resolves artifact panel

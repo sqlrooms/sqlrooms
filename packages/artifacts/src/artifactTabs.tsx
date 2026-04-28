@@ -505,6 +505,9 @@ export type ArtifactTabsProps = Omit<
     ) => React.ReactNode;
     emptyContent?: React.ReactNode;
     content?: React.ReactNode;
+    overlay?:
+      | React.ReactNode
+      | ((actions: UseArtifactTabsResult) => React.ReactNode);
   };
 
 function ArtifactTabsRoot({
@@ -516,6 +519,7 @@ function ArtifactTabsRoot({
   renderSearchItemActions,
   emptyContent,
   content,
+  overlay,
   closeable = true,
   preventCloseLastTab = false,
   ...props
@@ -562,6 +566,7 @@ function ArtifactTabsRoot({
         {content ?? <TabsLayout.TabContent />}
         {artifactTabs.tabs.length === 0 ? emptyContent : null}
       </TabsLayout.TabContentContainer>
+      {typeof overlay === 'function' ? overlay(artifactTabs) : overlay}
     </ArtifactTabsContext.Provider>
   );
 }
@@ -624,6 +629,7 @@ function ArtifactTabsAddMenu({
 }
 
 export const ArtifactTabs = Object.assign(ArtifactTabsRoot, {
+  useActions: useArtifactTabsContext,
   SearchDropdown: TabStrip.SearchDropdown,
   Tabs: TabStrip.Tabs,
   Button: TabStrip.Button,
