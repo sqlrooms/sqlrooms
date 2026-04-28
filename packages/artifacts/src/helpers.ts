@@ -1,4 +1,4 @@
-import {ArtifactMetadataType} from '.';
+import {ArtifactMetadata} from './ArtifactsSliceConfig';
 
 /**
  * Normalizes artifact ordering against the current registry contents.
@@ -16,7 +16,7 @@ import {ArtifactMetadataType} from '.';
  * @returns A stable artifact order containing each known artifact exactly once.
  */
 export function normalizeOrder(
-  artifactsById: Record<string, ArtifactMetadataType>,
+  artifactsById: Record<string, ArtifactMetadata>,
   artifactOrder: string[],
 ): string[] {
   const seen = new Set<string>();

@@ -167,9 +167,9 @@ export type {ChartBuilderContextValue} from './chart-builders/ChartBuilderContex
 export type {
   ChartBuilderDialogContentProps,
   ChartBuilderDialogProps,
-  ChartBuilderRootProps,
   ChartBuilderTriggerProps,
 } from './chart-builders/ChartBuilderDialog';
+export type {ChartBuilderRootProps} from './chart-builders/ChartBuilderRoot';
 export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
 export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';

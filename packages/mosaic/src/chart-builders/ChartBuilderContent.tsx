@@ -4,10 +4,7 @@ import React from 'react';
 import {ChartBuilderActions} from './ChartBuilderActions';
 import {useChartBuilderContext} from './ChartBuilderContext';
 import {ChartBuilderFields} from './ChartBuilderFields';
-import {
-  ChartBuilderRoot,
-  type ChartBuilderRootProps,
-} from './ChartBuilderDialog';
+import {ChartBuilderRoot, type ChartBuilderRootProps} from './ChartBuilderRoot';
 import {ChartBuilderTypeGrid} from './ChartBuilderTypeGrid';
 import type {
   ChartBuilderColumn,

@@ -4,13 +4,13 @@ import {
   LayoutDockNode,
   LayoutNode,
 } from '@sqlrooms/layout-config';
-import {DockDirection, getDockAxis} from './dock-layout';
 import {
   findNodeById,
   findNearestDockAncestor,
   FindNodeByIdResult,
 } from '../layout-tree';
 import {DockPreview, PreviewMode} from './docking-types';
+import {getDockAxis, type DockDirection} from './docking-types-base';
 
 const EDGE_THRESHOLD = 0.25;
 

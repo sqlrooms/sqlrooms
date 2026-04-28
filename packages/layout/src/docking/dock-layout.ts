@@ -11,19 +11,15 @@ import {
 } from '@sqlrooms/layout-config';
 import {createLayoutId, findNodeById} from '../layout-tree';
 import {validateDockOperation} from './docking-helpers';
+import {getDockAxis, type DockDirection} from './docking-types-base';
 
-export type DockDirection = 'left' | 'right' | 'up' | 'down';
-export type DockAxis = 'row' | 'column';
+export type {DockDirection} from './docking-types-base';
 export const DOCK_SPLIT_ID_PREFIX = 'dock-';
 
 type SizeProps = Pick<
   LayoutPanelNode,
   'defaultSize' | 'minSize' | 'maxSize' | 'collapsedSize' | 'collapsible'
 >;
-
-export function getDockAxis(direction: DockDirection): DockAxis {
-  return direction === 'left' || direction === 'right' ? 'row' : 'column';
-}
 
 function isBefore(direction: DockDirection): boolean {
   return direction === 'left' || direction === 'up';

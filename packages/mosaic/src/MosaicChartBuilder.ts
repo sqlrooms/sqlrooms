@@ -6,10 +6,12 @@ import {ChartBuilderContent} from './chart-builders/ChartBuilderContent';
 import {
   ChartBuilderDialog,
   ChartBuilderDialogContent,
-  ChartBuilderRoot,
-  type ChartBuilderRootProps,
   ChartBuilderTrigger,
 } from './chart-builders/ChartBuilderDialog';
+import {
+  ChartBuilderRoot,
+  type ChartBuilderRootProps,
+} from './chart-builders/ChartBuilderRoot';
 import {ChartBuilderFields} from './chart-builders/ChartBuilderFields';
 import {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 import {FieldSelectorInput} from './chart-builders/FieldSelectorInput';

@@ -25,7 +25,7 @@ export type {
 export type {ParentDirection} from './layout-base-types';
 
 export {movePanel} from './docking/dock-layout';
-export type {DockAxis, DockDirection} from './docking/dock-layout';
+export type {DockAxis, DockDirection} from './docking/docking-types-base';
 export {
   createLayoutId,
   findNearestDockAncestor,
