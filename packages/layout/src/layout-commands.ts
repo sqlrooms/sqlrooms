@@ -70,19 +70,57 @@ export function createLayoutPanelCommands(
       }
     },
     execute: ({getState}, input) => {
-      const {panelId} = input as ToggleLayoutPanelCommandInput;
+      const {panelId, show} = input as ToggleLayoutPanelCommandInput;
       const root = getState().layout.config;
 
       const tabsId = root ? findTabsNodeForPanel(root, panelId) : null;
 
-      if (tabsId) {
-        getState().layout.setActiveTab(tabsId, panelId);
+      if (!tabsId) {
+        return {
+          success: false,
+          commandId: 'layout.panel.show',
+          message: `Panel "${panelId}" not found in layout.`,
+        };
       }
-      return {
-        success: true,
-        commandId: 'layout.panel.show',
-        message: `Activated panel "${panelId}"${tabsId ? ` in "${tabsId}"` : ''}.`,
-      };
+
+      // Handle explicit show/hide/toggle
+      if (show === true) {
+        // Show: activate the tab
+        getState().layout.setActiveTab(tabsId, panelId);
+        return {
+          success: true,
+          commandId: 'layout.panel.show',
+          message: `Activated panel "${panelId}" in "${tabsId}".`,
+        };
+      } else if (show === false) {
+        // Hide: remove the tab
+        getState().layout.removeTab(tabsId, panelId);
+        return {
+          success: true,
+          commandId: 'layout.panel.show',
+          message: `Hidden panel "${panelId}" in "${tabsId}".`,
+        };
+      } else {
+        // Toggle: check if currently active/visible, then show or hide
+        const activeTab = getState().layout.getActiveTab(tabsId);
+        const isActive = activeTab === panelId;
+
+        if (isActive) {
+          getState().layout.removeTab(tabsId, panelId);
+          return {
+            success: true,
+            commandId: 'layout.panel.show',
+            message: `Toggled off panel "${panelId}" in "${tabsId}".`,
+          };
+        } else {
+          getState().layout.setActiveTab(tabsId, panelId);
+          return {
+            success: true,
+            commandId: 'layout.panel.show',
+            message: `Toggled on panel "${panelId}" in "${tabsId}".`,
+          };
+        }
+      }
     },
   };
 
@@ -113,14 +151,20 @@ export function createLayoutPanelCommands(
 
             const tabsId = root ? findTabsNodeForPanel(root, panelId) : null;
 
-            if (tabsId) {
-              setActiveTab(tabsId, panelId);
+            if (!tabsId) {
+              return {
+                success: false,
+                commandId: `layout.panel.show.${panelId}`,
+                message: `Panel "${panelId}" not found in layout.`,
+              };
             }
+
+            setActiveTab(tabsId, panelId);
 
             return {
               success: true,
               commandId: `layout.panel.show.${panelId}`,
-              message: `Activated panel "${panelId}".`,
+              message: `Activated panel "${panelId}" in "${tabsId}".`,
             };
           },
         };
