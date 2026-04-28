@@ -380,15 +380,20 @@ function insertIntoSplit(
       ? parseSizeValue(getSizeProps(targetNode).defaultSize)
       : undefined;
 
-    const sizedChildren =
-      targetSize === undefined
-        ? equalizeChildren(children)
-        : splitTargetShare(
-            children,
-            targetIndexAfterInsert,
-            insertIndex,
-            targetSize,
-          );
+    let sizedChildren: LayoutNode[];
+    if (targetSize === undefined) {
+      sizedChildren = equalizeChildren(children);
+    } else {
+      // Normalize sizes first to ensure children sum to 100% before splitting
+      const normalizedChildren = equalizeChildren(children);
+      const normalizedTargetSize = 100 / children.length;
+      sizedChildren = splitTargetShare(
+        normalizedChildren,
+        targetIndexAfterInsert,
+        insertIndex,
+        normalizedTargetSize,
+      );
+    }
 
     return {
       ...node,
