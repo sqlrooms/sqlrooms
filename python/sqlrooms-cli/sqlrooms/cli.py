@@ -378,6 +378,18 @@ def main(
         "--meta-namespace",
         help="Namespace used for SQLRooms meta tables. If --meta-db is provided, this is the ATTACH alias; otherwise it's a schema in the main DB.",
     ),
+    external_url: str | None = typer.Option(
+        None,
+        "--external-url",
+        envvar="SQLROOMS_EXTERNAL_URL",
+        help="Public HTTP base URL to expose in runtime config, e.g. https://my-sprite.sprites.dev.",
+    ),
+    external_ws_url: str | None = typer.Option(
+        None,
+        "--external-ws-url",
+        envvar="SQLROOMS_EXTERNAL_WS_URL",
+        help="Public DuckDB websocket URL to expose in runtime config, e.g. wss://my-sprite.sprites.dev:4000.",
+    ),
 ):
     """
     Start the SQLRooms local experience:
@@ -420,6 +432,8 @@ def main(
         open_browser=not no_open_browser,
         ui_dir=ui,
         config_path=save_config_path,
+        external_url=external_url,
+        external_ws_url=external_ws_url,
     )
     try:
         asyncio.run(server.start())

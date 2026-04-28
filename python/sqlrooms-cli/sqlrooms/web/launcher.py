@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -13,7 +14,7 @@ from typing import Any, Dict
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
-from fastapi import Request
+from fastapi import Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -232,6 +233,8 @@ class SqlroomsHttpServer:
         open_browser: bool = True,
         ui_dir: str | None = None,
         config_path: Path | None = None,
+        external_url: str | None = None,
+        external_ws_url: str | None = None,
     ):
         db_path_str = str(db_path)
         self.is_in_memory = db_path_str == ":memory:"
@@ -266,6 +269,8 @@ class SqlroomsHttpServer:
         )
         self.config_path = config_path
         self.connector_settings = connector_settings or []
+        self.external_url = external_url.rstrip("/") if external_url else None
+        self.external_ws_url = external_ws_url if external_ws_url else None
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -331,8 +336,9 @@ class SqlroomsHttpServer:
 
     def _runtime_config(self) -> Dict[str, Any]:
         return {
-            "wsUrl": f"ws://{self._public_host()}:{self.ws_port}",
-            "apiBaseUrl": "",
+            "wsUrl": self.external_ws_url
+            or f"ws://{self._public_host()}:{self.ws_port}",
+            "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
@@ -374,6 +380,60 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
+
+        @app.websocket("/ws/duckdb")
+        async def duckdb_websocket_proxy(client_ws: WebSocket):
+            await client_ws.accept()
+            try:
+                import websockets
+            except ImportError:
+                await client_ws.close(code=1011, reason="websockets package missing")
+                return
+
+            upstream_url = f"ws://127.0.0.1:{self.ws_port}"
+            try:
+                async with websockets.connect(
+                    upstream_url,
+                    max_size=None,
+                ) as upstream_ws:
+
+                    async def client_to_upstream() -> None:
+                        while True:
+                            message = await client_ws.receive()
+                            if message["type"] == "websocket.disconnect":
+                                await upstream_ws.close()
+                                return
+                            if message.get("bytes") is not None:
+                                await upstream_ws.send(message["bytes"])
+                            elif message.get("text") is not None:
+                                await upstream_ws.send(message["text"])
+
+                    async def upstream_to_client() -> None:
+                        async for message in upstream_ws:
+                            if isinstance(message, bytes):
+                                await client_ws.send_bytes(message)
+                            else:
+                                await client_ws.send_text(message)
+
+                    done, pending = await asyncio.wait(
+                        {
+                            asyncio.create_task(client_to_upstream()),
+                            asyncio.create_task(upstream_to_client()),
+                        },
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for task in pending:
+                        task.cancel()
+                    for task in done:
+                        task.result()
+            except WebSocketDisconnect:
+                return
+            except Exception:
+                logger.exception("DuckDB websocket proxy failed")
+                try:
+                    await client_ws.close(code=1011)
+                except Exception:
+                    pass
 
         @app.get("/api/db/settings")
         async def get_db_settings():
