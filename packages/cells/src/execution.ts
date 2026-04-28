@@ -2,13 +2,13 @@ import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
-  findSheetIdForCell,
+  findArtifactIdForCell,
   getUnqualifiedSqlIdentifier,
-  resolveSheetSchemaName,
+  resolveArtifactSchemaName,
 } from './helpers';
 import {
   findSqlDependencies,
-  qualifySheetLocalResultNames,
+  qualifyArtifactLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
 import {
@@ -54,18 +54,24 @@ export async function executeSqlCell(
 
   const {schemaName, cascade = true, signal, setCellResult} = options;
   const sqlRaw = cell.data.sql || '';
-  const sheetId = findSheetIdForCell(state, cellId);
-  const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
-  const finalSchemaName = sheet ? resolveSheetSchemaName(sheet) : schemaName;
+  const artifactId = findArtifactIdForCell(state, cellId);
+  const artifact = artifactId
+    ? state.cells.config.artifacts[artifactId]
+    : undefined;
+  const finalSchemaName = artifact
+    ? resolveArtifactSchemaName(artifact)
+    : schemaName;
   const finalDatabaseName =
     state.db.config.coreMaterialization.strategy === 'attached_ephemeral'
       ? state.db.config.coreMaterialization.attachedDatabaseName
       : undefined;
-  const sheetCellIds = sheet?.cellIds ?? [];
+  const artifactCellIds = artifact?.cellIds ?? [];
 
   // 1. Gather inputs for SQL rendering
   const cellsInScope = (
-    sheetCellIds.length ? sheetCellIds : Object.keys(state.cells.config.data)
+    artifactCellIds.length
+      ? artifactCellIds
+      : Object.keys(state.cells.config.data)
   )
     .map((id) => state.cells.config.data[id])
     .filter(isDefined);
@@ -77,11 +83,11 @@ export async function executeSqlCell(
     }));
 
   const renderedSql = renderSqlWithInputs(sqlRaw, inputs);
-  const sql = qualifySheetLocalResultNames({
+  const sql = qualifyArtifactLocalResultNames({
     sql: renderedSql,
-    sheetSchema: finalSchemaName,
-    sheetDatabase: finalDatabaseName,
-    sheetCellIds,
+    artifactSchema: finalSchemaName,
+    artifactDatabase: finalDatabaseName,
+    artifactCellIds,
     cells: state.cells.config.data,
     getSqlResultName: (id) => {
       const target = state.cells.config.data[id];
@@ -166,8 +172,8 @@ export async function executeSqlCell(
       //   otherwise keep a lightweight view.
       // - subsequent runs: preserve the previously selected relation type.
       const hasDownstream =
-        Boolean(sheetId) &&
-        getState().cells.getDownstream(sheetId as string, cellId).length > 0;
+        Boolean(artifactId) &&
+        getState().cells.getDownstream(artifactId as string, cellId).length > 0;
       relationType = chooseAdaptiveRelationType({
         previousRelationType: previousStatus?.resultRelationType,
         hasDownstream,
@@ -244,9 +250,9 @@ export async function executeSqlCell(
 
     // 5. Cascade if needed
     if (cascade) {
-      const ownerSheetId = findSheetIdForCell(getState(), cellId);
-      if (ownerSheetId) {
-        await state.cells.runDownstreamCascade(ownerSheetId, cellId);
+      const ownerArtifactId = findArtifactIdForCell(getState(), cellId);
+      if (ownerArtifactId) {
+        await state.cells.runDownstreamCascade(ownerArtifactId, cellId);
       }
     }
   } catch (e) {

@@ -42,6 +42,7 @@ import {produce} from 'immer';
 import {ReactNode} from 'react';
 import {z} from 'zod';
 import {StateCreator, StoreApi} from 'zustand';
+import {CreateDbSliceProps} from '../../db/dist/DbSlice';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -169,6 +170,7 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
   CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
   createCommandProps?: CreateCommandSliceProps;
+  createDbProps?: CreateDbSliceProps;
   /** @deprecated Use direct props instead e.g. layout.panels */
   room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
@@ -229,6 +231,7 @@ export function createRoomShellSlice(
       fileDataSourceLoader,
       CustomErrorBoundary = ErrorBoundary,
       createCommandProps,
+      createDbProps,
       captureException = (exception) => console.error(exception),
       ...restProps
     } = props;
@@ -244,7 +247,11 @@ export function createRoomShellSlice(
 
     const sliceState: RoomShellSliceState = {
       ...roomSliceState,
-      ...createDbSlice({duckDb: {connector}})(set, get, store),
+      ...createDbSlice(
+        connector
+          ? {...createDbProps, duckDb: {...createDbProps?.duckDb, connector}}
+          : createDbProps,
+      )(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
       ...createCommandSlice(createCommandProps)(set, get, store),
       room: {

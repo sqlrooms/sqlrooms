@@ -6,11 +6,11 @@ import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
 import {executeSqlCell} from './execution';
-import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
+import {findArtifactIdForCell, resolveArtifactSchemaName} from './helpers';
 import {dropResultRelation, renameResultRelation} from './resultRelationPolicy';
 import {
   findSqlDependenciesFromAst,
-  qualifySheetLocalResultNames,
+  qualifyArtifactLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
 import type {
@@ -94,9 +94,9 @@ export function createDefaultCellRegistry(): CellRegistry {
         return sqlStatus.resultView;
       },
       runCell: async ({id, opts, get, set}) => {
-        const ownerSheetId = findSheetIdForCell(get(), id);
-        if (ownerSheetId) {
-          await get().cells.updateEdgesFromSql(ownerSheetId, id);
+        const ownerArtifactId = findArtifactIdForCell(get(), id);
+        if (ownerArtifactId) {
+          await get().cells.updateEdgesFromSql(ownerArtifactId, id);
         }
 
         const controller = new AbortController();
@@ -125,9 +125,13 @@ export function createDefaultCellRegistry(): CellRegistry {
             ? (status as SqlCellStatus).resultRelationType
             : undefined) ?? 'view';
 
-        const sheetId = findSheetIdForCell(state, id);
-        const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
-        const schemaName = sheet ? resolveSheetSchemaName(sheet) : 'main';
+        const artifactId = findArtifactIdForCell(state, id);
+        const artifact = artifactId
+          ? state.cells.config.artifacts[artifactId]
+          : undefined;
+        const schemaName = artifact
+          ? resolveArtifactSchemaName(artifact)
+          : 'main';
 
         const effectiveResultName = getEffectiveResultName(
           cell.data as SqlCellData,
@@ -146,7 +150,7 @@ export function createDefaultCellRegistry(): CellRegistry {
         const connector = await state.db.getConnector();
         const sql = (cell.data as SqlCellData).sql;
         const scopedCellIds =
-          sheet?.cellIds ?? Object.keys(state.cells.config.data);
+          artifact?.cellIds ?? Object.keys(state.cells.config.data);
         const scopedCells = Object.fromEntries(
           scopedCellIds
             .map((cellId) => state.cells.config.data[cellId])
@@ -161,10 +165,10 @@ export function createDefaultCellRegistry(): CellRegistry {
             value: c.data.input.value as string | number,
           }));
         const renderedSql = renderSqlWithInputs(sql, inputs);
-        const rewrittenSql = qualifySheetLocalResultNames({
+        const rewrittenSql = qualifyArtifactLocalResultNames({
           sql: renderedSql,
-          sheetSchema: schemaName,
-          sheetCellIds: scopedCellIds,
+          artifactSchema: schemaName,
+          artifactCellIds: scopedCellIds,
           cells: state.cells.config.data,
           getSqlResultName: (cellId) => {
             const c = state.cells.config.data[cellId];

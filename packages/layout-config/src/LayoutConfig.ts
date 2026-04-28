@@ -54,6 +54,7 @@ const BaseLayoutSplitNode = z
   .object({
     type: z.literal('split'),
     id: z.string(),
+    panel: PanelIdentity.optional(),
     direction: LayoutDirection,
     collapsed: z.boolean().optional(),
     resizable: z.boolean().default(true).optional(),
@@ -76,6 +77,7 @@ const BaseLayoutTabsNode = z
   .object({
     type: z.literal('tabs'),
     id: z.string(),
+    panel: PanelIdentity.optional(),
     activeTabIndex: z.number(),
     collapsed: z.boolean().optional(),
     hideTabStrip: z.boolean().optional(),

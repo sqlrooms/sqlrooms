@@ -1,5 +1,12 @@
 import {
-  Canvas,
+  ArtifactsSliceConfig,
+  ArtifactsSliceState,
+  createArtifactPanelDefinition,
+  createArtifactsSlice,
+  defineArtifactTypes,
+  type ArtifactTypeDefinition,
+} from '@sqlrooms/artifacts';
+import {
   CanvasSliceConfig,
   CanvasSliceState,
   createCanvasSlice,
@@ -18,9 +25,11 @@ import {
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {DatabaseIcon} from 'lucide-react';
+import {DatabaseIcon, LayoutDashboardIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {CanvasArtifactPanel} from './components/CanvasArtifactPanel';
+import {MainView} from './components/MainView';
 
 // App config schema
 export const AppConfig = z.object({
@@ -29,6 +38,7 @@ export const AppConfig = z.object({
 export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
+  ArtifactsSliceState &
   CanvasSliceState &
   CellsSliceState & {
     app: {
@@ -36,6 +46,26 @@ export type RoomState = RoomShellSliceState &
       setApiKey: (apiKey: string) => void;
     };
   };
+export const DEFAULT_CANVAS_ARTIFACT_ID = 'canvas';
+
+export const CANVAS_ARTIFACT_TYPES = defineArtifactTypes({
+  canvas: {
+    label: 'Canvas',
+    defaultTitle: 'Canvas',
+    icon: LayoutDashboardIcon,
+    component: CanvasArtifactPanel,
+    onCreate: ({artifactId, store}) => {
+      store.getState().canvas.ensureArtifact(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().canvas.ensureArtifact(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().canvas.removeArtifact(artifactId);
+    },
+  },
+} satisfies Record<'canvas', ArtifactTypeDefinition<RoomState>>);
+
 export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
@@ -48,6 +78,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         layout: LayoutConfig,
         canvas: CanvasSliceConfig,
         cells: CellsSliceConfig,
+        artifacts: ArtifactsSliceConfig,
         app: AppConfig,
       },
     },
@@ -82,8 +113,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 hideTabStrip: true,
               },
               {
-                type: 'panel',
+                type: 'tabs',
                 id: RoomPanelTypes.enum['main'],
+                panel: RoomPanelTypes.enum['main'],
+                children: [],
+                activeTabIndex: 0,
                 defaultSize: '80%',
               },
             ],
@@ -92,14 +126,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             [RoomPanelTypes.enum['main']]: {
               title: 'Canvas',
               icon: () => null,
-              component: Canvas,
+              component: MainView,
             },
             [RoomPanelTypes.enum['data']]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },
+            artifact: createArtifactPanelDefinition(
+              CANVAS_ARTIFACT_TYPES,
+              store,
+            ),
           },
+        },
+      })(set, get, store),
+
+      ...createArtifactsSlice<RoomState>({
+        artifactTypes: CANVAS_ARTIFACT_TYPES,
+        config: {
+          artifactsById: {
+            [DEFAULT_CANVAS_ARTIFACT_ID]: {
+              id: DEFAULT_CANVAS_ARTIFACT_ID,
+              type: 'canvas',
+              title: 'Canvas',
+            },
+          },
+          artifactOrder: [DEFAULT_CANVAS_ARTIFACT_ID],
+          currentArtifactId: DEFAULT_CANVAS_ARTIFACT_ID,
         },
       })(set, get, store),
 

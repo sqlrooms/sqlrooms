@@ -75,27 +75,36 @@ function sqlCell(id: string, title: string, sql: string): Cell {
 }
 
 describe('cells slice local dependency policy', () => {
-  it('keeps downstream graph sheet-local', async () => {
+  const artifactA = 'artifact-a';
+  const artifactB = 'artifact-b';
+
+  it('keeps downstream graph artifact-local', async () => {
     const store = createTestStore();
     const state = store.getState();
-    const sheetA = state.cells.config.currentSheetId as string;
-    const sheetB = state.cells.addSheet('Sheet B', 'notebook');
+    state.cells.ensureArtifact(artifactA);
+    state.cells.ensureArtifact(artifactB);
 
-    await state.cells.addCell(sheetA, sqlCell('a1', 'A1', 'select 1 as v'));
-    await state.cells.addCell(sheetA, sqlCell('a2', 'A2', 'select * from A1'));
+    await state.cells.addCell(artifactA, sqlCell('a1', 'A1', 'select 1 as v'));
+    await state.cells.addCell(
+      artifactA,
+      sqlCell('a2', 'A2', 'select * from A1'),
+    );
 
-    // Cross-sheet SQL text reference should not create DAG edges across sheets.
-    await state.cells.addCell(sheetB, sqlCell('b1', 'B1', 'select * from A1'));
+    // Cross-artifact SQL text reference should not create DAG edges across artifacts.
+    await state.cells.addCell(
+      artifactB,
+      sqlCell('b1', 'B1', 'select * from A1'),
+    );
 
     const graphCacheA =
-      store.getState().cells.config.sheets[sheetA]?.graphCache;
+      store.getState().cells.config.artifacts[artifactA]?.graphCache;
     const graphCacheB =
-      store.getState().cells.config.sheets[sheetB]?.graphCache;
+      store.getState().cells.config.artifacts[artifactB]?.graphCache;
     expect(graphCacheA?.dependencies.a2).toEqual(['a1']);
     expect(graphCacheB?.dependencies.b1).toEqual([]);
 
-    const downstreamInA = store.getState().cells.getDownstream(sheetA, 'a1');
-    const downstreamInB = store.getState().cells.getDownstream(sheetB, 'a1');
+    const downstreamInA = store.getState().cells.getDownstream(artifactA, 'a1');
+    const downstreamInB = store.getState().cells.getDownstream(artifactB, 'a1');
 
     expect(downstreamInA).toEqual(['a2']);
     expect(downstreamInA).not.toContain('b1');
@@ -105,46 +114,52 @@ describe('cells slice local dependency policy', () => {
   it('does not use text fallback when AST parsing returns no table refs', async () => {
     const store = createTestStore(async () => ({error: false, statements: []}));
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
-    await state.cells.addCell(sheetId, sqlCell('a1', 'A1', 'select 1'));
+    await state.cells.addCell(artifactA, sqlCell('a1', 'A1', 'select 1'));
     // Text reference exists, but AST parser yields no table_name nodes.
-    await state.cells.addCell(sheetId, sqlCell('a2', 'A2', 'select * from A1'));
+    await state.cells.addCell(
+      artifactA,
+      sqlCell('a2', 'A2', 'select * from A1'),
+    );
 
-    const downstream = store.getState().cells.getDownstream(sheetId, 'a1');
+    const downstream = store.getState().cells.getDownstream(artifactA, 'a1');
     expect(downstream).toEqual([]);
   });
 
   it('invalidates graph cache on manual edge removal', async () => {
     const store = createTestStore();
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
-    await state.cells.addCell(sheetId, sqlCell('a1', 'A1', 'select 1'));
-    await state.cells.addCell(sheetId, sqlCell('a2', 'A2', 'select * from A1'));
+    await state.cells.addCell(artifactA, sqlCell('a1', 'A1', 'select 1'));
+    await state.cells.addCell(
+      artifactA,
+      sqlCell('a2', 'A2', 'select * from A1'),
+    );
     expect(
-      store.getState().cells.config.sheets[sheetId]?.graphCache,
+      store.getState().cells.config.artifacts[artifactA]?.graphCache,
     ).toBeDefined();
 
-    state.cells.removeEdge(sheetId, 'a1-a2');
+    state.cells.removeEdge(artifactA, 'a1-a2');
     expect(
-      store.getState().cells.config.sheets[sheetId]?.graphCache,
+      store.getState().cells.config.artifacts[artifactA]?.graphCache,
     ).toBeUndefined();
   });
 
   it('stores unmatched table references as tableDependencies in graph cache', async () => {
     const store = createTestStore();
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
     // "flights" doesn't match any cell title => it's an external table dependency
     await state.cells.addCell(
-      sheetId,
+      artifactA,
       sqlCell('q1', 'Q1', 'select * from flights'),
     );
 
     const graphCache =
-      store.getState().cells.config.sheets[sheetId]?.graphCache;
+      store.getState().cells.config.artifacts[artifactA]?.graphCache;
     expect(graphCache?.tableDependencies?.q1).toEqual(['flights']);
     // No cell deps since "flights" is not another cell
     expect(graphCache?.dependencies.q1).toEqual([]);

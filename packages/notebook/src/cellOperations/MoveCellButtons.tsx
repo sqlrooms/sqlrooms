@@ -5,15 +5,13 @@ import {ArrowDownIcon, ArrowUpIcon} from 'lucide-react';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 type Props = {
+  artifactId: string;
   id: string;
 };
 
-export const MoveCellButtons: FC<Props> = ({id}) => {
+export const MoveCellButtons: FC<Props> = ({artifactId, id}) => {
   const moveCell = useStoreWithNotebook((s) => s.notebook.moveCell);
-  const currentTabId = useStoreWithNotebook(
-    (s) => s.cells.config.currentSheetId,
-  );
-  if (!currentTabId) return null;
+  if (!artifactId) return null;
 
   return (
     <div className="flex gap-1">
@@ -21,7 +19,7 @@ export const MoveCellButtons: FC<Props> = ({id}) => {
         variant="ghost"
         className="h-6 w-6"
         size="xs"
-        onClick={() => moveCell(currentTabId, id, 'up')}
+        onClick={() => moveCell(artifactId, id, 'up')}
       >
         <ArrowUpIcon className="text-gray-500" />
       </Button>
@@ -29,7 +27,7 @@ export const MoveCellButtons: FC<Props> = ({id}) => {
         variant="ghost"
         className="h-6 w-6"
         size="xs"
-        onClick={() => moveCell(currentTabId, id, 'down')}
+        onClick={() => moveCell(artifactId, id, 'down')}
       >
         <ArrowDownIcon className="text-gray-500" />
       </Button>

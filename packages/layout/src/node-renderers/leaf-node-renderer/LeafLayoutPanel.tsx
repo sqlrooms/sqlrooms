@@ -25,7 +25,7 @@ export const LeafLayoutPanel: FC<PropsWithChildren> = ({children}) => {
 
   const {setNodeRef: setDroppableNodeRef} = useDroppable({
     id: panelId,
-    disabled: !isDockablePanel,
+    disabled: !isDockablePanel || isDragging,
   });
 
   const setNodeRef = useCallback(

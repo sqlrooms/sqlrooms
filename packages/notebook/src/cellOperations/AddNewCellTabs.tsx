@@ -6,13 +6,11 @@ import {getCellTypeLabel} from '../NotebookUtils';
 import {PlusIcon} from 'lucide-react';
 
 type Props = {
+  artifactId: string;
   onAdd: (type: string) => void;
 };
 
-export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
-  const currentTabId = useStoreWithNotebook(
-    (s) => s.cells.config.currentSheetId,
-  );
+export const AddNewCellTabs: FC<Props> = ({artifactId, onAdd}) => {
   const cellRegistry = useStoreWithNotebook((s) => s.cells.cellRegistry);
   const cellTypes = Object.keys(cellRegistry);
 
@@ -24,7 +22,7 @@ export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
           return (
             <Button
               key={type}
-              disabled={!currentTabId}
+              disabled={!artifactId}
               onClick={() => onAdd(type)}
               className="h-6 gap-1 py-0 text-gray-500 capitalize"
               variant="ghost"

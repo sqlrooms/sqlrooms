@@ -66,7 +66,7 @@ function createDashboardNode(
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
     {
-      name: 'ai-example-app-state-storage',
+      name: 'layout-example-app-state-storage',
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,
@@ -98,12 +98,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 id: RoomPanelTypes.enum['main'],
+                panel: RoomPanelTypes.enum['main'],
                 type: 'split',
                 direction: 'column',
                 children: [
                   {
                     type: 'tabs',
                     id: RoomPanelTypes.enum['dashboards'],
+                    panel: RoomPanelTypes.enum['dashboards'],
                     children: [
                       createDashboardNode(
                         'overview',
@@ -204,15 +206,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   {
                     type: 'tabs',
                     id: RoomPanelTypes.enum['bottom'],
+                    panel: RoomPanelTypes.enum['bottom'],
                     defaultSize: '30%',
                     children: [
                       {
                         type: 'panel',
                         id: RoomPanelTypes.enum['console'],
+                        panel: RoomPanelTypes.enum['console'],
                       },
                       {
                         type: 'panel',
                         id: RoomPanelTypes.enum['results'],
+                        panel: RoomPanelTypes.enum['results'],
                       },
                     ],
                     activeTabIndex: 0,

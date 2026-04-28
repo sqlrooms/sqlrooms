@@ -13,9 +13,16 @@ export function useTabDescriptors(): TabDescriptor[] {
   const panels = useStoreWithLayout((s) => s.layout.panels);
 
   const tabDescriptors: TabDescriptor[] = useMemo(() => {
-    return node.children.map((child) => {
+    const tabs: TabDescriptor[] = [];
+
+    for (const child of node.children) {
       const id = getLayoutNodeId(child);
       const {panelId, meta} = resolvePanelIdentity(child);
+
+      if (!panelId) {
+        continue;
+      }
+
       const definition = panels[panelId];
       const panelInfo = definition
         ? resolvePanelDefinition(definition, {
@@ -25,12 +32,14 @@ export function useTabDescriptors(): TabDescriptor[] {
           })
         : null;
 
-      return {
+      tabs.push({
         id,
         name: panelInfo?.title ?? panelId,
         icon: panelInfo?.icon,
-      };
-    });
+      });
+    }
+
+    return tabs;
   }, [node.children, panels, tabsContext]);
 
   return tabDescriptors;

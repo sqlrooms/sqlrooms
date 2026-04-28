@@ -1,4 +1,4 @@
-import {ToolErrorMessage} from '@sqlrooms/ai';
+import {ToolErrorMessage} from '@sqlrooms/ai-core';
 import {useSql} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 import React from 'react';

@@ -7,7 +7,8 @@ Use this package when you want a **map-first analytics experience** in a SQLRoom
 - `createKeplerSlice()` to add Kepler state/actions to your Room store
 - `KeplerMapContainer` and `KeplerPlotContainer` for rendering maps/overlays
 - `KeplerSidePanels` for layer/filter/interaction UI
-- utilities for map config persistence and dataset synchronization
+- utilities for map config persistence, dataset synchronization, and migration
+  from legacy Kepler-owned tabs to artifact-backed tabs
 
 ## Installation
 
@@ -94,6 +95,7 @@ createKeplerSlice({
 
 ## Related packages
 
+- `@sqlrooms/artifacts` for artifact-backed map tabs
 - `@sqlrooms/kepler-config` for Zod schemas used by persisted Kepler config
 - `@sqlrooms/room-shell` for Room store composition and UI shell
 - `@sqlrooms/duckdb` for DuckDB-backed table loading/querying

@@ -142,10 +142,32 @@ export function createTabActions<S extends LayoutStateShape>(
         );
         if (!childExists) return;
 
-        // Add to hidden (don't remove from children!)
+        // Add to hidden (don't remove from children)
         addToHidden(found.node, tabId);
 
         // Adjust activeTabIndex to stay within visible children bounds
+        const visibleChildren = getVisibleTabChildren(found.node);
+        if (found.node.activeTabIndex >= visibleChildren.length) {
+          found.node.activeTabIndex = Math.max(0, visibleChildren.length - 1);
+        }
+      }),
+    );
+  };
+
+  const deleteTab = (tabsId: string, tabId: string) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        const childIdx = found.node.children.findIndex(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+        if (childIdx < 0) return;
+
+        found.node.children.splice(childIdx, 1);
+        removeFromHidden(found.node, tabId);
+
         const visibleChildren = getVisibleTabChildren(found.node);
         if (found.node.activeTabIndex >= visibleChildren.length) {
           found.node.activeTabIndex = Math.max(0, visibleChildren.length - 1);
@@ -205,6 +227,49 @@ export function createTabActions<S extends LayoutStateShape>(
     return child != null ? getLayoutNodeId(child) : undefined;
   };
 
+  const reorderTabs = (tabsId: string, tabIds: string[]) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        const byId = new Map(
+          found.node.children.map((c) => [getLayoutNodeId(c), c]),
+        );
+        const hiddenSet = new Set(found.node.hiddenChildren ?? []);
+
+        const reordered: LayoutNode[] = [];
+        for (const id of tabIds) {
+          const node = byId.get(id);
+          if (node) {
+            reordered.push(node);
+            byId.delete(id);
+          }
+        }
+        // Append any hidden children that weren't in the new order
+        for (const [id, node] of byId) {
+          if (hiddenSet.has(id)) {
+            reordered.push(node);
+          }
+        }
+
+        found.node.children = reordered;
+
+        // Keep activeTabIndex pointing at the same tab
+        const activeId = getActiveTab(tabsId);
+        if (activeId) {
+          const visibleChildren = getVisibleTabChildren(found.node);
+          const idx = visibleChildren.findIndex(
+            (c) => getLayoutNodeId(c) === activeId,
+          );
+          if (idx >= 0) {
+            found.node.activeTabIndex = idx;
+          }
+        }
+      }),
+    );
+  };
+
   const isCollapsed = (id: string): boolean => {
     const found = findNodeById(get().layout.config, id);
 
@@ -219,6 +284,8 @@ export function createTabActions<S extends LayoutStateShape>(
     setActiveTab,
     addTab,
     removeTab,
+    deleteTab,
+    reorderTabs,
     setCollapsed,
     toggleCollapsed,
     getTabs,

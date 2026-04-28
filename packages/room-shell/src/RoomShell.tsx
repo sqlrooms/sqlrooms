@@ -83,6 +83,9 @@ export const LayoutComposer: FC<{
     (state) => state.layout.setActiveTab,
   );
   const removeTab = useBaseRoomShellStore((state) => state.layout.removeTab);
+  const reorderTabs = useBaseRoomShellStore(
+    (state) => state.layout.reorderTabs,
+  );
   const setCollapsed = useBaseRoomShellStore(
     (state) => state.layout.setCollapsed,
   );
@@ -110,12 +113,9 @@ export const LayoutComposer: FC<{
 
   const handleTabReorder = useCallback(
     (tabsId: string, tabIds: string[]) => {
-      const activeTab = tabIds[0];
-      if (activeTab) {
-        setActiveTab(tabsId, activeTab);
-      }
+      reorderTabs(tabsId, tabIds);
     },
-    [setActiveTab],
+    [reorderTabs],
   );
 
   const handleCollapse = useCallback(

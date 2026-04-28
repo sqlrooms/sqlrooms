@@ -36,8 +36,8 @@ const SidebarButton: FC<{
           variant="ghost"
           size="icon"
           className={cn(
-            'h-10 w-10 rounded-none',
-            isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
+            'h-10 w-10 rounded-md',
+            isSelected && 'bg-secondary',
             className,
           )}
           disabled={isDisabled}
@@ -153,6 +153,9 @@ const TabButtons: FC<{
       {tabIds.map((tabId) => {
         // Resolve panel identity from the tab ID (which is a LayoutNodeKey)
         const {panelId, meta} = resolvePanelIdentity(tabId);
+        if (!panelId) {
+          return null;
+        }
         const definition = panels[panelId];
         const info: RoomPanelInfo | undefined = definition
           ? resolvePanelDefinition(definition, {panelId, meta})

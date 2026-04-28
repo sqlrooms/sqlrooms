@@ -68,10 +68,9 @@ The `useMosaicClient` hook creates a Mosaic client that automatically queries da
 
 ```tsx
 import {Query, useMosaicClient} from '@sqlrooms/mosaic';
-import {Table} from 'apache-arrow';
 
 function MapView() {
-  const {data, isLoading, client} = useMosaicClient<Table>({
+  const {data, isLoading, client} = useMosaicClient({
     selectionName: 'brush', // Named selection for cross-filtering
     query: (filter: any) => {
       return Query.from('earthquakes')
@@ -88,6 +87,11 @@ function MapView() {
   return <div>Data loaded: {data?.numRows} rows</div>;
 }
 ```
+
+`useMosaicClient` returns an Apache Arrow table. Mosaic still uses its native
+table runtime internally, but that detail is hidden at the hook boundary so
+custom SQLRooms views can work with the same Arrow shape used by the DuckDB and
+deck packages.
 
 The hook accepts the following options:
 
@@ -132,6 +136,46 @@ function EarthquakeProfiler() {
 For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
 is still available when you need direct access to the profiler state for custom
 layout, sizing, or advanced composition.
+
+### Mosaic Dashboard Panels
+
+`MosaicDashboard` is a compound dashboard surface backed by generic dashboard
+panels instead of a chart-only list. Configure supported panel renderers and
+runtime add-panel actions when creating the dashboard slice.
+
+```tsx
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardSlice,
+  createMosaicDashboardVgPlotPanelConfig,
+  MosaicDashboard,
+} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice({
+  panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
+  // Optional: pass chartTypes/chartBuilders to customize Add Chart.
+  // Optional: pass addPanelActions to add app-specific menu entries.
+});
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="main" />;
+}
+
+function addProfiler(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardProfilerPanelConfig({
+      source: {tableName: 'earthquakes'},
+    }),
+  );
+}
+```
+
+Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
+panel omits a source it falls back to the dashboard selected table. Panel renderer
+definitions and chart builder definitions are runtime-only and intentionally
+live outside persisted dashboard config.
 
 ### Working with Selections
 

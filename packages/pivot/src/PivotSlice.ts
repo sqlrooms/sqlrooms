@@ -1,8 +1,14 @@
+import {createId} from '@paralleldrive/cuid2';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import {createId} from '@paralleldrive/cuid2';
+import {createStore} from 'zustand/vanilla';
+import type {
+  PivotInstanceSnapshot,
+  PivotInstanceState,
+  PivotInstanceStore,
+} from './PivotCoreSlice';
 import {
   addAttributeFilterValuesInConfig,
   clearAttributeFilterInConfig,
@@ -13,16 +19,11 @@ import {
   removeAttributeFilterValuesInConfig,
   setAttributeFilterValuesInConfig,
 } from './PivotCoreSlice';
-import type {
-  PivotInstanceSnapshot,
-  PivotInstanceState,
-  PivotInstanceStore,
-} from './PivotCoreSlice';
-import {createPivotQuerySourceFromTable} from './sql';
 import {
   createOrReplacePivotRelations,
   dropPivotRelations,
 } from './pivotExecution';
+import {createPivotQuerySourceFromTable} from './sql';
 import {
   type PivotConfig,
   type PivotSliceConfig as PivotSlicePersistedConfig,
@@ -31,7 +32,6 @@ import {
   PivotSliceConfig,
   PivotSliceState,
 } from './types';
-import {createStore} from 'zustand/vanilla';
 
 function createInitialPivotSliceConfig(props?: {
   config?: Partial<PivotConfig & {tableName?: string}>;
@@ -40,7 +40,6 @@ function createInitialPivotSliceConfig(props?: {
     return PivotSliceConfig.parse({
       pivots: {},
       pivotOrder: [],
-      currentPivotId: undefined,
     });
   }
   const id = createId();
@@ -52,14 +51,13 @@ function createInitialPivotSliceConfig(props?: {
     pivots: {
       [id]: {
         id,
-        title: 'Pivot 1',
+        title: 'Pivot',
         source,
         config,
         status: {state: 'idle', stale: false},
       },
     },
     pivotOrder: [id],
-    currentPivotId: id,
   });
 }
 
@@ -107,14 +105,6 @@ export function createPivotSlice(props?: {
           }
           set((state) =>
             produce(state, (draft) => {
-              if (
-                !draft.pivot.config.currentPivotId &&
-                draft.pivot.config.pivotOrder.length > 0
-              ) {
-                draft.pivot.config.currentPivotId =
-                  draft.pivot.config.pivotOrder[0];
-              }
-
               for (const pivotId of draft.pivot.config.pivotOrder) {
                 const pivot = draft.pivot.config.pivots[pivotId];
                 if (!pivot) continue;
@@ -260,12 +250,12 @@ export function createPivotSlice(props?: {
         },
 
         addPivot(pivotProps) {
-          const id = createId();
+          const id = pivotProps?.id ?? createId();
           const title = generateUniqueName(
-            pivotProps?.title ?? 'Pivot 1',
-            Object.values(get().pivot.config.pivots).map(
-              (pivot) => pivot.title,
-            ),
+            pivotProps?.title ?? 'Pivot',
+            Object.values(get().pivot.config.pivots)
+              .filter((pivot) => pivot.id !== id)
+              .map((pivot) => pivot.title),
             ' ',
           );
           const nextPivot = {
@@ -279,10 +269,21 @@ export function createPivotSlice(props?: {
             produce(state, (draft) => {
               draft.pivot.config.pivots[id] = nextPivot;
               draft.pivot.config.pivotOrder.push(id);
-              draft.pivot.config.currentPivotId = id;
             }),
           );
           return id;
+        },
+
+        ensurePivot(pivotId, pivotProps) {
+          if (get().pivot.config.pivots[pivotId]) {
+            return;
+          }
+          get().pivot.addPivot({
+            id: pivotId,
+            title: pivotProps?.title,
+            source: pivotProps?.source,
+            config: pivotProps?.config,
+          });
         },
 
         removePivot(pivotId) {
@@ -301,18 +302,6 @@ export function createPivotSlice(props?: {
               delete draft.pivot.config.pivots[pivotId];
               draft.pivot.config.pivotOrder =
                 draft.pivot.config.pivotOrder.filter((id) => id !== pivotId);
-              if (draft.pivot.config.currentPivotId === pivotId) {
-                draft.pivot.config.currentPivotId =
-                  draft.pivot.config.pivotOrder[0];
-              }
-            }),
-          );
-        },
-
-        setCurrentPivot(pivotId) {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.pivot.config.currentPivotId = pivotId;
             }),
           );
         },

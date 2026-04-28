@@ -116,6 +116,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               {
                 type: 'panel',
                 id: RoomPanelTypes.enum['main'],
+                panel: RoomPanelTypes.enum['main'],
                 defaultSize: '70%',
               },
             ],

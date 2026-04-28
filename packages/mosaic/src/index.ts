@@ -11,8 +11,52 @@ export {
 } from '@uwdata/mosaic-core';
 export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
-export {Query, sql} from '@uwdata/mosaic-sql';
+export {asc, column, desc, Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
+export {
+  MosaicDashboard,
+  MosaicDashboardRoot,
+  type MosaicDashboardProps,
+  type MosaicDashboardRootProps,
+} from './dashboard/MosaicDashboard';
+export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
+export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
+export {
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardVgPlotPanelConfig,
+  createDefaultMosaicDashboardConfig,
+  createMosaicDashboardSlice,
+  getMosaicDashboardDockId,
+  getMosaicDashboardPanelId,
+  getMosaicDashboardSelectionName,
+  MOSAIC_DASHBOARD_PANEL,
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
+  MosaicDashboardEntry,
+  MosaicDashboardPanelConfig,
+  MosaicDashboardPanelSource,
+  MosaicDashboardSliceConfig,
+  resolveMosaicDashboardPanelSource,
+  useStoreWithMosaicDashboard,
+} from './dashboard/MosaicDashboardSlice';
+export type {
+  MosaicDashboardAddPanelAction,
+  MosaicDashboardAddPanelActionContext,
+  CreateMosaicDashboardSliceProps,
+  MosaicDashboardEntry as MosaicDashboardEntryType,
+  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
+  MosaicDashboardPanelRenderer,
+  MosaicDashboardPanelRendererProps,
+  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
+  MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
+  MosaicDashboardSliceState,
+  MosaicDashboardStoreState,
+} from './dashboard/MosaicDashboardSlice';
+export {
+  createMosaicColorLegendPlot,
+  MosaicColorLegend,
+  type MosaicColorLegendProps,
+} from './MosaicColorLegend';
 export {
   createDefaultMosaicConfig,
   createMosaicSlice,
@@ -43,8 +87,13 @@ export {
   MosaicProfilerStatusBar,
   type MosaicProfilerStatusBarProps,
 } from './profiler/MosaicProfilerStatusBar';
-export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {useMosaicProfiler} from './profiler/useMosaicProfiler';
+export {
+  ResponsivePlot,
+  type PlotSize,
+  type ResponsivePlotProps,
+} from './ResponsivePlot';
+export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components
@@ -67,6 +116,20 @@ export type {MosaicChartEditorActionsProps} from './editor/MosaicChartEditorActi
 export type {MosaicCodeMirrorEditorProps} from './editor/MosaicCodeMirrorEditor';
 export type {MosaicSpecEditorPanelProps} from './editor/MosaicSpecEditorPanel';
 export type {
+  MosaicEditorActions,
+  MosaicEditorContextValue,
+  MosaicEditorState,
+  OnMosaicSpecChange,
+  UseMosaicChartEditorOptions,
+  UseMosaicChartEditorReturn,
+} from './editor/types';
+export {
+  getProfilerTableWidth,
+  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
+  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './profiler/layout';
+export type {
   MosaicProfilerCategoryBucket,
   MosaicProfilerCategorySummary,
   MosaicProfilerColumnKind,
@@ -78,28 +141,72 @@ export type {
   MosaicProfilerSummaryState,
   UseMosaicProfilerReturn,
 } from './profiler/types';
-export {
-  getProfilerTableWidth,
-  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
-  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
-  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
-} from './profiler/layout';
-export type {
-  MosaicEditorActions,
-  MosaicEditorContextValue,
-  MosaicEditorState,
-  OnMosaicSpecChange,
-  UseMosaicChartEditorOptions,
-  UseMosaicChartEditorReturn,
-} from './editor/types';
 
 // Chart builder types and utilities
-export {createDefaultChartBuilders} from './chart-builders/builders';
+export {
+  boxPlotBuilder,
+  bubbleChartBuilder,
+  countPlotBuilder,
+  createChartBuilderTemplate,
+  createChartBuilderTemplates,
+  createDefaultChartBuilders,
+  customSpecBuilder,
+  ecdfBuilder,
+  heatmapBuilder,
+  histogramBuilder,
+  lineChartBuilder,
+  mosaicChartBuilders,
+} from './chart-builders/builders';
+export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
-export type {ChartBuilderDialogProps} from './chart-builders/ChartBuilderDialog';
+export {
+  useChartBuilderContext,
+  useChartBuilderStore,
+} from './chart-builders/ChartBuilderContext';
+export type {ChartBuilderContextValue} from './chart-builders/ChartBuilderContext';
+export type {
+  ChartBuilderDialogContentProps,
+  ChartBuilderDialogProps,
+  ChartBuilderRootProps,
+  ChartBuilderTriggerProps,
+} from './chart-builders/ChartBuilderDialog';
+export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
+export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
+export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
+export {
+  boxPlotChartType,
+  bubbleChartChartType,
+  countPlotChartType,
+  createDefaultChartTypes,
+  customSpecChartType,
+  ecdfChartType,
+  heatmapChartType,
+  histogramChartType,
+  lineChartChartType,
+  mosaicChartTypes,
+} from './chart-builders/chartTypes';
+export {
+  buildChartTypeTitle,
+  canCreateChartFromType,
+  columnMatchesFieldTypes,
+  getAvailableChartTypes,
+  getCompatibleColumns,
+  isChartTypeAvailable,
+  NUMERIC_COLUMN_TYPES,
+  QUANTITATIVE_COLUMN_TYPES,
+  TEMPORAL_COLUMN_TYPES,
+} from './chart-builders/chartTypeUtils';
+export {
+  describeChartSpecs,
+  describeChartTypes,
+} from './chart-builders/describeChartSpecs';
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
+export {toChartSpec, toChartTypeDefinition} from './chart-builders/types';
 export type {
   ChartBuilderColumn,
   ChartBuilderField,
   ChartBuilderTemplate,
+  ChartSpec,
+  ChartTypeDefinition,
 } from './chart-builders/types';
+export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';

@@ -7,7 +7,7 @@ import {
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
-import {Code, Plus, X} from 'lucide-react';
+import {Code, X} from 'lucide-react';
 import {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
 import {ChartConfig, defaultChartConfigs} from './filterPlots';
@@ -91,93 +91,86 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   return (
     <RoomPanel type="filters" showHeader={false} className={className}>
       <div className="flex h-full flex-col">
-        <div className="p-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => setBuilderOpen(true)}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add Chart
-          </Button>
-        </div>
-        <ScrollArea className="flex-1">
+        <MosaicChartBuilder
+          tableName="earthquakes"
+          columns={columns}
+          onCreateChart={handleCreateChart}
+          open={builderOpen}
+          onOpenChange={setBuilderOpen}
+        >
           <div className="p-2">
-            <div className="w-full space-y-2">
-              {charts.map((chart) => {
-                const isEditing = editingCharts.has(chart.id);
-                return (
-                  <div key={chart.id} className="rounded-sm border px-2">
-                    <div className="py-2 hover:no-underline">
-                      <div className="flex w-full items-center justify-between pr-2">
-                        <span className="text-sm font-medium">
-                          {chart.title}
-                        </span>
-                        <div
-                          className="flex items-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => toggleEditor(chart.id)}
-                            title={isEditing ? 'Hide editor' : 'Edit spec'}
+            <MosaicChartBuilder.Trigger className="w-full" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <div className="w-full space-y-2">
+                {charts.map((chart) => {
+                  const isEditing = editingCharts.has(chart.id);
+                  return (
+                    <div key={chart.id} className="rounded-sm border px-2">
+                      <div className="py-2 hover:no-underline">
+                        <div className="flex w-full items-center justify-between pr-2">
+                          <span className="text-sm font-medium">
+                            {chart.title}
+                          </span>
+                          <div
+                            className="flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Code className="h-3.5 w-3.5" />
-                          </Button>
-                          {!defaultChartConfigs.some(
-                            (d) => d.id === chart.id,
-                          ) && (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => handleRemoveChart(chart.id)}
-                              title="Remove chart"
+                              onClick={() => toggleEditor(chart.id)}
+                              title={isEditing ? 'Hide editor' : 'Edit spec'}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <Code className="h-3.5 w-3.5" />
                             </Button>
-                          )}
+                            {!defaultChartConfigs.some(
+                              (d) => d.id === chart.id,
+                            ) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleRemoveChart(chart.id)}
+                                title="Remove chart"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <div className="overflow-hidden pb-4">
+                        <MosaicChart.Container
+                          spec={chart.spec}
+                          params={paramsMap}
+                          editable={isEditing}
+                          onSpecChange={(spec) =>
+                            handleSpecChange(chart.id, spec)
+                          }
+                        >
+                          <MosaicChart.Display />
+                          {isEditing && (
+                            <>
+                              <MosaicChart.SpecEditor
+                                className="h-64 border-t"
+                                title=""
+                              />
+                              <MosaicChart.Actions />
+                            </>
+                          )}
+                        </MosaicChart.Container>
+                      </div>
                     </div>
-                    <div className="overflow-hidden pb-4">
-                      <MosaicChart.Container
-                        spec={chart.spec}
-                        params={paramsMap}
-                        editable={isEditing}
-                        onSpecChange={(spec) =>
-                          handleSpecChange(chart.id, spec)
-                        }
-                      >
-                        <MosaicChart.Display />
-                        {isEditing && (
-                          <>
-                            <MosaicChart.SpecEditor
-                              className="h-64 border-t"
-                              title=""
-                            />
-                            <MosaicChart.Actions />
-                          </>
-                        )}
-                      </MosaicChart.Container>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </ScrollArea>
-
-        <MosaicChartBuilder.Dialog
-          open={builderOpen}
-          onOpenChange={setBuilderOpen}
-          tableName="earthquakes"
-          columns={columns}
-          onCreateChart={handleCreateChart}
-        />
+          </ScrollArea>
+          <MosaicChartBuilder.Dialog />
+        </MosaicChartBuilder>
       </div>
     </RoomPanel>
   );

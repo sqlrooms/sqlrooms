@@ -1,52 +1,50 @@
-import {Button, cn} from '@sqlrooms/ui';
+import {ArtifactTabs} from '@sqlrooms/artifacts';
+import {RoomPanelComponent, useLayoutNodeContext} from '@sqlrooms/layout';
 import {PivotView} from '@sqlrooms/pivot';
+import {PlusIcon} from 'lucide-react';
+import {useMemo} from 'react';
 import {useRoomStore} from '../store';
 
-export const MainView = () => {
-  const pivotConfig = useRoomStore((state) => state.pivot.config);
-  const addPivot = useRoomStore((state) => state.pivot.addPivot);
-  const setCurrentPivot = useRoomStore((state) => state.pivot.setCurrentPivot);
-  const removePivot = useRoomStore((state) => state.pivot.removePivot);
+export const MainView: RoomPanelComponent = () => {
+  const ctx = useLayoutNodeContext();
+  const artifactsConfig = useRoomStore((state) => state.artifacts.config);
 
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b px-4 pt-3">
-        <div className="flex flex-wrap items-center gap-2 pb-3">
-          {pivotConfig.pivotOrder.map((pivotId) => {
-            const pivot = pivotConfig.pivots[pivotId];
-            if (!pivot) return null;
-            const isActive = pivotConfig.currentPivotId === pivotId;
-            return (
-              <div key={pivotId} className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant={isActive ? 'default' : 'outline'}
-                  className={cn('h-8', !isActive && 'text-muted-foreground')}
-                  onClick={() => setCurrentPivot(pivotId)}
-                >
-                  {pivot.title}
-                </Button>
-                {pivotConfig.pivotOrder.length > 1 ? (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    className="h-8 px-2"
-                    onClick={() => removePivot(pivotId)}
-                  >
-                    x
-                  </Button>
-                ) : null}
-              </div>
-            );
-          })}
-          <Button size="sm" variant="secondary" onClick={() => addPivot()}>
-            Add pivot
-          </Button>
+  const pivotArtifacts = useMemo(
+    () =>
+      artifactsConfig.artifactOrder.filter(
+        (artifactId) =>
+          artifactsConfig.artifactsById[artifactId]?.type === 'pivot',
+      ),
+    [artifactsConfig.artifactsById, artifactsConfig.artifactOrder],
+  );
+  const fallbackPivotId = pivotArtifacts[0];
+
+  if (ctx.containerType !== 'tabs') {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1">
+          {fallbackPivotId ? <PivotView pivotId={fallbackPivotId} /> : null}
         </div>
       </div>
-      <div className="min-h-0 flex-1">
-        <PivotView />
-      </div>
-    </div>
+    );
+  }
+
+  return (
+    <ArtifactTabs
+      types={['pivot']}
+      panelKey="artifact"
+      closeable={true}
+      preventCloseLastTab={false}
+      emptyContent={
+        <div className="flex h-full items-center justify-center p-6">
+          <ArtifactTabs.NewButton artifactType="pivot" className="w-auto px-3">
+            <PlusIcon className="h-4 w-4" /> Add pivot
+          </ArtifactTabs.NewButton>
+        </div>
+      }
+    >
+      <ArtifactTabs.Tabs />
+      <ArtifactTabs.NewButton artifactType="pivot" />
+    </ArtifactTabs>
   );
 };

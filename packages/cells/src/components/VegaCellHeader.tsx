@@ -25,6 +25,7 @@ export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
   crossFilterPredicate,
 }) => {
   const updateCell = useCellsStore((s) => s.cells.updateCell);
+  const artifactId = useCellsStore((s) => s.cells.getArtifactIdForCell(cellId));
 
   const handleDataSourceChange = (value: string) => {
     updateCell(cellId, (c) =>
@@ -50,6 +51,7 @@ export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
   return (
     <div className="flex items-center gap-2">
       <CellSourceSelector
+        artifactId={artifactId ?? ''}
         value={selectValue}
         onValueChange={handleDataSourceChange}
       />

@@ -1,6 +1,7 @@
 import {
   type CellContainerProps,
   CellSourceSelector,
+  type CellsRootState,
   toDataSourceCell,
   toDataSourceTable,
   fromDataSourceCell,
@@ -21,7 +22,10 @@ export type PivotCellContentProps = {
   renderContainer: (props: CellContainerProps) => React.ReactElement;
 };
 
-const PivotSourceSelect: React.FC<{store: PivotInstanceStore}> = ({store}) => {
+const PivotSourceSelect: React.FC<{
+  artifactId: string;
+  store: PivotInstanceStore;
+}> = ({artifactId, store}) => {
   const source = useStore(store, (state) => state.source);
 
   const value = source
@@ -50,6 +54,7 @@ const PivotSourceSelect: React.FC<{store: PivotInstanceStore}> = ({store}) => {
     <div className="space-y-2">
       <Label>Source</Label>
       <CellSourceSelector
+        artifactId={artifactId}
         value={value}
         onValueChange={handleValueChange}
         className="h-8 w-full"
@@ -58,15 +63,20 @@ const PivotSourceSelect: React.FC<{store: PivotInstanceStore}> = ({store}) => {
   );
 };
 
-type PivotRootState = PivotSliceState & {db: {tables: {tableName: string}[]}};
+type PivotRootState = PivotSliceState &
+  CellsRootState & {db: {tables: {tableName: string}[]}};
 
 export const PivotCellContent: React.FC<PivotCellContentProps> = ({
+  id,
   cell,
   renderContainer,
 }) => {
   const pivotId = cell.data.pivotId;
   const getPivotStore = useBaseRoomStore(
     (state: PivotRootState) => state.pivot.getPivotStore,
+  );
+  const artifactId = useBaseRoomStore((state: PivotRootState) =>
+    state.cells.getArtifactIdForCell(id),
   );
   const pivotStore = useMemo(
     () => getPivotStore(pivotId),
@@ -78,7 +88,10 @@ export const PivotCellContent: React.FC<PivotCellContentProps> = ({
       <PivotEditor store={pivotStore}>
         <PivotEditor.Source>
           <>
-            <PivotSourceSelect store={pivotStore} />
+            <PivotSourceSelect
+              artifactId={artifactId ?? ''}
+              store={pivotStore}
+            />
             <PivotEditor.RendererSelector />
             <PivotEditor.AggregatorSelector />
             <div className="space-y-2">

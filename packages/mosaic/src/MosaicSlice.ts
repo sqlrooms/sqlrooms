@@ -19,20 +19,24 @@ import {
   Connector,
   Coordinator,
   coordinator,
-  decodeIPC,
   makeClient,
   Selection,
   wasmConnector,
 } from '@uwdata/mosaic-core';
 import {Query} from '@uwdata/mosaic-sql';
+import type {Table as ArrowTable} from 'apache-arrow';
 import {produce} from 'immer';
 import {z} from 'zod';
+import {
+  createMosaicTableFromArrowTable,
+  toArrowClientResult,
+} from './tableInterop';
 
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
 // Client configuration options
-export type MosaicClientOptions<T = unknown> = {
+export type MosaicClientOptions = {
   /** Unique identifier for this client */
   id?: string;
   /** Selection name for cross-filtering (will create if doesn't exist) */
@@ -42,18 +46,21 @@ export type MosaicClientOptions<T = unknown> = {
   /** Query builder function that receives the current filter */
   query: (filter: unknown) => ReturnType<typeof Query.from>;
   /** Callback when query results are received */
-  queryResult?: (result: T) => void;
+  queryResult?: (result: ArrowTable) => void;
+  /** Callback when query execution fails */
+  queryError?: (error: Error) => void;
 };
 
 // Tracked client info
-export type TrackedClient<T = unknown> = {
+export type TrackedClient = {
   id: string;
   client: ReturnType<typeof makeClient>;
   createdAt: number;
   isLoading: boolean;
-  data: T | null;
+  data: unknown | null;
+  error?: Error;
   selection?: Selection; // Track for change detection
-  queryResultCallback?: (result: T) => void; // External callback
+  queryResultCallback?: (result: ArrowTable) => void; // External callback
 };
 
 export type MosaicSliceState = {
@@ -64,7 +71,7 @@ export type MosaicSliceState = {
       | {status: 'error'; error: unknown};
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
-    clients: Record<string, TrackedClient<unknown>>;
+    clients: Record<string, TrackedClient>;
     /** Named selections for cross-filtering (e.g., 'brush', 'hover') */
     selections: Record<string, Selection>;
     initialize: () => Promise<void>;
@@ -74,12 +81,13 @@ export type MosaicSliceState = {
       type?: 'crossfilter' | 'single' | 'union',
     ) => Selection;
     /** Create a mosaic client and register it */
-    createClient: <T>(options: MosaicClientOptions<T>) => string;
+    createClient: (options: MosaicClientOptions) => string;
     /** Ensure a client exists with given options (idempotent - creates or updates as needed) */
-    ensureClient: <T>(
-      options: MosaicClientOptions<T> & {
+    ensureClient: (
+      options: MosaicClientOptions & {
         id: string;
-        onQueryResult?: (result: T) => void;
+        onQueryResult?: (result: ArrowTable) => void;
+        onQueryError?: (error: Error) => void;
       },
     ) => void;
     /** Disconnect and remove a client by id */
@@ -159,6 +167,14 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         get().mosaic.destroyAllClients();
       },
 
+      setConfig(config: MosaicSliceConfig) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.mosaic.config = config;
+          }),
+        );
+      },
+
       getSelection(
         name: string,
         type: 'crossfilter' | 'single' | 'union' = 'crossfilter',
@@ -181,7 +197,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         return selection;
       },
 
-      createClient<T>(options: MosaicClientOptions<T>) {
+      createClient(options: MosaicClientOptions) {
         const {connection} = get().mosaic;
         if (connection.status !== 'ready') {
           throw new Error('Mosaic connection not ready');
@@ -198,18 +214,42 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
 
         // Wrap queryResult to update store state AND call external callback
         const wrappedQueryResult = (data: unknown) => {
-          const typedData = data as T;
           set((state) =>
             produce(state, (draft) => {
               const tracked = draft.mosaic.clients[id];
               if (tracked) {
-                tracked.data = typedData;
+                tracked.data = data;
                 tracked.isLoading = false;
+                tracked.error = undefined;
               }
             }),
           );
           // Call external callback if provided
-          options.queryResult?.(typedData);
+          options.queryResult?.(toArrowClientResult(data));
+        };
+        const wrappedQueryPending = () => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[id];
+              if (tracked) {
+                tracked.isLoading = true;
+                tracked.error = undefined;
+              }
+            }),
+          );
+        };
+        const wrappedQueryError = (error: Error) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[id];
+              if (tracked) {
+                tracked.isLoading = false;
+                tracked.error = error;
+              }
+            }),
+          );
+          client.enabled = false;
+          options.queryError?.(error);
         };
 
         const client = makeClient({
@@ -217,6 +257,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           selection,
           query: options.query,
           queryResult: wrappedQueryResult,
+          queryPending: wrappedQueryPending,
+          queryError: wrappedQueryError,
         });
 
         set((state) =>
@@ -227,9 +269,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               createdAt: Date.now(),
               isLoading: true,
               data: null,
+              error: undefined,
               selection,
               queryResultCallback: options.queryResult
-                ? (result: unknown) => options.queryResult!(result as T)
+                ? (result: unknown) =>
+                    options.queryResult!(toArrowClientResult(result))
                 : undefined,
             };
           }),
@@ -238,10 +282,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         return id;
       },
 
-      ensureClient<T>(
-        options: MosaicClientOptions<T> & {
+      ensureClient(
+        options: MosaicClientOptions & {
           id: string;
-          onQueryResult?: (result: T) => void;
+          onQueryResult?: (result: ArrowTable) => void;
+          onQueryError?: (error: Error) => void;
         },
       ) {
         const {connection, clients} = get().mosaic;
@@ -273,20 +318,46 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
 
         // Create new client with wrapped queryResult that calls both store update and external callback
         const wrappedQueryResult = (data: unknown) => {
-          const typedData = data as T;
           set((state) =>
             produce(state, (draft) => {
               const tracked = draft.mosaic.clients[options.id];
               if (tracked) {
-                tracked.data = typedData;
+                tracked.data = data;
                 tracked.isLoading = false;
+                tracked.error = undefined;
               }
             }),
           );
+          const arrowData = toArrowClientResult(data);
           // Call external callback if provided
-          options.onQueryResult?.(typedData);
+          options.onQueryResult?.(arrowData);
           // Also call original queryResult if provided
-          options.queryResult?.(typedData);
+          options.queryResult?.(arrowData);
+        };
+        const wrappedQueryPending = () => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[options.id];
+              if (tracked) {
+                tracked.isLoading = true;
+                tracked.error = undefined;
+              }
+            }),
+          );
+        };
+        const wrappedQueryError = (error: Error) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[options.id];
+              if (tracked) {
+                tracked.isLoading = false;
+                tracked.error = error;
+              }
+            }),
+          );
+          client.enabled = false;
+          options.onQueryError?.(error);
+          options.queryError?.(error);
         };
 
         const client = makeClient({
@@ -294,6 +365,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           selection,
           query: options.query,
           queryResult: wrappedQueryResult,
+          queryPending: wrappedQueryPending,
+          queryError: wrappedQueryError,
         });
 
         set((state) =>
@@ -304,23 +377,23 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               createdAt: Date.now(),
               isLoading: true,
               data: null,
+              error: undefined,
               selection,
-              queryResultCallback: options.onQueryResult as
-                | ((result: unknown) => void)
-                | undefined,
+              queryResultCallback: options.onQueryResult
+                ? (result: unknown) =>
+                    options.onQueryResult!(toArrowClientResult(result))
+                : undefined,
             };
           }),
         );
       },
 
       destroyClient(id: string) {
-        const {connection, clients} = get().mosaic;
+        const {clients} = get().mosaic;
         const tracked = clients[id];
         if (!tracked) return;
 
-        if (connection.status === 'ready') {
-          connection.coordinator.disconnect(tracked.client);
-        }
+        tracked.client.destroy();
 
         set((state) =>
           produce(state, (draft) => {
@@ -330,13 +403,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyAllClients() {
-        const {connection, clients} = get().mosaic;
-
-        if (connection.status === 'ready') {
-          Object.values(clients).forEach((tracked) => {
-            connection.coordinator.disconnect(tracked.client);
-          });
-        }
+        const {clients} = get().mosaic;
+        Object.values(clients).forEach((tracked) => {
+          tracked.client.destroy();
+        });
 
         set((state) =>
           produce(state, (draft) => {
@@ -362,7 +432,7 @@ export function useStoreWithMosaic<T>(
  * Adapts a {@link DuckDbConnector} to the Mosaic {@link Connector} interface.
  *
  * For `'arrow'` queries the Apache Arrow table returned by the connector is
- * serialized to IPC bytes and decoded via {@link decodeIPC} into a flechette
+ * converted via {@link createMosaicTableFromArrowTable} into a flechette
  * `Table`, which is the shape Mosaic consumers expect (with `.toColumns()`).
  * For `'json'` queries, rows are materialized with {@link Array.from} which
  * may have performance/memory implications for very large result sets.
@@ -387,8 +457,7 @@ function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
       }
       if (queryType === 'arrow') {
         const arrowTable = await connector.query(query.sql);
-        const {tableToIPC} = await import('apache-arrow');
-        return decodeIPC(tableToIPC(arrowTable, 'stream')) as any;
+        return createMosaicTableFromArrowTable(arrowTable) as any;
       }
       throw new Error(`Unsupported Mosaic query type "${queryType}".`);
     }) as Connector['query'],

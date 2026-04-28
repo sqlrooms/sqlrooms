@@ -1,308 +1,116 @@
-import {Spec} from '@uwdata/mosaic-spec';
 import {
   AlignHorizontalDistributeCenter,
   BarChart3,
   BarChartHorizontal,
-  BubblesIcon,
+  Workflow as BubblesIcon,
+  ChartNoAxesCombined,
   Code,
   Grid3X3,
   LineChart,
   TrendingUp,
 } from 'lucide-react';
-import {ChartBuilderTemplate} from './types';
+import type {ComponentType} from 'react';
+import type {ChartBuilderTemplate, ChartTypeDefinition} from './types';
+import {
+  boxPlotChartType,
+  bubbleChartChartType,
+  countPlotChartType,
+  createDefaultChartTypes,
+  customSpecChartType,
+  ecdfChartType,
+  heatmapChartType,
+  histogramChartType,
+  lineChartChartType,
+  mosaicChartTypes,
+} from './chartTypes';
 
-const BG_COLOR = '#f5d9a6';
-const FG_COLOR = '#e67f5f';
-
-/**
- * Creates a count plot (bar chart with counts) of a field
- */
-const countPlotBuilder: ChartBuilderTemplate = {
-  id: 'count-plot',
-  icon: BarChartHorizontal,
-  description: 'Create a count plot of a field',
-  fields: [{key: 'field', label: 'Field', required: true}],
-  createSpec: (tableName, {field}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'rectY',
-          data: {from: tableName},
-          x: {bin: field, maxbins: 25},
-          y: {count: null},
-          fill: BG_COLOR,
-          inset: 0.5,
-        },
-        {
-          mark: 'rectY',
-          data: {from: tableName, filterBy: '$brush'},
-          x: {bin: field, maxbins: 25},
-          y: {count: null},
-          fill: FG_COLOR,
-          inset: 0.5,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: field,
-      yLabel: null,
-      yAxis: null,
-      height: 200,
-      width: 380,
-      margins: {left: 0, right: 10, top: 10, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
+const defaultChartTypeIcons: Record<
+  string,
+  ComponentType<{className?: string}>
+> = {
+  'count-plot': BarChartHorizontal,
+  histogram: BarChart3,
+  'line-chart': LineChart,
+  ecdf: TrendingUp,
+  heatmap: Grid3X3,
+  'box-plot': AlignHorizontalDistributeCenter,
+  'bubble-chart': BubblesIcon,
+  'custom-spec': Code,
 };
 
-/**
- * Creates a histogram with background/filtered overlay
- */
-const histogramBuilder: ChartBuilderTemplate = {
-  id: 'histogram',
-  icon: BarChart3,
-  description: 'Create a histogram of a field',
-  fields: [{key: 'field', label: 'Field', required: true}],
-  createSpec: (tableName, {field}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'rectY',
-          data: {from: tableName},
-          x: {bin: field, maxbins: 40},
-          y: {count: null},
-          fill: BG_COLOR,
-          inset: 0.5,
-        },
-        {
-          mark: 'rectY',
-          data: {from: tableName, filterBy: '$brush'},
-          x: {bin: field, maxbins: 40},
-          y: {count: null},
-          fill: FG_COLOR,
-          inset: 0.5,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: field,
-      yLabel: 'Count',
-      height: 200,
-      width: 380,
-      margins: {left: 40, right: 10, top: 10, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
+export function createChartBuilderTemplate(
+  chartType: ChartTypeDefinition,
+  icon: ComponentType<{className?: string}> = ChartNoAxesCombined,
+): ChartBuilderTemplate {
+  return {
+    ...chartType,
+    icon,
+  };
+}
 
-/**
- * Creates a line chart of two fields
- */
-const lineChartBuilder: ChartBuilderTemplate = {
-  id: 'line-chart',
-  icon: LineChart,
-  description: 'Create a line chart of two fields',
-  fields: [
-    {key: 'x', label: 'X Field', required: true},
-    {key: 'y', label: 'Y Field', required: true},
-  ],
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'lineY',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          stroke: FG_COLOR,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
+export function createChartBuilderTemplates(
+  chartTypes: ChartTypeDefinition[],
+): ChartBuilderTemplate[] {
+  return chartTypes.map((chartType) =>
+    createChartBuilderTemplate(
+      chartType,
+      defaultChartTypeIcons[chartType.id] ?? ChartNoAxesCombined,
+    ),
+  );
+}
 
-/**
- * Creates an empirical cumulative distribution (eCDF) chart
- */
-const ecdfBuilder: ChartBuilderTemplate = {
-  id: 'ecdf',
-  icon: TrendingUp,
-  description: 'Create an eCDF chart of a field',
-  fields: [{key: 'field', label: 'Field', required: true}],
-  createSpec: (tableName, {field}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'areaY',
-          data: {from: tableName, filterBy: '$brush'},
-          x: field,
-          y: {cumulative: field},
-          fill: FG_COLOR,
-          fillOpacity: 0.3,
-        },
-        {
-          mark: 'lineY',
-          data: {from: tableName, filterBy: '$brush'},
-          x: field,
-          y: {cumulative: field},
-          stroke: FG_COLOR,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: field,
-      yLabel: 'Cumulative',
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
-
-/**
- * Creates a 2D heatmap of two fields
- */
-const heatmapBuilder: ChartBuilderTemplate = {
-  id: 'heatmap',
-  icon: Grid3X3,
-  description: 'Create a 2D heatmap of two fields',
-  fields: [
-    {key: 'x', label: 'X Field', required: true},
-    {key: 'y', label: 'Y Field', required: true},
-  ],
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'raster',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          fill: 'density',
-          bandwidth: 0,
-          pixelSize: 3,
-        },
-        {select: 'intervalXY', as: '$brush'},
-      ],
-      colorScale: 'sqrt',
-      colorScheme: 'ylorrd',
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 40, right: 10, top: 15, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
-
-/**
- * Creates a box plot
- */
-const boxPlotBuilder: ChartBuilderTemplate = {
-  id: 'box-plot',
-  icon: AlignHorizontalDistributeCenter,
-  description: 'Create a box plot',
-  fields: [
-    {key: 'x', label: 'X Field (categorical)', required: true},
-    {key: 'y', label: 'Y Field (numeric)', required: true},
-  ],
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'boxY',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          fill: FG_COLOR,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
-
-/**
- * Creates a bubble chart
- */
-const bubbleChartBuilder: ChartBuilderTemplate = {
-  id: 'bubble-chart',
-  icon: BubblesIcon,
-  description: 'Create a bubble chart',
-  fields: [
-    {key: 'x', label: 'X Field', required: true},
-    {key: 'y', label: 'Y Field', required: true},
-  ],
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'dot',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          fill: FG_COLOR,
-          fillOpacity: 0.5,
-          r: 3,
-        },
-        {select: 'intervalXY', as: '$brush'},
-      ],
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 10, top: 10, bottom: 30},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
-
-/**
- * Creates a chart with custom spec (empty template)
- */
-const customSpecBuilder: ChartBuilderTemplate = {
-  id: 'custom-spec',
-  icon: Code,
-  description: 'Create a chart with custom spec',
-  fields: [],
-  createSpec: (tableName): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'rectY',
-          data: {from: tableName, filterBy: '$brush'},
-          x: {bin: 'field_name', maxbins: 25},
-          y: {count: null},
-          fill: 'steelblue',
-          inset: 0.5,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: 'field_name',
-      height: 200,
-      width: 380,
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
-};
+export const countPlotBuilder = createChartBuilderTemplate(
+  countPlotChartType,
+  BarChartHorizontal,
+);
+export const histogramBuilder = createChartBuilderTemplate(
+  histogramChartType,
+  BarChart3,
+);
+export const lineChartBuilder = createChartBuilderTemplate(
+  lineChartChartType,
+  LineChart,
+);
+export const ecdfBuilder = createChartBuilderTemplate(
+  ecdfChartType,
+  TrendingUp,
+);
+export const heatmapBuilder = createChartBuilderTemplate(
+  heatmapChartType,
+  Grid3X3,
+);
+export const boxPlotBuilder = createChartBuilderTemplate(
+  boxPlotChartType,
+  AlignHorizontalDistributeCenter,
+);
+export const bubbleChartBuilder = createChartBuilderTemplate(
+  bubbleChartChartType,
+  BubblesIcon,
+);
+export const customSpecBuilder = createChartBuilderTemplate(
+  customSpecChartType,
+  Code,
+);
 
 /**
  * Creates the default set of chart builders.
  * Call this to get a fresh array that you can extend or filter.
  */
 export function createDefaultChartBuilders(): ChartBuilderTemplate[] {
-  return [
-    countPlotBuilder,
-    histogramBuilder,
-    lineChartBuilder,
-    ecdfBuilder,
-    heatmapBuilder,
-    boxPlotBuilder,
-    bubbleChartBuilder,
-    customSpecBuilder,
-  ];
+  return createChartBuilderTemplates(createDefaultChartTypes());
 }
+
+/**
+ * Named built-in chart templates for cherry-picking and
+ * {@link MosaicChartBuilder.chartBuilders}.
+ */
+export const mosaicChartBuilders = {
+  countPlot: countPlotBuilder,
+  histogram: histogramBuilder,
+  lineChart: lineChartBuilder,
+  ecdf: ecdfBuilder,
+  heatmap: heatmapBuilder,
+  boxPlot: boxPlotBuilder,
+  bubbleChart: bubbleChartBuilder,
+  customSpec: customSpecBuilder,
+} as const;

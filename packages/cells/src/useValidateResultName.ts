@@ -121,18 +121,18 @@ export function useValidateResultName(
   cellId: string,
   name: string,
 ): string | null {
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
+  const artifactId = useCellsStore((s) => s.cells.getArtifactIdForCell(cellId));
   const cellsData = useCellsStore((s) => s.cells.config.data);
-  const sheets = useCellsStore((s) => s.cells.config.sheets);
+  const artifacts = useCellsStore((s) => s.cells.config.artifacts);
   const tableSchemas = useCellsStore((s) => s.db.tables);
 
   const currentCell = cellsData[cellId];
   const currentCellSql =
     currentCell?.type === 'sql' ? currentCell.data.sql : '';
 
-  const sheetCellIds = useMemo(
-    () => (currentSheetId ? (sheets[currentSheetId]?.cellIds ?? []) : []),
-    [currentSheetId, sheets],
+  const artifactCellIds = useMemo(
+    () => (artifactId ? (artifacts[artifactId]?.cellIds ?? []) : []),
+    [artifactId, artifacts],
   );
 
   const mainSchemaTableNames = useMemo(
@@ -148,7 +148,7 @@ export function useValidateResultName(
       proposedName: name,
       currentCellId: cellId,
       currentCellSql,
-      sheetCellIds,
+      sheetCellIds: artifactCellIds,
       cells: cellsData,
       mainSchemaTableNames,
       convertToValidName: convertToValidColumnOrTableName,
@@ -157,7 +157,7 @@ export function useValidateResultName(
     name,
     cellId,
     currentCellSql,
-    sheetCellIds,
+    artifactCellIds,
     cellsData,
     mainSchemaTableNames,
   ]);

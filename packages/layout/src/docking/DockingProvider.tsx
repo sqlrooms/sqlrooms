@@ -4,6 +4,7 @@ import {
   DndContext,
   DragEndEvent,
   DragMoveEvent,
+  DragOverlay,
   DragStartEvent,
   PointerSensor,
   useSensor,
@@ -14,7 +15,7 @@ import {DockingContext} from './DockingContext';
 import {DockPreview} from './docking-types';
 import {buildPreview, getDockDirection} from './docking-helpers';
 import {movePanel} from './dock-layout';
-import {findNearestDockAncestor, getPanelTitle} from '../layout-tree';
+import {findNearestDockAncestor, findNodeById} from '../layout-tree';
 import {DockPreviewOverlay} from './DockPreviewOverlay';
 import {DockDragOverlay} from './DockDragOverlay';
 
@@ -27,17 +28,6 @@ type CursorPosition = {
   x: number;
   y: number;
 };
-
-function hasPointerCoordinates(
-  event: Event,
-): event is Event & {clientX: number; clientY: number} {
-  return (
-    'clientX' in event &&
-    'clientY' in event &&
-    typeof event.clientX === 'number' &&
-    typeof event.clientY === 'number'
-  );
-}
 
 export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
   rootLayout,
@@ -52,21 +42,28 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
     }),
   );
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
-  const [activePanelTitle, setActivePanelTitle] = useState<string | null>(null);
   const [preview, setPreview] = useState<DockPreview | null>(null);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(
     null,
   );
 
+  const activePanelNode = useMemo(() => {
+    if (!activePanelId) return null;
+    const found = findNodeById(rootLayout, activePanelId);
+    return found?.node ?? null;
+  }, [activePanelId, rootLayout]);
+
   const clearDragState = useCallback(() => {
     setActivePanelId(null);
-    setActivePanelTitle(null);
     setPreview(null);
     setCursorPosition(null);
   }, []);
 
   const updatePreview = useCallback(
-    (event: DragMoveEvent | DragStartEvent) => {
+    (
+      event: DragMoveEvent | DragStartEvent,
+      cursor: {x: number; y: number} | null,
+    ) => {
       const sourceId = String(event.active.id);
       const over = 'over' in event ? event.over : null;
 
@@ -83,16 +80,12 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
         return;
       }
 
-      const translatedRect =
-        event.active.rect.current.translated ??
-        event.active.rect.current.initial;
-
-      if (!translatedRect) {
+      if (!cursor) {
         setPreview(null);
         return;
       }
 
-      const direction = getDockDirection(translatedRect, over.rect);
+      const direction = getDockDirection(cursor, over.rect);
       setPreview(
         buildPreview(rootLayout, sourceId, targetId, direction, over.rect),
       );
@@ -104,41 +97,39 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
     (event: DragStartEvent) => {
       const panelId = String(event.active.id);
       setActivePanelId(panelId);
-      setActivePanelTitle(getPanelTitle(rootLayout, panelId));
-      updatePreview(event);
 
-      // Track initial cursor position
-      if (hasPointerCoordinates(event.activatorEvent)) {
-        setCursorPosition({
-          x: event.activatorEvent.clientX,
-          y: event.activatorEvent.clientY,
-        });
+      const rect = event.active.rect.current.initial;
+      if (!rect) {
+        return;
       }
+
+      const cursor = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+
+      setCursorPosition(cursor);
+      updatePreview(event, cursor);
     },
-    [updatePreview, rootLayout],
+    [updatePreview],
   );
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
-      updatePreview(event);
+      // Use center of translated rect as cursor position
+      const rect = event.active.rect.current.translated;
 
-      // Calculate cursor position from drag delta
-      const translatedRect = event.active.rect.current.translated;
-      const initialRect = event.active.rect.current.initial;
-
-      if (
-        translatedRect &&
-        initialRect &&
-        hasPointerCoordinates(event.activatorEvent)
-      ) {
-        const deltaX = translatedRect.left - initialRect.left;
-        const deltaY = translatedRect.top - initialRect.top;
-
-        setCursorPosition({
-          x: event.activatorEvent.clientX + deltaX,
-          y: event.activatorEvent.clientY + deltaY,
-        });
+      if (!rect) {
+        return;
       }
+
+      const cursor = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+
+      setCursorPosition(cursor);
+      updatePreview(event, cursor);
     },
     [updatePreview],
   );
@@ -154,16 +145,13 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
       }
 
       const targetId = String(over.id);
-      const translatedRect =
-        event.active.rect.current.translated ??
-        event.active.rect.current.initial;
 
-      if (!translatedRect) {
+      if (!cursorPosition) {
         clearDragState();
         return;
       }
 
-      const direction = getDockDirection(translatedRect, over.rect);
+      const direction = getDockDirection(cursorPosition, over.rect);
       const nextLayout = movePanel(rootLayout, sourceId, targetId, direction);
 
       clearDragState();
@@ -172,7 +160,7 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
         onLayoutChange(nextLayout);
       }
     },
-    [clearDragState, onLayoutChange, rootLayout],
+    [clearDragState, cursorPosition, onLayoutChange, rootLayout],
   );
 
   const value = useMemo(
@@ -195,10 +183,14 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
         onDragCancel={clearDragState}
       >
         {children}
-        <DockDragOverlay
-          activePanelTitle={activePanelTitle}
-          cursorPosition={cursorPosition}
-        />
+        <DragOverlay dropAnimation={null}>
+          {activePanelId && activePanelNode && (
+            <DockDragOverlay
+              activePanelId={activePanelId}
+              activePanelNode={activePanelNode}
+            />
+          )}
+        </DragOverlay>
         <DockPreviewOverlay preview={preview} />
       </DndContext>
     </DockingContext.Provider>

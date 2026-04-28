@@ -24,44 +24,40 @@ const PivotViewContent: React.FC<{pivotId: string}> = ({pivotId}) => {
   return <PivotEditor store={pivotStore} autoRun />;
 };
 
-export const PivotView: React.FC = () => {
+export const PivotView: React.FC<{pivotId: string}> = ({pivotId}) => {
   const tables = useBaseRoomStore<PivotRootState, DataTable[]>(
     (state) => state.db.tables,
   );
-  const pivotConfig = useBaseRoomStore(
-    (state: PivotRootState) => state.pivot.config,
+  const pivot = useBaseRoomStore(
+    (state: PivotRootState) => state.pivot.config.pivots[pivotId],
   );
-  const currentPivotId = pivotConfig.currentPivotId;
-  const currentPivot = currentPivotId
-    ? pivotConfig.pivots[currentPivotId]
-    : undefined;
   const setSource = useBaseRoomStore(
     (state: PivotRootState) => state.pivot.setSource,
   );
 
   const selectedTable = useMemo(() => {
-    if (currentPivot?.source?.kind !== 'table') {
+    if (pivot?.source?.kind !== 'table') {
       return tables[0];
     }
-    const tableName = currentPivot.source.tableName;
+    const tableName = pivot.source.tableName;
     return tables.find((table) => table.tableName === tableName) ?? tables[0];
-  }, [currentPivot?.source, tables]);
+  }, [pivot?.source, tables]);
 
   useEffect(() => {
-    if (currentPivot && !currentPivot.source && selectedTable) {
-      setSource(currentPivot.id, {
+    if (pivot && !pivot.source && selectedTable) {
+      setSource(pivot.id, {
         kind: 'table',
         tableName: selectedTable.tableName,
       });
     }
-  }, [currentPivot, selectedTable, setSource]);
+  }, [pivot, selectedTable, setSource]);
 
   const tableSource =
-    currentPivot?.source?.kind === 'table' ? currentPivot.source : undefined;
+    pivot?.source?.kind === 'table' ? pivot.source : undefined;
 
-  if (!currentPivot || !selectedTable || !tableSource) {
+  if (!pivot || !selectedTable || !tableSource) {
     return null;
   }
 
-  return <PivotViewContent pivotId={currentPivot.id} />;
+  return <PivotViewContent pivotId={pivot.id} />;
 };

@@ -1,18 +1,24 @@
-import DeckGL from '@deck.gl/react';
-import {GeoArrowScatterplotLayer} from '@geoarrow/deck.gl-layers';
-import {Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
-import {cn} from '@sqlrooms/ui';
-import {Table} from 'apache-arrow';
-import {Loader2} from 'lucide-react';
+import type {ColorScaleConfig} from '@sqlrooms/color-scales';
+import {DeckJsonMap} from '@sqlrooms/deck';
+import {
+  asc,
+  column,
+  MosaicColorLegend,
+  Query,
+  sql,
+  useMosaicClient,
+} from '@sqlrooms/mosaic';
+import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import {useMemo, useRef, useState} from 'react';
-import Map, {ViewState} from 'react-map-gl/maplibre';
+import type {ViewState} from 'react-map-gl/maplibre';
+import {useRoomStore} from '../../store';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
-import {buildGeoArrowPointTable} from './utils';
-import {useRoomStore} from '../../store';
 
-const MAP_STYLE =
-  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const MAP_STYLES: Record<ResolvedTheme, string> = {
+  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+};
 
 const INITIAL_VIEW_STATE = {
   longitude: -119.5,
@@ -22,25 +28,12 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
-function getZoomFactor({
-  zoom,
-  zoomOffset = 0,
-}: {
-  zoom: number;
-  zoomOffset?: number;
-}) {
-  return Math.pow(2, Math.max(14 - zoom + zoomOffset, 0));
-}
-
 export default function MapView({className}: {className?: string}) {
-  const deckRef = useRef<any>(null);
-  const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
+  const brush = useRoomStore((state) => state.mosaic.selections.brush);
 
-  // Map view state - kept local as it's component-specific
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [showInfo, setShowInfo] = useState(false);
 
-  // Map settings from store
   const enableBrushing = useRoomStore(
     (state) => state.mapSettings.config.enableBrushing,
   );
@@ -62,40 +55,95 @@ export default function MapView({className}: {className?: string}) {
 
   const lastUpdateRef = useRef<number>(0);
 
-  // Use the mosaic client hook
   const {
     data: rawData,
     isLoading,
     client,
-  } = useMosaicClient<Table>({
+  } = useMosaicClient({
     selectionName: 'brush',
-    query: (filter: any) => {
-      return Query.from('earthquakes')
-        .select('Latitude', 'Longitude', 'Magnitude', 'Depth', 'DateTime')
-        .where(filter);
-    },
+    query: (filter: any) =>
+      Query.from('earthquakes')
+        .select('Latitude', 'Longitude', 'Magnitude', 'Depth', 'DateTime', {
+          geom: sql`ST_AsWKB(ST_Point(Longitude, Latitude))`,
+          dateLabel: sql`strftime(DateTime, '%Y-%m-%d')`,
+        })
+        .where(filter)
+        .orderby([asc(column('Magnitude'))]),
   });
 
-  // Transform raw Arrow table to GeoArrow format
-  const data = useMemo(() => {
-    if (!rawData) return null;
-    return buildGeoArrowPointTable(
-      rawData.getChild('Latitude'),
-      rawData.getChild('Longitude'),
-      rawData.getChild('Magnitude'),
-      rawData.getChild('Depth'),
-      rawData.getChild('DateTime'),
-    );
-  }, [rawData]);
+  const datasets = useMemo(
+    () => ({
+      earthquakes: {
+        arrowTable: rawData ?? undefined,
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb' as const,
+      },
+    }),
+    [rawData],
+  );
+  const dbReady = !isLoading && rawData !== null;
+  const {resolvedTheme} = useTheme();
+  const colorScale = useMemo(() => {
+    return {
+      field: 'Magnitude',
+      type: 'sequential',
+      scheme: 'YlOrBr',
+      domain: [0, 8],
+      reverse: resolvedTheme === 'dark',
+      clamp: true,
+    } satisfies ColorScaleConfig;
+  }, [resolvedTheme]);
 
-  const dbReady = !isLoading && data !== null;
+  const legendColorScale = useMemo(
+    () =>
+      ({
+        ...colorScale,
+        legend: {title: 'Magnitude'},
+      }) satisfies ColorScaleConfig,
+    [colorScale],
+  );
 
-  const onHover = (info: any) => {
-    if (!info.coordinate || !enableBrushing || !client) return;
-    if (!syncCharts) return;
+  const mapSpec = useMemo(
+    () => ({
+      initialViewState: INITIAL_VIEW_STATE,
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'earthquakes',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+          },
+          getFillColor: {
+            '@@function': 'colorScale',
+            ...colorScale,
+          },
+          filled: true,
+          stroked: false,
+          pickable: !enableBrushing,
+          getRadius: '@@=Magnitude',
+          radiusScale: 1,
+          radiusUnits: 'pixels',
+          radiusMinPixels: 1,
+          radiusMaxPixels: 10,
+          lineWidthMinPixels: 1,
+        },
+      ],
+    }),
+    [colorScale, enableBrushing],
+  );
+
+  const onHover = (info: {coordinate?: [number, number]}) => {
+    if (!info.coordinate || !enableBrushing || !client) {
+      return;
+    }
+    if (!syncCharts) {
+      return;
+    }
 
     const now = Date.now();
-    if (now - lastUpdateRef.current < 50) return;
+    if (now - lastUpdateRef.current < 50) {
+      return;
+    }
 
     const [lon, lat] = info.coordinate;
     const metersPerDeg = 111320;
@@ -107,7 +155,7 @@ export default function MapView({className}: {className?: string}) {
       pow((Latitude - ${lat}) * ${metersPerDeg}, 2)
     ) < ${radiusSq}`;
 
-    brush.update({
+    brush?.update({
       source: client,
       value: [lon, lat, brushRadius],
       predicate,
@@ -119,7 +167,7 @@ export default function MapView({className}: {className?: string}) {
   const clearBrush = () => {
     setEnableBrushing(false);
     if (client) {
-      brush.update({
+      brush?.update({
         source: client,
         value: null,
         predicate: null as any,
@@ -131,7 +179,7 @@ export default function MapView({className}: {className?: string}) {
     const next = !syncCharts;
     setSyncCharts(next);
     if (!next && client) {
-      brush.update({
+      brush?.update({
         source: client,
         value: null,
         predicate: null as any,
@@ -139,62 +187,33 @@ export default function MapView({className}: {className?: string}) {
     }
   };
 
-  const scatterLayer = useMemo(() => {
-    if (!data) return null;
-    return new GeoArrowScatterplotLayer({
-      id: 'earthquakes',
-      data,
-      getPosition: data.getChild('geom')!,
-      getFillColor: ({index, data}) => {
-        const batch = data.data;
-        const mag = batch.getChild('Magnitude')?.get(index) ?? 0;
-        if (mag >= 6.0) return [199, 91, 74, 200];
-        if (mag >= 5.0) return [220, 110, 88, 190];
-        if (mag >= 4.0) return [235, 145, 105, 180];
-        if (mag >= 3.0) return [245, 185, 135, 170];
-        if (mag >= 2.0) return [250, 210, 160, 160];
-        return [255, 235, 200, 150];
-      },
-      getRadius: ({index, data}) => {
-        const batch = data.data;
-        const mag = batch.getChild('Magnitude')?.get(index) ?? 0;
-        return mag * mag;
-      },
-      radiusScale: getZoomFactor({zoom: viewState.zoom}),
-      radiusMinPixels: 1,
-      radiusMaxPixels: 20,
-      pickable: !enableBrushing,
-      stroked: true,
-      getLineColor: [160, 160, 140, 90],
-      lineWidthMinPixels: 1,
-    });
-  }, [data, enableBrushing, viewState.zoom]);
-
   return (
     <div className={cn('flex h-full w-full', className)}>
       <div className="relative flex-1">
-        <DeckGL
-          ref={deckRef}
-          viewState={viewState}
-          onViewStateChange={({viewState: next}) =>
-            setViewState(next as ViewState)
-          }
-          controller={true}
-          layers={[scatterLayer]}
-          onHover={onHover}
-          getTooltip={({object}) =>
-            !enableBrushing &&
-            object && {
-              html: `<div style="font-family:system-ui; font-size:12px; padding:4px;">
-                  <strong>M ${Number(object.Magnitude).toFixed(1)}</strong><br/>
-                  Depth: ${object.Depth}km<br/>
-                  ${new Date(Number(object.DateTime)).toLocaleDateString()}
-                </div>`,
-            }
-          }
-        >
-          <Map mapStyle={MAP_STYLE} projection="mercator" />
-        </DeckGL>
+        <DeckJsonMap
+          className="h-full w-full"
+          spec={mapSpec}
+          datasets={datasets}
+          showLegends={false}
+          mapStyle={MAP_STYLES[resolvedTheme]}
+          mapProps={{projection: 'mercator'}}
+          deckProps={{
+            controller: true,
+            viewState,
+            onViewStateChange: ({viewState: next}: any) =>
+              setViewState(next as ViewState),
+            onHover: onHover as any,
+            getTooltip: ({object}: {object?: any}) =>
+              !enableBrushing &&
+              object && {
+                html: `<div style="font-family:system-ui; font-size:12px; padding:4px;">
+                    <strong>M ${Number(object.Magnitude).toFixed(1)}</strong><br/>
+                    Depth: ${object.Depth}km<br/>
+                    ${String(object.dateLabel ?? '')}
+                  </div>`,
+              },
+          }}
+        />
 
         <MapControls
           dbReady={dbReady}
@@ -208,14 +227,15 @@ export default function MapView({className}: {className?: string}) {
           onShowInfo={() => setShowInfo(true)}
         />
 
-        {showInfo && <MapInfoModal onClose={() => setShowInfo(false)} />}
+        <MosaicColorLegend
+          className="absolute bottom-2 left-2 z-10"
+          colorScale={legendColorScale}
+          selection={brush ?? undefined}
+          tickFormat=".1f"
+          width={220}
+        />
 
-        {!dbReady && (
-          <div className="absolute top-0 left-0 z-40 flex h-full w-full items-center justify-center bg-black/40 text-white backdrop-blur-sm">
-            <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-            <span>Loading earthquakes...</span>
-          </div>
-        )}
+        {showInfo ? <MapInfoModal onClose={() => setShowInfo(false)} /> : null}
       </div>
     </div>
   );

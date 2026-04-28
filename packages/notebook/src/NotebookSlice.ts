@@ -1,9 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
-import {
-  type Cell,
-  type CellsSliceState,
-  getSheetsByType,
-} from '@sqlrooms/cells';
+import {type Cell, type CellsSliceState} from '@sqlrooms/cells';
 import {DbSliceState} from '@sqlrooms/db';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
@@ -19,7 +15,7 @@ export function createDefaultNotebookConfig(
   props: Partial<NotebookSliceConfig> = {},
 ): NotebookSliceConfig {
   const base: NotebookSliceConfig = {
-    sheets: {},
+    artifacts: {},
     currentCellId: undefined,
   };
 
@@ -27,17 +23,17 @@ export function createDefaultNotebookConfig(
   return {...base, ...props};
 }
 
-function getSheet(config: NotebookSliceConfig, sheetId: string) {
-  return config.sheets[sheetId];
+function getArtifact(config: NotebookSliceConfig, artifactId: string) {
+  return config.artifacts[artifactId];
 }
 
-function findSheetIdByCellId(
+function findArtifactIdByCellId(
   config: NotebookSliceConfig,
   cellId: string,
 ): string | undefined {
-  for (const [sheetId, sheet] of Object.entries(config.sheets)) {
-    if (sheet?.meta.cellOrder.includes(cellId)) {
-      return sheetId;
+  for (const [artifactId, artifact] of Object.entries(config.artifacts)) {
+    if (artifact?.meta.cellOrder.includes(cellId)) {
+      return artifactId;
     }
   }
   return undefined;
@@ -70,51 +66,13 @@ export function createNotebookSlice(props?: {
               }),
             ),
 
-          getNotebookSheets: () => getSheetsByType(get(), 'notebook'),
-
-          addTab: (title) => {
-            const existingTitles = Object.values(get().cells.config.sheets).map(
-              (s) => s.title,
-            );
-            const finalTitle =
-              title || generateUniqueName('Notebook 1', existingTitles, ' ');
-            const id = get().cells.addSheet(finalTitle, 'notebook');
+          ensureArtifact: (artifactId) => {
+            get().cells.ensureArtifact(artifactId);
             set((state) =>
               produce(state, (draft) => {
-                draft.notebook.config.sheets[id] = {
-                  id,
-                  meta: {
-                    cellOrder: [],
-                  },
-                };
-              }),
-            );
-            return id;
-          },
-
-          renameTab: (id, title) => {
-            get().cells.renameSheet(id, title);
-          },
-
-          setCurrentTab: (id) => {
-            get().cells.setCurrentSheet(id);
-          },
-
-          removeTab: (id) => {
-            get().cells.removeSheet(id);
-            set((state) =>
-              produce(state, (draft) => {
-                delete draft.notebook.config.sheets[id];
-              }),
-            );
-          },
-
-          initializeSheet: (id) => {
-            set((state) =>
-              produce(state, (draft) => {
-                if (!draft.notebook.config.sheets[id]) {
-                  draft.notebook.config.sheets[id] = {
-                    id,
+                if (!draft.notebook.config.artifacts[artifactId]) {
+                  draft.notebook.config.artifacts[artifactId] = {
+                    id: artifactId,
                     meta: {
                       cellOrder: [],
                     },
@@ -124,7 +82,16 @@ export function createNotebookSlice(props?: {
             );
           },
 
-          addCell: async (tabId, type, index) => {
+          removeArtifact: (artifactId) => {
+            get().cells.removeArtifact(artifactId);
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.notebook.config.artifacts[artifactId];
+              }),
+            );
+          },
+
+          addCell: async (artifactId, type, index) => {
             const id = createId();
             const reg = get().cells.cellRegistry[type];
             if (!reg) return id;
@@ -166,25 +133,25 @@ export function createNotebookSlice(props?: {
               }
             }
 
-            await get().cells.addCell(tabId, cell, index);
+            get().cells.ensureArtifact(artifactId);
+            await get().cells.addCell(artifactId, cell, index);
 
             set((state) =>
               produce(state, (draft) => {
-                let sheet = getSheet(draft.notebook.config, tabId);
-                if (!sheet) {
-                  // Initialize metadata if needed
-                  sheet = {
-                    id: tabId,
+                let artifact = getArtifact(draft.notebook.config, artifactId);
+                if (!artifact) {
+                  artifact = {
+                    id: artifactId,
                     meta: {
                       cellOrder: [],
                     },
                   };
-                  draft.notebook.config.sheets[tabId] = sheet;
+                  draft.notebook.config.artifacts[artifactId] = artifact;
                 }
 
                 // cellOrder
-                const newIndex = index ?? sheet.meta.cellOrder.length;
-                sheet.meta.cellOrder.splice(newIndex, 0, id);
+                const newIndex = index ?? artifact.meta.cellOrder.length;
+                artifact.meta.cellOrder.splice(newIndex, 0, id);
 
                 draft.notebook.config.currentCellId = id;
               }),
@@ -192,20 +159,23 @@ export function createNotebookSlice(props?: {
             return id;
           },
 
-          moveCell: (tabId, cellId, direction) => {
+          moveCell: (artifactId, cellId, direction) => {
             set((state) =>
               produce(state, (draft) => {
-                const sheet = getSheet(draft.notebook.config, tabId);
-                if (!sheet) return;
+                const artifact = getArtifact(draft.notebook.config, artifactId);
+                if (!artifact) return;
 
-                const idx = sheet.meta.cellOrder.indexOf(cellId);
+                const idx = artifact.meta.cellOrder.indexOf(cellId);
                 if (idx >= 0) {
                   const newIndex = direction === 'up' ? idx - 1 : idx + 1;
-                  if (newIndex < 0 || newIndex >= sheet.meta.cellOrder.length)
+                  if (
+                    newIndex < 0 ||
+                    newIndex >= artifact.meta.cellOrder.length
+                  )
                     return;
 
-                  sheet.meta.cellOrder.splice(idx, 1);
-                  sheet.meta.cellOrder.splice(newIndex, 0, cellId);
+                  artifact.meta.cellOrder.splice(idx, 1);
+                  artifact.meta.cellOrder.splice(newIndex, 0, cellId);
                 }
               }),
             );
@@ -215,15 +185,15 @@ export function createNotebookSlice(props?: {
             get().cells.removeCell(cellId);
             set((state) =>
               produce(state, (draft) => {
-                const sheetId = findSheetIdByCellId(
+                const artifactId = findArtifactIdByCellId(
                   draft.notebook.config,
                   cellId,
                 );
-                if (!sheetId) return;
-                const sheet = getSheet(draft.notebook.config, sheetId);
-                if (!sheet) return;
+                if (!artifactId) return;
+                const artifact = getArtifact(draft.notebook.config, artifactId);
+                if (!artifact) return;
 
-                sheet.meta.cellOrder = sheet.meta.cellOrder.filter(
+                artifact.meta.cellOrder = artifact.meta.cellOrder.filter(
                   (id) => id !== cellId,
                 );
               }),
@@ -255,16 +225,16 @@ export function createNotebookSlice(props?: {
             get().cells.cancelCell(cellId);
           },
 
-          runAllCells: async (tabId) => {
-            const sheet = getSheet(get().notebook.config, tabId);
-            if (!sheet) return;
-            for (const cellId of sheet.meta.cellOrder) {
+          runAllCells: async (artifactId) => {
+            const artifact = getArtifact(get().notebook.config, artifactId);
+            if (!artifact) return;
+            for (const cellId of artifact.meta.cellOrder) {
               await get().cells.runCell(cellId, {cascade: false});
             }
           },
 
-          runAllCellsCascade: async (tabId) => {
-            await get().cells.runAllCellsCascade(tabId);
+          runAllCellsCascade: async (artifactId) => {
+            await get().cells.runAllCellsCascade(artifactId);
           },
 
           runCell: async (cellId, opts) => {
