@@ -326,6 +326,9 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.22
         version: 1.0.28(zod@4.1.13)
+      '@sqlrooms/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
@@ -2280,6 +2283,9 @@ importers:
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.1)
@@ -2289,9 +2295,21 @@ importers:
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.7)(react@19.2.1)
+      remark-gfm:
+        specifier: ^4.0.0
+        version: 4.0.1
+      yaml:
+        specifier: ^2.6.1
+        version: 2.8.2
       zod:
         specifier: 4.1.13
         version: 4.1.13
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
 
   packages/ai-config:
     dependencies:

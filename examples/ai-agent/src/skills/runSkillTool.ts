@@ -1,0 +1,87 @@
+/**
+ * The minimal skill-runtime `runSkill` tool.
+ *
+ * Lifecycle for one call:
+ *   1. Resolve `skillId` via `SkillStorage.resolveSkillId`.
+ *   2. Read the skill record (manifest + instructions).
+ *   3. Spin up a fresh `ToolLoopAgent` seeded with the skill's `SKILL.md` as
+ *      instructions and `querySQL` as its single tool.
+ *   4. Stream that sub-agent via `streamSubAgent` so its tool calls surface in
+ *      the parent's activity log.
+ */
+
+import {streamSubAgent, type AiSliceState} from '@sqlrooms/ai-core';
+import type {SkillStorage} from '@sqlrooms/ai';
+import type {StoreApi} from '@sqlrooms/room-store';
+import {ToolLoopAgent, stepCountIs, tool, type LanguageModel} from 'ai';
+import {z} from 'zod';
+import {createQuerySqlTool} from './querySqlTool';
+
+export interface CreateRunSkillToolOptions {
+  store: StoreApi<AiSliceState>;
+  storage: SkillStorage;
+  /**
+   * Resolver for the language model. Called once per `runSkill` invocation
+   * so the sub-agent uses the session's current provider/model.
+   */
+  getModel: () => LanguageModel;
+}
+
+export function createRunSkillTool({
+  store,
+  storage,
+  getModel,
+}: CreateRunSkillToolOptions) {
+  return tool({
+    description:
+      'Run an installed skill by id. The skill receives the goal as its user prompt and has access to querySQL.',
+    inputSchema: z.object({
+      reasoning: z.string().describe('Why this skill is being invoked.'),
+      skillId: z
+        .string()
+        .describe('The id of the skill to run, e.g. "summarize-table".'),
+      goal: z
+        .string()
+        .describe(
+          'The task for the skill: the concrete question or instruction to execute against.',
+        ),
+    }),
+    execute: async (
+      {skillId, goal}: {skillId: string; goal: string},
+      options?: {toolCallId?: string; abortSignal?: AbortSignal},
+    ) => {
+      const ref = await storage.resolveSkillId(skillId);
+      if (!ref) {
+        return {
+          success: false as const,
+          error: `No skill found with id "${skillId}".`,
+        };
+      }
+      const record = await storage.readSkill(ref);
+
+      const subAgent = new ToolLoopAgent({
+        model: getModel(),
+        tools: {
+          querySQL: createQuerySqlTool(),
+        },
+        instructions: record.instructions,
+        stopWhen: stepCountIs(10),
+      });
+
+      const result = await streamSubAgent(
+        subAgent,
+        goal,
+        store,
+        options?.toolCallId || '',
+        options?.abortSignal,
+      );
+
+      return {
+        success: true as const,
+        skillId,
+        rootId: ref.rootId,
+        finalOutput: result.finalOutput,
+      };
+    },
+  });
+}

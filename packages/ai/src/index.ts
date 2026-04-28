@@ -41,6 +41,58 @@ export {
   formatTablesForLLM,
 } from './tools/defaultInstructions';
 
+// Skills
+export {
+  SkillError,
+  SkillManifestError,
+  SkillNotFoundError,
+  SkillRootReadOnlyError,
+  SkillConflictError,
+} from './skills';
+export type {SkillErrorCode, SkillErrorContext} from './skills';
+export {
+  SkillManifestSchema,
+  parseSkillManifest,
+  serializeSkillManifest,
+  loadSkillFromFiles,
+} from './skills';
+export type {SkillManifest} from './skills';
+export type {
+  SkillStorage,
+  SkillRoot,
+  SkillRef,
+  SkillFile,
+  SkillRecord,
+  SkillListing,
+  SkillWriteContent,
+} from './skills';
+
+// Skills - authoring
+export {
+  createSkillDraftStore,
+  createSkillAuthoringAgent,
+  createWriteManifestTool,
+  createWriteInstructionsTool,
+  createSaveSkillTool,
+  buildSkillAuthoringSystemPrompt,
+  containsForbidden,
+  DEFAULT_SKILL_AUTHORING_STOP_STEPS,
+  SkillDraftPreview,
+  SkillAuthoringPanel,
+  DefaultSkillAuthoringPanelHeader,
+} from './skills';
+export type {
+  SkillAuthoringContext,
+  SkillDraft,
+  SkillDraftState,
+  SkillDraftStatus,
+  SkillDraftStore,
+  SaveSkillCallback,
+  CreateSkillAuthoringAgentOptions,
+  SkillDraftPreviewProps,
+  SkillAuthoringPanelProps,
+} from './skills';
+
 // From @sqlrooms/ai-core - State/Logic
 export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';

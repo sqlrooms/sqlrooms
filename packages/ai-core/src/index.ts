@@ -14,6 +14,7 @@ export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
 export {Chat} from './components/Chat';
+export {AgentChat, type AgentChatProps} from './components/agent-chat';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
