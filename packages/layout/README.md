@@ -90,11 +90,9 @@ Named `tabs` nodes (with an `id`) act as **areas** that can be managed programma
 import {Button} from '@sqlrooms/ui';
 
 function PanelButtons() {
-  const setActivePanel = useRoomStore((state) => state.layout.setActivePanel);
-  const addPanelToArea = useRoomStore((state) => state.layout.addPanelToArea);
-  const setAreaCollapsed = useRoomStore(
-    (state) => state.layout.setAreaCollapsed,
-  );
+  const setActiveTab = useRoomStore((state) => state.layout.setActiveTab);
+  const addTab = useRoomStore((state) => state.layout.addTab);
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
 
   return (
     <div className="flex gap-2">
