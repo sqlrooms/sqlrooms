@@ -1488,6 +1488,9 @@ importers:
 
   examples/kepler:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
