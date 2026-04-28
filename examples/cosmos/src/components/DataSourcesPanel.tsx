@@ -11,13 +11,13 @@ import {
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
 import type {FC} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 
 const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const isRoomEmpty = !roomFiles?.length;
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       {isRoomEmpty ? (
         <></>
       ) : (

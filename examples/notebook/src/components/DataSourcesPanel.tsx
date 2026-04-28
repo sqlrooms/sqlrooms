@@ -13,7 +13,7 @@ export const DataSourcesPanel: FC = () => {
   );
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{

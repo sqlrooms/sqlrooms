@@ -20,7 +20,7 @@ import {
 } from '@sqlrooms/sql-editor';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
-import DiscussionPanel from './components/DiscussionPanel';
+import {DiscussionPanel} from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
 
 export const RoomPanelTypes = z.enum(['left', 'discuss', MAIN_VIEW] as const);

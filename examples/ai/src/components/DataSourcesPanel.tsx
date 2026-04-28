@@ -1,7 +1,7 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
-import {useRoomStore, RoomPanelTypes} from '../store';
+import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {toast} from '@sqlrooms/ui';
 import type {FC} from 'react';
@@ -12,7 +12,7 @@ export const DataSourcesPanel: FC = () => {
     (state) => state.db.refreshTableSchemas,
   );
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{

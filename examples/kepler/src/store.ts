@@ -111,7 +111,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               {
                 type: 'tabs',
                 id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                children: [
+                  RoomPanelTypes.enum['data'],
+                  RoomPanelTypes.enum['layers'],
+                  RoomPanelTypes.enum['filters'],
+                  RoomPanelTypes.enum['interactions'],
+                  RoomPanelTypes.enum['basemaps'],
+                ],
                 defaultSize: '30%',
                 maxSize: '50%',
                 minSize: '300px',

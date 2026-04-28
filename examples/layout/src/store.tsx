@@ -29,6 +29,7 @@ import {
   isLayoutSplitNode,
   isLayoutNodeKey,
   LayoutDockNode,
+  MAIN_VIEW,
 } from '@sqlrooms/layout';
 import {createId} from '@paralleldrive/cuid2';
 

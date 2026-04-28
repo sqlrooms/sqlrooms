@@ -1,9 +1,8 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import type {FC} from 'react';
-import {RoomPanelTypes} from '../panel-types';
 
 export const SchemaPanel: FC = () => (
-  <RoomPanel type={RoomPanelTypes.enum['schema']}>
+  <RoomPanel>
     <div className="text-muted-foreground text-xs">
       Browse table schemas and column definitions.
     </div>

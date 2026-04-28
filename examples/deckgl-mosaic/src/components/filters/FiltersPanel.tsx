@@ -8,11 +8,11 @@ import {
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
 import {Code, X} from 'lucide-react';
-import {useCallback, useMemo, useState} from 'react';
+import {FC, useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
 import {ChartConfig, defaultChartConfigs} from './filterPlots';
 
-export default function FiltersPanel({className}: {className?: string}) {
+export const FiltersPanel: FC<{className?: string}> = ({className}) => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
   const isTableReady = useRoomStore((state) =>
     state.db.tables.find((t) => t.tableName === 'earthquakes'),
@@ -24,7 +24,7 @@ export default function FiltersPanel({className}: {className?: string}) {
     return null;
   }
   return <FiltersPanelContent className={className} />;
-}
+};
 
 const FiltersPanelContent = ({className}: {className?: string}) => {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
@@ -32,7 +32,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
 
   // Shared params map for cross-filtering across all charts
   const paramsMap = useMemo(
-    () => new Map<string, Param<any>>([['brush', brush as Param<any>]]),
+    () => new Map([['brush', brush as Param<unknown>]]),
     [brush],
   );
 
@@ -89,7 +89,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   }, []);
 
   return (
-    <RoomPanel type="filters" showHeader={false} className={className}>
+    <RoomPanel showHeader={false} className={className}>
       <div className="flex h-full flex-col">
         <MosaicChartBuilder
           tableName="earthquakes"

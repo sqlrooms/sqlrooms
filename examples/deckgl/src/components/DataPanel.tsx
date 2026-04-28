@@ -12,7 +12,7 @@ export const DataPanel: FC = () => {
     (state) => state.db.refreshTableSchemas,
   );
   return (
-    <RoomPanel type="data">
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{
