@@ -41,10 +41,6 @@ import {
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
 import {createId} from '@paralleldrive/cuid2';
-import {
-  buildKeplerUserTableIdMap,
-  unqualifySqlTableName,
-} from '@sqlrooms/duckdb-core';
 import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
   BaseRoomStoreState,
@@ -607,11 +603,34 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
+            // Use fully qualified name unless it's the default database and schema
+            // For main.main.table or main.table, just show "table"
+            // For other schemas, show the full qualified name
+            let label = String(tableName);
+
+            // Parse the table name to check if it's in the default location
+            const parts = label.split('.');
+            if (parts.length === 1) {
+              // Already just the table name
+              label = parts[0] ?? label;
+            } else if (parts.length === 2 && parts[0] === 'main') {
+              // main.table format - just show table name
+              label = parts[1] ?? label;
+            } else if (
+              parts.length === 3 &&
+              parts[0] === 'main' &&
+              parts[1] === 'main'
+            ) {
+              // main.main.table format - just show table name
+              label = parts[2] ?? label;
+            }
+            // Otherwise keep the full qualified name for non-default schemas
+
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {
                 id: tableName,
-                label: unqualifySqlTableName(String(tableName)),
+                label: label,
               },
               metadata: {tableName},
             };
@@ -674,9 +693,7 @@ export function createKeplerSlice({
             // so tables/maps added concurrently are picked up on the next pass.
             do {
               pendingKeplerSync = false;
-              const availableTableIds = buildKeplerUserTableIdMap(
-                get().db.tables,
-              );
+              // No longer building availableTableIds - we allow all tables and views
               for (const mapId of Object.keys(get().kepler.map)) {
                 const mapState = get().kepler.map[mapId];
                 if (!mapState) continue;
@@ -699,9 +716,8 @@ export function createKeplerSlice({
                   if (keplerDatasets?.[dataId]) {
                     continue;
                   }
-                  if (!availableTableIds.has(dataId)) {
-                    continue;
-                  }
+                  // Skip the availableTableIds check - allow views and all tables to be added
+                  // The UI restrictions in client apps should handle any filtering if needed
                   try {
                     await get().kepler.addTableToMap(mapId, dataId, {
                       autoCreateLayers: false,
