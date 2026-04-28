@@ -154,13 +154,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            area: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            area: 'main',
           },
         },
       },

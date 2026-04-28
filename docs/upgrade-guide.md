@@ -479,9 +479,9 @@ Deprecated helper renames in `@sqlrooms/layout`:
 | `findMosaicNodePathByKey`      | `findLayoutNodePathByKey` |
 | `removeMosaicNodeByKey`        | `removeLayoutNodeByKey`   |
 
-#### Panel `placement` replaced by `area`
+#### Panel `placement` is deprecated
 
-The `placement` property on panel info (`'sidebar'`, `'main'`, etc.) has been replaced by `area`, which references a named `tabs` node `id` in the layout tree. The old `placement` property still works but is deprecated.
+The `placement` property on panel info (`'sidebar'`, `'main'`, etc.) is deprecated and no longer used. Panel location is now determined entirely by the layout tree structure, not by a property on the panel definition.
 
 ##### Before
 
@@ -495,9 +495,11 @@ panels: {
 
 ```ts
 panels: {
-  data: {title: 'Data', component: DataPanel, area: 'left'},
+  data: {title: 'Data', component: DataPanel},
 }
 ```
+
+Panel location is controlled by the layout configuration structure (e.g., which `split`, `tabs`, or `panel` node references the panel key).
 
 #### New `LayoutRenderer` component
 
