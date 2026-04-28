@@ -8,9 +8,6 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "sideEffects": [
-    "**/*.css"
-  ],
   "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
