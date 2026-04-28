@@ -512,26 +512,3 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
     };
   });
 }
-
-// ---------------------------------------------------------------------------
-// Tool name helpers
-// ---------------------------------------------------------------------------
-
-const KNOWN_ACRONYMS = new Set(['fsq', 'h3', 'api', 'sql', 'ui', 'csv', 'db']);
-
-/**
- * Humanize a tool name like "agent-fsq-visits-chart" → "FSQ Visits Chart".
- * Strips common prefixes (agent-, skill-) and title-cases each word,
- * auto-uppercasing known acronyms.
- */
-export function humanizeToolName(toolName: string): string {
-  const stripped = toolName.replace(/^agent-/, '').replace(/^skill-/, '');
-  return stripped
-    .split(/[-_]+/)
-    .map((w) =>
-      KNOWN_ACRONYMS.has(w.toLowerCase())
-        ? w.toUpperCase()
-        : w.charAt(0).toUpperCase() + w.slice(1),
-    )
-    .join(' ');
-}

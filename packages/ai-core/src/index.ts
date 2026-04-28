@@ -35,7 +35,6 @@ export {
   ToolAbortError,
   extractModelsFromSettings,
   shouldEndAnalysis,
-  humanizeToolName,
 } from './utils';
 export type {
   AddToolApprovalResponse,
@@ -70,6 +69,11 @@ export {
   FlatAgentRenderer,
   OrchestratorToolLogLine,
   ShowToolCallDetailsProvider,
+} from './components/FlatAgentRenderer';
+export type {
+  ToolRenderBehavior,
+  ToolStructureBehavior,
+  ToolDisplayBehavior,
 } from './components/FlatAgentRenderer';
 export {collectHoistableRenderers} from './components/collectHoistableRenderers';
 export type {HoistableToolCall} from './components/collectHoistableRenderers';
