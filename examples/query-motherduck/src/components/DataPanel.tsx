@@ -1,7 +1,7 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {RoomPanelTypes} from '../store';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const DataPanel: FC = () => {
   return (

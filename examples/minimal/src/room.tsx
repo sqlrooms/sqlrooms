@@ -6,7 +6,7 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {Spinner} from '@sqlrooms/ui';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 /**
  * The whole room state.

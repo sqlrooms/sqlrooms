@@ -1,7 +1,7 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeProvider, ThemeSwitch} from '@sqlrooms/ui';
 import {roomStore, useRoomStore} from './store';
-import {FC} from 'react';
+import type {FC} from 'react';
 import {CollapseBottomButton} from './components/CollapseBottomButton';
 
 export const App: FC = () => {

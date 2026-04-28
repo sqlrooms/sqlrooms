@@ -11,7 +11,7 @@ import {
   useDisclosure,
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
-import {FC} from 'react';
+import type {FC} from 'react';
 import {useRoomStore} from '../store';
 
 export const MainView: FC = () => {

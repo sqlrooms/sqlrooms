@@ -1,6 +1,6 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {RoomPanelTypes} from '../panel-types';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const DataSourcesPanel: FC = () => {
   return (

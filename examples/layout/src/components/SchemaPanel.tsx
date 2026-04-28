@@ -1,5 +1,5 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {FC} from 'react';
+import type {FC} from 'react';
 import {RoomPanelTypes} from '../panel-types';
 
 export const SchemaPanel: FC = () => (

@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from '@sqlrooms/ui';
 import {PlusIcon, XCircleIcon} from 'lucide-react';
-import {FC} from 'react';
+import type {FC} from 'react';
 import {MD_TOKEN_KEY} from '../App';
 import {useRoomStore} from '../store';
 

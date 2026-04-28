@@ -3,7 +3,7 @@ import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {useRoomStore, RoomPanelTypes} from '../store';
 import {toast} from '@sqlrooms/ui';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const DataPanel: FC = () => {
   const addFile = useRoomStore((state) => state.addFile);

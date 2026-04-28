@@ -22,7 +22,7 @@ import {
   CardTitle,
   SpinnerPane,
 } from '@sqlrooms/ui';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const MainView: FC = () => {
   const table = useRoomStore((state) =>
