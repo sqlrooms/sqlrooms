@@ -142,14 +142,26 @@ export function createTabActions<S extends LayoutStateShape>(
         );
         if (!childExists) return;
 
+        // Get the index of the tab being hidden in visible children BEFORE hiding it
+        const visibleChildren = getVisibleTabChildren(found.node);
+        const hidingIndex = visibleChildren.findIndex(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+
+        // If hiding a tab before the active one, decrement activeTabIndex
+        if (hidingIndex >= 0 && hidingIndex < found.node.activeTabIndex) {
+          found.node.activeTabIndex -= 1;
+        }
+
         // Add to hidden (don't remove from children)
         addToHidden(found.node, tabId);
 
-        // Adjust activeTabIndex to stay within visible children bounds
-        const visibleChildren = getVisibleTabChildren(found.node);
-        if (found.node.activeTabIndex >= visibleChildren.length) {
-          found.node.activeTabIndex = Math.max(0, visibleChildren.length - 1);
-        }
+        // Recompute visible children and clamp activeTabIndex as final guard
+        const newVisibleChildren = getVisibleTabChildren(found.node);
+        found.node.activeTabIndex = Math.max(
+          0,
+          Math.min(found.node.activeTabIndex, newVisibleChildren.length - 1),
+        );
       }),
     );
   };
