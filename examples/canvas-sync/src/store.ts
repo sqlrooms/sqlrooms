@@ -17,6 +17,7 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
+  MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {setAutoFreeze} from 'immer';
@@ -40,7 +41,7 @@ export type RoomState = RoomShellSliceState &
       setApiKey: (apiKey: string) => void;
     };
   };
-export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
+export const RoomPanelTypes = z.enum([MAIN_VIEW, 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 const SERVER_URL =
@@ -74,14 +75,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: RoomPanelTypes.enum['main'],
-                panel: RoomPanelTypes.enum['main'],
+                id: MAIN_VIEW,
+                panel: MAIN_VIEW,
                 defaultSize: '80%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['main']]: {
+            [MAIN_VIEW]: {
               title: 'Canvas',
               icon: () => null,
               component: Canvas,

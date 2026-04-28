@@ -29,6 +29,7 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
+  MAIN_VIEW,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
@@ -68,7 +69,7 @@ export const NOTEBOOK_ARTIFACT_TYPES = defineArtifactTypes({
   },
 } satisfies Record<'notebook', ArtifactTypeDefinition<RoomState>>);
 
-export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
+export const RoomPanelTypes = z.enum([MAIN_VIEW, 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -105,8 +106,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['main'],
-                panel: RoomPanelTypes.enum['main'],
+                id: MAIN_VIEW,
+                panel: MAIN_VIEW,
                 children: [],
                 activeTabIndex: 0,
                 defaultSize: '80%',
@@ -114,7 +115,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['main']]: {
+            [MAIN_VIEW]: {
               title: 'Notebook',
               icon: () => null,
               component: MainView,

@@ -63,8 +63,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
             {
               type: 'panel',
-              id: RoomPanelTypes.enum['main'],
-              panel: RoomPanelTypes.enum['main'],
+              id: MAIN_VIEW,
+              panel: MAIN_VIEW,
             },
           ],
         } satisfies LayoutConfig,
@@ -74,7 +74,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             icon: DatabaseIcon,
             component: DataSourcesPanel,
           },
-          [RoomPanelTypes.enum['main']]: {
+          [MAIN_VIEW]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,

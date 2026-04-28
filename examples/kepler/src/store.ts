@@ -123,8 +123,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['main'],
-                panel: RoomPanelTypes.enum['main'],
+                id: MAIN_VIEW,
+                panel: MAIN_VIEW,
                 children: [],
                 activeTabIndex: 0,
                 defaultSize: '70%',
@@ -158,7 +158,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               component: KeplerSidePanelBaseMapManager,
             },
             // MapIcon
-            [RoomPanelTypes.enum['main']]: {
+            [MAIN_VIEW]: {
               title: 'Main view',
               icon: () => null,
               component: KeplerMapsContainer,

@@ -4,6 +4,7 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
+  MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
@@ -12,7 +13,7 @@ import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
 import {z} from 'zod';
 
-export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
@@ -62,8 +63,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
             {
               type: 'panel',
-              id: RoomPanelTypes.enum['main'],
-              panel: RoomPanelTypes.enum['main'],
+              id: MAIN_VIEW,
+              panel: MAIN_VIEW,
             },
           ],
         } satisfies LayoutConfig,

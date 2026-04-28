@@ -97,8 +97,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 hideTabStrip: true,
               },
               {
-                id: RoomPanelTypes.enum['main'],
-                panel: RoomPanelTypes.enum['main'],
+                id: MAIN_VIEW,
+                panel: MAIN_VIEW,
                 type: 'split',
                 direction: 'column',
                 children: [
@@ -266,7 +266,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               component: ResultsPanel,
               icon: TableRowsSplitIcon,
             },
-            [RoomPanelTypes.enum['main']]: {
+            [MAIN_VIEW]: {
               component: MainPanel,
             },
           },
