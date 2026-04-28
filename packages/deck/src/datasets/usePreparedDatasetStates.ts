@@ -6,7 +6,7 @@ import {type DeckDatasetInput, type PreparedDeckDatasetState} from '../types';
 import {
   preparedDatasetStore,
   resolvePreparedDeckDatasetStates,
-} from './PreparedDatasetStore';
+} from './PreparedDatasetStore_';
 
 /**
  * Stabilize a `datasets` record so that a new object reference created on
