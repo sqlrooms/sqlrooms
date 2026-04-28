@@ -119,17 +119,12 @@ function renderDatasetStatusOverlay(
     ] => entry[1].status === 'error',
   );
 
-  if (!loadingDatasets.length && !failedDatasets.length) {
+  if (!failedDatasets.length) {
     return null;
   }
 
   return (
     <div className="pointer-events-none absolute inset-x-4 top-4 z-10 space-y-2">
-      {loadingDatasets.length > 0 ? (
-        <div className="rounded-md border border-black/10 bg-white/90 px-3 py-2 text-sm text-slate-700 shadow-sm">
-          Loading datasets: {loadingDatasets.join(', ')}
-        </div>
-      ) : null}
       {failedDatasets.map(([datasetId, state]) => (
         <div
           key={datasetId}
@@ -151,6 +146,7 @@ export function DeckJsonMap({
   showLegends = true,
   className,
   children,
+  onDatasetStatesChange,
 }: DeckJsonMapProps) {
   const normalizedDatasets = useMemo(
     () => normalizeDatasets(datasets),
@@ -210,6 +206,10 @@ export function DeckJsonMap({
       console.error(convertedDeckPropsResult.error);
     }
   }, [convertedDeckPropsResult.error]);
+
+  useEffect(() => {
+    onDatasetStatesChange?.(datasetStates);
+  }, [datasetStates, onDatasetStatesChange]);
 
   const fallbackDeckProps = useMemo(
     () => extractFallbackDeckProps(availableSpec),
