@@ -153,10 +153,11 @@ const TabButtons: FC<{
       {tabIds.map((tabId) => {
         // Resolve panel identity from the tab ID (which is a LayoutNodeKey)
         const {panelId, meta} = resolvePanelIdentity(tabId);
-        const definition = panels[panelId];
-        const info: RoomPanelInfo | undefined = definition
-          ? resolvePanelDefinition(definition, {panelId, meta})
-          : undefined;
+        const definition = panelId ? panels[panelId] : undefined;
+        const info: RoomPanelInfo | undefined =
+          definition && panelId
+            ? resolvePanelDefinition(definition, {panelId, meta})
+            : undefined;
         const isSelected = activeTab === tabId && !collapsed;
         return (
           <SidebarButton
