@@ -10,6 +10,18 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
+
+#### Removed APIs
+
+- **`getPanelByPath`**: Path-based panel lookup function removed
+- **`useGetPanelByPath`**: Hook for path-based panel lookup removed
+- **`useGetPanelInfoByPath`**: Hook for path-based panel info removed
+- **`draggable` property**: Removed from split and tabs nodes
+- **`pathSegment` property**: Removed from split and tabs nodes
+
 ### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
 
 The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
@@ -363,9 +375,15 @@ return createAgentUIStreamResponse({
 
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
-The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles split/tabs rendering while `react-mosaic-component` is only used for `type: 'mosaic'` drag-and-drop nodes.
+The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles all layout rendering.
 
-**Binary tree layouts are migrated automatically.** The Zod schema uses `z.preprocess` to detect and convert legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays. The outer `{ type: 'mosaic', nodes }` wrapper is no longer supported and must be removed manually in your code.
+**Limited automatic migration:** The Zod schema uses `z.preprocess` to detect and convert **only** legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays.
+
+**Manual migration required for:**
+
+- The outer `{ type: 'mosaic', nodes: ... }` wrapper (must be removed)
+- N-ary `splitPercentages` arrays on nodes that already use `children` arrays (must be converted to per-child `defaultSize`)
+- Any other v1 layout formats not in binary tree shape
 
 #### Layout config: remove the outer wrapper
 
@@ -565,11 +583,9 @@ state.layout.getActivePanel(areaId);
 state.layout.isAreaCollapsed(areaId);
 ```
 
-#### `react-mosaic-component` upgraded to v7
+#### `react-mosaic-component` removed
 
-`react-mosaic-component` has been upgraded from v6 to v7. The mosaic tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`). This is handled automatically by the `z.preprocess` migration.
-
-`MosaicPath` is now `number[]` (numeric child indices) instead of `('first' | 'second')[]`.
+`react-mosaic-component` has been removed and replaced with `react-resizable-panels` for all layout rendering. The layout tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`). Binary tree layouts are migrated automatically via `z.preprocess`, but other formats require manual migration (see above).
 
 ## 0.28.0
 
