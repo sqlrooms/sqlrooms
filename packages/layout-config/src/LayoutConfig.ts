@@ -173,10 +173,7 @@ export function isLayoutDockNode(
 // LayoutConfig — the top-level config is just LayoutNode | null
 // ---------------------------------------------------------------------------
 
-export const LayoutConfig = z.preprocess(
-  migrate,
-  LayoutNode.nullable(),
-) as z.ZodType<LayoutConfig>;
+export const LayoutConfig = LayoutNode.nullable() as z.ZodType<LayoutConfig>;
 export type LayoutConfig = LayoutNode | null;
 
 export function createDefaultLayout(): LayoutConfig {
