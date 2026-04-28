@@ -34,6 +34,27 @@ def test_api_config(server):
     assert data["dbBridge"]["diagnostics"] == []
 
 
+def test_api_config_with_external_urls(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+        external_ws_url="wss://demo.sprites.dev/ws/duckdb",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
 def test_api_config_with_ai_provider_metadata(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
