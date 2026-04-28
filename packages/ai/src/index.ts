@@ -81,6 +81,11 @@ export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ShowToolCallDetailsProvider} from '@sqlrooms/ai-core';
+export type {
+  ToolRenderBehavior,
+  ToolStructureBehavior,
+  ToolDisplayBehavior,
+} from '@sqlrooms/ai-core';
 export {Chat} from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-config
