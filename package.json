@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
+    "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo && shx rm -rf examples/**/node_modules/.vite",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "sh scripts/build.sh",
     "build:all": "pnpm clean && turbo build",
@@ -46,6 +46,7 @@
     "publish-dry-run": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dry-run",
     "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes",
     "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
+    "setup-trusted-publishing": "node scripts/setup-trusted-publishing.mjs",
     "update-readme": "node scripts/update-readme.mjs",
     "update-deps": "pnpm --filter '*' update --interactive",
     "check-circular-deps": "npx madge --circular packages/*/src/index.ts",

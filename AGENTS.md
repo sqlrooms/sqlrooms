@@ -28,6 +28,27 @@ SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based an
 - **AI examples** (e.g. `examples/ai`) require `OPENAI_API_KEY`. Core examples (`minimal`, `query`) do not.
 - When using Zustand/room-store selectors in React, do not create derived arrays/objects/functions inside the selector (for example `state.items.filter(...)`). That returns a new reference on every read and can trigger `useSyncExternalStore` snapshot loops (`The result of getSnapshot should be cached`) and max update depth errors. Select stable raw state first, then derive with `React.useMemo` in the component.
 
+## Table Interop
+
+- SQLRooms generally defaults to Apache Arrow for query/data results, including
+  the DuckDB integration and many downstream package APIs.
+- Mosaic is the main internal exception: its native client/table runtime is
+  Flechette/Mosaic-native, but public SQLRooms hooks should generally expose
+  Apache Arrow.
+- deck is not unique in using Arrow, but its GeoArrow integration is a
+  particularly Arrow-sensitive consumer because it relies on Arrow
+  `Table` / `Vector` behavior and the current `@geoarrow/deck.gl-layers`
+  contract.
+- **Canonical shared representation:** Arrow IPC bytes, not eagerly materialized Flechette + Arrow tables.
+- **Default API rule:** app code and examples should pass tables through SQLRooms packages directly. Do not add ad hoc `tableToIPC(...)`, `tableFromIPC(...)`, or other third-party conversion glue in examples unless there is no SQLRooms-owned path available.
+- Table interop helpers are Mosaic-internal. Use them inside `@sqlrooms/mosaic`
+  when adapting Arrow query results into Mosaic-native tables and when exposing
+  Arrow results from Mosaic public hooks.
+- `@sqlrooms/deck` should stay Arrow-native and should not depend on Mosaic or
+  Flechette table interop.
+- **Why this exists:** without the interop contract, the Mosaic -> SQLRooms Arrow-native path, especially Mosaic -> deck, can do a wasteful Arrow -> Flechette -> Arrow roundtrip.
+- **Memory goal:** avoid eager double materialization. Arrow should be decoded lazily and memoized only if an Arrow-native consumer actually needs it.
+
 ## Component API Patterns
 
 - When adding a new grouped UI surface with shared state, prefer a compound component API over repeating the same state prop across multiple siblings.
@@ -44,6 +65,10 @@ SQLRooms is a pnpm monorepo of TypeScript packages for building browser-based an
   - use the room Zustand store when the state is app-level, cross-panel, or needs to coordinate with other room features
   - use an internal feature-local Zustand store when the state is instance-scoped to a component family or compound API
   - keep the compound context/provider as a thin access layer over that state, not as the primary place where complex state is modeled
+
+## Documentation
+
+When changing the public API of an @sqlrooms/\* package or adding new public API, make sure to update the package's README.md accordingly.
 
 ## Further Reading
 

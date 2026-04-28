@@ -28,6 +28,7 @@ import {
   useState,
 } from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
+import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 const defaultActionIcons = {
   expanded: ArrowDown,
@@ -43,21 +44,36 @@ export function CustomMapLegendFactory(
   LayerLegendHeader: ReturnType<typeof LayerLegendHeaderFactory>,
   LayerLegendContent: ReturnType<typeof LayerLegendContentFactory>,
 ) {
-  const MapLegend: React.FC<MapLegendProps> = ({
+  const MapLegend: React.FC<MapLegendProps & {mapIndex?: number}> = ({
     layers = [],
     width,
     isExport,
+    mapIndex: mapIndexProp,
     ...restProps
   }) => {
     const containerW = width || DIMENSIONS.mapControl.width;
     const mapId = useContext(KeplerGlContext).id;
+    const splitMapIndex = useContext(SplitMapIndexContext);
+    const mapIndex = mapIndexProp ?? splitMapIndex;
     const dispatchAction = useStoreWithKepler(
       (state) => state.kepler.dispatchAction,
+    );
+    const splitMaps = useStoreWithKepler(
+      (state) => state.kepler.map[mapId]?.visState?.splitMaps,
     );
     const handleClose = (evt: React.MouseEvent<HTMLButtonElement>) => {
       evt.stopPropagation();
       dispatchAction(mapId, toggleMapControl('mapLegend', 0));
     };
+
+    const isSplit = splitMaps && splitMaps.length > 1;
+    const panelLayers =
+      isSplit && mapIndex != null ? splitMaps[mapIndex]?.layers : undefined;
+
+    const visibleLayers = layers.filter(
+      (layer) =>
+        layer.config.isVisible && (!panelLayers || panelLayers[layer.id]),
+    );
 
     return (
       <div
@@ -79,19 +95,17 @@ export function CustomMapLegendFactory(
             </div>
           )}
           <div className="flex w-full flex-1 flex-col items-center">
-            {layers
-              .filter((layer) => layer.config.isVisible)
-              .map((layer, index) => {
-                return (
-                  <LayerLegendItem
-                    key={index}
-                    layer={layer}
-                    containerW={containerW}
-                    isExport={isExport}
-                    {...restProps}
-                  />
-                );
-              })}
+            {visibleLayers.map((layer, index) => {
+              return (
+                <LayerLegendItem
+                  key={index}
+                  layer={layer}
+                  containerW={containerW}
+                  isExport={isExport}
+                  {...restProps}
+                />
+              );
+            })}
           </div>
         </div>
       </div>

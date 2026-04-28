@@ -19,7 +19,7 @@ export function BaseTreeNode<T>(
     >
       <div
         className={cn(
-          'group relative flex w-full items-center overflow-hidden',
+          'group/treenode relative flex w-full items-center overflow-hidden',
           className,
         )}
       >

@@ -11,7 +11,7 @@ export {
 } from '@uwdata/mosaic-core';
 export {astToDOM, astToESM, parseSpec} from '@uwdata/mosaic-spec';
 export type {Spec} from '@uwdata/mosaic-spec';
-export {Query, sql} from '@uwdata/mosaic-sql';
+export {asc, column, desc, Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
 export {
   createDefaultMosaicConfig,
@@ -43,8 +43,13 @@ export {
   MosaicProfilerStatusBar,
   type MosaicProfilerStatusBarProps,
 } from './profiler/MosaicProfilerStatusBar';
-export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {useMosaicProfiler} from './profiler/useMosaicProfiler';
+export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
+export {
+  createMosaicColorLegendPlot,
+  MosaicColorLegend,
+  type MosaicColorLegendProps,
+} from './MosaicColorLegend';
 export {VgPlotChart} from './VgPlotChart';
 
 // Compound components
@@ -67,6 +72,20 @@ export type {MosaicChartEditorActionsProps} from './editor/MosaicChartEditorActi
 export type {MosaicCodeMirrorEditorProps} from './editor/MosaicCodeMirrorEditor';
 export type {MosaicSpecEditorPanelProps} from './editor/MosaicSpecEditorPanel';
 export type {
+  MosaicEditorActions,
+  MosaicEditorContextValue,
+  MosaicEditorState,
+  OnMosaicSpecChange,
+  UseMosaicChartEditorOptions,
+  UseMosaicChartEditorReturn,
+} from './editor/types';
+export {
+  getProfilerTableWidth,
+  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
+  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './profiler/layout';
+export type {
   MosaicProfilerCategoryBucket,
   MosaicProfilerCategorySummary,
   MosaicProfilerColumnKind,
@@ -78,20 +97,6 @@ export type {
   MosaicProfilerSummaryState,
   UseMosaicProfilerReturn,
 } from './profiler/types';
-export {
-  getProfilerTableWidth,
-  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
-  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
-  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
-} from './profiler/layout';
-export type {
-  MosaicEditorActions,
-  MosaicEditorContextValue,
-  MosaicEditorState,
-  OnMosaicSpecChange,
-  UseMosaicChartEditorOptions,
-  UseMosaicChartEditorReturn,
-} from './editor/types';
 
 // Chart builder types and utilities
 export {createDefaultChartBuilders} from './chart-builders/builders';
