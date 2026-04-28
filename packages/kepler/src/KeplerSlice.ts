@@ -735,7 +735,6 @@ export function createKeplerSlice({
             // so tables/maps added concurrently are picked up on the next pass.
             do {
               pendingKeplerSync = false;
-              // No longer building availableTableIds - we allow all tables and views
               for (const mapId of Object.keys(get().kepler.map)) {
                 const mapState = get().kepler.map[mapId];
                 if (!mapState) continue;
