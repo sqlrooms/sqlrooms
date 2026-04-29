@@ -6,6 +6,7 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {Spinner} from '@sqlrooms/ui';
+import {FC} from 'react';
 
 /**
  * The whole room state.
@@ -43,14 +44,17 @@ export const Room = () => (
   </RoomShell>
 );
 
-function MyComponent() {
+const MyComponent: FC = () => {
   const isTableReady = useRoomStore((state) =>
     Boolean(state.db.findTableByName('earthquakes')),
   );
+
   const queryResult = useSql<{maxMagnitude: number}>({
     query: `SELECT max(Magnitude) AS maxMagnitude FROM earthquakes`,
     enabled: isTableReady,
   });
-  const row = queryResult.data?.toArray()[0];
+
+  const [row] = queryResult.data?.toArray() || [];
+
   return row ? `Max earthquake magnitude: ${row.maxMagnitude}` : <Spinner />;
-}
+};

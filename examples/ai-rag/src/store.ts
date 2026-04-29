@@ -12,16 +12,14 @@ import {
 import {
   createRagSlice,
   createRagTool,
-  ragToolRenderer,
   RagSliceState,
+  ragToolRenderer,
 } from '@sqlrooms/ai-rag';
-import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
@@ -39,10 +37,12 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
+import {createOpenAIEmbeddingProvider} from './embeddings';
 
 export const RoomPanelTypes = z.enum([
+  'left',
   'room-details',
-  'data-sources',
+  'data',
   'view-configuration',
   MAIN_VIEW,
 ] as const);
@@ -83,26 +83,39 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
+            [RoomPanelTypes.enum['data']]: {
+              title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,
-              placement: 'main',
             },
           },
         },

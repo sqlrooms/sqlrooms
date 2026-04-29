@@ -3,7 +3,7 @@ import {createKeplerSlice, KeplerSliceState} from '@sqlrooms/kepler';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   LoadFileOptions,
   MAIN_VIEW,
   RoomShellSliceState,
@@ -28,6 +28,7 @@ import {
 } from './components/KeplerSidePanels';
 
 export const RoomPanelTypes = z.enum([
+  'left',
   'data',
   'layers',
   'filters',
@@ -70,51 +71,61 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         }),
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum['left'],
+                children: [RoomPanelTypes.enum['data']],
+                defaultSize: '30%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum['main'],
+                defaultSize: '70%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
             [RoomPanelTypes.enum['data']]: {
-              title: 'Data Sources',
+              title: 'Data',
               icon: DatabaseIcon,
               component: DataPanel,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['layers']]: {
               title: 'Layers',
               icon: Layers,
               component: KeplerSidePanelLayerManager,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['filters']]: {
               title: 'Filters',
               icon: Filter,
               component: KeplerSidePanelFilterManager,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['interactions']]: {
               title: 'Interactions',
               icon: SlidersHorizontal,
               component: KeplerSidePanelInteractionManager,
-              placement: 'sidebar',
             },
             [RoomPanelTypes.enum['basemaps']]: {
               title: 'Base Maps',
               icon: MapIcon,
               component: KeplerSidePanelBaseMapManager,
-              placement: 'sidebar',
             },
             // MapIcon
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               title: 'Main view',
               icon: () => null,
               component: KeplerMapsContainer,
-              placement: 'main',
             },
           },
         },

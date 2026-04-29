@@ -3,22 +3,23 @@ import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
-import DataSourcesPanel from './components/DataSourcesPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-import RoomDetailsPanel from './components/RoomDetailsPanel';
+import {RoomDetailsPanel} from './components/RoomDetailsPanel';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
-  'data-sources',
+  'data',
   'data-tables',
   'docs',
+  'left',
   MAIN_VIEW,
 ] as const);
 
@@ -50,32 +51,47 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: RoomPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
-        },
+          type: 'split',
+          id: 'root',
+          direction: 'row',
+          children: [
+            {
+              type: 'tabs',
+              id: RoomPanelTypes.enum['left'],
+              children: [
+                RoomPanelTypes.enum['data'],
+                RoomPanelTypes.enum['room-details'],
+              ],
+              defaultSize: '30%',
+              minSize: '300px',
+              maxSize: '50%',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
+            },
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum['main'],
+              defaultSize: '70%',
+            },
+          ],
+        } satisfies LayoutConfig,
         panels: {
           [RoomPanelTypes.enum['room-details']]: {
             title: 'Room Details',
             icon: InfoIcon,
             component: RoomDetailsPanel,
-            placement: 'sidebar',
           },
-          [RoomPanelTypes.enum['data-sources']]: {
-            title: 'Data Sources',
+          [RoomPanelTypes.enum['data']]: {
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            placement: 'sidebar',
           },
-          main: {
+          [RoomPanelTypes.enum['main']]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,
-            placement: 'main',
           },
         },
       },

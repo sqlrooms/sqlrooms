@@ -7,8 +7,9 @@ import {
   SpinnerPane,
 } from '@sqlrooms/ui';
 import {useRoomStore} from '../store.js';
+import {FC} from 'react';
 
-export function MainView() {
+export const MainView: FC = () => {
   const tableReady = useRoomStore((state) =>
     state.db.findTableByName('earthquakes'),
   );
@@ -75,4 +76,4 @@ export function MainView() {
       </Card>
     </div>
   );
-}
+};

@@ -19,7 +19,6 @@
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",

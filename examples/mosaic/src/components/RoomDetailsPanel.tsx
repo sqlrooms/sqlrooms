@@ -1,9 +1,9 @@
 import {DEFAULT_ROOM_TITLE, RoomPanel} from '@sqlrooms/room-shell';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
-import {useCallback} from 'react';
+import {FC, useCallback} from 'react';
 import {RoomPanelTypes, useRoomStore} from '../store';
 
-export default function RoomDetailsPanel() {
+export const RoomDetailsPanel: FC = () => {
   const title = useRoomStore((state) => state.room.config.title);
   const setRoomTitle = useRoomStore((state) => state.room.setRoomTitle);
   const description = useRoomStore((state) => state.room.config.description);
@@ -55,4 +55,4 @@ export default function RoomDetailsPanel() {
       </div>
     </RoomPanel>
   );
-}
+};

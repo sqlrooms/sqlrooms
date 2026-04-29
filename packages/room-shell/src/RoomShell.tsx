@@ -1,4 +1,5 @@
-import {MosaicLayout} from '@sqlrooms/layout';
+import {LayoutRenderer} from '@sqlrooms/layout';
+import type {LayoutNode} from '@sqlrooms/layout-config';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
   cn,
@@ -9,9 +10,10 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
-import {MosaicNode} from 'react-mosaic-component';
 import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
+  AreaPanelButtons,
+  TabButtons,
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
@@ -39,7 +41,7 @@ export function RoomShellBase({
   );
 }
 
-export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
+export const SidebarContainer: FC<PropsWithChildren<{className?: string}>> = ({
   className,
   children,
 }) => {
@@ -50,62 +52,106 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
         className,
       )}
     >
-      <RoomShellSidebarButtons />
       {children}
     </div>
   );
 };
 
+/**
+ * @deprecated Use SidebarContainer instead
+ */
+export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
+  className,
+  children,
+}) => {
+  return (
+    <SidebarContainer className={className}>
+      <RoomShellSidebarButtons /> {children}
+    </SidebarContainer>
+  );
+};
+
 export const LayoutComposer: FC<{
   className?: string;
-  tileClassName?: string;
-}> = ({className, tileClassName}) => {
-  const layout = useBaseRoomShellStore((state) => state.layout.config);
-  const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
+  onTabCreate?: (tabsId: string) => void;
+}> = ({className, onTabCreate}) => {
+  const rootLayout = useBaseRoomShellStore((state) => state.layout.config);
+  const setLayout = useBaseRoomShellStore((state) => state.layout.setConfig);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const ErrorBoundary = useBaseRoomShellStore(
-    (state) => state.room.CustomErrorBoundary,
+
+  const setActiveTab = useBaseRoomShellStore(
+    (state) => state.layout.setActiveTab,
+  );
+  const removeTab = useBaseRoomShellStore((state) => state.layout.removeTab);
+  const setCollapsed = useBaseRoomShellStore(
+    (state) => state.layout.setCollapsed,
   );
 
   const handleLayoutChange = useCallback(
-    (nodes: MosaicNode<string> | null) => {
-      // Keep layout properties, e.g. 'pinned' and 'fixed'
-      setLayout({...layout, nodes});
+    (newLayout: LayoutNode | null) => {
+      setLayout(newLayout);
     },
-    [setLayout, layout],
+    [setLayout],
   );
 
-  // const visibleRoomPanels = useMemo(
-  //   () => getVisibleMosaicLayoutPanels(layout?.nodes),
-  //   [layout],
-  // );
+  const handleTabSelect = useCallback(
+    (tabsId: string, tabId: string) => {
+      setActiveTab(tabsId, tabId);
+    },
+    [setActiveTab],
+  );
 
-  const renderTile = (panelId: string) => {
-    // const panelId = visibleRoomPanels.find((p) => p === id);
-    const PanelComp = panelId && panels[panelId]?.component;
-    if (!PanelComp) {
-      return <></>;
-    }
-    return (
-      <ErrorBoundary key={panelId}>
-        <PanelComp />
-      </ErrorBoundary>
-    );
-  };
+  const handleTabClose = useCallback(
+    (tabsId: string, tabId: string) => {
+      removeTab(tabsId, tabId);
+    },
+    [removeTab],
+  );
+
+  const handleTabReorder = useCallback(
+    (tabsId: string, tabIds: string[]) => {
+      const activeTab = tabIds[0];
+      if (activeTab) {
+        setActiveTab(tabsId, activeTab);
+      }
+    },
+    [setActiveTab],
+  );
+
+  const handleCollapse = useCallback(
+    (id: string) => {
+      setCollapsed(id, true);
+    },
+    [setCollapsed],
+  );
+
+  const handleExpand = useCallback(
+    (id: string, tabId?: string) => {
+      setCollapsed(id, false);
+      if (tabId) {
+        setActiveTab(id, tabId);
+      }
+    },
+    [setCollapsed, setActiveTab],
+  );
 
   return (
     <div
       className={cn(
-        'flex h-full w-full grow flex-col items-stretch',
+        'flex h-full min-w-0 grow flex-col items-stretch',
         className,
       )}
     >
-      {layout ? (
-        <MosaicLayout
-          renderTile={renderTile}
-          value={layout.nodes}
-          onChange={handleLayoutChange}
-          tileClassName={tileClassName}
+      {rootLayout ? (
+        <LayoutRenderer
+          rootLayout={rootLayout}
+          onLayoutChange={handleLayoutChange}
+          onTabSelect={handleTabSelect}
+          onTabClose={handleTabClose}
+          onTabReorder={handleTabReorder}
+          onTabCreate={onTabCreate}
+          onCollapse={handleCollapse}
+          onExpand={handleExpand}
         />
       ) : null}
     </div>
@@ -123,15 +169,21 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
       title="Loading"
       loadingStage={loadingProgress?.message}
       indeterminate={true}
-      // progress={loadingProgress?.progress}
     />
   );
 };
 
 export const RoomShell = Object.assign(RoomShellBase, {
+  /**
+   * @deprecated Use SidebarContainer instead
+   */
   Sidebar: RoomSidebar,
+  SidebarContainer: SidebarContainer,
   SidebarButton: SidebarButton,
   SidebarButtons: RoomShellSidebarButtons,
+  TabButtons: TabButtons,
+  /** @deprecated Use TabButtons instead */
+  AreaPanelButtons: AreaPanelButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
   CommandPalette: RoomShellCommandPalette,

@@ -1,33 +1,22 @@
 import {
   AiSettingsSliceConfig,
-  AiSettingsSliceState,
   AiSliceConfig,
-  AiSliceState,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {
-  CanvasSliceConfig,
-  CanvasSliceState,
-  createCanvasSlice,
-} from '@sqlrooms/canvas';
+import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
   CellsSliceConfig,
-  CellsSliceState,
   createCellsSlice,
   createDefaultCellRegistry,
+  SheetType,
 } from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import type {MosaicSliceState} from '@sqlrooms/mosaic';
 import {createMosaicSlice} from '@sqlrooms/mosaic';
-import {
-  createNotebookSlice,
-  NotebookSliceConfig,
-  NotebookSliceState,
-} from '@sqlrooms/notebook';
+import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -35,30 +24,23 @@ import {
   LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
-  RoomShellSliceState,
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
-import {
-  createSqlEditorSlice,
-  SqlEditorSliceConfig,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   createWebContainerToolkit,
   WebContainerPersistConfig,
-  WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
-import {z} from 'zod';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
   createDbSettingsSlice,
-  DbSettingsSliceState,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
+import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
   DASHBOARD_AI_INSTRUCTIONS,
@@ -68,80 +50,15 @@ import {
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {LAYOUT} from './layout';
+import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
+import {
+  AppBuilderProjectConfig,
+  DashboardProjectConfig,
+  RoomState,
+} from './store-types';
 import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
-
-export const AppBuilderProjectConfig = z.object({
-  appsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        name: z.string().default('Untitled App'),
-        prompt: z.string().default(''),
-        template: z.string().default('mosaic-dashboard'),
-        files: z.record(z.string(), z.string()).default({}),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
-
-export const DashboardProjectConfig = z.object({
-  dashboardsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type DashboardProjectConfig = z.infer<typeof DashboardProjectConfig>;
-
-export type RoomState = RoomShellSliceState &
-  MosaicSliceState &
-  AiSliceState &
-  SqlEditorSliceState &
-  AiSettingsSliceState &
-  CellsSliceState &
-  NotebookSliceState &
-  CanvasSliceState &
-  WebContainerSliceState &
-  DbSettingsSliceState & {
-    appProject: {
-      config: AppBuilderProjectConfig;
-      upsertSheetApp: (
-        sheetId: string,
-        app: Partial<AppBuilderProjectConfig['appsBySheetId'][string]> & {
-          name: string;
-        },
-      ) => void;
-      updateSheetAppFiles: (
-        sheetId: string,
-        files: Record<string, string>,
-      ) => void;
-      getSheetApp: (
-        sheetId: string,
-      ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
-    };
-    dashboard: {
-      initialize?: () => Promise<void>;
-      destroy?: () => Promise<void>;
-      config: DashboardProjectConfig;
-      ensureSheetDashboard: (sheetId: string) => void;
-      setSheetVgPlot: (sheetId: string, vgplot: string) => void;
-      getSheetVgPlot: (sheetId: string) => string | undefined;
-      getCurrentDashboardSheetId: () => string | undefined;
-      createDashboardSheet: (title?: string) => string;
-      setCurrentSheetVgPlot: (vgplot: string) => string;
-    };
-    isAssistantOpen: boolean;
-    setAssistantOpen: (isAssistantOpen: boolean) => void;
-  };
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -316,10 +233,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().appProject.config.appsBySheetId[sheetId],
         },
         dashboard: dashboardSlice,
-        isAssistantOpen: false,
-        setAssistantOpen: (isAssistantOpen: boolean) => {
-          set({isAssistantOpen});
-        },
 
         ...createDbSettingsSlice({
           config: {
@@ -345,7 +258,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createRoomShellSlice({
           connector,
           config: {dataSources: []},
-          layout: LAYOUT,
+          layout: createLayout({store}),
         })(set, get, store),
 
         ...createMosaicSlice()(set, get, store),
@@ -354,7 +267,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCellsSlice({
           cellRegistry: createDefaultCellRegistry(),
-          supportedSheetTypes: ['notebook', 'canvas', 'app', 'dashboard'],
+          supportedSheetTypes: Object.keys(ARTIFACT_TYPES) as SheetType[],
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),

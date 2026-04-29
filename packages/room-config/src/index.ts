@@ -35,14 +35,16 @@ export {
 // Re-export from @sqlrooms/layout-config
 export {
   MAIN_VIEW,
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutNode,
   LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  createDefaultLayout,
 } from '@sqlrooms/layout-config';
+
+export type {LayoutDirection} from '@sqlrooms/layout-config';

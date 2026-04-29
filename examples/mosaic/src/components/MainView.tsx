@@ -1,7 +1,9 @@
 import {Spec, VgPlotChart} from '@sqlrooms/mosaic';
 import {SpinnerPane} from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
-export const MainView = () => {
+import {FC} from 'react';
+
+export const MainView: FC = () => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
 
   const isTableReady = useRoomStore((state) =>

@@ -109,8 +109,7 @@ function useProfilerSelection(
     }
   }, [existingSelection, getSelection, providedSelection, selectionKey]);
 
-  const selection =
-    providedSelection ?? existingSelection ?? fallbackSelection;
+  const selection = providedSelection ?? existingSelection ?? fallbackSelection;
 
   return {
     selection,
