@@ -203,9 +203,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   s !== 'output-denied'
                 );
               });
+              const toolCount = seg.parts.length;
+              const allToolsDone = !anyPending && toolCount > 0;
+              const summaryLabel =
+                allToolsDone && analysisResult.isCompleted
+                  ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+                  : undefined;
               return (
                 <React.Fragment key={`tg-${segIdx}`}>
-                  <ActivityBox isRunning={anyPending}>
+                  <ActivityBox
+                    isRunning={anyPending}
+                    summaryLabel={summaryLabel}
+                  >
                     {seg.parts.map((p) => {
                       const toolName = getToolName(p.part);
                       const isHoisted =

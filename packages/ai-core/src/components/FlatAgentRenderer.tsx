@@ -417,12 +417,14 @@ const FlatSegmentList: React.FC<{
   hoistableSet: ReadonlySet<string>;
   toolRenderers: Record<string, unknown>;
   isPassthroughTool?: (tc: AgentToolCall) => boolean;
+  isAgentComplete?: boolean;
 }> = ({
   segments,
   agentProgress,
   hoistableSet,
   toolRenderers,
   isPassthroughTool,
+  isAgentComplete,
 }) => {
   return (
     <>
@@ -432,9 +434,16 @@ const FlatSegmentList: React.FC<{
             (t) => t.state === 'pending' || t.state === 'approval-requested',
           );
 
+          const toolCount = seg.tools.length;
+          const allToolsDone = !anyPending && toolCount > 0;
+          const summaryLabel =
+            allToolsDone && isAgentComplete
+              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+              : undefined;
+
           return (
             <React.Fragment key={`tg-${idx}`}>
-              <ActivityBox isRunning={anyPending}>
+              <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
                 {seg.tools.map((tc) => {
                   const isHoisted =
                     hoistableSet.has(tc.toolName) &&
@@ -513,6 +522,7 @@ const FlatSegmentList: React.FC<{
               hoistableSet={hoistableSet}
               toolRenderers={toolRenderers}
               isPassthroughTool={isPassthroughTool}
+              isAgentComplete={isComplete}
             />
           </React.Fragment>
         );
@@ -702,6 +712,7 @@ export const FlatAgentRenderer: React.FC<{
         hoistableSet={hoistableSet}
         toolRenderers={toolRenderers}
         isPassthroughTool={isPassthroughTool}
+        isAgentComplete={!!isComplete}
       />
     </div>
   );
