@@ -2844,9 +2844,6 @@ importers:
       '@geoarrow/deck.gl-layers':
         specifier: 0.3.2
         version: 0.3.2(600127656f06c96144b8a0f6992203a7)
-      '@loaders.gl/core':
-        specifier: ^4.4.1
-        version: 4.4.1
       '@loaders.gl/geoarrow':
         specifier: ^4.4.1
         version: 4.4.1(@loaders.gl/core@4.4.1)
