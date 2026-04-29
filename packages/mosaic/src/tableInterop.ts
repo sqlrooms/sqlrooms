@@ -93,10 +93,10 @@ export function createMosaicTableFromArrowTable(
   const arrowTableRef =
     typeof WeakRef === 'undefined' ? undefined : new WeakRef(arrowTable);
 
-  return attachTableInterop(decodeIPC(ipcBytes), {
+  return attachTableInterop(decodeIPC(ipcBytes) as unknown as MosaicTable, {
     ipcBytes,
     decodeArrowTable: (bytes) => arrowTableRef?.deref() ?? tableFromIPC(bytes),
-  }) as MosaicTable;
+  });
 }
 
 /**
