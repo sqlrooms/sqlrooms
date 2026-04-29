@@ -1,4 +1,5 @@
 import {FC, PropsWithChildren} from 'react';
+import {cn} from '@sqlrooms/ui';
 import {useLeafLayoutPanelDraggable} from './LeafLayoutPanelDraggableContext';
 
 type LeafLayoutDragHandleProps = PropsWithChildren<{
@@ -13,7 +14,7 @@ export const LeafLayoutDragHandle: FC<LeafLayoutDragHandleProps> = ({
 
   return (
     <div
-      className={className}
+      className={cn('select-none', className)}
       data-layout-drag-handle="true"
       {...attributes}
       {...listeners}
