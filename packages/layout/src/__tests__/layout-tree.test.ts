@@ -6,7 +6,11 @@ import {
   findNearestDockAncestor,
   isDockablePanel,
 } from '../layout-tree';
-import type {LayoutNode, LayoutDockNode} from '@sqlrooms/layout-config';
+import type {
+  LayoutNode,
+  LayoutDockNode,
+  LayoutGridNode,
+} from '@sqlrooms/layout-config';
 
 describe('layout-tree', () => {
   describe('findNodeById with dock nodes', () => {
@@ -155,6 +159,54 @@ describe('layout-tree', () => {
         'docked-panel-1',
         'docked-panel-2',
       ]);
+    });
+  });
+
+  describe('grid nodes', () => {
+    const gridNode: LayoutGridNode = {
+      type: 'grid',
+      id: 'grid-1',
+      panel: {key: 'dashboard', meta: {dashboardId: 'growth'}},
+      children: [
+        {type: 'panel', id: 'panel-1', panel: 'panel-1'},
+        {type: 'panel', id: 'panel-2', panel: 'panel-2'},
+      ],
+    };
+
+    it('should find nodes inside grid.children', () => {
+      const result = findNodeById(gridNode, 'panel-2');
+
+      expect(result).toBeDefined();
+      expect(result?.node).toEqual({
+        type: 'panel',
+        id: 'panel-2',
+        panel: 'panel-2',
+      });
+      expect(
+        result?.ancestors.map((n) => (typeof n === 'string' ? n : n.id)),
+      ).toEqual(['grid-1']);
+    });
+
+    it('should visit panels inside grid.children', () => {
+      const visited: string[] = [];
+      visitLayoutLeafNodes(gridNode, (nodeId) => {
+        visited.push(nodeId);
+      });
+
+      expect(visited).toEqual(['panel-1', 'panel-2']);
+    });
+
+    it('should remove panels inside grid.children', () => {
+      const result = removeLayoutNodeByKey(gridNode, 'panel-1');
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.nextTree).toMatchObject({
+          type: 'grid',
+          id: 'grid-1',
+          children: [{type: 'panel', id: 'panel-2', panel: 'panel-2'}],
+        });
+      }
     });
   });
 

@@ -33,7 +33,10 @@ const RoomPanelHeader: FC<RoomPanelHeaderProps> = ({
 
   return (
     <div className="flex">
-      <div className="flex w-full flex-row items-center gap-2">
+      <div
+        className="flex w-full cursor-grab flex-row items-center gap-2 active:cursor-grabbing"
+        data-layout-drag-handle="true"
+      >
         {showHeader && (
           <>
             {Icon && <Icon className="h-4 w-4" />}

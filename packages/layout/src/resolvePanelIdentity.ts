@@ -3,6 +3,7 @@ import {
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutDockNode,
+  isLayoutGridNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
 } from '@sqlrooms/layout-config';
@@ -30,6 +31,7 @@ export function resolvePanelIdentity(node: LayoutNode): PanelIdentityResult {
   if (
     isLayoutPanelNode(node) ||
     isLayoutDockNode(node) ||
+    isLayoutGridNode(node) ||
     isLayoutSplitNode(node) ||
     isLayoutTabsNode(node)
   ) {
