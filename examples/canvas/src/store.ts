@@ -22,7 +22,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -67,7 +66,12 @@ export const CANVAS_ARTIFACT_TYPES = defineArtifactTypes({
   },
 } satisfies Record<'canvas', ArtifactTypeDefinition<RoomState>>);
 
-export const RoomPanelTypes = z.enum([MAIN_VIEW, 'left', 'data'] as const);
+export const RoomPanelTypes = z.enum([
+  'main',
+  'left',
+  'data',
+  'artifact',
+] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -102,8 +106,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
                 defaultSize: '20%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -115,8 +119,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'tabs',
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 children: [],
                 activeTabIndex: 0,
                 defaultSize: '80%',
@@ -124,17 +128,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ],
           } satisfies LayoutConfig,
           panels: {
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Canvas',
               icon: () => null,
               component: MainView,
             },
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },
-            artifact: createArtifactPanelDefinition(
+            [RoomPanelTypes.enum.artifact]: createArtifactPanelDefinition(
               CANVAS_ARTIFACT_TYPES,
               store,
             ),

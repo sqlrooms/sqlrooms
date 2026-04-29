@@ -29,7 +29,6 @@ import {
   isLayoutSplitNode,
   isLayoutNodeKey,
   LayoutDockNode,
-  MAIN_VIEW,
 } from '@sqlrooms/layout';
 import {createId} from '@paralleldrive/cuid2';
 
@@ -83,10 +82,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
+                id: RoomPanelTypes.enum.left,
                 children: [
-                  RoomPanelTypes.enum['data'],
-                  RoomPanelTypes.enum['schema'],
+                  RoomPanelTypes.enum.data,
+                  RoomPanelTypes.enum.schema,
                 ],
                 defaultSize: '30%',
                 maxSize: '50%',
@@ -98,15 +97,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 hideTabStrip: true,
               },
               {
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 type: 'split',
                 direction: 'column',
                 children: [
                   {
                     type: 'tabs',
-                    id: RoomPanelTypes.enum['dashboards'],
-                    panel: RoomPanelTypes.enum['dashboards'],
+                    id: RoomPanelTypes.enum.dashboards,
+                    panel: RoomPanelTypes.enum.dashboards,
                     children: [
                       createDashboardNode(
                         'overview',
@@ -206,19 +205,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   },
                   {
                     type: 'tabs',
-                    id: RoomPanelTypes.enum['bottom'],
-                    panel: RoomPanelTypes.enum['bottom'],
+                    id: RoomPanelTypes.enum.bottom,
+                    panel: RoomPanelTypes.enum.bottom,
                     defaultSize: '30%',
                     children: [
                       {
                         type: 'panel',
-                        id: RoomPanelTypes.enum['console'],
-                        panel: RoomPanelTypes.enum['console'],
+                        id: RoomPanelTypes.enum.console,
+                        panel: RoomPanelTypes.enum.console,
                       },
                       {
                         type: 'panel',
-                        id: RoomPanelTypes.enum['results'],
-                        panel: RoomPanelTypes.enum['results'],
+                        id: RoomPanelTypes.enum.results,
+                        panel: RoomPanelTypes.enum.results,
                       },
                     ],
                     activeTabIndex: 0,
@@ -241,33 +240,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               component: DynamicChartPanel,
               title: `Chart ${ctx.meta?.chartId ?? ''}`,
             }),
-            [RoomPanelTypes.enum['dashboards']]: {
+            [RoomPanelTypes.enum.dashboards]: {
               component: DashboardTabs,
             },
-            [RoomPanelTypes.enum['bottom']]: {
+            [RoomPanelTypes.enum.bottom]: {
               component: BottomTabs,
             },
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               component: DataSourcesPanel,
               icon: DatabaseIcon,
             },
-            [RoomPanelTypes.enum['schema']]: {
+            [RoomPanelTypes.enum.schema]: {
               title: 'Schema',
               component: SchemaPanel,
               icon: TableIcon,
             },
-            [RoomPanelTypes.enum['console']]: {
+            [RoomPanelTypes.enum.console]: {
               title: 'Console',
               component: ConsolePanel,
               icon: TerminalIcon,
             },
-            [RoomPanelTypes.enum['results']]: {
+            [RoomPanelTypes.enum.results]: {
               title: 'Results',
               component: ResultsPanel,
               icon: TableRowsSplitIcon,
             },
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               component: MainPanel,
             },
           },

@@ -1,6 +1,7 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
+
 import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {toast} from '@sqlrooms/ui';

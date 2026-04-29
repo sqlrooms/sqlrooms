@@ -14,7 +14,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -40,12 +39,7 @@ const LazyMainView = lazy(() =>
   import('./components/MainView').then((m) => ({default: m.MainView})),
 );
 
-export const RoomPanelTypes = z.enum([
-  'left',
-  'data',
-  'view-configuration',
-  MAIN_VIEW,
-] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -88,8 +82,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
                 defaultSize: '20%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -101,19 +95,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 defaultSize: '80%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Main view',
               icon: () => null,
               // Wrap in function to prevent immer from freezing the lazy component (which causes errors)

@@ -12,7 +12,6 @@ import {
   createRoomStore,
   LayoutConfig,
   LoadFileOptions,
-  MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
@@ -42,7 +41,7 @@ export const RoomPanelTypes = z.enum([
   'filters',
   'interactions',
   'basemaps',
-  MAIN_VIEW,
+  'main',
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
@@ -110,13 +109,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
+                id: RoomPanelTypes.enum.left,
                 children: [
-                  RoomPanelTypes.enum['data'],
-                  RoomPanelTypes.enum['layers'],
-                  RoomPanelTypes.enum['filters'],
-                  RoomPanelTypes.enum['interactions'],
-                  RoomPanelTypes.enum['basemaps'],
+                  RoomPanelTypes.enum.data,
+                  RoomPanelTypes.enum.layers,
+                  RoomPanelTypes.enum.filters,
+                  RoomPanelTypes.enum.interactions,
+                  RoomPanelTypes.enum.basemaps,
                 ],
                 defaultSize: '30%',
                 maxSize: '50%',
@@ -129,8 +128,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'tabs',
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 children: [],
                 activeTabIndex: 0,
                 defaultSize: '70%',
@@ -138,33 +137,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataPanel,
             },
-            [RoomPanelTypes.enum['layers']]: {
+            [RoomPanelTypes.enum.layers]: {
               title: 'Layers',
               icon: Layers,
               component: KeplerSidePanelLayerManager,
             },
-            [RoomPanelTypes.enum['filters']]: {
+            [RoomPanelTypes.enum.filters]: {
               title: 'Filters',
               icon: Filter,
               component: KeplerSidePanelFilterManager,
             },
-            [RoomPanelTypes.enum['interactions']]: {
+            [RoomPanelTypes.enum.interactions]: {
               title: 'Interactions',
               icon: SlidersHorizontal,
               component: KeplerSidePanelInteractionManager,
             },
-            [RoomPanelTypes.enum['basemaps']]: {
+            [RoomPanelTypes.enum.basemaps]: {
               title: 'Base Maps',
               icon: MapIcon,
               component: KeplerSidePanelBaseMapManager,
             },
             // MapIcon
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Main view',
               icon: () => null,
               component: KeplerMapsContainer,

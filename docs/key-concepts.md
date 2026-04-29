@@ -170,12 +170,12 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           type: 'split',
           direction: 'row',
           children: [
-            {type: 'panel', id: 'data-panel', defaultSize: '30%'},
-            MAIN_VIEW,
+            {type: 'panel', id: 'data', defaultSize: '30%'},
+            {type: 'panel', id: 'main', defaultSize: '70%'},
           ],
         },
         panels: {
-          'data-panel': {
+          data: {
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,

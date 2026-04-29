@@ -23,7 +23,7 @@ npm install @sqlrooms/layout
 ## Store usage
 
 ```tsx
-import {LayoutSliceState, MAIN_VIEW, createLayoutSlice} from '@sqlrooms/layout';
+import {LayoutSliceState, createLayoutSlice} from '@sqlrooms/layout';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
@@ -47,7 +47,10 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
       config: {
         type: 'split',
         direction: 'row',
-        children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
+        children: [
+          {type: 'panel', id: 'data', defaultSize: '30%'},
+          {type: 'panel', id: 'main', defaultSize: '70%'},
+        ],
       },
       panels: {
         data: {

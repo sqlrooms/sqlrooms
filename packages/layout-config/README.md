@@ -20,18 +20,20 @@ npm install @sqlrooms/layout-config
 import {
   LayoutConfig,
   LayoutNode,
-  MAIN_VIEW,
   createDefaultLayout,
 } from '@sqlrooms/layout-config';
 
 // Simplest config — just the main view
-const simpleLayout = createDefaultLayout(); // returns MAIN_VIEW
+const simpleLayout = createDefaultLayout(); // returns 'main'
 
 // Two-pane split layout
 const twoPaneLayout: LayoutConfig = {
   type: 'split',
   direction: 'row',
-  children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
 };
 
 // Validated via Zod

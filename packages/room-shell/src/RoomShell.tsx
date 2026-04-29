@@ -77,7 +77,6 @@ export const LayoutComposer: FC<{
 }> = ({className, onTabCreate}) => {
   const rootLayout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setConfig);
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
 
   const setActiveTab = useBaseRoomShellStore(
     (state) => state.layout.setActiveTab,

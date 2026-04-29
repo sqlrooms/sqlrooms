@@ -4,7 +4,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -43,7 +42,7 @@ const BUNDLES: DuckDBBundles = {
   },
 };
 
-export const RoomPanelTypes = z.enum(['left', 'data', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
@@ -95,8 +94,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
                 defaultSize: '30%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -108,17 +107,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 defaultSize: '70%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               component: MainView,
             },
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               component: DataPanel,
               icon: DatabaseIcon,

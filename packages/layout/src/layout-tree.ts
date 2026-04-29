@@ -11,7 +11,6 @@ import {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
-  MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 
 export type FindNodeByIdResult = {node: LayoutNode; ancestors: LayoutNode[]};
@@ -182,9 +181,7 @@ export function visitLayoutLeafNodes<T = void>(
   return undefined;
 }
 
-export function getVisibleLayoutPanels(
-  root: LayoutNode | null = MAIN_VIEW,
-): string[] {
+export function getVisibleLayoutPanels(root: LayoutNode | null): string[] {
   const visiblePanels: string[] = [];
 
   visitLayoutLeafNodes(root, (node) => {

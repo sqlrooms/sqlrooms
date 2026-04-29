@@ -20,7 +20,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -39,13 +38,7 @@ import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
 import {createOpenAIEmbeddingProvider} from './embeddings';
 
-export const RoomPanelTypes = z.enum([
-  'left',
-  'room-details',
-  'data',
-  'view-configuration',
-  MAIN_VIEW,
-] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -89,8 +82,8 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
                 defaultSize: '20%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -101,19 +94,19 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 defaultSize: '80%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
             },
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,

@@ -13,7 +13,7 @@ import {FolderIcon, TableIcon} from 'lucide-react';
 import type {FC} from 'react';
 import {useRoomStore} from '../store';
 
-const DataSourcesPanel: FC = () => {
+export const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const isRoomEmpty = !roomFiles?.length;
   return (
@@ -61,5 +61,3 @@ const DataSourcesPanel: FC = () => {
     </RoomPanel>
   );
 };
-
-export default DataSourcesPanel;

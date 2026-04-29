@@ -1,4 +1,3 @@
-import {MAIN_VIEW} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
 export const RoomPanelTypes = z.enum([
@@ -9,7 +8,7 @@ export const RoomPanelTypes = z.enum([
   'dashboards',
   'bottom',
   'left',
-  MAIN_VIEW,
+  'main',
 ] as const);
 
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;

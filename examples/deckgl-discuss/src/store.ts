@@ -9,7 +9,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -23,7 +22,7 @@ import {z} from 'zod';
 import {DiscussionPanel} from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['left', 'discuss', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['left', 'discuss', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -73,8 +72,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['discuss']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.discuss],
                 defaultSize: '30%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -86,18 +85,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: MAIN_VIEW,
-                panel: MAIN_VIEW,
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['discuss']]: {
+            [RoomPanelTypes.enum.discuss]: {
               title: 'Discuss',
               icon: MessageCircleIcon,
               component: DiscussionPanel,
             },
-            [MAIN_VIEW]: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,

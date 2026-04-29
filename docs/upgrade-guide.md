@@ -408,12 +408,15 @@ const layout = {
 ##### After
 
 ```ts
-import {LayoutConfig, MAIN_VIEW} from '@sqlrooms/layout-config';
+import {LayoutConfig} from '@sqlrooms/layout-config';
 
 const layout: LayoutConfig = {
   type: 'split',
   direction: 'row',
-  children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
 };
 ```
 

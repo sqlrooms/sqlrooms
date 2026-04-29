@@ -4,7 +4,6 @@ import {
   BaseRoomConfig,
   createRoomStoreCreator,
   LayoutConfig,
-  MAIN_VIEW,
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {
@@ -17,7 +16,7 @@ import {z} from 'zod';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['left', 'data', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
@@ -49,8 +48,8 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
               children: [
                 {
                   type: 'tabs',
-                  id: RoomPanelTypes.enum['left'],
-                  children: [RoomPanelTypes.enum['data']],
+                  id: RoomPanelTypes.enum.left,
+                  children: [RoomPanelTypes.enum.data],
                   defaultSize: '30%',
                   maxSize: '50%',
                   minSize: '300px',
@@ -62,17 +61,17 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
                 },
                 {
                   type: 'panel',
-                  id: MAIN_VIEW,
-                  panel: MAIN_VIEW,
+                  id: RoomPanelTypes.enum.main,
+                  panel: RoomPanelTypes.enum.main,
                   defaultSize: '70%',
                 },
               ],
             } satisfies LayoutConfig,
             panels: {
-              [MAIN_VIEW]: {
+              [RoomPanelTypes.enum.main]: {
                 component: MainView,
               },
-              [RoomPanelTypes.enum['data']]: {
+              [RoomPanelTypes.enum.data]: {
                 title: 'Data',
                 component: DataPanel,
                 icon: DatabaseIcon,
