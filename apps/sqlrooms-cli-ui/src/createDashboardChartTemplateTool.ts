@@ -74,7 +74,10 @@ function resolveDashboardArtifactId(
   let targetArtifactId =
     params.artifactId ?? state.dashboard.getCurrentDashboardArtifactId();
   if (!targetArtifactId && params.createArtifactIfMissing) {
-    targetArtifactId = state.dashboard.createDashboardArtifact();
+    targetArtifactId = state.dashboard.createDashboardArtifact(
+      undefined,
+      'grid',
+    );
   }
   if (!targetArtifactId) return null;
 

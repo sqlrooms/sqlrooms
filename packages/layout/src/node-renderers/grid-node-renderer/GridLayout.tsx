@@ -1,5 +1,4 @@
 import {
-  LayoutConfig,
   LayoutGridItem,
   LayoutGridNode,
   LayoutNode,
@@ -9,7 +8,7 @@ import {
 import {FC, Ref, useCallback, useMemo} from 'react';
 import {Responsive, WidthProvider} from 'react-grid-layout';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
-import {useStoreWithLayout} from '../../LayoutSlice';
+import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {ParentDirection} from '../../layout-base-types';
 import {findNodeById} from '../../layout-tree';
 import {LayoutPath} from '../../types';
@@ -191,8 +190,7 @@ function normalizeLayouts(layouts: GridLayouts): GridLayouts {
 const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const renderNode = useRenderNode();
   const panelInfo = useGetPanel(node);
-  const layoutConfig = useStoreWithLayout((state) => state.layout.config);
-  const setLayoutConfig = useStoreWithLayout((state) => state.layout.setConfig);
+  const {rootLayout, onLayoutChange} = useLayoutRendererContext();
 
   const layouts = useMemo(() => {
     if (node.layouts) return node.layouts;
@@ -207,7 +205,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   );
   const handleLayoutChange = useCallback(
     (allLayouts: GridLayouts) => {
-      if (!layoutConfig) {
+      if (!onLayoutChange) {
         return;
       }
 
@@ -219,16 +217,16 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
         return;
       }
 
-      const nextConfig = JSON.parse(JSON.stringify(layoutConfig)) as LayoutConfig;
-      const result = findNodeById(nextConfig, node.id);
+      const nextRootLayout = JSON.parse(JSON.stringify(rootLayout)) as LayoutNode;
+      const result = findNodeById(nextRootLayout, node.id);
       if (!result || !isLayoutGridNode(result.node)) {
         return;
       }
 
       result.node.layouts = normalizedLayouts;
-      setLayoutConfig(nextConfig);
+      onLayoutChange(nextRootLayout);
     },
-    [layoutConfig, node.id, node.layouts, setLayoutConfig],
+    [node.id, node.layouts, onLayoutChange, rootLayout],
   );
 
   const defaultComponent = (
@@ -275,7 +273,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
                   {renderNode({
                     node: child,
                     path: [...path, node.id, childId],
-                    containerType: 'root',
+                    containerType: 'grid',
                     containerId: node.id,
                   })}
                 </div>

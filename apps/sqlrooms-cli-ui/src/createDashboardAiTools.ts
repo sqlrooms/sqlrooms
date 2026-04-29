@@ -9,11 +9,12 @@ import {RoomState} from './store-types';
 import {getErrorMessage} from './utils';
 import {toVgPlotSpecString} from './vgplot';
 
-const DashboardCreateArtifactToolParameters = z
-  .object({
-    title: z.string().optional(),
-  })
-  .default({});
+const DashboardCreateArtifactToolParameters = z.object({
+  title: z.string().optional(),
+  layoutType: z
+    .enum(['dock', 'grid'])
+    .describe('Dashboard layout node type to use at creation time.'),
+});
 type DashboardCreateArtifactToolParameters = z.infer<
   typeof DashboardCreateArtifactToolParameters
 >;
@@ -50,6 +51,7 @@ type DashboardSetVgPlotToolParameters = z.infer<
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
 - Use the dashboard tools to create/update dashboard vgplot specs.
+- When calling \`create_dashboard_artifact\`, provide \`layoutType\` as either \`grid\` or \`dock\`.
 - Prefer \`create_dashboard_chart_from_template\` for simple supported charts.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no template fits.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
@@ -64,12 +66,15 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
   return {
     create_dashboard_artifact: tool({
       description:
-        'Create a new dashboard artifact and make it the active artifact. Use when no dashboard artifact exists yet.',
+        'Create a new dashboard artifact with a dock or grid layout and make it the active artifact. Use when no dashboard artifact exists yet.',
       inputSchema: DashboardCreateArtifactToolParameters,
       execute: async (params: DashboardCreateArtifactToolParameters) => {
-        const {title} = params;
+        const {title, layoutType} = params;
         const state = store.getState();
-        const artifactId = state.dashboard.createDashboardArtifact(title);
+        const artifactId = state.dashboard.createDashboardArtifact(
+          title,
+          layoutType,
+        );
         state.artifacts.setCurrentArtifact(artifactId);
         return {
           llmResult: {
@@ -131,7 +136,10 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
         let targetArtifactId =
           params.artifactId ?? state.dashboard.getCurrentDashboardArtifactId();
         if (!targetArtifactId && params.createArtifactIfMissing) {
-          targetArtifactId = state.dashboard.createDashboardArtifact();
+          targetArtifactId = state.dashboard.createDashboardArtifact(
+            undefined,
+            'grid',
+          );
         }
         if (!targetArtifactId) {
           return {

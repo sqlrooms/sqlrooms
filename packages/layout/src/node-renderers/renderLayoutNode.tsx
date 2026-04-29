@@ -48,7 +48,12 @@ export const renderLayoutNode = (props: NodeRenderProps): ReactElement => {
   return (
     <Suspense fallback={null}>
       {(isLayoutNodeKey(node) || isLayoutPanelNode(node)) && (
-        <LeafLayout node={node} path={path} />
+        <LeafLayout
+          node={node}
+          path={path}
+          parentContainerType={props.containerType}
+          parentContainerId={props.containerId}
+        />
       )}
       {isLayoutSplitNode(node) && <SplitLayout node={node} path={path} />}
       {isLayoutTabsNode(node) && (

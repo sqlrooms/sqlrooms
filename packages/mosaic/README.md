@@ -172,6 +172,12 @@ function addProfiler(store: RoomStore) {
 }
 ```
 
+Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
+Existing persisted dashboards default to `dock`; pass `'grid'` to
+`createDashboard(title, 'grid')` or `ensureDashboard(id, title, 'grid')` when
+creating a dashboard that should use the scrollable grid renderer. Re-ensuring
+an existing dashboard does not convert between layout types.
+
 Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
 panel omits a source it falls back to the dashboard selected table. Panel renderer
 definitions and chart builder definitions are runtime-only and intentionally

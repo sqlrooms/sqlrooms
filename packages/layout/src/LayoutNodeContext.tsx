@@ -14,7 +14,11 @@ import {
   LayoutTabsNode,
 } from '@sqlrooms/layout-config';
 import {createContext, FC, PropsWithChildren, useContext} from 'react';
-import type {LayoutPath, ParentDirection} from './layout-base-types';
+import type {
+  LayoutPath,
+  PanelContainerType,
+  ParentDirection,
+} from './layout-base-types';
 
 export type LayoutNodeContextTabs = {
   containerType: 'tabs';
@@ -53,6 +57,8 @@ export type LayoutNodeContextLeaf = {
   containerType: 'leaf';
   node: LayoutPanelNode | LayoutNodeKey;
   path: LayoutPath;
+  parentContainerType?: PanelContainerType;
+  parentContainerId?: string;
 };
 
 export type LayoutNodeContextValue =
