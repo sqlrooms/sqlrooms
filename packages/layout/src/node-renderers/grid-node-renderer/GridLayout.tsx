@@ -30,6 +30,10 @@ const GRID_LAYOUT_STYLES = `
   transition: none;
 }
 
+.sqlrooms-grid-layout .react-grid-item.react-draggable-dragging {
+  opacity: 1;
+}
+
 .sqlrooms-grid-layout .react-grid-item.react-grid-placeholder {
   background: hsl(var(--primary) / 0.18);
   border: 1px solid hsl(var(--primary) / 0.35);
@@ -40,7 +44,7 @@ const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle {
   background-image: none;
   box-sizing: border-box;
-  opacity: 0.75;
+  opacity: 0;
   padding: 0;
   transform: none;
   transition:
@@ -69,7 +73,7 @@ const GRID_LAYOUT_STYLES = `
 }
 
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-e::before {
-  background: hsl(var(--border));
+  background: transparent;
   content: "";
   height: 100%;
   left: 5px;
@@ -94,7 +98,7 @@ const GRID_LAYOUT_STYLES = `
 
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-s::before {
   align-self: center;
-  background: hsl(var(--border));
+  background: transparent;
   content: "";
   height: 2px;
   left: 0;
@@ -267,7 +271,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
                 className="h-full"
                 style={{overflow: 'visible'}}
               >
-                <div className="h-full overflow-hidden rounded border">
+                <div className="bg-background h-full overflow-hidden rounded border">
                   {renderNode({
                     node: child,
                     path: [...path, node.id, childId],
