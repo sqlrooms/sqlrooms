@@ -10,6 +10,59 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
+
+The concept of "sheets" has been replaced with "artifacts" to better represent the variety of content types (app builders, charts, maps, etc.) that can be created and managed.
+
+#### API Changes
+
+**Store namespace:**
+
+- `state.sheets` → `state.artifacts`
+- `createSheetsSlice` → `createArtifactsSlice`
+- `SheetsSlice` → `ArtifactsSlice`
+
+**Component renames:**
+
+- `Sheets` → `Artifacts`
+- `SheetsTabs` → `ArtifactTabs`
+- `SheetsPanel` → `ArtifactsPanel`
+
+**Type renames:**
+
+- `Sheet` → `Artifact`
+- `SheetType` → `ArtifactType`
+
+#### Migration Example
+
+Before:
+
+```tsx
+import {createSheetsSlice, SheetsSlice} from '@sqlrooms/sheets';
+
+type RoomState = SheetsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createSheetsSlice()(set, get, store),
+}));
+
+const sheets = useRoomStore((state) => state.sheets.items);
+```
+
+After:
+
+```tsx
+import {createArtifactsSlice, ArtifactsSlice} from '@sqlrooms/artifacts';
+
+type RoomState = ArtifactsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createArtifactsSlice()(set, get, store),
+}));
+
+const artifacts = useRoomStore((state) => state.artifacts.items);
+```
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.

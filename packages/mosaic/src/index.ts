@@ -158,7 +158,9 @@ export {
   mosaicChartBuilders,
 } from './chart-builders/builders';
 export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
+export {ChartBuilderActions} from './chart-builders/ChartBuilderActions';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
+export {ChartBuilderContent} from './chart-builders/ChartBuilderContent';
 export {
   useChartBuilderContext,
   useChartBuilderStore,
@@ -169,9 +171,16 @@ export type {
   ChartBuilderDialogProps,
   ChartBuilderTriggerProps,
 } from './chart-builders/ChartBuilderDialog';
+export {
+  ChartBuilderDialogContent,
+  ChartBuilderTrigger,
+} from './chart-builders/ChartBuilderDialog';
 export type {ChartBuilderRootProps} from './chart-builders/ChartBuilderRoot';
+export {ChartBuilderRoot} from './chart-builders/ChartBuilderRoot';
 export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
+export {ChartBuilderFields} from './chart-builders/ChartBuilderFields';
 export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
+export {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
 export {
   boxPlotChartType,

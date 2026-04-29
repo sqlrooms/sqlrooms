@@ -177,6 +177,50 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### Chart Builder Compound Components
+
+The chart builder UI can be used as a compound component API for flexible composition:
+
+```tsx
+import {
+  ChartBuilderRoot,
+  ChartBuilderTrigger,
+  ChartBuilderDialogContent,
+  ChartBuilderContent,
+} from '@sqlrooms/mosaic';
+
+function MyDashboard() {
+  const columns = [...]; // Your table columns
+
+  return (
+    <ChartBuilderRoot
+      tableName="earthquakes"
+      columns={columns}
+      onCreateChart={(spec, title) => {
+        // Handle chart creation
+      }}
+    >
+      <ChartBuilderTrigger />
+      <ChartBuilderDialogContent>
+        <ChartBuilderContent />
+      </ChartBuilderDialogContent>
+    </ChartBuilderRoot>
+  );
+}
+```
+
+Available compound components:
+
+- `ChartBuilderRoot` - Context provider and dialog wrapper
+- `ChartBuilderTrigger` - Button to open the dialog
+- `ChartBuilderDialogContent` - Dialog content wrapper
+- `ChartBuilderContent` - Main chart builder UI (type grid + fields + actions)
+- `ChartBuilderTypeGrid` - Chart type selector grid
+- `ChartBuilderFields` - Field selector inputs
+- `ChartBuilderActions` - Back/Create buttons
+
+For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
+
 ### Working with Selections
 
 Selections enable cross-filtering between multiple visualizations. You can get or create a named selection from the store:

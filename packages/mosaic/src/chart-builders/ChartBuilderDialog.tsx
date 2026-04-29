@@ -91,7 +91,7 @@ export interface ChartBuilderDialogProps {
 /**
  * Dialog wrapper for the chart builder (legacy API).
  *
- * Prefer the compound form:
+ * @deprecated Prefer the compound form:
  * ```tsx
  * <MosaicChartBuilder tableName={…} columns={…} onCreateChart={…}>
  *   <MosaicChartBuilder.Trigger />
