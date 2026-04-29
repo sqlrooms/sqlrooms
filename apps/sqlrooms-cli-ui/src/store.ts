@@ -1,3 +1,4 @@
+import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
@@ -12,13 +13,32 @@ import {
   CellsSliceConfig,
   createCellsSlice,
   createDefaultCellRegistry,
-  SheetType,
 } from '@sqlrooms/cells';
-import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  deckMapDashboardPanelRenderer,
+} from '@sqlrooms/deck';
+import {
+  createDefaultLoadTableSchemasFilter,
+  createWebSocketDuckDbConnector,
+  type DataTable,
+  QualifiedTableName,
+} from '@sqlrooms/duckdb';
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardSlice,
+  createMosaicDashboardVgPlotPanelConfig,
+  createMosaicSlice,
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  type MosaicDashboardAddPanelAction,
+  MosaicDashboardSliceConfig,
+} from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
@@ -34,6 +54,7 @@ import {
   WebContainerPersistConfig,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
+import {MapIcon} from 'lucide-react';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
@@ -43,7 +64,7 @@ import {
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
-  DASHBOARD_AI_INSTRUCTIONS,
+  getDashboardAiInstructions,
 } from './createDashboardAiTools';
 import {
   createDashboardCommands,
@@ -55,10 +76,12 @@ import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 import {
   AppBuilderProjectConfig,
-  DashboardProjectConfig,
+  AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
+import {parseVgPlotSpecString} from './vgplot';
+
+export type {RoomState} from './store-types';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -72,6 +95,7 @@ const defaultModelFromConfig =
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
+  initializationQuery: 'INSTALL spatial; LOAD spatial;',
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -91,31 +115,150 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
+const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
+const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
+
+function findColumnByName(table: DataTable, candidates: string[]) {
+  const candidateSet = new Set(candidates);
+  return table.columns.find((column) =>
+    candidateSet.has(column.name.toLowerCase()),
+  )?.name;
+}
+
+function findLongitudeLatitudeColumns(table?: DataTable) {
+  if (!table) return null;
+  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
+  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
+  return longitudeColumn && latitudeColumn
+    ? {longitudeColumn, latitudeColumn}
+    : null;
+}
+
+function quoteSqlIdentifier(identifier: string) {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function quoteTableReference(table: DataTable) {
+  const qualifiedName = table.table;
+  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
+    .filter((part): part is string => Boolean(part))
+    .map(quoteSqlIdentifier)
+    .join('.');
+}
+
+function createDeckMapPanelForTable(table: DataTable) {
+  const coordinates = findLongitudeLatitudeColumns(table);
+  if (!coordinates) return undefined;
+
+  const {longitudeColumn, latitudeColumn} = coordinates;
+  const datasetId = table.tableName;
+  const geometryColumn = '__sqlrooms_geom';
+  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
+  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
+
+  return createDeckMapDashboardPanelConfig({
+    title: `${table.tableName} map`,
+    source: {tableName: table.tableName},
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: datasetId,
+          _sqlroomsBinding: {dataset: datasetId},
+          filled: true,
+          stroked: false,
+          pickable: true,
+          radiusUnits: 'pixels',
+          getRadius: 4,
+          getFillColor: [56, 189, 248, 180],
+        },
+      ],
+    },
+    datasets: {
+      [datasetId]: {
+        source: {
+          sqlQuery: [
+            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
+            `FROM ${quoteTableReference(table)}`,
+            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
+          ].join(' '),
+        },
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+    fitToData: {
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+      padding: 40,
+      maxZoom: 12,
+    },
+  });
+}
+
+const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
+  type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+  label: 'Map',
+  icon: MapIcon,
+  isEnabled: ({selectedTable}) =>
+    Boolean(findLongitudeLatitudeColumns(selectedTable)),
+  createPanel: ({selectedTable}) =>
+    selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
+};
+
+const sliceConfigSchemas = {
+  room: BaseRoomConfig,
+  layout: LayoutConfig,
+  ai: AiSliceConfig,
+  aiSettings: AiSettingsSliceConfig,
+  sqlEditor: SqlEditorSliceConfig,
+  artifacts: ArtifactsSliceConfig,
+  cells: CellsSliceConfig,
+  notebook: NotebookSliceConfig,
+  canvas: CanvasSliceConfig,
+  webContainer: WebContainerPersistConfig,
+  appProject: AppBuilderProjectConfigSchema,
+  mosaicDashboard: MosaicDashboardSliceConfig,
+} as const;
+
+const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
     {
       name: 'sqlrooms-cli-app-state',
-      sliceConfigSchemas: {
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        ai: AiSliceConfig,
-        // aiSettings: AiSettingsSliceConfig,
-        sqlEditor: SqlEditorSliceConfig,
-        cells: CellsSliceConfig,
-        notebook: NotebookSliceConfig,
-        canvas: CanvasSliceConfig,
-        webContainer: WebContainerPersistConfig,
-        appProject: AppBuilderProjectConfig,
-        dashboard: DashboardProjectConfig,
-      },
+      sliceConfigSchemas,
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
+      merge: (persistedState, currentState) => {
+        const persistedRecord = (persistedState ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const persistedCells = CellsSliceConfig.parse(
+          persistedRecord.cells ?? currentState.cells.config,
+        );
+        const persistedArtifacts = ArtifactsSliceConfig.parse(
+          persistedRecord.artifacts ?? currentState.artifacts.config,
+        );
+
+        return persistHelpers.merge(
+          {
+            ...persistedRecord,
+            artifacts: persistedArtifacts,
+            cells: persistedCells,
+          },
+          currentState,
+        );
+      },
     },
     (set, get, store) => {
-      const getFirstDashboardSheetId = () =>
-        Object.values(get().cells.config.sheets).find(
-          (sheet) => sheet.type === 'dashboard',
+      const getFirstDashboardArtifactId = () =>
+        Object.values(get().artifacts.config.artifactsById).find(
+          (artifact) => artifact.type === 'dashboard',
         )?.id;
 
       const dashboardSlice: RoomState['dashboard'] = {
@@ -129,78 +272,126 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
         },
-        config: DashboardProjectConfig.parse({}),
-        ensureSheetDashboard: (sheetId) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet || sheet.type !== 'dashboard') {
+        ensureDashboardArtifact: (artifactId) => {
+          const artifact = get().artifacts.getArtifact(artifactId);
+          if (!artifact || artifact.type !== 'dashboard') {
             return;
           }
-          set((state) =>
-            produce(state, (draft) => {
-              if (draft.dashboard.config.dashboardsBySheetId[sheetId]) {
-                return;
-              }
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: DEFAULT_DASHBOARD_VGPLOT_SPEC,
-                updatedAt: Date.now(),
-              };
-            }),
+          get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
+        },
+        addProfilerForTable: (tableName) => {
+          const existingDashboardArtifactId =
+            get().dashboard.getCurrentDashboardArtifactId();
+          const artifactId =
+            existingDashboardArtifactId ??
+            get().dashboard.createDashboardArtifact('Dashboard');
+          if (!existingDashboardArtifactId) {
+            get().artifacts.setCurrentArtifact(artifactId);
+          }
+          get().dashboard.ensureDashboardArtifact(artifactId);
+          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
+          if (!dashboard) return artifactId;
+
+          if (!dashboard.selectedTable) {
+            get().mosaicDashboard.setSelectedTable(artifactId, tableName);
+          }
+
+          const hasProfilerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE &&
+              panel.source?.tableName === tableName,
+          );
+          if (!hasProfilerForTable) {
+            get().mosaicDashboard.addPanel(
+              artifactId,
+              createMosaicDashboardProfilerPanelConfig({
+                title: `${tableName} profiler`,
+                source: {tableName},
+              }),
+            );
+          }
+
+          return artifactId;
+        },
+        setDashboardVgPlot: (artifactId, vgplot) => {
+          const artifact = get().artifacts.getArtifact(artifactId);
+          if (!artifact) {
+            throw new Error(`Unknown artifact "${artifactId}".`);
+          }
+          if (artifact.type !== 'dashboard') {
+            throw new Error(
+              `Artifact "${artifactId}" is not a dashboard artifact.`,
+            );
+          }
+          const {parsed} = parseVgPlotSpecString(vgplot);
+          get().dashboard.ensureDashboardArtifact(artifactId);
+          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
+          const primaryPanel = dashboard?.panels.find(
+            (panel) => panel.type === 'vgplot',
+          );
+          if (primaryPanel) {
+            get().mosaicDashboard.updatePanel(artifactId, primaryPanel.id, {
+              config: {
+                ...primaryPanel.config,
+                vgplot: parsed,
+              },
+            });
+            return;
+          }
+          get().mosaicDashboard.addPanel(
+            artifactId,
+            createMosaicDashboardVgPlotPanelConfig(parsed, 'Chart 1'),
           );
         },
-        setSheetVgPlot: (sheetId, vgplot) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet) {
-            throw new Error(`Unknown sheet "${sheetId}".`);
-          }
-          if (sheet.type !== 'dashboard') {
-            throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
-          }
-          const {formatted} = parseVgPlotSpecString(vgplot);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: formatted,
-                updatedAt: Date.now(),
-              };
-            }),
-          );
-        },
-        getSheetVgPlot: (sheetId) =>
-          get().dashboard.config.dashboardsBySheetId[sheetId]?.vgplot,
-        getCurrentDashboardSheetId: () => {
-          const currentSheetId = get().cells.config.currentSheetId;
-          const currentSheet = currentSheetId
-            ? get().cells.config.sheets[currentSheetId]
+        getDashboardVgPlot: (artifactId) =>
+          (() => {
+            const spec = get()
+              .mosaicDashboard.getDashboard(artifactId)
+              ?.panels.find((panel) => panel.type === 'vgplot')?.config.vgplot;
+            return spec && typeof spec === 'object'
+              ? JSON.stringify(spec, null, 2)
+              : undefined;
+          })(),
+        getCurrentDashboardArtifactId: () => {
+          const currentArtifactId = get().artifacts.config.currentArtifactId;
+          const currentArtifact = currentArtifactId
+            ? get().artifacts.config.artifactsById[currentArtifactId]
             : undefined;
-          if (currentSheet?.type === 'dashboard') {
-            return currentSheetId;
+          if (currentArtifact?.type === 'dashboard') {
+            return currentArtifactId;
           }
-          return getFirstDashboardSheetId();
+          return getFirstDashboardArtifactId();
         },
-        createDashboardSheet: (title) => {
-          const sheetId = get().cells.addSheet(title, 'dashboard');
-          get().dashboard.ensureSheetDashboard(sheetId);
-          return sheetId;
+        createDashboardArtifact: (title) => {
+          const artifactId = get().artifacts.createArtifact({
+            type: 'dashboard',
+            title: title ?? 'Dashboard',
+          });
+          get().mosaicDashboard.ensureDashboard(
+            artifactId,
+            title ?? 'Dashboard',
+          );
+          return artifactId;
         },
-        setCurrentSheetVgPlot: (vgplot) => {
+        setCurrentDashboardVgPlot: (vgplot) => {
           const state = get();
-          const targetSheetId =
-            state.dashboard.getCurrentDashboardSheetId() ??
-            state.dashboard.createDashboardSheet();
-          state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
-          state.cells.setCurrentSheet(targetSheetId);
-          return targetSheetId;
+          const targetArtifactId =
+            state.dashboard.getCurrentDashboardArtifactId() ??
+            state.dashboard.createDashboardArtifact();
+          state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
+          state.artifacts.setCurrentArtifact(targetArtifactId);
+          return targetArtifactId;
         },
       };
 
       return {
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
-          upsertSheetApp: (sheetId, app) => {
-            set(
-              produce((draft: RoomState) => {
-                const current = draft.appProject.config.appsBySheetId[
-                  sheetId
+          upsertArtifactApp: (artifactId, app) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                const current = draft.appProject.config.appsByArtifactId[
+                  artifactId
                 ] ?? {
                   name: app.name,
                   prompt: '',
@@ -208,7 +399,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   files: {},
                   updatedAt: 0,
                 };
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   ...app,
                   updatedAt: Date.now(),
@@ -216,12 +407,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          updateSheetAppFiles: (sheetId, files) => {
+          updateArtifactAppFiles: (artifactId, files) => {
             set((state) =>
               produce(state, (draft) => {
-                const current = draft.appProject.config.appsBySheetId[sheetId];
+                const current =
+                  draft.appProject.config.appsByArtifactId[artifactId];
                 if (!current) return;
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   files,
                   updatedAt: Date.now(),
@@ -229,8 +421,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          getSheetApp: (sheetId) =>
-            get().appProject.config.appsBySheetId[sheetId],
+          removeArtifactApp: (artifactId) => {
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.appProject.config.appsByArtifactId[artifactId];
+              }),
+            );
+          },
+          getArtifactApp: (artifactId) =>
+            get().appProject.config.appsByArtifactId[artifactId],
         },
         dashboard: dashboardSlice,
 
@@ -259,15 +458,41 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           connector,
           config: {dataSources: []},
           layout: createLayout({store}),
+          createDbProps: {
+            duckDb: {
+              loadTableSchemasFilter: (() => {
+                const filter = createDefaultLoadTableSchemasFilter();
+                return (table: QualifiedTableName) => {
+                  return (
+                    filter(table) &&
+                    !(
+                      table.database === get().db.currentDatabase &&
+                      table.schema === 'mosaic'
+                    )
+                  );
+                };
+              })(),
+            },
+          },
+        })(set, get, store),
+
+        ...createArtifactsSlice<RoomState>({
+          artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
 
         ...createMosaicSlice()(set, get, store),
+
+        ...createMosaicDashboardSlice({
+          addPanelActions: [deckMapDashboardAddPanelAction],
+          panelRenderers: createDefaultMosaicDashboardPanelRenderers({
+            [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
+          }),
+        })(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),
 
         ...createCellsSlice({
           cellRegistry: createDefaultCellRegistry(),
-          supportedSheetTypes: Object.keys(ARTIFACT_TYPES) as SheetType[],
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),
@@ -293,12 +518,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
             getApiKey: (provider) =>
-              runtimeAiProviders[provider]?.apiKey ||
+              get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),

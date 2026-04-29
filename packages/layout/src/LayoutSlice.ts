@@ -127,6 +127,7 @@ export function createLayoutSlice({
                     const newPanelNode: LayoutNode = {
                       type: 'panel',
                       id: panel,
+                      panel: panel,
                       defaultSize: '25%',
                     };
                     const existingLayout =

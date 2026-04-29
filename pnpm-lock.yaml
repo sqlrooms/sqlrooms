@@ -144,6 +144,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/canvas':
         specifier: workspace:*
         version: link:../../packages/canvas
@@ -156,6 +159,9 @@ importers:
       '@sqlrooms/db-settings':
         specifier: workspace:*
         version: link:../../packages/db-settings
+      '@sqlrooms/deck':
+        specifier: workspace:*
+        version: link:../../packages/deck
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -165,9 +171,6 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../../packages/layout
-      '@sqlrooms/monaco-editor':
-        specifier: workspace:*
-        version: link:../../packages/monaco-editor
       '@sqlrooms/mosaic':
         specifier: workspace:*
         version: link:../../packages/mosaic
@@ -761,6 +764,9 @@ importers:
 
   examples/canvas:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/canvas':
         specifier: workspace:*
         version: link:../../packages/canvas
@@ -770,6 +776,9 @@ importers:
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -837,6 +846,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -1212,7 +1224,7 @@ importers:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
       react-map-gl:
-        specifier: ^8.1.0
+        specifier: ^8.1.1
         version: 8.1.1(mapbox-gl@3.17.0)(maplibre-gl@5.12.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       zod:
         specifier: 4.1.13
@@ -1291,7 +1303,7 @@ importers:
         specifier: ^5.12.0
         version: 5.12.0
       react-map-gl:
-        specifier: ^8.1.0
+        specifier: ^8.1.1
         version: 8.1.1(mapbox-gl@3.17.0)(maplibre-gl@5.12.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       zod:
         specifier: 4.1.13
@@ -1370,7 +1382,7 @@ importers:
         specifier: ^5.12.0
         version: 5.12.0
       react-map-gl:
-        specifier: ^8.1.0
+        specifier: ^8.1.1
         version: 8.1.1(mapbox-gl@3.17.0)(maplibre-gl@5.12.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       zod:
         specifier: 4.1.13
@@ -1479,6 +1491,9 @@ importers:
 
   examples/kepler:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -1848,12 +1863,18 @@ importers:
 
   examples/notebook:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../../packages/cells
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/notebook':
         specifier: workspace:*
         version: link:../../packages/notebook
@@ -1912,9 +1933,15 @@ importers:
 
   examples/pivot:
     dependencies:
+      '@sqlrooms/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/pivot':
         specifier: workspace:*
         version: link:../../packages/pivot
@@ -2487,6 +2514,43 @@ importers:
         specifier: ^2.12.7
         version: 2.15.4(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
 
+  packages/artifacts:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.0.0
+        version: 3.0.4
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+
   packages/canvas:
     dependencies:
       '@paralleldrive/cuid2':
@@ -2896,18 +2960,33 @@ importers:
       '@loaders.gl/wkt':
         specifier: ^4.4.1
         version: 4.4.1(@loaders.gl/core@4.4.1)
+      '@paralleldrive/cuid2':
+        specifier: ^3.0.0
+        version: 3.0.4
       '@sqlrooms/color-scales':
         specifier: workspace:*
         version: link:../color-scales
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../mosaic
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@uwdata/mosaic-core':
+        specifier: ^0.21.0
+        version: 0.21.1
+      '@uwdata/mosaic-sql':
+        specifier: ^0.21.0
+        version: 0.21.1
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      lucide-react:
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
       maplibre-gl:
         specifier: ^5.12.0
         version: 5.12.0
@@ -2918,7 +2997,7 @@ importers:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
       react-map-gl:
-        specifier: ^8.1.0
+        specifier: ^8.1.1
         version: 8.1.1(mapbox-gl@3.17.0)(maplibre-gl@5.12.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       zod:
         specifier: 4.1.13
@@ -3275,9 +3354,18 @@ importers:
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
+      '@sqlrooms/db':
+        specifier: workspace:*
+        version: link:../db
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@sqlrooms/layout-config':
+        specifier: workspace:*
+        version: link:../layout-config
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -4009,9 +4097,9 @@ importers:
 
   packages/vega:
     dependencies:
-      '@sqlrooms/ai':
+      '@sqlrooms/ai-core':
         specifier: workspace:*
-        version: link:../ai
+        version: link:../ai-core
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror
@@ -14154,7 +14242,6 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
-
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   quadbin@0.4.2:

@@ -28,6 +28,11 @@ export function useGetPanel(node: LayoutNode): RoomPanelInfo | null {
 
   return useMemo(() => {
     const {panelId, meta} = resolvePanelIdentity(node);
+
+    if (!panelId) {
+      return null;
+    }
+
     const definition = panels[panelId];
 
     if (!definition) {

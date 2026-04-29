@@ -1,5 +1,5 @@
 import {TableRowsSplitIcon} from 'lucide-react';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const ResultsPanel: FC = () => (
   <div className="flex h-full flex-col gap-3 p-4">

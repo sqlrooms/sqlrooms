@@ -1,118 +1,148 @@
+import {ArtifactTabs} from '@sqlrooms/artifacts';
+import {RoomPanelComponent} from '@sqlrooms/layout';
 import {
-  RoomPanelComponent,
-  TabsLayout,
-  useLayoutNodeContext,
-} from '@sqlrooms/layout';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-  TabStrip,
 } from '@sqlrooms/ui';
 import {PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
-import {useCallback} from 'react';
-import {ARTIFACT_TYPES, ArtifactTypeInfo} from '../artifactTypes';
+import {useCallback, useState} from 'react';
+import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {
-  const executeCommand = useRoomStore((s) => s.commands.executeCommand);
-  const ctx = useLayoutNodeContext();
-  const nodeId = ctx.containerType === 'tabs' ? ctx.node.id : undefined;
-  const addTab = useRoomStore((s) => s.layout.addTab);
-  const removeTab = useRoomStore((s) => s.layout.removeTab);
-  const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
-  const isAssistantCollapsed = useRoomStore((s) =>
-    s.layout.isCollapsed('assistant'),
-  );
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    tabId: string;
+    tabName: string;
+  } | null>(null);
 
-  const handleAddSheet = useCallback(
-    async (info: ArtifactTypeInfo) => {
-      const result = await executeCommand(info.addCommand, {
-        title: `New ${info.title}`,
-      });
-      if (result?.success && nodeId) {
-        const {sheetId} = result.data as {sheetId: string};
-        addTab(nodeId, {
-          type: 'panel',
-          id: sheetId,
-          panel: {
-            key: 'artifact',
-            meta: {artifactId: sheetId},
-          },
-        });
-      }
-    },
-    [addTab, executeCommand, nodeId],
-  );
-
-  const handleDeleteTab = useCallback(
-    (sheetId: string) => {
-      if (nodeId) {
-        removeTab(nodeId, sheetId);
-      }
-    },
-    [nodeId, removeTab],
-  );
-
-  // const handleRenameSheet = useCallback((sheetId: string, newName: string) => {
-  //    renameSheet(sheetId, newName);
-  // }, []);
+  const handleDeleteTab = useCallback((tabId: string, tabName: string) => {
+    setDeleteConfirm({tabId, tabName});
+  }, []);
 
   return (
-    <>
-      <TabsLayout.TabStrip
-        closeable={true}
-        preventCloseLastTab={false}
-        renderTabMenu={(tab) => (
-          <>
-            <TabStrip.MenuItem
-              disabled
-              // onClick={() => handleRenameSheet(tab.id, tab.name)}
-            >
-              <PencilIcon className="mr-2 h-4 w-4" />
-              Rename
-            </TabStrip.MenuItem>
-            <TabStrip.MenuSeparator />
-            <TabStrip.MenuItem
-              disabled
-              variant="destructive"
-              onClick={() => handleDeleteTab(tab.id)}
-            >
-              <TrashIcon className="mr-2 h-4 w-4" />
-              Delete
-            </TabStrip.MenuItem>
-          </>
-        )}
-      >
-        <TabsLayout.SearchDropdown />
-        <TabsLayout.Tabs />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <TabStrip.NewButton aria-label="Add chart to dashboard" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {Object.values(ARTIFACT_TYPES).map((type) => (
-              <DropdownMenuItem
-                key={type.title}
-                onClick={() => handleAddSheet(type)}
-              >
-                <type.icon /> {`New ${type.title}`}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="flex-1" />
-        {isAssistantCollapsed ? (
-          <TabStrip.Button
-            className="w-auto text-xs uppercase"
-            onClick={() => toggleCollapsed('assistant')}
+    <ArtifactTabs
+      types={CLI_ARTIFACT_TYPES}
+      panelKey="artifact"
+      closeable={true}
+      preventCloseLastTab={false}
+      renderTabMenu={(tab) => (
+        <>
+          <ArtifactTabs.MenuItem disabled>
+            <PencilIcon className="mr-2 h-4 w-4" />
+            Rename
+          </ArtifactTabs.MenuItem>
+          <ArtifactTabs.MenuSeparator />
+          <ArtifactTabs.MenuItem
+            variant="destructive"
+            onClick={() => handleDeleteTab(tab.id, tab.name)}
           >
-            <SparklesIcon className="h-4 w-4" /> AI
-          </TabStrip.Button>
-        ) : null}
-      </TabsLayout.TabStrip>
-      <TabsLayout.TabContent />
-    </>
+            <TrashIcon className="mr-2 h-4 w-4" />
+            Delete
+          </ArtifactTabs.MenuItem>
+        </>
+      )}
+      overlay={
+        <DeleteArtifactDialog
+          deleteConfirm={deleteConfirm}
+          onClear={() => setDeleteConfirm(null)}
+        />
+      }
+    >
+      <ArtifactTabs.SearchDropdown />
+      <ArtifactTabs.Tabs />
+      <CliArtifactAddMenu />
+      <div className="flex-1" />
+      <AssistantToggleButton />
+    </ArtifactTabs>
   );
 };
+
+function CliArtifactAddMenu() {
+  return (
+    <ArtifactTabs.AddMenu>
+      {(artifactTabs) =>
+        CLI_ARTIFACT_TYPES.map((artifactType) => {
+          const type = ARTIFACT_TYPES[artifactType];
+          return (
+            <DropdownMenuItem
+              key={artifactType}
+              onClick={() => artifactTabs.createArtifact(artifactType)}
+            >
+              <type.icon /> {`New ${type.label}`}
+            </DropdownMenuItem>
+          );
+        })
+      }
+    </ArtifactTabs.AddMenu>
+  );
+}
+
+function AssistantToggleButton() {
+  const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
+  const isAssistantCollapsed = useRoomStore((s) =>
+    s.layout.isCollapsed('assistant-sidebar'),
+  );
+
+  if (!isAssistantCollapsed) {
+    return null;
+  }
+
+  return (
+    <ArtifactTabs.Button
+      className="w-auto text-xs uppercase"
+      onClick={() => toggleCollapsed('assistant-sidebar')}
+    >
+      <SparklesIcon className="h-4 w-4" /> AI
+    </ArtifactTabs.Button>
+  );
+}
+
+function DeleteArtifactDialog({
+  deleteConfirm,
+  onClear,
+}: {
+  deleteConfirm: {tabId: string; tabName: string} | null;
+  onClear: () => void;
+}) {
+  const artifactTabs = ArtifactTabs.useActions();
+
+  const confirmDelete = useCallback(() => {
+    if (deleteConfirm) {
+      artifactTabs.deleteArtifact(deleteConfirm.tabId);
+    }
+    onClear();
+  }, [artifactTabs, deleteConfirm, onClear]);
+
+  return (
+    <Dialog
+      open={deleteConfirm !== null}
+      onOpenChange={(open) => {
+        if (!open) onClear();
+      }}
+    >
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>Delete artifact</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete &ldquo;
+            {deleteConfirm?.tabName}&rdquo;? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClear}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={confirmDelete}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

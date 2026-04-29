@@ -39,12 +39,14 @@ export {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
+  LayoutDockNode,
   LayoutNode,
   LayoutConfig,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
+  isLayoutDockNode,
   createDefaultLayout,
 } from '@sqlrooms/layout-config';
 
-export type {LayoutDirection} from '@sqlrooms/layout-config';
+export type {LayoutDirection, PanelIdentity} from '@sqlrooms/layout-config';

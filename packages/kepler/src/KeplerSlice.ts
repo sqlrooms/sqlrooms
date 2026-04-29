@@ -151,7 +151,7 @@ export function createDefaultKeplerConfig(
   props?: Partial<KeplerSliceConfig>,
 ): KeplerSliceConfig {
   const mapId = createId();
-  return {
+  const config: KeplerSliceConfig = {
     maps: [
       {
         id: mapId,
@@ -161,9 +161,13 @@ export function createDefaultKeplerConfig(
       },
     ],
     currentMapId: mapId,
-    openTabs: [mapId],
     ...props,
   };
+  const knownMapIds = new Set(config.maps.map((map) => map.id));
+  if (config.currentMapId && !knownMapIds.has(config.currentMapId)) {
+    config.currentMapId = config.maps[0]?.id;
+  }
+  return config;
 }
 
 function createKeplerCommands(): RoomCommand<
@@ -191,6 +195,14 @@ function createKeplerCommands(): RoomCommand<
       },
       execute: async ({getState}) => {
         const currentMapId = getState().kepler.config.currentMapId;
+        if (!currentMapId) {
+          return {
+            success: false,
+            commandId: DUPLICATE_MAP_COMMAND_ID,
+            message: 'Unable to duplicate map: no current map selected',
+            code: ERROR_CODES.MAP_NOT_FOUND,
+          };
+        }
         const sourceMap = getState().kepler.config.maps.find(
           (m) => m.id === currentMapId,
         );
@@ -336,19 +348,18 @@ export type KeplerSliceState = {
     removeDatasetFromMaps: (datasetId: string) => void;
     dispatchAction: (mapId: string, action: KeplerAction) => void;
     setCurrentMapId: (mapId: string) => void;
+    ensureMap: (mapId: string, name?: string) => void;
     /**
      * Create a new map and return the map id
      * @param name - The name of the map
      * @returns The map id
      */
-    createMap: (name?: string) => string;
+    createMap: (name?: string, options?: {id?: string}) => string;
     deleteMap: (mapId: string) => void;
     duplicateMap: (
       mapId: string,
     ) => Promise<{success: boolean; message?: string; code?: string}>;
     renameMap: (mapId: string, name: string) => void;
-    closeMap: (mapId: string) => void;
-    setOpenTabs: (tabIds: string[]) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
     registerKeplerMapIfNotExists: (mapId: string) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, AnyAction> | undefined;
@@ -479,11 +490,13 @@ export function createKeplerSlice({
 
         async initialize() {
           const config = get().kepler.config;
-          const currentMapId = config.currentMapId;
-          const keplerInitialState: KeplerGlReduxState = createKeplerReducer({
-            reason: 'initialize',
-            mapId: currentMapId,
-          })(undefined, registerEntry({id: currentMapId}));
+          const currentMapId = config.currentMapId ?? config.maps[0]?.id;
+          const keplerInitialState: KeplerGlReduxState = currentMapId
+            ? createKeplerReducer({
+                reason: 'initialize',
+                mapId: currentMapId,
+              })(undefined, registerEntry({id: currentMapId}))
+            : {};
           set({
             kepler: {
               ...get().kepler,
@@ -510,7 +523,9 @@ export function createKeplerSlice({
           updateForwardDispatch();
           await get().kepler.syncKeplerDatasets();
           updateMapConfigs();
-          requestMapStyle(config.currentMapId);
+          if (currentMapId) {
+            requestMapStyle(currentMapId);
+          }
 
           // Register Kepler commands
           const keplerCommands = createKeplerCommands();
@@ -666,6 +681,9 @@ export function createKeplerSlice({
         setCurrentMapId: (mapId) => {
           return set((state) =>
             produce(state, (draft) => {
+              if (!draft.kepler.config.maps.some((map) => map.id === mapId)) {
+                return;
+              }
               const now = Date.now();
               draft.kepler.config.currentMapId = mapId;
               updateMapLastOpenedAt(draft.kepler.config.maps, mapId, now);
@@ -673,18 +691,24 @@ export function createKeplerSlice({
           );
         },
 
-        createMap: (name) => {
-          const mapId = createId();
+        ensureMap: (mapId, name) => {
           const now = Date.now();
-
           set((state) =>
             produce(state, (draft) => {
+              const existing = draft.kepler.config.maps.find(
+                (map) => map.id === mapId,
+              );
+              if (existing) {
+                if (name && existing.name !== name) {
+                  existing.name = name;
+                }
+                return;
+              }
               draft.kepler.config.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
                 lastOpenedAt: now,
               });
-              draft.kepler.config.openTabs.push(mapId);
               draft.kepler.map = createKeplerReducer({
                 reason: 'create-map',
                 mapId,
@@ -693,8 +717,17 @@ export function createKeplerSlice({
               draft.kepler.forwardDispatch[mapId] = getForwardDispatch(mapId);
             }),
           );
+          if (!get().kepler.map[mapId]) {
+            get().kepler.registerKeplerMapIfNotExists(mapId);
+          }
           requestMapStyle(mapId);
           get().kepler.syncKeplerDatasets();
+        },
+
+        createMap: (name, options) => {
+          const mapId = options?.id ?? createId();
+          get().kepler.ensureMap(mapId, name);
+          get().kepler.setCurrentMapId(mapId);
           return mapId;
         },
 
@@ -757,49 +790,23 @@ export function createKeplerSlice({
         deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
-              const openTabs = draft.kepler.config.openTabs;
               const maps = draft.kepler.config.maps;
               const wasCurrentMap = draft.kepler.config.currentMapId === mapId;
-              const deletingIndex = openTabs.indexOf(mapId);
 
-              // Remove from maps and openTabs
               draft.kepler.config.maps = maps.filter((map) => map.id !== mapId);
-              draft.kepler.config.openTabs = openTabs.filter(
-                (id) => id !== mapId,
-              );
 
-              // If we deleted the current map, select another one
               if (wasCurrentMap) {
-                const newOpenTabs = draft.kepler.config.openTabs;
                 const remainingMaps = draft.kepler.config.maps;
-
-                if (newOpenTabs.length > 0) {
-                  // Select from remaining open tabs
-                  const newIndex =
-                    deletingIndex === 0
-                      ? 0
-                      : Math.min(deletingIndex - 1, newOpenTabs.length - 1);
-                  const newSelectedId = newOpenTabs[newIndex];
-                  if (newSelectedId) {
-                    draft.kepler.config.currentMapId = newSelectedId;
-                    updateMapLastOpenedAt(
-                      draft.kepler.config.maps,
-                      newSelectedId,
-                      Date.now(),
-                    );
-                  }
-                } else if (remainingMaps.length > 0) {
-                  // No open tabs left, open a closed map
-                  const mapToOpen = remainingMaps[0];
-                  if (mapToOpen) {
-                    draft.kepler.config.openTabs.push(mapToOpen.id);
-                    draft.kepler.config.currentMapId = mapToOpen.id;
-                    updateMapLastOpenedAt(
-                      draft.kepler.config.maps,
-                      mapToOpen.id,
-                      Date.now(),
-                    );
-                  }
+                const nextMap = remainingMaps[0];
+                if (nextMap) {
+                  draft.kepler.config.currentMapId = nextMap.id;
+                  updateMapLastOpenedAt(
+                    draft.kepler.config.maps,
+                    nextMap.id,
+                    Date.now(),
+                  );
+                } else {
+                  draft.kepler.config.currentMapId = undefined;
                 }
               }
 
@@ -844,7 +851,6 @@ export function createKeplerSlice({
                 config: savedConfig as any,
                 lastOpenedAt: now,
               });
-              draft.kepler.config.openTabs.push(newMapId);
               draft.kepler.config.currentMapId = newMapId;
               // Register the new map with empty state, then load the config
               draft.kepler.map = createKeplerReducer({
@@ -877,30 +883,6 @@ export function createKeplerSlice({
               if (map) {
                 map.name = name;
               }
-            }),
-          );
-        },
-
-        closeMap: (mapId) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const openTabs = draft.kepler.config.openTabs;
-
-              // Don't close if it's the last open tab (defensive check, TabStrip also prevents this)
-              if (openTabs.length <= 1) return;
-
-              // Just remove from openTabs - TabStrip handles selection via onSelect before calling onClose
-              draft.kepler.config.openTabs = openTabs.filter(
-                (id) => id !== mapId,
-              );
-            }),
-          );
-        },
-
-        setOpenTabs: (tabIds) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.kepler.config.openTabs = tabIds;
             }),
           );
         },
@@ -1076,9 +1058,10 @@ export function createKeplerSlice({
     function updateForwardDispatch() {
       const config = get().kepler.config;
       const currentMapId = config.currentMapId;
-      const forwardDispatch = {
-        [currentMapId]: getForwardDispatch(currentMapId),
-      };
+      const forwardDispatch: Record<string, Dispatch<KeplerAction>> = {};
+      if (currentMapId) {
+        forwardDispatch[currentMapId] = getForwardDispatch(currentMapId);
+      }
       if (config) {
         for (const {id} of config.maps) {
           forwardDispatch[id] = getForwardDispatch(id);

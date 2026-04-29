@@ -3,16 +3,15 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
-import DataSourcesPanel from './components/DataSourcesPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['left', 'data', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
@@ -50,8 +49,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           children: [
             {
               type: 'tabs',
-              id: RoomPanelTypes.enum['left'],
-              children: [RoomPanelTypes.enum['data']],
+              id: RoomPanelTypes.enum.left,
+              children: [RoomPanelTypes.enum.data],
               defaultSize: '30%',
               maxSize: '50%',
               minSize: '300px',
@@ -63,17 +62,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
             {
               type: 'panel',
-              id: RoomPanelTypes.enum['main'],
+              id: RoomPanelTypes.enum.main,
+              panel: RoomPanelTypes.enum.main,
             },
           ],
         } satisfies LayoutConfig,
         panels: {
-          [RoomPanelTypes.enum['data']]: {
+          [RoomPanelTypes.enum.data]: {
             title: 'Data',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
           },
-          [RoomPanelTypes.enum['main']]: {
+          [RoomPanelTypes.enum.main]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,

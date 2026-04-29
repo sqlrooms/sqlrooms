@@ -3,7 +3,7 @@ import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {roomStore} from './store';
 import {TerminalIcon} from 'lucide-react';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const Room: FC = () => {
   const sqlEditorDisclosure = useDisclosure();

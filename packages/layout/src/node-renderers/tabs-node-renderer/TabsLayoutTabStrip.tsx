@@ -1,11 +1,18 @@
 import {TabStrip, TabStripProps} from '@sqlrooms/ui';
-import {FC, PropsWithChildren, useCallback} from 'react';
+import {FC, PropsWithChildren, useCallback, useMemo} from 'react';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {TabsLayoutTabLabel} from './TabsLayoutTabLabel';
 import {useTabsNodeContext} from '../../LayoutNodeContext';
 import {TabsLayoutToggleCollapseButton} from './TabsLayoutToggleCollapseButton';
 import {useStoreWithLayout} from '../../LayoutSlice';
 import {useTabDescriptors} from './useTabDescriptors';
+import {
+  getVisibleTabChildren,
+  getChildrenIds,
+  getLayoutNodeId,
+  isLayoutTabsNode,
+} from '@sqlrooms/layout-config';
+import {findNodeById} from '../../layout-tree';
 
 export type TabsLayoutTabStripProps = PropsWithChildren<Partial<TabStripProps>>;
 
@@ -17,11 +24,29 @@ export const TabsLayoutTabStrip: FC<TabsLayoutTabStripProps> = ({
     useLayoutRendererContext();
   const {node, path} = useTabsNodeContext();
 
-  const getVisibleTabs = useStoreWithLayout((s) => s.layout.getVisibleTabs);
-  const getActiveTab = useStoreWithLayout((s) => s.layout.getActiveTab);
+  // Subscribe to layout config changes (not stable getters)
+  const layoutConfig = useStoreWithLayout((s) => s.layout.config);
 
-  const visibleTabIds = getVisibleTabs(node.id);
-  const activeTabId = getActiveTab(node.id);
+  // Derive visible tabs and active tab from config
+  const visibleTabIds = useMemo(() => {
+    const found = findNodeById(layoutConfig, node.id);
+    if (!found?.node || !isLayoutTabsNode(found.node)) {
+      return [];
+    }
+
+    return getChildrenIds(getVisibleTabChildren(found.node));
+  }, [layoutConfig, node.id]);
+
+  const activeTabId = useMemo(() => {
+    const found = findNodeById(layoutConfig, node.id);
+    if (!found?.node || !isLayoutTabsNode(found.node)) {
+      return undefined;
+    }
+
+    const visibleChildren = getVisibleTabChildren(found.node);
+    const child = visibleChildren[found.node.activeTabIndex];
+    return child != null ? getLayoutNodeId(child) : undefined;
+  }, [layoutConfig, node.id]);
 
   const panelId = node.id;
   const isCollapsible = node.collapsible;

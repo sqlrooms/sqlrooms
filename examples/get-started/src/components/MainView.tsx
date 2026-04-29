@@ -7,7 +7,7 @@ import {
   SpinnerPane,
 } from '@sqlrooms/ui';
 import {useRoomStore} from '../store.js';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const MainView: FC = () => {
   const tableReady = useRoomStore((state) =>

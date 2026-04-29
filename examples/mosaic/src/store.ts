@@ -4,7 +4,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
@@ -20,7 +19,7 @@ export const RoomPanelTypes = z.enum([
   'data-tables',
   'docs',
   'left',
-  MAIN_VIEW,
+  'main',
 ] as const);
 
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
@@ -57,9 +56,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           children: [
             {
               type: 'tabs',
-              id: RoomPanelTypes.enum['left'],
+              id: RoomPanelTypes.enum.left,
               children: [
-                RoomPanelTypes.enum['data'],
+                RoomPanelTypes.enum.data,
                 RoomPanelTypes.enum['room-details'],
               ],
               defaultSize: '30%',
@@ -72,7 +71,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
             {
               type: 'panel',
-              id: RoomPanelTypes.enum['main'],
+              id: RoomPanelTypes.enum.main,
+              panel: RoomPanelTypes.enum.main,
               defaultSize: '70%',
             },
           ],
@@ -83,12 +83,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             icon: InfoIcon,
             component: RoomDetailsPanel,
           },
-          [RoomPanelTypes.enum['data']]: {
+          [RoomPanelTypes.enum.data]: {
             title: 'Data',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
           },
-          [RoomPanelTypes.enum['main']]: {
+          [RoomPanelTypes.enum.main]: {
             title: 'Main view',
             icon: MapIcon,
             component: MainView,

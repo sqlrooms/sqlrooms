@@ -10,8 +10,8 @@ npm install @sqlrooms/layout-config
 
 - `MAIN_VIEW`
 - `LayoutConfig` (`LayoutNode | null`)
-- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`
-- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`
+- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`, `LayoutDockNode`
+- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`, `isLayoutDockNode`
 - `createDefaultLayout()`
 
 ## Basic usage
@@ -20,18 +20,20 @@ npm install @sqlrooms/layout-config
 import {
   LayoutConfig,
   LayoutNode,
-  MAIN_VIEW,
   createDefaultLayout,
 } from '@sqlrooms/layout-config';
 
 // Simplest config — just the main view
-const simpleLayout = createDefaultLayout(); // returns MAIN_VIEW
+const simpleLayout = createDefaultLayout(); // returns 'main'
 
 // Two-pane split layout
 const twoPaneLayout: LayoutConfig = {
   type: 'split',
   direction: 'row',
-  children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
 };
 
 // Validated via Zod
@@ -48,6 +50,7 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
 | `panel`  | Leaf with sizing constraints (`defaultSize`, `minSize`, etc.) |
 | `split`  | Resizable panel group (rendered via `react-resizable-panels`) |
 | `tabs`   | Tabbed container with collapsible areas                       |
+| `dock`   | Docking container with a nested layout tree                   |
 
 ### Panel node
 
@@ -77,6 +80,24 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
   children: ['data', 'schema'],
   activeTabIndex: 0,
   collapsible: true,
+}
+```
+
+### Dock node
+
+```ts
+{
+  type: 'dock',
+  id: 'docking-area',
+  root: {
+    type: 'split',
+    direction: 'row',
+    children: [
+      {type: 'panel', id: 'editor', defaultSize: '70%'},
+      {type: 'panel', id: 'preview', defaultSize: '30%'},
+    ],
+  },
+  defaultSize: '100%',
 }
 ```
 

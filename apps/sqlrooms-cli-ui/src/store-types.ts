@@ -1,7 +1,11 @@
 import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
+import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
-import type {MosaicSliceState} from '@sqlrooms/mosaic';
+import type {
+  MosaicDashboardSliceState,
+  MosaicSliceState,
+} from '@sqlrooms/mosaic';
 import {NotebookSliceState} from '@sqlrooms/notebook';
 import {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
@@ -9,39 +13,28 @@ import {WebContainerSliceState} from '@sqlrooms/webcontainer';
 import {z} from 'zod';
 
 import {DbSettingsSliceState} from '@sqlrooms/db-settings';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC} from './vgplot';
+
+const AppBuilderProjectEntries = z.record(
+  z.string(),
+  z.object({
+    name: z.string().default('Untitled App'),
+    prompt: z.string().default(''),
+    template: z.string().default('mosaic-dashboard'),
+    files: z.record(z.string(), z.string()).default({}),
+    updatedAt: z.number().default(0),
+  }),
+);
 
 export const AppBuilderProjectConfig = z.object({
-  appsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        name: z.string().default('Untitled App'),
-        prompt: z.string().default(''),
-        template: z.string().default('mosaic-dashboard'),
-        files: z.record(z.string(), z.string()).default({}),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
+  appsByArtifactId: AppBuilderProjectEntries.default({}),
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
-
-export const DashboardProjectConfig = z.object({
-  dashboardsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type DashboardProjectConfig = z.infer<typeof DashboardProjectConfig>;
+export const AppBuilderProjectConfigSchema = AppBuilderProjectConfig;
 
 export type RoomState = RoomShellSliceState &
+  ArtifactsSliceState &
   MosaicSliceState &
+  MosaicDashboardSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState &
@@ -52,29 +45,30 @@ export type RoomState = RoomShellSliceState &
   DbSettingsSliceState & {
     appProject: {
       config: AppBuilderProjectConfig;
-      upsertSheetApp: (
-        sheetId: string,
-        app: Partial<AppBuilderProjectConfig['appsBySheetId'][string]> & {
+      upsertArtifactApp: (
+        artifactId: string,
+        app: Partial<AppBuilderProjectConfig['appsByArtifactId'][string]> & {
           name: string;
         },
       ) => void;
-      updateSheetAppFiles: (
-        sheetId: string,
+      updateArtifactAppFiles: (
+        artifactId: string,
         files: Record<string, string>,
       ) => void;
-      getSheetApp: (
-        sheetId: string,
-      ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
+      removeArtifactApp: (artifactId: string) => void;
+      getArtifactApp: (
+        artifactId: string,
+      ) => AppBuilderProjectConfig['appsByArtifactId'][string] | undefined;
     };
     dashboard: {
       initialize?: () => Promise<void>;
       destroy?: () => Promise<void>;
-      config: DashboardProjectConfig;
-      ensureSheetDashboard: (sheetId: string) => void;
-      setSheetVgPlot: (sheetId: string, vgplot: string) => void;
-      getSheetVgPlot: (sheetId: string) => string | undefined;
-      getCurrentDashboardSheetId: () => string | undefined;
-      createDashboardSheet: (title?: string) => string;
-      setCurrentSheetVgPlot: (vgplot: string) => string;
+      ensureDashboardArtifact: (artifactId: string) => void;
+      addProfilerForTable: (tableName: string) => string | undefined;
+      setDashboardVgPlot: (artifactId: string, vgplot: string) => void;
+      getDashboardVgPlot: (artifactId: string) => string | undefined;
+      getCurrentDashboardArtifactId: () => string | undefined;
+      createDashboardArtifact: (title?: string) => string;
+      setCurrentDashboardVgPlot: (vgplot: string) => string;
     };
   };

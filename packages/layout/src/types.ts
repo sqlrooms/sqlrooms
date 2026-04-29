@@ -1,4 +1,5 @@
 import type {ComponentType} from 'react';
+import type {LayoutNode} from '@sqlrooms/layout-config';
 import type {LayoutNodeContextValue} from './LayoutNodeContext';
 import type {PanelIdentityResult} from './resolvePanelIdentity';
 
@@ -18,6 +19,7 @@ export type RoomPanelInfo = {
   /** @deprecated No longer used — panel area is determined by the layout tree */
   placement?: string;
   component?: RoomPanelComponent;
+  dragOverlay?: ComponentType<{node: LayoutNode}>;
 };
 
 /**

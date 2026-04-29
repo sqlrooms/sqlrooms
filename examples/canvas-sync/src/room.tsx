@@ -9,7 +9,7 @@ import {
 import {Zap, ZapOff} from 'lucide-react';
 import {InputApiKey} from './components/InputApiKey';
 import {roomStore, useRoomStore} from './store';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 type ConnectionStatusVisual = {
   label: string;

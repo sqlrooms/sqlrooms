@@ -52,8 +52,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
                 defaultSize: '30%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -65,16 +65,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: RoomPanelTypes.enum['main'],
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 defaultSize: '70%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['main']]: {
+            [RoomPanelTypes.enum.main]: {
               component: MainView,
             },
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               component: DataPanel,
               icon: DatabaseIcon,

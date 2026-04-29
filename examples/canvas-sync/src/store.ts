@@ -23,6 +23,7 @@ import {setAutoFreeze} from 'immer';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {CanvasArtifactPanel} from './components/CanvasArtifactPanel';
 
 // Loro Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
@@ -61,8 +62,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             children: [
               {
                 type: 'tabs',
-                id: RoomPanelTypes.enum['left'],
-                children: [RoomPanelTypes.enum['data']],
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
                 defaultSize: '20%',
                 maxSize: '50%',
                 minSize: '300px',
@@ -74,21 +75,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               },
               {
                 type: 'panel',
-                id: RoomPanelTypes.enum['main'],
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
                 defaultSize: '80%',
               },
             ],
           } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['main']]: {
-              title: 'Canvas',
-              icon: () => null,
-              component: Canvas,
-            },
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
+            },
+            [RoomPanelTypes.enum.main]: {
+              title: 'Canvas',
+              icon: () => null,
+              component: CanvasArtifactPanel,
             },
           },
         },

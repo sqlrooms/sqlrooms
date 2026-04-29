@@ -11,10 +11,9 @@ import {
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
-  MAIN_VIEW,
 } from '@sqlrooms/layout-config';
 
-type FindNodeByIdResult = {node: LayoutNode; ancestors: LayoutNode[]};
+export type FindNodeByIdResult = {node: LayoutNode; ancestors: LayoutNode[]};
 
 function copyPanelNodeWithInheritedSize(
   node: LayoutNode,
@@ -27,6 +26,7 @@ function copyPanelNodeWithInheritedSize(
     return {
       type: 'panel',
       id: node,
+      panel: node,
       ...inherited,
     };
   }
@@ -163,7 +163,10 @@ export function visitLayoutLeafNodes<T = void>(
   if (isLayoutSplitNode(root)) {
     for (const child of root.children) {
       const result = visitLayoutLeafNodes(child, visitor, [...ancestors, root]);
-      if (result) return result;
+
+      if (result !== undefined) {
+        return result;
+      }
     }
     return undefined;
   }
@@ -171,16 +174,14 @@ export function visitLayoutLeafNodes<T = void>(
   if (isLayoutTabsNode(root)) {
     for (const child of getVisibleTabChildren(root)) {
       const result = visitLayoutLeafNodes(child, visitor, [...ancestors, root]);
-      if (result) return result;
+      if (result !== undefined) return result;
     }
   }
 
   return undefined;
 }
 
-export function getVisibleLayoutPanels(
-  root: LayoutNode | null = MAIN_VIEW,
-): string[] {
+export function getVisibleLayoutPanels(root: LayoutNode | null): string[] {
   const visiblePanels: string[] = [];
 
   visitLayoutLeafNodes(root, (node) => {
@@ -303,16 +304,4 @@ export function removeLayoutNodeByKey(
   const nextTree = removeNode(root, key);
 
   return {success: true, nextTree};
-}
-
-export function getPanelTitle(root: LayoutNode, panelId: string): string {
-  const found = findNodeById(root, panelId);
-
-  if (found?.node && isLayoutPanelNode(found.node)) {
-    if (typeof found.node.panel === 'object' && found.node.panel.meta?.title) {
-      return String(found.node.panel.meta.title);
-    }
-  }
-
-  return panelId;
 }

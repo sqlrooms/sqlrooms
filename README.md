@@ -181,7 +181,6 @@ export type RoomState = RoomShellSliceState & {
 2. Create your room store:
 
 ```typescript
-import {MAIN_VIEW} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {MainView} from './components/MainView';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -217,13 +216,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            area: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            area: 'main',
           },
         },
       },

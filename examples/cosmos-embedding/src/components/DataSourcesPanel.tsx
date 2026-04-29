@@ -13,9 +13,9 @@ import {
 } from '@sqlrooms/ui';
 import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 
-const DataSourcesPanel: FC = () => {
+export const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const dataSources = useRoomStore((state) => state.room.config.dataSources);
   const queryDataSources = useMemo(
@@ -26,7 +26,7 @@ const DataSourcesPanel: FC = () => {
   const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       {isRoomEmpty ? (
         <></>
       ) : (
@@ -86,5 +86,3 @@ const DataSourcesPanel: FC = () => {
     </RoomPanel>
   );
 };
-
-export default DataSourcesPanel;

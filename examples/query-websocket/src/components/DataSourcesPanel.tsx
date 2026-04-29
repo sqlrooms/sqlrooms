@@ -1,11 +1,10 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
-import {RoomPanelTypes} from '../store';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const DataSourcesPanel: FC = () => {
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       <SchemaExplorer>
         <SchemaExplorer.Header>
           <SchemaExplorer.RefreshButton />

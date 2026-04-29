@@ -1,5 +1,5 @@
 import {TerminalIcon} from 'lucide-react';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const ConsolePanel: FC = () => (
   <div className="flex h-full flex-col gap-3 p-4">

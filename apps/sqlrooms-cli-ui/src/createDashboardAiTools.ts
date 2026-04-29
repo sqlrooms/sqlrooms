@@ -1,22 +1,26 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 
+import {
+  createDashboardChartTemplateTool,
+  getDashboardChartTemplateInstructions,
+} from './createDashboardChartTemplateTool';
+import {RoomState} from './store-types';
 import {getErrorMessage} from './utils';
 import {toVgPlotSpecString} from './vgplot';
-import {RoomState} from './store-types';
 
-const DashboardCreateSheetToolParameters = z
+const DashboardCreateArtifactToolParameters = z
   .object({
     title: z.string().optional(),
   })
   .default({});
-type DashboardCreateSheetToolParameters = z.infer<
-  typeof DashboardCreateSheetToolParameters
+type DashboardCreateArtifactToolParameters = z.infer<
+  typeof DashboardCreateArtifactToolParameters
 >;
 
 const DashboardGetVgPlotToolParameters = z
   .object({
-    sheetId: z.string().optional(),
+    artifactId: z.string().optional(),
   })
   .default({});
 type DashboardGetVgPlotToolParameters = z.infer<
@@ -24,19 +28,19 @@ type DashboardGetVgPlotToolParameters = z.infer<
 >;
 
 const DashboardSetVgPlotToolParameters = z.object({
-  sheetId: z
+  artifactId: z
     .string()
     .optional()
-    .describe('Optional target dashboard sheet ID.'),
+    .describe('Optional target dashboard artifact ID.'),
   vgplot: z
     .union([z.string(), z.object({}).passthrough()])
     .describe('Dashboard vgplot specification as JSON string or object.'),
-  createSheetIfMissing: z
+  createArtifactIfMissing: z
     .boolean()
     .optional()
     .default(true)
     .describe(
-      'If true and no dashboard sheet is selected, create one automatically.',
+      'If true and no dashboard artifact is selected, create one automatically.',
     ),
 });
 type DashboardSetVgPlotToolParameters = z.infer<
@@ -46,63 +50,72 @@ type DashboardSetVgPlotToolParameters = z.infer<
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
 - Use the dashboard tools to create/update dashboard vgplot specs.
-- Prefer \`set_dashboard_vgplot\` with complete JSON.
+- Prefer \`create_dashboard_chart_from_template\` for simple supported charts.
+- Use \`set_dashboard_vgplot\` with complete JSON only when no template fits.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
 - Use SQL against DuckDB tables when deciding fields, filters, and aggregations in the spec.
 `;
 
+export function getDashboardAiInstructions(store: {getState: () => RoomState}) {
+  return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${getDashboardChartTemplateInstructions(store)}`;
+}
+
 export function createDashboardAiTools(store: {getState: () => RoomState}) {
   return {
-    create_dashboard_sheet: tool({
+    create_dashboard_artifact: tool({
       description:
-        'Create a new dashboard sheet and make it the active sheet. Use when no dashboard sheet exists yet.',
-      inputSchema: DashboardCreateSheetToolParameters,
-      execute: async (params: DashboardCreateSheetToolParameters) => {
+        'Create a new dashboard artifact and make it the active artifact. Use when no dashboard artifact exists yet.',
+      inputSchema: DashboardCreateArtifactToolParameters,
+      execute: async (params: DashboardCreateArtifactToolParameters) => {
         const {title} = params;
-        const sheetId = store.getState().dashboard.createDashboardSheet(title);
+        const state = store.getState();
+        const artifactId = state.dashboard.createDashboardArtifact(title);
+        state.artifacts.setCurrentArtifact(artifactId);
         return {
           llmResult: {
             success: true,
-            details: `Created dashboard sheet "${sheetId}".`,
-            data: {sheetId},
+            details: `Created dashboard artifact "${artifactId}".`,
+            data: {artifactId},
           },
         };
       },
     }),
+    create_dashboard_chart_from_template:
+      createDashboardChartTemplateTool(store),
     get_dashboard_vgplot: tool({
       description:
-        'Get the current vgplot JSON spec for a dashboard sheet. If sheetId is omitted, uses the current dashboard sheet.',
+        'Get the current vgplot JSON spec for a dashboard artifact. If artifactId is omitted, uses the current dashboard artifact.',
       inputSchema: DashboardGetVgPlotToolParameters,
       execute: async (params: DashboardGetVgPlotToolParameters) => {
         const state = store.getState();
-        const targetSheetId =
-          params.sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-        if (!targetSheetId) {
+        const targetArtifactId =
+          params.artifactId ?? state.dashboard.getCurrentDashboardArtifactId();
+        if (!targetArtifactId) {
           return {
             llmResult: {
               success: false,
               errorMessage:
-                'No dashboard sheet found. Create one with create_dashboard_sheet first.',
+                'No dashboard artifact found. Create one with create_dashboard_artifact first.',
             },
           };
         }
-        const sheet = state.cells.config.sheets[targetSheetId];
-        if (!sheet || sheet.type !== 'dashboard') {
+        const artifact = state.artifacts.getArtifact(targetArtifactId);
+        if (!artifact || artifact.type !== 'dashboard') {
           return {
             llmResult: {
               success: false,
-              errorMessage: `Sheet "${targetSheetId}" is not a dashboard sheet.`,
+              errorMessage: `Artifact "${targetArtifactId}" is not a dashboard artifact.`,
             },
           };
         }
-        state.dashboard.ensureSheetDashboard(targetSheetId);
-        const vgplot = state.dashboard.getSheetVgPlot(targetSheetId);
+        state.dashboard.ensureDashboardArtifact(targetArtifactId);
+        const vgplot = state.dashboard.getDashboardVgPlot(targetArtifactId);
         return {
           llmResult: {
             success: true,
-            details: `Loaded dashboard spec from "${targetSheetId}".`,
+            details: `Loaded dashboard spec from "${targetArtifactId}".`,
             data: {
-              sheetId: targetSheetId,
+              artifactId: targetArtifactId,
               vgplot,
             },
           },
@@ -111,36 +124,36 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
     }),
     set_dashboard_vgplot: tool({
       description:
-        'Set the vgplot JSON spec for a dashboard sheet. If sheetId is omitted, updates the current dashboard sheet (or creates one when allowed).',
+        'Set the vgplot JSON spec for a dashboard artifact. If artifactId is omitted, updates the current dashboard artifact (or creates one when allowed).',
       inputSchema: DashboardSetVgPlotToolParameters,
       execute: async (params: DashboardSetVgPlotToolParameters) => {
         const state = store.getState();
-        let targetSheetId =
-          params.sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-        if (!targetSheetId && params.createSheetIfMissing) {
-          targetSheetId = state.dashboard.createDashboardSheet();
+        let targetArtifactId =
+          params.artifactId ?? state.dashboard.getCurrentDashboardArtifactId();
+        if (!targetArtifactId && params.createArtifactIfMissing) {
+          targetArtifactId = state.dashboard.createDashboardArtifact();
         }
-        if (!targetSheetId) {
+        if (!targetArtifactId) {
           return {
             llmResult: {
               success: false,
               errorMessage:
-                'No dashboard sheet available. Set createSheetIfMissing=true or provide a sheetId.',
+                'No dashboard artifact available. Set createArtifactIfMissing=true or provide an artifactId.',
             },
           };
         }
 
         try {
           const vgplotString = toVgPlotSpecString(params.vgplot);
-          state.dashboard.setSheetVgPlot(targetSheetId, vgplotString);
-          state.cells.setCurrentSheet(targetSheetId);
+          state.dashboard.setDashboardVgPlot(targetArtifactId, vgplotString);
+          state.artifacts.setCurrentArtifact(targetArtifactId);
           return {
             llmResult: {
               success: true,
-              details: `Updated dashboard spec for "${targetSheetId}".`,
+              details: `Updated dashboard spec for "${targetArtifactId}".`,
               data: {
-                sheetId: targetSheetId,
-                vgplot: state.dashboard.getSheetVgPlot(targetSheetId),
+                artifactId: targetArtifactId,
+                vgplot: state.dashboard.getDashboardVgPlot(targetArtifactId),
               },
             },
           };

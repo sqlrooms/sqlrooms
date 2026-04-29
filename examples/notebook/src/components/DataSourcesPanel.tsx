@@ -4,7 +4,7 @@ import {useRoomStore, RoomPanelTypes} from '../store';
 import {toast} from '@sqlrooms/ui';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const DataSourcesPanel: FC = () => {
   const connector = useRoomStore((state) => state.db.connector);
@@ -13,7 +13,7 @@ export const DataSourcesPanel: FC = () => {
   );
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{

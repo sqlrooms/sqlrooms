@@ -1,7 +1,7 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
 import {roomStore} from './store';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const Room: FC = () => (
   <RoomShell roomStore={roomStore}>
@@ -11,7 +11,6 @@ export const Room: FC = () => (
       <ThemeSwitch />
     </RoomShell.SidebarContainer>
     <RoomShell.LayoutComposer />
-    <RoomShell.LoadingProgress />
     <RoomShell.LoadingProgress />
   </RoomShell>
 );

@@ -10,15 +10,15 @@ import {
   AccordionTrigger,
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
-import {FC} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import type {FC} from 'react';
+import {useRoomStore} from '../store';
 
 export const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel>
       {isRoomEmpty ? (
         <></>
       ) : (

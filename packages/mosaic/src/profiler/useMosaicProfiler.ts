@@ -12,14 +12,7 @@ import {
   type SetStateAction,
 } from 'react';
 import {useStore} from 'zustand';
-import {type MosaicSliceState, useStoreWithMosaic} from '../MosaicSlice';
-import type {
-  MosaicProfilerColumnState,
-  MosaicProfilerOptions,
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
-  UseMosaicProfilerReturn,
-} from './types';
+import {useStoreWithMosaic, type MosaicSliceState} from '../MosaicSlice';
 import {
   createProfilerStore,
   type ProfilerStore,
@@ -31,6 +24,13 @@ import {
   connectProfilerSummaryClients,
   loadProfilerSchema,
 } from './profilerController';
+import type {
+  MosaicProfilerColumnState,
+  MosaicProfilerOptions,
+  MosaicProfilerPaginationState,
+  MosaicProfilerSorting,
+  UseMosaicProfilerReturn,
+} from './types';
 import {
   buildProfilerBaseQuery,
   buildProfilerPageQuery,

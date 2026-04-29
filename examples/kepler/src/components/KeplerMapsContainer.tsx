@@ -1,3 +1,9 @@
+import {ArtifactTabs} from '@sqlrooms/artifacts';
+import {
+  KeplerImageExport,
+  KeplerProvider,
+  useKeplerStateActions,
+} from '@sqlrooms/kepler';
 import {
   Button,
   Dialog,
@@ -7,22 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  TabStrip,
 } from '@sqlrooms/ui';
-import {useRoomStore} from '../store';
 import {PencilIcon, Trash2Icon, UploadIcon} from 'lucide-react';
-import {FC, useCallback, useState} from 'react';
-import {
-  KeplerImageExport,
-  KeplerMapContainer,
-  KeplerPlotContainer,
-  KeplerProvider,
-  useKeplerStateActions,
-} from '@sqlrooms/kepler';
+import {FC, useCallback, useEffect, useState} from 'react';
+import {useRoomStore} from '../store';
 
-/**
- * Export image dialog content for a specific map.
- */
 const ExportImageDialogContent: FC<{mapId: string; fileName: string}> = ({
   mapId,
   fileName,
@@ -50,143 +45,154 @@ const ExportImageDialogContent: FC<{mapId: string; fileName: string}> = ({
 
 export const KeplerMapsContainer: FC = () => {
   const maps = useRoomStore((state) => state.kepler.config.maps);
-  const openTabs = useRoomStore((state) => state.kepler.config.openTabs);
-  const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
-  const setCurrentMapId = useRoomStore((state) => state.kepler.setCurrentMapId);
-  const createMap = useRoomStore((state) => state.kepler.createMap);
-  const renameMap = useRoomStore((state) => state.kepler.renameMap);
-  const deleteMap = useRoomStore((state) => state.kepler.deleteMap);
-  const closeMap = useRoomStore((state) => state.kepler.closeMap);
-  const setOpenTabs = useRoomStore((state) => state.kepler.setOpenTabs);
-
   const [mapToDelete, setMapToDelete] = useState<string | null>(null);
   const [mapToExport, setMapToExport] = useState<string | null>(null);
   const [mapToRename, setMapToRename] = useState<{
     id: string;
     name: string;
   } | null>(null);
+
+  const handleRenameRequest = useCallback((mapId: string, name: string) => {
+    setMapToRename({id: mapId, name});
+  }, []);
+
+  return (
+    <ArtifactTabs
+      types={['kepler-map']}
+      panelKey="artifact"
+      className="bg-muted items-center pt-1"
+      preventCloseLastTab
+      renderSearchItemActions={(tab, actions) => (
+        <>
+          <ArtifactTabs.SearchItemAction
+            icon={<PencilIcon className="h-3 w-3" />}
+            aria-label={`Rename ${tab.name}`}
+            onClick={() => handleRenameRequest(tab.id, tab.name)}
+          />
+          {actions.tabs.length > 1 && (
+            <ArtifactTabs.SearchItemAction
+              icon={<Trash2Icon className="h-3 w-3" />}
+              aria-label={`Delete ${tab.name}`}
+              onClick={() => setMapToDelete(tab.id)}
+            />
+          )}
+        </>
+      )}
+      renderTabMenu={(tab, actions) => (
+        <>
+          <ArtifactTabs.MenuItem onClick={() => setMapToExport(tab.id)}>
+            <UploadIcon className="mr-2 h-4 w-4" />
+            Export map
+          </ArtifactTabs.MenuItem>
+          <ArtifactTabs.MenuSeparator />
+          <ArtifactTabs.MenuItem
+            onClick={() => handleRenameRequest(tab.id, tab.name)}
+          >
+            <PencilIcon className="mr-2 h-4 w-4" />
+            Rename
+          </ArtifactTabs.MenuItem>
+          {actions.tabs.length > 1 && (
+            <>
+              <ArtifactTabs.MenuSeparator />
+              <ArtifactTabs.MenuItem
+                variant="destructive"
+                onClick={() => setMapToDelete(tab.id)}
+              >
+                <Trash2Icon className="mr-2 h-4 w-4" />
+                Delete map
+              </ArtifactTabs.MenuItem>
+            </>
+          )}
+        </>
+      )}
+      overlay={
+        <KeplerMapDialogs
+          mapToDelete={mapToDelete}
+          mapToExport={mapToExport}
+          mapToRename={mapToRename}
+          onClearDelete={() => setMapToDelete(null)}
+          onClearExport={() => setMapToExport(null)}
+          onClearRename={() => setMapToRename(null)}
+        />
+      }
+    >
+      <SyncCurrentKeplerMap />
+      <ArtifactTabs.SearchDropdown
+        sortSearchItems="recent"
+        getTabLastOpenedAt={(tab) =>
+          maps.find((map) => map.id === tab.id)?.lastOpenedAt
+        }
+      />
+      <ArtifactTabs.Tabs />
+      <ArtifactTabs.NewButton
+        artifactType="kepler-map"
+        aria-label="Create new map"
+      />
+    </ArtifactTabs>
+  );
+};
+
+function SyncCurrentKeplerMap() {
+  const {selectedTabId} = ArtifactTabs.useActions();
+  const setCurrentMapId = useRoomStore((state) => state.kepler.setCurrentMapId);
+
+  useEffect(() => {
+    if (selectedTabId) {
+      setCurrentMapId(selectedTabId);
+    }
+  }, [selectedTabId, setCurrentMapId]);
+
+  return null;
+}
+
+function KeplerMapDialogs({
+  mapToDelete,
+  mapToExport,
+  mapToRename,
+  onClearDelete,
+  onClearExport,
+  onClearRename,
+}: {
+  mapToDelete: string | null;
+  mapToExport: string | null;
+  mapToRename: {id: string; name: string} | null;
+  onClearDelete: () => void;
+  onClearExport: () => void;
+  onClearRename: () => void;
+}) {
+  const artifactTabs = ArtifactTabs.useActions();
   const [renameValue, setRenameValue] = useState('');
 
-  const handleCreateMap = () => {
-    const newMapId = createMap();
-    setCurrentMapId(newMapId);
-  };
+  useEffect(() => {
+    setRenameValue(mapToRename?.name ?? '');
+  }, [mapToRename]);
+
+  const mapToDeleteData = mapToDelete
+    ? artifactTabs.tabs.find((tab) => tab.id === mapToDelete)
+    : null;
+  const mapToExportData = mapToExport
+    ? artifactTabs.tabs.find((tab) => tab.id === mapToExport)
+    : null;
 
   const handleDeleteMap = useCallback(() => {
     if (mapToDelete) {
-      deleteMap(mapToDelete);
-      setMapToDelete(null);
+      artifactTabs.deleteArtifact(mapToDelete);
     }
-  }, [mapToDelete, deleteMap]);
-
-  const handleRenameRequest = useCallback(
-    (mapId: string) => {
-      const map = maps.find((m) => m.id === mapId);
-      if (map) {
-        setMapToRename({id: mapId, name: map.name});
-        setRenameValue(map.name);
-      }
-    },
-    [maps],
-  );
+    onClearDelete();
+  }, [artifactTabs, mapToDelete, onClearDelete]);
 
   const handleConfirmRename = useCallback(() => {
     if (mapToRename && renameValue.trim()) {
-      renameMap(mapToRename.id, renameValue.trim());
+      artifactTabs.renameArtifact(mapToRename.id, renameValue.trim());
     }
-    setMapToRename(null);
-  }, [mapToRename, renameValue, renameMap]);
-
-  const mapToDeleteData = mapToDelete
-    ? maps.find((m) => m.id === mapToDelete)
-    : null;
-  const mapToExportData = mapToExport
-    ? maps.find((m) => m.id === mapToExport)
-    : null;
+    onClearRename();
+  }, [artifactTabs, mapToRename, onClearRename, renameValue]);
 
   return (
     <>
-      <div className="flex h-full w-full flex-col">
-        <TabStrip
-          className="bg-muted items-center pt-1"
-          tabs={maps}
-          preventCloseLastTab
-          openTabs={openTabs}
-          onOpenTabsChange={setOpenTabs}
-          selectedTabId={currentMap?.id}
-          onSelect={setCurrentMapId}
-          onCreate={handleCreateMap}
-          onRename={renameMap}
-          onClose={closeMap}
-          renderSearchItemActions={(tab) => (
-            <>
-              <TabStrip.SearchItemAction
-                icon={<PencilIcon className="h-3 w-3" />}
-                aria-label={`Rename ${tab.name}`}
-                onClick={() => handleRenameRequest(tab.id)}
-              />
-              {maps.length > 1 && (
-                <TabStrip.SearchItemAction
-                  icon={<Trash2Icon className="h-3 w-3" />}
-                  aria-label={`Delete ${tab.name}`}
-                  onClick={() => setMapToDelete(tab.id)}
-                />
-              )}
-            </>
-          )}
-          renderTabMenu={(tab) => (
-            <>
-              <TabStrip.MenuItem onClick={() => setMapToExport(tab.id)}>
-                <UploadIcon className="mr-2 h-4 w-4" />
-                Export map
-              </TabStrip.MenuItem>
-              <TabStrip.MenuSeparator />
-              <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>
-                <PencilIcon className="mr-2 h-4 w-4" />
-                Rename
-              </TabStrip.MenuItem>
-              {maps.length > 1 && (
-                <>
-                  <TabStrip.MenuSeparator />
-                  <TabStrip.MenuItem
-                    variant="destructive"
-                    onClick={() => setMapToDelete(tab.id)}
-                  >
-                    <Trash2Icon className="mr-2 h-4 w-4" />
-                    Delete map
-                  </TabStrip.MenuItem>
-                </>
-              )}
-            </>
-          )}
-        >
-          <TabStrip.SearchDropdown
-            sortSearchItems="recent"
-            getTabLastOpenedAt={(tab) => tab.lastOpenedAt as number | undefined}
-          />
-          <TabStrip.Tabs />
-          <TabStrip.NewButton tooltip="Create new map" />
-        </TabStrip>
-
-        {/* Map content area */}
-        <div className="relative flex-1">
-          {maps.map((map) => (
-            <div
-              key={map.id}
-              className={`absolute inset-0 ${currentMap?.id === map.id ? '' : 'hidden'}`}
-            >
-              <KeplerMapContainer mapId={map.id} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <KeplerPlotContainer mapId={currentMap?.id || ''} logoComponent={null} />
-
-      {/* Delete confirmation dialog */}
       <Dialog
         open={mapToDelete !== null}
-        onOpenChange={(open) => !open && setMapToDelete(null)}
+        onOpenChange={(open) => !open && onClearDelete()}
       >
         <DialogContent>
           <DialogHeader>
@@ -197,7 +203,7 @@ export const KeplerMapsContainer: FC = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMapToDelete(null)}>
+            <Button variant="outline" onClick={onClearDelete}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteMap}>
@@ -207,10 +213,9 @@ export const KeplerMapsContainer: FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Export image dialog */}
       <Dialog
         open={mapToExport !== null}
-        onOpenChange={(open) => !open && setMapToExport(null)}
+        onOpenChange={(open) => !open && onClearExport()}
       >
         <DialogContent>
           <DialogHeader>
@@ -225,10 +230,9 @@ export const KeplerMapsContainer: FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Rename dialog */}
       <Dialog
         open={mapToRename !== null}
-        onOpenChange={(open) => !open && setMapToRename(null)}
+        onOpenChange={(open) => !open && onClearRename()}
       >
         <DialogContent>
           <DialogHeader>
@@ -247,7 +251,7 @@ export const KeplerMapsContainer: FC = () => {
             }}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMapToRename(null)}>
+            <Button variant="outline" onClick={onClearRename}>
               Cancel
             </Button>
             <Button
@@ -261,4 +265,4 @@ export const KeplerMapsContainer: FC = () => {
       </Dialog>
     </>
   );
-};
+}

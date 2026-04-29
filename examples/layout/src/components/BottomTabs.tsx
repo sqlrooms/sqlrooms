@@ -1,5 +1,5 @@
 import {TabsLayout} from '@sqlrooms/layout';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const BottomTabs: FC = () => (
   <>

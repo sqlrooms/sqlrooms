@@ -10,7 +10,7 @@ export const Room = () => {
     <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-cli-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>
         <RoomShell.SidebarContainer>
-          <RoomShell.TabButtons />
+          <RoomShell.TabButtons tabsId="left-sidebar" />
           <div className="flex-1" />
           <RoomShell.SidebarButton
             title="SQL Editor"

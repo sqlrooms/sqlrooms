@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

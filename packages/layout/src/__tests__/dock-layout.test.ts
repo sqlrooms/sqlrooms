@@ -6,6 +6,7 @@ describe('movePanel', () => {
     const input: LayoutNode = {
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'root',
@@ -19,14 +20,15 @@ describe('movePanel', () => {
     expect(result).toMatchObject({
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'root',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'b', defaultSize: '33.3333%'},
-          {type: 'panel', id: 'a', defaultSize: '33.3333%'},
-          {type: 'panel', id: 'c', defaultSize: '33.3333%'},
+          {type: 'panel', id: 'b', panel: 'b', defaultSize: '33.3333%'},
+          {type: 'panel', id: 'a', panel: 'a', defaultSize: '33.3333%'},
+          {type: 'panel', id: 'c', panel: 'c', defaultSize: '33.3333%'},
         ],
       },
     });
@@ -36,6 +38,7 @@ describe('movePanel', () => {
     const input: LayoutNode = {
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'root',
@@ -49,6 +52,7 @@ describe('movePanel', () => {
     expect(result).toMatchObject({
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'root',
@@ -58,8 +62,8 @@ describe('movePanel', () => {
             type: 'split',
             direction: 'column',
             children: [
-              {type: 'panel', id: 'b', defaultSize: '50%'},
-              {type: 'panel', id: 'a', defaultSize: '50%'},
+              {type: 'panel', id: 'b', panel: 'b', defaultSize: '50%'},
+              {type: 'panel', id: 'a', panel: 'a', defaultSize: '50%'},
             ],
           },
           'c',
@@ -72,6 +76,7 @@ describe('movePanel', () => {
     const input: LayoutNode = {
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         id: 'split-1',
@@ -85,13 +90,14 @@ describe('movePanel', () => {
     expect(result).toMatchObject({
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         id: 'split-1',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'right', defaultSize: '50%'},
-          {type: 'panel', id: 'left', defaultSize: '50%'},
+          {type: 'panel', id: 'right', panel: 'right', defaultSize: '50%'},
+          {type: 'panel', id: 'left', panel: 'left', defaultSize: '50%'},
         ],
       },
     });
@@ -101,6 +107,7 @@ describe('movePanel', () => {
     const input: LayoutNode = {
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         id: 'split-1',
@@ -114,13 +121,14 @@ describe('movePanel', () => {
     expect(result).toMatchObject({
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         id: 'split-1',
         direction: 'column',
         children: [
-          {type: 'panel', id: 'right', defaultSize: '50%'},
-          {type: 'panel', id: 'left', defaultSize: '50%'},
+          {type: 'panel', id: 'right', panel: 'right', defaultSize: '50%'},
+          {type: 'panel', id: 'left', panel: 'left', defaultSize: '50%'},
         ],
       },
     });
@@ -130,6 +138,7 @@ describe('movePanel', () => {
     const input: LayoutNode = {
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'root',
@@ -151,6 +160,7 @@ describe('movePanel', () => {
     expect(result).toMatchObject({
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'root',
@@ -162,8 +172,13 @@ describe('movePanel', () => {
             activeTabIndex: 1,
             children: ['alpha', 'gamma'],
           },
-          {type: 'panel', id: 'target', defaultSize: '33.3333%'},
-          {type: 'panel', id: 'beta', defaultSize: '33.3333%'},
+          {
+            type: 'panel',
+            id: 'target',
+            panel: 'target',
+            defaultSize: '33.3333%',
+          },
+          {type: 'panel', id: 'beta', panel: 'beta', defaultSize: '33.3333%'},
         ],
       },
     });
@@ -173,6 +188,7 @@ describe('movePanel', () => {
     const input: LayoutNode = {
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         id: 'split-1',
@@ -185,6 +201,7 @@ describe('movePanel', () => {
     expect(afterFirstMove).toMatchObject({
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         id: 'split-1',
@@ -195,8 +212,13 @@ describe('movePanel', () => {
             type: 'split',
             direction: 'row',
             children: [
-              {type: 'panel', id: 'second', defaultSize: '50%'},
-              {type: 'panel', id: 'third', defaultSize: '50%'},
+              {
+                type: 'panel',
+                id: 'second',
+                panel: 'second',
+                defaultSize: '50%',
+              },
+              {type: 'panel', id: 'third', panel: 'third', defaultSize: '50%'},
             ],
           },
         ],
@@ -213,6 +235,7 @@ describe('movePanel', () => {
     expect(afterSecondMove).toMatchObject({
       type: 'dock',
       id: 'dashboard',
+      panel: 'dashboard',
       root: {
         type: 'split',
         direction: 'row',
@@ -221,11 +244,16 @@ describe('movePanel', () => {
             type: 'split',
             direction: 'column',
             children: [
-              {type: 'panel', id: 'second', defaultSize: '50%'},
-              {type: 'panel', id: 'first', defaultSize: '50%'},
+              {
+                type: 'panel',
+                id: 'second',
+                panel: 'second',
+                defaultSize: '50%',
+              },
+              {type: 'panel', id: 'first', panel: 'first', defaultSize: '50%'},
             ],
           },
-          {type: 'panel', id: 'third'},
+          {type: 'panel', id: 'third', panel: 'third'},
         ],
       },
     });
@@ -237,11 +265,12 @@ describe('movePanel', () => {
       id: 'root',
       direction: 'row',
       children: [
-        {type: 'panel', id: 'sidebar'},
+        {type: 'panel', id: 'sidebar', panel: 'sidebar'},
         {
           type: 'dock',
           id: 'dashboard-1',
-          root: {type: 'panel', id: 'chart-1'},
+          panel: 'dashboard-1',
+          root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
         },
       ],
     };
@@ -259,12 +288,14 @@ describe('movePanel', () => {
         {
           type: 'dock',
           id: 'dashboard-1',
-          root: {type: 'panel', id: 'chart-1'},
+          panel: 'dashboard-1',
+          root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
         },
         {
           type: 'dock',
           id: 'dashboard-2',
-          root: {type: 'panel', id: 'chart-2'},
+          panel: 'dashboard-2',
+          root: {type: 'panel', id: 'chart-2', panel: 'chart-2'},
         },
       ],
     };
@@ -277,13 +308,14 @@ describe('movePanel', () => {
     const layout: LayoutNode = {
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'split-1',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'chart-1'},
-          {type: 'panel', id: 'chart-2'},
+          {type: 'panel', id: 'chart-1', panel: 'chart-1'},
+          {type: 'panel', id: 'chart-2', panel: 'chart-2'},
         ],
       },
     };
@@ -291,13 +323,14 @@ describe('movePanel', () => {
     expect(result).toMatchObject({
       type: 'dock',
       id: 'dashboard-1',
+      panel: 'dashboard-1',
       root: {
         type: 'split',
         id: 'split-1',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'chart-2', defaultSize: '50%'},
-          {type: 'panel', id: 'chart-1', defaultSize: '50%'},
+          {type: 'panel', id: 'chart-2', panel: 'chart-2', defaultSize: '50%'},
+          {type: 'panel', id: 'chart-1', panel: 'chart-1', defaultSize: '50%'},
         ],
       },
     });

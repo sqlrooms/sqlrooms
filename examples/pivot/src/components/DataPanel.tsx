@@ -3,8 +3,8 @@ import {TableStructurePanel} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {toast} from '@sqlrooms/ui';
-import {useRoomStore, RoomPanelTypes} from '../store';
-import {FC} from 'react';
+import {useRoomStore} from '../store';
+import type {FC} from 'react';
 
 export const DataPanel: FC = () => {
   const connector = useRoomStore((state) => state.db.connector);
@@ -13,7 +13,7 @@ export const DataPanel: FC = () => {
   );
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum.data}>
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{

@@ -26,23 +26,12 @@ describe('resolvePanelIdentity', () => {
     });
   });
 
-  test('returns id as panelId when panel property is missing', () => {
-    const node: LayoutNode = {
-      type: 'panel',
-      id: 'chart-1',
-    };
-    expect(resolvePanelIdentity(node)).toEqual({
-      panelId: 'chart-1',
-      meta: undefined,
-    });
-  });
-
   test('works with dock nodes with string panel', () => {
     const node: LayoutNode = {
       type: 'dock',
       id: 'dashboard-1',
       panel: 'dashboard',
-      root: {type: 'panel', id: 'chart-1'},
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
     };
     expect(resolvePanelIdentity(node)).toEqual({
       panelId: 'dashboard',
@@ -55,23 +44,11 @@ describe('resolvePanelIdentity', () => {
       type: 'dock',
       id: 'dashboard-1',
       panel: {key: 'dashboard', meta: {dashboardId: 'overview'}},
-      root: {type: 'panel', id: 'chart-1'},
+      root: {type: 'panel', id: 'chart-1', panel: 'chart-1'},
     };
     expect(resolvePanelIdentity(node)).toEqual({
       panelId: 'dashboard',
       meta: {dashboardId: 'overview'},
-    });
-  });
-
-  test('returns id for dock nodes without panel property', () => {
-    const node: LayoutNode = {
-      type: 'dock',
-      id: 'dashboard-1',
-      root: {type: 'panel', id: 'chart-1'},
-    };
-    expect(resolvePanelIdentity(node)).toEqual({
-      panelId: 'dashboard-1',
-      meta: undefined,
     });
   });
 
@@ -83,7 +60,7 @@ describe('resolvePanelIdentity', () => {
     });
   });
 
-  test('returns id for split nodes', () => {
+  test('returns null for split nodes without panel', () => {
     const node: LayoutNode = {
       type: 'split',
       id: 'split-1',
@@ -91,12 +68,12 @@ describe('resolvePanelIdentity', () => {
       children: [],
     };
     expect(resolvePanelIdentity(node)).toEqual({
-      panelId: 'split-1',
+      panelId: null,
       meta: undefined,
     });
   });
 
-  test('returns id for tabs nodes', () => {
+  test('returns null for tabs nodes without panel', () => {
     const node: LayoutNode = {
       type: 'tabs',
       id: 'tabs-1',
@@ -104,7 +81,7 @@ describe('resolvePanelIdentity', () => {
       children: [],
     };
     expect(resolvePanelIdentity(node)).toEqual({
-      panelId: 'tabs-1',
+      panelId: null,
       meta: undefined,
     });
   });

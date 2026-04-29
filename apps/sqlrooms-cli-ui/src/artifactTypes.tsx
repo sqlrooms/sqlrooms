@@ -1,46 +1,87 @@
-import {Canvas} from '@sqlrooms/canvas';
-import {SheetType} from '@sqlrooms/cells';
-import {RoomPanelComponent} from '@sqlrooms/layout';
-import {Notebook} from '@sqlrooms/notebook';
+import {
+  defineArtifactTypes,
+  type ArtifactTypeDefinition,
+} from '@sqlrooms/artifacts';
 import {
   AppWindow,
   BarChart3,
   FileText,
   LayoutDashboardIcon,
 } from 'lucide-react';
-import {AppBuilderSheet} from './workspace/AppBuilderSheet';
-import {DashboardSheet} from './workspace/DashboardSheet';
+import type {RoomState} from './store-types';
+import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
+import {CanvasArtifact} from './workspace/CanvasArtifact';
+import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
+import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 
-export type ArtifactTypeInfo = {
-  title: string;
-  addCommand: string;
-  icon: React.ComponentType<{className?: string}>;
-  component: RoomPanelComponent;
-};
+export const CLI_ARTIFACT_TYPES = [
+  'dashboard',
+  'notebook',
+  'canvas',
+  'app',
+] as const;
+export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
-export const ARTIFACT_TYPES: Record<SheetType, ArtifactTypeInfo> = {
+export const ARTIFACT_TYPES = defineArtifactTypes({
+  dashboard: {
+    label: 'Dashboard',
+    defaultTitle: 'Dashboard',
+    icon: BarChart3,
+    component: DashboardArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().dashboard.ensureDashboardArtifact(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().dashboard.ensureDashboardArtifact(artifactId);
+    },
+    onClose: ({artifactId, store}) => {
+      store.getState().mosaicDashboard.evictDashboardRuntime(artifactId, {
+        resetSelection: true,
+      });
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().mosaicDashboard.removeDashboard(artifactId);
+    },
+  },
   notebook: {
-    title: 'Notebook',
-    addCommand: 'notebook.create-sheet',
+    label: 'Notebook',
+    defaultTitle: 'Notebook',
     icon: FileText,
-    component: Notebook,
+    component: NotebookArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().notebook.ensureArtifact(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().notebook.ensureArtifact(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().notebook.removeArtifact(artifactId);
+    },
   },
   canvas: {
-    title: 'Canvas',
-    addCommand: 'canvas.create-sheet',
+    label: 'Canvas',
+    defaultTitle: 'Canvas',
     icon: LayoutDashboardIcon,
-    component: Canvas,
+    component: CanvasArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().canvas.ensureArtifact(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().canvas.ensureArtifact(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().canvas.removeArtifact(artifactId);
+    },
   },
   app: {
-    title: 'App',
-    addCommand: 'app.create-sheet',
+    label: 'App',
+    defaultTitle: 'App',
     icon: AppWindow,
-    component: AppBuilderSheet,
+    component: AppBuilderArtifact,
+    onDelete: ({artifactId, store}) => {
+      store.getState().appProject.removeArtifactApp(artifactId);
+    },
   },
-  dashboard: {
-    title: 'Dashboard',
-    addCommand: 'dashboard.create-sheet',
-    icon: BarChart3,
-    component: DashboardSheet,
-  },
-};
+} satisfies Record<CliArtifactType, ArtifactTypeDefinition<RoomState>>);
+
+export type ArtifactTypeInfo = (typeof ARTIFACT_TYPES)[CliArtifactType];

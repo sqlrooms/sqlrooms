@@ -1,17 +1,19 @@
-import {useGetPanel, useLayoutNodeContext} from '@sqlrooms/layout';
+import {
+  getLayoutNodeId,
+  useGetPanel,
+  useLayoutNodeContext,
+} from '@sqlrooms/layout';
 import {XIcon} from 'lucide-react';
 import {FC, PropsWithChildren} from 'react';
 import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {PanelHeaderButton} from './RoomHeaderButton';
 
 type RoomPanelHeaderProps = PropsWithChildren<{
-  panelKey: string;
   showHeader?: boolean;
 }>;
 
 const RoomPanelHeader: FC<RoomPanelHeaderProps> = ({
   showHeader = true,
-  panelKey,
   children,
 }) => {
   const layoutContext = useLayoutNodeContext();
@@ -26,7 +28,8 @@ const RoomPanelHeader: FC<RoomPanelHeaderProps> = ({
     (state) => state.layout.toggleCollapsed,
   );
 
-  const ancestorTabs = findAncestorOfType(panelKey, 'tabs');
+  const nodeId = getLayoutNodeId(layoutContext.node);
+  const ancestorTabs = findAncestorOfType(nodeId, 'tabs');
 
   return (
     <div className="flex">

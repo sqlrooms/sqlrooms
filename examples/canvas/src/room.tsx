@@ -2,7 +2,7 @@ import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
 import {InputApiKey} from './components/InputApiKey';
 import {roomStore} from './store';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const Room: FC = () => {
   return (

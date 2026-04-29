@@ -14,9 +14,11 @@ describe('layout-tree', () => {
       const dockNode: LayoutDockNode = {
         type: 'dock',
         id: 'dock-1',
+        panel: 'dock-1',
         root: {
           type: 'panel',
           id: 'panel-1',
+          panel: 'panel-1',
         },
       };
 
@@ -30,20 +32,25 @@ describe('layout-tree', () => {
       const dockNode: LayoutDockNode = {
         type: 'dock',
         id: 'dock-1',
+        panel: 'dock-1',
         root: {
           type: 'split',
           id: 'split-1',
           direction: 'row',
           children: [
-            {type: 'panel', id: 'panel-1'},
-            {type: 'panel', id: 'panel-2'},
+            {type: 'panel', id: 'panel-1', panel: 'panel-1'},
+            {type: 'panel', id: 'panel-2', panel: 'panel-2'},
           ],
         },
       };
 
       const result = findNodeById(dockNode, 'panel-2');
       expect(result).toBeDefined();
-      expect(result?.node).toEqual({type: 'panel', id: 'panel-2'});
+      expect(result?.node).toEqual({
+        type: 'panel',
+        id: 'panel-2',
+        panel: 'panel-2',
+      });
       expect(
         result?.ancestors.map((n) => (typeof n === 'string' ? n : n.id)),
       ).toEqual(['dock-1', 'split-1']);
@@ -55,13 +62,15 @@ describe('layout-tree', () => {
         id: 'root-split',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'left-panel'},
+          {type: 'panel', id: 'left-panel', panel: 'left-panel'},
           {
             type: 'dock',
             id: 'dock-1',
+            panel: 'dock-1',
             root: {
               type: 'panel',
               id: 'docked-panel',
+              panel: 'docked-panel',
             },
           },
         ],
@@ -69,7 +78,11 @@ describe('layout-tree', () => {
 
       const result = findNodeById(layout, 'docked-panel');
       expect(result).toBeDefined();
-      expect(result?.node).toEqual({type: 'panel', id: 'docked-panel'});
+      expect(result?.node).toEqual({
+        type: 'panel',
+        id: 'docked-panel',
+        panel: 'docked-panel',
+      });
       expect(
         result?.ancestors.map((n) => (typeof n === 'string' ? n : n.id)),
       ).toEqual(['root-split', 'dock-1']);
@@ -81,13 +94,14 @@ describe('layout-tree', () => {
       const dockNode: LayoutDockNode = {
         type: 'dock',
         id: 'dock-1',
+        panel: 'dock-1',
         root: {
           type: 'tabs',
           id: 'tabs-1',
           activeTabIndex: 0,
           children: [
-            {type: 'panel', id: 'panel-1'},
-            {type: 'panel', id: 'panel-2'},
+            {type: 'panel', id: 'panel-1', panel: 'panel-1'},
+            {type: 'panel', id: 'panel-2', panel: 'panel-2'},
           ],
         },
       };
@@ -107,21 +121,25 @@ describe('layout-tree', () => {
         id: 'root-split',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'regular-panel'},
+          {type: 'panel', id: 'regular-panel', panel: 'regular-panel'},
           {
             type: 'dock',
             id: 'dock-1',
+            panel: 'dock-1',
             root: {
               type: 'panel',
               id: 'docked-panel-1',
+              panel: 'docked-panel-1',
             },
           },
           {
             type: 'dock',
             id: 'dock-2',
+            panel: 'dock-2',
             root: {
               type: 'panel',
               id: 'docked-panel-2',
+              panel: 'docked-panel-2',
             },
           },
         ],
@@ -145,13 +163,14 @@ describe('layout-tree', () => {
       const dockNode: LayoutDockNode = {
         type: 'dock',
         id: 'dock-1',
+        panel: 'dock-1',
         root: {
           type: 'split',
           id: 'split-1',
           direction: 'row',
           children: [
-            {type: 'panel', id: 'panel-1'},
-            {type: 'panel', id: 'panel-2'},
+            {type: 'panel', id: 'panel-1', panel: 'panel-1'},
+            {type: 'panel', id: 'panel-2', panel: 'panel-2'},
           ],
         },
       };
@@ -162,9 +181,11 @@ describe('layout-tree', () => {
         expect(result.nextTree).toMatchObject({
           type: 'dock',
           id: 'dock-1',
+          panel: 'dock-1',
           root: {
             type: 'panel',
             id: 'panel-2',
+            panel: 'panel-2',
           },
         });
       }
@@ -176,13 +197,15 @@ describe('layout-tree', () => {
         id: 'root-split',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'panel-1'},
+          {type: 'panel', id: 'panel-1', panel: 'panel-1'},
           {
             type: 'dock',
             id: 'dock-1',
+            panel: 'dock-1',
             root: {
               type: 'panel',
               id: 'panel-2',
+              panel: 'panel-2',
             },
           },
         ],
@@ -194,6 +217,7 @@ describe('layout-tree', () => {
         expect(result.nextTree).toMatchObject({
           type: 'panel',
           id: 'panel-1',
+          panel: 'panel-1',
         });
       }
     });
@@ -206,17 +230,18 @@ describe('layout-tree', () => {
         id: 'root-split',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'panel-1'},
+          {type: 'panel', id: 'panel-1', panel: 'panel-1'},
           {
             type: 'dock',
             id: 'dock-1',
+            panel: 'dock-1',
             root: {
               type: 'tabs',
               id: 'tabs-1',
               activeTabIndex: 0,
               children: [
-                {type: 'panel', id: 'docked-panel-1'},
-                {type: 'panel', id: 'docked-panel-2'},
+                {type: 'panel', id: 'docked-panel-1', panel: 'docked-panel-1'},
+                {type: 'panel', id: 'docked-panel-2', panel: 'docked-panel-2'},
               ],
             },
           },
@@ -234,7 +259,8 @@ describe('layout-tree', () => {
       const layout: LayoutNode = {
         type: 'dock',
         id: 'dock-1',
-        root: {type: 'panel', id: 'panel-1'},
+        panel: 'dock-1',
+        root: {type: 'panel', id: 'panel-1', panel: 'panel-1'},
       };
 
       const result = findNearestDockAncestor(layout, 'non-existent');
@@ -245,14 +271,16 @@ describe('layout-tree', () => {
       const layout: LayoutNode = {
         type: 'dock',
         id: 'dock-1',
-        root: {type: 'panel', id: 'panel-1'},
+        panel: 'dock-1',
+        root: {type: 'panel', id: 'panel-1', panel: 'panel-1'},
       };
 
       const result = findNearestDockAncestor(layout, 'panel-1');
       expect(result).toEqual({
         type: 'dock',
         id: 'dock-1',
-        root: {type: 'panel', id: 'panel-1'},
+        panel: 'dock-1',
+        root: {type: 'panel', id: 'panel-1', panel: 'panel-1'},
       });
     });
 
@@ -260,6 +288,7 @@ describe('layout-tree', () => {
       const layout: LayoutNode = {
         type: 'dock',
         id: 'dock-1',
+        panel: 'dock-1',
         root: {
           type: 'split',
           id: 'split-1',
@@ -269,7 +298,7 @@ describe('layout-tree', () => {
               type: 'tabs',
               id: 'tabs-1',
               activeTabIndex: 0,
-              children: [{type: 'panel', id: 'panel-1'}],
+              children: [{type: 'panel', id: 'panel-1', panel: 'panel-1'}],
             },
           ],
         },
@@ -279,6 +308,7 @@ describe('layout-tree', () => {
       expect(result).toEqual({
         type: 'dock',
         id: 'dock-1',
+        panel: 'dock-1',
         root: layout.root,
       });
     });
@@ -289,11 +319,12 @@ describe('layout-tree', () => {
         id: 'root-split',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'panel-1'},
+          {type: 'panel', id: 'panel-1', panel: 'panel-1'},
           {
             type: 'dock',
             id: 'dock-1',
-            root: {type: 'panel', id: 'panel-2'},
+            panel: 'dock-1',
+            root: {type: 'panel', id: 'panel-2', panel: 'panel-2'},
           },
         ],
       };
@@ -306,7 +337,8 @@ describe('layout-tree', () => {
       const layout: LayoutNode = {
         type: 'dock',
         id: 'dock-1',
-        root: {type: 'panel', id: 'panel-1'},
+        panel: 'dock-1',
+        root: {type: 'panel', id: 'panel-1', panel: 'panel-1'},
       };
 
       const result = findNearestDockAncestor(layout, 'dock-1');
@@ -319,7 +351,8 @@ describe('layout-tree', () => {
       const layout: LayoutNode = {
         type: 'dock',
         id: 'dock-1',
-        root: {type: 'panel', id: 'panel-1'},
+        panel: 'dock-1',
+        root: {type: 'panel', id: 'panel-1', panel: 'panel-1'},
       };
 
       expect(isDockablePanel(layout, 'panel-1')).toBe(true);
@@ -331,11 +364,12 @@ describe('layout-tree', () => {
         id: 'root-split',
         direction: 'row',
         children: [
-          {type: 'panel', id: 'panel-1'},
+          {type: 'panel', id: 'panel-1', panel: 'panel-1'},
           {
             type: 'dock',
             id: 'dock-1',
-            root: {type: 'panel', id: 'panel-2'},
+            panel: 'dock-1',
+            root: {type: 'panel', id: 'panel-2', panel: 'panel-2'},
           },
         ],
       };
@@ -347,7 +381,8 @@ describe('layout-tree', () => {
       const layout: LayoutNode = {
         type: 'dock',
         id: 'dock-1',
-        root: {type: 'panel', id: 'panel-1'},
+        panel: 'dock-1',
+        root: {type: 'panel', id: 'panel-1', panel: 'panel-1'},
       };
 
       expect(isDockablePanel(layout, 'non-existent')).toBe(false);

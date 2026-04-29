@@ -39,6 +39,11 @@
         "src/index.{ts,tsx}"
       ]
     },
+    "packages/artifacts": {
+      "ignoreDependencies": [
+        "ts-jest"
+      ]
+    },
     "packages/preset-jest": {
       "entry": [
         "*.js"

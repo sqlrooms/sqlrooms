@@ -5,7 +5,7 @@ import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 const Room: FC = () => {
   const sqlEditor = useDisclosure();

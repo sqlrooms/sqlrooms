@@ -23,7 +23,7 @@ npm install @sqlrooms/layout
 ## Store usage
 
 ```tsx
-import {LayoutSliceState, MAIN_VIEW, createLayoutSlice} from '@sqlrooms/layout';
+import {LayoutSliceState, createLayoutSlice} from '@sqlrooms/layout';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
@@ -47,7 +47,10 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
       config: {
         type: 'split',
         direction: 'row',
-        children: [{type: 'panel', id: 'data', defaultSize: '30%'}, MAIN_VIEW],
+        children: [
+          {type: 'panel', id: 'data', defaultSize: '30%'},
+          {type: 'panel', id: 'main', defaultSize: '70%'},
+        ],
       },
       panels: {
         data: {
@@ -90,11 +93,9 @@ Named `tabs` nodes (with an `id`) act as **areas** that can be managed programma
 import {Button} from '@sqlrooms/ui';
 
 function PanelButtons() {
-  const setActivePanel = useRoomStore((state) => state.layout.setActivePanel);
-  const addPanelToArea = useRoomStore((state) => state.layout.addPanelToArea);
-  const setAreaCollapsed = useRoomStore(
-    (state) => state.layout.setAreaCollapsed,
-  );
+  const setActiveTab = useRoomStore((state) => state.layout.setActiveTab);
+  const addTab = useRoomStore((state) => state.layout.addTab);
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
 
   return (
     <div className="flex gap-2">

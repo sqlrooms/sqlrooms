@@ -1,7 +1,7 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {PanelBottomCloseIcon, PanelBottomOpenIcon} from 'lucide-react';
 import {useRoomStore} from '../store';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 export const CollapseBottomButton: FC = () => {
   const isCollapsed = useRoomStore((s) => s.layout.isCollapsed('bottom'));

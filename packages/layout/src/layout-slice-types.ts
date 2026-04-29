@@ -36,8 +36,12 @@ export type LayoutSliceState = {
     setActiveTab: (tabsId: string, tabId: string) => void;
     /** Add a tab to a tabs node */
     addTab: (tabsId: string, tabIdOrNode: string | LayoutNode) => void;
-    /** Remove (close) a tab from a tabs node */
+    /** Remove (close/hide) a tab from a tabs node */
     removeTab: (tabsId: string, tabId: string) => void;
+    /** Permanently delete a tab from a tabs node */
+    deleteTab: (tabsId: string, tabId: string) => void;
+    /** Reorder visible tabs within a tabs node */
+    reorderTabs: (tabsId: string, tabIds: string[]) => void;
     /** Collapse or expand a collapsible node */
     setCollapsed: (id: string, collapsed: boolean) => void;
     /** Toggle collapse state of a collapsible node */
