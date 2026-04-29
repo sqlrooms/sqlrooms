@@ -1,13 +1,17 @@
 import {
+  LayoutConfig,
   LayoutGridItem,
   LayoutGridNode,
   LayoutNode,
+  isLayoutGridNode,
   isLayoutNodeKey,
 } from '@sqlrooms/layout-config';
-import {FC, Ref, useMemo} from 'react';
+import {FC, Ref, useCallback, useMemo} from 'react';
 import {Responsive, WidthProvider} from 'react-grid-layout';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
+import {useStoreWithLayout} from '../../LayoutSlice';
 import {ParentDirection} from '../../layout-base-types';
+import {findNodeById} from '../../layout-tree';
 import {LayoutPath} from '../../types';
 import {useRenderNode} from '../RenderNodeContext';
 import {RendererSwitcher} from '../RendererSwitcher';
@@ -97,6 +101,8 @@ const GRID_LAYOUT_STYLES = `
 }
 `;
 
+type GridLayouts = NonNullable<LayoutGridNode['layouts']>;
+
 type RootProps = {
   node: LayoutGridNode;
   path: LayoutPath;
@@ -140,9 +146,41 @@ function renderResizeHandle(axis: string, ref: Ref<HTMLElement>) {
   );
 }
 
+function normalizeLayoutItem(item: LayoutGridItem): LayoutGridItem {
+  const normalized: LayoutGridItem = {
+    i: item.i,
+    x: item.x,
+    y: item.y,
+    w: item.w,
+    h: item.h,
+  };
+
+  if (item.minW != null) normalized.minW = item.minW;
+  if (item.maxW != null) normalized.maxW = item.maxW;
+  if (item.minH != null) normalized.minH = item.minH;
+  if (item.maxH != null) normalized.maxH = item.maxH;
+  if (item.static != null) normalized.static = item.static;
+  if (item.isDraggable != null) normalized.isDraggable = item.isDraggable;
+  if (item.isResizable != null) normalized.isResizable = item.isResizable;
+  if (item.resizeHandles != null) normalized.resizeHandles = item.resizeHandles;
+
+  return normalized;
+}
+
+function normalizeLayouts(layouts: GridLayouts): GridLayouts {
+  return Object.fromEntries(
+    Object.entries(layouts).map(([breakpoint, layout]) => [
+      breakpoint,
+      layout.map((item) => normalizeLayoutItem(item)),
+    ]),
+  );
+}
+
 const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const renderNode = useRenderNode();
   const panelInfo = useGetPanel(node);
+  const layoutConfig = useStoreWithLayout((state) => state.layout.config);
+  const setLayoutConfig = useStoreWithLayout((state) => state.layout.setConfig);
 
   const layouts = useMemo(() => {
     if (node.layouts) return node.layouts;
@@ -154,6 +192,31 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const cols = useMemo(
     () => getResponsiveCols(node.cols, breakpoints),
     [breakpoints, node.cols],
+  );
+  const handleLayoutChange = useCallback(
+    (allLayouts: GridLayouts) => {
+      if (!layoutConfig) {
+        return;
+      }
+
+      const normalizedLayouts = normalizeLayouts(allLayouts);
+      if (
+        JSON.stringify(node.layouts ?? {}) ===
+        JSON.stringify(normalizedLayouts)
+      ) {
+        return;
+      }
+
+      const nextConfig = JSON.parse(JSON.stringify(layoutConfig)) as LayoutConfig;
+      const result = findNodeById(nextConfig, node.id);
+      if (!result || !isLayoutGridNode(result.node)) {
+        return;
+      }
+
+      result.node.layouts = normalizedLayouts;
+      setLayoutConfig(nextConfig);
+    },
+    [layoutConfig, node.id, node.layouts, setLayoutConfig],
   );
 
   const defaultComponent = (
@@ -184,6 +247,9 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           }
           resizeHandles={node.resizeHandles ?? ['e', 's']}
           resizeHandle={renderResizeHandle}
+          onLayoutChange={(_, allLayouts) =>
+            handleLayoutChange(allLayouts as GridLayouts)
+          }
         >
           {node.children.map((child) => {
             const childId = isLayoutNodeKey(child) ? child : child.id;
