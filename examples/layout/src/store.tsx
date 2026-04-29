@@ -47,6 +47,27 @@ function generateChartId(): string {
   return `chart-${createId()}`;
 }
 
+function getDashboardTitle(meta?: Record<string, unknown>): string {
+  const layoutType =
+    typeof meta?.layoutType === 'string'
+      ? meta.layoutType
+      : meta?.dashboardId === 'growth-grid'
+        ? 'grid'
+        : meta?.dashboardId === 'overview'
+          ? 'dock'
+          : null;
+
+  if (layoutType === 'grid') {
+    return 'Grid layout';
+  }
+
+  if (layoutType === 'dock') {
+    return 'Dock layout';
+  }
+
+  return `Dashboard ${meta?.dashboardId ?? ''}`;
+}
+
 function getLayoutNodeKey(node: LayoutNode): string {
   return isLayoutNodeKey(node) ? node : node.id;
 }
@@ -89,7 +110,7 @@ function createDashboardNode(
   return {
     type: 'dock',
     id: dashboardId,
-    panel: {key: 'dashboard', meta: {dashboardId}},
+    panel: {key: 'dashboard', meta: {dashboardId, layoutType: 'dock'}},
     root: {
       type: 'split',
       id: `${dashboardId}-root`,
@@ -106,7 +127,7 @@ function createDashboardGridNode(
   return {
     type: 'grid',
     id: dashboardId,
-    panel: {key: 'dashboard', meta: {dashboardId}},
+    panel: {key: 'dashboard', meta: {dashboardId, layoutType: 'grid'}},
     cols: 12,
     rowHeight: 220,
     margin: [12, 12],
@@ -170,7 +191,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                     panel: RoomPanelTypes.enum.dashboards,
                     children: [
                       createDashboardNode(
-                        'overview',
+                        'dock',
                         [
                           {
                             type: 'split',
@@ -233,7 +254,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                         ],
                         'row',
                       ),
-                      createDashboardGridNode('growth-grid', [
+                      createDashboardGridNode('grid', [
                         {
                           type: 'panel',
                           id: 'growth-grid-sessions',
@@ -292,7 +313,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           panels: {
             dashboard: (ctx) => ({
               icon: BarChart3Icon,
-              title: `Dashboard ${ctx.meta?.dashboardId ?? ''}`,
+              title: getDashboardTitle(ctx.meta),
             }),
             chart: (ctx) => ({
               icon: BarChart3Icon,

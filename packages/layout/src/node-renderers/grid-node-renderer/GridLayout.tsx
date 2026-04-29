@@ -27,6 +27,14 @@ const DEFAULT_COLS = {lg: 12, md: 10, sm: 6, xs: 4, xxs: 2};
 const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item {
   overflow: visible;
+  transition: none;
+}
+
+.sqlrooms-grid-layout .react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.18);
+  border: 1px solid hsl(var(--primary) / 0.35);
+  opacity: 1;
+  transition: none;
 }
 
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle {
