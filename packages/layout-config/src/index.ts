@@ -11,6 +11,7 @@ export {
   LayoutSplitNode,
   LayoutTabsNode,
   LayoutDockNode,
+  LayoutGridNode,
   LayoutNode,
   LayoutConfig,
   isLayoutNodeKey,
@@ -18,11 +19,13 @@ export {
   isLayoutSplitNode,
   isLayoutTabsNode,
   isLayoutDockNode,
+  isLayoutGridNode,
   createDefaultLayout,
   LayoutNodeSize,
 } from './LayoutConfig';
 
 export type {PanelIdentity} from './LayoutConfig';
+export type {LayoutGridItem} from './LayoutConfig';
 
 export type {LayoutDirection} from './common';
 

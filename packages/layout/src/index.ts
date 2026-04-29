@@ -53,11 +53,13 @@ export {
   isLayoutPanelNode,
   isLayoutTabsNode,
   isLayoutDockNode,
+  isLayoutGridNode,
   isLayoutSplitNode,
   LayoutDockNode,
   LayoutConfig,
   LayoutNode,
   LayoutNodeKey,
+  LayoutGridNode,
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
@@ -65,6 +67,7 @@ export {
 } from '@sqlrooms/layout-config';
 
 export type {LayoutDirection} from '@sqlrooms/layout-config';
+export type {LayoutGridItem} from '@sqlrooms/layout-config';
 
 // Panel resolution utilities
 export {resolvePanelDefinition} from './resolvePanelDefinition';
@@ -77,12 +80,14 @@ export {
   getLayoutNodeContextValue,
   LayoutNodeProvider,
   useDockNodeContext,
+  useGridNodeContext,
   useLayoutNodeContext,
   useSplitNodeContext,
   useTabsNodeContext,
 } from './LayoutNodeContext';
 export type {
   LayoutNodeContextDock,
+  LayoutNodeContextGrid,
   LayoutNodeContextLeaf,
   LayoutNodeContextPanel,
   LayoutNodeContextSplit,
@@ -96,3 +101,4 @@ export {useLeafLayoutPanelDraggable} from './node-renderers/leaf-node-renderer/L
 export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
 export {DockLayout} from './node-renderers/dock-node-renderer/DockLayout';
+export {GridLayout} from './node-renderers/grid-node-renderer/GridLayout';

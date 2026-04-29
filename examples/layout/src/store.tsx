@@ -26,6 +26,7 @@ import {SchemaPanel} from './components/SchemaPanel';
 import {
   findNodeById,
   isLayoutDockNode,
+  LayoutGridNode,
   isLayoutSplitNode,
   isLayoutNodeKey,
   LayoutDockNode,
@@ -59,6 +60,32 @@ function createDashboardNode(
       id: `${dashboardId}-root`,
       direction,
       children,
+    },
+  };
+}
+
+function createDashboardGridNode(
+  dashboardId: string,
+  children: LayoutNode[],
+): LayoutGridNode {
+  return {
+    type: 'grid',
+    id: dashboardId,
+    panel: {key: 'dashboard', meta: {dashboardId}},
+    cols: 12,
+    rowHeight: 220,
+    margin: [12, 12],
+    compactType: 'vertical',
+    resizeHandles: ['e', 's'],
+    children,
+    layouts: {
+      lg: children.map((child, index) => ({
+        i: isLayoutNodeKey(child) ? child : child.id,
+        x: (index * 6) % 12,
+        y: Math.floor(index / 2) * 2,
+        w: 6,
+        h: 2,
+      })),
     },
   };
 }
@@ -171,33 +198,30 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                         ],
                         'row',
                       ),
-                      createDashboardNode('growth', [
+                      createDashboardGridNode('growth-grid', [
                         {
                           type: 'panel',
-                          id: 'foobar',
-                          panel: {key: 'chart', meta: {chartId: 'foobar'}},
-                          defaultSize: '60%',
-                          minSize: 200,
+                          id: 'growth-grid-sessions',
+                          panel: {
+                            key: 'chart',
+                            meta: {chartId: 'growth-grid-sessions'},
+                          },
                         },
                         {
                           type: 'panel',
-                          id: 'growth-sessions-2',
+                          id: 'growth-grid-retention',
                           panel: {
                             key: 'chart',
-                            meta: {chartId: 'growth-sessions-2'},
+                            meta: {chartId: 'growth-grid-retention'},
                           },
-                          defaultSize: '60%',
-                          minSize: 200,
                         },
                         {
                           type: 'panel',
-                          id: 'growth-conversions',
+                          id: 'growth-grid-conversions',
                           panel: {
                             key: 'chart',
-                            meta: {chartId: 'growth-conversions'},
+                            meta: {chartId: 'growth-grid-conversions'},
                           },
-                          defaultSize: '40%',
-                          minSize: 200,
                         },
                       ]),
                     ],

@@ -2,11 +2,13 @@ import {
   isLayoutDockNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
+  isLayoutGridNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
   LayoutDockNode,
   LayoutNode,
   LayoutNodeKey,
+  LayoutGridNode,
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
@@ -34,6 +36,12 @@ export type LayoutNodeContextDock = {
   path: LayoutPath;
   parentDirection?: ParentDirection;
 };
+export type LayoutNodeContextGrid = {
+  containerType: 'grid';
+  node: LayoutGridNode;
+  path: LayoutPath;
+  parentDirection?: ParentDirection;
+};
 
 export type LayoutNodeContextPanel = {
   containerType: 'panel';
@@ -51,6 +59,7 @@ export type LayoutNodeContextValue =
   | LayoutNodeContextTabs
   | LayoutNodeContextSplit
   | LayoutNodeContextDock
+  | LayoutNodeContextGrid
   | LayoutNodeContextPanel
   | LayoutNodeContextLeaf;
 
@@ -107,6 +116,15 @@ export function useDockNodeContext(): LayoutNodeContextDock {
   }
   return context;
 }
+export function useGridNodeContext(): LayoutNodeContextGrid {
+  const context = useLayoutNodeContext();
+  if (context.containerType !== 'grid') {
+    throw new Error(
+      `useGridNodeContext expected containerType "grid", got "${context.containerType}"`,
+    );
+  }
+  return context;
+}
 
 export function getLayoutNodeContextValue(
   node: LayoutNode,
@@ -127,6 +145,9 @@ export function getLayoutNodeContextValue(
 
   if (isLayoutDockNode(node)) {
     return {containerType: 'dock', node, path, parentDirection};
+  }
+  if (isLayoutGridNode(node)) {
+    return {containerType: 'grid', node, path, parentDirection};
   }
 
   throw new Error(`Unsupported node type: ${JSON.stringify(node)}`);

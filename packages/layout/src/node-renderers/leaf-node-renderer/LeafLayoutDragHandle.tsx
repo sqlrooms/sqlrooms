@@ -12,7 +12,12 @@ export const LeafLayoutDragHandle: FC<LeafLayoutDragHandleProps> = ({
   const {attributes, listeners} = useLeafLayoutPanelDraggable();
 
   return (
-    <div className={className} {...attributes} {...listeners}>
+    <div
+      className={className}
+      data-layout-drag-handle="true"
+      {...attributes}
+      {...listeners}
+    >
       {children}
     </div>
   );

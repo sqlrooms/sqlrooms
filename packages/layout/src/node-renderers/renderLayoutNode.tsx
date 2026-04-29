@@ -4,6 +4,7 @@ import {
   isLayoutSplitNode,
   isLayoutTabsNode,
   isLayoutDockNode,
+  isLayoutGridNode,
 } from '@sqlrooms/layout-config';
 import {lazy, ReactElement, Suspense} from 'react';
 import type {NodeRenderProps} from './types';
@@ -32,6 +33,11 @@ const DockNodeRenderer = lazy(() =>
     default: m.DockLayout.Root,
   })),
 );
+const GridNodeRenderer = lazy(() =>
+  import('./grid-node-renderer/GridLayout').then((m) => ({
+    default: m.GridLayout.Root,
+  })),
+);
 
 /**
  * Recursively renders a layout node.
@@ -50,6 +56,13 @@ export const renderLayoutNode = (props: NodeRenderProps): ReactElement => {
       )}
       {isLayoutDockNode(node) && (
         <DockNodeRenderer
+          node={node}
+          path={path}
+          parentDirection={parentDirection}
+        />
+      )}
+      {isLayoutGridNode(node) && (
+        <GridNodeRenderer
           node={node}
           path={path}
           parentDirection={parentDirection}
