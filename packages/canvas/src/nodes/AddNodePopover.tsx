@@ -11,21 +11,21 @@ import {useStoreWithCanvas} from '../CanvasSlice';
 
 export const AddNodePopover: FC<
   PropsWithChildren<{
+    artifactId: string;
     className?: string;
     parentId?: string;
   }>
-> = ({className, parentId, children}) => {
+> = ({artifactId, className, parentId, children}) => {
   const [open, setOpen] = useState(false);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
-  const sheetId = useStoreWithCanvas((s) => s.cells.config.currentSheetId);
   const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
 
   const onAdd = (type: string) => {
-    if (sheetId) {
-      addNode({sheetId, parentId, nodeType: type});
+    if (artifactId) {
+      addNode({artifactId, parentId, nodeType: type});
       setOpen(false);
     } else {
-      toast.error('No sheet selected');
+      toast.error('No artifact selected');
     }
   };
 

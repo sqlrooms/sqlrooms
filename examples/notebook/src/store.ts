@@ -1,19 +1,27 @@
 import {
+  ArtifactsSliceConfig,
+  ArtifactsSliceState,
+  createArtifactPanelDefinition,
+  createArtifactsSlice,
+  defineArtifactTypes,
+  type ArtifactTypeDefinition,
+} from '@sqlrooms/artifacts';
+import {
+  CellsSliceConfig,
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
   createNotebookSlice,
   NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
-  createCellsSlice,
-  CellsSliceState,
-  CellsSliceConfig,
-  createDefaultCellRegistry,
-} from '@sqlrooms/cells';
-import {
+  createPivotSlice,
   pivotCellRegistryEntry,
   PivotSliceConfig,
   PivotSliceState,
-  createPivotSlice,
 } from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
@@ -21,24 +29,46 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
-import {DatabaseIcon} from 'lucide-react';
+import {DatabaseIcon, FileTextIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
-import {DataSourcesPanel} from './DataSourcesPanel';
-import {NotebookPanel} from './NotebookPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
+import {NotebookPanel} from './components/NotebookPanel';
+
+export const DEFAULT_NOTEBOOK_ARTIFACT_ID = 'notebook';
 
 export type RoomState = RoomShellSliceState &
+  ArtifactsSliceState &
   NotebookSliceState &
   CellsSliceState &
   PivotSliceState & {
     apiKey: string;
     setApiKey: (apiKey: string) => void;
   };
-export const RoomPanelTypes = z.enum(['main', 'data'] as const);
+
+export const NOTEBOOK_ARTIFACT_TYPES = defineArtifactTypes({
+  notebook: {
+    label: 'Notebook',
+    defaultTitle: 'Notebook',
+    icon: FileTextIcon,
+    component: NotebookPanel,
+    onCreate: ({artifactId, store}) => {
+      store.getState().notebook.ensureArtifact(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().notebook.ensureArtifact(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().notebook.removeArtifact(artifactId);
+    },
+  },
+} satisfies Record<'notebook', ArtifactTypeDefinition<RoomState>>);
+
+export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
@@ -46,15 +76,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -63,21 +84,66 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
+                children: [],
+                activeTabIndex: 0,
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            main: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Notebook',
               icon: () => null,
-              component: NotebookPanel,
-              placement: 'main',
+              component: MainView,
             },
-            data: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
+            },
+            artifact: createArtifactPanelDefinition(
+              NOTEBOOK_ARTIFACT_TYPES,
+              store,
+            ),
+          },
+        },
+      })(set, get, store),
+
+      ...createArtifactsSlice<RoomState>({
+        artifactTypes: NOTEBOOK_ARTIFACT_TYPES,
+        config: {
+          artifactsById: {
+            [DEFAULT_NOTEBOOK_ARTIFACT_ID]: {
+              id: DEFAULT_NOTEBOOK_ARTIFACT_ID,
+              type: 'notebook',
+              title: 'Notebook',
             },
           },
+          artifactOrder: [DEFAULT_NOTEBOOK_ARTIFACT_ID],
+          currentArtifactId: DEFAULT_NOTEBOOK_ARTIFACT_ID,
         },
       })(set, get, store),
 
@@ -86,7 +152,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           ...createDefaultCellRegistry(),
           pivot: pivotCellRegistryEntry,
         },
-        supportedSheetTypes: ['notebook'],
       })(set, get, store),
       ...createNotebookSlice()(set, get, store),
       ...createPivotSlice()(set, get, store),
@@ -98,11 +163,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     // Persist settings
     {
       // Local storage key
-      name: 'notebook-example-app-state-storage',
+      name: 'notebook-example-app-state-storage-v2',
       // Subset of the state to persist
       ...createPersistHelpers({
         room: BaseRoomConfig,
         layout: LayoutConfig,
+        artifacts: ArtifactsSliceConfig,
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         pivot: PivotSliceConfig,

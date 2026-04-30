@@ -134,7 +134,6 @@ export type PivotSliceItem = z.infer<typeof PivotSliceItem>;
 export const PivotSliceConfig = z.object({
   pivots: z.record(z.string(), PivotSliceItem).default({}),
   pivotOrder: z.array(z.string()).default([]),
-  currentPivotId: z.string().optional(),
 });
 export type PivotSliceConfig = z.infer<typeof PivotSliceConfig>;
 
@@ -156,12 +155,20 @@ export type PivotSliceState = {
     initialize: () => Promise<void>;
     getPivotStore: (pivotId: string) => PivotInstanceStore;
     addPivot: (props?: {
+      id?: string;
       title?: string;
       source?: PivotSource;
       config?: Partial<PivotConfig>;
     }) => string;
+    ensurePivot: (
+      pivotId: string,
+      props?: {
+        title?: string;
+        source?: PivotSource;
+        config?: Partial<PivotConfig>;
+      },
+    ) => void;
     removePivot: (pivotId: string) => void;
-    setCurrentPivot: (pivotId: string) => void;
     renamePivot: (pivotId: string, title: string) => void;
     setSource: (pivotId: string, source: PivotSource | undefined) => void;
     setStatus: (pivotId: string, status: Partial<PivotStatus>) => void;

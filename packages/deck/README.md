@@ -127,6 +127,75 @@ const spec = createDeckJsonSpecFromDatasets({
 });
 ```
 
+## Mosaic Dashboard Renderer
+
+`@sqlrooms/deck` can contribute a `deck-json-map` panel renderer to
+`@sqlrooms/mosaic` dashboards without making the Mosaic package depend on
+deck.gl or MapLibre. Pass the renderer when creating the Mosaic dashboard
+slice.
+
+```tsx
+import {
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  deckMapDashboardPanelRenderer,
+} from '@sqlrooms/deck';
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardSlice,
+  MosaicDashboard,
+} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice({
+  panelRenderers: createDefaultMosaicDashboardPanelRenderers({
+    [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
+  }),
+});
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="geo" />;
+}
+
+const mapPanel = createDeckMapDashboardPanelConfig({
+  title: 'Earthquakes map',
+  spec: {
+    initialViewState: {longitude: -119.5, latitude: 37, zoom: 4.5},
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        id: 'earthquakes',
+        _sqlroomsBinding: {dataset: 'earthquakes'},
+      },
+    ],
+  },
+  datasets: {
+    earthquakes: {
+      source: {
+        sqlQuery:
+          'SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM earthquakes',
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+  fitToData: {
+    dataset: 'earthquakes',
+    longitudeColumn: 'Longitude',
+    latitudeColumn: 'Latitude',
+    padding: 40,
+    maxZoom: 12,
+  },
+});
+```
+
+The dashboard renderer uses `useMosaicClient`, receives Arrow tables directly,
+and passes them to `DeckJsonMap` as Arrow-backed datasets. Dataset sources fall
+back from dataset-level source, to panel source, to the dashboard selected
+table. When `fitToData` is provided, the renderer asks DuckDB Spatial for the
+dataset extent using the declared longitude/latitude columns and fits the
+initial map view once, instead of inferring bounds from the loaded Arrow
+payload in React.
+
 ## Core Concepts
 
 ### `DeckJsonMap`

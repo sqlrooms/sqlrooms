@@ -33,9 +33,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const runCell = useCellsStore((s) => s.cells.runCell);
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
   const getDownstream = useCellsStore((s) => s.cells.getDownstream);
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
+  const artifactId = useCellsStore((s) => s.cells.getArtifactIdForCell(id));
   const cellsData = useCellsStore((s) => s.cells.config.data);
-  const sheets = useCellsStore((s) => s.cells.config.sheets);
+  const artifacts = useCellsStore((s) => s.cells.config.artifacts);
   const cellStatus = useCellsStore((s) => s.cells.status[id]);
   const resultVersion = useCellsStore((s) => s.cells.resultVersion?.[id] ?? 0);
   const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
@@ -165,9 +165,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
       <CornerDownRightIcon className="h-3 w-3" />
       <SqlCellDependentsMenu
         cellId={id}
-        currentSheetId={currentSheetId}
+        artifactId={artifactId}
         cellsData={cellsData}
-        sheets={sheets}
+        artifacts={artifacts}
         getDownstream={getDownstream}
       />
       <SqlCellResultNameEditor

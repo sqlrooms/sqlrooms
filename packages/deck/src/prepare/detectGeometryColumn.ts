@@ -1,11 +1,14 @@
-import {getGeoMetadata, getGeometryColumnsFromSchema} from '@loaders.gl/geoarrow';
+import {
+  getGeoMetadata,
+  getGeometryColumnsFromSchema,
+} from '@loaders.gl/geoarrow';
 import type * as arrow from 'apache-arrow';
+import {isDirectGeoArrowEncoding} from './geoarrow';
 import type {
   GeometryEncodingHint,
   ResolvedGeometryColumn,
   ResolvedGeometryEncoding,
 } from './types';
-import {isDirectGeoArrowEncoding} from './geoarrow';
 
 type DetectGeometryColumnOptions = {
   table: arrow.Table;
@@ -20,7 +23,9 @@ function getFieldNames(table: arrow.Table) {
 function getFieldVector(table: arrow.Table, fieldName: string) {
   const vector = table.getChild(fieldName);
   if (!vector) {
-    throw new Error(`Geometry column "${fieldName}" was not found in the Arrow table.`);
+    throw new Error(
+      `Geometry column "${fieldName}" was not found in the Arrow table.`,
+    );
   }
   return vector;
 }
@@ -63,7 +68,9 @@ function inferEncodingFromHint(
   }
 }
 
-function inferEncodingFromVector(vector: arrow.Vector): ResolvedGeometryEncoding {
+function inferEncodingFromVector(
+  vector: arrow.Vector,
+): ResolvedGeometryEncoding {
   const typeName = String(vector.type).toLowerCase();
   if (typeName.includes('utf')) {
     return 'wkt';

@@ -1,47 +1,44 @@
+import {type FC} from 'react';
 import {KeplerSidePanels} from '@sqlrooms/kepler';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import {useCurrentMap} from './useCurrentMap';
 
-export function KeplerSidePanelLayerManager() {
-  const currentMap = useRoomStore((state) => {
-    return state.kepler.getCurrentMap();
-  });
+export const KeplerSidePanelLayerManager: FC = () => {
+  const currentMap = useCurrentMap();
+
   return (
-    <RoomPanel type={RoomPanelTypes.enum['layers']}>
+    <RoomPanel>
       <KeplerSidePanels panelId="layer" mapId={currentMap?.id || ''} />
     </RoomPanel>
   );
-}
+};
 
-export function KeplerSidePanelFilterManager() {
-  const currentMap = useRoomStore((state) => {
-    return state.kepler.getCurrentMap();
-  });
+export const KeplerSidePanelFilterManager: FC = () => {
+  const currentMap = useCurrentMap();
+
   return (
-    <RoomPanel type={RoomPanelTypes.enum['filters']}>
+    <RoomPanel>
       <KeplerSidePanels panelId="filter" mapId={currentMap?.id || ''} />
     </RoomPanel>
   );
-}
+};
 
-export function KeplerSidePanelBaseMapManager() {
-  const currentMap = useRoomStore((state) => {
-    return state.kepler.getCurrentMap();
-  });
+export const KeplerSidePanelBaseMapManager: FC = () => {
+  const currentMap = useCurrentMap();
+
   return (
-    <RoomPanel type={RoomPanelTypes.enum['basemaps']}>
+    <RoomPanel>
       <KeplerSidePanels panelId="map" mapId={currentMap?.id || ''} />
     </RoomPanel>
   );
-}
+};
 
-export function KeplerSidePanelInteractionManager() {
-  const currentMap = useRoomStore((state) => {
-    return state.kepler.getCurrentMap();
-  });
+export const KeplerSidePanelInteractionManager: FC = () => {
+  const currentMap = useCurrentMap();
+
   return (
-    <RoomPanel type={RoomPanelTypes.enum['interactions']}>
+    <RoomPanel>
       <KeplerSidePanels panelId="interaction" mapId={currentMap?.id || ''} />
     </RoomPanel>
   );
-}
+};

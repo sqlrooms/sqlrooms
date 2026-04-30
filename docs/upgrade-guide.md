@@ -10,6 +10,71 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
+
+The concept of "sheets" has been replaced with "artifacts" to better represent the variety of content types (app builders, charts, maps, etc.) that can be created and managed.
+
+#### API Changes
+
+**Store namespace:**
+
+- `state.sheets` → `state.artifacts`
+- `createSheetsSlice` → `createArtifactsSlice`
+- `SheetsSlice` → `ArtifactsSlice`
+
+**Component renames:**
+
+- `Sheets` → `Artifacts`
+- `SheetsTabs` → `ArtifactTabs`
+- `SheetsPanel` → `ArtifactsPanel`
+
+**Type renames:**
+
+- `Sheet` → `Artifact`
+- `SheetType` → `ArtifactType`
+
+#### Migration Example
+
+Before:
+
+```tsx
+import {createSheetsSlice, SheetsSlice} from '@sqlrooms/sheets';
+
+type RoomState = SheetsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createSheetsSlice()(set, get, store),
+}));
+
+const sheets = useRoomStore((state) => state.sheets.items);
+```
+
+After:
+
+```tsx
+import {createArtifactsSlice, ArtifactsSlice} from '@sqlrooms/artifacts';
+
+type RoomState = ArtifactsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createArtifactsSlice()(set, get, store),
+}));
+
+const artifacts = useRoomStore((state) => state.artifacts.items);
+```
+
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
+
+#### Removed APIs
+
+- **`getPanelByPath`**: Path-based panel lookup function removed
+- **`useGetPanelByPath`**: Hook for path-based panel lookup removed
+- **`useGetPanelInfoByPath`**: Hook for path-based panel info removed
+- **`draggable` property**: Removed from split and tabs nodes
+- **`pathSegment` property**: Removed from split and tabs nodes
+
 ### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
 
 The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
@@ -360,6 +425,223 @@ return createAgentUIStreamResponse({
 - `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
+
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles all layout rendering.
+
+**Limited automatic migration:** The Zod schema uses `z.preprocess` to detect and convert **only** legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays.
+
+**Manual migration required for:**
+
+- The outer `{ type: 'mosaic', nodes: ... }` wrapper (must be removed)
+- N-ary `splitPercentages` arrays on nodes that already use `children` arrays (must be converted to per-child `defaultSize`)
+- Any other v1 layout formats not in binary tree shape
+
+#### Layout config: remove the outer wrapper
+
+The `{ type: 'mosaic', nodes: ... }` wrapper and `LayoutTypes` enum are no longer needed.
+
+##### Before
+
+```ts
+import {LayoutTypes} from '@sqlrooms/layout-config';
+
+const layout = {
+  type: LayoutTypes.enum.mosaic,
+  nodes: {
+    type: 'split',
+    direction: 'row',
+    children: ['data', 'main'],
+    splitPercentages: [30, 70],
+  },
+};
+```
+
+##### After
+
+```ts
+import {LayoutConfig} from '@sqlrooms/layout-config';
+
+const layout: LayoutConfig = {
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
+};
+```
+
+#### `splitPercentages` replaced by per-node sizing
+
+`splitPercentages` and `savedPercentages` on split nodes have been removed. Sizing is now specified on individual child nodes via `defaultSize`, `minSize`, `maxSize`, `collapsedSize`, and `collapsible`.
+
+##### Before
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: ['sidebar', 'main'],
+  splitPercentages: [25, 75],
+}
+```
+
+##### After
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'sidebar', defaultSize: '25%', minSize: '150px'},
+    'main',
+  ],
+}
+```
+
+Size values accept CSS units (`'200px'`, `'25%'`, `'1rem'`). A plain string without a unit suffix is treated as a percentage.
+
+#### New `type: 'panel'` leaf node
+
+A new `panel` node type allows specifying sizing constraints on individual panels:
+
+```ts
+{
+  type: 'panel',
+  id: 'sidebar',
+  defaultSize: '25%',
+  minSize: '150px',
+  maxSize: '50%',
+  collapsedSize: '0px',
+  collapsible: true,
+}
+```
+
+Plain string keys (e.g. `'main'`) still work as leaf nodes without sizing constraints.
+
+#### Type renames
+
+All `MosaicLayout*` types have been renamed to `Layout*`. The old names are still exported as deprecated aliases.
+
+| Old name                      | New name                |
+| ----------------------------- | ----------------------- |
+| `MosaicLayoutConfig`          | `LayoutConfig`          |
+| `MosaicLayoutNode`            | `LayoutNode`            |
+| `MosaicLayoutSplitNode`       | `LayoutSplitNode`       |
+| `MosaicLayoutTabsNode`        | `LayoutTabsNode`        |
+| `MosaicLayoutMosaicNode`      | `LayoutMosaicNode`      |
+| `MosaicLayoutParent`          | `LayoutSplitNode`       |
+| `MosaicLayoutDirection`       | `LayoutDirection`       |
+| `MosaicLayoutNodeKey`         | `LayoutNodeKey`         |
+| `isMosaicLayoutParent()`      | `isLayoutSplitNode()`   |
+| `isMosaicLayoutSplitNode()`   | `isLayoutSplitNode()`   |
+| `isMosaicLayoutTabsNode()`    | `isLayoutTabsNode()`    |
+| `isMosaicLayoutMosaicNode()`  | `isLayoutMosaicNode()`  |
+| `createDefaultMosaicLayout()` | `createDefaultLayout()` |
+| `DEFAULT_MOSAIC_LAYOUT`       | _(removed)_             |
+| `LayoutTypes`                 | _(removed)_             |
+
+Deprecated helper renames in `@sqlrooms/layout`:
+
+| Old name                       | New name                  |
+| ------------------------------ | ------------------------- |
+| `makeMosaicStack`              | `makeLayoutStack`         |
+| `visitMosaicLeafNodes`         | `visitLayoutLeafNodes`    |
+| `getVisibleMosaicLayoutPanels` | `getVisibleLayoutPanels`  |
+| `findMosaicNodePathByKey`      | `findLayoutNodePathByKey` |
+| `removeMosaicNodeByKey`        | `removeLayoutNodeByKey`   |
+
+#### Panel `placement` is deprecated
+
+The `placement` property on panel info (`'sidebar'`, `'main'`, etc.) is deprecated and no longer used. Panel location is now determined entirely by the layout tree structure, not by a property on the panel definition.
+
+##### Before
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel, placement: 'sidebar'},
+}
+```
+
+##### After
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel},
+}
+```
+
+Panel location is controlled by the layout configuration structure (e.g., which `split`, `tabs`, or `panel` node references the panel key).
+
+#### New `LayoutRenderer` component
+
+`LayoutRenderer` is the new top-level renderer that handles all node types (`split`, `tabs`, `mosaic`, `panel`, and string leaves). `MosaicLayout` is still available for rendering mosaic-only sub-trees.
+
+#### Render callbacks API
+
+`createLayoutSlice` now accepts `renderPanel` and `renderTabStrip` callbacks for custom rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
+  },
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to use default
+  },
+  renderTabStrip: (context) => {
+    // Return custom tab strip JSX or undefined for default
+  },
+});
+```
+
+#### Panel padding removed from `LeafLayoutPanel` (breaking)
+
+`LeafLayoutPanel` no longer applies `p-2` padding by default. Panel components must now add their own padding.
+
+##### Before
+
+Panel content inherited `p-2` padding from `LeafLayoutPanel`:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div>My content</div>;
+};
+```
+
+##### After
+
+Add `p-2` to your panel component:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div className="p-2">My content</div>;
+};
+```
+
+#### Area-based panel management
+
+Named `tabs` nodes (with an `id`) act as areas with new management methods:
+
+```ts
+state.layout.setActivePanel(areaId, panelId);
+state.layout.addPanelToArea(areaId, panelId);
+state.layout.removePanelFromArea(areaId, panelId);
+state.layout.setAreaCollapsed(areaId, collapsed);
+state.layout.toggleAreaCollapsed(areaId);
+state.layout.getAreaPanels(areaId);
+state.layout.getActivePanel(areaId);
+state.layout.isAreaCollapsed(areaId);
+```
+
+#### `react-mosaic-component` removed
+
+`react-mosaic-component` has been removed and replaced with `react-resizable-panels` for all layout rendering. The layout tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`). Binary tree layouts are migrated automatically via `z.preprocess`, but other formats require manual migration (see above).
 
 ## 0.28.0
 

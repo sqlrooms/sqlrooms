@@ -19,7 +19,6 @@ import {
   Connector,
   Coordinator,
   coordinator,
-  decodeIPC,
   makeClient,
   Selection,
   wasmConnector,
@@ -48,6 +47,8 @@ export type MosaicClientOptions = {
   query: (filter: unknown) => ReturnType<typeof Query.from>;
   /** Callback when query results are received */
   queryResult?: (result: ArrowTable) => void;
+  /** Callback when query execution fails */
+  queryError?: (error: Error) => void;
 };
 
 // Tracked client info
@@ -57,6 +58,7 @@ export type TrackedClient = {
   createdAt: number;
   isLoading: boolean;
   data: unknown | null;
+  error?: Error;
   selection?: Selection; // Track for change detection
   queryResultCallback?: (result: ArrowTable) => void; // External callback
 };
@@ -85,6 +87,7 @@ export type MosaicSliceState = {
       options: MosaicClientOptions & {
         id: string;
         onQueryResult?: (result: ArrowTable) => void;
+        onQueryError?: (error: Error) => void;
       },
     ) => void;
     /** Disconnect and remove a client by id */
@@ -164,6 +167,14 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         get().mosaic.destroyAllClients();
       },
 
+      setConfig(config: MosaicSliceConfig) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.mosaic.config = config;
+          }),
+        );
+      },
+
       getSelection(
         name: string,
         type: 'crossfilter' | 'single' | 'union' = 'crossfilter',
@@ -209,11 +220,36 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               if (tracked) {
                 tracked.data = data;
                 tracked.isLoading = false;
+                tracked.error = undefined;
               }
             }),
           );
           // Call external callback if provided
           options.queryResult?.(toArrowClientResult(data));
+        };
+        const wrappedQueryPending = () => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[id];
+              if (tracked) {
+                tracked.isLoading = true;
+                tracked.error = undefined;
+              }
+            }),
+          );
+        };
+        const wrappedQueryError = (error: Error) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[id];
+              if (tracked) {
+                tracked.isLoading = false;
+                tracked.error = error;
+              }
+            }),
+          );
+          client.enabled = false;
+          options.queryError?.(error);
         };
 
         const client = makeClient({
@@ -221,6 +257,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           selection,
           query: options.query,
           queryResult: wrappedQueryResult,
+          queryPending: wrappedQueryPending,
+          queryError: wrappedQueryError,
         });
 
         set((state) =>
@@ -231,6 +269,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               createdAt: Date.now(),
               isLoading: true,
               data: null,
+              error: undefined,
               selection,
               queryResultCallback: options.queryResult
                 ? (result: unknown) =>
@@ -247,6 +286,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         options: MosaicClientOptions & {
           id: string;
           onQueryResult?: (result: ArrowTable) => void;
+          onQueryError?: (error: Error) => void;
         },
       ) {
         const {connection, clients} = get().mosaic;
@@ -284,6 +324,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               if (tracked) {
                 tracked.data = data;
                 tracked.isLoading = false;
+                tracked.error = undefined;
               }
             }),
           );
@@ -293,12 +334,39 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           // Also call original queryResult if provided
           options.queryResult?.(arrowData);
         };
+        const wrappedQueryPending = () => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[options.id];
+              if (tracked) {
+                tracked.isLoading = true;
+                tracked.error = undefined;
+              }
+            }),
+          );
+        };
+        const wrappedQueryError = (error: Error) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[options.id];
+              if (tracked) {
+                tracked.isLoading = false;
+                tracked.error = error;
+              }
+            }),
+          );
+          client.enabled = false;
+          options.onQueryError?.(error);
+          options.queryError?.(error);
+        };
 
         const client = makeClient({
           coordinator: connection.coordinator,
           selection,
           query: options.query,
           queryResult: wrappedQueryResult,
+          queryPending: wrappedQueryPending,
+          queryError: wrappedQueryError,
         });
 
         set((state) =>
@@ -309,6 +377,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               createdAt: Date.now(),
               isLoading: true,
               data: null,
+              error: undefined,
               selection,
               queryResultCallback: options.onQueryResult
                 ? (result: unknown) =>
@@ -320,13 +389,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyClient(id: string) {
-        const {connection, clients} = get().mosaic;
+        const {clients} = get().mosaic;
         const tracked = clients[id];
         if (!tracked) return;
 
-        if (connection.status === 'ready') {
-          connection.coordinator.disconnect(tracked.client);
-        }
+        tracked.client.destroy();
 
         set((state) =>
           produce(state, (draft) => {
@@ -336,13 +403,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyAllClients() {
-        const {connection, clients} = get().mosaic;
-
-        if (connection.status === 'ready') {
-          Object.values(clients).forEach((tracked) => {
-            connection.coordinator.disconnect(tracked.client);
-          });
-        }
+        const {clients} = get().mosaic;
+        Object.values(clients).forEach((tracked) => {
+          tracked.client.destroy();
+        });
 
         set((state) =>
           produce(state, (draft) => {
