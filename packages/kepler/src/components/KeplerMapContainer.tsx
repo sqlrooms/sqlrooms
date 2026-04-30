@@ -144,6 +144,7 @@ const KeplerGl: FC<{
           ...fields.uiState.mapControls,
           mapLegend: {
             ...fields.uiState.mapControls?.mapLegend,
+            show: fields.uiState.mapControls?.mapLegend?.show ?? false,
             active: false,
           },
         },
