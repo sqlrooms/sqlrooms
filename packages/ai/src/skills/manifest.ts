@@ -1,7 +1,15 @@
 import {parse as parseYaml, stringify as stringifyYaml} from 'yaml';
 import {z} from 'zod';
 import {SkillManifestError} from './errors';
-import type {SkillFile} from './storage';
+
+/**
+ * A file belonging to a skill directory, addressed by its path relative to
+ * the skill's root folder.
+ */
+export interface SkillFile {
+  relativePath: string;
+  content: string;
+}
 
 /**
  * Kebab-case identifier: lowercase letters, digits, and single hyphens.

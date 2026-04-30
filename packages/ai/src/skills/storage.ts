@@ -1,4 +1,6 @@
-import type {SkillManifest} from './manifest';
+import type {SkillFile, SkillManifest} from './manifest';
+
+export type {SkillFile};
 
 /**
  * A logical storage root that groups skills. Hosts typically wire multiple
@@ -20,15 +22,6 @@ export interface SkillRoot {
 export interface SkillRef {
   rootId: string;
   id: string;
-}
-
-/**
- * A file belonging to a skill directory, addressed by its path relative to
- * the skill's root folder.
- */
-export interface SkillFile {
-  relativePath: string;
-  content: string;
 }
 
 /**

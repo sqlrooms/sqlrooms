@@ -6,12 +6,12 @@ import {useEffect, useRef, type RefObject} from 'react';
  */
 export function useStickyScroll<T extends HTMLElement = HTMLDivElement>(
   dep: unknown,
-): RefObject<T | null> {
+): RefObject<T> {
   const ref = useRef<T | null>(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [dep]);
-  return ref;
+  return ref as RefObject<T>;
 }
