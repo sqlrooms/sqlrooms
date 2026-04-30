@@ -9,14 +9,15 @@ import {XIcon} from 'lucide-react';
 import React, {FC, useEffect, useRef} from 'react';
 
 type MosaicDashboardPanelLayoutProps = {
-  isOpen: boolean;
+  isOpen?: boolean;
   onIsOpenChange?: (isOpen: boolean) => void;
-  children?: React.ReactNode;
+  settings?: React.ReactNode;
+  content?: React.ReactNode;
 };
 
 export const MosaicDashboardPanelLayout: FC<
   MosaicDashboardPanelLayoutProps
-> = ({isOpen, onIsOpenChange, children}) => {
+> = ({isOpen, onIsOpenChange, settings, content}) => {
   const panelRef = useRef<ResizablePanelHandle>(null);
 
   useEffect(() => {
@@ -63,10 +64,10 @@ export const MosaicDashboardPanelLayout: FC<
             <XIcon className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="p-4"></div>
+        <div className="p-4">{settings}</div>
       </ResizablePanel>
       <ResizableHandle className="w-px" />
-      <ResizablePanel>{children}</ResizablePanel>
+      <ResizablePanel>{content}</ResizablePanel>
     </ResizablePanelGroup>
   );
 };

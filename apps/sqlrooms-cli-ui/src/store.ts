@@ -80,6 +80,7 @@ import {
   RoomState,
 } from './store-types';
 import {parseVgPlotSpecString} from './vgplot';
+import {VgPlotPanelConfig} from '@sqlrooms/mosaic';
 
 export type {RoomState} from './store-types';
 
@@ -347,7 +348,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           (() => {
             const spec = get()
               .mosaicDashboard.getDashboard(artifactId)
-              ?.panels.find((panel) => panel.type === 'vgplot')?.config.vgplot;
+              ?.panels.find(
+                (panel): panel is VgPlotPanelConfig => panel.type === 'vgplot',
+              )?.config.vgplot;
             return spec && typeof spec === 'object'
               ? JSON.stringify(spec, null, 2)
               : undefined;

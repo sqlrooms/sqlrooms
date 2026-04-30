@@ -93,12 +93,21 @@ export function MosaicDashboardRoot({
   ]);
 
   const handleCreateChart = useCallback(
-    (spec: Spec, title: string) => {
-      const panel = createMosaicDashboardVgPlotPanelConfig(spec, title);
+    (
+      spec: Spec,
+      title: string,
+      metadata?: {chartType?: string; settings?: Record<string, string>},
+    ) => {
+      const panel = createMosaicDashboardVgPlotPanelConfig(
+        spec,
+        title,
+        {tableName: dashboard?.selectedTable},
+        metadata,
+      );
       addPanel(dashboardId, panel);
       setBuilderOpen(false);
     },
-    [addPanel, dashboardId],
+    [addPanel, dashboard?.selectedTable, dashboardId],
   );
 
   const contextValue = useMemo(

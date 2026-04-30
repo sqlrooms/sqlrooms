@@ -29,6 +29,7 @@ import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
+import {VgPlotChartConfig} from './ChartSchemas';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -48,30 +49,87 @@ export type MosaicDashboardPanelSource = z.infer<
   typeof MosaicDashboardPanelSource
 >;
 
-export const MosaicDashboardPanelConfig = z.object({
+// Profiler panel config
+export const ProfilerPanelConfig = z.object({
+  pageSize: z.number().optional(),
+});
+export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
+
+// Panel configs discriminated by type
+export const VgPlotPanelConfig = z.object({
+  id: z.string(),
+  type: z.literal(MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE),
+  title: z.string().default('Panel'),
+  source: MosaicDashboardPanelSource.optional(),
+  config: VgPlotChartConfig,
+});
+export type VgPlotPanelConfig = z.infer<typeof VgPlotPanelConfig>;
+
+export const ProfilerPanel = z.object({
+  id: z.string(),
+  type: z.literal(MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE),
+  title: z.string().default('Panel'),
+  source: MosaicDashboardPanelSource.optional(),
+  config: ProfilerPanelConfig,
+});
+export type ProfilerPanel = z.infer<typeof ProfilerPanel>;
+
+// Legacy panel for backward compatibility
+export const LegacyPanelConfig = z.object({
   id: z.string(),
   type: z.string(),
   title: z.string().default('Panel'),
   source: MosaicDashboardPanelSource.optional(),
   config: z.record(z.string(), z.unknown()).default({}),
 });
+export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
+
+// Discriminated union of all panel types
+export const MosaicDashboardPanelConfig = z
+  .discriminatedUnion('type', [VgPlotPanelConfig, ProfilerPanel])
+  .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
 >;
 
-export type MosaicDashboardPanelRendererProps = {
+export type MosaicDashboardPanelRendererProps<
+  TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
+> = {
   dashboardId: string;
   dashboard: MosaicDashboardEntry;
-  panel: MosaicDashboardPanelConfig;
+  panel: TPanel;
   selectionName: string;
   resolvedSource?: MosaicDashboardPanelSource;
 };
 
-export type MosaicDashboardPanelRenderer = {
-  component: ComponentType<MosaicDashboardPanelRendererProps>;
-  headerActions?: ComponentType<MosaicDashboardPanelRendererProps>;
+export type VgPlotPanelRendererProps =
+  MosaicDashboardPanelRendererProps<VgPlotPanelConfig>;
+export type ProfilerPanelRendererProps =
+  MosaicDashboardPanelRendererProps<ProfilerPanel>;
+
+export type MosaicDashboardPanelRenderer<
+  TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
+> = {
+  component: ComponentType<MosaicDashboardPanelRendererProps<TPanel>>;
+  headerActions?: ComponentType<MosaicDashboardPanelRendererProps<TPanel>>;
   icon?: ComponentType<{className?: string}>;
 };
+
+// Type-erased renderer for storage (avoids circular dependency issues)
+export type AnyPanelRenderer = {
+  component: ComponentType<any>;
+  headerActions?: ComponentType<any>;
+  icon?: ComponentType<{className?: string}>;
+};
+
+// Map of panel type string to panel config type
+export type PanelTypeMap = {
+  [MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE]: VgPlotPanelConfig;
+  [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: ProfilerPanel;
+};
+
+// Panel renderers record - use type-erased renderers for runtime compatibility
+export type PanelRenderersRecord = Record<string, AnyPanelRenderer>;
 
 export type MosaicDashboardAddPanelActionContext = {
   dashboardId: string;
@@ -94,6 +152,10 @@ export function createMosaicDashboardVgPlotPanelConfig(
   spec: Spec | Record<string, unknown>,
   title: string,
   source?: MosaicDashboardPanelSource,
+  options?: {
+    chartType?: string;
+    settings?: Record<string, string>;
+  },
 ): MosaicDashboardPanelConfig {
   return {
     id: createId(),
@@ -102,6 +164,8 @@ export function createMosaicDashboardVgPlotPanelConfig(
     source,
     config: {
       vgplot: JSON.parse(JSON.stringify(spec)),
+      chartType: options?.chartType,
+      settings: options?.settings,
     },
   };
 }
@@ -162,11 +226,8 @@ export type MosaicDashboardSliceState = {
     removeDashboard: (dashboardId: string) => void;
     getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
     setSelectedTable: (dashboardId: string, tableName: string) => void;
-    panelRenderers: Record<string, MosaicDashboardPanelRenderer>;
-    registerPanelRenderer: (
-      type: string,
-      renderer: MosaicDashboardPanelRenderer,
-    ) => void;
+    panelRenderers: PanelRenderersRecord;
+    registerPanelRenderer: (type: string, renderer: AnyPanelRenderer) => void;
     unregisterPanelRenderer: (type: string) => void;
     addPanel: (
       dashboardId: string,

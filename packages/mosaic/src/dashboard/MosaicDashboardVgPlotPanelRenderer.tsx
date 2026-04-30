@@ -4,32 +4,31 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {BarChart3Icon} from 'lucide-react';
 import {type FC, useCallback, useEffect, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
+import {ChartSettings} from './chart-settings';
 import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
 import {MosaicDashboardVgPlotHeaderActions} from './MosaicDashboardVgPlotHeaderActions';
 import {
   type MosaicDashboardPanelRenderer,
-  type MosaicDashboardPanelRendererProps,
+  type VgPlotPanelConfig,
+  type VgPlotPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
+import {VgPlotChartConfig} from '../chart-types';
 
-function toRenderableMosaicSpec(
-  parsedValue: Record<string, unknown>,
-): Record<string, unknown> {
-  const mosaicSpec = {...parsedValue};
-  if ('$schema' in mosaicSpec) {
-    delete mosaicSpec.$schema;
+function toRenderableMosaicSpec(vgplot: unknown): Spec | null {
+  if (!vgplot || typeof vgplot !== 'object' || Array.isArray(vgplot)) {
+    return null;
   }
+
+  const vgplotRecord = vgplot as Spec;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const {$schema, ...mosaicSpec} = vgplotRecord;
+
   return mosaicSpec;
 }
 
-function getVgPlotSpec(panel: MosaicDashboardPanelRendererProps['panel']) {
-  const spec = panel.config.vgplot;
-  return spec && typeof spec === 'object' && !Array.isArray(spec)
-    ? (spec as Record<string, unknown>)
-    : null;
-}
-
-const MosaicDashboardVgPlotRenderer: FC<MosaicDashboardPanelRendererProps> = ({
+const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
   dashboardId,
   panel,
   selectionName,
@@ -49,15 +48,16 @@ const MosaicDashboardVgPlotRenderer: FC<MosaicDashboardPanelRendererProps> = ({
   const setRetainedChart = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setRetainedChart,
   );
-  const vgplot = getVgPlotSpec(panel);
-  const spec = vgplot
-    ? (toRenderableMosaicSpec(vgplot) as unknown as Spec)
-    : null;
+
+  const spec = useMemo(
+    () => toRenderableMosaicSpec(panel.config.vgplot),
+    [panel.config.vgplot],
+  );
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
-  const isSettingsOpen = Boolean(panel.config.settingsOpen);
+  const isSettingsOpen = panel.config.settingsOpen;
 
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
@@ -81,6 +81,7 @@ const MosaicDashboardVgPlotRenderer: FC<MosaicDashboardPanelRendererProps> = ({
         : undefined,
     [brushSelection],
   );
+
   const retention = useMemo(
     () => ({
       chart: retainedChart,
@@ -90,8 +91,27 @@ const MosaicDashboardVgPlotRenderer: FC<MosaicDashboardPanelRendererProps> = ({
     [dashboardId, panel.id, retainedChart, setRetainedChart],
   );
 
+  const tableName = panel.source?.tableName;
+
+  const handleSettingsChange = useCallback(
+    (config: VgPlotChartConfig) => {
+      updatePanel(dashboardId, panel.id, {
+        config,
+      });
+    },
+    [dashboardId, panel.id, updatePanel],
+  );
+
+  const settingsContent = (
+    <ChartSettings
+      tableName={tableName}
+      config={panel.config}
+      onChange={handleSettingsChange}
+    />
+  );
+
   const chartContent = (
-    <>
+    <div className="h-full overflow-auto p-2">
       {connection.status === 'loading' ? (
         <SpinnerPane className="h-full w-full" />
       ) : connection.status === 'ready' && spec && params ? (
@@ -107,7 +127,7 @@ const MosaicDashboardVgPlotRenderer: FC<MosaicDashboardPanelRendererProps> = ({
             : 'No valid chart spec'}
         </div>
       )}
-    </>
+    </div>
   );
 
   return (
@@ -115,14 +135,14 @@ const MosaicDashboardVgPlotRenderer: FC<MosaicDashboardPanelRendererProps> = ({
       <MosaicDashboardPanelLayout
         isOpen={isSettingsOpen}
         onIsOpenChange={handleOpenChange}
-      >
-        <div className="h-full overflow-auto p-2">{chartContent}</div>
-      </MosaicDashboardPanelLayout>
+        settings={settingsContent}
+        content={chartContent}
+      />
     </div>
   );
 };
 
-export const mosaicDashboardVgPlotPanelRenderer: MosaicDashboardPanelRenderer =
+export const mosaicDashboardVgPlotPanelRenderer: MosaicDashboardPanelRenderer<VgPlotPanelConfig> =
   {
     component: MosaicDashboardVgPlotRenderer,
     headerActions: MosaicDashboardVgPlotHeaderActions,

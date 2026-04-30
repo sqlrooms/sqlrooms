@@ -1,5 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ComponentType} from 'react';
+import {VgPlotChartType} from '../dashboard/ChartSchemas';
 
 /**
  * Describes a field selector in a chart builder UI
@@ -23,7 +24,7 @@ export interface ChartBuilderField {
  */
 export interface ChartTypeDefinition {
   /** Unique identifier */
-  id: string;
+  id: VgPlotChartType;
   /** Short human-friendly name used in chart-type grids and prompts */
   label?: string;
   /** Short description of what this builder creates */
@@ -31,7 +32,7 @@ export interface ChartTypeDefinition {
   /** Field selectors the user must fill in */
   fields: ChartBuilderField[];
   /** Generate a Mosaic spec from table name and selected field values */
-  createSpec: (tableName: string, values: Record<string, string>) => Spec;
+  createSpec: (tableName: string, values: Record<string, unknown>) => Spec;
   /** Generate a chart title from selected field values */
   buildTitle?: (fieldValues: Record<string, string>) => string;
   /** Optional availability override for a given table schema */

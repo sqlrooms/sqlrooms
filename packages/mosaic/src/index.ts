@@ -51,6 +51,7 @@ export type {
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
+  VgPlotPanelConfig,
 } from './dashboard/MosaicDashboardSlice';
 export {
   createMosaicColorLegendPlot,

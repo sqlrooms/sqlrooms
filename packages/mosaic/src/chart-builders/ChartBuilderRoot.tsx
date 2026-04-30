@@ -20,7 +20,11 @@ export interface ChartBuilderRootProps {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
+  onCreateChart: (
+    spec: Spec,
+    title: string,
+    metadata?: {chartType?: string; settings?: Record<string, string>},
+  ) => void;
   /** Preferred shared chart-type customization surface */
   chartTypes?: ChartTypeDefinition[];
   /** Backward-compatible UI template customization surface */
@@ -52,9 +56,11 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   const [store] = useState(() => createChartBuilderStore());
   const isControlled = open !== undefined;
   const resolvedOpen = isControlled ? open : uncontrolledOpen;
-  const resolvedOnOpenChange = isControlled
-    ? (onOpenChange ?? (() => {}))
-    : setUncontrolledOpen;
+
+  const resolvedOnOpenChange = useMemo(
+    () => (isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen),
+    [isControlled, onOpenChange],
+  );
 
   const resolvedTemplates = useMemo(() => {
     if (chartTypes) {
@@ -90,10 +96,14 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
 
   const handleCreateChart = useCallback(
     (spec: Spec, title: string) => {
-      onCreateChart(spec, title);
+      const {selectedTemplateId, fieldValues} = store.getState();
+      onCreateChart(spec, title, {
+        chartType: selectedTemplateId,
+        settings: fieldValues,
+      });
       resolvedOnOpenChange(false);
     },
-    [onCreateChart, resolvedOnOpenChange],
+    [onCreateChart, resolvedOnOpenChange, store],
   );
 
   const ctx = useMemo(

@@ -20,7 +20,7 @@ export const NUMERIC_COLUMN_TYPES = [
   'UINTEGER',
   'USMALLINT',
   'UTINYINT',
-] as const;
+];
 
 export const TEMPORAL_COLUMN_TYPES = [
   'DATE',
@@ -30,12 +30,12 @@ export const TEMPORAL_COLUMN_TYPES = [
   'TIMESTAMP_NS',
   'TIMESTAMP_S',
   'TIMESTAMPTZ',
-] as const;
+];
 
 export const QUANTITATIVE_COLUMN_TYPES = [
   ...NUMERIC_COLUMN_TYPES,
   ...TEMPORAL_COLUMN_TYPES,
-] as const;
+];
 
 export function columnMatchesFieldTypes(
   column: ChartBuilderColumn,
