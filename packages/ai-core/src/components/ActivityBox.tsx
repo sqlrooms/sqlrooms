@@ -148,7 +148,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
         >
           <div
             ref={innerRef}
-            className="text-muted-foreground w-full min-w-0 overflow-hidden p-2.5 text-xs break-words"
+            className="text-muted-foreground w-full min-w-0 overflow-hidden p-2.5 text-xs break-words hyphens-auto"
           >
             {children}
           </div>

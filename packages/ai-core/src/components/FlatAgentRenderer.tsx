@@ -129,7 +129,7 @@ const ActivityLogLine: React.FC<{
       </span>
       <span
         className={cn(
-          'min-w-0 leading-4 break-all whitespace-normal',
+          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
           reasoning && 'italic',
         )}
       >
@@ -619,7 +619,7 @@ const OrchestratorLogLineInner: React.FC<{
       </span>
       <span
         className={cn(
-          'min-w-0 leading-4 break-all whitespace-normal',
+          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
           reasoning && 'italic',
         )}
       >
