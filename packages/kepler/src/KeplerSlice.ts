@@ -790,8 +790,6 @@ export function createKeplerSlice({
                   if (keplerDatasets?.[dataId]) {
                     continue;
                   }
-                  // Skip the availableTableIds check - allow views and all tables to be added
-                  // The UI restrictions in client apps should handle any filtering if needed
                   try {
                     await get().kepler.addTableToMap(mapId, dataId, {
                       autoCreateLayers: false,
