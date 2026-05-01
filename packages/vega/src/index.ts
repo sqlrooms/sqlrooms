@@ -11,8 +11,10 @@ import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
 import {VegaSqlEditorPanel} from './editor/VegaSqlEditorPanel';
 import {VegaChartEditorActions} from './editor/VegaChartEditorActions';
 export {VegaChartToolResult as VegaChartToolResult} from './VegaChartToolResult';
+export type {VegaChartToolResultProps} from './VegaChartToolResult';
 export type {VisualizationSpec} from 'vega-embed';
 export type {SignalListenerHandler, SignalValue} from 'vega';
+export type {VegaBrushSelectionRanges} from './VegaLiteArrowChart';
 
 export {
   createVegaChartTool,
@@ -21,7 +23,11 @@ export {
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
 
-export type {VegaChartToolOptions, VegaChartToolOutput} from './VegaChartTool';
+export type {
+  VegaChartToolOptions,
+  VegaChartToolOutput,
+  BrushFieldMapping,
+} from './VegaChartTool';
 export {
   createChartImageForMarkdownTool,
   ChartImageForMarkdownToolParameters,
@@ -30,6 +36,12 @@ export type {
   ChartImageForMarkdownToolOutput,
   ChartImageForMarkdownToolParameters as ChartImageForMarkdownToolParametersType,
 } from './ChartImageForMarkdownTool';
+
+export {
+  extractTableNameFromSql,
+  computeBrushMapping,
+  resolveBrushToRowIndices,
+} from './brushMappingUtils';
 
 /**
  * Composable Vega-Lite chart component with editing capabilities.

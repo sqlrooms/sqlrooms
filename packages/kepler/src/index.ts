@@ -61,3 +61,5 @@ export {
   CustomAddDataButtonFactory,
   CustomPanelTitleFactory,
 } from './components/KeplerInjector';
+
+export {KeplerVegaChartToolResult} from './components/KeplerVegaChartToolResult';

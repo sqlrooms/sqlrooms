@@ -19,6 +19,15 @@ import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaEditAction} from './VegaEditAction';
 import {VegaExportAction} from './VegaExportAction';
 
+/**
+ * Brush selection ranges emitted by the Vega signal listener.
+ * Keys are field names; values are either numeric ranges or categorical arrays.
+ */
+export type VegaBrushSelectionRanges = Record<
+  string,
+  [number, number] | string[]
+>;
+
 export type VegaLiteArrowChartProps = {
   className?: string;
   width?: number | 'auto';
@@ -27,6 +36,14 @@ export type VegaLiteArrowChartProps = {
   spec: string | VisualizationSpec;
   options?: EmbedOptions;
   arrowTable: arrow.Table | undefined;
+  /**
+   * Optional callback invoked when the user interacts with data in the chart.
+   * When provided, a selection param is automatically injected into the
+   * Vega-Lite spec: interval (drag) for continuous axes, point (click) for
+   * nominal/ordinal axes (bar charts, pie charts, heatmaps, etc.).
+   * Pass `undefined`/omit to disable.
+   */
+  onBrushSelection?: (selectedRanges: VegaBrushSelectionRanges) => void;
   /**
    * Children for composing actions and other elements.
    * Use VegaLiteArrowChart.Actions to add action buttons.
@@ -62,6 +79,101 @@ export function makeDefaultVegaLiteOptions(
   };
 }
 
+const BRUSH_PARAM_NAME = 'brush';
+
+type EncodingType = 'quantitative' | 'temporal' | 'nominal' | 'ordinal';
+
+/**
+ * Inspect the top-level encoding of a parsed Vega-Lite spec and return the
+ * types of the x and y channels. Returns `undefined` for missing channels.
+ */
+function getEncodingTypes(spec: Record<string, unknown>): {
+  x?: EncodingType;
+  y?: EncodingType;
+} {
+  const encoding = spec.encoding as Record<string, {type?: string}> | undefined;
+  if (!encoding) return {};
+  return {
+    x: encoding.x?.type as EncodingType | undefined,
+    y: encoding.y?.type as EncodingType | undefined,
+  };
+}
+
+function isContinuousType(t: EncodingType | undefined): boolean {
+  return t === 'quantitative' || t === 'temporal';
+}
+
+type BrushMode = 'interval' | 'point';
+
+/**
+ * Build the brush selection param appropriate for the chart's encoding.
+ * - If both axes are continuous → plain interval selection (2D drag).
+ * - If only one axis is continuous → interval restricted to that encoding.
+ * - If neither axis is continuous (bar w/ nominal, pie, heatmap) → point
+ *   selection (click) so the user can still select marks.
+ * - If there's no encoding at all (layered/concat specs) → `null`.
+ */
+function buildBrushParam(
+  spec: Record<string, unknown>,
+): {name: string; select: unknown; mode: BrushMode} | null {
+  const encoding = spec.encoding as Record<string, unknown> | undefined;
+  if (!encoding) return null;
+
+  const {x, y} = getEncodingTypes(spec);
+  const xCont = isContinuousType(x);
+  const yCont = isContinuousType(y);
+
+  if (xCont && yCont) {
+    return {name: BRUSH_PARAM_NAME, select: 'interval', mode: 'interval'};
+  }
+  if (xCont) {
+    return {
+      name: BRUSH_PARAM_NAME,
+      select: {type: 'interval', encodings: ['x']},
+      mode: 'interval',
+    };
+  }
+  if (yCont) {
+    return {
+      name: BRUSH_PARAM_NAME,
+      select: {type: 'interval', encodings: ['y']},
+      mode: 'interval',
+    };
+  }
+  // No continuous axis — fall back to click-based point selection.
+  // toggle: true allows shift-click to accumulate; clear resets on background.
+  return {
+    name: BRUSH_PARAM_NAME,
+    select: {type: 'point', toggle: true},
+    mode: 'point',
+  };
+}
+
+/**
+ * Normalize a point selection signal value into {@link VegaBrushSelectionRanges}.
+ *
+ * Point selection signals emit individual field values (e.g.
+ * `{risk_category: "Critical"}`) rather than ranges.  We wrap each scalar
+ * value in a single-element array so the downstream pipeline treats it as a
+ * categorical selection.
+ */
+function normalizePointSignal(
+  value: Record<string, unknown>,
+): VegaBrushSelectionRanges {
+  const ranges: VegaBrushSelectionRanges = {};
+  for (const [key, val] of Object.entries(value)) {
+    // Skip internal Vega selection metadata fields
+    if (key.startsWith('vlPoint') || key.startsWith('_vgsid')) continue;
+    if (val == null) continue;
+    if (typeof val === 'number') {
+      ranges[key] = [val, val];
+    } else {
+      ranges[key] = [String(val)];
+    }
+  }
+  return ranges;
+}
+
 const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   className,
   aspectRatio = 16 / 9,
@@ -70,6 +182,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   options: propsOptions,
   width = 'auto',
   height = 'auto',
+  onBrushSelection,
   children,
 }) => {
   const {theme} = useTheme();
@@ -97,12 +210,21 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     return {values: arrowTableToJson(arrowTable)};
   }, [arrowTable]);
 
+  // Determine the brush mode that was injected into the spec.
+  const brushMode = useMemo((): BrushMode | null => {
+    if (!onBrushSelection) return null;
+    const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
+    if (!parsed) return null;
+    const param = buildBrushParam(parsed as Record<string, unknown>);
+    return param?.mode ?? null;
+  }, [spec, onBrushSelection]);
+
   const specWithData = useMemo(() => {
     const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) {
       return null;
     }
-    return {
+    const base = {
       padding: 10,
       background: 'transparent',
       ...parsed,
@@ -111,8 +233,23 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
       width: 'container',
       height: 'container',
       autosize: {contains: 'padding'},
-    } as VisualizationSpec;
-  }, [spec, data]);
+    } as VisualizationSpec & Record<string, unknown>;
+
+    if (onBrushSelection) {
+      const brushParam = buildBrushParam(base as Record<string, unknown>);
+      if (brushParam) {
+        const existingParams = Array.isArray(base.params) ? base.params : [];
+        const hasBrush = existingParams.some(
+          (p: {name?: string}) => p.name === BRUSH_PARAM_NAME,
+        );
+        if (!hasBrush) {
+          base.params = [...existingParams, brushParam];
+        }
+      }
+    }
+
+    return base as VisualizationSpec;
+  }, [spec, data, onBrushSelection]);
   const specError = specWithData
     ? null
     : new Error('Invalid Vega-Lite specification');
@@ -147,6 +284,70 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   useEffect(() => {
     changeDimensions(dimensions.width, dimensions.height);
   }, [changeDimensions, dimensions.width, dimensions.height]);
+
+  // Attach brush signal listener when onBrushSelection is provided.
+  // The handler is debounced so that rapid brush drags only trigger a single
+  // downstream update (e.g. Kepler map re-render) once the user settles.
+  useEffect(() => {
+    if (!embed?.view || !onBrushSelection || !brushMode) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const DEBOUNCE_MS = 150;
+
+    const debouncedCallback = (ranges: VegaBrushSelectionRanges) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => onBrushSelection(ranges), DEBOUNCE_MS);
+    };
+
+    if (brushMode === 'interval') {
+      const handler = (_name: string, value: unknown) => {
+        debouncedCallback(
+          (value && typeof value === 'object'
+            ? value
+            : {}) as VegaBrushSelectionRanges,
+        );
+      };
+      try {
+        embed.view.addSignalListener(BRUSH_PARAM_NAME, handler);
+      } catch {
+        return;
+      }
+      return () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        try {
+          embed.view.removeSignalListener(BRUSH_PARAM_NAME, handler);
+        } catch {
+          // View may already be finalized
+        }
+      };
+    }
+
+    // Point selection: the signal value contains field values of the clicked
+    // mark.  We normalize it into the VegaBrushSelectionRanges shape so the
+    // downstream map-highlighting logic works unchanged.
+    const handler = (_name: string, value: unknown) => {
+      if (value && typeof value === 'object') {
+        const raw = value as Record<string, unknown>;
+        const ranges = normalizePointSignal(raw);
+        debouncedCallback(ranges);
+      } else {
+        debouncedCallback({});
+      }
+    };
+    try {
+      embed.view.addSignalListener(BRUSH_PARAM_NAME, handler);
+    } catch {
+      return;
+    }
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      try {
+        embed.view.removeSignalListener(BRUSH_PARAM_NAME, handler);
+      } catch {
+        // View may already be finalized
+      }
+    };
+  }, [embed, onBrushSelection, brushMode]);
 
   return (
     <VegaChartContextProvider value={{embed}}>
