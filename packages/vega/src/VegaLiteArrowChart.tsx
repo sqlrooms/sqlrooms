@@ -165,11 +165,7 @@ function normalizePointSignal(
     // Skip internal Vega selection metadata fields
     if (key.startsWith('vlPoint') || key.startsWith('_vgsid')) continue;
     if (val == null) continue;
-    if (typeof val === 'number') {
-      ranges[key] = [val, val];
-    } else {
-      ranges[key] = [String(val)];
-    }
+    ranges[key] = [String(val)];
   }
   return ranges;
 }
