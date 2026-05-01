@@ -51,6 +51,13 @@ export type VegaChartToolOutput = {
 };
 
 /**
+ * Maps field alias → { distinct_value → source_row_indices[] }.
+ * Used to reverse-map brush selections on aggregated/aliased chart fields
+ * back to the original source table rows.
+ */
+export type BrushFieldMapping = Record<string, Record<string, number[]>>;
+
+/**
  * Default description for the VegaChart tool
  */
 export const DEFAULT_VEGA_CHART_DESCRIPTION = `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.

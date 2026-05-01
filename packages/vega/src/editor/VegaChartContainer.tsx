@@ -2,6 +2,7 @@ import * as arrow from 'apache-arrow';
 import React from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
 import {cn} from '@sqlrooms/ui';
+import type {VegaBrushSelectionRanges} from '../VegaLiteArrowChart';
 import {VegaEditorContext} from './VegaEditorContext';
 import {OnSpecChange, OnSqlChange, VegaEditorContextValue} from './types';
 import {useVegaChartEditor} from './useVegaChartEditor';
@@ -44,6 +45,11 @@ export interface VegaChartContainerProps {
    * Custom class name for the container
    */
   className?: string;
+  /**
+   * Callback for brush selection events (opt-in).
+   * When provided, an interval selection param is injected into the spec.
+   */
+  onBrushSelection?: (ranges: VegaBrushSelectionRanges) => void;
 }
 
 /**
@@ -74,6 +80,7 @@ export const VegaChartContainer: React.FC<VegaChartContainerProps> = ({
   editable = true,
   onSpecChange,
   onSqlChange,
+  onBrushSelection,
   children,
   className,
 }) => {
@@ -93,6 +100,7 @@ export const VegaChartContainer: React.FC<VegaChartContainerProps> = ({
     sqlQuery,
     arrowTable,
     options,
+    onBrushSelection,
     canApply,
     hasChanges,
   };
