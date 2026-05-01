@@ -1,5 +1,6 @@
 import * as arrow from 'apache-arrow';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import type {VegaBrushSelectionRanges} from '../VegaLiteArrowChart';
 
 /**
  * Editor mode determines which editors are shown
@@ -71,6 +72,8 @@ export interface VegaEditorContextValue {
   arrowTable: arrow.Table | undefined;
   /** Vega embed options */
   options: EmbedOptions | undefined;
+  /** Callback for brush selection events (opt-in) */
+  onBrushSelection: ((ranges: VegaBrushSelectionRanges) => void) | undefined;
 
   // Derived
   /** Whether apply is possible (no errors, has changes) */

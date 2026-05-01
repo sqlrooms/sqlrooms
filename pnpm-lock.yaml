@@ -3216,6 +3216,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@sqlrooms/vega':
+        specifier: workspace:*
+        version: link:../vega
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0

@@ -151,7 +151,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       const newSessionId = state.ai.config.currentSessionId;
       if (!newSessionId) return;
 
-      const contextMessage = `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`;
+      const contextMessage = `Please use the following context from a previous session:\n\n${summary}\n\nONLY respond "Got it" to this message`;
       state.ai.setPrompt(newSessionId, contextMessage);
 
       // Wait for SessionChatProvider to mount and register sendMessage for the new session
