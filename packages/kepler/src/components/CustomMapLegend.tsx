@@ -44,11 +44,14 @@ export function CustomMapLegendFactory(
   LayerLegendHeader: ReturnType<typeof LayerLegendHeaderFactory>,
   LayerLegendContent: ReturnType<typeof LayerLegendContentFactory>,
 ) {
-  const MapLegend: React.FC<MapLegendProps & {mapIndex?: number}> = ({
+  const MapLegend: React.FC<
+    MapLegendProps & {mapIndex?: number; onClose?: () => void}
+  > = ({
     layers = [],
     width,
     isExport,
     mapIndex: mapIndexProp,
+    onClose,
     ...restProps
   }) => {
     const containerW = width || DIMENSIONS.mapControl.width;
@@ -63,7 +66,11 @@ export function CustomMapLegendFactory(
     );
     const handleClose = (evt: React.MouseEvent<HTMLButtonElement>) => {
       evt.stopPropagation();
-      dispatchAction(mapId, toggleMapControl('mapLegend', 0));
+      if (onClose) {
+        onClose();
+      } else {
+        dispatchAction(mapId, toggleMapControl('mapLegend', 0));
+      }
     };
 
     const isSplit = splitMaps && splitMaps.length > 1;
