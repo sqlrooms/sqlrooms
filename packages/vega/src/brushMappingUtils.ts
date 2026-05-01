@@ -209,8 +209,8 @@ export function resolveBrushToRowIndices(
       typeof range[0] === 'number' &&
       typeof range[1] === 'number'
     ) {
-      const min = range[0];
-      const max = range[1];
+      const min = Math.min(range[0], range[1]);
+      const max = Math.max(range[0], range[1]);
       const indices: number[] = [];
       for (const [key, rowIndices] of Object.entries(fieldMap)) {
         const numVal = Number(key);
