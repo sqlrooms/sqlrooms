@@ -97,7 +97,8 @@ export function KeplerVegaChartToolResult(
   }, [keplerMap]);
 
   // Lazy cache: computed once on first brush, then reused.
-  // `null` = not yet attempted, `undefined` = attempted but unavailable.
+  // `mapping` is `undefined` until successfully computed; `promise` being
+  // non-null means computation was attempted (resolved null = unavailable).
   const brushCacheRef = useRef<{
     mapping: BrushFieldMapping | undefined;
     promise: Promise<BrushFieldMapping | null> | null;
@@ -147,7 +148,6 @@ export function KeplerVegaChartToolResult(
 
       const mapping = await cache.promise;
       if (!mapping) {
-        cache.mapping = {} as BrushFieldMapping;
         return;
       }
       cache.mapping = mapping;
