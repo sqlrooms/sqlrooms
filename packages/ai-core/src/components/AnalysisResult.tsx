@@ -195,6 +195,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         <div className="flex w-full flex-col gap-2">
           {segments.map((seg, segIdx) => {
             if (seg.kind === 'tool-group') {
+              const groupKey = seg.parts
+                .map((p) => p.part.toolCallId)
+                .join(',');
               const anyPending = seg.parts.some((p) => {
                 const s = (p.part as Record<string, unknown>).state as string;
                 return (
@@ -204,7 +207,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                 );
               });
               return (
-                <React.Fragment key={`tg-${segIdx}`}>
+                <React.Fragment key={`tg-${groupKey}`}>
                   <ActivityBox isRunning={anyPending}>
                     {seg.parts.map((p) => {
                       const toolName = getToolName(p.part);
