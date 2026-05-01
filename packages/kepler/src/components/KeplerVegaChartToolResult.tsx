@@ -148,6 +148,7 @@ export function KeplerVegaChartToolResult(
 
       const mapping = await cache.promise;
       if (!mapping) {
+        cache.promise = null;
         return;
       }
       cache.mapping = mapping;
