@@ -1,4 +1,4 @@
-import {Button, cn} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
 import {Plus, X} from 'lucide-react';
 import React, {useState, useCallback, useMemo, type FC} from 'react';
 import {ChartBuilderColumn} from './types';
@@ -64,7 +64,7 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
       </label>
 
       <div className="space-y-2">
-        {value.map((fieldConfig, index) => {
+        {value.map((fieldConfig) => {
           const columnType = getColumnType(fieldConfig.field);
           const canRemove = value.length > 1 || !required;
 
