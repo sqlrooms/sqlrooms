@@ -277,26 +277,64 @@ function getLayoutChildId(node: LayoutNode): string {
   return isLayoutNodeKey(node) ? node : node.id;
 }
 
+function getDashboardGridCols(
+  cols: LayoutGridNode['cols'],
+  breakpoint: string,
+): number {
+  if (typeof cols === 'number') {
+    return cols;
+  }
+
+  return cols?.[breakpoint] ?? cols?.lg ?? 12;
+}
+
 function createDashboardGridItem(
   panelId: string,
   layout: LayoutGridItem[],
+  cols = 12,
 ): LayoutGridItem {
+  const effectiveCols = Math.max(1, cols);
+  const w = Math.min(3, effectiveCols);
+  const h = 2;
   const bottom = layout.reduce(
     (max, item) => Math.max(max, item.y + item.h),
     0,
   );
+
+  for (let y = 0; y <= bottom; y += 1) {
+    for (let x = 0; x <= effectiveCols - w; x += 1) {
+      const overlaps = layout.some(
+        (item) =>
+          x < item.x + item.w &&
+          x + w > item.x &&
+          y < item.y + item.h &&
+          y + h > item.y,
+      );
+      if (!overlaps) {
+        return {
+          i: panelId,
+          x,
+          y,
+          w,
+          h,
+        };
+      }
+    }
+  }
+
   return {
     i: panelId,
     x: 0,
     y: bottom,
-    w: 3,
-    h: 2,
+    w,
+    h,
   };
 }
 
 function createDashboardGridLayoutsForChildren(
   children: LayoutNode[],
   sourceLayouts?: LayoutGridNode['layouts'],
+  cols?: LayoutGridNode['cols'],
 ): LayoutGridNode['layouts'] {
   const childIds = new Set(children.map((child) => getLayoutChildId(child)));
   const sourceEntries: Array<[string, LayoutGridItem[]]> =
@@ -314,7 +352,11 @@ function createDashboardGridLayoutsForChildren(
       for (const child of children) {
         const childId = getLayoutChildId(child);
         if (!layoutItemIds.has(childId)) {
-          const item = createDashboardGridItem(childId, nextLayout);
+          const item = createDashboardGridItem(
+            childId,
+            nextLayout,
+            getDashboardGridCols(cols, breakpoint),
+          );
           nextLayout.push(item);
           layoutItemIds.add(childId);
         }
@@ -373,6 +415,7 @@ function normalizeDashboardGridLayout(
   const layouts = createDashboardGridLayoutsForChildren(
     children,
     isLayoutGridNode(layout) ? layout.layouts : undefined,
+    isLayoutGridNode(layout) ? layout.cols : undefined,
   );
 
   if (isLayoutGridNode(layout)) {
@@ -426,7 +469,11 @@ function appendPanelToGridLayout(
         breakpoint,
         [
           ...breakpointLayout,
-          createDashboardGridItem(panelNode.id, breakpointLayout),
+          createDashboardGridItem(
+            panelNode.id,
+            breakpointLayout,
+            getDashboardGridCols(layout.cols, breakpoint),
+          ),
         ],
       ];
     }),

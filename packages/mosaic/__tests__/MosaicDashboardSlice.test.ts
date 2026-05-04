@@ -124,8 +124,8 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(
       dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
     ).toEqual([
-      expect.objectContaining({i: firstLayoutId}),
-      expect.objectContaining({i: secondLayoutId}),
+      expect.objectContaining({i: firstLayoutId, x: 0, y: 0, w: 3, h: 2}),
+      expect.objectContaining({i: secondLayoutId, x: 3, y: 0, w: 3, h: 2}),
     ]);
 
     store.getState().mosaicDashboard.removePanel(dashboardId, first.id);

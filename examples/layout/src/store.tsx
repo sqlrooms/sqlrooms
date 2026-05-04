@@ -89,18 +89,41 @@ function createGridLayoutItem(
   chartId: string,
 ) {
   const layout = node.layouts?.[breakpoint] ?? [];
-  const cols = getGridColsForBreakpoint(node, breakpoint);
+  const cols = Math.max(1, getGridColsForBreakpoint(node, breakpoint));
   const w = Math.min(6, cols);
-  const y = layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0);
-  const colsPerRow = Math.max(1, Math.floor(cols / w));
-  const index = layout.length;
+  const h = 2;
+  const bottom = layout.reduce(
+    (maxY, item) => Math.max(maxY, item.y + item.h),
+    0,
+  );
+
+  for (let y = 0; y <= bottom; y += 1) {
+    for (let x = 0; x <= cols - w; x += 1) {
+      const overlaps = layout.some(
+        (item) =>
+          x < item.x + item.w &&
+          x + w > item.x &&
+          y < item.y + item.h &&
+          y + h > item.y,
+      );
+      if (!overlaps) {
+        return {
+          i: chartId,
+          x,
+          y,
+          w,
+          h,
+        };
+      }
+    }
+  }
 
   return {
     i: chartId,
-    x: (index % colsPerRow) * w,
-    y,
+    x: 0,
+    y: bottom,
     w,
-    h: 2,
+    h,
   };
 }
 
