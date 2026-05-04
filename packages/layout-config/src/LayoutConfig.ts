@@ -161,9 +161,10 @@ const BaseLayoutGridNode = z.object({
   ...LayoutNodeSize.shape,
 });
 
-export const LayoutGridNode = BaseLayoutGridNode.extend({
+export const LayoutGridNode = z.strictObject({
+  ...BaseLayoutGridNode.shape,
   children: z.lazy(() => z.array(LayoutNode)),
-}).strict();
+});
 
 export type LayoutGridNode = z.infer<typeof BaseLayoutGridNode> & {
   children: LayoutNode[];

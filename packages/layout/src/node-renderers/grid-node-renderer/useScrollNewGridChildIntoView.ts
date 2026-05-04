@@ -7,9 +7,11 @@ function getGridItemElement(
   scrollContainer: HTMLElement,
   itemId: string,
 ): HTMLElement | undefined {
-  return Array.from(
-    scrollContainer.querySelectorAll<HTMLElement>('[data-layout-grid-item-id]'),
-  ).find((element) => element.dataset.layoutGridItemId === itemId);
+  return (
+    scrollContainer.querySelector<HTMLElement>(
+      `[data-layout-grid-item-id="${CSS.escape(itemId)}"]`,
+    ) ?? undefined
+  );
 }
 
 function scrollGridItemIntoView(
@@ -34,11 +36,6 @@ function scrollGridItemIntoView(
       scrollContainerRect.bottom,
     behavior: 'smooth',
   });
-  addedElement.scrollIntoView({
-    block: 'nearest',
-    inline: 'nearest',
-    behavior: 'smooth',
-  });
   return true;
 }
 
@@ -48,6 +45,13 @@ export function useScrollNewGridChildIntoView(
   layoutVersion: unknown,
 ): RefObject<HTMLDivElement | null> {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      previousGridChildIdsByNodeId.delete(nodeId);
+      pendingGridScrollItemByNodeId.delete(nodeId);
+    };
+  }, [nodeId]);
 
   useEffect(() => {
     const previousChildIds = previousGridChildIdsByNodeId.get(nodeId);

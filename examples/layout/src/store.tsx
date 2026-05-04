@@ -31,6 +31,7 @@ import {
   isLayoutSplitNode,
   isLayoutNodeKey,
   LayoutDockNode,
+  getLayoutNodeId,
 } from '@sqlrooms/layout';
 import {createId} from '@paralleldrive/cuid2';
 
@@ -66,10 +67,6 @@ function getDashboardTitle(meta?: Record<string, unknown>): string {
   }
 
   return `Dashboard ${meta?.dashboardId ?? ''}`;
-}
-
-function getLayoutNodeKey(node: LayoutNode): string {
-  return isLayoutNodeKey(node) ? node : node.id;
 }
 
 function getGridColsForBreakpoint(
@@ -161,7 +158,7 @@ function createDashboardGridNode(
     children,
     layouts: {
       lg: children.map((child, index) => ({
-        i: getLayoutNodeKey(child),
+        i: getLayoutNodeId(child),
         x: (index * 6) % 12,
         y: Math.floor(index / 2) * 2,
         w: 6,
