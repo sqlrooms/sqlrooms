@@ -15,6 +15,15 @@ import type {
   ResolvedGeometryEncoding,
 } from './types';
 import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
+import {
+  parseWKBHeader,
+  readWKBPointXY,
+  visitWKBMultiPolygonCoordinates,
+  visitWKBPolygonCoordinates,
+  WKB_MULTIPOLYGON,
+  WKB_POINT,
+  WKB_POLYGON,
+} from './wkbParser';
 
 const COORD_FIELD = new Field('xy', new Float64(), false);
 const VERTEX_TYPE = new FixedSizeList(2, COORD_FIELD);
@@ -23,8 +32,8 @@ const RING_TYPE = new List(VERTEX_FIELD);
 const RING_FIELD = new Field('', RING_TYPE, true);
 const POLYGON_TYPE = new List(RING_FIELD);
 
-const WKB_POINT = 1;
-const WKB_POLYGON = 3;
+const GEOMETRY_SAMPLE_LIMIT = 100;
+const BITS_PER_VALIDITY_BYTE = 8;
 
 function toArrayBuffer(value: unknown): ArrayBuffer {
   if (ArrayBuffer.isView(value)) {
@@ -36,39 +45,6 @@ function toArrayBuffer(value: unknown): ArrayBuffer {
     return copy.buffer;
   }
   return value as ArrayBuffer;
-}
-
-type WKBHeader = {
-  view: DataView;
-  isLE: boolean;
-  geomType: number;
-  offset: number;
-  coordBytes: number;
-};
-
-function parseWKBHeader(buf: ArrayBuffer): WKBHeader | null {
-  if (buf.byteLength < 5) return null;
-  const view = new DataView(buf);
-  const isLE = view.getUint8(0) === 1;
-  const rawType = view.getUint32(1, isLE);
-
-  const hasZ =
-    (rawType & 0x80000000) !== 0 ||
-    ((rawType & 0xffff) > 1000 && (rawType & 0xffff) <= 1007);
-  const hasM =
-    (rawType & 0x40000000) !== 0 ||
-    ((rawType & 0xffff) > 2000 && (rawType & 0xffff) <= 2007);
-  const hasSRID = (rawType & 0x20000000) !== 0;
-
-  let base = rawType & 0xffff;
-  if (base > 2000) base -= 2000;
-  else if (base > 1000) base -= 1000;
-
-  let offset = 5;
-  if (hasSRID) offset += 4;
-
-  const coordBytes = 16 + (hasZ ? 8 : 0) + (hasM ? 8 : 0);
-  return {view, isLE, geomType: base, offset, coordBytes};
 }
 
 function isWKTEncoding(
@@ -88,12 +64,17 @@ function buildNullBitmap(
   nullCount: number,
 ): Uint8Array | null {
   if (nullCount === 0) return null;
-  const bitmap = new Uint8Array(Math.ceil(n / 8));
+  const bitmap = new Uint8Array(Math.ceil(n / BITS_PER_VALIDITY_BYTE));
   for (let i = 0; i < n; i++) {
-    if (isNull[i] !== 1)
-      bitmap[i >> 3] = (bitmap[i >> 3] ?? 0) | (1 << (i & 7));
+    if (isNull[i] !== 1) setValidityBit(bitmap, i);
   }
   return bitmap;
+}
+
+function setValidityBit(bitmap: Uint8Array, rowIndex: number) {
+  const byteIndex = Math.floor(rowIndex / BITS_PER_VALIDITY_BYTE);
+  const bitIndex = rowIndex % BITS_PER_VALIDITY_BYTE;
+  bitmap[byteIndex]! |= 1 << bitIndex;
 }
 
 function buildPromotedResult(
@@ -127,6 +108,9 @@ function parseGeometryValue(
 
   try {
     if (isWKTEncoding(encoding, value)) {
+      // Keep WKT support for ST_AsText(...) and geoarrow.wkt inputs.
+      // The upstream WKB parser plan does not cover WKT.
+      // See: https://github.com/geoarrow/geoarrow-js/issues/54
       return (
         WKTLoader.parseTextSync?.(String(value), {wkt: {crs: false}}) ?? null
       );
@@ -151,34 +135,75 @@ function parseGeometryValue(
   }
 }
 
-function getSampleWKBGeomType(
+function getSampleWKBGeomTypes(
   table: arrow.Table,
   columnName: string,
-): number | null {
+  sampleLimit = GEOMETRY_SAMPLE_LIMIT,
+): number[] | null {
   const vector = table.getChild(columnName);
   if (!vector) return null;
+  const geomTypes: number[] = [];
   for (let i = 0; i < table.numRows; i++) {
     const raw = vector.get(i);
     if (raw == null) continue;
     const hdr = parseWKBHeader(toArrayBuffer(raw));
-    if (hdr) return hdr.geomType;
+    if (!hdr) return null;
+    geomTypes.push(hdr.geomType);
+    if (geomTypes.length >= sampleLimit) break;
   }
-  return null;
+  return geomTypes;
 }
 
-function getSampleGeometry(
+function getSampleGeometryTypes(
   table: arrow.Table,
   columnName: string,
   encoding: ResolvedGeometryEncoding,
-) {
+  sampleLimit = GEOMETRY_SAMPLE_LIMIT,
+): string[] | null {
   const vector = table.getChild(columnName);
   if (!vector) return null;
+  const geometryTypes: string[] = [];
 
   for (let i = 0; i < table.numRows; i++) {
     const geometry = parseGeometryValue(vector.get(i), encoding);
-    if (geometry) return geometry;
+    if (!geometry) continue;
+    geometryTypes.push(geometry.type);
+    if (geometryTypes.length >= sampleLimit) break;
   }
-  return null;
+  return geometryTypes;
+}
+
+function appendPolygonCoordinates(
+  rings: number[][][],
+  ringOffsetsList: number[],
+  xyList: number[],
+) {
+  for (const ring of rings) {
+    ringOffsetsList.push(xyList.length / 2);
+    for (const point of ring) {
+      xyList.push(point[0]!, point[1]!);
+    }
+  }
+}
+
+function sampledGeometriesMatch(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+  matchesParsedType: (geometryType: string) => boolean,
+  matchesWKBType: (geometryType: number) => boolean,
+) {
+  try {
+    const geometryTypes = getSampleGeometryTypes(table, columnName, encoding);
+    return geometryTypes != null && geometryTypes.every(matchesParsedType);
+  } catch {
+    try {
+      const geomTypes = getSampleWKBGeomTypes(table, columnName);
+      return geomTypes != null && geomTypes.every(matchesWKBType);
+    } catch {
+      return false;
+    }
+  }
 }
 
 function tryPromotePolygonTable(
@@ -195,6 +220,10 @@ function tryPromotePolygonTable(
   const xyList: number[] = [];
   const isNull = new Uint8Array(n);
   let nullCount = 0;
+  const polygonVisitor = {
+    onRingStart: () => ringOffsetsList.push(xyList.length / 2),
+    onCoordinate: (x: number, y: number) => xyList.push(x, y),
+  };
 
   for (let i = 0; i < n; i++) {
     polygonOffsets[i] = ringOffsetsList.length;
@@ -214,36 +243,30 @@ function tryPromotePolygonTable(
         continue;
       }
       if (geom.type === 'Polygon') {
-        for (const ring of geom.coordinates as number[][][]) {
-          ringOffsetsList.push(xyList.length / 2);
-          for (const p of ring) {
-            xyList.push(p[0]!, p[1]!);
-          }
+        appendPolygonCoordinates(
+          geom.coordinates as number[][][],
+          ringOffsetsList,
+          xyList,
+        );
+      } else if (geom.type === 'MultiPolygon') {
+        for (const polygon of geom.coordinates as number[][][][]) {
+          appendPolygonCoordinates(polygon, ringOffsetsList, xyList);
         }
       } else return null;
       continue;
     }
 
-    const hdr = parseWKBHeader(toArrayBuffer(raw));
+    const buf = toArrayBuffer(raw);
+    const hdr = parseWKBHeader(buf);
     if (!hdr) return null;
 
-    const {view, isLE, geomType, offset: hdrOff, coordBytes} = hdr;
-    let off = hdrOff;
-
-    if (geomType === WKB_POLYGON) {
-      const numRings = view.getUint32(off, isLE);
-      off += 4;
-      for (let r = 0; r < numRings; r++) {
-        ringOffsetsList.push(xyList.length / 2);
-        const numPts = view.getUint32(off, isLE);
-        off += 4;
-        for (let p = 0; p < numPts; p++) {
-          xyList.push(
-            view.getFloat64(off, isLE),
-            view.getFloat64(off + 8, isLE),
-          );
-          off += coordBytes;
-        }
+    if (hdr.geomType === WKB_POLYGON) {
+      if (visitWKBPolygonCoordinates(buf, hdr, polygonVisitor) == null) {
+        return null;
+      }
+    } else if (hdr.geomType === WKB_MULTIPOLYGON) {
+      if (!visitWKBMultiPolygonCoordinates(buf, hdr, polygonVisitor)) {
+        return null;
       }
     } else return null;
   }
@@ -307,19 +330,24 @@ function tryPromotePointTable(
   const isNull = new Uint8Array(n);
   let nullCount = 0;
 
+  const markNullPoint = (rowIndex: number) => {
+    isNull[rowIndex] = 1;
+    xyValues[rowIndex * 2] = Number.NaN;
+    xyValues[rowIndex * 2 + 1] = Number.NaN;
+    nullCount++;
+  };
+
   for (let i = 0; i < n; i++) {
     const raw = vector.get(i);
     if (raw == null) {
-      isNull[i] = 1;
-      nullCount++;
+      markNullPoint(i);
       continue;
     }
 
     if (isWKTEncoding(encoding, raw)) {
       const geom = parseGeometryValue(raw, encoding);
       if (!geom) {
-        isNull[i] = 1;
-        nullCount++;
+        markNullPoint(i);
         continue;
       }
       if (geom.type !== 'Point') return null;
@@ -330,9 +358,11 @@ function tryPromotePointTable(
     }
 
     const hdr = parseWKBHeader(toArrayBuffer(raw));
-    if (!hdr || hdr.geomType !== WKB_POINT) return null;
-    xyValues[i * 2] = hdr.view.getFloat64(hdr.offset, hdr.isLE);
-    xyValues[i * 2 + 1] = hdr.view.getFloat64(hdr.offset + 8, hdr.isLE);
+    if (!hdr) return null;
+    const xy = readWKBPointXY(hdr);
+    if (!xy) return null;
+    xyValues[i * 2] = xy[0];
+    xyValues[i * 2 + 1] = xy[1];
   }
 
   const floatData = makeData({
@@ -382,23 +412,25 @@ export const wkbGeometryDecoder: GeometryDecoder = {
     }
 
     if (POINT_LAYERS.has(layerType)) {
-      try {
-        const s = getSampleGeometry(table, columnName, encoding);
-        return s == null || s.type === 'Point';
-      } catch {
-        const t = getSampleWKBGeomType(table, columnName);
-        return t == null || t === WKB_POINT;
-      }
+      return sampledGeometriesMatch(
+        table,
+        columnName,
+        encoding,
+        (geometryType) => geometryType === 'Point',
+        (geometryType) => geometryType === WKB_POINT,
+      );
     }
 
     if (POLYGON_LAYERS.has(layerType)) {
-      try {
-        const s = getSampleGeometry(table, columnName, encoding);
-        return s == null || s.type === 'Polygon';
-      } catch {
-        const t = getSampleWKBGeomType(table, columnName);
-        return t == null || t === WKB_POLYGON;
-      }
+      return sampledGeometriesMatch(
+        table,
+        columnName,
+        encoding,
+        (geometryType) =>
+          geometryType === 'Polygon' || geometryType === 'MultiPolygon',
+        (geometryType) =>
+          geometryType === WKB_POLYGON || geometryType === WKB_MULTIPOLYGON,
+      );
     }
 
     return false;
