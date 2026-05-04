@@ -216,7 +216,20 @@ function getResizeHandles(
   return isLegacyDefault ? DEFAULT_RESIZE_HANDLES : resizeHandles;
 }
 
-function normalizeLayoutItem(item: LayoutGridItem): LayoutGridItem {
+function areResizeHandlesEqual(
+  left: NonNullable<LayoutGridNode['resizeHandles']>,
+  right: NonNullable<LayoutGridNode['resizeHandles']>,
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((handle) => right.includes(handle))
+  );
+}
+
+function normalizeLayoutItem(
+  item: LayoutGridItem,
+  gridResizeHandles: NonNullable<LayoutGridNode['resizeHandles']>,
+): LayoutGridItem {
   const normalized: LayoutGridItem = {
     i: item.i,
     x: item.x,
@@ -233,17 +246,23 @@ function normalizeLayoutItem(item: LayoutGridItem): LayoutGridItem {
   if (item.isDraggable != null) normalized.isDraggable = item.isDraggable;
   if (item.isResizable != null) normalized.isResizable = item.isResizable;
   if (item.resizeHandles != null) {
-    normalized.resizeHandles = getResizeHandles(item.resizeHandles);
+    const itemResizeHandles = getResizeHandles(item.resizeHandles);
+    if (!areResizeHandlesEqual(itemResizeHandles, gridResizeHandles)) {
+      normalized.resizeHandles = itemResizeHandles;
+    }
   }
 
   return normalized;
 }
 
-function normalizeLayouts(layouts: GridLayouts): GridLayouts {
+function normalizeLayouts(
+  layouts: GridLayouts,
+  gridResizeHandles: NonNullable<LayoutGridNode['resizeHandles']>,
+): GridLayouts {
   return Object.fromEntries(
     Object.entries(layouts).map(([breakpoint, layout]) => [
       breakpoint,
-      layout.map((item) => normalizeLayoutItem(item)),
+      layout.map((item) => normalizeLayoutItem(item, gridResizeHandles)),
     ]),
   );
 }
@@ -262,7 +281,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
     [node.resizeHandles],
   );
   const layouts = useMemo(() => {
-    if (node.layouts) return node.layouts;
+    if (node.layouts) return normalizeLayouts(node.layouts, resizeHandles);
     return Object.fromEntries(
       Object.entries(cols).map(([breakpoint, breakpointCols]) => [
         breakpoint,
@@ -271,14 +290,14 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
         ),
       ]),
     );
-  }, [cols, node.children, node.layouts]);
+  }, [cols, node.children, node.layouts, resizeHandles]);
   const handleLayoutChange = useCallback(
     (allLayouts: GridLayouts) => {
       if (!onLayoutChange) {
         return;
       }
 
-      const normalizedLayouts = normalizeLayouts(allLayouts);
+      const normalizedLayouts = normalizeLayouts(allLayouts, resizeHandles);
       if (
         JSON.stringify(node.layouts ?? {}) === JSON.stringify(normalizedLayouts)
       ) {
@@ -296,7 +315,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
       result.node.layouts = normalizedLayouts;
       onLayoutChange(nextRootLayout);
     },
-    [node.id, node.layouts, onLayoutChange, rootLayout],
+    [node.id, node.layouts, onLayoutChange, resizeHandles, rootLayout],
   );
 
   const defaultComponent = (
