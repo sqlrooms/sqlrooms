@@ -3,14 +3,24 @@ import {Plus, X} from 'lucide-react';
 import React, {useState, useCallback, useMemo, type FC} from 'react';
 import {ChartBuilderColumn} from './types';
 import {FieldSelectorInput} from './FieldSelectorInput';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlrooms/ui';
 
 export interface MultiFieldSelectorProps {
   label: string;
   columns: ChartBuilderColumn[];
   types?: string[];
-  value: Array<{field: string; color?: string}>;
-  onChange: (value: Array<{field: string; color?: string}>) => void;
+  value: {field: string; color?: string; aggregate?: 'sum' | 'avg'}[];
+  onChange: (
+    value: {field: string; color?: string; aggregate?: 'sum' | 'avg'}[],
+  ) => void;
   required?: boolean;
+  showAggregation?: boolean; // NEW: show aggregation dropdowns
 }
 
 export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
@@ -20,6 +30,7 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
   value,
   onChange,
   required,
+  showAggregation = false, // NEW
 }) => {
   const [addingField, setAddingField] = useState(false);
 
@@ -33,7 +44,7 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
   const handleRemoveField = useCallback(
     (fieldToRemove: string) => {
       if (value.length <= 1 && required) {
-        return; // Cannot remove last field if required
+        return;
       }
       onChange(value.filter((v) => v.field !== fieldToRemove));
     },
@@ -42,8 +53,17 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
 
   const handleAddField = useCallback(
     (fieldName: string) => {
-      onChange([...value, {field: fieldName}]);
+      onChange([...value, {field: fieldName, aggregate: 'sum'}]);
       setAddingField(false);
+    },
+    [value, onChange],
+  );
+
+  const handleAggregateChange = useCallback(
+    (fieldName: string, aggregate: 'sum' | 'avg') => {
+      onChange(
+        value.map((v) => (v.field === fieldName ? {...v, aggregate} : v)),
+      );
     },
     [value, onChange],
   );
@@ -67,6 +87,7 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
         {value.map((fieldConfig) => {
           const columnType = getColumnType(fieldConfig.field);
           const canRemove = value.length > 1 || !required;
+          const aggregate = fieldConfig.aggregate || 'sum';
 
           return (
             <div
@@ -81,6 +102,25 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
                   </span>
                 )}
               </div>
+
+              {/* NEW: Aggregation dropdown */}
+              {showAggregation && (
+                <Select
+                  value={aggregate}
+                  onValueChange={(value: 'sum' | 'avg') =>
+                    handleAggregateChange(fieldConfig.field, value)
+                  }
+                >
+                  <SelectTrigger className="h-8 w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sum">SUM</SelectItem>
+                    <SelectItem value="avg">AVG</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
               <Button
                 variant="ghost"
                 size="sm"
