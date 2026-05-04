@@ -1,6 +1,13 @@
 import {Dialog} from '@sqlrooms/ui';
 import type {Spec} from '@uwdata/mosaic-spec';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {
+  PropsWithChildren,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type {VgPlotChartConfig} from '../chart-types';
 import {
   createChartBuilderTemplates,
   createDefaultChartBuilders,
@@ -14,17 +21,13 @@ import type {
   ChartTypeDefinition,
 } from './types';
 
-export interface ChartBuilderRootProps {
+export type ChartBuilderRootProps = PropsWithChildren<{
   /** Table name to use in generated specs */
   tableName: string;
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (
-    spec: Spec,
-    title: string,
-    metadata?: {chartType?: string; settings?: Record<string, string>},
-  ) => void;
+  onCreateChart: (title: string, metadata: VgPlotChartConfig) => void;
   /** Preferred shared chart-type customization surface */
   chartTypes?: ChartTypeDefinition[];
   /** Backward-compatible UI template customization surface */
@@ -33,8 +36,7 @@ export interface ChartBuilderRootProps {
   open?: boolean;
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
-  children: React.ReactNode;
-}
+}>;
 
 /**
  * Compound-component root that provides shared chart-builder state via context
@@ -94,17 +96,14 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     }
   }, [availableTemplates, store]);
 
-  const handleCreateChart = useCallback(
-    (spec: Spec, title: string) => {
-      const {selectedTemplateId, fieldValues} = store.getState();
-      onCreateChart(spec, title, {
-        chartType: selectedTemplateId,
-        settings: fieldValues,
-      });
-      resolvedOnOpenChange(false);
-    },
-    [onCreateChart, resolvedOnOpenChange, store],
-  );
+  const handleCreateChart: (title: string, config: VgPlotChartConfig) => void =
+    useCallback(
+      (title: string, config: VgPlotChartConfig) => {
+        onCreateChart(title, config);
+        resolvedOnOpenChange(false);
+      },
+      [onCreateChart, resolvedOnOpenChange],
+    );
 
   const ctx = useMemo(
     () => ({

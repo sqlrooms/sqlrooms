@@ -1,5 +1,6 @@
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useMemo} from 'react';
+import {DashboardPanelErrorBoundary} from './DashboardPanelErrorBoundary';
 import {MosaicDashboardPanelHeader} from './MosaicDashboardPanelHeader';
 import {
   getMosaicDashboardSelectionName,
@@ -59,13 +60,15 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
 
       <div className="min-h-0 flex-1 overflow-hidden">
         {RendererComponent ? (
-          <RendererComponent
-            dashboardId={dashboardId}
-            dashboard={dashboard}
-            panel={panel}
-            resolvedSource={resolvedSource}
-            selectionName={selectionName}
-          />
+          <DashboardPanelErrorBoundary panelType={panel.type}>
+            <RendererComponent
+              dashboardId={dashboardId}
+              dashboard={dashboard}
+              panel={panel}
+              resolvedSource={resolvedSource}
+              selectionName={selectionName}
+            />
+          </DashboardPanelErrorBoundary>
         ) : (
           <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
             Unsupported dashboard panel type: {panel.type}

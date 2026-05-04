@@ -20,6 +20,7 @@ export {
   type MosaicDashboardRootProps,
 } from './dashboard/MosaicDashboard';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
+export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
 export {
   createMosaicDashboardProfilerPanelConfig,
@@ -194,7 +195,12 @@ export {
   histogramChartType,
   lineChartChartType,
   mosaicChartTypes,
-} from './chart-builders/chartTypes';
+} from './chart-types';
+export type {
+  VgPlotChartConfig,
+  VgPlotChartSettings,
+  VgPlotChartType,
+} from './chart-types';
 export {
   buildChartTypeTitle,
   canCreateChartFromType,

@@ -16,7 +16,6 @@ import {
   SliceFunctions,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
@@ -29,7 +28,7 @@ import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import {VgPlotChartConfig} from './ChartSchemas';
+import {VgPlotChartConfig} from '../chart-types';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -149,25 +148,17 @@ export type MosaicDashboardAddPanelAction = {
 };
 
 export function createMosaicDashboardVgPlotPanelConfig(
-  spec: Spec | Record<string, unknown>,
   title: string,
+  config: VgPlotChartConfig,
   source?: MosaicDashboardPanelSource,
-  options?: {
-    chartType?: string;
-    settings?: Record<string, string>;
-  },
-): MosaicDashboardPanelConfig {
-  return {
+): VgPlotPanelConfig {
+  return VgPlotPanelConfig.parse({
     id: createId(),
     type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
     title,
     source,
-    config: {
-      vgplot: JSON.parse(JSON.stringify(spec)),
-      chartType: options?.chartType,
-      settings: options?.settings,
-    },
-  };
+    config,
+  });
 }
 
 export function createMosaicDashboardProfilerPanelConfig(

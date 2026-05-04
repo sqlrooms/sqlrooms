@@ -34,6 +34,7 @@ import {
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
+  createDefaultChartTypes,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -341,7 +342,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           get().mosaicDashboard.addPanel(
             artifactId,
-            createMosaicDashboardVgPlotPanelConfig(parsed, 'Chart 1'),
+            createMosaicDashboardVgPlotPanelConfig('Chart 1', {
+              chartType: 'custom-spec',
+              vgplot: parsed,
+              settings: {},
+            }),
           );
         },
         getDashboardVgPlot: (artifactId) =>
@@ -490,6 +495,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           panelRenderers: createDefaultMosaicDashboardPanelRenderers({
             [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
           }),
+          chartTypes: createDefaultChartTypes(),
         })(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),

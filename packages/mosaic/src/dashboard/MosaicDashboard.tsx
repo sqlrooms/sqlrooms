@@ -1,4 +1,3 @@
-import type {Spec} from '@uwdata/mosaic-spec';
 import {
   PropsWithChildren,
   ReactElement,
@@ -8,6 +7,7 @@ import {
   useState,
 } from 'react';
 import type {ChartBuilderColumn} from '../chart-builders/types';
+import type {VgPlotChartConfig} from '../chart-types';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './MosaicDashboardPanels';
@@ -93,22 +93,35 @@ export function MosaicDashboardRoot({
   ]);
 
   const handleCreateChart = useCallback(
-    (
-      spec: Spec,
-      title: string,
-      metadata?: {chartType?: string; settings?: Record<string, string>},
-    ) => {
-      const panel = createMosaicDashboardVgPlotPanelConfig(
-        spec,
-        title,
-        {tableName: dashboard?.selectedTable},
-        metadata,
-      );
+    (title: string, config: VgPlotChartConfig) => {
+      const panel = createMosaicDashboardVgPlotPanelConfig(title, config, {
+        tableName: dashboard?.selectedTable,
+      });
       addPanel(dashboardId, panel);
       setBuilderOpen(false);
     },
     [addPanel, dashboard?.selectedTable, dashboardId],
   );
+
+  const handleAddDefaultChart = useCallback(() => {
+    if (!dashboard?.selectedTable) {
+      return;
+    }
+
+    // Create empty chart panel - user will select type and fields
+    const panel = createMosaicDashboardVgPlotPanelConfig(
+      'New Chart',
+      {
+        chartType: 'histogram', // Default type, but with empty settings
+        settings: {},
+        vgplot: null,
+        settingsOpen: true, // Open settings by default
+      },
+      {tableName: dashboard.selectedTable},
+    );
+
+    addPanel(dashboardId, panel);
+  }, [addPanel, dashboard, dashboardId]);
 
   const contextValue = useMemo(
     () => ({
@@ -123,6 +136,7 @@ export function MosaicDashboardRoot({
       openBuilder: () => setBuilderOpen(true),
       closeBuilder: () => setBuilderOpen(false),
       setBuilderOpen,
+      addDefaultChart: handleAddDefaultChart,
     }),
     [
       builderOpen,
@@ -131,6 +145,7 @@ export function MosaicDashboardRoot({
       dashboard?.selectedTable,
       dashboardId,
       panelRenderers,
+      handleAddDefaultChart,
     ],
   );
 

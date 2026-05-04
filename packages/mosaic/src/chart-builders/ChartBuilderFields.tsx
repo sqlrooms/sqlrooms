@@ -1,10 +1,11 @@
 import {cn} from '@sqlrooms/ui';
-import React, {useMemo} from 'react';
+import React from 'react';
 import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
 import {FieldSelectorInput} from './FieldSelectorInput';
+import {useChartFieldForm} from './hooks/useChartFieldForm';
 
 export interface ChartBuilderFieldsProps {
   className?: string;
@@ -20,14 +21,21 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
   const fieldValues = useChartBuilderStore((state) => state.fieldValues);
   const setFieldValue = useChartBuilderStore((state) => state.setFieldValue);
 
-  const selectedTemplate = useMemo(
+  const selectedTemplate = React.useMemo(
     () => templates.find((template) => template.id === selectedTemplateId),
     [templates, selectedTemplateId],
   );
 
+  const {fields, handleFieldChange} = useChartFieldForm({
+    fields: selectedTemplate?.fields || [],
+    values: fieldValues,
+    onChange: (key: string, value: unknown) =>
+      setFieldValue(key, value as string),
+  });
+
   if (!selectedTemplate) return null;
 
-  if (selectedTemplate.fields.length === 0) {
+  if (fields.length === 0) {
     return (
       <p className={cn('text-muted-foreground py-2 text-sm', className)}>
         This chart type has no configurable fields. A starter spec will be
@@ -38,13 +46,13 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
 
   return (
     <div className={cn('flex flex-col gap-4 py-2', className)}>
-      {selectedTemplate.fields.map((field) => (
+      {fields.map((field) => (
         <FieldSelectorInput
           key={field.key}
           field={field}
           columns={columns}
           value={fieldValues[field.key]}
-          onChange={(value) => setFieldValue(field.key, value)}
+          onChange={(value) => handleFieldChange(field.key, value)}
         />
       ))}
     </div>

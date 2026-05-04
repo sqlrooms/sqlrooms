@@ -4,7 +4,7 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {BarChart3Icon} from 'lucide-react';
 import {type FC, useCallback, useEffect, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
-import {ChartSettings} from './chart-settings';
+import {ChartSettingsPanel} from './chart-settings';
 import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
 import {MosaicDashboardVgPlotHeaderActions} from './MosaicDashboardVgPlotHeaderActions';
 import {
@@ -16,16 +16,21 @@ import {
 import {VgPlotChartConfig} from '../chart-types';
 
 function toRenderableMosaicSpec(vgplot: unknown): Spec | null {
-  if (!vgplot || typeof vgplot !== 'object' || Array.isArray(vgplot)) {
+  try {
+    if (!vgplot || typeof vgplot !== 'object' || Array.isArray(vgplot)) {
+      return null;
+    }
+
+    const vgplotRecord = vgplot as Spec;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const {$schema, ...mosaicSpec} = vgplotRecord;
+
+    return mosaicSpec;
+  } catch (error) {
+    console.error('[toRenderableMosaicSpec] Failed to parse spec:', error);
     return null;
   }
-
-  const vgplotRecord = vgplot as Spec;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const {$schema, ...mosaicSpec} = vgplotRecord;
-
-  return mosaicSpec;
 }
 
 const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
@@ -103,7 +108,7 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
   );
 
   const settingsContent = (
-    <ChartSettings
+    <ChartSettingsPanel
       tableName={tableName}
       config={panel.config}
       onChange={handleSettingsChange}

@@ -7,9 +7,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {Plus} from 'lucide-react';
 import React from 'react';
+import type {VgPlotChartConfig} from '../chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
@@ -81,7 +81,7 @@ export interface ChartBuilderDialogProps {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
+  onCreateChart: (title: string, config: VgPlotChartConfig) => void;
   /** Preferred shared chart-type customization surface */
   chartTypes?: ChartTypeDefinition[];
   /** Backward-compatible UI template customization surface */

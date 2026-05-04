@@ -22,7 +22,7 @@ import {
   histogramChartType,
   lineChartChartType,
   mosaicChartTypes,
-} from './chartTypes';
+} from '../chart-types';
 
 const defaultChartTypeIcons: Record<
   string,

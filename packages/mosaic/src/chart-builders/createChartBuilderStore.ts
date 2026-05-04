@@ -1,11 +1,12 @@
 import {produce} from 'immer';
 import {createStore} from 'zustand/vanilla';
+import {VgPlotChartType} from '../chart-types';
 
 export type ChartBuilderStoreState = {
-  selectedTemplateId?: string;
+  selectedTemplateId?: VgPlotChartType;
   fieldValues: Record<string, string>;
   reset: () => void;
-  selectTemplate: (templateId: string) => void;
+  selectTemplate: (templateId: VgPlotChartType) => void;
   setFieldValue: (fieldKey: string, value: string) => void;
 };
 

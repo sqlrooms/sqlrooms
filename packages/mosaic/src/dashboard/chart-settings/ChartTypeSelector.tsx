@@ -10,8 +10,8 @@ import {
 import type {TableColumn} from '@sqlrooms/duckdb';
 import {getAvailableChartTypes} from '../../chart-builders/chartTypeUtils';
 import {createChartBuilderTemplates} from '../../chart-builders/builders';
-import {useStoreWithMosaicDashboard, VgPlotChartType} from '../ChartSchemas';
-import {createDefaultChartTypes} from '../../chart-builders/chartTypes';
+import {VgPlotChartType, createDefaultChartTypes} from '../../chart-types';
+import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {
   value: VgPlotChartType;
