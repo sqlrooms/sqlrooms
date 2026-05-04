@@ -15,6 +15,7 @@ import {LayoutPath} from '../../types';
 import {useRenderNode} from '../RenderNodeContext';
 import {RendererSwitcher} from '../RendererSwitcher';
 import {useGetPanel} from '../../useGetPanel';
+import {useScrollNewGridChildIntoView} from './useScrollNewGridChildIntoView';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -156,7 +157,7 @@ function createDefaultItem(
   index: number,
   cols: number,
 ): LayoutGridItem {
-  const id = isLayoutNodeKey(node) ? node : node.id;
+  const id = getGridChildId(node);
   const effectiveCols = Math.max(1, cols);
   const w = Math.min(3, effectiveCols);
   const h = 2;
@@ -167,6 +168,10 @@ function createDefaultItem(
     w,
     h,
   };
+}
+
+function getGridChildId(node: LayoutNode): string {
+  return isLayoutNodeKey(node) ? node : node.id;
 }
 
 function getResponsiveCols(
@@ -271,6 +276,10 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const renderNode = useRenderNode();
   const panelInfo = useGetPanel(node);
   const {rootLayout, onLayoutChange} = useLayoutRendererContext();
+  const childIds = useMemo(
+    () => node.children.map(getGridChildId),
+    [node.children],
+  );
   const breakpoints = node.breakpoints ?? DEFAULT_BREAKPOINTS;
   const cols = useMemo(
     () => getResponsiveCols(node.cols, breakpoints),
@@ -291,6 +300,11 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
       ]),
     );
   }, [cols, node.children, node.layouts, resizeHandles]);
+  const scrollContainerRef = useScrollNewGridChildIntoView(
+    node.id,
+    childIds,
+    layouts,
+  );
   const handleLayoutChange = useCallback(
     (allLayouts: GridLayouts) => {
       if (!onLayoutChange) {
@@ -319,7 +333,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   );
 
   const defaultComponent = (
-    <div className="flex h-full w-full flex-col" data-grid-id={node.id}>
+    <div className="flex h-full min-h-0 w-full flex-col" data-grid-id={node.id}>
       <style>{GRID_LAYOUT_STYLES}</style>
       {panelInfo?.title && (
         <div className="border-border flex items-center gap-2 border-b px-3 py-2">
@@ -327,7 +341,10 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           <span className="text-sm font-medium">{panelInfo.title}</span>
         </div>
       )}
-      <div className="flex-1 overflow-auto p-2">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 overflow-auto p-2"
+      >
         <ResponsiveGridLayout
           className="layout sqlrooms-grid-layout"
           layouts={layouts}
@@ -351,11 +368,12 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           }
         >
           {node.children.map((child) => {
-            const childId = isLayoutNodeKey(child) ? child : child.id;
+            const childId = getGridChildId(child);
             return (
               <div
                 key={childId}
                 className="h-full"
+                data-layout-grid-item-id={childId}
                 style={{overflow: 'visible'}}
               >
                 <div className="bg-background h-full overflow-hidden rounded border">
