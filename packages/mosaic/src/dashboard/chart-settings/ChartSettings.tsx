@@ -14,7 +14,7 @@
  * </ChartSettings.Root>
  * ```
  */
-import {type FC, type PropsWithChildren} from 'react';
+import {type FC, type PropsWithChildren, useCallback, useMemo} from 'react';
 import {DynamicChartSettings} from './DynamicChartSettings';
 import {ChartTypeSelector} from './ChartTypeSelector';
 import {
@@ -79,6 +79,38 @@ const ChartSettingsFields: FC = () => {
   const {tableName, config, columns, onChange} = useChartSettingsContext();
   const chartTypeDef = getChartTypeDefinition(config.chartType);
 
+  // Memoize columns mapping
+  const mappedColumns = useMemo(
+    () => columns.map((col) => ({name: col.name, type: col.type})),
+    [columns],
+  );
+
+  const handleSettingsChange = useCallback(
+    (newSettings: Record<string, unknown>) => {
+      if (!chartTypeDef) return;
+
+      // Check if all required fields are filled
+      const allRequiredFieldsFilled = chartTypeDef.fields
+        .filter((field) => field.required)
+        .every((field) => {
+          const value = newSettings[field.key];
+          return value !== undefined && value !== null && value !== '';
+        });
+
+      // Generate spec
+      const vgplot = allRequiredFieldsFilled
+        ? generateMosaicChartSpec(tableName, config.chartType, newSettings)
+        : null;
+
+      onChange({
+        ...config,
+        settings: newSettings,
+        vgplot,
+      });
+    },
+    [chartTypeDef, config, onChange, tableName],
+  );
+
   if (!chartTypeDef) {
     console.error(`[ChartSettings] Unknown chart type: ${config.chartType}`);
     return (
@@ -99,25 +131,9 @@ const ChartSettingsFields: FC = () => {
   return (
     <DynamicChartSettings
       chartTypeDefinition={chartTypeDef}
-      columns={columns.map((col) => ({name: col.name, type: col.type}))}
+      columns={mappedColumns}
       values={config.settings}
-      onChange={(newSettings) => {
-        // Check if all required fields are filled
-        const allRequiredFieldsFilled = chartTypeDef.fields
-          .filter((field) => field.required)
-          .every((field) => {
-            const value = newSettings[field.key];
-            return value !== undefined && value !== null && value !== '';
-          });
-
-        onChange({
-          ...config,
-          settings: newSettings,
-          vgplot: allRequiredFieldsFilled
-            ? generateMosaicChartSpec(tableName, config.chartType, newSettings)
-            : null,
-        });
-      }}
+      onChange={handleSettingsChange}
     />
   );
 };

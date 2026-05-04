@@ -1,4 +1,4 @@
-import {FC} from 'react';
+import {type FC, memo} from 'react';
 import {useChartFieldForm} from '../../chart-builders/hooks/useChartFieldForm';
 import {FieldSelectorInput} from '../../chart-builders/FieldSelectorInput';
 import type {
@@ -13,39 +13,38 @@ interface DynamicChartSettingsProps {
   onChange: (values: Record<string, unknown>) => void;
 }
 
-export const DynamicChartSettings: FC<DynamicChartSettingsProps> = ({
-  chartTypeDefinition,
-  columns,
-  values,
-  onChange,
-}) => {
-  const {fields, handleFieldChange} = useChartFieldForm({
-    fields: chartTypeDefinition.fields,
-    values,
-    onChange: (key, value) => {
-      onChange({...values, [key]: value});
-    },
-  });
+export const DynamicChartSettings: FC<DynamicChartSettingsProps> = memo(
+  ({chartTypeDefinition, columns, values, onChange}) => {
+    const {fields, handleFieldChange} = useChartFieldForm({
+      fields: chartTypeDefinition.fields,
+      values,
+      onChange: (key, value) => {
+        onChange({...values, [key]: value});
+      },
+    });
 
-  if (fields.length === 0) {
+    if (fields.length === 0) {
+      return (
+        <div className="text-muted-foreground text-sm">
+          No settings available for this chart type
+        </div>
+      );
+    }
+
     return (
-      <div className="text-muted-foreground text-sm">
-        No settings available for this chart type
+      <div className="space-y-4">
+        {fields.map((field) => (
+          <FieldSelectorInput
+            key={field.key}
+            field={field}
+            columns={columns}
+            value={values[field.key] as string}
+            onChange={(value) => handleFieldChange(field.key, value)}
+          />
+        ))}
       </div>
     );
-  }
+  },
+);
 
-  return (
-    <div className="space-y-4">
-      {fields.map((field) => (
-        <FieldSelectorInput
-          key={field.key}
-          field={field}
-          columns={columns}
-          value={values[field.key] as string}
-          onChange={(value) => handleFieldChange(field.key, value)}
-        />
-      ))}
-    </div>
-  );
-};
+DynamicChartSettings.displayName = 'DynamicChartSettings';
