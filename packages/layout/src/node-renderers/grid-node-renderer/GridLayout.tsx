@@ -23,6 +23,11 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const DEFAULT_BREAKPOINTS = {lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0};
 const DEFAULT_COLS = {lg: 12, md: 10, sm: 6, xs: 4, xxs: 2};
+const DEFAULT_RESIZE_HANDLES: NonNullable<LayoutGridNode['resizeHandles']> = [
+  'e',
+  's',
+  'se',
+];
 const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item {
   overflow: visible;
@@ -110,6 +115,32 @@ const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-s::before {
   background: hsl(var(--primary));
 }
+
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-se {
+  bottom: -4px;
+  cursor: nwse-resize;
+  height: 16px;
+  margin-left: 0;
+  right: -4px;
+  width: 16px;
+}
+
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-se::before {
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  border-right: 2px solid transparent;
+  bottom: 5px;
+  content: "";
+  height: 8px;
+  position: absolute;
+  right: 5px;
+  width: 8px;
+}
+
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-se:hover::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-se::before {
+  border-color: hsl(var(--primary));
+}
 `;
 
 type GridLayouts = NonNullable<LayoutGridNode['layouts']>;
@@ -170,6 +201,21 @@ function renderResizeHandle(axis: string, ref: Ref<HTMLElement>) {
   );
 }
 
+function getResizeHandles(
+  resizeHandles: LayoutGridNode['resizeHandles'],
+): NonNullable<LayoutGridNode['resizeHandles']> {
+  if (!resizeHandles) {
+    return DEFAULT_RESIZE_HANDLES;
+  }
+
+  const isLegacyDefault =
+    resizeHandles.length === 2 &&
+    resizeHandles.includes('e') &&
+    resizeHandles.includes('s');
+
+  return isLegacyDefault ? DEFAULT_RESIZE_HANDLES : resizeHandles;
+}
+
 function normalizeLayoutItem(item: LayoutGridItem): LayoutGridItem {
   const normalized: LayoutGridItem = {
     i: item.i,
@@ -186,7 +232,9 @@ function normalizeLayoutItem(item: LayoutGridItem): LayoutGridItem {
   if (item.static != null) normalized.static = item.static;
   if (item.isDraggable != null) normalized.isDraggable = item.isDraggable;
   if (item.isResizable != null) normalized.isResizable = item.isResizable;
-  if (item.resizeHandles != null) normalized.resizeHandles = item.resizeHandles;
+  if (item.resizeHandles != null) {
+    normalized.resizeHandles = getResizeHandles(item.resizeHandles);
+  }
 
   return normalized;
 }
@@ -208,6 +256,10 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const cols = useMemo(
     () => getResponsiveCols(node.cols, breakpoints),
     [breakpoints, node.cols],
+  );
+  const resizeHandles = useMemo(
+    () => getResizeHandles(node.resizeHandles),
+    [node.resizeHandles],
   );
   const layouts = useMemo(() => {
     if (node.layouts) return node.layouts;
@@ -273,7 +325,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           draggableCancel={
             'button, input, textarea, select, a, [data-layout-drag-cancel="true"]'
           }
-          resizeHandles={node.resizeHandles ?? ['e', 's']}
+          resizeHandles={resizeHandles}
           resizeHandle={renderResizeHandle}
           onLayoutChange={(_, allLayouts) =>
             handleLayoutChange(allLayouts as GridLayouts)

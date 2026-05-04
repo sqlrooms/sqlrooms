@@ -110,7 +110,7 @@ describe('LayoutGridNode schema', () => {
       rowHeight: 220,
       margin: [12, 12],
       compactType: 'vertical',
-      resizeHandles: ['e', 's'],
+      resizeHandles: ['e', 's', 'se'],
       children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
       layouts: {
         lg: [{i: 'chart-1', x: 0, y: 0, w: 6, h: 2}],
