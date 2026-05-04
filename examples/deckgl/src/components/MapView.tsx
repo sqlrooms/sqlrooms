@@ -88,7 +88,7 @@ const AIRPORT_LAYERS = [
   {
     '@@type': 'GeoArrowScatterplotLayer',
     id: 'airports',
-    _sqlroomsBinding: {dataset: 'airports'},
+    _sqlroomsBinding: {dataset: AIRPORTS_TABLE_NAME},
     opacity: 0.7,
     filled: true,
     stroked: true,
