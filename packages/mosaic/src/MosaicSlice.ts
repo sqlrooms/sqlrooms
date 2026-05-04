@@ -35,6 +35,13 @@ import {
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
+export type MosaicPreAggregateOptions = {
+  /** Database schema/namespace for Mosaic pre-aggregate tables. */
+  schema?: string;
+  /** Enable or disable Mosaic's pre-aggregation optimization. */
+  enabled?: boolean;
+};
+
 // Client configuration options
 export type MosaicClientOptions = {
   /** Unique identifier for this client */
@@ -108,6 +115,7 @@ export function createDefaultMosaicConfig(
 export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
+  preagg?: MosaicPreAggregateOptions;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
@@ -132,6 +140,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         try {
           if (props.coordinator) {
             resolvedCoordinator = props.coordinator;
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
           } else {
             const dbConnector = await get().db.getConnector();
             resolvedCoordinator = coordinator();
@@ -142,6 +151,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
                   connection: dbConnector.getConnection(),
                 })
               : createDuckDbMosaicConnector(dbConnector);
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
         } catch (error) {
@@ -416,6 +426,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
     },
   }));
+}
+
+function applyMosaicPreAggregateOptions(
+  mosaicCoordinator: Coordinator,
+  options?: MosaicPreAggregateOptions,
+) {
+  if (!options) {
+    return;
+  }
+  if (options.schema !== undefined) {
+    mosaicCoordinator.preaggregator.schema = options.schema;
+  }
+  if (options.enabled !== undefined) {
+    mosaicCoordinator.preaggregator.enabled = options.enabled;
+  }
 }
 
 export type DuckDbSliceStateWithMosaic = DuckDbSliceState & MosaicSliceState;

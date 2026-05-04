@@ -92,10 +92,18 @@ const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
+const MOSAIC_PREAGG_SCHEMA = 'mosaic';
+const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
-  initializationQuery: 'INSTALL spatial; LOAD spatial;',
+  initializationQuery: [
+    'INSTALL spatial',
+    'LOAD spatial',
+    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
+    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
+  ].join('; '),
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -480,7 +488,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
 
-        ...createMosaicSlice()(set, get, store),
+        ...createMosaicSlice({
+          preagg: {
+            schema: MOSAIC_PREAGG_SCHEMA_REF,
+          },
+        })(set, get, store),
 
         ...createMosaicDashboardSlice({
           addPanelActions: [deckMapDashboardAddPanelAction],
