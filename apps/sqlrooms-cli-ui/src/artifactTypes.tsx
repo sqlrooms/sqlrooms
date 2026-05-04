@@ -28,9 +28,6 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
     defaultTitle: 'Dashboard',
     icon: BarChart3,
     component: DashboardArtifact,
-    onCreate: ({artifactId, store}) => {
-      store.getState().dashboard.ensureDashboardArtifact(artifactId);
-    },
     onEnsure: ({artifactId, store}) => {
       store.getState().dashboard.ensureDashboardArtifact(artifactId);
     },

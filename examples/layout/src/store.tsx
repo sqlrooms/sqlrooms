@@ -26,9 +26,12 @@ import {SchemaPanel} from './components/SchemaPanel';
 import {
   findNodeById,
   isLayoutDockNode,
+  LayoutGridNode,
+  isLayoutGridNode,
   isLayoutSplitNode,
   isLayoutNodeKey,
   LayoutDockNode,
+  getLayoutNodeId,
 } from '@sqlrooms/layout';
 import {createId} from '@paralleldrive/cuid2';
 
@@ -45,6 +48,77 @@ function generateChartId(): string {
   return `chart-${createId()}`;
 }
 
+function getDashboardTitle(meta?: Record<string, unknown>): string {
+  if (meta?.dashboardId === 'grid' || meta?.dashboardId === 'growth-grid') {
+    return 'Grid layout';
+  }
+
+  if (meta?.dashboardId === 'dock' || meta?.dashboardId === 'overview') {
+    return 'Dock layout';
+  }
+
+  if (typeof meta?.title === 'string') {
+    return meta.title;
+  }
+
+  return `Dashboard ${meta?.dashboardId ?? ''}`;
+}
+
+function getGridColsForBreakpoint(
+  node: LayoutGridNode,
+  breakpoint: string,
+): number {
+  if (typeof node.cols === 'number') {
+    return node.cols;
+  }
+
+  return node.cols?.[breakpoint] ?? node.cols?.lg ?? 12;
+}
+
+function createGridLayoutItem(
+  node: LayoutGridNode,
+  breakpoint: string,
+  chartId: string,
+) {
+  const layout = node.layouts?.[breakpoint] ?? [];
+  const cols = Math.max(1, getGridColsForBreakpoint(node, breakpoint));
+  const w = Math.min(6, cols);
+  const h = 2;
+  const bottom = layout.reduce(
+    (maxY, item) => Math.max(maxY, item.y + item.h),
+    0,
+  );
+
+  for (let y = 0; y <= bottom; y += 1) {
+    for (let x = 0; x <= cols - w; x += 1) {
+      const overlaps = layout.some(
+        (item) =>
+          x < item.x + item.w &&
+          x + w > item.x &&
+          y < item.y + item.h &&
+          y + h > item.y,
+      );
+      if (!overlaps) {
+        return {
+          i: chartId,
+          x,
+          y,
+          w,
+          h,
+        };
+      }
+    }
+  }
+
+  return {
+    i: chartId,
+    x: 0,
+    y: bottom,
+    w,
+    h,
+  };
+}
+
 function createDashboardNode(
   dashboardId: string,
   children: LayoutNode[],
@@ -53,12 +127,38 @@ function createDashboardNode(
   return {
     type: 'dock',
     id: dashboardId,
-    panel: {key: 'dashboard', meta: {dashboardId}},
+    panel: {key: 'dashboard', meta: {dashboardId, layoutType: 'dock'}},
     root: {
       type: 'split',
       id: `${dashboardId}-root`,
       direction,
       children,
+    },
+  };
+}
+
+function createDashboardGridNode(
+  dashboardId: string,
+  children: LayoutNode[],
+): LayoutGridNode {
+  return {
+    type: 'grid',
+    id: dashboardId,
+    panel: {key: 'dashboard', meta: {dashboardId, layoutType: 'grid'}},
+    cols: 12,
+    rowHeight: 220,
+    margin: [12, 12],
+    compactType: 'vertical',
+    resizeHandles: ['e', 's', 'se'],
+    children,
+    layouts: {
+      lg: children.map((child, index) => ({
+        i: getLayoutNodeId(child),
+        x: (index * 6) % 12,
+        y: Math.floor(index / 2) * 2,
+        w: 6,
+        h: 2,
+      })),
     },
   };
 }
@@ -108,7 +208,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                     panel: RoomPanelTypes.enum.dashboards,
                     children: [
                       createDashboardNode(
-                        'overview',
+                        'dock',
                         [
                           {
                             type: 'split',
@@ -171,33 +271,30 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                         ],
                         'row',
                       ),
-                      createDashboardNode('growth', [
+                      createDashboardGridNode('grid', [
                         {
                           type: 'panel',
-                          id: 'foobar',
-                          panel: {key: 'chart', meta: {chartId: 'foobar'}},
-                          defaultSize: '60%',
-                          minSize: 200,
+                          id: 'growth-grid-sessions',
+                          panel: {
+                            key: 'chart',
+                            meta: {chartId: 'growth-grid-sessions'},
+                          },
                         },
                         {
                           type: 'panel',
-                          id: 'growth-sessions-2',
+                          id: 'growth-grid-retention',
                           panel: {
                             key: 'chart',
-                            meta: {chartId: 'growth-sessions-2'},
+                            meta: {chartId: 'growth-grid-retention'},
                           },
-                          defaultSize: '60%',
-                          minSize: 200,
                         },
                         {
                           type: 'panel',
-                          id: 'growth-conversions',
+                          id: 'growth-grid-conversions',
                           panel: {
                             key: 'chart',
-                            meta: {chartId: 'growth-conversions'},
+                            meta: {chartId: 'growth-grid-conversions'},
                           },
-                          defaultSize: '40%',
-                          minSize: 200,
                         },
                       ]),
                     ],
@@ -233,7 +330,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           panels: {
             dashboard: (ctx) => ({
               icon: BarChart3Icon,
-              title: `Dashboard ${ctx.meta?.dashboardId ?? ''}`,
+              title: getDashboardTitle(ctx.meta),
             }),
             chart: (ctx) => ({
               icon: BarChart3Icon,
@@ -295,61 +392,75 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         const {config, setConfig} = get().layout;
         const chartId = generateChartId();
 
-        // Find the dock node for this dashboard
-        const dockResult = findNodeById(config, dashboardId);
-        if (!dockResult || !isLayoutDockNode(dockResult.node)) {
+        const dashboardResult = findNodeById(config, dashboardId);
+        if (!dashboardResult) {
           return;
         }
 
-        const dockNode = dockResult.node;
-
-        // Find the root split of the dock node
-        if (!isLayoutSplitNode(dockNode.root)) {
-          return;
-        }
-
-        // Clone the config and add the new chart panel to the dock's root split
         const newConfig = JSON.parse(JSON.stringify(config)) as LayoutConfig;
-        const newDockResult = findNodeById(newConfig, dashboardId);
-        if (!newDockResult || !isLayoutDockNode(newDockResult.node)) {
+        const newDashboardResult = findNodeById(newConfig, dashboardId);
+        if (!newDashboardResult) {
           return;
         }
 
-        const newDockNode = newDockResult.node;
-        if (!isLayoutSplitNode(newDockNode.root)) {
-          return;
-        }
-
-        // Add the new chart
-        newDockNode.root.children.push({
-          type: 'panel',
-          id: chartId,
-          panel: {key: 'chart', meta: {chartId}},
-          minSize: 200,
-        });
-
-        // Recalculate all children sizes equally
-        const totalChildren = newDockNode.root.children.length;
-        const equalSize = Math.floor(100 / totalChildren);
-
-        newDockNode.root.children = newDockNode.root.children.map((child) => {
-          // If child is just a string key, wrap it into a proper panel node
-          if (isLayoutNodeKey(child)) {
-            return {
-              type: 'panel' as const,
-              id: child,
-              defaultSize: equalSize,
-            };
+        if (isLayoutDockNode(newDashboardResult.node)) {
+          const newDockNode = newDashboardResult.node;
+          if (!isLayoutSplitNode(newDockNode.root)) {
+            return;
           }
 
-          // Otherwise, spread existing node and set defaultSize
-          return {
-            ...child,
-            defaultSize: equalSize,
-          };
-        });
+          newDockNode.root.children.push({
+            type: 'panel',
+            id: chartId,
+            panel: {key: 'chart', meta: {chartId}},
+            minSize: 200,
+          });
 
-        setConfig(newConfig);
+          const totalChildren = newDockNode.root.children.length;
+          const equalSize = Math.floor(100 / totalChildren);
+
+          newDockNode.root.children = newDockNode.root.children.map((child) => {
+            if (isLayoutNodeKey(child)) {
+              return {
+                type: 'panel' as const,
+                id: child,
+                defaultSize: equalSize,
+              };
+            }
+
+            return {
+              ...child,
+              defaultSize: equalSize,
+            };
+          });
+
+          setConfig(newConfig);
+          return;
+        }
+
+        if (isLayoutGridNode(newDashboardResult.node)) {
+          const newGridNode = newDashboardResult.node;
+          newGridNode.children.push({
+            type: 'panel',
+            id: chartId,
+            panel: {key: 'chart', meta: {chartId}},
+          });
+
+          const layoutBreakpoints = Object.keys(newGridNode.layouts ?? {});
+          const breakpoints =
+            layoutBreakpoints.length > 0 ? layoutBreakpoints : ['lg'];
+          const nextLayouts = {...(newGridNode.layouts ?? {})};
+
+          for (const breakpoint of breakpoints) {
+            nextLayouts[breakpoint] = [
+              ...(nextLayouts[breakpoint] ?? []),
+              createGridLayoutItem(newGridNode, breakpoint, chartId),
+            ];
+          }
+
+          newGridNode.layouts = nextLayouts;
+          setConfig(newConfig);
+        }
       },
     }),
   ),

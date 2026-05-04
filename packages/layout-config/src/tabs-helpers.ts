@@ -2,6 +2,7 @@ import {
   LayoutNode,
   LayoutTabsNode,
   isLayoutDockNode,
+  isLayoutGridNode,
   isLayoutPanelNode,
   isLayoutSplitNode,
   isLayoutTabsNode,
@@ -16,6 +17,7 @@ export function getLayoutNodeId(node: LayoutNode): string {
   if (isLayoutSplitNode(node)) return node.id;
   if (isLayoutTabsNode(node)) return node.id;
   if (isLayoutDockNode(node)) return node.id;
+  if (isLayoutGridNode(node)) return node.id;
 
   throw new Error('Unknown node type');
 }

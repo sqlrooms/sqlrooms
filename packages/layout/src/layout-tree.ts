@@ -2,6 +2,7 @@ import {
   getLayoutNodeId,
   getVisibleTabChildren,
   isLayoutDockNode,
+  isLayoutGridNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
@@ -118,6 +119,14 @@ function removeNode(
     return {...root, root: newRoot};
   }
 
+  if (isLayoutGridNode(root)) {
+    const children = root.children
+      .map((child) => removeNode(child, key))
+      .filter((child): child is LayoutNode => child !== null);
+
+    return {...root, children};
+  }
+
   if (isLayoutTabsNode(root)) {
     const children = root.children
       .map((child) => removeNode(child, key))
@@ -160,7 +169,7 @@ export function visitLayoutLeafNodes<T = void>(
     return visitLayoutLeafNodes(root.root, visitor, [...ancestors, root]);
   }
 
-  if (isLayoutSplitNode(root)) {
+  if (isLayoutSplitNode(root) || isLayoutGridNode(root)) {
     for (const child of root.children) {
       const result = visitLayoutLeafNodes(child, visitor, [...ancestors, root]);
 
@@ -214,7 +223,11 @@ export function findNodeById(
     return findNodeById(root.root, nodeId, [...ancestors, root]);
   }
 
-  if (isLayoutSplitNode(root) || isLayoutTabsNode(root)) {
+  if (
+    isLayoutSplitNode(root) ||
+    isLayoutTabsNode(root) ||
+    isLayoutGridNode(root)
+  ) {
     for (const child of root.children) {
       const result = findNodeById(child, nodeId, [...ancestors, root]);
 
@@ -237,6 +250,17 @@ export function findTabsNodeForPanel(
 
   if (isLayoutDockNode(root)) {
     return findTabsNodeForPanel(root.root, panelId);
+  }
+
+  if (isLayoutGridNode(root)) {
+    for (const child of root.children) {
+      const result = findTabsNodeForPanel(child, panelId);
+      if (result) {
+        return result;
+      }
+    }
+
+    return undefined;
   }
 
   if (isLayoutTabsNode(root)) {

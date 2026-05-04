@@ -1,6 +1,6 @@
 Layout slice and renderer for SQLRooms panel-based UIs.
 
-This package renders layout trees using `react-resizable-panels` for split layouts and `dnd-kit` for dockable panel rearrangement.
+This package renders layout trees using `react-resizable-panels` for split layouts, `dnd-kit` for dockable panel rearrangement, and `react-grid-layout` for scrollable grid dashboard layouts.
 
 ## Installation
 

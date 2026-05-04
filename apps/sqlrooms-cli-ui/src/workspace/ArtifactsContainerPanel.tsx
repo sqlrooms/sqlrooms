@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DropdownMenuItem,
 } from '@sqlrooms/ui';
-import {PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
+import {BarChart3Icon, PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
@@ -64,10 +64,39 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
 };
 
 function CliArtifactAddMenu() {
+  const createDashboardArtifact = useRoomStore(
+    (state) => state.dashboard.createDashboardArtifact,
+  );
+
   return (
     <ArtifactTabs.AddMenu>
-      {(artifactTabs) =>
-        CLI_ARTIFACT_TYPES.map((artifactType) => {
+      {(artifactTabs) => (
+        <>
+          <DropdownMenuItem
+            onClick={() => {
+              const artifactId = createDashboardArtifact(
+                'Dashboard',
+                'grid',
+              );
+              artifactTabs.selectArtifact(artifactId);
+            }}
+          >
+            <BarChart3Icon /> Dashboard: Scrollable grid
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              const artifactId = createDashboardArtifact(
+                'Dashboard',
+                'dock',
+              );
+              artifactTabs.selectArtifact(artifactId);
+            }}
+          >
+            <BarChart3Icon /> Dashboard: Docked panels
+          </DropdownMenuItem>
+          {CLI_ARTIFACT_TYPES.filter(
+            (artifactType) => artifactType !== 'dashboard',
+          ).map((artifactType) => {
           const type = ARTIFACT_TYPES[artifactType];
           return (
             <DropdownMenuItem
@@ -77,8 +106,9 @@ function CliArtifactAddMenu() {
               <type.icon /> {`New ${type.label}`}
             </DropdownMenuItem>
           );
-        })
-      }
+          })}
+        </>
+      )}
     </ArtifactTabs.AddMenu>
   );
 }

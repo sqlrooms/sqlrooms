@@ -5,7 +5,7 @@ import type {PanelIdentityResult} from './resolvePanelIdentity';
 
 export type LayoutPath = (string | number)[];
 
-export type PanelContainerType = 'tabs' | 'split' | 'root';
+export type PanelContainerType = 'tabs' | 'split' | 'root' | 'dock' | 'grid';
 
 export type RoomPanelComponentProps = {
   panelInfo: RoomPanelInfo;

@@ -3,6 +3,7 @@ import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
 import type {
+  MosaicDashboardLayoutType,
   MosaicDashboardSliceState,
   MosaicSliceState,
 } from '@sqlrooms/mosaic';
@@ -68,7 +69,10 @@ export type RoomState = RoomShellSliceState &
       setDashboardVgPlot: (artifactId: string, vgplot: string) => void;
       getDashboardVgPlot: (artifactId: string) => string | undefined;
       getCurrentDashboardArtifactId: () => string | undefined;
-      createDashboardArtifact: (title?: string) => string;
+      createDashboardArtifact: (
+        title?: string,
+        layoutType?: MosaicDashboardLayoutType,
+      ) => string;
       setCurrentDashboardVgPlot: (vgplot: string) => string;
     };
   };
