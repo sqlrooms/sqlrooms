@@ -16,6 +16,8 @@ export interface ChartBuilderField {
   types?: string[];
   /** Optional helper text for AI or custom UIs */
   description?: string;
+  /** Whether this field accepts multiple values (array) */
+  multiple?: boolean;
 }
 
 /**
