@@ -49,21 +49,16 @@ function generateChartId(): string {
 }
 
 function getDashboardTitle(meta?: Record<string, unknown>): string {
-  const layoutType =
-    typeof meta?.layoutType === 'string'
-      ? meta.layoutType
-      : meta?.dashboardId === 'growth-grid'
-        ? 'grid'
-        : meta?.dashboardId === 'overview'
-          ? 'dock'
-          : null;
-
-  if (layoutType === 'grid') {
+  if (meta?.dashboardId === 'grid' || meta?.dashboardId === 'growth-grid') {
     return 'Grid layout';
   }
 
-  if (layoutType === 'dock') {
+  if (meta?.dashboardId === 'dock' || meta?.dashboardId === 'overview') {
     return 'Dock layout';
+  }
+
+  if (typeof meta?.title === 'string') {
+    return meta.title;
   }
 
   return `Dashboard ${meta?.dashboardId ?? ''}`;
