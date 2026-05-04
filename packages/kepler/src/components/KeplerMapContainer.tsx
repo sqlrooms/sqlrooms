@@ -130,10 +130,27 @@ const KeplerGl: FC<{
     return getAnimatableVisibleLayers(layers).length > 0;
   }, [keplerState?.visState?.layers]);
 
-  const bottomWidgetFields =
-    hasFilters || hasAnimatableLayers
-      ? bottomWidgetSelector(mergedKeplerProps, theme)
-      : null;
+  const bottomWidgetFields = useMemo(() => {
+    if (!hasFilters && !hasAnimatableLayers) return null;
+    const fields = bottomWidgetSelector(mergedKeplerProps, theme);
+    // The legend is rendered as a draggable, portaled overlay so the
+    // BottomWidget should not shrink to reserve space for it.  Mask
+    // mapLegend.active so the upstream spaceForLegendWidth stays 0.
+    return {
+      ...fields,
+      uiState: {
+        ...fields.uiState,
+        mapControls: {
+          ...fields.uiState.mapControls,
+          mapLegend: {
+            ...fields.uiState.mapControls?.mapLegend,
+            show: fields.uiState.mapControls?.mapLegend?.show ?? false,
+            active: false,
+          },
+        },
+      },
+    };
+  }, [hasFilters, hasAnimatableLayers, mergedKeplerProps, theme]);
 
   const modalContainerFields = keplerState?.visState
     ? modalContainerSelector(mergedKeplerProps, containerNode)
