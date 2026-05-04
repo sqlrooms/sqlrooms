@@ -5,7 +5,6 @@ import type {
   PreparedDeckDatasetState,
 } from '@sqlrooms/deck';
 import {useCallback, useMemo, useState} from 'react';
-import {NavigationControl} from 'react-map-gl/maplibre';
 import {AIRPORTS_TABLE_NAME, BUILDINGS_TABLE_NAME} from '../dataSources';
 
 const ZURICH_VIEW_STATE = {
@@ -303,9 +302,7 @@ export const MapView = () => {
         mapStyle={MAP_STYLE}
         onDatasetStatesChange={handleDatasetStatesChange}
         deckProps={deckProps}
-      >
-        <NavigationControl position="top-left" />
-      </DeckJsonMap>
+      />
 
       <div className="pointer-events-none absolute inset-0 z-20">
         <div className="pointer-events-auto absolute top-3 right-3 w-72 overflow-hidden border border-white/10 bg-black/70 shadow-2xl backdrop-blur-md">
