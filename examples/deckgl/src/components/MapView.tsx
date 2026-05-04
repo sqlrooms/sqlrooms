@@ -6,7 +6,7 @@ import type {
 } from '@sqlrooms/deck';
 import {useCallback, useMemo, useState} from 'react';
 import {NavigationControl} from 'react-map-gl/maplibre';
-import {BUILDINGS_TABLE_NAME} from '../dataSources';
+import {AIRPORTS_TABLE_NAME, BUILDINGS_TABLE_NAME} from '../dataSources';
 
 const ZURICH_VIEW_STATE = {
   latitude: 47.376,
@@ -26,9 +26,11 @@ const AIRPORTS_VIEW_STATE = {
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const DEFAULT_BUILDING_HEIGHT_DOMAIN: [number, number] = [0, 200];
 
 const BUILDINGS_QUERY = `
   SELECT
+    name,
     class,
     height,
     geometry
@@ -43,7 +45,7 @@ const AIRPORTS_QUERY = `
     ST_X(geom) AS longitude,
     ST_Y(geom) AS latitude,
     ST_AsWKB(geom) AS geom
-  FROM airports
+  FROM ${AIRPORTS_TABLE_NAME}
 `;
 
 const MAJOR_AIRPORTS_QUERY = `
@@ -54,15 +56,15 @@ const MAJOR_AIRPORTS_QUERY = `
     ST_X(geom) AS longitude,
     ST_Y(geom) AS latitude,
     ST_AsWKB(geom) AS geom
-  FROM airports
+  FROM ${AIRPORTS_TABLE_NAME}
   WHERE scalerank <= 3
 `;
 
-const BUILDINGS_LAYERS = [
+const createBuildingsLayers = (heightDomain: [number, number]) => [
   {
     '@@type': 'GeoArrowPolygonLayer',
     id: 'buildings',
-    _sqlroomsBinding: {dataset: 'buildings'},
+    _sqlroomsBinding: {dataset: BUILDINGS_TABLE_NAME},
     pickable: true,
     filled: true,
     stroked: false,
@@ -76,7 +78,7 @@ const BUILDINGS_LAYERS = [
         title: 'Height (m)',
       },
       scheme: 'Blues',
-      domain: [0.003950834274291992, 186.7],
+      domain: heightDomain,
       clamp: true,
       reverse: true,
     },
@@ -121,6 +123,7 @@ const AIRPORT_LAYERS = [
 type ActiveLayer = 'buildings' | 'airports';
 
 type BuildingRow = {
+  name: string | null;
   class: string | null;
   height: number | null;
 };
@@ -129,6 +132,48 @@ type AirportRow = {
   name: string | null;
   abbrev: string | null;
 };
+
+type ReadyDatasetState = Extract<PreparedDeckDatasetState, {status: 'ready'}>;
+type PreparedTable = ReadyDatasetState['prepared']['table'];
+
+const STATUS_PRIORITY: Record<PreparedDeckDatasetState['status'], number> = {
+  ready: 0,
+  loading: 1,
+  error: 2,
+};
+
+function getWorstDatasetState(
+  ...states: Array<PreparedDeckDatasetState | undefined>
+) {
+  return states.reduce<PreparedDeckDatasetState | undefined>(
+    (worst, state) =>
+      !state ||
+      (worst && STATUS_PRIORITY[worst.status] >= STATUS_PRIORITY[state.status])
+        ? worst
+        : state,
+    undefined,
+  );
+}
+
+function getNumericColumnDomain(
+  table: PreparedTable,
+  columnName: string,
+): [number, number] | null {
+  const column = table.getChild(columnName);
+  if (!column) return null;
+
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+
+  for (let i = 0; i < table.numRows; i++) {
+    const value = column.get(i);
+    if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+
+  return min === Number.POSITIVE_INFINITY ? null : [min, max];
+}
 
 function StatusIndicator({
   status,
@@ -153,11 +198,31 @@ export const MapView = () => {
   const [datasetStates, setDatasetStates] = useState<
     Record<string, PreparedDeckDatasetState>
   >({});
+  const buildingState = datasetStates[BUILDINGS_TABLE_NAME];
+  const airportsState = datasetStates[AIRPORTS_TABLE_NAME];
+  const majorAirportsState = datasetStates['majorAirports'];
+  const airportsStatus = getWorstDatasetState(
+    airportsState,
+    majorAirportsState,
+  );
+
+  const buildingHeightDomain = useMemo(() => {
+    if (buildingState?.status !== 'ready') {
+      return DEFAULT_BUILDING_HEIGHT_DOMAIN;
+    }
+    return (
+      getNumericColumnDomain(buildingState.prepared.table, 'height') ??
+      DEFAULT_BUILDING_HEIGHT_DOMAIN
+    );
+  }, [buildingState]);
 
   const datasets = useMemo<Record<string, DeckDatasetInput>>(() => {
     if (activeLayer === 'airports') {
       const airportDatasets: Record<string, DeckDatasetInput> = {
-        airports: {sqlQuery: AIRPORTS_QUERY, geometryEncodingHint: 'wkb'},
+        [AIRPORTS_TABLE_NAME]: {
+          sqlQuery: AIRPORTS_QUERY,
+          geometryEncodingHint: 'wkb',
+        },
         majorAirports: {
           sqlQuery: MAJOR_AIRPORTS_QUERY,
           geometryEncodingHint: 'wkb',
@@ -167,7 +232,10 @@ export const MapView = () => {
     }
 
     const buildingDatasets: Record<string, DeckDatasetInput> = {
-      buildings: {sqlQuery: BUILDINGS_QUERY, geometryEncodingHint: 'wkb'},
+      [BUILDINGS_TABLE_NAME]: {
+        sqlQuery: BUILDINGS_QUERY,
+        geometryEncodingHint: 'wkb',
+      },
     };
     return buildingDatasets;
   }, [activeLayer]);
@@ -177,9 +245,12 @@ export const MapView = () => {
       initialViewState:
         activeLayer === 'airports' ? AIRPORTS_VIEW_STATE : ZURICH_VIEW_STATE,
       controller: true,
-      layers: activeLayer === 'airports' ? AIRPORT_LAYERS : BUILDINGS_LAYERS,
+      layers:
+        activeLayer === 'airports'
+          ? AIRPORT_LAYERS
+          : createBuildingsLayers(buildingHeightDomain),
     }),
-    [activeLayer],
+    [activeLayer, buildingHeightDomain],
   );
 
   const handleDatasetStatesChange = useCallback(
@@ -205,6 +276,7 @@ export const MapView = () => {
 
         const row = object as BuildingRow;
         const lines: string[] = [];
+        if (row.name) lines.push(row.name);
         if (row.class) lines.push(row.class);
         if (row.height != null) lines.push(`${row.height.toFixed(1)} m`);
         return lines.length ? {text: lines.join('\n')} : null;
@@ -213,15 +285,10 @@ export const MapView = () => {
     [activeLayer],
   );
 
-  const buildingState = datasetStates['buildings'];
-  const airportsState = datasetStates['airports'];
-  const majorAirportsState = datasetStates['majorAirports'];
-  const airportsStatus = majorAirportsState ?? airportsState;
-
   const buildingCount =
     buildingState?.status === 'ready'
       ? buildingState.prepared.table.numRows
-      : 48451;
+      : null;
   const airportCount =
     airportsState?.status === 'ready'
       ? airportsState.prepared.table.numRows
@@ -260,7 +327,10 @@ export const MapView = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-white/85">
-                    Zurich Buildings ({buildingCount.toLocaleString()})
+                    Zurich Buildings
+                    {buildingCount != null
+                      ? ` (${buildingCount.toLocaleString()})`
+                      : ''}
                   </span>
                   {activeLayer === 'buildings' && buildingState && (
                     <StatusIndicator status={buildingState.status} />

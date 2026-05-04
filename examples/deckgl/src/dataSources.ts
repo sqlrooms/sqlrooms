@@ -1,3 +1,5 @@
+export const AIRPORTS_TABLE_NAME = 'airports';
+
 export const BUILDINGS_TABLE_NAME = 'buildings';
 
 export const BUILDINGS_PARQUET_URL =

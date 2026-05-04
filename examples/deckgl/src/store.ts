@@ -10,7 +10,11 @@ import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
-import {BUILDINGS_PARQUET_URL, BUILDINGS_TABLE_NAME} from './dataSources';
+import {
+  AIRPORTS_TABLE_NAME,
+  BUILDINGS_PARQUET_URL,
+  BUILDINGS_TABLE_NAME,
+} from './dataSources';
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
@@ -19,7 +23,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     ...createSqlEditorSlice()(set, get, store),
     ...createRoomShellSlice({
       connector: createWasmDuckDbConnector({
-        initializationQuery: 'LOAD httpfs; LOAD spatial',
+        initializationQuery: 'LOAD httpfs; LOAD spatial;',
       }),
       config: {
         ...createDefaultDiscussConfig(),
@@ -51,7 +55,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             type: 'url',
             // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
             url: 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_10m_airports.geojson',
-            tableName: 'airports',
+            tableName: AIRPORTS_TABLE_NAME,
             loadOptions: {
               method: 'st_read',
             },

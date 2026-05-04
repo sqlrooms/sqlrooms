@@ -10,7 +10,7 @@
   <img src="https://sqlrooms.org/media/examples/deckgl.webp" alt="SQLRooms Deck.gl geospatial visualization example" width=450>
 </a>
 
-An example demonstrating [deck.gl](https://deck.gl/) integration for geospatial data visualization through [`@sqlrooms/deck`](../../packages/deck/README.md). It renders 48,451 Overture Maps building footprints for the Zurich city centre, extruded in 3D and colored by height using a sequential color scale.
+An example demonstrating [deck.gl](https://deck.gl/) integration for geospatial data visualization through [`@sqlrooms/deck`](../../packages/deck/README.md). It renders ~48k Overture Maps building footprints for the Zurich city centre (currently 48,451 rows), extruded in 3D and colored by height using a sequential color scale.
 
 Features:
 
