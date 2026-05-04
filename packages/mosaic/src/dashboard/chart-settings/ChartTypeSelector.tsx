@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import type {TableColumn} from '@sqlrooms/duckdb';
-import {getAvailableChartTypes} from '../../chart-builders/chartTypeUtils';
+import {isChartTypeAvailable} from '../../chart-builders/chartTypeUtils';
 import {createChartBuilderTemplates} from '../../chart-builders/builders';
 import {VgPlotChartType, createDefaultChartTypes} from '../../chart-types';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
@@ -35,9 +35,15 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
       [chartTypes],
     );
 
-    const availableChartTypes = useMemo(
-      () => getAvailableChartTypes(templates, columns),
+    const availableTemplates = useMemo(
+      () =>
+        templates.filter((template) => isChartTypeAvailable(template, columns)),
       [columns, templates],
+    );
+
+    const selectedTemplate = useMemo(
+      () => availableTemplates.find((template) => template.id === value),
+      [availableTemplates, value],
     );
 
     return (
@@ -45,12 +51,22 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
         <Label>Chart Type</Label>
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger>
-            <SelectValue placeholder="Select chart type" />
+            {selectedTemplate ? (
+              <div className="flex items-center gap-2">
+                <selectedTemplate.icon className="h-4 w-4" />
+                <span>{selectedTemplate.label}</span>
+              </div>
+            ) : (
+              <SelectValue placeholder="Select chart type" />
+            )}
           </SelectTrigger>
           <SelectContent>
-            {availableChartTypes.map((chartType) => (
-              <SelectItem key={chartType.id} value={chartType.id}>
-                {chartType.label}
+            {availableTemplates.map((template) => (
+              <SelectItem key={template.id} value={template.id}>
+                <div className="flex items-center gap-2">
+                  <template.icon className="h-4 w-4" />
+                  <span>{template.label}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
