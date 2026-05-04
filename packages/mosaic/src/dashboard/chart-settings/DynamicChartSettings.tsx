@@ -1,6 +1,7 @@
 import {type FC, memo} from 'react';
 import {useChartFieldForm} from '../../chart-builders/hooks/useChartFieldForm';
 import {FieldSelectorInput} from '../../chart-builders/FieldSelectorInput';
+import {MultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
 import type {
   ChartTypeDefinition,
   ChartBuilderColumn,
@@ -33,15 +34,37 @@ export const DynamicChartSettings: FC<DynamicChartSettingsProps> = memo(
 
     return (
       <div className="space-y-4">
-        {fields.map((field) => (
-          <FieldSelectorInput
-            key={field.key}
-            field={field}
-            columns={columns}
-            value={values[field.key] as string}
-            onChange={(value) => handleFieldChange(field.key, value)}
-          />
-        ))}
+        {fields.map((field) => {
+          if (field.multiple) {
+            // Render MultiFieldSelector for multiple fields
+            const fieldValue = values[field.key] as
+              | Array<{field: string; color?: string}>
+              | undefined;
+
+            return (
+              <MultiFieldSelector
+                key={field.key}
+                label={field.label}
+                columns={columns}
+                types={field.types}
+                value={fieldValue || []}
+                onChange={(value) => handleFieldChange(field.key, value)}
+                required={field.required}
+              />
+            );
+          }
+
+          // Render FieldSelectorInput for single fields
+          return (
+            <FieldSelectorInput
+              key={field.key}
+              field={field}
+              columns={columns}
+              value={values[field.key] as string}
+              onChange={(value) => handleFieldChange(field.key, value)}
+            />
+          );
+        })}
       </div>
     );
   },
