@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ComponentType} from 'react';
-import {VgPlotChartType} from '../chart-types';
+import type {VgPlotChartType} from '../chart-types/base-types';
 
 /**
  * Describes a field selector in a chart builder UI

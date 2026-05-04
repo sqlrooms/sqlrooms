@@ -4,7 +4,7 @@ import type {HeatmapChartSettings} from './schema';
 import {
   buildDefaultChartTitle,
   NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/chartTypeUtils';
+} from '../../chart-builders/constants';
 
 function titleFromDescription(description: string) {
   return (fieldValues: Record<string, string>) =>

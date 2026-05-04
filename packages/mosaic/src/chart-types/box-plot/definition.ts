@@ -4,7 +4,7 @@ import type {BoxPlotChartSettings} from './schema';
 import {
   buildDefaultChartTitle,
   NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/chartTypeUtils';
+} from '../../chart-builders/constants';
 
 const FG_COLOR = 'var(--color-chart-1)';
 

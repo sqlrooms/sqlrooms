@@ -4,7 +4,7 @@ import type {CountPlotChartSettings} from './schema';
 import {
   buildDefaultChartTitle,
   QUANTITATIVE_COLUMN_TYPES,
-} from '../../chart-builders/chartTypeUtils';
+} from '../../chart-builders/constants';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';

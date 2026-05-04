@@ -1,3 +1,6 @@
+// Re-export base types
+export * from './base-types';
+
 // Re-export all schemas and types
 export * from './histogram';
 export * from './line-chart';
@@ -44,7 +47,6 @@ export const VgPlotChartConfig = z.discriminatedUnion('chartType', [
 
 export type VgPlotChartConfig = z.infer<typeof VgPlotChartConfig>;
 export type VgPlotChartSettings = VgPlotChartConfig['settings'];
-export type VgPlotChartType = VgPlotChartConfig['chartType'];
 
 // Legacy compatibility exports
 export const mosaicChartTypes = {
@@ -60,7 +62,7 @@ export const mosaicChartTypes = {
 
 export function createDefaultChartTypes(options?: {
   includeCustomSpec?: boolean;
-}): import('../chart-builders/types').ChartTypeDefinition[] {
+}) {
   const includeCustomSpec = options?.includeCustomSpec ?? true;
   const chartTypes = [
     histogramChartType,
