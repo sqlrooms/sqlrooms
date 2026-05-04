@@ -7,6 +7,15 @@ import {
   NUMERIC_COLUMN_TYPES,
 } from '../../chart-builders/constants';
 
+// Chart color palette matching theme colors from tailwind-preset.css
+const CHART_COLORS = [
+  '#ea7c5c', // chart-1: hsl(12, 76%, 61%)
+  '#2a9d8f', // chart-2: hsl(173, 58%, 39%)
+  '#264653', // chart-3: hsl(197, 37%, 24%)
+  '#e9c46a', // chart-4: hsl(43, 74%, 66%)
+  '#f4a261', // chart-5: hsl(27, 87%, 67%)
+];
+
 function titleFromDescription(description: string) {
   return (fieldValues: Record<string, string>) =>
     buildDefaultChartTitle(description, fieldValues);
@@ -16,7 +25,11 @@ function getLineColor(
   fieldConfig: {field: string; color?: string},
   index: number,
 ): string {
-  return fieldConfig.color || `var(--color-chart-${index + 1})`;
+  if (fieldConfig.color) {
+    return fieldConfig.color;
+  }
+  // CHART_COLORS is non-empty, so this is always defined
+  return CHART_COLORS[index % CHART_COLORS.length]!;
 }
 
 export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
