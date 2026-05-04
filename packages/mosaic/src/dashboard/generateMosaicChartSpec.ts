@@ -32,7 +32,7 @@ export function generateMosaicChartSpec(
   }
 
   try {
-    return chartTypeDef.createSpec(tableName, settings);
+    return chartTypeDef.createSpec(tableName, settings as any);
   } catch (error) {
     console.error(
       `[generateMosaicChartSpec] Failed to generate spec for chart type "${chartType}":`,

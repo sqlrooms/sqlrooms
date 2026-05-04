@@ -47,7 +47,7 @@ export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
           const title = buildChartTypeTitle(selectedTemplate, fieldValues);
           onCreateChart(title, {
             chartType: selectedTemplateId,
-            settings: fieldValues,
+            settings: fieldValues as any,
             vgplot: spec,
           });
           reset();

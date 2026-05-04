@@ -63,7 +63,7 @@ const ChartSettingsTypeSelector: FC = () => {
       settings: {},
       vgplot: null,
       settingsOpen: config.settingsOpen,
-    });
+    } as VgPlotChartConfig);
   };
 
   return (
@@ -106,7 +106,7 @@ const ChartSettingsFields: FC = () => {
         ...config,
         settings: newSettings,
         vgplot,
-      });
+      } as VgPlotChartConfig);
     },
     [chartTypeDef, config, onChange, tableName],
   );
