@@ -1,6 +1,6 @@
 import {Button} from '@sqlrooms/ui';
-import {Plus, X} from 'lucide-react';
-import React, {useState, useCallback, useMemo, type FC} from 'react';
+import {Plus, Trash2} from 'lucide-react';
+import {useState, useCallback, useMemo, type FC} from 'react';
 import {ChartBuilderColumn} from './types';
 import {FieldSelectorInput} from './FieldSelectorInput';
 import {
@@ -10,17 +10,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
+import type {
+  AggregateFunction,
+  YFieldConfig,
+} from '../chart-types/line-chart/schema';
 
 export interface MultiFieldSelectorProps {
   label: string;
   columns: ChartBuilderColumn[];
   types?: string[];
-  value: {field: string; color?: string; aggregate?: 'sum' | 'avg'}[];
-  onChange: (
-    value: {field: string; color?: string; aggregate?: 'sum' | 'avg'}[],
-  ) => void;
+  value: YFieldConfig[];
+  onChange: (value: YFieldConfig[]) => void;
   required?: boolean;
-  showAggregation?: boolean; // NEW: show aggregation dropdowns
+  showAggregation?: boolean;
 }
 
 export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
@@ -30,7 +32,7 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
   value,
   onChange,
   required,
-  showAggregation = false, // NEW
+  showAggregation = false,
 }) => {
   const [addingField, setAddingField] = useState(false);
 
@@ -43,12 +45,9 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
 
   const handleRemoveField = useCallback(
     (fieldToRemove: string) => {
-      if (value.length <= 1 && required) {
-        return;
-      }
       onChange(value.filter((v) => v.field !== fieldToRemove));
     },
-    [value, onChange, required],
+    [value, onChange],
   );
 
   const handleAddField = useCallback(
@@ -60,20 +59,12 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
   );
 
   const handleAggregateChange = useCallback(
-    (fieldName: string, aggregate: 'sum' | 'avg') => {
+    (fieldName: string, aggregate: AggregateFunction) => {
       onChange(
         value.map((v) => (v.field === fieldName ? {...v, aggregate} : v)),
       );
     },
     [value, onChange],
-  );
-
-  const getColumnType = useCallback(
-    (fieldName: string) => {
-      const col = columns.find((c) => c.name === fieldName);
-      return col?.type;
-    },
-    [columns],
   );
 
   return (
@@ -85,51 +76,60 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
 
       <div className="space-y-2">
         {value.map((fieldConfig) => {
-          const columnType = getColumnType(fieldConfig.field);
-          const canRemove = value.length > 1 || !required;
           const aggregate = fieldConfig.aggregate || 'sum';
 
           return (
-            <div
-              key={fieldConfig.field}
-              className="flex items-center gap-2 rounded-md border p-2"
-            >
-              <div className="flex-1 truncate">
-                <span className="font-medium">{fieldConfig.field}</span>
-                {columnType && (
-                  <span className="text-muted-foreground ml-2 text-xs">
-                    {columnType}
-                  </span>
-                )}
+            <div key={fieldConfig.field} className="space-y-2">
+              <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+                <div className="min-w-[100px] flex-1">
+                  <FieldSelectorInput
+                    field={{
+                      key: fieldConfig.field,
+                      label: '',
+                      types,
+                    }}
+                    columns={columns}
+                    value={fieldConfig.field}
+                    onChange={(newField) => {
+                      onChange(
+                        value.map((v) =>
+                          v.field === fieldConfig.field
+                            ? {...v, field: newField}
+                            : v,
+                        ),
+                      );
+                    }}
+                  />
+                </div>
+
+                <div className="flex flex-0 items-end gap-2">
+                  {showAggregation && (
+                    <Select
+                      value={aggregate}
+                      onValueChange={(value: AggregateFunction) =>
+                        handleAggregateChange(fieldConfig.field, value)
+                      }
+                    >
+                      <SelectTrigger className="h-10 flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sum">SUM</SelectItem>
+                        <SelectItem value="avg">AVG</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveField(fieldConfig.field)}
+                    className="h-10 w-10 shrink-0"
+                  >
+                    <Trash2 className="text-destructive h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-
-              {/* NEW: Aggregation dropdown */}
-              {showAggregation && (
-                <Select
-                  value={aggregate}
-                  onValueChange={(value: 'sum' | 'avg') =>
-                    handleAggregateChange(fieldConfig.field, value)
-                  }
-                >
-                  <SelectTrigger className="h-8 w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sum">SUM</SelectItem>
-                    <SelectItem value="avg">AVG</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRemoveField(fieldConfig.field)}
-                disabled={!canRemove}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           );
         })}

@@ -59,37 +59,69 @@ export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
   buildTitle: titleFromDescription(
     'Create a line chart with one or more Y fields',
   ),
-  createSpec: (tableName, {x, yFields}): Spec => {
+  createSpec: (tableName, {x, yFields, xInterval}): Spec => {
     if (!yFields || yFields.length === 0) {
       throw new Error('At least one Y field is required');
     }
 
     const plotMarks: any[] = [];
 
+    // When temporal aggregation is active, use SQL binning
+    const dataSource = xInterval
+      ? {
+          from: tableName,
+          filterBy: '$brush',
+        }
+      : {from: tableName, filterBy: '$brush'};
+
     // Generate lineY and text marks for each Y field
     yFields.forEach((fieldConfig, index) => {
       const color = getLineColor(fieldConfig, index);
+      const aggregate = fieldConfig.aggregate || 'sum';
 
-      // Add line mark
-      plotMarks.push({
-        mark: 'lineY',
-        data: {from: tableName, filterBy: '$brush'},
-        x,
-        y: fieldConfig.field,
-        stroke: color,
-      });
+      // When temporal aggregation is active, use bin for X and aggregation for Y
+      if (xInterval) {
+        // Use bin syntax for temporal aggregation
+        plotMarks.push({
+          mark: 'lineY',
+          data: dataSource,
+          x: {bin: x, interval: xInterval},
+          y: {[aggregate]: fieldConfig.field},
+          stroke: color,
+        });
 
-      // Add text label mark
-      plotMarks.push({
-        mark: 'text',
-        data: {from: tableName, filterBy: '$brush'},
-        x,
-        y: fieldConfig.field,
-        text: [fieldConfig.field],
-        fill: color,
-        dx: 5,
-        dy: -5,
-      });
+        // Text label with aggregation info
+        plotMarks.push({
+          mark: 'text',
+          data: dataSource,
+          x: {bin: x, interval: xInterval},
+          y: {[aggregate]: fieldConfig.field},
+          text: [`${fieldConfig.field} (${aggregate})`],
+          fill: color,
+          dx: 5,
+          dy: -5,
+        });
+      } else {
+        // No aggregation - direct field references
+        plotMarks.push({
+          mark: 'lineY',
+          data: dataSource,
+          x,
+          y: fieldConfig.field,
+          stroke: color,
+        });
+
+        plotMarks.push({
+          mark: 'text',
+          data: dataSource,
+          x,
+          y: fieldConfig.field,
+          text: [fieldConfig.field],
+          fill: color,
+          dx: 5,
+          dy: -5,
+        });
+      }
     });
 
     // Add brush

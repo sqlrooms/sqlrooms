@@ -1,28 +1,34 @@
 import {z} from 'zod';
 
+// Temporal interval enum
+export const TemporalInterval = z.enum([
+  'year',
+  'quarter',
+  'month',
+  'week',
+  'day',
+  'hour',
+  'minute',
+  'second',
+]);
+export type TemporalInterval = z.infer<typeof TemporalInterval>;
+
+// Aggregate function enum
+export const AggregateFunction = z.enum(['sum', 'avg']);
+export type AggregateFunction = z.infer<typeof AggregateFunction>;
+
+// Y-field configuration
+export const YFieldConfig = z.object({
+  field: z.string(),
+  color: z.string().optional(),
+  aggregate: AggregateFunction.optional().default('sum'),
+});
+export type YFieldConfig = z.infer<typeof YFieldConfig>;
+
 export const LineChartSettings = z.object({
   x: z.string().optional(),
-  xInterval: z
-    .enum([
-      'year',
-      'quarter',
-      'month',
-      'week',
-      'day',
-      'hour',
-      'minute',
-      'second',
-    ])
-    .optional(),
-  yFields: z
-    .array(
-      z.object({
-        field: z.string(),
-        color: z.string().optional(),
-        aggregate: z.enum(['sum', 'avg']).optional().default('sum'),
-      }),
-    )
-    .min(1),
+  xInterval: TemporalInterval.optional(),
+  yFields: z.array(YFieldConfig).min(1),
 });
 
 export type LineChartSettings = z.infer<typeof LineChartSettings>;

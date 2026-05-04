@@ -213,7 +213,11 @@ function fitViewStateToBounds(options: {
       [bounds[1][0], bounds[1][1]],
     ],
     {padding},
-  ) as WebMercatorViewport & {longitude: number; latitude: number; zoom: number};
+  ) as WebMercatorViewport & {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+  };
 
   return {
     longitude: fitted.longitude,
@@ -670,19 +674,14 @@ export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
 const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
 const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
 
-function findColumnByName(
-  table: DataTable,
-  candidates: string[],
-) {
+function findColumnByName(table: DataTable, candidates: string[]) {
   const candidateSet = new Set(candidates);
   return table.columns.find((column) =>
     candidateSet.has(column.name.toLowerCase()),
   )?.name;
 }
 
-function findLongitudeLatitudeColumns(
-  table?: DataTable,
-) {
+function findLongitudeLatitudeColumns(table?: DataTable) {
   if (!table) return null;
   const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
   const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
@@ -703,9 +702,7 @@ function quoteTableReference(table: DataTable) {
     .join('.');
 }
 
-function createDeckMapPanelForTable(
-  table: DataTable,
-) {
+function createDeckMapPanelForTable(table: DataTable) {
   const coordinates = findLongitudeLatitudeColumns(table);
   if (!coordinates) return undefined;
 

@@ -1,6 +1,5 @@
 import {type FC, memo} from 'react';
 import {
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -8,18 +7,11 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {TEMPORAL_COLUMN_TYPES} from './constants';
+import {TemporalInterval} from '../chart-types';
 
 interface TemporalGranularitySelectorProps {
-  value?:
-    | 'year'
-    | 'quarter'
-    | 'month'
-    | 'week'
-    | 'day'
-    | 'hour'
-    | 'minute'
-    | 'second';
-  onChange: (value?: string) => void;
+  value?: TemporalInterval;
+  onChange: (value?: TemporalInterval) => void;
   xFieldType?: string;
 }
 
@@ -33,6 +25,8 @@ const TEMPORAL_INTERVALS = [
   {value: 'minute', label: 'Minute'},
   {value: 'second', label: 'Second'},
 ] as const;
+
+const NONE = 'none';
 
 function isTemporalField(fieldType?: string): boolean {
   if (!fieldType) return false;
@@ -48,8 +42,8 @@ export const TemporalGranularitySelector: FC<TemporalGranularitySelectorProps> =
       return null;
     }
 
-    const handleValueChange = (newValue: string) => {
-      if (newValue === 'none') {
+    const handleValueChange = (newValue: TemporalInterval | typeof NONE) => {
+      if (newValue === NONE) {
         onChange(undefined);
       } else {
         onChange(newValue);
@@ -57,22 +51,19 @@ export const TemporalGranularitySelector: FC<TemporalGranularitySelectorProps> =
     };
 
     return (
-      <div className="space-y-2">
-        <Label>Temporal Granularity</Label>
-        <Select value={value || 'none'} onValueChange={handleValueChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="None (no aggregation)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None (no aggregation)</SelectItem>
-            {TEMPORAL_INTERVALS.map((interval) => (
-              <SelectItem key={interval.value} value={interval.value}>
-                {interval.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select value={value || NONE} onValueChange={handleValueChange}>
+        <SelectTrigger className="h-10">
+          <SelectValue placeholder="None" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>None</SelectItem>
+          {TEMPORAL_INTERVALS.map((interval) => (
+            <SelectItem key={interval.value} value={interval.value}>
+              {interval.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   });
 
