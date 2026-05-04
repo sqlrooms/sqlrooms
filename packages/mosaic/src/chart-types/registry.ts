@@ -4,7 +4,6 @@ import {lineChartChartType} from './line-chart';
 import {countPlotChartType} from './count-plot';
 import {ecdfChartType} from './ecdf';
 import {heatmapChartType} from './heatmap';
-import {boxPlotChartType} from './box-plot';
 import {bubbleChartChartType} from './bubble-chart';
 import {customSpecChartType} from './custom-spec';
 
@@ -16,7 +15,6 @@ registerChartType(lineChartChartType);
 registerChartType(countPlotChartType);
 registerChartType(ecdfChartType);
 registerChartType(heatmapChartType);
-registerChartType(boxPlotChartType);
 registerChartType(bubbleChartChartType);
 registerChartType(customSpecChartType);
 

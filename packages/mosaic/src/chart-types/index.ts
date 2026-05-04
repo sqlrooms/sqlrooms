@@ -7,7 +7,6 @@ export * from './line-chart';
 export * from './count-plot';
 export * from './ecdf';
 export * from './heatmap';
-export * from './box-plot';
 export * from './bubble-chart';
 export * from './custom-spec';
 export * from './registry';
@@ -18,7 +17,6 @@ import {lineChartChartType} from './line-chart';
 import {countPlotChartType} from './count-plot';
 import {ecdfChartType} from './ecdf';
 import {heatmapChartType} from './heatmap';
-import {boxPlotChartType} from './box-plot';
 import {bubbleChartChartType} from './bubble-chart';
 import {customSpecChartType} from './custom-spec';
 
@@ -29,7 +27,6 @@ import {EcdfChartConfig as EcdfChartConfigSchema} from './ecdf';
 import {LineChartConfig as LineChartConfigSchema} from './line-chart';
 import {BubbleChartConfig as BubbleChartConfigSchema} from './bubble-chart';
 import {HeatmapChartConfig as HeatmapChartConfigSchema} from './heatmap';
-import {BoxPlotChartConfig as BoxPlotChartConfigSchema} from './box-plot';
 import {CustomSpecChartConfig as CustomSpecChartConfigSchema} from './custom-spec';
 import {z} from 'zod';
 
@@ -41,7 +38,6 @@ export const VgPlotChartConfig = z.discriminatedUnion('chartType', [
   LineChartConfigSchema,
   BubbleChartConfigSchema,
   HeatmapChartConfigSchema,
-  BoxPlotChartConfigSchema,
   CustomSpecChartConfigSchema,
 ]);
 
@@ -55,7 +51,6 @@ export const mosaicChartTypes = {
   lineChart: lineChartChartType,
   ecdf: ecdfChartType,
   heatmap: heatmapChartType,
-  boxPlot: boxPlotChartType,
   bubbleChart: bubbleChartChartType,
   customSpec: customSpecChartType,
 } as const;
@@ -70,7 +65,6 @@ export function createDefaultChartTypes(options?: {
     lineChartChartType,
     ecdfChartType,
     heatmapChartType,
-    boxPlotChartType,
     bubbleChartChartType,
   ];
 

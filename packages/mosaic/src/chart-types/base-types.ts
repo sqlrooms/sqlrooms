@@ -13,5 +13,4 @@ export type VgPlotChartType =
   | 'line-chart'
   | 'bubble-chart'
   | 'heatmap'
-  | 'box-plot'
   | 'custom-spec';

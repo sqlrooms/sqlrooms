@@ -146,7 +146,6 @@ export type {
 
 // Chart builder types and utilities
 export {
-  boxPlotBuilder,
   bubbleChartBuilder,
   countPlotBuilder,
   createChartBuilderTemplate,
@@ -185,7 +184,6 @@ export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeG
 export {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
 export {
-  boxPlotChartType,
   bubbleChartChartType,
   countPlotChartType,
   createDefaultChartTypes,

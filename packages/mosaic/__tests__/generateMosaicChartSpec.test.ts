@@ -75,17 +75,6 @@ describe('generateMosaicChartSpec', () => {
     expect(result).toHaveProperty('plot');
   });
 
-  it('generates spec for box-plot chart type', () => {
-    const result = generateMosaicChartSpec('data', 'box-plot', {
-      x: 'category',
-      y: 'value',
-    });
-
-    expect(result).toBeDefined();
-    expect(result).not.toBeNull();
-    expect(result).toHaveProperty('plot');
-  });
-
   it('generates spec for bubble-chart chart type', () => {
     const result = generateMosaicChartSpec('data', 'bubble-chart', {
       x: 'xval',
