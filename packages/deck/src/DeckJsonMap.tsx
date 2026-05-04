@@ -3,7 +3,7 @@ import DeckGL from '@deck.gl/react';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
@@ -107,9 +107,6 @@ function filterUnavailableLayers(
 function renderDatasetStatusOverlay(
   datasetStates: Record<string, PreparedDeckDatasetState>,
 ) {
-  const loadingDatasets = Object.entries(datasetStates)
-    .filter(([, state]) => state.status === 'loading')
-    .map(([datasetId]) => datasetId);
   const failedDatasets = Object.entries(datasetStates).filter(
     (
       entry,
@@ -157,6 +154,7 @@ export function DeckJsonMap({
     [normalizedDatasets],
   );
   const datasetStates = usePreparedDatasetStates(normalizedDatasets);
+  const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
 
   const {spec: parsedSpec, error: specError} = useMemo(
     () => parseSpec(spec),
@@ -208,8 +206,12 @@ export function DeckJsonMap({
   }, [convertedDeckPropsResult.error]);
 
   useEffect(() => {
-    onDatasetStatesChange?.(datasetStates);
-  }, [datasetStates, onDatasetStatesChange]);
+    onDatasetStatesChangeRef.current = onDatasetStatesChange;
+  }, [onDatasetStatesChange]);
+
+  useEffect(() => {
+    onDatasetStatesChangeRef.current?.(datasetStates);
+  }, [datasetStates]);
 
   const fallbackDeckProps = useMemo(
     () => extractFallbackDeckProps(availableSpec),
