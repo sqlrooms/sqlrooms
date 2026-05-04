@@ -65,6 +65,7 @@ export {
   MosaicSliceConfig,
   type CreateMosaicSliceProps,
   type MosaicClientOptions,
+  type MosaicPreAggregateOptions,
   type MosaicSliceState,
   type TrackedClient,
 } from './MosaicSlice';
