@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
@@ -27,7 +29,7 @@
     "eslint": "^9.36.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vite": "^7.1.9"
+    "vite": "^8.0.5"
   },
   "overrides": {
     "@duckdb/duckdb-wasm": "1.32.0"

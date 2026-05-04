@@ -1,7 +1,9 @@
-import type {DeckProps} from '@deck.gl/core';
 import type * as arrow from 'apache-arrow';
-import type {ReactNode} from 'react';
+import type {ComponentProps, ReactNode} from 'react';
+import type DeckGLReact from '@deck.gl/react';
 import type {MapProps} from 'react-map-gl/maplibre';
+
+type DeckProps = ComponentProps<typeof DeckGLReact>;
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
 
 export type {

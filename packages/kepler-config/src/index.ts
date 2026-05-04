@@ -23,28 +23,60 @@ export const KeplerMapSchema = z.object({
 });
 export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
 
+const LegacyKeplerSliceConfig = z.object({
+  currentMapId: z.string().optional(),
+  maps: z.array(KeplerMapSchema).default([]),
+  openTabs: z.array(z.string()).optional(),
+});
+
 export const KeplerSliceConfig = z.preprocess(
-  (val) => {
-    // Migration: initialize openTabs from maps if not set (for previously saved projects)
-    if (
-      val &&
-      typeof val === 'object' &&
-      'maps' in val &&
-      Array.isArray(val.maps) &&
-      !('openTabs' in val)
-    ) {
-      return {
-        ...val,
-        openTabs: val.maps.map((m: {id: string}) => m.id),
-      };
-    }
-    return val;
-  },
+  (val) => val,
   z.object({
-    currentMapId: z.string(),
-    maps: z.array(KeplerMapSchema),
-    /** IDs of maps that are currently open (visible in tab strip). */
-    openTabs: z.array(z.string()),
+    currentMapId: z.string().optional(),
+    maps: z.array(KeplerMapSchema).default([]),
   }),
 );
 export type KeplerSliceConfig = z.infer<typeof KeplerSliceConfig>;
+
+export type KeplerTabsArtifactsMigrationOptions = {
+  artifactType?: string;
+};
+
+export function migrateKeplerTabsToArtifacts(
+  input: unknown,
+  options: KeplerTabsArtifactsMigrationOptions = {},
+) {
+  const legacyConfig = LegacyKeplerSliceConfig.parse(input);
+  const artifactType = options.artifactType ?? 'kepler-map';
+  const mapIds = legacyConfig.maps.map((map) => map.id);
+  const knownMapIds = new Set(mapIds);
+  const openTabs =
+    legacyConfig.openTabs?.filter((mapId) => knownMapIds.has(mapId)) ?? mapIds;
+  const openTabSet = new Set(openTabs);
+  const currentArtifactId =
+    legacyConfig.currentMapId && knownMapIds.has(legacyConfig.currentMapId)
+      ? legacyConfig.currentMapId
+      : (openTabs[0] ?? mapIds[0]);
+
+  return {
+    keplerConfig: KeplerSliceConfig.parse({
+      maps: legacyConfig.maps,
+      currentMapId: currentArtifactId,
+    }),
+    artifactsConfig: {
+      artifactsById: Object.fromEntries(
+        legacyConfig.maps.map((map) => [
+          map.id,
+          {
+            id: map.id,
+            type: artifactType,
+            title: map.name,
+          },
+        ]),
+      ),
+      artifactOrder: mapIds,
+      currentArtifactId,
+    },
+    hiddenArtifactIds: mapIds.filter((mapId) => !openTabSet.has(mapId)),
+  };
+}

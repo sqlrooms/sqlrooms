@@ -1,3 +1,5 @@
+import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
+import type * as arrow from 'apache-arrow';
 import {
   Field,
   FixedSizeList,
@@ -7,14 +9,12 @@ import {
   Table,
   Vector,
 } from 'apache-arrow';
-import type * as arrow from 'apache-arrow';
-import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
 import type {GeometryDecoder} from './geometryDecoder';
+import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 import type {
   PreparedGeoArrowLayerData,
   ResolvedGeometryEncoding,
 } from './types';
-import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 import {
   parseWKBHeader,
   readWKBPointXY,

@@ -186,7 +186,7 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
   findDependencies: (args: {
     cell: TCell;
     cells: Record<string, Cell>;
-    sheetId: string;
+    artifactId: string;
     sqlSelectToJson: SqlSelectToJsonFn;
   }) => Promise<string[] | CellDependencies>;
   /** Optional: custom execution logic (defaults to SQL execution for sql type) */
@@ -234,10 +234,6 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
 
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
-/** Sheet and Edge types */
-export const SheetType = z.enum(['notebook', 'canvas', 'app', 'dashboard']);
-export type SheetType = z.infer<typeof SheetType>;
-
 export const EdgeKind = z.enum(['dependency', 'manual']);
 export type EdgeKind = z.infer<typeof EdgeKind>;
 
@@ -249,24 +245,22 @@ export const Edge = z.object({
 });
 export type Edge = z.infer<typeof Edge>;
 
-export const SheetGraphCache = z.object({
+export const CellArtifactGraphCache = z.object({
   dependencies: z.record(z.string(), z.array(z.string())).default({}),
   dependents: z.record(z.string(), z.array(z.string())).default({}),
   contentHashByCell: z.record(z.string(), z.string()).optional(),
   tableDependencies: z.record(z.string(), z.array(z.string())).default({}),
 });
-export type SheetGraphCache = z.infer<typeof SheetGraphCache>;
+export type CellArtifactGraphCache = z.infer<typeof CellArtifactGraphCache>;
 
-export const Sheet = z.object({
+export const CellArtifactRuntime = z.object({
   id: z.string(),
-  type: SheetType,
-  title: z.string(),
   schemaName: z.string().optional(),
-  cellIds: z.array(z.string()).default([]), // Which cells belong to this sheet
-  edges: z.array(Edge).default([]), // Dependencies
-  graphCache: SheetGraphCache.optional(),
+  cellIds: z.array(z.string()).default([]),
+  edges: z.array(Edge).default([]),
+  graphCache: CellArtifactGraphCache.optional(),
 });
-export type Sheet = z.infer<typeof Sheet>;
+export type CellArtifactRuntime = z.infer<typeof CellArtifactRuntime>;
 
 /** Cell Status */
 export const SqlCellStatus = z.object({
@@ -323,9 +317,7 @@ export type SqlCellRunStatus =
 
 export const CellsSliceConfig = z.object({
   data: z.record(z.string(), Cell).default({}),
-  sheets: z.record(z.string(), Sheet).default({}),
-  sheetOrder: z.array(z.string()).default([]),
-  currentSheetId: z.string().optional(),
+  artifacts: z.record(z.string(), CellArtifactRuntime).default({}),
   /** Which database schemas' tables are eligible for direct table dependencies. */
   tableDepSchemas: z.array(z.string()).default(['main']),
 });
@@ -334,7 +326,6 @@ export type CellsSliceConfig = z.infer<typeof CellsSliceConfig>;
 export type CellsSliceOptions = {
   config?: Partial<CellsSliceConfig>;
   cellRegistry: CellRegistry;
-  supportedSheetTypes?: SheetType[];
 };
 
 /** Data stored for a cell's query result */
@@ -357,7 +348,6 @@ export type CellsSliceState = {
     status: Record<string, CellStatus>;
     activeAbortControllers: Record<string, AbortController>;
     cellRegistry: CellRegistry;
-    supportedSheetTypes: SheetType[];
     /** Monotonic counter per cell, incremented when a new execution result arrives. Used to trigger pagination reset and re-render. */
     resultVersion: Record<string, number>;
     /** Monotonic counter per cell, incremented when a pagination/sorting fetch completes. Used to trigger re-render without resetting pagination. */
@@ -383,7 +373,12 @@ export type CellsSliceState = {
     clearCrossFilterGroup: (sqlId: string) => void;
 
     // Cell CRUD
-    addCell: (sheetId: string, cell: Cell, index?: number) => Promise<void>;
+    ensureArtifact: (
+      artifactId: string,
+      options?: {schemaName?: string},
+    ) => void;
+    removeArtifact: (artifactId: string) => void;
+    addCell: (artifactId: string, cell: Cell, index?: number) => Promise<void>;
     removeCell: (id: string) => void;
     updateCell: (
       id: string,
@@ -391,19 +386,10 @@ export type CellsSliceState = {
       opts?: {cascade?: boolean},
     ) => Promise<void>;
 
-    // Sheet CRUD
-    addSheet: (title?: string, type?: SheetType) => string;
-    removeSheet: (sheetId: string) => void;
-    closeSheet: (sheetId: string) => void;
-    openSheet: (sheetId: string) => void;
-    setSheetOrder: (sheetOrder: string[]) => void;
-    renameSheet: (sheetId: string, title: string) => void;
-    setCurrentSheet: (sheetId: string) => void;
-
     // Edge management
-    addEdge: (sheetId: string, edge: Omit<Edge, 'id'>) => void;
-    removeEdge: (sheetId: string, edgeId: string) => void;
-    updateEdgesFromSql: (sheetId: string, cellId: string) => Promise<void>;
+    addEdge: (artifactId: string, edge: Omit<Edge, 'id'>) => void;
+    removeEdge: (artifactId: string, edgeId: string) => void;
+    updateEdgesFromSql: (artifactId: string, cellId: string) => Promise<void>;
 
     // Execution
     runCell: (
@@ -425,11 +411,12 @@ export type CellsSliceState = {
     ) => Promise<void>;
 
     // DAG methods
-    getDownstream: (sheetId: string, sourceCellId: string) => string[];
-    getRootCells: (sheetId: string) => string[];
-    runAllCellsCascade: (sheetId: string) => Promise<void>;
+    getArtifactIdForCell: (cellId: string) => string | undefined;
+    getDownstream: (artifactId: string, sourceCellId: string) => string[];
+    getRootCells: (artifactId: string) => string[];
+    runAllCellsCascade: (artifactId: string) => Promise<void>;
     runDownstreamCascade: (
-      sheetId: string,
+      artifactId: string,
       sourceCellId: string,
     ) => Promise<void>;
   };

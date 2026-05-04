@@ -21,7 +21,6 @@ npm install @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
   RoomShell,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -52,26 +51,20 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: 'data',
-            second: 'main',
-            splitPercentage: 28,
-          },
+          type: 'split',
+          direction: 'row',
+          children: [{type: 'panel', id: 'data', defaultSize: '28%'}, 'main'],
         },
         panels: {
           data: {
             title: 'Data',
             icon: DatabaseIcon,
             component: DataPanel,
-            placement: 'sidebar',
           },
           main: {
             title: 'Main',
             icon: () => null,
             component: MainPanel,
-            placement: 'main',
           },
         },
       },

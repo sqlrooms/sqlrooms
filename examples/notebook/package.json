@@ -14,7 +14,9 @@
     "zod": "^3.25.73",
     "lucide-react": "0.501.0",
     "zustand": "^5.0.8",
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -30,6 +32,6 @@
     "@vitejs/plugin-react": "^5.0.3",
     "tailwindcss": "^4.1.18",
     "typescript": "5.9.2",
-    "vite": "^7.1.9"
+    "vite": "^8.0.5"
   }
 }

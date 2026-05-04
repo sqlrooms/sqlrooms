@@ -1,32 +1,44 @@
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
-import type {RoomState} from './store';
 import {parseVgPlotSpecString} from './vgplot';
+import {RoomState} from './store-types';
+
+type CliArtifactType = 'dashboard' | 'notebook' | 'canvas' | 'app';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
 
-const DashboardCreateSheetCommandInput = z
+// ---------------------------------------------------------------------------
+// Shared input schemas for generic artifact commands
+// ---------------------------------------------------------------------------
+
+const CreateArtifactCommandInput = z
   .object({
-    title: z.string().optional().describe('Optional dashboard sheet title.'),
+    title: z.string().optional().describe('Optional artifact title.'),
   })
   .default({});
-type DashboardCreateSheetCommandInput = z.infer<
-  typeof DashboardCreateSheetCommandInput
->;
+type CreateArtifactCommandInput = z.infer<typeof CreateArtifactCommandInput>;
 
-const DashboardSelectSheetCommandInput = z.object({
-  sheetId: z.string().describe('Target dashboard sheet ID.'),
-});
-type DashboardSelectSheetCommandInput = z.infer<
-  typeof DashboardSelectSheetCommandInput
->;
+const SelectArtifactCommandInput = z
+  .object({
+    artifactId: z.string().optional().describe('Target artifact ID.'),
+  })
+  .refine((value) => value.artifactId, {
+    message: 'Provide artifactId.',
+  });
+type SelectArtifactCommandInput = z.infer<typeof SelectArtifactCommandInput>;
+
+// ---------------------------------------------------------------------------
+// Dashboard-specific input schemas
+// ---------------------------------------------------------------------------
 
 const DashboardSetVgPlotCommandInput = z.object({
-  sheetId: z
+  artifactId: z
     .string()
     .optional()
-    .describe('Optional dashboard sheet ID. Defaults to current dashboard.'),
+    .describe(
+      'Optional dashboard artifact ID. Defaults to the current dashboard.',
+    ),
   vgplot: z
     .string()
     .describe('VgPlot JSON string for the dashboard specification.'),
@@ -37,160 +49,245 @@ type DashboardSetVgPlotCommandInput = z.infer<
 
 const DashboardGetVgPlotCommandInput = z
   .object({
-    sheetId: z
+    artifactId: z
       .string()
       .optional()
-      .describe('Optional dashboard sheet ID. Defaults to current dashboard.'),
+      .describe(
+        'Optional dashboard artifact ID. Defaults to the current dashboard.',
+      ),
   })
   .default({});
 type DashboardGetVgPlotCommandInput = z.infer<
   typeof DashboardGetVgPlotCommandInput
 >;
 
+// ---------------------------------------------------------------------------
+// Generic create-artifact helper per artifact type
+// ---------------------------------------------------------------------------
+
+function createArtifactCommand(
+  artifactType: CliArtifactType,
+  group: string,
+): RoomCommand<RoomState> {
+  const id = `${artifactType}.create-artifact`;
+  return {
+    id,
+    name: `Create ${group.toLowerCase()} artifact`,
+    description: `Create a new ${group.toLowerCase()} artifact and select it`,
+    group,
+    keywords: [artifactType, 'artifact', 'create', 'new'],
+    inputSchema: CreateArtifactCommandInput,
+    inputDescription: `Optional title for the ${group.toLowerCase()} artifact.`,
+    metadata: {
+      readOnly: false,
+      idempotent: false,
+      riskLevel: 'low',
+    },
+    execute: ({getState}, input) => {
+      const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
+      const state = getState();
+      const artifactId = state.artifacts.createArtifact({
+        type: artifactType,
+        title: title ?? group,
+      });
+      if (artifactType === 'notebook') {
+        state.notebook.ensureArtifact(artifactId);
+      } else if (artifactType === 'canvas') {
+        state.canvas.ensureArtifact(artifactId);
+      }
+      state.artifacts.setCurrentArtifact(artifactId);
+      return {
+        success: true,
+        commandId: id,
+        message: `Created ${group.toLowerCase()} artifact "${artifactId}".`,
+        data: {artifactId},
+      };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard-specific create command (uses dashboard slice for extra state)
+// ---------------------------------------------------------------------------
+
+function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
+  return {
+    id: 'dashboard.create-artifact',
+    name: 'Create dashboard artifact',
+    description: 'Create a new dashboard artifact and select it',
+    group: 'Dashboard',
+    keywords: ['dashboard', 'artifact', 'create', 'new'],
+    inputSchema: CreateArtifactCommandInput,
+    inputDescription: 'Optional title for the dashboard artifact.',
+    metadata: {
+      readOnly: false,
+      idempotent: false,
+      riskLevel: 'low',
+    },
+    execute: ({getState}, input) => {
+      const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
+      const artifactId = getState().dashboard.createDashboardArtifact(title);
+      getState().artifacts.setCurrentArtifact(artifactId);
+      return {
+        success: true,
+        commandId: 'dashboard.create-artifact',
+        message: `Created dashboard artifact "${artifactId}".`,
+        data: {artifactId},
+      };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Public factory
+// ---------------------------------------------------------------------------
+
 export function createDashboardCommands(): RoomCommand<RoomState>[] {
   return [
+    // Universal select (works for any artifact type)
     {
-      id: 'dashboard.create-sheet',
-      name: 'Create dashboard sheet',
-      description: 'Create a new dashboard sheet and select it',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'sheet', 'create', 'new'],
-      inputSchema: DashboardCreateSheetCommandInput,
-      inputDescription: 'Optional title for the dashboard sheet.',
-      metadata: {
-        readOnly: false,
-        idempotent: false,
-        riskLevel: 'low',
-      },
-      execute: ({getState}, input) => {
-        const {title} =
-          (input as DashboardCreateSheetCommandInput | undefined) ?? {};
-        const sheetId = getState().dashboard.createDashboardSheet(title);
-        return {
-          success: true,
-          commandId: 'dashboard.create-sheet',
-          message: `Created dashboard sheet "${sheetId}".`,
-          data: {sheetId},
-        };
-      },
-    },
-    {
-      id: 'dashboard.select-sheet',
-      name: 'Select dashboard sheet',
-      description: 'Switch current sheet to a dashboard sheet',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'sheet', 'select', 'switch'],
-      inputSchema: DashboardSelectSheetCommandInput,
-      inputDescription: 'Provide the dashboard sheet ID.',
+      id: 'artifact.select',
+      name: 'Select artifact',
+      description: 'Switch to an existing artifact by ID',
+      group: 'Artifacts',
+      keywords: ['artifact', 'select', 'switch'],
+      inputSchema: SelectArtifactCommandInput,
+      inputDescription: 'Provide the artifact ID.',
       metadata: {
         readOnly: false,
         idempotent: true,
         riskLevel: 'low',
       },
       validateInput: (input, {getState}) => {
-        const {sheetId} = input as DashboardSelectSheetCommandInput;
-        const sheet = getState().cells.config.sheets[sheetId];
-        if (!sheet) {
-          throw new Error(`Unknown sheet "${sheetId}".`);
+        const artifactId = (input as SelectArtifactCommandInput).artifactId;
+        if (!artifactId) {
+          throw new Error('No artifactId provided.');
         }
-        if (sheet.type !== 'dashboard') {
-          throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
+        const artifact = getState().artifacts.getArtifact(artifactId);
+        if (!artifact) {
+          throw new Error(`Unknown artifact "${artifactId}".`);
         }
       },
       execute: ({getState}, input) => {
-        const {sheetId} = input as DashboardSelectSheetCommandInput;
-        getState().cells.setCurrentSheet(sheetId);
-        getState().dashboard.ensureSheetDashboard(sheetId);
+        const artifactId = (input as SelectArtifactCommandInput).artifactId;
+        if (!artifactId) {
+          throw new Error('No artifactId provided.');
+        }
+        const state = getState();
+        const artifact = state.artifacts.getArtifact(artifactId);
+        if (!artifact) {
+          throw new Error(`Unknown artifact "${artifactId}".`);
+        }
+        state.artifacts.setCurrentArtifact(artifactId);
+        if (artifact.type === 'notebook') {
+          state.notebook.ensureArtifact(artifactId);
+        }
+        if (artifact.type === 'canvas') {
+          state.canvas.ensureArtifact(artifactId);
+        }
+        if (artifact.type === 'dashboard') {
+          state.dashboard.ensureDashboardArtifact(artifactId);
+        }
         return {
           success: true,
-          commandId: 'dashboard.select-sheet',
-          message: `Selected dashboard sheet "${sheetId}".`,
+          commandId: 'artifact.select',
+          message: `Selected artifact "${artifactId}".`,
         };
       },
     },
+
+    // Per-type create commands
+    createArtifactCommand('notebook', 'Notebook'),
+    createArtifactCommand('canvas', 'Canvas'),
+    createArtifactCommand('app', 'App'),
+    createDashboardCreateArtifactCommand(),
     {
       id: 'dashboard.set-vgplot',
       name: 'Set dashboard vgplot',
-      description: 'Set the vgplot JSON spec for a dashboard sheet',
+      description: 'Set the vgplot JSON spec for a dashboard artifact',
       group: 'Dashboard',
       keywords: ['dashboard', 'vgplot', 'spec', 'json', 'update'],
       inputSchema: DashboardSetVgPlotCommandInput,
-      inputDescription: 'Provide vgplot JSON and optional dashboard sheet ID.',
+      inputDescription:
+        'Provide vgplot JSON and an optional dashboard artifact ID.',
       metadata: {
         readOnly: false,
         idempotent: false,
         riskLevel: 'medium',
       },
       validateInput: (input, {getState}) => {
-        const {sheetId, vgplot} = input as DashboardSetVgPlotCommandInput;
+        const {artifactId, vgplot} = input as DashboardSetVgPlotCommandInput;
         parseVgPlotSpecString(vgplot);
-        if (!sheetId) return;
-        const sheet = getState().cells.config.sheets[sheetId];
-        if (!sheet) {
-          throw new Error(`Unknown sheet "${sheetId}".`);
+        if (!artifactId) return;
+        const artifact = getState().artifacts.getArtifact(artifactId);
+        if (!artifact) {
+          throw new Error(`Unknown artifact "${artifactId}".`);
         }
-        if (sheet.type !== 'dashboard') {
-          throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
+        if (artifact.type !== 'dashboard') {
+          throw new Error(
+            `Artifact "${artifactId}" is not a dashboard artifact.`,
+          );
         }
       },
       execute: ({getState}, input) => {
-        const {sheetId, vgplot} = input as DashboardSetVgPlotCommandInput;
+        const {artifactId, vgplot} = input as DashboardSetVgPlotCommandInput;
         const state = getState();
-        const targetSheetId =
-          sheetId ??
-          state.dashboard.getCurrentDashboardSheetId() ??
-          state.dashboard.createDashboardSheet();
-        state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
-        state.cells.setCurrentSheet(targetSheetId);
+        const targetArtifactId =
+          artifactId ??
+          state.dashboard.getCurrentDashboardArtifactId() ??
+          state.dashboard.createDashboardArtifact();
+        state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
+        state.artifacts.setCurrentArtifact(targetArtifactId);
         return {
           success: true,
           commandId: 'dashboard.set-vgplot',
-          message: `Updated dashboard spec for "${targetSheetId}".`,
-          data: {sheetId: targetSheetId},
+          message: `Updated dashboard spec for "${targetArtifactId}".`,
+          data: {artifactId: targetArtifactId},
         };
       },
     },
     {
       id: 'dashboard.get-vgplot',
       name: 'Get dashboard vgplot',
-      description: 'Read the current vgplot JSON spec for a dashboard sheet',
+      description: 'Read the current vgplot JSON spec for a dashboard artifact',
       group: 'Dashboard',
       keywords: ['dashboard', 'vgplot', 'spec', 'json', 'read'],
       inputSchema: DashboardGetVgPlotCommandInput,
-      inputDescription: 'Optional dashboard sheet ID.',
+      inputDescription: 'Optional dashboard artifact ID.',
       metadata: {
         readOnly: true,
         idempotent: true,
         riskLevel: 'low',
       },
       execute: ({getState}, input) => {
-        const {sheetId} =
+        const resolvedInput =
           (input as DashboardGetVgPlotCommandInput | undefined) ?? {};
         const state = getState();
-        const targetSheetId =
-          sheetId ?? state.dashboard.getCurrentDashboardSheetId();
-        if (!targetSheetId) {
+        const targetArtifactId =
+          resolvedInput.artifactId ??
+          state.dashboard.getCurrentDashboardArtifactId();
+        if (!targetArtifactId) {
           return {
             success: false,
             commandId: 'dashboard.get-vgplot',
-            error: 'No dashboard sheet is available.',
+            error: 'No dashboard artifact is available.',
           };
         }
-        const sheet = state.cells.config.sheets[targetSheetId];
-        if (!sheet || sheet.type !== 'dashboard') {
+        const artifact = state.artifacts.getArtifact(targetArtifactId);
+        if (!artifact || artifact.type !== 'dashboard') {
           return {
             success: false,
             commandId: 'dashboard.get-vgplot',
-            error: `Sheet "${targetSheetId}" is not a dashboard sheet.`,
+            error: `Artifact "${targetArtifactId}" is not a dashboard artifact.`,
           };
         }
-        state.dashboard.ensureSheetDashboard(targetSheetId);
-        const vgplot = state.dashboard.getSheetVgPlot(targetSheetId);
+        state.dashboard.ensureDashboardArtifact(targetArtifactId);
+        const vgplot = state.dashboard.getDashboardVgPlot(targetArtifactId);
         return {
           success: true,
           commandId: 'dashboard.get-vgplot',
           data: {
-            sheetId: targetSheetId,
+            artifactId: targetArtifactId,
             vgplot,
           },
         };

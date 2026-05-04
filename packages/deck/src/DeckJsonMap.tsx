@@ -104,7 +104,7 @@ function filterUnavailableLayers(
   };
 }
 
-function renderDatasetStatusOverlay(
+function renderDatasetErrorOverlay(
   datasetStates: Record<string, PreparedDeckDatasetState>,
 ) {
   const failedDatasets = Object.entries(datasetStates).filter(
@@ -263,11 +263,11 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL {...(mergedDeckProps as object)}>
+      <DeckGL {...(mergedDeckProps as any)}>
         <Map {...(mergedMapProps as object)}>{children}</Map>
       </DeckGL>
 
-      {renderDatasetStatusOverlay(datasetStates)}
+      {renderDatasetErrorOverlay(datasetStates)}
       {!hasRenderingError && showLegends ? (
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
           <ColorScaleLegend legends={legends} />
