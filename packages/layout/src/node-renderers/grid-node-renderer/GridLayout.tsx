@@ -120,9 +120,22 @@ type RootProps = {
   parentDirection?: ParentDirection;
 };
 
-function createDefaultItem(node: LayoutNode, index: number): LayoutGridItem {
+function createDefaultItem(
+  node: LayoutNode,
+  index: number,
+  cols: number,
+): LayoutGridItem {
   const id = isLayoutNodeKey(node) ? node : node.id;
-  return {i: id, x: (index * 3) % 12, y: Math.floor(index / 4), w: 3, h: 2};
+  const effectiveCols = Math.max(1, cols);
+  const w = Math.min(3, effectiveCols);
+  const h = 2;
+  return {
+    i: id,
+    x: (index * w) % effectiveCols,
+    y: Math.floor((index * w) / effectiveCols) * h,
+    w,
+    h,
+  };
 }
 
 function getResponsiveCols(
@@ -191,18 +204,22 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const renderNode = useRenderNode();
   const panelInfo = useGetPanel(node);
   const {rootLayout, onLayoutChange} = useLayoutRendererContext();
-
-  const layouts = useMemo(() => {
-    if (node.layouts) return node.layouts;
-    return {
-      lg: node.children.map((child, index) => createDefaultItem(child, index)),
-    };
-  }, [node.children, node.layouts]);
   const breakpoints = node.breakpoints ?? DEFAULT_BREAKPOINTS;
   const cols = useMemo(
     () => getResponsiveCols(node.cols, breakpoints),
     [breakpoints, node.cols],
   );
+  const layouts = useMemo(() => {
+    if (node.layouts) return node.layouts;
+    return Object.fromEntries(
+      Object.entries(cols).map(([breakpoint, breakpointCols]) => [
+        breakpoint,
+        node.children.map((child, index) =>
+          createDefaultItem(child, index, breakpointCols),
+        ),
+      ]),
+    );
+  }, [cols, node.children, node.layouts]);
   const handleLayoutChange = useCallback(
     (allLayouts: GridLayouts) => {
       if (!onLayoutChange) {
@@ -211,13 +228,14 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
 
       const normalizedLayouts = normalizeLayouts(allLayouts);
       if (
-        JSON.stringify(node.layouts ?? {}) ===
-        JSON.stringify(normalizedLayouts)
+        JSON.stringify(node.layouts ?? {}) === JSON.stringify(normalizedLayouts)
       ) {
         return;
       }
 
-      const nextRootLayout = JSON.parse(JSON.stringify(rootLayout)) as LayoutNode;
+      const nextRootLayout = JSON.parse(
+        JSON.stringify(rootLayout),
+      ) as LayoutNode;
       const result = findNodeById(nextRootLayout, node.id);
       if (!result || !isLayoutGridNode(result.node)) {
         return;

@@ -132,7 +132,9 @@ describe('MosaicDashboardSlice generic panels', () => {
 
     dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
-    expect(collectPanelIds(dashboard.layout)).toEqual(new Set([secondLayoutId]));
+    expect(collectPanelIds(dashboard.layout)).toEqual(
+      new Set([secondLayoutId]),
+    );
     expect(
       dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
     ).toEqual([expect.objectContaining({i: secondLayoutId})]);
@@ -174,6 +176,48 @@ describe('MosaicDashboardSlice generic panels', () => {
         getMosaicDashboardPanelId(dashboardId, second.id),
       ]),
     );
+  });
+
+  it('normalizes incoming dock layouts to grid without losing dashboard panels', () => {
+    const store = createTestStore();
+    const dashboardId = store
+      .getState()
+      .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
+    const first = createMosaicDashboardProfilerPanelConfig();
+    const second = createMosaicDashboardProfilerPanelConfig();
+    const firstLayoutId = getMosaicDashboardPanelId(dashboardId, first.id);
+    const secondLayoutId = getMosaicDashboardPanelId(dashboardId, second.id);
+
+    store.getState().mosaicDashboard.addPanel(dashboardId, first);
+    store.getState().mosaicDashboard.addPanel(dashboardId, second);
+
+    const dockShapedLayout: LayoutNode = {
+      type: 'split',
+      id: 'incoming-dock-layout',
+      direction: 'row',
+      children: [
+        {
+          type: 'panel',
+          id: firstLayoutId,
+          panel: {key: 'mosaic-dashboard-panel'},
+        },
+      ],
+    };
+
+    store.getState().mosaicDashboard.setLayout(dashboardId, dockShapedLayout);
+
+    const dashboard =
+      store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
+    expect(dashboard.layout?.type).toBe('grid');
+    expect(collectPanelIds(dashboard.layout)).toEqual(
+      new Set([firstLayoutId, secondLayoutId]),
+    );
+    expect(
+      dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
+    ).toEqual([
+      expect.objectContaining({i: firstLayoutId}),
+      expect.objectContaining({i: secondLayoutId}),
+    ]);
   });
 
   it('adds, updates, and removes dashboard panels with layout panels', () => {

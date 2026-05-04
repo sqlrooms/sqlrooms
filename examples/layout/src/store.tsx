@@ -92,10 +92,12 @@ function createGridLayoutItem(
   const cols = getGridColsForBreakpoint(node, breakpoint);
   const w = Math.min(6, cols);
   const y = layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0);
+  const colsPerRow = Math.max(1, Math.floor(cols / w));
+  const index = layout.length;
 
   return {
     i: chartId,
-    x: 0,
+    x: (index % colsPerRow) * w,
     y,
     w,
     h: 2,

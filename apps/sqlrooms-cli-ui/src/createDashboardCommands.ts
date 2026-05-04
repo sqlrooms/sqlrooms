@@ -23,6 +23,8 @@ const DashboardCreateArtifactCommandInput = z.object({
   title: z.string().optional().describe('Optional artifact title.'),
   layoutType: z
     .enum(['dock', 'grid'])
+    .optional()
+    .default('grid')
     .describe('Dashboard layout node type to use at creation time.'),
 });
 type DashboardCreateArtifactCommandInput = z.infer<
@@ -129,7 +131,7 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
     keywords: ['dashboard', 'artifact', 'create', 'new'],
     inputSchema: DashboardCreateArtifactCommandInput,
     inputDescription:
-      'Dashboard layoutType ("dock" or "grid") and optional title.',
+      'Optional dashboard layoutType ("dock" or "grid", defaults to "grid") and optional title.',
     metadata: {
       readOnly: false,
       idempotent: false,

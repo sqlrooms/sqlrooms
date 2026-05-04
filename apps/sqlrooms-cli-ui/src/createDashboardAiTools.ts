@@ -13,6 +13,8 @@ const DashboardCreateArtifactToolParameters = z.object({
   title: z.string().optional(),
   layoutType: z
     .enum(['dock', 'grid'])
+    .optional()
+    .default('grid')
     .describe('Dashboard layout node type to use at creation time.'),
 });
 type DashboardCreateArtifactToolParameters = z.infer<
@@ -51,7 +53,7 @@ type DashboardSetVgPlotToolParameters = z.infer<
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
 - Use the dashboard tools to create/update dashboard vgplot specs.
-- When calling \`create_dashboard_artifact\`, provide \`layoutType\` as either \`grid\` or \`dock\`.
+- When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`dock\`.
 - Prefer \`create_dashboard_chart_from_template\` for simple supported charts.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no template fits.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
