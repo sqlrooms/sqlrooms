@@ -8,8 +8,8 @@ import {
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
-import {Code, X} from 'lucide-react';
-import {FC, useCallback, useMemo, useState} from 'react';
+import {Code, FilterX, X} from 'lucide-react';
+import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
 import {ChartConfig, defaultChartConfigs} from './filterPlots';
 
@@ -92,6 +92,23 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
+  const handleClearAllFilters = useCallback(() => {
+    brush?.reset();
+  }, [brush]);
+
+  const [selectionVersion, setSelectionVersion] = useState(0);
+  useEffect(() => {
+    if (!brush) return;
+    const handler = () => setSelectionVersion((v) => v + 1);
+    brush.addEventListener('value', handler);
+    return () => brush.removeEventListener('value', handler);
+  }, [brush]);
+
+  const hasActiveFilters = useMemo(
+    () => Boolean(brush?.clauses.length),
+    [brush, selectionVersion],
+  );
+
   return (
     <RoomPanel showHeader={false} className={className}>
       <div className="flex h-full flex-col">
@@ -102,8 +119,18 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
           open={builderOpen}
           onOpenChange={setBuilderOpen}
         >
-          <div className="p-2">
-            <MosaicChartBuilder.Trigger className="w-full" />
+          <div className="flex items-center gap-2 p-2">
+            <MosaicChartBuilder.Trigger className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAllFilters}
+              disabled={!hasActiveFilters}
+              title="Clear all filters"
+            >
+              <FilterX className="h-3.5 w-3.5" />
+              <span>Clear</span>
+            </Button>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2">

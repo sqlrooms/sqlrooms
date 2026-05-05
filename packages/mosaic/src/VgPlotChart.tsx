@@ -152,12 +152,16 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
 
     useEffect(() => {
       const container = containerRef.current;
-      if (!container || !containerSize) {
+      if (!container) {
         return;
       }
 
       if (isPlotProps(props)) {
         container.replaceChildren(props.plot);
+        return;
+      }
+
+      if (!containerSize) {
         return;
       }
 

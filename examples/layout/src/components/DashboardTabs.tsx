@@ -9,6 +9,10 @@ export const DashboardTabs: RoomPanelComponent = ({panelId}) => {
   const getActiveTab = useRoomStore((s) => s.layout.getActiveTab);
 
   const handleAddChart = useCallback(() => {
+    if (!panelId) {
+      return;
+    }
+
     const activeTabId = getActiveTab(panelId);
     if (!activeTabId) {
       return;

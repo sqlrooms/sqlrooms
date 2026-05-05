@@ -41,6 +41,36 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
+Mosaic's pre-aggregation optimization creates `preagg_*` cache tables lazily
+when users interact with cross-filtered selections. By default Mosaic writes
+those tables to the persistent `mosaic` schema. If the DuckDB database is a user
+project file, point pre-aggregates at an attached cache database or disable them:
+
+```tsx
+const mosaicCacheDatabase = '__sqlrooms_mosaic_cache';
+
+const connector = createWebSocketDuckDbConnector({
+  initializationQuery: [
+    `ATTACH IF NOT EXISTS ':memory:' AS ${mosaicCacheDatabase}`,
+    `CREATE SCHEMA IF NOT EXISTS ${mosaicCacheDatabase}.mosaic`,
+  ].join('; '),
+});
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    // ... db slice using connector
+    ...createMosaicSlice({
+      preagg: {
+        schema: `${mosaicCacheDatabase}.mosaic`,
+      },
+    })(set, get, store),
+  }),
+);
+```
+
+Set `preagg.enabled` to `false` when you prefer to avoid pre-aggregate tables
+entirely.
+
 The Mosaic connection is automatically initialized when the DuckDB connector is ready. You can check the connection status:
 
 ```tsx
@@ -171,6 +201,12 @@ function addProfiler(store: RoomStore) {
   );
 }
 ```
+
+Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
+Existing persisted dashboards default to `dock`; pass `'grid'` to
+`createDashboard(title, 'grid')` or `ensureDashboard(id, title, 'grid')` when
+creating a dashboard that should use the scrollable grid renderer. Re-ensuring
+an existing dashboard does not convert between layout types.
 
 Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
 panel omits a source it falls back to the dashboard selected table. Panel renderer

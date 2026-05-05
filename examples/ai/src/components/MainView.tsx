@@ -93,6 +93,7 @@ export const MainView: FC = () => {
           {isDataAvailable ? (
             <Chat.Messages
               key={currentSessionId} // will prevent scrolling to bottom after changing current session
+              hoistedRenderers={['chart']}
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">

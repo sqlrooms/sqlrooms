@@ -4,4 +4,8 @@ import baseConfig from './base.js';
 export default {
   ...baseConfig,
   testEnvironment: 'node',
+  moduleNameMapper: {
+    ...baseConfig.moduleNameMapper,
+    '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
+  },
 };

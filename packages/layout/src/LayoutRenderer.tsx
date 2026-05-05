@@ -25,7 +25,7 @@ export const LayoutRenderer: FC<LayoutRendererProps> = ({
           rootLayout={contextValue.rootLayout}
           onLayoutChange={contextValue.onLayoutChange}
         >
-          <div className={cn('h-full min-w-0 flex-1', className)}>
+          <div className={cn('h-full min-h-0 min-w-0 flex-1', className)}>
             {renderLayoutNode({
               node: contextValue.rootLayout,
               path: [],

@@ -19,6 +19,18 @@ const CreateArtifactCommandInput = z
   .default({});
 type CreateArtifactCommandInput = z.infer<typeof CreateArtifactCommandInput>;
 
+const DashboardCreateArtifactCommandInput = z.object({
+  title: z.string().optional().describe('Optional artifact title.'),
+  layoutType: z
+    .enum(['dock', 'grid'])
+    .optional()
+    .default('grid')
+    .describe('Dashboard layout node type to use at creation time.'),
+});
+type DashboardCreateArtifactCommandInput = z.infer<
+  typeof DashboardCreateArtifactCommandInput
+>;
+
 const SelectArtifactCommandInput = z
   .object({
     artifactId: z.string().optional().describe('Target artifact ID.'),
@@ -117,16 +129,20 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
     description: 'Create a new dashboard artifact and select it',
     group: 'Dashboard',
     keywords: ['dashboard', 'artifact', 'create', 'new'],
-    inputSchema: CreateArtifactCommandInput,
-    inputDescription: 'Optional title for the dashboard artifact.',
+    inputSchema: DashboardCreateArtifactCommandInput,
+    inputDescription:
+      'Optional dashboard layoutType ("dock" or "grid", defaults to "grid") and optional title.',
     metadata: {
       readOnly: false,
       idempotent: false,
       riskLevel: 'low',
     },
     execute: ({getState}, input) => {
-      const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
-      const artifactId = getState().dashboard.createDashboardArtifact(title);
+      const {title, layoutType} = input as DashboardCreateArtifactCommandInput;
+      const artifactId = getState().dashboard.createDashboardArtifact(
+        title,
+        layoutType,
+      );
       getState().artifacts.setCurrentArtifact(artifactId);
       return {
         success: true,
@@ -235,7 +251,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         const targetArtifactId =
           artifactId ??
           state.dashboard.getCurrentDashboardArtifactId() ??
-          state.dashboard.createDashboardArtifact();
+          state.dashboard.createDashboardArtifact(undefined, 'grid');
         state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
         state.artifacts.setCurrentArtifact(targetArtifactId);
         return {
