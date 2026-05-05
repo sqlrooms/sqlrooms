@@ -1,23 +1,13 @@
+/**
+ * @jest-environment jsdom
+ */
 /// <reference types="@testing-library/jest-dom" />
 import {jest} from '@jest/globals';
 import {render, screen} from '@testing-library/react';
 import {MosaicProfilerStatusBar} from '../src/profiler/MosaicProfilerStatusBar';
 import type {UseMosaicProfilerReturn} from '../src/profiler/types';
 
-function createProfilerOverrides(
-  overrides: Partial<
-    Pick<
-      UseMosaicProfilerReturn,
-      | 'filteredRowCount'
-      | 'hasFilters'
-      | 'pagination'
-      | 'reset'
-      | 'setPagination'
-      | 'sql'
-      | 'totalRowCount'
-    >
-  > = {},
-): Pick<
+type ProfilerOverrides = Pick<
   UseMosaicProfilerReturn,
   | 'filteredRowCount'
   | 'hasFilters'
@@ -26,7 +16,11 @@ function createProfilerOverrides(
   | 'setPagination'
   | 'sql'
   | 'totalRowCount'
-> {
+>;
+
+function createProfilerOverrides(
+  overrides: Partial<ProfilerOverrides> = {},
+): ProfilerOverrides {
   return {
     filteredRowCount: 25,
     hasFilters: false,
