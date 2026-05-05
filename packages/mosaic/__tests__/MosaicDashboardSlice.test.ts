@@ -9,11 +9,14 @@ import {
 import {createMosaicSlice} from '../src/MosaicSlice';
 import {createMosaicDashboardSlice} from '../src/dashboard/MosaicDashboardSlice';
 import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardBoxPlotPanelConfig,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardVgPlotPanelConfig,
   getMosaicDashboardGridId,
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
+  MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MosaicDashboardEntry,
   type CreateMosaicDashboardSliceProps,
@@ -319,6 +322,24 @@ describe('MosaicDashboardSlice generic panels', () => {
         MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE
       ],
     ).toBeUndefined();
+  });
+
+  it('includes a default box plot renderer and config helper', () => {
+    const renderers = createDefaultMosaicDashboardPanelRenderers();
+    const panel = createMosaicDashboardBoxPlotPanelConfig({
+      source: {tableName: 'earthquakes'},
+      title: 'Magnitude by region',
+      x: 'region',
+      y: 'magnitude',
+    });
+
+    expect(renderers[MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE]?.component).toEqual(
+      expect.any(Function),
+    );
+    expect(panel.type).toBe(MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE);
+    expect(panel.title).toBe('Magnitude by region');
+    expect(panel.source).toEqual({tableName: 'earthquakes'});
+    expect(panel.config).toEqual({x: 'region', y: 'magnitude'});
   });
 
   it('evicts panel runtime on update and remove', () => {

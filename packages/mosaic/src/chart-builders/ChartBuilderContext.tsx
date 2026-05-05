@@ -7,6 +7,7 @@ import type {
 } from './createChartBuilderStore';
 import type {
   ChartBuilderColumn,
+  ChartBuilderOutput,
   ChartBuilderTemplate,
   ChartTypeDefinition,
 } from './types';
@@ -15,6 +16,7 @@ export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
+  onCreateChartOutput?: (output: ChartBuilderOutput, title: string) => void;
   templates: ChartBuilderTemplate[];
   availableChartTypes: ChartTypeDefinition[];
   availableTemplates: ChartBuilderTemplate[];

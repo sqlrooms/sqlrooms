@@ -42,6 +42,7 @@ import {VgPlotChartConfig} from '../chart-types';
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
+export const MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE = 'boxplot';
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
@@ -81,6 +82,18 @@ export const ProfilerPanel = z.object({
 });
 export type ProfilerPanel = z.infer<typeof ProfilerPanel>;
 
+export const BoxPlotPanelConfig = z.object({
+  id: z.string(),
+  type: z.literal(MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE),
+  title: z.string().default('Panel'),
+  source: MosaicDashboardPanelSource.optional(),
+  config: z.object({
+    x: z.string(),
+    y: z.string(),
+  }),
+});
+export type BoxPlotPanelConfig = z.infer<typeof BoxPlotPanelConfig>;
+
 // Legacy panel for backward compatibility
 export const LegacyPanelConfig = z.object({
   id: z.string(),
@@ -93,7 +106,11 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [VgPlotPanelConfig, ProfilerPanel])
+  .discriminatedUnion('type', [
+    VgPlotPanelConfig,
+    ProfilerPanel,
+    BoxPlotPanelConfig,
+  ])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
@@ -113,6 +130,8 @@ export type VgPlotPanelRendererProps =
   MosaicDashboardPanelRendererProps<VgPlotPanelConfig>;
 export type ProfilerPanelRendererProps =
   MosaicDashboardPanelRendererProps<ProfilerPanel>;
+export type BoxPlotPanelRendererProps =
+  MosaicDashboardPanelRendererProps<BoxPlotPanelConfig>;
 
 export type MosaicDashboardPanelRenderer<
   TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
@@ -133,6 +152,7 @@ export type AnyPanelRenderer = {
 export type PanelTypeMap = {
   [MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE]: VgPlotPanelConfig;
   [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: ProfilerPanel;
+  [MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE]: BoxPlotPanelConfig;
 };
 
 // Panel renderers record - use type-erased renderers for runtime compatibility
@@ -155,6 +175,21 @@ export type MosaicDashboardAddPanelAction = {
   ) => MosaicDashboardPanelConfig | undefined;
 };
 
+export function createMosaicDashboardPanelConfig(options: {
+  type: string;
+  title: string;
+  source?: MosaicDashboardPanelSource;
+  config?: Record<string, unknown>;
+}): MosaicDashboardPanelConfig {
+  return {
+    id: createId(),
+    type: options.type,
+    title: options.title,
+    source: options.source,
+    config: options.config ?? {},
+  };
+}
+
 export function createMosaicDashboardVgPlotPanelConfig(
   title: string,
   config: VgPlotChartConfig,
@@ -169,6 +204,24 @@ export function createMosaicDashboardVgPlotPanelConfig(
   });
 }
 
+export function createMosaicDashboardBoxPlotPanelConfig(options: {
+  title?: string;
+  source?: MosaicDashboardPanelSource;
+  x: string;
+  y: string;
+}): BoxPlotPanelConfig {
+  return BoxPlotPanelConfig.parse({
+    id: createId(),
+    type: MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
+    title: options.title ?? 'Box Plot',
+    source: options.source,
+    config: {
+      x: options.x,
+      y: options.y,
+    },
+  });
+}
+
 export function createMosaicDashboardProfilerPanelConfig(
   options: {
     title?: string;
@@ -176,15 +229,14 @@ export function createMosaicDashboardProfilerPanelConfig(
     pageSize?: number;
   } = {},
 ): MosaicDashboardPanelConfig {
-  return {
-    id: createId(),
+  return createMosaicDashboardPanelConfig({
     type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
     title: options.title ?? 'Profiler',
     source: options.source,
     config: {
       pageSize: options.pageSize ?? 10,
     },
-  };
+  });
 }
 
 export const MosaicDashboardEntry = z.object({

@@ -42,6 +42,27 @@ export interface ChartBuilderColumn {
   type: string;
 }
 
+export type ChartBuilderPanelSource = {
+  tableName?: string;
+  sqlQuery?: string;
+};
+
+export type ChartBuilderVgPlotOutput = {
+  kind: 'vgplot';
+  spec: Spec;
+};
+
+export type ChartBuilderDashboardPanelOutput = {
+  kind: 'dashboard-panel';
+  type: string;
+  source?: ChartBuilderPanelSource;
+  config?: Record<string, unknown>;
+};
+
+export type ChartBuilderOutput =
+  | ChartBuilderVgPlotOutput
+  | ChartBuilderDashboardPanelOutput;
+
 /**
  * Shared chart-type definition used by both the chart-builder UI and
  * assistant-driven chart creation.
@@ -56,7 +77,11 @@ export interface ChartTypeDefinition<TSettings = any> {
   /** Field selectors the user must fill in */
   fields: ChartBuilderField[];
   /** Generate a Mosaic spec from table name and selected field values */
-  createSpec: (tableName: string, values: TSettings) => Spec;
+  createSpec?: (tableName: string, values: TSettings) => Spec;
+  /** Generate a chart-builder output from table name and selected field values */
+  createOutput?: (tableName: string, values: TSettings) => ChartBuilderOutput;
+  /** Output surface required by this chart type. Defaults to `vgplot`. */
+  outputKind?: ChartBuilderOutput['kind'];
   /** Generate a chart title from selected field values */
   buildTitle?: (fieldValues: Record<string, string>) => string;
   /** Optional availability override for a given table schema */

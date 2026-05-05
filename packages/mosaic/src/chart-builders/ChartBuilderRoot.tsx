@@ -1,5 +1,4 @@
 import {Dialog} from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import React, {
   PropsWithChildren,
   useCallback,
@@ -17,6 +16,7 @@ import {createChartBuilderStore} from './createChartBuilderStore';
 import {getAvailableChartTypes} from './chartTypeUtils';
 import type {
   ChartBuilderColumn,
+  ChartBuilderOutput,
   ChartBuilderTemplate,
   ChartTypeDefinition,
 } from './types';
@@ -28,6 +28,8 @@ export type ChartBuilderRootProps = PropsWithChildren<{
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (title: string, metadata: VgPlotChartConfig) => void;
+  /** Callback when a chart type creates a non-spec chart-builder output */
+  onCreateChartOutput?: (output: ChartBuilderOutput, title: string) => void;
   /** Preferred shared chart-type customization surface */
   chartTypes?: ChartTypeDefinition[];
   /** Backward-compatible UI template customization surface */
@@ -48,6 +50,7 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   tableName,
   columns,
   onCreateChart,
+  onCreateChartOutput,
   chartTypes,
   builders,
   open,
@@ -80,10 +83,15 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   );
   const availableTemplates = useMemo(
     () =>
-      resolvedTemplates.filter((template) =>
-        availableChartTypes.some((chartType) => chartType.id === template.id),
+      resolvedTemplates.filter(
+        (template) =>
+          availableChartTypes.some(
+            (chartType) => chartType.id === template.id,
+          ) &&
+          (template.outputKind !== 'dashboard-panel' ||
+            Boolean(onCreateChartOutput)),
       ),
-    [availableChartTypes, resolvedTemplates],
+    [availableChartTypes, onCreateChartOutput, resolvedTemplates],
   );
 
   useEffect(() => {
@@ -110,6 +118,7 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
       tableName,
       columns,
       onCreateChart: handleCreateChart,
+      onCreateChartOutput,
       templates: resolvedTemplates,
       availableChartTypes,
       availableTemplates,
@@ -120,6 +129,7 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
       availableTemplates,
       columns,
       handleCreateChart,
+      onCreateChartOutput,
       resolvedTemplates,
       store,
       tableName,

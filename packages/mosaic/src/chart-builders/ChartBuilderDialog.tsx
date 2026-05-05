@@ -14,6 +14,7 @@ import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
   ChartBuilderColumn,
+  ChartBuilderOutput,
   ChartBuilderTemplate,
   ChartTypeDefinition,
 } from './types';
@@ -82,6 +83,8 @@ export interface ChartBuilderDialogProps {
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
+  /** Callback when a chart type creates a non-spec chart-builder output */
+  onCreateChartOutput?: (output: ChartBuilderOutput, title: string) => void;
   /** Preferred shared chart-type customization surface */
   chartTypes?: ChartTypeDefinition[];
   /** Backward-compatible UI template customization surface */
@@ -105,6 +108,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   tableName,
   columns,
   onCreateChart,
+  onCreateChartOutput,
   chartTypes,
   builders,
 }) => (
@@ -114,6 +118,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     tableName={tableName}
     columns={columns}
     onCreateChart={onCreateChart}
+    onCreateChartOutput={onCreateChartOutput}
     chartTypes={chartTypes}
     builders={builders}
   >

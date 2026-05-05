@@ -13,7 +13,7 @@ export interface ChartBuilderActionsProps {
 export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
   className,
 }) => {
-  const {columns, onCreateChart, tableName, templates} =
+  const {columns, onCreateChart, onCreateChartOutput, tableName, templates} =
     useChartBuilderContext();
   const selectedTemplateId = useChartBuilderStore(
     (state) => state.selectedTemplateId,
@@ -43,13 +43,24 @@ export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
         size="sm"
         onClick={() => {
           if (!selectedTemplate || !canCreate || !selectedTemplateId) return;
-          const spec = selectedTemplate.createSpec(tableName, fieldValues);
           const title = buildChartTypeTitle(selectedTemplate, fieldValues);
-          onCreateChart(title, {
-            chartType: selectedTemplateId,
-            settings: fieldValues,
-            vgplot: spec,
-          });
+          if (
+            selectedTemplate.outputKind === 'dashboard-panel' &&
+            selectedTemplate.createOutput &&
+            onCreateChartOutput
+          ) {
+            onCreateChartOutput(
+              selectedTemplate.createOutput(tableName, fieldValues),
+              title,
+            );
+          } else if (selectedTemplate.createSpec) {
+            const spec = selectedTemplate.createSpec(tableName, fieldValues);
+            onCreateChart(title, {
+              chartType: selectedTemplateId,
+              settings: fieldValues,
+              vgplot: spec,
+            });
+          }
           reset();
         }}
         disabled={!canCreate}

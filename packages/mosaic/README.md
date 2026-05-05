@@ -176,6 +176,7 @@ runtime add-panel actions when creating the dashboard slice.
 ```tsx
 import {
   createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardBoxPlotPanelConfig,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicDashboardVgPlotPanelConfig,
@@ -213,6 +214,12 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+The built-in Box Plot chart type creates a custom `boxplot` dashboard panel
+rather than a vgplot spec. It uses a Mosaic client to query grouped quartiles,
+whiskers, and outliers from DuckDB, then renders those summaries with
+Observable Plot primitives. This avoids relying on Observable Plot's `boxY`
+mark inside vgplot, where the mark is not supported.
+
 ### Chart Builder Compound Components
 
 The chart builder UI can be used as a compound component API for flexible composition:
@@ -234,6 +241,9 @@ function MyDashboard() {
       columns={columns}
       onCreateChart={(spec, title) => {
         // Handle chart creation
+      }}
+      onCreateChartOutput={(output, title) => {
+        // Optional: handle non-spec outputs such as dashboard panel chart types.
       }}
     >
       <ChartBuilderTrigger />

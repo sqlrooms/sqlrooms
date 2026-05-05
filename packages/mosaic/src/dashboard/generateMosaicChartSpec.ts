@@ -34,6 +34,13 @@ export function generateMosaicChartSpec(
     return null;
   }
 
+  if (!chartTypeDef.createSpec) {
+    console.error(
+      `[generateMosaicChartSpec] Chart type "${chartType}" does not create a vgplot spec`,
+    );
+    return null;
+  }
+
   try {
     return chartTypeDef.createSpec(tableName, settings);
   } catch (error) {

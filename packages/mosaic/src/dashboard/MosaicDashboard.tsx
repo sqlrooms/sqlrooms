@@ -6,12 +6,16 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type {ChartBuilderColumn} from '../chart-builders/types';
+import type {
+  ChartBuilderColumn,
+  ChartBuilderOutput,
+} from '../chart-builders/types';
 import type {VgPlotChartConfig} from '../chart-types';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './MosaicDashboardPanels';
 import {
+  createMosaicDashboardPanelConfig,
   createMosaicDashboardVgPlotPanelConfig,
   MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   useStoreWithMosaicDashboard,
@@ -103,6 +107,31 @@ export function MosaicDashboardRoot({
     [addPanel, dashboard?.selectedTable, dashboardId],
   );
 
+  const handleCreateChartOutput = useCallback(
+    (output: ChartBuilderOutput, title: string) => {
+      const panel =
+        output.kind === 'vgplot'
+          ? createMosaicDashboardVgPlotPanelConfig(
+              title,
+              {
+                chartType: 'custom-spec',
+                settings: {spec: JSON.stringify(output.spec)},
+                vgplot: output.spec,
+              },
+              {tableName: dashboard?.selectedTable},
+            )
+          : createMosaicDashboardPanelConfig({
+              type: output.type,
+              title,
+              source: output.source,
+              config: output.config,
+            });
+      addPanel(dashboardId, panel);
+      setBuilderOpen(false);
+    },
+    [addPanel, dashboard?.selectedTable, dashboardId],
+  );
+
   const handleAddDefaultChart = useCallback(() => {
     if (!dashboard?.selectedTable) {
       return;
@@ -161,6 +190,7 @@ export function MosaicDashboardRoot({
           builders={chartBuilders}
           chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
+          onCreateChartOutput={handleCreateChartOutput}
         >
           <MosaicChartBuilder.Dialog />
         </MosaicChartBuilder>

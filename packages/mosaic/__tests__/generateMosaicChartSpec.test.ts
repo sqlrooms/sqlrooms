@@ -77,15 +77,21 @@ describe('generateMosaicChartSpec', () => {
     expect(result).toHaveProperty('plot');
   });
 
-  it('generates spec for box-plot chart type', () => {
+  it('returns null for box-plot because it creates a custom dashboard panel', () => {
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     const result = generateMosaicChartSpec('data', 'box-plot', {
       x: 'category',
       y: 'value',
     });
 
-    expect(result).toBeDefined();
-    expect(result).not.toBeNull();
-    expect(result).toHaveProperty('plot');
+    expect(result).toBeNull();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('does not create a vgplot spec'),
+    );
+
+    consoleSpy.mockRestore();
   });
 
   it('generates spec for bubble-chart chart type', () => {

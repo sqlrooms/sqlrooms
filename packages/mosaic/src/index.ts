@@ -23,6 +23,8 @@ export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
 export {
+  createMosaicDashboardBoxPlotPanelConfig,
+  createMosaicDashboardPanelConfig,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardVgPlotPanelConfig,
   createDefaultMosaicDashboardConfig,
@@ -32,6 +34,7 @@ export {
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
   isVgPlotPanelConfig,
+  MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
   MOSAIC_DASHBOARD_PANEL,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
@@ -43,6 +46,7 @@ export {
   resolveMosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
+export {mosaicDashboardBoxPlotPanelRenderer} from './dashboard/MosaicDashboardBoxPlotPanelRenderer';
 export type {
   MosaicDashboardAddPanelAction,
   MosaicDashboardAddPanelActionContext,
@@ -55,6 +59,7 @@ export type {
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
+  BoxPlotPanelConfig,
   VgPlotPanelConfig,
 } from './dashboard/MosaicDashboardSlice';
 export {
@@ -224,9 +229,20 @@ export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput'
 export {toChartSpec, toChartTypeDefinition} from './chart-builders/types';
 export type {
   ChartBuilderColumn,
+  ChartBuilderDashboardPanelOutput,
   ChartBuilderField,
+  ChartBuilderOutput,
+  ChartBuilderPanelSource,
   ChartBuilderTemplate,
+  ChartBuilderVgPlotOutput,
   ChartSpec,
   ChartTypeDefinition,
 } from './chart-builders/types';
+export {
+  BoxPlotClient,
+  buildBoxPlotQuery,
+  type BoxPlotOutlierRow,
+  type BoxPlotState,
+  type BoxPlotSummaryRow,
+} from './boxplot/BoxPlotClient';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';

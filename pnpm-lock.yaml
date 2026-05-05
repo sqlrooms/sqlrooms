@@ -3351,6 +3351,9 @@ importers:
 
   packages/mosaic:
     dependencies:
+      '@observablehq/plot':
+        specifier: ^0.6.17
+        version: 0.6.17
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4

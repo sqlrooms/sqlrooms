@@ -3,10 +3,22 @@ import type {
   ChartTypeDefinition,
   ChartBuilderField,
   ChartBuilderColumn,
+  ChartBuilderDashboardPanelOutput,
+  ChartBuilderOutput,
+  ChartBuilderPanelSource,
+  ChartBuilderVgPlotOutput,
 } from '../chart-types/base-types';
 
 // Re-export for backward compatibility
-export type {ChartTypeDefinition, ChartBuilderField, ChartBuilderColumn};
+export type {
+  ChartTypeDefinition,
+  ChartBuilderField,
+  ChartBuilderColumn,
+  ChartBuilderDashboardPanelOutput,
+  ChartBuilderOutput,
+  ChartBuilderPanelSource,
+  ChartBuilderVgPlotOutput,
+};
 
 /**
  * Describes a chart builder template that generates Mosaic JSON specs
@@ -33,6 +45,8 @@ export function toChartTypeDefinition(
     description,
     fields,
     createSpec,
+    createOutput,
+    outputKind,
     buildTitle,
     isAvailable,
     aiDescription,
@@ -43,6 +57,8 @@ export function toChartTypeDefinition(
     description,
     fields,
     createSpec,
+    createOutput,
+    outputKind,
     buildTitle,
     isAvailable,
     aiDescription,
