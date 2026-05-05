@@ -34,18 +34,3 @@ export const QUANTITATIVE_COLUMN_TYPES = [
   ...NUMERIC_COLUMN_TYPES,
   ...TEMPORAL_COLUMN_TYPES,
 ];
-
-/**
- * Build a default chart title from description and field values
- */
-export function buildDefaultChartTitle(
-  description: string,
-  fieldValues: Record<string, string>,
-): string {
-  const baseTitle = description.replace(/^Create (a |an )?/, '');
-  const selectedFields = Object.values(fieldValues).filter(Boolean);
-
-  return selectedFields.length > 0
-    ? `${baseTitle} - ${selectedFields.join(', ')}`
-    : baseTitle;
-}

@@ -2,22 +2,18 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
 import type {LineChartSettings} from './schema';
 import {
-  buildDefaultChartTitle,
   QUANTITATIVE_COLUMN_TYPES,
   NUMERIC_COLUMN_TYPES,
 } from '../../chart-builders/constants';
+import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 
 const FG_COLOR = 'var(--color-chart-1)';
-
-function titleFromDescription(description: string) {
-  return (fieldValues: Record<string, string>) =>
-    buildDefaultChartTitle(description, fieldValues);
-}
+const DESCRIPTION = 'Create a line chart of two fields';
 
 export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
   id: 'line-chart',
   label: 'Line Chart',
-  description: 'Create a line chart of two fields',
+  description: DESCRIPTION,
   aiDescription:
     'Use for trends over an ordered x-axis, typically time on x and a numeric measure on y.',
   fields: [
@@ -37,7 +33,7 @@ export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
       description: 'Numeric measure plotted on the y-axis.',
     },
   ],
-  buildTitle: titleFromDescription('Create a line chart of two fields'),
+  buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, y}): Spec =>
     ({
       plot: [

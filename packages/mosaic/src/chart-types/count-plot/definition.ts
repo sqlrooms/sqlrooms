@@ -1,23 +1,17 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
 import type {CountPlotChartSettings} from './schema';
-import {
-  buildDefaultChartTitle,
-  QUANTITATIVE_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
-
-function titleFromDescription(description: string) {
-  return (fieldValues: Record<string, string>) =>
-    buildDefaultChartTitle(description, fieldValues);
-}
+const DESCRIPTION = 'Create a count plot of a field';
 
 export const countPlotChartType: ChartTypeDefinition<CountPlotChartSettings> = {
   id: 'count-plot',
   label: 'Count Plot',
-  description: 'Create a count plot of a field',
+  description: DESCRIPTION,
   aiDescription:
     'Use for a quick binned distribution of one numeric or temporal column.',
   fields: [
@@ -29,7 +23,7 @@ export const countPlotChartType: ChartTypeDefinition<CountPlotChartSettings> = {
       description: 'Numeric or temporal column to bin along the x-axis.',
     },
   ],
-  buildTitle: titleFromDescription('Create a count plot of a field'),
+  buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {field}): Spec =>
     ({
       plot: [

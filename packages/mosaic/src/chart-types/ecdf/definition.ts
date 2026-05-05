@@ -1,22 +1,16 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
 import type {EcdfChartSettings} from './schema';
-import {
-  buildDefaultChartTitle,
-  QUANTITATIVE_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 
 const FG_COLOR = 'var(--color-chart-1)';
-
-function titleFromDescription(description: string) {
-  return (fieldValues: Record<string, string>) =>
-    buildDefaultChartTitle(description, fieldValues);
-}
+const DESCRIPTION = 'Create an eCDF chart of a field';
 
 export const ecdfChartType: ChartTypeDefinition<EcdfChartSettings> = {
   id: 'ecdf',
   label: 'eCDF',
-  description: 'Create an eCDF chart of a field',
+  description: DESCRIPTION,
   aiDescription:
     'Use for a cumulative distribution curve over one numeric or temporal column.',
   fields: [
@@ -29,7 +23,7 @@ export const ecdfChartType: ChartTypeDefinition<EcdfChartSettings> = {
         'Numeric or temporal column used to build the cumulative distribution.',
     },
   ],
-  buildTitle: titleFromDescription('Create an eCDF chart of a field'),
+  buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {field}): Spec =>
     ({
       plot: [

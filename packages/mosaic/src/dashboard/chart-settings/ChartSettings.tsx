@@ -65,9 +65,16 @@ const ChartSettingsHeader: FC<ChartSettingsHeaderProps> = ({
   return (
     <div className="flex items-center justify-between border-b px-4 py-2 text-sm font-medium">
       {children}
-      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClose}>
-        <XIcon className="h-3.5 w-3.5" />
-      </Button>
+      {onClose && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5"
+          onClick={onClose}
+        >
+          <XIcon className="h-3.5 w-3.5" />
+        </Button>
+      )}
     </div>
   );
 };
@@ -115,7 +122,7 @@ const ChartSettingsFields: FC = () => {
 
       // Check if all required fields are filled
       const allRequiredFieldsFilled = chartTypeDef.fields
-        .filter((field) => field.required)
+        .filter((field) => field.required !== false)
         .every((field) => {
           const value = newSettings[field.key];
           return value !== undefined && value !== null && value !== '';

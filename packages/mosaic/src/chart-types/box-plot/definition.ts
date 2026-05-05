@@ -1,22 +1,16 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
 import type {BoxPlotChartSettings} from './schema';
-import {
-  buildDefaultChartTitle,
-  NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
+import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 
 const FG_COLOR = 'var(--color-chart-1)';
-
-function titleFromDescription(description: string) {
-  return (fieldValues: Record<string, string>) =>
-    buildDefaultChartTitle(description, fieldValues);
-}
+const DESCRIPTION = 'Create a box plot';
 
 export const boxPlotChartType: ChartTypeDefinition<BoxPlotChartSettings> = {
   id: 'box-plot',
   label: 'Box Plot',
-  description: 'Create a box plot',
+  description: DESCRIPTION,
   aiDescription:
     'Use for comparing the distribution of a numeric measure across categories.',
   fields: [
@@ -34,7 +28,7 @@ export const boxPlotChartType: ChartTypeDefinition<BoxPlotChartSettings> = {
       description: 'Numeric measure summarized within each category.',
     },
   ],
-  buildTitle: titleFromDescription('Create a box plot'),
+  buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, y}): Spec =>
     ({
       plot: [

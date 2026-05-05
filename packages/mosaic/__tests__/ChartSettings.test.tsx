@@ -17,6 +17,10 @@ describe('ChartSettings Compound Components', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe('ChartSettings.Root', () => {
     it('provides context to children', () => {
       const config: VgPlotChartConfig = {
@@ -42,9 +46,7 @@ describe('ChartSettings Compound Components', () => {
 
   describe('ChartSettings.Fields', () => {
     it('shows error for unknown chart type', () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+      jest.spyOn(console, 'error').mockImplementation(() => {});
       const config = {
         chartType: 'unknown-type',
         settings: {},
@@ -64,7 +66,6 @@ describe('ChartSettings Compound Components', () => {
 
       expect(markup).toContain('Unknown chart type');
       expect(markup).toContain('unknown-type');
-      consoleSpy.mockRestore();
     });
 
     it('shows error for empty columns', () => {
