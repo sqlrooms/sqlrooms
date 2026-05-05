@@ -57,6 +57,21 @@ export type RoomState = RoomShellSliceState &
     addFile: (file: File, loadOptions?: LoadFileOptions) => Promise<string>;
   };
 
+export function getCurrentKeplerMapArtifactId(
+  state: Pick<RoomState, 'artifacts'>,
+) {
+  const currentArtifactId = state.artifacts.config.currentArtifactId;
+  const currentArtifact = currentArtifactId
+    ? state.artifacts.config.artifactsById[currentArtifactId]
+    : undefined;
+  if (currentArtifact?.type === 'kepler-map') {
+    return currentArtifactId;
+  }
+  return Object.values(state.artifacts.config.artifactsById).find(
+    (artifact) => artifact.type === 'kepler-map',
+  )?.id;
+}
+
 export const KEPLER_ARTIFACT_TYPES = defineArtifactTypes({
   'kepler-map': {
     label: 'Map',
@@ -177,7 +192,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       initialize: async () => {
-        const mapId = get().kepler.getCurrentMap()?.id;
+        const mapId = getCurrentKeplerMapArtifactId(get());
         const datasetId = 'earthquakes';
         const layerId = 'earthquakes';
         if (mapId) {
@@ -225,7 +240,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               lastOpenedAt: Date.now(),
             },
           ],
-          currentMapId: DEFAULT_KEPLER_MAP_ID,
         },
       })(set, get, store),
 
@@ -251,9 +265,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         await get().db.connector.loadFile(file, tableName, loadOptions);
         await get().db.refreshTableSchemas();
         await get().kepler.syncKeplerDatasets();
-        const currentMapId = get().kepler.getCurrentMap()?.id;
-        if (currentMapId) {
-          await get().kepler.addTableToMap(currentMapId, tableName);
+        const targetMapId = getCurrentKeplerMapArtifactId(get());
+        if (targetMapId) {
+          await get().kepler.addTableToMap(targetMapId, tableName);
         }
         return tableName;
       },

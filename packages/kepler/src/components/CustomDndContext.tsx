@@ -61,10 +61,12 @@ export function CustomDndContextFactory(
   };
 
   const DndContext = ({children, visState}: DndContextProps) => {
-    // Get the current map ID from the store
-    const mapId = useStoreWithKepler(
-      (state: any) => state.kepler.config.currentMapId,
-    );
+    const mapId = useStoreWithKepler((state) => {
+      if (!visState) return undefined;
+      return Object.entries(state.kepler.map).find(
+        ([, mapState]) => mapState?.visState === visState,
+      )?.[0];
+    });
     const {datasets, layerOrder, layers, splitMaps, effects, effectOrder} =
       visState || {};
 

@@ -1,8 +1,11 @@
 import {KeplerMapSchema} from '@sqlrooms/kepler';
-import {useRoomStore} from '../store';
+import {getCurrentKeplerMapArtifactId, useRoomStore} from '../store';
 
 export function useCurrentMap(): KeplerMapSchema | undefined {
   return useRoomStore((state) => {
-    return state.kepler.getCurrentMap();
+    const mapId = getCurrentKeplerMapArtifactId(state);
+    return mapId
+      ? state.kepler.config.maps.find((map) => map.id === mapId)
+      : undefined;
   });
 }
