@@ -4,38 +4,34 @@ import type {
   ChartTypeDefinition,
 } from './types';
 
-export const NUMERIC_COLUMN_TYPES = [
-  'BIGINT',
-  'BIT',
-  'DECIMAL',
-  'DOUBLE',
-  'FLOAT',
-  'HUGEINT',
-  'INTEGER',
-  'REAL',
-  'SMALLINT',
-  'TINYINT',
-  'UBIGINT',
-  'UHUGEINT',
-  'UINTEGER',
-  'USMALLINT',
-  'UTINYINT',
-] as const;
+export {
+  NUMERIC_COLUMN_TYPES,
+  TEMPORAL_COLUMN_TYPES,
+  QUANTITATIVE_COLUMN_TYPES,
+} from './constants';
 
-export const TEMPORAL_COLUMN_TYPES = [
-  'DATE',
-  'TIME',
-  'TIMESTAMP',
-  'TIMESTAMP_MS',
-  'TIMESTAMP_NS',
-  'TIMESTAMP_S',
-  'TIMESTAMPTZ',
-] as const;
+/**
+ * Build a default chart title from description and field values
+ */
+export function buildDefaultChartTitle(
+  description: string,
+  fieldValues: Record<string, string>,
+): string {
+  const baseTitle = description.replace(/^Create (a |an )?/, '');
+  const selectedFields = Object.values(fieldValues).filter(Boolean);
 
-export const QUANTITATIVE_COLUMN_TYPES = [
-  ...NUMERIC_COLUMN_TYPES,
-  ...TEMPORAL_COLUMN_TYPES,
-] as const;
+  return selectedFields.length > 0
+    ? `${baseTitle} - ${selectedFields.join(', ')}`
+    : baseTitle;
+}
+
+/**
+ * Create a title builder function from a description string
+ */
+export function titleFromDescription(description: string) {
+  return (fieldValues: Record<string, string>) =>
+    buildDefaultChartTitle(description, fieldValues);
+}
 
 export function columnMatchesFieldTypes(
   column: ChartBuilderColumn,
@@ -74,18 +70,6 @@ export function getAvailableChartTypes(
   return chartTypes.filter((chartType) =>
     isChartTypeAvailable(chartType, columns),
   );
-}
-
-export function buildDefaultChartTitle(
-  description: string,
-  fieldValues: Record<string, string>,
-): string {
-  const baseTitle = description.replace(/^Create (a |an )?/, '');
-  const selectedFields = Object.values(fieldValues).filter(Boolean);
-
-  return selectedFields.length > 0
-    ? `${baseTitle} - ${selectedFields.join(', ')}`
-    : baseTitle;
 }
 
 export function buildChartTypeTitle(

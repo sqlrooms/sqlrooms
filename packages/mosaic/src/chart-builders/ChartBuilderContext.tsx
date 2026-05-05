@@ -1,6 +1,6 @@
 import {createContext, useContext} from 'react';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {useStore} from 'zustand';
+import type {VgPlotChartConfig} from '../chart-types';
 import type {
   ChartBuilderStore,
   ChartBuilderStoreState,
@@ -14,7 +14,7 @@ import type {
 export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
-  onCreateChart: (spec: Spec, title: string) => void;
+  onCreateChart: (title: string, config: VgPlotChartConfig) => void;
   templates: ChartBuilderTemplate[];
   availableChartTypes: ChartTypeDefinition[];
   availableTemplates: ChartBuilderTemplate[];

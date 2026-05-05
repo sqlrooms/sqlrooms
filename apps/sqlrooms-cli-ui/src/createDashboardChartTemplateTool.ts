@@ -258,7 +258,12 @@ export function createDashboardChartTemplateTool(store: {
         const title = chartType.buildTitle
           ? chartType.buildTitle(params.fieldValues)
           : (chartType.label ?? chartType.description);
-        const panel = createMosaicDashboardVgPlotPanelConfig(spec, title);
+
+        const panel = createMosaicDashboardVgPlotPanelConfig(title, {
+          chartType: chartType.id,
+          settings: params.fieldValues,
+          vgplot: spec,
+        });
 
         state.mosaicDashboard.addPanel(targetArtifactId, panel);
         state.artifacts.setCurrentArtifact(targetArtifactId);

@@ -7,6 +7,7 @@ export type MosaicDashboardContextValue = {
   openBuilder: () => void;
   closeBuilder: () => void;
   setBuilderOpen: (open: boolean) => void;
+  addDefaultChart: () => void;
 };
 
 export const MosaicDashboardContext =

@@ -1,67 +1,43 @@
-import {Button, SpinnerPane} from '@sqlrooms/ui';
+import {SpinnerPane} from '@sqlrooms/ui';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Spec} from '@uwdata/mosaic-spec';
 import {BarChart3Icon} from 'lucide-react';
-import {useCallback, useEffect, useMemo} from 'react';
+import {type FC, useCallback, useEffect, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
-import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
+import {ChartSettingsPanel} from './chart-settings';
+import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
+import {MosaicDashboardVgPlotHeaderActions} from './MosaicDashboardVgPlotHeaderActions';
 import {
   type MosaicDashboardPanelRenderer,
-  type MosaicDashboardPanelRendererProps,
+  type VgPlotPanelConfig,
+  type VgPlotPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
+import {VgPlotChartConfig} from '../chart-types';
 
-function toRenderableMosaicSpec(
-  parsedValue: Record<string, unknown>,
-): Record<string, unknown> {
-  const mosaicSpec = {...parsedValue};
-  if ('$schema' in mosaicSpec) {
-    delete mosaicSpec.$schema;
+function toRenderableMosaicSpec(vgplot: unknown): Spec | null {
+  try {
+    if (!vgplot || typeof vgplot !== 'object' || Array.isArray(vgplot)) {
+      return null;
+    }
+
+    const vgplotRecord = vgplot as Spec;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const {$schema, ...mosaicSpec} = vgplotRecord;
+
+    return mosaicSpec;
+  } catch (error) {
+    console.error('[toRenderableMosaicSpec] Failed to parse spec:', error);
+    return null;
   }
-  return mosaicSpec;
 }
 
-function getVgPlotSpec(panel: MosaicDashboardPanelRendererProps['panel']) {
-  const spec = panel.config.vgplot;
-  return spec && typeof spec === 'object' && !Array.isArray(spec)
-    ? (spec as Record<string, unknown>)
-    : null;
-}
-
-function MosaicDashboardVgPlotHeaderActions({
-  dashboardId,
-  panel,
-}: MosaicDashboardPanelRendererProps) {
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
-  );
-  const spec = getVgPlotSpec(panel);
-
-  const handleSpecApply = useCallback(
-    (newSpec: Record<string, unknown>) => {
-      updatePanel(dashboardId, panel.id, {
-        config: {...panel.config, vgplot: newSpec},
-      });
-    },
-    [dashboardId, panel.config, panel.id, updatePanel],
-  );
-
-  if (!spec) {
-    return (
-      <Button variant="ghost" size="sm" className="h-6 px-2" disabled>
-        Invalid spec
-      </Button>
-    );
-  }
-
-  return <VgPlotSpecPopoverEditor value={spec} onApply={handleSpecApply} />;
-}
-
-function MosaicDashboardVgPlotRenderer({
+const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
   dashboardId,
   panel,
   selectionName,
-}: MosaicDashboardPanelRendererProps) {
+}) => {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
@@ -77,10 +53,25 @@ function MosaicDashboardVgPlotRenderer({
   const setRetainedChart = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setRetainedChart,
   );
-  const vgplot = getVgPlotSpec(panel);
-  const spec = vgplot
-    ? (toRenderableMosaicSpec(vgplot) as unknown as Spec)
-    : null;
+
+  const spec = useMemo(
+    () => toRenderableMosaicSpec(panel.config.vgplot),
+    [panel.config.vgplot],
+  );
+
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
+  const isSettingsOpen = panel.config.settingsOpen;
+
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      updatePanel(dashboardId, panel.id, {
+        config: {...panel.config, settingsOpen: isOpen},
+      });
+    },
+    [dashboardId, panel.config, panel.id, updatePanel],
+  );
 
   useEffect(() => {
     if (!brushSelection) {
@@ -95,6 +86,7 @@ function MosaicDashboardVgPlotRenderer({
         : undefined,
     [brushSelection],
   );
+
   const retention = useMemo(
     () => ({
       chart: retainedChart,
@@ -104,8 +96,28 @@ function MosaicDashboardVgPlotRenderer({
     [dashboardId, panel.id, retainedChart, setRetainedChart],
   );
 
-  return (
-    <div className="h-full min-h-0 overflow-auto p-2">
+  const tableName = panel.source?.tableName;
+
+  const handleSettingsChange = useCallback(
+    (config: VgPlotChartConfig) => {
+      updatePanel(dashboardId, panel.id, {
+        config,
+      });
+    },
+    [dashboardId, panel.id, updatePanel],
+  );
+
+  const settingsContent = (
+    <ChartSettingsPanel
+      tableName={tableName}
+      config={panel.config}
+      onChange={handleSettingsChange}
+      onClose={() => handleOpenChange(false)}
+    />
+  );
+
+  const chartContent = (
+    <div className="h-full overflow-auto p-2">
       {connection.status === 'loading' ? (
         <SpinnerPane className="h-full w-full" />
       ) : connection.status === 'ready' && spec && params ? (
@@ -123,9 +135,20 @@ function MosaicDashboardVgPlotRenderer({
       )}
     </div>
   );
-}
 
-export const mosaicDashboardVgPlotPanelRenderer: MosaicDashboardPanelRenderer =
+  return (
+    <div className="h-full min-h-0">
+      <MosaicDashboardPanelLayout
+        isOpen={isSettingsOpen}
+        onIsOpenChange={handleOpenChange}
+        settings={settingsContent}
+        content={chartContent}
+      />
+    </div>
+  );
+};
+
+export const mosaicDashboardVgPlotPanelRenderer: MosaicDashboardPanelRenderer<VgPlotPanelConfig> =
   {
     component: MosaicDashboardVgPlotRenderer,
     headerActions: MosaicDashboardVgPlotHeaderActions,

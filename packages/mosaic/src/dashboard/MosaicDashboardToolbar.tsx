@@ -33,7 +33,7 @@ import {
 } from './MosaicDashboardSlice';
 
 export const MosaicDashboardToolbar: React.FC = () => {
-  const {dashboardId, canCreateChart, openBuilder} =
+  const {dashboardId, canCreateChart, addDefaultChart} =
     useMosaicDashboardContext();
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
@@ -208,7 +208,10 @@ export const MosaicDashboardToolbar: React.FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={openBuilder} disabled={!canCreateChart}>
+            <DropdownMenuItem
+              onClick={addDefaultChart}
+              disabled={!canCreateChart}
+            >
               <BarChart3 className="mr-2 h-4 w-4" />
               Chart
             </DropdownMenuItem>

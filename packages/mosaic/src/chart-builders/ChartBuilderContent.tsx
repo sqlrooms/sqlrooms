@@ -1,6 +1,6 @@
 import {cn} from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import React from 'react';
+import type {VgPlotChartConfig} from '../chart-types';
 import {ChartBuilderActions} from './ChartBuilderActions';
 import {useChartBuilderContext} from './ChartBuilderContext';
 import {ChartBuilderFields} from './ChartBuilderFields';
@@ -18,7 +18,7 @@ type StandaloneChartBuilderContentProps = {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
+  onCreateChart: (title: string, config: VgPlotChartConfig) => void;
   /** Preferred shared chart-type customization surface */
   chartTypes?: ChartTypeDefinition[];
   /** Backward-compatible UI template customization surface */

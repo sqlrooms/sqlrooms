@@ -42,10 +42,14 @@ export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
       <Button
         size="sm"
         onClick={() => {
-          if (!selectedTemplate || !canCreate) return;
+          if (!selectedTemplate || !canCreate || !selectedTemplateId) return;
           const spec = selectedTemplate.createSpec(tableName, fieldValues);
           const title = buildChartTypeTitle(selectedTemplate, fieldValues);
-          onCreateChart(spec, title);
+          onCreateChart(title, {
+            chartType: selectedTemplateId,
+            settings: fieldValues,
+            vgplot: spec,
+          });
           reset();
         }}
         disabled={!canCreate}

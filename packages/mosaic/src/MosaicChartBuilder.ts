@@ -1,6 +1,6 @@
 import type {ReactElement} from 'react';
 import {mosaicChartBuilders} from './chart-builders/builders';
-import {mosaicChartTypes} from './chart-builders/chartTypes';
+import {mosaicChartTypes} from './chart-types';
 import {ChartBuilderActions} from './chart-builders/ChartBuilderActions';
 import {ChartBuilderContent} from './chart-builders/ChartBuilderContent';
 import {

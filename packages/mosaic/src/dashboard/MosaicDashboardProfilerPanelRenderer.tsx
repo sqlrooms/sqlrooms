@@ -6,7 +6,8 @@ import {
 } from '../profiler/MosaicProfiler';
 import {
   type MosaicDashboardPanelRenderer,
-  type MosaicDashboardPanelRendererProps,
+  ProfilerPanel,
+  type ProfilerPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 
@@ -14,7 +15,7 @@ function MosaicDashboardProfilerRenderer({
   panel,
   resolvedSource,
   selectionName,
-}: MosaicDashboardPanelRendererProps) {
+}: ProfilerPanelRendererProps) {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
@@ -65,7 +66,7 @@ function MosaicDashboardProfilerRenderer({
   );
 }
 
-export const mosaicDashboardProfilerPanelRenderer: MosaicDashboardPanelRenderer =
+export const mosaicDashboardProfilerPanelRenderer: MosaicDashboardPanelRenderer<ProfilerPanel> =
   {
     component: MosaicDashboardProfilerRenderer,
     icon: TablePropertiesIcon,

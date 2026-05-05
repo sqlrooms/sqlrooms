@@ -4,6 +4,7 @@ import {
   MosaicChart,
   MosaicChartBuilder,
   type Spec,
+  type VgPlotChartConfig,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
@@ -74,10 +75,13 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
-  const handleCreateChart = useCallback((spec: Spec, title: string) => {
-    const id = `chart-${Date.now()}`;
-    setCharts((prev) => [{id, title, spec}, ...prev]);
-  }, []);
+  const handleCreateChart = useCallback(
+    (title: string, config: VgPlotChartConfig) => {
+      const id = `chart-${Date.now()}`;
+      setCharts((prev) => [{id, title, spec: config.vgplot as Spec}, ...prev]);
+    },
+    [],
+  );
 
   const handleRemoveChart = useCallback((chartId: string) => {
     setCharts((prev) => prev.filter((c) => c.id !== chartId));
@@ -178,7 +182,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                             handleSpecChange(chart.id, spec)
                           }
                         >
-                          <MosaicChart.Display />
+                          <MosaicChart.Display className="h-64" />
                           {isEditing && (
                             <>
                               <MosaicChart.SpecEditor

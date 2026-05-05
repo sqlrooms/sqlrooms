@@ -43,7 +43,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium">
+      <label className="text-xs font-medium">
         {field.label}
         {field.required && <span className="text-destructive ml-1">*</span>}
       </label>
@@ -53,12 +53,12 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between font-normal"
+            className="h-8 w-full justify-between text-xs font-normal"
           >
             {selectedColumn ? (
               <span className="flex items-center gap-2 truncate">
                 <span className="truncate">{selectedColumn.name}</span>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-[10px]">
                   {selectedColumn.type}
                 </span>
               </span>
@@ -67,12 +67,15 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
                 Select {field.label.toLowerCase()}...
               </span>
             )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 text-xs">
           <Command>
-            <CommandInput placeholder={`Search columns...`} />
+            <CommandInput
+              placeholder={`Search columns...`}
+              className="text-xs"
+            />
             <CommandList>
               <CommandEmpty>No matching column.</CommandEmpty>
               <CommandGroup>
@@ -87,12 +90,12 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
                   >
                     <Check
                       className={cn(
-                        'mr-2 h-4 w-4 shrink-0',
+                        'mr-2 h-3.5 w-3.5 shrink-0',
                         value === col.name ? 'opacity-100' : 'opacity-0',
                       )}
                     />
                     <span className="truncate">{col.name}</span>
-                    <span className="text-muted-foreground ml-auto text-xs">
+                    <span className="text-muted-foreground ml-auto text-[10px]">
                       {col.type}
                     </span>
                   </CommandItem>

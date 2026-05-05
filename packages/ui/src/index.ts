@@ -193,7 +193,10 @@ export {
   ResizablePanel,
   ResizablePanelGroup,
 } from './components/resizable';
-export type {ResizablePanelOrientation} from './components/resizable';
+export type {
+  ResizablePanelOrientation,
+  ResizablePanelHandle,
+} from './components/resizable';
 
 export {RunButton, type RunButtonProps} from './components/run-button';
 

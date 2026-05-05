@@ -102,10 +102,11 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = store
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
-    const first = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'bar'}]},
-      'Chart',
-    );
+    const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
     const second = createMosaicDashboardProfilerPanelConfig({
       source: {tableName: 'earthquakes'},
     });
@@ -223,10 +224,11 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('adds, updates, and removes dashboard panels with layout panels', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-1';
-    const first = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'bar'}]},
-      'Chart',
-    );
+    const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
     const second = createMosaicDashboardProfilerPanelConfig({
       source: {tableName: 'earthquakes'},
     });
@@ -236,7 +238,7 @@ describe('MosaicDashboardSlice generic panels', () => {
 
     let dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
-    expect(dashboard.panels.map((panel) => panel.id)).toEqual([
+    expect(dashboard.panels.map((panel: {id: string}) => panel.id)).toEqual([
       first.id,
       second.id,
     ]);
@@ -262,7 +264,9 @@ describe('MosaicDashboardSlice generic panels', () => {
     store.getState().mosaicDashboard.removePanel(dashboardId, first.id);
     dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
-    expect(dashboard.panels.map((panel) => panel.id)).toEqual([second.id]);
+    expect(dashboard.panels.map((panel: {id: string}) => panel.id)).toEqual([
+      second.id,
+    ]);
     expect(collectPanelIds(dashboard.layout)).toEqual(
       new Set([getMosaicDashboardPanelId(dashboardId, second.id)]),
     );
@@ -320,10 +324,11 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('evicts panel runtime on update and remove', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-1';
-    const panel = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'bar'}]},
-      'Chart',
-    );
+    const panel = createMosaicDashboardVgPlotPanelConfig('Chart', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
 
     store.getState().mosaicDashboard.addPanel(dashboardId, panel);
     const firstRuntime = createRuntimeChart();
@@ -365,14 +370,16 @@ describe('MosaicDashboardSlice generic panels', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-2';
     const otherDashboardId = 'dashboard-runtime-3';
-    const first = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'bar'}]},
-      'Chart 1',
-    );
-    const second = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'line'}]},
-      'Chart 2',
-    );
+    const first = createMosaicDashboardVgPlotPanelConfig('Chart 1', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
+    const second = createMosaicDashboardVgPlotPanelConfig('Chart 2', {
+      chartType: 'line-chart',
+      settings: {},
+      vgplot: {plot: [{mark: 'line'}]},
+    });
 
     store.getState().mosaicDashboard.addPanel(dashboardId, first);
     store.getState().mosaicDashboard.addPanel(otherDashboardId, second);
@@ -425,10 +432,11 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('removes dashboards after evicting runtime and selection state', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-4';
-    const panel = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'bar'}]},
-      'Chart',
-    );
+    const panel = createMosaicDashboardVgPlotPanelConfig('Chart', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
 
     store.getState().mosaicDashboard.addPanel(dashboardId, panel);
     const runtime = createRuntimeChart();
