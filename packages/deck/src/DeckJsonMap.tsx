@@ -15,6 +15,7 @@ import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import type {DeckJsonMapProps, PreparedDeckDatasetState} from './types';
+import {useDeckLayersReadyRedraw} from './useDeckLayersReadyRedraw';
 
 const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
   light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
@@ -220,32 +221,17 @@ export function DeckJsonMap({
     : (deckProps?.layers ??
       (convertedDeckProps.layers as unknown[] | undefined) ??
       []);
+  useDeckLayersReadyRedraw({
+    deckRef,
+    hasRenderingError,
+    layers: mergedLayers,
+  });
 
   const mergedDeckProps = {
     ...convertedDeckProps,
     ...extraDeckProps,
     layers: mergedLayers,
   };
-
-  useEffect(() => {
-    if (hasRenderingError || mergedLayers.length === 0) {
-      return;
-    }
-
-    let secondFrame: number | null = null;
-    const firstFrame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        deckRef.current?.deck?.redraw('SQLRooms layers ready');
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(firstFrame);
-      if (secondFrame !== null) {
-        cancelAnimationFrame(secondFrame);
-      }
-    };
-  }, [hasRenderingError, mergedLayers]);
 
   const {resolvedTheme} = useTheme();
 
