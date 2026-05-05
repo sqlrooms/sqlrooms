@@ -1,11 +1,11 @@
 import type {Spec} from '@uwdata/mosaic-spec';
-import type {ChartTypeDefinition} from '../../chart-builders/types';
+import type {ChartTypeDefinition} from '../base-types';
 import type {LineChartSettings} from './schema';
 import {
-  buildDefaultChartTitle,
   QUANTITATIVE_COLUMN_TYPES,
   NUMERIC_COLUMN_TYPES,
 } from '../../chart-builders/constants';
+import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -16,10 +16,7 @@ const CHART_COLORS = [
   '#f4a261', // chart-5: hsl(27, 87%, 67%)
 ];
 
-function titleFromDescription(description: string) {
-  return (fieldValues: Record<string, string>) =>
-    buildDefaultChartTitle(description, fieldValues);
-}
+const DESCRIPTION = 'Create a line chart of two fields';
 
 function getLineColor(
   fieldConfig: {field: string; color?: string},
@@ -35,7 +32,7 @@ function getLineColor(
 export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
   id: 'line-chart',
   label: 'Line Chart',
-  description: 'Create a line chart with one or more Y fields',
+  description: DESCRIPTION,
   aiDescription:
     'Use for trends over an ordered x-axis, typically time on x and numeric measures on y. Supports multiple Y fields for comparing trends.',
   fields: [
@@ -56,9 +53,7 @@ export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
       multiple: true,
     },
   ],
-  buildTitle: titleFromDescription(
-    'Create a line chart with one or more Y fields',
-  ),
+  buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, yFields, xInterval}): Spec => {
     if (!yFields || yFields.length === 0) {
       throw new Error('At least one Y field is required');

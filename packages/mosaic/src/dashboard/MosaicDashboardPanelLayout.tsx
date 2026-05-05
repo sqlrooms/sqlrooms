@@ -1,11 +1,9 @@
 import {
-  Button,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
   type ResizablePanelHandle,
 } from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
 import React, {FC, useEffect, useRef} from 'react';
 
 type MosaicDashboardPanelLayoutProps = {
@@ -52,19 +50,7 @@ export const MosaicDashboardPanelLayout: FC<
         className="overflow-auto"
         onResize={onResize}
       >
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <span className="text-sm font-medium">Chart settings</span>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={() => panelRef.current?.collapse()}
-          >
-            <XIcon className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        <div className="p-4">{settings}</div>
+        {settings}
       </ResizablePanel>
       <ResizableHandle className="w-px" />
       <ResizablePanel>{content}</ResizablePanel>

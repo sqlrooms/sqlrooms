@@ -1,22 +1,16 @@
 import type {Spec} from '@uwdata/mosaic-spec';
-import type {ChartTypeDefinition} from '../../chart-builders/types';
+import type {ChartTypeDefinition} from '../base-types';
 import type {BubbleChartSettings} from './schema';
-import {
-  buildDefaultChartTitle,
-  NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
+import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 
 const FG_COLOR = 'var(--color-chart-1)';
-
-function titleFromDescription(description: string) {
-  return (fieldValues: Record<string, string>) =>
-    buildDefaultChartTitle(description, fieldValues);
-}
+const DESCRIPTION = 'Create a bubble chart';
 
 export const bubbleChartChartType: ChartTypeDefinition<BubbleChartSettings> = {
   id: 'bubble-chart',
   label: 'Bubble Chart',
-  description: 'Create a bubble chart',
+  description: DESCRIPTION,
   aiDescription: 'Use for a simple scatterplot of two numeric columns.',
   fields: [
     {
@@ -34,7 +28,7 @@ export const bubbleChartChartType: ChartTypeDefinition<BubbleChartSettings> = {
       description: 'Numeric column used on the y-axis.',
     },
   ],
-  buildTitle: titleFromDescription('Create a bubble chart'),
+  buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, y}): Spec =>
     ({
       plot: [

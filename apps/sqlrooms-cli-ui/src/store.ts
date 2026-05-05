@@ -35,6 +35,7 @@ import {
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
   createDefaultChartTypes,
+  type VgPlotPanelConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -81,7 +82,6 @@ import {
   RoomState,
 } from './store-types';
 import {parseVgPlotSpecString} from './vgplot';
-import {VgPlotPanelConfig} from '@sqlrooms/mosaic';
 
 export type {RoomState} from './store-types';
 

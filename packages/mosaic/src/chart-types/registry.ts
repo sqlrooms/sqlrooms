@@ -1,4 +1,4 @@
-import type {ChartTypeDefinition} from '../chart-builders/types';
+import type {ChartTypeDefinition} from './base-types';
 import {histogramChartType} from './histogram';
 import {lineChartChartType} from './line-chart';
 import {countPlotChartType} from './count-plot';

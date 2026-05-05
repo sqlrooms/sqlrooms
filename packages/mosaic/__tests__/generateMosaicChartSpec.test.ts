@@ -11,7 +11,9 @@ describe('generateMosaicChartSpec', () => {
   });
 
   it('returns null for unknown chart type', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
 
     const result = generateMosaicChartSpec('sales', 'unknown-type' as any, {});
 
@@ -99,16 +101,16 @@ describe('generateMosaicChartSpec', () => {
   });
 
   it('handles createSpec throwing an error', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
 
     // Mock a chart type that throws
-    const originalHistogram = mosaicChartTypes.histogram;
-    mosaicChartTypes.histogram = {
-      ...originalHistogram,
-      createSpec: () => {
+    const createSpecSpy = jest
+      .spyOn(mosaicChartTypes.histogram, 'createSpec')
+      .mockImplementation(() => {
         throw new Error('Test error');
-      },
-    };
+      });
 
     const result = generateMosaicChartSpec('sales', 'histogram', {
       field: 'amount',
@@ -121,7 +123,7 @@ describe('generateMosaicChartSpec', () => {
     );
 
     // Restore
-    mosaicChartTypes.histogram = originalHistogram;
+    createSpecSpy.mockRestore();
     consoleSpy.mockRestore();
   });
 

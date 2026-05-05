@@ -1,6 +1,9 @@
-import {Spec} from '@uwdata/mosaic-spec';
-import {mosaicChartTypes} from '../chart-types';
-import {VgPlotChartSettings, VgPlotChartType} from '../chart-types';
+import type {Spec} from '@uwdata/mosaic-spec';
+import {
+  mosaicChartTypes,
+  type VgPlotChartSettings,
+  type VgPlotChartType,
+} from '../chart-types';
 
 /**
  * Generates a Mosaic chart specification from chart settings.
