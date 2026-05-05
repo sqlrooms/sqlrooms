@@ -1,6 +1,9 @@
 import {
   expandGridLayoutItemHorizontally,
   expandGridLayoutsItemHorizontally,
+  isGridLayoutsItemHorizontallyExpanded,
+  shrinkGridLayoutItemHorizontally,
+  shrinkGridLayoutsItemHorizontally,
 } from '../grid-layout-utils';
 
 describe('grid-layout-utils', () => {
@@ -89,6 +92,71 @@ describe('grid-layout-utils', () => {
         x: 0,
         w: 4,
       });
+    });
+  });
+
+  describe('shrinkGridLayoutItemHorizontally', () => {
+    it('shrinks an expanded item to half of its available horizontal space', () => {
+      const result = shrinkGridLayoutItemHorizontally(
+        [
+          {i: 'target', x: 0, y: 0, w: 12, h: 2},
+          {i: 'below', x: 0, y: 2, w: 12, h: 1},
+        ],
+        'target',
+        12,
+      );
+
+      expect(result.changed).toBe(true);
+      expect(result.layout.find((item) => item.i === 'target')).toMatchObject({
+        x: 0,
+        w: 6,
+      });
+    });
+
+    it('shrinks to half of the row segment between blockers', () => {
+      const result = shrinkGridLayoutItemHorizontally(
+        [
+          {i: 'left', x: 0, y: 0, w: 2, h: 2},
+          {i: 'target', x: 2, y: 0, w: 6, h: 2},
+          {i: 'right', x: 8, y: 0, w: 2, h: 2},
+        ],
+        'target',
+        12,
+      );
+
+      expect(result.layout.find((item) => item.i === 'target')).toMatchObject({
+        x: 2,
+        w: 3,
+      });
+    });
+  });
+
+  describe('shrinkGridLayoutsItemHorizontally', () => {
+    it('shrinks the item in each responsive layout', () => {
+      const layouts = {
+        lg: [{i: 'target', x: 0, y: 0, w: 12, h: 2}],
+        sm: [{i: 'target', x: 0, y: 0, w: 6, h: 2}],
+      };
+
+      expect(
+        isGridLayoutsItemHorizontallyExpanded(layouts, 'target', {
+          lg: 12,
+          sm: 6,
+        }),
+      ).toBe(true);
+
+      const result = shrinkGridLayoutsItemHorizontally(layouts, 'target', {
+        lg: 12,
+        sm: 6,
+      });
+
+      expect(result.changed).toBe(true);
+      expect(
+        result.layouts.lg?.find((item) => item.i === 'target'),
+      ).toMatchObject({w: 6});
+      expect(
+        result.layouts.sm?.find((item) => item.i === 'target'),
+      ).toMatchObject({w: 3});
     });
   });
 });

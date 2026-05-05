@@ -1,5 +1,11 @@
 import {LeafLayout, useExpandGridPanel} from '@sqlrooms/layout';
-import {Button} from '@sqlrooms/ui';
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {GripVerticalIcon, MoveHorizontalIcon, Trash2Icon} from 'lucide-react';
 import {FC, useCallback} from 'react';
 import {
@@ -34,7 +40,8 @@ export const MosaicDashboardPanelHeader: FC<
   const removePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.removePanel,
   );
-  const {canExpandGridPanel, expandGridPanel} = useExpandGridPanel();
+  const {canExpandGridPanel, expandGridPanel, isGridPanelHorizontallyExpanded} =
+    useExpandGridPanel();
 
   const handleRemove = useCallback(() => {
     if (!panelId) return;
@@ -44,6 +51,9 @@ export const MosaicDashboardPanelHeader: FC<
   const title = panel?.title ?? 'Dashboard panel';
   const Icon = renderer?.icon;
   const HeaderActions = renderer?.headerActions;
+  const expandLabel = isGridPanelHorizontallyExpanded
+    ? 'Shrink panel horizontally'
+    : 'Expand panel horizontally';
   const rendererProps: MosaicDashboardPanelRendererProps | undefined =
     dashboard && panel
       ? {dashboardId, dashboard, panel, resolvedSource, selectionName}
@@ -59,29 +69,41 @@ export const MosaicDashboardPanelHeader: FC<
         </LeafLayout.DragHandle>
 
         {panel && rendererProps ? (
-          <div className="flex items-center gap-0.5">
-            {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
-            {canExpandGridPanel ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                title="Expand panel horizontally"
-                onClick={expandGridPanel}
-              >
-                <MoveHorizontalIcon className="h-3.5 w-3.5" />
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              title="Remove dashboard panel"
-              onClick={handleRemove}
-            >
-              <Trash2Icon className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex items-center gap-0.5">
+              {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
+              {canExpandGridPanel ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={expandLabel}
+                      onClick={expandGridPanel}
+                    >
+                      <MoveHorizontalIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{expandLabel}</TooltipContent>
+                </Tooltip>
+              ) : null}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    aria-label="Remove dashboard panel"
+                    onClick={handleRemove}
+                  >
+                    <Trash2Icon className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Remove dashboard panel</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         ) : null}
       </div>
     </LeafLayout.Header>

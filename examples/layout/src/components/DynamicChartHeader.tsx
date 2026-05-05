@@ -1,6 +1,12 @@
 import {LeafLayout, useExpandGridPanel} from '@sqlrooms/layout';
 import {GripVerticalIcon, MoveHorizontalIcon, XIcon} from 'lucide-react';
-import {Button} from '@sqlrooms/ui';
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {FC, useCallback} from 'react';
 import {useRoomStore} from '../store';
 
@@ -14,7 +20,11 @@ export const DynamicChartHeader: FC<DynamicChartHeaderProps> = ({
   chartId,
 }) => {
   const togglePanel = useRoomStore((state) => state.layout.togglePanel);
-  const {canExpandGridPanel, expandGridPanel} = useExpandGridPanel();
+  const {canExpandGridPanel, expandGridPanel, isGridPanelHorizontallyExpanded} =
+    useExpandGridPanel();
+  const expandLabel = isGridPanelHorizontallyExpanded
+    ? 'Shrink panel horizontally'
+    : 'Expand panel horizontally';
 
   const handleRemove = useCallback(() => {
     togglePanel(chartId, false);
@@ -30,27 +40,40 @@ export const DynamicChartHeader: FC<DynamicChartHeaderProps> = ({
               <span className="truncate">{title}</span>
             </LeafLayout.DragHandle>
           </div>
-          <div className="flex shrink-0">
-            {canExpandGridPanel ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Expand panel horizontally"
-                onClick={expandGridPanel}
-                className="hover:text-foreground h-8 w-8 transition-colors"
-              >
-                <MoveHorizontalIcon className="h-4 w-4" />
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRemove}
-              className="hover:text-foreground h-8 w-8 transition-colors"
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex shrink-0">
+              {canExpandGridPanel ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={expandLabel}
+                      onClick={expandGridPanel}
+                      className="hover:text-foreground h-8 w-8 transition-colors"
+                    >
+                      <MoveHorizontalIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{expandLabel}</TooltipContent>
+                </Tooltip>
+              ) : null}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remove chart"
+                    onClick={handleRemove}
+                    className="hover:text-foreground h-8 w-8 transition-colors"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Remove chart</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
       </LeafLayout.Header>
     </>

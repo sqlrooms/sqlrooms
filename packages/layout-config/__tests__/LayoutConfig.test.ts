@@ -106,10 +106,11 @@ describe('LayoutGridNode schema', () => {
       type: 'grid',
       id: 'dashboard-grid-1',
       panel: 'dashboard',
-      cols: 12,
+      cols: {lg: 12, sm: 6},
       rowHeight: 220,
       margin: [12, 12],
-      compactType: 'vertical',
+      compactType: null,
+      preventCollision: true,
       resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
       children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
       layouts: {

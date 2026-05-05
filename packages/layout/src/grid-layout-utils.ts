@@ -6,13 +6,10 @@ import {
 } from '@sqlrooms/layout-config';
 
 export const DEFAULT_GRID_BREAKPOINTS = {
-  lg: 1200,
-  md: 996,
-  sm: 768,
-  xs: 480,
-  xxs: 0,
+  lg: 768,
+  sm: 0,
 };
-export const DEFAULT_GRID_COLS = {lg: 12, md: 10, sm: 6, xs: 4, xxs: 2};
+export const DEFAULT_GRID_COLS = {lg: 12, sm: 6};
 
 export type GridLayouts = NonNullable<LayoutGridNode['layouts']>;
 
@@ -81,14 +78,21 @@ function verticallyOverlaps(
   return item.y < other.y + other.h && item.y + item.h > other.y;
 }
 
-export function expandGridLayoutItemHorizontally(
+function getGridItemHorizontalExpansion(
   layout: LayoutGridItem[],
   itemId: string,
   cols: number,
-): {layout: LayoutGridItem[]; changed: boolean} {
+):
+  | {
+      item: LayoutGridItem;
+      x: number;
+      w: number;
+      isExpanded: boolean;
+    }
+  | undefined {
   const item = layout.find((layoutItem) => layoutItem.i === itemId);
   if (!item) {
-    return {layout, changed: false};
+    return undefined;
   }
 
   const effectiveCols = Math.max(1, cols);
@@ -110,8 +114,28 @@ export function expandGridLayoutItemHorizontally(
     }
   }
 
-  const nextX = Math.min(leftBoundary, effectiveCols - 1);
-  const nextW = Math.max(1, rightBoundary - nextX);
+  const x = Math.min(leftBoundary, effectiveCols - 1);
+  const w = Math.max(1, rightBoundary - x);
+
+  return {
+    item,
+    x,
+    w,
+    isExpanded: item.x === x && item.w === w,
+  };
+}
+
+export function expandGridLayoutItemHorizontally(
+  layout: LayoutGridItem[],
+  itemId: string,
+  cols: number,
+): {layout: LayoutGridItem[]; changed: boolean} {
+  const expansion = getGridItemHorizontalExpansion(layout, itemId, cols);
+  if (!expansion) {
+    return {layout, changed: false};
+  }
+
+  const {item, x: nextX, w: nextW} = expansion;
 
   if (item.x === nextX && item.w === nextW) {
     return {layout, changed: false};
@@ -129,6 +153,47 @@ export function expandGridLayoutItemHorizontally(
     ),
     changed: true,
   };
+}
+
+export function shrinkGridLayoutItemHorizontally(
+  layout: LayoutGridItem[],
+  itemId: string,
+  cols: number,
+): {layout: LayoutGridItem[]; changed: boolean} {
+  const expansion = getGridItemHorizontalExpansion(layout, itemId, cols);
+  if (!expansion) {
+    return {layout, changed: false};
+  }
+
+  const {item, x: nextX, w: expandedW} = expansion;
+  const nextW = Math.max(1, Math.ceil(expandedW / 2));
+
+  if (item.x === nextX && item.w === nextW) {
+    return {layout, changed: false};
+  }
+
+  return {
+    layout: layout.map((layoutItem) =>
+      layoutItem.i === item.i
+        ? {
+            ...layoutItem,
+            x: nextX,
+            w: nextW,
+          }
+        : layoutItem,
+    ),
+    changed: true,
+  };
+}
+
+export function isGridLayoutItemHorizontallyExpanded(
+  layout: LayoutGridItem[],
+  itemId: string,
+  cols: number,
+): boolean {
+  return (
+    getGridItemHorizontalExpansion(layout, itemId, cols)?.isExpanded ?? false
+  );
 }
 
 export function expandGridLayoutsItemHorizontally(
@@ -150,4 +215,46 @@ export function expandGridLayoutsItemHorizontally(
   );
 
   return {layouts: nextLayouts, changed};
+}
+
+export function shrinkGridLayoutsItemHorizontally(
+  layouts: GridLayouts,
+  itemId: string,
+  cols: Record<string, number>,
+): {layouts: GridLayouts; changed: boolean} {
+  let changed = false;
+  const nextLayouts = Object.fromEntries(
+    Object.entries(layouts).map(([breakpoint, layout]) => {
+      const result = shrinkGridLayoutItemHorizontally(
+        layout,
+        itemId,
+        cols[breakpoint] ?? DEFAULT_GRID_COLS.lg,
+      );
+      changed = changed || result.changed;
+      return [breakpoint, result.layout];
+    }),
+  );
+
+  return {layouts: nextLayouts, changed};
+}
+
+export function isGridLayoutsItemHorizontallyExpanded(
+  layouts: GridLayouts,
+  itemId: string,
+  cols: Record<string, number>,
+): boolean {
+  const relevantLayouts = Object.entries(layouts).filter(([, layout]) =>
+    layout.some((item) => item.i === itemId),
+  );
+
+  return (
+    relevantLayouts.length > 0 &&
+    relevantLayouts.every(([breakpoint, layout]) =>
+      isGridLayoutItemHorizontallyExpanded(
+        layout,
+        itemId,
+        cols[breakpoint] ?? DEFAULT_GRID_COLS.lg,
+      ),
+    )
+  );
 }

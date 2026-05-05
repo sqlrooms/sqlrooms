@@ -44,10 +44,7 @@ export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
 const DEFAULT_DASHBOARD_GRID_COLS = {
   lg: 12,
-  md: 10,
   sm: 6,
-  xs: 4,
-  xxs: 2,
 };
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
@@ -323,10 +320,11 @@ function createDashboardGridLayout(
     type: 'grid',
     id: getMosaicDashboardGridId(dashboardId),
     children,
-    rowHeight: 220,
+    rowHeight: 150,
     margin: [12, 12],
     containerPadding: [0, 0],
-    compactType: 'vertical',
+    compactType: null,
+    preventCollision: true,
     resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
     layouts,
   };

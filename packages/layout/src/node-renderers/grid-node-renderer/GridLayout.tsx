@@ -456,7 +456,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           rowHeight={rowHeight}
           margin={node.margin ?? [12, 12]}
           containerPadding={node.containerPadding ?? [0, 0]}
-          compactType={node.compactType ?? 'vertical'}
+          compactType={node.compactType === undefined ? null : node.compactType}
           preventCollision={node.preventCollision}
           isBounded={node.isBounded}
           autoSize={node.autoSize ?? true}

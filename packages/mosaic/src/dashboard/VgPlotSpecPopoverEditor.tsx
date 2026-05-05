@@ -1,4 +1,12 @@
-import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
+import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {PencilIcon} from 'lucide-react';
 import React, {useCallback, useState} from 'react';
 import {MosaicCodeMirrorEditor} from '../editor/MosaicCodeMirrorEditor';
@@ -46,16 +54,21 @@ export const VgPlotSpecPopoverEditor: React.FC<
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          title="Edit spec"
-        >
-          <PencilIcon className="h-3.5 w-3.5" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              aria-label="Edit spec"
+            >
+              <PencilIcon className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Edit spec</TooltipContent>
+      </Tooltip>
       <PopoverContent
         side="bottom"
         align="end"

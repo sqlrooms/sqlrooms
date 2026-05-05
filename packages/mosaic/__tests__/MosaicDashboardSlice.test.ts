@@ -180,11 +180,11 @@ describe('MosaicDashboardSlice generic panels', () => {
       expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 12, h: 2}),
     ]);
     expect(
-      dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.md : [],
+      dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.sm : [],
     ).toEqual([
-      expect.objectContaining({i: chartLayoutId, x: 0, y: 0, w: 5, h: 2}),
-      expect.objectContaining({i: mapLayoutId, x: 5, y: 0, w: 5, h: 2}),
-      expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 10, h: 2}),
+      expect.objectContaining({i: chartLayoutId, x: 0, y: 0, w: 3, h: 2}),
+      expect.objectContaining({i: mapLayoutId, x: 3, y: 0, w: 3, h: 2}),
+      expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 6, h: 2}),
     ]);
   });
 
