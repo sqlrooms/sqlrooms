@@ -60,3 +60,10 @@ To copy it into the Python package bundle directory (so the published `sqlrooms`
 cd python/sqlrooms-cli
 pnpm build:ui
 ```
+
+## Dashboard Layouts
+
+Dashboard artifacts are created with either a `dock` or `grid` Mosaic dashboard
+layout. Explicit dashboard creation commands and AI tools require `layoutType`
+so the choice is made once at creation time; auto-created dashboards from chart
+or profiler flows use `grid`.

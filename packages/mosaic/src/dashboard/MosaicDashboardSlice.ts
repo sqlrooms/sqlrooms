@@ -3,8 +3,11 @@ import {DbSliceState} from '@sqlrooms/db';
 import {type DataTable, type DuckDbSliceState} from '@sqlrooms/duckdb';
 import {LayoutSliceState} from '@sqlrooms/layout';
 import {
+  type LayoutGridItem,
+  type LayoutGridNode,
   type LayoutNode,
   type LayoutPanelNode,
+  isLayoutGridNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
@@ -39,6 +42,11 @@ import {VgPlotChartConfig} from '../chart-types';
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
+
+export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
+export type MosaicDashboardLayoutType = z.infer<
+  typeof MosaicDashboardLayoutType
+>;
 
 export const MosaicDashboardPanelSource = z.object({
   tableName: z.string().optional(),
@@ -182,6 +190,7 @@ export function createMosaicDashboardProfilerPanelConfig(
 export const MosaicDashboardEntry = z.object({
   id: z.string(),
   title: z.string().default('Dashboard'),
+  layoutType: MosaicDashboardLayoutType.default('dock'),
   selectedTable: z.string().optional(),
   panels: z.array(MosaicDashboardPanelConfig).default([]),
   layout: LayoutNodeSchema.nullable().default(null),
@@ -212,8 +221,15 @@ export type MosaicDashboardSliceState = {
     chartBuilders?: ChartBuilderTemplate[];
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
-    createDashboard: (title?: string) => string;
-    ensureDashboard: (dashboardId: string, title?: string) => void;
+    createDashboard: (
+      title?: string,
+      layoutType?: MosaicDashboardLayoutType,
+    ) => string;
+    ensureDashboard: (
+      dashboardId: string,
+      title?: string,
+      layoutType?: MosaicDashboardLayoutType,
+    ) => void;
     removeDashboard: (dashboardId: string) => void;
     getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
     setSelectedTable: (dashboardId: string, tableName: string) => void;
@@ -290,6 +306,238 @@ function appendPanelToLayout(
   };
 }
 
+function createDashboardGridLayout(
+  dashboardId: string,
+  panelNode?: LayoutPanelNode,
+): LayoutGridNode {
+  const children = panelNode ? [panelNode] : [];
+  const layouts = createDashboardGridLayoutsForChildren(children);
+  return {
+    type: 'grid',
+    id: getMosaicDashboardGridId(dashboardId),
+    children,
+    rowHeight: 220,
+    margin: [12, 12],
+    containerPadding: [0, 0],
+    compactType: 'vertical',
+    resizeHandles: ['e', 's', 'se'],
+    layouts,
+  };
+}
+
+function getLayoutChildId(node: LayoutNode): string {
+  return isLayoutNodeKey(node) ? node : node.id;
+}
+
+function getDashboardGridCols(
+  cols: LayoutGridNode['cols'],
+  breakpoint: string,
+): number {
+  if (typeof cols === 'number') {
+    return cols;
+  }
+
+  return cols?.[breakpoint] ?? cols?.lg ?? 12;
+}
+
+function createDashboardGridItem(
+  panelId: string,
+  layout: LayoutGridItem[],
+  cols = 12,
+): LayoutGridItem {
+  const effectiveCols = Math.max(1, cols);
+  const w = Math.min(3, effectiveCols);
+  const h = 2;
+  const bottom = layout.reduce(
+    (max, item) => Math.max(max, item.y + item.h),
+    0,
+  );
+
+  for (let y = 0; y <= bottom; y += 1) {
+    for (let x = 0; x <= effectiveCols - w; x += 1) {
+      const overlaps = layout.some(
+        (item) =>
+          x < item.x + item.w &&
+          x + w > item.x &&
+          y < item.y + item.h &&
+          y + h > item.y,
+      );
+      if (!overlaps) {
+        return {
+          i: panelId,
+          x,
+          y,
+          w,
+          h,
+        };
+      }
+    }
+  }
+
+  return {
+    i: panelId,
+    x: 0,
+    y: bottom,
+    w,
+    h,
+  };
+}
+
+function createDashboardGridLayoutsForChildren(
+  children: LayoutNode[],
+  sourceLayouts?: LayoutGridNode['layouts'],
+  cols?: LayoutGridNode['cols'],
+): LayoutGridNode['layouts'] {
+  const childIds = new Set(children.map((child) => getLayoutChildId(child)));
+  const sourceEntries: Array<[string, LayoutGridItem[]]> =
+    sourceLayouts && Object.keys(sourceLayouts).length > 0
+      ? Object.entries(sourceLayouts)
+      : [['lg', []]];
+
+  return Object.fromEntries(
+    sourceEntries.map(([breakpoint, breakpointLayout]) => {
+      const nextLayout = breakpointLayout.filter((item) =>
+        childIds.has(item.i),
+      );
+      const layoutItemIds = new Set(nextLayout.map((item) => item.i));
+
+      for (const child of children) {
+        const childId = getLayoutChildId(child);
+        if (!layoutItemIds.has(childId)) {
+          const item = createDashboardGridItem(
+            childId,
+            nextLayout,
+            getDashboardGridCols(cols, breakpoint),
+          );
+          nextLayout.push(item);
+          layoutItemIds.add(childId);
+        }
+      }
+
+      return [breakpoint, nextLayout];
+    }),
+  );
+}
+
+function isExpectedDashboardPanelNode(
+  node: LayoutNode,
+  expectedPanelIds: Set<string>,
+): boolean {
+  return expectedPanelIds.has(getLayoutChildId(node));
+}
+
+function collectDashboardPanelNodes(
+  layout: LayoutNode | null,
+  expectedPanelIds: Set<string>,
+  nodes: LayoutNode[] = [],
+  seen = new Set<string>(),
+): LayoutNode[] {
+  if (!layout) return nodes;
+
+  if (isLayoutNodeKey(layout) || isLayoutPanelNode(layout)) {
+    if (isExpectedDashboardPanelNode(layout, expectedPanelIds)) {
+      const id = getLayoutChildId(layout);
+      if (!seen.has(id)) {
+        nodes.push(layout);
+        seen.add(id);
+      }
+    }
+    return nodes;
+  }
+
+  if (isLayoutSplitNode(layout) || isLayoutGridNode(layout)) {
+    for (const child of layout.children) {
+      collectDashboardPanelNodes(child, expectedPanelIds, nodes, seen);
+    }
+  }
+
+  return nodes;
+}
+
+function normalizeDashboardGridLayout(
+  layout: LayoutNode | null,
+  dashboardId: string,
+  expectedPanelIds: Set<string>,
+): LayoutGridNode {
+  const collectedPanelIds = collectPanelIds(layout);
+  const existingExpectedPanelIds = new Set(
+    [...expectedPanelIds].filter((panelId) => collectedPanelIds.has(panelId)),
+  );
+  const children = collectDashboardPanelNodes(layout, existingExpectedPanelIds);
+  const layouts = createDashboardGridLayoutsForChildren(
+    children,
+    isLayoutGridNode(layout) ? layout.layouts : undefined,
+    isLayoutGridNode(layout) ? layout.cols : undefined,
+  );
+
+  if (isLayoutGridNode(layout)) {
+    return {
+      ...layout,
+      children,
+      layouts,
+    };
+  }
+
+  return {
+    ...createDashboardGridLayout(dashboardId),
+    children,
+    layouts,
+  };
+}
+
+function appendPanelToGridLayout(
+  layout: LayoutNode | null,
+  dashboardId: string,
+  panelNode: LayoutPanelNode,
+): LayoutGridNode {
+  if (!isLayoutGridNode(layout)) {
+    const dashboardPanelPrefix = `dashboard:${dashboardId}:panel:`;
+    const expectedPanelIds = new Set(
+      [...collectPanelIds(layout)].filter((panelId) =>
+        panelId.startsWith(dashboardPanelPrefix),
+      ),
+    );
+    expectedPanelIds.add(panelNode.id);
+    const normalizedLayout = normalizeDashboardGridLayout(
+      layout,
+      dashboardId,
+      expectedPanelIds,
+    );
+    return appendPanelToGridLayout(normalizedLayout, dashboardId, panelNode);
+  }
+
+  const hasChild = layout.children.some((child) => {
+    if (isLayoutNodeKey(child)) return child === panelNode.id;
+    return child.id === panelNode.id;
+  });
+  const children = hasChild ? layout.children : [...layout.children, panelNode];
+  const sourceLayouts = layout.layouts ?? {lg: []};
+  const layouts = Object.fromEntries(
+    Object.entries(sourceLayouts).map(([breakpoint, breakpointLayout]) => {
+      if (breakpointLayout.some((item) => item.i === panelNode.id)) {
+        return [breakpoint, breakpointLayout];
+      }
+      return [
+        breakpoint,
+        [
+          ...breakpointLayout,
+          createDashboardGridItem(
+            panelNode.id,
+            breakpointLayout,
+            getDashboardGridCols(layout.cols, breakpoint),
+          ),
+        ],
+      ];
+    }),
+  );
+
+  return {
+    ...layout,
+    children,
+    layouts,
+  };
+}
+
 function removePanelFromLayout(
   layout: LayoutNode | null,
   panelId: string,
@@ -315,6 +563,26 @@ function removePanelFromLayout(
     return {...layout, children: nextChildren};
   }
 
+  if (isLayoutGridNode(layout)) {
+    const nextChildren = layout.children.filter((child) => {
+      if (isLayoutNodeKey(child)) return child !== panelId;
+      return child.id !== panelId;
+    });
+    const nextLayouts = layout.layouts
+      ? Object.fromEntries(
+          Object.entries(layout.layouts).map(
+            ([breakpoint, breakpointLayout]) => [
+              breakpoint,
+              breakpointLayout.filter((item) => item.i !== panelId),
+            ],
+          ),
+        )
+      : layout.layouts;
+
+    if (nextChildren.length === 0) return null;
+    return {...layout, children: nextChildren, layouts: nextLayouts};
+  }
+
   return layout;
 }
 
@@ -336,6 +604,11 @@ function collectPanelIds(
       collectPanelIds(child, panelIds);
     }
   }
+  if (isLayoutGridNode(layout)) {
+    for (const child of layout.children) {
+      collectPanelIds(child, panelIds);
+    }
+  }
   return panelIds;
 }
 
@@ -343,17 +616,32 @@ function ensureLayoutContainsDashboardPanels(
   layout: LayoutNode | null,
   dashboardId: string,
   panelIds: string[],
+  layoutType: MosaicDashboardLayoutType = 'dock',
 ): LayoutNode | null {
   let nextLayout = layout;
-  const existing = collectPanelIds(layout);
 
+  if (layoutType === 'grid') {
+    const expectedPanelIds = new Set(
+      panelIds.map((panelId) =>
+        getMosaicDashboardPanelId(dashboardId, panelId),
+      ),
+    );
+    nextLayout = normalizeDashboardGridLayout(
+      nextLayout,
+      dashboardId,
+      expectedPanelIds,
+    );
+  }
+
+  const existing = collectPanelIds(nextLayout);
   for (const panelId of panelIds) {
     const layoutPanelId = getMosaicDashboardPanelId(dashboardId, panelId);
     if (!existing.has(layoutPanelId)) {
-      nextLayout = appendPanelToLayout(
-        nextLayout,
-        createDashboardPanelNode(dashboardId, panelId),
-      );
+      const panelNode = createDashboardPanelNode(dashboardId, panelId);
+      nextLayout =
+        layoutType === 'grid'
+          ? appendPanelToGridLayout(nextLayout, dashboardId, panelNode)
+          : appendPanelToLayout(nextLayout, panelNode);
       existing.add(layoutPanelId);
     }
   }
@@ -370,6 +658,10 @@ export function getMosaicDashboardPanelId(
 
 export function getMosaicDashboardDockId(dashboardId: string): string {
   return `dashboard:${dashboardId}:dock`;
+}
+
+export function getMosaicDashboardGridId(dashboardId: string): string {
+  return `dashboard:${dashboardId}:grid`;
 }
 
 export function getMosaicDashboardSelectionName(dashboardId: string): string {
@@ -455,13 +747,13 @@ export function createMosaicDashboardSlice(
         addPanelActions: props.addPanelActions ?? [],
         panelRenderers: props.panelRenderers ?? {},
 
-        createDashboard(title) {
+        createDashboard(title, layoutType) {
           const dashboardId = createId();
-          get().mosaicDashboard.ensureDashboard(dashboardId, title);
+          get().mosaicDashboard.ensureDashboard(dashboardId, title, layoutType);
           return dashboardId;
         },
 
-        ensureDashboard(dashboardId, title) {
+        ensureDashboard(dashboardId, title, layoutType) {
           set((state) =>
             produce(state, (draft) => {
               const existing =
@@ -476,9 +768,13 @@ export function createMosaicDashboardSlice(
               draft.mosaicDashboard.config.dashboardsById[dashboardId] = {
                 id: dashboardId,
                 title: title ?? 'Dashboard',
+                layoutType: layoutType ?? 'dock',
                 selectedTable: undefined,
                 panels: [],
-                layout: null,
+                layout:
+                  layoutType === 'grid'
+                    ? createDashboardGridLayout(dashboardId)
+                    : null,
                 updatedAt: Date.now(),
               };
             }),
@@ -546,10 +842,15 @@ export function createMosaicDashboardSlice(
               if (!dashboard) return;
 
               dashboard.panels.push(panel);
-              dashboard.layout = appendPanelToLayout(
-                dashboard.layout,
-                createDashboardPanelNode(dashboardId, panel.id),
-              );
+              const panelNode = createDashboardPanelNode(dashboardId, panel.id);
+              dashboard.layout =
+                dashboard.layoutType === 'grid'
+                  ? appendPanelToGridLayout(
+                      dashboard.layout,
+                      dashboardId,
+                      panelNode,
+                    )
+                  : appendPanelToLayout(dashboard.layout, panelNode);
               dashboard.updatedAt = Date.now();
             }),
           );
@@ -727,6 +1028,7 @@ export function createMosaicDashboardSlice(
                 layout,
                 dashboardId,
                 panelIds,
+                dashboard.layoutType,
               );
               dashboard.updatedAt = Date.now();
             }),

@@ -116,6 +116,61 @@ export type LayoutDockNode = z.infer<typeof BaseLayoutDockNode> & {
 };
 
 // ---------------------------------------------------------------------------
+// Grid node — scrollable draggable/resizable dashboard grid
+// ---------------------------------------------------------------------------
+
+const LayoutGridCompaction = z.enum(['vertical', 'horizontal']).nullable();
+
+const LayoutGridResizeHandles = z.array(z.enum(['e', 's', 'se'])).optional();
+
+const LayoutGridItem = z
+  .object({
+    i: z.string(),
+    x: z.number(),
+    y: z.number(),
+    w: z.number(),
+    h: z.number(),
+    minW: z.number().optional(),
+    maxW: z.number().optional(),
+    minH: z.number().optional(),
+    maxH: z.number().optional(),
+    static: z.boolean().optional(),
+    isDraggable: z.boolean().optional(),
+    isResizable: z.boolean().optional(),
+    resizeHandles: LayoutGridResizeHandles,
+  })
+  .strict();
+export type LayoutGridItem = z.infer<typeof LayoutGridItem>;
+
+const BaseLayoutGridNode = z.object({
+  type: z.literal('grid'),
+  id: z.string(),
+  panel: PanelIdentity.optional(),
+  collapsed: z.boolean().optional(),
+  cols: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
+  rowHeight: z.number().optional(),
+  margin: z.tuple([z.number(), z.number()]).optional(),
+  containerPadding: z.tuple([z.number(), z.number()]).optional(),
+  compactType: LayoutGridCompaction.optional(),
+  preventCollision: z.boolean().optional(),
+  isBounded: z.boolean().optional(),
+  breakpoints: z.record(z.string(), z.number()).optional(),
+  layouts: z.record(z.string(), z.array(LayoutGridItem)).optional(),
+  autoSize: z.boolean().optional(),
+  resizeHandles: LayoutGridResizeHandles,
+  ...LayoutNodeSize.shape,
+});
+
+export const LayoutGridNode = z.strictObject({
+  ...BaseLayoutGridNode.shape,
+  children: z.lazy(() => z.array(LayoutNode)),
+});
+
+export type LayoutGridNode = z.infer<typeof BaseLayoutGridNode> & {
+  children: LayoutNode[];
+};
+
+// ---------------------------------------------------------------------------
 // Composite LayoutNode union — accepts legacy formats via preprocess
 // ---------------------------------------------------------------------------
 
@@ -124,7 +179,8 @@ export type LayoutNode =
   | LayoutPanelNode
   | LayoutSplitNode
   | LayoutTabsNode
-  | LayoutDockNode;
+  | LayoutDockNode
+  | LayoutGridNode;
 
 export const LayoutNode = z.preprocess(
   migrate,
@@ -134,6 +190,7 @@ export const LayoutNode = z.preprocess(
     LayoutSplitNode,
     LayoutTabsNode,
     LayoutDockNode,
+    LayoutGridNode,
   ]),
 ) as z.ZodType<LayoutNode>;
 
@@ -167,6 +224,11 @@ export function isLayoutDockNode(
   node: LayoutNode | null | undefined,
 ): node is LayoutDockNode {
   return node != null && typeof node === 'object' && node.type === 'dock';
+}
+export function isLayoutGridNode(
+  node: LayoutNode | null | undefined,
+): node is LayoutGridNode {
+  return node != null && typeof node === 'object' && node.type === 'grid';
 }
 
 // ---------------------------------------------------------------------------

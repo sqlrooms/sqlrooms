@@ -52,6 +52,19 @@ describe('resolvePanelIdentity', () => {
     });
   });
 
+  test('works with grid nodes with object panel', () => {
+    const node: LayoutNode = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: {key: 'dashboard', meta: {dashboardId: 'growth'}},
+      children: [],
+    };
+    expect(resolvePanelIdentity(node)).toEqual({
+      panelId: 'dashboard',
+      meta: {dashboardId: 'growth'},
+    });
+  });
+
   test('returns id for string node keys', () => {
     const node: LayoutNode = 'simple-panel';
     expect(resolvePanelIdentity(node)).toEqual({

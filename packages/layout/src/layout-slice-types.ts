@@ -1,4 +1,5 @@
 import type {
+  LayoutGridNode,
   LayoutNode,
   LayoutSplitNode,
   LayoutTabsNode,
@@ -66,8 +67,8 @@ export type LayoutSliceState = {
     /** Find the nearest ancestor of a given type for a node */
     findAncestorOfType: (
       nodeId: string,
-      type: 'tabs' | 'split',
-    ) => LayoutTabsNode | LayoutSplitNode | undefined;
+      type: 'tabs' | 'split' | 'grid',
+    ) => LayoutTabsNode | LayoutSplitNode | LayoutGridNode | undefined;
   };
 };
 

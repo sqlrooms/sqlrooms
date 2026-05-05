@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import {ChevronDown, ChevronsUp} from 'lucide-react';
+import {ChevronDown, ChevronRight, ChevronsUp} from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 
 const DEFAULT_MAX_HEIGHT = 100;
@@ -11,6 +11,13 @@ type ActivityBoxProps = {
   /** When true, the box auto-scrolls to the bottom as content changes. */
   isRunning?: boolean;
   className?: string;
+  /**
+   * When provided, the box can be fully hidden behind a single clickable
+   * summary line (e.g. "Worked with 4 tools"). Clicking the line toggles
+   * visibility of the full activity box. While `isRunning` is true the
+   * box is always shown regardless of this prop.
+   */
+  summaryLabel?: string;
 };
 
 /**
@@ -24,6 +31,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   maxCollapsedHeight = DEFAULT_MAX_HEIGHT,
   isRunning = false,
   className,
+  summaryLabel,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +39,11 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   const [overflows, setOverflows] = useState(false);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  // Tracks which summaryLabel the user explicitly expanded. When the label
+  // changes (e.g. tool count updates) the override resets, auto-collapsing again.
+  const [expandedForLabel, setExpandedForLabel] = useState<string | null>(null);
+
+  const visible = !summaryLabel || expandedForLabel === summaryLabel;
 
   const measure = useCallback(() => {
     const el = innerRef.current;
@@ -67,7 +80,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       ro.disconnect();
       mo.disconnect();
     };
-  }, [measure, updateScrollFlags]);
+  }, [measure, updateScrollFlags, visible, isRunning]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -75,7 +88,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
     const handler = () => updateScrollFlags();
     el.addEventListener('scroll', handler, {passive: true});
     return () => el.removeEventListener('scroll', handler);
-  }, [updateScrollFlags]);
+  }, [updateScrollFlags, visible, isRunning]);
 
   // Auto-scroll to bottom when running and content changes
   useEffect(() => {
@@ -92,6 +105,22 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   }, [expanded, overflows, updateScrollFlags]);
 
   const showOverlay = overflows && !expanded;
+  const showBox = isRunning || !summaryLabel || visible;
+
+  if (!showBox) {
+    return (
+      <button
+        onClick={() => setExpandedForLabel(summaryLabel ?? null)}
+        className={cn(
+          'text-muted-foreground hover:text-foreground ml-4 flex w-full cursor-pointer items-center gap-1 py-0.5 text-xs transition-colors',
+          className,
+        )}
+      >
+        <ChevronRight className="h-3 w-3 shrink-0" />
+        <span>{summaryLabel}</span>
+      </button>
+    );
+  }
 
   return (
     <div
@@ -100,6 +129,15 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
         className,
       )}
     >
+      {summaryLabel && !isRunning && (
+        <button
+          onClick={() => setExpandedForLabel(null)}
+          className="text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center gap-1 px-1.5 pt-1 pb-0.5 text-xs transition-colors"
+        >
+          <ChevronDown className="h-3 w-3 shrink-0" />
+          <span>{summaryLabel}</span>
+        </button>
+      )}
       <div className="relative">
         <div
           ref={scrollRef}
@@ -110,7 +148,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
         >
           <div
             ref={innerRef}
-            className="text-muted-foreground w-full min-w-0 overflow-hidden p-2.5 text-xs break-words"
+            className="text-muted-foreground w-full min-w-0 overflow-hidden p-2.5 text-xs break-words hyphens-auto"
           >
             {children}
           </div>

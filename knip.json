@@ -4,6 +4,9 @@
     "interface": true,
     "type": true
   },
+  "ignoreDependencies": [
+    "identity-obj-proxy"
+  ],
   "ignore": [
     "python/**",
     "docs/**",
@@ -50,7 +53,6 @@
       ],
       "ignoreDependencies": [
         "@testing-library/*",
-        "identity-obj-proxy",
         "jest-environment-jsdom"
       ]
     },

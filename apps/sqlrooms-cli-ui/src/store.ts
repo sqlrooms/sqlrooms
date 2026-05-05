@@ -94,10 +94,18 @@ const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
+const MOSAIC_PREAGG_SCHEMA = 'mosaic';
+const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
-  initializationQuery: 'INSTALL spatial; LOAD spatial;',
+  initializationQuery: [
+    'INSTALL spatial',
+    'LOAD spatial',
+    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
+    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
+  ].join('; '),
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -286,7 +294,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().dashboard.getCurrentDashboardArtifactId();
           const artifactId =
             existingDashboardArtifactId ??
-            get().dashboard.createDashboardArtifact('Dashboard');
+            get().dashboard.createDashboardArtifact('Dashboard', 'grid');
           if (!existingDashboardArtifactId) {
             get().artifacts.setCurrentArtifact(artifactId);
           }
@@ -370,7 +378,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           return getFirstDashboardArtifactId();
         },
-        createDashboardArtifact: (title) => {
+        createDashboardArtifact: (title, layoutType = 'grid') => {
           const artifactId = get().artifacts.createArtifact({
             type: 'dashboard',
             title: title ?? 'Dashboard',
@@ -378,6 +386,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           get().mosaicDashboard.ensureDashboard(
             artifactId,
             title ?? 'Dashboard',
+            layoutType,
           );
           return artifactId;
         },
@@ -385,7 +394,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           const state = get();
           const targetArtifactId =
             state.dashboard.getCurrentDashboardArtifactId() ??
-            state.dashboard.createDashboardArtifact();
+            state.dashboard.createDashboardArtifact(undefined, 'grid');
           state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
           state.artifacts.setCurrentArtifact(targetArtifactId);
           return targetArtifactId;
@@ -488,7 +497,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
 
-        ...createMosaicSlice()(set, get, store),
+        ...createMosaicSlice({
+          preagg: {
+            schema: MOSAIC_PREAGG_SCHEMA_REF,
+          },
+        })(set, get, store),
 
         ...createMosaicDashboardSlice({
           addPanelActions: [deckMapDashboardAddPanelAction],
