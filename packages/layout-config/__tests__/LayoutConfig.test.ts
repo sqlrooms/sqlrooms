@@ -110,11 +110,22 @@ describe('LayoutGridNode schema', () => {
       rowHeight: 220,
       margin: [12, 12],
       compactType: 'vertical',
-      resizeHandles: ['e', 's', 'se'],
+      resizeHandles: ['n', 'e', 's', 'w'],
       children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
       layouts: {
         lg: [{i: 'chart-1', x: 0, y: 0, w: 6, h: 2}],
       },
+    };
+    expect(() => LayoutNode.parse(node)).not.toThrow();
+  });
+
+  test('accepts legacy southeast grid resize handles', () => {
+    const node = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: 'dashboard',
+      resizeHandles: ['e', 's', 'se'],
+      children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
     };
     expect(() => LayoutNode.parse(node)).not.toThrow();
   });

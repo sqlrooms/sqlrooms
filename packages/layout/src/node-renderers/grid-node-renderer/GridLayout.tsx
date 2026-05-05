@@ -25,9 +25,10 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const DEFAULT_BREAKPOINTS = {lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0};
 const DEFAULT_COLS = {lg: 12, md: 10, sm: 6, xs: 4, xxs: 2};
 const DEFAULT_RESIZE_HANDLES: NonNullable<LayoutGridNode['resizeHandles']> = [
+  'n',
   'e',
   's',
-  'se',
+  'w',
 ];
 const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item {
@@ -77,7 +78,18 @@ const GRID_LAYOUT_STYLES = `
   width: 12px;
 }
 
-.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-e::before {
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-w {
+  bottom: 0;
+  cursor: ew-resize;
+  height: 100%;
+  left: -4px;
+  margin-top: 0;
+  top: 0;
+  width: 12px;
+}
+
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-e::before,
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-w::before {
   background: transparent;
   content: "";
   height: 100%;
@@ -88,7 +100,9 @@ const GRID_LAYOUT_STYLES = `
 }
 
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-e:hover::before,
-.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-e::before {
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-w:hover::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-e::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-w::before {
   background: hsl(var(--primary));
 }
 
@@ -101,7 +115,17 @@ const GRID_LAYOUT_STYLES = `
   width: 100%;
 }
 
-.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-s::before {
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-n {
+  cursor: ns-resize;
+  height: 12px;
+  left: 0;
+  margin-left: 0;
+  top: -4px;
+  width: 100%;
+}
+
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-s::before,
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-n::before {
   align-self: center;
   background: transparent;
   content: "";
@@ -113,7 +137,9 @@ const GRID_LAYOUT_STYLES = `
 }
 
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-s:hover::before,
-.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-s::before {
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-n:hover::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-s::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-n::before {
   background: hsl(var(--primary));
 }
 
@@ -214,7 +240,8 @@ function getResizeHandles(
   }
 
   const isLegacyDefault =
-    resizeHandles.length === 2 &&
+    (resizeHandles.length === 2 ||
+      (resizeHandles.length === 3 && resizeHandles.includes('se'))) &&
     resizeHandles.includes('e') &&
     resizeHandles.includes('s');
 

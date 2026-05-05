@@ -10,8 +10,8 @@ npm install @sqlrooms/layout-config
 
 - `MAIN_VIEW`
 - `LayoutConfig` (`LayoutNode | null`)
-- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`, `LayoutDockNode`
-- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`, `isLayoutDockNode`
+- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`, `LayoutDockNode`, `LayoutGridNode`
+- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`, `isLayoutDockNode`, `isLayoutGridNode`
 - `createDefaultLayout()`
 
 ## Basic usage
@@ -51,6 +51,7 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
 | `split`  | Resizable panel group (rendered via `react-resizable-panels`) |
 | `tabs`   | Tabbed container with collapsible areas                       |
 | `dock`   | Docking container with a nested layout tree                   |
+| `grid`   | Scrollable dashboard grid with draggable/resizable panels     |
 
 ### Panel node
 
@@ -98,6 +99,23 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
     ],
   },
   defaultSize: '100%',
+}
+```
+
+### Grid node
+
+```ts
+{
+  type: 'grid',
+  id: 'dashboard-grid',
+  cols: 12,
+  rowHeight: 220,
+  compactType: 'vertical',
+  resizeHandles: ['n', 'e', 's', 'w'],
+  children: [
+    {type: 'panel', id: 'chart-a', panel: 'chart'},
+    {type: 'panel', id: 'chart-b', panel: 'chart'},
+  ],
 }
 ```
 
