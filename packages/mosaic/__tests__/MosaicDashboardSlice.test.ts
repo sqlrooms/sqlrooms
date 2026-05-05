@@ -102,10 +102,11 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = store
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
-    const first = createMosaicDashboardVgPlotPanelConfig(
-      {plot: [{mark: 'bar'}]},
-      'Chart',
-    );
+    const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
     const second = createMosaicDashboardProfilerPanelConfig({
       source: {tableName: 'earthquakes'},
     });
