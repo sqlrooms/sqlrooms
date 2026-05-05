@@ -1,5 +1,5 @@
 import type {Spec} from '@uwdata/mosaic-spec';
-import type {ChartTypeDefinition} from '../../chart-builders/types';
+import type {ChartTypeDefinition} from '../base-types';
 import type {CustomSpecChartSettings} from './schema';
 import {buildDefaultChartTitle} from '../../chart-builders/constants';
 
