@@ -36,6 +36,10 @@ const DEFAULT_RESIZE_HANDLES: NonNullable<LayoutGridNode['resizeHandles']> = [
   'se',
   'sw',
 ];
+const DEFAULT_MARGIN: NonNullable<LayoutGridNode['margin']> = [12, 12];
+const DEFAULT_CONTAINER_PADDING: NonNullable<
+  LayoutGridNode['containerPadding']
+> = [0, 0];
 const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item {
   overflow: visible;
@@ -241,6 +245,7 @@ type GridMetrics = {
   cols: number;
   containerPadding: [number, number];
 };
+type GridCallbackItem = Pick<LayoutGridItem, 'i' | 'x' | 'y' | 'w' | 'h'>;
 
 function getGridItemPreviewStyle(
   item: LayoutGridItem,
@@ -265,9 +270,7 @@ function getGridItemPreviewStyle(
   };
 }
 
-function toPreviewGridItem(
-  item: Pick<LayoutGridItem, 'i' | 'x' | 'y' | 'w' | 'h'>,
-): LayoutGridItem {
+function toPreviewGridItem(item: GridCallbackItem): LayoutGridItem {
   return {
     i: item.i,
     x: item.x,
@@ -375,12 +378,14 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const panelInfo = useGetPanel(node);
   const {rootLayout, onLayoutChange} = useLayoutRendererContext();
   const rowHeight = node.rowHeight ?? 220;
-  const [gridMetrics, setGridMetrics] = useState<GridMetrics>({
+  const margin = node.margin ?? DEFAULT_MARGIN;
+  const containerPadding = node.containerPadding ?? DEFAULT_CONTAINER_PADDING;
+  const [gridMetrics, setGridMetrics] = useState<GridMetrics>(() => ({
     width: 0,
-    margin: node.margin ?? [12, 12],
+    margin,
     cols: 12,
-    containerPadding: node.containerPadding ?? [0, 0],
-  });
+    containerPadding,
+  }));
   const [resizePreviewItem, setResizePreviewItem] =
     useState<LayoutGridItem | null>(null);
   const childIds = useMemo(
@@ -434,6 +439,46 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
     },
     [node.id, node.layouts, onLayoutChange, resizeHandles, rootLayout],
   );
+  const handleWidthChange = useCallback(
+    (
+      width: number,
+      widthChangeMargin: [number, number],
+      breakpointCols: number,
+      widthChangeContainerPadding: [number, number],
+    ) => {
+      setGridMetrics({
+        width,
+        margin: widthChangeMargin,
+        cols: breakpointCols,
+        containerPadding: widthChangeContainerPadding,
+      });
+    },
+    [],
+  );
+  const handleResizeStart = useCallback(
+    (
+      _: GridCallbackItem[],
+      __: GridCallbackItem,
+      newItem: GridCallbackItem,
+    ) => {
+      setResizePreviewItem(toPreviewGridItem(newItem));
+    },
+    [],
+  );
+  const handleResize = useCallback(
+    (
+      _: GridCallbackItem[],
+      __: GridCallbackItem,
+      newItem: GridCallbackItem,
+      placeholder: GridCallbackItem | null | undefined,
+    ) => {
+      setResizePreviewItem(toPreviewGridItem(placeholder ?? newItem));
+    },
+    [],
+  );
+  const handleResizeStop = useCallback(() => {
+    setResizePreviewItem(null);
+  }, []);
 
   const defaultComponent = (
     <div className="flex h-full min-h-0 w-full flex-col" data-grid-id={node.id}>
@@ -454,8 +499,8 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           cols={cols}
           breakpoints={breakpoints}
           rowHeight={rowHeight}
-          margin={node.margin ?? [12, 12]}
-          containerPadding={node.containerPadding ?? [0, 0]}
+          margin={margin}
+          containerPadding={containerPadding}
           compactType={node.compactType === undefined ? null : node.compactType}
           preventCollision={node.preventCollision}
           isBounded={node.isBounded}
@@ -466,23 +511,10 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           }
           resizeHandles={resizeHandles}
           resizeHandle={renderResizeHandle}
-          onWidthChange={(width, margin, breakpointCols, containerPadding) => {
-            setGridMetrics({
-              width,
-              margin,
-              cols: breakpointCols,
-              containerPadding,
-            });
-          }}
-          onResizeStart={(_, __, newItem) => {
-            setResizePreviewItem(toPreviewGridItem(newItem));
-          }}
-          onResize={(_, __, newItem, placeholder) => {
-            setResizePreviewItem(toPreviewGridItem(placeholder ?? newItem));
-          }}
-          onResizeStop={() => {
-            setResizePreviewItem(null);
-          }}
+          onWidthChange={handleWidthChange}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeStop={handleResizeStop}
           onLayoutChange={(_, allLayouts) =>
             handleLayoutChange(allLayouts as GridLayouts)
           }
