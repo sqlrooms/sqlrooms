@@ -42,6 +42,13 @@ import {VgPlotChartConfig} from '../chart-types';
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
+const DEFAULT_DASHBOARD_GRID_COLS = {
+  lg: 12,
+  md: 10,
+  sm: 6,
+  xs: 4,
+  xxs: 2,
+};
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
@@ -337,16 +344,27 @@ function getDashboardGridCols(
     return cols;
   }
 
-  return cols?.[breakpoint] ?? cols?.lg ?? 12;
+  return (
+    cols?.[breakpoint] ??
+    cols?.lg ??
+    DEFAULT_DASHBOARD_GRID_COLS[
+      breakpoint as keyof typeof DEFAULT_DASHBOARD_GRID_COLS
+    ] ??
+    DEFAULT_DASHBOARD_GRID_COLS.lg
+  );
 }
 
 function createDashboardGridItem(
   panelId: string,
   layout: LayoutGridItem[],
   cols = 12,
+  panelType?: string,
 ): LayoutGridItem {
   const effectiveCols = Math.max(1, cols);
-  const w = Math.min(3, effectiveCols);
+  const w =
+    panelType === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE
+      ? effectiveCols
+      : Math.max(1, Math.ceil(effectiveCols / 2));
   const h = 2;
   const bottom = layout.reduce(
     (max, item) => Math.max(max, item.y + item.h),
@@ -387,15 +405,23 @@ function createDashboardGridLayoutsForChildren(
   children: LayoutNode[],
   sourceLayouts?: LayoutGridNode['layouts'],
   cols?: LayoutGridNode['cols'],
+  panelTypesByLayoutId: Record<string, string | undefined> = {},
 ): LayoutGridNode['layouts'] {
   const childIds = new Set(children.map((child) => getLayoutChildId(child)));
-  const sourceEntries: Array<[string, LayoutGridItem[]]> =
-    sourceLayouts && Object.keys(sourceLayouts).length > 0
-      ? Object.entries(sourceLayouts)
-      : [['lg', []]];
+  const sourceEntries = new Map<string, LayoutGridItem[]>(
+    Object.keys(DEFAULT_DASHBOARD_GRID_COLS).map((breakpoint) => [
+      breakpoint,
+      [],
+    ]),
+  );
+  for (const [breakpoint, breakpointLayout] of Object.entries(
+    sourceLayouts ?? {},
+  )) {
+    sourceEntries.set(breakpoint, breakpointLayout);
+  }
 
   return Object.fromEntries(
-    sourceEntries.map(([breakpoint, breakpointLayout]) => {
+    [...sourceEntries.entries()].map(([breakpoint, breakpointLayout]) => {
       const nextLayout = breakpointLayout.filter((item) =>
         childIds.has(item.i),
       );
@@ -408,6 +434,7 @@ function createDashboardGridLayoutsForChildren(
             childId,
             nextLayout,
             getDashboardGridCols(cols, breakpoint),
+            panelTypesByLayoutId[childId],
           );
           nextLayout.push(item);
           layoutItemIds.add(childId);
@@ -489,6 +516,7 @@ function appendPanelToGridLayout(
   layout: LayoutNode | null,
   dashboardId: string,
   panelNode: LayoutPanelNode,
+  panelType?: string,
 ): LayoutGridNode {
   if (!isLayoutGridNode(layout)) {
     const dashboardPanelPrefix = `dashboard:${dashboardId}:panel:`;
@@ -503,7 +531,12 @@ function appendPanelToGridLayout(
       dashboardId,
       expectedPanelIds,
     );
-    return appendPanelToGridLayout(normalizedLayout, dashboardId, panelNode);
+    return appendPanelToGridLayout(
+      normalizedLayout,
+      dashboardId,
+      panelNode,
+      panelType,
+    );
   }
 
   const hasChild = layout.children.some((child) => {
@@ -511,9 +544,15 @@ function appendPanelToGridLayout(
     return child.id === panelNode.id;
   });
   const children = hasChild ? layout.children : [...layout.children, panelNode];
-  const sourceLayouts = layout.layouts ?? {lg: []};
   const layouts = Object.fromEntries(
-    Object.entries(sourceLayouts).map(([breakpoint, breakpointLayout]) => {
+    Object.entries(
+      createDashboardGridLayoutsForChildren(
+        children,
+        layout.layouts,
+        layout.cols,
+        {[panelNode.id]: panelType},
+      ) ?? {},
+    ).map(([breakpoint, breakpointLayout]) => {
       if (breakpointLayout.some((item) => item.i === panelNode.id)) {
         return [breakpoint, breakpointLayout];
       }
@@ -525,6 +564,7 @@ function appendPanelToGridLayout(
             panelNode.id,
             breakpointLayout,
             getDashboardGridCols(layout.cols, breakpoint),
+            panelType,
           ),
         ],
       ];
@@ -855,6 +895,7 @@ export function createMosaicDashboardSlice(
                       dashboard.layout,
                       dashboardId,
                       panelNode,
+                      panel.type,
                     )
                   : appendPanelToLayout(dashboard.layout, panelNode);
               dashboard.updatedAt = Date.now();

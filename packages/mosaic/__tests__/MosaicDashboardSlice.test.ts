@@ -125,8 +125,8 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(
       dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
     ).toEqual([
-      expect.objectContaining({i: firstLayoutId, x: 0, y: 0, w: 3, h: 2}),
-      expect.objectContaining({i: secondLayoutId, x: 3, y: 0, w: 3, h: 2}),
+      expect.objectContaining({i: firstLayoutId, x: 0, y: 0, w: 6, h: 2}),
+      expect.objectContaining({i: secondLayoutId, x: 0, y: 2, w: 12, h: 2}),
     ]);
 
     store.getState().mosaicDashboard.removePanel(dashboardId, first.id);
@@ -139,6 +139,53 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(
       dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
     ).toEqual([expect.objectContaining({i: secondLayoutId})]);
+  });
+
+  it('sizes new grid chart and map panels to half rows and profilers to full rows', () => {
+    const store = createTestStore();
+    const dashboardId = store
+      .getState()
+      .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
+    const chart = createMosaicDashboardVgPlotPanelConfig('Chart', {
+      chartType: 'histogram',
+      settings: {},
+      vgplot: {plot: [{mark: 'bar'}]},
+    });
+    const map = {
+      id: 'map-panel',
+      type: 'deck-json-map',
+      title: 'Map',
+      config: {},
+    };
+    const profiler = createMosaicDashboardProfilerPanelConfig();
+
+    store.getState().mosaicDashboard.addPanel(dashboardId, chart);
+    store.getState().mosaicDashboard.addPanel(dashboardId, map);
+    store.getState().mosaicDashboard.addPanel(dashboardId, profiler);
+
+    const dashboard =
+      store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
+    const chartLayoutId = getMosaicDashboardPanelId(dashboardId, chart.id);
+    const mapLayoutId = getMosaicDashboardPanelId(dashboardId, map.id);
+    const profilerLayoutId = getMosaicDashboardPanelId(
+      dashboardId,
+      profiler.id,
+    );
+
+    expect(
+      dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
+    ).toEqual([
+      expect.objectContaining({i: chartLayoutId, x: 0, y: 0, w: 6, h: 2}),
+      expect.objectContaining({i: mapLayoutId, x: 6, y: 0, w: 6, h: 2}),
+      expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 12, h: 2}),
+    ]);
+    expect(
+      dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.md : [],
+    ).toEqual([
+      expect.objectContaining({i: chartLayoutId, x: 0, y: 0, w: 5, h: 2}),
+      expect.objectContaining({i: mapLayoutId, x: 5, y: 0, w: 5, h: 2}),
+      expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 10, h: 2}),
+    ]);
   });
 
   it('preserves missing grid dashboard panels when setting layout', () => {

@@ -146,7 +146,7 @@ export const MosaicDashboardToolbar: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-between border-b px-3 py-2">
+    <div className="flex items-center justify-between border-b px-7 py-2">
       <div className="flex items-center gap-2">
         <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
           <PopoverTrigger asChild>
