@@ -44,7 +44,7 @@ export const MosaicDashboardVgPlotHeaderActions: FC<
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6"
+        className="data-[state=active]:bg-accent h-6 w-6"
         title="Chart settings"
         onClick={handleToggleSettings}
         data-state={isSettingsOpen ? 'active' : 'inactive'}

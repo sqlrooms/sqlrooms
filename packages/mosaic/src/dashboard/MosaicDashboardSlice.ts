@@ -649,6 +649,12 @@ function ensureLayoutContainsDashboardPanels(
   return nextLayout;
 }
 
+export function isVgPlotPanelConfig(
+  panel: MosaicDashboardPanelConfig,
+): panel is VgPlotPanelConfig {
+  return panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE;
+}
+
 export function getMosaicDashboardPanelId(
   dashboardId: string,
   panelId: string,

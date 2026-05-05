@@ -63,7 +63,7 @@ const ChartSettingsHeader: FC<ChartSettingsHeaderProps> = ({
   onClose,
 }) => {
   return (
-    <div className="flex items-center justify-between border-b px-4 py-2 text-sm font-medium">
+    <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
       {children}
       {onClose && (
         <Button

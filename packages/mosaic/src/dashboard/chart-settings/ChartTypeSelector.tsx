@@ -48,23 +48,23 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
 
     return (
       <div className="space-y-2">
-        <Label>Chart Type</Label>
+        <Label className="text-xs">Chart Type</Label>
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger>
+          <SelectTrigger className="h-8 text-xs">
             {selectedTemplate ? (
               <div className="flex items-center gap-2">
-                <selectedTemplate.icon className="h-4 w-4" />
+                <selectedTemplate.icon className="h-3.5 w-3.5" />
                 <span>{selectedTemplate.label}</span>
               </div>
             ) : (
               <SelectValue placeholder="Select chart type" />
             )}
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="text-xs">
             {availableTemplates.map((template) => (
               <SelectItem key={template.id} value={template.id}>
                 <div className="flex items-center gap-2">
-                  <template.icon className="h-4 w-4" />
+                  <template.icon className="h-3.5 w-3.5" />
                   <span>{template.label}</span>
                 </div>
               </SelectItem>

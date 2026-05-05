@@ -31,6 +31,7 @@ export {
   getMosaicDashboardGridId,
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
+  isVgPlotPanelConfig,
   MOSAIC_DASHBOARD_PANEL,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
