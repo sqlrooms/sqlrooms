@@ -80,7 +80,7 @@ describe('MosaicDashboardSlice generic panels', () => {
 
     let dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
-    expect(dashboard.panels.map((panel) => panel.id)).toEqual([
+    expect(dashboard.panels.map((panel: {id: string}) => panel.id)).toEqual([
       first.id,
       second.id,
     ]);
@@ -106,7 +106,9 @@ describe('MosaicDashboardSlice generic panels', () => {
     store.getState().mosaicDashboard.removePanel(dashboardId, first.id);
     dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
-    expect(dashboard.panels.map((panel) => panel.id)).toEqual([second.id]);
+    expect(dashboard.panels.map((panel: {id: string}) => panel.id)).toEqual([
+      second.id,
+    ]);
     expect(collectPanelIds(dashboard.layout)).toEqual(
       new Set([getMosaicDashboardPanelId(dashboardId, second.id)]),
     );

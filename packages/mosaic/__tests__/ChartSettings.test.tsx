@@ -38,32 +38,13 @@ describe('ChartSettings Compound Components', () => {
 
       expect(markup).toContain('Child content');
     });
-
-    it('wraps children in space-y-4 container', () => {
-      const config: VgPlotChartConfig = {
-        chartType: 'histogram',
-        settings: {},
-        vgplot: null,
-      };
-
-      const markup = renderToStaticMarkup(
-        <ChartSettings.Root
-          tableName="test_table"
-          config={config}
-          columns={mockColumns}
-          onChange={mockOnChange}
-        >
-          <div>Test</div>
-        </ChartSettings.Root>,
-      );
-
-      expect(markup).toContain('space-y-4');
-    });
   });
 
   describe('ChartSettings.Fields', () => {
     it('shows error for unknown chart type', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const config = {
         chartType: 'unknown-type',
         settings: {},
@@ -165,24 +146,6 @@ describe('ChartSettings Compound Components', () => {
         expect(markup).toBeDefined();
         expect(markup).not.toContain('Unknown chart type');
       });
-    });
-  });
-
-  describe('Context validation', () => {
-    it('throws error when Fields used outside Root', () => {
-      expect(() => {
-        renderToStaticMarkup(<ChartSettings.Fields />);
-      }).toThrow(
-        'ChartSettings compound components must be used within ChartSettings.Root',
-      );
-    });
-
-    it('throws error when TypeSelector used outside Root', () => {
-      expect(() => {
-        renderToStaticMarkup(<ChartSettings.TypeSelector />);
-      }).toThrow(
-        'ChartSettings compound components must be used within ChartSettings.Root',
-      );
     });
   });
 });

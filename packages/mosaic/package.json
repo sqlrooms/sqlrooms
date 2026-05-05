@@ -51,6 +51,8 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "ts-jest": "^29.4.4"
   },
   "scripts": {
