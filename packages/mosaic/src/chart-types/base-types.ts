@@ -60,7 +60,7 @@ export interface ChartTypeDefinition<TSettings = any> {
   /** Generate a Mosaic spec from table name and selected field values */
   createSpec: (tableName: string, values: TSettings) => Spec;
   /** Generate a chart title from selected field values */
-  buildTitle?: (fieldValues: Record<string, string>) => string;
+  buildTitle?: (fieldValues: Record<string, unknown>) => string;
   /** Optional availability override for a given table schema */
   isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
   /** Optional extra assistant-facing description */

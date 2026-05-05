@@ -1,11 +1,11 @@
 import {cn} from '@sqlrooms/ui';
-import React from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
-import {FieldSelectorInput} from './FieldSelectorInput';
-import {useChartFieldForm} from './hooks/useChartFieldForm';
+import {DynamicChartSettings} from '../dashboard/chart-settings/DynamicChartSettings';
+import {toChartTypeDefinition} from './types';
 
 export interface ChartBuilderFieldsProps {
   className?: string;
@@ -26,16 +26,26 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
     [templates, selectedTemplateId],
   );
 
-  const {fields, handleFieldChange} = useChartFieldForm({
-    fields: selectedTemplate?.fields || [],
-    values: fieldValues,
-    onChange: (key: string, value: unknown) =>
-      setFieldValue(key, value as string),
-  });
+  // Convert template to chart type definition
+  const chartTypeDefinition = useMemo(() => {
+    return selectedTemplate ? toChartTypeDefinition(selectedTemplate) : null;
+  }, [selectedTemplate]);
 
-  if (!selectedTemplate) return null;
+  const handleChange = useCallback(
+    (newValues: Record<string, unknown>) => {
+      // Update all changed values
+      Object.entries(newValues).forEach(([key, value]) => {
+        if (fieldValues[key] !== value) {
+          setFieldValue(key, value);
+        }
+      });
+    },
+    [fieldValues, setFieldValue],
+  );
 
-  if (fields.length === 0) {
+  if (!chartTypeDefinition) return null;
+
+  if (chartTypeDefinition.fields.length === 0) {
     return (
       <p className={cn('text-muted-foreground py-2 text-sm', className)}>
         This chart type has no configurable fields. A starter spec will be
@@ -46,15 +56,12 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
 
   return (
     <div className={cn('flex flex-col gap-4 py-2', className)}>
-      {fields.map((field) => (
-        <FieldSelectorInput
-          key={field.key}
-          field={field}
-          columns={columns}
-          value={fieldValues[field.key]}
-          onChange={(value) => handleFieldChange(field.key, value)}
-        />
-      ))}
+      <DynamicChartSettings
+        chartTypeDefinition={chartTypeDefinition}
+        columns={columns}
+        values={fieldValues}
+        onChange={handleChange}
+      />
     </div>
   );
 };

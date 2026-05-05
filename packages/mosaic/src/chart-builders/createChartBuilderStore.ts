@@ -4,10 +4,10 @@ import {VgPlotChartType} from '../chart-types';
 
 export type ChartBuilderStoreState = {
   selectedTemplateId?: VgPlotChartType;
-  fieldValues: Record<string, string>;
+  fieldValues: Record<string, unknown>;
   reset: () => void;
   selectTemplate: (templateId: VgPlotChartType) => void;
-  setFieldValue: (fieldKey: string, value: string) => void;
+  setFieldValue: (fieldKey: string, value: unknown) => void;
 };
 
 export type ChartBuilderStore = ReturnType<typeof createChartBuilderStore>;
