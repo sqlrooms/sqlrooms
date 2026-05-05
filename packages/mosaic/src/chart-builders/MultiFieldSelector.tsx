@@ -123,6 +123,12 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
                     <SelectItem value="avg" className="text-xs">
                       AVG
                     </SelectItem>
+                    <SelectItem value="min" className="text-xs">
+                      MIN
+                    </SelectItem>
+                    <SelectItem value="max" className="text-xs">
+                      MAX
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}

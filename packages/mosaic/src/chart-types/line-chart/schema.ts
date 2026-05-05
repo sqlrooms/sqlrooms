@@ -14,7 +14,7 @@ export const TemporalInterval = z.enum([
 export type TemporalInterval = z.infer<typeof TemporalInterval>;
 
 // Aggregate function enum
-export const AggregateFunction = z.enum(['sum', 'avg']);
+export const AggregateFunction = z.enum(['sum', 'avg', 'min', 'max']);
 export type AggregateFunction = z.infer<typeof AggregateFunction>;
 
 // Y-field configuration
