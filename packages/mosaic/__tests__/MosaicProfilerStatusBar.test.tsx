@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 /// <reference types="@testing-library/jest-dom" />
 import {jest} from '@jest/globals';
 import {render, screen} from '@testing-library/react';
