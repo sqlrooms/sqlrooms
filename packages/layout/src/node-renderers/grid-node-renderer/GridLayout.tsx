@@ -29,6 +29,8 @@ const DEFAULT_RESIZE_HANDLES: NonNullable<LayoutGridNode['resizeHandles']> = [
   'e',
   's',
   'w',
+  'se',
+  'sw',
 ];
 const GRID_LAYOUT_STYLES = `
 .sqlrooms-grid-layout .react-grid-item {
@@ -152,6 +154,15 @@ const GRID_LAYOUT_STYLES = `
   width: 16px;
 }
 
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-sw {
+  bottom: -4px;
+  cursor: nesw-resize;
+  height: 16px;
+  left: -4px;
+  margin-left: 0;
+  width: 16px;
+}
+
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-se::before {
   background: transparent;
   border-bottom: 2px solid transparent;
@@ -164,8 +175,22 @@ const GRID_LAYOUT_STYLES = `
   width: 8px;
 }
 
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-sw::before {
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  border-left: 2px solid transparent;
+  bottom: 5px;
+  content: "";
+  height: 8px;
+  left: 5px;
+  position: absolute;
+  width: 8px;
+}
+
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-se:hover::before,
-.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-se::before {
+.sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle.react-resizable-handle-sw:hover::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-se::before,
+.sqlrooms-grid-layout .react-grid-item.resizing > .sqlrooms-grid-resize-handle.react-resizable-handle-sw::before {
   border-color: hsl(var(--primary));
 }
 `;

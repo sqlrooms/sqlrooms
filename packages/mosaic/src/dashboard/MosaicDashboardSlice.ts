@@ -320,7 +320,7 @@ function createDashboardGridLayout(
     margin: [12, 12],
     containerPadding: [0, 0],
     compactType: 'vertical',
-    resizeHandles: ['n', 'e', 's', 'w'],
+    resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
     layouts,
   };
 }
