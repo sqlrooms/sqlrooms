@@ -8,6 +8,7 @@ import {ChartSettingsPanel} from './chart-settings';
 import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
 import {MosaicDashboardVgPlotHeaderActions} from './MosaicDashboardVgPlotHeaderActions';
 import {
+  MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
   type MosaicDashboardPanelRenderer,
   type VgPlotPanelConfig,
   type VgPlotPanelRendererProps,
@@ -100,11 +101,27 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
 
   const handleSettingsChange = useCallback(
     (config: VgPlotChartConfig) => {
+      if (config.chartType === 'box-plot') {
+        const {x, y} = config.settings;
+        if (typeof x === 'string' && typeof y === 'string') {
+          updatePanel(dashboardId, panel.id, {
+            type: MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
+            title:
+              panel.title === 'New Chart'
+                ? `Box Plot - ${x}, ${y}`
+                : panel.title,
+            source: panel.source ?? (tableName ? {tableName} : undefined),
+            config: {settingsOpen: config.settingsOpen, x, y},
+          });
+          return;
+        }
+      }
+
       updatePanel(dashboardId, panel.id, {
         config,
       });
     },
-    [dashboardId, panel.id, updatePanel],
+    [dashboardId, panel.id, panel.source, panel.title, tableName, updatePanel],
   );
 
   const settingsContent = (

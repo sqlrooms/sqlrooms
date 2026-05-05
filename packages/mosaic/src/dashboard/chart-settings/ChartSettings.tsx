@@ -128,9 +128,13 @@ const ChartSettingsFields: FC = () => {
           return value !== undefined && value !== null && value !== '';
         });
 
-      // Generate spec
+      // Generate specs only for chart types that render as vgplot panels.
+      // Custom dashboard panels, such as box plots, are handled by the
+      // dashboard renderer once all required fields are present.
       const vgplot = allRequiredFieldsFilled
-        ? generateMosaicChartSpec(tableName, config.chartType, newSettings)
+        ? chartTypeDef.createSpec
+          ? generateMosaicChartSpec(tableName, config.chartType, newSettings)
+          : null
         : null;
 
       onChange({

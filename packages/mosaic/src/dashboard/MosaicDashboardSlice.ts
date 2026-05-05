@@ -88,6 +88,7 @@ export const BoxPlotPanelConfig = z.object({
   title: z.string().default('Panel'),
   source: MosaicDashboardPanelSource.optional(),
   config: z.object({
+    settingsOpen: z.boolean().optional(),
     x: z.string(),
     y: z.string(),
   }),
@@ -216,6 +217,7 @@ export function createMosaicDashboardBoxPlotPanelConfig(options: {
     title: options.title ?? 'Box Plot',
     source: options.source,
     config: {
+      settingsOpen: false,
       x: options.x,
       y: options.y,
     },

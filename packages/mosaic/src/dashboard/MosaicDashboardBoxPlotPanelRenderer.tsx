@@ -1,7 +1,7 @@
-import {SpinnerPane} from '@sqlrooms/ui';
+import {Button, SpinnerPane} from '@sqlrooms/ui';
 import type {Selection} from '@uwdata/mosaic-core';
 import * as Plot from '@observablehq/plot';
-import {AlignHorizontalDistributeCenter} from 'lucide-react';
+import {AlignHorizontalDistributeCenter, SettingsIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent} from 'react';
 import {
@@ -12,11 +12,17 @@ import {
 } from '../boxplot/BoxPlotClient';
 import {type PlotSize, ResponsivePlot} from '../ResponsivePlot';
 import {
+  MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   type BoxPlotPanelConfig,
   type BoxPlotPanelRendererProps,
   type MosaicDashboardPanelRenderer,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
+import {boxPlotChartType, type VgPlotChartType} from '../chart-types';
+import {ChartTypeSelector} from './chart-settings/ChartTypeSelector';
+import {DynamicChartSettings} from './chart-settings/DynamicChartSettings';
+import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
+import {useTableColumns} from './chart-settings/useTableColumns';
 
 const BOX_FILL = 'var(--color-chart-1)';
 const BOX_STROKE = 'var(--color-chart-1)';
@@ -214,6 +220,7 @@ function useBoxPlotClient(args: {
 }
 
 function MosaicDashboardBoxPlotRenderer({
+  dashboardId,
   panel,
   resolvedSource,
   selectionName,
@@ -239,6 +246,10 @@ function MosaicDashboardBoxPlotRenderer({
   );
   const plotRef = useRef<HTMLDivElement>(null);
   const tableName = resolvedSource?.tableName;
+  const columns = useTableColumns(tableName);
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
   const {clientRef, state} = useBoxPlotClient({
     config,
     selection,
@@ -363,23 +374,86 @@ function MosaicDashboardBoxPlotRenderer({
     };
   }, [drag, size, state.yBrush, yDomain]);
 
-  if (!config) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Invalid box plot config
-      </div>
-    );
-  }
+  const mappedColumns = useMemo(
+    () => columns.map((column) => ({name: column.name, type: column.type})),
+    [columns],
+  );
 
-  if (!tableName) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Box plot requires a table source
-      </div>
-    );
-  }
+  const handleSettingsOpenChange = useCallback(
+    (isOpen: boolean) => {
+      updatePanel(dashboardId, panel.id, {
+        config: {...panel.config, settingsOpen: isOpen},
+      });
+    },
+    [dashboardId, panel.config, panel.id, updatePanel],
+  );
 
-  return (
+  const handleSettingsChange = useCallback(
+    (values: Record<string, unknown>) => {
+      const nextX =
+        typeof values.x === 'string' ? values.x : panel.config.x;
+      const nextY =
+        typeof values.y === 'string' ? values.y : panel.config.y;
+
+      updatePanel(dashboardId, panel.id, {
+        config: {
+          ...panel.config,
+          x: nextX,
+          y: nextY,
+        },
+      });
+    },
+    [dashboardId, panel.config, panel.id, updatePanel],
+  );
+
+  const handleChartTypeChange = useCallback(
+    (chartType: VgPlotChartType) => {
+      if (chartType === 'box-plot') return;
+
+      updatePanel(dashboardId, panel.id, {
+        type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
+        config: {
+          chartType,
+          settings: {},
+          vgplot: null,
+          settingsOpen: panel.config.settingsOpen,
+        },
+      });
+    },
+    [dashboardId, panel.config.settingsOpen, panel.id, updatePanel],
+  );
+
+  const settingsContent = (
+    <div className="flex flex-col gap-4 p-2">
+      <ChartTypeSelector
+        value="box-plot"
+        columns={columns}
+        onChange={handleChartTypeChange}
+      />
+      {columns.length === 0 ? (
+        <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+          No columns available
+        </div>
+      ) : (
+        <DynamicChartSettings
+          chartTypeDefinition={boxPlotChartType}
+          columns={mappedColumns}
+          values={panel.config}
+          onChange={handleSettingsChange}
+        />
+      )}
+    </div>
+  );
+
+  const chartContent = !config ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+      Invalid box plot config
+    </div>
+  ) : !tableName ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+      Box plot requires a table source
+    </div>
+  ) : (
     <div className="h-full min-h-0 overflow-auto p-2">
       <div className="bg-background text-foreground relative flex h-full min-h-[220px] w-full items-center justify-center rounded-md p-2">
         {state.error ? (
@@ -416,10 +490,51 @@ function MosaicDashboardBoxPlotRenderer({
       </div>
     </div>
   );
+
+  return (
+    <div className="h-full min-h-0">
+      <MosaicDashboardPanelLayout
+        isOpen={Boolean(panel.config.settingsOpen)}
+        onIsOpenChange={handleSettingsOpenChange}
+        settings={settingsContent}
+        content={chartContent}
+      />
+    </div>
+  );
 }
+
+const MosaicDashboardBoxPlotHeaderActions = ({
+  dashboardId,
+  panel,
+}: BoxPlotPanelRendererProps) => {
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
+  const isSettingsOpen = Boolean(panel.config.settingsOpen);
+
+  const handleToggleSettings = useCallback(() => {
+    updatePanel(dashboardId, panel.id, {
+      config: {...panel.config, settingsOpen: !isSettingsOpen},
+    });
+  }, [dashboardId, isSettingsOpen, panel.config, panel.id, updatePanel]);
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="data-[state=active]:bg-accent h-6 w-6"
+      title="Chart settings"
+      onClick={handleToggleSettings}
+      data-state={isSettingsOpen ? 'active' : 'inactive'}
+    >
+      <SettingsIcon className="h-3.5 w-3.5" />
+    </Button>
+  );
+};
 
 export const mosaicDashboardBoxPlotPanelRenderer: MosaicDashboardPanelRenderer<BoxPlotPanelConfig> =
   {
     component: MosaicDashboardBoxPlotRenderer,
+    headerActions: MosaicDashboardBoxPlotHeaderActions,
     icon: AlignHorizontalDistributeCenter,
   };

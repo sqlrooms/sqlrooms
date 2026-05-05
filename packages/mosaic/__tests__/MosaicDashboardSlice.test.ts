@@ -339,7 +339,11 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(panel.type).toBe(MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE);
     expect(panel.title).toBe('Magnitude by region');
     expect(panel.source).toEqual({tableName: 'earthquakes'});
-    expect(panel.config).toEqual({x: 'region', y: 'magnitude'});
+    expect(panel.config).toEqual({
+      settingsOpen: false,
+      x: 'region',
+      y: 'magnitude',
+    });
   });
 
   it('evicts panel runtime on update and remove', () => {
