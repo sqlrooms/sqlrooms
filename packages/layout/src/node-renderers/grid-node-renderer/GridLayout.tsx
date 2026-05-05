@@ -4,7 +4,7 @@ import {
   LayoutNode,
   isLayoutGridNode,
 } from '@sqlrooms/layout-config';
-import {FC, Ref, useCallback, useMemo} from 'react';
+import {CSSProperties, FC, Ref, useCallback, useMemo, useState} from 'react';
 import {Responsive, WidthProvider} from 'react-grid-layout';
 import {
   createDefaultGridLayouts,
@@ -51,6 +51,36 @@ const GRID_LAYOUT_STYLES = `
   border: 1px solid hsl(var(--primary) / 0.35);
   opacity: 1;
   transition: none;
+}
+
+.sqlrooms-grid-layout .react-grid-item.react-grid-placeholder.placeholder-resizing {
+  transition: none;
+}
+
+.sqlrooms-grid-layout .react-grid-item.sqlrooms-grid-resize-follow-preview {
+  height: var(--sqlrooms-grid-preview-height) !important;
+  transform: translate(
+    var(--sqlrooms-grid-preview-left),
+    var(--sqlrooms-grid-preview-top)
+  ) !important;
+  transition: none;
+  width: var(--sqlrooms-grid-preview-width) !important;
+}
+
+.sqlrooms-grid-resize-size {
+  background: hsl(var(--background) / 0.92);
+  border: 1px solid hsl(var(--primary) / 0.28);
+  border-radius: 9999px;
+  color: hsl(var(--foreground));
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 4px 7px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 30;
 }
 
 .sqlrooms-grid-layout .react-grid-item > .sqlrooms-grid-resize-handle {
@@ -205,6 +235,64 @@ type RootProps = {
   parentDirection?: ParentDirection;
 };
 
+type GridMetrics = {
+  width: number;
+  margin: [number, number];
+  cols: number;
+  containerPadding: [number, number];
+};
+
+function getGridItemPreviewStyle(
+  item: LayoutGridItem,
+  rowHeight: number,
+  metrics: GridMetrics,
+): CSSProperties | undefined {
+  if (metrics.width <= 0 || metrics.cols <= 0) {
+    return undefined;
+  }
+
+  const [marginX, marginY] = metrics.margin;
+  const [paddingX, paddingY] = metrics.containerPadding;
+  const colWidth =
+    (metrics.width - paddingX * 2 - marginX * (metrics.cols - 1)) /
+    metrics.cols;
+
+  return {
+    left: paddingX + item.x * (colWidth + marginX),
+    top: paddingY + item.y * (rowHeight + marginY),
+    width: item.w * colWidth + Math.max(0, item.w - 1) * marginX,
+    height: item.h * rowHeight + Math.max(0, item.h - 1) * marginY,
+  };
+}
+
+function toPreviewGridItem(
+  item: Pick<LayoutGridItem, 'i' | 'x' | 'y' | 'w' | 'h'>,
+): LayoutGridItem {
+  return {
+    i: item.i,
+    x: item.x,
+    y: item.y,
+    w: item.w,
+    h: item.h,
+  };
+}
+
+function getResizeFollowStyle(
+  previewStyle: CSSProperties | undefined,
+): CSSProperties {
+  if (!previewStyle) {
+    return {overflow: 'visible'};
+  }
+
+  return {
+    overflow: 'visible',
+    '--sqlrooms-grid-preview-left': `${previewStyle.left}px`,
+    '--sqlrooms-grid-preview-top': `${previewStyle.top}px`,
+    '--sqlrooms-grid-preview-width': `${previewStyle.width}px`,
+    '--sqlrooms-grid-preview-height': `${previewStyle.height}px`,
+  } as CSSProperties;
+}
+
 function renderResizeHandle(axis: string, ref: Ref<HTMLElement>) {
   return (
     <span
@@ -286,6 +374,15 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   const renderNode = useRenderNode();
   const panelInfo = useGetPanel(node);
   const {rootLayout, onLayoutChange} = useLayoutRendererContext();
+  const rowHeight = node.rowHeight ?? 220;
+  const [gridMetrics, setGridMetrics] = useState<GridMetrics>({
+    width: 0,
+    margin: node.margin ?? [12, 12],
+    cols: 12,
+    containerPadding: node.containerPadding ?? [0, 0],
+  });
+  const [resizePreviewItem, setResizePreviewItem] =
+    useState<LayoutGridItem | null>(null);
   const childIds = useMemo(
     () => node.children.map(getGridChildId),
     [node.children],
@@ -308,6 +405,9 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
     childIds,
     layouts,
   );
+  const resizePreviewStyle = resizePreviewItem
+    ? getGridItemPreviewStyle(resizePreviewItem, rowHeight, gridMetrics)
+    : undefined;
   const handleLayoutChange = useCallback(
     (allLayouts: GridLayouts) => {
       if (!onLayoutChange) {
@@ -353,7 +453,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           layouts={layouts}
           cols={cols}
           breakpoints={breakpoints}
-          rowHeight={node.rowHeight ?? 220}
+          rowHeight={rowHeight}
           margin={node.margin ?? [12, 12]}
           containerPadding={node.containerPadding ?? [0, 0]}
           compactType={node.compactType ?? 'vertical'}
@@ -366,18 +466,43 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           }
           resizeHandles={resizeHandles}
           resizeHandle={renderResizeHandle}
+          onWidthChange={(width, margin, breakpointCols, containerPadding) => {
+            setGridMetrics({
+              width,
+              margin,
+              cols: breakpointCols,
+              containerPadding,
+            });
+          }}
+          onResizeStart={(_, __, newItem) => {
+            setResizePreviewItem(toPreviewGridItem(newItem));
+          }}
+          onResize={(_, __, newItem, placeholder) => {
+            setResizePreviewItem(toPreviewGridItem(placeholder ?? newItem));
+          }}
+          onResizeStop={() => {
+            setResizePreviewItem(null);
+          }}
           onLayoutChange={(_, allLayouts) =>
             handleLayoutChange(allLayouts as GridLayouts)
           }
         >
           {node.children.map((child) => {
             const childId = getGridChildId(child);
+            const isResizePreviewChild =
+              resizePreviewItem?.i === childId && resizePreviewStyle != null;
             return (
               <div
                 key={childId}
-                className="h-full"
+                className={
+                  isResizePreviewChild
+                    ? 'sqlrooms-grid-resize-follow-preview h-full'
+                    : 'h-full'
+                }
                 data-layout-grid-item-id={childId}
-                style={{overflow: 'visible'}}
+                style={getResizeFollowStyle(
+                  isResizePreviewChild ? resizePreviewStyle : undefined,
+                )}
               >
                 <div className="bg-background h-full overflow-hidden rounded border">
                   {renderNode({
@@ -387,6 +512,11 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
                     containerId: node.id,
                   })}
                 </div>
+                {isResizePreviewChild ? (
+                  <div className="sqlrooms-grid-resize-size">
+                    {resizePreviewItem.w} cols x {resizePreviewItem.h} rows
+                  </div>
+                ) : null}
               </div>
             );
           })}
