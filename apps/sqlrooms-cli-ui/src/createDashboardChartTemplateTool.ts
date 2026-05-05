@@ -254,6 +254,11 @@ export function createDashboardChartTemplateTool(store: {
           params.chartType,
           columns,
         );
+        if (!chartType.createSpec) {
+          throw new Error(
+            `Chart type "${chartType.id}" does not support spec generation.`,
+          );
+        }
         const spec = chartType.createSpec(tableName, params.fieldValues);
         const title = chartType.buildTitle
           ? chartType.buildTitle(params.fieldValues)
