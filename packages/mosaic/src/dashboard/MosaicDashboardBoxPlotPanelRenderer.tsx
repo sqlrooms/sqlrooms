@@ -28,6 +28,7 @@ const BOX_FILL = 'var(--color-chart-1)';
 const BOX_STROKE = 'var(--color-chart-1)';
 const GRID_COLOR = 'var(--border)';
 const OUTLIER_FILL = 'var(--color-chart-2)';
+const MAX_BOX_ITEM_WIDTH = 20;
 
 const MARGINS = {
   bottom: 64,
@@ -101,6 +102,14 @@ function createBoxPlotElement(args: {
 }) {
   const {config, domain, outliers, size, summaries} = args;
   const categories = summaries.map((row) => row.categoryLabel);
+  const innerWidth = Math.max(0, size.width - MARGINS.left - MARGINS.right);
+  const categoryBandWidth = categories.length
+    ? innerWidth / categories.length
+    : MAX_BOX_ITEM_WIDTH;
+  const boxInset = Math.max(
+    0,
+    (categoryBandWidth - MAX_BOX_ITEM_WIDTH) / 2,
+  );
 
   return Plot.plot({
     height: size.height,
@@ -118,6 +127,7 @@ function createBoxPlotElement(args: {
     x: {
       domain: categories,
       label: config.x,
+      padding: 0,
       tickRotate: categories.length > 8 ? -35 : 0,
     },
     y: {
@@ -136,12 +146,16 @@ function createBoxPlotElement(args: {
         strokeWidth: 1.2,
       }),
       Plot.tickY(summaries, {
+        insetLeft: boxInset,
+        insetRight: boxInset,
         x: 'categoryLabel',
         y: 'whiskerLow',
         stroke: BOX_STROKE,
         strokeWidth: 1.4,
       }),
       Plot.tickY(summaries, {
+        insetLeft: boxInset,
+        insetRight: boxInset,
         x: 'categoryLabel',
         y: 'whiskerHigh',
         stroke: BOX_STROKE,
@@ -150,8 +164,8 @@ function createBoxPlotElement(args: {
       Plot.rectY(summaries, {
         fill: BOX_FILL,
         fillOpacity: 0.22,
-        insetLeft: 8,
-        insetRight: 8,
+        insetLeft: boxInset,
+        insetRight: boxInset,
         stroke: BOX_STROKE,
         strokeWidth: 1.2,
         x: 'categoryLabel',
@@ -159,6 +173,8 @@ function createBoxPlotElement(args: {
         y2: 'q3',
       }),
       Plot.tickY(summaries, {
+        insetLeft: boxInset,
+        insetRight: boxInset,
         x: 'categoryLabel',
         y: 'median',
         stroke: BOX_STROKE,
