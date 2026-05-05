@@ -35,7 +35,7 @@ import {
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
   createDefaultChartTypes,
-  type VgPlotPanelConfig,
+  isVgPlotPanelConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -361,9 +361,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           (() => {
             const spec = get()
               .mosaicDashboard.getDashboard(artifactId)
-              ?.panels.find(
-                (panel): panel is VgPlotPanelConfig => panel.type === 'vgplot',
-              )?.config.vgplot;
+              ?.panels.find(isVgPlotPanelConfig)?.config.vgplot;
             return spec && typeof spec === 'object'
               ? JSON.stringify(spec, null, 2)
               : undefined;
