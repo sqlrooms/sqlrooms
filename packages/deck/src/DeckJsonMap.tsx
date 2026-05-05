@@ -1,10 +1,9 @@
 import {JSONConverter} from '@deck.gl/json';
-import type {DeckGLRef} from '@deck.gl/react';
 import DeckGL from '@deck.gl/react';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {useEffect, useMemo, useRef} from 'react';
+import {useEffect, useMemo} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
@@ -214,38 +213,16 @@ export function DeckJsonMap({
   const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
   const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
   const hasRenderingError = Boolean(convertedDeckPropsResult.error);
-  const deckRef = useRef<DeckGLRef>(null);
-  const mergedLayers = hasRenderingError
-    ? []
-    : (deckProps?.layers ??
-      (convertedDeckProps.layers as unknown[] | undefined) ??
-      []);
 
   const mergedDeckProps = {
     ...convertedDeckProps,
     ...extraDeckProps,
-    layers: mergedLayers,
+    layers: hasRenderingError
+      ? []
+      : (deckProps?.layers ??
+        (convertedDeckProps.layers as unknown[] | undefined) ??
+        []),
   };
-
-  useEffect(() => {
-    if (hasRenderingError || mergedLayers.length === 0) {
-      return;
-    }
-
-    let secondFrame: number | null = null;
-    const firstFrame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        deckRef.current?.deck?.redraw('SQLRooms layers ready');
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(firstFrame);
-      if (secondFrame !== null) {
-        cancelAnimationFrame(secondFrame);
-      }
-    };
-  }, [hasRenderingError, mergedLayers]);
 
   const {resolvedTheme} = useTheme();
 
@@ -276,7 +253,7 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL ref={deckRef} {...(mergedDeckProps as object)}>
+      <DeckGL {...(mergedDeckProps as any)}>
         <Map {...(mergedMapProps as object)}>{children}</Map>
       </DeckGL>
 
