@@ -25,6 +25,8 @@ import type {TableColumn} from '@sqlrooms/duckdb';
 import {type VgPlotChartConfig, type VgPlotChartType} from '../../chart-types';
 import {generateMosaicChartSpec} from '../generateMosaicChartSpec';
 import {getChartTypeDefinition} from '../../chart-types/registry';
+import {Button} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 
 interface ChartSettingsRootProps {
   tableName?: string;
@@ -47,9 +49,31 @@ const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
       columns={columns}
       onChange={onChange}
     >
-      <div className="space-y-4">{children}</div>
+      {children}
     </ChartSettingsProvider>
   );
+};
+
+type ChartSettingsHeaderProps = PropsWithChildren<{
+  onClose?: () => void;
+}>;
+
+const ChartSettingsHeader: FC<ChartSettingsHeaderProps> = ({
+  children,
+  onClose,
+}) => {
+  return (
+    <div className="flex items-center justify-between border-b px-4 py-2 text-sm font-medium">
+      {children}
+      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClose}>
+        <XIcon className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+};
+
+const ChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
+  return <div className="flex flex-col gap-2 p-2">{children}</div>;
 };
 
 const ChartSettingsTypeSelector: FC = () => {
@@ -138,9 +162,10 @@ const ChartSettingsFields: FC = () => {
   );
 };
 
-// Compound component API
 export const ChartSettings = {
   Root: ChartSettingsRoot,
+  Header: ChartSettingsHeader,
+  Content: ChartSettingsContent,
   TypeSelector: ChartSettingsTypeSelector,
   Fields: ChartSettingsFields,
 };

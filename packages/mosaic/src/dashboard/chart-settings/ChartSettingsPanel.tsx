@@ -7,12 +7,14 @@ interface ChartSettingsPanelProps {
   tableName?: string;
   config: VgPlotChartConfig;
   onChange: (settings: VgPlotChartConfig) => void;
+  onClose?: () => void;
 }
 
 export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   tableName,
   config,
   onChange,
+  onClose,
 }) => {
   const columns = useTableColumns(tableName);
 
@@ -23,8 +25,13 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
       columns={columns}
       onChange={onChange}
     >
-      <ChartSettings.TypeSelector />
-      <ChartSettings.Fields />
+      <ChartSettings.Header onClose={onClose}>
+        Chart settings
+      </ChartSettings.Header>
+      <ChartSettings.Content>
+        <ChartSettings.TypeSelector />
+        <ChartSettings.Fields />
+      </ChartSettings.Content>
     </ChartSettings.Root>
   );
 };
