@@ -112,6 +112,7 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
       tableName={tableName}
       config={panel.config}
       onChange={handleSettingsChange}
+      onClose={() => handleOpenChange(false)}
     />
   );
 
