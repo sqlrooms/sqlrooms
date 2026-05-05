@@ -2768,10 +2768,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.3.0(@types/node@24.12.2)
+        version: 30.3.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/cosmos:
     dependencies:
@@ -2829,10 +2829,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.2.0(@types/node@24.10.2)
+        version: 30.2.0(@types/node@24.12.2)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.12.2))(typescript@5.9.3)
 
   packages/data-table:
     dependencies:
@@ -3105,10 +3105,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.2.0(@types/node@24.10.2)
+        version: 30.2.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/duckdb-core:
     dependencies:
@@ -3127,10 +3127,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.2.0(@types/node@24.10.2)
+        version: 30.2.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/duckdb-node:
     dependencies:
@@ -3152,10 +3152,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.2.0(@types/node@24.10.2)
+        version: 30.2.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/kepler:
     dependencies:
@@ -3556,10 +3556,10 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       jest:
         specifier: ^30.1.3
-        version: 30.2.0(@types/node@24.10.2)
+        version: 30.2.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/preset-eslint:
     devDependencies:
@@ -3610,13 +3610,13 @@ importers:
         version: 3.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.2.0(@types/node@24.10.2)
+        version: 30.2.0(@types/node@25.5.0)
       jest-environment-jsdom:
         specifier: ^30.1.2
         version: 30.2.0
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/preset-typedoc:
     dependencies:
@@ -4052,8 +4052,8 @@ importers:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.1)
       react-day-picker:
-        specifier: ^8.10.1
-        version: 8.10.1(date-fns@4.1.0)(react@19.2.1)
+        specifier: ^9.0.0
+        version: 9.14.0(react@19.2.1)
       react-hook-form:
         specifier: ^7.63.0
         version: 7.68.0(react@19.2.1)
@@ -5300,6 +5300,9 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
+
+  '@date-fns/tz@1.4.1':
+    resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
 
   '@deck.gl-community/editable-layers@9.2.8':
     resolution: {integrity: sha512-E9i4LwstJ+d/BqF46afhKVNHZuQt4gwdWL6jqsD4lfzr0IdWJMGmg+r8xtwHYK+nhbraHfX+ddDNUR03bPvswg==}
@@ -8718,6 +8721,10 @@ packages:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
 
+  '@tabby_ai/hijri-converter@1.0.5':
+    resolution: {integrity: sha512-r5bClKrcIusDoo049dSL8CawnHR6mRdDwhlQuIgZRNty68q0x8k3Lf1BtPAMxRf/GgnHBnIO4ujd3+GQdLWzxQ==}
+    engines: {node: '>=16.0.0'}
+
   '@tailwindcss/node@4.1.17':
     resolution: {integrity: sha512-csIkHIgLb3JisEFQ0vxr2Y57GUNYh447C8xzwj89U/8fdW8LhProdxvnVH6U8M2Y73QKiTIH+LWbK3V2BBZsAg==}
 
@@ -11048,6 +11055,9 @@ packages:
   data-view-byte-offset@1.0.1:
     resolution: {integrity: sha512-BS8PfmtDGnrgYdOonGZQdLZslWIeCGFP9tpan0hi1Co2Zr2NKADsvGYA8XxuG/4UWgJ6Cjtv+YJnB6MM69QGlQ==}
     engines: {node: '>= 0.4'}
+
+  date-fns-jalali@4.1.0-0:
+    resolution: {integrity: sha512-hTIP/z+t+qKwBDcmmsnmjWTduxCg+5KfdqWQvb2X/8C9+knYY6epN/pfxdDuyVlSVeFz0sM5eEfwIUQ70U4ckg==}
 
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
@@ -14401,6 +14411,7 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   quadbin@0.4.2:
@@ -14498,10 +14509,10 @@ packages:
       '@types/react':
         optional: true
 
-  react-day-picker@8.10.1:
-    resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
+  react-day-picker@9.14.0:
+    resolution: {integrity: sha512-tBaoDWjPwe0M5pGrum4H0SR6Lyk+BO9oHnp9JbKpGKW2mlraNPgP9BMfsg5pWpwrssARmeqk7YBl2oXutZTaHA==}
+    engines: {node: '>=18'}
     peerDependencies:
-      date-fns: ^2.28.0 || ^3.0.0
       react: 19.2.1
 
   react-dom@19.2.1:
@@ -16077,6 +16088,7 @@ packages:
 
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@13.0.0:
@@ -16085,10 +16097,12 @@ packages:
 
   uuid@7.0.3:
     resolution: {integrity: sha512-DPSke0pXhTZgoF/d+WSt2QaKMCFSfx7QegxEWT+JOuHF5aWrKEn0G+ztjuJg/gG8/ItK+rbPCD/yNv8yyih6Cg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.0:
     resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-to-istanbul@9.3.0:
@@ -18522,6 +18536,8 @@ snapshots:
   '@csstools/css-tokenizer@3.0.4': {}
 
   '@csstools/css-tokenizer@4.0.0': {}
+
+  '@date-fns/tz@1.4.1': {}
 
   '@deck.gl-community/editable-layers@9.2.8(fd0bf4abb72d041c353ce152968ab38f)':
     dependencies:
@@ -23152,6 +23168,8 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
+  '@tabby_ai/hijri-converter@1.0.5': {}
+
   '@tailwindcss/node@4.1.17':
     dependencies:
       '@jridgewell/remapping': 2.3.5
@@ -26023,6 +26041,8 @@ snapshots:
       es-errors: 1.3.0
       is-data-view: 1.0.2
 
+  date-fns-jalali@4.1.0-0: {}
+
   date-fns@4.1.0: {}
 
   dayjs@1.11.19: {}
@@ -27876,17 +27896,36 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@30.3.0(@types/node@24.12.2):
+  jest-cli@30.2.0(@types/node@24.12.2):
     dependencies:
-      '@jest/core': 30.3.0
-      '@jest/test-result': 30.3.0
-      '@jest/types': 30.3.0
+      '@jest/core': 30.2.0
+      '@jest/test-result': 30.2.0
+      '@jest/types': 30.2.0
       chalk: 4.1.2
       exit-x: 0.2.2
       import-local: 3.2.0
-      jest-config: 30.3.0(@types/node@24.12.2)
-      jest-util: 30.3.0
-      jest-validate: 30.3.0
+      jest-config: 30.2.0(@types/node@24.12.2)
+      jest-util: 30.2.0
+      jest-validate: 30.2.0
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - '@types/node'
+      - babel-plugin-macros
+      - esbuild-register
+      - supports-color
+      - ts-node
+
+  jest-cli@30.2.0(@types/node@25.5.0):
+    dependencies:
+      '@jest/core': 30.2.0
+      '@jest/test-result': 30.2.0
+      '@jest/types': 30.2.0
+      chalk: 4.1.2
+      exit-x: 0.2.2
+      import-local: 3.2.0
+      jest-config: 30.2.0(@types/node@25.5.0)
+      jest-util: 30.2.0
+      jest-validate: 30.2.0
       yargs: 17.7.2
     transitivePeerDependencies:
       - '@types/node'
@@ -27978,33 +28017,34 @@ snapshots:
       - babel-plugin-macros
       - supports-color
 
-  jest-config@30.3.0(@types/node@24.12.2):
+  jest-config@30.2.0(@types/node@25.5.0):
     dependencies:
       '@babel/core': 7.29.0
       '@jest/get-type': 30.1.0
       '@jest/pattern': 30.0.1
-      '@jest/test-sequencer': 30.3.0
-      '@jest/types': 30.3.0
-      babel-jest: 30.3.0(@babel/core@7.29.0)
+      '@jest/test-sequencer': 30.2.0
+      '@jest/types': 30.2.0
+      babel-jest: 30.2.0(@babel/core@7.29.0)
       chalk: 4.1.2
       ci-info: 4.4.0
       deepmerge: 4.3.1
       glob: 10.5.0
       graceful-fs: 4.2.11
-      jest-circus: 30.3.0
+      jest-circus: 30.2.0
       jest-docblock: 30.2.0
-      jest-environment-node: 30.3.0
+      jest-environment-node: 30.2.0
       jest-regex-util: 30.0.1
-      jest-resolve: 30.3.0
-      jest-runner: 30.3.0
-      jest-util: 30.3.0
-      jest-validate: 30.3.0
+      jest-resolve: 30.2.0
+      jest-runner: 30.2.0
+      jest-util: 30.2.0
+      jest-validate: 30.2.0
+      micromatch: 4.0.8
       parse-json: 5.2.0
-      pretty-format: 30.3.0
+      pretty-format: 30.2.0
       slash: 3.0.0
       strip-json-comments: 3.1.1
     optionalDependencies:
-      '@types/node': 24.12.2
+      '@types/node': 25.5.0
     transitivePeerDependencies:
       - babel-plugin-macros
       - supports-color
@@ -28489,12 +28529,25 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest@30.3.0(@types/node@24.12.2):
+  jest@30.2.0(@types/node@24.12.2):
     dependencies:
-      '@jest/core': 30.3.0
-      '@jest/types': 30.3.0
+      '@jest/core': 30.2.0
+      '@jest/types': 30.2.0
       import-local: 3.2.0
-      jest-cli: 30.3.0(@types/node@24.12.2)
+      jest-cli: 30.2.0(@types/node@24.12.2)
+    transitivePeerDependencies:
+      - '@types/node'
+      - babel-plugin-macros
+      - esbuild-register
+      - supports-color
+      - ts-node
+
+  jest@30.2.0(@types/node@25.5.0):
+    dependencies:
+      '@jest/core': 30.2.0
+      '@jest/types': 30.2.0
+      import-local: 3.2.0
+      jest-cli: 30.2.0(@types/node@25.5.0)
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
@@ -30529,9 +30582,12 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react-dom'
 
-  react-day-picker@8.10.1(date-fns@4.1.0)(react@19.2.1):
+  react-day-picker@9.14.0(react@19.2.1):
     dependencies:
+      '@date-fns/tz': 1.4.1
+      '@tabby_ai/hijri-converter': 1.0.5
       date-fns: 4.1.0
+      date-fns-jalali: 4.1.0-0
       react: 19.2.1
 
   react-dom@19.2.1(react@19.2.1):
@@ -32008,12 +32064,12 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
-  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3):
+  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@24.12.2))(typescript@5.9.3):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.8
-      jest: 30.2.0(@types/node@24.10.2)
+      jest: 30.2.0(@types/node@24.12.2)
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
@@ -32028,12 +32084,12 @@ snapshots:
       babel-jest: 30.3.0(@babel/core@7.29.0)
       jest-util: 30.3.0
 
-  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.2))(typescript@5.9.3):
+  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.2.0(@types/node@25.5.0))(typescript@5.9.3):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.8
-      jest: 30.3.0(@types/node@24.12.2)
+      jest: 30.2.0(@types/node@25.5.0)
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
