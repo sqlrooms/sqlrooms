@@ -3,10 +3,16 @@ import {
   LayoutGridNode,
   LayoutNode,
   isLayoutGridNode,
-  isLayoutNodeKey,
 } from '@sqlrooms/layout-config';
 import {FC, Ref, useCallback, useMemo} from 'react';
 import {Responsive, WidthProvider} from 'react-grid-layout';
+import {
+  createDefaultGridLayouts,
+  DEFAULT_GRID_BREAKPOINTS,
+  getGridChildId,
+  getResponsiveGridCols,
+  type GridLayouts,
+} from '../../grid-layout-utils';
 import {LayoutNodeProvider} from '../../LayoutNodeContext';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {ParentDirection} from '../../layout-base-types';
@@ -22,8 +28,6 @@ import 'react-resizable/css/styles.css';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const DEFAULT_BREAKPOINTS = {lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0};
-const DEFAULT_COLS = {lg: 12, md: 10, sm: 6, xs: 4, xxs: 2};
 const DEFAULT_RESIZE_HANDLES: NonNullable<LayoutGridNode['resizeHandles']> = [
   'n',
   'e',
@@ -195,57 +199,11 @@ const GRID_LAYOUT_STYLES = `
 }
 `;
 
-type GridLayouts = NonNullable<LayoutGridNode['layouts']>;
-
 type RootProps = {
   node: LayoutGridNode;
   path: LayoutPath;
   parentDirection?: ParentDirection;
 };
-
-function createDefaultItem(
-  node: LayoutNode,
-  index: number,
-  cols: number,
-): LayoutGridItem {
-  const id = getGridChildId(node);
-  const effectiveCols = Math.max(1, cols);
-  const w = Math.min(3, effectiveCols);
-  const h = 2;
-  return {
-    i: id,
-    x: (index * w) % effectiveCols,
-    y: Math.floor((index * w) / effectiveCols) * h,
-    w,
-    h,
-  };
-}
-
-function getGridChildId(node: LayoutNode): string {
-  return isLayoutNodeKey(node) ? node : node.id;
-}
-
-function getResponsiveCols(
-  cols: LayoutGridNode['cols'],
-  breakpoints: Record<string, number>,
-): Record<string, number> {
-  if (typeof cols === 'number') {
-    return Object.fromEntries(
-      Object.keys(breakpoints).map((breakpoint) => [breakpoint, cols]),
-    );
-  }
-
-  const fallbackCols = cols?.lg ?? DEFAULT_COLS.lg;
-
-  return Object.fromEntries(
-    Object.keys(breakpoints).map((breakpoint) => [
-      breakpoint,
-      cols?.[breakpoint] ??
-        DEFAULT_COLS[breakpoint as keyof typeof DEFAULT_COLS] ??
-        fallbackCols,
-    ]),
-  );
-}
 
 function renderResizeHandle(axis: string, ref: Ref<HTMLElement>) {
   return (
@@ -332,9 +290,9 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
     () => node.children.map(getGridChildId),
     [node.children],
   );
-  const breakpoints = node.breakpoints ?? DEFAULT_BREAKPOINTS;
+  const breakpoints = node.breakpoints ?? DEFAULT_GRID_BREAKPOINTS;
   const cols = useMemo(
-    () => getResponsiveCols(node.cols, breakpoints),
+    () => getResponsiveGridCols(node.cols, breakpoints),
     [breakpoints, node.cols],
   );
   const resizeHandles = useMemo(
@@ -343,14 +301,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
   );
   const layouts = useMemo(() => {
     if (node.layouts) return normalizeLayouts(node.layouts, resizeHandles);
-    return Object.fromEntries(
-      Object.entries(cols).map(([breakpoint, breakpointCols]) => [
-        breakpoint,
-        node.children.map((child, index) =>
-          createDefaultItem(child, index, breakpointCols),
-        ),
-      ]),
-    );
+    return createDefaultGridLayouts(node.children, cols);
   }, [cols, node.children, node.layouts, resizeHandles]);
   const scrollContainerRef = useScrollNewGridChildIntoView(
     node.id,

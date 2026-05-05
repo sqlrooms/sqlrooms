@@ -12,6 +12,7 @@ npm install @sqlrooms/layout
 
 - `createLayoutSlice()`, `useStoreWithLayout()`
 - `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels, tabs, and generic docking
+- `useExpandGridPanel()` — expands a grid child panel horizontally to available row space
 - Layout helpers:
   - `visitLayoutLeafNodes`
   - `getVisibleLayoutPanels`
