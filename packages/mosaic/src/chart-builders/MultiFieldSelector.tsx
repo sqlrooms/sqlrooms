@@ -1,6 +1,6 @@
 import {Button} from '@sqlrooms/ui';
-import {Plus, Trash2} from 'lucide-react';
-import {useState, useCallback, useMemo, type FC} from 'react';
+import {Trash2} from 'lucide-react';
+import {useCallback, useMemo, type FC} from 'react';
 import {ChartBuilderColumn} from './types';
 import {FieldSelectorInput} from './FieldSelectorInput';
 import {
@@ -34,8 +34,6 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
   required,
   showAggregation = false,
 }) => {
-  const [addingField, setAddingField] = useState(false);
-
   const selectedFieldNames = useMemo(() => value.map((v) => v.field), [value]);
 
   const availableColumns = useMemo(
@@ -52,8 +50,9 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
 
   const handleAddField = useCallback(
     (fieldName: string) => {
-      onChange([...value, {field: fieldName, aggregate: 'sum'}]);
-      setAddingField(false);
+      if (fieldName) {
+        onChange([...value, {field: fieldName, aggregate: 'sum'}]);
+      }
     },
     [value, onChange],
   );
@@ -74,98 +73,94 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
         {required && <span className="text-destructive ml-1">*</span>}
       </label>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         {value.map((fieldConfig) => {
           const aggregate = fieldConfig.aggregate || 'sum';
 
           return (
-            <div key={fieldConfig.field} className="space-y-2">
-              <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                <div className="min-w-[100px] flex-1">
-                  <FieldSelectorInput
-                    field={{
-                      key: fieldConfig.field,
-                      label: '',
-                      types,
-                    }}
-                    columns={columns}
-                    value={fieldConfig.field}
-                    onChange={(newField) => {
-                      onChange(
-                        value.map((v) =>
-                          v.field === fieldConfig.field
-                            ? {...v, field: newField}
-                            : v,
-                        ),
-                      );
-                    }}
-                  />
-                </div>
+            <div
+              key={fieldConfig.field}
+              className="grid items-end gap-2"
+              style={{
+                gridTemplateColumns: showAggregation
+                  ? 'minmax(120px, 1fr) 100px 32px'
+                  : 'minmax(120px, 1fr) 32px',
+              }}
+            >
+              <FieldSelectorInput
+                field={{
+                  key: fieldConfig.field,
+                  label: '',
+                  types,
+                }}
+                columns={columns}
+                value={fieldConfig.field}
+                onChange={(newField) => {
+                  onChange(
+                    value.map((v) =>
+                      v.field === fieldConfig.field
+                        ? {...v, field: newField}
+                        : v,
+                    ),
+                  );
+                }}
+              />
 
-                <div className="flex flex-0 items-end gap-2">
-                  {showAggregation && (
-                    <Select
-                      value={aggregate}
-                      onValueChange={(value: AggregateFunction) =>
-                        handleAggregateChange(fieldConfig.field, value)
-                      }
-                    >
-                      <SelectTrigger className="h-10 flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sum">SUM</SelectItem>
-                        <SelectItem value="avg">AVG</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
+              {showAggregation && (
+                <Select
+                  value={aggregate}
+                  onValueChange={(value: AggregateFunction) =>
+                    handleAggregateChange(fieldConfig.field, value)
+                  }
+                >
+                  <SelectTrigger className="h-8 w-[100px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sum" className="text-xs">
+                      SUM
+                    </SelectItem>
+                    <SelectItem value="avg" className="text-xs">
+                      AVG
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveField(fieldConfig.field)}
-                    className="h-10 w-10 shrink-0"
-                  >
-                    <Trash2 className="text-destructive h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveField(fieldConfig.field)}
+                className="h-8 w-8 shrink-0"
+              >
+                <Trash2 className="text-destructive h-4 w-4" />
+              </Button>
             </div>
           );
         })}
 
-        {addingField ? (
-          <div className="space-y-2">
-            <FieldSelectorInput
-              field={{
-                key: 'new-field',
-                label: 'Select field',
-                types,
-              }}
-              columns={availableColumns}
-              value={undefined}
-              onChange={handleAddField}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setAddingField(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAddingField(true)}
-            disabled={availableColumns.length === 0}
-            className="w-full"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Y-axis
-          </Button>
-        )}
+        <div
+          className="grid items-end gap-2"
+          style={{
+            gridTemplateColumns: showAggregation
+              ? 'minmax(120px, 1fr) 100px 32px'
+              : 'minmax(120px, 1fr) 32px',
+          }}
+        >
+          <FieldSelectorInput
+            field={{
+              key: 'add-field',
+              label: '',
+              types,
+            }}
+            columns={availableColumns}
+            value={undefined}
+            onChange={handleAddField}
+            placeholder="Select field..."
+          />
+          {showAggregation && <div className="w-[100px]" />}
+          <div className="h-8 w-8 shrink-0" />
+        </div>
       </div>
     </div>
   );

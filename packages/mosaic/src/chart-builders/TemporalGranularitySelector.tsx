@@ -52,13 +52,19 @@ export const TemporalGranularitySelector: FC<TemporalGranularitySelectorProps> =
 
     return (
       <Select value={value || NONE} onValueChange={handleValueChange}>
-        <SelectTrigger className="h-10">
+        <SelectTrigger className="h-8 text-xs">
           <SelectValue placeholder="None" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={NONE}>None</SelectItem>
+          <SelectItem value={NONE} className="text-xs">
+            None
+          </SelectItem>
           {TEMPORAL_INTERVALS.map((interval) => (
-            <SelectItem key={interval.value} value={interval.value}>
+            <SelectItem
+              key={interval.value}
+              value={interval.value}
+              className="text-xs"
+            >
               {interval.label}
             </SelectItem>
           ))}

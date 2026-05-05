@@ -39,24 +39,23 @@ export const SingleFieldSelector: FC<SingleFieldSelectorProps> = memo(
     }
 
     return (
-      <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-        <div className="min-w-[100px] flex-1">
-          <FieldSelectorInput
-            field={field}
-            columns={columns}
-            value={value}
-            onChange={onChange}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="flex-1">
-            <TemporalGranularitySelector
-              value={temporalValue}
-              onChange={onTemporalChange!}
-              xFieldType={xFieldType}
-            />
-          </div>
-        </div>
+      <div
+        className="grid items-end gap-2"
+        style={{
+          gridTemplateColumns: 'minmax(120px, 1fr) auto',
+        }}
+      >
+        <FieldSelectorInput
+          field={field}
+          columns={columns}
+          value={value}
+          onChange={onChange}
+        />
+        <TemporalGranularitySelector
+          value={temporalValue}
+          onChange={onTemporalChange!}
+          xFieldType={xFieldType}
+        />
       </div>
     );
   },

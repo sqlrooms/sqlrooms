@@ -20,6 +20,7 @@ export interface FieldSelectorInputProps {
   columns: ChartBuilderColumn[];
   value: string | undefined;
   onChange: (value: string) => void;
+  placeholder?: string;
 }
 
 /**
@@ -30,6 +31,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
   columns,
   value,
   onChange,
+  placeholder,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -41,12 +43,18 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
 
   const selectedColumn = filteredColumns.find((col) => col.name === value);
 
+  const showLabel = field.label && field.label.trim() !== '';
+  const placeholderText =
+    placeholder || `Select ${field.label.toLowerCase()}...`;
+
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium">
-        {field.label}
-        {field.required && <span className="text-destructive ml-1">*</span>}
-      </label>
+      {showLabel && (
+        <label className="text-xs font-medium">
+          {field.label}
+          {field.required && <span className="text-destructive ml-1">*</span>}
+        </label>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -63,9 +71,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
                 </span>
               </span>
             ) : (
-              <span className="text-muted-foreground">
-                Select {field.label.toLowerCase()}...
-              </span>
+              <span className="text-muted-foreground">{placeholderText}</span>
             )}
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
