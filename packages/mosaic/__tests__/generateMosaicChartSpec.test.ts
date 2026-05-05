@@ -48,7 +48,7 @@ describe('generateMosaicChartSpec', () => {
   it('generates spec for line-chart chart type', () => {
     const result = generateMosaicChartSpec('timeseries', 'line-chart', {
       x: 'date',
-      y: 'value',
+      yFields: [{field: 'value', aggregate: 'sum'}],
     });
 
     expect(result).toBeDefined();

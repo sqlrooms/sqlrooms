@@ -377,7 +377,7 @@ describe('MosaicDashboardSlice generic panels', () => {
     });
     const second = createMosaicDashboardVgPlotPanelConfig('Chart 2', {
       chartType: 'line-chart',
-      settings: {},
+      settings: {yFields: [{field: 'value', aggregate: 'sum'}]},
       vgplot: {plot: [{mark: 'line'}]},
     });
 
