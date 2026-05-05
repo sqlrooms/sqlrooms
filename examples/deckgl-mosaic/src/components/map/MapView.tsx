@@ -129,10 +129,20 @@ export const MapView: FC<{className?: string}> = ({className}) => {
   );
 
   const onHover = (info: {coordinate?: [number, number]}) => {
-    if (!info.coordinate || !enableBrushing || !client) {
+    if (!enableBrushing || !client) {
       return;
     }
     if (!syncCharts) {
+      return;
+    }
+
+    if (!info.coordinate) {
+      brush?.update({
+        source: client,
+        value: null,
+        predicate: null as any,
+      });
+      lastUpdateRef.current = 0;
       return;
     }
 
