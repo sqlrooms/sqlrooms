@@ -31,21 +31,23 @@ export function toChartTypeDefinition(
     id,
     label,
     description,
-    fields,
+    schema,
     createSpec,
     buildTitle,
     isAvailable,
     aiDescription,
+    settingsComponent,
   } = template;
   return {
     id,
     label,
     description,
-    fields,
+    schema,
     createSpec,
     buildTitle,
     isAvailable,
     aiDescription,
+    settingsComponent,
   };
 }
 

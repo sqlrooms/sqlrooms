@@ -14,6 +14,7 @@ import {
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {VgPlotChartConfig} from '../chart-types';
+import {generateMosaicChartSpec} from './generateMosaicChartSpec';
 
 function toRenderableMosaicSpec(vgplot: unknown): Spec | null {
   try {
@@ -54,10 +55,24 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
     (state) => state.mosaicDashboard.setRetainedChart,
   );
 
-  const spec = useMemo(
-    () => toRenderableMosaicSpec(panel.config.vgplot),
-    [panel.config.vgplot],
-  );
+  const spec = useMemo(() => {
+    // For custom-spec, use the vgplot from config
+    if (panel.config.chartType === 'custom-spec') {
+      return toRenderableMosaicSpec(panel.config.vgplot);
+    }
+
+    // For all other chart types, generate spec on the fly
+    const tableName = panel.source?.tableName;
+    if (!tableName) return null;
+
+    const generatedSpec = generateMosaicChartSpec(
+      tableName,
+      panel.config.chartType,
+      panel.config.settings,
+    );
+
+    return generatedSpec ? toRenderableMosaicSpec(generatedSpec) : null;
+  }, [panel.config, panel.source?.tableName]);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,

@@ -46,7 +46,6 @@ export type LineChartSettings = z.infer<typeof LineChartSettings>;
 export const LineChartConfig = z.object({
   chartType: z.literal('line-chart'),
   settings: LineChartSettings,
-  vgplot: z.unknown(),
   settingsOpen: z.boolean().optional(),
 });
 

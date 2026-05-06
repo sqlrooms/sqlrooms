@@ -1,8 +1,8 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
-import type {HistogramChartSettings} from './schema';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {HistogramChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {HistogramSettingsComponent} from './HistogramSettings';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
@@ -14,15 +14,8 @@ export const histogramChartType: ChartTypeDefinition<HistogramChartSettings> = {
   description: DESCRIPTION,
   aiDescription:
     'Use for the distribution of one numeric or temporal column with count on the y-axis.',
-  fields: [
-    {
-      key: 'field',
-      label: 'Field',
-      required: true,
-      types: [...QUANTITATIVE_COLUMN_TYPES],
-      description: 'Numeric or temporal column to bin into histogram buckets.',
-    },
-  ],
+  schema: HistogramChartSettings,
+  settingsComponent: HistogramSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {field}: HistogramChartSettings): Spec =>
     ({

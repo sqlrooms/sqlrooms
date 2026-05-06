@@ -27,30 +27,23 @@ export const ChartBuilderActions: FC<ChartBuilderActionsProps> = ({
     [templates, selectedTemplateId],
   );
 
-  const canCreate = canCreateChartFromType(
-    selectedTemplate,
-    fieldValues,
-    columns,
-  );
+  const canCreate = canCreateChartFromType(selectedTemplate, fieldValues);
 
   const handleCreateChart = useCallback(() => {
     if (!selectedTemplate || !canCreate || !selectedTemplateId) {
       return;
     }
 
-    const spec = selectedTemplate.createSpec(tableName, fieldValues);
     const title = buildChartTypeTitle(selectedTemplate, fieldValues);
     onCreateChart(title, {
       chartType: selectedTemplateId,
       settings: fieldValues,
-      vgplot: spec,
     } as VgPlotChartConfig);
     reset();
   }, [
     selectedTemplate,
     canCreate,
     selectedTemplateId,
-    tableName,
     fieldValues,
     onCreateChart,
     reset,

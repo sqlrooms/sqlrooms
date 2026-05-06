@@ -112,9 +112,8 @@ export function MosaicDashboardRoot({
     const panel = createMosaicDashboardVgPlotPanelConfig(
       'New Chart',
       {
-        chartType: 'histogram', // Default type, but with empty settings
-        settings: {},
-        vgplot: null,
+        chartType: 'histogram',
+        settings: {field: ''},
         settingsOpen: true, // Open settings by default
       },
       {tableName: dashboard.selectedTable},

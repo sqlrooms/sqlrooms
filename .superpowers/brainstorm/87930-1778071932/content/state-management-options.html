@@ -1,0 +1,199 @@
+<h2>State Management: onChange Handling</h2>
+<p class="subtitle">How should compound components manage state updates?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Controlled at Chart Level</h3>
+      <p style="margin-bottom: 1rem;">Each chart settings component receives <code>values</code> and <code>onChange</code>, manages the full state object internally.</p>
+
+      <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">
+        <div style="color: #888;">// LineChartSettings.tsx</div>
+        <div>&lt;FieldSelector</div>
+        <div style="padding-left: 1rem;">
+          value={values.x}<br/>
+          onChange={(x) => <span style="color: #e5c07b;">onChange({...values, x})</span>}
+        </div>
+        <div>/&gt;</div>
+        <br/>
+        <div>&lt;MultiFieldSelector</div>
+        <div style="padding-left: 1rem;">
+          value={values.yFields}<br/>
+          onChange={(yFields) => <span style="color: #e5c07b;">onChange({...values, yFields})</span>}
+        </div>
+        <div>/&gt;</div>
+      </div>
+
+      <div class="pros-cons" style="margin-top: 1rem; font-size: 13px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Simple API</li>
+            <li>Chart component owns logic</li>
+            <li>Easy validation</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Repetitive onChange wiring</li>
+            <li>Hard to share state between fields</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Context Provider</h3>
+      <p style="margin-bottom: 1rem;">Compound component pattern with Context - parent provides state, children consume it.</p>
+
+      <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">
+        <div style="color: #888;">// Usage</div>
+        <div>&lt;<span style="color: #e06c75;">LineChartSettings</span></div>
+        <div style="padding-left: 1rem;">
+          values={values}<br/>
+          onChange={onChange}
+        </div>
+        <div>&gt;</div>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #61afef;">LineChartSettings.XAxis</span> /&gt;<br/>
+          &lt;<span style="color: #61afef;">LineChartSettings.YAxis</span> /&gt;
+        </div>
+        <div>&lt;/<span style="color: #e06c75;">LineChartSettings</span>&gt;</div>
+        <br/>
+        <div style="color: #888;">// Subcomponents read/write via context</div>
+        <div style="color: #888;">// const {values, updateField} = useChartSettings()</div>
+      </div>
+
+      <div class="pros-cons" style="margin-top: 1rem; font-size: 13px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Clean composition</li>
+            <li>Shared state access</li>
+            <li>No prop drilling</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>More boilerplate</li>
+            <li>Context overhead</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid: Explicit Props + Helpers</h3>
+      <p style="margin-bottom: 1rem;">Chart component uses explicit props but provides helper functions to reduce boilerplate.</p>
+
+      <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">
+        <div style="color: #888;">// LineChartSettings.tsx</div>
+        <div style="color: #61afef;">const</span> updateField = <span style="color: #c678dd;">useCallback</span>(</div>
+        <div style="padding-left: 1rem;">
+          (key, val) => onChange({...values, [key]: val}),<br/>
+          [values, onChange]
+        </div>
+        <div>);</div>
+        <br/>
+        <div>&lt;FieldSelector</div>
+        <div style="padding-left: 1rem;">
+          value={values.x}<br/>
+          onChange={(x) => <span style="color: #e5c07b;">updateField('x', x)</span>}
+        </div>
+        <div>/&gt;</div>
+        <br/>
+        <div>&lt;MultiFieldSelector</div>
+        <div style="padding-left: 1rem;">
+          value={values.yFields}<br/>
+          onChange={(yFields) => <span style="color: #e5c07b;">updateField('yFields', yFields)</span>}
+        </div>
+        <div>/&gt;</div>
+      </div>
+
+      <div class="pros-cons" style="margin-top: 1rem; font-size: 13px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Explicit data flow</li>
+            <li>Less boilerplate than A</li>
+            <li>No context complexity</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Still some wiring needed</li>
+            <li>Helper per component</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Form Library (React Hook Form / Formik)</h3>
+      <p style="margin-bottom: 1rem;">Use a form library to manage state and validation.</p>
+
+      <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">
+        <div style="color: #888;">// LineChartSettings.tsx</div>
+        <div style="color: #61afef;">const</span> form = <span style="color: #c678dd;">useForm</span>({</div>
+        <div style="padding-left: 1rem;">
+          defaultValues: values,<br/>
+          onSubmit: onChange
+        </div>
+        <div>});</div>
+        <br/>
+        <div>&lt;FieldSelector</div>
+        <div style="padding-left: 1rem;">
+          {...form.register('x')}<br/>
+        </div>
+        <div>/&gt;</div>
+        <br/>
+        <div>&lt;MultiFieldSelector</div>
+        <div style="padding-left: 1rem;">
+          {...form.register('yFields')}<br/>
+        </div>
+        <div>/&gt;</div>
+      </div>
+
+      <div class="pros-cons" style="margin-top: 1rem; font-size: 13px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Battle-tested</li>
+            <li>Built-in validation</li>
+            <li>Performance optimized</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>External dependency</li>
+            <li>Learning curve</li>
+            <li>May be overkill</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+  <h3 style="margin-top: 0;">Key Questions</h3>
+  <ul style="line-height: 1.8;">
+    <li>Do you need cross-field validation? (e.g., "if x is temporal, require xInterval")</li>
+    <li>Should state updates be immediate or batched?</li>
+    <li>Do you want the compound components (<code>FieldSelector</code>, <code>MultiFieldSelector</code>) to be reusable outside chart settings?</li>
+  </ul>
+</div>

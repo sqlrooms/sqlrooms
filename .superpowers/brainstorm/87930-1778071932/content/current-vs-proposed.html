@@ -1,0 +1,103 @@
+<h2>Chart Settings Architecture</h2>
+<p class="subtitle">Current DynamicChartSettings vs. Proposed Explicit Components</p>
+
+<div class="split" style="margin-top: 2rem;">
+  <div class="mockup">
+    <div class="mockup-header">Current: DynamicChartSettings</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 1rem; line-height: 1.6;">
+      <div style="color: #888;">// Single component handles all chart types</div>
+      <div>&lt;<span style="color: #e06c75;">DynamicChartSettings</span></div>
+      <div style="padding-left: 1rem;">
+        chartTypeDefinition={<span style="color: #98c379;">lineChartChartType</span>}<br/>
+        columns={<span style="color: #98c379;">columns</span>}<br/>
+        values={<span style="color: #98c379;">values</span>}<br/>
+        onChange={<span style="color: #98c379;">onChange</span>}
+      </div>
+      <div>/&gt;</div>
+      <br/>
+      <div style="color: #888;">// Internally decides what to render</div>
+      <div style="color: #888;">// - SingleFieldSelector for x</div>
+      <div style="color: #888;">// - MultiFieldSelector for yFields</div>
+      <div style="color: #888;">// - FieldSelectorInput for others</div>
+      <br/>
+      <div style="color: #e5c07b;">Issues:</div>
+      <div style="padding-left: 1rem; color: #e06c75;">
+        • Limited flexibility<br/>
+        • Hard to customize per chart type<br/>
+        • Tight coupling to field definitions
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Proposed: Explicit Components</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 1rem; line-height: 1.6;">
+      <div style="color: #888;">// Each chart has dedicated settings component</div>
+      <div>&lt;<span style="color: #e06c75;">LineChartSettings</span></div>
+      <div style="padding-left: 1rem;">
+        columns={<span style="color: #98c379;">columns</span>}<br/>
+        values={<span style="color: #98c379;">values</span>}<br/>
+        onChange={<span style="color: #98c379;">onChange</span>}
+      </div>
+      <div>/&gt;</div>
+      <br/>
+      <div style="color: #888;">// Composed with reusable primitives:</div>
+      <br/>
+      <div>&lt;<span style="color: #61afef;">FieldSelector</span> label=<span style="color: #98c379;">"X Axis"</span> ...&gt;</div>
+      <div style="padding-left: 1rem;">
+        &lt;<span style="color: #61afef;">ColumnSelector</span> /&gt;<br/>
+        &lt;<span style="color: #61afef;">TemporalGranularitySelector</span> /&gt;
+      </div>
+      <div>&lt;/<span style="color: #61afef;">FieldSelector</span>&gt;</div>
+      <br/>
+      <div>&lt;<span style="color: #61afef;">MultiFieldSelector</span> label=<span style="color: #98c379;">"Y Axes"</span> ...&gt;</div>
+      <div style="padding-left: 1rem;">
+        {fields.map(() => (<br/>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #61afef;">ColumnSelector</span> /&gt;<br/>
+          &lt;<span style="color: #61afef;">AggregationSelector</span> /&gt;<br/>
+          &lt;<span style="color: #61afef;">DeleteButton</span> /&gt;
+        </div>
+        ))}
+      </div>
+      <div>&lt;/<span style="color: #61afef;">MultiFieldSelector</span>&gt;</div>
+      <br/>
+      <div style="color: #e5c07b;">Benefits:</div>
+      <div style="padding-left: 1rem; color: #98c379;">
+        • Full flexibility per chart<br/>
+        • Reusable compound components<br/>
+        • Clear component boundaries
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Your Example for Line Chart</h3>
+  <div style="background: #1e1e1e; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 13px; line-height: 1.7;">
+    <div style="color: #888;">// X-axis with temporal granularity</div>
+    <div>&lt;<span style="color: #61afef;">FieldSelector</span> ...&gt;</div>
+    <div style="padding-left: 1rem;">
+      &lt;<span style="color: #61afef;">ColumnSelector</span> /&gt;<br/>
+      &lt;<span style="color: #61afef;">TemporalGranularitySelector</span> /&gt;
+    </div>
+    <div>&lt;/<span style="color: #61afef;">FieldSelector</span>&gt;</div>
+    <br/>
+    <div style="color: #888;">// Y-axis with multiple fields and aggregation</div>
+    <div>&lt;<span style="color: #61afef;">MultiFieldSelector</span> ...&gt;</div>
+    <div style="padding-left: 1rem;">
+      {fieldValues.map(() => (<br/>
+      <div style="padding-left: 1rem;">
+        &lt;&gt;<br/>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #61afef;">ColumnSelector</span> /&gt;<br/>
+          &lt;<span style="color: #61afef;">AggregationSelector</span> /&gt;<br/>
+          &lt;<span style="color: #61afef;">DeleteButton</span> /&gt;
+        </div>
+        &lt;/&gt;
+      </div>
+      ))}
+    </div>
+    <div>&lt;/<span style="color: #61afef;">MultiFieldSelector</span>&gt;</div>
+  </div>
+</div>

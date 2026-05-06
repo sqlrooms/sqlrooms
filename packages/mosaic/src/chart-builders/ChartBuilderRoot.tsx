@@ -1,5 +1,4 @@
 import {Dialog} from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import React, {
   PropsWithChildren,
   useCallback,
@@ -14,7 +13,6 @@ import {
 } from './builders';
 import {ChartBuilderContext} from './ChartBuilderContext';
 import {createChartBuilderStore} from './createChartBuilderStore';
-import {getAvailableChartTypes} from './chartTypeUtils';
 import type {
   ChartBuilderColumn,
   ChartBuilderTemplate,
@@ -74,16 +72,12 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     return createDefaultChartBuilders();
   }, [builders, chartTypes]);
 
-  const availableChartTypes = useMemo(
-    () => getAvailableChartTypes(resolvedTemplates, columns),
-    [columns, resolvedTemplates],
-  );
   const availableTemplates = useMemo(
     () =>
       resolvedTemplates.filter((template) =>
-        availableChartTypes.some((chartType) => chartType.id === template.id),
+        resolvedTemplates.some((chartType) => chartType.id === template.id),
       ),
-    [availableChartTypes, resolvedTemplates],
+    [resolvedTemplates],
   );
 
   useEffect(() => {
@@ -111,12 +105,11 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
       columns,
       onCreateChart: handleCreateChart,
       templates: resolvedTemplates,
-      availableChartTypes,
+      resolvedTemplates,
       availableTemplates,
       store,
     }),
     [
-      availableChartTypes,
       availableTemplates,
       columns,
       handleCreateChart,

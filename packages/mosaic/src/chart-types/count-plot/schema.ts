@@ -1,10 +1,7 @@
 import {z} from 'zod';
 
 export const CountPlotChartSettings = z.object({
-  field: z
-    .string()
-    .optional()
-    .describe('Categorical column to count frequency of values'),
+  field: z.string().describe('Categorical column to count frequency of values'),
 });
 
 export type CountPlotChartSettings = z.infer<typeof CountPlotChartSettings>;
@@ -12,7 +9,6 @@ export type CountPlotChartSettings = z.infer<typeof CountPlotChartSettings>;
 export const CountPlotChartConfig = z.object({
   chartType: z.literal('count-plot'),
   settings: CountPlotChartSettings,
-  vgplot: z.unknown(),
   settingsOpen: z.boolean().optional(),
 });
 

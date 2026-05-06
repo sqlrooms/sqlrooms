@@ -1,0 +1,95 @@
+<h2>Testing & Verification</h2>
+<p class="subtitle">How to verify the implementation works correctly</p>
+
+<div class="section">
+  <h3>Testing Strategy</h3>
+
+  <div style="margin-bottom: 1.5rem;">
+    <h4>1. Unit Tests (Component Level)</h4>
+    <div style="padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+      <ul style="margin: 0; line-height: 1.8; font-size: 13px;">
+        <li><strong>ColumnSelector</strong> - renders columns, filters by types, calls onChange with selected value</li>
+        <li><strong>AggregationSelector</strong> - renders 4 options, calls onChange with selected function</li>
+        <li><strong>FieldSelector</strong> - renders label with required indicator, lays out children</li>
+        <li><strong>MultiFieldSelector</strong> - manages array add/update/remove, emits full updated array</li>
+        <li><strong>LineChartSettings</strong> - composes primitives correctly, updates full settings object</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem;">
+    <h4>2. Integration Tests</h4>
+    <div style="padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+      <ul style="margin: 0; line-height: 1.8; font-size: 13px;">
+        <li>ChartSettingsPanel routes to LineChartSettings for line-chart</li>
+        <li>ChartSettingsPanel falls back to DynamicChartSettings for other charts</li>
+        <li>Settings updates propagate correctly to chart spec generation</li>
+        <li>Temporal granularity shows/hides based on xInterval</li>
+        <li>Aggregation shows/hides in MultiFieldSelector based on prop</li>
+      </ul>
+    </div>
+  </div>
+
+  <div>
+    <h4>3. Manual Testing</h4>
+    <div style="padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+      <ul style="margin: 0; line-height: 1.8; font-size: 13px;">
+        <li>Run example app with line chart</li>
+        <li>Select X field, verify temporal selector appears for date/timestamp columns</li>
+        <li>Add multiple Y fields, verify aggregation selector appears when xInterval is set</li>
+        <li>Remove Y fields, verify array updates correctly</li>
+        <li>Change aggregation, verify chart updates</li>
+        <li>Test with other chart types to ensure no regressions</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Edge Cases to Handle</h3>
+
+  <div style="padding: 1.5rem; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+    <ul style="margin: 0; line-height: 2;">
+      <li><strong>Empty columns list</strong> - disable selectors, show message</li>
+      <li><strong>No matching columns for types</strong> - show "No columns available" message</li>
+      <li><strong>Remove last Y field</strong> - prevent removal, require at least one</li>
+      <li><strong>Selected column removed from schema</strong> - clear invalid selection, show warning</li>
+      <li><strong>Change X field from temporal to non-temporal</strong> - clear xInterval automatically</li>
+      <li><strong>Duplicate field selection</strong> - prevent adding same column twice in MultiFieldSelector</li>
+      <li><strong>Invalid settings object</strong> - validate with Zod schema, show error</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Verification Checklist</h3>
+
+  <div style="font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.8;">
+    <div>✅ All new components render without errors</div>
+    <div>✅ LineChartSettings composes components correctly</div>
+    <div>✅ ChartSettingsPanel routes to correct component</div>
+    <div>✅ Settings updates trigger chart re-render</div>
+    <div>✅ Generated Mosaic spec matches expected structure</div>
+    <div>✅ Temporal granularity conditional rendering works</div>
+    <div>✅ Aggregation conditional rendering works</div>
+    <div>✅ Multi-field add/update/remove works</div>
+    <div>✅ Type filtering in column selectors works</div>
+    <div>✅ Existing chart types still work with DynamicChartSettings</div>
+    <div>✅ No TypeScript errors</div>
+    <div>✅ No console warnings/errors</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Performance Considerations</h3>
+
+  <div style="padding: 1.5rem; background: #e8f4f8; border-radius: 8px; border-left: 4px solid #0288d1;">
+    <ul style="margin: 0; line-height: 2;">
+      <li><strong>Memoization</strong> - use <code>React.memo</code> on primitives to prevent unnecessary re-renders</li>
+      <li><strong>useCallback</strong> - wrap onChange handlers in LineChartSettings</li>
+      <li><strong>useMemo</strong> - memoize filtered columns lists</li>
+      <li><strong>Avoid inline objects</strong> - don't create new objects in render (causes re-renders)</li>
+      <li><strong>Key stability</strong> - use stable keys in MultiFieldSelector rows (field name, not index)</li>
+    </ul>
+  </div>
+</div>

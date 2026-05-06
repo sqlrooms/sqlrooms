@@ -4,7 +4,6 @@ import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
-import {DynamicChartSettings} from '../dashboard/chart-settings/DynamicChartSettings';
 import {toChartTypeDefinition} from './types';
 
 export interface ChartBuilderFieldsProps {
@@ -45,19 +44,10 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
 
   if (!chartTypeDefinition) return null;
 
-  if (chartTypeDefinition.fields.length === 0) {
-    return (
-      <p className={cn('text-muted-foreground py-2 text-sm', className)}>
-        This chart type has no configurable fields. A starter spec will be
-        created that you can edit manually.
-      </p>
-    );
-  }
-
+  const SettingsComponent = chartTypeDefinition.settingsComponent;
   return (
     <div className={cn('flex flex-col gap-4 py-2', className)}>
-      <DynamicChartSettings
-        chartTypeDefinition={chartTypeDefinition}
+      <SettingsComponent
         columns={columns}
         values={fieldValues}
         onChange={handleChange}

@@ -1,6 +1,9 @@
 // Re-export base types
 export * from './base-types';
 
+// Import specific types needed before re-exports
+import type {ChartTypeDefinition} from './base-types';
+
 // Re-export all schemas and types
 export * from './histogram';
 export * from './line-chart';
@@ -81,9 +84,9 @@ export const mosaicChartTypes = {
 
 export function createDefaultChartTypes(options?: {
   includeCustomSpec?: boolean;
-}) {
+}): ChartTypeDefinition<any>[] {
   const includeCustomSpec = options?.includeCustomSpec ?? true;
-  const chartTypes = [
+  const chartTypes: ChartTypeDefinition<any>[] = [
     histogramChartType,
     countPlotChartType,
     lineChartChartType,
@@ -94,7 +97,7 @@ export function createDefaultChartTypes(options?: {
   ];
 
   if (includeCustomSpec) {
-    chartTypes.push(customSpecChartType);
+    chartTypes.push(customSpecChartType as ChartTypeDefinition<any>);
   }
 
   return chartTypes;

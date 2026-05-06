@@ -1,8 +1,8 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
-import type {CountPlotChartSettings} from './schema';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {CountPlotChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {CountPlotSettingsComponent} from './CountPlotSettings';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
@@ -14,15 +14,8 @@ export const countPlotChartType: ChartTypeDefinition<CountPlotChartSettings> = {
   description: DESCRIPTION,
   aiDescription:
     'Use for a quick binned distribution of one numeric or temporal column.',
-  fields: [
-    {
-      key: 'field',
-      label: 'Field',
-      required: true,
-      types: [...QUANTITATIVE_COLUMN_TYPES],
-      description: 'Numeric or temporal column to bin along the x-axis.',
-    },
-  ],
+  schema: CountPlotChartSettings,
+  settingsComponent: CountPlotSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {field}): Spec =>
     ({

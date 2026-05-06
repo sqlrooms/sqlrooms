@@ -7,20 +7,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import type {TableColumn} from '@sqlrooms/duckdb';
-import {isChartTypeAvailable} from '../../chart-builders/chartTypeUtils';
 import {createChartBuilderTemplates} from '../../chart-builders/builders';
 import {VgPlotChartType, createDefaultChartTypes} from '../../chart-types';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {
   value: VgPlotChartType;
-  columns: TableColumn[];
   onChange: (chartType: VgPlotChartType) => void;
 }
 
 export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
-  ({value, columns, onChange}) => {
+  ({value, onChange}) => {
     const chartTypesFromStore = useStoreWithMosaicDashboard(
       (state) => state.mosaicDashboard.chartTypes,
     );
@@ -35,15 +32,9 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
       [chartTypes],
     );
 
-    const availableTemplates = useMemo(
-      () =>
-        templates.filter((template) => isChartTypeAvailable(template, columns)),
-      [columns, templates],
-    );
-
     const selectedTemplate = useMemo(
-      () => availableTemplates.find((template) => template.id === value),
-      [availableTemplates, value],
+      () => templates.find((template) => template.id === value),
+      [templates, value],
     );
 
     return (
@@ -61,7 +52,7 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
             )}
           </SelectTrigger>
           <SelectContent className="text-xs">
-            {availableTemplates.map((template) => (
+            {templates.map((template) => (
               <SelectItem key={template.id} value={template.id}>
                 <div className="flex items-center gap-2">
                   <template.icon className="h-3.5 w-3.5" />

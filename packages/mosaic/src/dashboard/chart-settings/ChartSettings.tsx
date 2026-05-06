@@ -15,7 +15,6 @@
  * ```
  */
 import {type FC, type PropsWithChildren, useCallback, useMemo} from 'react';
-import {DynamicChartSettings} from './DynamicChartSettings';
 import {ChartTypeSelector} from './ChartTypeSelector';
 import {
   ChartSettingsProvider,
@@ -23,7 +22,6 @@ import {
 } from './ChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/duckdb';
 import {type VgPlotChartConfig, type VgPlotChartType} from '../../chart-types';
-import {generateMosaicChartSpec} from '../generateMosaicChartSpec';
 import {getChartTypeDefinition} from '../../chart-types/registry';
 import {Button} from '@sqlrooms/ui';
 import {XIcon} from 'lucide-react';
@@ -87,12 +85,10 @@ const ChartSettingsTypeSelector: FC = () => {
   const {config, columns, onChange} = useChartSettingsContext();
 
   const handleChartTypeChange = (newChartType: VgPlotChartType) => {
-    // When changing chart type, clear settings and don't show chart
-    // until user selects all required fields
+    // When changing chart type, clear settings
     onChange({
       chartType: newChartType,
       settings: {},
-      vgplot: null,
       settingsOpen: config.settingsOpen,
     } as VgPlotChartConfig);
   };
@@ -100,7 +96,6 @@ const ChartSettingsTypeSelector: FC = () => {
   return (
     <ChartTypeSelector
       value={config.chartType}
-      columns={columns}
       onChange={handleChartTypeChange}
     />
   );
@@ -120,26 +115,12 @@ const ChartSettingsFields: FC = () => {
     (newSettings: Record<string, unknown>) => {
       if (!chartTypeDef) return;
 
-      // Check if all required fields are filled
-      const allRequiredFieldsFilled = chartTypeDef.fields
-        .filter((field) => field.required !== false)
-        .every((field) => {
-          const value = newSettings[field.key];
-          return value !== undefined && value !== null && value !== '';
-        });
-
-      // Generate spec
-      const vgplot = allRequiredFieldsFilled
-        ? generateMosaicChartSpec(tableName, config.chartType, newSettings)
-        : null;
-
       onChange({
         ...config,
         settings: newSettings,
-        vgplot,
       } as VgPlotChartConfig);
     },
-    [chartTypeDef, config, onChange, tableName],
+    [chartTypeDef, config, onChange],
   );
 
   if (!chartTypeDef) {
@@ -159,9 +140,9 @@ const ChartSettingsFields: FC = () => {
     );
   }
 
+  const SettingsComponent = chartTypeDef.settingsComponent;
   return (
-    <DynamicChartSettings
-      chartTypeDefinition={chartTypeDef}
+    <SettingsComponent
       columns={mappedColumns}
       values={config.settings}
       onChange={handleSettingsChange}

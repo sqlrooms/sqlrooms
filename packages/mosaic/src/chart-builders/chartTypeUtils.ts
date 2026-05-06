@@ -1,8 +1,4 @@
-import type {
-  ChartBuilderColumn,
-  ChartBuilderField,
-  ChartTypeDefinition,
-} from './types';
+import type {ChartTypeDefinition} from './types';
 
 export {
   NUMERIC_COLUMN_TYPES,
@@ -57,45 +53,6 @@ export function titleFromDescription(description: string) {
     buildDefaultChartTitle(description, fieldValues);
 }
 
-export function columnMatchesFieldTypes(
-  column: ChartBuilderColumn,
-  field: Pick<ChartBuilderField, 'types'>,
-): boolean {
-  if (!field.types?.length) return true;
-  return field.types.some(
-    (type) => column.type.toUpperCase() === type.toUpperCase(),
-  );
-}
-
-export function getCompatibleColumns(
-  columns: ChartBuilderColumn[],
-  field: Pick<ChartBuilderField, 'types'>,
-): ChartBuilderColumn[] {
-  return columns.filter((column) => columnMatchesFieldTypes(column, field));
-}
-
-export function isChartTypeAvailable(
-  chartType: ChartTypeDefinition,
-  columns: ChartBuilderColumn[],
-): boolean {
-  if (chartType.isAvailable) {
-    return chartType.isAvailable(columns);
-  }
-
-  return chartType.fields
-    .filter((field) => field.required !== false)
-    .every((field) => getCompatibleColumns(columns, field).length > 0);
-}
-
-export function getAvailableChartTypes(
-  chartTypes: ChartTypeDefinition[],
-  columns: ChartBuilderColumn[],
-): ChartTypeDefinition[] {
-  return chartTypes.filter((chartType) =>
-    isChartTypeAvailable(chartType, columns),
-  );
-}
-
 export function buildChartTypeTitle(
   chartType: Pick<ChartTypeDefinition, 'description' | 'buildTitle'>,
   fieldValues: Record<string, unknown>,
@@ -106,25 +63,8 @@ export function buildChartTypeTitle(
 }
 
 export function canCreateChartFromType(
-  chartType: ChartTypeDefinition | null | undefined,
+  chartTypeDefinition: ChartTypeDefinition | null | undefined,
   fieldValues: Record<string, unknown>,
-  columns: ChartBuilderColumn[],
 ): boolean {
-  if (!chartType) return false;
-
-  return chartType.fields
-    .filter((field) => field.required !== false)
-    .every((field) => {
-      const value = fieldValues[field.key];
-      if (!value) return false;
-
-      // Handle multiple fields (arrays)
-      if (field.multiple) {
-        return Array.isArray(value) && value.length > 0;
-      }
-
-      // Handle single fields
-      const column = columns.find((candidate) => candidate.name === value);
-      return Boolean(column && columnMatchesFieldTypes(column, field));
-    });
+  return chartTypeDefinition?.schema.safeParse(fieldValues)?.success ?? false;
 }

@@ -1,0 +1,279 @@
+<h2>LineChartSettings: Full Example</h2>
+<p class="subtitle">Complete implementation with explicit component composition</p>
+
+<div class="section">
+  <h3>Schema (existing)</h3>
+  <div style="font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+    <div style="color: #888;">// packages/mosaic/src/chart-types/line-chart/schema.ts</div>
+    <div style="color: #c678dd;">export</div> <div style="color: #c678dd;">type</div> <span style="color: #e5c07b;">LineChartSettings</span> = {</div>
+    <div style="padding-left: 1rem;">
+      x?: <span style="color: #e5c07b;">string</span>;<br/>
+      xInterval?: <span style="color: #e5c07b;">TemporalInterval</span>;<br/>
+      yFields: <span style="color: #e5c07b;">YFieldConfig</span>[]; <span style="color: #888;">// { field, aggregate?, color? }[]</span>
+    </div>
+    <div>}</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Option A: Direct Props (Simple)</h3>
+  <div style="font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+    <div style="color: #888;">// packages/mosaic/src/chart-types/line-chart/LineChartSettings.tsx</div>
+    <br/>
+    <div><span style="color: #c678dd;">interface</span> <span style="color: #e5c07b;">LineChartSettingsProps</span> {</div>
+    <div style="padding-left: 1rem;">
+      columns: <span style="color: #e5c07b;">ChartBuilderColumn</span>[];<br/>
+      values: <span style="color: #e5c07b;">LineChartSettings</span>;<br/>
+      onChange: (values: <span style="color: #e5c07b;">LineChartSettings</span>) => <span style="color: #e5c07b;">void</span>;
+    </div>
+    <div>}</div>
+    <br/>
+    <div><span style="color: #c678dd;">export</span> <span style="color: #c678dd;">function</span> <span style="color: #61afef;">LineChartSettings</span>({</div>
+    <div style="padding-left: 1rem;">
+      columns,<br/>
+      values,<br/>
+      onChange
+    </div>
+    <div>}: <span style="color: #e5c07b;">LineChartSettingsProps</span>) {</div>
+    <div style="padding-left: 1rem;">
+      <span style="color: #888;">// Helper to update a single field</span><br/>
+      <span style="color: #c678dd;">const</span> updateField = <span style="color: #c678dd;">useCallback</span>(<br/>
+      <div style="padding-left: 1rem;">
+        (key: <span style="color: #e5c07b;">keyof LineChartSettings</span>, value: <span style="color: #e5c07b;">any</span>) => {<br/>
+        <div style="padding-left: 1rem;">
+          onChange({...values, [key]: value});<br/>
+        </div>
+        },<br/>
+        [values, onChange]
+      </div>
+      );<br/>
+      <br/>
+      <span style="color: #c678dd;">return</span> (<br/>
+      <div style="padding-left: 1rem;">
+        &lt;<span style="color: #e5c07b;">div</span> className=<span style="color: #98c379;">"space-y-4"</span>&gt;<br/>
+        <div style="padding-left: 1rem;">
+          <span style="color: #888;">{/* X Axis with optional temporal granularity */}</span><br/>
+          &lt;<span style="color: #61afef;">FieldSelector</span><br/>
+          <div style="padding-left: 1rem;">
+            label=<span style="color: #98c379;">"X Axis"</span><br/>
+            required<br/>
+          &gt;<br/>
+          <div style="padding-left: 1rem;">
+            &lt;<span style="color: #61afef;">ColumnSelector</span><br/>
+            <div style="padding-left: 1rem;">
+              columns={columns}<br/>
+              types={[<span style="color: #98c379;">'DATE'</span>, <span style="color: #98c379;">'TIMESTAMP'</span>, <span style="color: #98c379;">'INTEGER'</span>, <span style="color: #98c379;">'DOUBLE'</span>]}<br/>
+              value={values.x}<br/>
+              onChange={(x) => updateField(<span style="color: #98c379;">'x'</span>, x)}<br/>
+            </div>
+            /&gt;<br/>
+            {values.x && &lt;<span style="color: #61afef;">TemporalGranularitySelector</span><br/>
+            <div style="padding-left: 1rem;">
+              value={values.xInterval}<br/>
+              onChange={(xInterval) => updateField(<span style="color: #98c379;">'xInterval'</span>, xInterval)}<br/>
+            </div>
+            /&gt;}
+          </div>
+          &lt;/<span style="color: #61afef;">FieldSelector</span>&gt;<br/>
+          <br/>
+          <span style="color: #888;">{/* Y Axis with multiple fields */}</span><br/>
+          &lt;<span style="color: #61afef;">MultiFieldSelector</span><br/>
+          <div style="padding-left: 1rem;">
+            label=<span style="color: #98c379;">"Y Axes"</span><br/>
+            required<br/>
+          &gt;<br/>
+          <div style="padding-left: 1rem;">
+            {values.yFields.map((field, index) => (<br/>
+            <div style="padding-left: 1rem;">
+              &lt;<span style="color: #61afef;">MultiFieldSelector.Row</span> key={field.field}&gt;<br/>
+              <div style="padding-left: 1rem;">
+                &lt;<span style="color: #61afef;">ColumnSelector</span><br/>
+                <div style="padding-left: 1rem;">
+                  columns={columns}<br/>
+                  types={[<span style="color: #98c379;">'INTEGER'</span>, <span style="color: #98c379;">'DOUBLE'</span>, <span style="color: #98c379;">'BIGINT'</span>]}<br/>
+                  value={field.field}<br/>
+                  onChange={(newField) => {<br/>
+                  <div style="padding-left: 1rem;">
+                    <span style="color: #c678dd;">const</span> updated = [...values.yFields];<br/>
+                    updated[index] = {...field, field: newField};<br/>
+                    updateField(<span style="color: #98c379;">'yFields'</span>, updated);<br/>
+                  </div>
+                  }}<br/>
+                </div>
+                /&gt;<br/>
+                {values.xInterval && &lt;<span style="color: #61afef;">AggregationSelector</span><br/>
+                <div style="padding-left: 1rem;">
+                  value={field.aggregate || <span style="color: #98c379;">'sum'</span>}<br/>
+                  onChange={(agg) => {<br/>
+                  <div style="padding-left: 1rem;">
+                    <span style="color: #c678dd;">const</span> updated = [...values.yFields];<br/>
+                    updated[index] = {...field, aggregate: agg};<br/>
+                    updateField(<span style="color: #98c379;">'yFields'</span>, updated);<br/>
+                  </div>
+                  }}<br/>
+                </div>
+                /&gt;}<br/>
+                &lt;<span style="color: #61afef;">DeleteButton</span><br/>
+                <div style="padding-left: 1rem;">
+                  onClick={() => {<br/>
+                  <div style="padding-left: 1rem;">
+                    updateField(<span style="color: #98c379;">'yFields'</span>, values.yFields.filter((_, i) => i !== index));<br/>
+                  </div>
+                  }}<br/>
+                </div>
+                /&gt;
+              </div>
+              &lt;/<span style="color: #61afef;">MultiFieldSelector.Row</span>&gt;
+            </div>
+            ))}<br/>
+            &lt;<span style="color: #61afef;">MultiFieldSelector.AddRow</span><br/>
+            <div style="padding-left: 1rem;">
+              columns={columns}<br/>
+              types={[<span style="color: #98c379;">'INTEGER'</span>, <span style="color: #98c379;">'DOUBLE'</span>, <span style="color: #98c379;">'BIGINT'</span>]}<br/>
+              onAdd={(field) => {<br/>
+              <div style="padding-left: 1rem;">
+                updateField(<span style="color: #98c379;">'yFields'</span>, [...values.yFields, {field, aggregate: <span style="color: #98c379;">'sum'</span>}]);<br/>
+              </div>
+              }}<br/>
+            </div>
+            /&gt;
+          </div>
+          &lt;/<span style="color: #61afef;">MultiFieldSelector</span>&gt;
+        </div>
+        &lt;/<span style="color: #e5c07b;">div</span>&gt;
+      </div>
+      );<br/>
+    </div>
+    <div>}</div>
+  </div>
+
+  <div class="pros-cons" style="margin-top: 1rem;">
+    <div class="pros">
+      <h4>Pros</h4>
+      <ul>
+        <li>Explicit data flow - easy to understand</li>
+        <li>Full control over composition</li>
+        <li>No magic context</li>
+        <li>Chart-specific logic clear</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Cons</h4>
+      <ul>
+        <li>Verbose onChange handlers for arrays</li>
+        <li>Repetitive updateField calls</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Option B: Compound Component with Context</h3>
+  <div style="font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+    <div style="color: #888;">// packages/mosaic/src/chart-types/line-chart/LineChartSettings.tsx</div>
+    <br/>
+    <div><span style="color: #c678dd;">export</span> <span style="color: #c678dd;">function</span> <span style="color: #61afef;">LineChartSettings</span>({</div>
+    <div style="padding-left: 1rem;">
+      columns,<br/>
+      values,<br/>
+      onChange
+    </div>
+    <div>}: <span style="color: #e5c07b;">LineChartSettingsProps</span>) {</div>
+    <div style="padding-left: 1rem;">
+      <span style="color: #c678dd;">return</span> (<br/>
+      <div style="padding-left: 1rem;">
+        &lt;<span style="color: #61afef;">ChartSettingsProvider</span> value={{columns, values, onChange}}&gt;<br/>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #e5c07b;">div</span> className=<span style="color: #98c379;">"space-y-4"</span>&gt;<br/>
+          <div style="padding-left: 1rem;">
+            &lt;<span style="color: #61afef;">LineChartSettings.XAxis</span> /&gt;<br/>
+            &lt;<span style="color: #61afef;">LineChartSettings.YAxis</span> /&gt;<br/>
+          </div>
+          &lt;/<span style="color: #e5c07b;">div</span>&gt;
+        </div>
+        &lt;/<span style="color: #61afef;">ChartSettingsProvider</span>&gt;
+      </div>
+      );<br/>
+    </div>
+    <div>}</div>
+    <br/>
+    <div style="color: #888;">// Internal subcomponents</div>
+    <div><span style="color: #e5c07b;">LineChartSettings</span>.XAxis = <span style="color: #c678dd;">function</span> <span style="color: #61afef;">XAxis</span>() {</div>
+    <div style="padding-left: 1rem;">
+      <span style="color: #c678dd;">const</span> {columns, values, updateField} = <span style="color: #61afef;">useChartSettings</span>&lt;<span style="color: #e5c07b;">LineChartSettings</span>&gt;();<br/>
+      <br/>
+      <span style="color: #c678dd;">return</span> (<br/>
+      <div style="padding-left: 1rem;">
+        &lt;<span style="color: #61afef;">FieldSelector</span> label=<span style="color: #98c379;">"X Axis"</span> required&gt;<br/>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #61afef;">ColumnSelector</span><br/>
+          <div style="padding-left: 1rem;">
+            columns={columns}<br/>
+            types={[<span style="color: #98c379;">'DATE'</span>, <span style="color: #98c379;">'TIMESTAMP'</span>, <span style="color: #98c379;">'INTEGER'</span>, <span style="color: #98c379;">'DOUBLE'</span>]}<br/>
+            value={values.x}<br/>
+            onChange={(x) => updateField(<span style="color: #98c379;">'x'</span>, x)}<br/>
+          </div>
+          /&gt;<br/>
+          {values.x && &lt;<span style="color: #61afef;">TemporalGranularitySelector</span><br/>
+          <div style="padding-left: 1rem;">
+            value={values.xInterval}<br/>
+            onChange={(xInterval) => updateField(<span style="color: #98c379;">'xInterval'</span>, xInterval)}<br/>
+          </div>
+          /&gt;}
+        </div>
+        &lt;/<span style="color: #61afef;">FieldSelector</span>&gt;
+      </div>
+      );<br/>
+    </div>
+    <div>}</div>
+    <br/>
+    <div><span style="color: #e5c07b;">LineChartSettings</span>.YAxis = <span style="color: #c678dd;">function</span> <span style="color: #61afef;">YAxis</span>() {</div>
+    <div style="padding-left: 1rem;">
+      <span style="color: #c678dd;">const</span> {columns, values, updateField} = <span style="color: #61afef;">useChartSettings</span>&lt;<span style="color: #e5c07b;">LineChartSettings</span>&gt;();<br/>
+      <br/>
+      <span style="color: #c678dd;">return</span> (<br/>
+      <div style="padding-left: 1rem;">
+        &lt;<span style="color: #61afef;">MultiFieldSelector</span> label=<span style="color: #98c379;">"Y Axes"</span> required&gt;<br/>
+        <div style="padding-left: 1rem;">
+          {values.yFields.map((field, index) => (<br/>
+          <div style="padding-left: 1rem;">
+            <span style="color: #888;">// Same as Option A but updateField from context</span>
+          </div>
+          ))}
+        </div>
+        &lt;/<span style="color: #61afef;">MultiFieldSelector</span>&gt;
+      </div>
+      );<br/>
+    </div>
+    <div>}</div>
+  </div>
+
+  <div class="pros-cons" style="margin-top: 1rem;">
+    <div class="pros">
+      <h4>Pros</h4>
+      <ul>
+        <li>Cleaner component organization</li>
+        <li>No prop drilling</li>
+        <li>Easy to split into files</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Cons</h4>
+      <ul>
+        <li>Context setup overhead</li>
+        <li>Less explicit data flow</li>
+        <li>Still verbose array updates</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1.5rem; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+  <h3 style="margin-top: 0;">Key Decision: MultiFieldSelector State Management</h3>
+  <p>The trickiest part is managing the <code>yFields</code> array. Each row needs to update its own field/aggregate/color without recreating the array on every render.</p>
+  <p style="margin-top: 1rem;"><strong>Should MultiFieldSelector own the array state internally?</strong></p>
+  <ul style="line-height: 1.8;">
+    <li><strong>Yes:</strong> Simpler API - pass <code>value</code> and <code>onChange</code> for the whole array</li>
+    <li><strong>No:</strong> Parent component explicitly manages each field update</li>
+  </ul>
+</div>

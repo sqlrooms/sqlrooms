@@ -1,0 +1,154 @@
+<h2>FieldSelector Component Pattern</h2>
+<p class="subtitle">How should the single FieldSelector work?</p>
+
+<div class="section" style="margin-bottom: 2rem;">
+  <p>We confirmed <code>MultiFieldSelector</code> will be self-contained (Option A). Now let's clarify <code>FieldSelector</code> for single fields like X-axis.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Simple Wrapper (Just Layout)</h3>
+      <p style="margin-bottom: 1rem;">FieldSelector is just a layout container with label. Child components handle their own onChange.</p>
+
+      <div style="font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+        <div style="color: #888;">// Usage</div>
+        <div>&lt;<span style="color: #61afef;">FieldSelector</span> label=<span style="color: #98c379;">"X Axis"</span> required&gt;</div>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #61afef;">ColumnSelector</span><br/>
+          <div style="padding-left: 1rem;">
+            columns={columns}<br/>
+            types={[<span style="color: #98c379;">'DATE'</span>, <span style="color: #98c379;">'TIMESTAMP'</span>]}<br/>
+            value={values.x}<br/>
+            onChange={(x) => updateField(<span style="color: #98c379;">'x'</span>, x)}<br/>
+          </div>
+          /&gt;<br/>
+          {values.x && &lt;<span style="color: #61afef;">TemporalGranularitySelector</span><br/>
+          <div style="padding-left: 1rem;">
+            value={values.xInterval}<br/>
+            onChange={(interval) => updateField(<span style="color: #98c379;">'xInterval'</span>, interval)}<br/>
+          </div>
+          /&gt;}
+        </div>
+        &lt;/<span style="color: #61afef;">FieldSelector</span>&gt;
+      </div>
+
+      <div style="margin-top: 1.5rem; padding: 1rem; background: #2d2d2d; border-radius: 6px;">
+        <div style="font-size: 11px; color: #888; margin-bottom: 0.5rem;">// Implementation</div>
+        <div style="font-family: monospace; font-size: 11px; line-height: 1.7;">
+          <span style="color: #c678dd;">function</span> <span style="color: #61afef;">FieldSelector</span>({label, required, children}) {<br/>
+          <div style="padding-left: 1rem;">
+            <span style="color: #c678dd;">return</span> (<br/>
+            <div style="padding-left: 1rem;">
+              &lt;<span style="color: #e5c07b;">div</span> className=<span style="color: #98c379;">"space-y-1"</span>&gt;<br/>
+              <div style="padding-left: 1rem;">
+                &lt;<span style="color: #e5c07b;">label</span>&gt;{label} {required && <span style="color: #98c379;">'*'</span>}&lt;/<span style="color: #e5c07b;">label</span>&gt;<br/>
+                &lt;<span style="color: #e5c07b;">div</span> className=<span style="color: #98c379;">"grid gap-2"</span>&gt;{children}&lt;/<span style="color: #e5c07b;">div</span>&gt;
+              </div>
+              &lt;/<span style="color: #e5c07b;">div</span>&gt;
+            </div>
+            );<br/>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="pros-cons" style="margin-top: 1rem; font-size: 13px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Simple and composable</li>
+            <li>Parent controls all state</li>
+            <li>Maximum flexibility</li>
+            <li>Clear data flow</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Parent handles each onChange</li>
+            <li>More wiring in chart settings</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Smart Container (Manages Multiple Fields)</h3>
+      <p style="margin-bottom: 1rem;">FieldSelector coordinates multiple related fields (e.g., x + xInterval) and returns them together.</p>
+
+      <div style="font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+        <div style="color: #888;">// Usage</div>
+        <div>&lt;<span style="color: #61afef;">FieldSelector</span></div>
+        <div style="padding-left: 1rem;">
+          label=<span style="color: #98c379;">"X Axis"</span><br/>
+          required<br/>
+          columns={columns}<br/>
+          types={[<span style="color: #98c379;">'DATE'</span>, <span style="color: #98c379;">'TIMESTAMP'</span>]}<br/>
+          value={{x: values.x, xInterval: values.xInterval}}<br/>
+          onChange={(fields) => onChange({...values, ...fields})}<br/>
+          showTemporal<br/>
+        /&gt;
+      </div>
+
+      <div style="margin-top: 1.5rem; padding: 1rem; background: #2d2d2d; border-radius: 6px;">
+        <div style="font-size: 11px; color: #888; margin-bottom: 0.5rem;">// Implementation (simplified)</div>
+        <div style="font-family: monospace; font-size: 11px; line-height: 1.7;">
+          <span style="color: #c678dd;">function</span> <span style="color: #61afef;">FieldSelector</span>({value, onChange, showTemporal, ...}) {<br/>
+          <div style="padding-left: 1rem;">
+            <span style="color: #c678dd;">return</span> (<br/>
+            <div style="padding-left: 1rem;">
+              &lt;&gt;<br/>
+              <div style="padding-left: 1rem;">
+                &lt;<span style="color: #61afef;">ColumnSelector</span><br/>
+                <div style="padding-left: 1rem;">
+                  value={value.x}<br/>
+                  onChange={(x) => onChange({...value, x})}<br/>
+                </div>
+                /&gt;<br/>
+                {showTemporal && value.x && &lt;<span style="color: #61afef;">TemporalGranularitySelector</span><br/>
+                <div style="padding-left: 1rem;">
+                  value={value.xInterval}<br/>
+                  onChange={(xInterval) => onChange({...value, xInterval})}<br/>
+                </div>
+                /&gt;}
+              </div>
+              &lt;/&gt;
+            </div>
+            );<br/>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="pros-cons" style="margin-top: 1rem; font-size: 13px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Encapsulates related fields</li>
+            <li>Less wiring in parent</li>
+            <li>Consistent with MultiFieldSelector</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Less flexible</li>
+            <li>Hard-coded field relationships</li>
+            <li>Not reusable for simple cases</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+  <h3 style="margin-top: 0;">Current Code Context</h3>
+  <p>Your existing <code>SingleFieldSelector</code> is like Option B - it manages both the column selector and temporal granularity selector together.</p>
+  <p style="margin-top: 1rem;">Should the new architecture keep that pattern, or break it into simpler pieces?</p>
+</div>

@@ -1,0 +1,189 @@
+<h2>File Structure & Implementation Details</h2>
+<p class="subtitle">Where each component lives and what it does</p>
+
+<div class="section">
+  <h3>New Files to Create</h3>
+  <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+    packages/mosaic/src/<br/>
+    <div style="padding-left: 1rem;">
+      <span style="color: #888;">// New primitives</span><br/>
+      chart-builders/<br/>
+      <div style="padding-left: 1rem;">
+        <span style="color: #98c379;">ColumnSelector.tsx</span> <span style="color: #888;">&larr; wraps FieldSelectorInput</span><br/>
+        <span style="color: #98c379;">AggregationSelector.tsx</span> <span style="color: #888;">&larr; SUM/AVG/MIN/MAX dropdown</span><br/>
+        <span style="color: #98c379;">FieldSelector.tsx</span> <span style="color: #888;">&larr; layout wrapper</span><br/>
+        <span style="color: #98c379;">MultiFieldSelector/</span><br/>
+        <div style="padding-left: 1rem;">
+          <span style="color: #98c379;">MultiFieldSelector.tsx</span> <span style="color: #888;">&larr; enhanced version</span><br/>
+          <span style="color: #98c379;">types.ts</span> <span style="color: #888;">&larr; shared types</span>
+        </div>
+        <br/>
+        <span style="color: #666;">// Existing (keep as-is)</span><br/>
+        FieldSelectorInput.tsx<br/>
+        TemporalGranularitySelector.tsx<br/>
+        SingleFieldSelector.tsx<br/>
+      </div>
+      <br/>
+      <span style="color: #888;">// Chart-specific settings</span><br/>
+      chart-types/<br/>
+      <div style="padding-left: 1rem;">
+        line-chart/<br/>
+        <div style="padding-left: 1rem;">
+          definition.ts<br/>
+          schema.ts<br/>
+          <span style="color: #98c379;">LineChartSettings.tsx</span> <span style="color: #888;">&larr; NEW</span><br/>
+          <span style="color: #98c379;">index.ts</span> <span style="color: #888;">&larr; export LineChartSettings</span>
+        </div>
+      </div>
+      <br/>
+      <span style="color: #888;">// Integration point</span><br/>
+      dashboard/chart-settings/<br/>
+      <div style="padding-left: 1rem;">
+        ChartSettingsPanel.tsx <span style="color: #888;">&larr; update to check for explicit settings</span><br/>
+        DynamicChartSettings.tsx <span style="color: #888;">&larr; keep as fallback</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Component Implementations</h3>
+
+  <div style="margin-bottom: 1.5rem;">
+    <h4>1. ColumnSelector (simple wrapper)</h4>
+    <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 6px; line-height: 1.7;">
+      <span style="color: #c678dd;">interface</span> <span style="color: #e5c07b;">ColumnSelectorProps</span> {<br/>
+      <div style="padding-left: 1rem;">
+        columns: <span style="color: #e5c07b;">ChartBuilderColumn</span>[];<br/>
+        types?: <span style="color: #e5c07b;">string</span>[]; <span style="color: #888;">// filter by DuckDB types</span><br/>
+        value: <span style="color: #e5c07b;">string</span> | <span style="color: #e5c07b;">undefined</span>;<br/>
+        onChange: (value: <span style="color: #e5c07b;">string</span>) => <span style="color: #e5c07b;">void</span>;<br/>
+        placeholder?: <span style="color: #e5c07b;">string</span>;<br/>
+      </div>
+      }<br/>
+      <br/>
+      <span style="color: #888;">// Just wraps FieldSelectorInput, removes field prop</span><br/>
+      <span style="color: #c678dd;">export</span> <span style="color: #c678dd;">function</span> <span style="color: #61afef;">ColumnSelector</span>(props) {<br/>
+      <div style="padding-left: 1rem;">
+        <span style="color: #c678dd;">return</span> &lt;<span style="color: #61afef;">FieldSelectorInput</span> field={{key: <span style="color: #98c379;">''</span>, label: <span style="color: #98c379;">''</span>, types: props.types}} {...props} /&gt;;<br/>
+      </div>
+      }
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem;">
+    <h4>2. AggregationSelector (new)</h4>
+    <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 6px; line-height: 1.7;">
+      <span style="color: #c678dd;">interface</span> <span style="color: #e5c07b;">AggregationSelectorProps</span> {<br/>
+      <div style="padding-left: 1rem;">
+        value: <span style="color: #e5c07b;">AggregateFunction</span>; <span style="color: #888;">// 'sum' | 'avg' | 'min' | 'max'</span><br/>
+        onChange: (value: <span style="color: #e5c07b;">AggregateFunction</span>) => <span style="color: #e5c07b;">void</span>;<br/>
+      </div>
+      }<br/>
+      <br/>
+      <span style="color: #888;">// Simple Select dropdown with 4 options</span><br/>
+      <span style="color: #888;">// Uses @sqlrooms/ui Select component</span>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem;">
+    <h4>3. FieldSelector (layout wrapper)</h4>
+    <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 6px; line-height: 1.7;">
+      <span style="color: #c678dd;">interface</span> <span style="color: #e5c07b;">FieldSelectorProps</span> {<br/>
+      <div style="padding-left: 1rem;">
+        label: <span style="color: #e5c07b;">string</span>;<br/>
+        required?: <span style="color: #e5c07b;">boolean</span>;<br/>
+        children: <span style="color: #e5c07b;">React.ReactNode</span>;<br/>
+      </div>
+      }<br/>
+      <br/>
+      <span style="color: #888;">// Renders label + grid container for horizontal layout</span><br/>
+      <span style="color: #888;">// Children positioned via CSS grid</span>
+    </div>
+  </div>
+
+  <div>
+    <h4>4. MultiFieldSelector (enhanced)</h4>
+    <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1rem; border-radius: 6px; line-height: 1.7;">
+      <span style="color: #c678dd;">interface</span> <span style="color: #e5c07b;">MultiFieldSelectorProps</span> {<br/>
+      <div style="padding-left: 1rem;">
+        label: <span style="color: #e5c07b;">string</span>;<br/>
+        required?: <span style="color: #e5c07b;">boolean</span>;<br/>
+        columns: <span style="color: #e5c07b;">ChartBuilderColumn</span>[];<br/>
+        types?: <span style="color: #e5c07b;">string</span>[];<br/>
+        value: <span style="color: #e5c07b;">YFieldConfig</span>[]; <span style="color: #888;">// {field, aggregate?, color?}[]</span><br/>
+        onChange: (value: <span style="color: #e5c07b;">YFieldConfig</span>[]) => <span style="color: #e5c07b;">void</span>;<br/>
+        showAggregation?: <span style="color: #e5c07b;">boolean</span>;<br/>
+      </div>
+      }<br/>
+      <br/>
+      <span style="color: #888;">// Internally manages:</span><br/>
+      <span style="color: #888;">// - handleUpdate(index, updates) - merge updates into array[index]</span><br/>
+      <span style="color: #888;">// - handleRemove(index) - filter out array[index]</span><br/>
+      <span style="color: #888;">// - handleAdd(field) - append new field config</span><br/>
+      <span style="color: #888;">// Renders rows + add row UI</span>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Integration in ChartSettingsPanel</h3>
+  <div style="font-family: monospace; font-size: 11px; background: #1e1e1e; padding: 1.5rem; border-radius: 8px; line-height: 1.7;">
+    <span style="color: #888;">// packages/mosaic/src/dashboard/chart-settings/ChartSettingsPanel.tsx</span><br/>
+    <br/>
+    <span style="color: #c678dd;">import</span> {LineChartSettings} <span style="color: #c678dd;">from</span> <span style="color: #98c379;">'../../chart-types/line-chart'</span>;<br/>
+    <br/>
+    <span style="color: #c678dd;">function</span> <span style="color: #61afef;">ChartSettingsPanel</span>({chartConfig, onChange, ...}) {<br/>
+    <div style="padding-left: 1rem;">
+      <span style="color: #888;">// Check if chart type has explicit settings component</span><br/>
+      <span style="color: #c678dd;">const</span> renderSettings = () => {<br/>
+      <div style="padding-left: 1rem;">
+        <span style="color: #c678dd;">if</span> (chartConfig.chartType === <span style="color: #98c379;">'line-chart'</span>) {<br/>
+        <div style="padding-left: 1rem;">
+          <span style="color: #c678dd;">return</span> (<br/>
+          <div style="padding-left: 1rem;">
+            &lt;<span style="color: #61afef;">LineChartSettings</span><br/>
+            <div style="padding-left: 1rem;">
+              columns={columns}<br/>
+              values={chartConfig.settings}<br/>
+              onChange={(settings) => onChange({...chartConfig, settings})}<br/>
+            </div>
+            /&gt;<br/>
+          </div>
+          );<br/>
+        </div>
+        }<br/>
+        <br/>
+        <span style="color: #888;">// Fallback to DynamicChartSettings for other chart types</span><br/>
+        <span style="color: #c678dd;">return</span> (<br/>
+        <div style="padding-left: 1rem;">
+          &lt;<span style="color: #61afef;">DynamicChartSettings</span><br/>
+          <div style="padding-left: 1rem;">
+            chartTypeDefinition={getChartTypeDefinition(chartConfig.chartType)}<br/>
+            columns={columns}<br/>
+            values={chartConfig.settings}<br/>
+            onChange={(settings) => onChange({...chartConfig, settings})}<br/>
+          </div>
+          /&gt;<br/>
+        </div>
+        );<br/>
+      </div>
+      };<br/>
+      <br/>
+      <span style="color: #c678dd;">return</span> <span style="color: #888;">/* ... render settings ... */</span>;<br/>
+    </div>
+    }
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1.5rem; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+  <h3 style="margin-top: 0;">Migration Strategy</h3>
+  <ul style="margin: 0; line-height: 1.8;">
+    <li>Create all new components in <code>chart-builders/</code></li>
+    <li>Create <code>LineChartSettings.tsx</code> using new components</li>
+    <li>Update <code>ChartSettingsPanel</code> to check for explicit settings</li>
+    <li>Test thoroughly with line-chart</li>
+    <li>Once proven, migrate other chart types one by one</li>
+    <li>Eventually remove <code>DynamicChartSettings</code> when all charts migrated</li>
+  </ul>
+</div>

@@ -1,7 +1,8 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
-import type {CustomSpecChartSettings} from './schema';
+import {CustomSpecChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {CustomSpecSettingsComponent} from './CustomSpecSettings';
 
 const DESCRIPTION = 'Create a chart with custom spec';
 
@@ -12,7 +13,8 @@ export const customSpecChartType: ChartTypeDefinition<CustomSpecChartSettings> =
     description: DESCRIPTION,
     aiDescription:
       'Manual template for editing after creation. Prefer explicit chart templates for assistant-created charts.',
-    fields: [],
+    schema: CustomSpecChartSettings,
+    settingsComponent: CustomSpecSettingsComponent,
     buildTitle: titleFromDescription(DESCRIPTION),
     createSpec: (tableName): Spec =>
       ({

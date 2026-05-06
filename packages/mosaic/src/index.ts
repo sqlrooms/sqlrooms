@@ -244,18 +244,10 @@ export type {
 export {
   buildChartTypeTitle,
   canCreateChartFromType,
-  columnMatchesFieldTypes,
-  getAvailableChartTypes,
-  getCompatibleColumns,
-  isChartTypeAvailable,
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from './chart-builders/chartTypeUtils';
-export {
-  describeChartSpecs,
-  describeChartTypes,
-} from './chart-builders/describeChartSpecs';
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
 export {toChartSpec, toChartTypeDefinition} from './chart-builders/types';
 export type {

@@ -1,8 +1,8 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
-import type {HeatmapChartSettings} from './schema';
-import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
+import {HeatmapChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {HeatmapSettingsComponent} from './HeatmapSettings';
 
 const DESCRIPTION = 'Create a 2D heatmap of two fields';
 
@@ -12,22 +12,8 @@ export const heatmapChartType: ChartTypeDefinition<HeatmapChartSettings> = {
   description: DESCRIPTION,
   aiDescription:
     'Use for dense relationships between two numeric columns where point overlap would be high.',
-  fields: [
-    {
-      key: 'x',
-      label: 'X Field',
-      required: true,
-      types: [...NUMERIC_COLUMN_TYPES],
-      description: 'Numeric column used on the x-axis.',
-    },
-    {
-      key: 'y',
-      label: 'Y Field',
-      required: true,
-      types: [...NUMERIC_COLUMN_TYPES],
-      description: 'Numeric column used on the y-axis.',
-    },
-  ],
+  schema: HeatmapChartSettings,
+  settingsComponent: HeatmapSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, y}): Spec =>
     ({

@@ -5,18 +5,13 @@ import type {
   ChartBuilderStore,
   ChartBuilderStoreState,
 } from './createChartBuilderStore';
-import type {
-  ChartBuilderColumn,
-  ChartBuilderTemplate,
-  ChartTypeDefinition,
-} from './types';
+import type {ChartBuilderColumn, ChartBuilderTemplate} from './types';
 
 export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
   templates: ChartBuilderTemplate[];
-  availableChartTypes: ChartTypeDefinition[];
   availableTemplates: ChartBuilderTemplate[];
   store: ChartBuilderStore;
 };

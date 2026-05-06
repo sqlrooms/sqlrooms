@@ -4,6 +4,8 @@
  */
 
 import type {Spec} from '@uwdata/mosaic-spec';
+import type {FC} from 'react';
+import type * as z from 'zod';
 
 /**
  * Supported chart type identifiers
@@ -45,6 +47,15 @@ export interface ChartBuilderField {
 }
 
 /**
+ * Props for chart settings components
+ */
+export interface ChartSettingsComponentProps<TSettings = any> {
+  columns: ChartBuilderColumn[];
+  values: TSettings;
+  onChange: (values: TSettings) => void;
+}
+
+/**
  * Shared chart-type definition used by both the chart-builder UI and
  * assistant-driven chart creation.
  */
@@ -55,8 +66,8 @@ export interface ChartTypeDefinition<TSettings = any> {
   label?: string;
   /** Short description of what this builder creates */
   description: string;
-  /** Field selectors the user must fill in */
-  fields: ChartBuilderField[];
+  /** Zod schema for runtime validation of settings */
+  schema: z.ZodType<TSettings>;
   /** Generate a Mosaic spec from table name and selected field values */
   createSpec: (tableName: string, values: TSettings) => Spec;
   /** Generate a chart title from selected field values */
@@ -65,4 +76,6 @@ export interface ChartTypeDefinition<TSettings = any> {
   isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
   /** Optional extra assistant-facing description */
   aiDescription?: string;
+  /** Explicit settings component for this chart type */
+  settingsComponent: FC<ChartSettingsComponentProps<TSettings>>;
 }

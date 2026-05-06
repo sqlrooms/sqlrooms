@@ -5,12 +5,13 @@ import {MosaicCodeMirrorEditor} from '../editor/MosaicCodeMirrorEditor';
 
 interface VgPlotSpecPopoverEditorProps {
   value: Record<string, unknown>;
-  onApply: (value: Record<string, unknown>) => void;
+  onApply?: (value: Record<string, unknown>) => void;
+  readonly?: boolean;
 }
 
 export const VgPlotSpecPopoverEditor: React.FC<
   VgPlotSpecPopoverEditorProps
-> = ({value, onApply}) => {
+> = ({value, onApply, readonly = false}) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(() => JSON.stringify(value, null, 2));
 
@@ -25,6 +26,7 @@ export const VgPlotSpecPopoverEditor: React.FC<
   );
 
   const handleApply = useCallback(() => {
+    if (readonly || !onApply) return;
     try {
       const parsed = JSON.parse(draft);
       onApply(parsed as Record<string, unknown>);
@@ -32,10 +34,10 @@ export const VgPlotSpecPopoverEditor: React.FC<
     } catch {
       // Invalid JSON — keep the editor open.
     }
-  }, [draft, onApply]);
+  }, [draft, onApply, readonly]);
 
   const serializedValue = JSON.stringify(value, null, 2);
-  const isDirty = draft !== serializedValue;
+  const isDirty = !readonly && draft !== serializedValue;
   let isValidJson = false;
   try {
     JSON.parse(draft);
@@ -51,7 +53,7 @@ export const VgPlotSpecPopoverEditor: React.FC<
           variant="ghost"
           size="icon"
           className="h-6 w-6"
-          title="Edit spec"
+          title={readonly ? 'View spec' : 'Edit spec'}
         >
           <PencilIcon className="h-3.5 w-3.5" />
         </Button>
@@ -67,26 +69,35 @@ export const VgPlotSpecPopoverEditor: React.FC<
         <div className="flex flex-col">
           <div className="h-72 overflow-hidden">
             <MosaicCodeMirrorEditor
-              value={draft}
-              onChange={(nextValue: string | undefined) =>
-                setDraft(nextValue ?? '')
+              value={readonly ? serializedValue : draft}
+              onChange={
+                readonly
+                  ? undefined
+                  : (nextValue: string | undefined) => setDraft(nextValue ?? '')
               }
               className="h-full"
               enableSchemaValidation
+              readOnly={readonly}
             />
           </div>
-          <div className="flex items-center justify-end gap-2 border-t p-2">
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={!isDirty || !isValidJson}
-              onClick={handleApply}
-            >
-              Apply
-            </Button>
-          </div>
+          {!readonly && (
+            <div className="flex items-center justify-end gap-2 border-t p-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={!isDirty || !isValidJson}
+                onClick={handleApply}
+              >
+                Apply
+              </Button>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>

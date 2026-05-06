@@ -1,11 +1,8 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
-import type {LineChartSettings} from './schema';
-import {
-  QUANTITATIVE_COLUMN_TYPES,
-  NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import {LineChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {LineChartSettingsComponent} from './LineChartSettings';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -35,24 +32,8 @@ export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
   description: DESCRIPTION,
   aiDescription:
     'Use for trends over an ordered x-axis, typically time on x and numeric measures on y. Supports multiple Y fields for comparing trends.',
-  fields: [
-    {
-      key: 'x',
-      label: 'X Field',
-      required: true,
-      types: [...QUANTITATIVE_COLUMN_TYPES],
-      description:
-        'Ordered x-axis column, usually time or a quantitative value.',
-    },
-    {
-      key: 'yFields',
-      label: 'Y Fields',
-      required: true,
-      types: [...NUMERIC_COLUMN_TYPES],
-      description: 'Numeric measures plotted on the y-axis.',
-      multiple: true,
-    },
-  ],
+  schema: LineChartSettings,
+  settingsComponent: LineChartSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, yFields, xInterval}): Spec => {
     if (!yFields || yFields.length === 0) {
