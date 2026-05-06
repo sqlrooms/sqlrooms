@@ -1,8 +1,8 @@
 import {z} from 'zod';
 
 export const HeatmapChartSettings = z.object({
-  x: z.string().optional(),
-  y: z.string().optional(),
+  x: z.string().optional().describe('Column for X axis'),
+  y: z.string().optional().describe('Column for Y axis'),
 });
 
 export type HeatmapChartSettings = z.infer<typeof HeatmapChartSettings>;

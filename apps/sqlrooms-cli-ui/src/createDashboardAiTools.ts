@@ -1,13 +1,19 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-
 import {
-  createDashboardChartTemplateTool,
-  getDashboardChartTemplateInstructions,
-} from './createDashboardChartTemplateTool';
+  createHistogramAiTool,
+  createLineChartAiTool,
+  createCountPlotAiTool,
+  createHeatmapAiTool,
+  createBubbleChartAiTool,
+  createBoxPlotAiTool,
+  createEcdfAiTool,
+} from '@sqlrooms/mosaic';
 import {RoomState} from './store-types';
 import {getErrorMessage} from './utils';
 import {toVgPlotSpecString} from './vgplot';
+import {StoreApi} from 'zustand';
+import {createChartToolDeps} from './createChartToolDeps';
 
 const DashboardCreateArtifactToolParameters = z.object({
   title: z.string().optional(),
@@ -52,19 +58,22 @@ type DashboardSetVgPlotToolParameters = z.infer<
 
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
-- Use the dashboard tools to create/update dashboard vgplot specs.
+- Use the dashboard chart tools to create charts (create_dashboard_histogram, create_dashboard_line_chart, etc.).
+- Each chart type has its own tool with specific parameters.
+- For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
+- Set xInterval for temporal binning (year, month, day, hour, etc.).
+- Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
-- Prefer \`create_dashboard_chart_from_template\` for simple supported charts.
-- Use \`set_dashboard_vgplot\` with complete JSON only when no template fits.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
-- Use SQL against DuckDB tables when deciding fields, filters, and aggregations in the spec.
 `;
 
-export function getDashboardAiInstructions(store: {getState: () => RoomState}) {
-  return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${getDashboardChartTemplateInstructions(store)}`;
+export function getDashboardAiInstructions(_store: StoreApi<RoomState>) {
+  return DASHBOARD_AI_INSTRUCTIONS.trim();
 }
 
-export function createDashboardAiTools(store: {getState: () => RoomState}) {
+export function createDashboardAiTools(store: StoreApi<RoomState>) {
+  const deps = createChartToolDeps(store);
+
   return {
     create_dashboard_artifact: tool({
       description:
@@ -87,8 +96,14 @@ export function createDashboardAiTools(store: {getState: () => RoomState}) {
         };
       },
     }),
-    create_dashboard_chart_from_template:
-      createDashboardChartTemplateTool(store),
+    // Chart tools - one for each chart type
+    create_dashboard_histogram: createHistogramAiTool(deps),
+    create_dashboard_line_chart: createLineChartAiTool(deps),
+    create_dashboard_count_plot: createCountPlotAiTool(deps),
+    create_dashboard_heatmap: createHeatmapAiTool(deps),
+    create_dashboard_bubble_chart: createBubbleChartAiTool(deps),
+    create_dashboard_box_plot: createBoxPlotAiTool(deps),
+    create_dashboard_ecdf: createEcdfAiTool(deps),
     get_dashboard_vgplot: tool({
       description:
         'Get the current vgplot JSON spec for a dashboard artifact. If artifactId is omitted, uses the current dashboard artifact.',

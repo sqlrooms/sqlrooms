@@ -12,6 +12,25 @@ export * from './bubble-chart';
 export * from './custom-spec';
 export * from './registry';
 
+// Re-export Settings schemas for AI tool
+export {HistogramChartSettings} from './histogram/schema';
+export {LineChartSettings} from './line-chart/schema';
+export {CountPlotChartSettings} from './count-plot/schema';
+export {EcdfChartSettings} from './ecdf/schema';
+export {BubbleChartSettings} from './bubble-chart/schema';
+export {HeatmapChartSettings} from './heatmap/schema';
+export {BoxPlotChartSettings} from './box-plot/schema';
+
+// Re-export tool helpers, parameters, and AI tool creators
+export * from './tool-helpers';
+export * from './histogram/tool';
+export * from './line-chart/tool';
+export * from './count-plot/tool';
+export * from './heatmap/tool';
+export * from './bubble-chart/tool';
+export * from './box-plot/tool';
+export * from './ecdf/tool';
+
 // Import chart type definitions for legacy exports
 import {histogramChartType} from './histogram';
 import {lineChartChartType} from './line-chart';

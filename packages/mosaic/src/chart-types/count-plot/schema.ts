@@ -1,7 +1,10 @@
 import {z} from 'zod';
 
 export const CountPlotChartSettings = z.object({
-  field: z.string().optional(),
+  field: z
+    .string()
+    .optional()
+    .describe('Categorical column to count frequency of values'),
 });
 
 export type CountPlotChartSettings = z.infer<typeof CountPlotChartSettings>;

@@ -1,7 +1,10 @@
 import {z} from 'zod';
 
 export const EcdfChartSettings = z.object({
-  field: z.string().optional(),
+  field: z
+    .string()
+    .optional()
+    .describe('Numeric column for empirical cumulative distribution function'),
 });
 
 export type EcdfChartSettings = z.infer<typeof EcdfChartSettings>;

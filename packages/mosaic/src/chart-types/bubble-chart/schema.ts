@@ -1,8 +1,9 @@
 import {z} from 'zod';
 
 export const BubbleChartSettings = z.object({
-  x: z.string().optional(),
-  y: z.string().optional(),
+  x: z.string().optional().describe('Numeric column for X axis position'),
+  y: z.string().optional().describe('Numeric column for Y axis position'),
+  size: z.string().optional().describe('Numeric column for bubble size (optional)'),
 });
 
 export type BubbleChartSettings = z.infer<typeof BubbleChartSettings>;

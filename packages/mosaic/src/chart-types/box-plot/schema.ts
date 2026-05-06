@@ -1,8 +1,11 @@
 import {z} from 'zod';
 
 export const BoxPlotChartSettings = z.object({
-  x: z.string().optional(),
-  y: z.string().optional(),
+  x: z
+    .string()
+    .optional()
+    .describe('Categorical column for grouping (optional)'),
+  y: z.string().optional().describe('Numeric column for distribution statistics'),
 });
 
 export type BoxPlotChartSettings = z.infer<typeof BoxPlotChartSettings>;

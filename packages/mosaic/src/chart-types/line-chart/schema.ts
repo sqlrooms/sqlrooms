@@ -19,16 +19,26 @@ export type AggregateFunction = z.infer<typeof AggregateFunction>;
 
 // Y-field configuration
 export const YFieldConfig = z.object({
-  field: z.string(),
-  color: z.string().optional(),
-  aggregate: AggregateFunction.optional().default('sum'),
+  field: z.string().describe('Numeric column name to plot on Y axis'),
+  color: z.string().optional().describe('Optional color for this line'),
+  aggregate: AggregateFunction.optional()
+    .default('sum')
+    .describe('Aggregation function: sum, avg, min, or max'),
 });
 export type YFieldConfig = z.infer<typeof YFieldConfig>;
 
 export const LineChartSettings = z.object({
-  x: z.string().optional(),
-  xInterval: TemporalInterval.optional(),
-  yFields: z.array(YFieldConfig).min(1),
+  x: z
+    .string()
+    .optional()
+    .describe('Column for X axis, typically temporal (date/time)'),
+  xInterval: TemporalInterval.optional().describe(
+    'Temporal binning interval: year, month, day, hour, etc.',
+  ),
+  yFields: z
+    .array(YFieldConfig)
+    .min(1)
+    .describe('Array of Y fields to plot, supports multiple lines'),
 });
 
 export type LineChartSettings = z.infer<typeof LineChartSettings>;

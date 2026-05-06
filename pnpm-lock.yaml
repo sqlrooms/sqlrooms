@@ -2768,10 +2768,10 @@ importers:
         version: 30.0.0
       jest:
         specifier: ^30.1.3
-        version: 30.3.0(@types/node@24.12.2)
+        version: 30.3.0(@types/node@25.5.0)
       ts-jest:
         specifier: ^29.4.4
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.2))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)
 
   packages/cosmos:
     dependencies:
@@ -3433,6 +3433,9 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      ai:
+        specifier: ^6.0.159
+        version: 6.0.159(zod@4.1.13)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@2.0.1)
@@ -27876,25 +27879,6 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@30.3.0(@types/node@24.12.2):
-    dependencies:
-      '@jest/core': 30.3.0
-      '@jest/test-result': 30.3.0
-      '@jest/types': 30.3.0
-      chalk: 4.1.2
-      exit-x: 0.2.2
-      import-local: 3.2.0
-      jest-config: 30.3.0(@types/node@24.12.2)
-      jest-util: 30.3.0
-      jest-validate: 30.3.0
-      yargs: 17.7.2
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - esbuild-register
-      - supports-color
-      - ts-node
-
   jest-cli@30.3.0(@types/node@25.5.0):
     dependencies:
       '@jest/core': 30.3.0
@@ -27970,37 +27954,6 @@ snapshots:
       micromatch: 4.0.8
       parse-json: 5.2.0
       pretty-format: 30.2.0
-      slash: 3.0.0
-      strip-json-comments: 3.1.1
-    optionalDependencies:
-      '@types/node': 24.12.2
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-
-  jest-config@30.3.0(@types/node@24.12.2):
-    dependencies:
-      '@babel/core': 7.29.0
-      '@jest/get-type': 30.1.0
-      '@jest/pattern': 30.0.1
-      '@jest/test-sequencer': 30.3.0
-      '@jest/types': 30.3.0
-      babel-jest: 30.3.0(@babel/core@7.29.0)
-      chalk: 4.1.2
-      ci-info: 4.4.0
-      deepmerge: 4.3.1
-      glob: 10.5.0
-      graceful-fs: 4.2.11
-      jest-circus: 30.3.0
-      jest-docblock: 30.2.0
-      jest-environment-node: 30.3.0
-      jest-regex-util: 30.0.1
-      jest-resolve: 30.3.0
-      jest-runner: 30.3.0
-      jest-util: 30.3.0
-      jest-validate: 30.3.0
-      parse-json: 5.2.0
-      pretty-format: 30.3.0
       slash: 3.0.0
       strip-json-comments: 3.1.1
     optionalDependencies:
@@ -28482,19 +28435,6 @@ snapshots:
       '@jest/types': 30.2.0
       import-local: 3.2.0
       jest-cli: 30.2.0(@types/node@24.10.2)
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - esbuild-register
-      - supports-color
-      - ts-node
-
-  jest@30.3.0(@types/node@24.12.2):
-    dependencies:
-      '@jest/core': 30.3.0
-      '@jest/types': 30.3.0
-      import-local: 3.2.0
-      jest-cli: 30.3.0(@types/node@24.12.2)
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
@@ -32014,26 +31954,6 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.8
       jest: 30.2.0(@types/node@24.10.2)
-      json5: 2.2.3
-      lodash.memoize: 4.1.2
-      make-error: 1.3.6
-      semver: 7.7.4
-      type-fest: 4.41.0
-      typescript: 5.9.3
-      yargs-parser: 21.1.1
-    optionalDependencies:
-      '@babel/core': 7.29.0
-      '@jest/transform': 30.3.0
-      '@jest/types': 30.3.0
-      babel-jest: 30.3.0(@babel/core@7.29.0)
-      jest-util: 30.3.0
-
-  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@24.12.2))(typescript@5.9.3):
-    dependencies:
-      bs-logger: 0.2.6
-      fast-json-stable-stringify: 2.1.0
-      handlebars: 4.7.8
-      jest: 30.3.0(@types/node@24.12.2)
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6

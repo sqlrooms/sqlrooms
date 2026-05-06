@@ -1,7 +1,10 @@
 import {z} from 'zod';
 
 export const HistogramChartSettings = z.object({
-  field: z.string().optional(),
+  field: z
+    .string()
+    .optional()
+    .describe('Numeric column to create histogram distribution for'),
 });
 
 export type HistogramChartSettings = z.infer<typeof HistogramChartSettings>;
