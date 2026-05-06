@@ -60,16 +60,9 @@ export type RoomState = RoomShellSliceState &
 export function getCurrentKeplerMapArtifactId(
   state: Pick<RoomState, 'artifacts'>,
 ) {
-  const currentArtifactId = state.artifacts.config.currentArtifactId;
-  const currentArtifact = currentArtifactId
-    ? state.artifacts.config.artifactsById[currentArtifactId]
-    : undefined;
-  if (currentArtifact?.type === 'kepler-map') {
-    return currentArtifactId;
-  }
-  return Object.values(state.artifacts.config.artifactsById).find(
-    (artifact) => artifact.type === 'kepler-map',
-  )?.id;
+  // This example only registers kepler-map artifacts, so the current artifact
+  // is always the current map.
+  return state.artifacts.config.currentArtifactId;
 }
 
 export const KEPLER_ARTIFACT_TYPES = defineArtifactTypes({
