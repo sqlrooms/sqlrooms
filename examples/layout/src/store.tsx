@@ -149,8 +149,8 @@ function createDashboardGridNode(
     cols: {lg: 12, sm: 6},
     rowHeight: 220,
     margin: [12, 12],
-    compactType: null,
-    preventCollision: true,
+    compactType: 'vertical',
+    preventCollision: false,
     resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
     children,
     layouts: {

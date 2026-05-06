@@ -86,7 +86,7 @@ export const MosaicDashboardPanels: React.FC = () => {
   }
 
   return (
-    <div className="h-full min-h-[360px] px-5">
+    <div className="h-full min-h-[360px]">
       <LayoutRenderer
         rootLayout={rootLayout}
         onLayoutChange={handleLayoutChange}

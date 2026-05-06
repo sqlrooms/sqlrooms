@@ -111,8 +111,8 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
   breakpoints: {lg: 768, sm: 0},
   cols: {lg: 12, sm: 6},
   rowHeight: 220,
-  compactType: null,
-  preventCollision: true,
+  compactType:  'vertical',
+  preventCollision: false,
   resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
   children: [
     {type: 'panel', id: 'chart-a', panel: 'chart'},

@@ -6,7 +6,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@sqlrooms/ui';
-import {GripVerticalIcon, MoveHorizontalIcon, Trash2Icon} from 'lucide-react';
+import {
+  ChevronsRightLeftIcon,
+  GripVerticalIcon,
+  MoveHorizontalIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import {FC, useCallback} from 'react';
 import {
   type MosaicDashboardEntry,
@@ -54,6 +59,9 @@ export const MosaicDashboardPanelHeader: FC<
   const expandLabel = isGridPanelHorizontallyExpanded
     ? 'Shrink panel horizontally'
     : 'Expand panel horizontally';
+  const ExpandIcon = isGridPanelHorizontallyExpanded
+    ? ChevronsRightLeftIcon
+    : MoveHorizontalIcon;
   const rendererProps: MosaicDashboardPanelRendererProps | undefined =
     dashboard && panel
       ? {dashboardId, dashboard, panel, resolvedSource, selectionName}
@@ -82,7 +90,7 @@ export const MosaicDashboardPanelHeader: FC<
                       aria-label={expandLabel}
                       onClick={expandGridPanel}
                     >
-                      <MoveHorizontalIcon className="h-3.5 w-3.5" />
+                      <ExpandIcon className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{expandLabel}</TooltipContent>

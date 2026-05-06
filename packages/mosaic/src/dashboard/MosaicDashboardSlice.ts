@@ -323,8 +323,8 @@ function createDashboardGridLayout(
     rowHeight: 150,
     margin: [12, 12],
     containerPadding: [0, 0],
-    compactType: null,
-    preventCollision: true,
+    compactType: 'vertical',
+    preventCollision: false,
     resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
     layouts,
   };

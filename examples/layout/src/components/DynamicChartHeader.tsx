@@ -1,5 +1,10 @@
 import {LeafLayout, useExpandGridPanel} from '@sqlrooms/layout';
-import {GripVerticalIcon, MoveHorizontalIcon, XIcon} from 'lucide-react';
+import {
+  ChevronsRightLeftIcon,
+  GripVerticalIcon,
+  MoveHorizontalIcon,
+  XIcon,
+} from 'lucide-react';
 import {
   Button,
   Tooltip,
@@ -25,6 +30,9 @@ export const DynamicChartHeader: FC<DynamicChartHeaderProps> = ({
   const expandLabel = isGridPanelHorizontallyExpanded
     ? 'Shrink panel horizontally'
     : 'Expand panel horizontally';
+  const ExpandIcon = isGridPanelHorizontallyExpanded
+    ? ChevronsRightLeftIcon
+    : MoveHorizontalIcon;
 
   const handleRemove = useCallback(() => {
     togglePanel(chartId, false);
@@ -52,7 +60,7 @@ export const DynamicChartHeader: FC<DynamicChartHeaderProps> = ({
                       onClick={expandGridPanel}
                       className="hover:text-foreground h-8 w-8 transition-colors"
                     >
-                      <MoveHorizontalIcon className="h-4 w-4" />
+                      <ExpandIcon className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{expandLabel}</TooltipContent>
