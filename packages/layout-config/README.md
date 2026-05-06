@@ -113,7 +113,7 @@ const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
   rowHeight: 220,
   compactType:  'vertical',
   preventCollision: false,
-  resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
+  resizeHandles: ['e', 's', 'w', 'se', 'sw'],
   children: [
     {type: 'panel', id: 'chart-a', panel: 'chart'},
     {type: 'panel', id: 'chart-b', panel: 'chart'},

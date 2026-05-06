@@ -151,7 +151,7 @@ function createDashboardGridNode(
     margin: [12, 12],
     compactType: 'vertical',
     preventCollision: false,
-    resizeHandles: ['n', 'e', 's', 'w', 'se', 'sw'],
+    resizeHandles: ['e', 's', 'w', 'se', 'sw'],
     children,
     layouts: {
       lg: children.map((child, index) => ({
