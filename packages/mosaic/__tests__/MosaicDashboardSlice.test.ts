@@ -224,6 +224,22 @@ describe('MosaicDashboardSlice generic panels', () => {
         getMosaicDashboardPanelId(dashboardId, second.id),
       ]),
     );
+    expect(
+      nextDashboard.layout?.type === 'grid'
+        ? nextDashboard.layout.layouts?.lg?.find(
+            (item) =>
+              item.i === getMosaicDashboardPanelId(dashboardId, second.id),
+          )
+        : undefined,
+    ).toMatchObject({w: 12});
+    expect(
+      nextDashboard.layout?.type === 'grid'
+        ? nextDashboard.layout.layouts?.sm?.find(
+            (item) =>
+              item.i === getMosaicDashboardPanelId(dashboardId, second.id),
+          )
+        : undefined,
+    ).toMatchObject({w: 6});
   });
 
   it('normalizes incoming dock layouts to grid without losing dashboard panels', () => {
@@ -264,7 +280,7 @@ describe('MosaicDashboardSlice generic panels', () => {
       dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.lg : [],
     ).toEqual([
       expect.objectContaining({i: firstLayoutId}),
-      expect.objectContaining({i: secondLayoutId}),
+      expect.objectContaining({i: secondLayoutId, w: 12}),
     ]);
   });
 

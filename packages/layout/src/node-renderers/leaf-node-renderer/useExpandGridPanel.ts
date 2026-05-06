@@ -3,7 +3,7 @@ import {
   isLayoutGridNode,
   LayoutNode,
 } from '@sqlrooms/layout-config';
-import {useCallback} from 'react';
+import {useCallback, useMemo} from 'react';
 import {
   createDefaultGridLayouts,
   DEFAULT_GRID_BREAKPOINTS,
@@ -15,6 +15,10 @@ import {
 import {useLayoutNodeContext} from '../../LayoutNodeContext';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {findNodeById} from '../../layout-tree';
+
+function cloneLayoutNode(node: LayoutNode): LayoutNode {
+  return structuredClone(node) as LayoutNode;
+}
 
 export function useExpandGridPanel(): {
   canExpandGridPanel: boolean;
@@ -28,7 +32,7 @@ export function useExpandGridPanel(): {
   const gridId = isGridChild ? context.parentContainerId : undefined;
   const panelId = isGridChild ? getLayoutNodeId(context.node) : undefined;
   const canExpandGridPanel = Boolean(gridId && panelId && onLayoutChange);
-  const gridPanelState = (() => {
+  const gridPanelState = useMemo(() => {
     if (!gridId || !panelId) {
       return {isGridPanelHorizontallyExpanded: false};
     }
@@ -51,14 +55,14 @@ export function useExpandGridPanel(): {
         cols,
       ),
     };
-  })();
+  }, [gridId, panelId, rootLayout]);
 
   const expandGridPanel = useCallback(() => {
     if (!gridId || !panelId || !onLayoutChange) {
       return;
     }
 
-    const nextRootLayout = JSON.parse(JSON.stringify(rootLayout)) as LayoutNode;
+    const nextRootLayout = cloneLayoutNode(rootLayout);
     const result = findNodeById(nextRootLayout, gridId);
     if (!result || !isLayoutGridNode(result.node)) {
       return;

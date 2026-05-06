@@ -129,6 +129,20 @@ describe('grid-layout-utils', () => {
         w: 3,
       });
     });
+
+    it('moves a non-leftmost item to the row segment start when shrinking', () => {
+      const result = shrinkGridLayoutItemHorizontally(
+        [{i: 'target', x: 6, y: 0, w: 6, h: 2}],
+        'target',
+        12,
+      );
+
+      expect(result.changed).toBe(true);
+      expect(result.layout.find((item) => item.i === 'target')).toMatchObject({
+        x: 0,
+        w: 6,
+      });
+    });
   });
 
   describe('shrinkGridLayoutsItemHorizontally', () => {
@@ -154,6 +168,24 @@ describe('grid-layout-utils', () => {
       expect(
         result.layouts.lg?.find((item) => item.i === 'target'),
       ).toMatchObject({w: 6});
+      expect(
+        result.layouts.sm?.find((item) => item.i === 'target'),
+      ).toMatchObject({w: 3});
+    });
+
+    it('uses breakpoint defaults when responsive cols omit a layout breakpoint', () => {
+      const layouts = {
+        sm: [{i: 'target', x: 0, y: 0, w: 6, h: 2}],
+      };
+
+      expect(
+        isGridLayoutsItemHorizontallyExpanded(layouts, 'target', {lg: 12}),
+      ).toBe(true);
+
+      const result = shrinkGridLayoutsItemHorizontally(layouts, 'target', {
+        lg: 12,
+      });
+
       expect(
         result.layouts.sm?.find((item) => item.i === 'target'),
       ).toMatchObject({w: 3});

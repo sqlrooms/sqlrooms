@@ -311,12 +311,22 @@ type GridCallbackItem = Pick<LayoutGridItem, 'i' | 'x' | 'y' | 'w' | 'h'>;
 type GridResizeHandleAxis = NonNullable<
   LayoutGridNode['resizeHandles']
 >[number];
+type PreviewRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+function cloneLayoutNode(node: LayoutNode): LayoutNode {
+  return structuredClone(node) as LayoutNode;
+}
 
 function getGridItemPreviewStyle(
   item: LayoutGridItem,
   rowHeight: number,
   metrics: GridMetrics,
-): CSSProperties | undefined {
+): PreviewRect | undefined {
   if (metrics.width <= 0 || metrics.cols <= 0) {
     return undefined;
   }
@@ -346,7 +356,7 @@ function toPreviewGridItem(item: GridCallbackItem): LayoutGridItem {
 }
 
 function getResizeFollowStyle(
-  previewStyle: CSSProperties | undefined,
+  previewStyle: PreviewRect | undefined,
 ): CSSProperties {
   if (!previewStyle) {
     return {overflow: 'visible'};
@@ -508,9 +518,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
         return;
       }
 
-      const nextRootLayout = JSON.parse(
-        JSON.stringify(rootLayout),
-      ) as LayoutNode;
+      const nextRootLayout = cloneLayoutNode(rootLayout);
       const result = findNodeById(nextRootLayout, node.id);
       if (!result || !isLayoutGridNode(result.node)) {
         return;

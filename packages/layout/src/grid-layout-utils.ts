@@ -17,6 +17,22 @@ export function getGridChildId(node: LayoutNode): string {
   return isLayoutNodeKey(node) ? node : node.id;
 }
 
+export function getGridColsForBreakpoint(
+  cols: LayoutGridNode['cols'],
+  breakpoint: string,
+): number {
+  if (typeof cols === 'number') {
+    return cols;
+  }
+
+  return (
+    cols?.[breakpoint] ??
+    DEFAULT_GRID_COLS[breakpoint as keyof typeof DEFAULT_GRID_COLS] ??
+    cols?.lg ??
+    DEFAULT_GRID_COLS.lg
+  );
+}
+
 export function getResponsiveGridCols(
   cols: LayoutGridNode['cols'],
   breakpoints: Record<string, number>,
@@ -27,14 +43,10 @@ export function getResponsiveGridCols(
     );
   }
 
-  const fallbackCols = cols?.lg ?? DEFAULT_GRID_COLS.lg;
-
   return Object.fromEntries(
     Object.keys(breakpoints).map((breakpoint) => [
       breakpoint,
-      cols?.[breakpoint] ??
-        DEFAULT_GRID_COLS[breakpoint as keyof typeof DEFAULT_GRID_COLS] ??
-        fallbackCols,
+      getGridColsForBreakpoint(cols, breakpoint),
     ]),
   );
 }
@@ -207,7 +219,7 @@ export function expandGridLayoutsItemHorizontally(
       const result = expandGridLayoutItemHorizontally(
         layout,
         itemId,
-        cols[breakpoint] ?? DEFAULT_GRID_COLS.lg,
+        getGridColsForBreakpoint(cols, breakpoint),
       );
       changed = changed || result.changed;
       return [breakpoint, result.layout];
@@ -228,7 +240,7 @@ export function shrinkGridLayoutsItemHorizontally(
       const result = shrinkGridLayoutItemHorizontally(
         layout,
         itemId,
-        cols[breakpoint] ?? DEFAULT_GRID_COLS.lg,
+        getGridColsForBreakpoint(cols, breakpoint),
       );
       changed = changed || result.changed;
       return [breakpoint, result.layout];
@@ -253,7 +265,7 @@ export function isGridLayoutsItemHorizontallyExpanded(
       isGridLayoutItemHorizontallyExpanded(
         layout,
         itemId,
-        cols[breakpoint] ?? DEFAULT_GRID_COLS.lg,
+        getGridColsForBreakpoint(cols, breakpoint),
       ),
     )
   );
