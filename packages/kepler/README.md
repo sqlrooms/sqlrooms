@@ -10,6 +10,14 @@ Use this package when you want a **map-first analytics experience** in a SQLRoom
 - utilities for map config persistence, dataset synchronization, and migration
   from legacy Kepler-owned tabs to artifact-backed tabs
 
+## Selection model
+
+- `createKeplerSlice()` manages Kepler map documents and runtime state keyed by
+  map id, but it does not own host-level map selection.
+- Render maps with explicit ids, for example `<KeplerMapContainer mapId={id} />`.
+- Use `@sqlrooms/artifacts` when an app needs multiple user-managed map tabs;
+  artifact state should own the selected map artifact.
+
 ## Installation
 
 ```bash
@@ -52,7 +60,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 
 function MapPanel() {
-  const mapId = useRoomStore((state) => state.kepler.config.currentMapId);
+  const mapId = useRoomStore((state) => state.kepler.config.maps[0]?.id);
   const addTableToMap = useRoomStore((state) => state.kepler.addTableToMap);
   const isTableReady = useRoomStore((state) =>
     Boolean(state.db.findTableByName('earthquakes')),
