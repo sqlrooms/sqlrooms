@@ -1,4 +1,4 @@
-import {Button} from '@sqlrooms/ui';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {SettingsIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
@@ -41,16 +41,21 @@ export const MosaicDashboardVgPlotHeaderActions: FC<
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="data-[state=active]:bg-accent h-6 w-6"
-        title="Chart settings"
-        onClick={handleToggleSettings}
-        data-state={isSettingsOpen ? 'active' : 'inactive'}
-      >
-        <SettingsIcon className="h-3.5 w-3.5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="data-[state=active]:bg-accent h-6 w-6"
+            aria-label="Chart settings"
+            onClick={handleToggleSettings}
+            data-state={isSettingsOpen ? 'active' : 'inactive'}
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Chart settings</TooltipContent>
+      </Tooltip>
       {spec ? (
         <VgPlotSpecPopoverEditor value={spec} onApply={handleSpecApply} />
       ) : null}
