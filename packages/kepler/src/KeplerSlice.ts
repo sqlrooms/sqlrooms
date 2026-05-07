@@ -567,9 +567,72 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
+            const splitQualifiedIdentifier = (value: string): string[] => {
+              const parts: string[] = [];
+              let current = '';
+              let inQuotes = false;
+
+              for (let i = 0; i < value.length; i++) {
+                const char = value[i];
+
+                if (char === '"') {
+                  current += char;
+                  if (inQuotes && value[i + 1] === '"') {
+                    current += value[i + 1];
+                    i++;
+                  } else {
+                    inQuotes = !inQuotes;
+                  }
+                } else if (char === '.' && !inQuotes) {
+                  parts.push(current);
+                  current = '';
+                } else {
+                  current += char;
+                }
+              }
+
+              parts.push(current);
+              return parts;
+            };
+
+            const normalizeIdentifierPart = (part: string): string => {
+              const trimmed = part.trim();
+              if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                return trimmed.slice(1, -1).replace(/""/g, '"');
+              }
+              return trimmed;
+            };
+
+            // Use fully qualified name unless it's the default database and schema
+            // For main.main.table or main.table, just show "table"
+            // For other schemas, keep schema qualification while stripping DuckDB quotes
+            const normalizedParts = splitQualifiedIdentifier(String(tableName)).map(
+              normalizeIdentifierPart,
+            );
+            let label = normalizedParts.join('.');
+
+            if (normalizedParts.length === 1) {
+              label = normalizedParts[0] ?? label;
+            } else if (normalizedParts.length === 2) {
+              if (normalizedParts[0] === 'main') {
+                label = normalizedParts[1] ?? label;
+              }
+            } else if (normalizedParts.length === 3) {
+              const [database, schema, table] = normalizedParts;
+
+              if (database === 'main' && schema === 'main') {
+                label = table ?? label;
+              } else if (database === 'main') {
+                label = [schema, table].filter(Boolean).join('.');
+              }
+            }
+
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
-              info: {label: tableName, id: tableName},
+              info: {
+                id: tableName,
+                label: label,
+              },
               metadata: {tableName},
             };
             get().kepler.dispatchAction(
@@ -647,20 +710,19 @@ export function createKeplerSlice({
                   }
                 }
 
-                const availableTables = new Set(
-                  get()
-                    .db.tables.filter((t) => t.table.schema === 'main')
-                    .map((t) => t.table.table),
-                );
-
                 for (const dataId of referencedDataIds) {
-                  if (
-                    !keplerDatasets?.[dataId] &&
-                    availableTables.has(dataId)
-                  ) {
+                  if (keplerDatasets?.[dataId]) {
+                    continue;
+                  }
+                  try {
                     await get().kepler.addTableToMap(mapId, dataId, {
                       autoCreateLayers: false,
                       centerMap: false,
+                    });
+                  } catch (e) {
+                    console.error('syncKeplerDatasets: addTableToMap failed', {
+                      dataId,
+                      e,
                     });
                   }
                 }
