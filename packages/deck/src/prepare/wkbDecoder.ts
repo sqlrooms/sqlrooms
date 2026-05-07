@@ -1,3 +1,5 @@
+import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
+import type * as arrow from 'apache-arrow';
 import {
   Field,
   FixedSizeList,
@@ -5,14 +7,12 @@ import {
   Table,
   vectorFromArray,
 } from 'apache-arrow';
-import type * as arrow from 'apache-arrow';
-import {WKBLoader, WKTLoader} from '@loaders.gl/wkt';
 import type {GeometryDecoder} from './geometryDecoder';
+import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 import type {
   PreparedGeoArrowLayerData,
   ResolvedGeometryEncoding,
 } from './types';
-import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
 
 function toArrayBuffer(value: unknown) {
   if (ArrayBuffer.isView(value)) {
@@ -107,6 +107,11 @@ function tryPromotePointTable(
 
     if (geometry.type !== 'Point') {
       return null;
+    }
+
+    if (!('coordinates' in geometry)) {
+      points.push(null);
+      continue;
     }
 
     const coords = geometry.coordinates;

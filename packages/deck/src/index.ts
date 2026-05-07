@@ -5,6 +5,26 @@
 
 export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
+export {
+  deckMapDashboardAddPanelAction,
+  deckMapDashboardPanelRenderer,
+} from './dashboard';
+export {
+  asDeckJsonMapConfig,
+  createDeckMapDashboardDatasetQuery,
+  createDeckMapDashboardDatasets,
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  resolveDeckMapDashboardDatasetSource,
+} from './dashboardConfig';
+export type {
+  DeckMapDashboardFitToDataConfig,
+  CreateDeckMapDashboardPanelConfigOptions,
+  DeckMapDashboardDatasetClientState,
+  DeckMapDashboardDatasetConfig,
+  DeckMapDashboardInteractionConfig,
+  DeckMapDashboardPanelConfig,
+} from './dashboardConfig';
 export {DeckJsonMap} from './DeckJsonMap';
 export {
   ColorScaleFunction,

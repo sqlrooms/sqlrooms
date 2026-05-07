@@ -1,9 +1,10 @@
 import {JSONConverter} from '@deck.gl/json';
+import type {DeckGLRef} from '@deck.gl/react';
 import DeckGL from '@deck.gl/react';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import Map from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
@@ -14,6 +15,7 @@ import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import type {DeckJsonMapProps, PreparedDeckDatasetState} from './types';
+import {useDeckLayersReadyRedraw} from './useDeckLayersReadyRedraw';
 
 const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
   light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
@@ -104,12 +106,9 @@ function filterUnavailableLayers(
   };
 }
 
-function renderDatasetStatusOverlay(
+function renderDatasetErrorOverlay(
   datasetStates: Record<string, PreparedDeckDatasetState>,
 ) {
-  const loadingDatasets = Object.entries(datasetStates)
-    .filter(([, state]) => state.status === 'loading')
-    .map(([datasetId]) => datasetId);
   const failedDatasets = Object.entries(datasetStates).filter(
     (
       entry,
@@ -119,17 +118,12 @@ function renderDatasetStatusOverlay(
     ] => entry[1].status === 'error',
   );
 
-  if (!loadingDatasets.length && !failedDatasets.length) {
+  if (!failedDatasets.length) {
     return null;
   }
 
   return (
     <div className="pointer-events-none absolute inset-x-4 top-4 z-10 space-y-2">
-      {loadingDatasets.length > 0 ? (
-        <div className="rounded-md border border-black/10 bg-white/90 px-3 py-2 text-sm text-slate-700 shadow-sm">
-          Loading datasets: {loadingDatasets.join(', ')}
-        </div>
-      ) : null}
       {failedDatasets.map(([datasetId, state]) => (
         <div
           key={datasetId}
@@ -221,15 +215,22 @@ export function DeckJsonMap({
   const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
   const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
   const hasRenderingError = Boolean(convertedDeckPropsResult.error);
+  const deckRef = useRef<DeckGLRef>(null);
+  const mergedLayers = hasRenderingError
+    ? []
+    : (deckProps?.layers ??
+      (convertedDeckProps.layers as unknown[] | undefined) ??
+      []);
+  useDeckLayersReadyRedraw({
+    deckRef,
+    hasRenderingError,
+    layers: mergedLayers,
+  });
 
   const mergedDeckProps = {
     ...convertedDeckProps,
     ...extraDeckProps,
-    layers: hasRenderingError
-      ? []
-      : (deckProps?.layers ??
-        (convertedDeckProps.layers as unknown[] | undefined) ??
-        []),
+    layers: mergedLayers,
   };
 
   const {resolvedTheme} = useTheme();
@@ -261,11 +262,11 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL {...(mergedDeckProps as object)}>
+      <DeckGL ref={deckRef} {...(mergedDeckProps as object)}>
         <Map {...(mergedMapProps as object)}>{children}</Map>
       </DeckGL>
 
-      {renderDatasetStatusOverlay(datasetStates)}
+      {renderDatasetErrorOverlay(datasetStates)}
       {!hasRenderingError && showLegends ? (
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
           <ColorScaleLegend legends={legends} />

@@ -4,15 +4,16 @@ import {
   MosaicChart,
   MosaicChartBuilder,
   type Spec,
+  type VgPlotChartConfig,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
-import {Code, Plus, X} from 'lucide-react';
-import {useCallback, useMemo, useState} from 'react';
+import {Code, FilterX, X} from 'lucide-react';
+import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
 import {ChartConfig, defaultChartConfigs} from './filterPlots';
 
-export default function FiltersPanel({className}: {className?: string}) {
+export const FiltersPanel: FC<{className?: string}> = ({className}) => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
   const isTableReady = useRoomStore((state) =>
     state.db.tables.find((t) => t.tableName === 'earthquakes'),
@@ -24,7 +25,7 @@ export default function FiltersPanel({className}: {className?: string}) {
     return null;
   }
   return <FiltersPanelContent className={className} />;
-}
+};
 
 const FiltersPanelContent = ({className}: {className?: string}) => {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
@@ -32,7 +33,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
 
   // Shared params map for cross-filtering across all charts
   const paramsMap = useMemo(
-    () => new Map<string, Param<any>>([['brush', brush as Param<any>]]),
+    () => new Map([['brush', brush as Param<unknown>]]),
     [brush],
   );
 
@@ -74,10 +75,13 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
-  const handleCreateChart = useCallback((spec: Spec, title: string) => {
-    const id = `chart-${Date.now()}`;
-    setCharts((prev) => [{id, title, spec}, ...prev]);
-  }, []);
+  const handleCreateChart = useCallback(
+    (title: string, config: VgPlotChartConfig) => {
+      const id = `chart-${Date.now()}`;
+      setCharts((prev) => [{id, title, spec: config.vgplot as Spec}, ...prev]);
+    },
+    [],
+  );
 
   const handleRemoveChart = useCallback((chartId: string) => {
     setCharts((prev) => prev.filter((c) => c.id !== chartId));
@@ -88,96 +92,116 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
+  const handleClearAllFilters = useCallback(() => {
+    brush?.reset();
+  }, [brush]);
+
+  const [selectionVersion, setSelectionVersion] = useState(0);
+  useEffect(() => {
+    if (!brush) return;
+    const handler = () => setSelectionVersion((v) => v + 1);
+    brush.addEventListener('value', handler);
+    return () => brush.removeEventListener('value', handler);
+  }, [brush]);
+
+  const hasActiveFilters = useMemo(
+    () => Boolean(brush?.clauses.length),
+    [brush, selectionVersion],
+  );
+
   return (
-    <RoomPanel type="filters" showHeader={false} className={className}>
+    <RoomPanel showHeader={false} className={className}>
       <div className="flex h-full flex-col">
-        <div className="p-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => setBuilderOpen(true)}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add Chart
-          </Button>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            <div className="w-full space-y-2">
-              {charts.map((chart) => {
-                const isEditing = editingCharts.has(chart.id);
-                return (
-                  <div key={chart.id} className="rounded-sm border px-2">
-                    <div className="py-2 hover:no-underline">
-                      <div className="flex w-full items-center justify-between pr-2">
-                        <span className="text-sm font-medium">
-                          {chart.title}
-                        </span>
-                        <div
-                          className="flex items-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => toggleEditor(chart.id)}
-                            title={isEditing ? 'Hide editor' : 'Edit spec'}
+        <MosaicChartBuilder
+          tableName="earthquakes"
+          columns={columns}
+          onCreateChart={handleCreateChart}
+          open={builderOpen}
+          onOpenChange={setBuilderOpen}
+        >
+          <div className="flex items-center gap-2 p-2">
+            <MosaicChartBuilder.Trigger className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAllFilters}
+              disabled={!hasActiveFilters}
+              title="Clear all filters"
+            >
+              <FilterX className="h-3.5 w-3.5" />
+              <span>Clear</span>
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <div className="w-full space-y-2">
+                {charts.map((chart) => {
+                  const isEditing = editingCharts.has(chart.id);
+                  return (
+                    <div key={chart.id} className="rounded-sm border px-2">
+                      <div className="py-2 hover:no-underline">
+                        <div className="flex w-full items-center justify-between pr-2">
+                          <span className="text-sm font-medium">
+                            {chart.title}
+                          </span>
+                          <div
+                            className="flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Code className="h-3.5 w-3.5" />
-                          </Button>
-                          {!defaultChartConfigs.some(
-                            (d) => d.id === chart.id,
-                          ) && (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => handleRemoveChart(chart.id)}
-                              title="Remove chart"
+                              onClick={() => toggleEditor(chart.id)}
+                              title={isEditing ? 'Hide editor' : 'Edit spec'}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <Code className="h-3.5 w-3.5" />
                             </Button>
-                          )}
+                            {!defaultChartConfigs.some(
+                              (d) => d.id === chart.id,
+                            ) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleRemoveChart(chart.id)}
+                                title="Remove chart"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <div className="overflow-hidden pb-4">
+                        <MosaicChart.Container
+                          spec={chart.spec}
+                          params={paramsMap}
+                          editable={isEditing}
+                          onSpecChange={(spec) =>
+                            handleSpecChange(chart.id, spec)
+                          }
+                        >
+                          <MosaicChart.Display className="h-64" />
+                          {isEditing && (
+                            <>
+                              <MosaicChart.SpecEditor
+                                className="h-64 border-t"
+                                title=""
+                              />
+                              <MosaicChart.Actions />
+                            </>
+                          )}
+                        </MosaicChart.Container>
+                      </div>
                     </div>
-                    <div className="overflow-hidden pb-4">
-                      <MosaicChart.Container
-                        spec={chart.spec}
-                        params={paramsMap}
-                        editable={isEditing}
-                        onSpecChange={(spec) =>
-                          handleSpecChange(chart.id, spec)
-                        }
-                      >
-                        <MosaicChart.Display />
-                        {isEditing && (
-                          <>
-                            <MosaicChart.SpecEditor
-                              className="h-64 border-t"
-                              title=""
-                            />
-                            <MosaicChart.Actions />
-                          </>
-                        )}
-                      </MosaicChart.Container>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </ScrollArea>
-
-        <MosaicChartBuilder.Dialog
-          open={builderOpen}
-          onOpenChange={setBuilderOpen}
-          tableName="earthquakes"
-          columns={columns}
-          onCreateChart={handleCreateChart}
-        />
+          </ScrollArea>
+          <MosaicChartBuilder.Dialog />
+        </MosaicChartBuilder>
       </div>
     </RoomPanel>
   );

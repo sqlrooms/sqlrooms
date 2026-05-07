@@ -13,11 +13,6 @@ import {
   separateLastStatement,
 } from '@sqlrooms/duckdb-core';
 import {
-  loadTableSchemas,
-  LoadTableSchemasFilter,
-  LoadTableSchemasFilterFunction,
-} from './loadTableSchemas';
-import {
   BaseRoomStoreState,
   createSlice,
   registerCommandsForOwner,
@@ -31,22 +26,27 @@ import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
+import {
+  loadTableSchemas,
+  LoadTableSchemasFilter,
+  LoadTableSchemasFilterFunction,
+} from './loadTableSchemas';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
-const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
+const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
 
 /**
  * Default filter to exclude internal SQLRooms tables, schemas, and databases
  */
-export const createDefaultLoadTableSchemasFilter = (
-  table: QualifiedTableName,
-): boolean => {
-  return (
-    !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
-  );
-};
+export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
+  return (table: QualifiedTableName): boolean => {
+    return (
+      !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+      !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+      !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
+    );
+  };
+}
 
 const DropTableCommandInput = z.object({
   tableName: z.string().describe('Name of the table to drop.'),
@@ -315,7 +315,7 @@ export type CreateDuckDbSliceProps = {
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
-  loadTableSchemasFilter = createDefaultLoadTableSchemasFilter,
+  loadTableSchemasFilter = createDefaultLoadTableSchemasFilter(),
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   let refreshPromise: Promise<DataTable[]> | null = null;
   let pendingSchemaRefresh = false;

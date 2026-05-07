@@ -1,40 +1,53 @@
-import {Spec} from '@uwdata/mosaic-spec';
-import {ComponentType} from 'react';
+import type {ComponentType} from 'react';
+import type {
+  ChartTypeDefinition,
+  ChartBuilderField,
+  ChartBuilderColumn,
+} from '../chart-types/base-types';
 
-/**
- * Describes a field selector in a chart builder UI
- */
-export interface ChartBuilderField {
-  /** Unique key for this field */
-  key: string;
-  /** Display label */
-  label: string;
-  /** Whether the field is required */
-  required?: boolean;
-  /** Filter columns by DuckDB type (e.g. 'INTEGER', 'VARCHAR', 'DOUBLE') */
-  types?: string[];
-}
+// Re-export for backward compatibility
+export type {ChartTypeDefinition, ChartBuilderField, ChartBuilderColumn};
 
 /**
  * Describes a chart builder template that generates Mosaic JSON specs
+ * (includes an icon for the chart-type grid).
  */
-export interface ChartBuilderTemplate {
-  /** Unique identifier */
-  id: string;
+export interface ChartBuilderTemplate extends ChartTypeDefinition {
   /** Icon component */
   icon: ComponentType<{className?: string}>;
-  /** Short description of what this builder creates */
-  description: string;
-  /** Field selectors the user must fill in */
-  fields: ChartBuilderField[];
-  /** Generate a Mosaic spec from table name and selected field values */
-  createSpec: (tableName: string, values: Record<string, string>) => Spec;
 }
 
 /**
- * Column info passed to chart builder UI
+ * Backward-compatible alias for earlier chart-builder helper APIs.
+ * Prefer {@link ChartTypeDefinition} for new code.
  */
-export interface ChartBuilderColumn {
-  name: string;
-  type: string;
+export type ChartSpec = ChartTypeDefinition;
+
+/** Strip UI-only fields from a template for non-UI chart-type contexts. */
+export function toChartTypeDefinition(
+  template: ChartBuilderTemplate,
+): ChartTypeDefinition {
+  const {
+    id,
+    label,
+    description,
+    fields,
+    createSpec,
+    buildTitle,
+    isAvailable,
+    aiDescription,
+  } = template;
+  return {
+    id,
+    label,
+    description,
+    fields,
+    createSpec,
+    buildTitle,
+    isAvailable,
+    aiDescription,
+  };
 }
+
+/** Backward-compatible alias for earlier helper APIs. */
+export const toChartSpec = toChartTypeDefinition;

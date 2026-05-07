@@ -1,4 +1,4 @@
-import {ToolErrorMessage} from '@sqlrooms/ai';
+import {ToolErrorMessage} from '@sqlrooms/ai-core';
 import {arrowTableToJson} from '@sqlrooms/duckdb';
 import {
   AspectRatio,

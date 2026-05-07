@@ -1,67 +1,13 @@
+/**
+ * @jest-environment jsdom
+ */
+/// <reference types="@testing-library/jest-dom" />
 import {jest} from '@jest/globals';
-import {isValidElement, type ReactElement, type ReactNode} from 'react';
+import {render, screen} from '@testing-library/react';
 import {MosaicProfilerStatusBar} from '../src/profiler/MosaicProfilerStatusBar';
 import type {UseMosaicProfilerReturn} from '../src/profiler/types';
 
-function collectElements(node: ReactNode): ReactElement[] {
-  if (node == null || typeof node === 'boolean') {
-    return [];
-  }
-
-  if (Array.isArray(node)) {
-    return node.flatMap(collectElements);
-  }
-
-  if (!isValidElement(node)) {
-    return [];
-  }
-
-  return [node, ...collectElements(node.props.children)];
-}
-
-function collectText(node: ReactNode): string {
-  if (node == null || typeof node === 'boolean') {
-    return '';
-  }
-
-  if (typeof node === 'string' || typeof node === 'number') {
-    return String(node);
-  }
-
-  if (Array.isArray(node)) {
-    return node.map(collectText).join('');
-  }
-
-  if (!isValidElement(node)) {
-    return '';
-  }
-
-  return collectText(node.props.children);
-}
-
-function findButtonByLabel(
-  element: ReactElement,
-  label: string,
-): ReactElement | undefined {
-  return collectElements(element).find(
-    (child) => child.props['aria-label'] === label,
-  );
-}
-
-function createProfilerOverrides(
-  overrides: Partial<
-    Pick<
-      UseMosaicProfilerReturn,
-      | 'filteredRowCount'
-      | 'hasFilters'
-      | 'pagination'
-      | 'reset'
-      | 'setPagination'
-      | 'sql'
-      | 'totalRowCount'
-    >
-  > = {},
-): Pick<
+type ProfilerOverrides = Pick<
   UseMosaicProfilerReturn,
   | 'filteredRowCount'
   | 'hasFilters'
@@ -70,7 +16,11 @@ function createProfilerOverrides(
   | 'setPagination'
   | 'sql'
   | 'totalRowCount'
-> {
+>;
+
+function createProfilerOverrides(
+  overrides: Partial<ProfilerOverrides> = {},
+): ProfilerOverrides {
   return {
     filteredRowCount: 25,
     hasFilters: false,
@@ -86,18 +36,11 @@ function createProfilerOverrides(
 describe('MosaicProfilerStatusBar', () => {
   it('shows compact pagination and disables previous on the first page', () => {
     const profiler = createProfilerOverrides();
-    const element = MosaicProfilerStatusBar({profiler});
-    const previousButton = findButtonByLabel(element, 'Previous page');
-    const nextButton = findButtonByLabel(element, 'Next page');
+    render(<MosaicProfilerStatusBar profiler={profiler} />);
 
-    expect(
-      collectElements(element).some(
-        (child) =>
-          child.type === 'span' && collectText(child).includes('1 / 3'),
-      ),
-    ).toBe(true);
-    expect(previousButton?.props.disabled).toBe(true);
-    expect(nextButton?.props.disabled).toBe(false);
+    expect(screen.getByText(/1 \/ 3/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Previous page')).toBeDisabled();
+    expect(screen.getByLabelText('Next page')).not.toBeDisabled();
   });
 
   it('enables reset from the explicit filter flag instead of count comparison', () => {
@@ -106,12 +49,9 @@ describe('MosaicProfilerStatusBar', () => {
       hasFilters: true,
       totalRowCount: 100,
     });
-    const element = MosaicProfilerStatusBar({profiler});
-    const resetButton = collectElements(element).find(
-      (child) => collectText(child) === 'Reset',
-    );
+    render(<MosaicProfilerStatusBar profiler={profiler} />);
 
-    expect(resetButton?.props.disabled).toBe(false);
+    expect(screen.getByText('Reset')).not.toBeDisabled();
   });
 
   it('disables next on the last page and updates page index when clicked', () => {
@@ -121,22 +61,15 @@ describe('MosaicProfilerStatusBar', () => {
       pagination: {pageIndex: 1, pageSize: 13},
       setPagination,
     });
-    const element = MosaicProfilerStatusBar({profiler});
-    const previousButton = findButtonByLabel(element, 'Previous page');
-    const nextButton = findButtonByLabel(element, 'Next page');
+    render(<MosaicProfilerStatusBar profiler={profiler} />);
 
-    expect(
-      collectElements(element).some(
-        (child) =>
-          child.type === 'span' && collectText(child).includes('2 / 2'),
-      ),
-    ).toBe(true);
-    expect(nextButton?.props.disabled).toBe(true);
-    expect(previousButton?.props.disabled).toBe(false);
+    expect(screen.getByText(/2 \/ 2/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Next page')).toBeDisabled();
+    expect(screen.getByLabelText('Previous page')).not.toBeDisabled();
 
-    previousButton?.props.onClick();
+    screen.getByLabelText('Previous page').click();
     expect(setPagination).toHaveBeenCalledTimes(1);
-    const updatePagination = setPagination.mock.calls[0][0];
+    const updatePagination = setPagination.mock.calls[0]?.[0] as any;
     expect(
       updatePagination({
         pageIndex: 1,
@@ -153,16 +86,10 @@ describe('MosaicProfilerStatusBar', () => {
       filteredRowCount: undefined,
       totalRowCount: undefined,
     });
-    const element = MosaicProfilerStatusBar({profiler});
-    const previousButton = findButtonByLabel(element, 'Previous page');
-    const nextButton = findButtonByLabel(element, 'Next page');
+    render(<MosaicProfilerStatusBar profiler={profiler} />);
 
-    expect(
-      collectElements(element).some(
-        (child) => child.type === 'span' && collectText(child).includes('/'),
-      ),
-    ).toBe(false);
-    expect(previousButton?.props.disabled).toBe(true);
-    expect(nextButton?.props.disabled).toBe(true);
+    expect(screen.queryByText(/\//)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Previous page')).toBeDisabled();
+    expect(screen.getByLabelText('Next page')).toBeDisabled();
   });
 });

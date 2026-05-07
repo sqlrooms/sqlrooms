@@ -4,14 +4,15 @@ import {FileDropzone} from '@sqlrooms/dropzone';
 import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {toast} from '@sqlrooms/ui';
+import type {FC} from 'react';
 
-export const DataPanel = () => {
+export const DataPanel: FC = () => {
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
   return (
-    <RoomPanel type="data">
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{
