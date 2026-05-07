@@ -1,5 +1,6 @@
 import {
   promoteContextSelectorItem,
+  reorderContextSelectorItems,
   toggleContextSelectorItem,
 } from '../src/components/ContextSelector';
 
@@ -22,6 +23,19 @@ describe('ContextSelector selection helpers', () => {
       'c',
       'a',
       'b',
+    ]);
+  });
+
+  it('reorders selected ids', () => {
+    expect(reorderContextSelectorItems(['a', 'b', 'c'], 'c', 'a')).toEqual([
+      'c',
+      'a',
+      'b',
+    ]);
+    expect(reorderContextSelectorItems(['a', 'b', 'c'], 'x', 'a')).toEqual([
+      'a',
+      'b',
+      'c',
     ]);
   });
 });

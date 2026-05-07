@@ -1,4 +1,20 @@
 import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  horizontalListSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable';
+import {
   Badge as UiBadge,
   Button,
   cn,
@@ -19,6 +35,7 @@ import {
 import {
   BarChart3Icon,
   BoxesIcon,
+  GripVerticalIcon,
   MapIcon,
   PlusIcon,
   XIcon,
@@ -99,6 +116,7 @@ type ContextSelectorContextValue = Omit<
   toggleItem: (itemId: string) => void;
   removeItem: (itemId: string) => void;
   makeMain: (itemId: string) => void;
+  reorderItems: (activeId: string, overId: string) => void;
 };
 
 type ContextSelectorComponent = FC<ContextSelectorRootProps> & {
@@ -138,6 +156,19 @@ export function promoteContextSelectorItem(
   itemId: string,
 ) {
   return [itemId, ...selectedIds.filter((id) => id !== itemId)];
+}
+
+export function reorderContextSelectorItems(
+  selectedIds: string[],
+  activeId: string,
+  overId: string,
+) {
+  const oldIndex = selectedIds.indexOf(activeId);
+  const newIndex = selectedIds.indexOf(overId);
+  if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+    return selectedIds;
+  }
+  return arrayMove(selectedIds, oldIndex, newIndex);
 }
 
 function getKnownItems(items: ContextSelectorItem[], ids: string[]) {
@@ -226,6 +257,11 @@ const Root: FC<ContextSelectorRootProps> = ({
           promoteContextSelectorItem(normalizedSelectedIds, itemId),
         );
       },
+      reorderItems: (activeId, overId) => {
+        onSelectedIdsChange(
+          reorderContextSelectorItems(normalizedSelectedIds, activeId, overId),
+        );
+      },
     }),
     [
       items,
@@ -268,7 +304,16 @@ const Badge: FC<ContextSelectorBadgeProps> = ({
     renderBadgeLabel,
     removeItem,
     makeMain,
+    reorderItems,
   } = useContextSelectorContext();
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {distance: 4},
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const mainItem = selectedItems[0];
   const label =
     renderBadgeLabel?.({mainItem, selectedItems, runningItems}) ??
@@ -306,51 +351,109 @@ const Badge: FC<ContextSelectorBadgeProps> = ({
         </TooltipContent>
       </Tooltip>
       {selectedItems.length > 0 ? (
-        selectedItems.map((item, index) => {
-          const Icon = getDefaultIcon(item);
-          const main = index === 0;
-          return (
-            <UiBadge
-              key={item.id}
-              variant={main ? 'default' : 'secondary'}
-              className="h-6 max-w-36 min-w-0 gap-1 px-1.5 text-[11px]"
-            >
-              <button
-                type="button"
-                className="flex min-w-0 items-center gap-1"
-                onClick={() => makeMain(item.id)}
-                aria-label={`Make ${item.title} the main context item`}
-              >
-                <span className="shrink-0">
-                  {renderIcon ? (
-                    renderIcon(item)
-                  ) : (
-                    <Icon className="h-3 w-3" />
-                  )}
-                </span>
-                <span className="truncate">{item.title}</span>
-              </button>
-              <button
-                type="button"
-                className="ml-0.5 shrink-0 opacity-70 hover:opacity-100"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  removeItem(item.id);
-                }}
-                aria-label={`Remove ${item.title} from context`}
-              >
-                <XIcon className="h-2.5 w-2.5" />
-              </button>
-            </UiBadge>
-          );
-        })
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event: DragEndEvent) => {
+            const {active, over} = event;
+            if (!over || active.id === over.id) return;
+            reorderItems(String(active.id), String(over.id));
+          }}
+        >
+          <SortableContext
+            items={selectedItems.map((item) => item.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {selectedItems.map((item, index) => (
+              <SortableContextChip
+                key={item.id}
+                item={item}
+                main={index === 0}
+                renderIcon={renderIcon}
+                onMakeMain={makeMain}
+                onRemove={removeItem}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       ) : (
         <span className="text-muted-foreground truncate text-[11px]">
           {label}
         </span>
       )}
     </div>
+  );
+};
+
+const SortableContextChip: FC<{
+  item: ContextSelectorItem;
+  main: boolean;
+  renderIcon?: (item: ContextSelectorItem) => ReactNode;
+  onMakeMain: (itemId: string) => void;
+  onRemove: (itemId: string) => void;
+}> = ({item, main, renderIcon, onMakeMain, onRemove}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({id: item.id});
+  const Icon = getDefaultIcon(item);
+  const transformStyle = transform
+    ? `translate3d(${Math.round(transform.x)}px, ${Math.round(
+        transform.y,
+      )}px, 0)`
+    : undefined;
+
+  return (
+    <span
+      ref={setNodeRef}
+      className={cn('inline-flex min-w-0', isDragging && 'opacity-70')}
+      style={{
+        transform: transformStyle,
+        transition,
+      }}
+    >
+      <UiBadge
+        variant={main ? 'default' : 'secondary'}
+        className="h-6 max-w-36 min-w-0 gap-1 px-1.5 text-[11px]"
+      >
+        <button
+          type="button"
+          className="text-muted-foreground/80 hover:text-foreground shrink-0 cursor-grab active:cursor-grabbing"
+          aria-label={`Drag ${item.title} to reorder context`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVerticalIcon className="h-2.5 w-2.5" />
+        </button>
+        <button
+          type="button"
+          className="flex min-w-0 items-center gap-1"
+          onClick={() => onMakeMain(item.id)}
+          aria-label={`Make ${item.title} the main context item`}
+        >
+          <span className="shrink-0">
+            {renderIcon ? renderIcon(item) : <Icon className="h-3 w-3" />}
+          </span>
+          <span className="truncate">{item.title}</span>
+        </button>
+        <button
+          type="button"
+          className="ml-0.5 shrink-0 opacity-70 hover:opacity-100"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onRemove(item.id);
+          }}
+          aria-label={`Remove ${item.title} from context`}
+        >
+          <XIcon className="h-2.5 w-2.5" />
+        </button>
+      </UiBadge>
+    </span>
   );
 };
 
