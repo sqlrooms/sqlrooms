@@ -1,4 +1,6 @@
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
+import type {AiRunContext} from '@sqlrooms/ai-config';
+import {jest} from '@jest/globals';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
 
@@ -8,7 +10,9 @@ type TestStoreState = AiSliceState & {
   };
 };
 
-function createTestStore() {
+function createTestStore(options?: {
+  getRunContext?: () => AiRunContext | undefined;
+}) {
   const now = Date.now();
   const settingsConfig: AiSettingsSliceConfig = {
     providers: {
@@ -34,6 +38,13 @@ function createTestStore() {
     ...createAiSlice({
       tools: {} as any,
       getInstructions: () => 'test instructions',
+      getRunContext: options?.getRunContext,
+      formatRunContextInstructions: ({runContext}) => {
+        const mainItem = runContext.items[0];
+        return mainItem
+          ? `Context: ${mainItem.type} ${mainItem.title}`
+          : '';
+      },
       defaultProvider: 'openai',
       defaultModel: 'shared-model',
       config: {
@@ -102,5 +113,50 @@ describe('AiSlice model selection', () => {
     expect(currentSession?.id).not.toBe(previousSessionId);
     expect(currentSession?.modelProvider).toBe('anthropic');
     expect(currentSession?.model).toBe('shared-model');
+  });
+
+  it('captures run context once when starting analysis', async () => {
+    const contextA: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'map-a',
+          type: 'map',
+          title: 'Map A',
+        },
+      ],
+      capturedAt: 1,
+    };
+    const contextB: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'map-b',
+          type: 'map',
+          title: 'Map B',
+        },
+      ],
+      capturedAt: 2,
+    };
+    let activeContext = contextA;
+    const store = createTestStore({
+      getRunContext: () => activeContext,
+    });
+    const sendMessage = jest.fn();
+
+    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    store.getState().ai.setPrompt('session-1', 'hello');
+    await store.getState().ai.startAnalysis('session-1');
+    activeContext = contextB;
+
+    const session = store.getState().ai.config.sessions[0];
+    expect(session?.runContext).toEqual(contextA);
+    expect(store.getState().ai.getFullInstructions('session-1')).toContain(
+      'Map A',
+    );
+    expect(store.getState().ai.getFullInstructions('session-1')).not.toContain(
+      'Map B',
+    );
+    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
   });
 });

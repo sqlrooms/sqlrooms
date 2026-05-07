@@ -759,20 +759,24 @@ function DropdownTabItems({
 /**
  * A general-purpose button for the tab strip.
  */
-function TabStripButton({className, ...props}: ButtonProps) {
-  return (
-    <Button
-      size="icon"
-      variant="ghost"
-      className={cn(
-        ...TAB_STRIP_BUTTON_CLASSNAMES,
-        'h-full shrink-0',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const TabStripButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({className, ...props}, ref) => {
+    return (
+      <Button
+        ref={ref}
+        size="icon"
+        variant="ghost"
+        className={cn(
+          ...TAB_STRIP_BUTTON_CLASSNAMES,
+          'h-full shrink-0',
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
+TabStripButton.displayName = 'TabStripButton';
 type TabStripNewButtonProps = ButtonProps & {
   /** Optional tooltip content for the button. */
   tooltip?: React.ReactNode;

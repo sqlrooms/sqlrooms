@@ -11,6 +11,10 @@ import {
   ReactNode,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {
+  CHAT_CONTEXT_SELECTOR_SLOT,
+  ContextSelector,
+} from './ContextSelector';
 import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
 
@@ -30,29 +34,48 @@ function isInlineApiKeyInput(
   return isValidElement(child) && child.type === InlineApiKeyInput;
 }
 
+function isContextSelector(
+  child: ReactNode,
+): child is React.ReactElement<React.ComponentProps<typeof ContextSelector>> {
+  if (!isValidElement(child)) return false;
+  if (child.type === ContextSelector) return true;
+  return (
+    typeof child.type !== 'string' &&
+    Boolean(
+      (child.type as {[CHAT_CONTEXT_SELECTOR_SLOT]?: boolean})[
+        CHAT_CONTEXT_SELECTOR_SLOT
+      ],
+    )
+  );
+}
+
 /**
- * Extracts InlineApiKeyInput from children and returns the rest
+ * Extracts special composer children and returns the rest.
  */
-function extractInlineApiKeyInput(children: ReactNode): {
+function extractComposerChildren(children: ReactNode): {
   inlineApiKeyInput: React.ReactElement<
     React.ComponentProps<typeof InlineApiKeyInput>
   > | null;
+  contextSelectors: ReactNode[];
   otherChildren: ReactNode[];
 } {
   let inlineApiKeyInput: React.ReactElement<
     React.ComponentProps<typeof InlineApiKeyInput>
   > | null = null;
+  const contextSelectors: ReactNode[] = [];
   const otherChildren: ReactNode[] = [];
 
   Children.forEach(children, (child) => {
     if (isInlineApiKeyInput(child)) {
       inlineApiKeyInput = child;
+    } else if (isContextSelector(child)) {
+      contextSelectors.push(child);
     } else {
       otherChildren.push(child);
     }
   });
 
-  return {inlineApiKeyInput, otherChildren};
+  return {inlineApiKeyInput, contextSelectors, otherChildren};
 }
 
 export const QueryControls: React.FC<QueryControlsProps> = ({
@@ -71,8 +94,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
   const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
 
-  // Extract InlineApiKeyInput from children
-  const {inlineApiKeyInput, otherChildren} = extractInlineApiKeyInput(children);
+  // Extract special composer controls from children
+  const {inlineApiKeyInput, contextSelectors, otherChildren} =
+    extractComposerChildren(children);
 
   // Show API key input if InlineApiKeyInput is provided and either:
   // - No API key is set, OR
@@ -176,6 +200,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       )}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
+          {contextSelectors.length > 0 ? (
+            <div className="flex w-full flex-wrap items-center gap-1 px-2 pt-2">
+              {contextSelectors}
+            </div>
+          ) : null}
           <Textarea
             ref={textareaRef}
             className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"

@@ -51,6 +51,7 @@ export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
   AddToolOutput,
+  AiToolExecutionContext,
   AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
@@ -87,16 +88,25 @@ export type {
   ToolDisplayBehavior,
 } from '@sqlrooms/ai-core';
 export {Chat} from '@sqlrooms/ai-core';
+export {ContextSelector} from '@sqlrooms/ai-core';
+export type {ContextSelectorItem, ContextSelectorRootProps} from '@sqlrooms/ai-core';
+export const CHAT_CONTEXT_SELECTOR_SLOT = Symbol.for(
+  'sqlrooms.ai.contextSelectorSlot',
+);
 
 // From @sqlrooms/ai-config
 export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
   AiSliceConfig,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
+  getAiRunContextItems,
 } from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

@@ -5,6 +5,7 @@ import {
   AnalysisSessionSchema,
   createDefaultAiConfig,
 } from '@sqlrooms/ai-config';
+import type {AiRunContext} from '@sqlrooms/ai-config';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -176,7 +177,7 @@ export type AiSliceState = {
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
-    getFullInstructions: () => string;
+    getFullInstructions: (sessionId?: string) => string;
     getLocalChatTransport: (
       sessionId: string,
     ) => DefaultChatTransport<UIMessage>;
@@ -221,7 +222,15 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   initialPrompt?: string;
   tools: TTools;
   toolRenderers?: ToolRenderers<TTools>;
-  getInstructions: () => string;
+  getInstructions: (args?: {
+    session?: AnalysisSessionSchema;
+    runContext?: AiRunContext;
+  }) => string;
+  getRunContext?: () => AiRunContext | undefined;
+  formatRunContextInstructions?: (args: {
+    runContext: AiRunContext;
+    session?: AnalysisSessionSchema;
+  }) => string;
   defaultProvider?: string;
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
@@ -252,6 +261,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
+    getRunContext,
+    formatRunContextInstructions,
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
@@ -937,10 +948,27 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return 50;
         },
 
-        getFullInstructions: () => {
+        getFullInstructions: (sessionId?: string) => {
           const store = get();
+          const session = sessionId
+            ? store.ai.config.sessions.find(
+                (candidate: AnalysisSessionSchema) =>
+                  candidate.id === sessionId,
+              )
+            : getCurrentSessionFromState(store);
+          const runContext = session?.runContext;
 
-          let instructions = getInstructions();
+          let instructions = getInstructions({session, runContext});
+
+          if (runContext && formatRunContextInstructions) {
+            const contextInstructions = formatRunContextInstructions({
+              runContext,
+              session,
+            });
+            if (contextInstructions.trim().length > 0) {
+              instructions = `${instructions}\n\n${contextInstructions}`;
+            }
+          }
 
           // Fall back to settings
           if (hasAiSettingsConfig(store)) {
@@ -1002,7 +1030,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               model,
               temperature: AI_DEFAULT_TEMPERATURE,
               messages: [{role: 'user', content: prompt}],
-              system: systemInstructions || state.ai.getFullInstructions(),
+              system:
+                systemInstructions ||
+                state.ai.getFullInstructions(currentSession?.id),
               abortSignal: abortSignal,
               ...(useTools ? {tools: toolsWithoutExecute as ToolSet} : {}),
             });
@@ -1056,6 +1086,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               );
               if (draftSession) {
                 draftSession.isRunning = true;
+                draftSession.runContext = getRunContext?.();
                 draftSession.prompt = '';
                 draft.ai.promptSuggestionsVisible = false;
 
@@ -1233,7 +1264,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             store,
             defaultProvider: defaultProvider,
             defaultModel: defaultModel,
-            getInstructions: () => store.getState().ai.getFullInstructions(),
+            getInstructions: () =>
+              store.getState().ai.getFullInstructions(sessionId),
             getCustomModel,
             sessionId,
           })();
@@ -1249,7 +1281,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             defaultProvider,
             defaultModel,
             sessionId,
-            getInstructions: () => store.getState().ai.getFullInstructions(),
+            getInstructions: () =>
+              store.getState().ai.getFullInstructions(sessionId),
           })(endpoint, headers),
 
         ...createChatHandlers({store}),
