@@ -8,6 +8,10 @@
   "module": "dist/index.js",
   "author": "SQLRooms Contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
   "files": [
     "dist"
   ],
