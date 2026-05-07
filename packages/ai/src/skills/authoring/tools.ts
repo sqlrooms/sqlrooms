@@ -4,25 +4,35 @@ import type {SkillRef} from '../storage';
 import type {SkillAuthoringContext} from './SkillAuthoringContext';
 import type {SkillDraft, SkillDraftStore} from './createSkillDraftStore';
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
- * Return the first identifier in `identifiers` that appears in `text` as a
+ * Pre-compile word-boundary patterns for a list of forbidden identifiers.
+ * Returns an array of `[identifier, RegExp]` pairs, skipping empty strings.
+ */
+function buildForbiddenPatterns(
+  identifiers: readonly string[] | undefined,
+): Array<[string, RegExp]> {
+  if (!identifiers || identifiers.length === 0) return [];
+  return identifiers
+    .filter((id) => id.length > 0)
+    .map((id) => [id, new RegExp(`\\b${escapeRegExp(id)}\\b`, 'i')]);
+}
+
+/**
+ * Return the first identifier in `patterns` that appears in `text` as a
  * whole word (case-insensitive), or `null` if none do.
  */
 export function containsForbidden(
   text: string,
-  identifiers: readonly string[] | undefined,
+  patterns: Array<[string, RegExp]>,
 ): string | null {
-  if (!identifiers || identifiers.length === 0) return null;
-  for (const id of identifiers) {
-    if (id.length === 0) continue;
-    const pattern = new RegExp(`\\b${escapeRegExp(id)}\\b`, 'i');
+  for (const [id, pattern] of patterns) {
     if (pattern.test(text)) return id;
   }
   return null;
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function portabilityErrorMessage(match: string): string {
@@ -31,6 +41,21 @@ function portabilityErrorMessage(match: string): string {
     `portable templates. Rewrite abstractly (refer to "the input table" or ` +
     `"the target column" instead).`
   );
+}
+
+/**
+ * Run the forbidden-identifier check against `text` and return an error
+ * result if a match is found, otherwise `null`.
+ */
+function checkForbidden(
+  text: string,
+  patterns: Array<[string, RegExp]>,
+): {success: false; error: string} | null {
+  const match = containsForbidden(text, patterns);
+  if (match !== null) {
+    return {success: false as const, error: portabilityErrorMessage(match)};
+  }
+  return null;
 }
 
 /**
@@ -59,24 +84,19 @@ export function createWriteManifestTool(
   draftStore: SkillDraftStore,
   context: SkillAuthoringContext,
 ) {
+  const forbiddenPatterns = buildForbiddenPatterns(
+    context.forbiddenIdentifiers,
+  );
+
   return tool({
     description:
       'Draft or revise the skill manifest (name, description, optional author). Call this first when authoring a new skill.',
     inputSchema: WriteManifestInput,
     execute: async ({name, description, author}) => {
       const combined = `${name}\n${description}\n${author ?? ''}`;
-      const match = containsForbidden(combined, context.forbiddenIdentifiers);
-      if (match !== null) {
-        return {
-          success: false as const,
-          error: portabilityErrorMessage(match),
-        };
-      }
-      draftStore.getState().patchManifest({
-        name,
-        description,
-        ...(author !== undefined ? {author} : {}),
-      });
+      const forbidden = checkForbidden(combined, forbiddenPatterns);
+      if (forbidden !== null) return forbidden;
+      draftStore.getState().patchManifest({name, description, author});
       return {
         success: true as const,
         manifest: {name, description, author},
@@ -96,18 +116,17 @@ export function createWriteInstructionsTool(
   draftStore: SkillDraftStore,
   context: SkillAuthoringContext,
 ) {
+  const forbiddenPatterns = buildForbiddenPatterns(
+    context.forbiddenIdentifiers,
+  );
+
   return tool({
     description:
       'Replace the full SKILL.md body with the given markdown. Call after writeManifest.',
     inputSchema: WriteInstructionsInput,
     execute: async ({markdown}) => {
-      const match = containsForbidden(markdown, context.forbiddenIdentifiers);
-      if (match !== null) {
-        return {
-          success: false as const,
-          error: portabilityErrorMessage(match),
-        };
-      }
+      const forbidden = checkForbidden(markdown, forbiddenPatterns);
+      if (forbidden !== null) return forbidden;
       draftStore.getState().setInstructions(markdown);
       return {success: true as const, length: markdown.length};
     },

@@ -10,6 +10,15 @@ export type SkillErrorCode =
   | 'ROOT_READONLY'
   | 'ID_CONFLICT';
 
+/** A JSON-serializable value (no functions, no undefined, no circular refs). */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | {[key: string]: JsonValue};
+
 export interface SkillErrorContext {
   /** The ref involved, when applicable. */
   ref?: {rootId: string; id: string};
@@ -21,8 +30,8 @@ export interface SkillErrorContext {
     message: string;
     code?: string;
   }>;
-  /** Free-form additional context. */
-  [key: string]: unknown;
+  /** Free-form additional context — must be JSON-serializable. */
+  extras?: Record<string, JsonValue>;
 }
 
 export class SkillError extends Error {

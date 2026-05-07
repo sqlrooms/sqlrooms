@@ -16,6 +16,13 @@ import type {SkillDraftStore} from './createSkillDraftStore';
  */
 export const DEFAULT_SKILL_AUTHORING_STOP_STEPS = 20;
 
+/** Tool name constants for the skill authoring agent. */
+export const SKILL_AUTHORING_TOOL_NAMES = {
+  writeManifest: 'writeManifest',
+  writeInstructions: 'writeInstructions',
+  saveSkill: 'saveSkill',
+} as const;
+
 export interface CreateSkillAuthoringAgentOptions {
   /**
    * Fully constructed language model. The factory does not handle credentials

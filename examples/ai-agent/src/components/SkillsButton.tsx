@@ -34,14 +34,9 @@ const AUTHORING_CONTEXT: SkillAuthoringContext = {
  */
 export const SkillsButton: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [nonce, setNonce] = useState(0);
 
   const handleOpenChange = useCallback((next: boolean) => {
     setOpen(next);
-    if (!next) {
-      // Bump the nonce so the next open gets a fresh draft store + agent.
-      setNonce((n) => n + 1);
-    }
   }, []);
 
   return (
@@ -65,9 +60,7 @@ export const SkillsButton: React.FC = () => {
               instructions; the preview on the right updates live.
             </DialogDescription>
           </DialogHeader>
-          {open && (
-            <AuthoringBody key={nonce} onDone={() => handleOpenChange(false)} />
-          )}
+          {open && <AuthoringBody onDone={() => handleOpenChange(false)} />}
         </DialogContent>
       </Dialog>
     </>
@@ -75,7 +68,8 @@ export const SkillsButton: React.FC = () => {
 };
 
 const AuthoringBody: React.FC<{onDone: () => void}> = ({onDone}) => {
-  // Fresh store + agent per mount (keyed by `nonce` in the parent).
+  // Fresh store + agent per mount — component is unmounted on close, so each
+  // open naturally starts with a clean slate.
   const draftStore: SkillDraftStore = useMemo(
     () => createSkillDraftStore(),
     [],
@@ -124,17 +118,16 @@ const AuthoringBody: React.FC<{onDone: () => void}> = ({onDone}) => {
   );
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
-      <SkillAuthoringPanel
-        agent={agent}
-        draftStore={draftStore}
-        onCancel={onDone}
-        initialSuggestions={[
-          'Build a skill that checks a column for null values.',
-          'Build a skill that reports the row count of each table.',
-        ]}
-      />
-    </div>
+    <SkillAuthoringPanel
+      agent={agent}
+      draftStore={draftStore}
+      onCancel={onDone}
+      className="min-h-0 flex-1 overflow-hidden"
+      initialSuggestions={[
+        'Build a skill that checks a column for null values.',
+        'Build a skill that reports the row count of each table.',
+      ]}
+    />
   );
 };
 

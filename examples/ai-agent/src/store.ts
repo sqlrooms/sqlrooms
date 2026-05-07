@@ -34,7 +34,11 @@ export const skillStorage = new InMemorySkillStorage();
 let cachedListings: SkillListing[] = [];
 
 async function refreshSkillListings() {
-  cachedListings = await skillStorage.listSkills();
+  try {
+    cachedListings = await skillStorage.listSkills();
+  } catch (err) {
+    console.error('[store] Failed to refresh skill listings:', err);
+  }
 }
 
 // Initial seed — fire-and-forget is safe, the storage constructor already

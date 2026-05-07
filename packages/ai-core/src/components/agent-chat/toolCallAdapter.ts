@@ -1,5 +1,6 @@
 import type {UIMessagePart} from 'ai';
 import type {AgentToolCall} from '../../types';
+import {isDynamicToolPart, isToolPart} from '../../utils';
 
 /**
  * Convert a UI-message tool part (`tool-*` or `dynamic-tool`) into the
@@ -9,22 +10,22 @@ import type {AgentToolCall} from '../../types';
 export function partToAgentToolCall(
   part: UIMessagePart<any, any>,
 ): AgentToolCall | null {
-  const type = (part as {type?: string}).type ?? '';
-  const toolCallId = (part as {toolCallId?: string}).toolCallId;
+  if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
+
+  const toolCallId = part.toolCallId;
   if (!toolCallId) return null;
 
-  const toolName =
-    type === 'dynamic-tool'
-      ? ((part as {toolName?: string}).toolName ?? 'tool')
-      : type.replace(/^tool-/, '') || 'tool';
+  const toolName = isDynamicToolPart(part)
+    ? (part.toolName ?? 'tool')
+    : part.type.replace(/^tool-/, '') || 'tool';
 
   return {
     toolCallId,
     toolName,
-    input: (part as {input?: unknown}).input,
-    output: (part as {output?: unknown}).output,
-    errorText: (part as {errorText?: string}).errorText,
-    state: mapPartStateToToolCallState((part as {state?: string}).state),
+    input: part.input,
+    output: part.output,
+    errorText: part.errorText,
+    state: mapPartStateToToolCallState(part.state),
   };
 }
 

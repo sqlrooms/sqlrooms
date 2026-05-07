@@ -9,6 +9,7 @@ import {
 } from '@sqlrooms/ui';
 import React, {useMemo, type ReactNode} from 'react';
 import {useStore} from 'zustand';
+import {SKILL_AUTHORING_TOOL_NAMES} from './SkillAuthoringAgent';
 import {SkillDraftPreview} from './SkillDraftPreview';
 import type {SkillDraftStatus, SkillDraftStore} from './createSkillDraftStore';
 
@@ -62,11 +63,11 @@ export const SkillAuthoringPanel: React.FC<SkillAuthoringPanelProps> = ({
     () => ({
       getActivityLabel: (toolCall) => {
         switch (toolCall.toolName) {
-          case 'writeManifest':
+          case SKILL_AUTHORING_TOOL_NAMES.writeManifest:
             return 'Drafting the manifest';
-          case 'writeInstructions':
+          case SKILL_AUTHORING_TOOL_NAMES.writeInstructions:
             return 'Writing instructions';
-          case 'saveSkill':
+          case SKILL_AUTHORING_TOOL_NAMES.saveSkill:
             return 'Saving the skill';
           default:
             return undefined;
@@ -130,15 +131,22 @@ export const DefaultSkillAuthoringPanelHeader: React.FC = () => (
 const StatusPill: React.FC<{
   status: SkillDraftStatus;
 }> = ({status}) => {
-  const label =
-    status === 'saving' ? 'Saving...' : status === 'error' ? 'Error' : 'Ready';
+  let label: string;
+  let dotClass: string;
 
-  const dotClass =
-    status === 'saving'
-      ? 'bg-amber-500 animate-pulse'
-      : status === 'error'
-        ? 'bg-destructive'
-        : 'bg-muted-foreground/40';
+  switch (status) {
+    case 'saving':
+      label = 'Saving...';
+      dotClass = 'bg-amber-500 animate-pulse';
+      break;
+    case 'error':
+      label = 'Error';
+      dotClass = 'bg-destructive';
+      break;
+    default:
+      label = 'Ready';
+      dotClass = 'bg-muted-foreground/40';
+  }
 
   return (
     <div

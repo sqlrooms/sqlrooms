@@ -11,7 +11,7 @@ export function getModel(store: StoreApi<AiSliceState>): LanguageModel {
   const state = store.getState();
   const currentSession = state.ai.getCurrentSession();
   const provider = currentSession?.modelProvider || 'openai';
-  const modelId = currentSession?.model || 'gpt-4.1';
+  const modelId = currentSession?.model || 'gpt-4o';
 
   return createOpenAICompatible({
     apiKey: state.ai.getApiKeyFromSettings(),

@@ -83,6 +83,52 @@ export function AiPanel() {
 }
 ```
 
+## AgentChat
+
+`AgentChat` is a lightweight, stateless chat surface driven by an externally constructed `ToolLoopAgent`. Unlike the session-based `Chat` component it owns no session list, no AI slice, no model selector, and no persistence — it is intended for transient, single-purpose conversations such as authoring wizards, inline approvals, or one-shot agent flows.
+
+### Key props
+
+| Prop                 | Type                              | Description                                                                           |
+| -------------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
+| `agent`              | `ToolLoopAgent`                   | A pre-built agent. The caller owns model, tools, system prompt, and provider options. |
+| `initialMessages`    | `UIMessage[]`                     | Seed messages shown on mount. State is local after mount.                             |
+| `initialSuggestions` | `string[]`                        | Prompt chips shown before the first message is sent.                                  |
+| `toolRenderBehavior` | `ToolRenderBehavior`              | Customize tool-call labels and rendering structure.                                   |
+| `onMessagesChange`   | `(messages: UIMessage[]) => void` | Notified on every stream delta; useful for mirroring messages to external state.      |
+| `placeholder`        | `string`                          | Textarea placeholder text.                                                            |
+
+### Usage
+
+```tsx
+import {AgentChat} from '@sqlrooms/ai-core';
+import {createToolLoopAgent, tool} from 'ai';
+import {z} from 'zod';
+
+const agent = createToolLoopAgent({
+  model: myLanguageModel,
+  system: 'You are a helpful assistant.',
+  tools: {
+    greet: tool({
+      description: 'Greet the user',
+      inputSchema: z.object({name: z.string()}),
+      execute: async ({name}) => `Hello, ${name}!`,
+    }),
+  },
+});
+
+function WizardPanel() {
+  return (
+    <AgentChat
+      agent={agent}
+      initialSuggestions={['Get started', 'Show me an example']}
+      placeholder="Ask anything..."
+      onMessagesChange={(msgs) => console.log(msgs)}
+    />
+  );
+}
+```
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`

@@ -10,12 +10,13 @@
 
 import {
   loadSkillFromFiles,
-  parseSkillManifest,
   serializeSkillManifest,
+  SkillManifestError,
   SkillNotFoundError,
   SkillRootReadOnlyError,
   type SkillFile,
   type SkillListing,
+  type SkillManifest,
   type SkillRecord,
   type SkillRef,
   type SkillRoot,
@@ -31,6 +32,7 @@ const ROOTS: SkillRoot[] = [
 
 interface StoredSkill {
   files: SkillFile[];
+  manifest: SkillManifest;
 }
 
 export class InMemorySkillStorage implements SkillStorage {
@@ -56,7 +58,7 @@ export class InMemorySkillStorage implements SkillStorage {
           `Seed skill "${seed.id}" targets unknown rootId "${seed.rootId}"`,
         );
       }
-      rootMap.set(seed.id, {files: seed.files});
+      rootMap.set(seed.id, {files: seed.files, manifest});
     }
   }
 
@@ -80,12 +82,14 @@ export class InMemorySkillStorage implements SkillStorage {
       const rootMap = this.byRoot.get(rId);
       if (!rootMap) continue;
       for (const [id, stored] of rootMap) {
-        const manifestFile = stored.files.find(
-          (f) => f.relativePath === 'skill.yaml',
-        );
-        if (!manifestFile) continue;
-        const manifest = parseSkillManifest(manifestFile.content);
-        out.push({ref: {rootId: rId, id}, manifest});
+        try {
+          out.push({ref: {rootId: rId, id}, manifest: stored.manifest});
+        } catch (err) {
+          console.warn(
+            `[InMemorySkillStorage] Skipping corrupt entry "${id}" in root "${rId}":`,
+            err,
+          );
+        }
       }
     }
     return out;
@@ -113,12 +117,24 @@ export class InMemorySkillStorage implements SkillStorage {
   ): Promise<SkillRef> {
     const root = ROOTS.find((r) => r.id === rootId);
     if (!root) {
-      throw new SkillNotFoundError(`Unknown root "${rootId}"`, {rootId});
+      throw new SkillManifestError(`Unknown root: ${rootId}`, {rootId});
     }
     if (!root.writable) {
       throw new SkillRootReadOnlyError(`Root "${rootId}" is read-only`, {
         rootId,
       });
+    }
+    // Validate extra file paths: no absolute paths, no path traversal.
+    for (const file of content.extraFiles ?? []) {
+      if (
+        file.relativePath.startsWith('/') ||
+        file.relativePath.split('/').includes('..')
+      ) {
+        throw new SkillManifestError(
+          'Skill file path must be relative and cannot escape the skill directory',
+          {rootId},
+        );
+      }
     }
     const files: SkillFile[] = [
       {
@@ -128,13 +144,11 @@ export class InMemorySkillStorage implements SkillStorage {
       {relativePath: 'SKILL.md', content: content.instructions},
       ...(content.extraFiles ?? []),
     ];
-    // Round-trip validation.
-    loadSkillFromFiles(files);
     const rootMap = this.byRoot.get(rootId);
     if (!rootMap) {
-      throw new SkillNotFoundError(`Unknown root "${rootId}"`, {rootId});
+      throw new SkillManifestError(`Unknown root: ${rootId}`, {rootId});
     }
-    rootMap.set(id, {files});
+    rootMap.set(id, {files, manifest: content.manifest});
     this.notify();
     return {rootId, id};
   }
@@ -142,7 +156,9 @@ export class InMemorySkillStorage implements SkillStorage {
   async deleteSkill(ref: SkillRef): Promise<void> {
     const root = ROOTS.find((r) => r.id === ref.rootId);
     if (!root) {
-      throw new SkillNotFoundError(`Unknown root "${ref.rootId}"`, {ref});
+      throw new SkillManifestError(`Unknown root: ${ref.rootId}`, {
+        rootId: ref.rootId,
+      });
     }
     if (!root.writable) {
       throw new SkillRootReadOnlyError(`Root "${ref.rootId}" is read-only`, {

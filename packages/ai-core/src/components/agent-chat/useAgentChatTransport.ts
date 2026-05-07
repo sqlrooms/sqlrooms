@@ -37,7 +37,12 @@ function parseUiMessages(body: BodyInit | null | undefined): UIMessage[] {
   try {
     const parsed = JSON.parse(String(body)) as {messages?: UIMessage[]};
     return Array.isArray(parsed.messages) ? parsed.messages : [];
-  } catch {
+  } catch (err) {
+    console.warn(
+      '[useAgentChatTransport] Failed to parse request body:',
+      err,
+      String(body)?.slice(0, 200),
+    );
     return [];
   }
 }

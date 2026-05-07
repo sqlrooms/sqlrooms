@@ -99,8 +99,20 @@ export function loadSkillFromFiles(files: SkillFile[]): {
   instructions: string;
   extraFiles: SkillFile[];
 } {
-  const manifestFile = files.find((f) => f.relativePath === 'skill.yaml');
-  const instructionsFile = files.find((f) => f.relativePath === 'SKILL.md');
+  let manifestFile: SkillFile | undefined;
+  let instructionsFile: SkillFile | undefined;
+  const extraFiles: SkillFile[] = [];
+
+  for (const file of files) {
+    if (file.relativePath === 'skill.yaml') {
+      manifestFile = file;
+    } else if (file.relativePath === 'SKILL.md') {
+      instructionsFile = file;
+    } else {
+      extraFiles.push(file);
+    }
+  }
+
   if (!manifestFile) {
     throw new SkillManifestError('Missing skill.yaml');
   }
@@ -111,8 +123,5 @@ export function loadSkillFromFiles(files: SkillFile[]): {
     throw new SkillManifestError('SKILL.md must not be empty');
   }
   const manifest = parseSkillManifest(manifestFile.content);
-  const extraFiles = files.filter(
-    (f) => f.relativePath !== 'skill.yaml' && f.relativePath !== 'SKILL.md',
-  );
   return {manifest, instructions: instructionsFile.content, extraFiles};
 }

@@ -12,27 +12,27 @@ export interface SkillAuthoringContext {
    * Named services the drafted skill may reference (e.g. the sub-apis of an
    * `execute`-style tool the host exposes). Empty list is valid.
    */
-  services: string[];
+  services: readonly string[];
 
   /**
    * Leaf tools available at skill runtime (e.g. `querySQL`, `readFile`).
    * Empty list is valid.
    */
-  tools: string[];
+  tools: readonly string[];
 
   /**
    * Permission keys the host recognizes. Currently unused by the manifest
    * schema but surfaced in the system prompt for forward compatibility.
    * Empty list is valid.
    */
-  permissions: string[];
+  permissions: readonly string[];
 
   /**
    * Identifiers (e.g. current table names) that must not appear verbatim in
    * manifest fields or instructions. Matched case-insensitively on word
    * boundaries. Optional — omit if the host has no contextual identifiers.
    */
-  forbiddenIdentifiers?: string[];
+  forbiddenIdentifiers?: readonly string[];
 
   /**
    * Root the wizard writes to when `saveSkill` is called without an explicit

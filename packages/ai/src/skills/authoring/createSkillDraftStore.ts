@@ -1,4 +1,3 @@
-import {produce} from 'immer';
 import {createStore, type StoreApi} from 'zustand/vanilla';
 
 /**
@@ -51,41 +50,13 @@ export function createSkillDraftStore(): SkillDraftStore {
     status: 'idle',
     error: undefined,
 
-    patchManifest: (patch) =>
-      set((state) =>
-        produce(state, (draft) => {
-          if (patch.name !== undefined) draft.name = patch.name;
-          if (patch.description !== undefined)
-            draft.description = patch.description;
-          if (patch.author !== undefined) draft.author = patch.author;
-        }),
-      ),
+    patchManifest: (patch) => set((s) => ({...s, ...patch})),
 
-    setInstructions: (markdown) =>
-      set((state) =>
-        produce(state, (draft) => {
-          draft.instructions = markdown;
-        }),
-      ),
+    setInstructions: (markdown) => set({instructions: markdown}),
 
     setStatus: (status, error) =>
-      set((state) =>
-        produce(state, (draft) => {
-          draft.status = status;
-          draft.error = status === 'error' ? error : undefined;
-        }),
-      ),
+      set({status, error: status === 'error' ? error : undefined}),
 
-    reset: () =>
-      set((state) =>
-        produce(state, (draft) => {
-          draft.name = initialDraft.name;
-          draft.description = initialDraft.description;
-          draft.author = initialDraft.author;
-          draft.instructions = initialDraft.instructions;
-          draft.status = 'idle';
-          draft.error = undefined;
-        }),
-      ),
+    reset: () => set({...initialDraft, status: 'idle', error: undefined}),
   }));
 }

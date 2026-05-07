@@ -141,6 +141,77 @@ If you want server-side model calls, set `chatEndPoint` and optional `chatHeader
 })(set, get, store),
 ```
 
+## Skills
+
+The skills subsystem lets you define, store, and author reusable AI "skills" — named instruction sets that can be loaded into an agent at runtime.
+
+### Storage and types
+
+`SkillStorage` is the interface that abstracts where skills live (filesystem, database, cloud, etc.). Implement it to plug in your own backend:
+
+- `listRoots()` — enumerate available skill root locations
+- `listSkills(rootId)` — list all skills under a root
+- `readSkill(ref)` / `writeSkill(ref, content)` / `deleteSkill(ref)` — CRUD on individual skills
+- `resolveSkillId(ref)` — resolve a skill reference to a canonical ID
+
+Supporting types: `SkillRoot`, `SkillManifest`, `SkillRef`, `SkillRecord`, `SkillListing`, `SkillWriteContent`, `SkillFile`.
+
+### Manifest utilities
+
+- `parseSkillManifest(raw)` — parse and validate a skill manifest (Zod-backed, throws `SkillManifestError` on failure)
+- `serializeSkillManifest(manifest)` — serialize a manifest back to its raw form
+- `loadSkillFromFiles(files)` — assemble a `SkillRecord` from a set of `SkillFile` objects (manifest + instruction body)
+
+### Error types
+
+All skill errors extend `SkillError` and carry a typed `SkillErrorCode`:
+
+| Class                    | When thrown                         |
+| ------------------------ | ----------------------------------- |
+| `SkillManifestError`     | Manifest parse/validation failure   |
+| `SkillNotFoundError`     | Skill ref does not exist in storage |
+| `SkillRootReadOnlyError` | Write attempted on a read-only root |
+| `SkillConflictError`     | Skill ID collision on write         |
+
+### Skill authoring
+
+A built-in agent-driven authoring flow that generates skill content through a conversational UI:
+
+- `createSkillAuthoringAgent(options)` — construct a `ToolLoopAgent` scoped to skill creation; accepts `CreateSkillAuthoringAgentOptions`
+- `createSkillDraftStore()` — Zustand store for tracking the in-progress draft (`SkillDraftStore`, `SkillDraftState`)
+- `SkillAuthoringPanel` — drop-in panel component that wires `AgentChat` to the authoring agent; accepts `SkillAuthoringPanelProps`
+- `SkillDraftPreview` — read-only preview of the current draft manifest and instructions; accepts `SkillDraftPreviewProps`
+- `DefaultSkillAuthoringPanelHeader` — default header for `SkillAuthoringPanel`
+
+Types: `SkillAuthoringContext`, `SkillDraft`, `SkillDraftStatus`, `SaveSkillCallback`, `CreateSkillAuthoringAgentOptions`.
+
+Lower-level authoring tools (exported for advanced use): `createWriteManifestTool`, `createWriteInstructionsTool`, `createSaveSkillTool`, `buildSkillAuthoringSystemPrompt`, `containsForbidden`, `DEFAULT_SKILL_AUTHORING_STOP_STEPS`.
+
+```tsx
+import {
+  createSkillAuthoringAgent,
+  createSkillDraftStore,
+  SkillAuthoringPanel,
+} from '@sqlrooms/ai';
+
+const draftStore = createSkillDraftStore();
+
+const agent = createSkillAuthoringAgent({
+  model: myLanguageModel,
+  draftStore,
+  onSave: async (skill) => {
+    await mySkillStorage.writeSkill(
+      {rootId: 'default', skillId: skill.id},
+      skill,
+    );
+  },
+});
+
+function SkillCreator() {
+  return <SkillAuthoringPanel agent={agent} draftStore={draftStore} />;
+}
+```
+
 ## Related packages
 
 - `@sqlrooms/ai-core` for lower-level AI slice and chat primitives

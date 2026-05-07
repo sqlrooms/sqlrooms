@@ -50,38 +50,46 @@ export function createRunSkillTool({
       {skillId, goal}: {skillId: string; goal: string},
       options?: {toolCallId?: string; abortSignal?: AbortSignal},
     ) => {
-      const ref = await storage.resolveSkillId(skillId);
-      if (!ref) {
+      try {
+        const ref = await storage.resolveSkillId(skillId);
+        if (!ref) {
+          return {
+            success: false as const,
+            error: `No skill found with id "${skillId}".`,
+          };
+        }
+        const record = await storage.readSkill(ref);
+
+        const subAgent = new ToolLoopAgent({
+          model: getModel(),
+          tools: {
+            querySQL: createQuerySqlTool(),
+          },
+          instructions: record.instructions,
+          stopWhen: stepCountIs(10),
+        });
+
+        const result = await streamSubAgent(
+          subAgent,
+          goal,
+          store,
+          options?.toolCallId || '',
+          options?.abortSignal,
+        );
+
+        return {
+          success: true as const,
+          skillId,
+          rootId: ref.rootId,
+          finalOutput: result.finalOutput,
+        };
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') throw err;
         return {
           success: false as const,
-          error: `No skill found with id "${skillId}".`,
+          error: `Skill "${skillId}" failed: ${err instanceof Error ? err.message : String(err)}`,
         };
       }
-      const record = await storage.readSkill(ref);
-
-      const subAgent = new ToolLoopAgent({
-        model: getModel(),
-        tools: {
-          querySQL: createQuerySqlTool(),
-        },
-        instructions: record.instructions,
-        stopWhen: stepCountIs(10),
-      });
-
-      const result = await streamSubAgent(
-        subAgent,
-        goal,
-        store,
-        options?.toolCallId || '',
-        options?.abortSignal,
-      );
-
-      return {
-        success: true as const,
-        skillId,
-        rootId: ref.rootId,
-        finalOutput: result.finalOutput,
-      };
     },
   });
 }
