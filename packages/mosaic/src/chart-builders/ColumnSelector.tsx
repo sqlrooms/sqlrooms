@@ -1,6 +1,6 @@
 import {type FC} from 'react';
 import {FieldSelectorInput} from './FieldSelectorInput';
-import {QUANTITATIVE_COLUMN_TYPES} from './constants';
+import {NUMERIC_COLUMN_TYPES, QUANTITATIVE_COLUMN_TYPES} from './constants';
 import {useChartSettingsContext} from '../dashboard/chart-settings/ChartSettingsContext';
 import {TableColumn} from '@sqlrooms/db';
 
@@ -46,4 +46,4 @@ export const QuantitativeColumnSelector: FC<
 
 export const NumericColumnSelector: FC<Omit<ColumnSelectorProps, 'types'>> = (
   props,
-) => <ColumnSelector {...props} types={QUANTITATIVE_COLUMN_TYPES} />;
+) => <ColumnSelector {...props} types={NUMERIC_COLUMN_TYPES} />;
