@@ -1,14 +1,6 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {
-  createHistogramAiTool,
-  createLineChartAiTool,
-  createCountPlotAiTool,
-  createHeatmapAiTool,
-  createBubbleChartAiTool,
-  createBoxPlotAiTool,
-  createEcdfAiTool,
-} from '@sqlrooms/mosaic';
+import {createDefaultChartTypes, createChartTools} from '@sqlrooms/mosaic';
 import {RoomState} from './store-types';
 import {StoreApi} from 'zustand';
 import {createChartToolDeps} from './createChartToolDeps';
@@ -42,6 +34,8 @@ export function getDashboardAiInstructions(_store: StoreApi<RoomState>) {
 
 export function createDashboardAiTools(store: StoreApi<RoomState>) {
   const deps = createChartToolDeps(store);
+  const chartTypes = createDefaultChartTypes({includeCustomSpec: false});
+  const chartTools = createChartTools(chartTypes, deps);
 
   return {
     create_dashboard_artifact: tool({
@@ -65,13 +59,6 @@ export function createDashboardAiTools(store: StoreApi<RoomState>) {
         };
       },
     }),
-    // Chart tools - one for each chart type
-    create_dashboard_histogram: createHistogramAiTool(deps),
-    create_dashboard_line_chart: createLineChartAiTool(deps),
-    create_dashboard_count_plot: createCountPlotAiTool(deps),
-    create_dashboard_heatmap: createHeatmapAiTool(deps),
-    create_dashboard_bubble_chart: createBubbleChartAiTool(deps),
-    create_dashboard_box_plot: createBoxPlotAiTool(deps),
-    create_dashboard_ecdf: createEcdfAiTool(deps),
+    ...chartTools,
   };
 }

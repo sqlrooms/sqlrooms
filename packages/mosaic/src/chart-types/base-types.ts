@@ -6,7 +6,9 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {FC} from 'react';
 import type * as z from 'zod';
+import type {Tool} from 'ai';
 import {VgPlotChartType} from './chart-config';
+import type {ChartToolDeps} from './tool-types';
 
 // Re-export VgPlotChartType for convenience
 export type {VgPlotChartType};
@@ -52,6 +54,8 @@ export interface ChartTypeDefinition<TSettings = any> {
   schema: z.ZodType<TSettings>;
   /** Generate a Mosaic spec from table name and selected field values */
   createSpec: (tableName: string, values: TSettings) => Spec;
+  /** Create an AI tool for this chart type */
+  createTool?: (deps: ChartToolDeps) => Tool;
   /** Generate a chart title from selected field values */
   buildTitle?: (fieldValues: Record<string, unknown>) => string;
   /** Optional availability override for a given table schema */

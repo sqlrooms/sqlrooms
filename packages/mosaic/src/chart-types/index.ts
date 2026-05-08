@@ -1,6 +1,9 @@
 // Re-export base types
 export * from './base-types';
 
+// Import Tool type for createChartTools function
+import type {Tool} from 'ai';
+
 // Re-export error classes for chart definitions
 export * from './errors';
 
@@ -68,6 +71,7 @@ import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
 import {bubbleChartChartType} from './bubble-chart/definition';
 import {customSpecChartType} from './custom-spec/definition';
+import {ChartToolDeps} from './tool-types';
 
 // Legacy compatibility exports
 export const mosaicChartTypes = {
@@ -100,6 +104,36 @@ export function createDefaultChartTypes(options?: {
   }
 
   return chartTypes;
+}
+
+/**
+ * Dynamically generate AI tools from chart type definitions.
+ *
+ * @param chartTypes Array of chart type definitions
+ * @param deps Dependencies needed by tool creators (resolveResources, createChart)
+ * @param toolNamePrefix Prefix for generated tool names (default: 'create_dashboard_')
+ * @returns Record mapping tool names to tool instances
+ *
+ * @example
+ * const chartTypes = createDefaultChartTypes({includeCustomSpec: false});
+ * const tools = createChartTools(chartTypes, deps);
+ * // Returns: { create_dashboard_histogram: ..., create_dashboard_line_chart: ..., ... }
+ */
+export function createChartTools(
+  chartTypes: ChartTypeDefinition<any>[],
+  deps: ChartToolDeps,
+  toolNamePrefix: string = 'create_dashboard_',
+): Record<string, Tool> {
+  const tools: Record<string, Tool> = {};
+
+  for (const chartType of chartTypes) {
+    if (chartType.createTool) {
+      const toolName = `${toolNamePrefix}${chartType.id.replace(/-/g, '_')}`;
+      tools[toolName] = chartType.createTool(deps);
+    }
+  }
+
+  return tools;
 }
 
 // Re-export registry LAST - it imports and registers all chart types at module load time

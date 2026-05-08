@@ -224,6 +224,7 @@ export {
   createBubbleChartAiTool,
   createBoxPlotAiTool,
   createEcdfAiTool,
+  createChartTools,
 } from './chart-types';
 export type {
   VgPlotChartSettings,

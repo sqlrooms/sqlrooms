@@ -1,9 +1,9 @@
-import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
 import {HeatmapChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {HeatmapSettingsComponent} from './HeatmapSettings';
-import {SpecGenerationError} from '../errors';
+import {createHeatmapAiTool} from './tool';
+import {createHeatmapSpec} from './spec';
 
 const DESCRIPTION = 'Create a 2D heatmap of two fields';
 
@@ -16,34 +16,6 @@ export const heatmapChartType: ChartTypeDefinition<HeatmapChartSettings> = {
   schema: HeatmapChartSettings,
   settingsComponent: HeatmapSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {x, y}): Spec => {
-    if (!x) {
-      throw new SpecGenerationError('X field is required for heatmap');
-    }
-    if (!y) {
-      throw new SpecGenerationError('Y field is required for heatmap');
-    }
-    return {
-      plot: [
-        {
-          mark: 'raster',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          fill: 'density',
-          bandwidth: 0,
-          pixelSize: 3,
-        },
-        {select: 'intervalXY', as: '$brush'},
-      ],
-      colorScale: 'sqrt',
-      colorScheme: 'ylorrd',
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 20, top: 20, bottom: 50},
-      params: {brush: {select: 'crossfilter'}},
-    } as Spec;
-  },
+  createTool: createHeatmapAiTool,
+  createSpec: createHeatmapSpec,
 };
