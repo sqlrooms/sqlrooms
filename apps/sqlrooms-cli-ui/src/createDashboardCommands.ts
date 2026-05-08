@@ -1,7 +1,6 @@
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
-import {parseVgPlotSpecString} from './vgplot';
 import {RoomState} from './store-types';
 
 type CliArtifactType = 'dashboard' | 'notebook' | 'canvas' | 'app';
@@ -39,39 +38,6 @@ const SelectArtifactCommandInput = z
     message: 'Provide artifactId.',
   });
 type SelectArtifactCommandInput = z.infer<typeof SelectArtifactCommandInput>;
-
-// ---------------------------------------------------------------------------
-// Dashboard-specific input schemas
-// ---------------------------------------------------------------------------
-
-const DashboardSetVgPlotCommandInput = z.object({
-  artifactId: z
-    .string()
-    .optional()
-    .describe(
-      'Optional dashboard artifact ID. Defaults to the current dashboard.',
-    ),
-  vgplot: z
-    .string()
-    .describe('VgPlot JSON string for the dashboard specification.'),
-});
-type DashboardSetVgPlotCommandInput = z.infer<
-  typeof DashboardSetVgPlotCommandInput
->;
-
-const DashboardGetVgPlotCommandInput = z
-  .object({
-    artifactId: z
-      .string()
-      .optional()
-      .describe(
-        'Optional dashboard artifact ID. Defaults to the current dashboard.',
-      ),
-  })
-  .default({});
-type DashboardGetVgPlotCommandInput = z.infer<
-  typeof DashboardGetVgPlotCommandInput
->;
 
 // ---------------------------------------------------------------------------
 // Generic create-artifact helper per artifact type
@@ -217,97 +183,5 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
     createArtifactCommand('canvas', 'Canvas'),
     createArtifactCommand('app', 'App'),
     createDashboardCreateArtifactCommand(),
-    {
-      id: 'dashboard.set-vgplot',
-      name: 'Set dashboard vgplot',
-      description: 'Set the vgplot JSON spec for a dashboard artifact',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'vgplot', 'spec', 'json', 'update'],
-      inputSchema: DashboardSetVgPlotCommandInput,
-      inputDescription:
-        'Provide vgplot JSON and an optional dashboard artifact ID.',
-      metadata: {
-        readOnly: false,
-        idempotent: false,
-        riskLevel: 'medium',
-      },
-      validateInput: (input, {getState}) => {
-        const {artifactId, vgplot} = input as DashboardSetVgPlotCommandInput;
-        parseVgPlotSpecString(vgplot);
-        if (!artifactId) return;
-        const artifact = getState().artifacts.getArtifact(artifactId);
-        if (!artifact) {
-          throw new Error(`Unknown artifact "${artifactId}".`);
-        }
-        if (artifact.type !== 'dashboard') {
-          throw new Error(
-            `Artifact "${artifactId}" is not a dashboard artifact.`,
-          );
-        }
-      },
-      execute: ({getState}, input) => {
-        const {artifactId, vgplot} = input as DashboardSetVgPlotCommandInput;
-        const state = getState();
-        const targetArtifactId =
-          artifactId ??
-          state.dashboard.getCurrentDashboardArtifactId() ??
-          state.dashboard.createDashboardArtifact(undefined, 'grid');
-        state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
-        state.artifacts.setCurrentArtifact(targetArtifactId);
-        return {
-          success: true,
-          commandId: 'dashboard.set-vgplot',
-          message: `Updated dashboard spec for "${targetArtifactId}".`,
-          data: {artifactId: targetArtifactId},
-        };
-      },
-    },
-    {
-      id: 'dashboard.get-vgplot',
-      name: 'Get dashboard vgplot',
-      description: 'Read the current vgplot JSON spec for a dashboard artifact',
-      group: 'Dashboard',
-      keywords: ['dashboard', 'vgplot', 'spec', 'json', 'read'],
-      inputSchema: DashboardGetVgPlotCommandInput,
-      inputDescription: 'Optional dashboard artifact ID.',
-      metadata: {
-        readOnly: true,
-        idempotent: true,
-        riskLevel: 'low',
-      },
-      execute: ({getState}, input) => {
-        const resolvedInput =
-          (input as DashboardGetVgPlotCommandInput | undefined) ?? {};
-        const state = getState();
-        const targetArtifactId =
-          resolvedInput.artifactId ??
-          state.dashboard.getCurrentDashboardArtifactId();
-        if (!targetArtifactId) {
-          return {
-            success: false,
-            commandId: 'dashboard.get-vgplot',
-            error: 'No dashboard artifact is available.',
-          };
-        }
-        const artifact = state.artifacts.getArtifact(targetArtifactId);
-        if (!artifact || artifact.type !== 'dashboard') {
-          return {
-            success: false,
-            commandId: 'dashboard.get-vgplot',
-            error: `Artifact "${targetArtifactId}" is not a dashboard artifact.`,
-          };
-        }
-        state.dashboard.ensureDashboardArtifact(targetArtifactId);
-        const vgplot = state.dashboard.getDashboardVgPlot(targetArtifactId);
-        return {
-          success: true,
-          commandId: 'dashboard.get-vgplot',
-          data: {
-            artifactId: targetArtifactId,
-            vgplot,
-          },
-        };
-      },
-    },
   ];
 }
