@@ -1,6 +1,5 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import type {Selection} from '@uwdata/mosaic-core';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {BarChart3Icon} from 'lucide-react';
 import {type FC, useCallback, useEffect, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
@@ -16,24 +15,6 @@ import {
 import {type VgPlotChartConfig} from '../chart-types/chart-config';
 import {useGenerateSpec} from './useGenerateSpec';
 import {ChartSpecErrorDisplay} from './ChartSpecErrorDisplay';
-
-function toRenderableMosaicSpec(vgplot: unknown): Spec | null {
-  try {
-    if (!vgplot || typeof vgplot !== 'object' || Array.isArray(vgplot)) {
-      return null;
-    }
-
-    const vgplotRecord = vgplot as Spec;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const {$schema, ...mosaicSpec} = vgplotRecord;
-
-    return mosaicSpec;
-  } catch (error) {
-    console.error('[toRenderableMosaicSpec] Failed to parse spec:', error);
-    return null;
-  }
-}
 
 const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
   dashboardId,
@@ -57,27 +38,11 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
   );
 
   // Generate spec using hook
-  const {spec: generatedSpec, error: specError} = useGenerateSpec(
+  const {renderableSpec, error: specError} = useGenerateSpec(
     panel.source?.tableName,
     panel.config.chartType,
     panel.config.settings,
   );
-
-  // Apply toRenderableMosaicSpec
-  const spec = useMemo(() => {
-    console.log(
-      '[MosaicDashboardVgPlotRenderer] generatedSpec:',
-      generatedSpec,
-    );
-    const renderableSpec = generatedSpec
-      ? toRenderableMosaicSpec(generatedSpec)
-      : null;
-    console.log(
-      '[MosaicDashboardVgPlotRenderer] renderableSpec:',
-      renderableSpec,
-    );
-    return renderableSpec;
-  }, [generatedSpec]);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -140,11 +105,15 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
     <div className="h-full overflow-auto p-2">
       {connection.status === 'loading' ? (
         <SpinnerPane className="h-full w-full" />
-      ) : connection.status === 'ready' && spec && params ? (
+      ) : connection.status === 'ready' && renderableSpec && params ? (
         <div className="bg-background text-foreground flex h-full w-full items-center justify-center rounded-md p-2">
-          <VgPlotChart spec={spec} params={params} retention={retention} />
+          <VgPlotChart
+            spec={renderableSpec}
+            params={params}
+            retention={retention}
+          />
         </div>
-      ) : connection.status === 'ready' && spec ? (
+      ) : connection.status === 'ready' && renderableSpec ? (
         <SpinnerPane className="h-full w-full" />
       ) : (
         <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm">
