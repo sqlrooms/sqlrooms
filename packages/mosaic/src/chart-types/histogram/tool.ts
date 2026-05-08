@@ -38,8 +38,10 @@ export function createHistogramAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'histogram',
-          settings: params.settings,
+          config: {
+            chartType: 'histogram',
+            settings: params.settings,
+          },
           title,
         });
 

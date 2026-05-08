@@ -37,8 +37,10 @@ export function createEcdfAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'ecdf',
-          settings: params.settings,
+          config: {
+            chartType: 'ecdf',
+            settings: params.settings,
+          },
           title,
         });
 

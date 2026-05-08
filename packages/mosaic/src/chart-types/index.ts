@@ -11,7 +11,11 @@ import type {ChartTypeDefinition} from './base-types';
 // Export VgPlotChartConfig from separate file to avoid circular dependencies
 // (chart-types/index imports Settings components, which import ChartSettingsContext,
 // which imports VgPlotChartConfig)
-export {VgPlotChartConfig, type VgPlotChartSettings} from './chart-config';
+export {
+  VgPlotChartConfig,
+  type VgPlotChartSettings,
+  type VgPlotChartType,
+} from './chart-config';
 
 // Re-export schemas
 export * from './histogram/schema';

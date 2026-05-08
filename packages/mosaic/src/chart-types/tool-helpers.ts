@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import type {ChartBuilderColumn} from './base-types';
+import {VgPlotChartConfig} from './chart-config';
 
 export const BaseChartToolParameters = z.object({
   artifactId: z
@@ -40,17 +41,16 @@ export interface ResolvedChartResources {
 export interface CreateChartParams {
   artifactId: string;
   tableName: string;
-  chartType: string;
-  settings: unknown;
   title: string;
+  config: VgPlotChartConfig;
 }
 
 export interface CreateChartResult {
   panelId: string;
-  chartType: string;
   artifactId: string;
   tableName: string;
   title: string;
+  config: VgPlotChartConfig;
 }
 
 export interface ChartToolDeps {

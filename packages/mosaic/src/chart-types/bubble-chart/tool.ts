@@ -53,8 +53,10 @@ export function createBubbleChartAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'bubble-chart',
-          settings: params.settings,
+          config: {
+            chartType: 'bubble-chart',
+            settings: params.settings,
+          },
           title,
         });
 

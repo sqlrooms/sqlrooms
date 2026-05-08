@@ -123,31 +123,25 @@ export function createChartToolDeps(store: {
       return {artifactId, tableName, columns};
     },
 
-    createChart: ({artifactId, tableName, chartType, settings, title}) => {
+    createChart: ({artifactId, tableName, title, config}) => {
       const state = store.getState();
-      const chartTypeDef = aiChartTypes.find((ct) => ct.id === chartType);
+      const chartTypeDef = aiChartTypes.find(
+        (ct) => ct.id === config.chartType,
+      );
       if (!chartTypeDef) {
-        throw new Error(`Unknown chart type "${chartType}".`);
+        throw new Error(`Unknown chart type "${config.chartType}".`);
       }
 
-      const spec = chartTypeDef.createSpec(tableName, settings as any);
-
-      const panel = createMosaicDashboardVgPlotPanelConfig(
-        title,
-        {
-          chartType: chartType as any,
-          settings,
-          vgplot: spec,
-        } as any,
-        {tableName},
-      );
+      const panel = createMosaicDashboardVgPlotPanelConfig(title, config, {
+        tableName,
+      });
 
       state.mosaicDashboard.addPanel(artifactId, panel);
       state.artifacts.setCurrentArtifact(artifactId);
 
       return {
         panelId: panel.id,
-        chartType,
+        config,
         artifactId,
         tableName,
         title,

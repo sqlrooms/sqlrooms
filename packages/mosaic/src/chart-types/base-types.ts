@@ -6,19 +6,10 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {FC} from 'react';
 import type * as z from 'zod';
+import {VgPlotChartType} from './chart-config';
 
-/**
- * Supported chart type identifiers
- */
-export type VgPlotChartType =
-  | 'histogram'
-  | 'count-plot'
-  | 'ecdf'
-  | 'line-chart'
-  | 'bubble-chart'
-  | 'heatmap'
-  | 'box-plot'
-  | 'custom-spec';
+// Re-export VgPlotChartType for convenience
+export type {VgPlotChartType};
 
 /**
  * Column info passed to chart builder UI

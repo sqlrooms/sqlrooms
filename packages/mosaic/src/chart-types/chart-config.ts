@@ -32,3 +32,4 @@ export const VgPlotChartConfig = z.discriminatedUnion('chartType', [
 
 export type VgPlotChartConfig = z.infer<typeof VgPlotChartConfig>;
 export type VgPlotChartSettings = VgPlotChartConfig['settings'];
+export type VgPlotChartType = VgPlotChartConfig['chartType'];

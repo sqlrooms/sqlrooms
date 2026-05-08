@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from '@sqlrooms/ui';
 import {Plus} from 'lucide-react';
-import React from 'react';
+import React, {PropsWithChildren} from 'react';
 import type {VgPlotChartConfig} from '../chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
@@ -39,14 +39,13 @@ export const ChartBuilderTrigger = React.forwardRef<
 });
 ChartBuilderTrigger.displayName = 'ChartBuilderTrigger';
 
-export interface ChartBuilderDialogContentProps {
+export type ChartBuilderDialogContentProps = PropsWithChildren<{
   /** Override dialog title (default "Add Chart") */
   title?: string;
   /** Override dialog description */
   description?: string;
   className?: string;
-  children?: React.ReactNode;
-}
+}>;
 
 /**
  * The dialog content pane that renders the chart-builder steps.

@@ -51,8 +51,10 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'box-plot',
-          settings: params.settings,
+          config: {
+            chartType: 'box-plot',
+            settings: params.settings,
+          },
           title,
         });
 

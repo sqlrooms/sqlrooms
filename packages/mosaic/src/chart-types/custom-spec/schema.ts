@@ -8,7 +8,6 @@ export type CustomSpecChartSettings = z.infer<typeof CustomSpecChartSettings>;
 
 export const CustomSpecChartConfig = z.object({
   chartType: z.literal('custom-spec'),
-  vgplot: z.unknown(),
   settingsOpen: z.boolean().optional(),
   settings: CustomSpecChartSettings,
 });

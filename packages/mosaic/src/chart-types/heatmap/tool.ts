@@ -52,8 +52,10 @@ export function createHeatmapAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'heatmap',
-          settings: params.settings,
+          config: {
+            chartType: 'heatmap',
+            settings: params.settings,
+          },
           title,
         });
 

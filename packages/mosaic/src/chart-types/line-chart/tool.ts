@@ -60,8 +60,10 @@ export function createLineChartAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'line-chart',
-          settings: params.settings,
+          config: {
+            chartType: 'line-chart',
+            settings: params.settings,
+          },
           title,
         });
 

@@ -258,3 +258,5 @@ export type {
   ChartTypeDefinition,
 } from './chart-builders/types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+
+export {generateMosaicChartSpec} from './dashboard/generateMosaicChartSpec';

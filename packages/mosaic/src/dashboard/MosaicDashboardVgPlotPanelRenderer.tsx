@@ -65,7 +65,18 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
 
   // Apply toRenderableMosaicSpec
   const spec = useMemo(() => {
-    return generatedSpec ? toRenderableMosaicSpec(generatedSpec) : null;
+    console.log(
+      '[MosaicDashboardVgPlotRenderer] generatedSpec:',
+      generatedSpec,
+    );
+    const renderableSpec = generatedSpec
+      ? toRenderableMosaicSpec(generatedSpec)
+      : null;
+    console.log(
+      '[MosaicDashboardVgPlotRenderer] renderableSpec:',
+      renderableSpec,
+    );
+    return renderableSpec;
   }, [generatedSpec]);
 
   const updatePanel = useStoreWithMosaicDashboard(

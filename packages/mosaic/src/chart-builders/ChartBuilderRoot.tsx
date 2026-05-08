@@ -72,13 +72,9 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     return createDefaultChartBuilders();
   }, [builders, chartTypes]);
 
-  const availableTemplates = useMemo(
-    () =>
-      resolvedTemplates.filter((template) =>
-        resolvedTemplates.some((chartType) => chartType.id === template.id),
-      ),
-    [resolvedTemplates],
-  );
+  // All resolved templates are available by default
+  // (Filtering by schema compatibility was removed in favour of runtime validation)
+  const availableTemplates = resolvedTemplates;
 
   useEffect(() => {
     const {selectedTemplateId, reset} = store.getState();

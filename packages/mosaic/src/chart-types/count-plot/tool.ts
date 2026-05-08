@@ -36,8 +36,10 @@ export function createCountPlotAiTool(deps: ChartToolDeps) {
         const result = deps.createChart({
           artifactId,
           tableName,
-          chartType: 'count-plot',
-          settings: params.settings,
+          config: {
+            chartType: 'count-plot',
+            settings: params.settings,
+          },
           title,
         });
 
