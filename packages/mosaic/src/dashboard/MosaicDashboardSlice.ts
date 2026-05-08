@@ -164,13 +164,13 @@ export function createMosaicDashboardVgPlotPanelConfig(
   config: VgPlotChartConfig,
   source?: MosaicDashboardPanelSource,
 ): VgPlotPanelConfig {
-  return VgPlotPanelConfig.parse({
+  return {
     id: createId(),
     type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
     title,
     source,
     config,
-  });
+  };
 }
 
 export function createMosaicDashboardProfilerPanelConfig(

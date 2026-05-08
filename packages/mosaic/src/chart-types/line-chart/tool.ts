@@ -23,17 +23,15 @@ export function createLineChartAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        if (params.settings.x) {
-          deps.validateField(
-            'x',
-            params.settings.x,
-            {
-              required: true,
-              types: QUANTITATIVE_COLUMN_TYPES,
-            },
-            columns,
-          );
-        }
+        deps.validateField(
+          'x',
+          params.settings.x,
+          {
+            required: true,
+            types: QUANTITATIVE_COLUMN_TYPES,
+          },
+          columns,
+        );
 
         if (params.settings.yFields && Array.isArray(params.settings.yFields)) {
           for (const yField of params.settings.yFields) {

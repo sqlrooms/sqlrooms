@@ -28,16 +28,13 @@ export const YFieldConfig = z.object({
 export type YFieldConfig = z.infer<typeof YFieldConfig>;
 
 export const LineChartSettings = z.object({
-  x: z
-    .string()
-    .optional()
-    .describe('Column for X axis, typically temporal (date/time)'),
+  x: z.string().describe('Column for X axis, typically temporal (date/time)'),
   xInterval: TemporalInterval.optional().describe(
     'Temporal binning interval: year, month, day, hour, etc.',
   ),
   yFields: z
     .array(YFieldConfig)
-    .optional()
+    .min(1)
     .describe('Array of Y fields to plot, supports multiple lines'),
 });
 

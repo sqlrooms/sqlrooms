@@ -19,28 +19,25 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        if (params.settings.x) {
-          deps.validateField(
-            'x',
-            params.settings.x,
-            {
-              required: true,
-            },
-            columns,
-          );
-        }
 
-        if (params.settings.y) {
-          deps.validateField(
-            'y',
-            params.settings.y,
-            {
-              required: true,
-              types: NUMERIC_COLUMN_TYPES,
-            },
-            columns,
-          );
-        }
+        deps.validateField(
+          'x',
+          params.settings.x,
+          {
+            required: true,
+          },
+          columns,
+        );
+
+        deps.validateField(
+          'y',
+          params.settings.y,
+          {
+            required: true,
+            types: NUMERIC_COLUMN_TYPES,
+          },
+          columns,
+        );
 
         const title = params.settings.x
           ? `Box plot - ${params.settings.y} by ${params.settings.x}`

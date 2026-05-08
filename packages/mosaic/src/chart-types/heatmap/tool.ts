@@ -19,29 +19,26 @@ export function createHeatmapAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        if (params.settings.x) {
-          deps.validateField(
-            'x',
-            params.settings.x,
-            {
-              required: true,
-              types: NUMERIC_COLUMN_TYPES,
-            },
-            columns,
-          );
-        }
 
-        if (params.settings.y) {
-          deps.validateField(
-            'y',
-            params.settings.y,
-            {
-              required: true,
-              types: NUMERIC_COLUMN_TYPES,
-            },
-            columns,
-          );
-        }
+        deps.validateField(
+          'x',
+          params.settings.x,
+          {
+            required: true,
+            types: NUMERIC_COLUMN_TYPES,
+          },
+          columns,
+        );
+
+        deps.validateField(
+          'y',
+          params.settings.y,
+          {
+            required: true,
+            types: NUMERIC_COLUMN_TYPES,
+          },
+          columns,
+        );
 
         const title =
           params.settings.x && params.settings.y

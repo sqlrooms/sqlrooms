@@ -20,17 +20,15 @@ export function createHistogramAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        if (params.settings.field) {
-          deps.validateField(
-            'field',
-            params.settings.field,
-            {
-              required: true,
-              types: QUANTITATIVE_COLUMN_TYPES,
-            },
-            columns,
-          );
-        }
+        deps.validateField(
+          'field',
+          params.settings.field,
+          {
+            required: true,
+            types: QUANTITATIVE_COLUMN_TYPES,
+          },
+          columns,
+        );
 
         const title = `Histogram of ${params.settings.field}`;
 
