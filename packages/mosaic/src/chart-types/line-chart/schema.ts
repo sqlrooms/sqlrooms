@@ -43,10 +43,6 @@ export const LineChartSettings = z.object({
 
 export type LineChartSettings = z.infer<typeof LineChartSettings>;
 
-// For AI-generated charts, we want to require all settings to ensure a complete spec can be generated
-export const LineChartAiChartSettings = LineChartSettings.required();
-export type LineChartAiChartSettings = z.infer<typeof LineChartAiChartSettings>;
-
 export const LineChartConfig = z.object({
   chartType: z.literal('line-chart'),
   settings: LineChartSettings,

@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {EcdfAiChartSettings} from './schema';
+import {EcdfChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const EcdfToolParameters = BaseChartToolParameters.extend({
-  settings: EcdfAiChartSettings,
+  settings: EcdfChartSettings.required(),
 });
 
 export type EcdfToolParams = z.infer<typeof EcdfToolParameters>;

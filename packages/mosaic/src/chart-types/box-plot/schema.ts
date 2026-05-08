@@ -10,10 +10,6 @@ export const BoxPlotChartSettings = z.object({
 
 export type BoxPlotChartSettings = z.infer<typeof BoxPlotChartSettings>;
 
-// For AI-generated charts, we want to require all settings to ensure a complete spec can be generated
-export const BoxPlotAiChartSettings = BoxPlotChartSettings.required();
-export type BoxPlotAiChartSettings = z.infer<typeof BoxPlotAiChartSettings>;
-
 export const BoxPlotChartConfig = z.object({
   chartType: z.literal('box-plot'),
   settings: BoxPlotChartSettings,

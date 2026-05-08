@@ -7,10 +7,6 @@ export const HeatmapChartSettings = z.object({
 
 export type HeatmapChartSettings = z.infer<typeof HeatmapChartSettings>;
 
-// For AI-generated charts, we want to require all settings to ensure a complete spec can be generated
-export const HeatmapAiChartSettings = HeatmapChartSettings.required();
-export type HeatmapAiChartSettings = z.infer<typeof HeatmapAiChartSettings>;
-
 export const HeatmapChartConfig = z.object({
   chartType: z.literal('heatmap'),
   settings: HeatmapChartSettings,

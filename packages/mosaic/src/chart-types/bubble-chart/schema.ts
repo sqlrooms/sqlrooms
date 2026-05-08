@@ -11,12 +11,6 @@ export const BubbleChartSettings = z.object({
 
 export type BubbleChartSettings = z.infer<typeof BubbleChartSettings>;
 
-// For AI-generated charts, we want to require all settings to ensure a complete spec can be generated
-export const BubbleChartAiChartSettings = BubbleChartSettings.required();
-export type BubbleChartAiChartSettings = z.infer<
-  typeof BubbleChartAiChartSettings
->;
-
 export const BubbleChartConfig = z.object({
   chartType: z.literal('bubble-chart'),
   settings: BubbleChartSettings,

@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {BoxPlotAiChartSettings} from './schema';
+import {BoxPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
-  settings: BoxPlotAiChartSettings,
+  settings: BoxPlotChartSettings.required(),
 });
 
 export type BoxPlotToolParams = z.infer<typeof BoxPlotToolParameters>;
