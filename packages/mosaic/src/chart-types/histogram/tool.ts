@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {HistogramChartSettings} from './schema';
+import {HistogramAiChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
-  settings: HistogramChartSettings,
+  settings: HistogramAiChartSettings,
 });
 
 export type HistogramToolParams = z.infer<typeof HistogramToolParameters>;

@@ -22,6 +22,7 @@ export const countPlotChartType: ChartTypeDefinition<CountPlotChartSettings> = {
     if (!field) {
       throw new SpecGenerationError('Field is required for count plot');
     }
+
     return {
       plot: [
         {

@@ -103,7 +103,7 @@ const ChartSettingsTypeSelector: FC = () => {
       chartType: newChartType,
       settings: {},
       settingsOpen: config.settingsOpen,
-    } as VgPlotChartConfig);
+    });
   };
 
   return (

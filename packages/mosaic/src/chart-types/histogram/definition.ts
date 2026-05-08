@@ -18,7 +18,7 @@ export const histogramChartType: ChartTypeDefinition<HistogramChartSettings> = {
   schema: HistogramChartSettings,
   settingsComponent: HistogramSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {field}: HistogramChartSettings): Spec => {
+  createSpec: (tableName, {field}): Spec => {
     if (!field) {
       throw new SpecGenerationError('Field is required for histogram');
     }

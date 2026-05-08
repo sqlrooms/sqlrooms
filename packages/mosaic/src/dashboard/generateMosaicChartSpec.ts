@@ -44,25 +44,13 @@ export function generateMosaicChartSpec(
 
   // Generate spec - createSpec will throw SpecGenerationError if settings are invalid
   try {
-    const spec = chartTypeDef.createSpec(tableName!, settings as any);
-    console.log('[generateMosaicChartSpec] Generated spec:', {
-      tableName,
-      chartType,
-      settings,
-      spec,
-    });
-    return spec;
+    return chartTypeDef.createSpec(tableName!, settings as any);
   } catch (error) {
-    console.error('[generateMosaicChartSpec] Error:', {
-      tableName,
-      chartType,
-      settings,
-      error,
-    });
     // Re-throw if already a ChartSpecError (including SpecGenerationError)
     if (error instanceof ChartSpecError) {
       throw error;
     }
+
     // Wrap unexpected errors
     const message =
       error instanceof Error ? error.message : 'Failed to generate chart';

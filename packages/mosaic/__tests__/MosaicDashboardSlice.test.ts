@@ -104,8 +104,7 @@ describe('MosaicDashboardSlice generic panels', () => {
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
     const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
       chartType: 'histogram',
-      settings: {},
-      vgplot: {plot: [{mark: 'bar'}]},
+      settings: {field: 'amount'},
     });
     const second = createMosaicDashboardProfilerPanelConfig({
       source: {tableName: 'earthquakes'},
@@ -148,8 +147,7 @@ describe('MosaicDashboardSlice generic panels', () => {
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
     const chart = createMosaicDashboardVgPlotPanelConfig('Chart', {
       chartType: 'histogram',
-      settings: {},
-      vgplot: {plot: [{mark: 'bar'}]},
+      settings: {field: 'amount'},
     });
     const map = {
       id: 'map-panel',
@@ -289,8 +287,9 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = 'dashboard-1';
     const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
       chartType: 'histogram',
-      settings: {},
-      vgplot: {plot: [{mark: 'bar'}]},
+      settings: {
+        field: 'amount',
+      },
     });
     const second = createMosaicDashboardProfilerPanelConfig({
       source: {tableName: 'earthquakes'},
@@ -389,8 +388,7 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = 'dashboard-runtime-1';
     const panel = createMosaicDashboardVgPlotPanelConfig('Chart', {
       chartType: 'histogram',
-      settings: {},
-      vgplot: {plot: [{mark: 'bar'}]},
+      settings: {field: 'amount'},
     });
 
     store.getState().mosaicDashboard.addPanel(dashboardId, panel);
@@ -435,13 +433,11 @@ describe('MosaicDashboardSlice generic panels', () => {
     const otherDashboardId = 'dashboard-runtime-3';
     const first = createMosaicDashboardVgPlotPanelConfig('Chart 1', {
       chartType: 'histogram',
-      settings: {},
-      vgplot: {plot: [{mark: 'bar'}]},
+      settings: {field: 'amount'},
     });
     const second = createMosaicDashboardVgPlotPanelConfig('Chart 2', {
       chartType: 'line-chart',
-      settings: {yFields: [{field: 'value', aggregate: 'sum'}]},
-      vgplot: {plot: [{mark: 'line'}]},
+      settings: {x: 'id', yFields: [{field: 'value', aggregate: 'sum'}]},
     });
 
     store.getState().mosaicDashboard.addPanel(dashboardId, first);
@@ -497,8 +493,9 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = 'dashboard-runtime-4';
     const panel = createMosaicDashboardVgPlotPanelConfig('Chart', {
       chartType: 'histogram',
-      settings: {},
-      vgplot: {plot: [{mark: 'bar'}]},
+      settings: {
+        field: 'amount',
+      },
     });
 
     store.getState().mosaicDashboard.addPanel(dashboardId, panel);

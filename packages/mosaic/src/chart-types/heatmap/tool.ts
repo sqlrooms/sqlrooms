@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {HeatmapChartSettings} from './schema';
+import {HeatmapAiChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({
-  settings: HeatmapChartSettings,
+  settings: HeatmapAiChartSettings,
 });
 
 export type HeatmapToolParams = z.infer<typeof HeatmapToolParameters>;

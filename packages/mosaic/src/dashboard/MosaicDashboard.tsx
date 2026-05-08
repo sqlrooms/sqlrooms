@@ -115,7 +115,7 @@ export function MosaicDashboardRoot({
         chartType: 'histogram',
         settings: {},
         settingsOpen: true, // Open settings by default
-      } as VgPlotChartConfig,
+      },
       {tableName: dashboard.selectedTable},
     );
 

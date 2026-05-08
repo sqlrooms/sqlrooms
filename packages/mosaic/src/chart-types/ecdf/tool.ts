@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {EcdfChartSettings} from './schema';
+import {EcdfAiChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const EcdfToolParameters = BaseChartToolParameters.extend({
-  settings: EcdfChartSettings,
+  settings: EcdfAiChartSettings,
 });
 
 export type EcdfToolParams = z.infer<typeof EcdfToolParameters>;
@@ -22,14 +22,12 @@ export function createEcdfAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        if (params.settings.field) {
-          validateColumnExists(
-            params.settings.field,
-            QUANTITATIVE_COLUMN_TYPES,
-            columns,
-            'field',
-          );
-        }
+        validateColumnExists(
+          params.settings.field,
+          QUANTITATIVE_COLUMN_TYPES,
+          columns,
+          'field',
+        );
 
         const title = `ECDF of ${params.settings.field}`;
 

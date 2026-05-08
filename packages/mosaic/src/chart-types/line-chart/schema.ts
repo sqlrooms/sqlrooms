@@ -28,17 +28,24 @@ export const YFieldConfig = z.object({
 export type YFieldConfig = z.infer<typeof YFieldConfig>;
 
 export const LineChartSettings = z.object({
-  x: z.string().describe('Column for X axis, typically temporal (date/time)'),
+  x: z
+    .string()
+    .optional()
+    .describe('Column for X axis, typically temporal (date/time)'),
   xInterval: TemporalInterval.optional().describe(
     'Temporal binning interval: year, month, day, hour, etc.',
   ),
   yFields: z
     .array(YFieldConfig)
-    .min(1)
+    .optional()
     .describe('Array of Y fields to plot, supports multiple lines'),
 });
 
 export type LineChartSettings = z.infer<typeof LineChartSettings>;
+
+// For AI-generated charts, we want to require all settings to ensure a complete spec can be generated
+export const LineChartAiChartSettings = LineChartSettings.required();
+export type LineChartAiChartSettings = z.infer<typeof LineChartAiChartSettings>;
 
 export const LineChartConfig = z.object({
   chartType: z.literal('line-chart'),

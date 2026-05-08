@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {BubbleChartSettings} from './schema';
+import {BubbleChartAiChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const BubbleChartToolParameters = BaseChartToolParameters.extend({
-  settings: BubbleChartSettings,
+  settings: BubbleChartAiChartSettings,
 });
 
 export type BubbleChartToolParams = z.infer<typeof BubbleChartToolParameters>;

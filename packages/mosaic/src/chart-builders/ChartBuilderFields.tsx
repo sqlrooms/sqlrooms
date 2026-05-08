@@ -50,7 +50,7 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
       return {
         chartType: 'histogram',
         settings: {},
-      } as VgPlotChartConfig;
+      };
     }
     return {
       chartType: chartTypeDefinition.id,

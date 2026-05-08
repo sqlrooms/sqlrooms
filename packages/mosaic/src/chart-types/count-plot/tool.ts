@@ -1,13 +1,13 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {CountPlotChartSettings} from './schema';
+import {CountPlotAiChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
-  settings: CountPlotChartSettings,
+  settings: CountPlotAiChartSettings,
 });
 
 export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;

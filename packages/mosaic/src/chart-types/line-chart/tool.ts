@@ -1,6 +1,6 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {LineChartSettings} from './schema';
+import {LineChartAiChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../tool-types';
 import {validateColumnExists} from '../tool-validation';
@@ -10,7 +10,7 @@ import {
 } from '../../chart-builders/constants';
 
 export const LineChartToolParameters = BaseChartToolParameters.extend({
-  settings: LineChartSettings,
+  settings: LineChartAiChartSettings,
 });
 
 export type LineChartToolParams = z.infer<typeof LineChartToolParameters>;
