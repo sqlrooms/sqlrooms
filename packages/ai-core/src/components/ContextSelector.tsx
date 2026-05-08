@@ -179,11 +179,12 @@ function getKnownItems(items: ContextSelectorItem[], ids: string[]) {
     .filter(Boolean) as ContextSelectorItem[];
 }
 
-function getDefaultIcon(item: ContextSelectorItem) {
-  if (item.kind === 'artifact' && item.type === 'map') return MapIcon;
+function renderDefaultIcon(item: ContextSelectorItem, className: string) {
+  if (item.kind === 'artifact' && item.type === 'map')
+    return <MapIcon className={className} />;
   if (item.kind === 'artifact' && item.type === 'dashboard')
-    return BarChart3Icon;
-  return BoxesIcon;
+    return <BarChart3Icon className={className} />;
+  return <BoxesIcon className={className} />;
 }
 
 function defaultTypeLabel(item: ContextSelectorItem) {
@@ -405,7 +406,6 @@ const SortableContextChip: FC<{
     transition,
     isDragging,
   } = useSortable({id: item.id});
-  const Icon = getDefaultIcon(item);
   const transformStyle = transform
     ? `translate3d(${Math.round(transform.x)}px, ${Math.round(
         transform.y,
@@ -441,7 +441,7 @@ const SortableContextChip: FC<{
           aria-label={`Make ${item.title} the main context item`}
         >
           <span className="shrink-0">
-            {renderIcon ? renderIcon(item) : <Icon className="h-3 w-3" />}
+            {renderIcon ? renderIcon(item) : renderDefaultIcon(item, 'h-3 w-3')}
           </span>
           <span className="truncate">{item.title}</span>
         </button>
@@ -496,7 +496,6 @@ const SearchDropdown: FC<ContextSelectorSearchDropdownProps> = ({
           <CommandGroup>
             {availableItems.map((item) => {
               const running = runningIdSet.has(item.id);
-              const Icon = getDefaultIcon(item);
               const keywords = [
                 item.title,
                 item.kind,
@@ -522,11 +521,9 @@ const SearchDropdown: FC<ContextSelectorSearchDropdownProps> = ({
                   ) : (
                     <>
                       <span className="shrink-0">
-                        {renderIcon ? (
-                          renderIcon(item)
-                        ) : (
-                          <Icon className="h-3.5 w-3.5" />
-                        )}
+                        {renderIcon
+                          ? renderIcon(item)
+                          : renderDefaultIcon(item, 'h-3.5 w-3.5')}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{item.title}</span>
