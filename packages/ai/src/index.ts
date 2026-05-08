@@ -88,11 +88,8 @@ export type {
   ToolDisplayBehavior,
 } from '@sqlrooms/ai-core';
 export {Chat} from '@sqlrooms/ai-core';
-export {ContextSelector} from '@sqlrooms/ai-core';
+export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
 export type {ContextSelectorItem, ContextSelectorRootProps} from '@sqlrooms/ai-core';
-export const CHAT_CONTEXT_SELECTOR_SLOT = Symbol.for(
-  'sqlrooms.ai.contextSelectorSlot',
-);
 
 // From @sqlrooms/ai-config
 export {

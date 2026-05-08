@@ -45,6 +45,7 @@ import {
   type FC,
   type PropsWithChildren,
   type ReactNode,
+  useCallback,
   useContext,
   useMemo,
   useState,
@@ -206,10 +207,13 @@ const Root: FC<ContextSelectorRootProps> = ({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const isControlled = open !== undefined;
   const actualOpen = isControlled ? open : uncontrolledOpen;
-  const setOpen = (nextOpen: boolean) => {
-    if (!isControlled) setUncontrolledOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
+  const setOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (!isControlled) setUncontrolledOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [isControlled, onOpenChange],
+  );
   const normalizedSelectedIds = useMemo(
     () => uniqueIds(selectedIds),
     [selectedIds],
@@ -272,6 +276,7 @@ const Root: FC<ContextSelectorRootProps> = ({
       renderItem,
       renderBadgeLabel,
       actualOpen,
+      setOpen,
       selectedItems,
       runningItems,
       displayItems,
@@ -557,8 +562,5 @@ const SearchDropdown: FC<ContextSelectorSearchDropdownProps> = ({
 export const ContextSelector: ContextSelectorComponent = Object.assign(Root, {
   Badge,
   SearchDropdown,
-}) as ContextSelectorComponent;
-
-Object.assign(ContextSelector, {
   [CHAT_CONTEXT_SELECTOR_SLOT]: true,
-});
+}) as ContextSelectorComponent;
