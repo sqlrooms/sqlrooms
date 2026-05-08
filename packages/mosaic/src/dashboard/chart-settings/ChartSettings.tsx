@@ -61,6 +61,7 @@ const ChartSettingsViewSpecButton: FC<{onClick: () => void}> = ({onClick}) => {
       className="h-5 w-5"
       onClick={onClick}
       title="View spec"
+      aria-label="View spec"
     >
       <CodeIcon className="h-3.5 w-3.5" />
     </Button>
@@ -69,7 +70,13 @@ const ChartSettingsViewSpecButton: FC<{onClick: () => void}> = ({onClick}) => {
 
 const ChartSettingsCloseButton: FC<{onClick: () => void}> = ({onClick}) => {
   return (
-    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClick}>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-5 w-5"
+      onClick={onClick}
+      aria-label="Close"
+    >
       <XIcon className="h-3.5 w-3.5" />
     </Button>
   );
