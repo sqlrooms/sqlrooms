@@ -23,7 +23,6 @@ export interface FieldValidationSpec {
   required?: boolean;
   multiple?: boolean;
   types?: string[];
-  label: string;
 }
 
 export interface ResolvedChartResourcesParams {
@@ -73,7 +72,7 @@ export function validateFieldValue(
   columns: ChartBuilderColumn[],
 ) {
   if (field.required && !value) {
-    throw new Error(`Missing required field "${fieldKey}" (${field.label}).`);
+    throw new Error(`Missing required field "${fieldKey}".`);
   }
 
   if (!value) {

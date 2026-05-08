@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {EcdfChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const EcdfToolParameters = BaseChartToolParameters.extend({
   settings: EcdfChartSettings,
@@ -25,8 +26,7 @@ export function createEcdfAiTool(deps: ChartToolDeps) {
             params.settings.field,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT'],
-              label: 'Field',
+              types: QUANTITATIVE_COLUMN_TYPES,
             },
             columns,
           );

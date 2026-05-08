@@ -2,6 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {LineChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {
+  NUMERIC_COLUMN_TYPES,
+  QUANTITATIVE_COLUMN_TYPES,
+} from '../../chart-builders/constants';
 
 export const LineChartToolParameters = BaseChartToolParameters.extend({
   settings: LineChartSettings,
@@ -25,8 +29,7 @@ export function createLineChartAiTool(deps: ChartToolDeps) {
             params.settings.x,
             {
               required: true,
-              types: ['TIMESTAMP', 'DATE', 'DOUBLE', 'BIGINT'],
-              label: 'X Field',
+              types: QUANTITATIVE_COLUMN_TYPES,
             },
             columns,
           );
@@ -34,22 +37,15 @@ export function createLineChartAiTool(deps: ChartToolDeps) {
 
         if (params.settings.yFields && Array.isArray(params.settings.yFields)) {
           for (const yField of params.settings.yFields) {
-            if (
-              typeof yField === 'object' &&
-              yField !== null &&
-              'field' in yField
-            ) {
-              deps.validateField(
-                'yFields',
-                (yField as any).field,
-                {
-                  required: true,
-                  types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT'],
-                  label: 'Y Fields',
-                },
-                columns,
-              );
-            }
+            deps.validateField(
+              'yFields',
+              yField.field,
+              {
+                required: true,
+                types: NUMERIC_COLUMN_TYPES,
+              },
+              columns,
+            );
           }
         }
 

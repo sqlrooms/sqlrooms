@@ -27,7 +27,6 @@ export function createHistogramAiTool(deps: ChartToolDeps) {
             {
               required: true,
               types: QUANTITATIVE_COLUMN_TYPES,
-              label: 'Field',
             },
             columns,
           );

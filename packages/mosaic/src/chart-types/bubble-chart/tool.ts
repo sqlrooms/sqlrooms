@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {BubbleChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const BubbleChartToolParameters = BaseChartToolParameters.extend({
   settings: BubbleChartSettings,
@@ -25,8 +26,7 @@ export function createBubbleChartAiTool(deps: ChartToolDeps) {
             params.settings.x,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT'],
-              label: 'X Field',
+              types: NUMERIC_COLUMN_TYPES,
             },
             columns,
           );
@@ -38,8 +38,7 @@ export function createBubbleChartAiTool(deps: ChartToolDeps) {
             params.settings.y,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT'],
-              label: 'Y Field',
+              types: NUMERIC_COLUMN_TYPES,
             },
             columns,
           );

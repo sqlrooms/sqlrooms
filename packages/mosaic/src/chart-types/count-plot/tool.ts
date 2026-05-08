@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings,
@@ -24,8 +25,7 @@ export function createCountPlotAiTool(deps: ChartToolDeps) {
             params.settings.field,
             {
               required: true,
-              types: ['VARCHAR', 'INTEGER', 'BIGINT', 'BOOLEAN'],
-              label: 'Field',
+              types: QUANTITATIVE_COLUMN_TYPES,
             },
             columns,
           );

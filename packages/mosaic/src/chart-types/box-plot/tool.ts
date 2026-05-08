@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {BoxPlotChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
   settings: BoxPlotChartSettings,
@@ -23,9 +24,7 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
             'x',
             params.settings.x,
             {
-              required: false,
-              types: ['VARCHAR', 'INTEGER', 'BIGINT', 'BOOLEAN'],
-              label: 'X Field (category)',
+              required: true,
             },
             columns,
           );
@@ -37,8 +36,7 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
             params.settings.y,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT'],
-              label: 'Y Field (numeric)',
+              types: NUMERIC_COLUMN_TYPES,
             },
             columns,
           );

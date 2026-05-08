@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {HeatmapChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({
   settings: HeatmapChartSettings,
@@ -24,8 +25,7 @@ export function createHeatmapAiTool(deps: ChartToolDeps) {
             params.settings.x,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT', 'VARCHAR'],
-              label: 'X Field',
+              types: NUMERIC_COLUMN_TYPES,
             },
             columns,
           );
@@ -37,8 +37,7 @@ export function createHeatmapAiTool(deps: ChartToolDeps) {
             params.settings.y,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT', 'VARCHAR'],
-              label: 'Y Field',
+              types: NUMERIC_COLUMN_TYPES,
             },
             columns,
           );
