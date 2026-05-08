@@ -102,24 +102,13 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
         );
       })}
 
-      <div
-        className="grid items-end gap-2"
-        style={{
-          gridTemplateColumns: showAggregation
-            ? 'minmax(120px, 1fr) 100px 32px'
-            : 'minmax(120px, 1fr) 32px',
-        }}
-      >
-        <ColumnSelector
-          columns={availableColumns}
-          types={types}
-          value={undefined}
-          onChange={handleAdd}
-          placeholder="Select field..."
-        />
-        {showAggregation && <div className="w-[100px]" />}
-        <div className="h-8 w-8 shrink-0" />
-      </div>
+      <ColumnSelector
+        columns={availableColumns}
+        types={types}
+        value={undefined}
+        onChange={handleAdd}
+        placeholder="Select field..."
+      />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
 import {TemporalGranularitySelector} from '../../chart-builders/TemporalGranularitySelector';
 import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
 import {NumericMultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
+import {isTemporalType} from '../../chart-builders/constants';
 
 /**
  * Explicit settings component for line chart.
@@ -29,7 +30,7 @@ export const LineChartSettingsComponent: FC = () => {
             value={config.settings.x}
             onChange={(x) => onChangeConfig('x', x)}
           />
-          {xField && (
+          {xField && isTemporalType(xField.type) && (
             <TemporalGranularitySelector
               value={config.settings.xInterval}
               onChange={(xInterval) => onChangeConfig('xInterval', xInterval)}
