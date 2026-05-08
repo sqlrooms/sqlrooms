@@ -7,7 +7,6 @@ import {
   createHeatmapAiTool,
   createBubbleChartAiTool,
   createBoxPlotAiTool,
-  createEcdfAiTool,
 } from '@sqlrooms/mosaic';
 import {RoomState} from './store-types';
 import {getErrorMessage} from './utils';
@@ -103,7 +102,6 @@ export function createDashboardAiTools(store: StoreApi<RoomState>) {
     create_dashboard_heatmap: createHeatmapAiTool(deps),
     create_dashboard_bubble_chart: createBubbleChartAiTool(deps),
     create_dashboard_box_plot: createBoxPlotAiTool(deps),
-    create_dashboard_ecdf: createEcdfAiTool(deps),
     get_dashboard_vgplot: tool({
       description:
         'Get the current vgplot JSON spec for a dashboard artifact. If artifactId is omitted, uses the current dashboard artifact.',

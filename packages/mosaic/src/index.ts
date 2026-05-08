@@ -157,7 +157,6 @@ export {
   createChartBuilderTemplates,
   createDefaultChartBuilders,
   customSpecBuilder,
-  ecdfBuilder,
   heatmapBuilder,
   histogramBuilder,
   lineChartBuilder,
@@ -194,7 +193,6 @@ export {
   countPlotChartType,
   createDefaultChartTypes,
   customSpecChartType,
-  ecdfChartType,
   heatmapChartType,
   histogramChartType,
   lineChartChartType,
@@ -203,7 +201,6 @@ export {
   HistogramChartSettings,
   LineChartSettings,
   CountPlotChartSettings,
-  EcdfChartSettings,
   BubbleChartSettings,
   HeatmapChartSettings,
   BoxPlotChartSettings,
@@ -216,14 +213,12 @@ export {
   HeatmapToolParameters,
   BubbleChartToolParameters,
   BoxPlotToolParameters,
-  EcdfToolParameters,
   createHistogramAiTool,
   createLineChartAiTool,
   createCountPlotAiTool,
   createHeatmapAiTool,
   createBubbleChartAiTool,
   createBoxPlotAiTool,
-  createEcdfAiTool,
 } from './chart-types';
 export type {
   VgPlotChartSettings,
@@ -239,7 +234,6 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
-  EcdfToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,

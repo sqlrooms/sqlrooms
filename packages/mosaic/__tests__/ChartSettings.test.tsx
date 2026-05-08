@@ -123,7 +123,6 @@ describe('ChartSettings Compound Components', () => {
         {type: 'heatmap', settings: {x: 'name', y: 'id'}},
         {type: 'box-plot', settings: {x: 'name', y: 'amount'}},
         {type: 'bubble-chart', settings: {x: 'id', y: 'amount', size: 'id'}},
-        {type: 'ecdf', settings: {field: 'amount'}},
       ];
 
       chartTypes.forEach(({type, settings}) => {

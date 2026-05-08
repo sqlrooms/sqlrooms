@@ -7,7 +7,6 @@ import {
   Code,
   Grid3X3,
   LineChart,
-  TrendingUp,
 } from 'lucide-react';
 import type {ComponentType} from 'react';
 import type {ChartBuilderTemplate, ChartTypeDefinition} from './types';
@@ -17,7 +16,6 @@ import {
   countPlotChartType,
   createDefaultChartTypes,
   customSpecChartType,
-  ecdfChartType,
   heatmapChartType,
   histogramChartType,
   lineChartChartType,
@@ -30,7 +28,6 @@ const defaultChartTypeIcons: Record<
   'count-plot': BarChartHorizontal,
   histogram: BarChart3,
   'line-chart': LineChart,
-  ecdf: TrendingUp,
   heatmap: Grid3X3,
   'box-plot': AlignHorizontalDistributeCenter,
   'bubble-chart': BubblesIcon,
@@ -70,10 +67,7 @@ export const lineChartBuilder = createChartBuilderTemplate(
   lineChartChartType,
   LineChart,
 );
-export const ecdfBuilder = createChartBuilderTemplate(
-  ecdfChartType,
-  TrendingUp,
-);
+
 export const heatmapBuilder = createChartBuilderTemplate(
   heatmapChartType,
   Grid3X3,
@@ -107,7 +101,6 @@ export const mosaicChartBuilders = {
   countPlot: countPlotBuilder,
   histogram: histogramBuilder,
   lineChart: lineChartBuilder,
-  ecdf: ecdfBuilder,
   heatmap: heatmapBuilder,
   boxPlot: boxPlotBuilder,
   bubbleChart: bubbleChartBuilder,
