@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.3](github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.2...v0.29.0-rc.3) (2026-05-07)
+
+### Bug Fixes
+
+* deckgl mosaic example fixes ([#586](/github.com/sqlrooms/sqlrooms/issues/586)) ([024461b](github.com/sqlrooms/sqlrooms/commits/024461bc550b33f1d87e234e8895ad2a2fbbe0d1))
+* DeckJsonMap: nudge render on load ([#587](/github.com/sqlrooms/sqlrooms/issues/587)) ([761bcaf](github.com/sqlrooms/sqlrooms/commits/761bcaf182a5a079b6d23d2ce1573e6134155351))
+* kepler legend should overlay on top of bottom widget ([#578](/github.com/sqlrooms/sqlrooms/issues/578)) ([1e85041](github.com/sqlrooms/sqlrooms/commits/1e850413a252222db6b48fad4cb25910b13bbdba))
+
+### Features
+
+* add split map functionality and related context to Kepler ([#563](/github.com/sqlrooms/sqlrooms/issues/563)) ([9328d21](github.com/sqlrooms/sqlrooms/commits/9328d21feb552983881e267ee8298fdbc160e19e))
+* customizable tool render behavior in ai-core ([#561](/github.com/sqlrooms/sqlrooms/issues/561)) ([b8cadf5](github.com/sqlrooms/sqlrooms/commits/b8cadf571dbc7bd65440a7f868e5a9843f3ef90d))
+* dashboard charts settings ([#581](/github.com/sqlrooms/sqlrooms/issues/581)) ([afc1f0e](github.com/sqlrooms/sqlrooms/commits/afc1f0e89f8febea4c05526ccfc085a544d0caca))
+* dnd-kit docking layout ([#552](/github.com/sqlrooms/sqlrooms/issues/552)) ([b6876c0](github.com/sqlrooms/sqlrooms/commits/b6876c008459f417754bba99394154bce7c48455))
+* enhance CustomMapLegend with close functionality and fix split pane support in CustomMapLegendPanel ([#584](/github.com/sqlrooms/sqlrooms/issues/584)) ([0a96750](github.com/sqlrooms/sqlrooms/commits/0a967502270a1e32fb28629e1e43a429d8ee4e0e))
+* Grid layout: more resize options ([#594](/github.com/sqlrooms/sqlrooms/issues/594)) ([46dcf3d](github.com/sqlrooms/sqlrooms/commits/46dcf3d9e6054e9f1da1ac659470628a65b8bf7b))
+* Kepler: Removing currentMapId to align with artifacts ([#595](/github.com/sqlrooms/sqlrooms/issues/595)) ([efe9eb7](github.com/sqlrooms/sqlrooms/commits/efe9eb714522f1f29bc408604a120a830c401e63))
+* **layout:** Add grid node type for scrollable dashboard layouts ([#575](/github.com/sqlrooms/sqlrooms/issues/575)) ([0166d1e](github.com/sqlrooms/sqlrooms/commits/0166d1e098de1b3794f9ba29e85a75cbcbfd63ee))
+* Mosaic dashboards ([#539](/github.com/sqlrooms/sqlrooms/issues/539)) ([ae2c193](github.com/sqlrooms/sqlrooms/commits/ae2c19365565a50971ed672b4331752e96161f0e))
+* Mosaic preagg in an ephemeral database ([#585](/github.com/sqlrooms/sqlrooms/issues/585)) ([0262bac](github.com/sqlrooms/sqlrooms/commits/0262bac6afb58d557635443857bdd16c84b93609))
+* update ai chat ui component ([#576](/github.com/sqlrooms/sqlrooms/issues/576)) ([0770869](github.com/sqlrooms/sqlrooms/commits/0770869066e440bb765d7e7872d883176ee96ff7))
+
 # [0.29.0-rc.2](github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.1...v0.29.0-rc.2) (2026-04-25)
 
 ### Bug Fixes

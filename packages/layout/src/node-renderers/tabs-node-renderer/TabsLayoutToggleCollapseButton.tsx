@@ -1,4 +1,5 @@
 import {FC, useCallback} from 'react';
+import {TooltipProvider} from '@sqlrooms/ui';
 import {CollapseButton} from './CollapseButton';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {useTabsNodeContext} from '../../LayoutNodeContext';
@@ -21,12 +22,12 @@ export const TabsLayoutToggleCollapseButton: FC = () => {
   }, [panelId, onExpand]);
 
   return (
-    <>
+    <TooltipProvider delayDuration={300}>
       {collapsed ? (
         <ExpandButton direction={parentDirection} onClick={handleExpand} />
       ) : (
         <CollapseButton onClick={handleCollapse} />
       )}
-    </>
+    </TooltipProvider>
   );
 };

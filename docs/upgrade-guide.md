@@ -63,6 +63,63 @@ const store = createRoomStore<RoomState>((set, get, store) => ({
 const artifacts = useRoomStore((state) => state.artifacts.items);
 ```
 
+### `@sqlrooms/kepler`: map tabs moved to `@sqlrooms/artifacts` (breaking)
+
+Kepler no longer owns host-level tab selection. If your app supports multiple
+user-managed maps, model each map as an artifact and let `ArtifactTabs` own the
+selected tab, ordering, close/reopen, rename, and delete lifecycle.
+
+#### API Changes
+
+- `KeplerSliceConfig.currentMapId` was removed.
+- Legacy Kepler tab state such as `openTabs` should move to layout/artifact tab
+  state.
+- `state.kepler.getCurrentMap()` and `state.kepler.setCurrentMapId(...)` were
+  removed. Pass explicit map ids to Kepler APIs instead.
+- `KeplerMapContainer`, `KeplerPlotContainer`, `KeplerSidePanels`, and Kepler
+  slice actions should receive a `mapId` derived from the artifact panel or
+  current artifact selection.
+
+#### Migration Helper
+
+Use `migrateKeplerTabsToArtifacts` when loading persisted Kepler configs that
+still contain `maps`, `openTabs`, and `currentMapId`.
+
+```ts
+import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
+import {
+  KeplerSliceConfig,
+  migrateKeplerTabsToArtifacts,
+} from '@sqlrooms/kepler-config';
+
+const migrated = migrateKeplerTabsToArtifacts(rawKeplerConfig, {
+  artifactType: 'kepler-map',
+});
+
+const keplerConfig = KeplerSliceConfig.parse(migrated.keplerConfig);
+const artifactsConfig = ArtifactsSliceConfig.parse(migrated.artifactsConfig);
+```
+
+Then initialize the slices with the migrated configs and apply
+`migrated.hiddenArtifactIds` to the artifact tabs layout node if you need to
+preserve maps that were closed under the old Kepler tab model.
+
+#### Before
+
+```ts
+const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
+
+<KeplerMapContainer mapId={currentMap?.id ?? ''} />;
+```
+
+#### After
+
+```tsx
+const mapId = artifactIdFromPanelMeta;
+
+<KeplerMapContainer mapId={mapId} />;
+```
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
