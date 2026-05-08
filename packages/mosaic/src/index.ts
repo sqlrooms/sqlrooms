@@ -209,7 +209,7 @@ export {
   BoxPlotChartSettings,
   // Tool helpers, parameters, and AI tool creators
   BaseChartToolParameters,
-  validateFieldValue,
+  validateColumnExists,
   HistogramToolParameters,
   LineChartToolParameters,
   CountPlotToolParameters,
@@ -229,7 +229,6 @@ export type {
   VgPlotChartSettings,
   VgPlotChartType,
   ChartToolDeps,
-  FieldValidationSpec,
   ResolvedChartResources,
   CreateChartParams,
   CreateChartResult,

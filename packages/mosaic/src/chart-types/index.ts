@@ -47,8 +47,10 @@ export {BoxPlotSettingsComponent} from './box-plot/BoxPlotSettings';
 export {BubbleChartSettingsComponent} from './bubble-chart/BubbleChartSettings';
 export {CustomSpecSettingsComponent} from './custom-spec/CustomSpecSettings';
 
-// Re-export tool helpers, parameters, and AI tool creators
-export * from './tool-helpers';
+// Re-export tool types, schemas, validation, and AI tool creators
+export * from './tool-types';
+export * from './tool-schemas';
+export * from './tool-validation';
 export * from './histogram/tool';
 export * from './line-chart/tool';
 export * from './count-plot/tool';

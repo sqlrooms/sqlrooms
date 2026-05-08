@@ -1,7 +1,9 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {HistogramChartSettings} from './schema';
-import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {BaseChartToolParameters} from '../tool-schemas';
+import {type ChartToolDeps} from '../tool-types';
+import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
@@ -20,14 +22,11 @@ export function createHistogramAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        deps.validateField(
-          'field',
+        validateColumnExists(
           params.settings.field,
-          {
-            required: true,
-            types: QUANTITATIVE_COLUMN_TYPES,
-          },
+          QUANTITATIVE_COLUMN_TYPES,
           columns,
+          'field',
         );
 
         const title = `Histogram of ${params.settings.field}`;

@@ -1,7 +1,9 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {BubbleChartSettings} from './schema';
-import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {BaseChartToolParameters} from '../tool-schemas';
+import {type ChartToolDeps} from '../tool-types';
+import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const BubbleChartToolParameters = BaseChartToolParameters.extend({
@@ -20,24 +22,18 @@ export function createBubbleChartAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        deps.validateField(
-          'x',
+        validateColumnExists(
           params.settings.x,
-          {
-            required: true,
-            types: NUMERIC_COLUMN_TYPES,
-          },
+          NUMERIC_COLUMN_TYPES,
           columns,
+          'x',
         );
 
-        deps.validateField(
-          'y',
+        validateColumnExists(
           params.settings.y,
-          {
-            required: true,
-            types: NUMERIC_COLUMN_TYPES,
-          },
+          NUMERIC_COLUMN_TYPES,
           columns,
+          'y',
         );
 
         const title =

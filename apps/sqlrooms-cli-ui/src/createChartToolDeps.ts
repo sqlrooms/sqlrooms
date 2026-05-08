@@ -1,7 +1,6 @@
 import {
   createMosaicDashboardVgPlotPanelConfig,
   createDefaultChartTypes,
-  validateFieldValue,
   type ChartToolDeps,
   type ChartBuilderColumn,
 } from '@sqlrooms/mosaic';
@@ -110,10 +109,6 @@ export function createChartToolDeps(store: {
   };
 
   return {
-    validateField: (fieldKey, value, field, columns) => {
-      validateFieldValue(fieldKey, value, field, columns);
-    },
-
     resolveResources: (params) => {
       const artifactId = resolveArtifact(
         params.artifactId,

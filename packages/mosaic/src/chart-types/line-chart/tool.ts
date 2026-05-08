@@ -1,7 +1,9 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {LineChartSettings} from './schema';
-import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {BaseChartToolParameters} from '../tool-schemas';
+import {type ChartToolDeps} from '../tool-types';
+import {validateColumnExists} from '../tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
@@ -23,28 +25,20 @@ export function createLineChartAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-        deps.validateField(
-          'x',
+        validateColumnExists(
           params.settings.x,
-          {
-            required: true,
-            types: QUANTITATIVE_COLUMN_TYPES,
-          },
+          QUANTITATIVE_COLUMN_TYPES,
           columns,
+          'x',
         );
 
-        if (params.settings.yFields && Array.isArray(params.settings.yFields)) {
-          for (const yField of params.settings.yFields) {
-            deps.validateField(
-              'yFields',
-              yField.field,
-              {
-                required: true,
-                types: NUMERIC_COLUMN_TYPES,
-              },
-              columns,
-            );
-          }
+        for (const yField of params.settings.yFields) {
+          validateColumnExists(
+            yField.field,
+            NUMERIC_COLUMN_TYPES,
+            columns,
+            'yFields',
+          );
         }
 
         const title = params.settings.x

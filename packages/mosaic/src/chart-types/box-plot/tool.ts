@@ -1,7 +1,9 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {BoxPlotChartSettings} from './schema';
-import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {BaseChartToolParameters} from '../tool-schemas';
+import {type ChartToolDeps} from '../tool-types';
+import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
@@ -19,24 +21,11 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
-
-        deps.validateField(
-          'x',
-          params.settings.x,
-          {
-            required: true,
-          },
-          columns,
-        );
-
-        deps.validateField(
-          'y',
+        validateColumnExists(
           params.settings.y,
-          {
-            required: true,
-            types: NUMERIC_COLUMN_TYPES,
-          },
+          NUMERIC_COLUMN_TYPES,
           columns,
+          'y',
         );
 
         const title = params.settings.x
