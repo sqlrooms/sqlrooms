@@ -8,7 +8,6 @@ import {z} from 'zod';
 // Import only the Zod schemas (no Settings components)
 import {HistogramChartConfig} from './histogram/schema';
 import {CountPlotChartConfig} from './count-plot/schema';
-import {EcdfChartConfig} from './ecdf/schema';
 import {LineChartConfig} from './line-chart/schema';
 import {BubbleChartConfig} from './bubble-chart/schema';
 import {HeatmapChartConfig} from './heatmap/schema';
@@ -22,7 +21,6 @@ import {CustomSpecChartConfig} from './custom-spec/schema';
 export const VgPlotChartConfig = z.discriminatedUnion('chartType', [
   HistogramChartConfig,
   CountPlotChartConfig,
-  EcdfChartConfig,
   LineChartConfig,
   BubbleChartConfig,
   HeatmapChartConfig,

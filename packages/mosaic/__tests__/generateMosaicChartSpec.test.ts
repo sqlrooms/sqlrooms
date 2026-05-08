@@ -53,16 +53,6 @@ describe('generateMosaicChartSpec', () => {
     expect(result).toHaveProperty('plot');
   });
 
-  it('generates spec for ecdf chart type', () => {
-    const result = generateMosaicChartSpec('data', 'ecdf', {
-      field: 'value',
-    });
-
-    expect(result).toBeDefined();
-    expect(result).not.toBeNull();
-    expect(result).toHaveProperty('plot');
-  });
-
   it('generates spec for heatmap chart type', () => {
     const result = generateMosaicChartSpec('matrix', 'heatmap', {
       x: 'col',

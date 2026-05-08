@@ -180,7 +180,6 @@ export {
   countPlotChartType,
   createDefaultChartTypes,
   customSpecChartType,
-  ecdfChartType,
   heatmapChartType,
   histogramChartType,
   lineChartChartType,
@@ -189,7 +188,6 @@ export {
   HistogramChartSettings,
   LineChartSettings,
   CountPlotChartSettings,
-  EcdfChartSettings,
   BubbleChartSettings,
   HeatmapChartSettings,
   BoxPlotChartSettings,
@@ -202,14 +200,12 @@ export {
   HeatmapToolParameters,
   BubbleChartToolParameters,
   BoxPlotToolParameters,
-  EcdfToolParameters,
   createHistogramAiTool,
   createLineChartAiTool,
   createCountPlotAiTool,
   createHeatmapAiTool,
   createBubbleChartAiTool,
   createBoxPlotAiTool,
-  createEcdfAiTool,
   createChartTools,
 } from './chart-types';
 export type {
@@ -225,7 +221,6 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
-  EcdfToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,

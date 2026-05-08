@@ -24,31 +24,28 @@ export {
 export * from './histogram/schema';
 export * from './line-chart/schema';
 export * from './count-plot/schema';
-export * from './ecdf/schema';
 export * from './heatmap/schema';
 export * from './box-plot/schema';
 export * from './bubble-chart/schema';
 export * from './custom-spec/schema';
 
-// Re-export definitions
-export * from './histogram/definition';
-export * from './line-chart/definition';
-export * from './count-plot/definition';
-export * from './ecdf/definition';
-export * from './heatmap/definition';
-export * from './box-plot/definition';
-export * from './bubble-chart/definition';
-export * from './custom-spec/definition';
-
 // Re-export Settings components
 export {HistogramSettingsComponent} from './histogram/HistogramSettings';
 export {LineChartSettingsComponent} from './line-chart/LineChartSettings';
 export {CountPlotSettingsComponent} from './count-plot/CountPlotSettings';
-export {EcdfSettingsComponent} from './ecdf/EcdfSettings';
 export {HeatmapSettingsComponent} from './heatmap/HeatmapSettings';
 export {BoxPlotSettingsComponent} from './box-plot/BoxPlotSettings';
 export {BubbleChartSettingsComponent} from './bubble-chart/BubbleChartSettings';
 export {CustomSpecSettingsComponent} from './custom-spec/CustomSpecSettings';
+
+// Re-export definitions
+export * from './histogram/definition';
+export * from './line-chart/definition';
+export * from './count-plot/definition';
+export * from './heatmap/definition';
+export * from './box-plot/definition';
+export * from './bubble-chart/definition';
+export * from './custom-spec/definition';
 
 // Re-export tool types, schemas, validation, and AI tool creators
 export * from './tool-types';
@@ -60,13 +57,11 @@ export * from './count-plot/tool';
 export * from './heatmap/tool';
 export * from './bubble-chart/tool';
 export * from './box-plot/tool';
-export * from './ecdf/tool';
 
 // Import chart type definitions for legacy exports
 import {histogramChartType} from './histogram/definition';
 import {lineChartChartType} from './line-chart/definition';
 import {countPlotChartType} from './count-plot/definition';
-import {ecdfChartType} from './ecdf/definition';
 import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
 import {bubbleChartChartType} from './bubble-chart/definition';
@@ -78,7 +73,6 @@ export const mosaicChartTypes = {
   histogram: histogramChartType,
   countPlot: countPlotChartType,
   lineChart: lineChartChartType,
-  ecdf: ecdfChartType,
   heatmap: heatmapChartType,
   boxPlot: boxPlotChartType,
   bubbleChart: bubbleChartChartType,
@@ -93,7 +87,6 @@ export function createDefaultChartTypes(options?: {
     histogramChartType,
     countPlotChartType,
     lineChartChartType,
-    ecdfChartType,
     heatmapChartType,
     boxPlotChartType,
     bubbleChartChartType,
