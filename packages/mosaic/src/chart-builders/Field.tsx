@@ -1,23 +1,18 @@
-import type {FC, ReactNode} from 'react';
+import type {FC, PropsWithChildren} from 'react';
 
-export interface FieldSelectorProps {
+export type FieldProps = PropsWithChildren<{
   label: string;
   required?: boolean;
-  children: ReactNode;
-}
+}>;
 
 /**
  * Layout wrapper that provides a label and grid container for horizontal
  * arrangement of child selectors (e.g., ColumnSelector, TemporalGranularitySelector).
  */
-export const FieldSelector: FC<FieldSelectorProps> = ({
-  label,
-  required,
-  children,
-}) => {
+export const Field: FC<FieldProps> = ({label, required, children}) => {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium">
+      <label className="text-xs font-medium">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
       </label>

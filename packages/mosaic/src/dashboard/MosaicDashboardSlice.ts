@@ -31,7 +31,7 @@ import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import {VgPlotChartConfig} from '../chart-types';
+import {VgPlotChartConfig} from '../chart-types/chart-config';
 
 /**
  * Panel key used for function-form panel definitions registered by

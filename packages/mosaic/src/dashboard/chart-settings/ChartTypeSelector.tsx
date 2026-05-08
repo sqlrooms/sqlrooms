@@ -8,7 +8,8 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {createChartBuilderTemplates} from '../../chart-builders/builders';
-import {VgPlotChartType, createDefaultChartTypes} from '../../chart-types';
+import {type VgPlotChartType} from '../../chart-types/base-types';
+import {createDefaultChartTypes} from '../../chart-types/index';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {

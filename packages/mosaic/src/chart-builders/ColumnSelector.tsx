@@ -1,10 +1,12 @@
-import type {FC} from 'react';
+import {type FC} from 'react';
 import {FieldSelectorInput} from './FieldSelectorInput';
-import type {ChartBuilderColumn} from './types';
+import {QUANTITATIVE_COLUMN_TYPES} from './constants';
+import {useChartSettingsContext} from '../dashboard/chart-settings/ChartSettingsContext';
+import {TableColumn} from '@sqlrooms/db';
 
 export interface ColumnSelectorProps {
-  columns: ChartBuilderColumn[];
   types?: string[];
+  columns?: TableColumn[];
   value: string | undefined;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -15,12 +17,14 @@ export interface ColumnSelectorProps {
  * Removes the field prop requirement for easier composition.
  */
 export const ColumnSelector: FC<ColumnSelectorProps> = ({
-  columns,
   types,
   value,
   onChange,
+  columns,
   placeholder,
 }) => {
+  const {columns: contextColumns} = useChartSettingsContext();
+
   return (
     <FieldSelectorInput
       field={{
@@ -28,10 +32,18 @@ export const ColumnSelector: FC<ColumnSelectorProps> = ({
         label: '',
         types,
       }}
-      columns={columns}
+      columns={columns ?? contextColumns}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
     />
   );
 };
+
+export const QuantitativeColumnSelector: FC<
+  Omit<ColumnSelectorProps, 'types'>
+> = (props) => <ColumnSelector {...props} types={QUANTITATIVE_COLUMN_TYPES} />;
+
+export const NumericColumnSelector: FC<Omit<ColumnSelectorProps, 'types'>> = (
+  props,
+) => <ColumnSelector {...props} types={QUANTITATIVE_COLUMN_TYPES} />;

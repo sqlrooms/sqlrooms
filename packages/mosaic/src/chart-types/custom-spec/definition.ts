@@ -16,8 +16,13 @@ export const customSpecChartType: ChartTypeDefinition<CustomSpecChartSettings> =
     schema: CustomSpecChartSettings,
     settingsComponent: CustomSpecSettingsComponent,
     buildTitle: titleFromDescription(DESCRIPTION),
-    createSpec: (tableName): Spec =>
-      ({
+    createSpec: (tableName, {vgPlotSpec}): Spec => {
+      if (vgPlotSpec) {
+        return vgPlotSpec as Spec;
+      }
+
+      // Default starter spec
+      return {
         plot: [
           {
             mark: 'rectY',
@@ -33,5 +38,6 @@ export const customSpecChartType: ChartTypeDefinition<CustomSpecChartSettings> =
         height: 200,
         width: 380,
         params: {brush: {select: 'crossfilter'}},
-      }) as Spec,
+      } as Spec;
+    },
   };

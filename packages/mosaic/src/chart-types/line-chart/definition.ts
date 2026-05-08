@@ -3,6 +3,7 @@ import type {ChartTypeDefinition} from '../base-types';
 import {LineChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {LineChartSettingsComponent} from './LineChartSettings';
+import {SpecGenerationError} from '../errors';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -36,8 +37,13 @@ export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
   settingsComponent: LineChartSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createSpec: (tableName, {x, yFields, xInterval}): Spec => {
+    if (!x) {
+      throw new SpecGenerationError('X field is required for line chart');
+    }
     if (!yFields || yFields.length === 0) {
-      throw new Error('At least one Y field is required');
+      throw new SpecGenerationError(
+        'At least one Y field is required for line chart',
+      );
     }
 
     const plotMarks: any[] = [];

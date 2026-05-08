@@ -1,28 +1,27 @@
-import {createContext, type ReactNode, useContext} from 'react';
+import {createContext, type ReactNode, useCallback, useContext} from 'react';
 import type {TableColumn} from '@sqlrooms/duckdb';
-import type {VgPlotChartConfig, VgPlotChartType} from '../../chart-types';
+import type {VgPlotChartConfig} from '../../chart-types/chart-config';
+import type {VgPlotChartType} from '../../chart-types/base-types';
 
-interface ChartSettingsContextValue<T = VgPlotChartConfig> {
+type ChartSetting<T extends VgPlotChartConfig = VgPlotChartConfig> =
+  T['settings'];
+
+interface ChartSettingsContextValue<
+  T extends VgPlotChartConfig = VgPlotChartConfig,
+> {
   tableName?: string;
   config: T;
   columns: TableColumn[];
   onChange: (config: T) => void;
+  onChangeConfig: <K extends keyof ChartSetting<T>>(
+    key: K,
+    value: ChartSetting<T>[K],
+  ) => void;
 }
 
 const ChartSettingsContext = createContext<ChartSettingsContextValue | null>(
   null,
 );
-
-// export function useChartSettingsContext() {
-//   const context = useContext(ChartSettingsContext);
-
-//   if (!context) {
-//     throw new Error(
-//       'ChartSettings compound components must be used within ChartSettings.Root',
-//     );
-//   }
-//   return context;
-// }
 
 // Extract specific config type from the discriminated union by chartType
 type ExtractChartConfig<T extends VgPlotChartType> = Extract<
@@ -30,23 +29,7 @@ type ExtractChartConfig<T extends VgPlotChartType> = Extract<
   {chartType: T}
 >;
 
-/**
- * Get strongly-typed chart settings context for a specific chart type.
- *
- * @example
- * // In a histogram-specific component:
- * const {config, onChange} = useConcreteChartSettingsContext('histogram');
- * // config is typed as HistogramChartConfig
- * const field = config.settings.field; // TypeScript knows this is string
- *
- * @example
- * // In a bubble chart component:
- * const {config} = useConcreteChartSettingsContext('bubble-chart');
- * // config is typed as BubbleChartConfig
- * const x = config.settings.x;
- * const y = config.settings.y;
- */
-export function useChartSettingsContext(): ChartSettingsContextValue<VgPlotChartType>;
+export function useChartSettingsContext(): ChartSettingsContextValue<VgPlotChartConfig>;
 export function useChartSettingsContext<T extends VgPlotChartType>(
   chartType: T,
 ): ChartSettingsContextValue<ExtractChartConfig<T>>;
@@ -54,7 +37,7 @@ export function useChartSettingsContext<T extends VgPlotChartType>(
   chartType?: T,
 ):
   | ChartSettingsContextValue<ExtractChartConfig<T>>
-  | ChartSettingsContextValue<VgPlotChartType> {
+  | ChartSettingsContextValue<VgPlotChartConfig> {
   const context = useContext(ChartSettingsContext);
 
   if (!context) {
@@ -64,7 +47,7 @@ export function useChartSettingsContext<T extends VgPlotChartType>(
   }
 
   if (!chartType) {
-    return context as unknown as ChartSettingsContextValue<VgPlotChartType>;
+    return context as unknown as ChartSettingsContextValue<VgPlotChartConfig>;
   }
 
   if (context.config.chartType !== chartType) {
@@ -91,9 +74,28 @@ export function ChartSettingsProvider({
   onChange,
   children,
 }: ChartSettingsProviderProps) {
+  const onChangeConfig = useCallback(
+    function <K extends keyof ChartSetting>(key: K, value: ChartSetting) {
+      onChange({
+        ...config,
+        settings: {
+          ...config.settings,
+          [key]: value,
+        },
+      } as VgPlotChartConfig);
+    },
+    [config, onChange],
+  );
+
   return (
     <ChartSettingsContext.Provider
-      value={{tableName, config, columns, onChange}}
+      value={{
+        tableName,
+        config,
+        columns,
+        onChange,
+        onChangeConfig,
+      }}
     >
       {children}
     </ChartSettingsContext.Provider>

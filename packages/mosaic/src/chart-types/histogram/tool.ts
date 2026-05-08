@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {HistogramChartSettings} from './schema';
 import {BaseChartToolParameters, type ChartToolDeps} from '../tool-helpers';
+import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
   settings: HistogramChartSettings,
@@ -25,7 +26,7 @@ export function createHistogramAiTool(deps: ChartToolDeps) {
             params.settings.field,
             {
               required: true,
-              types: ['DOUBLE', 'BIGINT', 'INTEGER', 'FLOAT'],
+              types: QUANTITATIVE_COLUMN_TYPES,
               label: 'Field',
             },
             columns,

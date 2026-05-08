@@ -3,6 +3,7 @@ import type {ChartTypeDefinition} from '../base-types';
 import {HistogramChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {HistogramSettingsComponent} from './HistogramSettings';
+import {SpecGenerationError} from '../errors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
@@ -17,8 +18,12 @@ export const histogramChartType: ChartTypeDefinition<HistogramChartSettings> = {
   schema: HistogramChartSettings,
   settingsComponent: HistogramSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {field}: HistogramChartSettings): Spec =>
-    ({
+  createSpec: (tableName, {field}: HistogramChartSettings): Spec => {
+    if (!field) {
+      throw new SpecGenerationError('Field is required for histogram');
+    }
+
+    return {
       plot: [
         {
           mark: 'rectY',
@@ -44,5 +49,6 @@ export const histogramChartType: ChartTypeDefinition<HistogramChartSettings> = {
       width: 380,
       margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
+    } as Spec;
+  },
 };

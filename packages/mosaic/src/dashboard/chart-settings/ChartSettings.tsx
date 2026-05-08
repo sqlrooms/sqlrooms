@@ -14,17 +14,18 @@
  * </ChartSettings.Root>
  * ```
  */
-import {type FC, type PropsWithChildren, useCallback, useMemo} from 'react';
+import {type FC, type PropsWithChildren} from 'react';
 import {ChartTypeSelector} from './ChartTypeSelector';
 import {
   ChartSettingsProvider,
   useChartSettingsContext,
 } from './ChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/duckdb';
-import {type VgPlotChartConfig, type VgPlotChartType} from '../../chart-types';
+import {type VgPlotChartConfig} from '../../chart-types/chart-config';
+import {type VgPlotChartType} from '../../chart-types/base-types';
 import {getChartTypeDefinition} from '../../chart-types/registry';
 import {Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
+import {CodeIcon, XIcon} from 'lucide-react';
 
 interface ChartSettingsRootProps {
   tableName?: string;
@@ -52,27 +53,32 @@ const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
   );
 };
 
-type ChartSettingsHeaderProps = PropsWithChildren<{
-  onClose?: () => void;
-}>;
+const ChartSettingsViewSpecButton: FC<{onClick: () => void}> = ({onClick}) => {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-5 w-5"
+      onClick={onClick}
+      title="View spec"
+    >
+      <CodeIcon className="h-3.5 w-3.5" />
+    </Button>
+  );
+};
 
-const ChartSettingsHeader: FC<ChartSettingsHeaderProps> = ({
-  children,
-  onClose,
-}) => {
+const ChartSettingsCloseButton: FC<{onClick: () => void}> = ({onClick}) => {
+  return (
+    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClick}>
+      <XIcon className="h-3.5 w-3.5" />
+    </Button>
+  );
+};
+
+const ChartSettingsHeader: FC<PropsWithChildren> = ({children}) => {
   return (
     <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
       {children}
-      {onClose && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-5 w-5"
-          onClick={onClose}
-        >
-          <XIcon className="h-3.5 w-3.5" />
-        </Button>
-      )}
     </div>
   );
 };
@@ -82,7 +88,7 @@ const ChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
 };
 
 const ChartSettingsTypeSelector: FC = () => {
-  const {config, columns, onChange} = useChartSettingsContext();
+  const {config, onChange} = useChartSettingsContext();
 
   const handleChartTypeChange = (newChartType: VgPlotChartType) => {
     // When changing chart type, clear settings
@@ -102,29 +108,10 @@ const ChartSettingsTypeSelector: FC = () => {
 };
 
 const ChartSettingsFields: FC = () => {
-  const {tableName, config, columns, onChange} = useChartSettingsContext();
+  const {config, columns} = useChartSettingsContext();
   const chartTypeDef = getChartTypeDefinition(config.chartType);
 
-  // Memoize columns mapping
-  const mappedColumns = useMemo(
-    () => columns.map((col) => ({name: col.name, type: col.type})),
-    [columns],
-  );
-
-  const handleSettingsChange = useCallback(
-    (newSettings: Record<string, unknown>) => {
-      if (!chartTypeDef) return;
-
-      onChange({
-        ...config,
-        settings: newSettings,
-      } as VgPlotChartConfig);
-    },
-    [chartTypeDef, config, onChange],
-  );
-
   if (!chartTypeDef) {
-    console.error(`[ChartSettings] Unknown chart type: ${config.chartType}`);
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
         Unknown chart type: {config.chartType}
@@ -141,13 +128,7 @@ const ChartSettingsFields: FC = () => {
   }
 
   const SettingsComponent = chartTypeDef.settingsComponent;
-  return (
-    <SettingsComponent
-      columns={mappedColumns}
-      values={config.settings}
-      onChange={handleSettingsChange}
-    />
-  );
+  return <SettingsComponent />;
 };
 
 export const ChartSettings = {
@@ -156,4 +137,6 @@ export const ChartSettings = {
   Content: ChartSettingsContent,
   TypeSelector: ChartSettingsTypeSelector,
   Fields: ChartSettingsFields,
+  ViewSpecButton: ChartSettingsViewSpecButton,
+  CloseButton: ChartSettingsCloseButton,
 };

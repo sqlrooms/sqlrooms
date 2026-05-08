@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react';
 import type {ChartBuilderColumn} from '../chart-builders/types';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {VgPlotChartConfig} from '../chart-types/chart-config';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './MosaicDashboardPanels';
@@ -108,12 +108,12 @@ export function MosaicDashboardRoot({
       return;
     }
 
-    // Create empty chart panel - user will select type and fields
+    // Create chart panel with default field or empty if no numeric columns
     const panel = createMosaicDashboardVgPlotPanelConfig(
       'New Chart',
       {
         chartType: 'histogram',
-        settings: {field: ''},
+        settings: {},
         settingsOpen: true, // Open settings by default
       },
       {tableName: dashboard.selectedTable},

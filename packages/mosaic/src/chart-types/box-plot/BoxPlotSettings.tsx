@@ -1,46 +1,29 @@
-import {useCallback, type FC} from 'react';
-import {FieldSelector} from '../../chart-builders/FieldSelector';
-import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import type {ChartBuilderColumn} from '../../chart-builders/types';
-import type {BoxPlotChartSettings} from './schema';
-import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
+import {type FC} from 'react';
+import {Field} from '../../chart-builders/Field';
+import {
+  ColumnSelector,
+  NumericColumnSelector,
+} from '../../chart-builders/ColumnSelector';
+import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
 
-export interface BoxPlotSettingsComponentProps {
-  columns: ChartBuilderColumn[];
-  values: BoxPlotChartSettings;
-  onChange: (values: BoxPlotChartSettings) => void;
-}
-
-export const BoxPlotSettingsComponent: FC<BoxPlotSettingsComponentProps> = ({
-  columns,
-  values,
-  onChange,
-}) => {
-  const updateField = useCallback(
-    (key: keyof BoxPlotChartSettings, value: any) => {
-      onChange({...values, [key]: value});
-    },
-    [values, onChange],
-  );
+export const BoxPlotSettingsComponent: FC = () => {
+  const {onChangeConfig, config} = useChartSettingsContext('box-plot');
 
   return (
     <div className="space-y-4">
-      <FieldSelector label="X Field (categorical)" required>
+      <Field label="X Field (categorical)" required>
         <ColumnSelector
-          columns={columns}
-          value={values.x}
-          onChange={(x) => updateField('x', x)}
+          value={config.settings.x}
+          onChange={(x) => onChangeConfig('x', x)}
         />
-      </FieldSelector>
+      </Field>
 
-      <FieldSelector label="Y Field (numeric)" required>
-        <ColumnSelector
-          columns={columns}
-          types={NUMERIC_COLUMN_TYPES}
-          value={values.y}
-          onChange={(y) => updateField('y', y)}
+      <Field label="Y Field (numeric)" required>
+        <NumericColumnSelector
+          value={config.settings.y}
+          onChange={(y) => onChangeConfig('y', y)}
         />
-      </FieldSelector>
+      </Field>
     </div>
   );
 };

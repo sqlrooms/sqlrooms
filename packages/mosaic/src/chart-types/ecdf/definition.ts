@@ -3,6 +3,7 @@ import type {ChartTypeDefinition} from '../base-types';
 import {EcdfChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {EcdfSettingsComponent} from './EcdfSettings';
+import {SpecGenerationError} from '../errors';
 
 const FG_COLOR = 'var(--color-chart-1)';
 const DESCRIPTION = 'Create an eCDF chart of a field';
@@ -16,8 +17,11 @@ export const ecdfChartType: ChartTypeDefinition<EcdfChartSettings> = {
   schema: EcdfChartSettings,
   settingsComponent: EcdfSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {field}): Spec =>
-    ({
+  createSpec: (tableName, {field}): Spec => {
+    if (!field) {
+      throw new SpecGenerationError('Field is required for eCDF chart');
+    }
+    return {
       plot: [
         {
           mark: 'areaY',
@@ -42,5 +46,6 @@ export const ecdfChartType: ChartTypeDefinition<EcdfChartSettings> = {
       width: 380,
       margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
+    } as Spec;
+  },
 };

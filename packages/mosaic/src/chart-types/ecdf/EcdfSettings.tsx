@@ -1,38 +1,19 @@
-import {useCallback, type FC} from 'react';
-import {FieldSelector} from '../../chart-builders/FieldSelector';
-import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import type {ChartBuilderColumn} from '../../chart-builders/types';
-import type {EcdfChartSettings} from './schema';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {type FC} from 'react';
+import {Field} from '../../chart-builders/Field';
+import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
+import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
 
-export interface EcdfSettingsComponentProps {
-  columns: ChartBuilderColumn[];
-  values: EcdfChartSettings;
-  onChange: (values: EcdfChartSettings) => void;
-}
-
-export const EcdfSettingsComponent: FC<EcdfSettingsComponentProps> = ({
-  columns,
-  values,
-  onChange,
-}) => {
-  const updateField = useCallback(
-    (key: keyof EcdfChartSettings, value: any) => {
-      onChange({...values, [key]: value});
-    },
-    [values, onChange],
-  );
+export const EcdfSettingsComponent: FC = () => {
+  const {onChangeConfig, config} = useChartSettingsContext('ecdf');
 
   return (
     <div className="space-y-4">
-      <FieldSelector label="Field" required>
-        <ColumnSelector
-          columns={columns}
-          types={QUANTITATIVE_COLUMN_TYPES}
-          value={values.field}
-          onChange={(field) => updateField('field', field)}
+      <Field label="Field" required>
+        <QuantitativeColumnSelector
+          value={config.settings.field}
+          onChange={(field) => onChangeConfig('field', field)}
         />
-      </FieldSelector>
+      </Field>
     </div>
   );
 };

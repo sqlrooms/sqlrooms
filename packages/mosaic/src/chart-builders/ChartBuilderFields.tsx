@@ -5,6 +5,8 @@ import {
   useChartBuilderStore,
 } from './ChartBuilderContext';
 import {toChartTypeDefinition} from './types';
+import {ChartSettingsProvider} from '../dashboard/chart-settings/ChartSettingsContext';
+import type {VgPlotChartConfig} from '../chart-types';
 
 export interface ChartBuilderFieldsProps {
   className?: string;
@@ -31,9 +33,9 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
   }, [selectedTemplate]);
 
   const handleChange = useCallback(
-    (newValues: Record<string, unknown>) => {
-      // Update all changed values
-      Object.entries(newValues).forEach(([key, value]) => {
+    (config: VgPlotChartConfig) => {
+      // Update all changed values from settings
+      Object.entries(config.settings).forEach(([key, value]) => {
         if (fieldValues[key] !== value) {
           setFieldValue(key, value);
         }
@@ -42,16 +44,32 @@ export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
     [fieldValues, setFieldValue],
   );
 
+  // Create a config object for the context
+  const config: VgPlotChartConfig = useMemo(() => {
+    if (!chartTypeDefinition) {
+      return {
+        chartType: 'histogram',
+        settings: {},
+      } as VgPlotChartConfig;
+    }
+    return {
+      chartType: chartTypeDefinition.id,
+      settings: fieldValues,
+    } as VgPlotChartConfig;
+  }, [chartTypeDefinition, fieldValues]);
+
   if (!chartTypeDefinition) return null;
 
   const SettingsComponent = chartTypeDefinition.settingsComponent;
   return (
     <div className={cn('flex flex-col gap-4 py-2', className)}>
-      <SettingsComponent
+      <ChartSettingsProvider
+        config={config}
         columns={columns}
-        values={fieldValues}
         onChange={handleChange}
-      />
+      >
+        <SettingsComponent />
+      </ChartSettingsProvider>
     </div>
   );
 };

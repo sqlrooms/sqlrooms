@@ -1,6 +1,8 @@
 import {z} from 'zod';
 
-export const CustomSpecChartSettings = z.record(z.string(), z.unknown());
+export const CustomSpecChartSettings = z.object({
+  vgPlotSpec: z.unknown().optional(),
+});
 
 export type CustomSpecChartSettings = z.infer<typeof CustomSpecChartSettings>;
 

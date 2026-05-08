@@ -1,64 +1,51 @@
-import {useCallback, type FC} from 'react';
-import {FieldSelector} from '../../chart-builders/FieldSelector';
-import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import {MultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
-import {TemporalGranularitySelector} from '../../chart-builders/TemporalGranularitySelector';
-import type {ChartBuilderColumn} from '../../chart-builders/types';
-import type {LineChartSettings} from './schema';
-import {
-  QUANTITATIVE_COLUMN_TYPES,
-  NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import {type FC} from 'react';
+import {Field} from '../../chart-builders/Field';
+import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
 
-export interface LineChartSettingsComponentProps {
-  columns: ChartBuilderColumn[];
-  values: LineChartSettings;
-  onChange: (values: LineChartSettings) => void;
-}
+import {TemporalGranularitySelector} from '../../chart-builders/TemporalGranularitySelector';
+import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
+import {NumericMultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
 
 /**
  * Explicit settings component for line chart.
  * Composes primitive and compound components for full control over the UI.
  */
-export const LineChartSettingsComponent: FC<
-  LineChartSettingsComponentProps
-> = ({columns, values, onChange}) => {
-  const updateField = useCallback(
-    (key: keyof LineChartSettings, value: any) => {
-      onChange({...values, [key]: value});
-    },
-    [values, onChange],
-  );
+export const LineChartSettingsComponent: FC = () => {
+  const {columns, onChangeConfig, config} =
+    useChartSettingsContext('line-chart');
+
+  const xField = columns.find((c) => c.name === config.settings.x);
 
   return (
     <div className="space-y-4">
-      {/* X Axis */}
-      <FieldSelector label="X Axis" required>
-        <ColumnSelector
-          columns={columns}
-          types={QUANTITATIVE_COLUMN_TYPES}
-          value={values.x}
-          onChange={(x) => updateField('x', x)}
-        />
-        {values.x && (
-          <TemporalGranularitySelector
-            value={values.xInterval}
-            onChange={(xInterval) => updateField('xInterval', xInterval)}
-            xFieldType={columns.find((c) => c.name === values.x)?.type}
+      <Field label="X Axis" required>
+        <div
+          className="grid items-end gap-2"
+          style={{
+            gridTemplateColumns: xField ? 'minmax(120px, 1fr) 100px' : '1fr',
+          }}
+        >
+          <QuantitativeColumnSelector
+            value={config.settings.x}
+            onChange={(x) => onChangeConfig('x', x)}
           />
-        )}
-      </FieldSelector>
+          {xField && (
+            <TemporalGranularitySelector
+              value={config.settings.xInterval}
+              onChange={(xInterval) => onChangeConfig('xInterval', xInterval)}
+              xFieldType={xField.type}
+            />
+          )}
+        </div>
+      </Field>
 
-      {/* Y Axes */}
-      <MultiFieldSelector
-        label="Y Axes"
-        required
-        columns={columns}
-        types={NUMERIC_COLUMN_TYPES}
-        value={values.yFields || []}
-        onChange={(yFields) => updateField('yFields', yFields)}
-        showAggregation={Boolean(values.xInterval)}
-      />
+      <Field label="Y Axis" required>
+        <NumericMultiFieldSelector
+          value={config.settings.yFields ?? []}
+          onChange={(yFields) => onChangeConfig('yFields', yFields)}
+          showAggregation={Boolean(config.settings.xInterval)}
+        />
+      </Field>
     </div>
   );
 };

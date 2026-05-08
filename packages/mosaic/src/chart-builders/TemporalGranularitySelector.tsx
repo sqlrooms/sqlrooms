@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {TEMPORAL_COLUMN_TYPES} from './constants';
-import {TemporalInterval} from '../chart-types';
+import {TemporalInterval} from '../chart-types/line-chart/schema';
 
 interface TemporalGranularitySelectorProps {
   value?: TemporalInterval;

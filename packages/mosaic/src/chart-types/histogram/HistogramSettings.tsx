@@ -1,35 +1,19 @@
-import {useCallback, type FC} from 'react';
-import {FieldSelector} from '../../chart-builders/FieldSelector';
-import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {type FC} from 'react';
+import {Field} from '../../chart-builders/Field';
+import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
 import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
 
 export const HistogramSettingsComponent: FC = () => {
-  const {columns, onChange, config} = useChartSettingsContext('histogram');
-
-  const handleOnChange = useCallback(
-    (field: string) => {
-      onChange({
-        ...config,
-        settings: {
-          ...config.settings,
-          field,
-        },
-      });
-    },
-    [onChange, config],
-  );
+  const {onChangeConfig, config} = useChartSettingsContext('histogram');
 
   return (
     <div className="space-y-4">
-      <FieldSelector label="Field" required>
-        <ColumnSelector
-          columns={columns}
-          types={QUANTITATIVE_COLUMN_TYPES}
+      <Field label="Field" required>
+        <QuantitativeColumnSelector
           value={config.settings.field}
-          onChange={handleOnChange}
+          onChange={(field) => onChangeConfig('field', field)}
         />
-      </FieldSelector>
+      </Field>
     </div>
   );
 };

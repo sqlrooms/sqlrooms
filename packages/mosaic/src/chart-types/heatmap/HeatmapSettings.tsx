@@ -1,47 +1,26 @@
-import {useCallback, type FC} from 'react';
-import {FieldSelector} from '../../chart-builders/FieldSelector';
-import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import type {ChartBuilderColumn} from '../../chart-builders/types';
-import type {HeatmapChartSettings} from './schema';
-import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
+import {type FC} from 'react';
+import {Field} from '../../chart-builders/Field';
+import {NumericColumnSelector} from '../../chart-builders/ColumnSelector';
+import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
 
-export interface HeatmapSettingsComponentProps {
-  columns: ChartBuilderColumn[];
-  values: HeatmapChartSettings;
-  onChange: (values: HeatmapChartSettings) => void;
-}
-
-export const HeatmapSettingsComponent: FC<HeatmapSettingsComponentProps> = ({
-  columns,
-  values,
-  onChange,
-}) => {
-  const updateField = useCallback(
-    (key: keyof HeatmapChartSettings, value: any) => {
-      onChange({...values, [key]: value});
-    },
-    [values, onChange],
-  );
+export const HeatmapSettingsComponent: FC = () => {
+  const {onChangeConfig, config} = useChartSettingsContext('heatmap');
 
   return (
     <div className="space-y-4">
-      <FieldSelector label="X Field" required>
-        <ColumnSelector
-          columns={columns}
-          types={NUMERIC_COLUMN_TYPES}
-          value={values.x}
-          onChange={(x) => updateField('x', x)}
+      <Field label="X Field" required>
+        <NumericColumnSelector
+          value={config.settings.x}
+          onChange={(x) => onChangeConfig('x', x)}
         />
-      </FieldSelector>
+      </Field>
 
-      <FieldSelector label="Y Field" required>
-        <ColumnSelector
-          columns={columns}
-          types={NUMERIC_COLUMN_TYPES}
-          value={values.y}
-          onChange={(y) => updateField('y', y)}
+      <Field label="Y Field" required>
+        <NumericColumnSelector
+          value={config.settings.y}
+          onChange={(y) => onChangeConfig('y', y)}
         />
-      </FieldSelector>
+      </Field>
     </div>
   );
 };

@@ -47,15 +47,6 @@ export interface ChartBuilderField {
 }
 
 /**
- * Props for chart settings components
- */
-export interface ChartSettingsComponentProps<TSettings = any> {
-  columns: ChartBuilderColumn[];
-  values: TSettings;
-  onChange: (values: TSettings) => void;
-}
-
-/**
  * Shared chart-type definition used by both the chart-builder UI and
  * assistant-driven chart creation.
  */
@@ -77,5 +68,5 @@ export interface ChartTypeDefinition<TSettings = any> {
   /** Optional extra assistant-facing description */
   aiDescription?: string;
   /** Explicit settings component for this chart type */
-  settingsComponent: FC<ChartSettingsComponentProps<TSettings>>;
+  settingsComponent: FC;
 }

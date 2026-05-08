@@ -54,7 +54,7 @@ export function createLineChartAiTool(deps: ChartToolDeps) {
         }
 
         const title = params.settings.x
-          ? `Line chart - ${params.settings.yFields.map((f) => f.field).join(', ')} over ${params.settings.x}`
+          ? `Line chart - ${params.settings.yFields?.map((f) => f.field).join(', ') || ''} over ${params.settings.x}`
           : 'Line chart';
 
         const result = deps.createChart({

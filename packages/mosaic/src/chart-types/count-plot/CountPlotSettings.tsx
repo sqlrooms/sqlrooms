@@ -1,36 +1,19 @@
-import {useCallback, type FC} from 'react';
-import {FieldSelector} from '../../chart-builders/FieldSelector';
-import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import type {ChartBuilderColumn} from '../../chart-builders/types';
-import type {CountPlotChartSettings} from './schema';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {type FC} from 'react';
+import {Field} from '../../chart-builders/Field';
+import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
+import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
 
-export interface CountPlotSettingsComponentProps {
-  columns: ChartBuilderColumn[];
-  values: CountPlotChartSettings;
-  onChange: (values: CountPlotChartSettings) => void;
-}
-
-export const CountPlotSettingsComponent: FC<
-  CountPlotSettingsComponentProps
-> = ({columns, values, onChange}) => {
-  const updateField = useCallback(
-    (key: keyof CountPlotChartSettings, value: any) => {
-      onChange({...values, [key]: value});
-    },
-    [values, onChange],
-  );
+export const CountPlotSettingsComponent: FC = () => {
+  const {onChangeConfig, config} = useChartSettingsContext('count-plot');
 
   return (
     <div className="space-y-4">
-      <FieldSelector label="Field" required>
-        <ColumnSelector
-          columns={columns}
-          types={QUANTITATIVE_COLUMN_TYPES}
-          value={values.field}
-          onChange={(field) => updateField('field', field)}
+      <Field label="Field" required>
+        <QuantitativeColumnSelector
+          value={config.settings.field}
+          onChange={(field) => onChangeConfig('field', field)}
         />
-      </FieldSelector>
+      </Field>
     </div>
   );
 };

@@ -31,7 +31,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
   columns,
   value,
   onChange,
-  placeholder,
+  placeholder = 'Select...',
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -43,18 +43,8 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
 
   const selectedColumn = filteredColumns.find((col) => col.name === value);
 
-  const showLabel = field.label && field.label.trim() !== '';
-  const placeholderText =
-    placeholder || `Select ${field.label.toLowerCase()}...`;
-
   return (
-    <div className="flex flex-col gap-1">
-      {showLabel && (
-        <label className="text-xs font-medium">
-          {field.label}
-          {field.required && <span className="text-destructive ml-1">*</span>}
-        </label>
-      )}
+    <div className="@container flex flex-col gap-1">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -64,14 +54,16 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
             className="h-8 w-full justify-between text-xs font-normal"
           >
             {selectedColumn ? (
-              <span className="flex items-center gap-2 truncate">
+              <span className="flex min-w-0 items-baseline gap-1">
                 <span className="truncate">{selectedColumn.name}</span>
-                <span className="text-muted-foreground text-[10px]">
+                <span className="text-muted-foreground hidden overflow-hidden text-[10px] whitespace-nowrap @[180px]:inline">
                   {selectedColumn.type}
                 </span>
               </span>
             ) : (
-              <span className="text-muted-foreground">{placeholderText}</span>
+              <span className="text-muted-foreground truncate">
+                {placeholder}
+              </span>
             )}
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>

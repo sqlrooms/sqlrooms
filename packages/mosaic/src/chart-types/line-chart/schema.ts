@@ -37,7 +37,7 @@ export const LineChartSettings = z.object({
   ),
   yFields: z
     .array(YFieldConfig)
-    .min(1)
+    .optional()
     .describe('Array of Y fields to plot, supports multiple lines'),
 });
 

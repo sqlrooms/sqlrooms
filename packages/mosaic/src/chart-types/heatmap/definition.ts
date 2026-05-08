@@ -3,6 +3,7 @@ import type {ChartTypeDefinition} from '../base-types';
 import {HeatmapChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {HeatmapSettingsComponent} from './HeatmapSettings';
+import {SpecGenerationError} from '../errors';
 
 const DESCRIPTION = 'Create a 2D heatmap of two fields';
 
@@ -15,8 +16,14 @@ export const heatmapChartType: ChartTypeDefinition<HeatmapChartSettings> = {
   schema: HeatmapChartSettings,
   settingsComponent: HeatmapSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
+  createSpec: (tableName, {x, y}): Spec => {
+    if (!x) {
+      throw new SpecGenerationError('X field is required for heatmap');
+    }
+    if (!y) {
+      throw new SpecGenerationError('Y field is required for heatmap');
+    }
+    return {
       plot: [
         {
           mark: 'raster',
@@ -37,5 +44,6 @@ export const heatmapChartType: ChartTypeDefinition<HeatmapChartSettings> = {
       width: 380,
       margins: {left: 50, right: 20, top: 20, bottom: 50},
       params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
+    } as Spec;
+  },
 };

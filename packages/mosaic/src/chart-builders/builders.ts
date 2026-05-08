@@ -21,8 +21,7 @@ import {
   heatmapChartType,
   histogramChartType,
   lineChartChartType,
-  mosaicChartTypes,
-} from '../chart-types';
+} from '../chart-types/index';
 
 const defaultChartTypeIcons: Record<
   string,
