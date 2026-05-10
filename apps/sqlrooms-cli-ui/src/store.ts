@@ -63,7 +63,12 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
-import {createDocumentsSlice, DocumentsSliceConfig} from '@sqlrooms/documents';
+import {
+  createDocumentCommands,
+  createDocumentsSlice,
+  DOCUMENT_AI_INSTRUCTIONS,
+  DocumentsSliceConfig,
+} from '@sqlrooms/documents';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -85,6 +90,8 @@ import {
 import {parseVgPlotSpecString} from './vgplot';
 
 export type {RoomState} from './store-types';
+
+const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -280,9 +287,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
+          registerCommandsForOwner(
+            store,
+            DOCUMENT_COMMAND_OWNER,
+            createDocumentCommands<RoomState>(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -547,7 +560,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),

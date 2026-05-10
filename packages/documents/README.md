@@ -4,9 +4,11 @@ Artifact-scoped Markdown documents and knowledge-index utilities for SQLRooms.
 
 ```tsx
 import {
+  DOCUMENT_AI_INSTRUCTIONS,
   DocumentsSliceConfig,
   MarkdownDocument,
   buildKnowledgeIndex,
+  createDocumentCommands,
   createDocumentsSlice,
 } from '@sqlrooms/documents';
 import {defineArtifactTypes} from '@sqlrooms/artifacts';
@@ -51,6 +53,21 @@ const roomStore = createRoomStore(
 
 The source mode edits Markdown directly. The rich mode uses Tiptap and serializes
 changes back to Markdown.
+
+## Commands
+
+`createDocumentCommands()` registers AI- and palette-friendly commands for
+document artifacts:
+
+- `document.list`
+- `document.get`
+- `document.create`
+- `document.set-markdown`
+- `document.append-markdown`
+
+Register the commands with your room command slice and include
+`DOCUMENT_AI_INSTRUCTIONS` in your AI system prompt when exposing
+`list_commands` and `execute_command` tools.
 
 ## Knowledge Index
 

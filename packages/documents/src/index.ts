@@ -16,6 +16,10 @@ export {
   type DocumentsSliceState,
 } from './DocumentsSlice';
 export {
+  createDocumentCommands,
+  DOCUMENT_AI_INSTRUCTIONS,
+} from './documentCommands';
+export {
   MarkdownDocumentEditor,
   type MarkdownDocumentEditorMode,
   type MarkdownDocumentEditorProps,
