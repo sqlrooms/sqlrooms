@@ -3105,6 +3105,9 @@ importers:
       immer:
         specifier: ^11.0.1
         version: 11.0.1
+      lucide-react:
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
       react:
         specifier: 19.2.1
         version: 19.2.1
@@ -3117,6 +3120,9 @@ importers:
       zod:
         specifier: 4.1.13
         version: 4.1.13
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
       ts-jest:
         specifier: ^29.4.4

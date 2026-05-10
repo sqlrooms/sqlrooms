@@ -42,8 +42,10 @@
     "@tiptap/react": "^3.23.1",
     "@tiptap/starter-kit": "^3.23.1",
     "immer": "^11.0.1",
+    "lucide-react": "^0.555.0",
     "yaml": "^2.8.2",
-    "zod": "^4.1.13"
+    "zod": "^4.1.13",
+    "zustand": "^5.0.8"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
