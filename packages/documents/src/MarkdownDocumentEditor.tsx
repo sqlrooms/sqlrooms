@@ -18,12 +18,18 @@ import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import {Markdown} from '@tiptap/markdown';
-import {EditorContent, type Editor, useEditor} from '@tiptap/react';
+import {
+  EditorContent,
+  type Editor,
+  useEditor,
+  useEditorState,
+} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
   BoldIcon,
   CodeIcon,
   ChevronDownIcon,
+  FileCodeCornerIcon,
   ItalicIcon,
   LinkIcon,
   ListIcon,
@@ -163,47 +169,81 @@ function RichToolbar({
   editor: Editor | null;
   disabled: boolean;
 }) {
+  const activeState = useEditorState({
+    editor,
+    selector: ({editor}) => ({
+      bold: editor?.isActive('bold') ?? false,
+      italic: editor?.isActive('italic') ?? false,
+      code: editor?.isActive('code') ?? false,
+      codeBlock: editor?.isActive('codeBlock') ?? false,
+      bulletList: editor?.isActive('bulletList') ?? false,
+      orderedList: editor?.isActive('orderedList') ?? false,
+      blockquote: editor?.isActive('blockquote') ?? false,
+      link: editor?.isActive('link') ?? false,
+      headingLevel:
+        ([1, 2, 3, 4] as const).find((level) =>
+          editor?.isActive('heading', {level}),
+        ) ?? null,
+    }),
+  }) ?? {
+    bold: false,
+    italic: false,
+    code: false,
+    codeBlock: false,
+    bulletList: false,
+    orderedList: false,
+    blockquote: false,
+    link: false,
+    headingLevel: null,
+  };
+
   const tools = [
     {
       label: 'Bold',
       icon: BoldIcon,
-      active: () => editor?.isActive('bold'),
+      active: activeState.bold,
       run: () => editor?.chain().focus().toggleBold().run(),
     },
     {
       label: 'Italic',
       icon: ItalicIcon,
-      active: () => editor?.isActive('italic'),
+      active: activeState.italic,
       run: () => editor?.chain().focus().toggleItalic().run(),
     },
     {
       label: 'Code',
       icon: CodeIcon,
-      active: () => editor?.isActive('code'),
+      active: activeState.code,
       run: () => editor?.chain().focus().toggleCode().run(),
+    },
+    {
+      label: 'Code block',
+      icon: FileCodeCornerIcon,
+      active: activeState.codeBlock,
+      run: () => editor?.chain().focus().toggleCodeBlock().run(),
     },
     {
       label: 'Bullet list',
       icon: ListIcon,
-      active: () => editor?.isActive('bulletList'),
+      active: activeState.bulletList,
       run: () => editor?.chain().focus().toggleBulletList().run(),
     },
     {
       label: 'Ordered list',
       icon: ListOrderedIcon,
-      active: () => editor?.isActive('orderedList'),
+      active: activeState.orderedList,
       run: () => editor?.chain().focus().toggleOrderedList().run(),
     },
     {
       label: 'Blockquote',
       icon: QuoteIcon,
-      active: () => editor?.isActive('blockquote'),
+      active: activeState.blockquote,
       run: () => editor?.chain().focus().toggleBlockquote().run(),
     },
     {
       label: 'Link',
       icon: LinkIcon,
-      active: () => editor?.isActive('link'),
+      active: activeState.link,
       run: () => {
         const previous = editor?.getAttributes('link').href as
           | string
@@ -221,7 +261,11 @@ function RichToolbar({
 
   return (
     <div className="flex items-center gap-1">
-      <HeadingDropdown editor={editor} disabled={disabled || !editor} />
+      <HeadingDropdown
+        editor={editor}
+        activeHeadingLevel={activeState.headingLevel}
+        disabled={disabled || !editor}
+      />
       {tools.map((tool) => {
         const Icon = tool.icon;
         return (
@@ -229,7 +273,7 @@ function RichToolbar({
             key={tool.label}
             type="button"
             size="icon"
-            variant={tool.active() ? 'secondary' : 'ghost'}
+            variant={tool.active ? 'secondary' : 'ghost'}
             className="h-8 w-8"
             disabled={disabled || !editor}
             title={tool.label}
@@ -245,14 +289,13 @@ function RichToolbar({
 
 function HeadingDropdown({
   editor,
+  activeHeadingLevel,
   disabled,
 }: {
   editor: Editor | null;
+  activeHeadingLevel: 1 | 2 | 3 | 4 | null;
   disabled: boolean;
 }) {
-  const activeHeadingLevel = [1, 2, 3, 4].find((level) =>
-    editor?.isActive('heading', {level}),
-  );
   const label = activeHeadingLevel ? `H${activeHeadingLevel}` : null;
 
   return (
