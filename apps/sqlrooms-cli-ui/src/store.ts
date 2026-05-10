@@ -63,6 +63,7 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
+import {createDocumentsSlice, DocumentsSliceConfig} from '@sqlrooms/documents';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -228,6 +229,7 @@ const sliceConfigSchemas = {
   cells: CellsSliceConfig,
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
+  documents: DocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -518,6 +520,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createNotebookSlice()(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
+
+        ...createDocumentsSlice()(set, get, store),
 
         ...createWebContainerSlice({
           autoInitialize: false,
