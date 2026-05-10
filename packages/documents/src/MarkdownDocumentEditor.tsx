@@ -1,6 +1,15 @@
 import {markdown} from '@codemirror/lang-markdown';
-import {CodeMirrorEditor} from '@sqlrooms/codemirror';
-import {Button, cn, ToggleGroup, ToggleGroupItem} from '@sqlrooms/ui';
+import {CodeMirrorEditor, createSqlroomsTheme} from '@sqlrooms/codemirror';
+import {
+  Button,
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  ToggleGroup,
+  ToggleGroupItem,
+} from '@sqlrooms/ui';
 import Link from '@tiptap/extension-link';
 import {Table} from '@tiptap/extension-table';
 import TableCell from '@tiptap/extension-table-cell';
@@ -14,8 +23,7 @@ import StarterKit from '@tiptap/starter-kit';
 import {
   BoldIcon,
   CodeIcon,
-  Heading1Icon,
-  Heading2Icon,
+  ChevronDownIcon,
   ItalicIcon,
   LinkIcon,
   ListIcon,
@@ -82,7 +90,7 @@ export function MarkdownDocumentEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm dark:prose-invert max-w-none min-h-full px-6 py-5 focus:outline-none',
+          'prose prose-sm dark:prose-invert prose-a:text-primary prose-a:underline-offset-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:leading-6 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground prose-pre:my-3 prose-pre:rounded-md prose-pre:px-3 prose-pre:py-2 [&_li>p]:my-0 max-w-none min-h-full px-6 py-5 focus:outline-none',
       },
     },
   });
@@ -131,8 +139,9 @@ export function MarkdownDocumentEditor({
           value={value}
           readOnly={readOnly}
           onChange={onChange}
-          extensions={[markdown()]}
+          extensions={[markdown(), createSqlroomsTheme()]}
           options={{
+            lineNumbers: false,
             lineWrapping: true,
             foldGutter: false,
           }}
@@ -155,24 +164,6 @@ function RichToolbar({
   disabled: boolean;
 }) {
   const tools = [
-    {
-      label: 'Paragraph',
-      icon: PilcrowIcon,
-      active: () => editor?.isActive('paragraph'),
-      run: () => editor?.chain().focus().setParagraph().run(),
-    },
-    {
-      label: 'Heading 1',
-      icon: Heading1Icon,
-      active: () => editor?.isActive('heading', {level: 1}),
-      run: () => editor?.chain().focus().toggleHeading({level: 1}).run(),
-    },
-    {
-      label: 'Heading 2',
-      icon: Heading2Icon,
-      active: () => editor?.isActive('heading', {level: 2}),
-      run: () => editor?.chain().focus().toggleHeading({level: 2}).run(),
-    },
     {
       label: 'Bold',
       icon: BoldIcon,
@@ -230,6 +221,7 @@ function RichToolbar({
 
   return (
     <div className="flex items-center gap-1">
+      <HeadingDropdown editor={editor} disabled={disabled || !editor} />
       {tools.map((tool) => {
         const Icon = tool.icon;
         return (
@@ -248,5 +240,64 @@ function RichToolbar({
         );
       })}
     </div>
+  );
+}
+
+function HeadingDropdown({
+  editor,
+  disabled,
+}: {
+  editor: Editor | null;
+  disabled: boolean;
+}) {
+  const activeHeadingLevel = [1, 2, 3, 4].find((level) =>
+    editor?.isActive('heading', {level}),
+  );
+  const label = activeHeadingLevel ? `H${activeHeadingLevel}` : null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant={activeHeadingLevel ? 'secondary' : 'ghost'}
+          className="h-8 gap-1 px-2"
+          disabled={disabled}
+          title="Text style"
+        >
+          {label ? (
+            <span className="min-w-5 text-xs font-semibold">{label}</span>
+          ) : (
+            <PilcrowIcon className="h-4 w-4" />
+          )}
+          <ChevronDownIcon className="h-3 w-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem
+          onClick={() => editor?.chain().focus().setParagraph().run()}
+        >
+          Paragraph
+        </DropdownMenuItem>
+        {[1, 2, 3, 4].map((level) => (
+          <DropdownMenuItem
+            key={level}
+            onClick={() =>
+              editor
+                ?.chain()
+                .focus()
+                .toggleHeading({level: level as 1 | 2 | 3 | 4})
+                .run()
+            }
+          >
+            <span className="text-muted-foreground mr-2 font-mono text-xs">
+              H{level}
+            </span>
+            Heading {level}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
