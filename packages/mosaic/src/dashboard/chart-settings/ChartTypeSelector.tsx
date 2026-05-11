@@ -7,9 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {createChartBuilderTemplates} from '../../chart-builders/builders';
+import {ChartNoAxesCombined} from 'lucide-react';
 import {type VgPlotChartType} from '../../chart-types/base-types';
-import {createDefaultChartTypes} from '../../chart-types/index';
+import {getAllChartTypes} from '../../chart-types/registry';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {
@@ -24,18 +24,13 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
     );
 
     const chartTypes = useMemo(
-      () => chartTypesFromStore || createDefaultChartTypes(),
+      () => chartTypesFromStore || getAllChartTypes(),
       [chartTypesFromStore],
     );
 
-    const templates = useMemo(
-      () => createChartBuilderTemplates(chartTypes),
-      [chartTypes],
-    );
-
-    const selectedTemplate = useMemo(
-      () => templates.find((template) => template.id === value),
-      [templates, value],
+    const selectedChartType = useMemo(
+      () => chartTypes.find((chartType) => chartType.id === value),
+      [chartTypes, value],
     );
 
     return (
@@ -43,24 +38,30 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
         <Label className="text-xs">Chart Type</Label>
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger className="h-8 text-xs">
-            {selectedTemplate ? (
+            {selectedChartType ? (
               <div className="flex items-center gap-2">
-                <selectedTemplate.icon className="h-3.5 w-3.5" />
-                <span>{selectedTemplate.label}</span>
+                {(() => {
+                  const Icon = selectedChartType.icon ?? ChartNoAxesCombined;
+                  return <Icon className="h-3.5 w-3.5" />;
+                })()}
+                <span>{selectedChartType.label}</span>
               </div>
             ) : (
               <SelectValue placeholder="Select chart type" />
             )}
           </SelectTrigger>
           <SelectContent className="text-xs">
-            {templates.map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                <div className="flex items-center gap-2">
-                  <template.icon className="h-3.5 w-3.5" />
-                  <span>{template.label}</span>
-                </div>
-              </SelectItem>
-            ))}
+            {chartTypes.map((chartType) => {
+              const Icon = chartType.icon ?? ChartNoAxesCombined;
+              return (
+                <SelectItem key={chartType.id} value={chartType.id}>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{chartType.label}</span>
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

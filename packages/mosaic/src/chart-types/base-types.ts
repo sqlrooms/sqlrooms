@@ -4,7 +4,7 @@
  */
 
 import type {Spec} from '@uwdata/mosaic-spec';
-import type {FC} from 'react';
+import type {ComponentType} from 'react';
 import type * as z from 'zod';
 import type {Tool} from 'ai';
 import {VgPlotChartType} from './chart-config';
@@ -90,5 +90,13 @@ export interface ChartTypeDefinition<TSettings = any> {
   /** Optional extra assistant-facing description */
   aiDescription?: string;
   /** Explicit settings component for this chart type */
-  settingsComponent: FC;
+  settingsComponent: ComponentType;
+  /** Optional icon component for chart-type grids */
+  icon: ComponentType<{className?: string}>;
 }
+
+/**
+ * Backward-compatible alias for earlier chart-builder helper APIs.
+ * @deprecated Use {@link ChartTypeDefinition} instead.
+ */
+export type ChartSpec = ChartTypeDefinition;

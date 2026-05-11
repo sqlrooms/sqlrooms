@@ -14,9 +14,8 @@ import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 export type ChartBuilderTriggerProps = ButtonProps;
 
@@ -81,10 +80,8 @@ export interface ChartBuilderDialogProps {
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
-  /** Preferred shared chart-type customization surface */
+  /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
 }
 
 /**
@@ -105,7 +102,6 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   columns,
   onCreateChart,
   chartTypes,
-  builders,
 }) => (
   <ChartBuilderRoot
     open={open}
@@ -114,7 +110,6 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     columns={columns}
     onCreateChart={onCreateChart}
     chartTypes={chartTypes}
-    builders={builders}
   >
     <ChartBuilderDialogContent />
   </ChartBuilderRoot>

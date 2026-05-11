@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type {ChartBuilderColumn} from '../chart-builders/types';
+import type {ChartBuilderColumn} from '../chart-types/base-types';
 import type {VgPlotChartConfig} from '../chart-types/chart-config';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
@@ -39,9 +39,6 @@ export function MosaicDashboardRoot({
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
-  const chartBuilders = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.chartBuilders,
-  );
   const chartTypes = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.chartTypes,
   );
@@ -129,7 +126,6 @@ export function MosaicDashboardRoot({
       canCreateChart: Boolean(
         dashboard?.selectedTable &&
         panelRenderers[MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE] &&
-        chartBuilders?.length !== 0 &&
         chartTypes?.length !== 0,
       ),
       openBuilder: () => setBuilderOpen(true),
@@ -139,7 +135,6 @@ export function MosaicDashboardRoot({
     }),
     [
       builderOpen,
-      chartBuilders?.length,
       chartTypes?.length,
       dashboard?.selectedTable,
       dashboardId,
@@ -157,7 +152,6 @@ export function MosaicDashboardRoot({
           onOpenChange={setBuilderOpen}
           tableName={dashboard.selectedTable}
           columns={builderColumns}
-          builders={chartBuilders}
           chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
         >

@@ -26,10 +26,7 @@ import {
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
-import type {
-  ChartBuilderTemplate,
-  ChartTypeDefinition,
-} from '../chart-builders/types';
+import type {ChartTypeDefinition} from '../chart-types/base-types';
 import {type MosaicSliceState} from '../MosaicSlice';
 import {
   destroyRetainedVgPlotChart,
@@ -222,7 +219,6 @@ export type MosaicDashboardSliceState = {
        */
       retainedChartsByPanelId: Record<string, RetainedVgPlotChart>;
     };
-    chartBuilders?: ChartBuilderTemplate[];
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
     createDashboard: (
@@ -783,7 +779,6 @@ type CreateMosaicDashboardSliceProps = {
   panelRenderers?: Record<string, MosaicDashboardPanelRenderer>;
   addPanelActions?: MosaicDashboardAddPanelAction[];
   chartTypes?: ChartTypeDefinition[];
-  chartBuilders?: ChartBuilderTemplate[];
 };
 export type {CreateMosaicDashboardSliceProps};
 
@@ -797,7 +792,6 @@ export function createMosaicDashboardSlice(
         runtime: {
           retainedChartsByPanelId: {},
         },
-        chartBuilders: props.chartBuilders,
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
         panelRenderers: props.panelRenderers ?? {},

@@ -4,6 +4,7 @@ import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {BubbleChartSettingsComponent} from './BubbleChartSettings';
 import {createBubbleChartAiTool} from './tool';
 import {createBubbleChartSpec} from './spec';
+import {Workflow} from 'lucide-react';
 
 const DESCRIPTION = 'Create a bubble chart';
 
@@ -12,6 +13,7 @@ export const bubbleChartChartType: ChartTypeDefinition<BubbleChartSettings> = {
   label: 'Bubble Chart',
   description: DESCRIPTION,
   aiDescription: 'Use for a simple scatterplot of two numeric columns.',
+  icon: Workflow,
   schema: BubbleChartSettings,
   settingsComponent: BubbleChartSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),

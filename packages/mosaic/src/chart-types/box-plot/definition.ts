@@ -4,6 +4,7 @@ import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {BoxPlotSettingsComponent} from './BoxPlotSettings';
 import {createBoxPlotAiTool} from './tool';
 import {createBoxPlotSpec} from './spec';
+import {AlignHorizontalDistributeCenter} from 'lucide-react';
 
 const DESCRIPTION = 'Create a box plot';
 
@@ -13,6 +14,7 @@ export const boxPlotChartType: ChartTypeDefinition<BoxPlotChartSettings> = {
   description: DESCRIPTION,
   aiDescription:
     'Use for comparing the distribution of a numeric measure across categories.',
+  icon: AlignHorizontalDistributeCenter,
   schema: BoxPlotChartSettings,
   settingsComponent: BoxPlotSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),

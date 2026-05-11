@@ -1,4 +1,4 @@
-import type {ChartTypeDefinition} from './types';
+import type {ChartTypeDefinition} from '../chart-types/base-types';
 
 export {
   NUMERIC_COLUMN_TYPES,

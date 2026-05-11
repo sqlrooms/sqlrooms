@@ -3,6 +3,7 @@ import type {ChartTypeDefinition} from '../base-types';
 import {CustomSpecChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {CustomSpecSettingsComponent} from './CustomSpecSettings';
+import {Code} from 'lucide-react';
 
 const DESCRIPTION = 'Create a chart with custom spec';
 
@@ -13,6 +14,7 @@ export const customSpecChartType: ChartTypeDefinition<CustomSpecChartSettings> =
     description: DESCRIPTION,
     aiDescription:
       'Manual template for editing after creation. Prefer explicit chart templates for assistant-created charts.',
+    icon: Code,
     schema: CustomSpecChartSettings,
     settingsComponent: CustomSpecSettingsComponent,
     buildTitle: titleFromDescription(DESCRIPTION),
