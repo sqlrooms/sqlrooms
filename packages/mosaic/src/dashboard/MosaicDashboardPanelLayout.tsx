@@ -13,7 +13,7 @@ type MosaicDashboardPanelLayoutProps = {
   content?: React.ReactNode;
 };
 
-const MIN_WIDTH_FOR_SPLIT_VIEW = 600; // pixels
+const MIN_WIDTH_FOR_SPLIT_VIEW = 200; // pixels
 
 export const MosaicDashboardPanelLayout: FC<
   MosaicDashboardPanelLayoutProps
