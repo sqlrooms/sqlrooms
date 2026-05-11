@@ -22,7 +22,7 @@ export const AggregationSelector: FC<AggregationSelectorProps> = ({
 }) => {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-8 w-[100px] text-xs">
+      <SelectTrigger className="h-8 w-[100px] text-xs shadow-none">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

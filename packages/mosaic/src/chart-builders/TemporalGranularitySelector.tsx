@@ -52,7 +52,7 @@ export const TemporalGranularitySelector: FC<TemporalGranularitySelectorProps> =
 
     return (
       <Select value={value || NONE} onValueChange={handleValueChange}>
-        <SelectTrigger className="h-8 text-xs">
+        <SelectTrigger className="h-8 text-xs shadow-none">
           <SelectValue placeholder="None" />
         </SelectTrigger>
         <SelectContent>
