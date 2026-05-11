@@ -44,21 +44,20 @@ export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
         onClick={() => {
           if (!selectedTemplate || !canCreate || !selectedTemplateId) return;
           const title = buildChartTypeTitle(selectedTemplate, fieldValues);
-          if (
-            selectedTemplate.outputKind === 'dashboard-panel' &&
-            selectedTemplate.createOutput &&
-            onCreateChartOutput
-          ) {
+
+          // Check if this chart type creates a custom dashboard panel (e.g. box-plot)
+          if (selectedTemplate.createOutput && onCreateChartOutput) {
             onCreateChartOutput(
               selectedTemplate.createOutput(tableName, fieldValues),
               title,
             );
-          } else if (selectedTemplate.createSpec) {
-            const spec = selectedTemplate.createSpec(tableName, fieldValues);
+          } else {
+            // Use renderer pattern: create vgplot panel with chartType and settings
+            // The dashboard will use the chart type's renderer to render it
             onCreateChart(title, {
               chartType: selectedTemplateId,
               settings: fieldValues,
-              vgplot: spec,
+              vgplot: null,
             });
           }
           reset();

@@ -13,6 +13,8 @@ const FG_COLOR = 'var(--color-chart-1)';
 export function LineChartRenderer({
   tableName,
   settings,
+  params,
+  retention,
 }: ChartRendererProps<LineChartSettings>) {
   const spec = useMemo((): Spec => {
     const {x, y} = settings;
@@ -37,5 +39,5 @@ export function LineChartRenderer({
     } as Spec;
   }, [tableName, settings]);
 
-  return <VgPlotChart spec={spec} />;
+  return <VgPlotChart spec={spec} params={params} retention={retention} />;
 }

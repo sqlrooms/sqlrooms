@@ -10,6 +10,8 @@ import type {CustomSpecChartSettings} from './schema';
  */
 export function CustomSpecRenderer({
   tableName,
+  params,
+  retention,
 }: ChartRendererProps<CustomSpecChartSettings>) {
   const spec = useMemo((): Spec => {
     return {
@@ -31,5 +33,5 @@ export function CustomSpecRenderer({
     } as Spec;
   }, [tableName]);
 
-  return <VgPlotChart spec={spec} />;
+  return <VgPlotChart spec={spec} params={params} retention={retention} />;
 }

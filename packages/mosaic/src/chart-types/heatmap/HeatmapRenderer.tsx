@@ -11,6 +11,8 @@ import type {HeatmapChartSettings} from './schema';
 export function HeatmapRenderer({
   tableName,
   settings,
+  params,
+  retention,
 }: ChartRendererProps<HeatmapChartSettings>) {
   const spec = useMemo((): Spec => {
     const {x, y} = settings;
@@ -39,5 +41,5 @@ export function HeatmapRenderer({
     } as Spec;
   }, [tableName, settings]);
 
-  return <VgPlotChart spec={spec} />;
+  return <VgPlotChart spec={spec} params={params} retention={retention} />;
 }

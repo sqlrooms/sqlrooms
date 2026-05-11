@@ -88,8 +88,8 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
           availableChartTypes.some(
             (chartType) => chartType.id === template.id,
           ) &&
-          (template.outputKind !== 'dashboard-panel' ||
-            Boolean(onCreateChartOutput)),
+          // Only include custom dashboard panel types if callback is provided
+          (!template.createOutput || Boolean(onCreateChartOutput)),
       ),
     [availableChartTypes, onCreateChartOutput, resolvedTemplates],
   );

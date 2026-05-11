@@ -72,7 +72,19 @@ export interface ChartRendererProps<TSettings = any> {
   tableName: string;
   settings: TSettings;
   coordinator: Coordinator;
-  // Add other common props as needed
+  /**
+   * Pre-defined params/selections to inject when rendering vgplot specs.
+   * Keys are param names (without $), values are Param or Selection instances.
+   */
+  params?: Map<string, any>;
+  /**
+   * Optional retention adapter for preserving the underlying vgplot
+   * instance across temporary unmount/remount cycles.
+   */
+  retention?: {
+    chart?: any;
+    setChart: (chart: any) => void;
+  };
 }
 
 /**
@@ -99,11 +111,19 @@ export interface ChartTypeDefinition<TSettings = any> {
   /** Optional extra assistant-facing description */
   aiDescription?: string;
 
-  // Backward compatibility fields during transition period (to be removed)
-  /** @deprecated Use renderer instead */
+  // Backward compatibility fields - prefer using renderer
+  /**
+   * @deprecated Use renderer instead. This field is kept for backward compatibility
+   * with chart settings and validation. Will be removed in a future version.
+   */
   createSpec?: (tableName: string, settings: TSettings) => Spec;
-  /** @deprecated Use renderer instead */
-  outputKind?: 'vgplot' | 'dashboard-panel';
-  /** @deprecated Use renderer instead */
+  /**
+   * @deprecated Use renderer instead. This field is kept for backward compatibility
+   * with custom dashboard panel types. Will be removed in a future version.
+   */
   createOutput?: (tableName: string, settings: TSettings) => ChartBuilderOutput;
+  /**
+   * @deprecated No longer used. Kept for backward compatibility.
+   */
+  outputKind?: 'vgplot' | 'dashboard-panel';
 }

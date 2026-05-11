@@ -13,6 +13,8 @@ const FG_COLOR = 'var(--color-chart-1)';
 export function EcdfRenderer({
   tableName,
   settings,
+  params,
+  retention,
 }: ChartRendererProps<EcdfChartSettings>) {
   const spec = useMemo((): Spec => {
     const {field} = settings;
@@ -45,5 +47,5 @@ export function EcdfRenderer({
     } as Spec;
   }, [tableName, settings]);
 
-  return <VgPlotChart spec={spec} />;
+  return <VgPlotChart spec={spec} params={params} retention={retention} />;
 }

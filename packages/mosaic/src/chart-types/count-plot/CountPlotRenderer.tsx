@@ -14,6 +14,8 @@ const FG_COLOR = 'var(--color-chart-1)';
 export function CountPlotRenderer({
   tableName,
   settings,
+  params,
+  retention,
 }: ChartRendererProps<CountPlotChartSettings>) {
   const spec = useMemo((): Spec => {
     const {field} = settings;
@@ -48,5 +50,5 @@ export function CountPlotRenderer({
     } as Spec;
   }, [tableName, settings]);
 
-  return <VgPlotChart spec={spec} />;
+  return <VgPlotChart spec={spec} params={params} retention={retention} />;
 }

@@ -14,6 +14,8 @@ const FG_COLOR = 'var(--color-chart-1)';
 export function HistogramRenderer({
   tableName,
   settings,
+  params,
+  retention,
 }: ChartRendererProps<HistogramChartSettings>) {
   const spec = useMemo((): Spec => {
     const field = settings.field;
@@ -47,5 +49,5 @@ export function HistogramRenderer({
     } as Spec;
   }, [tableName, settings.field]);
 
-  return <VgPlotChart spec={spec} />;
+  return <VgPlotChart spec={spec} params={params} retention={retention} />;
 }
