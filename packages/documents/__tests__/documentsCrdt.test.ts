@@ -107,4 +107,45 @@ describe('documents CRDT mirrors', () => {
       updatedAt: 123,
     });
   });
+
+  it('deduplicates incoming document order and drops unknown artifact IDs', () => {
+    const store = createTestStore(new LoroDoc());
+    const dashboardId = store.getState().artifacts.createArtifact({
+      id: 'dashboard-1',
+      type: 'dashboard',
+      title: 'Dashboard',
+    });
+    store.setState((state) => ({
+      ...state,
+      artifacts: {
+        ...state.artifacts,
+        config: {
+          ...state.artifacts.config,
+          artifactOrder: ['deleted-artifact', dashboardId],
+        },
+      },
+    }));
+
+    createDocumentsCrdtMirror<TestRoomState>().apply(
+      {
+        artifacts: [
+          {id: 'doc-1', type: 'document', title: 'Notes'},
+          {id: 'doc-2', type: 'document', title: 'Ideas'},
+        ],
+        documents: [
+          {id: 'doc-1', markdown: '# Notes', updatedAt: 1},
+          {id: 'doc-2', markdown: '# Ideas', updatedAt: 2},
+        ],
+        artifactOrder: ['doc-1', 'unknown-doc', 'doc-1'],
+      },
+      store.setState,
+      store.getState,
+    );
+
+    expect(store.getState().artifacts.config.artifactOrder).toEqual([
+      dashboardId,
+      'doc-1',
+      'doc-2',
+    ]);
+  });
 });

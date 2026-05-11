@@ -3,7 +3,11 @@ import {
   createBaseRoomSlice,
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
-import {createDocumentsSlice, type DocumentsSliceState} from '../src';
+import {
+  createDocumentsSlice,
+  DocumentsSliceConfig,
+  type DocumentsSliceState,
+} from '../src';
 
 type TestRoomState = BaseRoomStoreState & DocumentsSliceState;
 
@@ -61,6 +65,20 @@ describe('DocumentsSlice', () => {
       id: 'doc-1',
       markdown: '# Created',
       updatedAt: 100,
+    });
+  });
+
+  it('rejects document artifact records keyed by a different ID', () => {
+    const result = DocumentsSliceConfig.safeParse({
+      artifacts: {
+        'doc-key': {id: 'doc-value', markdown: '# Mismatch', updatedAt: 1},
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      path: ['artifacts', 'doc-key', 'id'],
+      message: 'Artifact key "doc-key" does not match artifact id "doc-value"',
     });
   });
 });

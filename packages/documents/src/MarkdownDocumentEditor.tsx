@@ -3,10 +3,16 @@ import {CodeMirrorEditor, createSqlroomsTheme} from '@sqlrooms/codemirror';
 import {
   Button,
   cn,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Input,
 } from '@sqlrooms/ui';
 import Link from '@tiptap/extension-link';
 import {Table} from '@tiptap/extension-table';
@@ -196,6 +202,8 @@ function RichToolbar({
   editor: Editor | null;
   disabled: boolean;
 }) {
+  const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
+  const [linkHref, setLinkHref] = React.useState('');
   const activeState = useEditorState({
     editor,
     selector: ({editor}) => ({
@@ -275,42 +283,111 @@ function RichToolbar({
         const previous = editor?.getAttributes('link').href as
           | string
           | undefined;
-        const href = window.prompt('Link URL', previous ?? '');
-        if (href === null) return;
-        if (!href) {
-          editor?.chain().focus().unsetLink().run();
-          return;
-        }
-        editor?.chain().focus().setLink({href}).run();
+        setLinkHref(previous ?? '');
+        setLinkDialogOpen(true);
       },
     },
   ];
 
+  const applyLink = (href: string) => {
+    const nextHref = href.trim();
+    if (!nextHref) {
+      editor?.chain().focus().unsetLink().run();
+    } else {
+      editor?.chain().focus().setLink({href: nextHref}).run();
+    }
+    setLinkDialogOpen(false);
+  };
+
   return (
-    <div className="flex items-center gap-1">
-      <HeadingDropdown
-        editor={editor}
-        activeHeadingLevel={activeState.headingLevel}
-        disabled={disabled || !editor}
+    <>
+      <div className="flex items-center gap-1">
+        <HeadingDropdown
+          editor={editor}
+          activeHeadingLevel={activeState.headingLevel}
+          disabled={disabled || !editor}
+        />
+        {tools.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <Button
+              key={tool.label}
+              type="button"
+              size="icon"
+              variant={tool.active ? 'secondary' : 'ghost'}
+              className="h-8 w-8"
+              disabled={disabled || !editor}
+              title={tool.label}
+              onClick={() => tool.run()}
+            >
+              <Icon className="h-4 w-4" />
+            </Button>
+          );
+        })}
+      </div>
+      <LinkInputDialog
+        open={linkDialogOpen}
+        value={linkHref}
+        onValueChange={setLinkHref}
+        onOpenChange={setLinkDialogOpen}
+        onConfirm={applyLink}
       />
-      {tools.map((tool) => {
-        const Icon = tool.icon;
-        return (
-          <Button
-            key={tool.label}
-            type="button"
-            size="icon"
-            variant={tool.active ? 'secondary' : 'ghost'}
-            className="h-8 w-8"
-            disabled={disabled || !editor}
-            title={tool.label}
-            onClick={() => tool.run()}
-          >
-            <Icon className="h-4 w-4" />
-          </Button>
-        );
-      })}
-    </div>
+    </>
+  );
+}
+
+function LinkInputDialog({
+  open,
+  value,
+  onValueChange,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  value: string;
+  onValueChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (href: string) => void;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onConfirm(value);
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Link URL</DialogTitle>
+          </DialogHeader>
+          <Input
+            ref={inputRef}
+            value={value}
+            className="mt-4"
+            placeholder="https://example.com"
+            onChange={(event) => onValueChange(event.target.value)}
+          />
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit">Apply</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

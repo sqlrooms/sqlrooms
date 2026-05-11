@@ -122,16 +122,22 @@ export function createDocumentsCrdtMirror<
       };
       const currentArtifactOrder =
         currentArtifactsConfig.artifactOrder as string[];
-      const incomingDocumentOrder = incomingArtifactOrder.filter(
-        (id) => documentArtifacts[id],
-      );
+      const incomingDocumentIds = new Set<string>();
+      const incomingDocumentOrder = incomingArtifactOrder.filter((id) => {
+        if (!documentArtifacts[id] || incomingDocumentIds.has(id)) {
+          return false;
+        }
+        incomingDocumentIds.add(id);
+        return true;
+      });
       const knownDocumentOrder = new Set(incomingDocumentOrder);
       const missingDocumentOrder = Object.keys(documentArtifacts).filter(
         (id) => !knownDocumentOrder.has(id),
       );
-      const nonDocumentOrder = currentArtifactOrder.filter(
-        (id) => artifactsById[id]?.type !== 'document',
-      );
+      const nonDocumentOrder = currentArtifactOrder.filter((id) => {
+        const artifact = artifactsById[id];
+        return artifact != null && artifact.type !== 'document';
+      });
       const artifactOrder = [
         ...nonDocumentOrder,
         ...incomingDocumentOrder,

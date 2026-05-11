@@ -1,18 +1,17 @@
-import React, {useEffect} from 'react';
+import React, {useCallback, useEffect} from 'react';
+import {useShallow} from 'zustand/react/shallow';
 import {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 import {useStoreWithDocuments} from './useStoreWithDocuments';
 
 export const MarkdownDocument: React.FC<{artifactId: string}> = ({
   artifactId,
 }) => {
-  const document = useStoreWithDocuments(
-    (state) => state.documents.config.artifacts[artifactId],
-  );
-  const ensureDocument = useStoreWithDocuments(
-    (state) => state.documents.ensureDocument,
-  );
-  const setMarkdown = useStoreWithDocuments(
-    (state) => state.documents.setMarkdown,
+  const {document, ensureDocument, setMarkdown} = useStoreWithDocuments(
+    useShallow((state) => ({
+      document: state.documents.config.artifacts[artifactId],
+      ensureDocument: state.documents.ensureDocument,
+      setMarkdown: state.documents.setMarkdown,
+    })),
   );
 
   useEffect(() => {
@@ -21,10 +20,17 @@ export const MarkdownDocument: React.FC<{artifactId: string}> = ({
     }
   }, [artifactId, document, ensureDocument]);
 
+  const handleChange = useCallback(
+    (markdown: string) => {
+      setMarkdown(artifactId, markdown);
+    },
+    [artifactId, setMarkdown],
+  );
+
   return (
     <MarkdownDocumentEditor
       value={document?.markdown ?? ''}
-      onChange={(markdown) => setMarkdown(artifactId, markdown)}
+      onChange={handleChange}
     />
   );
 };
