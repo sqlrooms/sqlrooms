@@ -16,11 +16,7 @@ import {
   UIMessage,
 } from 'ai';
 import {produce} from 'immer';
-import {
-  AI_DEFAULT_TEMPERATURE,
-  ANALYSIS_PENDING_ID,
-  TOOL_CALL_CANCELLED,
-} from './constants';
+import {ANALYSIS_PENDING_ID, TOOL_CALL_CANCELLED} from './constants';
 import type {
   AiSliceStateForTransport,
   AiToolExecutionContext,
@@ -322,7 +318,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        temperature: AI_DEFAULT_TEMPERATURE,
         onFinish: ({totalUsage, usage}) => {
           const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
           rememberSessionTokenUsage(sessionId, finalUsage);
@@ -426,7 +421,6 @@ export function createRemoteChatTransportFactory(params: {
         model,
         instructions: getInstructions(),
         maxSteps: state.ai.getMaxStepsFromSettings(),
-        temperature: AI_DEFAULT_TEMPERATURE,
       };
 
       // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)
