@@ -70,6 +70,11 @@ export interface TabDescriptor {
 
 export type TabStripDndMode = 'internal' | 'shared';
 
+/**
+ * Extra payload attached to tab drags. `TabStrip` always preserves `tabId` and
+ * `tabStripId`; callers may intentionally override `kind` for cross-component
+ * drags such as artifact tabs.
+ */
 export type TabStripDragData = Record<string, unknown>;
 
 // -----------------------------------------------------------------------------
@@ -176,12 +181,13 @@ function SortableTab({
   dndScopeId,
   getTabDragData,
 }: SortableTabProps) {
+  const tabDragData = getTabDragData?.(tab);
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
     useSortable({
       id: sortableId,
       data: {
         kind: DEFAULT_TAB_DRAG_KIND,
-        ...getTabDragData?.(tab),
+        ...tabDragData,
         tabId: tab.id,
         tabStripId: dndScopeId,
       },
@@ -443,6 +449,18 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     );
   };
 
+  const shouldHideSharedDragOverlay = (
+    event: DragMoveEvent | DragOverEvent | DragStartEvent,
+  ) => {
+    if (isDragInsideTabStrip(event)) {
+      return true;
+    }
+    if ('over' in event) {
+      return event.over?.data.current?.tabStripId === dndScopeId;
+    }
+    return false;
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const {active, over} = event;
     if (!over || active.id === over.id || !onOpenTabsChange) return;
@@ -476,46 +494,6 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
       onOpenTabsChange(newOrder);
     }
   };
-
-  useDndMonitor({
-    onDragStart: (event) => {
-      const activeData = event.active.data.current;
-      if (dndMode !== 'shared' || activeData?.tabStripId !== dndScopeId) {
-        return;
-      }
-      setActiveDraggedTabId(
-        typeof activeData.tabId === 'string' ? activeData.tabId : null,
-      );
-      setHideSharedDragOverlay(true);
-    },
-    onDragMove: (event) => {
-      if (dndMode !== 'shared') return;
-      if (isDragInsideTabStrip(event)) {
-        setHideSharedDragOverlay(true);
-      }
-    },
-    onDragOver: (event) => {
-      if (dndMode !== 'shared') return;
-      if (!event.over || isDragInsideTabStrip(event)) {
-        setHideSharedDragOverlay(true);
-        return;
-      }
-      setHideSharedDragOverlay(
-        event.over?.data.current?.tabStripId === dndScopeId,
-      );
-    },
-    onDragEnd: (event) => {
-      if (dndMode === 'shared') {
-        handleDragEnd(event);
-      }
-      setActiveDraggedTabId(null);
-      setHideSharedDragOverlay(false);
-    },
-    onDragCancel: () => {
-      setActiveDraggedTabId(null);
-      setHideSharedDragOverlay(false);
-    },
-  });
 
   const getSortableId = (tabId: string) =>
     dndMode === 'shared' ? `${dndScopeId}:${tabId}` : tabId;
@@ -572,6 +550,13 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
 
     return (
       <>
+        <SharedTabStripDndMonitor
+          dndScopeId={dndScopeId}
+          handleDragEnd={handleDragEnd}
+          setActiveDraggedTabId={setActiveDraggedTabId}
+          setHideSharedDragOverlay={setHideSharedDragOverlay}
+          shouldHideSharedDragOverlay={shouldHideSharedDragOverlay}
+        />
         {content}
         <DragOverlay dropAnimation={null}>
           {activeDraggedTab && !hideSharedDragOverlay ? (
@@ -596,6 +581,59 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
       {content}
     </DndContext>
   );
+}
+
+function SharedTabStripDndMonitor({
+  dndScopeId,
+  handleDragEnd,
+  setActiveDraggedTabId,
+  setHideSharedDragOverlay,
+  shouldHideSharedDragOverlay,
+}: {
+  dndScopeId: string;
+  handleDragEnd: (event: DragEndEvent) => void;
+  setActiveDraggedTabId: React.Dispatch<React.SetStateAction<string | null>>;
+  setHideSharedDragOverlay: React.Dispatch<React.SetStateAction<boolean>>;
+  shouldHideSharedDragOverlay: (
+    event: DragMoveEvent | DragOverEvent | DragStartEvent,
+  ) => boolean;
+}) {
+  const isOwnTabDrag = (
+    event: DragStartEvent | DragMoveEvent | DragOverEvent | DragEndEvent,
+  ) => event.active.data.current?.tabStripId === dndScopeId;
+
+  useDndMonitor({
+    onDragStart: (event) => {
+      const activeData = event.active.data.current;
+      if (!isOwnTabDrag(event)) {
+        return;
+      }
+      setActiveDraggedTabId(
+        typeof activeData?.tabId === 'string' ? activeData.tabId : null,
+      );
+      setHideSharedDragOverlay(true);
+    },
+    onDragMove: (event) => {
+      if (!isOwnTabDrag(event)) return;
+      setHideSharedDragOverlay(shouldHideSharedDragOverlay(event));
+    },
+    onDragOver: (event) => {
+      if (!isOwnTabDrag(event)) return;
+      setHideSharedDragOverlay(shouldHideSharedDragOverlay(event));
+    },
+    onDragEnd: (event) => {
+      if (!isOwnTabDrag(event)) return;
+      handleDragEnd(event);
+      setActiveDraggedTabId(null);
+      setHideSharedDragOverlay(false);
+    },
+    onDragCancel: () => {
+      setActiveDraggedTabId(null);
+      setHideSharedDragOverlay(false);
+    },
+  });
+
+  return null;
 }
 
 function TabDragOverlay({
@@ -1027,7 +1065,7 @@ export interface TabStripProps {
   dndMode?: TabStripDndMode;
   /** Unique scope for shared dnd tab ids. Defaults to a generated component id. */
   dndScopeId?: string;
-  /** Extra drag payload attached to tab drags. */
+  /** Extra drag payload attached to tab drags; may intentionally override `kind`. */
   getTabDragData?: (tab: TabDescriptor) => TabStripDragData | undefined;
 }
 

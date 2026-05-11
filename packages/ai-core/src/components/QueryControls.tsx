@@ -4,12 +4,13 @@ import {ArrowUpIcon, LoaderCircleIcon, OctagonXIcon} from 'lucide-react';
 import {
   PropsWithChildren,
   useCallback,
-  useRef,
   useEffect,
   useState,
   Children,
   isValidElement,
   ReactNode,
+  Ref,
+  useRef,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {CHAT_CONTEXT_SELECTOR_SLOT, ContextSelector} from './ContextSelector';
@@ -27,6 +28,15 @@ type QueryControlsProps = PropsWithChildren<{
     onDrop: (data: unknown) => void;
   };
 }>;
+
+type ContextDropTargetConfig = NonNullable<
+  QueryControlsProps['contextDropTarget']
+>;
+
+type ContextDropTargetRenderArgs = {
+  isAcceptedOver: boolean;
+  setNodeRef?: Ref<HTMLDivElement>;
+};
 
 /**
  * Checks if a child is an InlineApiKeyInput component
@@ -119,50 +129,6 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
-  const {
-    active,
-    isOver: isContextDropOver,
-    setNodeRef: setContextDropTargetRef,
-  } = useDroppable({
-    id: contextDropTarget?.id ?? 'chat-composer-context-drop-target-disabled',
-    disabled: !contextDropTarget,
-    data: {roomDndPriority: 100},
-  });
-  const activeDropData = active?.data.current;
-  const canAcceptContextDrop = Boolean(
-    contextDropTarget &&
-    activeDropData &&
-    contextDropTarget.canAccept(activeDropData),
-  );
-  const isAcceptedContextDropOver = isContextDropOver && canAcceptContextDrop;
-
-  const isPointerWithinContextDropTarget = useCallback(
-    (event: DragEndEvent) =>
-      Boolean(
-        contextDropTarget &&
-        event.collisions?.some(
-          (collision) =>
-            collision.id === contextDropTarget.id &&
-            collision.data?.pointerWithin === true,
-        ),
-      ),
-    [contextDropTarget],
-  );
-
-  useDndMonitor({
-    onDragEnd: (event) => {
-      if (!contextDropTarget || event.over?.id !== contextDropTarget.id) {
-        return;
-      }
-      if (!isPointerWithinContextDropTarget(event)) {
-        return;
-      }
-      const data = event.active.data.current;
-      if (contextDropTarget.canAccept(data)) {
-        contextDropTarget.onDrop(data);
-      }
-    },
-  });
 
   useEffect(() => {
     if (showApiKeyInput) return;
@@ -246,61 +212,122 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           </span>
         </div>
       )}
-      <div
-        ref={setContextDropTargetRef}
-        className={cn(
-          'bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border transition-all',
-          isAcceptedContextDropOver &&
-            'border-primary/70 bg-primary/10 ring-primary/35 shadow-primary/10 shadow-sm ring-2',
-        )}
-      >
-        <div className="flex w-full flex-col gap-1 overflow-hidden">
-          {contextSelectors.length > 0 ? (
-            <div className="flex w-full flex-wrap items-center gap-1 px-2 pt-2">
-              {contextSelectors}
-            </div>
-          ) : null}
-          <Textarea
-            ref={textareaRef}
-            className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
-            autoResize
-            value={prompt}
-            disabled={isSummarizing}
-            onChange={(e) => {
-              if (sessionId) {
-                setPrompt(sessionId, e.target.value);
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            autoFocus
-          />
-          <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
-            <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
-                  {otherChildren}
+      <OptionalContextDropTarget target={contextDropTarget}>
+        {({setNodeRef, isAcceptedOver}) => (
+          <div
+            ref={setNodeRef}
+            className={cn(
+              'bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border transition-all',
+              isAcceptedOver &&
+                'border-primary/70 bg-primary/10 ring-primary/35 shadow-primary/10 shadow-sm ring-2',
+            )}
+          >
+            <div className="flex w-full flex-col gap-1 overflow-hidden">
+              {contextSelectors.length > 0 ? (
+                <div className="flex w-full flex-wrap items-center gap-1 px-2 pt-2">
+                  {contextSelectors}
                 </div>
-              </div>
-              <div className="ml-auto flex shrink-0 items-center gap-1 p-2">
-                <ContextUsageIndicator />
-                <Button
-                  className="h-8 w-8 rounded-full"
-                  variant="default"
-                  size="icon"
-                  onClick={handleClickRunOrCancel}
-                  disabled={isSummarizing || (!isRunning && !canStart)}
-                >
-                  {isRunning ? <OctagonXIcon /> : <ArrowUpIcon />}
-                </Button>
+              ) : null}
+              <Textarea
+                ref={textareaRef}
+                className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
+                autoResize
+                value={prompt}
+                disabled={isSummarizing}
+                onChange={(e) => {
+                  if (sessionId) {
+                    setPrompt(sessionId, e.target.value);
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder}
+                autoFocus
+              />
+              <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
+                <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
+                      {otherChildren}
+                    </div>
+                  </div>
+                  <div className="ml-auto flex shrink-0 items-center gap-1 p-2">
+                    <ContextUsageIndicator />
+                    <Button
+                      className="h-8 w-8 rounded-full"
+                      variant="default"
+                      size="icon"
+                      onClick={handleClickRunOrCancel}
+                      disabled={isSummarizing || (!isRunning && !canStart)}
+                    >
+                      {isRunning ? <OctagonXIcon /> : <ArrowUpIcon />}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        )}
+      </OptionalContextDropTarget>
     </div>
   );
 };
+
+function OptionalContextDropTarget({
+  target,
+  children,
+}: {
+  target?: ContextDropTargetConfig;
+  children: (args: ContextDropTargetRenderArgs) => ReactNode;
+}) {
+  if (!target) {
+    return children({setNodeRef: undefined, isAcceptedOver: false});
+  }
+
+  return <ContextDropTarget target={target}>{children}</ContextDropTarget>;
+}
+
+function ContextDropTarget({
+  target,
+  children,
+}: {
+  target: ContextDropTargetConfig;
+  children: (args: ContextDropTargetRenderArgs) => ReactNode;
+}) {
+  const {active, isOver, setNodeRef} = useDroppable({
+    id: target.id,
+    data: {roomDndPriority: 100},
+  });
+  const activeDropData = active?.data.current;
+  const isAcceptedOver = Boolean(
+    isOver && activeDropData && target.canAccept(activeDropData),
+  );
+
+  const isPointerWithinTarget = useCallback(
+    (event: DragEndEvent) =>
+      Boolean(
+        event.collisions?.some(
+          (collision) =>
+            collision.id === target.id &&
+            collision.data?.pointerWithin === true,
+        ),
+      ),
+    [target.id],
+  );
+
+  useDndMonitor({
+    onDragEnd: (event) => {
+      if (event.over?.id !== target.id || !isPointerWithinTarget(event)) {
+        return;
+      }
+      const data = event.active.data.current;
+      if (target.canAccept(data)) {
+        target.onDrop(data);
+      }
+    },
+  });
+
+  return children({setNodeRef, isAcceptedOver});
+}
 
 /**
  * Internal component that renders the InlineApiKeyInput with proper layout

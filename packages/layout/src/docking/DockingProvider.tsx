@@ -26,6 +26,14 @@ type CursorPosition = {
   y: number;
 };
 
+/**
+ * Provides layout panel docking inside a dnd-kit `DndContext`.
+ *
+ * `LayoutRenderer` wraps `DockingProvider` with `RoomDndProvider` by default.
+ * Custom shells that render `DockingProvider` directly must provide their own
+ * `DndContext`/`RoomDndProvider`; dnd-kit's `useDndMonitor` surfaces the
+ * development-time error if this requirement is missed.
+ */
 export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
   rootLayout,
   onLayoutChange,

@@ -554,14 +554,17 @@ function ArtifactTabsRoot({
                 )
             : undefined
         }
-        getTabDragData={(tab) =>
-          getTabDragData?.(tab) ?? {
+        getTabDragData={(tab) => {
+          const artifactTab = tab as ArtifactTabDescriptor;
+          const userData = getTabDragData?.(artifactTab);
+          return {
             kind: 'artifact',
-            id: (tab as ArtifactTabDescriptor).artifact.id,
-            type: (tab as ArtifactTabDescriptor).artifact.type,
-            title: (tab as ArtifactTabDescriptor).artifact.title,
-          }
-        }
+            id: artifactTab.artifact.id,
+            type: artifactTab.artifact.type,
+            title: artifactTab.artifact.title,
+            ...userData,
+          };
+        }}
       >
         {children ?? (
           <>

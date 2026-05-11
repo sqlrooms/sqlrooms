@@ -43,8 +43,8 @@ export function useScrollNewGridChildIntoView(
   nodeId: string,
   childIds: string[],
   layoutVersion: unknown,
-): RefObject<HTMLDivElement> {
-  const scrollContainerRef = useRef<HTMLDivElement>(null!);
+): RefObject<HTMLDivElement | null> {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
