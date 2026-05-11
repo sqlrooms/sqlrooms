@@ -51,8 +51,17 @@ const roomStore = createRoomStore(
 <MarkdownDocumentEditor value={markdown} onChange={setMarkdown} />
 ```
 
-The source mode edits Markdown directly. The rich mode uses Tiptap and serializes
-changes back to Markdown.
+The rich editor is the primary surface. The optional Markdown source panel can
+be opened alongside it and edits the same canonical Markdown string:
+
+```tsx
+<MarkdownDocumentEditor
+  value={markdown}
+  onChange={setMarkdown}
+  sourcePanelOpen={showSource}
+  onSourcePanelOpenChange={setShowSource}
+/>
+```
 
 ## Commands
 

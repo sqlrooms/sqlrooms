@@ -7,8 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  ToggleGroup,
-  ToggleGroupItem,
 } from '@sqlrooms/ui';
 import Link from '@tiptap/extension-link';
 import {Table} from '@tiptap/extension-table';
@@ -36,6 +34,7 @@ import {
   ListOrderedIcon,
   PilcrowIcon,
   QuoteIcon,
+  XIcon,
 } from 'lucide-react';
 import React, {useEffect, useMemo, useRef} from 'react';
 
@@ -44,7 +43,11 @@ export type MarkdownDocumentEditorMode = 'rich' | 'source';
 export type MarkdownDocumentEditorProps = {
   value: string;
   onChange: (value: string) => void;
+  sourcePanelOpen?: boolean;
+  onSourcePanelOpenChange?: (open: boolean) => void;
+  /** @deprecated Use sourcePanelOpen. Source mode now means the Markdown panel is open. */
   mode?: MarkdownDocumentEditorMode;
+  /** @deprecated Use onSourcePanelOpenChange. */
   onModeChange?: (mode: MarkdownDocumentEditorMode) => void;
   className?: string;
   readOnly?: boolean;
@@ -53,14 +56,20 @@ export type MarkdownDocumentEditorProps = {
 export function MarkdownDocumentEditor({
   value,
   onChange,
+  sourcePanelOpen: controlledSourcePanelOpen,
+  onSourcePanelOpenChange,
   mode: controlledMode,
   onModeChange,
   className,
   readOnly = false,
 }: MarkdownDocumentEditorProps) {
-  const [uncontrolledMode, setUncontrolledMode] =
-    React.useState<MarkdownDocumentEditorMode>('rich');
-  const mode = controlledMode ?? uncontrolledMode;
+  const [uncontrolledSourcePanelOpen, setUncontrolledSourcePanelOpen] =
+    React.useState(controlledMode === 'source');
+  const sourcePanelOpen =
+    controlledSourcePanelOpen ??
+    (controlledMode
+      ? controlledMode === 'source'
+      : uncontrolledSourcePanelOpen);
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
@@ -69,7 +78,7 @@ export function MarkdownDocumentEditor({
 
   const extensions = useMemo(
     () => [
-      StarterKit,
+      StarterKit.configure({link: false}),
       Link.configure({openOnClick: false}),
       TaskList,
       TaskItem.configure({nested: true}),
@@ -102,62 +111,80 @@ export function MarkdownDocumentEditor({
   });
 
   useEffect(() => {
-    if (!editor || mode !== 'rich') return;
+    if (!editor) return;
     if (editor.getMarkdown() === value) return;
     editor.commands.setContent(value, {contentType: 'markdown'});
-  }, [editor, mode, value]);
+  }, [editor, value]);
 
   useEffect(() => {
     editor?.setEditable(!readOnly);
   }, [editor, readOnly]);
 
-  const setMode = (nextMode: MarkdownDocumentEditorMode) => {
-    if (!nextMode || nextMode === mode) return;
-    setUncontrolledMode(nextMode);
-    onModeChange?.(nextMode);
+  const setSourcePanelOpen = (open: boolean) => {
+    if (open === sourcePanelOpen) return;
+    setUncontrolledSourcePanelOpen(open);
+    onSourcePanelOpenChange?.(open);
+    onModeChange?.(open ? 'source' : 'rich');
   };
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
       <div className="border-border flex shrink-0 items-center gap-1 border-b px-3 py-2">
-        <RichToolbar editor={editor} disabled={readOnly || mode !== 'rich'} />
+        <RichToolbar editor={editor} disabled={readOnly} />
         <div className="flex-1" />
-        <ToggleGroup
-          type="single"
-          value={mode}
-          onValueChange={(value) =>
-            setMode(value as MarkdownDocumentEditorMode)
-          }
+        <Button
+          type="button"
           size="sm"
+          variant={sourcePanelOpen ? 'secondary' : 'ghost'}
+          className="h-8 gap-2"
+          aria-pressed={sourcePanelOpen}
+          title={
+            sourcePanelOpen ? 'Hide Markdown source' : 'Show Markdown source'
+          }
+          onClick={() => setSourcePanelOpen(!sourcePanelOpen)}
         >
-          <ToggleGroupItem value="rich" aria-label="Rich text mode">
-            Rich
-          </ToggleGroupItem>
-          <ToggleGroupItem value="source" aria-label="Markdown source mode">
-            Markdown
-          </ToggleGroupItem>
-        </ToggleGroup>
+          <FileCodeCornerIcon className="h-4 w-4" />
+          Markdown
+        </Button>
       </div>
 
-      {mode === 'source' ? (
-        <CodeMirrorEditor
-          className="h-full min-h-0 flex-1"
-          value={value}
-          readOnly={readOnly}
-          onChange={onChange}
-          extensions={[markdown(), createSqlroomsTheme()]}
-          options={{
-            lineNumbers: false,
-            lineWrapping: true,
-            foldGutter: false,
-          }}
-        />
-      ) : (
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <EditorContent
           editor={editor}
-          className="min-h-0 flex-1 overflow-auto"
+          className="min-h-[320px] flex-1 overflow-auto lg:min-h-0"
         />
-      )}
+        {sourcePanelOpen ? (
+          <div className="border-border flex min-h-[260px] flex-col border-t lg:min-h-0 lg:w-[42%] lg:min-w-[22rem] lg:border-t-0 lg:border-l">
+            <div className="border-border flex h-10 shrink-0 items-center gap-2 border-b px-3">
+              <FileCodeCornerIcon className="text-muted-foreground h-4 w-4" />
+              <span className="text-sm font-medium">Markdown</span>
+              <div className="flex-1" />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                title="Hide Markdown source"
+                onClick={() => setSourcePanelOpen(false)}
+              >
+                <XIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            <CodeMirrorEditor
+              className="h-full min-h-0 flex-1"
+              value={value}
+              readOnly={readOnly}
+              onChange={onChange}
+              extensions={[markdown(), createSqlroomsTheme()]}
+              options={{
+                lineNumbers: false,
+                lineWrapping: true,
+                foldGutter: false,
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
