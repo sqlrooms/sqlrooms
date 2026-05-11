@@ -1,52 +1,77 @@
 // Re-export base types
 export * from './base-types';
 
-// Re-export all schemas and types
-export * from './histogram';
-export * from './line-chart';
-export * from './count-plot';
-export * from './ecdf';
-export * from './heatmap';
-export * from './box-plot';
-export * from './bubble-chart';
-export * from './custom-spec';
-export * from './registry';
+// Import Tool type for createChartTools function
+import type {Tool} from 'ai';
+
+// Re-export error classes for chart definitions
+export * from './errors';
+
+// Import specific types needed before re-exports
+import type {ChartTypeDefinition} from './base-types';
+
+// CRITICAL: Export VgPlotChartConfig FIRST, before importing Settings components
+// Export VgPlotChartConfig from separate file to avoid circular dependencies
+// (chart-types/index imports Settings components, which import ChartSettingsContext,
+// which imports VgPlotChartConfig)
+export {
+  VgPlotChartConfig,
+  type VgPlotChartSettings,
+  type VgPlotChartType,
+} from './chart-config';
+
+// Re-export schemas
+export * from './histogram/schema';
+export * from './line-chart/schema';
+export * from './count-plot/schema';
+export * from './ecdf/schema';
+export * from './heatmap/schema';
+export * from './box-plot/schema';
+export * from './bubble-chart/schema';
+export * from './custom-spec/schema';
+
+// Re-export definitions
+export * from './histogram/definition';
+export * from './line-chart/definition';
+export * from './count-plot/definition';
+export * from './ecdf/definition';
+export * from './heatmap/definition';
+export * from './box-plot/definition';
+export * from './bubble-chart/definition';
+export * from './custom-spec/definition';
+
+// Re-export Settings components
+export {HistogramSettingsComponent} from './histogram/HistogramSettings';
+export {LineChartSettingsComponent} from './line-chart/LineChartSettings';
+export {CountPlotSettingsComponent} from './count-plot/CountPlotSettings';
+export {EcdfSettingsComponent} from './ecdf/EcdfSettings';
+export {HeatmapSettingsComponent} from './heatmap/HeatmapSettings';
+export {BoxPlotSettingsComponent} from './box-plot/BoxPlotSettings';
+export {BubbleChartSettingsComponent} from './bubble-chart/BubbleChartSettings';
+export {CustomSpecSettingsComponent} from './custom-spec/CustomSpecSettings';
+
+// Re-export tool types, schemas, validation, and AI tool creators
+export * from './tool-types';
+export * from './tool-schemas';
+export * from './tool-validation';
+export * from './histogram/tool';
+export * from './line-chart/tool';
+export * from './count-plot/tool';
+export * from './heatmap/tool';
+export * from './bubble-chart/tool';
+export * from './box-plot/tool';
+export * from './ecdf/tool';
 
 // Import chart type definitions for legacy exports
-import {histogramChartType} from './histogram';
-import {lineChartChartType} from './line-chart';
-import {countPlotChartType} from './count-plot';
-import {ecdfChartType} from './ecdf';
-import {heatmapChartType} from './heatmap';
-import {boxPlotChartType} from './box-plot';
-import {bubbleChartChartType} from './bubble-chart';
-import {customSpecChartType} from './custom-spec';
-
-// Import Zod configs for discriminated union
-import {HistogramChartConfig as HistogramChartConfigSchema} from './histogram';
-import {CountPlotChartConfig as CountPlotChartConfigSchema} from './count-plot';
-import {EcdfChartConfig as EcdfChartConfigSchema} from './ecdf';
-import {LineChartConfig as LineChartConfigSchema} from './line-chart';
-import {BubbleChartConfig as BubbleChartConfigSchema} from './bubble-chart';
-import {HeatmapChartConfig as HeatmapChartConfigSchema} from './heatmap';
-import {BoxPlotChartConfig as BoxPlotChartConfigSchema} from './box-plot';
-import {CustomSpecChartConfig as CustomSpecChartConfigSchema} from './custom-spec';
-import {z} from 'zod';
-
-// Zod schema for VgPlotChartConfig (discriminated union)
-export const VgPlotChartConfig = z.discriminatedUnion('chartType', [
-  HistogramChartConfigSchema,
-  CountPlotChartConfigSchema,
-  EcdfChartConfigSchema,
-  LineChartConfigSchema,
-  BubbleChartConfigSchema,
-  HeatmapChartConfigSchema,
-  BoxPlotChartConfigSchema,
-  CustomSpecChartConfigSchema,
-]);
-
-export type VgPlotChartConfig = z.infer<typeof VgPlotChartConfig>;
-export type VgPlotChartSettings = VgPlotChartConfig['settings'];
+import {histogramChartType} from './histogram/definition';
+import {lineChartChartType} from './line-chart/definition';
+import {countPlotChartType} from './count-plot/definition';
+import {ecdfChartType} from './ecdf/definition';
+import {heatmapChartType} from './heatmap/definition';
+import {boxPlotChartType} from './box-plot/definition';
+import {bubbleChartChartType} from './bubble-chart/definition';
+import {customSpecChartType} from './custom-spec/definition';
+import type {ChartToolDeps} from './base-types';
 
 // Legacy compatibility exports
 export const mosaicChartTypes = {
@@ -62,9 +87,9 @@ export const mosaicChartTypes = {
 
 export function createDefaultChartTypes(options?: {
   includeCustomSpec?: boolean;
-}) {
+}): ChartTypeDefinition<any>[] {
   const includeCustomSpec = options?.includeCustomSpec ?? true;
-  const chartTypes = [
+  const chartTypes: ChartTypeDefinition<any>[] = [
     histogramChartType,
     countPlotChartType,
     lineChartChartType,
@@ -75,8 +100,41 @@ export function createDefaultChartTypes(options?: {
   ];
 
   if (includeCustomSpec) {
-    chartTypes.push(customSpecChartType);
+    chartTypes.push(customSpecChartType as ChartTypeDefinition<any>);
   }
 
   return chartTypes;
 }
+
+/**
+ * Dynamically generate AI tools from chart type definitions.
+ *
+ * @param chartTypes Array of chart type definitions
+ * @param deps Dependencies needed by tool creators (resolveResources, createChart)
+ * @param toolNamePrefix Prefix for generated tool names (default: 'create_dashboard_')
+ * @returns Record mapping tool names to tool instances
+ *
+ * @example
+ * const chartTypes = createDefaultChartTypes({includeCustomSpec: false});
+ * const tools = createChartTools(chartTypes, deps);
+ * // Returns: { create_dashboard_histogram: ..., create_dashboard_line_chart: ..., ... }
+ */
+export function createChartTools(
+  chartTypes: ChartTypeDefinition<any>[],
+  deps: ChartToolDeps,
+  toolNamePrefix: string = 'create_dashboard_',
+): Record<string, Tool> {
+  const tools: Record<string, Tool> = {};
+
+  for (const chartType of chartTypes) {
+    if (chartType.createTool) {
+      const toolName = `${toolNamePrefix}${chartType.id.replace(/-/g, '_')}`;
+      tools[toolName] = chartType.createTool(deps);
+    }
+  }
+
+  return tools;
+}
+
+// Re-export registry LAST - it imports and registers all chart types at module load time
+export * from './registry';

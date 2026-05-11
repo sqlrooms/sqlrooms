@@ -1,10 +1,9 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import type {Selection} from '@uwdata/mosaic-core';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {BarChart3Icon} from 'lucide-react';
 import {type FC, useCallback, useEffect, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
-import {ChartSettingsPanel} from './chart-settings';
+import {ChartSettingsPanel} from './chart-settings/ChartSettingsPanel';
 import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
 import {MosaicDashboardVgPlotHeaderActions} from './MosaicDashboardVgPlotHeaderActions';
 import {
@@ -13,25 +12,9 @@ import {
   type VgPlotPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
-import {VgPlotChartConfig} from '../chart-types';
-
-function toRenderableMosaicSpec(vgplot: unknown): Spec | null {
-  try {
-    if (!vgplot || typeof vgplot !== 'object' || Array.isArray(vgplot)) {
-      return null;
-    }
-
-    const vgplotRecord = vgplot as Spec;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const {$schema, ...mosaicSpec} = vgplotRecord;
-
-    return mosaicSpec;
-  } catch (error) {
-    console.error('[toRenderableMosaicSpec] Failed to parse spec:', error);
-    return null;
-  }
-}
+import {type VgPlotChartConfig} from '../chart-types/chart-config';
+import {useGenerateSpec} from './useGenerateSpec';
+import {ChartSpecErrorDisplay} from './ChartSpecErrorDisplay';
 
 const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
   dashboardId,
@@ -54,9 +37,11 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
     (state) => state.mosaicDashboard.setRetainedChart,
   );
 
-  const spec = useMemo(
-    () => toRenderableMosaicSpec(panel.config.vgplot),
-    [panel.config.vgplot],
+  // Generate spec using hook
+  const {renderableSpec, error: specError} = useGenerateSpec(
+    panel.source?.tableName,
+    panel.config.chartType,
+    panel.config.settings,
   );
 
   const updatePanel = useStoreWithMosaicDashboard(
@@ -120,17 +105,28 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = ({
     <div className="h-full overflow-auto p-2">
       {connection.status === 'loading' ? (
         <SpinnerPane className="h-full w-full" />
-      ) : connection.status === 'ready' && spec && params ? (
+      ) : connection.status === 'ready' && renderableSpec && params ? (
         <div className="bg-background text-foreground flex h-full w-full items-center justify-center rounded-md p-2">
-          <VgPlotChart spec={spec} params={params} retention={retention} />
+          <VgPlotChart
+            spec={renderableSpec}
+            params={params}
+            retention={retention}
+          />
         </div>
-      ) : connection.status === 'ready' && spec ? (
+      ) : connection.status === 'ready' && renderableSpec ? (
         <SpinnerPane className="h-full w-full" />
       ) : (
-        <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-          {connection.status === 'error'
-            ? 'Mosaic connection failed'
-            : 'No valid chart spec'}
+        <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm">
+          {connection.status === 'error' ? (
+            <>
+              <div className="font-medium">Mosaic connection failed</div>
+              <div className="text-xs">Check your database connection</div>
+            </>
+          ) : specError ? (
+            <ChartSpecErrorDisplay error={specError} />
+          ) : (
+            'Configure chart settings to display visualization'
+          )}
         </div>
       )}
     </div>

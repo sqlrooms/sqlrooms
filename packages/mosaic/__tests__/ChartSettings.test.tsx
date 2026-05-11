@@ -26,7 +26,6 @@ describe('ChartSettings Compound Components', () => {
       const config: VgPlotChartConfig = {
         chartType: 'histogram',
         settings: {field: 'amount'},
-        vgplot: null,
       };
 
       const markup = renderToStaticMarkup(
@@ -49,9 +48,7 @@ describe('ChartSettings Compound Components', () => {
       jest.spyOn(console, 'error').mockImplementation(() => {});
       const config = {
         chartType: 'unknown-type',
-        settings: {},
-        vgplot: null,
-      } as any;
+      } as unknown as VgPlotChartConfig;
 
       const markup = renderToStaticMarkup(
         <ChartSettings.Root
@@ -71,9 +68,10 @@ describe('ChartSettings Compound Components', () => {
     it('shows error for empty columns', () => {
       const config: VgPlotChartConfig = {
         chartType: 'histogram',
-        settings: {},
-        vgplot: null,
-      };
+        settings: {
+          field: 'amount',
+        },
+      } satisfies VgPlotChartConfig;
 
       const markup = renderToStaticMarkup(
         <ChartSettings.Root
@@ -93,7 +91,6 @@ describe('ChartSettings Compound Components', () => {
       const config: VgPlotChartConfig = {
         chartType: 'histogram',
         settings: {field: 'amount'},
-        vgplot: null,
       };
 
       const markup = renderToStaticMarkup(
@@ -130,7 +127,6 @@ describe('ChartSettings Compound Components', () => {
         const config: VgPlotChartConfig = {
           chartType: type,
           settings,
-          vgplot: null,
         };
 
         const markup = renderToStaticMarkup(

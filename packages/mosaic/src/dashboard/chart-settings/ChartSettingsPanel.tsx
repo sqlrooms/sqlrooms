@@ -1,7 +1,8 @@
-import {FC} from 'react';
+import {FC, useCallback, useState} from 'react';
 import {ChartSettings} from './ChartSettings';
-import {VgPlotChartConfig} from '../../chart-types';
+import {type VgPlotChartConfig} from '../../chart-types/chart-config';
 import {useTableColumns} from './useTableColumns';
+import {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
 
 interface ChartSettingsPanelProps {
   tableName?: string;
@@ -17,6 +18,27 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   onClose,
 }) => {
   const columns = useTableColumns(tableName);
+  const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
+
+  const handleViewSpec = useCallback(() => {
+    setViewMode('spec');
+  }, []);
+
+  const handleBackToSettings = useCallback(() => {
+    setViewMode('settings');
+  }, []);
+
+  const isCustomSpec = config.chartType === 'custom-spec';
+
+  if (viewMode === 'spec' && !isCustomSpec) {
+    return (
+      <ChartSpecViewerPanel
+        tableName={tableName}
+        config={config}
+        onBack={handleBackToSettings}
+      />
+    );
+  }
 
   return (
     <ChartSettings.Root
@@ -25,8 +47,14 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
       columns={columns}
       onChange={onChange}
     >
-      <ChartSettings.Header onClose={onClose}>
-        Chart settings
+      <ChartSettings.Header>
+        <div className="flex items-center">Chart settings</div>
+        <div className="flex items-center gap-1">
+          {!isCustomSpec && (
+            <ChartSettings.ViewSpecButton onClick={handleViewSpec} />
+          )}
+          {onClose && <ChartSettings.CloseButton onClick={onClose} />}
+        </div>
       </ChartSettings.Header>
       <ChartSettings.Content>
         <ChartSettings.TypeSelector />

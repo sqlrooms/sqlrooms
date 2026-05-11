@@ -7,17 +7,15 @@ import type {
 } from './createChartBuilderStore';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
-  templates: ChartBuilderTemplate[];
-  availableChartTypes: ChartTypeDefinition[];
-  availableTemplates: ChartBuilderTemplate[];
+  templates: ChartTypeDefinition[];
+  availableTemplates: ChartTypeDefinition[];
   store: ChartBuilderStore;
 };
 

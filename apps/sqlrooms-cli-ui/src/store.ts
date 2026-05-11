@@ -29,13 +29,11 @@ import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
-  createMosaicDashboardVgPlotPanelConfig,
   createMosaicSlice,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
   createDefaultChartTypes,
-  isVgPlotPanelConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -81,7 +79,6 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
-import {parseVgPlotSpecString} from './vgplot';
 
 export type {RoomState} from './store-types';
 
@@ -323,49 +320,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
           return artifactId;
         },
-        setDashboardVgPlot: (artifactId, vgplot) => {
-          const artifact = get().artifacts.getArtifact(artifactId);
-          if (!artifact) {
-            throw new Error(`Unknown artifact "${artifactId}".`);
-          }
-          if (artifact.type !== 'dashboard') {
-            throw new Error(
-              `Artifact "${artifactId}" is not a dashboard artifact.`,
-            );
-          }
-          const {parsed} = parseVgPlotSpecString(vgplot);
-          get().dashboard.ensureDashboardArtifact(artifactId);
-          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
-          const primaryPanel = dashboard?.panels.find(
-            (panel) => panel.type === 'vgplot',
-          );
-          if (primaryPanel) {
-            get().mosaicDashboard.updatePanel(artifactId, primaryPanel.id, {
-              config: {
-                ...primaryPanel.config,
-                vgplot: parsed,
-              },
-            });
-            return;
-          }
-          get().mosaicDashboard.addPanel(
-            artifactId,
-            createMosaicDashboardVgPlotPanelConfig('Chart 1', {
-              chartType: 'custom-spec',
-              vgplot: parsed,
-              settings: {},
-            }),
-          );
-        },
-        getDashboardVgPlot: (artifactId) =>
-          (() => {
-            const spec = get()
-              .mosaicDashboard.getDashboard(artifactId)
-              ?.panels.find(isVgPlotPanelConfig)?.config.vgplot;
-            return spec && typeof spec === 'object'
-              ? JSON.stringify(spec, null, 2)
-              : undefined;
-          })(),
         getCurrentDashboardArtifactId: () => {
           const currentArtifactId = get().artifacts.config.currentArtifactId;
           const currentArtifact = currentArtifactId
@@ -387,15 +341,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             layoutType,
           );
           return artifactId;
-        },
-        setCurrentDashboardVgPlot: (vgplot) => {
-          const state = get();
-          const targetArtifactId =
-            state.dashboard.getCurrentDashboardArtifactId() ??
-            state.dashboard.createDashboardArtifact(undefined, 'grid');
-          state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
-          state.artifacts.setCurrentArtifact(targetArtifactId);
-          return targetArtifactId;
         },
       };
 

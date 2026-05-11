@@ -66,13 +66,10 @@ export type RoomState = RoomShellSliceState &
       destroy?: () => Promise<void>;
       ensureDashboardArtifact: (artifactId: string) => void;
       addProfilerForTable: (tableName: string) => string | undefined;
-      setDashboardVgPlot: (artifactId: string, vgplot: string) => void;
-      getDashboardVgPlot: (artifactId: string) => string | undefined;
       getCurrentDashboardArtifactId: () => string | undefined;
       createDashboardArtifact: (
         title?: string,
         layoutType?: MosaicDashboardLayoutType,
       ) => string;
-      setCurrentDashboardVgPlot: (vgplot: string) => string;
     };
   };

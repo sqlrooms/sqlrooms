@@ -1,7 +1,9 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
-import type {CustomSpecChartSettings} from './schema';
+import {CustomSpecChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {CustomSpecSettingsComponent} from './CustomSpecSettings';
+import {Code} from 'lucide-react';
 
 const DESCRIPTION = 'Create a chart with custom spec';
 
@@ -12,10 +14,17 @@ export const customSpecChartType: ChartTypeDefinition<CustomSpecChartSettings> =
     description: DESCRIPTION,
     aiDescription:
       'Manual template for editing after creation. Prefer explicit chart templates for assistant-created charts.',
-    fields: [],
+    icon: Code,
+    schema: CustomSpecChartSettings,
+    settingsComponent: CustomSpecSettingsComponent,
     buildTitle: titleFromDescription(DESCRIPTION),
-    createSpec: (tableName): Spec =>
-      ({
+    createSpec: (tableName, {vgPlotSpec}): Spec => {
+      if (vgPlotSpec) {
+        return vgPlotSpec as Spec;
+      }
+
+      // Default starter spec
+      return {
         plot: [
           {
             mark: 'rectY',
@@ -31,5 +40,6 @@ export const customSpecChartType: ChartTypeDefinition<CustomSpecChartSettings> =
         height: 200,
         width: 380,
         params: {brush: {select: 'crossfilter'}},
-      }) as Spec,
+      } as Spec;
+    },
   };

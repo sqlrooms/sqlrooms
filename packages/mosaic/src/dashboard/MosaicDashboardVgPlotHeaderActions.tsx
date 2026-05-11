@@ -1,19 +1,10 @@
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {SettingsIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
-import {VgPlotSpecPopoverEditor} from './VgPlotSpecPopoverEditor';
 import {
-  VgPlotPanelConfig,
   type VgPlotPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
-
-function getVgPlotSpec(panel: VgPlotPanelConfig) {
-  const spec = panel.config.vgplot;
-  return spec && typeof spec === 'object' && !Array.isArray(spec)
-    ? (spec as Record<string, unknown>)
-    : null;
-}
 
 export const MosaicDashboardVgPlotHeaderActions: FC<
   VgPlotPanelRendererProps
@@ -21,17 +12,8 @@ export const MosaicDashboardVgPlotHeaderActions: FC<
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
-  const spec = getVgPlotSpec(panel);
-  const isSettingsOpen = Boolean(panel.config.settingsOpen);
 
-  const handleSpecApply = useCallback(
-    (newSpec: Record<string, unknown>) => {
-      updatePanel(dashboardId, panel.id, {
-        config: {...panel.config, vgplot: newSpec},
-      });
-    },
-    [dashboardId, panel.config, panel.id, updatePanel],
-  );
+  const isSettingsOpen = Boolean(panel.config.settingsOpen);
 
   const handleToggleSettings = useCallback(() => {
     updatePanel(dashboardId, panel.id, {
@@ -47,7 +29,7 @@ export const MosaicDashboardVgPlotHeaderActions: FC<
             variant="ghost"
             size="icon"
             className="data-[state=active]:bg-accent h-6 w-6"
-            aria-label="Chart settings"
+            title="Chart settings"
             onClick={handleToggleSettings}
             data-state={isSettingsOpen ? 'active' : 'inactive'}
           >
@@ -56,9 +38,6 @@ export const MosaicDashboardVgPlotHeaderActions: FC<
         </TooltipTrigger>
         <TooltipContent>Chart settings</TooltipContent>
       </Tooltip>
-      {spec ? (
-        <VgPlotSpecPopoverEditor value={spec} onApply={handleSpecApply} />
-      ) : null}
     </>
   );
 };

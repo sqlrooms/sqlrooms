@@ -1,5 +1,9 @@
-export {ChartSettingsPanel} from './ChartSettingsPanel';
 export {ChartSettings} from './ChartSettings';
+export {
+  ChartSettingsProvider,
+  useChartSettingsContext,
+} from './ChartSettingsContext';
+export {ChartSettingsPanel} from './ChartSettingsPanel';
+export {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
 export {ChartTypeSelector} from './ChartTypeSelector';
-export {DynamicChartSettings} from './DynamicChartSettings';
-export {useChartSettingsContext} from './ChartSettingsContext';
+export {useTableColumns} from './useTableColumns';
