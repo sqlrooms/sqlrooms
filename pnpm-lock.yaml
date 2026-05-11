@@ -3139,6 +3139,9 @@ importers:
         specifier: ^5.0.8
         version: 5.0.11(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
+      loro-crdt:
+        specifier: ^1.10.3
+        version: 1.10.3
       ts-jest:
         specifier: ^29.4.4
         version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.3.0)(@jest/types@30.3.0)(babel-jest@30.3.0(@babel/core@7.29.0))(jest-util@30.3.0)(jest@30.3.0(@types/node@25.5.0))(typescript@5.9.3)

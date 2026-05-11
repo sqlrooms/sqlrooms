@@ -58,6 +58,7 @@
     "react-dom": "^18 || ^19"
   },
   "devDependencies": {
+    "loro-crdt": "^1.10.3",
     "ts-jest": "^29.4.4"
   },
   "scripts": {
