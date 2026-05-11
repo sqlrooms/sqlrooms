@@ -3,7 +3,7 @@ import {z} from 'zod';
 
 import {RoomState} from './store-types';
 
-type CliArtifactType = 'dashboard' | 'notebook' | 'canvas' | 'app';
+type CliArtifactType = 'dashboard' | 'notebook' | 'document' | 'canvas' | 'app';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
 
@@ -70,6 +70,8 @@ function createArtifactCommand(
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
+      } else if (artifactType === 'document') {
+        state.documents.ensureDocument(artifactId);
       } else if (artifactType === 'canvas') {
         state.canvas.ensureArtifact(artifactId);
       }
@@ -164,6 +166,9 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
+        if (artifact.type === 'document') {
+          state.documents.ensureDocument(artifactId);
+        }
         if (artifact.type === 'canvas') {
           state.canvas.ensureArtifact(artifactId);
         }
@@ -180,6 +185,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
 
     // Per-type create commands
     createArtifactCommand('notebook', 'Notebook'),
+    createArtifactCommand('document', 'Document'),
     createArtifactCommand('canvas', 'Canvas'),
     createArtifactCommand('app', 'App'),
     createDashboardCreateArtifactCommand(),

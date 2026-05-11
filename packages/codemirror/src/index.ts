@@ -12,3 +12,4 @@ export type {JavascriptCodeMirrorEditorProps} from './components/JavascriptCodeM
 // Themes
 export {createBaseTheme} from './themes/base-theme';
 export type {BaseThemeOptions} from './themes/base-theme';
+export {createSqlroomsTheme} from './themes/sqlrooms-theme';

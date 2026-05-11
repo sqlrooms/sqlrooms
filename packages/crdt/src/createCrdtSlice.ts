@@ -211,6 +211,7 @@ export function createCrdtSlice<
             const snapshot = await options.storage.load();
             if (snapshot) {
               activeDoc.import(snapshot);
+              activeDoc.checkoutToLatest();
             }
           }
 

@@ -7,10 +7,7 @@ import {
 describe('ContextSelector selection helpers', () => {
   it('adds and removes selected ids without changing order', () => {
     expect(toggleContextSelectorItem(['a'], 'b')).toEqual(['a', 'b']);
-    expect(toggleContextSelectorItem(['a', 'b', 'c'], 'b')).toEqual([
-      'a',
-      'c',
-    ]);
+    expect(toggleContextSelectorItem(['a', 'b', 'c'], 'b')).toEqual(['a', 'c']);
   });
 
   it('promotes an item to main without duplicating it', () => {

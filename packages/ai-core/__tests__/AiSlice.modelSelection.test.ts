@@ -41,9 +41,7 @@ function createTestStore(options?: {
       getRunContext: options?.getRunContext,
       formatRunContextInstructions: ({runContext}) => {
         const mainItem = runContext.items[0];
-        return mainItem
-          ? `Context: ${mainItem.type} ${mainItem.title}`
-          : '';
+        return mainItem ? `Context: ${mainItem.type} ${mainItem.title}` : '';
       },
       defaultProvider: 'openai',
       defaultModel: 'shared-model',

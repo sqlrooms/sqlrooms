@@ -327,9 +327,7 @@ const Badge: FC<ContextSelectorBadgeProps> = ({
     emptyLabel;
   const tooltipContent =
     tooltip ??
-    (runningItems.length > 0
-      ? 'Next request context'
-      : 'Add context');
+    (runningItems.length > 0 ? 'Next request context' : 'Add context');
 
   return (
     <div
@@ -398,14 +396,8 @@ const SortableContextChip: FC<{
   onMakeMain: (itemId: string) => void;
   onRemove: (itemId: string) => void;
 }> = ({item, main, renderIcon, onMakeMain, onRemove}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({id: item.id});
+  const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
+    useSortable({id: item.id});
   const transformStyle = transform
     ? `translate3d(${Math.round(transform.x)}px, ${Math.round(
         transform.y,

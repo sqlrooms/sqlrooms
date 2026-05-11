@@ -7,16 +7,19 @@ import {
   BarChart3,
   FileText,
   LayoutDashboardIcon,
+  ScrollTextIcon,
 } from 'lucide-react';
 import type {RoomState} from './store-types';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
+import {DocumentArtifact} from './workspace/DocumentArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 
 export const CLI_ARTIFACT_TYPES = [
   'dashboard',
   'notebook',
+  'document',
   'canvas',
   'app',
 ] as const;
@@ -53,6 +56,21 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
     },
     onDelete: ({artifactId, store}) => {
       store.getState().notebook.removeArtifact(artifactId);
+    },
+  },
+  document: {
+    label: 'Document',
+    defaultTitle: 'Document',
+    icon: ScrollTextIcon,
+    component: DocumentArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().documents.ensureDocument(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().documents.ensureDocument(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().documents.removeDocument(artifactId);
     },
   },
   canvas: {

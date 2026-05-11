@@ -29,6 +29,11 @@ import {
   QualifiedTableName,
 } from '@sqlrooms/duckdb';
 import {
+  createCrdtSlice,
+  createIndexedDbDocStorage,
+  createWebSocketSyncConnector,
+} from '@sqlrooms/crdt';
+import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
@@ -64,6 +69,13 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
+import {
+  createDocumentCommands,
+  createDocumentsSlice,
+  DOCUMENT_AI_INSTRUCTIONS,
+  DocumentsSliceConfig,
+} from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -85,6 +97,8 @@ import {
 
 export type {RoomState} from './store-types';
 
+const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
   (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
@@ -97,6 +111,24 @@ const defaultModelFromConfig =
 const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
 const MOSAIC_PREAGG_SCHEMA = 'mosaic';
 const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CRDT_STORAGE_KEY = [
+  'sqlrooms-cli',
+  runtimeConfig.metaNamespace || '__sqlrooms',
+  runtimeConfig.dbPath || 'memory',
+  'documents',
+].join(':');
+
+function createCliCrdtSyncConnector() {
+  if (!runtimeConfig.syncEnabled) return undefined;
+  return createWebSocketSyncConnector({
+    url:
+      runtimeConfig.crdtWsUrl || runtimeConfig.wsUrl || 'ws://localhost:4000',
+    roomId:
+      runtimeConfig.crdtRoomId ||
+      `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    sendSnapshotOnConnect: false,
+  });
+}
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -228,6 +260,7 @@ const sliceConfigSchemas = {
   cells: CellsSliceConfig,
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
+  documents: DocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -286,9 +319,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
+          registerCommandsForOwner(
+            store,
+            DOCUMENT_COMMAND_OWNER,
+            createDocumentCommands<RoomState>(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -479,6 +518,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCanvasSlice()(set, get, store),
 
+        ...createDocumentsSlice()(set, get, store),
+
+        ...createCrdtSlice<RoomState>({
+          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+          sync: createCliCrdtSyncConnector(),
+          mirrors: {
+            documentState: createDocumentsCrdtMirror<RoomState>(),
+          },
+        })(set, get, store),
+
         ...createWebContainerSlice({
           autoInitialize: false,
           config: {
@@ -503,7 +552,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
             getRunContext: () => {
               const state = store.getState();
               const {artifactsById} = state.artifacts.config;
