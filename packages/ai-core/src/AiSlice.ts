@@ -29,7 +29,6 @@ import {
   createRemoteChatTransportFactory,
 } from './chatTransport';
 import {
-  AI_DEFAULT_TEMPERATURE,
   ANALYSIS_CANCELLED,
   ANALYSIS_PENDING_ID,
   SESSION_DELETED,
@@ -1028,7 +1027,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           try {
             const response = await generateText({
               model,
-              temperature: AI_DEFAULT_TEMPERATURE,
               messages: [{role: 'user', content: prompt}],
               system:
                 systemInstructions ||
