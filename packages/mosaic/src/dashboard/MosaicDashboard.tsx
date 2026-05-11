@@ -6,8 +6,8 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type {ChartBuilderColumn} from '../chart-builders/types';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartBuilderColumn} from '../chart-types/base-types';
+import type {VgPlotChartConfig} from '../chart-types/chart-config';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './MosaicDashboardPanels';
@@ -39,9 +39,6 @@ export function MosaicDashboardRoot({
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
-  const chartBuilders = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.chartBuilders,
-  );
   const chartTypes = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.chartTypes,
   );
@@ -108,13 +105,12 @@ export function MosaicDashboardRoot({
       return;
     }
 
-    // Create empty chart panel - user will select type and fields
+    // Create chart panel with default field or empty if no numeric columns
     const panel = createMosaicDashboardVgPlotPanelConfig(
       'New Chart',
       {
-        chartType: 'histogram', // Default type, but with empty settings
+        chartType: 'histogram',
         settings: {},
-        vgplot: null,
         settingsOpen: true, // Open settings by default
       },
       {tableName: dashboard.selectedTable},
@@ -130,7 +126,6 @@ export function MosaicDashboardRoot({
       canCreateChart: Boolean(
         dashboard?.selectedTable &&
         panelRenderers[MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE] &&
-        chartBuilders?.length !== 0 &&
         chartTypes?.length !== 0,
       ),
       openBuilder: () => setBuilderOpen(true),
@@ -140,7 +135,6 @@ export function MosaicDashboardRoot({
     }),
     [
       builderOpen,
-      chartBuilders?.length,
       chartTypes?.length,
       dashboard?.selectedTable,
       dashboardId,
@@ -158,7 +152,6 @@ export function MosaicDashboardRoot({
           onOpenChange={setBuilderOpen}
           tableName={dashboard.selectedTable}
           columns={builderColumns}
-          builders={chartBuilders}
           chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
         >

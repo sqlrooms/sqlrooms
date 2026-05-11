@@ -2407,6 +2407,12 @@ importers:
       '@ai-sdk/react':
         specifier: ^3.0.118
         version: 3.0.161(react@19.2.1)(zod@4.1.13)
+      '@dnd-kit/core':
+        specifier: ^6.3.1
+        version: 6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@dnd-kit/sortable':
+        specifier: ^10.0.0
+        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react@19.2.1)
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.0.4
@@ -2453,6 +2459,9 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
+      '@jest/globals':
+        specifier: ^30.3.0
+        version: 30.3.0
       '@sqlrooms/preset-jest':
         specifier: workspace:*
         version: link:../preset-jest
@@ -3496,6 +3505,9 @@ importers:
       '@uwdata/vgplot':
         specifier: ^0.21.0
         version: 0.21.1
+      ai:
+        specifier: ^6.0.159
+        version: 6.0.159(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0

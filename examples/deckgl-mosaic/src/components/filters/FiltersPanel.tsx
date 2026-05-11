@@ -1,6 +1,7 @@
 import type {Param} from '@sqlrooms/mosaic';
 import {
   type ChartBuilderColumn,
+  generateMosaicChartSpec,
   MosaicChart,
   MosaicChartBuilder,
   type Spec,
@@ -78,7 +79,12 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   const handleCreateChart = useCallback(
     (title: string, config: VgPlotChartConfig) => {
       const id = `chart-${Date.now()}`;
-      setCharts((prev) => [{id, title, spec: config.vgplot as Spec}, ...prev]);
+      const spec = generateMosaicChartSpec(
+        'earthquakes',
+        config.chartType,
+        config.settings,
+      );
+      setCharts((prev) => [{id, title, spec}, ...prev]);
     },
     [],
   );

@@ -26,16 +26,13 @@ import {
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
-import type {
-  ChartBuilderTemplate,
-  ChartTypeDefinition,
-} from '../chart-builders/types';
+import type {ChartTypeDefinition} from '../chart-types/base-types';
 import {type MosaicSliceState} from '../MosaicSlice';
 import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import {VgPlotChartConfig} from '../chart-types';
+import {VgPlotChartConfig} from '../chart-types/chart-config';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -164,13 +161,13 @@ export function createMosaicDashboardVgPlotPanelConfig(
   config: VgPlotChartConfig,
   source?: MosaicDashboardPanelSource,
 ): VgPlotPanelConfig {
-  return VgPlotPanelConfig.parse({
+  return {
     id: createId(),
     type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
     title,
     source,
     config,
-  });
+  };
 }
 
 export function createMosaicDashboardProfilerPanelConfig(
@@ -222,7 +219,6 @@ export type MosaicDashboardSliceState = {
        */
       retainedChartsByPanelId: Record<string, RetainedVgPlotChart>;
     };
-    chartBuilders?: ChartBuilderTemplate[];
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
     createDashboard: (
@@ -748,10 +744,7 @@ function shouldEvictPanelRuntimeForPatch(
   }
 
   if (panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE) {
-    return Boolean(
-      patch.config &&
-      Object.prototype.hasOwnProperty.call(patch.config, 'vgplot'),
-    );
+    return Boolean(patch.config);
   }
 
   return false;
@@ -783,7 +776,6 @@ type CreateMosaicDashboardSliceProps = {
   panelRenderers?: Record<string, MosaicDashboardPanelRenderer>;
   addPanelActions?: MosaicDashboardAddPanelAction[];
   chartTypes?: ChartTypeDefinition[];
-  chartBuilders?: ChartBuilderTemplate[];
 };
 export type {CreateMosaicDashboardSliceProps};
 
@@ -797,7 +789,6 @@ export function createMosaicDashboardSlice(
         runtime: {
           retainedChartsByPanelId: {},
         },
-        chartBuilders: props.chartBuilders,
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
         panelRenderers: props.panelRenderers ?? {},

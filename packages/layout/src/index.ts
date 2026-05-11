@@ -46,6 +46,7 @@ export {
 // New LayoutRenderer component
 export {LayoutRenderer} from './LayoutRenderer';
 export type {LayoutRendererProps} from './LayoutRenderer';
+export {RoomDndProvider} from './dnd/RoomDndProvider';
 
 // New primary exports from @sqlrooms/layout-config
 export {

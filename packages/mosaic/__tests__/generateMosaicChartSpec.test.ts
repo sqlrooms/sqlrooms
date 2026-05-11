@@ -1,28 +1,25 @@
 import {describe, expect, it, jest} from '@jest/globals';
 import {generateMosaicChartSpec} from '../src/dashboard/generateMosaicChartSpec';
 import {mosaicChartTypes} from '../src/chart-types';
+import {
+  MissingTableError,
+  UnknownChartTypeError,
+  SpecGenerationError,
+} from '../src/chart-types/errors';
 
 describe('generateMosaicChartSpec', () => {
-  it('returns null when tableName is undefined', () => {
-    const result = generateMosaicChartSpec(undefined, 'histogram', {
-      field: 'amount',
-    });
-    expect(result).toBeNull();
+  it('throws MissingTableError when tableName is undefined', () => {
+    expect(() =>
+      generateMosaicChartSpec(undefined, 'histogram', {
+        field: 'amount',
+      }),
+    ).toThrow(MissingTableError);
   });
 
-  it('returns null for unknown chart type', () => {
-    const consoleSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
-
-    const result = generateMosaicChartSpec('sales', 'unknown-type' as any, {});
-
-    expect(result).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Unknown chart type: unknown-type'),
-    );
-
-    consoleSpy.mockRestore();
+  it('throws UnknownChartTypeError for unknown chart type', () => {
+    expect(() =>
+      generateMosaicChartSpec('sales', 'unknown-type' as any, {}),
+    ).toThrow(UnknownChartTypeError);
   });
 
   it('generates spec for histogram chart type', () => {
@@ -48,17 +45,7 @@ describe('generateMosaicChartSpec', () => {
   it('generates spec for line-chart chart type', () => {
     const result = generateMosaicChartSpec('timeseries', 'line-chart', {
       x: 'date',
-      y: 'value',
-    });
-
-    expect(result).toBeDefined();
-    expect(result).not.toBeNull();
-    expect(result).toHaveProperty('plot');
-  });
-
-  it('generates spec for ecdf chart type', () => {
-    const result = generateMosaicChartSpec('data', 'ecdf', {
-      field: 'value',
+      yFields: [{field: 'value', aggregate: 'sum'}],
     });
 
     expect(result).toBeDefined();
@@ -100,7 +87,7 @@ describe('generateMosaicChartSpec', () => {
     expect(result).toHaveProperty('plot');
   });
 
-  it('handles createSpec throwing an error', () => {
+  it('throws SpecGenerationError when createSpec throws', () => {
     const consoleSpy = jest
       .spyOn(console, 'error')
       .mockImplementation(() => {});
@@ -112,15 +99,11 @@ describe('generateMosaicChartSpec', () => {
         throw new Error('Test error');
       });
 
-    const result = generateMosaicChartSpec('sales', 'histogram', {
-      field: 'amount',
-    });
-
-    expect(result).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to generate spec'),
-      expect.any(Error),
-    );
+    expect(() =>
+      generateMosaicChartSpec('sales', 'histogram', {
+        field: 'amount',
+      }),
+    ).toThrow(SpecGenerationError);
 
     // Restore
     createSpecSpy.mockRestore();

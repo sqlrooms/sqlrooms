@@ -8,9 +8,8 @@ import {ChartBuilderRoot, type ChartBuilderRootProps} from './ChartBuilderRoot';
 import {ChartBuilderTypeGrid} from './ChartBuilderTypeGrid';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 type StandaloneChartBuilderContentProps = {
   /** Table name to use in generated specs */
@@ -19,10 +18,8 @@ type StandaloneChartBuilderContentProps = {
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
-  /** Preferred shared chart-type customization surface */
+  /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
   /** Custom class name */
   className?: string;
 };

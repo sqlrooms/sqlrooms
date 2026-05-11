@@ -148,21 +148,7 @@ export type {
   UseMosaicProfilerReturn,
 } from './profiler/types';
 
-// Chart builder types and utilities
-export {
-  boxPlotBuilder,
-  bubbleChartBuilder,
-  countPlotBuilder,
-  createChartBuilderTemplate,
-  createChartBuilderTemplates,
-  createDefaultChartBuilders,
-  customSpecBuilder,
-  ecdfBuilder,
-  heatmapBuilder,
-  histogramBuilder,
-  lineChartBuilder,
-  mosaicChartBuilders,
-} from './chart-builders/builders';
+// Chart builder components
 export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
 export {ChartBuilderActions} from './chart-builders/ChartBuilderActions';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
@@ -194,39 +180,62 @@ export {
   countPlotChartType,
   createDefaultChartTypes,
   customSpecChartType,
-  ecdfChartType,
   heatmapChartType,
   histogramChartType,
   lineChartChartType,
   mosaicChartTypes,
+  VgPlotChartConfig,
+  HistogramChartSettings,
+  LineChartSettings,
+  CountPlotChartSettings,
+  BubbleChartSettings,
+  HeatmapChartSettings,
+  BoxPlotChartSettings,
+  // Tool helpers, parameters, and AI tool creators
+  BaseChartToolParameters,
+  validateColumnExists,
+  HistogramToolParameters,
+  LineChartToolParameters,
+  CountPlotToolParameters,
+  HeatmapToolParameters,
+  BubbleChartToolParameters,
+  BoxPlotToolParameters,
+  createHistogramAiTool,
+  createLineChartAiTool,
+  createCountPlotAiTool,
+  createHeatmapAiTool,
+  createBubbleChartAiTool,
+  createBoxPlotAiTool,
+  createChartTools,
 } from './chart-types';
 export type {
-  VgPlotChartConfig,
   VgPlotChartSettings,
   VgPlotChartType,
+  ChartToolDeps,
+  ResolvedChartResources,
+  CreateChartParams,
+  CreateChartResult,
+  HistogramToolParams,
+  LineChartToolParams,
+  CountPlotToolParams,
+  HeatmapToolParams,
+  BubbleChartToolParams,
+  BoxPlotToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,
   canCreateChartFromType,
-  columnMatchesFieldTypes,
-  getAvailableChartTypes,
-  getCompatibleColumns,
-  isChartTypeAvailable,
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from './chart-builders/chartTypeUtils';
-export {
-  describeChartSpecs,
-  describeChartTypes,
-} from './chart-builders/describeChartSpecs';
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
-export {toChartSpec, toChartTypeDefinition} from './chart-builders/types';
 export type {
   ChartBuilderColumn,
   ChartBuilderField,
-  ChartBuilderTemplate,
   ChartSpec,
   ChartTypeDefinition,
-} from './chart-builders/types';
+} from './chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+
+export {generateMosaicChartSpec} from './dashboard/generateMosaicChartSpec';

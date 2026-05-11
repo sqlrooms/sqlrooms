@@ -1,14 +1,10 @@
 import {FC, PropsWithChildren, useCallback, useMemo, useState} from 'react';
 import {
-  closestCenter,
-  DndContext,
   DragEndEvent,
   DragMoveEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
+  useDndMonitor,
 } from '@dnd-kit/core';
 import {LayoutNode} from '@sqlrooms/layout-config';
 import {DockingContext} from './DockingContext';
@@ -18,6 +14,7 @@ import {movePanel} from './dock-layout';
 import {findNearestDockAncestor, findNodeById} from '../layout-tree';
 import {DockPreviewOverlay} from './DockPreviewOverlay';
 import {DockDragOverlay} from './DockDragOverlay';
+import {LAYOUT_PANEL_DND_KIND} from '../node-renderers/leaf-node-renderer/LeafLayoutPanel';
 
 interface DockingProviderProps {
   rootLayout: LayoutNode;
@@ -29,18 +26,19 @@ type CursorPosition = {
   y: number;
 };
 
+/**
+ * Provides layout panel docking inside a dnd-kit `DndContext`.
+ *
+ * `LayoutRenderer` wraps `DockingProvider` with `RoomDndProvider` by default.
+ * Custom shells that render `DockingProvider` directly must provide their own
+ * `DndContext`/`RoomDndProvider`; dnd-kit's `useDndMonitor` surfaces the
+ * development-time error if this requirement is missed.
+ */
 export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
   rootLayout,
   onLayoutChange,
   children,
 }) => {
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-  );
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
   const [preview, setPreview] = useState<DockPreview | null>(null);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(
@@ -93,8 +91,13 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
     [rootLayout],
   );
 
+  const isLayoutPanelDrag = useCallback((event: DragStartEvent) => {
+    return event.active.data.current?.kind === LAYOUT_PANEL_DND_KIND;
+  }, []);
+
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
+      if (!isLayoutPanelDrag(event)) return;
       const panelId = String(event.active.id);
       setActivePanelId(panelId);
 
@@ -111,11 +114,12 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
       setCursorPosition(cursor);
       updatePreview(event, cursor);
     },
-    [updatePreview],
+    [isLayoutPanelDrag, updatePreview],
   );
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
+      if (!activePanelId) return;
       // Use center of translated rect as cursor position
       const rect = event.active.rect.current.translated;
 
@@ -131,11 +135,12 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
       setCursorPosition(cursor);
       updatePreview(event, cursor);
     },
-    [updatePreview],
+    [activePanelId, updatePreview],
   );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      if (!activePanelId) return;
       const sourceId = String(event.active.id);
       const over = event.over;
 
@@ -160,8 +165,15 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
         onLayoutChange(nextLayout);
       }
     },
-    [clearDragState, cursorPosition, onLayoutChange, rootLayout],
+    [activePanelId, clearDragState, cursorPosition, onLayoutChange, rootLayout],
   );
+
+  useDndMonitor({
+    onDragStart: handleDragStart,
+    onDragMove: handleDragMove,
+    onDragEnd: handleDragEnd,
+    onDragCancel: clearDragState,
+  });
 
   const value = useMemo(
     () => ({
@@ -174,25 +186,16 @@ export const DockingProvider: FC<PropsWithChildren<DockingProviderProps>> = ({
 
   return (
     <DockingContext.Provider value={value}>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragEnd={handleDragEnd}
-        onDragCancel={clearDragState}
-      >
-        {children}
-        <DragOverlay dropAnimation={null}>
-          {activePanelId && activePanelNode && (
-            <DockDragOverlay
-              activePanelId={activePanelId}
-              activePanelNode={activePanelNode}
-            />
-          )}
-        </DragOverlay>
-        <DockPreviewOverlay preview={preview} />
-      </DndContext>
+      {children}
+      <DragOverlay dropAnimation={null}>
+        {activePanelId && activePanelNode && (
+          <DockDragOverlay
+            activePanelId={activePanelId}
+            activePanelNode={activePanelNode}
+          />
+        )}
+      </DragOverlay>
+      <DockPreviewOverlay preview={preview} />
     </DockingContext.Provider>
   );
 };

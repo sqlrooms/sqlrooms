@@ -4,19 +4,21 @@
  */
 
 import type {Spec} from '@uwdata/mosaic-spec';
+import type {ComponentType} from 'react';
+import type * as z from 'zod';
+import type {Tool} from 'ai';
+import {VgPlotChartType} from './chart-config';
+
+// Re-export VgPlotChartType for convenience
+export type {VgPlotChartType};
 
 /**
- * Supported chart type identifiers
+ * Column info passed to chart builder UI
  */
-export type VgPlotChartType =
-  | 'histogram'
-  | 'count-plot'
-  | 'ecdf'
-  | 'line-chart'
-  | 'bubble-chart'
-  | 'heatmap'
-  | 'box-plot'
-  | 'custom-spec';
+export interface ChartBuilderColumn {
+  name: string;
+  type: string;
+}
 
 /**
  * Describes a field selector in a chart builder UI
@@ -32,14 +34,36 @@ export interface ChartBuilderField {
   types?: string[];
   /** Optional helper text for AI or custom UIs */
   description?: string;
+  /** Whether this field accepts multiple values (array) */
+  multiple?: boolean;
 }
 
 /**
- * Column info passed to chart builder UI
+ * Dependencies injected into chart tool creation functions.
+ * Provides the resources and operations needed to create charts.
  */
-export interface ChartBuilderColumn {
-  name: string;
-  type: string;
+export interface ChartToolDeps {
+  resolveResources: (params: {
+    artifactId?: string;
+    tableName?: string;
+    createArtifactIfMissing?: boolean;
+  }) => {
+    artifactId: string;
+    tableName: string;
+    columns: ChartBuilderColumn[];
+  };
+  createChart: (params: {
+    artifactId: string;
+    tableName: string;
+    title: string;
+    config: any;
+  }) => {
+    panelId: string;
+    artifactId: string;
+    tableName: string;
+    title: string;
+    config: any;
+  };
 }
 
 /**
@@ -53,14 +77,26 @@ export interface ChartTypeDefinition<TSettings = any> {
   label?: string;
   /** Short description of what this builder creates */
   description: string;
-  /** Field selectors the user must fill in */
-  fields: ChartBuilderField[];
+  /** Zod schema for runtime validation of settings */
+  schema: z.ZodType<TSettings>;
   /** Generate a Mosaic spec from table name and selected field values */
   createSpec: (tableName: string, values: TSettings) => Spec;
+  /** Create an AI tool for this chart type */
+  createTool?: (deps: ChartToolDeps) => Tool;
   /** Generate a chart title from selected field values */
-  buildTitle?: (fieldValues: Record<string, string>) => string;
+  buildTitle?: (fieldValues: Record<string, unknown>) => string;
   /** Optional availability override for a given table schema */
   isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
   /** Optional extra assistant-facing description */
   aiDescription?: string;
+  /** Explicit settings component for this chart type */
+  settingsComponent: ComponentType;
+  /** Optional icon component for chart-type grids */
+  icon: ComponentType<{className?: string}>;
 }
+
+/**
+ * Backward-compatible alias for earlier chart-builder helper APIs.
+ * @deprecated Use {@link ChartTypeDefinition} instead.
+ */
+export type ChartSpec = ChartTypeDefinition;
