@@ -1,4 +1,3 @@
-import type {Spec} from '@uwdata/mosaic-spec';
 import type {ChartTypeDefinition} from '../base-types';
 import type {LineChartSettings} from './schema';
 import {
@@ -6,8 +5,8 @@ import {
   NUMERIC_COLUMN_TYPES,
 } from '../../chart-builders/constants';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {LineChartRenderer} from './LineChartRenderer';
 
-const FG_COLOR = 'var(--color-chart-1)';
 const DESCRIPTION = 'Create a line chart of two fields';
 
 export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
@@ -34,23 +33,5 @@ export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
     },
   ],
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'lineY',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          stroke: FG_COLOR,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 20, top: 20, bottom: 50},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
+  renderer: LineChartRenderer,
 };

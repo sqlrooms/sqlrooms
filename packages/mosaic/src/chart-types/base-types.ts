@@ -98,4 +98,12 @@ export interface ChartTypeDefinition<TSettings = any> {
   isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
   /** Optional extra assistant-facing description */
   aiDescription?: string;
+
+  // Backward compatibility fields during transition period (to be removed)
+  /** @deprecated Use renderer instead */
+  createSpec?: (tableName: string, settings: TSettings) => Spec;
+  /** @deprecated Use renderer instead */
+  outputKind?: 'vgplot' | 'dashboard-panel';
+  /** @deprecated Use renderer instead */
+  createOutput?: (tableName: string, settings: TSettings) => ChartBuilderOutput;
 }
