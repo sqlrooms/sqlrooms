@@ -21,6 +21,7 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
         // Validate settings
+        validateColumnExists(params.settings.x, undefined, columns, 'x');
         validateColumnExists(
           params.settings.y,
           NUMERIC_COLUMN_TYPES,
@@ -28,9 +29,7 @@ export function createBoxPlotAiTool(deps: ChartToolDeps) {
           'y',
         );
 
-        const title = params.settings.x
-          ? `Box plot - ${params.settings.y} by ${params.settings.x}`
-          : `Box plot of ${params.settings.y}`;
+        const title = `Box plot - ${params.settings.y} by ${params.settings.x}`;
 
         const result = deps.createChart({
           artifactId,
