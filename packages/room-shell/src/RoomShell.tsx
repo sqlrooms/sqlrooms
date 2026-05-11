@@ -1,4 +1,4 @@
-import {LayoutRenderer} from '@sqlrooms/layout';
+import {LayoutRenderer, RoomDndProvider} from '@sqlrooms/layout';
 import type {LayoutNode} from '@sqlrooms/layout-config';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
@@ -173,6 +173,7 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
 };
 
 export const RoomShell = Object.assign(RoomShellBase, {
+  DndProvider: RoomDndProvider,
   /**
    * @deprecated Use SidebarContainer instead
    */

@@ -54,7 +54,7 @@ describe('default cell registry integration', () => {
     const deps = await registry.sql?.findDependencies({
       cell: target,
       cells,
-      sheetId: 'sheet-1',
+      artifactId: 'sheet-1',
       sqlSelectToJson: async () =>
         ({error: false, statements: [{node: {table_name: 'a1'}}]}) as any,
     });
@@ -74,7 +74,7 @@ describe('default cell registry integration', () => {
     const deps = await registry.sql?.findDependencies({
       cell: target,
       cells,
-      sheetId: 'sheet-1',
+      artifactId: 'sheet-1',
       sqlSelectToJson: async () =>
         ({error: false, statements: [{node: {table_name: 'flights'}}]}) as any,
     });
@@ -93,7 +93,7 @@ describe('default cell registry integration', () => {
     const deps = await registry.vega?.findDependencies({
       cell: vegaCell,
       cells: {},
-      sheetId: 'sheet-1',
+      artifactId: 'sheet-1',
       sqlSelectToJson: async () => ({error: false, statements: []}),
     });
 

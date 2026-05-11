@@ -1,5 +1,6 @@
 import type {FC, PropsWithChildren} from 'react';
 import {AnalysisResultsContainer} from './AnalysisResultsContainer';
+import {ContextSelector} from './ContextSelector';
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
@@ -26,6 +27,7 @@ type ChatComponent = FC<RootProps> & {
     VisibilityToggle: typeof PromptSuggestions.VisibilityToggle;
   };
   ModelSelector: typeof ModelSelector;
+  ContextSelector: typeof ContextSelector;
 };
 
 const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
@@ -54,4 +56,5 @@ export const Chat: ChatComponent = Object.assign(Root, {
   InlineApiKeyInput: InlineApiKeyInput,
   PromptSuggestions: PromptSuggestionsCompound,
   ModelSelector: ModelSelector,
+  ContextSelector: ContextSelector,
 }) as ChatComponent;
