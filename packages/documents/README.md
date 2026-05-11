@@ -12,6 +12,7 @@ import {
   createDocumentCommands,
   createDocumentsSlice,
 } from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {defineArtifactTypes} from '@sqlrooms/artifacts';
 
 const artifactTypes = defineArtifactTypes({
@@ -90,6 +91,22 @@ document artifacts:
 Register the commands with your room command slice and include
 `DOCUMENT_AI_INSTRUCTIONS` in your AI system prompt when exposing
 `list_commands` and `execute_command` tools.
+
+## CRDT
+
+`@sqlrooms/documents/crdt` exposes Loro Mirror bindings for document state:
+
+```ts
+createCrdtSlice({
+  mirrors: {
+    documentState: createDocumentsCrdtMirror(),
+  },
+});
+```
+
+`createDocumentsCrdtMirror()` syncs Markdown document bodies plus document
+artifact metadata so remote documents can appear in artifact tabs. The current
+artifact selection is kept local.
 
 ## Knowledge Index
 

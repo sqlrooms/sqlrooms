@@ -15,6 +15,7 @@
     "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
+    "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/db-settings": "workspace:*",
     "@sqlrooms/documents": "workspace:*",
@@ -47,7 +48,9 @@
     "immer": "^11.0.1",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.2",
-    "vite": "^8.0.5"
+    "vite": "^8.0.5",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   },
   "overrides": {
     "@duckdb/duckdb-wasm": "1.32.0"

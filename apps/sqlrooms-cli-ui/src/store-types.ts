@@ -2,6 +2,7 @@ import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
+import {CrdtSliceState} from '@sqlrooms/crdt';
 import {DocumentsSliceState} from '@sqlrooms/documents';
 import type {
   MosaicDashboardLayoutType,
@@ -44,6 +45,7 @@ export type RoomState = RoomShellSliceState &
   NotebookSliceState &
   CanvasSliceState &
   DocumentsSliceState &
+  CrdtSliceState &
   WebContainerSliceState &
   DbSettingsSliceState & {
     appProject: {

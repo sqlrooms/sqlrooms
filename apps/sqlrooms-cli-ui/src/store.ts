@@ -26,6 +26,11 @@ import {
   QualifiedTableName,
 } from '@sqlrooms/duckdb';
 import {
+  createCrdtSlice,
+  createIndexedDbDocStorage,
+  createWebSocketSyncConnector,
+} from '@sqlrooms/crdt';
+import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
@@ -69,6 +74,7 @@ import {
   DOCUMENT_AI_INSTRUCTIONS,
   DocumentsSliceConfig,
 } from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -105,6 +111,24 @@ const defaultModelFromConfig =
 const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
 const MOSAIC_PREAGG_SCHEMA = 'mosaic';
 const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CRDT_STORAGE_KEY = [
+  'sqlrooms-cli',
+  runtimeConfig.metaNamespace || '__sqlrooms',
+  runtimeConfig.dbPath || 'memory',
+  'documents',
+].join(':');
+
+function createCliCrdtSyncConnector() {
+  if (!runtimeConfig.syncEnabled) return undefined;
+  return createWebSocketSyncConnector({
+    url:
+      runtimeConfig.crdtWsUrl || runtimeConfig.wsUrl || 'ws://localhost:4000',
+    roomId:
+      runtimeConfig.crdtRoomId ||
+      `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    sendSnapshotOnConnect: false,
+  });
+}
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -535,6 +559,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createCanvasSlice()(set, get, store),
 
         ...createDocumentsSlice()(set, get, store),
+
+        ...createCrdtSlice<RoomState>({
+          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+          sync: createCliCrdtSyncConnector(),
+          mirrors: {
+            documentState: createDocumentsCrdtMirror<RoomState>(),
+          },
+        })(set, get, store),
 
         ...createWebContainerSlice({
           autoInitialize: false,
