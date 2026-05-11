@@ -1,5 +1,6 @@
 import {
   ArtifactsSliceConfig,
+  type ArtifactMetadataType,
   type ArtifactsSliceState,
 } from '@sqlrooms/artifacts';
 import type {CrdtMirror} from '@sqlrooms/crdt';
@@ -44,6 +45,11 @@ export const documentsMirrorInitialState = {
  * Creates a CRDT mirror for Markdown documents and their document artifact metadata.
  *
  * The room's current artifact selection is intentionally kept local.
+ *
+ * TODO: Once the Tiptap document schema settles, replace the Markdown body
+ * snapshot in this mirror with a structured ProseMirror/Loro body synced via
+ * `loro-prosemirror`; keep this mirror focused on registry and artifact
+ * metadata during that migration.
  */
 export function createDocumentsCrdtMirror<
   S extends DocumentCrdtState = DocumentCrdtState,
@@ -52,12 +58,16 @@ export function createDocumentsCrdtMirror<
     schema: documentsMirrorSchema,
     initialState: documentsMirrorInitialState,
     select: (state) => {
-      const documentArtifacts = Object.values(
+      const artifactValues = Object.values(
         state.artifacts.config.artifactsById,
-      ).filter((artifact) => artifact.type === 'document');
+      ) as ArtifactMetadataType[];
+      const documentArtifacts = artifactValues.filter(
+        (artifact) => artifact.type === 'document',
+      );
       const documentIds = new Set(
         documentArtifacts.map((artifact) => artifact.id),
       );
+      const artifactOrder = state.artifacts.config.artifactOrder as string[];
       return {
         documents: Object.values(state.documents.config.artifacts).map(
           (document) => ({
@@ -71,41 +81,55 @@ export function createDocumentsCrdtMirror<
           type: artifact.type,
           title: artifact.title,
         })),
-        artifactOrder: state.artifacts.config.artifactOrder.filter((id) =>
-          documentIds.has(id),
-        ),
+        artifactOrder: artifactOrder.filter((id) => documentIds.has(id)),
       };
     },
     apply: (value, set, get) => {
-      const documentArtifacts = Object.fromEntries(
-        (value?.artifacts ?? []).map((artifact) => [
-          artifact.id,
-          {
-            id: artifact.id,
-            type: 'document',
-            title: artifact.title,
-          },
-        ]),
-      );
-      const documents = documentsArrayToRecord(value?.documents ?? []);
+      const incomingArtifacts = (value?.artifacts ?? []) as Array<{
+        id: string;
+        title: string;
+      }>;
+      const incomingDocuments = (value?.documents ??
+        []) as DocumentsSliceConfigType['artifacts'][string][];
+      const incomingArtifactOrder = (value?.artifactOrder ?? []) as string[];
+      const documentArtifacts: Record<string, ArtifactMetadataType> =
+        Object.fromEntries(
+          incomingArtifacts.map((artifact) => [
+            artifact.id,
+            {
+              id: artifact.id,
+              type: 'document',
+              title: artifact.title,
+            },
+          ]),
+        );
+      const documents = documentsArrayToRecord(incomingDocuments);
       const currentArtifactsConfig = get().artifacts.config;
-      const nonDocumentArtifacts = Object.fromEntries(
-        Object.entries(currentArtifactsConfig.artifactsById).filter(
-          ([, artifact]) => artifact.type !== 'document',
-        ),
-      );
-      const artifactsById = {
+      const currentArtifactsById =
+        currentArtifactsConfig.artifactsById as Record<
+          string,
+          ArtifactMetadataType
+        >;
+      const nonDocumentArtifacts: Record<string, ArtifactMetadataType> =
+        Object.fromEntries(
+          Object.entries(currentArtifactsById).filter(
+            ([, artifact]) => artifact.type !== 'document',
+          ),
+        );
+      const artifactsById: Record<string, ArtifactMetadataType> = {
         ...nonDocumentArtifacts,
         ...documentArtifacts,
       };
-      const incomingDocumentOrder = (value?.artifactOrder ?? []).filter(
+      const currentArtifactOrder =
+        currentArtifactsConfig.artifactOrder as string[];
+      const incomingDocumentOrder = incomingArtifactOrder.filter(
         (id) => documentArtifacts[id],
       );
       const knownDocumentOrder = new Set(incomingDocumentOrder);
       const missingDocumentOrder = Object.keys(documentArtifacts).filter(
         (id) => !knownDocumentOrder.has(id),
       );
-      const nonDocumentOrder = currentArtifactsConfig.artifactOrder.filter(
+      const nonDocumentOrder = currentArtifactOrder.filter(
         (id) => artifactsById[id]?.type !== 'document',
       );
       const artifactOrder = [

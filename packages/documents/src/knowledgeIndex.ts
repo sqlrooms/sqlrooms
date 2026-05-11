@@ -1,4 +1,7 @@
-import type {ArtifactsSliceConfigType} from '@sqlrooms/artifacts';
+import type {
+  ArtifactMetadataType,
+  ArtifactsSliceConfigType,
+} from '@sqlrooms/artifacts';
 import YAML from 'yaml';
 import type {DocumentsSliceConfig} from './DocumentsSliceConfig';
 
@@ -43,7 +46,11 @@ export function buildKnowledgeIndex({
   artifacts,
 }: BuildKnowledgeIndexProps): KnowledgeIndex {
   const titleToArtifactIds = new Map<string, string[]>();
-  for (const artifact of Object.values(artifacts.artifactsById)) {
+  const artifactsById = artifacts.artifactsById as Record<
+    string,
+    ArtifactMetadataType
+  >;
+  for (const artifact of Object.values(artifactsById)) {
     if (artifact.type !== 'document') continue;
     const ids = titleToArtifactIds.get(artifact.title) ?? [];
     ids.push(artifact.id);
@@ -58,7 +65,7 @@ export function buildKnowledgeIndex({
   };
 
   for (const document of Object.values(documents.artifacts)) {
-    const artifact = artifacts.artifactsById[document.id];
+    const artifact = artifactsById[document.id];
     if (!artifact || artifact.type !== 'document') continue;
 
     const sourceTitle = artifact.title;

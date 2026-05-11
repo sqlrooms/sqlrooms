@@ -24,11 +24,6 @@ export {
   type MarkdownDocumentEditorMode,
   type MarkdownDocumentEditorProps,
 } from './MarkdownDocumentEditor';
-export {
-  MilkdownMarkdownDocumentEditor,
-  type MilkdownMarkdownDocumentEditorMode,
-  type MilkdownMarkdownDocumentEditorProps,
-} from './MilkdownMarkdownDocumentEditor';
 export {MarkdownDocument} from './MarkdownDocument';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {

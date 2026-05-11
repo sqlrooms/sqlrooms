@@ -7,7 +7,6 @@ import {
   DOCUMENT_AI_INSTRUCTIONS,
   DocumentsSliceConfig,
   MarkdownDocument,
-  MilkdownMarkdownDocumentEditor,
   buildKnowledgeIndex,
   createDocumentCommands,
   createDocumentsSlice,
@@ -47,19 +46,11 @@ const roomStore = createRoomStore(
 );
 ```
 
-`MarkdownDocument` currently uses the Milkdown prototype editor. It keeps
-Markdown as the controlled value, renders a rich Markdown-first editing surface,
-and keeps the existing CodeMirror source panel for direct Markdown edits.
+`MarkdownDocument` uses the Tiptap-backed `MarkdownDocumentEditor`. It keeps
+Markdown as the controlled value, renders a rich document editing surface, and
+keeps the existing CodeMirror source panel for direct Markdown edits.
 
-`MilkdownMarkdownDocumentEditor` exposes the prototype as a reusable controlled
-editor:
-
-```tsx
-<MilkdownMarkdownDocumentEditor value={markdown} onChange={setMarkdown} />
-```
-
-The previous Tiptap-backed `MarkdownDocumentEditor` is still exported for
-comparison:
+`MarkdownDocumentEditor` is also exported as a reusable controlled editor:
 
 ```tsx
 <MarkdownDocumentEditor value={markdown} onChange={setMarkdown} />

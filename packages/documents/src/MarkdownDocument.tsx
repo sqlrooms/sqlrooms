@@ -1,5 +1,5 @@
 import React, {useEffect} from 'react';
-import {MilkdownMarkdownDocumentEditor} from './MilkdownMarkdownDocumentEditor';
+import {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 import {useStoreWithDocuments} from './useStoreWithDocuments';
 
 export const MarkdownDocument: React.FC<{artifactId: string}> = ({
@@ -22,7 +22,7 @@ export const MarkdownDocument: React.FC<{artifactId: string}> = ({
   }, [artifactId, document, ensureDocument]);
 
   return (
-    <MilkdownMarkdownDocumentEditor
+    <MarkdownDocumentEditor
       value={document?.markdown ?? ''}
       onChange={(markdown) => setMarkdown(artifactId, markdown)}
     />

@@ -31,8 +31,6 @@
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
-    "@milkdown/kit": "^7.20.0",
-    "@milkdown/react": "^7.20.0",
     "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
