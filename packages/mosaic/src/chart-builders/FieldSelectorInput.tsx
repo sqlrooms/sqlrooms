@@ -55,13 +55,13 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
           >
             {selectedColumn ? (
               <span className="flex min-w-0 items-baseline gap-1">
-                <span className="truncate">{selectedColumn.name}</span>
-                <span className="text-muted-foreground hidden overflow-hidden text-[10px] whitespace-nowrap @[180px]:inline">
+                <span className="truncate text-xs">{selectedColumn.name}</span>
+                <span className="text-muted-foreground hidden overflow-hidden text-[8px] whitespace-nowrap @[180px]:inline">
                   {selectedColumn.type}
                 </span>
               </span>
             ) : (
-              <span className="text-muted-foreground truncate">
+              <span className="text-muted-foreground truncate text-xs">
                 {placeholder}
               </span>
             )}
@@ -92,8 +92,8 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
                         value === col.name ? 'opacity-100' : 'opacity-0',
                       )}
                     />
-                    <span className="truncate">{col.name}</span>
-                    <span className="text-muted-foreground ml-auto text-[10px]">
+                    <span className="truncate text-xs">{col.name}</span>
+                    <span className="text-muted-foreground ml-auto text-[8px]">
                       {col.type}
                     </span>
                   </CommandItem>

@@ -33,6 +33,9 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
       [chartTypes, value],
     );
 
+    const SelectedChartTypeIcon =
+      selectedChartType?.icon ?? ChartNoAxesCombined;
+
     return (
       <div className="space-y-2">
         <Label className="text-xs">Chart Type</Label>
@@ -40,10 +43,7 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
           <SelectTrigger className="h-8 text-xs">
             {selectedChartType ? (
               <div className="flex items-center gap-2">
-                {(() => {
-                  const Icon = selectedChartType.icon ?? ChartNoAxesCombined;
-                  return <Icon className="h-3.5 w-3.5" />;
-                })()}
+                <SelectedChartTypeIcon className="h-3.5 w-3.5" />
                 <span>{selectedChartType.label}</span>
               </div>
             ) : (
@@ -55,7 +55,7 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
               const Icon = chartType.icon ?? ChartNoAxesCombined;
               return (
                 <SelectItem key={chartType.id} value={chartType.id}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-xs">
                     <Icon className="h-3.5 w-3.5" />
                     <span>{chartType.label}</span>
                   </div>
