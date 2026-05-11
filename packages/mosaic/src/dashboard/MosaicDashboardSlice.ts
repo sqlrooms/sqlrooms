@@ -744,10 +744,7 @@ function shouldEvictPanelRuntimeForPatch(
   }
 
   if (panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE) {
-    return Boolean(
-      patch.config &&
-      Object.prototype.hasOwnProperty.call(patch.config, 'vgplot'),
-    );
+    return Boolean(patch.config);
   }
 
   return false;

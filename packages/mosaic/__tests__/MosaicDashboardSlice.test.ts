@@ -313,14 +313,24 @@ describe('MosaicDashboardSlice generic panels', () => {
 
     store.getState().mosaicDashboard.updatePanel(dashboardId, first.id, {
       title: 'Updated chart',
-      config: {vgplot: {plot: [{mark: 'line'}]}},
+      config: {
+        chartType: 'line',
+        settings: {
+          x: 'amount',
+          y: 'count',
+        },
+      },
     });
 
     dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
     expect(dashboard.panels[0]?.title).toBe('Updated chart');
-    expect(dashboard.panels[0]?.config.vgplot).toEqual({
-      plot: [{mark: 'line'}],
+    expect(dashboard.panels[0]?.config).toEqual({
+      chartType: 'line',
+      settings: {
+        x: 'amount',
+        y: 'count',
+      },
     });
 
     store.getState().mosaicDashboard.removePanel(dashboardId, first.id);
@@ -402,7 +412,13 @@ describe('MosaicDashboardSlice generic panels', () => {
       );
 
     store.getState().mosaicDashboard.updatePanel(dashboardId, panel.id, {
-      config: {vgplot: {plot: [{mark: 'line'}]}},
+      config: {
+        chartType: 'line',
+        settings: {
+          x: 'amount',
+          y: 'count',
+        },
+      },
     });
 
     expect(firstRuntime.destroy).toHaveBeenCalledTimes(1);
