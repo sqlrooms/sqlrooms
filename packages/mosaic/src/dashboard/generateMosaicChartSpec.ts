@@ -6,6 +6,9 @@ import {
 } from '../chart-types';
 
 /**
+ * @deprecated This function is deprecated with the renderer pattern migration.
+ * Chart types now generate specs internally within their renderer components.
+ *
  * Generates a Mosaic chart specification from chart settings.
  *
  * @param tableName - The source table name. Returns null if undefined.

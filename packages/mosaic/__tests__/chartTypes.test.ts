@@ -1,19 +1,12 @@
-import {boxPlotChartType, MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE} from '../src';
+import {boxPlotChartType} from '../src';
 
 describe('chart type definitions', () => {
-  it('creates box plots as dashboard panel outputs', () => {
-    const output = boxPlotChartType.createOutput?.('earthquakes', {
-      x: 'region',
-      y: 'magnitude',
-    });
-
-    expect(boxPlotChartType.outputKind).toBe('dashboard-panel');
+  it('box-plot uses renderer pattern', () => {
+    // After renderer pattern migration, box-plot no longer uses
+    // outputKind/createOutput/createSpec. It renders via BoxPlotPanelRenderer.
+    expect(boxPlotChartType.renderer).toBeDefined();
+    expect(boxPlotChartType.outputKind).toBeUndefined();
     expect(boxPlotChartType.createSpec).toBeUndefined();
-    expect(output).toEqual({
-      kind: 'dashboard-panel',
-      type: MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
-      source: {tableName: 'earthquakes'},
-      config: {x: 'region', y: 'magnitude'},
-    });
+    expect(boxPlotChartType.createOutput).toBeUndefined();
   });
 });

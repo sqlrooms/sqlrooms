@@ -5,7 +5,6 @@ import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
 import {BoxPlotPanelRenderer} from './BoxPlotPanelRenderer';
 
 const DESCRIPTION = 'Create a box plot';
-const MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE = 'boxplot';
 
 export const boxPlotChartType: ChartTypeDefinition<BoxPlotChartSettings> = {
   id: 'box-plot',
@@ -30,12 +29,4 @@ export const boxPlotChartType: ChartTypeDefinition<BoxPlotChartSettings> = {
   ],
   buildTitle: titleFromDescription(DESCRIPTION),
   renderer: BoxPlotPanelRenderer,
-  // Backward compatibility during transition (Task 6 will remove these)
-  outputKind: 'dashboard-panel',
-  createOutput: (tableName, {x, y}) => ({
-    kind: 'dashboard-panel',
-    type: MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
-    source: {tableName},
-    config: {x, y},
-  }),
 };

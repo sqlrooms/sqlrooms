@@ -23,7 +23,6 @@ import {
 } from './ChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/duckdb';
 import {type VgPlotChartConfig, type VgPlotChartType} from '../../chart-types';
-import {generateMosaicChartSpec} from '../generateMosaicChartSpec';
 import {getChartTypeDefinition} from '../../chart-types/registry';
 import {Button} from '@sqlrooms/ui';
 import {XIcon} from 'lucide-react';
@@ -120,30 +119,15 @@ const ChartSettingsFields: FC = () => {
     (newSettings: Record<string, unknown>) => {
       if (!chartTypeDef) return;
 
-      // Check if all required fields are filled
-      const allRequiredFieldsFilled = chartTypeDef.fields
-        .filter((field) => field.required !== false)
-        .every((field) => {
-          const value = newSettings[field.key];
-          return value !== undefined && value !== null && value !== '';
-        });
-
-      // Generate specs only for chart types that render as vgplot panels.
-      // Custom dashboard panels, such as box plots, are handled by the
-      // dashboard renderer once all required fields are present.
-      const vgplot = allRequiredFieldsFilled
-        ? chartTypeDef.createSpec
-          ? generateMosaicChartSpec(tableName, config.chartType, newSettings)
-          : null
-        : null;
-
+      // With the renderer pattern, chart types generate specs internally
+      // within their renderer components. We just store the settings.
       onChange({
         ...config,
         settings: newSettings,
-        vgplot,
+        vgplot: null, // Deprecated field, kept for backward compatibility
       });
     },
-    [chartTypeDef, config, onChange, tableName],
+    [chartTypeDef, config, onChange],
   );
 
   if (!chartTypeDef) {
