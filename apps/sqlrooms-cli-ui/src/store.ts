@@ -2,11 +2,14 @@ import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
+  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
+  type AiRunContext,
+  type AiRunContextItem,
 } from '@sqlrooms/ai';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
@@ -270,6 +273,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
         )?.id;
+      const getRunContextDashboardArtifactId = () => {
+        const currentSession = get().ai.getCurrentSession();
+        const contextItems = getAiRunContextItems(currentSession?.runContext);
+        return contextItems.find((item) => {
+          const artifact = get().artifacts.config.artifactsById[item.id];
+          return artifact?.type === 'dashboard';
+        })?.id;
+      };
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -367,6 +378,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               : undefined;
           })(),
         getCurrentDashboardArtifactId: () => {
+          const contextDashboardArtifactId = getRunContextDashboardArtifactId();
+          if (contextDashboardArtifactId) {
+            return contextDashboardArtifactId;
+          }
           const currentArtifactId = get().artifacts.config.currentArtifactId;
           const currentArtifact = currentArtifactId
             ? get().artifacts.config.artifactsById[currentArtifactId]
@@ -544,6 +559,45 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
+            getRunContext: () => {
+              const state = store.getState();
+              const {artifactsById} = state.artifacts.config;
+              const items = Array.from(new Set(state.aiContextItemIds))
+                .map((artifactId): AiRunContextItem | undefined => {
+                  const artifact = artifactsById[artifactId];
+                  if (!artifact) return undefined;
+                  return {
+                    kind: 'artifact',
+                    id: artifact.id,
+                    type: artifact.type,
+                    title: artifact.title,
+                  };
+                })
+                .filter(Boolean) as AiRunContextItem[];
+              if (items.length === 0) return undefined;
+              return {
+                items,
+                capturedAt: Date.now(),
+              } satisfies AiRunContext;
+            },
+            formatRunContextInstructions: ({runContext}) => {
+              const artifactItems = getAiRunContextItems(runContext).filter(
+                (item) => item.kind === 'artifact',
+              );
+              if (artifactItems.length === 0) return '';
+              const [mainItem, ...additionalItems] = artifactItems;
+              if (!mainItem) return '';
+              const artifactType = mainItem.type ?? 'artifact';
+              return [
+                'Current artifact context:',
+                `- Main/default target: ${artifactType} "${mainItem.title}" (id: ${mainItem.id}). Tools use this artifact as the implicit target when the artifact type is supported.`,
+                ...additionalItems.map(
+                  (item) =>
+                    `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
+                ),
+                '- Additional context items are reference-only by default; tools will not implicitly target them.',
+              ].join('\n');
+            },
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
@@ -557,6 +611,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
+        aiContextMode: 'auto',
+        aiContextItemIds: [],
+        setAiContextItemIds: (artifactIds, mode) => {
+          set({
+            aiContextItemIds: Array.from(new Set(artifactIds)),
+            ...(mode ? {aiContextMode: mode} : {}),
+          });
+        },
+        replaceAiContextWithArtifact: (artifactId) => {
+          set({aiContextItemIds: [artifactId]});
+        },
       };
     },
   ),
