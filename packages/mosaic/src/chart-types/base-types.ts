@@ -8,7 +8,6 @@ import type {FC} from 'react';
 import type * as z from 'zod';
 import type {Tool} from 'ai';
 import {VgPlotChartType} from './chart-config';
-import type {ChartToolDeps} from './tool-types';
 
 // Re-export VgPlotChartType for convenience
 export type {VgPlotChartType};
@@ -37,6 +36,34 @@ export interface ChartBuilderField {
   description?: string;
   /** Whether this field accepts multiple values (array) */
   multiple?: boolean;
+}
+
+/**
+ * Dependencies injected into chart tool creation functions.
+ * Provides the resources and operations needed to create charts.
+ */
+export interface ChartToolDeps {
+  resolveResources: (params: {
+    artifactId?: string;
+    tableName?: string;
+    createArtifactIfMissing?: boolean;
+  }) => {
+    artifactId: string;
+    tableName: string;
+    columns: ChartBuilderColumn[];
+  };
+  createChart: (params: {
+    artifactId: string;
+    tableName: string;
+    title: string;
+    config: any;
+  }) => {
+    panelId: string;
+    artifactId: string;
+    tableName: string;
+    title: string;
+    config: any;
+  };
 }
 
 /**

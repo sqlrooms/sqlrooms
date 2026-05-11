@@ -2,7 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {EcdfChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
-import {type ChartToolDeps} from '../tool-types';
+import {type ChartToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 

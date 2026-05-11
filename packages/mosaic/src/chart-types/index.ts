@@ -71,7 +71,7 @@ import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
 import {bubbleChartChartType} from './bubble-chart/definition';
 import {customSpecChartType} from './custom-spec/definition';
-import {ChartToolDeps} from './tool-types';
+import type {ChartToolDeps} from './base-types';
 
 // Legacy compatibility exports
 export const mosaicChartTypes = {
