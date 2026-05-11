@@ -4,6 +4,8 @@
  */
 
 import type {Spec} from '@uwdata/mosaic-spec';
+import type {Coordinator} from '@uwdata/mosaic-core';
+import type React from 'react';
 
 /**
  * Supported chart type identifiers
@@ -64,6 +66,16 @@ export type ChartBuilderOutput =
   | ChartBuilderDashboardPanelOutput;
 
 /**
+ * Props passed to chart renderer components.
+ */
+export interface ChartRendererProps<TSettings = any> {
+  tableName: string;
+  settings: TSettings;
+  coordinator: Coordinator;
+  // Add other common props as needed
+}
+
+/**
  * Shared chart-type definition used by both the chart-builder UI and
  * assistant-driven chart creation.
  */
@@ -76,12 +88,10 @@ export interface ChartTypeDefinition<TSettings = any> {
   description: string;
   /** Field selectors the user must fill in */
   fields: ChartBuilderField[];
-  /** Generate a Mosaic spec from table name and selected field values */
-  createSpec?: (tableName: string, values: TSettings) => Spec;
-  /** Generate a chart-builder output from table name and selected field values */
-  createOutput?: (tableName: string, values: TSettings) => ChartBuilderOutput;
-  /** Output surface required by this chart type. Defaults to `vgplot`. */
-  outputKind?: ChartBuilderOutput['kind'];
+
+  /** Required renderer component for this chart type */
+  renderer: React.ComponentType<ChartRendererProps<TSettings>>;
+
   /** Generate a chart title from selected field values */
   buildTitle?: (fieldValues: Record<string, string>) => string;
   /** Optional availability override for a given table schema */
