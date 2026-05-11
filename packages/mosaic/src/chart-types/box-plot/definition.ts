@@ -2,7 +2,7 @@ import type {ChartTypeDefinition} from '../base-types';
 import type {BoxPlotChartSettings} from './schema';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
-import {BoxPlotStubRenderer} from './BoxPlotStubRenderer';
+import {BoxPlotPanelRenderer} from './BoxPlotPanelRenderer';
 
 const DESCRIPTION = 'Create a box plot';
 const MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE = 'boxplot';
@@ -29,8 +29,8 @@ export const boxPlotChartType: ChartTypeDefinition<BoxPlotChartSettings> = {
     },
   ],
   buildTitle: titleFromDescription(DESCRIPTION),
-  renderer: BoxPlotStubRenderer,
-  // Backward compatibility during transition (Task 5 will remove these)
+  renderer: BoxPlotPanelRenderer,
+  // Backward compatibility during transition (Task 6 will remove these)
   outputKind: 'dashboard-panel',
   createOutput: (tableName, {x, y}) => ({
     kind: 'dashboard-panel',
