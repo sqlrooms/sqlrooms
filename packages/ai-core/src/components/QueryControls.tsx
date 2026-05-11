@@ -1,3 +1,4 @@
+import {DragEndEvent, useDndMonitor, useDroppable} from '@dnd-kit/core';
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, LoaderCircleIcon, OctagonXIcon} from 'lucide-react';
 import {
@@ -11,10 +12,7 @@ import {
   ReactNode,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import {
-  CHAT_CONTEXT_SELECTOR_SLOT,
-  ContextSelector,
-} from './ContextSelector';
+import {CHAT_CONTEXT_SELECTOR_SLOT, ContextSelector} from './ContextSelector';
 import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
 
@@ -23,6 +21,11 @@ type QueryControlsProps = PropsWithChildren<{
   placeholder?: string;
   onRun?: () => void;
   onCancel?: () => void;
+  contextDropTarget?: {
+    id: string;
+    canAccept: (data: unknown) => boolean;
+    onDrop: (data: unknown) => void;
+  };
 }>;
 
 /**
@@ -84,6 +87,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   children,
   onRun,
   onCancel,
+  contextDropTarget,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -115,6 +119,50 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
+  const {
+    active,
+    isOver: isContextDropOver,
+    setNodeRef: setContextDropTargetRef,
+  } = useDroppable({
+    id: contextDropTarget?.id ?? 'chat-composer-context-drop-target-disabled',
+    disabled: !contextDropTarget,
+    data: {roomDndPriority: 100},
+  });
+  const activeDropData = active?.data.current;
+  const canAcceptContextDrop = Boolean(
+    contextDropTarget &&
+    activeDropData &&
+    contextDropTarget.canAccept(activeDropData),
+  );
+  const isAcceptedContextDropOver = isContextDropOver && canAcceptContextDrop;
+
+  const isPointerWithinContextDropTarget = useCallback(
+    (event: DragEndEvent) =>
+      Boolean(
+        contextDropTarget &&
+        event.collisions?.some(
+          (collision) =>
+            collision.id === contextDropTarget.id &&
+            collision.data?.pointerWithin === true,
+        ),
+      ),
+    [contextDropTarget],
+  );
+
+  useDndMonitor({
+    onDragEnd: (event) => {
+      if (!contextDropTarget || event.over?.id !== contextDropTarget.id) {
+        return;
+      }
+      if (!isPointerWithinContextDropTarget(event)) {
+        return;
+      }
+      const data = event.active.data.current;
+      if (contextDropTarget.canAccept(data)) {
+        contextDropTarget.onDrop(data);
+      }
+    },
+  });
 
   useEffect(() => {
     if (showApiKeyInput) return;
@@ -198,7 +246,14 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           </span>
         </div>
       )}
-      <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
+      <div
+        ref={setContextDropTargetRef}
+        className={cn(
+          'bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border transition-all',
+          isAcceptedContextDropOver &&
+            'border-primary/70 bg-primary/10 ring-primary/35 shadow-primary/10 shadow-sm ring-2',
+        )}
+      >
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           {contextSelectors.length > 0 ? (
             <div className="flex w-full flex-wrap items-center gap-1 px-2 pt-2">

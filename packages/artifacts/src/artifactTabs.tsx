@@ -522,6 +522,7 @@ function ArtifactTabsRoot({
   overlay,
   closeable = true,
   preventCloseLastTab = false,
+  getTabDragData,
   ...props
 }: ArtifactTabsProps) {
   const artifactTabs = useArtifactTabs({types, tabsId, panelKey});
@@ -552,6 +553,14 @@ function ArtifactTabsRoot({
                   artifactTabs,
                 )
             : undefined
+        }
+        getTabDragData={(tab) =>
+          getTabDragData?.(tab) ?? {
+            kind: 'artifact',
+            id: (tab as ArtifactTabDescriptor).artifact.id,
+            type: (tab as ArtifactTabDescriptor).artifact.type,
+            title: (tab as ArtifactTabDescriptor).artifact.title,
+          }
         }
       >
         {children ?? (
