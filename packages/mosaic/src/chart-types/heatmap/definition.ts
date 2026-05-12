@@ -1,14 +1,14 @@
-import type {ChartTypeDefinition} from '../base-types';
+import type {SpecChartTypeDefinition} from '../base-types';
 import {HeatmapChartConfig, HeatmapChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
-import {HeatmapRenderer} from './HeatmapRenderer';
 import {HeatmapSettingsComponent} from './HeatmapSettings';
 import {createHeatmapAiTool} from './tool';
 import {Grid3X3} from 'lucide-react';
+import {createHeatmapSpec} from './spec';
 
 const DESCRIPTION = 'Create a 2D heatmap of two fields';
 
-export const heatmapChartType: ChartTypeDefinition<HeatmapChartConfig> = {
+export const heatmapChartType: SpecChartTypeDefinition<HeatmapChartConfig> = {
   id: 'heatmap',
   label: 'Heatmap',
   description: DESCRIPTION,
@@ -18,6 +18,6 @@ export const heatmapChartType: ChartTypeDefinition<HeatmapChartConfig> = {
   schema: HeatmapChartSettings,
   settingsComponent: HeatmapSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  renderer: HeatmapRenderer,
   createTool: createHeatmapAiTool,
+  createSpec: createHeatmapSpec,
 };
