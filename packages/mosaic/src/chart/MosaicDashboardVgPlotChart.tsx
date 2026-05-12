@@ -14,7 +14,11 @@ export const MosaicDashboardVgPlotChart: FC<
   MosaicDashboardVgPlotChartProps
 > = ({spec, retention, params}) => {
   if (spec.error) {
-    return <MosaicDashboardVgPlotError error={spec.error} />;
+    return (
+      <div className="flex h-full flex-col items-center justify-center">
+        <MosaicDashboardVgPlotError error={spec.error} />
+      </div>
+    );
   }
 
   return <VgPlotChart spec={spec.spec} params={params} retention={retention} />;

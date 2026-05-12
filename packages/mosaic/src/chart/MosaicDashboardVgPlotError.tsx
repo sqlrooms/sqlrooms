@@ -12,8 +12,10 @@ export const MosaicDashboardVgPlotError: FC<
   if (error instanceof SpecGenerationError) {
     return (
       <>
-        <div>Configure chart to display visualization</div>
-        <div className="text-xs">{error.message}</div>
+        <div className="text-center font-medium">
+          Configure chart to display visualization
+        </div>
+        <div className="text-center text-xs">{error.message}</div>
       </>
     );
   }
@@ -21,8 +23,8 @@ export const MosaicDashboardVgPlotError: FC<
   // Generic error fallback
   return (
     <>
-      <div className="font-medium">Unable to display chart</div>
-      <div className="text-xs">{error.message}</div>
+      <div className="text-center font-medium">Unable to display chart</div>
+      <div className="text-center text-xs">{error.message}</div>
     </>
   );
 };
