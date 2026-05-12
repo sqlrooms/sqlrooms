@@ -20,7 +20,7 @@ import {
   TabsTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {Settings} from 'lucide-react';
+import {Settings, XIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
@@ -31,72 +31,87 @@ export const AssistantPanel: React.FC = () => {
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
+  const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const settingsPanelOpen = useDisclosure();
   const contextDropTarget = useAssistantContextDropTarget();
 
   return (
     <div className="flex h-full flex-col p-2">
-      <RoomPanelHeader />
+      <RoomPanelHeader>
+        <div className="ml-auto flex items-center gap-1">
+          {currentSessionId && (
+            <Dialog
+              open={settingsPanelOpen.isOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  settingsPanelOpen.onOpen();
+                } else {
+                  settingsPanelOpen.onClose();
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6"
+                  title="AI Assistant Settings"
+                  aria-label="AI Assistant Settings"
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="flex h-[80vh] w-[90vw] max-w-3xl flex-col overflow-hidden">
+                <DialogHeader>
+                  <DialogTitle>AI Assistant Settings</DialogTitle>
+                </DialogHeader>
+                <Tabs
+                  defaultValue="providers"
+                  className="flex min-h-0 flex-1 flex-col"
+                >
+                  <TabsList className="grid w-full shrink-0 grid-cols-3">
+                    <TabsTrigger value="providers">Providers</TabsTrigger>
+                    <TabsTrigger value="models">Models</TabsTrigger>
+                    <TabsTrigger value="parameters">Parameters</TabsTrigger>
+                  </TabsList>
+                  <TabsContent
+                    value="providers"
+                    className="flex-1 overflow-y-auto"
+                  >
+                    <AiSettingsPanel.ProvidersSettings />
+                  </TabsContent>
+                  <TabsContent
+                    value="models"
+                    className="flex-1 overflow-y-auto"
+                  >
+                    <AiSettingsPanel.ModelsSettings />
+                  </TabsContent>
+                  <TabsContent
+                    value="parameters"
+                    className="flex-1 overflow-y-auto"
+                  >
+                    <AiSettingsPanel.ModelParametersSettings />
+                  </TabsContent>
+                </Tabs>
+              </DialogContent>
+            </Dialog>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6"
+            title="Close panel"
+            aria-label="Close panel"
+            onClick={() => toggleCollapsed('assistant-sidebar')}
+          >
+            <XIcon className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </RoomPanelHeader>
       <Chat.Root>
         <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
           <div className="mb-4 flex items-center justify-between gap-2">
             <Chat.Sessions className="w-full" />
-            {currentSessionId && (
-              <Dialog
-                open={settingsPanelOpen.isOpen}
-                onOpenChange={(open) => {
-                  if (open) {
-                    settingsPanelOpen.onOpen();
-                  } else {
-                    settingsPanelOpen.onClose();
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="hover:bg-accent flex items-center justify-center transition-colors"
-                    title="Configuration"
-                    size="sm"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="flex h-[80vh] w-[90vw] max-w-3xl flex-col overflow-hidden">
-                  <DialogHeader>
-                    <DialogTitle>AI Assistant Settings</DialogTitle>
-                  </DialogHeader>
-                  <Tabs
-                    defaultValue="providers"
-                    className="flex min-h-0 flex-1 flex-col"
-                  >
-                    <TabsList className="grid w-full shrink-0 grid-cols-3">
-                      <TabsTrigger value="providers">Providers</TabsTrigger>
-                      <TabsTrigger value="models">Models</TabsTrigger>
-                      <TabsTrigger value="parameters">Parameters</TabsTrigger>
-                    </TabsList>
-                    <TabsContent
-                      value="providers"
-                      className="flex-1 overflow-y-auto"
-                    >
-                      <AiSettingsPanel.ProvidersSettings />
-                    </TabsContent>
-                    <TabsContent
-                      value="models"
-                      className="flex-1 overflow-y-auto"
-                    >
-                      <AiSettingsPanel.ModelsSettings />
-                    </TabsContent>
-                    <TabsContent
-                      value="parameters"
-                      className="flex-1 overflow-y-auto"
-                    >
-                      <AiSettingsPanel.ModelParametersSettings />
-                    </TabsContent>
-                  </Tabs>
-                </DialogContent>
-              </Dialog>
-            )}
           </div>
           <div className="print-container grow overflow-auto">
             {!currentSessionId ? (
