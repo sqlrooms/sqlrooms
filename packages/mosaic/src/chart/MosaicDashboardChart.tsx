@@ -1,5 +1,5 @@
 import {type FC, useCallback} from 'react';
-import {ChartSettingsPanel} from './chart-settings';
+import {ChartSettingsContent} from './chart-settings/ChartSettingsContent';
 import {MosaicDashboardPanelLayout} from '../dashboard/MosaicDashboardPanelLayout';
 import {
   type ChartPanelConfig,
@@ -45,7 +45,7 @@ export const MosaicDashboardChart: FC<MosaicDashboardChartProps> = ({
   const spec = useGenerateSpec(tableName, panel.config.settings, chartTypeDef);
 
   const settingsContent = (
-    <ChartSettingsPanel
+    <ChartSettingsContent
       dashboardId={dashboardId}
       panel={panel}
       spec={spec.spec}

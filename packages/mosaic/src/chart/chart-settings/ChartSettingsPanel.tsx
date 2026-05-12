@@ -1,8 +1,7 @@
-import {FC, useCallback, useState} from 'react';
+import {FC, useCallback} from 'react';
 import {ChartSettings} from './ChartSettings';
 import {type ChartConfig} from '../../chart-types/chart-config';
 import {useTableColumns} from './useTableColumns';
-import {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
 import {
   useStoreWithMosaicDashboard,
   ChartPanelConfig,
@@ -15,6 +14,7 @@ interface ChartSettingsPanelProps {
   spec?: Spec;
   panel: ChartPanelConfig;
   onClose?: () => void;
+  onViewSpec?: () => void;
 }
 
 export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
@@ -23,6 +23,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   tableName,
   spec,
   onClose,
+  onViewSpec,
 }) => {
   const config = panel.config;
 
@@ -31,15 +32,6 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   );
 
   const columns = useTableColumns(tableName);
-  const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
-
-  const handleViewSpec = useCallback(() => {
-    setViewMode('spec');
-  }, []);
-
-  const handleBackToSettings = useCallback(() => {
-    setViewMode('settings');
-  }, []);
 
   const handleSettingsChange = useCallback(
     (config: ChartConfig) => {
@@ -49,10 +41,6 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
     },
     [dashboardId, panel.id, updatePanel],
   );
-
-  if (spec && viewMode === 'spec') {
-    return <ChartSpecViewerPanel spec={spec} onBack={handleBackToSettings} />;
-  }
 
   return (
     <ChartSettings.Root
@@ -64,7 +52,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
       <ChartSettings.Header>
         <div className="flex items-center">Chart settings</div>
         <div className="flex items-center gap-1">
-          {spec && <ChartSettings.ViewSpecButton onClick={handleViewSpec} />}
+          {spec && <ChartSettings.ViewSpecButton onClick={onViewSpec} />}
           {onClose && <ChartSettings.CloseButton onClick={onClose} />}
         </div>
       </ChartSettings.Header>

@@ -52,7 +52,7 @@ const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
   );
 };
 
-const ChartSettingsViewSpecButton: FC<{onClick: () => void}> = ({onClick}) => {
+const ChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({onClick}) => {
   return (
     <Button
       variant="ghost"

@@ -11,7 +11,6 @@ export type UseGenerateSpecResult =
     }
   | {
       spec?: undefined;
-
       error: ChartSpecError;
     };
 
