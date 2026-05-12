@@ -5,10 +5,13 @@ import {apiSidebarConfig} from './gen-api-sidebar';
 const PACKAGE_CATEGORIES = {
   'Core Packages': [
     'ai',
-    'core',
+    'ai-core',
+    'artifacts',
+    'db',
     'room-shell',
     'room-store',
     'duckdb',
+    'duckdb-core',
     'ui',
     'layout',
   ],
@@ -16,20 +19,31 @@ const PACKAGE_CATEGORIES = {
     'ai-rag',
     'ai-settings',
     'canvas',
+    'cells',
+    'codemirror',
+    'color-scales',
     'cosmos',
+    'crdt',
     'data-table',
+    'db-settings',
+    'deck',
     'discuss',
+    'documents',
     'dropzone',
     'kepler',
     'monaco-editor',
     'mosaic',
     'motherduck',
+    'notebook',
+    'pivot',
     'recharts',
+    's3-browser',
     'schema-tree',
     'sql-editor',
     'vega',
+    'webcontainer',
   ],
-  'Utility Packages': ['utils'],
+  'Utility Packages': ['duckdb-node', 'utils'],
 };
 
 // https://vitepress.dev/reference/site-config
@@ -39,23 +53,35 @@ export default defineConfig({
       // @ts-ignore
       llmstxt({
         domain: 'https://sqlrooms.org',
-        // Keep package-level API docs in llms.txt, but omit symbol-level API pages
-        // (functions/types/variables/etc.) to reduce repetitive long link lists.
         ignoreFiles: [
-          // Keep llms.txt focused on package-level docs.
-          // Drop symbol pages and deeply nested API internals.
-          'api/**/classes/**',
-          'api/**/functions/**',
-          'api/**/interfaces/**',
-          'api/**/type-aliases/**',
-          'api/**/variables/**',
-          'api/**/enumerations/**',
-          'api/**/namespaces/**',
+          // Omit generated media and non-reference pages from all LLM outputs.
           'api/**/_media/**',
-          // Also omit non-package top-level pages from llms.txt TOC buckets.
           'join-slack.md',
           'packages.md',
         ],
+        ignoreFilesPerOutput: {
+          // Keep summary bundles focused on package-level docs, while still
+          // generating per-symbol .md pages so package references can link to
+          // useful markdown targets.
+          llmsTxt: [
+            'api/**/classes/**',
+            'api/**/functions/**',
+            'api/**/interfaces/**',
+            'api/**/type-aliases/**',
+            'api/**/variables/**',
+            'api/**/enumerations/**',
+            'api/**/namespaces/**',
+          ],
+          llmsFullTxt: [
+            'api/**/classes/**',
+            'api/**/functions/**',
+            'api/**/interfaces/**',
+            'api/**/type-aliases/**',
+            'api/**/variables/**',
+            'api/**/enumerations/**',
+            'api/**/namespaces/**',
+          ],
+        },
         customLLMsTxtTemplate: `# {title}
 
 {description}
@@ -212,7 +238,6 @@ Canonical package combos:
           ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {
             return {
               text: category,
-              link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
               items: apiSidebarConfig.filter((item) =>
                 packages.includes(item.text),
               ),
