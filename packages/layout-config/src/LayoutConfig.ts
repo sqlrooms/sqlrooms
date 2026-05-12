@@ -121,7 +121,9 @@ export type LayoutDockNode = z.infer<typeof BaseLayoutDockNode> & {
 
 const LayoutGridCompaction = z.enum(['vertical', 'horizontal']).nullable();
 
-const LayoutGridResizeHandles = z.array(z.enum(['e', 's', 'se'])).optional();
+const LayoutGridResizeHandles = z
+  .array(z.enum(['n', 'e', 's', 'w', 'se', 'sw', 'nw', 'ne']))
+  .optional();
 
 const LayoutGridItem = z
   .object({

@@ -23,7 +23,6 @@ export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
 export {
-  createMosaicDashboardBoxPlotPanelConfig,
   createMosaicDashboardPanelConfig,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardVgPlotPanelConfig,
@@ -34,7 +33,6 @@ export {
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
   isVgPlotPanelConfig,
-  MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
   MOSAIC_DASHBOARD_PANEL,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
@@ -46,7 +44,6 @@ export {
   resolveMosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
-export {mosaicDashboardBoxPlotPanelRenderer} from './dashboard/MosaicDashboardBoxPlotPanelRenderer';
 export type {
   MosaicDashboardAddPanelAction,
   MosaicDashboardAddPanelActionContext,
@@ -59,7 +56,6 @@ export type {
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
-  BoxPlotPanelConfig,
   VgPlotPanelConfig,
 } from './dashboard/MosaicDashboardSlice';
 export {
@@ -153,21 +149,7 @@ export type {
   UseMosaicProfilerReturn,
 } from './profiler/types';
 
-// Chart builder types and utilities
-export {
-  boxPlotBuilder,
-  bubbleChartBuilder,
-  countPlotBuilder,
-  createChartBuilderTemplate,
-  createChartBuilderTemplates,
-  createDefaultChartBuilders,
-  customSpecBuilder,
-  ecdfBuilder,
-  heatmapBuilder,
-  histogramBuilder,
-  lineChartBuilder,
-  mosaicChartBuilders,
-} from './chart-builders/builders';
+// Chart builder components
 export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
 export {ChartBuilderActions} from './chart-builders/ChartBuilderActions';
 export type {ChartBuilderContentProps} from './chart-builders/ChartBuilderContent';
@@ -199,50 +181,61 @@ export {
   countPlotChartType,
   createDefaultChartTypes,
   customSpecChartType,
-  ecdfChartType,
   heatmapChartType,
   histogramChartType,
   lineChartChartType,
   mosaicChartTypes,
+  VgPlotChartConfig,
+  HistogramChartSettings,
+  LineChartSettings,
+  CountPlotChartSettings,
+  BubbleChartSettings,
+  HeatmapChartSettings,
+  BoxPlotChartSettings,
+  // Tool helpers, parameters, and AI tool creators
+  BaseChartToolParameters,
+  validateColumnExists,
+  HistogramToolParameters,
+  LineChartToolParameters,
+  CountPlotToolParameters,
+  HeatmapToolParameters,
+  BubbleChartToolParameters,
+  BoxPlotToolParameters,
+  createHistogramAiTool,
+  createLineChartAiTool,
+  createCountPlotAiTool,
+  createHeatmapAiTool,
+  createBubbleChartAiTool,
+  createBoxPlotAiTool,
+  createChartTools,
 } from './chart-types';
 export type {
-  VgPlotChartConfig,
   VgPlotChartSettings,
   VgPlotChartType,
+  ChartToolDeps,
+  ResolvedChartResources,
+  CreateChartParams,
+  CreateChartResult,
+  HistogramToolParams,
+  LineChartToolParams,
+  CountPlotToolParams,
+  HeatmapToolParams,
+  BubbleChartToolParams,
+  BoxPlotToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,
   canCreateChartFromType,
-  columnMatchesFieldTypes,
-  getAvailableChartTypes,
-  getCompatibleColumns,
-  isChartTypeAvailable,
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from './chart-builders/chartTypeUtils';
-export {
-  describeChartSpecs,
-  describeChartTypes,
-} from './chart-builders/describeChartSpecs';
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
-export {toChartSpec, toChartTypeDefinition} from './chart-builders/types';
 export type {
   ChartBuilderColumn,
   ChartBuilderDashboardPanelOutput,
   ChartBuilderField,
-  ChartBuilderOutput,
-  ChartBuilderPanelSource,
-  ChartBuilderTemplate,
-  ChartBuilderVgPlotOutput,
   ChartSpec,
   ChartTypeDefinition,
-} from './chart-builders/types';
-export {
-  BoxPlotClient,
-  buildBoxPlotQuery,
-  type BoxPlotOutlierRow,
-  type BoxPlotState,
-  type BoxPlotSummaryRow,
-} from './boxplot/BoxPlotClient';
+} from './chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';

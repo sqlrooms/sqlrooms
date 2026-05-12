@@ -11,7 +11,7 @@ import {
 } from '../../boxplot/BoxPlotClient';
 import {type PlotSize, ResponsivePlot} from '../../ResponsivePlot';
 import type {ChartRendererProps} from '../base-types';
-import type {BoxPlotChartSettings} from './schema';
+import type {BoxPlotChartConfig} from './schema';
 
 const BOX_FILL = 'var(--color-chart-1)';
 const BOX_STROKE = 'var(--color-chart-1)';
@@ -227,12 +227,12 @@ function useBoxPlotClient(args: {
  */
 export function BoxPlotPanelRenderer({
   tableName,
-  settings,
+  config,
   coordinator,
-}: ChartRendererProps<BoxPlotChartSettings>) {
-  const configX = settings.x;
-  const configY = settings.y;
-  const config = useMemo(
+}: ChartRendererProps<BoxPlotChartConfig>) {
+  const configX = config.settings.x;
+  const configY = config.settings.y;
+  const boxPlotConfig = useMemo(
     () =>
       typeof configX === 'string' && typeof configY === 'string'
         ? {x: configX, y: configY}
@@ -247,7 +247,7 @@ export function BoxPlotPanelRenderer({
   const plotRef = useRef<HTMLDivElement>(null);
 
   const {clientRef, state} = useBoxPlotClient({
-    config,
+    config: boxPlotConfig,
     coordinator,
     tableName,
   });
@@ -275,7 +275,7 @@ export function BoxPlotPanelRenderer({
 
   useEffect(() => {
     const container = plotRef.current;
-    if (!container || !size || !config) {
+    if (!container || !size || !boxPlotConfig) {
       return;
     }
     if (!summaries.length) {
@@ -284,14 +284,14 @@ export function BoxPlotPanelRenderer({
     }
 
     const plot = createBoxPlotElement({
-      config,
+      config: boxPlotConfig,
       domain: yDomain,
       outliers,
       size,
       summaries,
     });
     container.replaceChildren(plot);
-  }, [config, outliers, size, summaries, yDomain]);
+  }, [boxPlotConfig, outliers, size, summaries, yDomain]);
 
   const getLocalY = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();

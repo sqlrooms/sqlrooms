@@ -58,12 +58,18 @@ export function CustomFilterPanelHeaderFactory(): React.ComponentType<FilterPane
       (state) => state.kepler.dispatchAction,
     );
     const mapId = useStoreWithKepler(
-      // TODO: pass the mapId via the props, currentMapId is not necessarily the map where filter is originated from
-      (state) => state.kepler.config.currentMapId,
+      (state) =>
+        Object.entries(state.kepler.map).find(([, mapState]) =>
+          Boolean(
+            mapState?.visState?.filters?.some(
+              (f: Filter) => f.id === filter.id,
+            ),
+          ),
+        )?.[0],
     );
     const filterIdx = useStoreWithKepler((state) =>
       mapId
-        ? state.kepler.map[mapId]?.visState.filters.findIndex(
+        ? state.kepler.map[mapId]?.visState?.filters?.findIndex(
             (f: Filter) => f.id === filter.id,
           )
         : undefined,

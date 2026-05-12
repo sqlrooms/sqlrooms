@@ -31,6 +31,8 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       panelKey="artifact"
       closeable={true}
       preventCloseLastTab={false}
+      dndMode="shared"
+      dndScopeId="cli-artifact-tabs"
       renderTabMenu={(tab) => (
         <>
           <ArtifactTabs.MenuItem disabled>
@@ -74,10 +76,7 @@ function CliArtifactAddMenu() {
         <>
           <DropdownMenuItem
             onClick={() => {
-              const artifactId = createDashboardArtifact(
-                'Dashboard',
-                'grid',
-              );
+              const artifactId = createDashboardArtifact('Dashboard', 'grid');
               artifactTabs.selectArtifact(artifactId);
             }}
           >
@@ -85,10 +84,7 @@ function CliArtifactAddMenu() {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
-              const artifactId = createDashboardArtifact(
-                'Dashboard',
-                'dock',
-              );
+              const artifactId = createDashboardArtifact('Dashboard', 'dock');
               artifactTabs.selectArtifact(artifactId);
             }}
           >
@@ -97,15 +93,15 @@ function CliArtifactAddMenu() {
           {CLI_ARTIFACT_TYPES.filter(
             (artifactType) => artifactType !== 'dashboard',
           ).map((artifactType) => {
-          const type = ARTIFACT_TYPES[artifactType];
-          return (
-            <DropdownMenuItem
-              key={artifactType}
-              onClick={() => artifactTabs.createArtifact(artifactType)}
-            >
-              <type.icon /> {`New ${type.label}`}
-            </DropdownMenuItem>
-          );
+            const type = ARTIFACT_TYPES[artifactType];
+            return (
+              <DropdownMenuItem
+                key={artifactType}
+                onClick={() => artifactTabs.createArtifact(artifactType)}
+              >
+                <type.icon /> {`New ${type.label}`}
+              </DropdownMenuItem>
+            );
           })}
         </>
       )}

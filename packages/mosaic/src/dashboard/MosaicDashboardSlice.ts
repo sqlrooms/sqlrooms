@@ -1,7 +1,11 @@
 import {createId} from '@paralleldrive/cuid2';
 import {DbSliceState} from '@sqlrooms/db';
 import {type DataTable, type DuckDbSliceState} from '@sqlrooms/duckdb';
-import {LayoutSliceState} from '@sqlrooms/layout';
+import {
+  DEFAULT_GRID_COLS,
+  getGridColsForBreakpoint,
+  type LayoutSliceState,
+} from '@sqlrooms/layout';
 import {
   type LayoutGridItem,
   type LayoutGridNode,
@@ -22,16 +26,13 @@ import {
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
-import type {
-  ChartBuilderTemplate,
-  ChartTypeDefinition,
-} from '../chart-builders/types';
+import type {ChartTypeDefinition} from '../chart-types/base-types';
 import {type MosaicSliceState} from '../MosaicSlice';
 import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import {VgPlotChartConfig} from '../chart-types';
+import {VgPlotChartConfig} from '../chart-types/chart-config';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -42,7 +43,6 @@ import {VgPlotChartConfig} from '../chart-types';
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
-export const MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE = 'boxplot';
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
@@ -82,19 +82,6 @@ export const ProfilerPanel = z.object({
 });
 export type ProfilerPanel = z.infer<typeof ProfilerPanel>;
 
-export const BoxPlotPanelConfig = z.object({
-  id: z.string(),
-  type: z.literal(MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE),
-  title: z.string().default('Panel'),
-  source: MosaicDashboardPanelSource.optional(),
-  config: z.object({
-    settingsOpen: z.boolean().optional(),
-    x: z.string(),
-    y: z.string(),
-  }),
-});
-export type BoxPlotPanelConfig = z.infer<typeof BoxPlotPanelConfig>;
-
 // Legacy panel for backward compatibility
 export const LegacyPanelConfig = z.object({
   id: z.string(),
@@ -107,11 +94,7 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [
-    VgPlotPanelConfig,
-    ProfilerPanel,
-    BoxPlotPanelConfig,
-  ])
+  .discriminatedUnion('type', [VgPlotPanelConfig, ProfilerPanel])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
@@ -131,8 +114,6 @@ export type VgPlotPanelRendererProps =
   MosaicDashboardPanelRendererProps<VgPlotPanelConfig>;
 export type ProfilerPanelRendererProps =
   MosaicDashboardPanelRendererProps<ProfilerPanel>;
-export type BoxPlotPanelRendererProps =
-  MosaicDashboardPanelRendererProps<BoxPlotPanelConfig>;
 
 export type MosaicDashboardPanelRenderer<
   TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
@@ -153,7 +134,6 @@ export type AnyPanelRenderer = {
 export type PanelTypeMap = {
   [MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE]: VgPlotPanelConfig;
   [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: ProfilerPanel;
-  [MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE]: BoxPlotPanelConfig;
 };
 
 // Panel renderers record - use type-erased renderers for runtime compatibility
@@ -196,32 +176,13 @@ export function createMosaicDashboardVgPlotPanelConfig(
   config: VgPlotChartConfig,
   source?: MosaicDashboardPanelSource,
 ): VgPlotPanelConfig {
-  return VgPlotPanelConfig.parse({
+  return {
     id: createId(),
     type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
     title,
     source,
     config,
-  });
-}
-
-export function createMosaicDashboardBoxPlotPanelConfig(options: {
-  title?: string;
-  source?: MosaicDashboardPanelSource;
-  x: string;
-  y: string;
-}): BoxPlotPanelConfig {
-  return BoxPlotPanelConfig.parse({
-    id: createId(),
-    type: MOSAIC_DASHBOARD_BOXPLOT_PANEL_TYPE,
-    title: options.title ?? 'Box Plot',
-    source: options.source,
-    config: {
-      settingsOpen: false,
-      x: options.x,
-      y: options.y,
-    },
-  });
+  };
 }
 
 export function createMosaicDashboardProfilerPanelConfig(
@@ -272,7 +233,6 @@ export type MosaicDashboardSliceState = {
        */
       retainedChartsByPanelId: Record<string, RetainedVgPlotChart>;
     };
-    chartBuilders?: ChartBuilderTemplate[];
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
     createDashboard: (
@@ -326,6 +286,8 @@ export type MosaicDashboardStoreState = BaseRoomStoreState &
   MosaicSliceState &
   MosaicDashboardSliceState;
 
+type DashboardPanelTypesByLayoutId = Record<string, string | undefined>;
+
 // ---------------------------------------------------------------------------
 // Layout tree helpers (operate on the new LayoutNode types)
 // ---------------------------------------------------------------------------
@@ -343,6 +305,18 @@ function createDashboardPanelNode(
       meta: {dashboardId, panelId},
     },
   };
+}
+
+function getDashboardPanelTypesByLayoutId(
+  dashboardId: string,
+  panels: MosaicDashboardPanelConfig[],
+): DashboardPanelTypesByLayoutId {
+  return Object.fromEntries(
+    panels.map((panel) => [
+      getMosaicDashboardPanelId(dashboardId, panel.id),
+      panel.type,
+    ]),
+  );
 }
 
 function appendPanelToLayout(
@@ -370,11 +344,12 @@ function createDashboardGridLayout(
     type: 'grid',
     id: getMosaicDashboardGridId(dashboardId),
     children,
-    rowHeight: 220,
+    rowHeight: 150,
     margin: [12, 12],
     containerPadding: [0, 0],
     compactType: 'vertical',
-    resizeHandles: ['e', 's', 'se'],
+    preventCollision: false,
+    resizeHandles: ['e', 's', 'w', 'se', 'sw'],
     layouts,
   };
 }
@@ -383,24 +358,17 @@ function getLayoutChildId(node: LayoutNode): string {
   return isLayoutNodeKey(node) ? node : node.id;
 }
 
-function getDashboardGridCols(
-  cols: LayoutGridNode['cols'],
-  breakpoint: string,
-): number {
-  if (typeof cols === 'number') {
-    return cols;
-  }
-
-  return cols?.[breakpoint] ?? cols?.lg ?? 12;
-}
-
 function createDashboardGridItem(
   panelId: string,
   layout: LayoutGridItem[],
   cols = 12,
+  panelType?: string,
 ): LayoutGridItem {
   const effectiveCols = Math.max(1, cols);
-  const w = Math.min(3, effectiveCols);
+  const w =
+    panelType === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE
+      ? effectiveCols
+      : Math.max(1, Math.ceil(effectiveCols / 2));
   const h = 2;
   const bottom = layout.reduce(
     (max, item) => Math.max(max, item.y + item.h),
@@ -441,15 +409,20 @@ function createDashboardGridLayoutsForChildren(
   children: LayoutNode[],
   sourceLayouts?: LayoutGridNode['layouts'],
   cols?: LayoutGridNode['cols'],
+  panelTypesByLayoutId: Record<string, string | undefined> = {},
 ): LayoutGridNode['layouts'] {
   const childIds = new Set(children.map((child) => getLayoutChildId(child)));
-  const sourceEntries: Array<[string, LayoutGridItem[]]> =
-    sourceLayouts && Object.keys(sourceLayouts).length > 0
-      ? Object.entries(sourceLayouts)
-      : [['lg', []]];
+  const sourceEntries = new Map<string, LayoutGridItem[]>(
+    Object.keys(DEFAULT_GRID_COLS).map((breakpoint) => [breakpoint, []]),
+  );
+  for (const [breakpoint, breakpointLayout] of Object.entries(
+    sourceLayouts ?? {},
+  )) {
+    sourceEntries.set(breakpoint, breakpointLayout);
+  }
 
   return Object.fromEntries(
-    sourceEntries.map(([breakpoint, breakpointLayout]) => {
+    [...sourceEntries.entries()].map(([breakpoint, breakpointLayout]) => {
       const nextLayout = breakpointLayout.filter((item) =>
         childIds.has(item.i),
       );
@@ -461,7 +434,8 @@ function createDashboardGridLayoutsForChildren(
           const item = createDashboardGridItem(
             childId,
             nextLayout,
-            getDashboardGridCols(cols, breakpoint),
+            getGridColsForBreakpoint(cols, breakpoint),
+            panelTypesByLayoutId[childId],
           );
           nextLayout.push(item);
           layoutItemIds.add(childId);
@@ -512,6 +486,7 @@ function normalizeDashboardGridLayout(
   layout: LayoutNode | null,
   dashboardId: string,
   expectedPanelIds: Set<string>,
+  panelTypesByLayoutId: DashboardPanelTypesByLayoutId = {},
 ): LayoutGridNode {
   const collectedPanelIds = collectPanelIds(layout);
   const existingExpectedPanelIds = new Set(
@@ -522,6 +497,7 @@ function normalizeDashboardGridLayout(
     children,
     isLayoutGridNode(layout) ? layout.layouts : undefined,
     isLayoutGridNode(layout) ? layout.cols : undefined,
+    panelTypesByLayoutId,
   );
 
   if (isLayoutGridNode(layout)) {
@@ -543,7 +519,14 @@ function appendPanelToGridLayout(
   layout: LayoutNode | null,
   dashboardId: string,
   panelNode: LayoutPanelNode,
+  panelType?: string,
+  panelTypesByLayoutId: DashboardPanelTypesByLayoutId = {},
 ): LayoutGridNode {
+  const nextPanelTypesByLayoutId = {
+    ...panelTypesByLayoutId,
+    [panelNode.id]: panelType ?? panelTypesByLayoutId[panelNode.id],
+  };
+
   if (!isLayoutGridNode(layout)) {
     const dashboardPanelPrefix = `dashboard:${dashboardId}:panel:`;
     const expectedPanelIds = new Set(
@@ -556,8 +539,15 @@ function appendPanelToGridLayout(
       layout,
       dashboardId,
       expectedPanelIds,
+      nextPanelTypesByLayoutId,
     );
-    return appendPanelToGridLayout(normalizedLayout, dashboardId, panelNode);
+    return appendPanelToGridLayout(
+      normalizedLayout,
+      dashboardId,
+      panelNode,
+      panelType,
+      nextPanelTypesByLayoutId,
+    );
   }
 
   const hasChild = layout.children.some((child) => {
@@ -565,9 +555,15 @@ function appendPanelToGridLayout(
     return child.id === panelNode.id;
   });
   const children = hasChild ? layout.children : [...layout.children, panelNode];
-  const sourceLayouts = layout.layouts ?? {lg: []};
   const layouts = Object.fromEntries(
-    Object.entries(sourceLayouts).map(([breakpoint, breakpointLayout]) => {
+    Object.entries(
+      createDashboardGridLayoutsForChildren(
+        children,
+        layout.layouts,
+        layout.cols,
+        nextPanelTypesByLayoutId,
+      ) ?? {},
+    ).map(([breakpoint, breakpointLayout]) => {
       if (breakpointLayout.some((item) => item.i === panelNode.id)) {
         return [breakpoint, breakpointLayout];
       }
@@ -578,7 +574,8 @@ function appendPanelToGridLayout(
           createDashboardGridItem(
             panelNode.id,
             breakpointLayout,
-            getDashboardGridCols(layout.cols, breakpoint),
+            getGridColsForBreakpoint(layout.cols, breakpoint),
+            nextPanelTypesByLayoutId[panelNode.id],
           ),
         ],
       ];
@@ -671,6 +668,7 @@ function ensureLayoutContainsDashboardPanels(
   dashboardId: string,
   panelIds: string[],
   layoutType: MosaicDashboardLayoutType = 'dock',
+  panelTypesByLayoutId: DashboardPanelTypesByLayoutId = {},
 ): LayoutNode | null {
   let nextLayout = layout;
 
@@ -684,6 +682,7 @@ function ensureLayoutContainsDashboardPanels(
       nextLayout,
       dashboardId,
       expectedPanelIds,
+      panelTypesByLayoutId,
     );
   }
 
@@ -694,7 +693,13 @@ function ensureLayoutContainsDashboardPanels(
       const panelNode = createDashboardPanelNode(dashboardId, panelId);
       nextLayout =
         layoutType === 'grid'
-          ? appendPanelToGridLayout(nextLayout, dashboardId, panelNode)
+          ? appendPanelToGridLayout(
+              nextLayout,
+              dashboardId,
+              panelNode,
+              panelTypesByLayoutId[layoutPanelId],
+              panelTypesByLayoutId,
+            )
           : appendPanelToLayout(nextLayout, panelNode);
       existing.add(layoutPanelId);
     }
@@ -753,10 +758,7 @@ function shouldEvictPanelRuntimeForPatch(
   }
 
   if (panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE) {
-    return Boolean(
-      patch.config &&
-      Object.prototype.hasOwnProperty.call(patch.config, 'vgplot'),
-    );
+    return Boolean(patch.config);
   }
 
   return false;
@@ -788,7 +790,6 @@ type CreateMosaicDashboardSliceProps = {
   panelRenderers?: Record<string, MosaicDashboardPanelRenderer>;
   addPanelActions?: MosaicDashboardAddPanelAction[];
   chartTypes?: ChartTypeDefinition[];
-  chartBuilders?: ChartBuilderTemplate[];
 };
 export type {CreateMosaicDashboardSliceProps};
 
@@ -802,7 +803,6 @@ export function createMosaicDashboardSlice(
         runtime: {
           retainedChartsByPanelId: {},
         },
-        chartBuilders: props.chartBuilders,
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
         panelRenderers: props.panelRenderers ?? {},
@@ -903,12 +903,18 @@ export function createMosaicDashboardSlice(
 
               dashboard.panels.push(panel);
               const panelNode = createDashboardPanelNode(dashboardId, panel.id);
+              const panelTypesByLayoutId = getDashboardPanelTypesByLayoutId(
+                dashboardId,
+                dashboard.panels,
+              );
               dashboard.layout =
                 dashboard.layoutType === 'grid'
                   ? appendPanelToGridLayout(
                       dashboard.layout,
                       dashboardId,
                       panelNode,
+                      panel.type,
+                      panelTypesByLayoutId,
                     )
                   : appendPanelToLayout(dashboard.layout, panelNode);
               dashboard.updatedAt = Date.now();
@@ -1084,11 +1090,16 @@ export function createMosaicDashboardSlice(
               if (!dashboard) return;
 
               const panelIds = dashboard.panels.map((panel) => panel.id);
+              const panelTypesByLayoutId = getDashboardPanelTypesByLayoutId(
+                dashboardId,
+                dashboard.panels,
+              );
               dashboard.layout = ensureLayoutContainsDashboardPanels(
                 layout,
                 dashboardId,
                 panelIds,
                 dashboard.layoutType,
+                panelTypesByLayoutId,
               );
               dashboard.updatedAt = Date.now();
             }),

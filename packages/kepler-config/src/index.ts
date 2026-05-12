@@ -32,7 +32,6 @@ const LegacyKeplerSliceConfig = z.object({
 export const KeplerSliceConfig = z.preprocess(
   (val) => val,
   z.object({
-    currentMapId: z.string().optional(),
     maps: z.array(KeplerMapSchema).default([]),
   }),
 );
@@ -61,7 +60,6 @@ export function migrateKeplerTabsToArtifacts(
   return {
     keplerConfig: KeplerSliceConfig.parse({
       maps: legacyConfig.maps,
-      currentMapId: currentArtifactId,
     }),
     artifactsConfig: {
       artifactsById: Object.fromEntries(

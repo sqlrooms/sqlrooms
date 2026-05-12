@@ -8,16 +8,14 @@ import {
   DialogTrigger,
 } from '@sqlrooms/ui';
 import {Plus} from 'lucide-react';
-import React from 'react';
+import React, {PropsWithChildren} from 'react';
 import type {VgPlotChartConfig} from '../chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
   ChartBuilderColumn,
-  ChartBuilderOutput,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 export type ChartBuilderTriggerProps = ButtonProps;
 
@@ -40,14 +38,13 @@ export const ChartBuilderTrigger = React.forwardRef<
 });
 ChartBuilderTrigger.displayName = 'ChartBuilderTrigger';
 
-export interface ChartBuilderDialogContentProps {
+export type ChartBuilderDialogContentProps = PropsWithChildren<{
   /** Override dialog title (default "Add Chart") */
   title?: string;
   /** Override dialog description */
   description?: string;
   className?: string;
-  children?: React.ReactNode;
-}
+}>;
 
 /**
  * The dialog content pane that renders the chart-builder steps.
@@ -83,12 +80,8 @@ export interface ChartBuilderDialogProps {
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (title: string, config: VgPlotChartConfig) => void;
-  /** Callback when a chart type creates a non-spec chart-builder output */
-  onCreateChartOutput?: (output: ChartBuilderOutput, title: string) => void;
-  /** Preferred shared chart-type customization surface */
+  /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
 }
 
 /**
@@ -108,9 +101,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   tableName,
   columns,
   onCreateChart,
-  onCreateChartOutput,
   chartTypes,
-  builders,
 }) => (
   <ChartBuilderRoot
     open={open}
@@ -118,9 +109,7 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     tableName={tableName}
     columns={columns}
     onCreateChart={onCreateChart}
-    onCreateChartOutput={onCreateChartOutput}
     chartTypes={chartTypes}
-    builders={builders}
   >
     <ChartBuilderDialogContent />
   </ChartBuilderRoot>

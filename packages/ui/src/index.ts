@@ -203,6 +203,8 @@ export {RunButton, type RunButtonProps} from './components/run-button';
 export {
   TabStrip,
   type TabDescriptor,
+  type TabStripDndMode,
+  type TabStripDragData,
   type TabStripProps,
 } from './components/tab-strip';
 

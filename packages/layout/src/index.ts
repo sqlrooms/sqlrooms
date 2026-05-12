@@ -27,6 +27,12 @@ export type {ParentDirection} from './layout-base-types';
 export {movePanel} from './docking/dock-layout';
 export type {DockAxis, DockDirection} from './docking/docking-types-base';
 export {
+  DEFAULT_GRID_BREAKPOINTS,
+  DEFAULT_GRID_COLS,
+  getGridColsForBreakpoint,
+  getResponsiveGridCols,
+} from './grid-layout-utils';
+export {
   createLayoutId,
   findNearestDockAncestor,
   findNodeById,
@@ -40,6 +46,7 @@ export {
 // New LayoutRenderer component
 export {LayoutRenderer} from './LayoutRenderer';
 export type {LayoutRendererProps} from './LayoutRenderer';
+export {RoomDndProvider} from './dnd/RoomDndProvider';
 
 // New primary exports from @sqlrooms/layout-config
 export {
@@ -97,6 +104,7 @@ export type {
 
 // Node renderers
 export {LeafLayout} from './node-renderers/leaf-node-renderer/LeafLayout';
+export {useExpandGridPanel} from './node-renderers/leaf-node-renderer/useExpandGridPanel';
 export {useLeafLayoutPanelDraggable} from './node-renderers/leaf-node-renderer/LeafLayoutPanelDraggableContext';
 export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';

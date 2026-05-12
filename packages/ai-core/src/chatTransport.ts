@@ -16,13 +16,10 @@ import {
   UIMessage,
 } from 'ai';
 import {produce} from 'immer';
-import {
-  AI_DEFAULT_TEMPERATURE,
-  ANALYSIS_PENDING_ID,
-  TOOL_CALL_CANCELLED,
-} from './constants';
+import {ANALYSIS_PENDING_ID, TOOL_CALL_CANCELLED} from './constants';
 import type {
   AiSliceStateForTransport,
+  AiToolExecutionContext,
   ToolTimingEntry,
   AssistantMessageMetadata,
   MessageTokenUsage,
@@ -133,6 +130,49 @@ function getSessionById(
     .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
 }
 
+function withRunContextTools(
+  tools: ToolSet,
+  args: AiToolExecutionContext & {
+    state: AiSliceStateForTransport;
+  },
+): ToolSet {
+  return Object.fromEntries(
+    Object.entries(tools).map(([name, tool]) => {
+      if (!tool || typeof tool.execute !== 'function') {
+        return [name, tool];
+      }
+
+      const originalExecute = tool.execute;
+      return [
+        name,
+        {
+          ...tool,
+          execute: async (
+            input: unknown,
+            options?: Record<string, unknown>,
+          ) => {
+            const toolCallId =
+              typeof options?.toolCallId === 'string'
+                ? options.toolCallId
+                : undefined;
+            if (toolCallId && args.sessionId) {
+              args.state.ai.setToolCallSession(toolCallId, args.sessionId);
+            }
+            return originalExecute(
+              input as never,
+              {
+                ...options,
+                sessionId: args.sessionId,
+                aiRunContext: args.aiRunContext,
+              } as never,
+            );
+          },
+        },
+      ];
+    }),
+  ) as ToolSet;
+}
+
 /**
  * The AI SDK stream metadata is not reliably surfaced back onto `UIMessage.metadata`
  * for our local transport setup, so persist token usage per session and stamp it
@@ -221,6 +261,7 @@ export function createLocalChatTransportFactory({
       const sessionFromBody = getSessionById(store, sessionId);
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
+      const aiRunContext = sessionFromBody?.runContext;
 
       // Fetch API key and base URL dynamically to pick up settings changes
       const apiKey = state.ai.getApiKeyFromSettings();
@@ -248,7 +289,11 @@ export function createLocalChatTransportFactory({
       // full tool loop server-side. UI-approval tools (no execute) are paused
       // by the agent and resumed via addToolOutput from the client.
       // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
-      const tools = (state.ai.tools || {}) as ToolSet;
+      const tools = withRunContextTools((state.ai.tools || {}) as ToolSet, {
+        state,
+        sessionId,
+        aiRunContext,
+      });
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
@@ -273,7 +318,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        temperature: AI_DEFAULT_TEMPERATURE,
         onFinish: ({totalUsage, usage}) => {
           const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
           rememberSessionTokenUsage(sessionId, finalUsage);
@@ -377,7 +421,6 @@ export function createRemoteChatTransportFactory(params: {
         model,
         instructions: getInstructions(),
         maxSteps: state.ai.getMaxStepsFromSettings(),
-        temperature: AI_DEFAULT_TEMPERATURE,
       };
 
       // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)
