@@ -35,6 +35,12 @@ export const AssistantPanel: React.FC = () => {
   const settingsPanelOpen = useDisclosure();
   const contextDropTarget = useAssistantContextDropTarget();
 
+  useEffect(() => {
+    if (!currentSessionId && settingsPanelOpen.isOpen) {
+      settingsPanelOpen.onClose();
+    }
+  }, [currentSessionId, settingsPanelOpen.isOpen, settingsPanelOpen.onClose]);
+
   return (
     <div className="flex h-full flex-col p-2">
       <RoomPanelHeader>

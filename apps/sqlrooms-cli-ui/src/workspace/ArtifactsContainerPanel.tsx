@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  toast,
 } from '@sqlrooms/ui';
 import {
   BarChart3Icon,
@@ -80,10 +81,21 @@ function CliArtifactAddMenu() {
 
   const invokeCreateArtifactCommand = useCallback(
     async (commandId: string, input?: Record<string, unknown>) => {
-      const result = await invokeCommand(commandId, input, {
-        surface: 'api',
-        actor: 'artifact-tabstrip',
-      });
+      let result: Awaited<ReturnType<typeof invokeCommand>>;
+      try {
+        result = await invokeCommand(commandId, input, {
+          surface: 'api',
+          actor: 'artifact-tabstrip',
+        });
+      } catch (error) {
+        toast.error('Failed to create artifact', {
+          description:
+            error instanceof Error
+              ? error.message
+              : 'An unknown error occurred',
+        });
+        return;
+      }
       const artifactId =
         result.success &&
         result.data &&
