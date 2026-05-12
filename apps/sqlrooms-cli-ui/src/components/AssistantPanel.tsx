@@ -106,7 +106,10 @@ export const AssistantPanel: React.FC = () => {
                 </p>
               </div>
             ) : isDataAvailable ? (
-              <Chat.Messages key={currentSessionId} />
+              <Chat.Messages
+                key={currentSessionId}
+                hoistedRenderers={['chart']}
+              />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center">
                 <SkeletonPane className="p-4" />

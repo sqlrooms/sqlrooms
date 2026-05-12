@@ -29,6 +29,7 @@ describe('DocumentsSlice', () => {
     expect(store.getState().documents.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Hello',
+      assets: {},
       updatedAt: 100,
     });
 
@@ -36,6 +37,7 @@ describe('DocumentsSlice', () => {
     expect(store.getState().documents.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Updated',
+      assets: {},
       updatedAt: 101,
     });
 
@@ -52,6 +54,7 @@ describe('DocumentsSlice', () => {
     expect(store.getState().documents.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Original',
+      assets: {},
       updatedAt: 100,
     });
   });
@@ -64,8 +67,71 @@ describe('DocumentsSlice', () => {
     expect(store.getState().documents.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Created',
+      assets: {},
       updatedAt: 100,
     });
+  });
+
+  it('upserts, updates, reads, and removes document assets', () => {
+    const store = createTestStore();
+
+    store.getState().documents.ensureDocument('doc-1', '# Chart');
+    store.getState().documents.upsertAsset('doc-1', {
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg />',
+      alt: 'Chart',
+    });
+
+    expect(store.getState().documents.getAsset('doc-1', 'chart-1')).toEqual({
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg />',
+      alt: 'Chart',
+      createdAt: 101,
+      updatedAt: 101,
+    });
+    expect(store.getState().documents.getDocument('doc-1')?.updatedAt).toBe(
+      101,
+    );
+
+    store.getState().documents.upsertAsset('doc-1', {
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg><text>Updated</text></svg>',
+      alt: 'Updated chart',
+    });
+
+    expect(store.getState().documents.getAsset('doc-1', 'chart-1')).toEqual({
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg><text>Updated</text></svg>',
+      alt: 'Updated chart',
+      createdAt: 101,
+      updatedAt: 102,
+    });
+
+    store.getState().documents.removeAsset('doc-1', 'chart-1');
+    expect(
+      store.getState().documents.getAsset('doc-1', 'chart-1'),
+    ).toBeUndefined();
+    expect(store.getState().documents.getDocument('doc-1')?.updatedAt).toBe(
+      103,
+    );
+  });
+
+  it('defaults assets for legacy document records', () => {
+    const result = DocumentsSliceConfig.parse({
+      artifacts: {
+        'doc-1': {id: 'doc-1', markdown: '# Legacy', updatedAt: 1},
+      },
+    });
+
+    expect(result.artifacts['doc-1']?.assets).toEqual({});
   });
 
   it('rejects document artifact records keyed by a different ID', () => {

@@ -7,17 +7,45 @@ import type {CrdtMirror} from '@sqlrooms/crdt';
 import {schema} from 'loro-mirror';
 import {
   DocumentsSliceConfig,
+  type DocumentAsset,
   type DocumentsSliceConfig as DocumentsSliceConfigType,
 } from './DocumentsSliceConfig';
 import type {DocumentsSliceState} from './DocumentsSlice';
 
 type DocumentCrdtState = DocumentsSliceState & ArtifactsSliceState;
+type IncomingDocumentAsset = DocumentAsset & {
+  filename?: string | null;
+  alt?: string | null;
+  title?: string | null;
+  provenance?: unknown;
+};
+type IncomingDocument = Omit<
+  DocumentsSliceConfigType['artifacts'][string],
+  'assets'
+> & {
+  assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
+};
 
 export const documentsMirrorSchema = schema.LoroMap({
   documents: schema.LoroList(
     schema.LoroMap({
       id: schema.String(),
       markdown: schema.String(),
+      assets: schema.LoroList(
+        schema.LoroMap({
+          id: schema.String(),
+          mediaType: schema.String(),
+          encoding: schema.String(),
+          data: schema.String(),
+          filename: schema.Any(),
+          alt: schema.Any(),
+          title: schema.Any(),
+          provenance: schema.Any(),
+          createdAt: schema.Number(),
+          updatedAt: schema.Number(),
+        }),
+        (asset) => asset.id,
+      ),
       updatedAt: schema.Number(),
     }),
     (document) => document.id,
@@ -73,6 +101,18 @@ export function createDocumentsCrdtMirror<
           (document) => ({
             id: document.id,
             markdown: document.markdown,
+            assets: Object.values(document.assets).map((asset) => ({
+              id: asset.id,
+              mediaType: asset.mediaType,
+              encoding: asset.encoding,
+              data: asset.data,
+              filename: asset.filename ?? null,
+              alt: asset.alt ?? null,
+              title: asset.title ?? null,
+              provenance: asset.provenance ?? null,
+              createdAt: asset.createdAt,
+              updatedAt: asset.updatedAt,
+            })),
             updatedAt: document.updatedAt,
           }),
         ),
@@ -90,7 +130,7 @@ export function createDocumentsCrdtMirror<
         title: string;
       }>;
       const incomingDocuments = (value?.documents ??
-        []) as DocumentsSliceConfigType['artifacts'][string][];
+        []) as unknown as IncomingDocument[];
       const incomingArtifactOrder = (value?.artifactOrder ?? []) as string[];
       const documentArtifacts: Record<string, ArtifactMetadataType> =
         Object.fromEntries(
@@ -167,16 +207,37 @@ export function createDocumentsCrdtMirror<
   };
 }
 
-function documentsArrayToRecord(
-  documents: DocumentsSliceConfigType['artifacts'][string][],
-) {
+function documentsArrayToRecord(documents: IncomingDocument[]) {
   return Object.fromEntries(
     documents.map((document) => [
       document.id,
       {
         id: document.id,
         markdown: document.markdown,
+        assets: assetsArrayToRecord(document.assets),
         updatedAt: document.updatedAt,
+      },
+    ]),
+  );
+}
+
+function assetsArrayToRecord(assets: IncomingDocument['assets']) {
+  if (!assets) return {};
+  const assetArray = Array.isArray(assets) ? assets : Object.values(assets);
+  return Object.fromEntries(
+    assetArray.map((asset) => [
+      asset.id,
+      {
+        id: asset.id,
+        mediaType: asset.mediaType,
+        encoding: asset.encoding,
+        data: asset.data,
+        ...(asset.filename ? {filename: asset.filename} : {}),
+        ...(asset.alt ? {alt: asset.alt} : {}),
+        ...(asset.title ? {title: asset.title} : {}),
+        ...(asset.provenance ? {provenance: asset.provenance} : {}),
+        createdAt: asset.createdAt,
+        updatedAt: asset.updatedAt,
       },
     ]),
   );

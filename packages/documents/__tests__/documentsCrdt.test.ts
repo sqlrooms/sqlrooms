@@ -69,8 +69,15 @@ describe('documents CRDT mirrors', () => {
       title: 'Notes',
     });
     storeA.getState().documents.setMarkdown(artifactId, '# Hello');
+    storeA.getState().documents.upsertAsset(artifactId, {
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg />',
+      alt: 'Chart',
+    });
     await waitForCondition(() =>
-      JSON.stringify(docA.toJSON()).includes('# Hello'),
+      JSON.stringify(docA.toJSON()).includes('chart-1'),
     );
 
     const snapshot = docA.export({mode: 'snapshot'});
@@ -104,6 +111,17 @@ describe('documents CRDT mirrors', () => {
     expect(storeB.getState().documents.getDocument('doc-1')).toMatchObject({
       id: 'doc-1',
       markdown: '# Hello',
+      assets: {
+        'chart-1': {
+          id: 'chart-1',
+          mediaType: 'image/svg+xml',
+          encoding: 'utf8',
+          data: '<svg />',
+          alt: 'Chart',
+          createdAt: 123,
+          updatedAt: 123,
+        },
+      },
       updatedAt: 123,
     });
   });
