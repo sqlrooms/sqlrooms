@@ -6,6 +6,7 @@ import {
   SliceFunctions,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
@@ -64,13 +65,21 @@ function getArtifactTypeDefinition(
 
 function getArtifactTitle(
   artifactTypes: ArtifactTypeDefinitions<any>,
+  artifactsById: Record<string, ArtifactMetadataType>,
   type: string,
+  id: string,
   title?: string,
 ) {
   const typeDefinition = getArtifactTypeDefinition(artifactTypes, type);
-  return (
-    title ?? typeDefinition?.defaultTitle ?? typeDefinition?.label ?? 'Untitled'
-  );
+  const baseTitle =
+    title ??
+    typeDefinition?.defaultTitle ??
+    typeDefinition?.label ??
+    'Untitled';
+  const existingTitles = Object.values(artifactsById)
+    .filter((artifact) => artifact.id !== id)
+    .map((artifact) => artifact.title);
+  return generateUniqueName(baseTitle, existingTitles, ' ');
 }
 
 function assertKnownArtifactType(
@@ -107,7 +116,13 @@ export function createArtifactsSlice<
         const next = ArtifactMetadata.parse({
           id,
           type: artifact.type,
-          title: getArtifactTitle(artifactTypes, artifact.type, artifact.title),
+          title: getArtifactTitle(
+            artifactTypes,
+            get().artifacts.config.artifactsById,
+            artifact.type,
+            id,
+            artifact.title,
+          ),
         });
         set((state) =>
           produce(state, (draft) => {
@@ -132,7 +147,12 @@ export function createArtifactsSlice<
         const next = ArtifactMetadata.parse({
           id,
           type: artifact.type,
-          title: getArtifactTitle(artifactTypes, artifact.type, artifact.title),
+          title:
+            artifact.title ??
+            getArtifactTypeDefinition(artifactTypes, artifact.type)
+              ?.defaultTitle ??
+            getArtifactTypeDefinition(artifactTypes, artifact.type)?.label ??
+            'Untitled',
         });
         set((state) =>
           produce(state, (draft) => {

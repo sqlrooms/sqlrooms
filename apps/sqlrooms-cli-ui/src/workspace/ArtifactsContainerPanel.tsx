@@ -8,9 +8,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@sqlrooms/ui';
-import {BarChart3Icon, PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
+import {
+  BarChart3Icon,
+  PencilIcon,
+  PlusIcon,
+  SparklesIcon,
+  TrashIcon,
+} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
@@ -66,46 +75,60 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
 };
 
 function CliArtifactAddMenu() {
+  const artifactTabs = ArtifactTabs.useActions();
   const createDashboardArtifact = useRoomStore(
     (state) => state.dashboard.createDashboardArtifact,
   );
 
   return (
-    <ArtifactTabs.AddMenu>
-      {(artifactTabs) => (
-        <>
-          <DropdownMenuItem
-            onClick={() => {
-              const artifactId = createDashboardArtifact('Dashboard', 'grid');
-              artifactTabs.selectArtifact(artifactId);
-            }}
-          >
-            <BarChart3Icon /> Dashboard: Scrollable grid
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              const artifactId = createDashboardArtifact('Dashboard', 'dock');
-              artifactTabs.selectArtifact(artifactId);
-            }}
-          >
-            <BarChart3Icon /> Dashboard: Docked panels
-          </DropdownMenuItem>
-          {CLI_ARTIFACT_TYPES.filter(
-            (artifactType) => artifactType !== 'dashboard',
-          ).map((artifactType) => {
-            const type = ARTIFACT_TYPES[artifactType];
-            return (
-              <DropdownMenuItem
-                key={artifactType}
-                onClick={() => artifactTabs.createArtifact(artifactType)}
-              >
-                <type.icon /> {`New ${type.label}`}
-              </DropdownMenuItem>
-            );
-          })}
-        </>
-      )}
-    </ArtifactTabs.AddMenu>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-full shrink-0"
+          aria-label="Add new artifact"
+        >
+          <PlusIcon className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem
+          onClick={() => {
+            const artifactId = createDashboardArtifact('Dashboard', 'grid');
+            artifactTabs.selectArtifact(artifactId);
+          }}
+        >
+          <BarChart3Icon /> Dashboard
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            const artifactId = createDashboardArtifact('Dashboard', 'dock');
+            artifactTabs.selectArtifact(artifactId);
+          }}
+        >
+          <BarChart3Icon /> Dashboard (dock)
+        </DropdownMenuItem>
+        {CLI_ARTIFACT_TYPES.filter(
+          (artifactType) => artifactType !== 'dashboard',
+        ).map((artifactType) => {
+          const type = ARTIFACT_TYPES[artifactType];
+          return (
+            <DropdownMenuItem
+              key={artifactType}
+              onClick={() => {
+                const artifactId = artifactTabs.createArtifact(artifactType);
+                if (artifactId) {
+                  artifactTabs.selectArtifact(artifactId);
+                }
+              }}
+            >
+              <type.icon /> {`New ${type.label}`}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
