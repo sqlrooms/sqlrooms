@@ -41,7 +41,7 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   aspectRatio = 16 / 9,
   children,
 }) => {
-  const {state, arrowTable, options} = useVegaEditorContext();
+  const {state, arrowTable, options, onBrushSelection} = useVegaEditorContext();
 
   // Use the applied SQL for chart rendering (updates when Apply is clicked)
   const sqlQuery = state.appliedSql;
@@ -97,6 +97,7 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
         arrowTable={chartData}
         aspectRatio={aspectRatio}
         options={options}
+        onBrushSelection={onBrushSelection}
       >
         {children}
       </VegaLiteArrowChart>
