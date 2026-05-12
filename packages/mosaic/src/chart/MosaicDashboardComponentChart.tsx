@@ -1,0 +1,36 @@
+import React, {FC} from 'react';
+import {
+  ComponentChartTypeDefinition,
+  ChartRetainer,
+  BrushSelectionParams,
+} from '../chart-types/base-types';
+import {ChartPanelConfig} from '../dashboard/MosaicDashboardSlice';
+import {MosaicReadyConnection} from '../MosaicSlice';
+
+export type MosaicDashboardComponentChartProps = {
+  tableName: string;
+  panel: ChartPanelConfig;
+  chartTypeDefinition: ComponentChartTypeDefinition;
+  connection: MosaicReadyConnection;
+  retention: ChartRetainer;
+  params: BrushSelectionParams | undefined;
+};
+
+export const MosaicDashboardComponentChart: FC<
+  MosaicDashboardComponentChartProps
+> = ({
+  tableName,
+  panel,
+  chartTypeDefinition,
+  connection,
+  retention,
+  params,
+}) => {
+  return React.createElement(chartTypeDefinition.renderer, {
+    tableName,
+    config: panel.config,
+    coordinator: connection.coordinator,
+    params,
+    retention,
+  });
+};

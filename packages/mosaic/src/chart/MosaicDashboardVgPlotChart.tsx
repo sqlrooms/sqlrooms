@@ -1,22 +1,18 @@
 import {FC} from 'react';
-import {ChartPanelRendererProps} from '../dashboard/MosaicDashboardSlice';
 import {UseGenerateSpecResult} from './useGenerateSpec';
 import {MosaicDashboardVgPlotError} from './MosaicDashboardVgPlotError';
 import {VgPlotChart} from '../VgPlotChart';
-import {useChartRetainer} from './useChartRetainer';
-import {useBrushSelectionParams} from './useBrushSelectionParams';
+import {ChartRetainer, BrushSelectionParams} from '../chart-types/base-types';
 
-export type MosaicDashboardVgPlotChartProps = ChartPanelRendererProps & {
-  tableName: string;
+export type MosaicDashboardVgPlotChartProps = {
   spec: UseGenerateSpecResult;
+  retention: ChartRetainer;
+  params: BrushSelectionParams | undefined;
 };
 
 export const MosaicDashboardVgPlotChart: FC<
   MosaicDashboardVgPlotChartProps
-> = ({panel, dashboardId, selectionName, spec}) => {
-  const retention = useChartRetainer(dashboardId, panel.id);
-  const params = useBrushSelectionParams(selectionName);
-
+> = ({spec, retention, params}) => {
   if (spec.error) {
     return <MosaicDashboardVgPlotError error={spec.error} />;
   }
