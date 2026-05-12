@@ -378,6 +378,7 @@ function RoomShellCommandPaletteBase({
 
   useEffect(() => {
     if (activeInputCommandId && !activeInputCommand && !isSubmittingInput) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveInputCommandId(undefined);
       setInputError(undefined);
     }
@@ -443,6 +444,7 @@ function RoomShellCommandPaletteBase({
           </DialogHeader>
 
           {ActiveInputComponent && activeInputCommand ? (
+            // eslint-disable-next-line react-hooks/static-components
             <ActiveInputComponent
               commandId={activeInputCommand.id}
               commandName={activeInputCommand.name}

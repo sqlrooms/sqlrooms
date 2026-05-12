@@ -64,7 +64,6 @@ export const SqlCellResults: React.FC<SqlCellResultsProps> = ({
   useEffect(() => {
     if (resultVersion !== prevResultVersion.current) {
       prevResultVersion.current = resultVersion;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPagination((prev) =>
         prev.pageIndex === 0 ? prev : {...prev, pageIndex: 0},
       );
