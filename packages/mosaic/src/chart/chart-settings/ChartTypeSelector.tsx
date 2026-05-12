@@ -9,7 +9,7 @@ import {
 } from '@sqlrooms/ui';
 import {ChartNoAxesCombined} from 'lucide-react';
 import {type ChartType} from '../../chart-types/base-types';
-import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
+import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {
   value: ChartType;

@@ -1,7 +1,7 @@
 import {type FC} from 'react';
 import {Field} from '../../chart-builders/Field';
 import {NumericColumnSelector} from '../../chart-builders/ColumnSelector';
-import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
+import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 
 export const HeatmapSettingsComponent: FC = () => {
   const {onChangeConfig, config} = useChartSettingsContext('heatmap');

@@ -1,5 +1,5 @@
 import {FC} from 'react';
-import {ChartPanelRendererProps} from './MosaicDashboardSlice';
+import {ChartPanelRendererProps} from '../dashboard/MosaicDashboardSlice';
 import {UseGenerateSpecResult} from './useGenerateSpec';
 import {ChartSpecErrorDisplay} from './ChartSpecErrorDisplay';
 import {VgPlotChart} from '../VgPlotChart';

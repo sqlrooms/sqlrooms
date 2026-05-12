@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
+import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import {ChartRetainer} from '../chart-types/base-types';
 

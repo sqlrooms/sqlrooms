@@ -2,14 +2,14 @@ import {SpinnerPane} from '@sqlrooms/ui';
 import {BarChart3Icon} from 'lucide-react';
 import React, {type FC, useCallback} from 'react';
 import {ChartSettingsPanel} from './chart-settings';
-import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
+import {MosaicDashboardPanelLayout} from '../dashboard/MosaicDashboardPanelLayout';
 import {MosaicDashboardChartHeaderActions} from './MosaicDashboardChartHeaderActions';
 import {
   type MosaicDashboardPanelRenderer,
   type ChartPanelConfig,
   type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
-} from './MosaicDashboardSlice';
+} from '../dashboard/MosaicDashboardSlice';
 import {useChartTypeDefinition} from '../chart-types/useChartTypeDefinition';
 import {useChartRetainer} from './useChartRetainer';
 import {useBrushSelectionParams} from './useBrushSelectionParams';

@@ -1,5 +1,5 @@
 import {type FC, useCallback, useMemo} from 'react';
-import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
+import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {Field} from '../../chart-builders/Field';
 

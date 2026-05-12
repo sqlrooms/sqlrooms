@@ -3,7 +3,7 @@ import {Field} from '../../chart-builders/Field';
 import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
 
 import {TemporalGranularitySelector} from '../../chart-builders/TemporalGranularitySelector';
-import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
+import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 import {NumericMultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
 import {isTemporalType} from '../../chart-builders/constants';
 

@@ -4,7 +4,7 @@ import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
-import {ChartSettingsProvider} from '../dashboard/chart-settings/ChartSettingsContext';
+import {ChartSettingsProvider} from '../chart/chart-settings/ChartSettingsContext';
 import type {ChartConfig} from '../chart-types';
 
 export interface ChartBuilderFieldsProps {

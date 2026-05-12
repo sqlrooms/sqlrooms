@@ -6,7 +6,7 @@ import {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
 import {
   useStoreWithMosaicDashboard,
   ChartPanelConfig,
-} from '../MosaicDashboardSlice';
+} from '../../dashboard/MosaicDashboardSlice';
 import {Spec} from '@uwdata/mosaic-spec';
 
 interface ChartSettingsPanelProps {

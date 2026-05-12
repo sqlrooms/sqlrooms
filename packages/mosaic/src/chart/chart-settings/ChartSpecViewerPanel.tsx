@@ -2,7 +2,7 @@ import {type FC, useMemo} from 'react';
 import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {ChartSettings} from './ChartSettings';
 import {Spec} from '@uwdata/mosaic-spec';
-import {toRenderableMosaicSpec} from '../utils';
+import {toRenderableMosaicSpec} from '../../dashboard/utils';
 
 interface ChartSpecViewerPanelProps {
   spec: Spec;

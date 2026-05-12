@@ -4,7 +4,7 @@ import {
   ColumnSelector,
   NumericColumnSelector,
 } from '../../chart-builders/ColumnSelector';
-import {useChartSettingsContext} from '../../dashboard/chart-settings/ChartSettingsContext';
+import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 
 export const BoxPlotSettingsComponent: FC = () => {
   const {onChangeConfig, config} = useChartSettingsContext('box-plot');

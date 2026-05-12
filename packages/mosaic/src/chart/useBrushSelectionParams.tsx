@@ -1,6 +1,6 @@
 import type {Selection} from '@uwdata/mosaic-core';
 import {useEffect, useMemo} from 'react';
-import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
+import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 import {BrushSelectionParams} from '../chart-types/base-types';
 
 export function useBrushSelectionParams(

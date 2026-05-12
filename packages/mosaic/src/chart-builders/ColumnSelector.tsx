@@ -1,7 +1,7 @@
 import {type FC} from 'react';
 import {FieldSelectorInput} from './FieldSelectorInput';
 import {NUMERIC_COLUMN_TYPES, QUANTITATIVE_COLUMN_TYPES} from './constants';
-import {useChartSettingsContext} from '../dashboard/chart-settings/ChartSettingsContext';
+import {useChartSettingsContext} from '../chart/chart-settings/ChartSettingsContext';
 import {TableColumn} from '@sqlrooms/db';
 
 export interface ColumnSelectorProps {

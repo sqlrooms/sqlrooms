@@ -4,8 +4,8 @@ import {
   type AnyPanelRenderer,
   type PanelRenderersRecord,
 } from './MosaicDashboardSlice';
-import {mosaicDashboardProfilerPanelRenderer} from './MosaicDashboardProfilerPanelRenderer';
-import {mosaicDashboardChartRenderer} from './MosaicDashboardChartRenderer';
+import {mosaicDashboardProfilerPanelRenderer} from '../profiler/MosaicDashboardProfilerPanelRenderer';
+import {mosaicDashboardChartRenderer} from '../chart/MosaicDashboardChartRenderer';
 
 export function createDefaultMosaicDashboardPanelRenderers(
   extraRenderers: PanelRenderersRecord = {},

@@ -4,7 +4,7 @@ import {type FC, useCallback} from 'react';
 import {
   type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
-} from './MosaicDashboardSlice';
+} from '../dashboard/MosaicDashboardSlice';
 
 export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
   dashboardId,
