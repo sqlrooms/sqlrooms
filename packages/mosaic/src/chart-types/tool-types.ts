@@ -1,4 +1,4 @@
-import {VgPlotChartConfig} from './chart-config';
+import {ChartConfig} from './chart-config';
 import type {ChartBuilderColumn} from './base-types';
 
 export interface ResolvedChartResourcesParams {
@@ -17,7 +17,7 @@ export interface CreateChartParams {
   artifactId: string;
   tableName: string;
   title: string;
-  config: VgPlotChartConfig;
+  config: ChartConfig;
 }
 
 export interface CreateChartResult {
@@ -25,5 +25,5 @@ export interface CreateChartResult {
   artifactId: string;
   tableName: string;
   title: string;
-  config: VgPlotChartConfig;
+  config: ChartConfig;
 }

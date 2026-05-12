@@ -5,7 +5,7 @@ import {
   MosaicChart,
   MosaicChartBuilder,
   type Spec,
-  type VgPlotChartConfig,
+  type ChartConfig,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
@@ -77,7 +77,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   }, []);
 
   const handleCreateChart = useCallback(
-    (title: string, config: VgPlotChartConfig) => {
+    (title: string, config: ChartConfig) => {
       const id = `chart-${Date.now()}`;
       const spec = generateMosaicChartSpec(
         'earthquakes',

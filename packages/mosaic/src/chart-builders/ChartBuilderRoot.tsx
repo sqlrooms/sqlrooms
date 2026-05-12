@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderContext} from './ChartBuilderContext';
 import {createChartBuilderStore} from './createChartBuilderStore';
 import type {
@@ -20,7 +20,7 @@ export type ChartBuilderRootProps = PropsWithChildren<{
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (title: string, metadata: VgPlotChartConfig) => void;
+  onCreateChart: (title: string, metadata: ChartConfig) => void;
   /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
   /** Controlled open state */
@@ -70,9 +70,9 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     }
   }, [availableChartTypes, store]);
 
-  const handleCreateChart: (title: string, config: VgPlotChartConfig) => void =
+  const handleCreateChart: (title: string, config: ChartConfig) => void =
     useCallback(
-      (title: string, config: VgPlotChartConfig) => {
+      (title: string, config: ChartConfig) => {
         onCreateChart(title, config);
         resolvedOnOpenChange(false);
       },

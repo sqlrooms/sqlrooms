@@ -8,12 +8,12 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {ChartNoAxesCombined} from 'lucide-react';
-import {type VgPlotChartType} from '../../chart-types/base-types';
+import {type ChartType} from '../../chart-types/base-types';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {
-  value: VgPlotChartType;
-  onChange: (chartType: VgPlotChartType) => void;
+  value: ChartType;
+  onChange: (chartType: ChartType) => void;
 }
 
 export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(

@@ -12,7 +12,7 @@ import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardBoxPlotPanelConfig,
   createMosaicDashboardProfilerPanelConfig,
-  createMosaicDashboardVgPlotPanelConfig,
+  createMosaicDashboardChartPanelConfig,
   getMosaicDashboardGridId,
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
@@ -105,7 +105,7 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = store
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
-    const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
+    const first = createMosaicDashboardChartPanelConfig('Chart', {
       chartType: 'histogram',
       settings: {field: 'amount'},
     });
@@ -148,7 +148,7 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = store
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
-    const chart = createMosaicDashboardVgPlotPanelConfig('Chart', {
+    const chart = createMosaicDashboardChartPanelConfig('Chart', {
       chartType: 'histogram',
       settings: {field: 'amount'},
     });
@@ -288,7 +288,7 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('adds, updates, and removes dashboard panels with layout panels', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-1';
-    const first = createMosaicDashboardVgPlotPanelConfig('Chart', {
+    const first = createMosaicDashboardChartPanelConfig('Chart', {
       chartType: 'histogram',
       settings: {
         field: 'amount',
@@ -421,7 +421,7 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('evicts panel runtime on update and remove', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-1';
-    const panel = createMosaicDashboardVgPlotPanelConfig('Chart', {
+    const panel = createMosaicDashboardChartPanelConfig('Chart', {
       chartType: 'histogram',
       settings: {field: 'amount'},
     });
@@ -472,11 +472,11 @@ describe('MosaicDashboardSlice generic panels', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-2';
     const otherDashboardId = 'dashboard-runtime-3';
-    const first = createMosaicDashboardVgPlotPanelConfig('Chart 1', {
+    const first = createMosaicDashboardChartPanelConfig('Chart 1', {
       chartType: 'histogram',
       settings: {field: 'amount'},
     });
-    const second = createMosaicDashboardVgPlotPanelConfig('Chart 2', {
+    const second = createMosaicDashboardChartPanelConfig('Chart 2', {
       chartType: 'line-chart',
       settings: {x: 'id', yFields: [{field: 'value', aggregate: 'sum'}]},
     });
@@ -532,7 +532,7 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('removes dashboards after evicting runtime and selection state', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-4';
-    const panel = createMosaicDashboardVgPlotPanelConfig('Chart', {
+    const panel = createMosaicDashboardChartPanelConfig('Chart', {
       chartType: 'histogram',
       settings: {
         field: 'amount',

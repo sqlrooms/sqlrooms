@@ -9,7 +9,7 @@ import {
 } from '@sqlrooms/ui';
 import {Plus} from 'lucide-react';
 import React, {PropsWithChildren} from 'react';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
@@ -79,7 +79,7 @@ export interface ChartBuilderDialogProps {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (title: string, config: VgPlotChartConfig) => void;
+  onCreateChart: (title: string, config: ChartConfig) => void;
   /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
 }

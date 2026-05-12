@@ -5,7 +5,7 @@ import {
   useChartBuilderStore,
 } from './ChartBuilderContext';
 import {buildChartTypeTitle, canCreateChartFromType} from './chartTypeUtils';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartConfig} from '../chart-types';
 
 export interface ChartBuilderActionsProps {
   className?: string;
@@ -37,7 +37,7 @@ export const ChartBuilderActions: FC<ChartBuilderActionsProps> = ({
     onCreateChart(title, {
       chartType: selectedTemplateId,
       settings: fieldValues,
-    } as VgPlotChartConfig);
+    } as ChartConfig);
     reset();
   }, [
     selectedTemplate,

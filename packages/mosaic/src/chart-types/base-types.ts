@@ -8,12 +8,12 @@ import {type Tool} from 'ai';
 import type {Coordinator} from '@uwdata/mosaic-core';
 import type {ComponentType} from 'react';
 import type * as z from 'zod';
-import {VgPlotChartConfig, VgPlotChartType} from './chart-config';
+import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
 
-// Re-export VgPlotChartType for convenience
-export type {VgPlotChartType};
+// Re-export ChartType for convenience
+export type {ChartType};
 
 /**
  * Column info passed to chart builder UI
@@ -100,9 +100,7 @@ export type BrushSelectionParams = Map<string, Selection>;
 /**
  * Props passed to chart renderer components.
  */
-export interface ChartRendererProps<
-  TConfig extends VgPlotChartConfig = VgPlotChartConfig,
-> {
+export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
   tableName: string;
   config: TConfig;
   coordinator: Coordinator;
@@ -118,11 +116,9 @@ export interface ChartRendererProps<
   retention?: ChartRetainer;
 }
 
-type BaseChartTypeDefinition<
-  TConfig extends VgPlotChartConfig = VgPlotChartConfig,
-> = {
+type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   /** Unique identifier */
-  id: VgPlotChartType;
+  id: ChartType;
   /** Short human-friendly name used in chart-type grids and prompts */
   label?: string;
   /** Short description of what this builder creates */
@@ -143,15 +139,14 @@ type BaseChartTypeDefinition<
   createTool?: (deps: ChartToolDeps) => Tool;
 };
 
-export type SpecChartTypeDefinition<
-  TConfig extends VgPlotChartConfig = VgPlotChartConfig,
-> = BaseChartTypeDefinition<TConfig> & {
-  createSpec: (tableName: string, config: TConfig['settings']) => Spec;
-  canViewSpec?: boolean;
-};
+export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
+  BaseChartTypeDefinition<TConfig> & {
+    createSpec: (tableName: string, config: TConfig['settings']) => Spec;
+    canViewSpec?: boolean;
+  };
 
 export type ComponentChartTypeDefinition<
-  TConfig extends VgPlotChartConfig = VgPlotChartConfig,
+  TConfig extends ChartConfig = ChartConfig,
 > = BaseChartTypeDefinition<TConfig> & {
   renderer: ComponentType<ChartRendererProps<TConfig>>;
 };
@@ -160,17 +155,17 @@ export type ComponentChartTypeDefinition<
  * Shared chart-type definition used by both the chart-builder UI and
  * assistant-driven chart creation.
  */
-export type ChartTypeDefinition<
-  TConfig extends VgPlotChartConfig = VgPlotChartConfig,
-> = SpecChartTypeDefinition<TConfig> | ComponentChartTypeDefinition<TConfig>;
+export type ChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
+  | SpecChartTypeDefinition<TConfig>
+  | ComponentChartTypeDefinition<TConfig>;
 
-export function isSpecChartType<TConfig extends VgPlotChartConfig>(
+export function isSpecChartType<TConfig extends ChartConfig>(
   chartType: ChartTypeDefinition<TConfig>,
 ): chartType is SpecChartTypeDefinition<TConfig> {
   return 'createSpec' in chartType;
 }
 
-export function isComponentChartType<TConfig extends VgPlotChartConfig>(
+export function isComponentChartType<TConfig extends ChartConfig>(
   chartType: ChartTypeDefinition<TConfig>,
 ): chartType is ComponentChartTypeDefinition<TConfig> {
   return 'renderer' in chartType;

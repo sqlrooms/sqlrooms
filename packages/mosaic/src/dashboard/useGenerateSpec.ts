@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import type {Spec} from '@uwdata/mosaic-spec';
 import {ChartSpecError} from '../chart-types/errors';
-import type {VgPlotChartSettings} from '../chart-types/chart-config';
+import type {ChartSettings} from '../chart-types/chart-config';
 import {ChartTypeDefinition, isSpecChartType} from '../chart-types/base-types';
 
 export type UseGenerateSpecResult =
@@ -17,7 +17,7 @@ export type UseGenerateSpecResult =
 
 export function useGenerateSpec(
   tableName: string,
-  settings: VgPlotChartSettings,
+  settings: ChartSettings,
   chartTypeDefinition: ChartTypeDefinition,
 ): UseGenerateSpecResult {
   return useMemo(() => {

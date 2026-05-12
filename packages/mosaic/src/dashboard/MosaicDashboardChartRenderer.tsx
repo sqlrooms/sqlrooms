@@ -3,11 +3,11 @@ import {BarChart3Icon} from 'lucide-react';
 import React, {type FC, useCallback} from 'react';
 import {ChartSettingsPanel} from './chart-settings';
 import {MosaicDashboardPanelLayout} from './MosaicDashboardPanelLayout';
-import {MosaicDashboardVgPlotHeaderActions} from './MosaicDashboardVgPlotHeaderActions';
+import {MosaicDashboardChartHeaderActions} from './MosaicDashboardChartHeaderActions';
 import {
   type MosaicDashboardPanelRenderer,
-  type VgPlotPanelConfig,
-  type VgPlotPanelRendererProps,
+  type ChartPanelConfig,
+  type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {useChartTypeDefinition} from '../chart-types/useChartTypeDefinition';
@@ -23,7 +23,7 @@ import {SpecChart} from './SpecChart';
 import {useGenerateSpec, UseGenerateSpecResult} from './useGenerateSpec';
 import {MosaicReadyConnection} from '../MosaicSlice';
 
-const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = (props) => {
+const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = (props) => {
   const {panel} = props;
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
@@ -61,7 +61,7 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = (props) => {
   }
 
   return (
-    <MosaicDashboardVgPlotChartContent
+    <MosaicDashboardChartContent
       {...props}
       chartTypeDef={chartTypeDef}
       tableName={tableName}
@@ -70,22 +70,25 @@ const MosaicDashboardVgPlotRenderer: FC<VgPlotPanelRendererProps> = (props) => {
   );
 };
 
-export const mosaicDashboardVgPlotPanelRenderer: MosaicDashboardPanelRenderer<VgPlotPanelConfig> =
+export const mosaicDashboardChartRenderer: MosaicDashboardPanelRenderer<ChartPanelConfig> =
   {
-    component: MosaicDashboardVgPlotRenderer,
-    headerActions: MosaicDashboardVgPlotHeaderActions,
+    component: MosaicDashboardChartRenderer,
+    headerActions: MosaicDashboardChartHeaderActions,
     icon: BarChart3Icon,
   };
 
-type MosaicDashboardVgPlotChartContentProps = VgPlotPanelRendererProps & {
+type MosaicDashboardChartContentProps = ChartPanelRendererProps & {
   chartTypeDef: ChartTypeDefinition;
   tableName: string;
   connection: MosaicReadyConnection;
 };
 
-const MosaicDashboardVgPlotChartContent: FC<
-  MosaicDashboardVgPlotChartContentProps
-> = ({chartTypeDef, tableName, connection, ...props}) => {
+const MosaicDashboardChartContent: FC<MosaicDashboardChartContentProps> = ({
+  chartTypeDef,
+  tableName,
+  connection,
+  ...props
+}) => {
   const {dashboardId, panel} = props;
 
   const updatePanel = useStoreWithMosaicDashboard(
@@ -141,7 +144,7 @@ const MosaicDashboardVgPlotChartContent: FC<
   );
 };
 
-type ChartContentRendererProps = VgPlotPanelRendererProps & {
+type ChartContentRendererProps = ChartPanelRendererProps & {
   chartTypeDefinition: ChartTypeDefinition;
   tableName: string;
   connection: MosaicReadyConnection;

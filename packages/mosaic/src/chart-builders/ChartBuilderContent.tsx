@@ -1,6 +1,6 @@
 import {cn} from '@sqlrooms/ui';
 import React from 'react';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderActions} from './ChartBuilderActions';
 import {useChartBuilderContext} from './ChartBuilderContext';
 import {ChartBuilderFields} from './ChartBuilderFields';
@@ -17,7 +17,7 @@ type StandaloneChartBuilderContentProps = {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (title: string, config: VgPlotChartConfig) => void;
+  onCreateChart: (title: string, config: ChartConfig) => void;
   /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
   /** Custom class name */

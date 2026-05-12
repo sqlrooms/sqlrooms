@@ -21,16 +21,16 @@ import {
   useChartSettingsContext,
 } from './ChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/duckdb';
-import {type VgPlotChartConfig, type VgPlotChartType} from '../../chart-types';
+import {type ChartConfig, type ChartType} from '../../chart-types';
 import {Button} from '@sqlrooms/ui';
 import {CodeIcon, XIcon} from 'lucide-react';
 import {useChartTypeDefinition} from '../../chart-types/useChartTypeDefinition';
 
 interface ChartSettingsRootProps {
   tableName?: string;
-  config: VgPlotChartConfig;
+  config: ChartConfig;
   columns: TableColumn[];
-  onChange: (config: VgPlotChartConfig) => void;
+  onChange: (config: ChartConfig) => void;
 }
 
 const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
@@ -96,7 +96,7 @@ const ChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
 const ChartSettingsTypeSelector: FC = () => {
   const {config, onChange} = useChartSettingsContext();
 
-  const handleChartTypeChange = (newChartType: VgPlotChartType) => {
+  const handleChartTypeChange = (newChartType: ChartType) => {
     // When changing chart type, clear settings
     onChange({
       chartType: newChartType,

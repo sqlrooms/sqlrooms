@@ -1,5 +1,5 @@
 /**
- * Central VgPlotChartConfig discriminated union.
+ * Central ChartConfig discriminated union.
  * Separated from index.ts to avoid circular dependencies with Settings components.
  */
 
@@ -30,7 +30,7 @@ export type CustomChartConfig = z.infer<typeof CustomChartConfig>;
  * Discriminated union of all chart configuration types.
  * This schema is used for runtime validation and type inference.
  */
-export const VgPlotChartConfig = z
+export const ChartConfig = z
   .discriminatedUnion('chartType', [
     HistogramChartConfig,
     CountPlotChartConfig,
@@ -42,7 +42,7 @@ export const VgPlotChartConfig = z
   ])
   .or(CustomChartConfig);
 
-export type VgPlotChartConfig = z.infer<typeof VgPlotChartConfig>;
+export type ChartConfig = z.infer<typeof ChartConfig>;
 
-export type VgPlotChartSettings = VgPlotChartConfig['settings'];
-export type VgPlotChartType = VgPlotChartConfig['chartType'];
+export type ChartSettings = ChartConfig['settings'];
+export type ChartType = ChartConfig['chartType'];

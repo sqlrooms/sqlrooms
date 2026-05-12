@@ -1,11 +1,11 @@
 import {FC, useCallback, useState} from 'react';
 import {ChartSettings} from './ChartSettings';
-import {type VgPlotChartConfig} from '../../chart-types/chart-config';
+import {type ChartConfig} from '../../chart-types/chart-config';
 import {useTableColumns} from './useTableColumns';
 import {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
 import {
   useStoreWithMosaicDashboard,
-  VgPlotPanelConfig,
+  ChartPanelConfig,
 } from '../MosaicDashboardSlice';
 import {Spec} from '@uwdata/mosaic-spec';
 
@@ -13,7 +13,7 @@ interface ChartSettingsPanelProps {
   dashboardId: string;
   tableName: string;
   spec?: Spec;
-  panel: VgPlotPanelConfig;
+  panel: ChartPanelConfig;
   onClose?: () => void;
 }
 
@@ -42,7 +42,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   }, []);
 
   const handleSettingsChange = useCallback(
-    (config: VgPlotChartConfig) => {
+    (config: ChartConfig) => {
       updatePanel(dashboardId, panel.id, {
         config,
       });

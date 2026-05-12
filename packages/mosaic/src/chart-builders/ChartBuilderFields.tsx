@@ -5,7 +5,7 @@ import {
   useChartBuilderStore,
 } from './ChartBuilderContext';
 import {ChartSettingsProvider} from '../dashboard/chart-settings/ChartSettingsContext';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartConfig} from '../chart-types';
 
 export interface ChartBuilderFieldsProps {
   className?: string;
@@ -27,7 +27,7 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
   );
 
   const handleChange = useCallback(
-    (config: VgPlotChartConfig) => {
+    (config: ChartConfig) => {
       // Update all changed values from settings
       Object.entries(config.settings).forEach(([key, value]) => {
         if (fieldValues[key] !== value) {
@@ -39,7 +39,7 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
   );
 
   // Create a config object for the context
-  const config: VgPlotChartConfig = useMemo(() => {
+  const config: ChartConfig = useMemo(() => {
     if (!chartTypeDefinition) {
       return {
         chartType: 'histogram',
@@ -49,7 +49,7 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
     return {
       chartType: chartTypeDefinition.id,
       settings: fieldValues,
-    } as VgPlotChartConfig;
+    } as ChartConfig;
   }, [chartTypeDefinition, fieldValues]);
 
   if (!chartTypeDefinition) {

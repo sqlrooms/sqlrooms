@@ -1,7 +1,7 @@
 import {describe, expect, it, jest} from '@jest/globals';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ChartSettings} from '../src/dashboard/chart-settings';
-import type {VgPlotChartConfig} from '../src/chart-types';
+import type {ChartConfig} from '../src/chart-types';
 import type {TableColumn} from '@sqlrooms/duckdb';
 
 describe('ChartSettings Compound Components', () => {
@@ -23,7 +23,7 @@ describe('ChartSettings Compound Components', () => {
 
   describe('ChartSettings.Root', () => {
     it('provides context to children', () => {
-      const config: VgPlotChartConfig = {
+      const config: ChartConfig = {
         chartType: 'histogram',
         settings: {field: 'amount'},
       };
@@ -48,7 +48,7 @@ describe('ChartSettings Compound Components', () => {
       jest.spyOn(console, 'error').mockImplementation(() => {});
       const config = {
         chartType: 'unknown-type',
-      } as unknown as VgPlotChartConfig;
+      } as unknown as ChartConfig;
 
       const markup = renderToStaticMarkup(
         <ChartSettings.Root
@@ -66,12 +66,12 @@ describe('ChartSettings Compound Components', () => {
     });
 
     it('shows error for empty columns', () => {
-      const config: VgPlotChartConfig = {
+      const config: ChartConfig = {
         chartType: 'histogram',
         settings: {
           field: 'amount',
         },
-      } satisfies VgPlotChartConfig;
+      } satisfies ChartConfig;
 
       const markup = renderToStaticMarkup(
         <ChartSettings.Root
@@ -88,7 +88,7 @@ describe('ChartSettings Compound Components', () => {
     });
 
     it('renders for valid histogram config', () => {
-      const config: VgPlotChartConfig = {
+      const config: ChartConfig = {
         chartType: 'histogram',
         settings: {field: 'amount'},
       };
@@ -111,7 +111,7 @@ describe('ChartSettings Compound Components', () => {
 
     it('renders for all chart types', () => {
       const chartTypes: Array<{
-        type: VgPlotChartConfig['chartType'];
+        type: ChartConfig['chartType'];
         settings: any;
       }> = [
         {type: 'histogram', settings: {field: 'amount'}},
@@ -123,7 +123,7 @@ describe('ChartSettings Compound Components', () => {
       ];
 
       chartTypes.forEach(({type, settings}) => {
-        const config: VgPlotChartConfig = {
+        const config: ChartConfig = {
           chartType: type,
           settings,
         };

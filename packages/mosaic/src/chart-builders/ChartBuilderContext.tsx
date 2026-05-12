@@ -1,6 +1,6 @@
 import {createContext, useContext} from 'react';
 import {useStore} from 'zustand';
-import type {VgPlotChartConfig} from '../chart-types';
+import type {ChartConfig} from '../chart-types';
 import type {
   ChartBuilderStore,
   ChartBuilderStoreState,
@@ -13,7 +13,7 @@ import type {
 export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
-  onCreateChart: (title: string, config: VgPlotChartConfig) => void;
+  onCreateChart: (title: string, config: ChartConfig) => void;
   templates: ChartTypeDefinition[];
   availableTemplates: ChartTypeDefinition[];
   store: ChartBuilderStore;

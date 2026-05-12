@@ -1,5 +1,5 @@
 import {
-  createMosaicDashboardVgPlotPanelConfig,
+  createMosaicDashboardChartPanelConfig,
   createDefaultChartTypes,
   type ChartToolDeps,
   type ChartBuilderColumn,
@@ -127,7 +127,7 @@ export function createChartToolDeps(store: {
         throw new Error(`Unknown chart type "${config.chartType}".`);
       }
 
-      const panel = createMosaicDashboardVgPlotPanelConfig(title, config, {
+      const panel = createMosaicDashboardChartPanelConfig(title, config, {
         tableName,
       });
 

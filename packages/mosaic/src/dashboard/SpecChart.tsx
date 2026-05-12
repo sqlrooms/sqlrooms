@@ -1,12 +1,12 @@
 import {FC} from 'react';
-import {VgPlotPanelRendererProps} from './MosaicDashboardSlice';
+import {ChartPanelRendererProps} from './MosaicDashboardSlice';
 import {UseGenerateSpecResult} from './useGenerateSpec';
 import {ChartSpecErrorDisplay} from './ChartSpecErrorDisplay';
 import {VgPlotChart} from '../VgPlotChart';
 import {useChartRetainer} from './useChartRetainer';
 import {useBrushSelectionParams} from './useBrushSelectionParams';
 
-export type SpecChartProps = VgPlotPanelRendererProps & {
+export type SpecChartProps = ChartPanelRendererProps & {
   tableName: string;
   spec: UseGenerateSpecResult;
 };
