@@ -1,18 +1,13 @@
 import {type FC} from 'react';
 import {ChartSpecError, SpecGenerationError} from '../chart-types/errors';
 
-interface ChartSpecErrorDisplayProps {
+interface MosaicDashboardVgPlotErrorProps {
   error: ChartSpecError;
 }
 
-/**
- * Displays chart specification errors with appropriate styling.
- * Configuration errors (like missing required fields) are shown with a neutral tone,
- * while actual errors (like missing table) are shown with emphasis.
- */
-export const ChartSpecErrorDisplay: FC<ChartSpecErrorDisplayProps> = ({
-  error,
-}) => {
+export const MosaicDashboardVgPlotError: FC<
+  MosaicDashboardVgPlotErrorProps
+> = ({error}) => {
   // Configuration issues - user just needs to configure settings
   if (error instanceof SpecGenerationError) {
     return (

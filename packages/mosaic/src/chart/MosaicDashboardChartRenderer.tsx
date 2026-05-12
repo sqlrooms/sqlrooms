@@ -18,7 +18,7 @@ import {
   isComponentChartType,
   isSpecChartType,
 } from '../chart-types/base-types';
-import {SpecChart} from './SpecChart';
+import {MosaicDashboardVgPlotChart} from './MosaicDashboardVgPlotChart';
 import {useGenerateSpec, UseGenerateSpecResult} from './useGenerateSpec';
 import {MosaicReadyConnection} from '../MosaicSlice';
 
@@ -163,7 +163,7 @@ const ChartContentRenderer: FC<ChartContentRendererProps> = (props) => {
   const params = useBrushSelectionParams(selectionName);
 
   if (isSpecChartType(chartTypeDefinition)) {
-    return <SpecChart {...props} spec={spec} />;
+    return <MosaicDashboardVgPlotChart {...props} spec={spec} />;
   }
 
   if (isComponentChartType(chartTypeDefinition)) {
