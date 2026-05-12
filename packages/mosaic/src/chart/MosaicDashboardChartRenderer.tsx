@@ -13,7 +13,6 @@ import {
 import {useChartTypeDefinition} from '../chart-types/useChartTypeDefinition';
 import {useChartRetainer} from './useChartRetainer';
 import {useBrushSelectionParams} from './useBrushSelectionParams';
-import {DashboardChartErrorBoundary} from './DashboardChartErrorBoundary';
 import {
   ChartTypeDefinition,
   isComponentChartType,
@@ -120,15 +119,13 @@ const MosaicDashboardChartContent: FC<MosaicDashboardChartContentProps> = ({
 
   const chartContent = (
     <div className="h-full overflow-auto p-2">
-      <DashboardChartErrorBoundary>
-        <ChartContentRenderer
-          {...props}
-          chartTypeDefinition={chartTypeDef}
-          tableName={tableName}
-          connection={connection}
-          spec={spec}
-        />
-      </DashboardChartErrorBoundary>
+      <ChartContentRenderer
+        {...props}
+        chartTypeDefinition={chartTypeDef}
+        tableName={tableName}
+        connection={connection}
+        spec={spec}
+      />
     </div>
   );
 
