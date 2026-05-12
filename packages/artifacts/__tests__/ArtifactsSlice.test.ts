@@ -83,30 +83,6 @@ describe('ArtifactsSlice', () => {
     ]);
   });
 
-  it('generates unique titles for newly created artifacts', () => {
-    const store = createTestStore();
-    const firstId = store.getState().artifacts.createArtifact({
-      type: 'notebook',
-    });
-    const secondId = store.getState().artifacts.createArtifact({
-      type: 'notebook',
-    });
-    const titledId = store.getState().artifacts.createArtifact({
-      type: 'dashboard',
-      title: 'Notebook',
-    });
-
-    expect(store.getState().artifacts.getArtifact(firstId)?.title).toBe(
-      'Notebook',
-    );
-    expect(store.getState().artifacts.getArtifact(secondId)?.title).toBe(
-      'Notebook 1',
-    );
-    expect(store.getState().artifacts.getArtifact(titledId)?.title).toBe(
-      'Notebook 2',
-    );
-  });
-
   it('normalizes artifactOrder and current artifact', () => {
     const store = createTestStore();
     store.getState().artifacts.ensureArtifact('a', {

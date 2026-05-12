@@ -76,8 +76,27 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
 
 function CliArtifactAddMenu() {
   const artifactTabs = ArtifactTabs.useActions();
-  const createDashboardArtifact = useRoomStore(
-    (state) => state.dashboard.createDashboardArtifact,
+  const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
+
+  const invokeCreateArtifactCommand = useCallback(
+    async (commandId: string, input?: Record<string, unknown>) => {
+      const result = await invokeCommand(commandId, input, {
+        surface: 'api',
+        actor: 'artifact-tabstrip',
+      });
+      const artifactId =
+        result.success &&
+        result.data &&
+        typeof result.data === 'object' &&
+        'artifactId' in result.data &&
+        typeof result.data.artifactId === 'string'
+          ? result.data.artifactId
+          : undefined;
+      if (artifactId) {
+        artifactTabs.selectArtifact(artifactId);
+      }
+    },
+    [artifactTabs, invokeCommand],
   );
 
   return (
@@ -94,18 +113,20 @@ function CliArtifactAddMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <DropdownMenuItem
-          onClick={() => {
-            const artifactId = createDashboardArtifact('Dashboard', 'grid');
-            artifactTabs.selectArtifact(artifactId);
-          }}
+          onClick={() =>
+            void invokeCreateArtifactCommand('dashboard.create-artifact', {
+              layoutType: 'grid',
+            })
+          }
         >
           <BarChart3Icon /> Dashboard
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => {
-            const artifactId = createDashboardArtifact('Dashboard', 'dock');
-            artifactTabs.selectArtifact(artifactId);
-          }}
+          onClick={() =>
+            void invokeCreateArtifactCommand('dashboard.create-artifact', {
+              layoutType: 'dock',
+            })
+          }
         >
           <BarChart3Icon /> Dashboard (dock)
         </DropdownMenuItem>
@@ -116,12 +137,11 @@ function CliArtifactAddMenu() {
           return (
             <DropdownMenuItem
               key={artifactType}
-              onClick={() => {
-                const artifactId = artifactTabs.createArtifact(artifactType);
-                if (artifactId) {
-                  artifactTabs.selectArtifact(artifactId);
-                }
-              }}
+              onClick={() =>
+                void invokeCreateArtifactCommand(
+                  `${artifactType}.create-artifact`,
+                )
+              }
             >
               <type.icon /> {`New ${type.label}`}
             </DropdownMenuItem>

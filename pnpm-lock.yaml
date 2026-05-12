@@ -2429,9 +2429,6 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
-      '@sqlrooms/utils':
-        specifier: workspace:*
-        version: link:../utils
       ai:
         specifier: ^6.0.154
         version: 6.0.177(zod@4.1.13)
