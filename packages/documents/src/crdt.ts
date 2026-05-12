@@ -13,7 +13,15 @@ import {
 import type {DocumentsSliceState} from './DocumentsSlice';
 
 type DocumentCrdtState = DocumentsSliceState & ArtifactsSliceState;
-type IncomingDocumentAsset = DocumentAsset & {
+type OmitAssetMetadata<T extends DocumentAsset> = Omit<
+  T,
+  'filename' | 'alt' | 'title' | 'provenance'
+>;
+type IncomingDocumentAsset = (DocumentAsset extends infer Asset
+  ? Asset extends DocumentAsset
+    ? OmitAssetMetadata<Asset>
+    : never
+  : never) & {
   filename?: string | null;
   alt?: string | null;
   title?: string | null;
@@ -232,10 +240,10 @@ function assetsArrayToRecord(assets: IncomingDocument['assets']) {
         mediaType: asset.mediaType,
         encoding: asset.encoding,
         data: asset.data,
-        ...(asset.filename ? {filename: asset.filename} : {}),
-        ...(asset.alt ? {alt: asset.alt} : {}),
-        ...(asset.title ? {title: asset.title} : {}),
-        ...(asset.provenance ? {provenance: asset.provenance} : {}),
+        ...(asset.filename != null ? {filename: asset.filename} : {}),
+        ...(asset.alt != null ? {alt: asset.alt} : {}),
+        ...(asset.title != null ? {title: asset.title} : {}),
+        ...(asset.provenance != null ? {provenance: asset.provenance} : {}),
         createdAt: asset.createdAt,
         updatedAt: asset.updatedAt,
       },

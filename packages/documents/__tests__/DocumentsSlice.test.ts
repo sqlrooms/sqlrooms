@@ -134,6 +134,28 @@ describe('DocumentsSlice', () => {
     expect(result.artifacts['doc-1']?.assets).toEqual({});
   });
 
+  it('rejects PNG assets that are not base64 encoded', () => {
+    const result = DocumentsSliceConfig.safeParse({
+      artifacts: {
+        'doc-1': {
+          id: 'doc-1',
+          markdown: '# Image',
+          assets: {
+            'image-1': {
+              id: 'image-1',
+              mediaType: 'image/png',
+              encoding: 'utf8',
+              data: 'not png bytes',
+            },
+          },
+          updatedAt: 1,
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects document artifact records keyed by a different ID', () => {
     const result = DocumentsSliceConfig.safeParse({
       artifacts: {

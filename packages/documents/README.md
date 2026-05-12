@@ -84,7 +84,8 @@ Markdown source. `MarkdownDocument` handles this automatically for artifacts
 stored in the documents slice.
 
 The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
-managing image assets alongside Markdown content.
+managing image assets alongside Markdown content. SVG assets may use `utf8` or
+`base64` encoding; PNG assets must use `base64` encoding.
 
 ## Commands
 
