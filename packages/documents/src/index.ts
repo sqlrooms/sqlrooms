@@ -4,7 +4,9 @@
  */
 
 export {
+  DocumentAsset,
   DocumentArtifact,
+  type DocumentAsset as DocumentAssetType,
   DocumentsSliceConfig,
   type DocumentArtifact as DocumentArtifactType,
   type DocumentsSliceConfig as DocumentsSliceConfigType,
@@ -13,6 +15,7 @@ export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
   type CreateDocumentsSliceProps,
+  type DocumentAssetInput,
   type DocumentsSliceState,
 } from './DocumentsSlice';
 export {

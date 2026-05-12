@@ -53,7 +53,11 @@ keeps the existing CodeMirror source panel for direct Markdown edits.
 `MarkdownDocumentEditor` is also exported as a reusable controlled editor:
 
 ```tsx
-<MarkdownDocumentEditor value={markdown} onChange={setMarkdown} />
+<MarkdownDocumentEditor
+  value={markdown}
+  assets={assets}
+  onChange={setMarkdown}
+/>
 ```
 
 The rich editor is the primary surface. The optional Markdown source panel can
@@ -67,6 +71,21 @@ be opened alongside it and edits the same canonical Markdown string:
   onSourcePanelOpenChange={setShowSource}
 />
 ```
+
+Document Markdown can reference document-owned assets with `asset://` URLs:
+
+```md
+![Revenue by week](asset://chart-revenue-week)
+```
+
+Pass the document asset map to `MarkdownDocumentEditor` to render those links as
+browser-loadable image data while preserving the canonical `asset://` link in
+Markdown source. `MarkdownDocument` handles this automatically for artifacts
+stored in the documents slice.
+
+The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
+managing image assets alongside Markdown content. SVG assets may use `utf8` or
+`base64` encoding; PNG assets must use `base64` encoding.
 
 ## Commands
 
@@ -95,9 +114,9 @@ createCrdtSlice({
 });
 ```
 
-`createDocumentsCrdtMirror()` syncs Markdown document bodies plus document
-artifact metadata so remote documents can appear in artifact tabs. The current
-artifact selection is kept local.
+`createDocumentsCrdtMirror()` syncs Markdown document bodies, document image
+assets, and document artifact metadata so remote documents can appear in
+artifact tabs. The current artifact selection is kept local.
 
 ## Knowledge Index
 

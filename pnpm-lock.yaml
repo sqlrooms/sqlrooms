@@ -3093,6 +3093,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@tiptap/extension-image':
+        specifier: ^3.23.1
+        version: 3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))
       '@tiptap/extension-link':
         specifier: ^3.23.1
         version: 3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))(@tiptap/pm@3.23.1)
@@ -4227,6 +4230,9 @@ importers:
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror
+      '@sqlrooms/documents':
+        specifier: workspace:*
+        version: link:../documents
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
@@ -9171,6 +9177,11 @@ packages:
     peerDependencies:
       '@tiptap/core': 3.23.1
       '@tiptap/pm': 3.23.1
+
+  '@tiptap/extension-image@3.23.1':
+    resolution: {integrity: sha512-rAyfh8HS0PfXS8PKl1VQUiDFzXtF5SlrILpOPmz+4Oc4pmI+/vN+ain4z8k6HRxWM03YVpvLvyeQ0OFwi/fq3A==}
+    peerDependencies:
+      '@tiptap/core': 3.23.1
 
   '@tiptap/extension-italic@3.23.1':
     resolution: {integrity: sha512-lZB9YCjoVNDoPMguya66nBvaS/2YpGN5iAcjAGx/JQkCAZeOAtl9+ALMzbWPKH6tQP6m98YtkY1T7RXr++T0bA==}
@@ -23845,6 +23856,10 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.23.1(@tiptap/pm@3.23.1)
       '@tiptap/pm': 3.23.1
+
+  '@tiptap/extension-image@3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))':
+    dependencies:
+      '@tiptap/core': 3.23.1(@tiptap/pm@3.23.1)
 
   '@tiptap/extension-italic@3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))':
     dependencies:
