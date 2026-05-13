@@ -4,6 +4,7 @@ import {SpinnerPane} from '@sqlrooms/ui';
 import {type PlotSize, ResponsivePlot} from '../../../ResponsivePlot';
 import type {ChartRendererProps} from '../../base-types';
 import {
+  DRAG_CLICK_THRESHOLD,
   MARGINS,
   type PlotOutlierDatum,
   type PlotSummaryDatum,
@@ -12,6 +13,7 @@ import {createBoxPlotElement} from './plot';
 import type {BoxPlotChartConfig} from '../schema';
 import {useBoxPlotClient} from './useBoxPlotClient';
 import {formatCategory, getYDomain, yPixelToValue} from './utils';
+import {BoxPlotErrorBoundary} from './BoxPlotErrorBoundary';
 
 /**
  * Custom renderer for box-plot chart type.
@@ -113,7 +115,7 @@ export const BoxPlotPanelRenderer: FC<
       const currentY = getLocalY(event);
       const pixelDistance = Math.abs(currentY - drag.startY);
       setDrag(null);
-      if (pixelDistance < 4) {
+      if (pixelDistance < DRAG_CLICK_THRESHOLD) {
         clientRef.current?.updateYBrush();
         return;
       }
@@ -168,40 +170,42 @@ export const BoxPlotPanelRenderer: FC<
   }
 
   return (
-    <div className="h-full min-h-0 overflow-auto p-2">
-      <div className="bg-background text-foreground relative flex h-full min-h-[220px] w-full items-center justify-center rounded-md p-2">
-        {state.error ? (
-          <div className="text-destructive flex h-full items-center justify-center p-4 text-sm">
-            {state.error.message}
-          </div>
-        ) : state.isLoading && !state.summaries.length ? (
-          <SpinnerPane className="h-full w-full" />
-        ) : !state.summaries.length ? (
-          <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-            No numeric values for this box plot
-          </div>
-        ) : (
-          <ResponsivePlot
-            onResize={setSize}
-            className="relative h-full min-h-[220px] w-full"
-          >
-            <div ref={plotRef} className="absolute inset-0" />
-            {brushStyle ? (
+    <BoxPlotErrorBoundary>
+      <div className="h-full min-h-0 overflow-auto p-2">
+        <div className="bg-background text-foreground relative flex h-full min-h-[220px] w-full items-center justify-center rounded-md p-2">
+          {state.error ? (
+            <div className="text-destructive flex h-full items-center justify-center p-4 text-sm">
+              {state.error.message}
+            </div>
+          ) : state.isLoading && !state.summaries.length ? (
+            <SpinnerPane className="h-full w-full" />
+          ) : !state.summaries.length ? (
+            <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+              No numeric values for this box plot
+            </div>
+          ) : (
+            <ResponsivePlot
+              onResize={setSize}
+              className="relative h-full min-h-[220px] w-full"
+            >
+              <div ref={plotRef} className="absolute inset-0" />
+              {brushStyle ? (
+                <div
+                  className="bg-primary/15 border-primary/60 pointer-events-none absolute border"
+                  style={brushStyle}
+                />
+              ) : null}
               <div
-                className="bg-primary/15 border-primary/60 pointer-events-none absolute border"
-                style={brushStyle}
+                className="absolute inset-0 cursor-crosshair touch-none"
+                onPointerCancel={finishDrag}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={finishDrag}
               />
-            ) : null}
-            <div
-              className="absolute inset-0 cursor-crosshair touch-none"
-              onPointerCancel={finishDrag}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={finishDrag}
-            />
-          </ResponsivePlot>
-        )}
+            </ResponsivePlot>
+          )}
+        </div>
       </div>
-    </div>
+    </BoxPlotErrorBoundary>
   );
 };

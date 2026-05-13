@@ -16,6 +16,12 @@ export const MARGINS = {
   top: 20,
 } as const;
 
+/**
+ * Minimum pixel distance to distinguish a drag from a click.
+ * Drags shorter than this threshold are treated as clicks that clear the brush.
+ */
+export const DRAG_CLICK_THRESHOLD = 4;
+
 export type PlotSummaryDatum = BoxPlotSummaryRow & {
   categoryLabel: string;
 };

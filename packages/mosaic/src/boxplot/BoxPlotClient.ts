@@ -65,17 +65,52 @@ function normalizeFilter(filter?: FilterExpr | null): string[] {
     .filter((expr): expr is string => Boolean(expr));
 }
 
+/**
+ * Type guard to check if data has a toArray method.
+ */
+function hasToArrayMethod(data: unknown): data is {toArray: () => unknown} {
+  return (
+    data !== null &&
+    data !== undefined &&
+    typeof data === 'object' &&
+    'toArray' in data &&
+    typeof (data as Record<string, unknown>).toArray === 'function'
+  );
+}
+
+/**
+ * Safely extract rows from query result data.
+ * Handles both direct arrays and objects with toArray() method.
+ * Returns empty array if data is invalid or doesn't have expected structure.
+ */
 function rowsFromQueryResult<T>(data: unknown): T[] {
-  if (
-    !data ||
-    typeof data !== 'object' ||
-    !('toArray' in data) ||
-    typeof (data as {toArray?: unknown}).toArray !== 'function'
-  ) {
+  // Handle direct arrays
+  if (Array.isArray(data)) {
+    return data as T[];
+  }
+
+  // Handle objects with toArray() method (Arrow Tables, Mosaic results, etc.)
+  if (!hasToArrayMethod(data)) {
     return [];
   }
 
-  return Array.from((data as {toArray(): T[]}).toArray());
+  try {
+    const result = data.toArray();
+
+    // Validate that toArray() returned an array
+    if (!Array.isArray(result)) {
+      console.warn(
+        'BoxPlotClient: toArray() did not return an array',
+        typeof result,
+      );
+      return [];
+    }
+
+    return result as T[];
+  } catch (error) {
+    console.error('BoxPlotClient: Error calling toArray():', error);
+    return [];
+  }
 }
 
 function numericValue(value: unknown): number | undefined {
@@ -181,6 +216,7 @@ export class BoxPlotClient extends MosaicClient {
     outliers: [],
     summaries: [],
   };
+  private destroyed = false;
 
   constructor(options: BoxPlotClientOptions) {
     super(options.selection);
@@ -195,6 +231,9 @@ export class BoxPlotClient extends MosaicClient {
   }
 
   private emitState(next: Partial<BoxPlotState>) {
+    if (this.destroyed) {
+      return;
+    }
     this.state = {...this.state, ...next};
     this.onStateChange(this.state);
   }
@@ -288,5 +327,10 @@ export class BoxPlotClient extends MosaicClient {
 
   reset() {
     this.updateYBrush();
+  }
+
+  override destroy() {
+    this.destroyed = true;
+    super.destroy();
   }
 }
