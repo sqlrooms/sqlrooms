@@ -154,10 +154,15 @@ export const BoxPlotPanelRenderer: FC<
     };
   }, [drag, size, state.yBrush, yDomain]);
 
-  if (!config) {
+  if (!config.settings.x || !config.settings.y) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Invalid box plot config: x and y fields are required
+      <div className="flex h-full flex-col items-center justify-center">
+        <div className="text-center font-medium">
+          Configure chart to display visualization
+        </div>
+        <div className="text-center text-xs">
+          X and Y fields are required for box plot
+        </div>
       </div>
     );
   }
