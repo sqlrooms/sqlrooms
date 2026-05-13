@@ -21,7 +21,7 @@ export type ChartBuilderRootProps = PropsWithChildren<{
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
   onCreateChart: (title: string, metadata: ChartConfig) => void;
-  /** Optional chart types to show (defaults to all registered types) */
+  /** Optional chart types to show (defaults to an empty array) */
   chartTypes?: ChartTypeDefinition[];
   /** Controlled open state */
   open?: boolean;
