@@ -211,6 +211,7 @@ export class BoxPlotClient extends MosaicClient {
   private readonly tableName: string;
   private readonly x: string;
   private readonly y: string;
+  private readonly selection: Selection;
   private state: BoxPlotState = {
     isLoading: true,
     outliers: [],
@@ -224,10 +225,15 @@ export class BoxPlotClient extends MosaicClient {
     this.tableName = options.tableName;
     this.x = options.x;
     this.y = options.y;
+    this.selection = options.selection;
   }
 
   override get filterStable(): boolean {
     return false;
+  }
+
+  fields(): string[] {
+    return [this.x, this.y];
   }
 
   private emitState(next: Partial<BoxPlotState>) {
@@ -320,9 +326,8 @@ export class BoxPlotClient extends MosaicClient {
       ? ([Math.min(...extent), Math.max(...extent)] as [number, number])
       : undefined;
     this.emitState({yBrush: normalized});
-    this.filterBy?.update(
-      clauseInterval(this.y, normalized ?? null, {source: this}),
-    );
+    const clause = clauseInterval(this.y, normalized ?? null, {source: this});
+    this.selection.update(clause);
   }
 
   reset() {

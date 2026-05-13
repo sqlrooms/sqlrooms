@@ -1,15 +1,16 @@
-import {Selection} from '@uwdata/mosaic-core';
-import {useEffect, useRef, useState} from 'react';
+import {Coordinator, Selection} from '@uwdata/mosaic-core';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {BoxPlotClient, type BoxPlotState} from '../../../boxplot/BoxPlotClient';
-import type {ChartRendererProps} from '../../base-types';
+import type {BrushSelectionParams} from '../../base-types';
 import {BoxPlotChartSettings} from '../schema';
 
 export function useBoxPlotClient(args: {
   config: BoxPlotChartSettings | null;
-  coordinator: ChartRendererProps['coordinator'];
+  coordinator: Coordinator;
+  params?: BrushSelectionParams;
   tableName: string;
 }) {
-  const {config, coordinator, tableName} = args;
+  const {config, coordinator, params, tableName} = args;
   const [state, setState] = useState<BoxPlotState>({
     isLoading: true,
     outliers: [],
@@ -17,8 +18,16 @@ export function useBoxPlotClient(args: {
   });
   const clientRef = useRef<BoxPlotClient | null>(null);
 
-  // Create a crossfilter selection for this box plot (only once)
-  const [selection] = useState(() => Selection.crossfilter());
+  // Get or create the crossfilter selection
+  const selection = useMemo(() => {
+    // First try to get the brush selection from params (which should be connected to crossfilter)
+    const brushSelection = params?.get('brush');
+    if (brushSelection) {
+      return brushSelection;
+    }
+    // Fallback: create a new crossfilter selection (shouldn't happen in dashboard context)
+    return Selection.crossfilter();
+  }, [params]);
 
   useEffect(() => {
     if (!config) {

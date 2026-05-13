@@ -21,7 +21,7 @@ import {BoxPlotErrorBoundary} from './BoxPlotErrorBoundary';
  */
 export const BoxPlotPanelRenderer: FC<
   ChartRendererProps<BoxPlotChartConfig>
-> = ({tableName, config, coordinator}) => {
+> = ({tableName, config, coordinator, params}) => {
   const configX = config.settings.x;
   const configY = config.settings.y;
   const boxPlotConfig = useMemo(
@@ -41,6 +41,7 @@ export const BoxPlotPanelRenderer: FC<
   const {clientRef, state} = useBoxPlotClient({
     config: boxPlotConfig,
     coordinator,
+    params,
     tableName,
   });
 
