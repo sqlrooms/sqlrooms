@@ -136,9 +136,12 @@ export const BoxPlotPanelRenderer: FC<
               1,
               size.height - MARGINS.top - MARGINS.bottom,
             );
-            return (
-              MARGINS.top +
-              ((yDomain[1] - value) / (yDomain[1] - yDomain[0])) * plotHeight
+            const span = yDomain[1] - yDomain[0] || 1;
+            const pixelPos =
+              MARGINS.top + ((yDomain[1] - value) / span) * plotHeight;
+            return Math.max(
+              MARGINS.top,
+              Math.min(MARGINS.top + plotHeight, pixelPos),
             );
           })
         : null;
