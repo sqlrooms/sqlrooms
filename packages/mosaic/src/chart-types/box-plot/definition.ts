@@ -1,7 +1,7 @@
 import type {ComponentChartTypeDefinition} from '../base-types';
 import {BoxPlotChartConfig, BoxPlotChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
-import {BoxPlotPanelRenderer} from './BoxPlotPanelRenderer';
+import {BoxPlotPanelRenderer} from './renderer/BoxPlotPanelRenderer';
 import {BoxPlotSettingsComponent} from './BoxPlotSettings';
 import {createBoxPlotAiTool} from './tool';
 import {AlignHorizontalDistributeCenter} from 'lucide-react';

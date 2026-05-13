@@ -1,235 +1,25 @@
-import * as Plot from '@observablehq/plot';
-import {Selection} from '@uwdata/mosaic-core';
+import type {FC, PointerEvent as ReactPointerEvent} from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import type {PointerEvent as ReactPointerEvent} from 'react';
 import {SpinnerPane} from '@sqlrooms/ui';
+import {type PlotSize, ResponsivePlot} from '../../../ResponsivePlot';
+import type {ChartRendererProps} from '../../base-types';
 import {
-  BoxPlotClient,
-  type BoxPlotOutlierRow,
-  type BoxPlotState,
-  type BoxPlotSummaryRow,
-} from '../../boxplot/BoxPlotClient';
-import {type PlotSize, ResponsivePlot} from '../../ResponsivePlot';
-import type {ChartRendererProps} from '../base-types';
-import type {BoxPlotChartConfig} from './schema';
-
-const BOX_FILL = 'var(--color-chart-1)';
-const BOX_STROKE = 'var(--color-chart-1)';
-const GRID_COLOR = 'var(--border)';
-const OUTLIER_FILL = 'var(--color-chart-2)';
-const MAX_BOX_ITEM_WIDTH = 20;
-
-const MARGINS = {
-  bottom: 64,
-  left: 56,
-  right: 24,
-  top: 20,
-};
-
-type PlotSummaryDatum = BoxPlotSummaryRow & {
-  categoryLabel: string;
-};
-
-type PlotOutlierDatum = BoxPlotOutlierRow & {
-  categoryLabel: string;
-};
-
-function formatCategory(value: unknown): string {
-  return value === null || value === undefined ? '(null)' : String(value);
-}
-
-function getYDomain(
-  summaries: BoxPlotSummaryRow[],
-  outliers: BoxPlotOutlierRow[],
-): [number, number] {
-  const values = [
-    ...summaries.flatMap((row) => [
-      row.whiskerLow,
-      row.whiskerHigh,
-      row.q1,
-      row.q3,
-      row.median,
-    ]),
-    ...outliers.map((row) => row.value),
-  ].filter((value) => Number.isFinite(value));
-
-  if (!values.length) {
-    return [0, 1];
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  if (min === max) {
-    const pad = Math.abs(min) || 1;
-    return [min - pad * 0.5, max + pad * 0.5];
-  }
-
-  const pad = (max - min) * 0.08;
-  return [min - pad, max + pad];
-}
-
-function yPixelToValue(
-  pixelY: number,
-  size: PlotSize,
-  domain: [number, number],
-) {
-  const plotHeight = Math.max(1, size.height - MARGINS.top - MARGINS.bottom);
-  const clampedY = Math.min(
-    size.height - MARGINS.bottom,
-    Math.max(MARGINS.top, pixelY),
-  );
-  const ratio = (clampedY - MARGINS.top) / plotHeight;
-  return domain[1] - ratio * (domain[1] - domain[0]);
-}
-
-function createBoxPlotElement(args: {
-  config: {x: string; y: string};
-  domain: [number, number];
-  outliers: PlotOutlierDatum[];
-  size: PlotSize;
-  summaries: PlotSummaryDatum[];
-}) {
-  const {config, domain, outliers, size, summaries} = args;
-  const categories = summaries.map((row) => row.categoryLabel);
-  const innerWidth = Math.max(0, size.width - MARGINS.left - MARGINS.right);
-  const categoryBandWidth = categories.length
-    ? innerWidth / categories.length
-    : MAX_BOX_ITEM_WIDTH;
-  const boxInset = Math.max(0, (categoryBandWidth - MAX_BOX_ITEM_WIDTH) / 2);
-
-  return Plot.plot({
-    height: size.height,
-    marginBottom: MARGINS.bottom,
-    marginLeft: MARGINS.left,
-    marginRight: MARGINS.right,
-    marginTop: MARGINS.top,
-    style: {
-      background: 'transparent',
-      color: 'currentColor',
-      font: '12px var(--font-sans, system-ui, sans-serif)',
-      overflow: 'visible',
-    },
-    width: size.width,
-    x: {
-      domain: categories,
-      label: config.x,
-      padding: 0,
-      tickRotate: categories.length > 8 ? -35 : 0,
-    },
-    y: {
-      domain,
-      grid: true,
-      label: config.y,
-      nice: true,
-    },
-    marks: [
-      Plot.gridY({stroke: GRID_COLOR, strokeOpacity: 0.65}),
-      Plot.ruleX(summaries, {
-        x: 'categoryLabel',
-        y1: 'whiskerLow',
-        y2: 'whiskerHigh',
-        stroke: BOX_STROKE,
-        strokeWidth: 1.2,
-      }),
-      Plot.tickY(summaries, {
-        insetLeft: boxInset,
-        insetRight: boxInset,
-        x: 'categoryLabel',
-        y: 'whiskerLow',
-        stroke: BOX_STROKE,
-        strokeWidth: 1.4,
-      }),
-      Plot.tickY(summaries, {
-        insetLeft: boxInset,
-        insetRight: boxInset,
-        x: 'categoryLabel',
-        y: 'whiskerHigh',
-        stroke: BOX_STROKE,
-        strokeWidth: 1.4,
-      }),
-      Plot.rectY(summaries, {
-        fill: BOX_FILL,
-        fillOpacity: 0.22,
-        insetLeft: boxInset,
-        insetRight: boxInset,
-        stroke: BOX_STROKE,
-        strokeWidth: 1.2,
-        x: 'categoryLabel',
-        y1: 'q1',
-        y2: 'q3',
-      }),
-      Plot.tickY(summaries, {
-        insetLeft: boxInset,
-        insetRight: boxInset,
-        x: 'categoryLabel',
-        y: 'median',
-        stroke: BOX_STROKE,
-        strokeWidth: 2.4,
-      }),
-      Plot.dot(outliers, {
-        fill: OUTLIER_FILL,
-        fillOpacity: 0.7,
-        r: 2.5,
-        stroke: 'transparent',
-        x: 'categoryLabel',
-        y: 'value',
-      }),
-    ],
-  });
-}
-
-function useBoxPlotClient(args: {
-  config: {x: string; y: string} | null;
-  coordinator: ChartRendererProps['coordinator'];
-  tableName: string;
-}) {
-  const {config, coordinator, tableName} = args;
-  const [state, setState] = useState<BoxPlotState>({
-    isLoading: true,
-    outliers: [],
-    summaries: [],
-  });
-  const clientRef = useRef<BoxPlotClient | null>(null);
-
-  // Create a crossfilter selection for this box plot (only once)
-  const [selection] = useState(() => Selection.crossfilter());
-
-  useEffect(() => {
-    if (!config) {
-      clientRef.current = null;
-      return;
-    }
-
-    const client = new BoxPlotClient({
-      onStateChange: setState,
-      selection,
-      tableName,
-      x: config.x,
-      y: config.y,
-    });
-    clientRef.current = client;
-    coordinator.connect(client);
-
-    return () => {
-      client.destroy();
-      if (clientRef.current === client) {
-        clientRef.current = null;
-      }
-    };
-  }, [config, coordinator, selection, tableName]);
-
-  return {clientRef, state};
-}
+  MARGINS,
+  type PlotOutlierDatum,
+  type PlotSummaryDatum,
+} from './constants';
+import {createBoxPlotElement} from './plot';
+import type {BoxPlotChartConfig} from '../schema';
+import {useBoxPlotClient} from './useBoxPlotClient';
+import {formatCategory, getYDomain, yPixelToValue} from './utils';
 
 /**
  * Custom renderer for box-plot chart type.
  * Uses BoxPlotClient for SQL-based quartile calculations and custom Observable Plot rendering.
  */
-export function BoxPlotPanelRenderer({
-  tableName,
-  config,
-  coordinator,
-}: ChartRendererProps<BoxPlotChartConfig>) {
+export const BoxPlotPanelRenderer: FC<
+  ChartRendererProps<BoxPlotChartConfig>
+> = ({tableName, config, coordinator}) => {
   const configX = config.settings.x;
   const configY = config.settings.y;
   const boxPlotConfig = useMemo(
@@ -409,4 +199,4 @@ export function BoxPlotPanelRenderer({
       </div>
     </div>
   );
-}
+};
