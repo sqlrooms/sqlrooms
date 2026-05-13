@@ -9,7 +9,7 @@ export const BoxPlotSettingsComponent: FC = () => {
   return (
     <div className="space-y-4">
       <Field label="X Field (categorical)" required>
-        <ColumnSelector
+        <ColumnSelector.Categorical
           value={config.settings.x}
           onChange={(x) => onChangeConfig('x', x)}
         />

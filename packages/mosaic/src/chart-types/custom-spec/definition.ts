@@ -12,8 +12,6 @@ export const customSpecChartType: SpecChartTypeDefinition<CustomSpecChartConfig>
     id: 'custom-spec',
     label: 'Custom Spec',
     description: DESCRIPTION,
-    aiDescription:
-      'Manual template for editing after creation. Prefer explicit chart templates for assistant-created charts.',
     icon: Code,
     schema: CustomSpecChartSettings,
     settingsComponent: CustomSpecSettingsComponent,

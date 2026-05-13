@@ -14,8 +14,15 @@ export type BubbleChartToolParams = z.infer<typeof BubbleChartToolParameters>;
 
 export function createBubbleChartAiTool(deps: ChartToolDeps) {
   return tool({
-    description:
-      'Create a bubble/scatter chart with x, y position and optional size.',
+    description: `Bubble/scatter chart: plots individual points positioned by two numeric columns (x, y), with optional size dimension.
+
+Use when: user asks to "plot X vs Y", "show relationship between", "scatter plot", "correlation", "compare two numeric columns".
+Example queries: "plot latitude vs longitude", "show correlation between elevation and temperature", "visualize coordinates sized by population", "plot area vs population density".
+
+Required: x and y must be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}).
+Optional: size can encode a third numeric dimension (magnitude, frequency, count).
+
+Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart).`,
     inputSchema: BubbleChartToolParameters,
     execute: async (params) => {
       try {
