@@ -5,7 +5,11 @@ import {ColumnSelector} from './ColumnSelector';
 import {AggregationSelector} from './AggregationSelector';
 import type {AggregateFunction} from '../chart-types/line-chart/schema';
 import {useChartSettingsContext} from '../chart/chart-settings/ChartSettingsContext';
-import {NUMERIC_COLUMN_TYPES} from './constants';
+import {
+  NUMERIC_COLUMN_TYPES,
+  QUANTITATIVE_COLUMN_TYPES,
+  CATEGORICAL_COLUMN_TYPES,
+} from './constants';
 import type {YFieldConfig} from '../chart-types/line-chart/schema';
 
 export interface MultiFieldSelectorProps {
@@ -18,8 +22,14 @@ export interface MultiFieldSelectorProps {
 /**
  * Manages an array of field configurations with add/update/remove logic.
  * Emits the full updated array on every change.
+ *
+ * Can be used as:
+ * - `<MultiFieldSelector types={...} />` - custom types
+ * - `<MultiFieldSelector.Numeric />` - numeric types only
+ * - `<MultiFieldSelector.Quantitative />` - numeric + temporal
+ * - `<MultiFieldSelector.Categorical />` - text/enum types
  */
-export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
+const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   types,
   value,
   onChange,
@@ -113,6 +123,20 @@ export const MultiFieldSelector: FC<MultiFieldSelectorProps> = ({
   );
 };
 
-export const NumericMultiFieldSelector: FC<
-  Omit<MultiFieldSelectorProps, 'types'>
-> = (props) => <MultiFieldSelector {...props} types={NUMERIC_COLUMN_TYPES} />;
+const Numeric: FC<Omit<MultiFieldSelectorProps, 'types'>> = (props) => (
+  <MultiFieldSelectorRoot {...props} types={NUMERIC_COLUMN_TYPES} />
+);
+
+const Quantitative: FC<Omit<MultiFieldSelectorProps, 'types'>> = (props) => (
+  <MultiFieldSelectorRoot {...props} types={QUANTITATIVE_COLUMN_TYPES} />
+);
+
+const Categorical: FC<Omit<MultiFieldSelectorProps, 'types'>> = (props) => (
+  <MultiFieldSelectorRoot {...props} types={CATEGORICAL_COLUMN_TYPES} />
+);
+
+export const MultiFieldSelector = Object.assign(MultiFieldSelectorRoot, {
+  Numeric,
+  Quantitative,
+  Categorical,
+});

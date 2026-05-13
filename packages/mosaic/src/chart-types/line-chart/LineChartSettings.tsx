@@ -1,10 +1,10 @@
 import {type FC} from 'react';
 import {Field} from '../../chart-builders/Field';
-import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
+import {ColumnSelector} from '../../chart-builders/ColumnSelector';
 
 import {TemporalGranularitySelector} from '../../chart-builders/TemporalGranularitySelector';
 import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
-import {NumericMultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
+import {MultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
 import {isTemporalType} from '../../chart-builders/constants';
 
 /**
@@ -29,7 +29,7 @@ export const LineChartSettingsComponent: FC = () => {
               : '1fr',
           }}
         >
-          <QuantitativeColumnSelector
+          <ColumnSelector.Quantitative
             value={config.settings.x}
             onChange={(x) => onChangeConfig('x', x)}
           />
@@ -44,7 +44,7 @@ export const LineChartSettingsComponent: FC = () => {
       </Field>
 
       <Field label="Y Axis" required>
-        <NumericMultiFieldSelector
+        <MultiFieldSelector.Numeric
           value={config.settings.yFields ?? []}
           onChange={(yFields) => onChangeConfig('yFields', yFields)}
           showAggregation={Boolean(config.settings.xInterval)}

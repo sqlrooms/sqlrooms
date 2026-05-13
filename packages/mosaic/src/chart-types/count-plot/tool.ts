@@ -4,7 +4,7 @@ import {CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import {type ChartToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {CATEGORICAL_COLUMN_TYPES} from '../../chart-builders/constants';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings.required(),
@@ -14,16 +14,17 @@ export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;
 
 export function createCountPlotAiTool(deps: ChartToolDeps) {
   return tool({
-    description: 'Create a count plot showing frequency of categorical values.',
+    description:
+      'Create a horizontal bar chart showing frequency/count of categorical values. Use for discrete/categorical columns (text, enums), not numeric distributions.',
     inputSchema: CountPlotToolParameters,
     execute: async (params) => {
       try {
         const {artifactId, tableName, columns} = deps.resolveResources(params);
 
-        // Validate settings
+        // Validate settings - expect categorical columns
         validateColumnExists(
           params.settings.field,
-          QUANTITATIVE_COLUMN_TYPES,
+          CATEGORICAL_COLUMN_TYPES,
           columns,
           'field',
         );
