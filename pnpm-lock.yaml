@@ -3472,6 +3472,9 @@ importers:
       '@sqlrooms/db':
         specifier: workspace:*
         version: link:../db
+      '@sqlrooms/documents':
+        specifier: workspace:*
+        version: link:../documents
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb

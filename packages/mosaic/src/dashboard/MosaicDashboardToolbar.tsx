@@ -18,6 +18,7 @@ import {
   BarChart3,
   Check,
   ChevronsUpDown,
+  FileText,
   Plus,
   TableProperties,
 } from 'lucide-react';
@@ -27,8 +28,10 @@ import {
   type MosaicDashboardAddPanelAction,
   type MosaicDashboardAddPanelActionContext,
   createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardTextPanelConfig,
   getMosaicDashboardSelectionName,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 
@@ -74,6 +77,7 @@ export const MosaicDashboardToolbar: React.FC = () => {
     dashboard?.selectedTable &&
     panelRenderers[MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE],
   );
+  const canAddText = Boolean(panelRenderers[MOSAIC_DASHBOARD_TEXT_PANEL_TYPE]);
   const addPanelActionContext = useMemo<MosaicDashboardAddPanelActionContext>(
     () => ({
       dashboardId,
@@ -96,7 +100,8 @@ export const MosaicDashboardToolbar: React.FC = () => {
   const canAddCustomPanel = addPanelActionEntries.some(
     (entry) => entry.enabled,
   );
-  const canAddAnyPanel = canCreateChart || canAddProfiler || canAddCustomPanel;
+  const canAddAnyPanel =
+    canCreateChart || canAddProfiler || canAddText || canAddCustomPanel;
   const [selectionVersion, setSelectionVersion] = useState(0);
 
   useEffect(() => {
@@ -131,6 +136,11 @@ export const MosaicDashboardToolbar: React.FC = () => {
           source: {tableName: dashboard.selectedTable},
         })
       : createMosaicDashboardProfilerPanelConfig();
+    addPanel(dashboardId, panel);
+  };
+
+  const handleAddText = () => {
+    const panel = createMosaicDashboardTextPanelConfig();
     addPanel(dashboardId, panel);
   };
 
@@ -221,6 +231,10 @@ export const MosaicDashboardToolbar: React.FC = () => {
             >
               <TableProperties className="mr-2 h-4 w-4" />
               Profiler
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleAddText} disabled={!canAddText}>
+              <FileText className="mr-2 h-4 w-4" />
+              Text
             </DropdownMenuItem>
             {addPanelActionEntries.map(({action, enabled}) => {
               const Icon = action.icon;

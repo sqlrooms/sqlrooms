@@ -43,6 +43,7 @@ import {ChartConfig} from '../chart-types/chart-config';
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
+export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
@@ -63,6 +64,12 @@ export const ProfilerPanelConfig = z.object({
 });
 export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
 
+// Text panel config
+export const TextPanelConfig = z.object({
+  content: z.string().default(''),
+});
+export type TextPanelConfig = z.infer<typeof TextPanelConfig>;
+
 // Panel configs discriminated by type
 export const ChartPanelConfig = z.object({
   id: z.string(),
@@ -82,6 +89,15 @@ export const ProfilerPanel = z.object({
 });
 export type ProfilerPanel = z.infer<typeof ProfilerPanel>;
 
+export const TextPanel = z.object({
+  id: z.string(),
+  type: z.literal(MOSAIC_DASHBOARD_TEXT_PANEL_TYPE),
+  title: z.string().default('Text'),
+  source: MosaicDashboardPanelSource.optional(),
+  config: TextPanelConfig,
+});
+export type TextPanel = z.infer<typeof TextPanel>;
+
 // Legacy panel for backward compatibility
 export const LegacyPanelConfig = z.object({
   id: z.string(),
@@ -94,7 +110,7 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [ChartPanelConfig, ProfilerPanel])
+  .discriminatedUnion('type', [ChartPanelConfig, ProfilerPanel, TextPanel])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
@@ -114,6 +130,8 @@ export type ChartPanelRendererProps =
   MosaicDashboardPanelRendererProps<ChartPanelConfig>;
 export type ProfilerPanelRendererProps =
   MosaicDashboardPanelRendererProps<ProfilerPanel>;
+export type TextPanelRendererProps =
+  MosaicDashboardPanelRendererProps<TextPanel>;
 
 export type MosaicDashboardPanelRenderer<
   TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
@@ -134,6 +152,7 @@ export type AnyPanelRenderer = {
 export type PanelTypeMap = {
   [MOSAIC_DASHBOARD_CHART_PANEL_TYPE]: ChartPanelConfig;
   [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: ProfilerPanel;
+  [MOSAIC_DASHBOARD_TEXT_PANEL_TYPE]: TextPanel;
 };
 
 // Panel renderers record - use type-erased renderers for runtime compatibility
@@ -200,6 +219,24 @@ export function createMosaicDashboardProfilerPanelConfig(
       pageSize: options.pageSize ?? 10,
     },
   });
+}
+
+export function createMosaicDashboardTextPanelConfig(
+  options: {
+    title?: string;
+    content?: string;
+    source?: MosaicDashboardPanelSource;
+  } = {},
+): MosaicDashboardPanelConfig {
+  return {
+    id: createId(),
+    type: MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
+    title: options.title ?? 'Text',
+    source: options.source,
+    config: {
+      content: options.content ?? '',
+    },
+  };
 }
 
 export const MosaicDashboardEntry = z.object({
@@ -758,18 +795,39 @@ function shouldEvictPanelRuntimeForPatch(
   }
 
   if (panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE) {
-    return Boolean(patch.config);
+    return Boolean('config' in patch && patch.config);
   }
 
   return false;
+}
+
+/**
+ * Type guard to check if a panel config has a source property.
+ * All standard panel types (Chart, Profiler, Text) have optional sources.
+ */
+export function panelHasSource(
+  panel: MosaicDashboardPanelConfig,
+): panel is ChartPanelConfig | ProfilerPanel | TextPanel {
+  return (
+    panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE ||
+    panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE ||
+    panel.type === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE
+  );
 }
 
 export function resolveMosaicDashboardPanelSource(
   dashboard: MosaicDashboardEntry,
   panel: MosaicDashboardPanelConfig,
 ): MosaicDashboardPanelSource | undefined {
+  if (!panelHasSource(panel)) {
+    return undefined;
+  }
   if (panel.source?.sqlQuery || panel.source?.tableName) {
     return panel.source;
+  }
+  // Text panels typically don't need a table source
+  if (panel.type === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE) {
+    return undefined;
   }
   return dashboard.selectedTable
     ? {tableName: dashboard.selectedTable}
