@@ -184,6 +184,8 @@ export {
   customSpecChartType,
   heatmapChartType,
   histogramChartType,
+  isSpecChartType,
+  isComponentChartType,
   lineChartChartType,
   mosaicChartTypes,
   ChartConfig,

@@ -16,6 +16,7 @@ export const LineChartSettingsComponent: FC = () => {
     useChartSettingsContext('line-chart');
 
   const xField = columns.find((c) => c.name === config.settings.x);
+  const isXFieldTemporal = xField && isTemporalType(xField.type);
 
   return (
     <div className="space-y-4">
@@ -23,14 +24,16 @@ export const LineChartSettingsComponent: FC = () => {
         <div
           className="grid items-end gap-2"
           style={{
-            gridTemplateColumns: xField ? 'minmax(120px, 1fr) 100px' : '1fr',
+            gridTemplateColumns: isXFieldTemporal
+              ? 'minmax(120px, 1fr) 100px'
+              : '1fr',
           }}
         >
           <QuantitativeColumnSelector
             value={config.settings.x}
             onChange={(x) => onChangeConfig('x', x)}
           />
-          {xField && isTemporalType(xField.type) && (
+          {isXFieldTemporal && (
             <TemporalGranularitySelector
               value={config.settings.xInterval}
               onChange={(xInterval) => onChangeConfig('xInterval', xInterval)}
