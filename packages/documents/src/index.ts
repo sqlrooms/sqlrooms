@@ -19,14 +19,11 @@ export {
   createDocumentCommands,
   DOCUMENT_AI_INSTRUCTIONS,
 } from './documentCommands';
-export {
-  MarkdownDocumentEditor,
-  type MarkdownDocumentEditorProps,
-} from './MarkdownDocumentEditor';
+export {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 export {
   MarkdownDocumentEditorRoot,
-  type MarkdownDocumentEditorMode,
   type MarkdownDocumentEditorRootProps,
+  type MarkdownDocumentEditorMode,
 } from './MarkdownDocumentEditor/MarkdownDocumentEditorRoot';
 export {
   MarkdownDocumentEditorToolbar,
