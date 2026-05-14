@@ -74,9 +74,6 @@
     "examples/*nextjs*": {
       "entry": [
         "src/app/**/{page.tsx,api/**/*.ts}"
-      ],
-      "ignoreBinaries": [
-        "next"
       ]
     },
     "examples/*": {
