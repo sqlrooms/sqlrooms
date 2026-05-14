@@ -10,6 +10,7 @@ Document artifacts:
 - Use document.create to create a new Markdown document artifact.
 - Use document.set-markdown only when replacing the full document body is intended.
 - Use document.append-markdown for additive edits that should keep existing content.
+- Before embedding chart images in Markdown, use the chart_image_for_markdown tool and insert its returned Markdown image link.
 `.trim();
 
 type DocumentCommandState = BaseRoomStoreState & {
@@ -81,6 +82,7 @@ export function createDocumentCommands<
               title: artifact.title,
               updatedAt: document?.updatedAt,
               markdownLength: document?.markdown.length ?? 0,
+              assetCount: Object.keys(document?.assets ?? {}).length,
             };
           });
 
@@ -127,6 +129,9 @@ export function createDocumentCommands<
             artifactId: resolved.artifact.id,
             title: resolved.artifact.title,
             markdown: document?.markdown ?? '',
+            assets: Object.values(document?.assets ?? {}).map(
+              documentAssetMetadata,
+            ),
             updatedAt: document?.updatedAt,
           },
         };
@@ -176,6 +181,9 @@ export function createDocumentCommands<
             artifactId,
             title: state.artifacts.getArtifact(artifactId)?.title,
             markdown: state.documents.getDocument(artifactId)?.markdown ?? '',
+            assets: Object.values(
+              state.documents.getDocument(artifactId)?.assets ?? {},
+            ).map(documentAssetMetadata),
           },
         };
       },
@@ -299,4 +307,20 @@ function appendMarkdown(existing: string, markdown: string) {
   const trimmedExisting = existing.trimEnd();
   if (!trimmedExisting) return trimmedAppend;
   return `${trimmedExisting}\n\n${trimmedAppend}`;
+}
+
+function documentAssetMetadata(
+  asset: DocumentCommandState['documents']['config']['artifacts'][string]['assets'][string],
+) {
+  return {
+    id: asset.id,
+    mediaType: asset.mediaType,
+    encoding: asset.encoding,
+    filename: asset.filename,
+    alt: asset.alt,
+    title: asset.title,
+    provenance: asset.provenance,
+    createdAt: asset.createdAt,
+    updatedAt: asset.updatedAt,
+  };
 }

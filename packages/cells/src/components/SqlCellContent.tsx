@@ -2,7 +2,7 @@ import {getCoreDuckDbConnectionId} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {useCellsStore} from '../hooks';
 import type {
   CellContainerProps,
@@ -81,9 +81,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           }
         }),
       );
-      handleRunRef.current();
+      runCell(id);
     },
-    [id, storeApi],
+    [id, runCell, storeApi],
   );
 
   const handleConnectorChange = useCallback(
@@ -133,11 +133,6 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
       : undefined;
 
   const isRunning = status?.state === 'running';
-
-  const handleRunRef = useRef(handleRun);
-  useEffect(() => {
-    handleRunRef.current = handleRun;
-  }, [handleRun]);
 
   const content = (
     <div className="flex flex-col">

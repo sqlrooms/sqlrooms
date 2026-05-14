@@ -1,4 +1,5 @@
 import type {RoomCommand} from '@sqlrooms/room-shell';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {z} from 'zod';
 
 import {RoomState} from './store-types';
@@ -43,6 +44,16 @@ type SelectArtifactCommandInput = z.infer<typeof SelectArtifactCommandInput>;
 // Generic create-artifact helper per artifact type
 // ---------------------------------------------------------------------------
 
+function getUniqueArtifactTitle(state: RoomState, baseTitle: string) {
+  return generateUniqueName(
+    baseTitle,
+    Object.values(state.artifacts.config.artifactsById).map(
+      (artifact) => artifact.title,
+    ),
+    ' ',
+  );
+}
+
 function createArtifactCommand(
   artifactType: CliArtifactType,
   group: string,
@@ -66,7 +77,7 @@ function createArtifactCommand(
       const state = getState();
       const artifactId = state.artifacts.createArtifact({
         type: artifactType,
-        title: title ?? group,
+        title: getUniqueArtifactTitle(state, title ?? group),
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
@@ -107,11 +118,12 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
     },
     execute: ({getState}, input) => {
       const {title, layoutType} = input as DashboardCreateArtifactCommandInput;
-      const artifactId = getState().dashboard.createDashboardArtifact(
-        title,
+      const state = getState();
+      const artifactId = state.dashboard.createDashboardArtifact(
+        getUniqueArtifactTitle(state, title ?? 'Dashboard'),
         layoutType,
       );
-      getState().artifacts.setCurrentArtifact(artifactId);
+      state.artifacts.setCurrentArtifact(artifactId);
       return {
         success: true,
         commandId: 'dashboard.create-artifact',

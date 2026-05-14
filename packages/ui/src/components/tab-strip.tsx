@@ -182,9 +182,11 @@ function SortableTab({
   getTabDragData,
 }: SortableTabProps) {
   const tabDragData = getTabDragData?.(tab);
+  const isEditing = editingTabId === tab.id;
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
     useSortable({
       id: sortableId,
+      disabled: isEditing,
       data: {
         kind: DEFAULT_TAB_DRAG_KIND,
         ...tabDragData,
@@ -210,35 +212,35 @@ function SortableTab({
       className="h-full shrink-0"
       style={style}
       data-tab-id={tab.id}
-      {...attributes}
-      {...listeners}
+      {...(isEditing ? {} : attributes)}
+      {...(isEditing ? {} : listeners)}
       tabIndex={-1}
     >
       <div
-        data-state={editingTabId === tab.id ? 'editing' : undefined}
+        data-state={isEditing ? 'editing' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
           'group flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
           'py-0 pr-1 pl-4 font-normal data-[state=active]:shadow-none',
           tabClassName,
-          editingTabId === tab.id && 'focus-visible:ring-0',
+          isEditing && 'focus-visible:ring-0',
         )}
       >
         <div className="relative flex h-full min-w-0 flex-1 items-center">
           <TabsTrigger
             value={tab.id}
-            tabIndex={editingTabId === tab.id ? -1 : undefined}
-            data-editing={editingTabId === tab.id ? '' : undefined}
+            tabIndex={isEditing ? -1 : undefined}
+            data-editing={isEditing ? '' : undefined}
             className={cn(
               ...TAB_STRIP_BUTTON_CLASSNAMES,
               'flex-1 justify-start gap-1',
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
-              editingTabId === tab.id && 'focus-visible:ring-0',
+              isEditing && 'focus-visible:ring-0',
             )}
             onDoubleClick={() => onStartEditing(tab.id)}
           >
-            {editingTabId !== tab.id ? (
+            {!isEditing ? (
               <div className="truncate text-sm">
                 {renderTabLabel ? renderTabLabel(tab) : tab.name}
               </div>

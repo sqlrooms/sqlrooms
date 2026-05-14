@@ -55,7 +55,11 @@ import {
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {
+  createChartImageForMarkdownTool,
+  createVegaChartTool,
+  VegaChartToolResult,
+} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   createWebContainerToolkit,
@@ -597,6 +601,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ...createDashboardAiTools(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
+              chart_image_for_markdown: createChartImageForMarkdownTool(store),
             },
             toolRenderers: {
               ...createDefaultAiToolRenderers(),

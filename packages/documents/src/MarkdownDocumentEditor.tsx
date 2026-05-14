@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
   Input,
 } from '@sqlrooms/ui';
+import TiptapImage, {type ImageOptions} from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import {Table} from '@tiptap/extension-table';
 import TableCell from '@tiptap/extension-table-cell';
@@ -43,11 +44,13 @@ import {
   XIcon,
 } from 'lucide-react';
 import React, {useEffect, useMemo, useRef} from 'react';
+import type {DocumentAsset} from './DocumentsSliceConfig';
 
 export type MarkdownDocumentEditorMode = 'rich' | 'source';
 
 export type MarkdownDocumentEditorProps = {
   value: string;
+  assets?: Record<string, DocumentAsset>;
   onChange: (value: string) => void;
   sourcePanelOpen?: boolean;
   onSourcePanelOpenChange?: (open: boolean) => void;
@@ -61,6 +64,7 @@ export type MarkdownDocumentEditorProps = {
 
 export function MarkdownDocumentEditor({
   value,
+  assets = {},
   onChange,
   sourcePanelOpen: controlledSourcePanelOpen,
   onSourcePanelOpenChange,
@@ -82,9 +86,21 @@ export function MarkdownDocumentEditor({
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  const assetVersion = useMemo(
+    () =>
+      Object.values(assets)
+        .map((asset) => `${asset.id}:${asset.updatedAt}`)
+        .sort()
+        .join('|'),
+    [assets],
+  );
+
   const extensions = useMemo(
     () => [
       StarterKit.configure({link: false}),
+      AssetAwareImage.configure({
+        resolveAssetUrl: (src) => resolveDocumentAssetUrl(src, assets),
+      }),
       Link.configure({openOnClick: false}),
       TaskList,
       TaskItem.configure({nested: true}),
@@ -96,7 +112,7 @@ export function MarkdownDocumentEditor({
         markedOptions: {gfm: true},
       }),
     ],
-    [],
+    [assets],
   );
 
   const editor = useEditor({
@@ -121,6 +137,13 @@ export function MarkdownDocumentEditor({
     if (editor.getMarkdown() === value) return;
     editor.commands.setContent(value, {contentType: 'markdown'});
   }, [editor, value]);
+
+  useEffect(() => {
+    if (!editor) return;
+    if (!value.includes('asset://')) return;
+    if (editor.getMarkdown() !== value) return;
+    editor.commands.setContent(value, {contentType: 'markdown'});
+  }, [assetVersion, editor, value]);
 
   useEffect(() => {
     editor?.setEditable(!readOnly);
@@ -193,6 +216,55 @@ export function MarkdownDocumentEditor({
       </div>
     </div>
   );
+}
+
+type AssetAwareImageOptions = ImageOptions & {
+  resolveAssetUrl: (src: string) => string | undefined;
+};
+
+const AssetAwareImage = TiptapImage.extend<AssetAwareImageOptions>({
+  addOptions() {
+    const parentOptions = this.parent?.() as ImageOptions | undefined;
+    return {
+      inline: false,
+      allowBase64: false,
+      HTMLAttributes: {},
+      resize: false,
+      ...parentOptions,
+      resolveAssetUrl: () => undefined,
+    };
+  },
+
+  renderHTML({HTMLAttributes}) {
+    const src =
+      typeof HTMLAttributes.src === 'string' ? HTMLAttributes.src : undefined;
+    const resolvedSrc = src ? this.options.resolveAssetUrl(src) : undefined;
+
+    return [
+      'img',
+      {
+        ...this.options.HTMLAttributes,
+        ...HTMLAttributes,
+        ...(resolvedSrc ? {src: resolvedSrc} : {}),
+      },
+    ];
+  },
+});
+
+function resolveDocumentAssetUrl(
+  src: string,
+  assets: Record<string, DocumentAsset>,
+) {
+  if (!src.startsWith('asset://')) return undefined;
+  const assetId = decodeURIComponent(src.slice('asset://'.length));
+  const asset = assets[assetId];
+  if (!asset) return undefined;
+  if (asset.mediaType === 'image/svg+xml') {
+    return asset.encoding === 'base64'
+      ? `data:image/svg+xml;base64,${asset.data}`
+      : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.data)}`;
+  }
+  return `data:${asset.mediaType};base64,${asset.data}`;
 }
 
 function RichToolbar({
