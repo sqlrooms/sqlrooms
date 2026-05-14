@@ -158,8 +158,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             resolvedCoordinator = coordinator();
             mosaicConnector = isWasmDuckDbConnector(dbConnector)
               ? await wasmConnector({
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - We might be using a different version of duckdb-wasm than mosaic expects
                   duckDb: dbConnector.getDb(),
-                  // @ts-expect-error - We install a different version of duckdb-wasm
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - same version mismatch
                   connection: dbConnector.getConnection(),
                 })
               : createDuckDbMosaicConnector(dbConnector);
