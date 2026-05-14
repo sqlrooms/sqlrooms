@@ -30,6 +30,7 @@ export const MarkdownDocument: React.FC<{artifactId: string}> = ({
   return (
     <MarkdownDocumentEditor
       value={document?.markdown ?? ''}
+      assets={document?.assets ?? {}}
       onChange={handleChange}
     />
   );

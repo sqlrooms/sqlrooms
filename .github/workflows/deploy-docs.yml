@@ -64,7 +64,7 @@ jobs:
         run: pnpm install --shamefully-hoist --no-frozen-lockfile
 
       - name: Cache for Turbo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -117,7 +117,7 @@ jobs:
         run: echo "sqlrooms.org" > docs/.vitepress/dist/CNAME
 
       - name: Upload artifact to GitHub Pages
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.vitepress/dist
 

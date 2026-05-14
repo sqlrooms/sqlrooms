@@ -35,10 +35,6 @@ export {
   renderSqlWithInputs,
   runSqlWithCallbacks,
 } from './sqlHelpers';
-export {
-  buildCrossFilterPredicate,
-  BRUSH_PARAM_NAME,
-} from './vegaSelectionUtils';
 export * from './types';
 
 export const SqlCell = {
