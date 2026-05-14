@@ -2,7 +2,10 @@
   "name": "sqlrooms",
   "version": "0.0.0",
   "private": true,
-  "repository": "git@github.com:sqlrooms/sqlrooms.git",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
   "author": "SQLRooms Contributors",
   "type": "module",
   "workspaces": [
