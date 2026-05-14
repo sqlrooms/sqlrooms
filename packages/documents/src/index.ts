@@ -21,9 +21,21 @@ export {
 } from './documentCommands';
 export {
   MarkdownDocumentEditor,
-  type MarkdownDocumentEditorMode,
   type MarkdownDocumentEditorProps,
 } from './MarkdownDocumentEditor';
+export {
+  MarkdownDocumentEditorRoot,
+  type MarkdownDocumentEditorMode,
+  type MarkdownDocumentEditorRootProps,
+} from './MarkdownDocumentEditor/MarkdownDocumentEditorRoot';
+export {
+  MarkdownDocumentEditorToolbar,
+  type MarkdownDocumentEditorToolbarProps,
+} from './MarkdownDocumentEditor/MarkdownDocumentEditorToolbar';
+export {
+  MarkdownDocumentEditorContent,
+  type MarkdownDocumentEditorContentProps,
+} from './MarkdownDocumentEditor/MarkdownDocumentEditorContent';
 export {MarkdownDocument} from './MarkdownDocument';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {

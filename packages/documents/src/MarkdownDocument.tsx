@@ -31,6 +31,9 @@ export const MarkdownDocument: React.FC<{artifactId: string}> = ({
     <MarkdownDocumentEditor
       value={document?.markdown ?? ''}
       onChange={handleChange}
-    />
+    >
+      <MarkdownDocumentEditor.Toolbar />
+      <MarkdownDocumentEditor.Content />
+    </MarkdownDocumentEditor>
   );
 };

@@ -32,7 +32,10 @@ const MosaicDashboardTextRenderer: FC<TextPanelRendererProps> = ({
       <MarkdownDocumentEditor
         value={panel.config.content}
         onChange={handleChange}
-      />
+      >
+        <MarkdownDocumentEditor.Toolbar />
+        <MarkdownDocumentEditor.Content />
+      </MarkdownDocumentEditor>
     </div>
   );
 };
