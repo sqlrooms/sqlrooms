@@ -1,19 +1,13 @@
 {
   "name": "@sqlrooms/notebook",
   "version": "0.29.0-rc.3",
-  "type": "module",
-  "author": "SQLRooms Contributors",
-  "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
   },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -21,16 +15,18 @@
       "default": "./dist/index.js"
     }
   },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "tsc -w",
     "build": "tsc",
+    "dev": "tsc -w",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
-  },
-  "peerDependencies": {
-    "react": "^18 || ^19",
-    "react-dom": "^18 || ^19"
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
@@ -43,5 +39,9 @@
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "zod": "^4.1.13"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
   }
 }

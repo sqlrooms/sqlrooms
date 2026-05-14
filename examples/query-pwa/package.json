@@ -1,14 +1,17 @@
 {
   "name": "query-pwa-example",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
+    "postinstall": "node scripts/download-extensions.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "postinstall": "node scripts/download-extensions.mjs"
+    "preview": "vite preview"
+  },
+  "overrides": {
+    "@duckdb/duckdb-wasm": "1.32.0"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
@@ -41,8 +44,5 @@
     "vite": "^8.0.5",
     "vite-plugin-pwa": "^1.0.3",
     "workbox-window": "^7.4.0"
-  },
-  "overrides": {
-    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }
