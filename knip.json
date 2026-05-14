@@ -73,39 +73,14 @@
     },
     "examples/*nextjs*": {
       "entry": [
-        "src/app/**/{page.tsx,api/**/*.ts}",
-        "postcss.config.mjs"
-      ],
-      "ignore": [
-        "src/globals.css"
-      ]
-    },
-    "examples/canvas": {
-      "entry": [
-        "src/main.tsx"
-      ],
-      "ignoreDependencies": [],
-      "ignore": [
-        "src/index.css"
+        "src/app/**/{page.tsx,api/**/*.ts}"
       ]
     },
     "examples/*": {
       "entry": [
         "src/main.{ts,tsx}"
-      ],
-      "ignoreDependencies": [],
-      "ignore": [
-        "src/index.css"
       ]
     },
-    "apps/*": {
-      "entry": [
-        "src/main.tsx"
-      ],
-      "ignoreDependencies": [],
-      "ignore": [
-        "src/style.css"
-      ]
-    }
+    "apps/*": {}
   }
 }

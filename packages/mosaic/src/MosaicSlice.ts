@@ -158,8 +158,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             resolvedCoordinator = coordinator();
             mosaicConnector = isWasmDuckDbConnector(dbConnector)
               ? await wasmConnector({
-                  // @ts-expect-error - We install a different version of duckdb-wasm
                   duckDb: dbConnector.getDb(),
+                  // @ts-expect-error - We install a different version of duckdb-wasm
                   connection: dbConnector.getConnection(),
                 })
               : createDuckDbMosaicConnector(dbConnector);
