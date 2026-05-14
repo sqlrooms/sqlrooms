@@ -13,7 +13,6 @@ export const bubbleChartChartType: SpecChartTypeDefinition<BubbleChartConfig> =
     id: 'bubble-chart',
     label: 'Bubble Chart',
     description: DESCRIPTION,
-    aiDescription: 'Use for a simple scatterplot of two numeric columns.',
     icon: Workflow,
     schema: BubbleChartSettings,
     settingsComponent: BubbleChartSettingsComponent,
