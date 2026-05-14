@@ -1,9 +1,11 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
-import MapView from './map/MapView';
-import FiltersPanel from './filters/FiltersPanel';
+import {EarthquakeProfiler} from './filters/EarthquakeProfiler';
+import {FiltersPanel} from './filters/FiltersPanel';
+import {MapView} from './map/MapView';
+import {FC} from 'react';
 
-export const MainView = () => {
+export const MainView: FC = () => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
   const isTableReady = useRoomStore((state) =>
     state.db.tables.find(({table: {table}}) => table === 'earthquakes'),
@@ -32,9 +34,12 @@ export const MainView = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-row">
-      <MapView className="w-[70%] grow" />
-      <FiltersPanel className="w-[30%] max-w-100" />
+    <div className="flex h-full w-full flex-col">
+      <div className="flex min-h-0 flex-1 flex-row">
+        <MapView className="relative w-[70%] grow overflow-hidden" />
+        <FiltersPanel className="w-[30%] max-w-100" />
+      </div>
+      <EarthquakeProfiler className="h-[42%]" />
     </div>
   );
 };

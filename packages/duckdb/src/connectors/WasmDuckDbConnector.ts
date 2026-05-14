@@ -99,6 +99,22 @@ export function createWasmDuckDbConnector(
 
         conn = await db.connect();
       } catch (err) {
+        if (conn) {
+          try {
+            await conn.close();
+          } catch {
+            /* best-effort */
+          }
+        }
+        if (db) {
+          try {
+            await db.terminate();
+          } catch {
+            /* best-effort */
+          }
+        } else if (worker) {
+          worker.terminate();
+        }
         db = null;
         conn = null;
         worker = null;

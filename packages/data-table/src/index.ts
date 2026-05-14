@@ -5,6 +5,12 @@
 
 export {ColumnTypeBadge} from './ColumnTypeBadge';
 export {
+  ArrowCellValue,
+  type ArrowCellValueFormatter,
+  isNumericArrowType,
+  valueToString,
+} from './ArrowCellValue';
+export {
   DataTableArrowPaginated,
   type DataTableArrowPaginatedProps,
 } from './DataTableArrowPaginated';

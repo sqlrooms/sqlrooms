@@ -193,12 +193,18 @@ export {
   ResizablePanel,
   ResizablePanelGroup,
 } from './components/resizable';
+export type {
+  ResizablePanelOrientation,
+  ResizablePanelHandle,
+} from './components/resizable';
 
 export {RunButton, type RunButtonProps} from './components/run-button';
 
 export {
   TabStrip,
   type TabDescriptor,
+  type TabStripDndMode,
+  type TabStripDragData,
   type TabStripProps,
 } from './components/tab-strip';
 

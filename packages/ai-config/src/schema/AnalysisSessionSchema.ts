@@ -26,6 +26,67 @@ export const AnalysisResultSchema = z.object({
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
 
+export const AiRunContextItemSchema = z
+  .object({
+    kind: z.string(),
+    id: z.string(),
+    title: z.string(),
+    type: z.string().optional(),
+    subtitle: z.string().optional(),
+  })
+  .passthrough();
+export type AiRunContextItem = z.infer<typeof AiRunContextItemSchema>;
+
+const AiRunContextBaseSchema = z
+  .object({
+    items: z.array(AiRunContextItemSchema),
+    capturedAt: z.number(),
+  })
+  .passthrough();
+
+export const AiRunContextSchema = z.preprocess((data) => {
+  if (
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    'kind' in data &&
+    'id' in data &&
+    'title' in data &&
+    !('items' in data)
+  ) {
+    const legacyContext = data as {
+      kind: unknown;
+      id: unknown;
+      title: unknown;
+      type?: unknown;
+      capturedAt?: unknown;
+    };
+    const {capturedAt, ...item} = legacyContext;
+    return {
+      items: [item],
+      capturedAt: typeof capturedAt === 'number' ? capturedAt : 0,
+    };
+  }
+  return data;
+}, AiRunContextBaseSchema);
+export type AiRunContext = z.infer<typeof AiRunContextSchema>;
+
+export function getAiRunContextItems(
+  runContext: AiRunContext | unknown,
+): AiRunContextItem[] {
+  if (!runContext || typeof runContext !== 'object') return [];
+
+  if ('items' in runContext && Array.isArray(runContext.items)) {
+    return runContext.items
+      .map((item) => AiRunContextItemSchema.safeParse(item))
+      .filter((result) => result.success)
+      .map((result) => result.data);
+  }
+
+  const legacyResult = AiRunContextItemSchema.safeParse(runContext);
+  return legacyResult.success ? [legacyResult.data] : [];
+}
+
 const AnalysisSessionBaseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -44,6 +105,10 @@ const AnalysisSessionBaseSchema = z.object({
   isRunning: z.boolean().default(false),
   /** Last time the session was opened/selected (epoch ms) */
   lastOpenedAt: z.number().optional(),
+  /** Context captured when the current run started. */
+  runContext: AiRunContextSchema.optional(),
+  /** Persisted sub-agent tool call trees, keyed by parent toolCallId */
+  agentProgress: z.record(z.string(), z.array(z.unknown())).optional(),
 });
 
 /**

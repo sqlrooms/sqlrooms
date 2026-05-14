@@ -3,6 +3,90 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.2...v0.29.0-rc.3) (2026-05-07)
+
+### Bug Fixes
+
+* deckgl mosaic example fixes ([#586](https://github.com/sqlrooms/sqlrooms/issues/586)) ([024461b](https://github.com/sqlrooms/sqlrooms/commits/024461bc550b33f1d87e234e8895ad2a2fbbe0d1))
+* DeckJsonMap: nudge render on load ([#587](https://github.com/sqlrooms/sqlrooms/issues/587)) ([761bcaf](https://github.com/sqlrooms/sqlrooms/commits/761bcaf182a5a079b6d23d2ce1573e6134155351))
+* kepler legend should overlay on top of bottom widget ([#578](https://github.com/sqlrooms/sqlrooms/issues/578)) ([1e85041](https://github.com/sqlrooms/sqlrooms/commits/1e850413a252222db6b48fad4cb25910b13bbdba))
+
+### Features
+
+* add split map functionality and related context to Kepler ([#563](https://github.com/sqlrooms/sqlrooms/issues/563)) ([9328d21](https://github.com/sqlrooms/sqlrooms/commits/9328d21feb552983881e267ee8298fdbc160e19e))
+* customizable tool render behavior in ai-core ([#561](https://github.com/sqlrooms/sqlrooms/issues/561)) ([b8cadf5](https://github.com/sqlrooms/sqlrooms/commits/b8cadf571dbc7bd65440a7f868e5a9843f3ef90d))
+* dashboard charts settings ([#581](https://github.com/sqlrooms/sqlrooms/issues/581)) ([afc1f0e](https://github.com/sqlrooms/sqlrooms/commits/afc1f0e89f8febea4c05526ccfc085a544d0caca))
+* dnd-kit docking layout ([#552](https://github.com/sqlrooms/sqlrooms/issues/552)) ([b6876c0](https://github.com/sqlrooms/sqlrooms/commits/b6876c008459f417754bba99394154bce7c48455))
+* enhance CustomMapLegend with close functionality and fix split pane support in CustomMapLegendPanel ([#584](https://github.com/sqlrooms/sqlrooms/issues/584)) ([0a96750](https://github.com/sqlrooms/sqlrooms/commits/0a967502270a1e32fb28629e1e43a429d8ee4e0e))
+* Grid layout: more resize options ([#594](https://github.com/sqlrooms/sqlrooms/issues/594)) ([46dcf3d](https://github.com/sqlrooms/sqlrooms/commits/46dcf3d9e6054e9f1da1ac659470628a65b8bf7b))
+* Kepler: Removing currentMapId to align with artifacts ([#595](https://github.com/sqlrooms/sqlrooms/issues/595)) ([efe9eb7](https://github.com/sqlrooms/sqlrooms/commits/efe9eb714522f1f29bc408604a120a830c401e63))
+* **layout:** Add grid node type for scrollable dashboard layouts ([#575](https://github.com/sqlrooms/sqlrooms/issues/575)) ([0166d1e](https://github.com/sqlrooms/sqlrooms/commits/0166d1e098de1b3794f9ba29e85a75cbcbfd63ee))
+* Mosaic dashboards ([#539](https://github.com/sqlrooms/sqlrooms/issues/539)) ([ae2c193](https://github.com/sqlrooms/sqlrooms/commits/ae2c19365565a50971ed672b4331752e96161f0e))
+* Mosaic preagg in an ephemeral database ([#585](https://github.com/sqlrooms/sqlrooms/issues/585)) ([0262bac](https://github.com/sqlrooms/sqlrooms/commits/0262bac6afb58d557635443857bdd16c84b93609))
+* update ai chat ui component ([#576](https://github.com/sqlrooms/sqlrooms/issues/576)) ([0770869](https://github.com/sqlrooms/sqlrooms/commits/0770869066e440bb765d7e7872d883176ee96ff7))
+
+# [0.29.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.1...v0.29.0-rc.2) (2026-04-25)
+
+### Bug Fixes
+
+* add back draw geometry button ([#513](https://github.com/sqlrooms/sqlrooms/issues/513)) ([0e74352](https://github.com/sqlrooms/sqlrooms/commits/0e74352016bd00bb007a40e0a018b44cca5bfdc6))
+* add copy to ai assistant prompt ([#411](https://github.com/sqlrooms/sqlrooms/issues/411)) ([2cc975a](https://github.com/sqlrooms/sqlrooms/commits/2cc975a462a44ad88c481c47e25c72094230e035))
+* adjust padding in notebook examples ([#494](https://github.com/sqlrooms/sqlrooms/issues/494)) ([1bf099a](https://github.com/sqlrooms/sqlrooms/commits/1bf099a61340e6422f7a12d0120a6a6bb19d8c2b))
+* AiSettings: Prevent model name collisions ([#413](https://github.com/sqlrooms/sqlrooms/issues/413)) ([4be44b9](https://github.com/sqlrooms/sqlrooms/commits/4be44b9dd40293e77a4db5ed5c4275afa423c94a))
+* All schema tree menus are showing up at once ([#566](https://github.com/sqlrooms/sqlrooms/issues/566)) ([e3c4a88](https://github.com/sqlrooms/sqlrooms/commits/e3c4a88a15483012fd537c5fb7ab0f61c9313f72))
+* code mirror hover and autocomplete tooltips ([#499](https://github.com/sqlrooms/sqlrooms/issues/499)) ([8d4b3fc](https://github.com/sqlrooms/sqlrooms/commits/8d4b3fc04004300a50e648849a7c3f07a16cd493))
+* decrease height of suggestions ([#417](https://github.com/sqlrooms/sqlrooms/issues/417)) ([bcd4f79](https://github.com/sqlrooms/sqlrooms/commits/bcd4f795bf9ab2e2d525a319d9959154667a5c81))
+* Don't show empty footer in data table ([#412](https://github.com/sqlrooms/sqlrooms/issues/412)) ([00fe136](https://github.com/sqlrooms/sqlrooms/commits/00fe136af0c1f56e0cece477095d318d145e4dbf))
+* enable line numbers and highlight active line in SQL editor ([#463](https://github.com/sqlrooms/sqlrooms/issues/463)) ([fa19e8c](https://github.com/sqlrooms/sqlrooms/commits/fa19e8c96f7d51d43e08e37c345c5614aa710d95))
+* improve ai assistant text visibility ([#493](https://github.com/sqlrooms/sqlrooms/issues/493)) ([805882c](https://github.com/sqlrooms/sqlrooms/commits/805882c895b675482dbf9292e3c52942e6527bcb))
+* Improve copy message placement in AI assistant ([#392](https://github.com/sqlrooms/sqlrooms/issues/392)) ([fce659c](https://github.com/sqlrooms/sqlrooms/commits/fce659c5fb16f2ddacafa37fc3ba1a16a80a0db7))
+* monaco flicker pr test ([#344](https://github.com/sqlrooms/sqlrooms/issues/344)) ([275084e](https://github.com/sqlrooms/sqlrooms/commits/275084e93e2e3846b00da3054dafbbc0b2034727))
+* notebook pagination styling ([#479](https://github.com/sqlrooms/sqlrooms/issues/479)) ([ed9b08a](https://github.com/sqlrooms/sqlrooms/commits/ed9b08ae65e7cd9ff4a89e5ca09523a1884d2ddd))
+* only sync tables used by kepler ([#533](https://github.com/sqlrooms/sqlrooms/issues/533)) ([b269675](https://github.com/sqlrooms/sqlrooms/commits/b26967502b4854127d84ac8b6f267cbf4c453b6e))
+* subagent output render issue ([#505](https://github.com/sqlrooms/sqlrooms/issues/505)) ([1bb4642](https://github.com/sqlrooms/sqlrooms/commits/1bb4642931013fdc442b29ba3326ad766eca2e6d))
+* temporary disable SQL linter and gutter markers in DuckDB SQL extension ([#476](https://github.com/sqlrooms/sqlrooms/issues/476)) ([4ba6095](https://github.com/sqlrooms/sqlrooms/commits/4ba609555f57e0ec81d9b98288c6a45445acd1a0))
+* toModelOutput doesn't work in tool ([#510](https://github.com/sqlrooms/sqlrooms/issues/510)) ([aca33f8](https://github.com/sqlrooms/sqlrooms/commits/aca33f84b2d61ec54f52e0b4e274c7906f38d940))
+* update reason box highlight color ([#487](https://github.com/sqlrooms/sqlrooms/issues/487)) ([a537fed](https://github.com/sqlrooms/sqlrooms/commits/a537fed52fe7003c29951e3d4c415ef7ec246bcd))
+* WasmDuckDbConnector: worker not terminated on init failure ([#538](https://github.com/sqlrooms/sqlrooms/issues/538)) ([a82ffe2](https://github.com/sqlrooms/sqlrooms/commits/a82ffe28dce7af832170cd6f888a84392da6b28e))
+* word wrapping in notebook "Add new" cell dropdown ([#454](https://github.com/sqlrooms/sqlrooms/issues/454)) ([888c0cd](https://github.com/sqlrooms/sqlrooms/commits/888c0cd1e09d9077d0a1a56496bdc422c1d39c37))
+
+### Features
+
+*  Deck.gl + geoarrow layers integration ([#549](https://github.com/sqlrooms/sqlrooms/issues/549)) ([1dd3153](https://github.com/sqlrooms/sqlrooms/commits/1dd3153efb958b57227f8702967c3ed967a90375))
+* add close button to the draw panel ([#515](https://github.com/sqlrooms/sqlrooms/issues/515)) ([8e5a15a](https://github.com/sqlrooms/sqlrooms/commits/8e5a15a934e09a884797e99c82da4c1178d53d4e))
+* add duplicate kepler map ([#410](https://github.com/sqlrooms/sqlrooms/issues/410)) ([60a639e](https://github.com/sqlrooms/sqlrooms/commits/60a639e6ee6714964ab29a886a3d79ba5efd661a))
+* add filter related kepler.gl actions in KeplerSlice ([#555](https://github.com/sqlrooms/sqlrooms/issues/555)) ([ce023cc](https://github.com/sqlrooms/sqlrooms/commits/ce023cc64e6fb1adbcbdf0244574954b1f3dbc62))
+* Add just-bash support for WebContainer editing ([#489](https://github.com/sqlrooms/sqlrooms/issues/489)) ([7fbecb7](https://github.com/sqlrooms/sqlrooms/commits/7fbecb7948f312f0a9e27bdc1558858b0fac1496))
+* add markdown MonacoEditor ([#544](https://github.com/sqlrooms/sqlrooms/issues/544)) ([c18e25f](https://github.com/sqlrooms/sqlrooms/commits/c18e25f92f1cfac0d7926079b7cc3d15f9a8694b))
+* add more map export resolution options ([#469](https://github.com/sqlrooms/sqlrooms/issues/469)) ([352fc65](https://github.com/sqlrooms/sqlrooms/commits/352fc65771f0263768dc6beb4684c987d801aeb2))
+* add updateTooltipFields to dispatch tooltip action in KeplerSlice ([#425](https://github.com/sqlrooms/sqlrooms/issues/425)) ([8688abf](https://github.com/sqlrooms/sqlrooms/commits/8688abf144db97203e696fdb30746fc40b196db7))
+* add Сopy button to SQL Cell results footer ([#458](https://github.com/sqlrooms/sqlrooms/issues/458)) ([388299f](https://github.com/sqlrooms/sqlrooms/commits/388299f844e1da33eaa4a79bfdb262b1b2fccd00))
+* CLI: Dynamic connector load ([#407](https://github.com/sqlrooms/sqlrooms/issues/407)) ([e167396](https://github.com/sqlrooms/sqlrooms/commits/e167396c31a669219d6a329805358192bb359df5))
+* CLI: Mosaic dashboard ([#408](https://github.com/sqlrooms/sqlrooms/issues/408)) ([aeb614c](https://github.com/sqlrooms/sqlrooms/commits/aeb614ca70704a407ec34fe017c7f800a5bdaabf))
+* CLI: Native DuckDB file loading ([#409](https://github.com/sqlrooms/sqlrooms/issues/409)) ([bc32e25](https://github.com/sqlrooms/sqlrooms/commits/bc32e25b16d704598f51ecaeac539908373b3ba3))
+* code mirror editors ([#418](https://github.com/sqlrooms/sqlrooms/issues/418)) ([fb6bd0a](https://github.com/sqlrooms/sqlrooms/commits/fb6bd0ab0ace3604d7bc808dc912a16364d57a9c))
+* control ToolCallDetailHover visibility in ai-core ([#556](https://github.com/sqlrooms/sqlrooms/issues/556)) ([a45a7ec](https://github.com/sqlrooms/sqlrooms/commits/a45a7ec0443649a2a5cadb8fc977b36a2991172a))
+* Db settings and connections editing ([#492](https://github.com/sqlrooms/sqlrooms/issues/492)) ([aebcd22](https://github.com/sqlrooms/sqlrooms/commits/aebcd223fad05f4a74754b3107f23a3f96735f1d))
+* hide connector dropdown when only one connector is available ([#456](https://github.com/sqlrooms/sqlrooms/issues/456)) ([7349a11](https://github.com/sqlrooms/sqlrooms/commits/7349a11bf7961685a5c79da9d5e8994972a23857))
+* implement internal resource filtering in createDbSchemaTrees ([#477](https://github.com/sqlrooms/sqlrooms/issues/477)) ([a5f4220](https://github.com/sqlrooms/sqlrooms/commits/a5f422004ca6448dfe322e0bf3bb5bf152d5e801))
+* Improved color scales + example app ([#565](https://github.com/sqlrooms/sqlrooms/issues/565)) ([6fb92e7](https://github.com/sqlrooms/sqlrooms/commits/6fb92e7f6b288d52a72d0be3fc577dbb31e430a5))
+* json schema completions ([#483](https://github.com/sqlrooms/sqlrooms/issues/483)) ([f78a08b](https://github.com/sqlrooms/sqlrooms/commits/f78a08b286a5fad611053be62bcfdeba10962252))
+* Mosaic chart builders ([#473](https://github.com/sqlrooms/sqlrooms/issues/473)) ([9d4a874](https://github.com/sqlrooms/sqlrooms/commits/9d4a874094149dc557e4e007d7836612b347c9a9))
+* Mosaic table profiler ([#527](https://github.com/sqlrooms/sqlrooms/issues/527)) ([07005ae](https://github.com/sqlrooms/sqlrooms/commits/07005ae778d7a583a62fb187be6b716a854218f6))
+* **mosaic:** accept optional custom Coordinator in createMosaicSlice ([#478](https://github.com/sqlrooms/sqlrooms/issues/478)) ([f71cb6f](https://github.com/sqlrooms/sqlrooms/commits/f71cb6f7da68fcd343522deccb108c1ad49200e3))
+* Pivot in notebooks (take 2)  ([#460](https://github.com/sqlrooms/sqlrooms/issues/460)) ([01f24da](https://github.com/sqlrooms/sqlrooms/commits/01f24dadead2b4aa260d117aba808c287a25aaab))
+* Pointer cursor on buttons ([#521](https://github.com/sqlrooms/sqlrooms/issues/521)) ([eabafc5](https://github.com/sqlrooms/sqlrooms/commits/eabafc58fb546f2a2e1474088958790c4981c3c3))
+* prevent SQL cell result name collisions ([#480](https://github.com/sqlrooms/sqlrooms/issues/480)) ([f9fc960](https://github.com/sqlrooms/sqlrooms/commits/f9fc9607f0203c343645a0628a111e5f1aa7042f))
+* refreshTableSchemas improvements ([#346](https://github.com/sqlrooms/sqlrooms/issues/346)) ([daefc89](https://github.com/sqlrooms/sqlrooms/commits/daefc8971d9ff10e3d9a372df0fbd48b4688f7a3))
+* replace AJV with vscode-json-languageservice ([#474](https://github.com/sqlrooms/sqlrooms/issues/474)) ([0d16adb](https://github.com/sqlrooms/sqlrooms/commits/0d16adbf0cea3713d8be546003123fcf11d52a95))
+* save chart cell automatically and other improvements  ([#502](https://github.com/sqlrooms/sqlrooms/issues/502)) ([f11641a](https://github.com/sqlrooms/sqlrooms/commits/f11641a4bf8fd0f8b168db79cbf00fce03eba03a))
+* Sonner toast integration ([#415](https://github.com/sqlrooms/sqlrooms/issues/415)) ([b4a792e](https://github.com/sqlrooms/sqlrooms/commits/b4a792e269e37edbb1be930e011dd2cf47ffddbc))
+* sql cell improvements ([#471](https://github.com/sqlrooms/sqlrooms/issues/471)) ([5100260](https://github.com/sqlrooms/sqlrooms/commits/5100260893980904e3d2aa369964ed051cf04699))
+* text/markdown cell improvements ([#455](https://github.com/sqlrooms/sqlrooms/issues/455)) ([37b1327](https://github.com/sqlrooms/sqlrooms/commits/37b132749a892cf1d793bfb1ded3e664f05d0633))
+* theme aware map styling ([#419](https://github.com/sqlrooms/sqlrooms/issues/419)) ([e34f3b4](https://github.com/sqlrooms/sqlrooms/commits/e34f3b4589624c03ae5e14e9f768133c9131c5bd))
+* Upgrade AI SDK to v6 ([#497](https://github.com/sqlrooms/sqlrooms/issues/497)) ([bd17a5f](https://github.com/sqlrooms/sqlrooms/commits/bd17a5f860b78320ee820bf7c9fc074a7e8cf1ad))
+* Vega crossfilter in notebook cells ([#488](https://github.com/sqlrooms/sqlrooms/issues/488)) ([fdd3a40](https://github.com/sqlrooms/sqlrooms/commits/fdd3a4002e18e45f22d21cedb7030a59be5e07ae))
+
 # [0.29.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.0...v0.29.0-rc.1) (2026-03-01)
 
 **Note:** Version bump only for package sqlrooms

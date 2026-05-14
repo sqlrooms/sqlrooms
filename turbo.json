@@ -1,11 +1,11 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://v2-9-6.turborepo.dev/schema.json",
   "concurrency": "100",
   "globalEnv": ["NODE_ENV"],
   "tasks": {
     "typedoc": {
-      "persistent": false,
-      "outputs": ["../../docs/api/**"]
+      "cache": false,
+      "persistent": false
     },
     "typedoc:watch": {
       "cache": false,

@@ -2,10 +2,10 @@ import type {
   Cell,
   CellDependencies,
   CellsRootState,
+  CellArtifactRuntime,
+  CellArtifactGraphCache,
   Edge,
   EdgeKind,
-  Sheet,
-  SheetGraphCache,
   SqlSelectToJsonFn,
 } from './types';
 import {isDefined} from './utils';
@@ -26,25 +26,27 @@ function getEdgeKind(edge: Edge): EdgeKind {
 }
 
 function isGraphCacheComplete(
-  cache: SheetGraphCache | undefined,
-  sheet: Sheet,
+  cache: CellArtifactGraphCache | undefined,
+  artifact: CellArtifactRuntime,
 ): boolean {
   if (!cache) return false;
-  return sheet.cellIds.every((cellId) =>
+  return artifact.cellIds.every((cellId) =>
     Array.isArray(cache.dependencies[cellId]),
   );
 }
 
-export function buildGraphCacheFromEdges(sheet: Sheet): SheetGraphCache {
+export function buildGraphCacheFromEdges(
+  artifact: CellArtifactRuntime,
+): CellArtifactGraphCache {
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
-  const localCellIds = new Set(sheet.cellIds);
+  const localCellIds = new Set(artifact.cellIds);
 
-  for (const cellId of sheet.cellIds) {
+  for (const cellId of artifact.cellIds) {
     dependencies[cellId] = [];
   }
 
-  for (const edge of sheet.edges) {
+  for (const edge of artifact.edges) {
     // Cascades only consume dependency edges.
     if (getEdgeKind(edge) !== 'dependency') continue;
     if (!localCellIds.has(edge.source) || !localCellIds.has(edge.target))
@@ -60,19 +62,21 @@ export function buildGraphCacheFromEdges(sheet: Sheet): SheetGraphCache {
   return {
     dependencies,
     dependents,
-    contentHashByCell: sheet.graphCache?.contentHashByCell || {},
-    tableDependencies: sheet.graphCache?.tableDependencies || {},
+    contentHashByCell: artifact.graphCache?.contentHashByCell || {},
+    tableDependencies: artifact.graphCache?.tableDependencies || {},
   };
 }
 
-export function dependencyEdgesFromGraphCache(sheet: Sheet): Edge[] {
-  if (!isGraphCacheComplete(sheet.graphCache, sheet)) return [];
+export function dependencyEdgesFromGraphCache(
+  artifact: CellArtifactRuntime,
+): Edge[] {
+  if (!isGraphCacheComplete(artifact.graphCache, artifact)) return [];
 
-  const cache = sheet.graphCache as SheetGraphCache;
-  const localCellIds = new Set(sheet.cellIds);
+  const cache = artifact.graphCache as CellArtifactGraphCache;
+  const localCellIds = new Set(artifact.cellIds);
   const edges: Edge[] = [];
 
-  for (const target of sheet.cellIds) {
+  for (const target of artifact.cellIds) {
     const deps = dedupe(cache.dependencies[target] || []);
     for (const source of deps) {
       if (!localCellIds.has(source) || source === target) continue;
@@ -88,32 +92,42 @@ export function dependencyEdgesFromGraphCache(sheet: Sheet): Edge[] {
   return edges;
 }
 
-export function getRenderableDependencyEdges(sheet: Sheet): Edge[] {
-  const cacheEdges = dependencyEdgesFromGraphCache(sheet);
-  if (cacheEdges.length > 0 || isGraphCacheComplete(sheet.graphCache, sheet)) {
+export function getRenderableDependencyEdges(
+  artifact: CellArtifactRuntime,
+): Edge[] {
+  const cacheEdges = dependencyEdgesFromGraphCache(artifact);
+  if (
+    cacheEdges.length > 0 ||
+    isGraphCacheComplete(artifact.graphCache, artifact)
+  ) {
     return cacheEdges;
   }
 
   // Compatibility fallback while legacy edge persistence still exists.
   // TODO(edge-kinds): merge sheet-local manual edges here once manual editing is enabled.
-  return sheet.edges.filter((edge) => getEdgeKind(edge) === 'dependency');
+  return artifact.edges.filter((edge) => getEdgeKind(edge) === 'dependency');
 }
 
-export function ensureGraphCache(sheet: Sheet): SheetGraphCache {
-  if (!sheet.graphCache || !isGraphCacheComplete(sheet.graphCache, sheet)) {
-    sheet.graphCache = buildGraphCacheFromEdges(sheet);
+export function ensureGraphCache(
+  artifact: CellArtifactRuntime,
+): CellArtifactGraphCache {
+  if (
+    !artifact.graphCache ||
+    !isGraphCacheComplete(artifact.graphCache, artifact)
+  ) {
+    artifact.graphCache = buildGraphCacheFromEdges(artifact);
   }
-  return sheet.graphCache;
+  return artifact.graphCache;
 }
 
 export function replaceCellDependenciesInCache(
-  sheet: Sheet,
+  artifact: CellArtifactRuntime,
   cellId: string,
   deps: string[],
   tableNames?: string[],
 ) {
-  const cache = ensureGraphCache(sheet);
-  const localCellIds = new Set(sheet.cellIds);
+  const cache = ensureGraphCache(artifact);
+  const localCellIds = new Set(artifact.cellIds);
   const nextDeps = dedupe(deps).filter(
     (depId) => localCellIds.has(depId) && depId !== cellId,
   );
@@ -138,8 +152,11 @@ export function replaceCellDependenciesInCache(
   }
 }
 
-export function removeCellFromCache(sheet: Sheet, cellId: string) {
-  const cache = ensureGraphCache(sheet);
+export function removeCellFromCache(
+  artifact: CellArtifactRuntime,
+  cellId: string,
+) {
+  const cache = ensureGraphCache(artifact);
   const previousDeps = cache.dependencies[cellId] || [];
 
   for (const depId of previousDeps) {
@@ -164,15 +181,15 @@ export function removeCellFromCache(sheet: Sheet, cellId: string) {
 }
 
 export function buildDependencyGraph(
-  sheetId: string,
+  artifactId: string,
   state: CellsRootState,
 ): DependencyGraph {
-  const sheet = state.cells.config.sheets[sheetId];
-  if (!sheet) return {dependencies: {}, dependents: {}};
+  const artifact = state.cells.config.artifacts[artifactId];
+  if (!artifact) return {dependencies: {}, dependents: {}};
 
-  const cache = isGraphCacheComplete(sheet.graphCache, sheet)
-    ? (sheet.graphCache as SheetGraphCache)
-    : buildGraphCacheFromEdges(sheet);
+  const cache = isGraphCacheComplete(artifact.graphCache, artifact)
+    ? (artifact.graphCache as CellArtifactGraphCache)
+    : buildGraphCacheFromEdges(artifact);
 
   return {
     dependencies: {...cache.dependencies},
@@ -245,18 +262,18 @@ export function collectReachable(
  * registry dependency derivation.
  */
 export async function buildDependencyGraphAsync(
-  sheetId: string,
+  artifactId: string,
   state: CellsRootState,
   sqlSelectToJson: SqlSelectToJsonFn,
 ): Promise<DependencyGraph> {
-  const sheet = state.cells.config.sheets[sheetId];
+  const artifact = state.cells.config.artifacts[artifactId];
   const registry = state.cells.cellRegistry;
-  if (!sheet) {
+  if (!artifact) {
     return {dependencies: {}, dependents: {}};
   }
 
-  if (isGraphCacheComplete(sheet.graphCache, sheet)) {
-    const cache = sheet.graphCache as SheetGraphCache;
+  if (isGraphCacheComplete(artifact.graphCache, artifact)) {
+    const cache = artifact.graphCache as CellArtifactGraphCache;
     return {
       dependencies: {...cache.dependencies},
       dependents: {...cache.dependents},
@@ -269,16 +286,16 @@ export async function buildDependencyGraphAsync(
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
   const tableDependencies: Record<string, string[]> = {};
-  const sheetCellIds = new Set(sheet.cellIds);
+  const artifactCellIds = new Set(artifact.cellIds);
   const scopedCells = Object.fromEntries(
-    sheet.cellIds
+    artifact.cellIds
       .map((id) => state.cells.config.data[id])
       .filter(isDefined)
       .map((cell) => [cell.id, cell]),
   ) as Record<string, Cell>;
 
   const cellDeps = await Promise.all(
-    sheet.cellIds.map(async (cellId) => {
+    artifact.cellIds.map(async (cellId) => {
       const cell = state.cells.config.data[cellId];
       if (!cell)
         return {
@@ -298,7 +315,7 @@ export async function buildDependencyGraphAsync(
       const raw = await registryItem.findDependencies({
         cell,
         cells: scopedCells,
-        sheetId,
+        artifactId,
         sqlSelectToJson,
       });
       const normalized = normalizeCellDependencies(raw);
@@ -306,7 +323,7 @@ export async function buildDependencyGraphAsync(
       return {
         cellId,
         cellIds: Array.from(new Set(normalized.cellIds)).filter((depId) =>
-          sheetCellIds.has(depId),
+          artifactCellIds.has(depId),
         ),
         tableNames: normalized.tableNames,
       };

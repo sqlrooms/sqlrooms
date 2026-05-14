@@ -12,7 +12,16 @@ export {AnalysisResult} from './components/AnalysisResult';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
+export {useElapsedTime} from './hooks/useElapsedTime';
 export {Chat} from './components/Chat';
+export {
+  CHAT_CONTEXT_SELECTOR_SLOT,
+  ContextSelector,
+} from './components/ContextSelector';
+export type {
+  ContextSelectorItem,
+  ContextSelectorRootProps,
+} from './components/ContextSelector';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
@@ -27,29 +36,65 @@ export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
 export type {ErrorMessageComponentProps} from './components/ErrorMessage';
 export {ToolCallInfo} from './components/ToolCallInfo';
 
-export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
+export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
+  AiSliceConfig,
+  createDefaultAiConfig,
+  getAiRunContextItems,
+} from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';
 export {
   cleanupPendingAnalysisResults,
   ToolAbortError,
   extractModelsFromSettings,
+  shouldEndAnalysis,
 } from './utils';
 export type {
-  AddToolResult,
+  AddToolApprovalResponse,
+  AddToolOutput,
+  AiToolExecutionContext,
+  AgentProgressSnapshot,
   StoredTool,
   StoredToolSet,
   ToolRendererProps,
   ToolRenderer,
   ToolRendererRegistry,
   ToolRenderers,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
+  MessageTokenUsage,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 
-export {processAgentStream} from './agents/AgentUtils';
-export type {
-  AgentStreamResult,
-  AgentStreamOutput,
-  UIMessageChunk,
-  AgentToolCall,
+export {
+  streamSubAgent,
+  updateAgentToolCallData,
+  formatAbortSnapshot,
 } from './agents/AgentUtils';
-export {ReasoningBox} from './components/ReasoningBox';
+export type {
+  AgentStreamOutput,
+  AgentToolCall,
+  AgentToolCallAdditionalData,
+  PendingSubAgentApproval,
+} from './types';
+export {ExpandableContent} from './components/ExpandableContent';
+export {ActivityBox} from './components/ActivityBox';
+export {
+  FlatAgentRenderer,
+  OrchestratorToolLogLine,
+  ShowToolCallDetailsProvider,
+} from './components/FlatAgentRenderer';
+export type {
+  ToolRenderBehavior,
+  ToolStructureBehavior,
+  ToolDisplayBehavior,
+} from './components/FlatAgentRenderer';
+export {collectHoistableRenderers} from './components/collectHoistableRenderers';
+export type {HoistableToolCall} from './components/collectHoistableRenderers';
+export {ContextUsageIndicator} from './components/ContextUsageIndicator';
+export {
+  HoistedRenderersProvider,
+  useHoistedRenderers,
+} from './components/HoistedRenderersContext';

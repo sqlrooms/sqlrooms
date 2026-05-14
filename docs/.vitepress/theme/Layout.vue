@@ -98,12 +98,12 @@ function dismiss() {
               rel="noopener noreferrer"
             >
               <img
-                src="https://www.netlify.com/v3/img/components/netlify-light.svg"
+                src="https://www.netlify.com/assets/badges/netlify-badge-light.svg"
                 alt="Deploys by Netlify"
                 class="netlify-logo netlify-light"
               />
               <img
-                src="https://www.netlify.com/v3/img/components/netlify-dark.svg"
+                src="https://www.netlify.com/assets/badges/netlify-badge-dark.svg"
                 alt="Deploys by Netlify"
                 class="netlify-logo netlify-dark"
               />

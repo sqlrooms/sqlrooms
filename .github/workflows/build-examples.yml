@@ -1,7 +1,9 @@
 name: Build examples
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - 'examples/**'
   workflow_dispatch:
@@ -30,6 +32,13 @@ jobs:
       - name: Install dependencies
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
+
+      - name: Cache for Turbo
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-turbo-
 
       - name: Build packages
         run: pnpm build

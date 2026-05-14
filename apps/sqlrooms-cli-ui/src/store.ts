@@ -1,147 +1,107 @@
+import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
-  AiSettingsSliceState,
   AiSliceConfig,
-  AiSliceState,
+  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
+  type AiRunContext,
+  type AiRunContextItem,
 } from '@sqlrooms/ai';
-import {
-  CanvasSliceConfig,
-  CanvasSliceState,
-  createCanvasSlice,
-} from '@sqlrooms/canvas';
+import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
   CellsSliceConfig,
-  CellsSliceState,
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import type {MosaicSliceState} from '@sqlrooms/mosaic';
-import {createMosaicSlice} from '@sqlrooms/mosaic';
 import {
-  createNotebookSlice,
-  NotebookSliceConfig,
-  NotebookSliceState,
-} from '@sqlrooms/notebook';
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  deckMapDashboardPanelRenderer,
+} from '@sqlrooms/deck';
+import {
+  createDefaultLoadTableSchemasFilter,
+  createWebSocketDuckDbConnector,
+  type DataTable,
+  QualifiedTableName,
+} from '@sqlrooms/duckdb';
+import {
+  createCrdtSlice,
+  createIndexedDbDocStorage,
+  createWebSocketSyncConnector,
+} from '@sqlrooms/crdt';
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardSlice,
+  createMosaicSlice,
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  type MosaicDashboardAddPanelAction,
+  MosaicDashboardSliceConfig,
+  createDefaultChartTypes,
+} from '@sqlrooms/mosaic';
+import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
-  RoomShellSliceState,
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
+import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {
-  createSqlEditorSlice,
-  SqlEditorSliceConfig,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+  createChartImageForMarkdownTool,
+  createVegaChartTool,
+  VegaChartToolResult,
+} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   createWebContainerToolkit,
   WebContainerPersistConfig,
-  WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
-import {z} from 'zod';
+import {MapIcon} from 'lucide-react';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
   createDbSettingsSlice,
-  DbSettingsSliceState,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
+  createDocumentCommands,
+  createDocumentsSlice,
+  DOCUMENT_AI_INSTRUCTIONS,
+  DocumentsSliceConfig,
+} from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
+import {ARTIFACT_TYPES} from './artifactTypes';
+import {
   createDashboardAiTools,
-  DASHBOARD_AI_INSTRUCTIONS,
+  getDashboardAiInstructions,
 } from './createDashboardAiTools';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {LAYOUT} from './layout';
+import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
+import {
+  AppBuilderProjectConfig,
+  AppBuilderProjectConfigSchema,
+  RoomState,
+} from './store-types';
 
-export const AppBuilderProjectConfig = z.object({
-  appsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        name: z.string().default('Untitled App'),
-        prompt: z.string().default(''),
-        template: z.string().default('mosaic-dashboard'),
-        files: z.record(z.string(), z.string()).default({}),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
+export type {RoomState} from './store-types';
 
-export const DashboardProjectConfig = z.object({
-  dashboardsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type DashboardProjectConfig = z.infer<typeof DashboardProjectConfig>;
-
-export type RoomState = RoomShellSliceState &
-  MosaicSliceState &
-  AiSliceState &
-  SqlEditorSliceState &
-  AiSettingsSliceState &
-  CellsSliceState &
-  NotebookSliceState &
-  CanvasSliceState &
-  WebContainerSliceState &
-  DbSettingsSliceState & {
-    appProject: {
-      config: AppBuilderProjectConfig;
-      upsertSheetApp: (
-        sheetId: string,
-        app: Partial<AppBuilderProjectConfig['appsBySheetId'][string]> & {
-          name: string;
-        },
-      ) => void;
-      updateSheetAppFiles: (
-        sheetId: string,
-        files: Record<string, string>,
-      ) => void;
-      getSheetApp: (
-        sheetId: string,
-      ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
-    };
-    dashboard: {
-      initialize?: () => Promise<void>;
-      destroy?: () => Promise<void>;
-      config: DashboardProjectConfig;
-      ensureSheetDashboard: (sheetId: string) => void;
-      setSheetVgPlot: (sheetId: string, vgplot: string) => void;
-      getSheetVgPlot: (sheetId: string) => string | undefined;
-      getCurrentDashboardSheetId: () => string | undefined;
-      createDashboardSheet: (title?: string) => string;
-      setCurrentSheetVgPlot: (vgplot: string) => string;
-    };
-    isAssistantOpen: boolean;
-    setAssistantOpen: (isAssistantOpen: boolean) => void;
-  };
+const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -152,9 +112,36 @@ const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
+const MOSAIC_PREAGG_SCHEMA = 'mosaic';
+const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CRDT_STORAGE_KEY = [
+  'sqlrooms-cli',
+  runtimeConfig.metaNamespace || '__sqlrooms',
+  runtimeConfig.dbPath || 'memory',
+  'documents',
+].join(':');
+
+function createCliCrdtSyncConnector() {
+  if (!runtimeConfig.syncEnabled) return undefined;
+  return createWebSocketSyncConnector({
+    url:
+      runtimeConfig.crdtWsUrl || runtimeConfig.wsUrl || 'ws://localhost:4000',
+    roomId:
+      runtimeConfig.crdtRoomId ||
+      `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    sendSnapshotOnConnect: false,
+  });
+}
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
+  initializationQuery: [
+    'INSTALL spatial',
+    'LOAD spatial',
+    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
+    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
+  ].join('; '),
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -174,32 +161,160 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
+const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
+const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
+
+function findColumnByName(table: DataTable, candidates: string[]) {
+  const candidateSet = new Set(candidates);
+  return table.columns.find((column) =>
+    candidateSet.has(column.name.toLowerCase()),
+  )?.name;
+}
+
+function findLongitudeLatitudeColumns(table?: DataTable) {
+  if (!table) return null;
+  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
+  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
+  return longitudeColumn && latitudeColumn
+    ? {longitudeColumn, latitudeColumn}
+    : null;
+}
+
+function quoteSqlIdentifier(identifier: string) {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function quoteTableReference(table: DataTable) {
+  const qualifiedName = table.table;
+  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
+    .filter((part): part is string => Boolean(part))
+    .map(quoteSqlIdentifier)
+    .join('.');
+}
+
+function createDeckMapPanelForTable(table: DataTable) {
+  const coordinates = findLongitudeLatitudeColumns(table);
+  if (!coordinates) return undefined;
+
+  const {longitudeColumn, latitudeColumn} = coordinates;
+  const datasetId = table.tableName;
+  const geometryColumn = '__sqlrooms_geom';
+  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
+  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
+
+  return createDeckMapDashboardPanelConfig({
+    title: `${table.tableName} map`,
+    source: {tableName: table.tableName},
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: datasetId,
+          _sqlroomsBinding: {dataset: datasetId},
+          filled: true,
+          stroked: false,
+          pickable: true,
+          radiusUnits: 'pixels',
+          getRadius: 4,
+          getFillColor: [56, 189, 248, 180],
+        },
+      ],
+    },
+    datasets: {
+      [datasetId]: {
+        source: {
+          sqlQuery: [
+            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
+            `FROM ${quoteTableReference(table)}`,
+            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
+          ].join(' '),
+        },
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+    fitToData: {
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+      padding: 40,
+      maxZoom: 12,
+    },
+  });
+}
+
+const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
+  type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+  label: 'Map',
+  icon: MapIcon,
+  isEnabled: ({selectedTable}) =>
+    Boolean(findLongitudeLatitudeColumns(selectedTable)),
+  createPanel: ({selectedTable}) =>
+    selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
+};
+
+const sliceConfigSchemas = {
+  room: BaseRoomConfig,
+  layout: LayoutConfig,
+  ai: AiSliceConfig,
+  aiSettings: AiSettingsSliceConfig,
+  sqlEditor: SqlEditorSliceConfig,
+  artifacts: ArtifactsSliceConfig,
+  cells: CellsSliceConfig,
+  notebook: NotebookSliceConfig,
+  canvas: CanvasSliceConfig,
+  documents: DocumentsSliceConfig,
+  webContainer: WebContainerPersistConfig,
+  appProject: AppBuilderProjectConfigSchema,
+  mosaicDashboard: MosaicDashboardSliceConfig,
+} as const;
+
+const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
     {
       name: 'sqlrooms-cli-app-state',
-      sliceConfigSchemas: {
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        ai: AiSliceConfig,
-        // aiSettings: AiSettingsSliceConfig,
-        sqlEditor: SqlEditorSliceConfig,
-        cells: CellsSliceConfig,
-        notebook: NotebookSliceConfig,
-        canvas: CanvasSliceConfig,
-        webContainer: WebContainerPersistConfig,
-        appProject: AppBuilderProjectConfig,
-        dashboard: DashboardProjectConfig,
-      },
+      sliceConfigSchemas,
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
+      merge: (persistedState, currentState) => {
+        const persistedRecord = (persistedState ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const persistedCells = CellsSliceConfig.parse(
+          persistedRecord.cells ?? currentState.cells.config,
+        );
+        const persistedArtifacts = ArtifactsSliceConfig.parse(
+          persistedRecord.artifacts ?? currentState.artifacts.config,
+        );
+
+        return persistHelpers.merge(
+          {
+            ...persistedRecord,
+            artifacts: persistedArtifacts,
+            cells: persistedCells,
+          },
+          currentState,
+        );
+      },
     },
     (set, get, store) => {
-      const getFirstDashboardSheetId = () =>
-        Object.values(get().cells.config.sheets).find(
-          (sheet) => sheet.type === 'dashboard',
+      const getFirstDashboardArtifactId = () =>
+        Object.values(get().artifacts.config.artifactsById).find(
+          (artifact) => artifact.type === 'dashboard',
         )?.id;
+      const getRunContextDashboardArtifactId = () => {
+        const currentSession = get().ai.getCurrentSession();
+        const contextItems = getAiRunContextItems(currentSession?.runContext);
+        return contextItems.find((item) => {
+          const artifact = get().artifacts.config.artifactsById[item.id];
+          return artifact?.type === 'dashboard';
+        })?.id;
+      };
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -208,82 +323,93 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
+          registerCommandsForOwner(
+            store,
+            DOCUMENT_COMMAND_OWNER,
+            createDocumentCommands<RoomState>(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
         },
-        config: DashboardProjectConfig.parse({}),
-        ensureSheetDashboard: (sheetId) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet || sheet.type !== 'dashboard') {
+        ensureDashboardArtifact: (artifactId) => {
+          const artifact = get().artifacts.getArtifact(artifactId);
+          if (!artifact || artifact.type !== 'dashboard') {
             return;
           }
-          set((state) =>
-            produce(state, (draft) => {
-              if (draft.dashboard.config.dashboardsBySheetId[sheetId]) {
-                return;
-              }
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: DEFAULT_DASHBOARD_VGPLOT_SPEC,
-                updatedAt: Date.now(),
-              };
-            }),
-          );
+          get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
         },
-        setSheetVgPlot: (sheetId, vgplot) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet) {
-            throw new Error(`Unknown sheet "${sheetId}".`);
+        addProfilerForTable: (tableName) => {
+          const existingDashboardArtifactId =
+            get().dashboard.getCurrentDashboardArtifactId();
+          const artifactId =
+            existingDashboardArtifactId ??
+            get().dashboard.createDashboardArtifact('Dashboard', 'grid');
+          if (!existingDashboardArtifactId) {
+            get().artifacts.setCurrentArtifact(artifactId);
           }
-          if (sheet.type !== 'dashboard') {
-            throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
+          get().dashboard.ensureDashboardArtifact(artifactId);
+          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
+          if (!dashboard) return artifactId;
+
+          if (!dashboard.selectedTable) {
+            get().mosaicDashboard.setSelectedTable(artifactId, tableName);
           }
-          const {formatted} = parseVgPlotSpecString(vgplot);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: formatted,
-                updatedAt: Date.now(),
-              };
-            }),
+
+          const hasProfilerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE &&
+              panel.source?.tableName === tableName,
           );
+          if (!hasProfilerForTable) {
+            get().mosaicDashboard.addPanel(
+              artifactId,
+              createMosaicDashboardProfilerPanelConfig({
+                title: `${tableName} profiler`,
+                source: {tableName},
+              }),
+            );
+          }
+
+          return artifactId;
         },
-        getSheetVgPlot: (sheetId) =>
-          get().dashboard.config.dashboardsBySheetId[sheetId]?.vgplot,
-        getCurrentDashboardSheetId: () => {
-          const currentSheetId = get().cells.config.currentSheetId;
-          const currentSheet = currentSheetId
-            ? get().cells.config.sheets[currentSheetId]
+        getCurrentDashboardArtifactId: () => {
+          const contextDashboardArtifactId = getRunContextDashboardArtifactId();
+          if (contextDashboardArtifactId) {
+            return contextDashboardArtifactId;
+          }
+          const currentArtifactId = get().artifacts.config.currentArtifactId;
+          const currentArtifact = currentArtifactId
+            ? get().artifacts.config.artifactsById[currentArtifactId]
             : undefined;
-          if (currentSheet?.type === 'dashboard') {
-            return currentSheetId;
+          if (currentArtifact?.type === 'dashboard') {
+            return currentArtifactId;
           }
-          return getFirstDashboardSheetId();
+          return getFirstDashboardArtifactId();
         },
-        createDashboardSheet: (title) => {
-          const sheetId = get().cells.addSheet(title, 'dashboard');
-          get().dashboard.ensureSheetDashboard(sheetId);
-          return sheetId;
-        },
-        setCurrentSheetVgPlot: (vgplot) => {
-          const state = get();
-          const targetSheetId =
-            state.dashboard.getCurrentDashboardSheetId() ??
-            state.dashboard.createDashboardSheet();
-          state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
-          state.cells.setCurrentSheet(targetSheetId);
-          return targetSheetId;
+        createDashboardArtifact: (title, layoutType = 'grid') => {
+          const artifactId = get().artifacts.createArtifact({
+            type: 'dashboard',
+            title: title ?? 'Dashboard',
+          });
+          get().mosaicDashboard.ensureDashboard(
+            artifactId,
+            title ?? 'Dashboard',
+            layoutType,
+          );
+          return artifactId;
         },
       };
 
       return {
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
-          upsertSheetApp: (sheetId, app) => {
-            set(
-              produce((draft: RoomState) => {
-                const current = draft.appProject.config.appsBySheetId[
-                  sheetId
+          upsertArtifactApp: (artifactId, app) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                const current = draft.appProject.config.appsByArtifactId[
+                  artifactId
                 ] ?? {
                   name: app.name,
                   prompt: '',
@@ -291,7 +417,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   files: {},
                   updatedAt: 0,
                 };
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   ...app,
                   updatedAt: Date.now(),
@@ -299,12 +425,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          updateSheetAppFiles: (sheetId, files) => {
+          updateArtifactAppFiles: (artifactId, files) => {
             set((state) =>
               produce(state, (draft) => {
-                const current = draft.appProject.config.appsBySheetId[sheetId];
+                const current =
+                  draft.appProject.config.appsByArtifactId[artifactId];
                 if (!current) return;
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   files,
                   updatedAt: Date.now(),
@@ -312,14 +439,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          getSheetApp: (sheetId) =>
-            get().appProject.config.appsBySheetId[sheetId],
+          removeArtifactApp: (artifactId) => {
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.appProject.config.appsByArtifactId[artifactId];
+              }),
+            );
+          },
+          getArtifactApp: (artifactId) =>
+            get().appProject.config.appsByArtifactId[artifactId],
         },
         dashboard: dashboardSlice,
-        isAssistantOpen: false,
-        setAssistantOpen: (isAssistantOpen: boolean) => {
-          set({isAssistantOpen});
-        },
 
         ...createDbSettingsSlice({
           config: {
@@ -345,21 +475,62 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createRoomShellSlice({
           connector,
           config: {dataSources: []},
-          layout: LAYOUT,
+          layout: createLayout({store}),
+          createDbProps: {
+            duckDb: {
+              loadTableSchemasFilter: (() => {
+                const filter = createDefaultLoadTableSchemasFilter();
+                return (table: QualifiedTableName) => {
+                  return (
+                    filter(table) &&
+                    !(
+                      table.database === get().db.currentDatabase &&
+                      table.schema === 'mosaic'
+                    )
+                  );
+                };
+              })(),
+            },
+          },
         })(set, get, store),
 
-        ...createMosaicSlice()(set, get, store),
+        ...createArtifactsSlice<RoomState>({
+          artifactTypes: ARTIFACT_TYPES,
+        })(set, get, store),
+
+        ...createMosaicSlice({
+          preagg: {
+            schema: MOSAIC_PREAGG_SCHEMA_REF,
+          },
+        })(set, get, store),
+
+        ...createMosaicDashboardSlice({
+          addPanelActions: [deckMapDashboardAddPanelAction],
+          panelRenderers: createDefaultMosaicDashboardPanelRenderers({
+            [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
+          }),
+          chartTypes: createDefaultChartTypes(),
+        })(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),
 
         ...createCellsSlice({
           cellRegistry: createDefaultCellRegistry(),
-          supportedSheetTypes: ['notebook', 'canvas', 'app', 'dashboard'],
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
+
+        ...createDocumentsSlice()(set, get, store),
+
+        ...createCrdtSlice<RoomState>({
+          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+          sync: createCliCrdtSyncConnector(),
+          mirrors: {
+            documentState: createDocumentsCrdtMirror<RoomState>(),
+          },
+        })(set, get, store),
 
         ...createWebContainerSlice({
           autoInitialize: false,
@@ -380,17 +551,57 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
             getApiKey: (provider) =>
-              runtimeAiProviders[provider]?.apiKey ||
+              get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
+            getRunContext: () => {
+              const state = store.getState();
+              const {artifactsById} = state.artifacts.config;
+              const items = Array.from(new Set(state.aiContextItemIds))
+                .map((artifactId): AiRunContextItem | undefined => {
+                  const artifact = artifactsById[artifactId];
+                  if (!artifact) return undefined;
+                  return {
+                    kind: 'artifact',
+                    id: artifact.id,
+                    type: artifact.type,
+                    title: artifact.title,
+                  };
+                })
+                .filter(Boolean) as AiRunContextItem[];
+              if (items.length === 0) return undefined;
+              return {
+                items,
+                capturedAt: Date.now(),
+              } satisfies AiRunContext;
+            },
+            formatRunContextInstructions: ({runContext}) => {
+              const artifactItems = getAiRunContextItems(runContext).filter(
+                (item) => item.kind === 'artifact',
+              );
+              if (artifactItems.length === 0) return '';
+              const [mainItem, ...additionalItems] = artifactItems;
+              if (!mainItem) return '';
+              const artifactType = mainItem.type ?? 'artifact';
+              return [
+                'Current artifact context:',
+                `- Main/default target: ${artifactType} "${mainItem.title}" (id: ${mainItem.id}). Tools use this artifact as the implicit target when the artifact type is supported.`,
+                ...additionalItems.map(
+                  (item) =>
+                    `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
+                ),
+                '- Additional context items are reference-only by default; tools will not implicitly target them.',
+              ].join('\n');
+            },
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
+              chart_image_for_markdown: createChartImageForMarkdownTool(store),
             },
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
@@ -399,6 +610,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
+        aiContextMode: 'auto',
+        aiContextItemIds: [],
+        setAiContextItemIds: (artifactIds, mode) => {
+          set({
+            aiContextItemIds: Array.from(new Set(artifactIds)),
+            ...(mode ? {aiContextMode: mode} : {}),
+          });
+        },
+        replaceAiContextWithArtifact: (artifactId) => {
+          set({aiContextItemIds: [artifactId]});
+        },
       };
     },
   ),

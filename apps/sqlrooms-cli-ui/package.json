@@ -12,15 +12,17 @@
   },
   "dependencies": {
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
+    "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/db-settings": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/deck": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/layout-config": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -30,8 +32,8 @@
     "@sqlrooms/vega": "workspace:*",
     "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
+    "ai": "^6.0.154",
     "lucide-react": "^0.555.0",
-    "ai": "^5.0.155",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.1.8",
@@ -46,7 +48,9 @@
     "immer": "^11.0.1",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.2",
-    "vite": "^7.1.9"
+    "vite": "^8.0.5",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   },
   "overrides": {
     "@duckdb/duckdb-wasm": "1.32.0"

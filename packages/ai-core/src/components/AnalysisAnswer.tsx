@@ -1,4 +1,4 @@
-import {cn, CopyButton} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {truncate} from '@sqlrooms/utils';
 import {BrainIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
@@ -23,9 +23,6 @@ type ThinkContent = {
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
-
-const sanitizeThinkTags = (value: string): string =>
-  value.replace(COMPLETE_THINK_REGEX, '').replace(INCOMPLETE_THINK_REGEX, '');
 
 /**
  * Processes content and extracts think content in one pass
@@ -135,9 +132,6 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const copyableText = useMemo(() => sanitizeThinkTags(content), [content]);
-  const hasTextContent = copyableText.trim().length > 0;
-
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
       const newExpanded = new Set(prev);
@@ -191,7 +185,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       type={isAnswer ? 'answer' : 'thinking'}
       content={{content, isAnswer}}
     >
-      <div className="prose dark:prose-invert text-foreground max-w-none text-sm">
+      <div className="text-foreground prose dark:prose-invert max-w-none min-w-0 overflow-hidden text-sm [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
         <Markdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}

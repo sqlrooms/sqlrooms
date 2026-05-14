@@ -18,7 +18,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
   className,
   type,
   // borderColor,
-  content,
+  // content,
   children,
   footerActions,
   footerActionsClassName,
@@ -28,7 +28,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
   return (
     <div
       className={cn(
-        'group relative px-5 py-2 text-xs',
+        'group relative w-full min-w-0 px-5 py-2 text-xs',
         className,
         type === 'error' && 'border-destructive rounded-md border py-4',
         // borderColor,

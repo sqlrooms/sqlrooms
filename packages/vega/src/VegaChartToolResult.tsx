@@ -1,10 +1,10 @@
-import type {ToolRendererProps} from '@sqlrooms/ai';
+import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {cn} from '@sqlrooms/ui';
 import {ReactNode} from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import {EditorMode} from './editor/types';
 import {VegaChartContainer} from './editor/VegaChartContainer';
 import {VegaChartDisplay} from './editor/VegaChartDisplay';
-import {EditorMode} from './editor/types';
 import type {
   VegaChartToolOutput,
   VegaChartToolParameters,
@@ -32,6 +32,7 @@ export type VegaChartToolResultProps = ToolRendererProps<
  */
 export function VegaChartToolResult({
   className,
+  input,
   output,
   options,
   editorMode = 'both',
@@ -45,6 +46,11 @@ export function VegaChartToolResult({
 
   return (
     <div className={cn('flex max-w-full flex-col gap-2', className)}>
+      {input?.reasoning && (
+        <p className="text-tiny text-muted-foreground ml-4">
+          {input.reasoning}
+        </p>
+      )}
       <VegaChartContainer
         spec={vegaLiteSpec}
         sqlQuery={sqlQuery}

@@ -68,22 +68,22 @@ const SqlEditor = React.memo<SqlEditorProps>((props) => {
         onToggleDocs={handleToggleDocs}
       />
       <div className="bg-muted h-full grow">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          <ResizablePanel defaultSize={showDocs ? 70 : 100}>
-            <ResizablePanelGroup direction="vertical" className="h-full">
-              <ResizablePanel defaultSize={50} className="flex flex-row">
-                <ResizablePanelGroup direction="horizontal">
-                  <ResizablePanel defaultSize={20}>
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel defaultSize={showDocs ? '70' : '100'}>
+            <ResizablePanelGroup orientation="vertical" className="h-full">
+              <ResizablePanel defaultSize="50" className="flex flex-row">
+                <ResizablePanelGroup orientation="horizontal">
+                  <ResizablePanel defaultSize="20">
                     <TableStructurePanel schema={schema} />
                   </ResizablePanel>
                   <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={80}>
+                  <ResizablePanel defaultSize="80">
                     <QueryEditorPanel />
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={50}>
+              <ResizablePanel defaultSize="50">
                 <QueryResultPanel
                   onRowClick={queryResultProps?.onRowClick}
                   onRowDoubleClick={queryResultProps?.onRowDoubleClick}
@@ -102,7 +102,7 @@ const SqlEditor = React.memo<SqlEditorProps>((props) => {
           {showDocs && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={30}>
+              <ResizablePanel defaultSize="30">
                 {documentationPanel}
               </ResizablePanel>
             </>

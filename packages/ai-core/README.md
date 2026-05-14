@@ -92,7 +92,7 @@ export function AiPanel() {
 - Tool/agent utilities:
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
-  - `processAgentStream`
+  - `streamSubAgent`
 
 ## Related packages
 
