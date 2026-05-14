@@ -8,7 +8,7 @@ import {createStore, type StoreApi} from 'zustand/vanilla';
 export interface SkillDraft {
   name: string;
   description: string;
-  author: string;
+  author?: string;
   instructions: string;
 }
 
@@ -34,7 +34,7 @@ export type SkillDraftStore = StoreApi<SkillDraftState>;
 const initialDraft: SkillDraft = {
   name: '',
   description: '',
-  author: '',
+  author: undefined,
   instructions: '',
 };
 

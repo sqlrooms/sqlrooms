@@ -33,9 +33,12 @@ export const skillStorage = new InMemorySkillStorage();
  */
 let cachedListings: SkillListing[] = [];
 
+let refreshSeq = 0;
 async function refreshSkillListings() {
+  const seq = ++refreshSeq;
   try {
-    cachedListings = await skillStorage.listSkills();
+    const next = await skillStorage.listSkills();
+    if (seq === refreshSeq) cachedListings = next;
   } catch (err) {
     console.error('[store] Failed to refresh skill listings:', err);
   }

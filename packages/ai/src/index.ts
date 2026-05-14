@@ -71,6 +71,7 @@ export type {
 export {
   createSkillDraftStore,
   createSkillAuthoringAgent,
+  SKILL_AUTHORING_TOOL_NAMES,
   createWriteManifestTool,
   createWriteInstructionsTool,
   createSaveSkillTool,

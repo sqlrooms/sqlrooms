@@ -16,8 +16,8 @@ import {
 } from '@sqlrooms/ui';
 import {SparklesIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
-import {roomStore, skillStorage} from '../store';
 import {getModel} from '../skills/getModel';
+import {roomStore, skillStorage} from '../store';
 
 const AUTHORING_CONTEXT: SkillAuthoringContext = {
   services: ['querySQL'],
@@ -34,10 +34,7 @@ const AUTHORING_CONTEXT: SkillAuthoringContext = {
  */
 export const SkillsButton: React.FC = () => {
   const [open, setOpen] = useState(false);
-
-  const handleOpenChange = useCallback((next: boolean) => {
-    setOpen(next);
-  }, []);
+  const close = useCallback(() => setOpen(false), []);
 
   return (
     <>
@@ -51,7 +48,7 @@ export const SkillsButton: React.FC = () => {
         <span>New skill</span>
       </Button>
 
-      <Dialog open={open} onOpenChange={handleOpenChange}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex h-[80vh] max-h-180 w-[min(1040px,95vw)] flex-col gap-0 p-0 sm:max-w-none">
           <DialogHeader className="border-border border-b px-4 py-3">
             <DialogTitle>New skill with AI</DialogTitle>
@@ -60,7 +57,7 @@ export const SkillsButton: React.FC = () => {
               instructions; the preview on the right updates live.
             </DialogDescription>
           </DialogHeader>
-          {open && <AuthoringBody onDone={() => handleOpenChange(false)} />}
+          {open && <AuthoringBody onDone={close} />}
         </DialogContent>
       </Dialog>
     </>

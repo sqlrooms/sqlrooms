@@ -16,6 +16,7 @@ export {
 export {buildSkillAuthoringSystemPrompt} from './systemPrompt';
 export {
   createSkillAuthoringAgent,
+  SKILL_AUTHORING_TOOL_NAMES,
   DEFAULT_SKILL_AUTHORING_STOP_STEPS,
   type CreateSkillAuthoringAgentOptions,
 } from './SkillAuthoringAgent';

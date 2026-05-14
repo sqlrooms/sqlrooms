@@ -24,7 +24,7 @@ export const SkillDraftPreview: React.FC<SkillDraftPreviewProps> = ({
   const author = useStore(draftStore, (s) => s.author);
   const instructions = useStore(draftStore, (s) => s.instructions);
 
-  const hasManifestContent = Boolean(name || description);
+  const hasManifestContent = Boolean(name || description || author);
   const hasInstructions = instructions.trim().length > 0;
 
   return (
@@ -67,7 +67,7 @@ export const SkillDraftPreview: React.FC<SkillDraftPreviewProps> = ({
 const ManifestCard: React.FC<{
   name: string;
   description: string;
-  author: string;
+  author?: string;
 }> = ({name, description, author}) => {
   return (
     <div className="bg-muted/40 flex flex-col gap-2 rounded-md p-4 transition-opacity duration-300">

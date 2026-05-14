@@ -102,12 +102,12 @@ export function AiPanel() {
 
 ```tsx
 import {AgentChat} from '@sqlrooms/ai-core';
-import {createToolLoopAgent, tool} from 'ai';
+import {ToolLoopAgent, tool} from 'ai';
 import {z} from 'zod';
 
-const agent = createToolLoopAgent({
+const agent = new ToolLoopAgent({
   model: myLanguageModel,
-  system: 'You are a helpful assistant.',
+  instructions: 'You are a helpful assistant.',
   tools: {
     greet: tool({
       description: 'Greet the user',

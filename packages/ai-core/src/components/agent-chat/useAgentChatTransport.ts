@@ -34,14 +34,21 @@ export function useAgentChatTransport(
 
 function parseUiMessages(body: BodyInit | null | undefined): UIMessage[] {
   if (!body) return [];
+  if (typeof body !== 'string') {
+    console.warn(
+      '[useAgentChatTransport] Unexpected non-string request body:',
+      Object.prototype.toString.call(body),
+    );
+    return [];
+  }
   try {
-    const parsed = JSON.parse(String(body)) as {messages?: UIMessage[]};
+    const parsed = JSON.parse(body) as {messages?: UIMessage[]};
     return Array.isArray(parsed.messages) ? parsed.messages : [];
   } catch (err) {
     console.warn(
       '[useAgentChatTransport] Failed to parse request body:',
       err,
-      String(body)?.slice(0, 200),
+      body.slice(0, 200),
     );
     return [];
   }

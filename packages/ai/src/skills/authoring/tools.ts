@@ -44,21 +44,6 @@ function portabilityErrorMessage(match: string): string {
 }
 
 /**
- * Run the forbidden-identifier check against `text` and return an error
- * result if a match is found, otherwise `null`.
- */
-function checkForbidden(
-  text: string,
-  patterns: Array<[string, RegExp]>,
-): {success: false; error: string} | null {
-  const match = containsForbidden(text, patterns);
-  if (match !== null) {
-    return {success: false as const, error: portabilityErrorMessage(match)};
-  }
-  return null;
-}
-
-/**
  * Callback invoked by `saveSkill` after the draft has been validated. The
  * host owns id derivation, version assignment, and the actual write through
  * `SkillStorage`.
@@ -72,11 +57,11 @@ export type SaveSkillCallback = (
 // writeManifest
 
 const WriteManifestInput = z.object({
-  name: z.string().trim().min(1, {message: 'name must not be empty'}),
+  name: z.string().trim().min(1, {error: 'name must not be empty'}),
   description: z
     .string()
     .trim()
-    .min(1, {message: 'description must not be empty'}),
+    .min(1, {error: 'description must not be empty'}),
   author: z.string().optional(),
 });
 
@@ -94,8 +79,10 @@ export function createWriteManifestTool(
     inputSchema: WriteManifestInput,
     execute: async ({name, description, author}) => {
       const combined = `${name}\n${description}\n${author ?? ''}`;
-      const forbidden = checkForbidden(combined, forbiddenPatterns);
-      if (forbidden !== null) return forbidden;
+      const match = containsForbidden(combined, forbiddenPatterns);
+      if (match !== null) {
+        return {success: false as const, error: portabilityErrorMessage(match)};
+      }
       draftStore.getState().patchManifest({name, description, author});
       return {
         success: true as const,
@@ -109,7 +96,7 @@ export function createWriteManifestTool(
 // writeInstructions
 
 const WriteInstructionsInput = z.object({
-  markdown: z.string().min(1, {message: 'markdown must not be empty'}),
+  markdown: z.string().min(1, {error: 'markdown must not be empty'}),
 });
 
 export function createWriteInstructionsTool(
@@ -125,8 +112,10 @@ export function createWriteInstructionsTool(
       'Replace the full SKILL.md body with the given markdown. Call after writeManifest.',
     inputSchema: WriteInstructionsInput,
     execute: async ({markdown}) => {
-      const forbidden = checkForbidden(markdown, forbiddenPatterns);
-      if (forbidden !== null) return forbidden;
+      const match = containsForbidden(markdown, forbiddenPatterns);
+      if (match !== null) {
+        return {success: false as const, error: portabilityErrorMessage(match)};
+      }
       draftStore.getState().setInstructions(markdown);
       return {success: true as const, length: markdown.length};
     },
@@ -165,7 +154,7 @@ export function createSaveSkillTool(
       const draft: SkillDraft = {
         name: state.name,
         description: state.description,
-        author: state.author,
+        author: state.author ?? '',
         instructions: state.instructions,
       };
       state.setStatus('saving');

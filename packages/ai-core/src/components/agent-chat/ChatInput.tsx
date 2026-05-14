@@ -27,10 +27,17 @@ export const ChatInput: FC<ChatInputProps> = ({
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        if (isStreaming) {
+          onStop();
+          return;
+        }
+        if (value.trim().length === 0) {
+          return;
+        }
         onSend(value);
       }
     },
-    [onSend, value],
+    [isStreaming, onSend, onStop, value],
   );
 
   return (

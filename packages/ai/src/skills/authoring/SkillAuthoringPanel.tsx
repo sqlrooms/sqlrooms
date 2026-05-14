@@ -128,25 +128,20 @@ export const DefaultSkillAuthoringPanelHeader: React.FC = () => (
   </div>
 );
 
+const STATUS_PILL_CONFIG: Record<
+  SkillDraftStatus,
+  {label: string; dotClass: string}
+> = {
+  idle: {label: 'Ready', dotClass: 'bg-muted-foreground/40'},
+  saving: {label: 'Saving...', dotClass: 'bg-amber-500 animate-pulse'},
+  saved: {label: 'Saved', dotClass: 'bg-green-500'},
+  error: {label: 'Error', dotClass: 'bg-destructive'},
+};
+
 const StatusPill: React.FC<{
   status: SkillDraftStatus;
 }> = ({status}) => {
-  let label: string;
-  let dotClass: string;
-
-  switch (status) {
-    case 'saving':
-      label = 'Saving...';
-      dotClass = 'bg-amber-500 animate-pulse';
-      break;
-    case 'error':
-      label = 'Error';
-      dotClass = 'bg-destructive';
-      break;
-    default:
-      label = 'Ready';
-      dotClass = 'bg-muted-foreground/40';
-  }
+  const {label, dotClass} = STATUS_PILL_CONFIG[status];
 
   return (
     <div

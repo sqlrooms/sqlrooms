@@ -25,16 +25,16 @@ const SEMVER = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 
 export const SkillManifestSchema = z.object({
   id: z.string().min(1).regex(KEBAB_CASE, {
-    message: 'id must be kebab-case (e.g. "my-skill-name")',
+    error: 'id must be kebab-case (e.g. "my-skill-name")',
   }),
   version: z.string().regex(SEMVER, {
-    message: 'version must be semver (e.g. "0.1.0")',
+    error: 'version must be semver (e.g. "0.1.0")',
   }),
-  name: z.string().trim().min(1, {message: 'name must not be empty'}),
+  name: z.string().trim().min(1, {error: 'name must not be empty'}),
   description: z
     .string()
     .trim()
-    .min(1, {message: 'description must not be empty'}),
+    .min(1, {error: 'description must not be empty'}),
   author: z.string().optional(),
   icon: z.string().optional(),
 });

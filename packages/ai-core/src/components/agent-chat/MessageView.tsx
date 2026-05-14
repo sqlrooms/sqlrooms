@@ -1,11 +1,9 @@
 import {cn} from '@sqlrooms/ui';
 import type {UIMessage, UIMessagePart} from 'ai';
 import type {FC} from 'react';
-import ReactMarkdown, {type Components} from 'react-markdown';
+import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {ToolActivityLine} from './ToolActivityLine';
-
-const MARKDOWN_COMPONENTS: Components = {};
 
 /**
  * Render a single UI message as a vertical stack of parts (text, reasoning,
@@ -70,12 +68,7 @@ const TextPart: FC<{text: string; role: UIMessage['role']}> = ({
         <span className="whitespace-pre-wrap">{text}</span>
       ) : (
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={MARKDOWN_COMPONENTS}
-          >
-            {text}
-          </ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
         </div>
       )}
     </div>
