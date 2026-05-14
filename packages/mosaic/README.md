@@ -226,6 +226,15 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### AI Chart Tools
+
+`createChartTools` generates assistant tools for the built-in chart types. The
+injected `ChartToolDeps.resolveResources(params, context)` callback receives the
+tool execution context as its second argument. Client apps should prefer
+execution-scoped context, such as a captured AI run context, over live UI state
+when resolving implicit dashboard targets. Explicit `params.artifactId` should
+still take precedence.
+
 ### Box Plot Chart Type
 
 The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses

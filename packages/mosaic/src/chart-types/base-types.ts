@@ -46,11 +46,14 @@ export interface ChartBuilderField {
  * Provides the resources and operations needed to create charts.
  */
 export interface ChartToolDeps {
-  resolveResources: (params: {
-    artifactId?: string;
-    tableName?: string;
-    createArtifactIfMissing?: boolean;
-  }) => {
+  resolveResources: (
+    params: {
+      artifactId?: string;
+      tableName?: string;
+      createArtifactIfMissing?: boolean;
+    },
+    context?: ChartToolExecutionContext,
+  ) => {
     artifactId: string;
     tableName: string;
     columns: ChartBuilderColumn[];
@@ -68,6 +71,11 @@ export interface ChartToolDeps {
     config: any;
   };
 }
+
+export type ChartToolExecutionContext = object & {
+  sessionId?: string;
+  aiRunContext?: unknown;
+};
 
 export type ChartBuilderPanelSource = {
   tableName?: string;

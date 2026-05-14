@@ -25,9 +25,12 @@ Best for: large datasets with overlapping points, finding patterns/hotspots in 2
 
 Do NOT use for: individual point plots (use bubble-chart), single variable distribution (use histogram), time trends (use line-chart).`,
     inputSchema: HeatmapToolParameters,
-    execute: async (params) => {
+    execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(params);
+        const {artifactId, tableName, columns} = deps.resolveResources(
+          params,
+          context,
+        );
 
         // Validate settings
 

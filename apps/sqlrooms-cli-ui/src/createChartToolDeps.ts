@@ -3,9 +3,11 @@ import {
   createDefaultChartTypes,
   type ChartToolDeps,
   type ChartBuilderColumn,
+  type ChartToolExecutionContext,
 } from '@sqlrooms/mosaic';
 import type {RoomState} from './store';
 import {DataTable} from '@sqlrooms/db';
+import {getAiRunContextItems} from '@sqlrooms/ai';
 
 const aiChartTypes = createDefaultChartTypes({includeCustomSpec: false});
 
@@ -34,13 +36,27 @@ function findTableColumns(
 export function createChartToolDeps(store: {
   getState: () => RoomState;
 }): ChartToolDeps {
+  const getRunContextDashboardArtifactId = (
+    state: RoomState,
+    context?: ChartToolExecutionContext,
+  ) => {
+    const contextItems = getAiRunContextItems(context?.aiRunContext);
+    return contextItems.find((item) => {
+      const artifact = state.artifacts.config.artifactsById[item.id];
+      return artifact?.type === 'dashboard';
+    })?.id;
+  };
+
   const resolveArtifact = (
     artifactId?: string,
     createIfMissing?: boolean,
+    context?: ChartToolExecutionContext,
   ): string => {
     const state = store.getState();
     let targetArtifactId =
-      artifactId ?? state.dashboard.getCurrentDashboardArtifactId();
+      artifactId ??
+      getRunContextDashboardArtifactId(state, context) ??
+      state.dashboard.getCurrentDashboardArtifactId();
     if (!targetArtifactId && createIfMissing) {
       targetArtifactId = state.dashboard.createDashboardArtifact(
         undefined,
@@ -109,10 +125,11 @@ export function createChartToolDeps(store: {
   };
 
   return {
-    resolveResources: (params) => {
+    resolveResources: (params, context) => {
       const artifactId = resolveArtifact(
         params.artifactId,
         params.createArtifactIfMissing,
+        context,
       );
       const {tableName, columns} = resolveTable(artifactId, params.tableName);
       return {artifactId, tableName, columns};

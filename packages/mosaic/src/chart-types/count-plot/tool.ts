@@ -24,9 +24,12 @@ Required: field must be categorical/text (${CATEGORICAL_COLUMN_TYPES.join(', ')}
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use bubble-chart), time series (use line-chart).`,
     inputSchema: CountPlotToolParameters,
-    execute: async (params) => {
+    execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(params);
+        const {artifactId, tableName, columns} = deps.resolveResources(
+          params,
+          context,
+        );
 
         // Validate settings - expect categorical columns
         validateColumnExists(
