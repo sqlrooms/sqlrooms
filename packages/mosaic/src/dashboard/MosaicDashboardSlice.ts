@@ -32,7 +32,7 @@ import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import {VgPlotChartConfig} from '../chart-types/chart-config';
+import {ChartConfig} from '../chart-types/chart-config';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -41,7 +41,7 @@ import {VgPlotChartConfig} from '../chart-types/chart-config';
  * `{ key: MOSAIC_DASHBOARD_PANEL, meta: { dashboardId, panelId } }`.
  */
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
-export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
+export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
@@ -64,14 +64,14 @@ export const ProfilerPanelConfig = z.object({
 export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
 
 // Panel configs discriminated by type
-export const VgPlotPanelConfig = z.object({
+export const ChartPanelConfig = z.object({
   id: z.string(),
-  type: z.literal(MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE),
+  type: z.literal(MOSAIC_DASHBOARD_CHART_PANEL_TYPE),
   title: z.string().default('Panel'),
   source: MosaicDashboardPanelSource.optional(),
-  config: VgPlotChartConfig,
+  config: ChartConfig,
 });
-export type VgPlotPanelConfig = z.infer<typeof VgPlotPanelConfig>;
+export type ChartPanelConfig = z.infer<typeof ChartPanelConfig>;
 
 export const ProfilerPanel = z.object({
   id: z.string(),
@@ -94,7 +94,7 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [VgPlotPanelConfig, ProfilerPanel])
+  .discriminatedUnion('type', [ChartPanelConfig, ProfilerPanel])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
@@ -110,8 +110,8 @@ export type MosaicDashboardPanelRendererProps<
   resolvedSource?: MosaicDashboardPanelSource;
 };
 
-export type VgPlotPanelRendererProps =
-  MosaicDashboardPanelRendererProps<VgPlotPanelConfig>;
+export type ChartPanelRendererProps =
+  MosaicDashboardPanelRendererProps<ChartPanelConfig>;
 export type ProfilerPanelRendererProps =
   MosaicDashboardPanelRendererProps<ProfilerPanel>;
 
@@ -132,7 +132,7 @@ export type AnyPanelRenderer = {
 
 // Map of panel type string to panel config type
 export type PanelTypeMap = {
-  [MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE]: VgPlotPanelConfig;
+  [MOSAIC_DASHBOARD_CHART_PANEL_TYPE]: ChartPanelConfig;
   [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: ProfilerPanel;
 };
 
@@ -156,14 +156,29 @@ export type MosaicDashboardAddPanelAction = {
   ) => MosaicDashboardPanelConfig | undefined;
 };
 
-export function createMosaicDashboardVgPlotPanelConfig(
-  title: string,
-  config: VgPlotChartConfig,
-  source?: MosaicDashboardPanelSource,
-): VgPlotPanelConfig {
+export function createMosaicDashboardPanelConfig(options: {
+  type: string;
+  title: string;
+  source?: MosaicDashboardPanelSource;
+  config?: Record<string, unknown>;
+}): MosaicDashboardPanelConfig {
   return {
     id: createId(),
-    type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
+    type: options.type,
+    title: options.title,
+    source: options.source,
+    config: options.config ?? {},
+  };
+}
+
+export function createMosaicDashboardChartPanelConfig(
+  title: string,
+  config: ChartConfig,
+  source?: MosaicDashboardPanelSource,
+): ChartPanelConfig {
+  return {
+    id: createId(),
+    type: MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
     title,
     source,
     config,
@@ -177,15 +192,14 @@ export function createMosaicDashboardProfilerPanelConfig(
     pageSize?: number;
   } = {},
 ): MosaicDashboardPanelConfig {
-  return {
-    id: createId(),
+  return createMosaicDashboardPanelConfig({
     type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
     title: options.title ?? 'Profiler',
     source: options.source,
     config: {
       pageSize: options.pageSize ?? 10,
     },
-  };
+  });
 }
 
 export const MosaicDashboardEntry = z.object({
@@ -694,10 +708,10 @@ function ensureLayoutContainsDashboardPanels(
   return nextLayout;
 }
 
-export function isVgPlotPanelConfig(
+export function isChartPanelConfig(
   panel: MosaicDashboardPanelConfig,
-): panel is VgPlotPanelConfig {
-  return panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE;
+): panel is ChartPanelConfig {
+  return panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE;
 }
 
 export function getMosaicDashboardPanelId(
@@ -743,7 +757,7 @@ function shouldEvictPanelRuntimeForPatch(
     return true;
   }
 
-  if (panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE) {
+  if (panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE) {
     return Boolean(patch.config);
   }
 

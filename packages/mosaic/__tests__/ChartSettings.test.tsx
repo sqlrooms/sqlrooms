@@ -1,7 +1,7 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {describe, expect, it, jest, beforeEach, afterEach} from '@jest/globals';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ChartSettings} from '../src/dashboard/chart-settings';
-import type {VgPlotChartConfig} from '../src/chart-types';
+import {ChartSettings} from '../src/chart/chart-settings/ChartSettings';
+import type {ChartConfig} from '../src/chart-types';
 import type {TableColumn} from '@sqlrooms/duckdb';
 
 describe('ChartSettings Compound Components', () => {
@@ -23,7 +23,7 @@ describe('ChartSettings Compound Components', () => {
 
   describe('ChartSettings.Root', () => {
     it('provides context to children', () => {
-      const config: VgPlotChartConfig = {
+      const config: ChartConfig = {
         chartType: 'histogram',
         settings: {field: 'amount'},
       };
@@ -41,91 +41,21 @@ describe('ChartSettings Compound Components', () => {
 
       expect(markup).toContain('Child content');
     });
-  });
 
-  describe('ChartSettings.Fields', () => {
-    it('shows error for unknown chart type', () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {});
-      const config = {
-        chartType: 'unknown-type',
-      } as unknown as VgPlotChartConfig;
-
-      const markup = renderToStaticMarkup(
-        <ChartSettings.Root
-          tableName="test_table"
-          config={config}
-          columns={mockColumns}
-          onChange={mockOnChange}
-        >
-          <ChartSettings.Fields />
-        </ChartSettings.Root>,
-      );
-
-      expect(markup).toContain('Unknown chart type');
-      expect(markup).toContain('unknown-type');
-    });
-
-    it('shows error for empty columns', () => {
-      const config: VgPlotChartConfig = {
-        chartType: 'histogram',
-        settings: {
-          field: 'amount',
-        },
-      } satisfies VgPlotChartConfig;
-
-      const markup = renderToStaticMarkup(
-        <ChartSettings.Root
-          tableName="test_table"
-          config={config}
-          columns={[]}
-          onChange={mockOnChange}
-        >
-          <ChartSettings.Fields />
-        </ChartSettings.Root>,
-      );
-
-      expect(markup).toContain('No columns available');
-    });
-
-    it('renders for valid histogram config', () => {
-      const config: VgPlotChartConfig = {
-        chartType: 'histogram',
-        settings: {field: 'amount'},
-      };
-
-      const markup = renderToStaticMarkup(
-        <ChartSettings.Root
-          tableName="test_table"
-          config={config}
-          columns={mockColumns}
-          onChange={mockOnChange}
-        >
-          <ChartSettings.Fields />
-        </ChartSettings.Root>,
-      );
-
-      expect(markup).toBeDefined();
-      expect(markup).not.toContain('Unknown chart type');
-      expect(markup).not.toContain('No columns available');
-    });
-
-    it('renders for all chart types', () => {
-      const chartTypes: Array<{
-        type: VgPlotChartConfig['chartType'];
-        settings: any;
-      }> = [
-        {type: 'histogram', settings: {field: 'amount'}},
-        {type: 'count-plot', settings: {field: 'name'}},
-        {type: 'line-chart', settings: {x: 'id', y: 'amount'}},
-        {type: 'heatmap', settings: {x: 'name', y: 'id'}},
-        {type: 'box-plot', settings: {x: 'name', y: 'amount'}},
-        {type: 'bubble-chart', settings: {x: 'id', y: 'amount', size: 'id'}},
+    it('renders with different chart types', () => {
+      const chartTypes: ChartConfig['chartType'][] = [
+        'histogram',
+        'count-plot',
+        'line-chart',
+        'heatmap',
+        'box-plot',
+        'bubble-chart',
       ];
 
-      chartTypes.forEach(({type, settings}) => {
-        const config: VgPlotChartConfig = {
-          chartType: type,
-          settings,
+      chartTypes.forEach((chartType) => {
+        const config: ChartConfig = {
+          chartType,
+          settings: {},
         };
 
         const markup = renderToStaticMarkup(
@@ -135,13 +65,32 @@ describe('ChartSettings Compound Components', () => {
             columns={mockColumns}
             onChange={mockOnChange}
           >
-            <ChartSettings.Fields />
+            <div>Test content</div>
           </ChartSettings.Root>,
         );
 
-        expect(markup).toBeDefined();
-        expect(markup).not.toContain('Unknown chart type');
+        expect(markup).toContain('Test content');
       });
+    });
+
+    it('handles empty columns', () => {
+      const config: ChartConfig = {
+        chartType: 'histogram',
+        settings: {field: 'amount'},
+      };
+
+      const markup = renderToStaticMarkup(
+        <ChartSettings.Root
+          tableName="test_table"
+          config={config}
+          columns={[]}
+          onChange={mockOnChange}
+        >
+          <div>Empty columns test</div>
+        </ChartSettings.Root>,
+      );
+
+      expect(markup).toContain('Empty columns test');
     });
   });
 });

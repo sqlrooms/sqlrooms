@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
+import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 import {TableColumn} from '@sqlrooms/db';
 
 export function useTableColumns(tableName?: string): TableColumn[] {

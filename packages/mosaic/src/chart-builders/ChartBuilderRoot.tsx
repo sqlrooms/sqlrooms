@@ -6,8 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type {VgPlotChartConfig} from '../chart-types';
-import {getAllChartTypes} from '../chart-types/registry';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderContext} from './ChartBuilderContext';
 import {createChartBuilderStore} from './createChartBuilderStore';
 import type {
@@ -21,8 +20,8 @@ export type ChartBuilderRootProps = PropsWithChildren<{
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (title: string, metadata: VgPlotChartConfig) => void;
-  /** Optional chart types to show (defaults to all registered types) */
+  onCreateChart: (title: string, metadata: ChartConfig) => void;
+  /** Optional chart types to show (defaults to an empty array) */
   chartTypes?: ChartTypeDefinition[];
   /** Controlled open state */
   open?: boolean;
@@ -55,13 +54,9 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     [isControlled, onOpenChange],
   );
 
-  const resolvedChartTypes = useMemo(() => {
-    return chartTypes ?? getAllChartTypes();
-  }, [chartTypes]);
-
   // All resolved chart types are available by default
   // (Filtering by schema compatibility was removed in favour of runtime validation)
-  const availableChartTypes = resolvedChartTypes;
+  const availableChartTypes = useMemo(() => chartTypes ?? [], [chartTypes]);
 
   useEffect(() => {
     const {selectedTemplateId, reset} = store.getState();
@@ -75,9 +70,9 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     }
   }, [availableChartTypes, store]);
 
-  const handleCreateChart: (title: string, config: VgPlotChartConfig) => void =
+  const handleCreateChart: (title: string, config: ChartConfig) => void =
     useCallback(
-      (title: string, config: VgPlotChartConfig) => {
+      (title: string, config: ChartConfig) => {
         onCreateChart(title, config);
         resolvedOnOpenChange(false);
       },
@@ -89,19 +84,11 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
       tableName,
       columns,
       onCreateChart: handleCreateChart,
-      templates: resolvedChartTypes,
-      resolvedTemplates: resolvedChartTypes,
-      availableTemplates: availableChartTypes,
+      templates: availableChartTypes,
+      availableTemplates: availableChartTypes, // TODO: why we need both templates and availableTemplates? can we remove one of them?
       store,
     }),
-    [
-      availableChartTypes,
-      columns,
-      handleCreateChart,
-      resolvedChartTypes,
-      store,
-      tableName,
-    ],
+    [availableChartTypes, columns, handleCreateChart, store, tableName],
   );
 
   return (

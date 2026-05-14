@@ -177,8 +177,8 @@ runtime add-panel actions when creating the dashboard slice.
 import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardChartPanelConfig,
   createMosaicDashboardSlice,
-  createMosaicDashboardVgPlotPanelConfig,
   MosaicDashboard,
 } from '@sqlrooms/mosaic';
 
@@ -200,6 +200,19 @@ function addProfiler(store: RoomStore) {
     }),
   );
 }
+
+function addBoxPlotChart(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardChartPanelConfig('Magnitude by Region', {
+      chartType: 'box-plot',
+      settings: {
+        x: 'region',
+        y: 'magnitude',
+      },
+    }),
+  );
+}
 ```
 
 Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
@@ -212,6 +225,30 @@ Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
 panel omits a source it falls back to the dashboard selected table. Panel renderer
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
+
+### Box Plot Chart Type
+
+The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses
+a custom renderer instead of Vega-Lite. It calculates quartiles, whiskers, and
+outliers directly in DuckDB using SQL queries, then renders them with Observable
+Plot primitives. This approach provides better performance and more accurate
+statistical calculations than Observable Plot's built-in `boxY` mark.
+
+Box plots support:
+
+- Grouped box plots by categorical variable (x-axis)
+- Y-axis brushing for interactive filtering
+- Cross-filtering integration with other dashboard charts
+- Custom quartile calculation using DuckDB's `quantile_cont` function
+
+The renderer is modular and organized in the `chart-types/box-plot/renderer/`
+directory with separate concerns:
+
+- **BoxPlotPanelRenderer.tsx** - Main React component with drag interactions
+- **BoxPlotClient.ts** - Mosaic client for SQL-based data queries
+- **plot.ts** - Observable Plot rendering logic
+- **utils.ts** - Statistical calculations and coordinate transformations
+- **constants.ts** - Theme colors and layout constants
 
 ### Chart Builder Compound Components
 
@@ -234,6 +271,9 @@ function MyDashboard() {
       columns={columns}
       onCreateChart={(spec, title) => {
         // Handle chart creation
+      }}
+      onCreateChartOutput={(output, title) => {
+        // Optional: handle non-spec outputs such as dashboard panel chart types.
       }}
     >
       <ChartBuilderTrigger />

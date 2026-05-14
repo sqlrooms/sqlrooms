@@ -14,24 +14,23 @@
  * </ChartSettings.Root>
  * ```
  */
-import {type FC, type PropsWithChildren} from 'react';
+import {type FC, type PropsWithChildren, createElement} from 'react';
 import {ChartTypeSelector} from './ChartTypeSelector';
 import {
   ChartSettingsProvider,
   useChartSettingsContext,
 } from './ChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/duckdb';
-import {type VgPlotChartConfig} from '../../chart-types/chart-config';
-import {type VgPlotChartType} from '../../chart-types/base-types';
-import {getChartTypeDefinition} from '../../chart-types/registry';
+import {type ChartConfig, type ChartType} from '../../chart-types';
 import {Button} from '@sqlrooms/ui';
 import {CodeIcon, XIcon} from 'lucide-react';
+import {useChartTypeDefinition} from '../../chart-types/useChartTypeDefinition';
 
 interface ChartSettingsRootProps {
   tableName?: string;
-  config: VgPlotChartConfig;
+  config: ChartConfig;
   columns: TableColumn[];
-  onChange: (config: VgPlotChartConfig) => void;
+  onChange: (config: ChartConfig) => void;
 }
 
 const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
@@ -53,7 +52,7 @@ const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
   );
 };
 
-const ChartSettingsViewSpecButton: FC<{onClick: () => void}> = ({onClick}) => {
+const ChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({onClick}) => {
   return (
     <Button
       variant="ghost"
@@ -97,7 +96,7 @@ const ChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
 const ChartSettingsTypeSelector: FC = () => {
   const {config, onChange} = useChartSettingsContext();
 
-  const handleChartTypeChange = (newChartType: VgPlotChartType) => {
+  const handleChartTypeChange = (newChartType: ChartType) => {
     // When changing chart type, clear settings
     onChange({
       chartType: newChartType,
@@ -116,7 +115,7 @@ const ChartSettingsTypeSelector: FC = () => {
 
 const ChartSettingsFields: FC = () => {
   const {config, columns} = useChartSettingsContext();
-  const chartTypeDef = getChartTypeDefinition(config.chartType);
+  const chartTypeDef = useChartTypeDefinition(config.chartType);
 
   if (!chartTypeDef) {
     return (
@@ -134,8 +133,7 @@ const ChartSettingsFields: FC = () => {
     );
   }
 
-  const SettingsComponent = chartTypeDef.settingsComponent;
-  return <SettingsComponent />;
+  return createElement(chartTypeDef.settingsComponent);
 };
 
 export const ChartSettings = {

@@ -8,28 +8,22 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {ChartNoAxesCombined} from 'lucide-react';
-import {type VgPlotChartType} from '../../chart-types/base-types';
-import {getAllChartTypes} from '../../chart-types/registry';
-import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
+import {type ChartType} from '../../chart-types/base-types';
+import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 
 interface ChartTypeSelectorProps {
-  value: VgPlotChartType;
-  onChange: (chartType: VgPlotChartType) => void;
+  value: ChartType;
+  onChange: (chartType: ChartType) => void;
 }
 
 export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
   ({value, onChange}) => {
-    const chartTypesFromStore = useStoreWithMosaicDashboard(
+    const chartTypes = useStoreWithMosaicDashboard(
       (state) => state.mosaicDashboard.chartTypes,
     );
 
-    const chartTypes = useMemo(
-      () => chartTypesFromStore || getAllChartTypes(),
-      [chartTypesFromStore],
-    );
-
     const selectedChartType = useMemo(
-      () => chartTypes.find((chartType) => chartType.id === value),
+      () => chartTypes?.find((chartType) => chartType.id === value),
       [chartTypes, value],
     );
 
@@ -51,7 +45,7 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
             )}
           </SelectTrigger>
           <SelectContent className="text-xs">
-            {chartTypes.map((chartType) => {
+            {chartTypes?.map((chartType) => {
               const Icon = chartType.icon ?? ChartNoAxesCombined;
               return (
                 <SelectItem key={chartType.id} value={chartType.id}>

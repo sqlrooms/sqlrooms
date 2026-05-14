@@ -70,12 +70,24 @@ export type TrackedClient = {
   queryResultCallback?: (result: ArrowTable) => void; // External callback
 };
 
+export type MosaicIdleConnection = {status: 'idle'};
+export type MosaicLoadingConnection = {status: 'loading'};
+export type MosaicReadyConnection = {
+  status: 'ready';
+  connector?: Connector;
+  coordinator: Coordinator;
+};
+export type MosaicErrorConnection = {status: 'error'; error: unknown};
+
+export type MosaicConnection =
+  | MosaicIdleConnection
+  | MosaicLoadingConnection
+  | MosaicReadyConnection
+  | MosaicErrorConnection;
+
 export type MosaicSliceState = {
   mosaic: SliceFunctions & {
-    connection:
-      | {status: 'idle' | 'loading'}
-      | {status: 'ready'; connector?: Connector; coordinator: Coordinator}
-      | {status: 'error'; error: unknown};
+    connection: MosaicConnection;
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
     clients: Record<string, TrackedClient>;

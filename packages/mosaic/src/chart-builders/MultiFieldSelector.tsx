@@ -4,7 +4,7 @@ import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
 import {AggregationSelector} from './AggregationSelector';
 import type {AggregateFunction} from '../chart-types/line-chart/schema';
-import {useChartSettingsContext} from '../dashboard/chart-settings/ChartSettingsContext';
+import {useChartSettingsContext} from '../chart/chart-settings/ChartSettingsContext';
 import {NUMERIC_COLUMN_TYPES} from './constants';
 import type {YFieldConfig} from '../chart-types/line-chart/schema';
 

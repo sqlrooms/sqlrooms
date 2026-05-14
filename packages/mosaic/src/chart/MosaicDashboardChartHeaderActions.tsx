@@ -2,13 +2,14 @@ import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {SettingsIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import {
-  type VgPlotPanelRendererProps,
+  type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
-} from './MosaicDashboardSlice';
+} from '../dashboard/MosaicDashboardSlice';
 
-export const MosaicDashboardVgPlotHeaderActions: FC<
-  VgPlotPanelRendererProps
-> = ({dashboardId, panel}) => {
+export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
+  dashboardId,
+  panel,
+}) => {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );

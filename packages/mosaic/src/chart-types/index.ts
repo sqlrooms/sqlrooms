@@ -10,15 +10,11 @@ export * from './errors';
 // Import specific types needed before re-exports
 import type {ChartTypeDefinition} from './base-types';
 
-// CRITICAL: Export VgPlotChartConfig FIRST, before importing Settings components
-// Export VgPlotChartConfig from separate file to avoid circular dependencies
+// CRITICAL: Export ChartConfig FIRST, before importing Settings components
+// Export ChartConfig from separate file to avoid circular dependencies
 // (chart-types/index imports Settings components, which import ChartSettingsContext,
-// which imports VgPlotChartConfig)
-export {
-  VgPlotChartConfig,
-  type VgPlotChartSettings,
-  type VgPlotChartType,
-} from './chart-config';
+// which imports ChartConfig)
+export {ChartConfig, type ChartSettings, type ChartType} from './chart-config';
 
 // Re-export schemas
 export * from './histogram/schema';
@@ -128,6 +124,3 @@ export function createChartTools(
 
   return tools;
 }
-
-// Re-export registry LAST - it imports and registers all chart types at module load time
-export * from './registry';

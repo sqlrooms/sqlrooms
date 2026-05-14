@@ -1,25 +1,23 @@
 import {type FC, useMemo} from 'react';
-import {type VgPlotChartConfig} from '../../chart-types/chart-config';
-import {useGenerateSpec} from '../useGenerateSpec';
 import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {ChartSettings} from './ChartSettings';
+import {Spec} from '@uwdata/mosaic-spec';
+import {toRenderableMosaicSpec} from '../../dashboard/utils';
 
 interface ChartSpecViewerPanelProps {
-  tableName?: string;
-  config: VgPlotChartConfig;
+  spec: Spec;
   onBack: () => void;
 }
 
 export const ChartSpecViewerPanel: FC<ChartSpecViewerPanelProps> = ({
-  tableName,
-  config,
+  spec,
   onBack,
 }) => {
-  const {spec} = useGenerateSpec(tableName, config.chartType, config.settings);
+  const renderableSpec = toRenderableMosaicSpec(spec);
 
   const serializedValue = useMemo(
-    () => (spec ? JSON.stringify(spec, null, 2) : ''),
-    [spec],
+    () => (renderableSpec ? JSON.stringify(renderableSpec, null, 2) : ''),
+    [renderableSpec],
   );
 
   return (

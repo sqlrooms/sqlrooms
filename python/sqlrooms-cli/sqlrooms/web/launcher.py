@@ -339,8 +339,7 @@ class SqlroomsHttpServer:
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": f"ws://{self._public_host()}:{self.ws_port}",
             "crdtRoomId": (
-                f"sqlrooms-cli:{self.meta_namespace}:"
-                f"{self.duckdb_database or 'memory'}"
+                f"sqlrooms-cli:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
             ),
             "aiProviders": self.ai_providers,
             "dbPath": self.duckdb_database,

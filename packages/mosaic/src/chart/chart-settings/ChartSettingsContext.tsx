@@ -1,14 +1,11 @@
 import {createContext, type ReactNode, useCallback, useContext} from 'react';
 import type {TableColumn} from '@sqlrooms/duckdb';
-import type {VgPlotChartConfig} from '../../chart-types/chart-config';
-import type {VgPlotChartType} from '../../chart-types/base-types';
+import type {ChartConfig} from '../../chart-types/chart-config';
+import type {ChartType} from '../../chart-types/base-types';
 
-type ChartSetting<T extends VgPlotChartConfig = VgPlotChartConfig> =
-  T['settings'];
+type ChartSetting<T extends ChartConfig = ChartConfig> = T['settings'];
 
-interface ChartSettingsContextValue<
-  T extends VgPlotChartConfig = VgPlotChartConfig,
-> {
+interface ChartSettingsContextValue<T extends ChartConfig = ChartConfig> {
   tableName?: string;
   config: T;
   columns: TableColumn[];
@@ -24,20 +21,20 @@ const ChartSettingsContext = createContext<ChartSettingsContextValue | null>(
 );
 
 // Extract specific config type from the discriminated union by chartType
-type ExtractChartConfig<T extends VgPlotChartType> = Extract<
-  VgPlotChartConfig,
+type ExtractChartConfig<T extends ChartType> = Extract<
+  ChartConfig,
   {chartType: T}
 >;
 
-export function useChartSettingsContext(): ChartSettingsContextValue<VgPlotChartConfig>;
-export function useChartSettingsContext<T extends VgPlotChartType>(
+export function useChartSettingsContext(): ChartSettingsContextValue<ChartConfig>;
+export function useChartSettingsContext<T extends ChartType>(
   chartType: T,
 ): ChartSettingsContextValue<ExtractChartConfig<T>>;
-export function useChartSettingsContext<T extends VgPlotChartType>(
+export function useChartSettingsContext<T extends ChartType>(
   chartType?: T,
 ):
   | ChartSettingsContextValue<ExtractChartConfig<T>>
-  | ChartSettingsContextValue<VgPlotChartConfig> {
+  | ChartSettingsContextValue<ChartConfig> {
   const context = useContext(ChartSettingsContext);
 
   if (!context) {
@@ -47,7 +44,7 @@ export function useChartSettingsContext<T extends VgPlotChartType>(
   }
 
   if (!chartType) {
-    return context as unknown as ChartSettingsContextValue<VgPlotChartConfig>;
+    return context as unknown as ChartSettingsContextValue<ChartConfig>;
   }
 
   if (context.config.chartType !== chartType) {
@@ -61,9 +58,9 @@ export function useChartSettingsContext<T extends VgPlotChartType>(
 
 interface ChartSettingsProviderProps {
   tableName?: string;
-  config: VgPlotChartConfig;
+  config: ChartConfig;
   columns: TableColumn[];
-  onChange: (config: VgPlotChartConfig) => void;
+  onChange: (config: ChartConfig) => void;
   children: ReactNode;
 }
 
@@ -82,7 +79,7 @@ export function ChartSettingsProvider({
           ...config.settings,
           [key]: value,
         },
-      } as VgPlotChartConfig);
+      } as ChartConfig);
     },
     [config, onChange],
   );

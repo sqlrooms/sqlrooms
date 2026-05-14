@@ -23,18 +23,20 @@ export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
 export {
+  createMosaicDashboardPanelConfig,
   createMosaicDashboardProfilerPanelConfig,
-  createMosaicDashboardVgPlotPanelConfig,
+  createMosaicDashboardChartPanelConfig,
   createDefaultMosaicDashboardConfig,
   createMosaicDashboardSlice,
   getMosaicDashboardDockId,
   getMosaicDashboardGridId,
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
-  isVgPlotPanelConfig,
+  isChartPanelConfig,
   MOSAIC_DASHBOARD_PANEL,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-  MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
+  MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
+  MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   MosaicDashboardEntry,
   MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
@@ -55,7 +57,7 @@ export type {
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
-  VgPlotPanelConfig,
+  ChartPanelConfig,
 } from './dashboard/MosaicDashboardSlice';
 export {
   createMosaicColorLegendPlot,
@@ -182,9 +184,11 @@ export {
   customSpecChartType,
   heatmapChartType,
   histogramChartType,
+  isSpecChartType,
+  isComponentChartType,
   lineChartChartType,
   mosaicChartTypes,
-  VgPlotChartConfig,
+  ChartConfig,
   HistogramChartSettings,
   LineChartSettings,
   CountPlotChartSettings,
@@ -209,8 +213,8 @@ export {
   createChartTools,
 } from './chart-types';
 export type {
-  VgPlotChartSettings,
-  VgPlotChartType,
+  ChartSettings,
+  ChartType,
   ChartToolDeps,
   ResolvedChartResources,
   CreateChartParams,
@@ -232,10 +236,9 @@ export {
 export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
 export type {
   ChartBuilderColumn,
+  ChartBuilderDashboardPanelOutput,
   ChartBuilderField,
   ChartSpec,
   ChartTypeDefinition,
 } from './chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
-
-export {generateMosaicChartSpec} from './dashboard/generateMosaicChartSpec';
