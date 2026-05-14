@@ -4,19 +4,24 @@
  */
 
 import type {Spec} from '@uwdata/mosaic-spec';
+import {type Tool} from 'ai';
+import type {Coordinator} from '@uwdata/mosaic-core';
+import type {ComponentType} from 'react';
+import type * as z from 'zod';
+import {ChartConfig, ChartType} from './chart-config';
+import {RetainedVgPlotChart} from '../VgPlotChart';
+import type {Selection} from '@uwdata/mosaic-core';
+
+// Re-export ChartType for convenience
+export type {ChartType};
 
 /**
- * Supported chart type identifiers
+ * Column info passed to chart builder UI
  */
-export type VgPlotChartType =
-  | 'histogram'
-  | 'count-plot'
-  | 'ecdf'
-  | 'line-chart'
-  | 'bubble-chart'
-  | 'heatmap'
-  | 'box-plot'
-  | 'custom-spec';
+export interface ChartBuilderColumn {
+  name: string;
+  type: string;
+}
 
 /**
  * Describes a field selector in a chart builder UI
@@ -32,35 +37,142 @@ export interface ChartBuilderField {
   types?: string[];
   /** Optional helper text for AI or custom UIs */
   description?: string;
+  /** Whether this field accepts multiple values (array) */
+  multiple?: boolean;
 }
 
 /**
- * Column info passed to chart builder UI
+ * Dependencies injected into chart tool creation functions.
+ * Provides the resources and operations needed to create charts.
  */
-export interface ChartBuilderColumn {
-  name: string;
-  type: string;
+export interface ChartToolDeps {
+  resolveResources: (params: {
+    artifactId?: string;
+    tableName?: string;
+    createArtifactIfMissing?: boolean;
+  }) => {
+    artifactId: string;
+    tableName: string;
+    columns: ChartBuilderColumn[];
+  };
+  createChart: (params: {
+    artifactId: string;
+    tableName: string;
+    title: string;
+    config: any;
+  }) => {
+    panelId: string;
+    artifactId: string;
+    tableName: string;
+    title: string;
+    config: any;
+  };
 }
+
+export type ChartBuilderPanelSource = {
+  tableName?: string;
+  sqlQuery?: string;
+};
+
+export type ChartBuilderVgPlotOutput = {
+  kind: 'vgplot';
+  spec: Spec;
+};
+
+export type ChartBuilderDashboardPanelOutput = {
+  kind: 'dashboard-panel';
+  type: string;
+  source?: ChartBuilderPanelSource;
+  config?: Record<string, unknown>;
+};
+
+export type ChartBuilderOutput =
+  | ChartBuilderVgPlotOutput
+  | ChartBuilderDashboardPanelOutput;
+
+export type ChartRetainer = {
+  chart: RetainedVgPlotChart | undefined;
+  setChart: (chart: RetainedVgPlotChart) => void;
+};
+
+export type BrushSelectionParams = Map<string, Selection>;
+
+/**
+ * Props passed to chart renderer components.
+ */
+export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
+  tableName: string;
+  config: TConfig;
+  coordinator: Coordinator;
+  /**
+   * Pre-defined params/selections to inject when rendering vgplot specs.
+   * Keys are param names (without $), values are Param or Selection instances.
+   */
+  params?: BrushSelectionParams;
+  /**
+   * Optional retention adapter for preserving the underlying vgplot
+   * instance across temporary unmount/remount cycles.
+   */
+  retention?: ChartRetainer;
+}
+
+type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
+  /** Unique identifier */
+  id: ChartType;
+  /** Short human-friendly name used in chart-type grids and prompts */
+  label?: string;
+  /** Short description of what this builder creates */
+  description: string;
+  /** Zod schema for runtime validation of settings */
+  schema: z.ZodType<TConfig['settings']>;
+  /** Generate a chart title from selected field values */
+  buildTitle?: (fieldValues: Record<string, unknown>) => string;
+  /** Optional availability override for a given table schema */
+  isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
+  /** Optional extra assistant-facing description */
+  aiDescription?: string;
+  /** Explicit settings component for this chart type */
+  settingsComponent: ComponentType;
+  /** Optional icon component for chart-type grids */
+  icon: ComponentType<{className?: string}>;
+  /** Optional function to create an AI tool for this chart type */
+  createTool?: (deps: ChartToolDeps) => Tool;
+};
+
+export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
+  BaseChartTypeDefinition<TConfig> & {
+    createSpec: (tableName: string, config: TConfig['settings']) => Spec;
+    canViewSpec?: boolean;
+  };
+
+export type ComponentChartTypeDefinition<
+  TConfig extends ChartConfig = ChartConfig,
+> = BaseChartTypeDefinition<TConfig> & {
+  renderer: ComponentType<ChartRendererProps<TConfig>>;
+};
 
 /**
  * Shared chart-type definition used by both the chart-builder UI and
  * assistant-driven chart creation.
  */
-export interface ChartTypeDefinition<TSettings = any> {
-  /** Unique identifier */
-  id: VgPlotChartType;
-  /** Short human-friendly name used in chart-type grids and prompts */
-  label?: string;
-  /** Short description of what this builder creates */
-  description: string;
-  /** Field selectors the user must fill in */
-  fields: ChartBuilderField[];
-  /** Generate a Mosaic spec from table name and selected field values */
-  createSpec: (tableName: string, values: TSettings) => Spec;
-  /** Generate a chart title from selected field values */
-  buildTitle?: (fieldValues: Record<string, string>) => string;
-  /** Optional availability override for a given table schema */
-  isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
-  /** Optional extra assistant-facing description */
-  aiDescription?: string;
+export type ChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
+  | SpecChartTypeDefinition<TConfig>
+  | ComponentChartTypeDefinition<TConfig>;
+
+export function isSpecChartType<TConfig extends ChartConfig>(
+  chartType: ChartTypeDefinition<TConfig>,
+): chartType is SpecChartTypeDefinition<TConfig> {
+  return 'createSpec' in chartType;
 }
+
+export function isComponentChartType<TConfig extends ChartConfig>(
+  chartType: ChartTypeDefinition<TConfig>,
+): chartType is ComponentChartTypeDefinition<TConfig> {
+  return 'renderer' in chartType;
+}
+
+/**
+ * Backward-compatible alias for earlier chart-builder helper APIs.
+ * @deprecated Use {@link ChartTypeDefinition} instead.
+ */
+export type ChartSpec = ChartTypeDefinition;

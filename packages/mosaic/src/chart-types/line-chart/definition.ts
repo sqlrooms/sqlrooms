@@ -1,56 +1,23 @@
-import type {Spec} from '@uwdata/mosaic-spec';
-import type {ChartTypeDefinition} from '../base-types';
-import type {LineChartSettings} from './schema';
-import {
-  QUANTITATIVE_COLUMN_TYPES,
-  NUMERIC_COLUMN_TYPES,
-} from '../../chart-builders/constants';
+import type {SpecChartTypeDefinition} from '../base-types';
+import {LineChartConfig, LineChartSettings} from './schema';
 import {titleFromDescription} from '../../chart-builders/chartTypeUtils';
+import {LineChartSettingsComponent} from './LineChartSettings';
+import {createLineChartAiTool} from './tool';
+import {LineChart} from 'lucide-react';
+import {createLineChartSpec} from './spec';
 
-const FG_COLOR = 'var(--color-chart-1)';
 const DESCRIPTION = 'Create a line chart of two fields';
 
-export const lineChartChartType: ChartTypeDefinition<LineChartSettings> = {
+export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   id: 'line-chart',
   label: 'Line Chart',
   description: DESCRIPTION,
   aiDescription:
-    'Use for trends over an ordered x-axis, typically time on x and a numeric measure on y.',
-  fields: [
-    {
-      key: 'x',
-      label: 'X Field',
-      required: true,
-      types: [...QUANTITATIVE_COLUMN_TYPES],
-      description:
-        'Ordered x-axis column, usually time or a quantitative value.',
-    },
-    {
-      key: 'y',
-      label: 'Y Field',
-      required: true,
-      types: [...NUMERIC_COLUMN_TYPES],
-      description: 'Numeric measure plotted on the y-axis.',
-    },
-  ],
+    'Use for trends over an ordered x-axis, typically time on x and numeric measures on y. Supports multiple Y fields for comparing trends.',
+  icon: LineChart,
+  schema: LineChartSettings,
+  settingsComponent: LineChartSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
-  createSpec: (tableName, {x, y}): Spec =>
-    ({
-      plot: [
-        {
-          mark: 'lineY',
-          data: {from: tableName, filterBy: '$brush'},
-          x,
-          y,
-          stroke: FG_COLOR,
-        },
-        {select: 'intervalX', as: '$brush'},
-      ],
-      xLabel: x,
-      yLabel: y,
-      height: 250,
-      width: 380,
-      margins: {left: 50, right: 20, top: 20, bottom: 50},
-      params: {brush: {select: 'crossfilter'}},
-    }) as Spec,
+  createTool: createLineChartAiTool,
+  createSpec: createLineChartSpec,
 };

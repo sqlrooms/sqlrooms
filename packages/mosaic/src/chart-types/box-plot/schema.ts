@@ -1,8 +1,8 @@
 import {z} from 'zod';
 
 export const BoxPlotChartSettings = z.object({
-  x: z.string().optional(),
-  y: z.string().optional(),
+  x: z.string().describe('Categorical column for grouping'),
+  y: z.string().describe('Numeric column for distribution statistics'),
 });
 
 export type BoxPlotChartSettings = z.infer<typeof BoxPlotChartSettings>;
@@ -10,7 +10,6 @@ export type BoxPlotChartSettings = z.infer<typeof BoxPlotChartSettings>;
 export const BoxPlotChartConfig = z.object({
   chartType: z.literal('box-plot'),
   settings: BoxPlotChartSettings,
-  vgplot: z.unknown(),
   settingsOpen: z.boolean().optional(),
 });
 

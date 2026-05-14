@@ -1,17 +1,19 @@
 import type {Param} from '@sqlrooms/mosaic';
 import {
   type ChartBuilderColumn,
+  type ChartConfig,
+  createDefaultChartTypes,
+  isSpecChartType,
   MosaicChart,
   MosaicChartBuilder,
   type Spec,
-  type VgPlotChartConfig,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
 import {Code, FilterX, X} from 'lucide-react';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
-import {ChartConfig, defaultChartConfigs} from './filterPlots';
+import {type FilterChartItem, defaultChartConfigs} from './filterPlots';
 
 export const FiltersPanel: FC<{className?: string}> = ({className}) => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
@@ -38,7 +40,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   );
 
   // Chart list state
-  const [charts, setCharts] = useState<ChartConfig[]>(() => [
+  const [charts, setCharts] = useState<FilterChartItem[]>(() => [
     ...defaultChartConfigs,
   ]);
 
@@ -75,12 +77,31 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
-  const handleCreateChart = useCallback(
-    (title: string, config: VgPlotChartConfig) => {
-      const id = `chart-${Date.now()}`;
-      setCharts((prev) => [{id, title, spec: config.vgplot as Spec}, ...prev]);
-    },
+  // Only include spec-based chart types (filter panel doesn't support component renderers)
+  const chartTypes = useMemo(
+    () => createDefaultChartTypes().filter(isSpecChartType),
     [],
+  );
+
+  const handleCreateChart = useCallback(
+    (title: string, config: ChartConfig) => {
+      try {
+        const id = `chart-${Date.now()}`;
+        const chartTypeDef = chartTypes.find(
+          (ct) => ct.id === config.chartType,
+        );
+        if (!chartTypeDef) {
+          console.error(`Unknown chart type: ${config.chartType}`);
+          return;
+        }
+        // chartTypes is filtered to only spec-based types, so createSpec exists
+        const spec = chartTypeDef.createSpec('earthquakes', config.settings);
+        setCharts((prev) => [{id, title, spec}, ...prev]);
+      } catch (error) {
+        console.error('Failed to create chart:', error);
+      }
+    },
+    [chartTypes],
   );
 
   const handleRemoveChart = useCallback((chartId: string) => {
@@ -115,6 +136,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
         <MosaicChartBuilder
           tableName="earthquakes"
           columns={columns}
+          chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
           open={builderOpen}
           onOpenChange={setBuilderOpen}

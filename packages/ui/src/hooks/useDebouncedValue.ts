@@ -32,6 +32,7 @@ export function useDebouncedValue<T>(
 
   // Sync local state when external value changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalValue(externalValue);
   }, [externalValue]);
 

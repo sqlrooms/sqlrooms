@@ -4,6 +4,7 @@
  */
 
 export {RoomShell} from './RoomShell';
+export {RoomDndProvider} from '@sqlrooms/layout';
 export {RoomShellCommandPalette} from './RoomShellCommandPalette';
 export type {
   RoomShellCommandPaletteButtonProps,

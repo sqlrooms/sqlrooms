@@ -2,11 +2,14 @@ import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
+  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
+  type AiRunContext,
+  type AiRunContextItem,
 } from '@sqlrooms/ai';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
@@ -26,16 +29,19 @@ import {
   QualifiedTableName,
 } from '@sqlrooms/duckdb';
 import {
+  createCrdtSlice,
+  createIndexedDbDocStorage,
+  createWebSocketSyncConnector,
+} from '@sqlrooms/crdt';
+import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
-  createMosaicDashboardVgPlotPanelConfig,
   createMosaicSlice,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
   createDefaultChartTypes,
-  isVgPlotPanelConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -49,7 +55,11 @@ import {
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {
+  createChartImageForMarkdownTool,
+  createVegaChartTool,
+  VegaChartToolResult,
+} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   createWebContainerToolkit,
@@ -63,6 +73,13 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
+import {
+  createDocumentCommands,
+  createDocumentsSlice,
+  DOCUMENT_AI_INSTRUCTIONS,
+  DocumentsSliceConfig,
+} from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -81,9 +98,10 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
-import {parseVgPlotSpecString} from './vgplot';
 
 export type {RoomState} from './store-types';
+
+const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -97,6 +115,24 @@ const defaultModelFromConfig =
 const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
 const MOSAIC_PREAGG_SCHEMA = 'mosaic';
 const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CRDT_STORAGE_KEY = [
+  'sqlrooms-cli',
+  runtimeConfig.metaNamespace || '__sqlrooms',
+  runtimeConfig.dbPath || 'memory',
+  'documents',
+].join(':');
+
+function createCliCrdtSyncConnector() {
+  if (!runtimeConfig.syncEnabled) return undefined;
+  return createWebSocketSyncConnector({
+    url:
+      runtimeConfig.crdtWsUrl || runtimeConfig.wsUrl || 'ws://localhost:4000',
+    roomId:
+      runtimeConfig.crdtRoomId ||
+      `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    sendSnapshotOnConnect: false,
+  });
+}
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -228,6 +264,7 @@ const sliceConfigSchemas = {
   cells: CellsSliceConfig,
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
+  documents: DocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -270,6 +307,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
         )?.id;
+      const getRunContextDashboardArtifactId = () => {
+        const currentSession = get().ai.getCurrentSession();
+        const contextItems = getAiRunContextItems(currentSession?.runContext);
+        return contextItems.find((item) => {
+          const artifact = get().artifacts.config.artifactsById[item.id];
+          return artifact?.type === 'dashboard';
+        })?.id;
+      };
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -278,9 +323,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
+          registerCommandsForOwner(
+            store,
+            DOCUMENT_COMMAND_OWNER,
+            createDocumentCommands<RoomState>(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -323,50 +374,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
           return artifactId;
         },
-        setDashboardVgPlot: (artifactId, vgplot) => {
-          const artifact = get().artifacts.getArtifact(artifactId);
-          if (!artifact) {
-            throw new Error(`Unknown artifact "${artifactId}".`);
-          }
-          if (artifact.type !== 'dashboard') {
-            throw new Error(
-              `Artifact "${artifactId}" is not a dashboard artifact.`,
-            );
-          }
-          const {parsed} = parseVgPlotSpecString(vgplot);
-          get().dashboard.ensureDashboardArtifact(artifactId);
-          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
-          const primaryPanel = dashboard?.panels.find(
-            (panel) => panel.type === 'vgplot',
-          );
-          if (primaryPanel) {
-            get().mosaicDashboard.updatePanel(artifactId, primaryPanel.id, {
-              config: {
-                ...primaryPanel.config,
-                vgplot: parsed,
-              },
-            });
-            return;
-          }
-          get().mosaicDashboard.addPanel(
-            artifactId,
-            createMosaicDashboardVgPlotPanelConfig('Chart 1', {
-              chartType: 'custom-spec',
-              vgplot: parsed,
-              settings: {},
-            }),
-          );
-        },
-        getDashboardVgPlot: (artifactId) =>
-          (() => {
-            const spec = get()
-              .mosaicDashboard.getDashboard(artifactId)
-              ?.panels.find(isVgPlotPanelConfig)?.config.vgplot;
-            return spec && typeof spec === 'object'
-              ? JSON.stringify(spec, null, 2)
-              : undefined;
-          })(),
         getCurrentDashboardArtifactId: () => {
+          const contextDashboardArtifactId = getRunContextDashboardArtifactId();
+          if (contextDashboardArtifactId) {
+            return contextDashboardArtifactId;
+          }
           const currentArtifactId = get().artifacts.config.currentArtifactId;
           const currentArtifact = currentArtifactId
             ? get().artifacts.config.artifactsById[currentArtifactId]
@@ -387,15 +399,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             layoutType,
           );
           return artifactId;
-        },
-        setCurrentDashboardVgPlot: (vgplot) => {
-          const state = get();
-          const targetArtifactId =
-            state.dashboard.getCurrentDashboardArtifactId() ??
-            state.dashboard.createDashboardArtifact(undefined, 'grid');
-          state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
-          state.artifacts.setCurrentArtifact(targetArtifactId);
-          return targetArtifactId;
         },
       };
 
@@ -519,6 +522,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCanvasSlice()(set, get, store),
 
+        ...createDocumentsSlice()(set, get, store),
+
+        ...createCrdtSlice<RoomState>({
+          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+          sync: createCliCrdtSyncConnector(),
+          mirrors: {
+            documentState: createDocumentsCrdtMirror<RoomState>(),
+          },
+        })(set, get, store),
+
         ...createWebContainerSlice({
           autoInitialize: false,
           config: {
@@ -543,12 +556,52 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
+            getRunContext: () => {
+              const state = store.getState();
+              const {artifactsById} = state.artifacts.config;
+              const items = Array.from(new Set(state.aiContextItemIds))
+                .map((artifactId): AiRunContextItem | undefined => {
+                  const artifact = artifactsById[artifactId];
+                  if (!artifact) return undefined;
+                  return {
+                    kind: 'artifact',
+                    id: artifact.id,
+                    type: artifact.type,
+                    title: artifact.title,
+                  };
+                })
+                .filter(Boolean) as AiRunContextItem[];
+              if (items.length === 0) return undefined;
+              return {
+                items,
+                capturedAt: Date.now(),
+              } satisfies AiRunContext;
+            },
+            formatRunContextInstructions: ({runContext}) => {
+              const artifactItems = getAiRunContextItems(runContext).filter(
+                (item) => item.kind === 'artifact',
+              );
+              if (artifactItems.length === 0) return '';
+              const [mainItem, ...additionalItems] = artifactItems;
+              if (!mainItem) return '';
+              const artifactType = mainItem.type ?? 'artifact';
+              return [
+                'Current artifact context:',
+                `- Main/default target: ${artifactType} "${mainItem.title}" (id: ${mainItem.id}). Tools use this artifact as the implicit target when the artifact type is supported.`,
+                ...additionalItems.map(
+                  (item) =>
+                    `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
+                ),
+                '- Additional context items are reference-only by default; tools will not implicitly target them.',
+              ].join('\n');
+            },
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
+              chart_image_for_markdown: createChartImageForMarkdownTool(store),
             },
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
@@ -557,6 +610,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
+        aiContextMode: 'auto',
+        aiContextItemIds: [],
+        setAiContextItemIds: (artifactIds, mode) => {
+          set({
+            aiContextItemIds: Array.from(new Set(artifactIds)),
+            ...(mode ? {aiContextMode: mode} : {}),
+          });
+        },
+        replaceAiContextWithArtifact: (artifactId) => {
+          set({aiContextItemIds: [artifactId]});
+        },
       };
     },
   ),

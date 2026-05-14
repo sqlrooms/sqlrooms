@@ -6,6 +6,7 @@ import {
 } from '@sqlrooms/layout';
 import {useCallback, useEffect, useMemo} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
+import {MosaicDashboardEmptyState} from './MosaicDashboardEmptyState';
 import {MosaicDashboardPanelDragOverlay} from './MosaicDashboardPanelDragOverlay';
 import {MosaicDashboardPanel} from './MosaicDashboardPanel';
 import {
@@ -78,11 +79,7 @@ export const MosaicDashboardPanels: React.FC = () => {
   );
 
   if (!panels.length || !rootLayout) {
-    return (
-      <div className="text-muted-foreground flex min-h-[240px] items-center justify-center rounded-md border border-dashed p-6 text-sm">
-        Add a chart, profiler, or map to start building this dashboard.
-      </div>
-    );
+    return <MosaicDashboardEmptyState />;
   }
 
   return (

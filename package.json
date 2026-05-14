@@ -26,15 +26,15 @@
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "typecheck": "turbo typecheck",
     "typecheck:examples": "turbo typecheck --filter=./examples/*",
-    "typedoc:watch": "turbo typedoc -- -watch",
+    "typedoc:watch": "pnpm run check:typedoc-links && turbo typedoc -- -watch",
     "graph": "turbo run build --filter=@sqlrooms/* --graph | sed 's/\\[root\\] @sqlrooms\\///g' | sed 's/#build//g' | grep -v '___ROOT___'",
     "format": "pnpm format:ts && pnpm format:python",
     "format:ts": "prettier --write \"**/*.{ts,tsx,md}\"",
     "format:python": "uv run --project python ruff check --fix python && uv run --project python ruff format python",
     "docs:dev": "concurrently \"pnpm typedoc:watch\" \"pnpm docs:vitepress\"",
     "docs:vitepress": "vitepress dev docs --port 6173 --host --open",
-    "docs:build:vitepress": "vitepress build docs",
-    "docs:build:typedoc": "turbo typedoc --filter=@sqlrooms/*",
+    "docs:build:vitepress": "vitepress build docs && node scripts/fix-llms-api-links.mjs",
+    "docs:build:typedoc": "pnpm run check:typedoc-links && turbo typedoc --filter=@sqlrooms/* && node scripts/fix-typedoc-package-titles.mjs",
     "docs:build": "pnpm run docs:clean && pnpm run docs:build:typedoc && pnpm run docs:build:vitepress",
     "docs:preview": "vitepress preview docs --port 7173 --open",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
@@ -48,6 +48,7 @@
     "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
     "setup-trusted-publishing": "node scripts/setup-trusted-publishing.mjs",
     "update-readme": "node scripts/update-readme.mjs",
+    "check:typedoc-links": "node scripts/check-typedoc-links.mjs",
     "update-deps": "pnpm --filter '*' update --interactive",
     "check-circular-deps": "npx madge --circular packages/*/src/index.ts",
     "knip": "knip"
@@ -107,7 +108,8 @@
       "monaco-editor": "0.55.1",
       "node-fetch": "3.3.2",
       "d3-color": "3.1.0",
-      "hoek": "6.1.3"
+      "hoek": "6.1.3",
+      "apache-arrow": "17.0.0"
     },
     "onlyBuiltDependencies": [
       "@danmarshall/deckgl-typings",

@@ -6,17 +6,17 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type {ChartBuilderColumn} from '../chart-builders/types';
-import type {VgPlotChartConfig} from '../chart-types';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './MosaicDashboardPanels';
 import {
-  createMosaicDashboardVgPlotPanelConfig,
-  MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
+  createMosaicDashboardChartPanelConfig,
+  MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardToolbar} from './MosaicDashboardToolbar';
+import {ChartBuilderColumn} from '../chart-types/base-types';
+import {ChartConfig} from '../chart-types/chart-config';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
@@ -39,9 +39,6 @@ export function MosaicDashboardRoot({
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
-  const chartBuilders = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.chartBuilders,
-  );
   const chartTypes = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.chartTypes,
   );
@@ -93,8 +90,8 @@ export function MosaicDashboardRoot({
   ]);
 
   const handleCreateChart = useCallback(
-    (title: string, config: VgPlotChartConfig) => {
-      const panel = createMosaicDashboardVgPlotPanelConfig(title, config, {
+    (title: string, config: ChartConfig) => {
+      const panel = createMosaicDashboardChartPanelConfig(title, config, {
         tableName: dashboard?.selectedTable,
       });
       addPanel(dashboardId, panel);
@@ -108,13 +105,12 @@ export function MosaicDashboardRoot({
       return;
     }
 
-    // Create empty chart panel - user will select type and fields
-    const panel = createMosaicDashboardVgPlotPanelConfig(
+    // Create chart panel with default field or empty if no numeric columns
+    const panel = createMosaicDashboardChartPanelConfig(
       'New Chart',
       {
-        chartType: 'histogram', // Default type, but with empty settings
+        chartType: 'histogram',
         settings: {},
-        vgplot: null,
         settingsOpen: true, // Open settings by default
       },
       {tableName: dashboard.selectedTable},
@@ -129,8 +125,7 @@ export function MosaicDashboardRoot({
       builderOpen,
       canCreateChart: Boolean(
         dashboard?.selectedTable &&
-        panelRenderers[MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE] &&
-        chartBuilders?.length !== 0 &&
+        panelRenderers[MOSAIC_DASHBOARD_CHART_PANEL_TYPE] &&
         chartTypes?.length !== 0,
       ),
       openBuilder: () => setBuilderOpen(true),
@@ -140,7 +135,6 @@ export function MosaicDashboardRoot({
     }),
     [
       builderOpen,
-      chartBuilders?.length,
       chartTypes?.length,
       dashboard?.selectedTable,
       dashboardId,
@@ -158,7 +152,6 @@ export function MosaicDashboardRoot({
           onOpenChange={setBuilderOpen}
           tableName={dashboard.selectedTable}
           columns={builderColumns}
-          builders={chartBuilders}
           chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
         >

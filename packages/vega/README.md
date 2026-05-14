@@ -10,6 +10,7 @@ npm install @sqlrooms/vega @sqlrooms/duckdb @sqlrooms/ui
 
 - `VegaLiteChart` (simple + compound component API)
 - `createVegaChartTool()` for AI tool workflows
+- `createChartImageForMarkdownTool()` for AI-generated Markdown document image assets
 - `VegaChartToolResult`
 - editor utilities/hooks (`useVegaChartEditor`, `useVegaEditorContext`)
 
@@ -103,6 +104,28 @@ These fields are supplied by the LLM when invoking the tool (not passed into
 - `sqlQuery`: SQL used to fetch chart data
 - `vegaLiteSpec`: Vega-Lite JSON string
 - `reasoning`: explanation shown to users for why this chart/spec was chosen
+
+## Markdown document image assets
+
+`createChartImageForMarkdownTool(store)` creates an AI-only companion tool that
+renders a Vega chart to SVG or PNG, stores it as an asset on a
+`@sqlrooms/documents` Markdown artifact, and returns a ready-to-insert Markdown
+image link such as:
+
+```md
+![Revenue by week](asset://chart-revenue-week)
+```
+
+Use this alongside the existing document commands when the assistant needs a
+portable conversation summary with static chart images instead of live SQL-backed
+charts.
+
+Chart images default to the light Vega theme with an explicit background so
+exported Markdown renders predictably in GitHub, Obsidian, PDF exports, and
+other document surfaces. When the requested static theme matches the current app
+theme, the background is resolved from the app's Tailwind `--background` token
+and written into the SVG/PNG as a concrete color. The tool also accepts
+`renderTheme: "dark"` and `background` for explicit dark/static export requests.
 
 ## Example apps
 

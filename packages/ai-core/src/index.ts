@@ -15,6 +15,14 @@ export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
 export {Chat} from './components/Chat';
 export {AgentChat, type AgentChatProps} from './components/agent-chat';
+export {
+  CHAT_CONTEXT_SELECTOR_SLOT,
+  ContextSelector,
+} from './components/ContextSelector';
+export type {
+  ContextSelectorItem,
+  ContextSelectorRootProps,
+} from './components/ContextSelector';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
@@ -29,7 +37,14 @@ export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
 export type {ErrorMessageComponentProps} from './components/ErrorMessage';
 export {ToolCallInfo} from './components/ToolCallInfo';
 
-export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
+export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
+  AiSliceConfig,
+  createDefaultAiConfig,
+  getAiRunContextItems,
+} from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';
 export {
   cleanupPendingAnalysisResults,
@@ -40,6 +55,7 @@ export {
 export type {
   AddToolApprovalResponse,
   AddToolOutput,
+  AiToolExecutionContext,
   AgentProgressSnapshot,
   StoredTool,
   StoredToolSet,

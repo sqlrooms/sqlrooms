@@ -1,5 +1,4 @@
 import {Dialog} from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import React, {
   PropsWithChildren,
   useCallback,
@@ -7,19 +6,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type {VgPlotChartConfig} from '../chart-types';
-import {
-  createChartBuilderTemplates,
-  createDefaultChartBuilders,
-} from './builders';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderContext} from './ChartBuilderContext';
 import {createChartBuilderStore} from './createChartBuilderStore';
-import {getAvailableChartTypes} from './chartTypeUtils';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 export type ChartBuilderRootProps = PropsWithChildren<{
   /** Table name to use in generated specs */
@@ -27,11 +20,9 @@ export type ChartBuilderRootProps = PropsWithChildren<{
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (title: string, metadata: VgPlotChartConfig) => void;
-  /** Preferred shared chart-type customization surface */
+  onCreateChart: (title: string, metadata: ChartConfig) => void;
+  /** Optional chart types to show (defaults to an empty array) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
   /** Controlled open state */
   open?: boolean;
   /** Callback when open state changes */
@@ -49,7 +40,6 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   columns,
   onCreateChart,
   chartTypes,
-  builders,
   open,
   onOpenChange,
   children,
@@ -64,41 +54,25 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
     [isControlled, onOpenChange],
   );
 
-  const resolvedTemplates = useMemo(() => {
-    if (chartTypes) {
-      return createChartBuilderTemplates(chartTypes);
-    }
-    if (builders) {
-      return builders;
-    }
-    return createDefaultChartBuilders();
-  }, [builders, chartTypes]);
-
-  const availableChartTypes = useMemo(
-    () => getAvailableChartTypes(resolvedTemplates, columns),
-    [columns, resolvedTemplates],
-  );
-  const availableTemplates = useMemo(
-    () =>
-      resolvedTemplates.filter((template) =>
-        availableChartTypes.some((chartType) => chartType.id === template.id),
-      ),
-    [availableChartTypes, resolvedTemplates],
-  );
+  // All resolved chart types are available by default
+  // (Filtering by schema compatibility was removed in favour of runtime validation)
+  const availableChartTypes = useMemo(() => chartTypes ?? [], [chartTypes]);
 
   useEffect(() => {
     const {selectedTemplateId, reset} = store.getState();
     if (
       selectedTemplateId &&
-      !availableTemplates.some((template) => template.id === selectedTemplateId)
+      !availableChartTypes.some(
+        (template) => template.id === selectedTemplateId,
+      )
     ) {
       reset();
     }
-  }, [availableTemplates, store]);
+  }, [availableChartTypes, store]);
 
-  const handleCreateChart: (title: string, config: VgPlotChartConfig) => void =
+  const handleCreateChart: (title: string, config: ChartConfig) => void =
     useCallback(
-      (title: string, config: VgPlotChartConfig) => {
+      (title: string, config: ChartConfig) => {
         onCreateChart(title, config);
         resolvedOnOpenChange(false);
       },
@@ -110,20 +84,11 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
       tableName,
       columns,
       onCreateChart: handleCreateChart,
-      templates: resolvedTemplates,
-      availableChartTypes,
-      availableTemplates,
+      templates: availableChartTypes,
+      availableTemplates: availableChartTypes, // TODO: why we need both templates and availableTemplates? can we remove one of them?
       store,
     }),
-    [
-      availableChartTypes,
-      availableTemplates,
-      columns,
-      handleCreateChart,
-      resolvedTemplates,
-      store,
-      tableName,
-    ],
+    [availableChartTypes, columns, handleCreateChart, store, tableName],
   );
 
   return (

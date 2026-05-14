@@ -502,6 +502,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
     childIds,
     layouts,
   );
+  const scrollContainerElementRef = scrollContainerRef as Ref<HTMLDivElement>;
   const resizePreviewStyle = resizePreviewItem
     ? getGridItemPreviewStyle(resizePreviewItem, rowHeight, gridMetrics)
     : undefined;
@@ -592,7 +593,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
         </div>
       )}
       <div
-        ref={scrollContainerRef}
+        ref={scrollContainerElementRef}
         className="min-h-0 flex-1 overflow-auto px-5 py-2"
       >
         <ResponsiveGridLayout
