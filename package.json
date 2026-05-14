@@ -94,7 +94,7 @@
     "vitepress": "^1.6.4",
     "vitepress-plugin-llms": "^1.8.0"
   },
-  "packageManager": "pnpm@10.29.3",
+  "packageManager": "pnpm@11.1.2",
   "engines": {
     "node": ">=22"
   },
