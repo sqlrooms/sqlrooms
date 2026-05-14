@@ -1,8 +1,34 @@
 import {z} from 'zod';
 
+const DocumentAssetBase = {
+  id: z.string(),
+  data: z.string(),
+  filename: z.string().optional(),
+  alt: z.string().optional(),
+  title: z.string().optional(),
+  provenance: z.unknown().optional(),
+  createdAt: z.number().default(0),
+  updatedAt: z.number().default(0),
+};
+
+export const DocumentAsset = z.discriminatedUnion('mediaType', [
+  z.object({
+    ...DocumentAssetBase,
+    mediaType: z.literal('image/svg+xml'),
+    encoding: z.enum(['utf8', 'base64']),
+  }),
+  z.object({
+    ...DocumentAssetBase,
+    mediaType: z.literal('image/png'),
+    encoding: z.literal('base64'),
+  }),
+]);
+export type DocumentAsset = z.infer<typeof DocumentAsset>;
+
 export const DocumentArtifact = z.object({
   id: z.string(),
   markdown: z.string().default(''),
+  assets: z.record(z.string(), DocumentAsset).default({}),
   updatedAt: z.number().default(0),
 });
 export type DocumentArtifact = z.infer<typeof DocumentArtifact>;

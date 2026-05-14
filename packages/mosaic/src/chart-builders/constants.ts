@@ -35,6 +35,8 @@ export const QUANTITATIVE_COLUMN_TYPES = [
   ...TEMPORAL_COLUMN_TYPES,
 ];
 
+export const CATEGORICAL_COLUMN_TYPES = ['VARCHAR', 'TEXT', 'BLOB', 'ENUM'];
+
 export function isTemporalType(columnType: string): boolean {
   return TEMPORAL_COLUMN_TYPES.includes(columnType);
 }
@@ -45,4 +47,8 @@ export function isQuantitativeType(columnType: string): boolean {
 
 export function isNumericType(columnType: string): boolean {
   return NUMERIC_COLUMN_TYPES.includes(columnType);
+}
+
+export function isCategoricalType(columnType: string): boolean {
+  return CATEGORICAL_COLUMN_TYPES.includes(columnType);
 }

@@ -1,9 +1,6 @@
 import {type FC} from 'react';
 import {Field} from '../../chart-builders/Field';
-import {
-  ColumnSelector,
-  NumericColumnSelector,
-} from '../../chart-builders/ColumnSelector';
+import {ColumnSelector} from '../../chart-builders/ColumnSelector';
 import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 
 export const BoxPlotSettingsComponent: FC = () => {
@@ -19,7 +16,7 @@ export const BoxPlotSettingsComponent: FC = () => {
       </Field>
 
       <Field label="Y Field (numeric)" required>
-        <NumericColumnSelector
+        <ColumnSelector.Numeric
           value={config.settings.y}
           onChange={(y) => onChangeConfig('y', y)}
         />

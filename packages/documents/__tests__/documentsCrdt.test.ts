@@ -69,8 +69,15 @@ describe('documents CRDT mirrors', () => {
       title: 'Notes',
     });
     storeA.getState().documents.setMarkdown(artifactId, '# Hello');
+    storeA.getState().documents.upsertAsset(artifactId, {
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg />',
+      alt: 'Chart',
+    });
     await waitForCondition(() =>
-      JSON.stringify(docA.toJSON()).includes('# Hello'),
+      JSON.stringify(docA.toJSON()).includes('chart-1'),
     );
 
     const snapshot = docA.export({mode: 'snapshot'});
@@ -104,6 +111,17 @@ describe('documents CRDT mirrors', () => {
     expect(storeB.getState().documents.getDocument('doc-1')).toMatchObject({
       id: 'doc-1',
       markdown: '# Hello',
+      assets: {
+        'chart-1': {
+          id: 'chart-1',
+          mediaType: 'image/svg+xml',
+          encoding: 'utf8',
+          data: '<svg />',
+          alt: 'Chart',
+          createdAt: 123,
+          updatedAt: 123,
+        },
+      },
       updatedAt: 123,
     });
   });
@@ -147,5 +165,52 @@ describe('documents CRDT mirrors', () => {
       'doc-1',
       'doc-2',
     ]);
+  });
+
+  it('preserves falsy asset metadata from incoming CRDT snapshots', () => {
+    const store = createTestStore(new LoroDoc());
+
+    createDocumentsCrdtMirror<TestRoomState>().apply(
+      {
+        artifacts: [{id: 'doc-1', type: 'document', title: 'Notes'}],
+        documents: [
+          {
+            id: 'doc-1',
+            markdown: '# Notes',
+            assets: [
+              {
+                id: 'image-1',
+                mediaType: 'image/svg+xml',
+                encoding: 'utf8',
+                data: '<svg />',
+                filename: '',
+                alt: '',
+                title: '',
+                provenance: false,
+                createdAt: 1,
+                updatedAt: 2,
+              },
+            ],
+            updatedAt: 3,
+          },
+        ],
+        artifactOrder: ['doc-1'],
+      },
+      store.setState,
+      store.getState,
+    );
+
+    expect(store.getState().documents.getAsset('doc-1', 'image-1')).toEqual({
+      id: 'image-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg />',
+      filename: '',
+      alt: '',
+      title: '',
+      provenance: false,
+      createdAt: 1,
+      updatedAt: 2,
+    });
   });
 });

@@ -14,7 +14,7 @@ export const countPlotChartType: SpecChartTypeDefinition<CountPlotChartConfig> =
     label: 'Count Plot',
     description: DESCRIPTION,
     aiDescription:
-      'Use for a quick binned distribution of one numeric or temporal column.',
+      'Use for showing frequency/count of categorical values as horizontal bars. Best for discrete text/enum columns, not numeric distributions.',
     icon: BarChartHorizontal,
     schema: CountPlotChartSettings,
     settingsComponent: CountPlotSettingsComponent,

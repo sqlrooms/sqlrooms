@@ -85,6 +85,7 @@ describe('document commands', () => {
         title: 'Notes',
         updatedAt: 101,
         markdownLength: 7,
+        assetCount: 0,
       },
     ]);
 
@@ -96,6 +97,7 @@ describe('document commands', () => {
       artifactId,
       title: 'Notes',
       markdown: '# Hello',
+      assets: [],
       updatedAt: 101,
     });
 
@@ -108,8 +110,53 @@ describe('document commands', () => {
       artifactId,
       title: 'Notes',
       markdown: '# Hello',
+      assets: [],
       updatedAt: 101,
     });
+  });
+
+  it('lists asset counts and returns asset metadata without data', async () => {
+    const store = createTestStore();
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('document.create', {
+        title: 'Charts',
+        markdown: '![Chart](asset://chart-1)',
+      });
+    const artifactId = (createResult.data as any).artifactId as string;
+
+    store.getState().documents.upsertAsset(artifactId, {
+      id: 'chart-1',
+      mediaType: 'image/svg+xml',
+      encoding: 'utf8',
+      data: '<svg />',
+      alt: 'Chart',
+      title: 'Chart title',
+    });
+
+    const listResult = await store
+      .getState()
+      .commands.invokeCommand('document.list');
+    expect((listResult.data as any).documents[0]).toMatchObject({
+      artifactId,
+      assetCount: 1,
+    });
+
+    const getResult = await store
+      .getState()
+      .commands.invokeCommand('document.get', {artifactId});
+    expect(getResult.data).toMatchObject({
+      assets: [
+        {
+          id: 'chart-1',
+          mediaType: 'image/svg+xml',
+          encoding: 'utf8',
+          alt: 'Chart',
+          title: 'Chart title',
+        },
+      ],
+    });
+    expect((getResult.data as any).assets[0].data).toBeUndefined();
   });
 
   it('replaces and appends markdown', async () => {

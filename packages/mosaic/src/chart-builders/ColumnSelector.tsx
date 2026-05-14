@@ -1,6 +1,10 @@
 import {type FC} from 'react';
 import {FieldSelectorInput} from './FieldSelectorInput';
-import {NUMERIC_COLUMN_TYPES, QUANTITATIVE_COLUMN_TYPES} from './constants';
+import {
+  NUMERIC_COLUMN_TYPES,
+  QUANTITATIVE_COLUMN_TYPES,
+  CATEGORICAL_COLUMN_TYPES,
+} from './constants';
 import {useChartSettingsContext} from '../chart/chart-settings/ChartSettingsContext';
 import {TableColumn} from '@sqlrooms/db';
 
@@ -15,8 +19,14 @@ export interface ColumnSelectorProps {
 /**
  * Simplified wrapper around FieldSelectorInput for selecting a table column.
  * Removes the field prop requirement for easier composition.
+ *
+ * Can be used as:
+ * - `<ColumnSelector types={...} />` - custom types
+ * - `<ColumnSelector.Numeric />` - numeric types only
+ * - `<ColumnSelector.Quantitative />` - numeric + temporal
+ * - `<ColumnSelector.Categorical />` - text/enum types
  */
-export const ColumnSelector: FC<ColumnSelectorProps> = ({
+const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
   types,
   value,
   onChange,
@@ -40,10 +50,20 @@ export const ColumnSelector: FC<ColumnSelectorProps> = ({
   );
 };
 
-export const QuantitativeColumnSelector: FC<
-  Omit<ColumnSelectorProps, 'types'>
-> = (props) => <ColumnSelector {...props} types={QUANTITATIVE_COLUMN_TYPES} />;
+const Numeric: FC<Omit<ColumnSelectorProps, 'types'>> = (props) => (
+  <ColumnSelectorRoot {...props} types={NUMERIC_COLUMN_TYPES} />
+);
 
-export const NumericColumnSelector: FC<Omit<ColumnSelectorProps, 'types'>> = (
-  props,
-) => <ColumnSelector {...props} types={NUMERIC_COLUMN_TYPES} />;
+const Quantitative: FC<Omit<ColumnSelectorProps, 'types'>> = (props) => (
+  <ColumnSelectorRoot {...props} types={QUANTITATIVE_COLUMN_TYPES} />
+);
+
+const Categorical: FC<Omit<ColumnSelectorProps, 'types'>> = (props) => (
+  <ColumnSelectorRoot {...props} types={CATEGORICAL_COLUMN_TYPES} />
+);
+
+export const ColumnSelector = Object.assign(ColumnSelectorRoot, {
+  Numeric,
+  Quantitative,
+  Categorical,
+});
