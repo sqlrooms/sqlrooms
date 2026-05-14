@@ -129,8 +129,6 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   buildTitle?: (fieldValues: Record<string, unknown>) => string;
   /** Optional availability override for a given table schema */
   isAvailable?: (columns: ChartBuilderColumn[]) => boolean;
-  /** Optional extra assistant-facing description */
-  aiDescription?: string;
   /** Explicit settings component for this chart type */
   settingsComponent: ComponentType;
   /** Optional icon component for chart-type grids */

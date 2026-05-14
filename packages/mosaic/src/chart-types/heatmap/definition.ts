@@ -12,8 +12,6 @@ export const heatmapChartType: SpecChartTypeDefinition<HeatmapChartConfig> = {
   id: 'heatmap',
   label: 'Heatmap',
   description: DESCRIPTION,
-  aiDescription:
-    'Use for dense relationships between two numeric columns where point overlap would be high.',
   icon: Grid3X3,
   schema: HeatmapChartSettings,
   settingsComponent: HeatmapSettingsComponent,

@@ -13,8 +13,6 @@ export const boxPlotChartType: ComponentChartTypeDefinition<BoxPlotChartConfig> 
     id: 'box-plot',
     label: 'Box Plot',
     description: DESCRIPTION,
-    aiDescription:
-      'Use for comparing the distribution of a numeric measure across categories.',
     icon: AlignHorizontalDistributeCenter,
     schema: BoxPlotChartSettings,
     settingsComponent: BoxPlotSettingsComponent,

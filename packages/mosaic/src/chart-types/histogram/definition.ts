@@ -13,8 +13,6 @@ export const histogramChartType: SpecChartTypeDefinition<HistogramChartConfig> =
     id: 'histogram',
     label: 'Histogram',
     description: DESCRIPTION,
-    aiDescription:
-      'Use for the distribution of one numeric or temporal column with count on the y-axis.',
     icon: BarChart3,
     schema: HistogramChartSettings,
     settingsComponent: HistogramSettingsComponent,
