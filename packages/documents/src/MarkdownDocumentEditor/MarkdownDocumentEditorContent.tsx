@@ -76,6 +76,7 @@ export const MarkdownDocumentEditorContent: FC<
                 size="icon"
                 variant="ghost"
                 className="h-7 w-7"
+                aria-label="Hide Markdown source"
                 title="Hide Markdown source"
                 onClick={() => setSourcePanelOpen(false)}
               >
