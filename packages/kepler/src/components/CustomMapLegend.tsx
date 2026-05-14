@@ -7,7 +7,10 @@ import {
   LayerLegendContentFactory,
   LayerLegendHeaderFactory,
 } from '@kepler.gl/components';
-import {MapLegendProps} from '@kepler.gl/components/dist/map/map-legend';
+import {
+  MapLegendIcons,
+  MapLegendProps,
+} from '@kepler.gl/components/dist/map/map-legend';
 import {DIMENSIONS} from '@kepler.gl/constants';
 import {Layer} from '@kepler.gl/layers';
 import {Button} from '@sqlrooms/ui';
@@ -20,20 +23,23 @@ import {
   EyeOffIcon,
   XIcon,
 } from 'lucide-react';
-import {
-  MouseEventHandler,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-} from 'react';
+import {useCallback, useContext, useRef, useState} from 'react';
+import type {Context, MouseEventHandler} from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
 import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 const defaultActionIcons = {
-  expanded: ArrowDown,
-  collapsed: ArrowRight,
+  expanded: ArrowDown as unknown as MapLegendIcons['expanded'],
+  collapsed: ArrowRight as unknown as MapLegendIcons['collapsed'],
+} satisfies MapLegendIcons;
+
+type KeplerGlContextValue = {
+  selector: (state: any) => any;
+  id: string;
 };
+
+const keplerGlContext =
+  KeplerGlContext as unknown as Context<KeplerGlContextValue>;
 
 CustomMapLegendFactory.deps = [
   LayerLegendHeaderFactory,
@@ -55,7 +61,7 @@ export function CustomMapLegendFactory(
     ...restProps
   }) => {
     const containerW = width || DIMENSIONS.mapControl.width;
-    const mapId = useContext(KeplerGlContext).id;
+    const mapId = useContext(keplerGlContext).id;
     const splitMapIndex = useContext(SplitMapIndexContext);
     const mapIndex = mapIndexProp ?? splitMapIndex;
     const dispatchAction = useStoreWithKepler(
@@ -151,7 +157,7 @@ export function CustomMapLegendFactory(
       }
     };
 
-    const mapId = useContext(KeplerGlContext).id;
+    const mapId = useContext(keplerGlContext).id;
     const containerRef = useRef<HTMLDivElement>(null);
 
     if (!layer.isValidToSave() || layer.config.hidden) {
