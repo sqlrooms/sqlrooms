@@ -1,5 +1,12 @@
 import React from 'react';
-import {Tabs, TabsContent, TabsList, TabsTrigger, Label, Separator} from '@sqlrooms/ui';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Label,
+  Separator,
+} from '@sqlrooms/ui';
 import {useSql} from '@sqlrooms/duckdb';
 import {readSpecValues, buildFlatSpec} from '../vegaSpecBuilder';
 import {FieldSelector} from './FieldSelector';
@@ -12,12 +19,7 @@ export const VegaConfigPanel: React.FC<{
   sqlQuery: string;
   lastRunTime?: number;
   onSpecChange: (spec: any) => void;
-}> = ({
-  sqlQuery,
-  lastRunTime,
-  spec,
-  onSpecChange,
-}) => {
+}> = ({sqlQuery, lastRunTime, spec, onSpecChange}) => {
   const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
   const fields = arrowTable?.schema?.fields || [];

@@ -1,6 +1,6 @@
 import {type FC} from 'react';
 import {Field} from '../../chart-builders/Field';
-import {QuantitativeColumnSelector} from '../../chart-builders/ColumnSelector';
+import {ColumnSelector} from '../../chart-builders/ColumnSelector';
 import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 
 export const HistogramSettingsComponent: FC = () => {
@@ -9,7 +9,7 @@ export const HistogramSettingsComponent: FC = () => {
   return (
     <div className="space-y-4">
       <Field label="Field" required>
-        <QuantitativeColumnSelector
+        <ColumnSelector.Quantitative
           value={config.settings.field}
           onChange={(field) => onChangeConfig('field', field)}
         />

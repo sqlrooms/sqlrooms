@@ -13,32 +13,44 @@ export function createCountPlotSpec(
     throw new SpecGenerationError('Field is required for count plot');
   }
 
+  // Count plot shows categorical frequency as horizontal bars
+  // Categories on Y-axis, counts on X-axis
   return {
     plot: [
       {
-        mark: 'rectY',
+        mark: 'barX',
         data: {from: tableName},
-        x: {bin: field, maxbins: 25},
-        y: {count: null},
+        x: {count: null},
+        y: {column: field, sort: {x: 'sum', order: 'desc', limit: 100}},
         fill: BG_COLOR,
         inset: 0.5,
       },
       {
-        mark: 'rectY',
+        mark: 'barX',
         data: {from: tableName, filterBy: '$brush'},
-        x: {bin: field, maxbins: 25},
-        y: {count: null},
+        x: {count: null},
+        y: {column: field, sort: {x: 'sum', order: 'desc', limit: 100}},
         fill: FG_COLOR,
         inset: 0.5,
       },
-      {select: 'intervalX', as: '$brush'},
+      {
+        mark: 'text',
+        data: {from: tableName, filterBy: '$brush'},
+        x: {count: null},
+        y: {column: field, sort: {x: 'sum', order: 'desc', limit: 100}},
+        text: {count: null},
+        dx: 5,
+        textAnchor: 'start',
+        fill: 'currentColor',
+        fontSize: 11,
+      },
+      {select: 'intervalY', as: '$brush'},
     ],
-    xLabel: field,
-    yLabel: null,
-    yAxis: null,
-    height: 200,
+    xLabel: 'Count',
+    yLabel: field,
+    height: 400,
     width: 380,
-    margins: {left: 50, right: 20, top: 20, bottom: 50},
+    margins: {left: 50, right: 50, top: 20, bottom: 50},
     params: {brush: {select: 'crossfilter'}},
   } as Spec;
 }
