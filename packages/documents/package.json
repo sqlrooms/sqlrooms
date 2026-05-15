@@ -54,7 +54,7 @@
     "@tiptap/starter-kit": "^3.23.1",
     "immer": "^11.0.1",
     "loro-mirror": "^1.1.2",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.577.0",
     "yaml": "^2.8.2",
     "zod": "^4.1.13",
     "zustand": "^5.0.8"

@@ -31,7 +31,7 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "ai": "^6.0.154",
-    "lucide-react": "^0.556.0",
+    "lucide-react": "^0.577.0",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

@@ -32,7 +32,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
-    "lucide-react": "^0.556.0",
+    "lucide-react": "^0.577.0",
     "react-grid-layout": "^1.5.2",
     "react-resizable": "^3.0.5",
     "react-resizable-panels": "^4.7.6",
