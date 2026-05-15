@@ -22,11 +22,20 @@ export {
   createDocumentCommands,
   DOCUMENT_AI_INSTRUCTIONS,
 } from './documentCommands';
+export {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 export {
-  MarkdownDocumentEditor,
+  MarkdownDocumentEditorRoot,
+  type MarkdownDocumentEditorRootProps,
   type MarkdownDocumentEditorMode,
-  type MarkdownDocumentEditorProps,
-} from './MarkdownDocumentEditor';
+} from './MarkdownDocumentEditor/MarkdownDocumentEditorRoot';
+export {
+  MarkdownDocumentEditorToolbar,
+  type MarkdownDocumentEditorToolbarProps,
+} from './MarkdownDocumentEditor/MarkdownDocumentEditorToolbar';
+export {
+  MarkdownDocumentEditorContent,
+  type MarkdownDocumentEditorContentProps,
+} from './MarkdownDocumentEditor/MarkdownDocumentEditorContent';
 export {MarkdownDocument} from './MarkdownDocument';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {

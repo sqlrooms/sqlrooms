@@ -30,6 +30,7 @@
     "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/layout-config": "workspace:*",
