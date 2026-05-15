@@ -47,7 +47,7 @@ async function refreshSkillListings() {
 // Initial seed — fire-and-forget is safe, the storage constructor already
 // populated the built-in root synchronously.
 void refreshSkillListings();
-skillStorage.subscribe(() => {
+skillStorage.subscribe?.(() => {
   void refreshSkillListings();
 });
 

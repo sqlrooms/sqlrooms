@@ -114,4 +114,12 @@ export interface SkillStorage {
    * it, or `null` if no root has the id.
    */
   resolveSkillId(id: string): Promise<SkillRef | null>;
+
+  /**
+   * Optional change notification. Mutating implementations should fire the
+   * listener after a change is observable via `listSkills`/`readSkill`.
+   * Read-only storages may omit this; consumers must guard with
+   * `storage.subscribe?.(listener)`.
+   */
+  subscribe?(listener: () => void): () => void;
 }
