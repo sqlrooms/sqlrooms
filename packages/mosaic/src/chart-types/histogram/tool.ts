@@ -24,9 +24,12 @@ Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUM
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use bubble-chart), time series trends (use line-chart).`,
     inputSchema: HistogramToolParameters,
-    execute: async (params) => {
+    execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(params);
+        const {artifactId, tableName, columns} = deps.resolveResources(
+          params,
+          context,
+        );
 
         // Validate settings
         validateColumnExists(

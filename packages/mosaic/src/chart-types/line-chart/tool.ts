@@ -35,9 +35,12 @@ Multiple yFields create multi-line chart for comparing metrics.
 
 Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use bubble-chart).`,
     inputSchema: LineChartToolParameters,
-    execute: async (params) => {
+    execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(params);
+        const {artifactId, tableName, columns} = deps.resolveResources(
+          params,
+          context,
+        );
 
         // Validate settings
         validateColumnExists(
