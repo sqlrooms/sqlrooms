@@ -129,6 +129,12 @@ export class InMemorySkillStorage implements SkillStorage {
     content: SkillWriteContent,
   ): Promise<SkillRef> {
     const rootMap = this.getWritableRootMap(rootId);
+    if (content.manifest.id !== id) {
+      throw new SkillManifestError(
+        `Skill id "${id}" must match manifest.id "${content.manifest.id}"`,
+        {rootId},
+      );
+    }
     // Validate extra file paths: no absolute paths, no path traversal.
     for (const file of content.extraFiles ?? []) {
       if (
