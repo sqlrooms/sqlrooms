@@ -1,11 +1,13 @@
 import {Button} from '@sqlrooms/ui';
-import {BarChart3, Map, TableProperties} from 'lucide-react';
+import {BarChart3, Map, TableProperties, Text} from 'lucide-react';
 import {useCallback, useMemo} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
   createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardTextPanelConfig,
   type MosaicDashboardAddPanelActionContext,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 
@@ -44,6 +46,8 @@ export const MosaicDashboardEmptyState: React.FC = () => {
     panelRenderers[MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE],
   );
 
+  const canAddText = Boolean(panelRenderers[MOSAIC_DASHBOARD_TEXT_PANEL_TYPE]);
+
   const addPanelActionContext = useMemo<MosaicDashboardAddPanelActionContext>(
     () => ({
       dashboardId,
@@ -81,11 +85,16 @@ export const MosaicDashboardEmptyState: React.FC = () => {
     }
   }, [addPanel, addPanelActionContext, dashboardId, mapAction]);
 
+  const handleAddText = useCallback(() => {
+    const panel = createMosaicDashboardTextPanelConfig();
+    addPanel(dashboardId, panel);
+  }, [addPanel, dashboardId]);
+
   return (
     <div className="m-4 flex min-h-[240px] items-center justify-center rounded-md border border-dashed p-8">
       <div className="flex flex-col items-center gap-4">
         <p className="text-muted-foreground text-sm">
-          Add a chart, profiler, or map to start building this dashboard
+          Add a chart, profiler, map, or text to start building this dashboard
         </p>
         <div className="flex gap-3">
           <Button
@@ -111,6 +120,14 @@ export const MosaicDashboardEmptyState: React.FC = () => {
           >
             <Map className="mr-2 h-4 w-4" />
             Map
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!canAddText}
+            onClick={handleAddText}
+          >
+            <Text className="mr-2 h-4 w-4" />
+            Text
           </Button>
         </div>
       </div>
