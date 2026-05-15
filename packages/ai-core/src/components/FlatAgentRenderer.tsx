@@ -15,6 +15,7 @@ import {useElapsedTime} from '../hooks/useElapsedTime';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
+import {HighlightedChatSearchText} from './ChatSearch';
 import {type HoistableToolCall} from './collectHoistableRenderers';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
@@ -575,7 +576,8 @@ const FlatSegmentList: React.FC<{
 export const OrchestratorToolLogLine: React.FC<{
   part: UIMessagePart;
   toolCallId: string;
-}> = ({part, toolCallId}) => {
+  searchBlockId?: string;
+}> = ({part, toolCallId, searchBlockId}) => {
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
   const toolName = isDynamicToolPart(part)
@@ -603,6 +605,7 @@ export const OrchestratorToolLogLine: React.FC<{
       isSuccess={isSuccess}
       isError={isError}
       toolCall={toolCall}
+      searchBlockId={searchBlockId}
     />
   );
 };
@@ -613,7 +616,8 @@ const OrchestratorLogLineInner: React.FC<{
   isSuccess: boolean;
   isError: boolean;
   toolCall: AgentToolCall;
-}> = ({toolCallId, isPending, isSuccess, isError, toolCall}) => {
+  searchBlockId?: string;
+}> = ({toolCallId, isPending, isSuccess, isError, toolCall, searchBlockId}) => {
   const showDetails = useShowToolCallDetails();
   const {getActivityLabel} = useToolRenderBehavior();
   const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);
@@ -659,7 +663,11 @@ const OrchestratorLogLineInner: React.FC<{
           reasoning && 'italic',
         )}
       >
-        {label}
+        {searchBlockId ? (
+          <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+        ) : (
+          label
+        )}
       </span>
       {elapsed ? (
         <span className="text-muted-foreground/60 shrink-0 text-[10px]">

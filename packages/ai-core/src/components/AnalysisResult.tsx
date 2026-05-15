@@ -19,7 +19,12 @@ import {
   shouldSuppressTextPart,
 } from '../utils';
 import {ActivityBox} from './ActivityBox';
-import {AnalysisAnswer} from './AnalysisAnswer';
+import {AnalysisAnswer, processAnalysisAnswerContent} from './AnalysisAnswer';
+import {
+  HighlightedChatSearchText,
+  useRegisterChatSearchBlocks,
+  type ChatSearchBlock,
+} from './ChatSearch';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {ExpandableContent} from './ExpandableContent';
 import {OrchestratorToolLogLine} from './FlatAgentRenderer';
@@ -171,6 +176,55 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const hoistableSet = useMemo(() => new Set(excludeList), [excludeList]);
 
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
+  const currentSessionId = useStoreWithAi(
+    (s) => s.ai.config.currentSessionId ?? '',
+  );
+  const searchBlockPrefix = `${currentSessionId}:${analysisResult.id}`;
+
+  const searchBlocks = useMemo<ChatSearchBlock[]>(() => {
+    const blocks: ChatSearchBlock[] = [
+      {
+        id: `${searchBlockPrefix}:prompt`,
+        resultId: analysisResult.id,
+        text: analysisResult.prompt,
+      },
+    ];
+
+    uiMessageParts.forEach((part, index) => {
+      if (isTextPart(part)) {
+        blocks.push({
+          id: `${searchBlockPrefix}:text:${index}`,
+          resultId: analysisResult.id,
+          text: processAnalysisAnswerContent(part.text).processedContent,
+        });
+      } else if (isReasoningPart(part)) {
+        blocks.push({
+          id: `${searchBlockPrefix}:reasoning:${index}`,
+          resultId: analysisResult.id,
+          text: part.text,
+        });
+      } else if (isToolPart(part) || isDynamicToolPart(part)) {
+        const toolName = getToolName(part);
+        const state = (part as Record<string, unknown>).state;
+        blocks.push({
+          id: `${searchBlockPrefix}:tool:${index}`,
+          resultId: analysisResult.id,
+          text: [toolName, typeof state === 'string' ? state : undefined]
+            .filter(Boolean)
+            .join(' '),
+        });
+      }
+    });
+
+    return blocks.filter((block) => block.text.trim().length > 0);
+  }, [
+    analysisResult.id,
+    analysisResult.prompt,
+    searchBlockPrefix,
+    uiMessageParts,
+  ]);
+
+  useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
   return (
     <HoistedRenderersProvider value={excludeList}>
@@ -180,7 +234,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             <SquareTerminalIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <ExpandableContent maxHeight={60} showLabels={false}>
-                <div className="break-words">{analysisResult.prompt}</div>
+                <div className="break-words">
+                  <HighlightedChatSearchText
+                    blockId={`${searchBlockPrefix}:prompt`}
+                    text={analysisResult.prompt}
+                  />
+                </div>
               </ExpandableContent>
             </div>
             <div className="shrink-0 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
@@ -226,6 +285,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                           <OrchestratorToolLogLine
                             part={p.part}
                             toolCallId={p.part.toolCallId}
+                            searchBlockId={`${searchBlockPrefix}:tool:${p.index}`}
                           />
                           {!isHoisted && (
                             <ToolPartRenderer
@@ -276,6 +336,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   key={`text-${index}`}
                   content={part.text}
                   isAnswer={index === uiMessageParts.length - 1}
+                  searchBlockId={`${searchBlockPrefix}:text:${index}`}
                   customMarkdownComponents={customMarkdownComponents}
                 />
               );
@@ -287,7 +348,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   key={`reasoning-${index}`}
                   className="text-muted-foreground text-xs"
                 >
-                  {part.text}
+                  <HighlightedChatSearchText
+                    blockId={`${searchBlockPrefix}:reasoning:${index}`}
+                    text={part.text}
+                  />
                 </div>
               );
             }

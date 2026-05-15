@@ -11,6 +11,7 @@ import {PromptSuggestions} from './PromptSuggestions';
 import {QueryControls} from './QueryControls';
 import {SessionChatManager} from './SessionChatManager';
 import {SessionControls} from './SessionControls';
+import {ChatSearch, ChatSearchProvider} from './ChatSearch';
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;
@@ -26,6 +27,7 @@ type ChatComponent = FC<RootProps> & {
     Item: typeof PromptSuggestions.Item;
     VisibilityToggle: typeof PromptSuggestions.VisibilityToggle;
   };
+  Search: typeof ChatSearch;
   ModelSelector: typeof ModelSelector;
   ContextSelector: typeof ContextSelector;
 };
@@ -38,8 +40,10 @@ const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
  */
 const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
-    <SessionChatManager />
-    {children}
+    <ChatSearchProvider>
+      <SessionChatManager />
+      {children}
+    </ChatSearchProvider>
   </ToolRenderBehaviorProvider>
 );
 
@@ -55,6 +59,7 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Composer: QueryControls,
   InlineApiKeyInput: InlineApiKeyInput,
   PromptSuggestions: PromptSuggestionsCompound,
+  Search: ChatSearch,
   ModelSelector: ModelSelector,
   ContextSelector: ContextSelector,
 }) as ChatComponent;

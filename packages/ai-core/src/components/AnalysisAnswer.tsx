@@ -5,11 +5,16 @@ import React, {useCallback, useMemo, useState} from 'react';
 import Markdown, {Components} from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+import {
+  createChatSearchRehypePlugin,
+  useOptionalChatSearch,
+} from './ChatSearch';
 import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
   content: string;
   isAnswer: boolean;
+  searchBlockId?: string;
   customMarkdownComponents?: Partial<Components>;
 };
 
@@ -27,7 +32,7 @@ const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
 /**
  * Processes content and extracts think content in one pass
  */
-const processContent = (
+export const processAnalysisAnswerContent = (
   originalContent: string,
 ): {
   processedContent: string;
@@ -130,7 +135,8 @@ ThinkBlock.displayName = 'ThinkBlock';
 export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   props: AnalysisAnswerProps,
 ) {
-  const {content, isAnswer, customMarkdownComponents} = props;
+  const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
+  const search = useOptionalChatSearch();
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
@@ -146,9 +152,26 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 
   // Memoize content processing to avoid recalculation on every render
   const {processedContent, thinkContents} = useMemo(
-    () => processContent(content),
+    () => processAnalysisAnswerContent(content),
     [content],
   );
+
+  const searchMatches = searchBlockId
+    ? (search?.getMatchesForBlock(searchBlockId) ?? [])
+    : [];
+  const rehypePlugins = useMemo(() => {
+    const plugins: unknown[] = [rehypeRaw];
+    if (searchBlockId && searchMatches.length > 0) {
+      plugins.push(
+        createChatSearchRehypePlugin({
+          blockId: searchBlockId,
+          matches: searchMatches,
+          activeMatchId: search?.activeMatchId,
+        }),
+      );
+    }
+    return plugins;
+  }, [search?.activeMatchId, searchBlockId, searchMatches]);
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(
@@ -188,7 +211,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       <div className="text-foreground prose dark:prose-invert max-w-none min-w-0 overflow-hidden text-sm [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
         <Markdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
+          rehypePlugins={rehypePlugins as never}
           components={
             {
               'think-block': thinkBlockComponent,
