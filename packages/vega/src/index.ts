@@ -92,5 +92,7 @@ export {VegaExportAction} from './VegaExportAction';
 export type {VegaExportActionProps} from './VegaExportAction';
 export {VegaEditAction} from './VegaEditAction';
 export type {VegaEditActionProps} from './VegaEditAction';
+export {VegaInteractiveEdit} from './VegaInteractiveEdit';
+export type {VegaInteractiveEditProps} from './VegaInteractiveEdit';
 export {VegaChartActions} from './VegaChartActions';
 export type {VegaChartActionsProps} from './VegaChartActions';

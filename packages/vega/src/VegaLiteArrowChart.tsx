@@ -18,6 +18,7 @@ import {VegaChartActions} from './VegaChartActions';
 import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaEditAction} from './VegaEditAction';
 import {VegaExportAction} from './VegaExportAction';
+import {VegaInteractiveEdit} from './VegaInteractiveEdit';
 
 export type VegaLiteArrowChartProps = {
   className?: string;
@@ -103,10 +104,19 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
       setChartError(new Error('Invalid Vega-Lite specification'));
       return null;
     }
+    const parsedRecord = parsed as Record<string, unknown>;
+    // Normalize $schema to v6 to silence the version mismatch warning
+    // when the upstream spec was authored for Vega-Lite v5.
+    const $schema =
+      typeof parsedRecord.$schema === 'string' &&
+      parsedRecord.$schema.includes('vega-lite/v5')
+        ? 'https://vega.github.io/schema/vega-lite/v6.json'
+        : parsedRecord.$schema;
     return {
       padding: 10,
       background: 'transparent',
       ...parsed,
+      ...($schema ? {$schema} : {}),
       data: data,
       // Override the following props to ensure the chart is responsive
       width: 'container',
@@ -218,4 +228,8 @@ export const VegaLiteArrowChart = Object.assign(VegaLiteArrowChartBase, {
    * Built-in edit action with spec/SQL editor popover
    */
   EditAction: VegaEditAction,
+  /**
+   * Interactive editing (editable title, drag labels, delete labels)
+   */
+  InteractiveEdit: VegaInteractiveEdit,
 });
