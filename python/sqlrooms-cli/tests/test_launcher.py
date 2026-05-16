@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
@@ -32,6 +33,7 @@ def test_api_config(server):
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
+    assert "wsAuthToken" in data
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):
@@ -307,3 +309,33 @@ schema = "PUBLIC"
     assert "account" not in entry
     assert "warehouse" not in entry
     assert "schema" not in entry
+
+
+def test_api_auth_allows_loopback_without_token(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is True
+
+
+def test_api_auth_requires_token_for_non_loopback(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("10.0.0.2", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is False
