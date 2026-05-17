@@ -36,9 +36,15 @@ permissions:
   contents: write
   id-token: write
 
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
     # only run publish if run manually or if commit starts with one of "feat|fix"
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat:') || startsWith(github.event.head_commit.message, 'fix:')}}
     steps:
@@ -125,8 +131,6 @@ jobs:
       - name: Push version commit and tags
         if: ${{ success() }}
         # CI already validated quality gates earlier; avoid local husky pre-push checks here.
-        env:
-          HUSKY: 0
         run: |
           git push origin HEAD:${{ github.ref_name }}
           git push origin --tags
