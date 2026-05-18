@@ -14,7 +14,44 @@ import React, {
   useState,
 } from 'react';
 import type {PropsWithChildren} from 'react';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
+import {unified} from 'unified';
 import {useStoreWithAi} from '../AiSlice';
+
+const markdownHastProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkRehype, {allowDangerousHtml: true})
+  .use(rehypeRaw);
+
+function collectHastText(node: any): string {
+  if (!node) return '';
+  if (node.type === 'text' && typeof node.value === 'string') {
+    return node.value;
+  }
+  if (Array.isArray(node.children)) {
+    let out = '';
+    for (const child of node.children) {
+      out += collectHastText(child);
+    }
+    return out;
+  }
+  return '';
+}
+
+export function markdownToPlainText(markdown: string): string {
+  if (!markdown) return '';
+  try {
+    const mdast = markdownHastProcessor.parse(markdown);
+    const hast = markdownHastProcessor.runSync(mdast);
+    return collectHastText(hast);
+  } catch {
+    return markdown;
+  }
+}
 
 export type ChatSearchBlock = {
   id: string;
@@ -377,9 +414,10 @@ export function HighlightedChatSearchText({
         key={match.id}
         id={match.id}
         className={cn(
-          'rounded-sm px-0.5',
+          'p-0 m-0 leading-[inherit] [unicode-bidi:normal] rounded-sm',
           isActive
-            ? 'bg-editor-search-match-selected text-foreground ring-ring ring-1'
+            ? // inset box-shadow instead of ring/border so active mark does not shift surrounding text by 1px
+              'bg-editor-search-match-selected text-foreground shadow-[inset_0_0_0_1px_var(--color-ring)]'
             : 'bg-editor-search-match text-foreground',
         )}
       >
@@ -432,10 +470,10 @@ export function createChatSearchRehypePlugin({
           properties: {
             id: match.id,
             className: [
-              'rounded-sm',
-              'px-0.5',
+              'p-0 m-0 leading-[inherit] [unicode-bidi:normal] rounded-sm',
               match.id === activeMatchId
-                ? 'bg-editor-search-match-selected text-foreground ring-ring ring-1'
+                ? // inset box-shadow instead of ring/border so active mark does not shift surrounding text by 1px
+                  'bg-editor-search-match-selected text-foreground shadow-[inset_0_0_0_1px_var(--color-ring)]'
                 : 'bg-editor-search-match text-foreground',
             ],
             dataChatSearchBlockId: blockId,

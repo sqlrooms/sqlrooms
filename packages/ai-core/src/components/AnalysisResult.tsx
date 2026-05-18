@@ -22,6 +22,7 @@ import {ActivityBox} from './ActivityBox';
 import {AnalysisAnswer, processAnalysisAnswerContent} from './AnalysisAnswer';
 import {
   HighlightedChatSearchText,
+  markdownToPlainText,
   useRegisterChatSearchBlocks,
   type ChatSearchBlock,
 } from './ChatSearch';
@@ -195,7 +196,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         blocks.push({
           id: `${searchBlockPrefix}:text:${index}`,
           resultId: analysisResult.id,
-          text: processAnalysisAnswerContent(part.text).processedContent,
+          text: markdownToPlainText(
+            processAnalysisAnswerContent(part.text).processedContent,
+          ),
         });
       } else if (isReasoningPart(part)) {
         blocks.push({
