@@ -46,6 +46,7 @@
   "devDependencies": {
     "@jest/globals": "^30.3.0",
     "@sqlrooms/preset-jest": "workspace:*",
+    "jsdom": "^29.1.1",
     "ts-jest": "^29.4.4",
     "zustand": "^5.0.8"
   },
