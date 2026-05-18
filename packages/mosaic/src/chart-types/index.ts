@@ -43,16 +43,21 @@ export * from './box-plot/definition';
 export * from './bubble-chart/definition';
 export * from './custom-spec/definition';
 
-// Re-export tool types, schemas, validation, and AI tool creators
+// Re-export tool types, schemas, validation, helpers, and AI tool creators
 export * from './tool-types';
 export * from './tool-schemas';
 export * from './tool-validation';
+export * from './chart-tool-helpers';
 export * from './histogram/tool';
 export * from './line-chart/tool';
 export * from './count-plot/tool';
 export * from './heatmap/tool';
 export * from './bubble-chart/tool';
 export * from './box-plot/tool';
+export * from './profiler-tool';
+export * from './text-panel-tool';
+export * from './list-panels-tool';
+export * from './remove-panel-tool';
 
 // Import chart type definitions for legacy exports
 import {histogramChartType} from './histogram/definition';
@@ -62,7 +67,7 @@ import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
 import {bubbleChartChartType} from './bubble-chart/definition';
 import {customSpecChartType} from './custom-spec/definition';
-import type {ChartToolDeps} from './base-types';
+import type {DashboardToolDeps} from './base-types';
 
 // Legacy compatibility exports
 export const mosaicChartTypes = {
@@ -110,7 +115,7 @@ export function createDefaultChartTypes(options?: {
  */
 export function createChartTools(
   chartTypes: ChartTypeDefinition<any>[],
-  deps: ChartToolDeps,
+  deps: DashboardToolDeps,
   toolNamePrefix: string = 'create_dashboard_',
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {};

@@ -11,6 +11,7 @@ import type * as z from 'zod';
 import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
+import {MosaicDashboardEntry} from '../dashboard/MosaicDashboardSlice';
 
 // Re-export ChartType for convenience
 export type {ChartType};
@@ -42,10 +43,11 @@ export interface ChartBuilderField {
 }
 
 /**
- * Dependencies injected into chart tool creation functions.
- * Provides the resources and operations needed to create charts.
+ * Dependencies injected into dashboard tool creation functions.
+ * Provides the resources and operations needed to create dashboard panels.
  */
-export interface ChartToolDeps {
+
+export interface DashboardToolDeps {
   resolveResources: (
     params: {
       artifactId?: string;
@@ -58,18 +60,15 @@ export interface ChartToolDeps {
     tableName: string;
     columns: ChartBuilderColumn[];
   };
-  createChart: (params: {
-    artifactId: string;
-    tableName: string;
-    title: string;
-    config: any;
-  }) => {
-    panelId: string;
-    artifactId: string;
-    tableName: string;
-    title: string;
-    config: any;
-  };
+  addPanel: (dashboardId: string, panel: any) => string;
+  updatePanel: (
+    dashboardId: string,
+    panelId: string,
+    patch: Partial<{title?: string; config?: any}>,
+  ) => void;
+  getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
+  removePanel: (dashboardId: string, panelId: string) => void;
+  setCurrentArtifact: (artifactId: string) => void;
 }
 
 export type ChartToolExecutionContext = object & {
@@ -142,7 +141,7 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   /** Optional icon component for chart-type grids */
   icon: ComponentType<{className?: string}>;
   /** Optional function to create an AI tool for this chart type */
-  createTool?: (deps: ChartToolDeps) => Tool;
+  createTool?: (deps: DashboardToolDeps) => Tool;
 };
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =

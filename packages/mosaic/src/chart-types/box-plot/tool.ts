@@ -2,12 +2,13 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {BoxPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
-import {type ChartToolDeps} from '../base-types';
+import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from '../../chart-builders/constants';
+import {createOrUpdateChartPanel} from '../chart-tool-helpers';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
   settings: BoxPlotChartSettings.required(),
@@ -15,7 +16,7 @@ export const BoxPlotToolParameters = BaseChartToolParameters.extend({
 
 export type BoxPlotToolParams = z.infer<typeof BoxPlotToolParameters>;
 
-export function createBoxPlotAiTool(deps: ChartToolDeps) {
+export function createBoxPlotAiTool(deps: DashboardToolDeps) {
   return tool({
     description: `Box plot: compares distributions of numeric values across categories. Shows median, quartiles (25th, 75th percentiles), and outliers per group.
 
@@ -25,6 +26,8 @@ Example queries: "compare population by administrative region", "show elevation 
 Required:
 - x: categorical/grouping column (${CATEGORICAL_COLUMN_TYPES.join(', ')}) - e.g., region, terrain type, zone classification
 - y: numeric (${NUMERIC_COLUMN_TYPES.join(', ')})
+
+To UPDATE an existing box plot: provide the panelId parameter. Otherwise creates new panel.
 
 Best for: comparing distributions between groups, finding outliers per category, seeing spread and variance differences.
 
@@ -51,22 +54,23 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
           'y',
         );
 
-        const title = `Box plot - ${params.settings.y} by ${params.settings.x}`;
-
-        const result = deps.createChart({
-          artifactId,
+        const result = createOrUpdateChartPanel(deps, {
+          panelId: params.panelId,
+          dashboardId: artifactId,
           tableName,
+          title: `Box plot - ${params.settings.y} by ${params.settings.x}`,
           config: {
             chartType: 'box-plot',
             settings: params.settings,
           },
-          title,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Created box plot "${result.title}".`,
+            details: params.panelId
+              ? `Updated box plot "${result.title}".`
+              : `Created box plot "${result.title}".`,
             data: result,
           },
         };
