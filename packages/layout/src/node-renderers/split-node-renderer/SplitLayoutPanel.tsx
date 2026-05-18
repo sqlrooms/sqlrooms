@@ -60,6 +60,10 @@ function updateNodeDefaultSize(
     };
   }
 
+  if (node.defaultSize === defaultSize) {
+    return node;
+  }
+
   return {...node, defaultSize};
 }
 
