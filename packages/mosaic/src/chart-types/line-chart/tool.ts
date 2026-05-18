@@ -2,13 +2,14 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {LineChartSettings, AggregateFunction, TemporalInterval} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
-import type {ChartToolDeps} from '../base-types';
+import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from '../../chart-builders/constants';
+import {createOrUpdateChartPanel} from '../chart-tool-helpers';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;
@@ -19,7 +20,7 @@ export const LineChartToolParameters = BaseChartToolParameters.extend({
 
 export type LineChartToolParams = z.infer<typeof LineChartToolParameters>;
 
-export function createLineChartAiTool(deps: ChartToolDeps) {
+export function createLineChartAiTool(deps: DashboardToolDeps) {
   return tool({
     description: `Line chart: shows trends and changes over time or ordered continuous variable. Connects data points to show progression.
 
@@ -32,6 +33,8 @@ Required:
 
 Optional: xInterval for temporal grouping (${TEMPORAL_INTERVALS.join(', ')}) when x is temporal (${TEMPORAL_COLUMN_TYPES.join(', ')}).
 Multiple yFields create multi-line chart for comparing metrics.
+
+To UPDATE an existing line chart: provide the panelId parameter. Otherwise creates new panel.
 
 Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use bubble-chart).`,
     inputSchema: LineChartToolParameters,
@@ -56,24 +59,25 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
           );
         }
 
-        const title = params.settings.x
-          ? `Line chart - ${params.settings.yFields?.map((f) => f.field).join(', ') || ''} over ${params.settings.x}`
-          : 'Line chart';
-
-        const result = deps.createChart({
-          artifactId,
+        const result = createOrUpdateChartPanel(deps, {
+          panelId: params.panelId,
+          dashboardId: artifactId,
           tableName,
+          title: params.settings.x
+            ? `Line chart - ${params.settings.yFields?.map((f) => f.field).join(', ') || ''} over ${params.settings.x}`
+            : 'Line chart',
           config: {
             chartType: 'line-chart',
             settings: params.settings,
           },
-          title,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Created line chart "${result.title}".`,
+            details: params.panelId
+              ? `Updated line chart "${result.title}".`
+              : `Created line chart "${result.title}".`,
             data: result,
           },
         };

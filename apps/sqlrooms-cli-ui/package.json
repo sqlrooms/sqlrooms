@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^1.0.22",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",

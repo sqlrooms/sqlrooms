@@ -1,13 +1,9 @@
 import {
-  createMosaicDashboardChartPanelConfig,
-  createDefaultChartTypes,
-  type ChartToolDeps,
+  type DashboardToolDeps,
   type ChartBuilderColumn,
 } from '@sqlrooms/mosaic';
 import type {RoomState} from './store';
 import {DataTable} from '@sqlrooms/db';
-
-const aiChartTypes = createDefaultChartTypes({includeCustomSpec: false});
 
 // Helper functions
 function getTablesWithColumns(state: RoomState): DataTable[] {
@@ -31,9 +27,9 @@ function findTableColumns(
 }
 
 // Create dependencies for tool execution
-export function createChartToolDeps(store: {
+export function createDashboardToolDeps(store: {
   getState: () => RoomState;
-}): ChartToolDeps {
+}): DashboardToolDeps {
   const resolveArtifact = (
     artifactId?: string,
     createIfMissing?: boolean,
@@ -118,29 +114,33 @@ export function createChartToolDeps(store: {
       return {artifactId, tableName, columns};
     },
 
-    createChart: ({artifactId, tableName, title, config}) => {
+    addPanel: (dashboardId: string, panel: any) => {
       const state = store.getState();
-      const chartTypeDef = aiChartTypes.find(
-        (ct) => ct.id === config.chartType,
-      );
-      if (!chartTypeDef) {
-        throw new Error(`Unknown chart type "${config.chartType}".`);
-      }
+      return state.mosaicDashboard.addPanel(dashboardId, panel);
+    },
 
-      const panel = createMosaicDashboardChartPanelConfig(title, config, {
-        tableName,
-      });
+    updatePanel: (
+      dashboardId: string,
+      panelId: string,
+      patch: Partial<{title?: string; config?: any}>,
+    ) => {
+      const state = store.getState();
+      state.mosaicDashboard.updatePanel(dashboardId, panelId, patch);
+    },
 
-      state.mosaicDashboard.addPanel(artifactId, panel);
+    getDashboard: (dashboardId: string) => {
+      const state = store.getState();
+      return state.mosaicDashboard.getDashboard(dashboardId);
+    },
+
+    removePanel: (dashboardId: string, panelId: string) => {
+      const state = store.getState();
+      state.mosaicDashboard.removePanel(dashboardId, panelId);
+    },
+
+    setCurrentArtifact: (artifactId: string) => {
+      const state = store.getState();
       state.artifacts.setCurrentArtifact(artifactId);
-
-      return {
-        panelId: panel.id,
-        config,
-        artifactId,
-        tableName,
-        title,
-      };
     },
   };
 }

@@ -2,9 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
-import {type ChartToolDeps} from '../base-types';
+import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {CATEGORICAL_COLUMN_TYPES} from '../../chart-builders/constants';
+import {createOrUpdateChartPanel} from '../chart-tool-helpers';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings.required(),
@@ -12,7 +13,7 @@ export const CountPlotToolParameters = BaseChartToolParameters.extend({
 
 export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;
 
-export function createCountPlotAiTool(deps: ChartToolDeps) {
+export function createCountPlotAiTool(deps: DashboardToolDeps) {
   return tool({
     description: `Count plot: horizontal bar chart showing frequency of categorical/text values. Counts how many times each unique value appears.
 
@@ -20,6 +21,8 @@ Use when: user asks to "count", "frequency of", "how many", "breakdown by catego
 Example queries: "count by land use type", "how many features per administrative region", "frequency of terrain types", "breakdown by zone classification", "count parcels by ownership type".
 
 Required: field must be categorical/text (${CATEGORICAL_COLUMN_TYPES.join(', ')}).
+
+To UPDATE an existing count plot: provide the panelId parameter. Otherwise creates new panel.
 
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use bubble-chart), time series (use line-chart).`,
@@ -36,22 +39,23 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
           'field',
         );
 
-        const title = `Count plot of ${params.settings.field}`;
-
-        const result = deps.createChart({
-          artifactId,
+        const result = createOrUpdateChartPanel(deps, {
+          panelId: params.panelId,
+          dashboardId: artifactId,
           tableName,
+          title: `Count plot of ${params.settings.field}`,
           config: {
             chartType: 'count-plot',
             settings: params.settings,
           },
-          title,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Created count plot "${result.title}".`,
+            details: params.panelId
+              ? `Updated count plot "${result.title}".`
+              : `Created count plot "${result.title}".`,
             data: result,
           },
         };
