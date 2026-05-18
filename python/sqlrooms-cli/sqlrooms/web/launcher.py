@@ -231,6 +231,7 @@ class SqlroomsHttpServer:
         | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
+        serve_ui: bool = True,
         config_path: Path | None = None,
     ):
         db_path_str = str(db_path)
@@ -257,6 +258,7 @@ class SqlroomsHttpServer:
         self.api_key = api_key
         self.ai_providers = ai_providers or {}
         self.open_browser = open_browser
+        self.serve_ui = serve_ui
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
@@ -294,7 +296,7 @@ class SqlroomsHttpServer:
         self._start_duckdb_backend()
         app = self._build_app()
 
-        if self.open_browser:
+        if self.open_browser and self.serve_ui:
             threading.Timer(1.0, self._open_browser).start()
 
         config = uvicorn.Config(
@@ -618,7 +620,7 @@ class SqlroomsHttpServer:
                 return JSONResponse({"error": str(exc)}, status_code=400)
             return data
 
-        if self.static_dir.exists():
+        if self.serve_ui and self.static_dir.exists():
             app.mount(
                 "/",
                 StaticFiles(directory=self.static_dir, html=True),
@@ -630,10 +632,14 @@ class SqlroomsHttpServer:
                 if self.index_html.exists():
                     return FileResponse(self.index_html)
                 return JSONResponse({"error": "UI bundle not found"}, status_code=404)
-        else:
+        elif self.serve_ui:
             logger.warning(
                 "Static bundle missing at %s. UI will not load until built.",
                 self.index_html,
+            )
+        else:
+            logger.info(
+                "Static UI serving is disabled; API endpoints remain available."
             )
 
         return app
