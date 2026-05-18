@@ -3,6 +3,36 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.3...v0.29.0-rc.4) (2026-05-17)
+
+### Bug Fixes
+
+* Artifact creation issues ([#616](https://github.com/sqlrooms/sqlrooms/issues/616)) ([2824e5c](https://github.com/sqlrooms/sqlrooms/commit/2824e5cf865b0e26a256b1f0c808965abb86350a))
+* count plot chart display horizontally and only allow categorical fields ([#620](https://github.com/sqlrooms/sqlrooms/issues/620)) ([a352e09](https://github.com/sqlrooms/sqlrooms/commit/a352e09fd88162faee8817162ffd449f0288ca22))
+* Fix build and potential Mosaic duckdb-wasm type mismatch ([#625](https://github.com/sqlrooms/sqlrooms/issues/625)) ([1332308](https://github.com/sqlrooms/sqlrooms/commit/13323082b7679bf2e06f7af46076d53affe7a851))
+* Pass AI run context into dashboard chart tool resolution ([#627](https://github.com/sqlrooms/sqlrooms/issues/627)) ([229b4d1](https://github.com/sqlrooms/sqlrooms/commit/229b4d1e55019720f37faa95c51db445f3eb42a1))
+* Prevent-concurrent-publish ([#629](https://github.com/sqlrooms/sqlrooms/issues/629)) ([f277f57](https://github.com/sqlrooms/sqlrooms/commit/f277f57c090223395313e9249519a12d2fc0e9a8))
+* Remove AI_DEFAULT_TEMPERATURE ([#610](https://github.com/sqlrooms/sqlrooms/issues/610)) ([c03d46a](https://github.com/sqlrooms/sqlrooms/commit/c03d46ab995b635bbd2ccc4e05ae709a70239387))
+* Rename freeze in tab-strip ([#614](https://github.com/sqlrooms/sqlrooms/issues/614)) ([02c4bd9](https://github.com/sqlrooms/sqlrooms/commit/02c4bd93e6f900c6011bf3d6badf5c1433ad321e))
+* use CustomErrorBoundary in RoomShell ([#514](https://github.com/sqlrooms/sqlrooms/issues/514)) ([6ea9896](https://github.com/sqlrooms/sqlrooms/commit/6ea98964ff9a1c4fc8bc1af2345527ca52cb90f4))
+
+### Features
+
+* Add chat prompt context ([#598](https://github.com/sqlrooms/sqlrooms/issues/598)) ([ce29e0e](https://github.com/sqlrooms/sqlrooms/commit/ce29e0e7c916dca5af0b9f7bea91777b920a42b6))
+* add Text panel support to Mosaic Dashboard ([#622](https://github.com/sqlrooms/sqlrooms/issues/622)) ([e1584eb](https://github.com/sqlrooms/sqlrooms/commit/e1584ebc7691c9746490096d2298a67f6b0f57ef))
+* aggregations, multiple lines in line chart and dashboard tools refactoring ([#591](https://github.com/sqlrooms/sqlrooms/issues/591)) ([278d244](https://github.com/sqlrooms/sqlrooms/commit/278d24460154960fe9b9d806758e45f5aafe5e1f))
+* Box plot for mosaic dashboards ([#588](https://github.com/sqlrooms/sqlrooms/issues/588)) ([2fc7d18](https://github.com/sqlrooms/sqlrooms/commit/2fc7d1861afc8e3fd24c7e97e6874d4ec9740763))
+* dashboard empty state ([#619](https://github.com/sqlrooms/sqlrooms/issues/619)) ([e09fe80](https://github.com/sqlrooms/sqlrooms/commit/e09fe80900286694cb7aebd03bd4152f8e52911e))
+* decompose AssistantPanel component ([#623](https://github.com/sqlrooms/sqlrooms/issues/623)) ([15f694b](https://github.com/sqlrooms/sqlrooms/commit/15f694bc6bae52862cd84211395a104f1a3ce6bc))
+* Document artifact ([#603](https://github.com/sqlrooms/sqlrooms/issues/603)) ([14c96f9](https://github.com/sqlrooms/sqlrooms/commit/14c96f9ed72f56a20ecbf08441c472221f3bd4ad))
+* Embed charts as image assets in documents ([#612](https://github.com/sqlrooms/sqlrooms/issues/612)) ([4705d19](https://github.com/sqlrooms/sqlrooms/commit/4705d19f046949fb58d0581117bef2dc52aa3190))
+* enhance tool descriptions for clarity ([#621](https://github.com/sqlrooms/sqlrooms/issues/621)) ([a48a9a5](https://github.com/sqlrooms/sqlrooms/commit/a48a9a5328106b59a6266f5a57f4d03097f299bd))
+* remove eCDF chart ([#608](https://github.com/sqlrooms/sqlrooms/issues/608)) ([733d8d5](https://github.com/sqlrooms/sqlrooms/commit/733d8d52108cf237d59f21d0ea750b39bcc29781))
+
+### Reverts
+
+* Remove Vega cross-filtering from notebook cells ([#611](https://github.com/sqlrooms/sqlrooms/issues/611)) ([8c3d047](https://github.com/sqlrooms/sqlrooms/commit/8c3d047e122724ef3229dc51ea60c87175e55c63))
+
 # [0.29.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.2...v0.29.0-rc.3) (2026-05-07)
 
 ### Bug Fixes

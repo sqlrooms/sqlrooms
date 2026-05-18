@@ -226,6 +226,55 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### AI Chart Tools
+
+`createChartTools` generates assistant tools for the built-in chart types. The
+injected `ChartToolDeps.resolveResources(params, context)` callback receives the
+tool execution context as its second argument. Client apps should prefer
+execution-scoped context, such as a captured AI run context, over live UI state
+when resolving implicit dashboard targets. Explicit `params.artifactId` should
+still take precedence.
+
+```ts
+import {
+  createChartTools,
+  createDefaultChartTypes,
+  type ChartToolDeps,
+} from '@sqlrooms/mosaic';
+
+const deps: ChartToolDeps = {
+  resolveResources: (params, context) => {
+    const sessionId = context?.sessionId;
+    const runContext = context?.aiRunContext;
+    const contextArtifactId = getDashboardArtifactIdFromRunContext(
+      runContext,
+      sessionId,
+    );
+
+    // Prefer execution-scoped context over live UI state for implicit targets.
+    // Explicit tool input still wins over anything derived from context.
+    const artifactId =
+      params.artifactId ??
+      contextArtifactId ??
+      getCurrentDashboardArtifactId();
+    const tableName = params.tableName ?? getSelectedTableName(artifactId);
+
+    return {
+      artifactId,
+      tableName,
+      columns: getTableColumns(tableName),
+    };
+  },
+  createChart: ({artifactId, tableName, title, config}) =>
+    addChartPanel({artifactId, tableName, title, config}),
+};
+
+const chartTools = createChartTools(
+  createDefaultChartTypes({includeCustomSpec: false}),
+  deps,
+);
+```
+
 ### Box Plot Chart Type
 
 The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses

@@ -221,6 +221,7 @@ export type {
   ChartSettings,
   ChartType,
   ChartToolDeps,
+  ChartToolExecutionContext,
   ResolvedChartResources,
   CreateChartParams,
   CreateChartResult,

@@ -123,6 +123,31 @@ function groupPartsIntoSegments(
   return segments;
 }
 
+const ReasoningBox: React.FC<{text: string; isRunning: boolean}> = ({
+  text,
+  isRunning,
+}) => {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  return (
+    <details className="border-border bg-muted/30 text-muted-foreground group rounded-md border text-xs">
+      <summary className="hover:bg-muted/50 flex cursor-pointer items-center justify-between gap-2 px-3 py-2 font-medium select-none">
+        <span>{isRunning ? 'Thinking...' : 'Thinking'}</span>
+        <span className="text-muted-foreground/70 text-[11px] font-normal group-open:hidden">
+          show
+        </span>
+        <span className="text-muted-foreground/70 hidden text-[11px] font-normal group-open:inline">
+          hide
+        </span>
+      </summary>
+      <div className="border-border/70 max-h-64 overflow-auto border-t px-3 py-2 leading-relaxed whitespace-pre-wrap">
+        {text}
+      </div>
+    </details>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // AnalysisResult
 // ---------------------------------------------------------------------------
@@ -347,15 +372,17 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
             if (isReasoningPart(part)) {
               return (
-                <div
+                <ReasoningBox
                   key={`reasoning-${index}`}
                   className="text-muted-foreground text-xs"
+                  text={part.text}
+                  isRunning={!analysisResult.isCompleted}
                 >
                   <HighlightedChatSearchText
                     blockId={`${searchBlockPrefix}:reasoning:${index}`}
                     text={part.text}
                   />
-                </div>
+                />
               );
             }
 

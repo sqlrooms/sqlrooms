@@ -24,9 +24,12 @@ Optional: size can encode a third numeric dimension (magnitude, frequency, count
 
 Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart).`,
     inputSchema: BubbleChartToolParameters,
-    execute: async (params) => {
+    execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(params);
+        const {artifactId, tableName, columns} = deps.resolveResources(
+          params,
+          context,
+        );
 
         // Validate settings
         validateColumnExists(
