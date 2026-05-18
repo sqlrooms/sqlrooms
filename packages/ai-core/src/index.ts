@@ -13,8 +13,7 @@ export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
-export {Chat} from './components/Chat';
-export {AgentChat, type AgentChatProps} from './components/agent-chat';
+export {Chat, type LocalAgentChatRootProps} from './components/Chat';
 export {
   CHAT_CONTEXT_SELECTOR_SLOT,
   ContextSelector,

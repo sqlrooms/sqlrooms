@@ -55,6 +55,7 @@ export {
   parseSkillManifest,
   serializeSkillManifest,
   loadSkillFromFiles,
+  CompositeSkillStorage,
 } from './skills';
 export type {SkillManifest} from './skills';
 export type {
@@ -139,6 +140,7 @@ export type {
   ToolRenderBehavior,
   ToolStructureBehavior,
   ToolDisplayBehavior,
+  LocalAgentChatRootProps,
 } from '@sqlrooms/ai-core';
 export {Chat} from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';

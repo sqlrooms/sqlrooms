@@ -204,7 +204,7 @@ A built-in agent-driven authoring flow that generates skill content through a co
 
 - `createSkillAuthoringAgent(options)` — construct a `ToolLoopAgent` scoped to skill creation; accepts `CreateSkillAuthoringAgentOptions`
 - `createSkillDraftStore()` — Zustand store for tracking the in-progress draft (`SkillDraftStore`, `SkillDraftState`)
-- `SkillAuthoringPanel` — drop-in panel component that wires `AgentChat` to the authoring agent; accepts `SkillAuthoringPanelProps`
+- `SkillAuthoringPanel` — drop-in panel component that wires `Chat.LocalAgentRoot` to the authoring agent; accepts `SkillAuthoringPanelProps`
 - `SkillDraftPreview` — read-only preview of the current draft manifest and instructions; accepts `SkillDraftPreviewProps`
 - `DefaultSkillAuthoringPanelHeader` — default header for `SkillAuthoringPanel`
 

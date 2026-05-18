@@ -7,13 +7,10 @@ import {
 import {useMemo} from 'react';
 
 /**
- * Build a `DefaultChatTransport` that bypasses HTTP and drives a
- * locally-constructed `ToolLoopAgent` directly. The returned transport is the
- * shape `useChat` expects; we fulfill its `fetch` contract by parsing the
- * request body for the `messages` array, handing them to
- * `createAgentUIStreamResponse`, and returning the resulting `Response`.
+ * Build a local `useChat` transport that drives a pre-constructed
+ * `ToolLoopAgent` directly instead of calling an HTTP endpoint.
  */
-export function useAgentChatTransport(
+export function useLocalAgentChatTransport(
   agent: ToolLoopAgent<any, any, any>,
 ): DefaultChatTransport<UIMessage> {
   return useMemo(
@@ -32,11 +29,17 @@ export function useAgentChatTransport(
   );
 }
 
+export function parseLocalAgentUiMessages(
+  body: BodyInit | null | undefined,
+): UIMessage[] {
+  return parseUiMessages(body);
+}
+
 function parseUiMessages(body: BodyInit | null | undefined): UIMessage[] {
   if (!body) return [];
   if (typeof body !== 'string') {
     console.warn(
-      '[useAgentChatTransport] Unexpected non-string request body:',
+      '[useLocalAgentChatTransport] Unexpected non-string request body:',
       Object.prototype.toString.call(body),
     );
     return [];
@@ -46,7 +49,7 @@ function parseUiMessages(body: BodyInit | null | undefined): UIMessage[] {
     return Array.isArray(parsed.messages) ? parsed.messages : [];
   } catch (err) {
     console.warn(
-      '[useAgentChatTransport] Failed to parse request body:',
+      '[useLocalAgentChatTransport] Failed to parse request body:',
       err,
       body.slice(0, 200),
     );

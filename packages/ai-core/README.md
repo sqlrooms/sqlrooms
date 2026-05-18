@@ -83,50 +83,22 @@ export function AiPanel() {
 }
 ```
 
-## AgentChat
+## Local Agent Chat
 
-`AgentChat` is a lightweight, stateless chat surface driven by an externally constructed `ToolLoopAgent`. Unlike the session-based `Chat` component it owns no session list, no AI slice, no model selector, and no persistence — it is intended for transient, single-purpose conversations such as authoring wizards, inline approvals, or one-shot agent flows.
-
-### Key props
-
-| Prop                 | Type                              | Description                                                                           |
-| -------------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
-| `agent`              | `ToolLoopAgent`                   | A pre-built agent. The caller owns model, tools, system prompt, and provider options. |
-| `initialMessages`    | `UIMessage[]`                     | Seed messages shown on mount. State is local after mount.                             |
-| `initialSuggestions` | `string[]`                        | Prompt chips shown before the first message is sent.                                  |
-| `toolRenderBehavior` | `ToolRenderBehavior`              | Customize tool-call labels and rendering structure.                                   |
-| `onMessagesChange`   | `(messages: UIMessage[]) => void` | Notified on every stream delta; useful for mirroring messages to external state.      |
-| `placeholder`        | `string`                          | Textarea placeholder text.                                                            |
-
-### Usage
+Use `Chat.LocalAgentRoot` when a transient surface should be driven by a
+pre-constructed `ToolLoopAgent` instead of the session-backed AI slice. The
+message and composer components stay under the same `Chat` compound API.
 
 ```tsx
-import {AgentChat} from '@sqlrooms/ai-core';
-import {ToolLoopAgent, tool} from 'ai';
-import {z} from 'zod';
-
-const agent = new ToolLoopAgent({
-  model: myLanguageModel,
-  instructions: 'You are a helpful assistant.',
-  tools: {
-    greet: tool({
-      description: 'Greet the user',
-      inputSchema: z.object({name: z.string()}),
-      execute: async ({name}) => `Hello, ${name}!`,
-    }),
-  },
-});
-
-function WizardPanel() {
-  return (
-    <AgentChat
-      agent={agent}
-      initialSuggestions={['Get started', 'Show me an example']}
-      placeholder="Ask anything..."
-      onMessagesChange={(msgs) => console.log(msgs)}
-    />
-  );
-}
+<Chat.LocalAgentRoot
+  agent={agent}
+  initialSuggestions={['Get started', 'Show me an example']}
+  onMessagesChange={(msgs) => console.log(msgs)}
+>
+  <Chat.Messages />
+  <Chat.PromptSuggestions />
+  <Chat.Composer placeholder="Ask anything..." />
+</Chat.LocalAgentRoot>
 ```
 
 ## Useful exports
