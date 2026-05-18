@@ -5,6 +5,7 @@ import {
   getVisibleLayoutPanels,
   findNearestDockAncestor,
   isDockablePanel,
+  updateLayoutNodeById,
 } from '../layout-tree';
 import type {
   LayoutNode,
@@ -438,6 +439,60 @@ describe('layout-tree', () => {
       };
 
       expect(isDockablePanel(layout, 'non-existent')).toBe(false);
+    });
+  });
+
+  describe('updateLayoutNodeById', () => {
+    it('updates a nested layout node without changing siblings', () => {
+      const layout: LayoutNode = {
+        type: 'split',
+        id: 'root-split',
+        direction: 'row',
+        children: [
+          {type: 'panel', id: 'left', panel: 'left', defaultSize: '30%'},
+          {type: 'panel', id: 'right', panel: 'right', defaultSize: '70%'},
+        ],
+      };
+
+      const nextLayout = updateLayoutNodeById(layout, 'right', (node) =>
+        typeof node === 'string' ? node : {...node, defaultSize: '420px'},
+      );
+
+      expect(nextLayout).toEqual({
+        type: 'split',
+        id: 'root-split',
+        direction: 'row',
+        children: [
+          {type: 'panel', id: 'left', panel: 'left', defaultSize: '30%'},
+          {type: 'panel', id: 'right', panel: 'right', defaultSize: '420px'},
+        ],
+      });
+      expect(nextLayout).not.toBe(layout);
+    });
+
+    it('can replace a string panel key with a panel node', () => {
+      const layout: LayoutNode = {
+        type: 'split',
+        id: 'root-split',
+        direction: 'row',
+        children: ['left', 'right'],
+      };
+
+      const nextLayout = updateLayoutNodeById(layout, 'right', (node) =>
+        typeof node === 'string'
+          ? {type: 'panel', id: node, panel: node, defaultSize: '40%'}
+          : node,
+      );
+
+      expect(nextLayout).toEqual({
+        type: 'split',
+        id: 'root-split',
+        direction: 'row',
+        children: [
+          'left',
+          {type: 'panel', id: 'right', panel: 'right', defaultSize: '40%'},
+        ],
+      });
     });
   });
 });
