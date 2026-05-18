@@ -1,10 +1,5 @@
 import {Button, cn, Input} from '@sqlrooms/ui';
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  SearchIcon,
-  XIcon,
-} from 'lucide-react';
+import {ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon} from 'lucide-react';
 import React, {
   createContext,
   useCallback,
@@ -116,9 +111,7 @@ export function findChatSearchMatches(
   return matches;
 }
 
-export const ChatSearchProvider: React.FC<PropsWithChildren> = ({
-  children,
-}) => {
+export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   const currentSessionId = useStoreWithAi(
     (s) => s.ai.config.currentSessionId ?? '',
   );
@@ -143,10 +136,10 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({
       block.id.startsWith(`${currentSessionId}:`),
     );
   }, [blockGroups, currentSessionId]);
-  const matches = useMemo(() => findChatSearchMatches(blocks, query), [
-    blocks,
-    query,
-  ]);
+  const matches = useMemo(
+    () => findChatSearchMatches(blocks, query),
+    [blocks, query],
+  );
 
   // clamp inline so out-of-range indices never reach render without an effect round-trip
   const safeActiveIndex =
@@ -417,7 +410,7 @@ export function HighlightedChatSearchText({
         key={match.id}
         id={match.id}
         className={cn(
-          'p-0 m-0 leading-[inherit] [unicode-bidi:normal] rounded-sm',
+          'm-0 rounded-sm p-0 leading-[inherit] [unicode-bidi:normal]',
           isActive
             ? // inset box-shadow instead of ring/border so active mark does not shift surrounding text by 1px
               'bg-editor-search-match-selected text-foreground shadow-[inset_0_0_0_1px_var(--color-ring)]'
