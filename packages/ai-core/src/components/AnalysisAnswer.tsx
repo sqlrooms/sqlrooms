@@ -156,9 +156,11 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     [content],
   );
 
-  const searchMatches = searchBlockId
-    ? (search?.getMatchesForBlock(searchBlockId) ?? [])
-    : [];
+  const searchMatches = useMemo(
+    () =>
+      searchBlockId ? (search?.getMatchesForBlock(searchBlockId) ?? []) : [],
+    [search, searchBlockId],
+  );
   const rehypePlugins = useMemo(() => {
     const plugins: unknown[] = [rehypeRaw];
     if (searchBlockId && searchMatches.length > 0) {

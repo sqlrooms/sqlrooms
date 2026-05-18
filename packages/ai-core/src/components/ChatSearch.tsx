@@ -128,6 +128,14 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({
     Record<string, ChatSearchBlock[]>
   >({});
 
+  const resetKey = `${currentSessionId}:${query}`;
+  const [lastResetKey, setLastResetKey] = useState(resetKey);
+  if (lastResetKey !== resetKey) {
+    // set state during render to reset active index when session or query changes
+    setLastResetKey(resetKey);
+    setActiveMatchIndex(0);
+  }
+
   const blocks = useMemo(() => {
     const allBlocks = Object.values(blockGroups).flat();
     if (!currentSessionId) return allBlocks;
@@ -140,20 +148,12 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({
     query,
   ]);
 
-  const activeMatch = matches[activeMatchIndex];
+  // clamp inline so out-of-range indices never reach render without an effect round-trip
+  const safeActiveIndex =
+    matches.length === 0 ? 0 : Math.min(activeMatchIndex, matches.length - 1);
+  const activeMatch = matches[safeActiveIndex];
   const activeMatchId = activeMatch?.id;
-  const activeMatchNumber = matches.length > 0 ? activeMatchIndex + 1 : 0;
-
-  useEffect(() => {
-    setActiveMatchIndex(0);
-  }, [currentSessionId, query]);
-
-  useEffect(() => {
-    setActiveMatchIndex((index) => {
-      if (matches.length === 0) return 0;
-      return Math.min(index, matches.length - 1);
-    });
-  }, [matches.length]);
+  const activeMatchNumber = matches.length > 0 ? safeActiveIndex + 1 : 0;
 
   useEffect(() => {
     if (!activeMatchId) return;
@@ -211,17 +211,19 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({
   );
 
   const goToNextMatch = useCallback(() => {
-    setActiveMatchIndex((index) =>
-      matches.length === 0 ? 0 : (index + 1) % matches.length,
-    );
+    setActiveMatchIndex((index) => {
+      if (matches.length === 0) return 0;
+      const safe = Math.min(index, matches.length - 1);
+      return (safe + 1) % matches.length;
+    });
   }, [matches.length]);
 
   const goToPreviousMatch = useCallback(() => {
-    setActiveMatchIndex((index) =>
-      matches.length === 0
-        ? 0
-        : (index - 1 + matches.length) % matches.length,
-    );
+    setActiveMatchIndex((index) => {
+      if (matches.length === 0) return 0;
+      const safe = Math.min(index, matches.length - 1);
+      return (safe - 1 + matches.length) % matches.length;
+    });
   }, [matches.length]);
 
   const clearSearch = useCallback(() => {

@@ -63,10 +63,15 @@ function BlockRegistrar({
   return null;
 }
 
-let latestSearch: ReturnType<typeof useChatSearch> | undefined;
+const latestSearchRef: {
+  current: ReturnType<typeof useChatSearch> | undefined;
+} = {current: undefined};
 
 function SearchController() {
-  latestSearch = useChatSearch();
+  const search = useChatSearch();
+  React.useEffect(() => {
+    latestSearchRef.current = search;
+  });
   return null;
 }
 
@@ -74,7 +79,7 @@ function renderSearchUi(options?: {
   blocks?: ChatSearchBlock[];
   sessionId?: string;
 }) {
-  latestSearch = undefined;
+  latestSearchRef.current = undefined;
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -102,10 +107,10 @@ function cleanup(container: HTMLElement, root: Root) {
 
 function setDesignQuery() {
   act(() => {
-    if (!latestSearch) {
+    if (!latestSearchRef.current) {
       throw new Error('Search context was not captured.');
     }
-    latestSearch?.setQuery('design');
+    latestSearchRef.current?.setQuery('design');
   });
 }
 
