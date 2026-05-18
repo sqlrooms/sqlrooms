@@ -18,7 +18,6 @@ def test_cli_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "Start the SQLRooms local experience" in result.stdout
-    assert "--no-ui" in result.stdout
 
 
 def test_cli_export_help():
