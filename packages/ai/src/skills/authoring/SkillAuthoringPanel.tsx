@@ -1,5 +1,5 @@
-import {AgentChat} from '@sqlrooms/ai-core';
-import type {AgentChatProps, ToolRenderBehavior} from '@sqlrooms/ai-core';
+import {Chat} from '@sqlrooms/ai-core';
+import type {ToolRenderBehavior} from '@sqlrooms/ai-core';
 import {
   Button,
   ResizableHandle,
@@ -7,6 +7,7 @@ import {
   ResizablePanelGroup,
   cn,
 } from '@sqlrooms/ui';
+import type {ToolLoopAgent} from 'ai';
 import React, {useCallback, useMemo, type ReactNode} from 'react';
 import {useStore} from 'zustand';
 import {SKILL_AUTHORING_TOOL_NAMES} from './SkillAuthoringAgent';
@@ -23,7 +24,7 @@ export type SkillAuthoringPanelProps = {
    * `createSkillAuthoringAgent` and held by the host for the lifetime of the
    * wizard.
    */
-  agent: AgentChatProps['agent'];
+  agent: ToolLoopAgent<any, any, any>;
   /** The draft store shared between the agent's tools and the preview pane. */
   draftStore: SkillDraftStore;
   /** Fired when the user clicks Cancel or Done. The host decides what to close. */
@@ -48,7 +49,7 @@ export type SkillAuthoringPanelProps = {
 };
 
 /**
- * Split-pane authoring surface: left is the `AgentChat` driving a
+ * Split-pane authoring surface: left is a local-agent `Chat` driving a
  * `SkillAuthoringAgent`, right is a live `SkillDraftPreview`. There is no
  * explicit Save button — the agent calls `saveSkill` once the draft is
  * complete, and the status pill in the footer communicates progress.
@@ -120,13 +121,17 @@ export const SkillAuthoringPanel: React.FC<SkillAuthoringPanelProps> = ({
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel defaultSize={60} minSize={30}>
-            <AgentChat
+            <Chat.LocalAgentRoot
               agent={agent}
               initialSuggestions={initialSuggestions}
               toolRenderBehavior={toolRenderBehavior}
-              placeholder="Describe the skill you want to build..."
-              className="h-full"
-            />
+            >
+              <div className="flex h-full min-h-0 flex-col">
+                <Chat.Messages className="min-h-0 flex-1" />
+                <Chat.PromptSuggestions />
+                <Chat.Composer placeholder="Describe the skill you want to build..." />
+              </div>
+            </Chat.LocalAgentRoot>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={40} minSize={30}>
