@@ -187,8 +187,9 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({
   const unregisterBlocks = useCallback((ownerId: string) => {
     setBlockGroups((current) => {
       if (!(ownerId in current)) return current;
-      const {[ownerId]: _removed, ...rest} = current;
-      return rest;
+      const next = {...current};
+      delete next[ownerId];
+      return next;
     });
   }, []);
 
