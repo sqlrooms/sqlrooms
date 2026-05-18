@@ -3,6 +3,7 @@ import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
+  lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
@@ -123,7 +124,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     id: `${sessionId}::${messagesRevision}`,
     transport,
     messages: initialMessages,
-    // Auto-resend after all approval responses are provided (approve/deny),
+    // Auto-resend after all client-side tool outputs or approval responses are provided,
     // but skip if the session was aborted.
     sendAutomaticallyWhen: (
       options: Parameters<
@@ -131,7 +132,10 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
       >[0],
     ) => {
       if (isAbortedRef.current) return false;
-      return lastAssistantMessageIsCompleteWithApprovalResponses(options);
+      return (
+        lastAssistantMessageIsCompleteWithToolCalls(options) ||
+        lastAssistantMessageIsCompleteWithApprovalResponses(options)
+      );
     },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
     onError: (error) => onChatError?.(sessionId, error),
