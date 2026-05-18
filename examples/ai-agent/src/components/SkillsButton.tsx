@@ -4,6 +4,7 @@ import {
   SkillAuthoringPanel,
   type SaveSkillCallback,
   type SkillAuthoringContext,
+  type SkillDraft,
   type SkillDraftStore,
 } from '@sqlrooms/ai';
 import {
@@ -72,35 +73,32 @@ const AuthoringBody: React.FC<{onDone: () => void}> = ({onDone}) => {
     [],
   );
 
-  const handleSave = useCallback<SaveSkillCallback>(
-    async (draft, rootId) => {
-      const targetRoot = rootId ?? AUTHORING_CONTEXT.defaultRootId ?? 'default';
-      // Derive a kebab-case id from the name, resolving any collision by
-      // appending `-2`, `-3`, ...
-      const baseId = slugify(draft.name);
-      let candidateId = baseId;
-      let counter = 2;
+  const writeDraft = useCallback(async (draft: SkillDraft, rootId?: string) => {
+    const targetRoot = rootId ?? AUTHORING_CONTEXT.defaultRootId ?? 'default';
+    const baseId = slugify(draft.name);
+    let candidateId = baseId;
+    let counter = 2;
 
-      while (true) {
-        const existing = await skillStorage.resolveSkillId(candidateId);
-        if (!existing) break;
-        candidateId = `${baseId}-${counter++}`;
-      }
-      const ref = await skillStorage.writeSkill(targetRoot, candidateId, {
-        manifest: {
-          id: candidateId,
-          version: '0.1.0',
-          name: draft.name,
-          description: draft.description,
-          ...(draft.author ? {author: draft.author} : {}),
-        },
-        instructions: draft.instructions,
-      });
-      // Close the dialog on success — the status pill never shows "saved".
-      setTimeout(onDone, 0);
-      return ref;
-    },
-    [onDone],
+    while (true) {
+      const existing = await skillStorage.resolveSkillId(candidateId);
+      if (!existing) break;
+      candidateId = `${baseId}-${counter++}`;
+    }
+    return skillStorage.writeSkill(targetRoot, candidateId, {
+      manifest: {
+        id: candidateId,
+        version: '0.1.0',
+        name: draft.name,
+        description: draft.description,
+        ...(draft.author ? {author: draft.author} : {}),
+      },
+      instructions: draft.instructions,
+    });
+  }, []);
+
+  const handleSave = useCallback<SaveSkillCallback>(
+    (draft, rootId) => writeDraft(draft, rootId),
+    [writeDraft],
   );
 
   const agent = useMemo(
@@ -119,6 +117,7 @@ const AuthoringBody: React.FC<{onDone: () => void}> = ({onDone}) => {
       agent={agent}
       draftStore={draftStore}
       onCancel={onDone}
+      onSave={writeDraft}
       className="min-h-0 flex-1 overflow-hidden"
       initialSuggestions={[
         'Build a skill that checks a column for null values.',

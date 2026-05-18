@@ -8,11 +8,15 @@ import {
   cn,
 } from '@sqlrooms/ui';
 import type {ToolLoopAgent} from 'ai';
-import React, {useMemo, type ReactNode} from 'react';
+import React, {useCallback, useMemo, type ReactNode} from 'react';
 import {useStore} from 'zustand';
 import {SKILL_AUTHORING_TOOL_NAMES} from './SkillAuthoringAgent';
 import {SkillDraftPreview} from './SkillDraftPreview';
-import type {SkillDraftStatus, SkillDraftStore} from './createSkillDraftStore';
+import type {
+  SkillDraft,
+  SkillDraftStatus,
+  SkillDraftStore,
+} from './createSkillDraftStore';
 
 export type SkillAuthoringPanelProps = {
   /**
@@ -23,8 +27,14 @@ export type SkillAuthoringPanelProps = {
   agent: ToolLoopAgent<any, any, any>;
   /** The draft store shared between the agent's tools and the preview pane. */
   draftStore: SkillDraftStore;
-  /** Fired when the user clicks Cancel. The host decides what to close. */
+  /** Fired when the user clicks Cancel or Done. The host decides what to close. */
   onCancel: () => void;
+  /**
+   * When provided, a Save button is shown in the footer once the draft has
+   * name, description, and instructions filled in. The panel drives the status
+   * pill; the host owns the actual write logic.
+   */
+  onSave?: (draft: SkillDraft) => Promise<unknown>;
   /** Optional chips shown on an empty chat. */
   initialSuggestions?: string[];
   /**
@@ -53,12 +63,38 @@ export const SkillAuthoringPanel: React.FC<SkillAuthoringPanelProps> = ({
   agent,
   draftStore,
   onCancel,
+  onSave,
   initialSuggestions,
   header,
   className,
 }) => {
   const status = useStore(draftStore, (s) => s.status);
   const error = useStore(draftStore, (s) => s.error);
+  const isDraftReady = useStore(
+    draftStore,
+    (s) =>
+      s.name.trim().length > 0 &&
+      s.description.trim().length > 0 &&
+      s.instructions.trim().length > 0,
+  );
+
+  const handleSave = useCallback(async () => {
+    if (!onSave) return;
+    const state = draftStore.getState();
+    state.setStatus('saving');
+    try {
+      await onSave({
+        name: state.name,
+        description: state.description,
+        author: state.author,
+        instructions: state.instructions,
+      });
+      draftStore.getState().setStatus('saved');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      draftStore.getState().setStatus('error', message);
+    }
+  }, [onSave, draftStore]);
 
   const toolRenderBehavior = useMemo<ToolRenderBehavior>(
     () => ({
@@ -111,9 +147,21 @@ export const SkillAuthoringPanel: React.FC<SkillAuthoringPanelProps> = ({
             <span className="text-destructive text-xs">{error}</span>
           )}
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
+        <div className="flex items-center gap-2">
+          {onSave && status !== 'saved' && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={!isDraftReady || status === 'saving'}
+              onClick={handleSave}
+            >
+              Save
+            </Button>
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+            {status === 'saved' ? 'Done' : 'Cancel'}
+          </Button>
+        </div>
       </div>
     </div>
   );
