@@ -69,7 +69,7 @@ const ToolRenderBehaviorContext = createContext<ToolRenderBehavior>({});
 
 export const ToolRenderBehaviorProvider = ToolRenderBehaviorContext.Provider;
 
-function useToolRenderBehavior(): ToolRenderBehavior {
+export function useToolRenderBehavior(): ToolRenderBehavior {
   return useContext(ToolRenderBehaviorContext);
 }
 
