@@ -240,6 +240,48 @@ export function findNodeById(
   return undefined;
 }
 
+export function updateLayoutNodeById(
+  root: LayoutNode,
+  nodeId: string,
+  updater: (node: LayoutNode) => LayoutNode,
+): LayoutNode {
+  if (isLayoutNodeKey(root)) {
+    return root === nodeId ? updater(root) : root;
+  }
+
+  if (isLayoutPanelNode(root)) {
+    return root.id === nodeId ? updater(root) : root;
+  }
+
+  if (root.id === nodeId) {
+    return updater(root);
+  }
+
+  if (isLayoutDockNode(root)) {
+    const nextRoot = updateLayoutNodeById(root.root, nodeId, updater);
+    return nextRoot === root.root ? root : {...root, root: nextRoot};
+  }
+
+  if (
+    isLayoutSplitNode(root) ||
+    isLayoutTabsNode(root) ||
+    isLayoutGridNode(root)
+  ) {
+    let changed = false;
+    const children = root.children.map((child) => {
+      const nextChild = updateLayoutNodeById(child, nodeId, updater);
+      if (nextChild !== child) {
+        changed = true;
+      }
+      return nextChild;
+    });
+
+    return changed ? {...root, children} : root;
+  }
+
+  return root;
+}
+
 export function findTabsNodeForPanel(
   root: LayoutNode,
   panelId: string,
