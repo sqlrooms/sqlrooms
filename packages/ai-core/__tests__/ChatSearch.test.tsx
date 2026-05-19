@@ -243,9 +243,9 @@ describe('Chat.Search', () => {
     expect(container.textContent).toContain('1/2');
 
     act(() => {
-      container
-        .querySelector('button[aria-label="Clear chat search"]')
-        ?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}),
+      );
     });
     expect(input.value).toBe('');
     expect(container.textContent).toContain('0/0');
