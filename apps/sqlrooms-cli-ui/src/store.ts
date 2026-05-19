@@ -478,18 +478,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           layout: createLayout({store}),
           createDbProps: {
             duckDb: {
-              loadTableSchemasFilter: (() => {
-                const filter = createDefaultLoadTableSchemasFilter();
-                return (table: QualifiedTableName) => {
-                  return (
-                    filter(table) &&
-                    !(
-                      table.database === get().db.currentDatabase &&
-                      table.schema === 'mosaic'
-                    )
-                  );
-                };
-              })(),
+              loadTableSchemasFilter: (table: QualifiedTableName) => {
+                return (
+                  createDefaultLoadTableSchemasFilter(table) &&
+                  !(
+                    table.database === get().db.currentDatabase &&
+                    table.schema === 'mosaic'
+                  )
+                );
+              },
             },
           },
         })(set, get, store),
