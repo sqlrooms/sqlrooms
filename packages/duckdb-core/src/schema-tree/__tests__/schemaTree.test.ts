@@ -49,6 +49,22 @@ describe('schemaTree', () => {
           2,
         );
       });
+
+      it('should preserve empty schemas (tables: []) as schema nodes with no table children', () => {
+        const schemas: QualifiedSchema[] = [
+          {database: 'db1', schema: 'empty_schema', tables: []},
+        ];
+
+        const result = createDbSchemaTrees(schemas);
+
+        expect(result).toHaveLength(1);
+        expect(result[0]?.object.type).toBe('database');
+        expect(result[0]?.object.name).toBe('db1');
+        expect(result[0]?.children).toHaveLength(1);
+        expect(result[0]?.children?.[0]?.object.type).toBe('schema');
+        expect(result[0]?.children?.[0]?.object.name).toBe('empty_schema');
+        expect(result[0]?.children?.[0]?.children).toHaveLength(0);
+      });
     });
   });
 });
