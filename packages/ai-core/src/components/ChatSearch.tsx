@@ -121,9 +121,14 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     Record<string, ChatSearchBlock[]>
   >({});
 
-  useEffect(() => {
+  // reset active index during render when session or query changes
+  // (avoids cascading effect/setState round-trip)
+  const resetKey = `${currentSessionId}:${query}`;
+  const [lastResetKey, setLastResetKey] = useState(resetKey);
+  if (lastResetKey !== resetKey) {
+    setLastResetKey(resetKey);
     setActiveMatchIndex(0);
-  }, [currentSessionId, query]);
+  }
 
   const blocks = useMemo(() => {
     const allBlocks = Object.values(blockGroups).flat();
@@ -438,16 +443,16 @@ export function createChatSearchRehypePlugin({
       const nodeStart = textOffset;
       const nodeEnd = nodeStart + value.length;
 
-      while (
-        matchIndex < sortedMatches.length &&
-        sortedMatches[matchIndex].end <= nodeStart
-      ) {
+      while (matchIndex < sortedMatches.length) {
+        const m = sortedMatches[matchIndex];
+        if (!m || m.end > nodeStart) break;
         matchIndex += 1;
       }
 
       const nodeMatches: ChatSearchMatch[] = [];
       for (let i = matchIndex; i < sortedMatches.length; i += 1) {
         const match = sortedMatches[i];
+        if (!match) break;
         if (match.start >= nodeEnd) break;
         if (match.end > nodeStart) {
           nodeMatches.push(match);

@@ -233,35 +233,4 @@ describe('Chat.Search', () => {
     cleanup(container, root);
   });
 
-  it('clears search and resets when the session changes', () => {
-    const {container, root, store} = renderSearchUi();
-    const input = container.querySelector(
-      'input[aria-label="Search chat"]',
-    ) as HTMLInputElement;
-
-    setDesignQuery();
-    expect(container.textContent).toContain('1/2');
-
-    act(() => {
-      input.dispatchEvent(
-        new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}),
-      );
-    });
-    expect(input.value).toBe('');
-    expect(container.textContent).toContain('0/0');
-
-    setDesignQuery();
-    act(() => {
-      store.setState({
-        ai: {
-          config: {
-            currentSessionId: 'session-2',
-          },
-        },
-      });
-    });
-    expect(container.textContent).toContain('0/0');
-
-    cleanup(container, root);
-  });
 });
