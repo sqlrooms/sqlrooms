@@ -1,62 +1,40 @@
 import type {DataTable} from '../types';
 import {getDuckDbTypeCategory} from './typeCategories';
-import type {DbSchemaNode} from './types';
+import type {DbSchemaNode, QualifiedSchema} from './types';
 
 /**
- * Group tables by database, schema and create a tree of databases, schemas, tables, and columns.
- * @param tables - The tables to group
- * @param schemas - Optional list of all schemas (including empty ones)
- * @returns An array of database nodes containing schemas, tables and columns
+ * Build a tree of databases → schemas → tables → columns from the grouped schema list.
+ * Empty schemas (`tables: []`) are preserved as leaf-less schema nodes.
+ * @param schemas - Schemas grouped by database, each carrying its tables (may be empty)
+ * @returns An array of database nodes
  */
 export function createDbSchemaTrees(
-  tables: DataTable[],
-  schemas?: Array<{database: string; schema: string}>,
+  schemas: QualifiedSchema[],
 ): DbSchemaNode[] {
   const databaseMap = new Map<string, Map<string, DbSchemaNode[]>>();
 
-  if (schemas) {
-    for (const {database, schema} of schemas) {
-      const db = database ?? 'default';
-      if (!databaseMap.has(db)) {
-        databaseMap.set(db, new Map<string, DbSchemaNode[]>());
-      }
-      const schemaMap = databaseMap.get(db)!;
-      if (!schemaMap.has(schema)) {
-        schemaMap.set(schema, []);
-      }
+  for (const {database, schema, tables} of schemas) {
+    const db = database || 'default';
+    if (!databaseMap.has(db)) {
+      databaseMap.set(db, new Map<string, DbSchemaNode[]>());
     }
-  }
-
-  for (const table of tables) {
-    const database = table.database ?? 'default';
-    const schema = table.schema;
-    const tableName = table.tableName;
-
-    const columnNodes = table.columns.map((column) =>
-      createColumnNode(schema, tableName, column.name, column.type),
-    );
-
-    const tableNode = createTableNode(table, columnNodes);
-
-    if (!databaseMap.has(database)) {
-      databaseMap.set(database, new Map<string, DbSchemaNode[]>());
-    }
-
-    const schemaMap = databaseMap.get(database)!;
-
+    const schemaMap = databaseMap.get(db)!;
     if (!schemaMap.has(schema)) {
       schemaMap.set(schema, []);
     }
-
-    schemaMap.get(schema)?.push(tableNode);
+    const schemaTables = schemaMap.get(schema)!;
+    for (const table of tables) {
+      const columnNodes = table.columns.map((column) =>
+        createColumnNode(schema, table.tableName, column.name, column.type),
+      );
+      schemaTables.push(createTableNode(table, columnNodes));
+    }
   }
 
-  // Create database nodes
   return Array.from(databaseMap.entries()).map(([database, schemaMap]) => {
     const schemaNodes = Array.from(schemaMap.entries()).map(
       ([schema, tables]) => createSchemaTreeNode(schema, tables),
     );
-
     return createDatabaseTreeNode(database, schemaNodes);
   });
 }

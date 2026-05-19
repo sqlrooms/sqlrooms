@@ -1,30 +1,36 @@
 import {createDbSchemaTrees} from '../schemaTree';
-import type {DataTable} from '../../types';
+import type {QualifiedSchema} from '../types';
 
 describe('schemaTree', () => {
   describe('createDbSchemaTrees', () => {
     describe('basic functionality', () => {
       it('should create a tree with databases, schemas, and tables', () => {
-        const tables: DataTable[] = [
+        const schemas: QualifiedSchema[] = [
           {
-            table: {
-              database: 'db1',
-              schema: 'schema1',
-              table: 'table1',
-              toString: () => 'db1.schema1.table1',
-            },
-            isView: false,
             database: 'db1',
             schema: 'schema1',
-            tableName: 'table1',
-            columns: [
-              {name: 'col1', type: 'INTEGER'},
-              {name: 'col2', type: 'VARCHAR'},
+            tables: [
+              {
+                table: {
+                  database: 'db1',
+                  schema: 'schema1',
+                  table: 'table1',
+                  toString: () => 'db1.schema1.table1',
+                },
+                isView: false,
+                database: 'db1',
+                schema: 'schema1',
+                tableName: 'table1',
+                columns: [
+                  {name: 'col1', type: 'INTEGER'},
+                  {name: 'col2', type: 'VARCHAR'},
+                ],
+              },
             ],
           },
         ];
 
-        const result = createDbSchemaTrees(tables);
+        const result = createDbSchemaTrees(schemas);
 
         expect(result).toHaveLength(1);
         expect(result[0]?.object.type).toBe('database');

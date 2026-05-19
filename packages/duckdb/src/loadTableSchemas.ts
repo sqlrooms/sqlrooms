@@ -4,6 +4,7 @@ import {
   escapeVal,
   makeQualifiedTableName,
   QualifiedTableName,
+  QualifiedSchema,
   TableColumn,
 } from '@sqlrooms/duckdb-core';
 
@@ -49,21 +50,59 @@ export async function loadTableSchemas(
 }
 
 /**
- * Load all schemas from the database (including empty schemas).
+ * Load all schemas (including empty ones) grouped with their tables.
  *
- * If provided, `filter` reuses the same `LoadTableSchemasFilterFunction` type as
- * `loadTableSchemas`, but it is invoked with a schema-only qualified name:
- * `database` and `schema` are populated and `table` is an empty string.
- * Filters that rely on a real, non-empty table name may therefore behave
- * differently when used here.
+ * If provided, `filter` is applied at two layers:
+ * - schemas: invoked with a qualified name where `table === ''` (schemas with no
+ *   tables are still surfaced this way)
+ * - tables: invoked with the full qualified name as in `loadTableSchemas`
  *
  * @param connector - The DuckDB connector
- * @param filter - Optional filter function applied to schema entries via a qualified name with `table: ''`; omit or pass `null` for no filter
- * @returns An array of {database, schema} objects
+ * @param filter - Optional visibility filter; omit or pass `null` to include everything
+ * @returns Schemas grouped by database, each carrying their (filtered) tables
  */
-export async function loadAllSchemas(
+export async function loadSchemasWithTables(
   connector: DuckDbConnector,
   filter?: LoadTableSchemasFilterFunction | null,
+): Promise<QualifiedSchema[]> {
+  const [tables, schemaRows] = await Promise.all([
+    loadTableSchemas(connector, {filterFunction: filter ?? undefined}),
+    queryAllSchemas(connector),
+  ]);
+
+  const groups = new Map<string, QualifiedSchema>();
+  const keyOf = (database: string, schema: string) => `${database}\x00${schema}`;
+
+  for (const {database, schema} of schemaRows) {
+    if (filter) {
+      const shouldInclude = filter(
+        makeQualifiedTableName({database, schema, table: ''}),
+      );
+      if (!shouldInclude) continue;
+    }
+    const key = keyOf(database, schema);
+    if (!groups.has(key)) {
+      groups.set(key, {database, schema, tables: []});
+    }
+  }
+
+  for (const table of tables) {
+    const database = table.database || '';
+    const schema = table.schema || '';
+    const key = keyOf(database, schema);
+    let group = groups.get(key);
+    if (!group) {
+      group = {database, schema, tables: []};
+      groups.set(key, group);
+    }
+    group.tables.push(table);
+  }
+
+  return Array.from(groups.values());
+}
+
+async function queryAllSchemas(
+  connector: DuckDbConnector,
 ): Promise<Array<{database: string; schema: string}>> {
   const sql = `
     SELECT DISTINCT
@@ -79,34 +118,17 @@ export async function loadAllSchemas(
     ORDER BY 1, 2
   `;
   const result = await connector.query(sql);
-  const schemas: Array<{database: string; schema: string}> = [];
-
+  const out: Array<{database: string; schema: string}> = [];
   for (let i = 0; i < result.numRows; i++) {
     const database = result.getChild('database')?.get(i);
     const schema = result.getChild('schema')?.get(i);
-
-    if (schema == null) continue;
+    if (schema == null || database == null) continue;
     const schemaStr = String(schema).trim();
-    if (schemaStr === '') continue;
-    if (database == null) continue;
     const databaseStr = String(database).trim();
-    if (databaseStr === '') continue;
-
-    if (filter) {
-      const shouldInclude = filter(
-        makeQualifiedTableName({
-          database: databaseStr,
-          schema: schemaStr,
-          table: '',
-        }),
-      );
-      if (!shouldInclude) continue;
-    }
-
-    schemas.push({database: databaseStr, schema: schemaStr});
+    if (schemaStr === '' || databaseStr === '') continue;
+    out.push({database: databaseStr, schema: schemaStr});
   }
-
-  return schemas;
+  return out;
 }
 
 function isDuckDbPlaceholderViewColumn(
