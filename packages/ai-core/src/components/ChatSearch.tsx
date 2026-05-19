@@ -291,11 +291,13 @@ export function useRegisterChatSearchBlocks(
 type ChatSearchProps = {
   className?: string;
   placeholder?: string;
+  autoFocus?: boolean;
 };
 
 export const ChatSearch: React.FC<ChatSearchProps> = ({
   className,
   placeholder = 'Search chat...',
+  autoFocus = false,
 }) => {
   const {
     query,
@@ -335,7 +337,7 @@ export const ChatSearch: React.FC<ChatSearchProps> = ({
     >
       <SearchIcon className="text-muted-foreground h-4 w-4 shrink-0" />
       <Input
-        autoFocus
+        autoFocus={autoFocus}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={handleKeyDown}
