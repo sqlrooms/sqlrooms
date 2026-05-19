@@ -90,6 +90,12 @@ export function useVgPlotChartRender({
     if (cachedChart) {
       container.replaceChildren(asPlotDomElement(cachedChart.element));
       resizeChartElement(cachedChart.element, containerSize);
+
+      // Restore error state from cached chart
+      if (cachedChart.error) {
+        onError(cachedChart.error);
+      }
+
       return;
     }
 
@@ -125,6 +131,8 @@ export function useVgPlotChartRender({
               mark.queryError = (error: any) => {
                 // Call onError to display error in UI
                 onError(error);
+                // Update cached chart with error
+                nextChart.error = error;
                 // Call original to maintain Mosaic's internal state
                 originalQueryError.call(mark, error);
               };

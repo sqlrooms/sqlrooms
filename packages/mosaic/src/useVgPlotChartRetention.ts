@@ -5,6 +5,7 @@ export type RetainedVgPlotChart = {
   element: object;
   params?: Map<string, Param<any> | Selection>;
   specKey: string;
+  error?: Error;
 };
 
 export type VgPlotChartRetention = {

@@ -277,6 +277,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
+          client.enabled = false;
           options.queryError?.(error);
         };
 
@@ -383,6 +385,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
+          client.enabled = false;
           options.onQueryError?.(error);
           options.queryError?.(error);
         };
