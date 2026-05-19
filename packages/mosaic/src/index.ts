@@ -79,6 +79,7 @@ export {
   type MosaicSliceState,
   type TrackedClient,
 } from './MosaicSlice';
+export {DataPointLimitError, MAX_DATA_POINTS} from './DataPointLimitError';
 export {
   MosaicProfiler,
   type MosaicProfilerCompoundHeaderProps,
