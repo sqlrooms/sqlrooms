@@ -121,13 +121,9 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     Record<string, ChatSearchBlock[]>
   >({});
 
-  const resetKey = `${currentSessionId}:${query}`;
-  const [lastResetKey, setLastResetKey] = useState(resetKey);
-  if (lastResetKey !== resetKey) {
-    // set state during render to reset active index when session or query changes
-    setLastResetKey(resetKey);
+  useEffect(() => {
     setActiveMatchIndex(0);
-  }
+  }, [currentSessionId, query]);
 
   const blocks = useMemo(() => {
     const allBlocks = Object.values(blockGroups).flat();
