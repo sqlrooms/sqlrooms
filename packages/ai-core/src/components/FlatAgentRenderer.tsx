@@ -663,11 +663,7 @@ const OrchestratorLogLineInner: React.FC<{
           reasoning && 'italic',
         )}
       >
-        {searchBlockId ? (
-          <HighlightedChatSearchText blockId={searchBlockId} text={label} />
-        ) : (
-          label
-        )}
+        {label}
       </span>
       {elapsed ? (
         <span className="text-muted-foreground/60 shrink-0 text-[10px]">
