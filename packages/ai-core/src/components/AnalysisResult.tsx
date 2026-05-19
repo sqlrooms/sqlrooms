@@ -124,13 +124,9 @@ function groupPartsIntoSegments(
 }
 
 const ReasoningBox: React.FC<{
-  text: string;
   isRunning: boolean;
-  children?: React.ReactNode;
-}> = ({text, isRunning, children}) => {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-
+  children: React.ReactNode;
+}> = ({isRunning, children}) => {
   return (
     <details className="border-border bg-muted/30 text-muted-foreground group rounded-md border text-xs">
       <summary className="hover:bg-muted/50 flex cursor-pointer items-center justify-between gap-2 px-3 py-2 font-medium select-none">
@@ -143,7 +139,7 @@ const ReasoningBox: React.FC<{
         </span>
       </summary>
       <div className="border-border/70 max-h-64 overflow-auto border-t px-3 py-2 leading-relaxed whitespace-pre-wrap">
-        {children ?? text}
+        {children}
       </div>
     </details>
   );
@@ -371,10 +367,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             }
 
             if (isReasoningPart(part)) {
+              if (!part.text.trim()) return null;
               return (
                 <ReasoningBox
                   key={`reasoning-${index}`}
-                  text={part.text}
                   isRunning={!analysisResult.isCompleted}
                 >
                   <HighlightedChatSearchText
