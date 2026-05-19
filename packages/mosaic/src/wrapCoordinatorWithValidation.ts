@@ -1,5 +1,5 @@
 import {Coordinator} from '@uwdata/mosaic-core';
-import {DataPointLimitError, MAX_DATA_POINTS} from './DataPointLimitError';
+import {DataPointLimitError} from './DataPointLimitError';
 
 /**
  * Extract row count from various query result formats.
@@ -33,7 +33,7 @@ function getQueryResultRowCount(result: unknown): number {
  */
 export function wrapCoordinatorWithValidation(
   coordinator: Coordinator,
-  maxDataPoints: number = MAX_DATA_POINTS,
+  maxDataPoints: number,
 ): void {
   const originalQuery = coordinator.query.bind(coordinator);
 
@@ -41,7 +41,6 @@ export function wrapCoordinatorWithValidation(
     const result = await originalQuery(request, options);
 
     // Validate all queries that return data
-    // Skip validation for small helper queries (scales, legends, etc.)
     const rowCount = getQueryResultRowCount(result);
     if (rowCount > maxDataPoints) {
       throw new DataPointLimitError(rowCount, maxDataPoints);

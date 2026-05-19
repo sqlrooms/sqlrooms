@@ -33,6 +33,8 @@ import {
 } from './tableInterop';
 import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
 
+export const MAX_DATA_POINTS = 10000;
+
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
@@ -129,6 +131,12 @@ export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
   preagg?: MosaicPreAggregateOptions;
+  /**
+   * Maximum number of data points allowed in a chart query result.
+   * Charts that would render more than this limit will show an error instead.
+   * @default 10000
+   */
+  maxDataPoints?: number;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
@@ -172,7 +180,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           }
 
           // Wrap coordinator query to validate result sizes
-          wrapCoordinatorWithValidation(resolvedCoordinator);
+          wrapCoordinatorWithValidation(
+            resolvedCoordinator,
+            props.maxDataPoints ?? MAX_DATA_POINTS,
+          );
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
