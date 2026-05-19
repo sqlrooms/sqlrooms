@@ -23,6 +23,8 @@ import {AnalysisAnswer, processAnalysisAnswerContent} from './AnalysisAnswer';
 import {
   HighlightedChatSearchText,
   markdownToPlainText,
+  normalizeChatSearchQuery,
+  useOptionalChatSearch,
   useRegisterChatSearchBlocks,
   type ChatSearchBlock,
 } from './ChatSearch';
@@ -204,7 +206,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   );
   const searchBlockPrefix = `${currentSessionId}:${analysisResult.id}`;
 
+  const search = useOptionalChatSearch();
+  const hasActiveQuery =
+    !!search && normalizeChatSearchQuery(search.query).length > 0;
+
   const searchBlocks = useMemo<ChatSearchBlock[]>(() => {
+    if (!hasActiveQuery) return [];
     const blocks: ChatSearchBlock[] = [
       {
         id: `${searchBlockPrefix}:prompt`,
@@ -244,6 +251,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, [
     analysisResult.id,
     analysisResult.prompt,
+    hasActiveQuery,
     searchBlockPrefix,
     uiMessageParts,
   ]);
