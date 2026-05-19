@@ -29,8 +29,9 @@ export const MainView: FC = () => {
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
       <Chat>
-        <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Chat.Sessions className="w-full" />
+          <Chat.Search className="min-w-64 flex-1" />
           {currentSessionId && (
             <Dialog
               open={settingsPanelOpen.isOpen}

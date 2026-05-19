@@ -1,29 +1,30 @@
-import type {ComponentProps, FC, PropsWithChildren} from 'react';
-import {AnalysisResultsContainer} from './AnalysisResultsContainer';
+import type { ComponentProps, FC, PropsWithChildren } from 'react';
+import { AnalysisResultsContainer } from './AnalysisResultsContainer';
 import {
   LocalAgentChatRuntimeProvider,
   SessionChatRuntimeProvider,
   useChatRuntime,
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
-import {ContextSelector} from './ContextSelector';
+import { ContextSelector } from './ContextSelector';
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
 } from './FlatAgentRenderer';
-import {InlineApiKeyInput} from './InlineApiKeyInput';
-import {LocalAgentChatComposer} from './LocalAgentChatComposer';
-import {LocalAgentChatMessages} from './LocalAgentChatMessages';
+import { InlineApiKeyInput } from './InlineApiKeyInput';
+import { LocalAgentChatComposer } from './LocalAgentChatComposer';
+import { LocalAgentChatMessages } from './LocalAgentChatMessages';
 import {
   LocalAgentPromptSuggestionItem,
   LocalAgentPromptSuggestionsContainer,
   LocalAgentPromptSuggestionsVisibilityToggle,
 } from './LocalAgentPromptSuggestions';
-import {ModelSelector} from './ModelSelector';
-import {PromptSuggestions} from './PromptSuggestions';
-import {QueryControls} from './QueryControls';
-import {SessionChatManager} from './SessionChatManager';
-import {SessionControls} from './SessionControls';
+import { ModelSelector } from './ModelSelector';
+import { PromptSuggestions } from './PromptSuggestions';
+import { QueryControls } from './QueryControls';
+import { SessionChatManager } from './SessionChatManager';
+import { SessionControls } from './SessionControls';
+import { ChatSearch, ChatSearchProvider } from './ChatSearch';
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;
@@ -40,6 +41,7 @@ type ChatComponent = FC<RootProps> & {
     Item: typeof PromptSuggestions.Item;
     VisibilityToggle: typeof PromptSuggestions.VisibilityToggle;
   };
+  Search: typeof ChatSearch;
   ModelSelector: typeof ModelSelector;
   ContextSelector: typeof ContextSelector;
 };
@@ -50,11 +52,13 @@ const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
  * Local compound component wrapper to reduce the number of @sqlrooms/ai imports
  * and provide a single "root" place to mount SessionChatManager.
  */
-const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
+const Root: FC<RootProps> = ({ children, toolRenderBehavior }) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <SessionChatRuntimeProvider>
-      <SessionChatManager />
-      {children}
+      <ChatSearchProvider>
+        <SessionChatManager />
+        {children}
+      </ChatSearchProvider>
     </SessionChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
 );
@@ -129,8 +133,9 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Composer,
   InlineApiKeyInput: InlineApiKeyInput,
   PromptSuggestions: PromptSuggestionsCompound,
+  Search: ChatSearch,
   ModelSelector: ModelSelector,
   ContextSelector: ContextSelector,
 }) as ChatComponent;
 
-export type {LocalAgentChatRootProps};
+export type { LocalAgentChatRootProps };
