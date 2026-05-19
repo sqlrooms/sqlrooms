@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/deck",
-  "version": "0.29.0-rc.4",
+  "version": "0.29.0-rc.5",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -32,7 +32,6 @@
     "@deck.gl/layers": "^9.3.1",
     "@deck.gl/react": "^9.3.1",
     "@geoarrow/deck.gl-layers": "0.3.2",
-    "@loaders.gl/core": "^4.4.1",
     "@loaders.gl/geoarrow": "^4.4.1",
     "@loaders.gl/gis": "^4.4.1",
     "@loaders.gl/wkt": "^4.4.1",

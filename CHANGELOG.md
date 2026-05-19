@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.4...v0.29.0-rc.5) (2026-05-18)
+
+### Bug Fixes
+
+* ai-core tool auto-resume ([#630](https://github.com/sqlrooms/sqlrooms/issues/630)) ([b323060](https://github.com/sqlrooms/sqlrooms/commit/b32306098d882ce6ee6db2d27a5ab1595aa467da))
+* cli don't serve core server ui ([#633](https://github.com/sqlrooms/sqlrooms/issues/633)) ([9c78504](https://github.com/sqlrooms/sqlrooms/commit/9c785040682c6387e53716b193ca983c8a280772))
+* Collapse reasoning messages in chat ([#632](https://github.com/sqlrooms/sqlrooms/issues/632)) ([c932f1e](https://github.com/sqlrooms/sqlrooms/commit/c932f1e6a4c87934c4ac51723a6c0df11af2a534))
+* Persist split panel resize state ([#631](https://github.com/sqlrooms/sqlrooms/issues/631)) ([f20f4f6](https://github.com/sqlrooms/sqlrooms/commit/f20f4f630ce7b0509c09f2d443070413b4daaaa7))
+
+### Features
+
+* skills subsystem + authoring wizard in @sqlrooms/ai ([#574](https://github.com/sqlrooms/sqlrooms/issues/574)) ([c3d2a9e](https://github.com/sqlrooms/sqlrooms/commit/c3d2a9ef5b44bc6e5536927d64bd1981b2b2aaa8))
+
 # [0.29.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.3...v0.29.0-rc.4) (2026-05-17)
 
 ### Bug Fixes

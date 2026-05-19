@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/ai",
-  "version": "0.29.0-rc.4",
+  "version": "0.29.0-rc.5",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -31,8 +31,13 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "ai": "^6.0.154",
+    "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
-    "zod": "^4.1.8"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.0",
+    "yaml": "^2.6.1",
+    "zod": "^4.1.8",
+    "zustand": "^5.0.8"
   },
   "peerDependencies": {
     "apache-arrow": "17.0.0",
