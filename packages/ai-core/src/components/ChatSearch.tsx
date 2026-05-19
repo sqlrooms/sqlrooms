@@ -429,14 +429,35 @@ export function createChatSearchRehypePlugin({
   return () => (tree: unknown) => {
     if (matches.length === 0) return;
 
+    const sortedMatches = [...matches].sort((a, b) => {
+      if (a.start !== b.start) return a.start - b.start;
+      if (a.end !== b.end) return a.end - b.end;
+      return a.id.localeCompare(b.id);
+    });
+
     let textOffset = 0;
+    let matchIndex = 0;
     const transformTextNode = (node: any): any[] => {
       const value = node.value as string;
       const nodeStart = textOffset;
       const nodeEnd = nodeStart + value.length;
-      const nodeMatches = matches.filter(
-        (match) => match.start < nodeEnd && match.end > nodeStart,
-      );
+
+      while (
+        matchIndex < sortedMatches.length &&
+        sortedMatches[matchIndex].end <= nodeStart
+      ) {
+        matchIndex += 1;
+      }
+
+      const nodeMatches: ChatSearchMatch[] = [];
+      for (let i = matchIndex; i < sortedMatches.length; i += 1) {
+        const match = sortedMatches[i];
+        if (match.start >= nodeEnd) break;
+        if (match.end > nodeStart) {
+          nodeMatches.push(match);
+        }
+      }
+
       textOffset = nodeEnd;
 
       if (nodeMatches.length === 0) return [node];
