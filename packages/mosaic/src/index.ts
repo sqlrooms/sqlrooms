@@ -216,12 +216,21 @@ export {
   createBubbleChartAiTool,
   createBoxPlotAiTool,
   createChartTools,
+  // New panel and dashboard tools
+  createProfilerTool,
+  createTextPanelTool,
+  createListPanelsTool,
+  createRemovePanelTool,
+  ProfilerToolParameters,
+  TextPanelToolParameters,
+  ListPanelsToolParameters,
+  RemovePanelToolParameters,
 } from './chart-types';
 export type {
   ChartSettings,
   ChartType,
-  ChartToolDeps,
   ChartToolExecutionContext,
+  DashboardToolDeps,
   ResolvedChartResources,
   CreateChartParams,
   CreateChartResult,
@@ -231,6 +240,10 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
+  ProfilerToolParams,
+  TextPanelToolParams,
+  ListPanelsToolParams,
+  RemovePanelToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,
@@ -248,3 +261,5 @@ export type {
   ChartTypeDefinition,
 } from './chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+
+// Dashboard agent
