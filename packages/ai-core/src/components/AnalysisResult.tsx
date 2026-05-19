@@ -234,11 +234,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         });
       } else if (isToolPart(part) || isDynamicToolPart(part)) {
         const toolName = getToolName(part);
-        blocks.push({
-          id: `${searchBlockPrefix}:tool:${index}`,
-          resultId: analysisResult.id,
-          text: toolName,
-        });
+        if (toolName) {
+          blocks.push({
+            id: `${searchBlockPrefix}:tool:${index}`,
+            resultId: analysisResult.id,
+            text: toolName,
+          });
+        }
       }
     });
 
