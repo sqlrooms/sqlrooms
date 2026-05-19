@@ -31,6 +31,7 @@ import {
   createMosaicTableFromArrowTable,
   toArrowClientResult,
 } from './tableInterop';
+import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
 
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
@@ -169,6 +170,9 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
+
+          // Wrap coordinator query to validate result sizes
+          wrapCoordinatorWithValidation(resolvedCoordinator);
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
@@ -273,7 +277,6 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
-          client.enabled = false;
           options.queryError?.(error);
         };
 
@@ -380,7 +383,6 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
-          client.enabled = false;
           options.onQueryError?.(error);
           options.queryError?.(error);
         };
