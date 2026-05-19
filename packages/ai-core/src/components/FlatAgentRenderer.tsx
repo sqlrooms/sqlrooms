@@ -15,7 +15,6 @@ import {useElapsedTime} from '../hooks/useElapsedTime';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
-import {HighlightedChatSearchText} from './ChatSearch';
 import {type HoistableToolCall} from './collectHoistableRenderers';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
