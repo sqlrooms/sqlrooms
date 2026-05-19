@@ -1,5 +1,5 @@
 import {Button, cn, Input} from '@sqlrooms/ui';
-import {ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon} from 'lucide-react';
+import {ChevronDownIcon, ChevronUpIcon, SearchIcon} from 'lucide-react';
 import React, {
   createContext,
   useCallback,
@@ -334,6 +334,7 @@ export const ChatSearch: React.FC<ChatSearchProps> = ({
     >
       <SearchIcon className="text-muted-foreground h-4 w-4 shrink-0" />
       <Input
+        autoFocus
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={handleKeyDown}
@@ -370,18 +371,6 @@ export const ChatSearch: React.FC<ChatSearchProps> = ({
         title="Next match"
       >
         <ChevronDownIcon className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={clearSearch}
-        disabled={!hasQuery}
-        aria-label="Clear chat search"
-        title="Clear search"
-      >
-        <XIcon className="h-4 w-4" />
       </Button>
     </div>
   );
