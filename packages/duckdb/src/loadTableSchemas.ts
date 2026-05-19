@@ -4,6 +4,7 @@ import {
   escapeVal,
   makeQualifiedTableName,
   QualifiedTableName,
+  QualifiedSchema,
   TableColumn,
 } from '@sqlrooms/duckdb-core';
 
@@ -46,6 +47,88 @@ export async function loadTableSchemas(
   }
 
   return tables;
+}
+
+/**
+ * Load all schemas (including empty ones) grouped with their tables.
+ *
+ * If provided, `filter` is applied at two layers:
+ * - schemas: invoked with a qualified name where `table === ''` (schemas with no
+ *   tables are still surfaced this way)
+ * - tables: invoked with the full qualified name as in `loadTableSchemas`
+ *
+ * @param connector - The DuckDB connector
+ * @param filter - Optional visibility filter; omit or pass `null` to include everything
+ * @returns Schemas grouped by database, each carrying their (filtered) tables
+ */
+export async function loadSchemasWithTables(
+  connector: DuckDbConnector,
+  filter?: LoadTableSchemasFilterFunction | null,
+): Promise<QualifiedSchema[]> {
+  const [tables, schemaRows] = await Promise.all([
+    loadTableSchemas(connector, {filterFunction: filter ?? undefined}),
+    queryAllSchemas(connector),
+  ]);
+
+  const groups = new Map<string, QualifiedSchema>();
+  const keyOf = (database: string, schema: string) => `${database}\x00${schema}`;
+
+  for (const {database, schema} of schemaRows) {
+    if (filter) {
+      const shouldInclude = filter(
+        makeQualifiedTableName({database, schema, table: ''}),
+      );
+      if (!shouldInclude) continue;
+    }
+    const key = keyOf(database, schema);
+    if (!groups.has(key)) {
+      groups.set(key, {database, schema, tables: []});
+    }
+  }
+
+  for (const table of tables) {
+    const database = table.database || '';
+    const schema = table.schema || '';
+    const key = keyOf(database, schema);
+    let group = groups.get(key);
+    if (!group) {
+      group = {database, schema, tables: []};
+      groups.set(key, group);
+    }
+    group.tables.push(table);
+  }
+
+  return Array.from(groups.values());
+}
+
+async function queryAllSchemas(
+  connector: DuckDbConnector,
+): Promise<Array<{database: string; schema: string}>> {
+  const sql = `
+    SELECT DISTINCT
+      COALESCE(
+        NULLIF(CAST(database_name AS VARCHAR), ''),
+        current_database()
+      ) AS database,
+      CAST(schema_name AS VARCHAR) AS schema
+    FROM duckdb_schemas()
+    WHERE (database_name IS NULL OR database_name != 'system')
+      AND (internal = false OR CAST(schema_name AS VARCHAR) = 'main')
+      AND schema_name IS NOT NULL
+    ORDER BY 1, 2
+  `;
+  const result = await connector.query(sql);
+  const out: Array<{database: string; schema: string}> = [];
+  for (let i = 0; i < result.numRows; i++) {
+    const database = result.getChild('database')?.get(i);
+    const schema = result.getChild('schema')?.get(i);
+    if (schema == null || database == null) continue;
+    const schemaStr = String(schema).trim();
+    const databaseStr = String(database).trim();
+    if (schemaStr === '' || databaseStr === '') continue;
+    out.push({database: databaseStr, schema: schemaStr});
+  }
+  return out;
 }
 
 function isDuckDbPlaceholderViewColumn(
