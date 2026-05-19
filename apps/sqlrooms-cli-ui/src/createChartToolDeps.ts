@@ -4,6 +4,7 @@ import {
   type ChartToolDeps,
   type ChartBuilderColumn,
   type ChartToolExecutionContext,
+  MAX_DATA_POINTS,
 } from '@sqlrooms/mosaic';
 import type {RoomState} from './store';
 import {DataTable} from '@sqlrooms/db';
@@ -125,6 +126,7 @@ export function createChartToolDeps(store: {
   };
 
   return {
+    maxDataPoints: MAX_DATA_POINTS,
     resolveResources: (params, context) => {
       const artifactId = resolveArtifact(
         params.artifactId,
