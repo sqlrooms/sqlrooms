@@ -1,5 +1,5 @@
 import type {Spec} from '@uwdata/mosaic-spec';
-import {HistogramChartSettings} from './schema';
+import {HistogramChartSettings, DEFAULT_BINS_COUNT} from './schema';
 import {SpecGenerationError} from '../errors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
@@ -7,7 +7,7 @@ const FG_COLOR = 'var(--color-chart-1)';
 
 export function createHistogramSpec(
   tableName: string,
-  {field}: HistogramChartSettings,
+  {field, maxBins = DEFAULT_BINS_COUNT}: HistogramChartSettings,
 ): Spec {
   if (!field) {
     throw new SpecGenerationError('Field is required for histogram');
@@ -18,7 +18,7 @@ export function createHistogramSpec(
       {
         mark: 'rectY',
         data: {from: tableName},
-        x: {bin: field, maxbins: 40},
+        x: {bin: field, steps: maxBins},
         y: {count: null},
         fill: BG_COLOR,
         inset: 0.5,
@@ -26,7 +26,7 @@ export function createHistogramSpec(
       {
         mark: 'rectY',
         data: {from: tableName, filterBy: '$brush'},
-        x: {bin: field, maxbins: 40},
+        x: {bin: field, steps: maxBins},
         y: {count: null},
         fill: FG_COLOR,
         inset: 0.5,
