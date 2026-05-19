@@ -48,7 +48,12 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
   const hasChildren = Boolean(children?.length);
   const [isOpen, setIsOpen] = useState(Boolean(treeData.isInitialOpen));
   if (!hasChildren) {
-    return <div className="pl-4">{renderNode(treeData, isOpen)}</div>;
+    return (
+      <div className="flex w-full items-center space-x-1">
+        <div className="shrink-0" style={{width: '18px'}} />
+        {renderNode(treeData, isOpen)}
+      </div>
+    );
   }
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
