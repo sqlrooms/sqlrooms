@@ -33,6 +33,8 @@ Required:
 Optional: xInterval for temporal grouping (${TEMPORAL_INTERVALS.join(', ')}) when x is temporal (${TEMPORAL_COLUMN_TYPES.join(', ')}).
 Multiple yFields create multi-line chart for comparing metrics.
 
+NOTE: Line charts with aggregation (xInterval or aggregate functions) handle large datasets well. Without aggregation, line charts plot individual points and should not be used for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead.
+
 Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use bubble-chart).`,
     inputSchema: LineChartToolParameters,
     execute: async (params, context) => {

@@ -35,7 +35,9 @@ import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
 
 export const MAX_DATA_POINTS = 10000;
 
-export const MosaicSliceConfig = z.object({});
+export const MosaicSliceConfig = z.object({
+  maxDataPoints: z.number().optional(),
+});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
 export type MosaicPreAggregateOptions = {
@@ -123,6 +125,7 @@ export function createDefaultMosaicConfig(
   props?: Partial<MosaicSliceConfig>,
 ): MosaicSliceConfig {
   return {
+    maxDataPoints: MAX_DATA_POINTS,
     ...props,
   } as MosaicSliceConfig;
 }
@@ -140,12 +143,17 @@ export type CreateMosaicSliceProps = {
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
+  const maxDataPoints = props.maxDataPoints ?? MAX_DATA_POINTS;
+
   return createSlice<
     MosaicSliceState,
     BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
   >((set, get, store) => ({
     mosaic: {
-      config: createDefaultMosaicConfig(props?.config),
+      config: createDefaultMosaicConfig({
+        ...props?.config,
+        maxDataPoints,
+      }),
       connection: {status: 'idle'},
       clients: {},
       selections: {},
@@ -180,10 +188,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           }
 
           // Wrap coordinator query to validate result sizes
-          wrapCoordinatorWithValidation(
-            resolvedCoordinator,
-            props.maxDataPoints ?? MAX_DATA_POINTS,
-          );
+          wrapCoordinatorWithValidation(resolvedCoordinator, maxDataPoints);
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {

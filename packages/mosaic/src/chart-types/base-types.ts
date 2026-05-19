@@ -70,6 +70,7 @@ export interface ChartToolDeps {
     title: string;
     config: any;
   };
+  maxDataPoints: number;
 }
 
 export type ChartToolExecutionContext = object & {

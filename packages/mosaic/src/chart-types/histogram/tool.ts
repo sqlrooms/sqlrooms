@@ -21,6 +21,8 @@ Example queries: "distribution of population density", "show elevation distribut
 
 Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUMN_TYPES.join(', ')}).
 
+NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
+
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use bubble-chart), time series trends (use line-chart).`,
     inputSchema: HistogramToolParameters,

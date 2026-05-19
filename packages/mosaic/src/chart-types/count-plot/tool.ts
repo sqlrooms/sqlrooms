@@ -21,6 +21,8 @@ Example queries: "count by land use type", "how many features per administrative
 
 Required: field must be categorical/text (${CATEGORICAL_COLUMN_TYPES.join(', ')}).
 
+NOTE: Count plots aggregate by counting unique values, so they handle large datasets efficiently (no data point limit).
+
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use bubble-chart), time series (use line-chart).`,
     inputSchema: CountPlotToolParameters,

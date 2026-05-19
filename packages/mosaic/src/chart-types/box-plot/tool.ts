@@ -26,6 +26,8 @@ Required:
 - x: categorical/grouping column (${CATEGORICAL_COLUMN_TYPES.join(', ')}) - e.g., region, terrain type, zone classification
 - y: numeric (${NUMERIC_COLUMN_TYPES.join(', ')})
 
+NOTE: Box plots aggregate data by computing quartiles and outliers per group, so they handle large datasets efficiently (no data point limit).
+
 Best for: comparing distributions between groups, finding outliers per category, seeing spread and variance differences.
 
 Do NOT use for: single distribution (use histogram), time trends (use line-chart), simple counts (use count-plot).`,
