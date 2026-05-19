@@ -68,8 +68,8 @@ type ChatSearchContextValue = {
   matches: ChatSearchMatch[];
   activeMatchId?: string;
   activeMatchNumber: number;
-  registerBlocks: (ownerId: string, blocks: ChatSearchBlock[]) => void;
-  unregisterBlocks: (ownerId: string) => void;
+  registerBlocks: (groupId: string, blocks: ChatSearchBlock[]) => void;
+  unregisterBlocks: (groupId: string) => void;
   getMatchesForBlock: (blockId: string) => ChatSearchMatch[];
   goToNextMatch: () => void;
   goToPreviousMatch: () => void;
@@ -169,20 +169,20 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   }, [activeMatchId]);
 
   const registerBlocks = useCallback(
-    (ownerId: string, nextBlocks: ChatSearchBlock[]) => {
+    (groupId: string, nextBlocks: ChatSearchBlock[]) => {
       setBlockGroups((current) => ({
         ...current,
-        [ownerId]: nextBlocks,
+        [groupId]: nextBlocks,
       }));
     },
     [],
   );
 
-  const unregisterBlocks = useCallback((ownerId: string) => {
+  const unregisterBlocks = useCallback((groupId: string) => {
     setBlockGroups((current) => {
-      if (!(ownerId in current)) return current;
+      if (!(groupId in current)) return current;
       const next = {...current};
-      delete next[ownerId];
+      delete next[groupId];
       return next;
     });
   }, []);
@@ -274,7 +274,7 @@ export function useOptionalChatSearch(): ChatSearchContextValue | null {
 }
 
 export function useRegisterChatSearchBlocks(
-  ownerId: string,
+  groupId: string,
   blocks: ChatSearchBlock[],
 ): void {
   const search = useOptionalChatSearch();
@@ -283,9 +283,9 @@ export function useRegisterChatSearchBlocks(
 
   useEffect(() => {
     if (!registerBlocks || !unregisterBlocks) return;
-    registerBlocks(ownerId, blocks);
-    return () => unregisterBlocks(ownerId);
-  }, [blocks, ownerId, registerBlocks, unregisterBlocks]);
+    registerBlocks(groupId, blocks);
+    return () => unregisterBlocks(groupId);
+  }, [blocks, groupId, registerBlocks, unregisterBlocks]);
 }
 
 type ChatSearchProps = {

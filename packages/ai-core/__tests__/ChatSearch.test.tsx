@@ -53,13 +53,13 @@ function createTestStore(sessionId = 'session-1') {
 }
 
 function BlockRegistrar({
-  ownerId = 'owner',
+  groupId = 'group',
   blocks,
 }: {
-  ownerId?: string;
+  groupId?: string;
   blocks: ChatSearchBlock[];
 }) {
-  useRegisterChatSearchBlocks(ownerId, blocks);
+  useRegisterChatSearchBlocks(groupId, blocks);
   return null;
 }
 
