@@ -4,7 +4,7 @@ import {
   escapeVal,
   makeQualifiedTableName,
   QualifiedTableName,
-  QualifiedSchema,
+  SchemaWithTables,
   TableColumn,
 } from '@sqlrooms/duckdb-core';
 
@@ -20,6 +20,19 @@ export type LoadTableSchemasFilter = {
 
 export type LoadTableSchemasOptions = LoadTableSchemasFilter & {
   filterFunction?: LoadTableSchemasFilterFunction | null;
+};
+
+export type SchemaCatalogFilterEntry =
+  | {type: 'database'; database: string}
+  | {type: 'schema'; database: string; schema: string}
+  | {type: 'table'; table: QualifiedTableName};
+
+export type LoadSchemaCatalogFilterFunction = (
+  entry: SchemaCatalogFilterEntry,
+) => boolean;
+
+export type LoadSchemaCatalogOptions = LoadTableSchemasFilter & {
+  filterFunction?: LoadSchemaCatalogFilterFunction | null;
 };
 
 /**
@@ -50,85 +63,56 @@ export async function loadTableSchemas(
 }
 
 /**
- * Load all schemas (including empty ones) grouped with their tables.
- *
- * If provided, `filter` is applied at two layers:
- * - schemas: invoked with a qualified name where `table === ''` (schemas with no
- *   tables are still surfaced this way)
- * - tables: invoked with the full qualified name as in `loadTableSchemas`
- *
- * @param connector - The DuckDB connector
- * @param filter - Optional visibility filter; omit or pass `null` to include everything
- * @returns Schemas grouped by database, each carrying their (filtered) tables
+ * Load the visible DuckDB schema catalog in one metadata query.
+ * Starts from schemas, then left-joins tables, views, and columns so empty
+ * schemas and empty attached database `main` schemas are preserved.
  */
-export async function loadSchemasWithTables(
+export async function loadSchemaCatalog(
   connector: DuckDbConnector,
-  filter?: LoadTableSchemasFilterFunction | null,
-): Promise<QualifiedSchema[]> {
-  const [tables, schemaRows] = await Promise.all([
-    loadTableSchemas(connector, {filterFunction: filter ?? undefined}),
-    queryAllSchemas(connector),
-  ]);
+  options: LoadSchemaCatalogOptions = {},
+): Promise<SchemaWithTables[]> {
+  const {filterFunction, ...filter} = options;
+  const result = await connector.query(buildSchemaCatalogQuery(filter));
+  const groups = new Map<string, SchemaWithTables>();
+  const includedDatabases = new Set<string>();
+  const keyOf = (database: string, schema: string) =>
+    `${database}\x00${schema}`;
 
-  const groups = new Map<string, QualifiedSchema>();
-  const keyOf = (database: string, schema: string) => `${database}\x00${schema}`;
+  for (let i = 0; i < result.numRows; i++) {
+    const database = String(result.getChild('database')?.get(i) ?? '').trim();
+    const schema = String(result.getChild('schema')?.get(i) ?? '').trim();
+    if (!database || !schema) continue;
 
-  for (const {database, schema} of schemaRows) {
-    if (filter) {
-      const shouldInclude = filter(
-        makeQualifiedTableName({database, schema, table: ''}),
-      );
-      if (!shouldInclude) continue;
+    if (!includedDatabases.has(database)) {
+      if (filterFunction?.({type: 'database', database}) === false) {
+        continue;
+      } else {
+        includedDatabases.add(database);
+      }
     }
-    const key = keyOf(database, schema);
-    if (!groups.has(key)) {
-      groups.set(key, {database, schema, tables: []});
-    }
-  }
 
-  for (const table of tables) {
-    const database = table.database || '';
-    const schema = table.schema || '';
+    if (filterFunction?.({type: 'schema', database, schema}) === false) {
+      continue;
+    }
+
     const key = keyOf(database, schema);
     let group = groups.get(key);
+
     if (!group) {
       group = {database, schema, tables: []};
       groups.set(key, group);
     }
-    group.tables.push(table);
+
+    const table = parseSchemaCatalogTableRow(result, i);
+    if (
+      table &&
+      (!filterFunction || filterFunction({type: 'table', table: table.table}))
+    ) {
+      group.tables.push(table);
+    }
   }
 
   return Array.from(groups.values());
-}
-
-async function queryAllSchemas(
-  connector: DuckDbConnector,
-): Promise<Array<{database: string; schema: string}>> {
-  const sql = `
-    SELECT DISTINCT
-      COALESCE(
-        NULLIF(CAST(database_name AS VARCHAR), ''),
-        current_database()
-      ) AS database,
-      CAST(schema_name AS VARCHAR) AS schema
-    FROM duckdb_schemas()
-    WHERE (database_name IS NULL OR database_name != 'system')
-      AND (internal = false OR CAST(schema_name AS VARCHAR) = 'main')
-      AND schema_name IS NOT NULL
-    ORDER BY 1, 2
-  `;
-  const result = await connector.query(sql);
-  const out: Array<{database: string; schema: string}> = [];
-  for (let i = 0; i < result.numRows; i++) {
-    const database = result.getChild('database')?.get(i);
-    const schema = result.getChild('schema')?.get(i);
-    if (schema == null || database == null) continue;
-    const schemaStr = String(schema).trim();
-    const databaseStr = String(database).trim();
-    if (schemaStr === '' || databaseStr === '') continue;
-    out.push({database: databaseStr, schema: schemaStr});
-  }
-  return out;
 }
 
 function isDuckDbPlaceholderViewColumn(
@@ -189,6 +173,15 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
   };
 }
 
+function parseSchemaCatalogTableRow(
+  result: any,
+  index: number,
+): DataTable | null {
+  const rowTable = result.getChild('name')?.get(index);
+  if (rowTable == null) return null;
+  return parseTableSchemaRow(result, index);
+}
+
 function buildMetadataWhereClause(
   nameColumn: string,
   filter: LoadTableSchemasFilter,
@@ -203,6 +196,80 @@ function buildMetadataWhereClause(
   ]
     .filter(Boolean)
     .join(' AND ');
+}
+
+function buildSchemaWhereClause(filter: LoadTableSchemasFilter): string {
+  const {schema, database} = filter;
+  return [
+    database
+      ? `database_name = ${escapeVal(database)}`
+      : `database_name != 'system'`,
+    schema ? `schema_name = ${escapeVal(schema)}` : 'schema_name IS NOT NULL',
+    `(internal = false OR schema_name = 'main')`,
+  ]
+    .filter(Boolean)
+    .join(' AND ');
+}
+
+function buildSchemaCatalogQuery(filter: LoadTableSchemasFilter): string {
+  const schemaWhereClause = buildSchemaWhereClause(filter);
+  const tableWhereClause = buildMetadataWhereClause('table_name', filter);
+  const viewWhereClause = buildMetadataWhereClause('view_name', filter);
+
+  return `WITH schemas AS (
+    FROM duckdb_schemas() SELECT DISTINCT
+      COALESCE(
+        NULLIF(CAST(database_name AS VARCHAR), ''),
+        current_database()
+      ) AS database,
+      CAST(schema_name AS VARCHAR) AS schema
+    WHERE ${schemaWhereClause}
+  ),
+  tables_and_views AS (
+    FROM duckdb_tables() SELECT
+      database_name AS database,
+      schema_name AS schema,
+      table_name AS name,
+      sql,
+      comment,
+      estimated_size,
+      FALSE AS isView
+    WHERE ${tableWhereClause}
+    UNION ALL
+    FROM duckdb_views() SELECT
+      database_name AS database,
+      schema_name AS schema,
+      view_name AS name,
+      sql,
+      comment,
+      NULL AS estimated_size,
+      TRUE AS isView
+    WHERE ${viewWhereClause}
+  ),
+  columns AS (
+    FROM duckdb_columns() SELECT
+      database_name AS database,
+      schema_name AS schema,
+      table_name AS name,
+      list(column_name ORDER BY column_index) AS column_names,
+      list(data_type ORDER BY column_index) AS column_types
+    WHERE ${tableWhereClause}
+    GROUP BY database_name, schema_name, table_name
+  )
+  SELECT
+    tables_and_views.isView AS isView,
+    schemas.database AS database,
+    schemas.schema AS schema,
+    tables_and_views.name AS name,
+    columns.column_names AS column_names,
+    columns.column_types AS column_types,
+    tables_and_views.sql AS sql,
+    tables_and_views.comment AS comment,
+    tables_and_views.estimated_size AS estimated_size
+  FROM schemas
+  LEFT JOIN tables_and_views USING (database, schema)
+  LEFT JOIN columns USING (database, schema, name)
+  ORDER BY schemas.database, schemas.schema, tables_and_views.isView, tables_and_views.name`;
 }
 
 /**

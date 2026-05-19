@@ -1,6 +1,6 @@
 import type {DataTable} from '../types';
 import {getDuckDbTypeCategory} from './typeCategories';
-import type {DbSchemaNode, QualifiedSchema} from './types';
+import type {DbSchemaNode, SchemaWithTables} from './types';
 
 /**
  * Build a tree of databases → schemas → tables → columns from the grouped schema list.
@@ -9,7 +9,7 @@ import type {DbSchemaNode, QualifiedSchema} from './types';
  * @returns An array of database nodes
  */
 export function createDbSchemaTrees(
-  schemas: QualifiedSchema[],
+  schemas: SchemaWithTables[],
 ): DbSchemaNode[] {
   const databaseMap = new Map<string, Map<string, DbSchemaNode[]>>();
 

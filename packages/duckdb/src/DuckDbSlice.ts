@@ -10,7 +10,7 @@ import {
   makeQualifiedTableName,
   QualifiedTableName,
   QueryHandle,
-  QualifiedSchema,
+  SchemaWithTables,
   separateLastStatement,
 } from '@sqlrooms/duckdb-core';
 import {
@@ -28,7 +28,8 @@ import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
-  loadSchemasWithTables,
+  loadSchemaCatalog,
+  LoadSchemaCatalogFilterFunction,
   loadTableSchemas,
   LoadTableSchemasFilter,
   LoadTableSchemasFilterFunction,
@@ -68,6 +69,30 @@ export const defaultLoadTableSchemasFilter: LoadTableSchemasFilterFunction = (
 export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
   return defaultLoadTableSchemasFilter;
 }
+
+/**
+ * Default catalog visibility predicate for the data source panel.
+ * Hides SQLRooms internal objects and DuckDB's temporary database catalog.
+ */
+export const defaultLoadSchemaCatalogFilter: LoadSchemaCatalogFilterFunction = (
+  entry,
+): boolean => {
+  switch (entry.type) {
+    case 'database':
+      return (
+        !entry.database.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+        entry.database !== DUCKDB_TEMP_DATABASE
+      );
+    case 'schema':
+      return (
+        !entry.database.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+        entry.database !== DUCKDB_TEMP_DATABASE &&
+        !entry.schema.startsWith(INTERNAL_SQLROOMS_PREFIX)
+      );
+    case 'table':
+      return defaultLoadTableSchemasFilter(entry.table);
+  }
+};
 
 const DropTableCommandInput = z.object({
   tableName: z.string().describe('Name of the table to drop.'),
@@ -323,10 +348,16 @@ export type DuckDbSliceState = {
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
-   * Optional filter for which tables/schemas/databases appear in the data source panel.
-   * Defaults to {@link createDefaultLoadTableSchemasFilter} (hides `__sqlrooms_*` and the DuckDB `temp` database).
+   * Optional table visibility filter.
+   * Defaults to {@link createDefaultLoadTableSchemasFilter}.
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
+  /**
+   * Optional catalog visibility filter for the data source panel.
+   * Defaults to {@link defaultLoadSchemaCatalogFilter}. When omitted, custom
+   * table filters still apply to table entries while schemas/databases use the default.
+   */
+  loadSchemaCatalogFilter?: LoadSchemaCatalogFilterFunction | null;
 };
 
 /**
@@ -335,9 +366,22 @@ export type CreateDuckDbSliceProps = {
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
   loadTableSchemasFilter = defaultLoadTableSchemasFilter,
+  loadSchemaCatalogFilter,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   let refreshPromise: Promise<DataTable[]> | null = null;
   let pendingSchemaRefresh = false;
+  const effectiveSchemaCatalogFilter =
+    loadSchemaCatalogFilter ??
+    (loadTableSchemasFilter === null
+      ? null
+      : (((entry) => {
+          if (entry.type === 'table') {
+            return loadTableSchemasFilter
+              ? loadTableSchemasFilter(entry.table)
+              : true;
+          }
+          return defaultLoadSchemaCatalogFilter(entry);
+        }) satisfies LoadSchemaCatalogFilterFunction));
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
       /**
@@ -673,7 +717,7 @@ export function createDuckDbSlice({
             );
             refreshPromise = (async () => {
               try {
-                let schemasWithTables: QualifiedSchema[] = [];
+                let schemasWithTables: SchemaWithTables[] = [];
                 do {
                   pendingSchemaRefresh = false;
                   const connector = await get().db.getConnector();
@@ -690,10 +734,9 @@ export function createDuckDbSlice({
                         ?.get(0);
                     }),
                   );
-                  schemasWithTables = await loadSchemasWithTables(
-                    connector,
-                    loadTableSchemasFilter ?? undefined,
-                  );
+                  schemasWithTables = await loadSchemaCatalog(connector, {
+                    filterFunction: effectiveSchemaCatalogFilter,
+                  });
                 } while (pendingSchemaRefresh);
 
                 const newTables = schemasWithTables.flatMap((s) => s.tables);
