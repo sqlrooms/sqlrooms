@@ -58,7 +58,7 @@ export {
   type TableNodeObject,
   type SchemaNodeObject,
   type DatabaseNodeObject,
-  type QualifiedSchema,
+  type SchemaWithTables,
 } from './schema-tree/types';
 
 export {type TableColumn, type DataTable} from './types';
