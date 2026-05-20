@@ -132,6 +132,77 @@ This release introduces explicit panel identity and dock boundaries, replacing t
 - **`draggable` property**: Removed from split and tabs nodes
 - **`pathSegment` property**: Removed from split and tabs nodes
 
+### `@sqlrooms/duckdb-core`, `@sqlrooms/duckdb`: schema catalog loader and `createDbSchemaTrees()` input changed (breaking)
+
+`createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`, and the loader pair changed:
+
+- `loadSchemasWithTables()` → replaced by `loadSchemaCatalog()` (single metadata query, preserves empty schemas and empty `main` schemas of attached databases)
+- Filter API: instead of a single `(QualifiedTableName) => boolean` invoked with a fake `table === ''` for schemas, the new `loadSchemaCatalogFilter` receives a typed `SchemaCatalogFilterEntry` discriminated union (`{type: 'database' | 'schema' | 'table', ...}`)
+- `DuckDbSlice` accepts a new `loadSchemaCatalogFilter` prop alongside `loadTableSchemasFilter`. If you only set `loadTableSchemasFilter`, it is bridged for `entry.type === 'table'` only — schemas/databases fall through to `defaultLoadSchemaCatalogFilter`, so any reserved schemas/databases you previously hid via the table filter must move to a `loadSchemaCatalogFilter`.
+
+#### Signature change
+
+```ts
+// Before
+function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[];
+
+// After
+function createDbSchemaTrees(schemas: SchemaWithTables[]): DbSchemaNode[];
+
+type SchemaWithTables = {
+  database: string;
+  schema: string;
+  tables: DataTable[];
+};
+```
+
+`SchemaWithTables` is exported from both `@sqlrooms/duckdb-core` and `@sqlrooms/duckdb`.
+
+#### Before
+
+```ts
+import {createDbSchemaTrees, type DataTable} from '@sqlrooms/duckdb-core';
+
+const tables: DataTable[] = await loadTableSchemas(connector);
+const trees = createDbSchemaTrees(tables);
+```
+
+#### After
+
+Use the new `loadSchemaCatalog()` from `@sqlrooms/duckdb`, which returns `SchemaWithTables[]` directly:
+
+```ts
+import {createDbSchemaTrees} from '@sqlrooms/duckdb-core';
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const schemas = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
+});
+const trees = createDbSchemaTrees(schemas);
+```
+
+If you only have a flat `DataTable[]`, group it before passing to `createDbSchemaTrees`:
+
+```ts
+const grouped = new Map<string, SchemaWithTables>();
+for (const t of tables) {
+  const key = `${t.database}\x00${t.schema}`;
+  let g = grouped.get(key);
+  if (!g) {
+    g = {database: t.database ?? '', schema: t.schema, tables: []};
+    grouped.set(key, g);
+  }
+  g.tables.push(t);
+}
+const trees = createDbSchemaTrees(Array.from(grouped.values()));
+```
+
 ### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
 
 The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
@@ -482,65 +553,6 @@ return createAgentUIStreamResponse({
 - `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
-
-### `@sqlrooms/duckdb-core`: `createDbSchemaTrees()` input type changed in v0.29.0 (breaking)
-
-`createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`. This lets the tree preserve empty schemas (and empty `main` schemas of attached databases) as leaf-less nodes — previously, schemas with no tables could not appear in the tree because the input was just a list of tables.
-
-#### Signature change
-
-```ts
-// Before
-function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[];
-
-// After
-function createDbSchemaTrees(schemas: SchemaWithTables[]): DbSchemaNode[];
-
-type SchemaWithTables = {
-  database: string;
-  schema: string;
-  tables: DataTable[];
-};
-```
-
-`SchemaWithTables` is exported from both `@sqlrooms/duckdb-core` and `@sqlrooms/duckdb`.
-
-#### Before
-
-```ts
-import {createDbSchemaTrees, type DataTable} from '@sqlrooms/duckdb-core';
-
-const tables: DataTable[] = await loadTableSchemas(connector);
-const trees = createDbSchemaTrees(tables);
-```
-
-#### After
-
-Use the new `loadSchemaCatalog()` from `@sqlrooms/duckdb`, which returns `SchemaWithTables[]` directly:
-
-```ts
-import {createDbSchemaTrees} from '@sqlrooms/duckdb-core';
-import {loadSchemaCatalog} from '@sqlrooms/duckdb';
-
-const schemas = await loadSchemaCatalog(connector);
-const trees = createDbSchemaTrees(schemas);
-```
-
-If you only have a flat `DataTable[]`, group it before passing to `createDbSchemaTrees`:
-
-```ts
-const grouped = new Map<string, SchemaWithTables>();
-for (const t of tables) {
-  const key = `${t.database}\x00${t.schema}`;
-  let g = grouped.get(key);
-  if (!g) {
-    g = {database: t.database ?? '', schema: t.schema, tables: []};
-    grouped.set(key, g);
-  }
-  g.tables.push(t);
-}
-const trees = createDbSchemaTrees(Array.from(grouped.values()));
-```
 
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
