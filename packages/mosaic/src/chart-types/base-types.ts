@@ -55,6 +55,7 @@ export interface ResolvedTable {
  */
 export interface PanelPatch {
   title?: string;
+  source?: ChartBuilderPanelSource;
   config?: any;
 }
 

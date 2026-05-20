@@ -8,7 +8,7 @@ import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from '../../chart-builders/constants';
-import {createOrUpdateChartPanel} from '../chart-tool-helpers';
+import {createOrUpdateChartPanel} from '../tool-helpers';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
   settings: BoxPlotChartSettings.required(),

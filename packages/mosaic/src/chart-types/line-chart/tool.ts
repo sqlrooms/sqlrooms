@@ -9,7 +9,7 @@ import {
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from '../../chart-builders/constants';
-import {createOrUpdateChartPanel} from '../chart-tool-helpers';
+import {createOrUpdateChartPanel} from '../tool-helpers';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;

@@ -5,7 +5,7 @@ import {BaseChartToolParameters} from '../tool-schemas';
 import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {CATEGORICAL_COLUMN_TYPES} from '../../chart-builders/constants';
-import {createOrUpdateChartPanel} from '../chart-tool-helpers';
+import {createOrUpdateChartPanel} from '../tool-helpers';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings.required(),

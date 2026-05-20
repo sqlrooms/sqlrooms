@@ -38,15 +38,17 @@ export interface CreateOrUpdateTextPanelParams {
 /**
  * Universal helper to create or update a chart panel.
  * Handles everything: panel config creation, add/update logic, artifact switching.
+ * When updating, both source and config are updated to allow changing the data source.
  */
 export function createOrUpdateChartPanel(
   deps: DashboardToolDeps,
   params: CreateOrUpdateChartPanelParams,
 ): PanelResult {
   if (params.panelId) {
-    // Update existing panel
+    // Update existing panel - update both source and config
     deps.updatePanel(params.dashboardId, params.panelId, {
       title: params.title,
+      source: {tableName: params.tableName},
       config: params.config,
     });
 
@@ -83,11 +85,11 @@ export function createOrUpdateProfilerPanel(
   params: CreateOrUpdateProfilerPanelParams,
 ): PanelResult {
   if (params.panelId) {
-    // Update existing panel - create config inline with just what we need
+    // Update existing panel - update both source (at panel level) and config
     deps.updatePanel(params.dashboardId, params.panelId, {
       title: params.title,
+      source: {tableName: params.tableName},
       config: {
-        source: {tableName: params.tableName},
         pageSize: params.pageSize,
       },
     });
@@ -97,7 +99,6 @@ export function createOrUpdateProfilerPanel(
       artifactId: params.dashboardId,
       title: params.title,
       config: {
-        source: {tableName: params.tableName},
         pageSize: params.pageSize,
       },
     };

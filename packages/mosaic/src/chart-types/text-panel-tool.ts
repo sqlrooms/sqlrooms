@@ -1,7 +1,7 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from './base-types';
-import {createOrUpdateTextPanel} from './chart-tool-helpers';
+import {createOrUpdateTextPanel} from './tool-helpers';
 
 export const TextPanelToolParameters = z.object({
   artifactId: z

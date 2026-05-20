@@ -47,7 +47,7 @@ export * from './custom-spec/definition';
 export * from './tool-types';
 export * from './tool-schemas';
 export * from './tool-validation';
-export * from './chart-tool-helpers';
+export * from './tool-helpers';
 export * from './histogram/tool';
 export * from './line-chart/tool';
 export * from './count-plot/tool';
