@@ -58,6 +58,7 @@ import {
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
+import {formatDateTimeSimple} from '@sqlrooms/utils';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -711,18 +712,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           let sessionName = name;
           if (!sessionName) {
             // Generate a human-readable date and time for the session name
-            const now = new Date();
-            const formattedDate = now.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            });
-            const formattedTime = now.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: 'numeric',
-              hour12: true,
-            });
-            sessionName = `Session ${formattedDate} at ${formattedTime}`;
+            sessionName = formatDateTimeSimple();
           }
 
           set((state) =>
