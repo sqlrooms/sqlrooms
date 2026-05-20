@@ -4,7 +4,10 @@ import {
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardTextPanelConfig,
 } from '../dashboard/MosaicDashboardSlice';
-import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
+import {
+  MosaicDashboardEntry,
+  ProfilerPanelConfig,
+} from '../dashboard/dashboard-types';
 
 export interface PanelResult {
   panelId: string;
@@ -26,7 +29,7 @@ export interface CreateOrUpdateProfilerPanelParams {
   dashboardId: string;
   tableName: string;
   title: string;
-  pageSize?: number;
+  config: ProfilerPanelConfig;
 }
 
 export interface CreateOrUpdateTextPanelParams {
@@ -127,29 +130,24 @@ export function createOrUpdateProfilerPanel(
     const dashboard = ensureDashboard(deps, params.dashboardId);
     ensurePanel(dashboard, params.dashboardId, params.panelId);
 
-    // Update existing panel - update both source (at panel level) and config
     deps.updatePanel(params.dashboardId, params.panelId, {
-      title: params.title,
+      config: params.config,
       source: {tableName: params.tableName},
-      config: {
-        pageSize: params.pageSize,
-      },
+      title: params.title,
     });
 
     return {
       panelId: params.panelId,
       artifactId: params.dashboardId,
       title: params.title,
-      config: {
-        pageSize: params.pageSize,
-      },
+      config: params.config,
     };
   } else {
     // Create new panel - create full panel config
     const panel = createMosaicDashboardProfilerPanelConfig({
       title: params.title,
       source: {tableName: params.tableName},
-      pageSize: params.pageSize,
+      config: params.config,
     });
 
     const panelId = deps.addPanel(params.dashboardId, panel);

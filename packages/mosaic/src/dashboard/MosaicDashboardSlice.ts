@@ -15,7 +15,6 @@ import {
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
-  LayoutNode as LayoutNodeSchema,
 } from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
@@ -40,6 +39,7 @@ import type {
   MosaicDashboardPanelConfig,
   MosaicDashboardPanelSource,
   ProfilerPanel,
+  ProfilerPanelConfig,
   TextPanel,
 } from './dashboard-types';
 import {
@@ -149,16 +149,14 @@ export function createMosaicDashboardProfilerPanelConfig(
   options: {
     title?: string;
     source?: MosaicDashboardPanelSource;
-    pageSize?: number;
+    config?: ProfilerPanelConfig;
   } = {},
 ): MosaicDashboardPanelConfig {
   return createMosaicDashboardPanelConfig({
     type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
     title: options.title ?? 'Profiler',
     source: options.source,
-    config: {
-      pageSize: options.pageSize ?? 10,
-    },
+    config: options.config,
   });
 }
 

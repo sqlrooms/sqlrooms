@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from './base-types';
 import {createOrUpdateProfilerPanel} from './tool-helpers';
+import {ProfilerPanelConfig} from '../dashboard/dashboard-types';
 
 export const ProfilerToolParameters = z.object({
   artifactId: z
@@ -28,11 +29,7 @@ export const ProfilerToolParameters = z.object({
     .optional()
     .default('Profiler')
     .describe('Title for the profiler panel.'),
-  pageSize: z
-    .number()
-    .optional()
-    .default(10)
-    .describe('Number of rows to show per page.'),
+  config: ProfilerPanelConfig,
   reasoning: z.string().describe('Brief rationale for creating the profiler.'),
 });
 
@@ -61,7 +58,7 @@ To UPDATE an existing profiler: provide the panelId parameter. Otherwise creates
           dashboardId: artifactId,
           tableName,
           title: params.title || 'Profiler',
-          pageSize: params.pageSize,
+          config: params.config,
         });
 
         return {
