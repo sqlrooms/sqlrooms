@@ -8,7 +8,7 @@ import {MosaicDashboardVgPlotChart} from './MosaicDashboardVgPlotChart';
 import {MosaicDashboardComponentChart} from './MosaicDashboardComponentChart';
 import {UseGenerateSpecResult} from './useGenerateSpec';
 import {MosaicReadyConnection} from '../MosaicSlice';
-import {ChartPanelConfig} from '../dashboard/MosaicDashboardSlice';
+import type {ChartPanelConfig} from '../dashboard/dashboard-types';
 import {useChartRetainer} from './useChartRetainer';
 import {useBrushSelectionParams} from './useBrushSelectionParams';
 

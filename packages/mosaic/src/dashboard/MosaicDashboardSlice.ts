@@ -9,13 +9,12 @@ import {
 import {
   type LayoutGridItem,
   type LayoutGridNode,
-  type LayoutNode,
+  LayoutNode,
   type LayoutPanelNode,
   isLayoutGridNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
-  LayoutNode as LayoutNodeSchema,
 } from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
@@ -27,12 +26,12 @@ import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
 import type {ChartTypeDefinition} from '../chart-types/base-types';
+import {ChartConfig} from '../chart-types/chart-config';
 import {type MosaicSliceState} from '../MosaicSlice';
 import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import {ChartConfig} from '../chart-types/chart-config';
 import type {MosaicDashboardAddPanelAction} from './MosaicDashboardAddPanelAction';
 
 /**
@@ -168,16 +167,14 @@ export function createMosaicDashboardChartPanelConfig(
 export function createMosaicDashboardProfilerPanelConfig(
   options: {
     title?: string;
-    pageSize?: number;
+    config?: ProfilerPanelConfig;
   } = {},
 ): ProfilerPanel {
   return {
     id: createId(),
     type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-    title: options.title ?? 'Data Table',
-    config: {
-      pageSize: options.pageSize ?? 10,
-    },
+    title: options.title ?? 'Profiler',
+    config: options.config ?? {},
   };
 }
 
@@ -206,7 +203,7 @@ export const MosaicDashboardEntry = z.object({
   selectedTable: z.string().optional(),
   lastSelectedTable: z.string().optional(),
   panels: z.array(MosaicDashboardPanelConfig).default([]),
-  layout: LayoutNodeSchema.nullable().default(null),
+  layout: LayoutNode.nullable().default(null),
   updatedAt: z.number().default(0),
 });
 export type MosaicDashboardEntry = z.infer<typeof MosaicDashboardEntry>;

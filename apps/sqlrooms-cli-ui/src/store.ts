@@ -26,8 +26,10 @@ import {
 import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
+  defaultLoadSchemaCatalogFilter,
   type DataTable,
   QualifiedTableName,
+  type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
   createCrdtSlice,
@@ -87,6 +89,7 @@ import {
   createDashboardAiTools,
   getDashboardAiInstructions,
 } from './createDashboardAiTools';
+import {dashboardAgentTool} from './createDashboardAgent';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
@@ -487,6 +490,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   );
                 };
               })(),
+              loadSchemaCatalogFilter: (entry: SchemaCatalogFilterEntry) => {
+                if (!defaultLoadSchemaCatalogFilter(entry)) {
+                  return false;
+                }
+                if (
+                  entry.type === 'schema' &&
+                  entry.database === get().db.currentDatabase &&
+                  entry.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                if (
+                  entry.type === 'table' &&
+                  entry.table.database === get().db.currentDatabase &&
+                  entry.table.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                return true;
+              },
             },
           },
         })(set, get, store),
@@ -599,6 +622,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
+              dashboard_agent: dashboardAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
               chart_image_for_markdown: createChartImageForMarkdownTool(store),

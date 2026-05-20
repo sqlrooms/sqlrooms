@@ -8,10 +8,10 @@ import {useCallback, useEffect, useMemo} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanelDragOverlay} from './MosaicDashboardPanelDragOverlay';
 import {MosaicDashboardPanel} from './MosaicDashboardPanel';
+import type {MosaicDashboardPanelConfig} from './dashboard-types';
 import {
   getMosaicDashboardDockId,
   MOSAIC_DASHBOARD_PANEL,
-  type MosaicDashboardPanelConfig,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardInitialState} from './MosaicDashboardInitialState';

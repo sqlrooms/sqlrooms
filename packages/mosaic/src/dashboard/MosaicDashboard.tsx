@@ -9,9 +9,9 @@ import {
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './MosaicDashboardPanels';
+import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
-  MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';

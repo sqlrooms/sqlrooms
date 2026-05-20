@@ -45,6 +45,10 @@ export {
   getMosaicDashboardSelectionName,
   isChartPanelConfig,
   MOSAIC_DASHBOARD_PANEL,
+  MosaicDashboardSliceConfig,
+  useStoreWithMosaicDashboard,
+} from './dashboard/MosaicDashboardSlice';
+export {
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
@@ -52,24 +56,26 @@ export {
   MosaicDashboardEntry,
   MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
-  MosaicDashboardSliceConfig,
-  useStoreWithMosaicDashboard,
-} from './dashboard/MosaicDashboardSlice';
+  MosaicDashboardPanelSource,
+} from './dashboard/dashboard-types';
 export type {
   MosaicDashboardAddPanelAction,
   MosaicDashboardAddPanelActionContext,
   CreateMosaicDashboardSliceProps,
-  MosaicDashboardEntry as MosaicDashboardEntryType,
-  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
   MosaicDashboardPanelRenderer,
   MosaicDashboardPanelRendererProps,
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
+} from './dashboard/MosaicDashboardSlice';
+export type {
+  MosaicDashboardEntry as MosaicDashboardEntryType,
+  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
+  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
   ChartPanelConfig,
   TextPanel,
   TextPanelConfig,
-} from './dashboard/MosaicDashboardSlice';
+} from './dashboard/dashboard-types';
 export {
   createMosaicColorLegendPlot,
   MosaicColorLegend,
@@ -231,12 +237,21 @@ export {
   createBubbleChartAiTool,
   createBoxPlotAiTool,
   createChartTools,
+  // New panel and dashboard tools
+  createProfilerTool,
+  createTextPanelTool,
+  createListPanelsTool,
+  createRemovePanelTool,
+  ProfilerToolParameters,
+  TextPanelToolParameters,
+  ListPanelsToolParameters,
+  RemovePanelToolParameters,
 } from './chart-types';
 export type {
   ChartSettings,
   ChartType,
-  ChartToolDeps,
   ChartToolExecutionContext,
+  DashboardToolDeps,
   ResolvedChartResources,
   CreateChartParams,
   CreateChartResult,
@@ -246,6 +261,10 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
+  ProfilerToolParams,
+  TextPanelToolParams,
+  ListPanelsToolParams,
+  RemovePanelToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,
@@ -263,3 +282,5 @@ export type {
   ChartTypeDefinition,
 } from './chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+
+// Dashboard agent
