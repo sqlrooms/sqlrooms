@@ -483,7 +483,7 @@ return createAgentUIStreamResponse({
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
 
-### `@sqlrooms/duckdb-core`: `createDbSchemaTrees()` input type changed (breaking)
+### `@sqlrooms/duckdb-core`: `createDbSchemaTrees()` input type changed in v0.29.0 (breaking)
 
 `createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`. This lets the tree preserve empty schemas (and empty `main` schemas of attached databases) as leaf-less nodes — previously, schemas with no tables could not appear in the tree because the input was just a list of tables.
 
