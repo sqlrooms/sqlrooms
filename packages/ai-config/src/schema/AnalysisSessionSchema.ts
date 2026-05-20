@@ -40,6 +40,7 @@ export type AiRunContextItem = z.infer<typeof AiRunContextItemSchema>;
 const AiRunContextBaseSchema = z
   .object({
     items: z.array(AiRunContextItemSchema),
+    primaryItemId: z.string().optional(),
     capturedAt: z.number(),
   })
   .passthrough();
@@ -85,6 +86,43 @@ export function getAiRunContextItems(
 
   const legacyResult = AiRunContextItemSchema.safeParse(runContext);
   return legacyResult.success ? [legacyResult.data] : [];
+}
+
+export function getAiRunContextPrimaryItem(
+  runContext: AiRunContext | unknown,
+): AiRunContextItem | undefined {
+  const items = getAiRunContextItems(runContext);
+  if (items.length === 0) return undefined;
+
+  const primaryItemId =
+    runContext &&
+    typeof runContext === 'object' &&
+    'primaryItemId' in runContext &&
+    typeof runContext.primaryItemId === 'string'
+      ? runContext.primaryItemId
+      : undefined;
+
+  return primaryItemId
+    ? items.find((item) => item.id === primaryItemId) ?? items[0]
+    : items[0];
+}
+
+export function setAiRunContextPrimaryItem(
+  runContext: AiRunContext | unknown,
+  item: AiRunContextItem,
+): AiRunContext {
+  const parsedContext = AiRunContextSchema.safeParse(runContext);
+  const baseContext = parsedContext.success ? parsedContext.data : undefined;
+  const existingItems = getAiRunContextItems(runContext).filter(
+    (existing) => !(existing.kind === item.kind && existing.id === item.id),
+  );
+
+  return {
+    ...(baseContext ?? {}),
+    items: [item, ...existingItems],
+    primaryItemId: item.id,
+    capturedAt: baseContext?.capturedAt ?? Date.now(),
+  };
 }
 
 const AnalysisSessionBaseSchema = z.object({

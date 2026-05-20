@@ -5,7 +5,17 @@ import {
 } from '@sqlrooms/mosaic';
 import type {RoomState} from './store';
 import {DataTable} from '@sqlrooms/db';
-import {getAiRunContextItems} from '@sqlrooms/ai';
+import {getAiRunContextItems, getAiRunContextPrimaryItem} from '@sqlrooms/ai';
+
+function getMutableAiRunContext(context?: ChartToolExecutionContext) {
+  return (
+    (
+      context as
+        | (ChartToolExecutionContext & {getAiRunContext?: () => unknown})
+        | undefined
+    )?.getAiRunContext?.() ?? context?.aiRunContext
+  );
+}
 
 // Helper functions
 function getTablesWithColumns(state: RoomState): DataTable[] {
@@ -36,11 +46,12 @@ export function createDashboardToolDeps(store: {
     state: RoomState,
     context?: ChartToolExecutionContext,
   ) => {
-    const contextItems = getAiRunContextItems(context?.aiRunContext);
-    return contextItems.find((item) => {
-      const artifact = state.artifacts.config.artifactsById[item.id];
-      return artifact?.type === 'dashboard';
-    })?.id;
+    const primaryItem = getAiRunContextPrimaryItem(
+      getMutableAiRunContext(context),
+    );
+    if (!primaryItem) return undefined;
+    const artifact = state.artifacts.config.artifactsById[primaryItem.id];
+    return artifact?.type === 'dashboard' ? primaryItem.id : undefined;
   };
 
   const resolveArtifact = (
@@ -49,10 +60,23 @@ export function createDashboardToolDeps(store: {
     context?: ChartToolExecutionContext,
   ): string => {
     const state = store.getState();
+    const runContext = getMutableAiRunContext(context);
+    const hasRunContext = getAiRunContextItems(runContext).length > 0;
+    const runContextDashboardArtifactId = getRunContextDashboardArtifactId(
+      state,
+      context,
+    );
     let targetArtifactId =
       artifactId ??
-      getRunContextDashboardArtifactId(state, context) ??
-      state.dashboard.getCurrentDashboardArtifactId();
+      runContextDashboardArtifactId ??
+      (!hasRunContext
+        ? state.dashboard.getCurrentDashboardArtifactId()
+        : undefined);
+    if (!targetArtifactId && hasRunContext) {
+      throw new Error(
+        'No primary dashboard artifact is available in the current run context. Pass artifactId explicitly or use set_primary_context_artifact first.',
+      );
+    }
     if (!targetArtifactId && createIfMissing) {
       targetArtifactId = state.dashboard.createDashboardArtifact(
         undefined,
