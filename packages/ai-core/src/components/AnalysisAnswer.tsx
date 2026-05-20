@@ -10,6 +10,7 @@ import {
   createChatSearchRehypePlugin,
   useOptionalChatSearch,
 } from './ChatSearch';
+import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
@@ -204,6 +205,15 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     },
     [thinkContents, expandedThink, toggleThinkExpansion],
   );
+  const markdownComponents = useMemo(
+    () =>
+      ({
+        table: markdownTableComponent,
+        'think-block': thinkBlockComponent,
+        ...customMarkdownComponents,
+      }) as Partial<Components>,
+    [customMarkdownComponents, thinkBlockComponent],
+  );
 
   return (
     <MessageContainer
@@ -215,12 +225,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
         <Markdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={rehypePlugins}
-          components={
-            {
-              'think-block': thinkBlockComponent,
-              ...customMarkdownComponents,
-            } as Partial<Components>
-          }
+          components={markdownComponents}
         >
           {processedContent}
         </Markdown>
