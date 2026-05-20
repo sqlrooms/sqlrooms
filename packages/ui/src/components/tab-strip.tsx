@@ -98,6 +98,7 @@ interface TabStripContextValue {
   dndMode: TabStripDndMode;
   dndScopeId: string;
   getTabDragData?: (tab: TabDescriptor) => TabStripDragData | undefined;
+  fontSize?: React.CSSProperties['fontSize'];
 
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
@@ -106,6 +107,7 @@ interface TabStripContextValue {
   onRename?: (tabId: string, newName: string) => void;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  renderSearchItemLabel?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 
   // Internal handlers
@@ -124,6 +126,25 @@ function useTabStripContext() {
     throw new Error('TabStrip subcomponents must be used within a TabStrip');
   }
   return context;
+}
+
+function useOptionalTabStripContext() {
+  return useContext(TabStripContext);
+}
+
+function getFontSizeStyle(fontSize?: React.CSSProperties['fontSize']) {
+  return fontSize === undefined
+    ? undefined
+    : ({fontSize} as React.CSSProperties);
+}
+
+function mergeFontSizeStyle(
+  fontSize: React.CSSProperties['fontSize'] | undefined,
+  style: React.CSSProperties | undefined,
+) {
+  if (fontSize === undefined) return style;
+  if (style === undefined) return {fontSize};
+  return {...style, fontSize: style?.fontSize ?? fontSize};
 }
 
 // -----------------------------------------------------------------------------
@@ -150,6 +171,7 @@ interface SortableTabProps {
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
   dndScopeId: string;
   getTabDragData?: (tab: TabDescriptor) => TabStripDragData | undefined;
+  fontSize?: React.CSSProperties['fontSize'];
 }
 
 const DEFAULT_TAB_DRAG_KIND = 'sqlrooms.tab';
@@ -177,6 +199,7 @@ function SortableTab({
   renderTabLabel,
   dndScopeId,
   getTabDragData,
+  fontSize,
 }: SortableTabProps) {
   const tabDragData = getTabDragData?.(tab);
   const isEditing = editingTabId === tab.id;
@@ -202,6 +225,7 @@ function SortableTab({
   };
 
   const menuContent = renderTabMenu?.(tab);
+  const fontSizeStyle = getFontSizeStyle(fontSize);
 
   return (
     <div
@@ -235,6 +259,7 @@ function SortableTab({
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
               isEditing && 'focus-visible:ring-0',
             )}
+            style={fontSizeStyle}
             onDoubleClick={() => onStartEditing(tab.id)}
           >
             {!isEditing ? (
@@ -246,6 +271,7 @@ function SortableTab({
                 value={tab.name}
                 onChange={(newName) => onInlineRename(tab.id, newName)}
                 className="h-6 min-w-0 flex-1 truncate shadow-none"
+                style={fontSizeStyle}
                 isEditing
                 autoFocus
                 selectOnFocus
@@ -278,7 +304,7 @@ function SortableTab({
                     <EllipsisVerticalIcon className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
+                <DropdownMenuContent align="start" style={fontSizeStyle}>
                   {menuContent}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -331,6 +357,8 @@ function TabStripMenuItem({
   className,
   disabled,
 }: TabStripMenuItemProps) {
+  const {fontSize} = useTabStripContext();
+
   return (
     <DropdownMenuItem
       disabled={disabled}
@@ -342,6 +370,7 @@ function TabStripMenuItem({
         variant === 'destructive' && 'text-destructive focus:text-destructive',
         className,
       )}
+      style={getFontSizeStyle(fontSize)}
     >
       {children}
     </DropdownMenuItem>
@@ -410,6 +439,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     renderTabLabel,
     preventCloseLastTab,
     closeable,
+    fontSize,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
@@ -534,6 +564,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
             renderTabLabel={renderTabLabel}
             dndScopeId={dndScopeId}
             getTabDragData={getTabDragData}
+            fontSize={fontSize}
           />
         ))}
       </ScrollableRow>
@@ -560,6 +591,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
             <TabDragOverlay
               tab={activeDraggedTab}
               renderTabLabel={renderTabLabel}
+              fontSize={fontSize}
             />
           ) : null}
         </DragOverlay>
@@ -636,9 +668,11 @@ function SharedTabStripDndMonitor({
 function TabDragOverlay({
   tab,
   renderTabLabel,
+  fontSize,
 }: {
   tab: TabDescriptor;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
+  fontSize?: React.CSSProperties['fontSize'];
 }) {
   return (
     <div
@@ -647,6 +681,7 @@ function TabDragOverlay({
         'cursor-grabbing items-center justify-center gap-1 overflow-hidden rounded-md border px-6 py-1',
         'text-sm shadow-lg',
       )}
+      style={getFontSizeStyle(fontSize)}
     >
       <div className="truncate text-center">
         {renderTabLabel ? renderTabLabel(tab) : tab.name}
@@ -704,9 +739,12 @@ function TabStripSearchDropdown({
     onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
+    renderSearchItemLabel,
     getLastOpenedAt,
     handleClose,
+    fontSize,
   } = useTabStripContext();
+  const fontSizeStyle = getFontSizeStyle(fontSize);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -788,6 +826,7 @@ function TabStripSearchDropdown({
         aria-label="Browse tabs"
         size="icon"
         className={cn(...TAB_STRIP_BUTTON_CLASSNAMES, triggerClassName)}
+        style={fontSizeStyle}
       >
         {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
       </Button>
@@ -814,6 +853,7 @@ function TabStripSearchDropdown({
           'flex max-h-[400px] max-w-[240px] flex-col overflow-x-hidden',
           className,
         )}
+        style={fontSizeStyle}
       >
         <div className="flex shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
@@ -835,6 +875,7 @@ function TabStripSearchDropdown({
             }}
             onKeyUp={(event) => event.stopPropagation()}
             className="border-none text-xs shadow-none focus-visible:ring-0"
+            style={fontSizeStyle}
             placeholder="Search..."
             aria-label="Search"
             autoFocus={autoFocus}
@@ -849,6 +890,7 @@ function TabStripSearchDropdown({
                 tabs={filteredTabs}
                 emptyMessage={searchEmptyMessage}
                 onTabClick={handleTabClick}
+                renderLabel={renderSearchItemLabel}
                 renderActions={renderSearchItemActions}
               />
             ) : (
@@ -856,17 +898,22 @@ function TabStripSearchDropdown({
                 <DropdownTabItems
                   tabs={filteredOpenTabs}
                   onTabClick={handleTabClick}
+                  renderLabel={renderSearchItemLabel}
                   renderActions={renderOpenTabActions}
                 />
                 {filteredClosedTabs.length > 0 && (
                   <>
                     {filteredOpenTabs.length > 0 && <DropdownMenuSeparator />}
-                    <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                    <DropdownMenuLabel
+                      className="text-muted-foreground py-1 text-xs font-medium"
+                      style={fontSizeStyle}
+                    >
                       {closedTabsLabel}
                     </DropdownMenuLabel>
                     <DropdownTabItems
                       tabs={filteredClosedTabs}
                       onTabClick={handleTabClick}
+                      renderLabel={renderSearchItemLabel}
                       renderActions={renderSearchItemActions}
                       getItemClassName={() => 'text-muted-foreground'}
                     />
@@ -881,17 +928,22 @@ function TabStripSearchDropdown({
                   <DropdownTabItems
                     tabs={openTabsList}
                     onTabClick={handleTabClick}
+                    renderLabel={renderSearchItemLabel}
                     renderActions={renderOpenTabActions}
                   />
                   {closedTabsList.length > 0 && (
                     <>
                       {openTabsList.length > 0 && <DropdownMenuSeparator />}
-                      <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                      <DropdownMenuLabel
+                        className="text-muted-foreground py-1 text-xs font-medium"
+                        style={fontSizeStyle}
+                      >
                         {closedTabsLabel}
                       </DropdownMenuLabel>
                       <DropdownTabItems
                         tabs={closedTabsList}
                         onTabClick={handleTabClick}
+                        renderLabel={renderSearchItemLabel}
                         renderActions={renderSearchItemActions}
                         getItemClassName={() => 'text-muted-foreground'}
                       />
@@ -903,6 +955,7 @@ function TabStripSearchDropdown({
                   tabs={[]}
                   emptyMessage={emptyMessage}
                   onTabClick={handleTabClick}
+                  renderLabel={renderSearchItemLabel}
                   renderActions={renderSearchItemActions}
                 />
               )}
@@ -918,6 +971,7 @@ interface DropdownTabItemsProps {
   tabs: TabDescriptor[];
   emptyMessage?: React.ReactNode;
   onTabClick?: (tabId: string) => void;
+  renderLabel?: (tab: TabDescriptor) => React.ReactNode;
   renderActions?: (tab: TabDescriptor) => React.ReactNode;
   getItemClassName?: (tab: TabDescriptor) => string | undefined;
 }
@@ -926,13 +980,20 @@ function DropdownTabItems({
   tabs,
   emptyMessage,
   onTabClick,
+  renderLabel,
   renderActions,
   getItemClassName,
 }: DropdownTabItemsProps) {
+  const {fontSize} = useTabStripContext();
+  const fontSizeStyle = getFontSizeStyle(fontSize);
+
   if (tabs.length === 0) {
     if (!emptyMessage) return null;
     return (
-      <DropdownMenuLabel className="items-center justify-center text-xs">
+      <DropdownMenuLabel
+        className="items-center justify-center text-xs"
+        style={fontSizeStyle}
+      >
         {emptyMessage}
       </DropdownMenuLabel>
     );
@@ -948,8 +1009,11 @@ function DropdownTabItems({
             'flex h-7 cursor-pointer items-center justify-between truncate',
             getItemClassName?.(tab),
           )}
+          style={fontSizeStyle}
         >
-          <span className="truncate pl-1 text-xs">{tab.name}</span>
+          <div className="min-w-0 truncate pl-1 text-xs" style={fontSizeStyle}>
+            {renderLabel ? renderLabel(tab) : tab.name}
+          </div>
           {renderActions && (
             <div className="flex items-center gap-2">{renderActions(tab)}</div>
           )}
@@ -963,12 +1027,15 @@ function DropdownTabItems({
  * A general-purpose button for the tab strip.
  */
 const TabStripButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({className, ...props}, ref) => {
+  function TabStripButtonComponent({className, style, ...props}, ref) {
+    const context = useOptionalTabStripContext();
+
     return (
       <Button
         ref={ref}
         size="icon"
         variant="ghost"
+        style={mergeFontSizeStyle(context?.fontSize, style)}
         className={cn(
           ...TAB_STRIP_BUTTON_CLASSNAMES,
           'h-full shrink-0',
@@ -989,7 +1056,7 @@ type TabStripNewButtonProps = ButtonProps & {
  * Renders a button to create a new tab.
  */
 function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
-  const {onCreate} = useTabStripContext();
+  const {onCreate, fontSize} = useTabStripContext();
 
   if (!onCreate) {
     return null;
@@ -998,6 +1065,7 @@ function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
   const button = (
     <TabStripButton
       {...props}
+      style={mergeFontSizeStyle(fontSize, props.style)}
       aria-label={props['aria-label'] || 'Create new tab'}
       onClick={(e) => {
         onCreate();
@@ -1054,8 +1122,12 @@ export interface TabStripProps {
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  /** Render function for custom search dropdown item labels. */
+  renderSearchItemLabel?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for custom tab content. Receives the tab and returns the content to display. */
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
+  /** Font size applied to tab labels, inline editing, and TabStrip subcomponents. */
+  fontSize?: React.CSSProperties['fontSize'];
   /** Whether this tab strip owns its dnd context or participates in a shared parent context. */
   dndMode?: TabStripDndMode;
   /** Unique scope for shared dnd tab ids. Defaults to a generated component id. */
@@ -1101,7 +1173,9 @@ function TabStripRoot({
   onRename,
   renderTabMenu,
   renderSearchItemActions,
+  renderSearchItemLabel,
   renderTabLabel,
+  fontSize,
   dndMode = 'internal',
   dndScopeId,
   getTabDragData,
@@ -1283,12 +1357,14 @@ function TabStripRoot({
     dndMode,
     dndScopeId: actualDndScopeId,
     getTabDragData,
+    fontSize,
     onOpenTabsChange,
     onSelect,
     onCreate,
     onRename,
     renderTabMenu,
     renderSearchItemActions,
+    renderSearchItemLabel,
     renderTabLabel,
     setSearch,
     handleStartEditing,
@@ -1307,6 +1383,7 @@ function TabStripRoot({
       onValueChange={handleValueChange}
       activationMode="manual"
       className={cn('bg-muted w-full min-w-0', className)}
+      style={getFontSizeStyle(fontSize)}
     >
       <TabStripContext.Provider value={contextValue}>
         <TabsList
