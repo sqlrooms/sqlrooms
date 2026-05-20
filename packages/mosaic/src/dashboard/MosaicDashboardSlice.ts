@@ -41,6 +41,7 @@ import type {
   ProfilerPanel,
   ProfilerPanelConfig,
   TextPanel,
+  TextPanelConfig,
 } from './dashboard-types';
 import {
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
@@ -163,19 +164,16 @@ export function createMosaicDashboardProfilerPanelConfig(
 export function createMosaicDashboardTextPanelConfig(
   options: {
     title?: string;
-    content?: string;
     source?: MosaicDashboardPanelSource;
+    config?: TextPanelConfig;
   } = {},
 ): MosaicDashboardPanelConfig {
-  return {
-    id: createId(),
+  return createMosaicDashboardPanelConfig({
     type: MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
     title: options.title ?? 'Text',
     source: options.source,
-    config: {
-      content: options.content ?? '',
-    },
-  };
+    config: options.config,
+  });
 }
 
 export const MosaicDashboardSliceConfig = z.object({

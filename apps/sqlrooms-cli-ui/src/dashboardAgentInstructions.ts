@@ -51,17 +51,31 @@ When user asks to discover insights:
 
 **CRITICAL:**
 - Create exactly ONE text panel with insights summary (can be first, last, or in between)
-- Keep insights concise - focus on the most important 3-5 findings
+- Insights should be concise but USEFUL - each bullet should provide actionable or interesting information
+- Include specific numbers, percentages, and comparisons that tell the story
+- Use query tool to discover actual patterns, don't make vague statements
+- Focus on 3-5 most important findings that answer "what's interesting about this data?"
 - Do NOT create additional text panels unless absolutely necessary
+
+**Good insight examples:**
+- "Peak activity between 4-5 magnitude (62% of events)" ← specific, actionable
+- "Strong correlation (0.73) between depth and magnitude suggests tectonic pattern" ← specific with interpretation
+- "California accounts for 3,234/5,234 events (62%), followed by Japan (18%)" ← specific comparison
+
+**Bad insight examples:**
+- "Dataset has data" ← useless
+- "Various magnitudes observed" ← vague
+- "Interesting patterns found" ← not specific
 
 Example workflow for "find insights in earthquakes dataset":
 - query: SELECT COUNT(*), MIN(magnitude), MAX(magnitude) FROM earthquakes
-- query: SELECT region, COUNT(*) FROM earthquakes GROUP BY region LIMIT 10
+- query: SELECT region, COUNT(*) as cnt FROM earthquakes GROUP BY region ORDER BY cnt DESC LIMIT 10
 - query: SELECT CORR(magnitude, depth) FROM earthquakes
+- query: SELECT COUNT(*) as cnt FROM earthquakes WHERE magnitude BETWEEN 4 AND 5
 - create_dashboard_histogram: magnitude distribution
 - create_dashboard_bubble_chart: magnitude vs depth
 - create_dashboard_count_plot: by region
-- **create_dashboard_text_panel (ONLY text panel):** "## Key Insights\n\n- 5,234 earthquakes (magnitude 3.2-8.1)\n- Strong magnitude/depth correlation (0.73)\n- California and Japan: 60% of events\n- Peak activity at 4-5 magnitude range"
+- **create_dashboard_text_panel (ONLY text panel):** "## Key Insights\n\n- Dataset: 5,234 earthquakes (magnitude 3.2-8.1, avg 4.6)\n- Regional concentration: California 3,234 events (62%), Japan 942 (18%)\n- Strong depth-magnitude correlation (0.73) suggests tectonic plate activity pattern\n- Activity peak: 3,245 events (62%) between magnitude 4-5\n- Notable: 12 major events >7.0 magnitude, all in Pacific Ring of Fire"
 
 ### Update Requests
 To update existing panels:
@@ -101,7 +115,8 @@ Stop after:
 ## Best Practices
 
 - **ONE text panel for exploratory requests:** Always create exactly ONE text panel with insights summary when exploring data. It can be created at any point in the workflow.
-- **Keep insights concise:** Limit text panel to 3-5 key bullet points. Focus on the most important findings only.
+- **Make insights useful, not just concise:** Each bullet should include specific numbers, percentages, or patterns discovered through queries. Avoid vague statements.
+- **Use queries to find real insights:** Run queries to discover actual patterns (correlations, distributions, outliers, top values). Don't make assumptions.
 - **No additional text panels:** Do NOT create multiple text panels. All insights go in the single summary panel.
 - **Avoid unaggregated charts for large datasets:** For datasets >10k rows, DO NOT use bubble charts or line charts without aggregations. Use aggregated alternatives instead:
   - For scatter/bubble plots: use heatmap or binned aggregations
@@ -116,12 +131,17 @@ Stop after:
 
 **Direct request:** "Created histogram of magnitude with 20 bins."
 
-**Exploratory request:** "I analyzed the earthquakes dataset and created a concise dashboard.
+**Exploratory request:** "I analyzed the earthquakes dataset and created a dashboard with useful insights.
 
 Created dashboard with:
 1. Histogram showing magnitude distribution
 2. Bubble chart showing magnitude vs depth correlation
 3. Count plot by region showing top 10 locations
-4. Text panel with key insights - 5,234 earthquakes, magnitude 3.2-8.1, strong correlation (0.73) between magnitude/depth, 60% in California/Japan
+4. Text panel with key insights including:
+   - Dataset summary: 5,234 earthquakes, magnitude 3.2-8.1 (avg 4.6)
+   - Regional concentration: California 62%, Japan 18%
+   - Strong depth-magnitude correlation (0.73) suggesting tectonic patterns
+   - Activity peak: 62% of events between magnitude 4-5
+   - 12 major events >7.0, all in Pacific Ring of Fire
 
-The single concise text panel summarizes the key findings."`;
+The text panel provides specific, data-driven insights discovered through queries."`;

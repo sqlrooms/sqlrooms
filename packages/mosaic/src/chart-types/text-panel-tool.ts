@@ -2,6 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from './base-types';
 import {createOrUpdateTextPanel} from './tool-helpers';
+import {TextPanelConfig} from '../dashboard/dashboard-types';
 
 export const TextPanelToolParameters = z.object({
   artifactId: z
@@ -24,9 +25,7 @@ export const TextPanelToolParameters = z.object({
     .optional()
     .default('Text')
     .describe('Title for the text panel.'),
-  content: z
-    .string()
-    .describe('Markdown content to display in the text panel.'),
+  config: TextPanelConfig,
   reasoning: z
     .string()
     .describe('Brief rationale for creating the text panel.'),
@@ -57,7 +56,7 @@ To UPDATE an existing text panel: provide the panelId parameter. Otherwise creat
           panelId: params.panelId,
           dashboardId: artifactId,
           title: params.title || 'Text',
-          content: params.content,
+          config: params.config,
         });
 
         return {

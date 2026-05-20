@@ -7,13 +7,15 @@ import {
 import {
   MosaicDashboardEntry,
   ProfilerPanelConfig,
+  TextPanelConfig,
 } from '../dashboard/dashboard-types';
+import type {ChartConfig} from './chart-config';
 
 export interface PanelResult {
   panelId: string;
   artifactId: string;
   title: string;
-  config: any;
+  config: ChartConfig | ProfilerPanelConfig | TextPanelConfig;
 }
 
 export interface CreateOrUpdateChartPanelParams {
@@ -21,7 +23,7 @@ export interface CreateOrUpdateChartPanelParams {
   dashboardId: string;
   tableName: string;
   title: string;
-  config: any;
+  config: ChartConfig;
 }
 
 export interface CreateOrUpdateProfilerPanelParams {
@@ -36,7 +38,7 @@ export interface CreateOrUpdateTextPanelParams {
   panelId?: string;
   dashboardId: string;
   title: string;
-  content: string;
+  config: TextPanelConfig;
 }
 
 /**
@@ -174,27 +176,23 @@ export function createOrUpdateTextPanel(
     const dashboard = ensureDashboard(deps, params.dashboardId);
     ensurePanel(dashboard, params.dashboardId, params.panelId);
 
-    // Update existing panel - create config inline with just what we need
+    // Update existing panel
     deps.updatePanel(params.dashboardId, params.panelId, {
       title: params.title,
-      config: {
-        content: params.content,
-      },
+      config: params.config,
     });
 
     return {
       panelId: params.panelId,
       artifactId: params.dashboardId,
       title: params.title,
-      config: {
-        content: params.content,
-      },
+      config: params.config,
     };
   } else {
     // Create new panel - create full panel config
     const panel = createMosaicDashboardTextPanelConfig({
       title: params.title,
-      content: params.content,
+      config: params.config,
     });
 
     const panelId = deps.addPanel(params.dashboardId, panel);
