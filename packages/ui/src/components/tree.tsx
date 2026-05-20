@@ -1,11 +1,11 @@
 'use client';
 
-import {Collapsible, CollapsibleContent} from '@radix-ui/react-collapsible';
-import React, {useState} from 'react';
+import { Collapsible, CollapsibleContent } from '@radix-ui/react-collapsible';
+import React, { useState } from 'react';
 
-import {ChevronRightIcon} from 'lucide-react';
-import {cn} from '../lib/utils';
-import {CollapsibleTrigger} from './collapsible';
+import { ChevronRightIcon } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { CollapsibleTrigger } from './collapsible';
 
 export type TreeNodeData<T> = {
   key: string;
@@ -26,7 +26,7 @@ type TreeProps<T> = {
  * @param renderNode - A function that renders a tree node.
  */
 export function Tree<T>(props: TreeProps<T>): React.ReactElement {
-  const {className, treeData, renderNode} = props;
+  const { className, treeData, renderNode } = props;
   return (
     <div className={cn('flex flex-col', className)}>
       <TreeNode<T> treeData={treeData} renderNode={renderNode} />
@@ -43,12 +43,17 @@ type TreeNodeProps<T> = {
  * Component that renders a tree node.
  */
 function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
-  const {treeData, renderNode} = props;
-  const {children} = treeData;
+  const { treeData, renderNode } = props;
+  const { children } = treeData;
   const hasChildren = Boolean(children?.length);
   const [isOpen, setIsOpen] = useState(Boolean(treeData.isInitialOpen));
   if (!hasChildren) {
-    return <div className="pl-4">{renderNode(treeData, isOpen)}</div>;
+    return (
+      <div className="flex w-full items-center space-x-1">
+        <div className="shrink-0" style={{ width: '18px' }} />
+        {renderNode(treeData, isOpen)}
+      </div>
+    );
   }
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -66,12 +71,12 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
       <CollapsibleContent className="pl-4">
         {isOpen
           ? children?.map((child) => (
-              <TreeNode<T>
-                key={child.key}
-                treeData={child}
-                renderNode={renderNode}
-              />
-            ))
+            <TreeNode<T>
+              key={child.key}
+              treeData={child}
+              renderNode={renderNode}
+            />
+          ))
           : null}
       </CollapsibleContent>
     </Collapsible>
