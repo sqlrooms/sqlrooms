@@ -82,6 +82,27 @@ def test_api_upload(server, tmp_path):
     assert Path(data["path"]).read_bytes() == file_content
 
 
+def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):
+    app = server._build_app()
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    client = TestClient(app)
+    with open(source, "rb") as f:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("large.bin", f, "application/octet-stream")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    uploaded = Path(data["path"])
+    assert uploaded.name == "large.bin"
+    assert uploaded.stat().st_size == source_size
+
+
 @pytest.mark.asyncio
 async def test_write_upload_to_path_streams_files_larger_than_previous_cap(tmp_path):
     source = tmp_path / "large.bin"
