@@ -43,6 +43,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       preventCloseLastTab={false}
       dndMode="shared"
       dndScopeId="cli-artifact-tabs"
+      fontSize={13}
       renderTabMenu={(tab) => (
         <>
           <ArtifactTabs.MenuItem disabled>
