@@ -41,6 +41,78 @@ function downloadBlob(blob: Blob, filename: string) {
   document.body.removeChild(a);
 }
 
+/**
+ * Collect all external stylesheet rules that could affect SVG rendering
+ * (e.g. injected <style> for interactive edit modes) and inline them
+ * into the SVG so the exported image is self-contained.
+ */
+function inlineExternalStyles(svgEl: SVGSVGElement): void {
+  const sheets = document.styleSheets;
+  let cssText = '';
+  for (let i = 0; i < sheets.length; i++) {
+    try {
+      const rules = sheets[i]?.cssRules;
+      if (!rules) continue;
+      for (let j = 0; j < rules.length; j++) {
+        cssText += rules[j]!.cssText + '\n';
+      }
+    } catch {
+      // Cross-origin stylesheets will throw — skip them
+    }
+  }
+  if (!cssText) return;
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = cssText;
+  svgEl.insertBefore(styleEl, svgEl.firstChild);
+}
+
+/**
+ * Render an SVG element to a canvas at the given scale, capturing all
+ * DOM-level modifications (transform attributes, display:none, etc.)
+ * that Vega's view.toCanvas() would miss.
+ */
+async function svgToCanvas(
+  svgEl: SVGSVGElement,
+  scale: number,
+): Promise<HTMLCanvasElement> {
+  const clone = svgEl.cloneNode(true) as SVGSVGElement;
+  inlineExternalStyles(clone);
+
+  const width = svgEl.clientWidth || svgEl.getBoundingClientRect().width;
+  const height = svgEl.clientHeight || svgEl.getBoundingClientRect().height;
+
+  clone.setAttribute('width', String(width));
+  clone.setAttribute('height', String(height));
+  if (!clone.getAttribute('viewBox')) {
+    clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  }
+
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(clone);
+  const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  const img = new window.Image();
+  img.width = width * scale;
+  img.height = height * scale;
+
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = url;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
+  ctx.drawImage(img, 0, 0, width, height);
+
+  URL.revokeObjectURL(url);
+  return canvas;
+}
+
 function escapeCsvValue(value: unknown): string {
   if (value == null) return '';
   const str = String(value);
@@ -94,10 +166,21 @@ export const VegaExportAction: React.FC<VegaExportActionProps> = ({
     if (!embed?.view) return;
     setIsExporting(true);
     try {
-      const canvas = await embed.view.toCanvas(pngScale);
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, 'image/png'),
-      );
+      const container = embed.view.container() as HTMLElement | undefined;
+      const svgEl = container?.querySelector('svg') as SVGSVGElement | null;
+
+      let blob: Blob | null = null;
+      if (svgEl) {
+        const canvas = await svgToCanvas(svgEl, pngScale);
+        blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/png'),
+        );
+      } else {
+        const canvas = await embed.view.toCanvas(pngScale);
+        blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/png'),
+        );
+      }
       if (blob) {
         downloadBlob(blob, getFilename?.('png') ?? `chart-${Date.now()}.png`);
       }
@@ -110,8 +193,25 @@ export const VegaExportAction: React.FC<VegaExportActionProps> = ({
     if (!embed?.view) return;
     setIsExporting(true);
     try {
-      const svg = await embed.view.toSVG();
-      const blob = new Blob([svg], {type: 'image/svg+xml'});
+      const container = embed.view.container() as HTMLElement | undefined;
+      const svgEl = container?.querySelector('svg') as SVGSVGElement | null;
+
+      let svgString: string;
+      if (svgEl) {
+        const clone = svgEl.cloneNode(true) as SVGSVGElement;
+        inlineExternalStyles(clone);
+        const width = svgEl.clientWidth || svgEl.getBoundingClientRect().width;
+        const height = svgEl.clientHeight || svgEl.getBoundingClientRect().height;
+        clone.setAttribute('width', String(width));
+        clone.setAttribute('height', String(height));
+        if (!clone.getAttribute('viewBox')) {
+          clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        }
+        svgString = new XMLSerializer().serializeToString(clone);
+      } else {
+        svgString = await embed.view.toSVG();
+      }
+      const blob = new Blob([svgString], {type: 'image/svg+xml'});
       downloadBlob(blob, getFilename?.('svg') ?? `chart-${Date.now()}.svg`);
     } finally {
       setIsExporting(false);
