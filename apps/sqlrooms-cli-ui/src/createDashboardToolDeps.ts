@@ -17,6 +17,16 @@ function getMutableAiRunContext(context?: ChartToolExecutionContext) {
   );
 }
 
+function getMutableAiRunContext(context?: ChartToolExecutionContext) {
+  return (
+    (
+      context as
+        | (ChartToolExecutionContext & {getAiRunContext?: () => unknown})
+        | undefined
+    )?.getAiRunContext?.() ?? context?.aiRunContext
+  );
+}
+
 // Helper functions
 function getTablesWithColumns(state: RoomState): DataTable[] {
   return state.db.tables.filter(

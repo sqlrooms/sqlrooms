@@ -113,7 +113,7 @@ export function setAiRunContextPrimaryItem(
 ): AiRunContext {
   const parsedContext = AiRunContextSchema.safeParse(runContext);
   const baseContext = parsedContext.success ? parsedContext.data : undefined;
-  const existingItems = getAiRunContextItems(baseContext).filter(
+  const existingItems = getAiRunContextItems(runContext).filter(
     (existing) => !(existing.kind === item.kind && existing.id === item.id),
   );
 
