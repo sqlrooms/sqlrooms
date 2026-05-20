@@ -4,6 +4,7 @@ import {
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardTextPanelConfig,
 } from '../dashboard/MosaicDashboardSlice';
+import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
 
 export interface PanelResult {
   panelId: string;
@@ -36,6 +37,38 @@ export interface CreateOrUpdateTextPanelParams {
 }
 
 /**
+ * Validates that a dashboard exists. Throws if not found.
+ */
+function ensureDashboard(
+  deps: DashboardToolDeps,
+  dashboardId: string,
+): NonNullable<ReturnType<DashboardToolDeps['getDashboard']>> {
+  const dashboard = deps.getDashboard(dashboardId);
+  if (!dashboard) {
+    throw new Error(
+      `Dashboard "${dashboardId}" not found. Cannot update panel.`,
+    );
+  }
+  return dashboard;
+}
+
+/**
+ * Validates that a panel exists in a dashboard. Throws if not found.
+ */
+function ensurePanel(
+  dashboard: MosaicDashboardEntry,
+  dashboardId: string,
+  panelId: string,
+): void {
+  const panelExists = dashboard.panels.some((p) => p.id === panelId);
+  if (!panelExists) {
+    throw new Error(
+      `Panel "${panelId}" not found in dashboard "${dashboardId}". Cannot update.`,
+    );
+  }
+}
+
+/**
  * Universal helper to create or update a chart panel.
  * Handles everything: panel config creation, add/update logic, artifact switching.
  * When updating, both source and config are updated to allow changing the data source.
@@ -45,6 +78,10 @@ export function createOrUpdateChartPanel(
   params: CreateOrUpdateChartPanelParams,
 ): PanelResult {
   if (params.panelId) {
+    // Validate panel exists before attempting update
+    const dashboard = ensureDashboard(deps, params.dashboardId);
+    ensurePanel(dashboard, params.dashboardId, params.panelId);
+
     // Update existing panel - update both source and config
     deps.updatePanel(params.dashboardId, params.panelId, {
       title: params.title,
@@ -67,6 +104,7 @@ export function createOrUpdateChartPanel(
     );
 
     const panelId = deps.addPanel(params.dashboardId, panel);
+    deps.setCurrentArtifact(params.dashboardId);
 
     return {
       panelId,
@@ -85,6 +123,10 @@ export function createOrUpdateProfilerPanel(
   params: CreateOrUpdateProfilerPanelParams,
 ): PanelResult {
   if (params.panelId) {
+    // Validate panel exists before attempting update
+    const dashboard = ensureDashboard(deps, params.dashboardId);
+    ensurePanel(dashboard, params.dashboardId, params.panelId);
+
     // Update existing panel - update both source (at panel level) and config
     deps.updatePanel(params.dashboardId, params.panelId, {
       title: params.title,
@@ -111,6 +153,7 @@ export function createOrUpdateProfilerPanel(
     });
 
     const panelId = deps.addPanel(params.dashboardId, panel);
+    deps.setCurrentArtifact(params.dashboardId);
 
     return {
       panelId,
@@ -129,6 +172,10 @@ export function createOrUpdateTextPanel(
   params: CreateOrUpdateTextPanelParams,
 ): PanelResult {
   if (params.panelId) {
+    // Validate panel exists before attempting update
+    const dashboard = ensureDashboard(deps, params.dashboardId);
+    ensurePanel(dashboard, params.dashboardId, params.panelId);
+
     // Update existing panel - create config inline with just what we need
     deps.updatePanel(params.dashboardId, params.panelId, {
       title: params.title,
@@ -153,6 +200,7 @@ export function createOrUpdateTextPanel(
     });
 
     const panelId = deps.addPanel(params.dashboardId, panel);
+    deps.setCurrentArtifact(params.dashboardId);
 
     return {
       panelId,
