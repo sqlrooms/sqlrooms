@@ -1,9 +1,9 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {TablePropertiesIcon} from 'lucide-react';
 import {MosaicProfiler, type MosaicProfilerProps} from './MosaicProfiler';
+import type {ProfilerPanel} from '../dashboard/dashboard-types';
 import {
   type MosaicDashboardPanelRenderer,
-  ProfilerPanel,
   type ProfilerPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from '../dashboard/MosaicDashboardSlice';

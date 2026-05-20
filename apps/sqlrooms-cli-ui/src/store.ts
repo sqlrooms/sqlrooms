@@ -87,6 +87,7 @@ import {
   createDashboardAiTools,
   getDashboardAiInstructions,
 } from './createDashboardAiTools';
+import {dashboardAgentTool} from './createDashboardAgent';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
@@ -621,6 +622,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createDashboardAiTools(store),
+              dashboard_agent: dashboardAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
               chart_image_for_markdown: createChartImageForMarkdownTool(store),

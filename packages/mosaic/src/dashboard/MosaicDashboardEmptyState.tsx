@@ -3,11 +3,13 @@ import {BarChart3, Map, TableProperties, Text} from 'lucide-react';
 import {useCallback, useMemo} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
+} from './dashboard-types';
+import {
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardTextPanelConfig,
   type MosaicDashboardAddPanelActionContext,
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 
