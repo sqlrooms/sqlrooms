@@ -325,6 +325,9 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.22
         version: 1.0.39(zod@4.1.13)
+      '@sqlrooms/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
@@ -2364,6 +2367,9 @@ importers:
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.1)
@@ -2373,9 +2379,21 @@ importers:
       react-dom:
         specifier: '>=18'
         version: 19.2.1(react@19.2.1)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.7)(react@19.2.1)
+      remark-gfm:
+        specifier: ^4.0.0
+        version: 4.0.1
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
       zod:
         specifier: ^4.1.8
         version: 4.1.13
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.13(@types/react@19.2.7)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
 
   packages/ai-config:
     dependencies:
@@ -2442,6 +2460,15 @@ importers:
       remark-gfm:
         specifier: ^4.0.0
         version: 4.0.1
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0
+      remark-rehype:
+        specifier: ^11.0.0
+        version: 11.1.2
+      unified:
+        specifier: ^11.0.0
+        version: 11.0.5
       zod:
         specifier: ^4.1.8
         version: 4.1.13
@@ -2452,6 +2479,9 @@ importers:
       '@sqlrooms/preset-jest':
         specifier: workspace:*
         version: link:../preset-jest
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1(@noble/hashes@2.2.0)
       ts-jest:
         specifier: ^29.4.4
         version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
@@ -2956,9 +2986,6 @@ importers:
       '@geoarrow/deck.gl-layers':
         specifier: 0.3.2
         version: 0.3.2(b21922810d26188ec38bfc72e76101f6)
-      '@loaders.gl/core':
-        specifier: ^4.4.1
-        version: 4.4.1
       '@loaders.gl/geoarrow':
         specifier: ^4.4.1
         version: 4.4.1(@loaders.gl/core@4.4.1)

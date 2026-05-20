@@ -8,6 +8,7 @@ const defaultArgs = [
   '--port',
   '4173',
   '--no-open-browser',
+  '--no-ui',
   '--db-path',
   '/tmp/sqlrooms-cli.db',
 ];

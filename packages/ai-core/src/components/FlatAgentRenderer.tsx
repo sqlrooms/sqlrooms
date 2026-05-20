@@ -69,7 +69,7 @@ const ToolRenderBehaviorContext = createContext<ToolRenderBehavior>({});
 
 export const ToolRenderBehaviorProvider = ToolRenderBehaviorContext.Provider;
 
-function useToolRenderBehavior(): ToolRenderBehavior {
+export function useToolRenderBehavior(): ToolRenderBehavior {
   return useContext(ToolRenderBehaviorContext);
 }
 
@@ -575,7 +575,8 @@ const FlatSegmentList: React.FC<{
 export const OrchestratorToolLogLine: React.FC<{
   part: UIMessagePart;
   toolCallId: string;
-}> = ({part, toolCallId}) => {
+  searchBlockId?: string;
+}> = ({part, toolCallId, searchBlockId}) => {
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
   const toolName = isDynamicToolPart(part)
@@ -603,6 +604,7 @@ export const OrchestratorToolLogLine: React.FC<{
       isSuccess={isSuccess}
       isError={isError}
       toolCall={toolCall}
+      searchBlockId={searchBlockId}
     />
   );
 };
@@ -613,7 +615,8 @@ const OrchestratorLogLineInner: React.FC<{
   isSuccess: boolean;
   isError: boolean;
   toolCall: AgentToolCall;
-}> = ({toolCallId, isPending, isSuccess, isError, toolCall}) => {
+  searchBlockId?: string;
+}> = ({toolCallId, isPending, isSuccess, isError, toolCall, searchBlockId}) => {
   const showDetails = useShowToolCallDetails();
   const {getActivityLabel} = useToolRenderBehavior();
   const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);

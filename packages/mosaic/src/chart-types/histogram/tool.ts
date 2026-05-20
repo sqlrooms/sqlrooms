@@ -1,6 +1,11 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {HistogramChartSettings} from './schema';
+import {
+  HistogramChartSettings,
+  MIN_BINS_COUNT,
+  MAX_BINS_COUNT,
+  DEFAULT_BINS_COUNT,
+} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
 import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
@@ -23,6 +28,8 @@ Example queries: "distribution of population density", "show elevation distribut
 Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUMN_TYPES.join(', ')}).
 
 To UPDATE an existing histogram: provide the panelId parameter. Otherwise creates new panel.
+
+Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.
 
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use bubble-chart), time series trends (use line-chart).`,

@@ -39,8 +39,8 @@
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "prepare": "husky",
     "publish-dry-run": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dry-run",
-    "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next --throttle --throttle-size=1 --throttle-delay=0",
-    "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --throttle --throttle-size=1 --throttle-delay=0",
+    "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next --throttle --throttle-size=1 --throttle-delay=1",
+    "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --throttle --throttle-size=1 --throttle-delay=1",
     "setup-trusted-publishing": "node scripts/setup-trusted-publishing.mjs",
     "sort-package-json": "sort-package-json package.json 'packages/*/package.json' 'examples/*/package.json' 'apps/*/package.json'",
     "sort-package-json:check": "sort-package-json --check package.json 'packages/*/package.json' 'examples/*/package.json' 'apps/*/package.json'",
@@ -125,6 +125,7 @@
       "zod": "4.1.13"
     },
     "patchedDependencies": {
+      "sigstore@4.1.0": "patches/sigstore@4.1.0.patch",
       "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
     },
     "ignoredBuiltDependencies": [

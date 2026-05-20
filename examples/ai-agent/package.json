@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.22",
+    "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
