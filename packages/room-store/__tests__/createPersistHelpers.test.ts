@@ -1,10 +1,9 @@
 import {describe, expect, it} from '@jest/globals';
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {z} from 'zod';
-import {
-  createPersistHelpers,
-  PersistMergeInputSymbol,
-} from '../src/createPersistHelpers';
+import {createPersistHelpers} from '../src/createPersistHelpers';
+
+const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
 
 const defaults = {
   providers: {
@@ -43,7 +42,7 @@ describe('createPersistHelpers.merge', () => {
     expect(merged).toEqual(currentState);
   });
 
-  it('applies strict-prune aiSettings merge on rehydrate', () => {
+  it('applies defaults-aware aiSettings merge on rehydrate', () => {
     const helpers = createPersistHelpers({
       aiSettings: AiSettingsSliceConfig,
     });
@@ -63,10 +62,10 @@ describe('createPersistHelpers.merge', () => {
               apiKey: 'sk-test',
               models: [{modelName: 'gpt-5'}, {modelName: 'legacy-model'}],
             },
-            removedProvider: {
-              baseUrl: 'https://removed.example/v1',
-              apiKey: 'removed-key',
-              models: [{modelName: 'removed-model'}],
+            customProvider: {
+              baseUrl: 'https://custom.example/v1',
+              apiKey: 'custom-key',
+              models: [{modelName: 'custom-provider-model'}],
             },
           },
           customModels: [],
@@ -79,12 +78,18 @@ describe('createPersistHelpers.merge', () => {
     expect(Object.keys(merged.aiSettings.config.providers)).toEqual([
       'openai',
       'anthropic',
+      'customProvider',
     ]);
     expect(
       merged.aiSettings.config.providers.openai.models.map(
         (m: {modelName: string}) => m.modelName,
       ),
-    ).toEqual(['gpt-5', 'gpt-4.1']);
+    ).toEqual(['gpt-5', 'gpt-4.1', 'legacy-model']);
+    expect(
+      merged.aiSettings.config.providers.customProvider.models.map(
+        (m: {modelName: string}) => m.modelName,
+      ),
+    ).toEqual(['custom-provider-model']);
     expect(merged.aiSettings.config.providers.openai.baseUrl).toBe(
       'https://custom-openai.example/v1',
     );

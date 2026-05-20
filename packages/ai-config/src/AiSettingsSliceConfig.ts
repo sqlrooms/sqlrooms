@@ -58,23 +58,33 @@ function mergeProviderModels(
   }
 
   const persistedByModelName = new Map<string, Record<string, unknown>>();
+  const persistedModels: Record<string, unknown>[] = [];
   for (const model of persistedProvider.models) {
     if (!isRecord(model) || typeof model.modelName !== 'string') {
       continue;
     }
+    persistedModels.push(model);
     persistedByModelName.set(model.modelName, model);
   }
 
-  // Strict prune: only keep models present in code defaults.
-  return defaultProvider.models.map((defaultModel) => {
-    const persistedModel = persistedByModelName.get(defaultModel.modelName);
-    if (!persistedModel) return defaultModel;
-    return {
-      ...defaultModel,
-      ...persistedModel,
-      modelName: defaultModel.modelName,
-    };
-  });
+  const defaultModelNames = new Set(
+    defaultProvider.models.map((model) => model.modelName),
+  );
+
+  return [
+    ...defaultProvider.models.map((defaultModel) => {
+      const persistedModel = persistedByModelName.get(defaultModel.modelName);
+      if (!persistedModel) return defaultModel;
+      return {
+        ...defaultModel,
+        ...persistedModel,
+        modelName: defaultModel.modelName,
+      };
+    }),
+    ...persistedModels
+      .filter((model) => !defaultModelNames.has(model.modelName as string))
+      .map((model) => AiProviderModelSchema.parse(model)),
+  ];
 }
 
 export function mergeAiSettingsWithDefaults(
@@ -89,8 +99,8 @@ export function mergeAiSettingsWithDefaults(
     ? persisted.providers
     : undefined;
 
-  const providers = Object.fromEntries(
-    Object.entries(defaults.providers).map(
+  const providers = Object.fromEntries([
+    ...Object.entries(defaults.providers).map(
       ([providerName, defaultProvider]) => {
         const persistedProvider =
           persistedProviders && isRecord(persistedProviders[providerName])
@@ -114,7 +124,13 @@ export function mergeAiSettingsWithDefaults(
         ];
       },
     ),
-  );
+    ...Object.entries(persistedProviders ?? {})
+      .filter(([providerName]) => !(providerName in defaults.providers))
+      .flatMap(([providerName, persistedProvider]) => {
+        const parsed = AiProviderSchema.safeParse(persistedProvider);
+        return parsed.success ? [[providerName, parsed.data] as const] : [];
+      }),
+  ]);
 
   const customModels = AiSettingsSliceConfigSchema.shape.customModels.safeParse(
     persisted.customModels,

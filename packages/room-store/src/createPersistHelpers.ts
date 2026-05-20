@@ -30,7 +30,7 @@ function createSafeStorage<S>(
 }
 
 /**
- * Symbol-based extension point for schema-specific rehydrate merge input.
+ * Internal symbol-based hook for schema-specific rehydrate merge input.
  *
  * If a Zod schema sets a function under this symbol, `createPersistHelpers().merge`
  * will call it with `{defaults, persisted}` and parse the returned value instead of
@@ -38,9 +38,7 @@ function createSafeStorage<S>(
  *
  * This allows slices to opt into defaults-aware merging without hard-coding slice keys.
  */
-export const PersistMergeInputSymbol = Symbol.for(
-  'sqlrooms.persist.mergeInput',
-);
+const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
 
 /**
  * Builds the value passed to `schema.parse(...)` during rehydrate merge.
@@ -73,7 +71,7 @@ function getPersistMergeInputBuilder(
  *   - `partialize`: serializes `state[slice].config` for each configured slice
  *   - `merge`: rehydrates each slice config from persisted storage
  *
- * `merge` supports schema-level customization via `PersistMergeInputSymbol`.
+ * `merge` supports schema-level customization via an internal symbol marker.
  * When present on a schema, the marker function receives the current defaults and
  * persisted value and can return custom parse input for `schema.parse(...)`.
  *

@@ -31,7 +31,6 @@ export type {
 
 export type {StateCreator, StoreApi} from 'zustand';
 export {
-  PersistMergeInputSymbol,
   createPersistHelpers,
   persistSliceConfigs,
 } from './createPersistHelpers';

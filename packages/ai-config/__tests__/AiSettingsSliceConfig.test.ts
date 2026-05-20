@@ -22,7 +22,7 @@ const defaults = {
 };
 
 describe('AiSettingsSliceConfig', () => {
-  it('strictly prunes removed providers/models while preserving mutable provider fields', () => {
+  it('adds code defaults while preserving persisted provider fields and user additions', () => {
     const merged = AiSettingsSliceConfig.parse({
       defaults,
       persisted: {
@@ -32,10 +32,10 @@ describe('AiSettingsSliceConfig', () => {
             apiKey: 'sk-test',
             models: [{modelName: 'gpt-5'}, {modelName: 'legacy-model'}],
           },
-          removedProvider: {
-            baseUrl: 'https://removed.example',
-            apiKey: 'removed-key',
-            models: [{modelName: 'removed-model'}],
+          customProvider: {
+            baseUrl: 'https://custom.example',
+            apiKey: 'custom-key',
+            models: [{modelName: 'custom-provider-model'}],
           },
         },
         customModels: [
@@ -52,7 +52,11 @@ describe('AiSettingsSliceConfig', () => {
       },
     });
 
-    expect(Object.keys(merged.providers)).toEqual(['openai', 'anthropic']);
+    expect(Object.keys(merged.providers)).toEqual([
+      'openai',
+      'anthropic',
+      'customProvider',
+    ]);
     expect(merged.providers.openai.baseUrl).toBe(
       'https://custom-openai.example/v1',
     );
@@ -60,10 +64,14 @@ describe('AiSettingsSliceConfig', () => {
     expect(merged.providers.openai.models.map((m) => m.modelName)).toEqual([
       'gpt-5',
       'gpt-4.1',
+      'legacy-model',
     ]);
     expect(merged.providers.anthropic.models.map((m) => m.modelName)).toEqual([
       'claude-3-5-sonnet',
     ]);
+    expect(
+      merged.providers.customProvider.models.map((m) => m.modelName),
+    ).toEqual(['custom-provider-model']);
     expect(merged.customModels.map((m) => m.modelName)).toEqual(['qwen3']);
     expect(merged.modelParameters.maxSteps).toBe(12);
   });
