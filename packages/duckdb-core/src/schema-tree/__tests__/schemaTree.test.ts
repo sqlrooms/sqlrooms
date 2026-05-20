@@ -1,11 +1,11 @@
 import {createDbSchemaTrees} from '../schemaTree';
-import type {QualifiedSchema} from '../types';
+import type {SchemaWithTables} from '../types';
 
 describe('schemaTree', () => {
   describe('createDbSchemaTrees', () => {
     describe('basic functionality', () => {
       it('should create a tree with databases, schemas, and tables', () => {
-        const schemas: QualifiedSchema[] = [
+        const schemas: SchemaWithTables[] = [
           {
             database: 'db1',
             schema: 'schema1',
@@ -51,7 +51,7 @@ describe('schemaTree', () => {
       });
 
       it('should preserve empty schemas (tables: []) as schema nodes with no table children', () => {
-        const schemas: QualifiedSchema[] = [
+        const schemas: SchemaWithTables[] = [
           {database: 'db1', schema: 'empty_schema', tables: []},
         ];
 

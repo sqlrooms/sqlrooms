@@ -25,8 +25,10 @@ import {
 import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
+  defaultLoadSchemaCatalogFilter,
   type DataTable,
   QualifiedTableName,
+  type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
   createCrdtSlice,
@@ -490,6 +492,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   );
                 };
               })(),
+              loadSchemaCatalogFilter: (entry: SchemaCatalogFilterEntry) => {
+                if (!defaultLoadSchemaCatalogFilter(entry)) {
+                  return false;
+                }
+                if (
+                  entry.type === 'schema' &&
+                  entry.database === get().db.currentDatabase &&
+                  entry.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                if (
+                  entry.type === 'table' &&
+                  entry.table.database === get().db.currentDatabase &&
+                  entry.table.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                return true;
+              },
             },
           },
         })(set, get, store),

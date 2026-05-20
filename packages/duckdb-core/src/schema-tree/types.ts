@@ -36,7 +36,7 @@ export type DatabaseNodeObject = BaseNodeObject & {
   type: 'database';
 };
 
-export type QualifiedSchema = {
+export type SchemaWithTables = {
   database: string;
   schema: string;
   tables: DataTable[];
