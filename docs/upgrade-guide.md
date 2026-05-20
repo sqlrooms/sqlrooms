@@ -483,6 +483,65 @@ return createAgentUIStreamResponse({
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
 
+### `@sqlrooms/duckdb-core`: `createDbSchemaTrees()` input type changed (breaking)
+
+`createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`. This lets the tree preserve empty schemas (and empty `main` schemas of attached databases) as leaf-less nodes — previously, schemas with no tables could not appear in the tree because the input was just a list of tables.
+
+#### Signature change
+
+```ts
+// Before
+function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[];
+
+// After
+function createDbSchemaTrees(schemas: SchemaWithTables[]): DbSchemaNode[];
+
+type SchemaWithTables = {
+  database: string;
+  schema: string;
+  tables: DataTable[];
+};
+```
+
+`SchemaWithTables` is exported from both `@sqlrooms/duckdb-core` and `@sqlrooms/duckdb`.
+
+#### Before
+
+```ts
+import {createDbSchemaTrees, type DataTable} from '@sqlrooms/duckdb-core';
+
+const tables: DataTable[] = await loadTableSchemas(connector);
+const trees = createDbSchemaTrees(tables);
+```
+
+#### After
+
+Use the new `loadSchemaCatalog()` from `@sqlrooms/duckdb`, which returns `SchemaWithTables[]` directly:
+
+```ts
+import {createDbSchemaTrees} from '@sqlrooms/duckdb-core';
+import {loadSchemaCatalog} from '@sqlrooms/duckdb';
+
+const schemas = await loadSchemaCatalog(connector);
+const trees = createDbSchemaTrees(schemas);
+```
+
+If you only have a flat `DataTable[]`, group it before passing to `createDbSchemaTrees`:
+
+```ts
+const grouped = new Map<string, SchemaWithTables>();
+for (const t of tables) {
+  const key = `${t.database}\x00${t.schema}`;
+  let g = grouped.get(key);
+  if (!g) {
+    g = {database: t.database ?? '', schema: t.schema, tables: []};
+    grouped.set(key, g);
+  }
+  g.tables.push(t);
+}
+const trees = createDbSchemaTrees(Array.from(grouped.values()));
+```
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles all layout rendering.

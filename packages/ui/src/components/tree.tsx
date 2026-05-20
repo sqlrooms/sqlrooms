@@ -7,6 +7,8 @@ import { ChevronRightIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { CollapsibleTrigger } from './collapsible';
 
+const DROPDOWN_ICON_PLACEHOLDER_WIDTH = '18px';
+
 export type TreeNodeData<T> = {
   key: string;
   object: T;
@@ -50,7 +52,7 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
   if (!hasChildren) {
     return (
       <div className="flex w-full items-center space-x-1">
-        <div className="shrink-0" style={{ width: '18px' }} />
+        <div className="shrink-0" style={{ width: DROPDOWN_ICON_PLACEHOLDER_WIDTH }} />
         {renderNode(treeData, isOpen)}
       </div>
     );
@@ -63,7 +65,7 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
             className={cn('shrink-0 text-gray-500', {
               'rotate-90 transform': isOpen,
             })}
-            size="18px"
+            size={DROPDOWN_ICON_PLACEHOLDER_WIDTH}
           />
           {renderNode(treeData, isOpen)}
         </div>
