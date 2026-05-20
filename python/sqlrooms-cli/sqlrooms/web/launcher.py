@@ -36,6 +36,16 @@ from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
+UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
+
+
+async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
+    bytes_written = 0
+    with open(target, "wb") as f:
+        while chunk := await file.read(UPLOAD_COPY_CHUNK_SIZE):
+            bytes_written += len(chunk)
+            f.write(chunk)
+    return bytes_written
 
 
 def _write_db_connectors_to_toml(
@@ -442,13 +452,9 @@ class SqlroomsHttpServer:
             unauthorized = self._require_api_auth(request)
             if unauthorized is not None:
                 return unauthorized
-            content = await file.read()
-            if len(content) > 50 * 1024 * 1024:
-                return JSONResponse({"error": "file too large"}, status_code=413)
             safe_name = _sanitize_filename(file.filename)
             target = self.upload_dir / safe_name
-            with open(target, "wb") as f:
-                f.write(content)
+            await _write_upload_to_path(file, target)
             return {"path": str(target)}
 
         @app.post("/api/db/test-connection")

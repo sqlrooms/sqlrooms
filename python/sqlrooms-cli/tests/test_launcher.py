@@ -1,9 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import UploadFile
 from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
+from sqlrooms.web.launcher import _write_upload_to_path
 from pathlib import Path
 
 
@@ -78,6 +80,24 @@ def test_api_upload(server, tmp_path):
     assert "path" in data
     assert Path(data["path"]).name == "test.txt"
     assert Path(data["path"]).read_bytes() == file_content
+
+
+@pytest.mark.asyncio
+async def test_write_upload_to_path_streams_files_larger_than_previous_cap(tmp_path):
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    target = tmp_path / "uploaded.bin"
+    with open(source, "rb") as f:
+        bytes_written = await _write_upload_to_path(
+            UploadFile(file=f, filename="large.bin"),
+            target,
+        )
+
+    assert bytes_written == source_size
+    assert target.stat().st_size == source_size
 
 
 def test_api_config_with_postgres_connector(tmp_path):
