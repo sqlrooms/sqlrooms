@@ -17,7 +17,7 @@ export interface TabsLayoutTabContentProps {
 export const TabsLayoutTabContent: FC<TabsLayoutTabContentProps> = ({
   forceMount = false,
 }) => {
-  const {container, node, path} = useActiveTab();
+  const {node, path} = useActiveTab();
   const {node: tabsNode, path: tabsPath} = useTabsNodeContext();
   const renderNode = useRenderNode();
 
@@ -61,6 +61,6 @@ export const TabsLayoutTabContent: FC<TabsLayoutTabContentProps> = ({
     node,
     path,
     containerType: 'tabs',
-    containerId: container.id,
+    containerId: tabsNode.id,
   });
 };
