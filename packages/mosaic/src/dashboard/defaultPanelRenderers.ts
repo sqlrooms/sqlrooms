@@ -2,6 +2,8 @@ import {
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
+} from './dashboard-types';
+import {
   type AnyPanelRenderer,
   type PanelRenderersRecord,
 } from './MosaicDashboardSlice';

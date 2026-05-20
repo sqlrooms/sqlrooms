@@ -1,10 +1,8 @@
 import {type FC, useCallback} from 'react';
 import {ChartSettingsContent} from './chart-settings/ChartSettingsContent';
 import {MosaicDashboardPanelLayout} from '../dashboard/MosaicDashboardPanelLayout';
-import {
-  type ChartPanelConfig,
-  useStoreWithMosaicDashboard,
-} from '../dashboard/MosaicDashboardSlice';
+import type {ChartPanelConfig} from '../dashboard/dashboard-types';
+import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 import {useGenerateSpec} from './useGenerateSpec';
 import {MosaicReadyConnection} from '../MosaicSlice';
 import {ChartTypeDefinition} from '../chart-types/base-types';

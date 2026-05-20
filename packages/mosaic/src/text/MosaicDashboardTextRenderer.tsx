@@ -2,9 +2,9 @@ import {MarkdownDocumentEditor} from '@sqlrooms/documents';
 import {Button} from '@sqlrooms/ui';
 import {ALargeSmallIcon, FileTextIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
+import type {TextPanel} from '../dashboard/dashboard-types';
 import {
   type MosaicDashboardPanelRenderer,
-  type TextPanel,
   type TextPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from '../dashboard/MosaicDashboardSlice';
