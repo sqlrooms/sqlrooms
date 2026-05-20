@@ -193,6 +193,7 @@ export interface AiStateForTransport {
   tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
+  getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
   setSessionRunContext: (
     sessionId: string,
     runContext: AiRunContext | undefined,

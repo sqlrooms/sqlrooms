@@ -94,11 +94,21 @@ function readCliArtifact({
 function createArtifactContextOptions(
   store: StoreApi<RoomState>,
 ): ArtifactContextToolsOptions<RoomState> {
+  const getContextSessionId = (
+    state: RoomState,
+    context?: ArtifactContextToolExecutionContext,
+  ) => context?.sessionId ?? state.ai.getCurrentSession()?.id;
+
   return {
     store,
-    getRunContext: ({state}) => state.ai.getCurrentSession()?.runContext,
+    getRunContext: ({state, context}) => {
+      const sessionId = getContextSessionId(state, context);
+      return sessionId
+        ? state.ai.getSessionRunContext(sessionId)
+        : state.ai.getCurrentSession()?.runContext;
+    },
     setRunContext: ({state, context, runContext}) => {
-      const sessionId = context?.sessionId ?? state.ai.getCurrentSession()?.id;
+      const sessionId = getContextSessionId(state, context);
       if (sessionId) {
         state.ai.setSessionRunContext(sessionId, runContext);
       }

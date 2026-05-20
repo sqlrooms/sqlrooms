@@ -165,6 +165,7 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
+    getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
     setSessionRunContext: (
       sessionId: string,
       runContext: AiRunContext | undefined,
@@ -670,6 +671,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const state = get();
           const {currentSessionId, sessions} = state.ai.config;
           return sessions.find((session) => session.id === currentSessionId);
+        },
+
+        getSessionRunContext: (sessionId: string) => {
+          const state = get();
+          return state.ai.config.sessions.find(
+            (session: AnalysisSessionSchema) => session.id === sessionId,
+          )?.runContext;
         },
 
         setSessionRunContext: (
