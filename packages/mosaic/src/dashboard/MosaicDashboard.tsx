@@ -14,17 +14,21 @@ import {
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
-import {MosaicDashboardToolbar} from './MosaicDashboardToolbar';
+import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
 import {ChartBuilderColumn} from '../chart-types/base-types';
 import {ChartConfig} from '../chart-types/chart-config';
+import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
+import type {MosaicDashboardInitialStateProps} from './MosaicDashboardInitialState';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
+  onStart?: MosaicDashboardInitialStateProps['onStart'];
 }>;
 
 export function MosaicDashboardRoot({
   children,
   dashboardId,
+  onStart,
 }: MosaicDashboardRootProps) {
   const ensureDashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.ensureDashboard,
@@ -32,33 +36,18 @@ export function MosaicDashboardRoot({
   const addPanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.addPanel,
   );
-  const setSelectedTable = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.setSelectedTable,
-  );
-  const dashboard = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
-  );
-  const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
+
   const chartTypes = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.chartTypes,
   );
+
   const panelRenderers = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.panelRenderers,
   );
+
   const [builderOpen, setBuilderOpen] = useState(false);
 
-  const tablesWithColumns = useMemo(
-    () => tables.filter((table) => table.columns && table.columns.length > 0),
-    [tables],
-  );
-
-  const selectedTableInfo = useMemo(
-    () =>
-      tablesWithColumns.find(
-        (table) => table.tableName === dashboard?.selectedTable,
-      ),
-    [dashboard?.selectedTable, tablesWithColumns],
-  );
+  const selectedTableInfo = useSelectedOrFirstTable(dashboardId);
 
   const builderColumns: ChartBuilderColumn[] = useMemo(
     () =>
@@ -73,58 +62,32 @@ export function MosaicDashboardRoot({
     ensureDashboard(dashboardId);
   }, [dashboardId, ensureDashboard]);
 
-  useEffect(() => {
-    const firstTable = tablesWithColumns[0];
-    if (!firstTable) return;
-    const tableStillExists = tablesWithColumns.some(
-      (table) => table.tableName === dashboard?.selectedTable,
-    );
-    if (!dashboard?.selectedTable || !tableStillExists) {
-      setSelectedTable(dashboardId, firstTable.tableName);
-    }
-  }, [
-    dashboard?.selectedTable,
-    dashboardId,
-    setSelectedTable,
-    tablesWithColumns,
-  ]);
-
   const handleCreateChart = useCallback(
     (title: string, config: ChartConfig) => {
-      const panel = createMosaicDashboardChartPanelConfig(title, config, {
-        tableName: dashboard?.selectedTable,
-      });
+      const panel = createMosaicDashboardChartPanelConfig(title, config);
       addPanel(dashboardId, panel);
       setBuilderOpen(false);
     },
-    [addPanel, dashboard?.selectedTable, dashboardId],
+    [addPanel, dashboardId],
   );
 
   const handleAddDefaultChart = useCallback(() => {
-    if (!dashboard?.selectedTable) {
-      return;
-    }
-
     // Create chart panel with default field or empty if no numeric columns
-    const panel = createMosaicDashboardChartPanelConfig(
-      'New Chart',
-      {
-        chartType: 'histogram',
-        settings: {},
-        settingsOpen: true, // Open settings by default
-      },
-      {tableName: dashboard.selectedTable},
-    );
+    const panel = createMosaicDashboardChartPanelConfig('New Chart', {
+      chartType: 'histogram',
+      settings: {},
+      settingsOpen: true, // Open settings by default
+    });
 
     addPanel(dashboardId, panel);
-  }, [addPanel, dashboard, dashboardId]);
+  }, [addPanel, dashboardId]);
 
   const contextValue = useMemo(
     () => ({
       dashboardId,
       builderOpen,
       canCreateChart: Boolean(
-        dashboard?.selectedTable &&
+        selectedTableInfo &&
         panelRenderers[MOSAIC_DASHBOARD_CHART_PANEL_TYPE] &&
         chartTypes?.length !== 0,
       ),
@@ -132,25 +95,27 @@ export function MosaicDashboardRoot({
       closeBuilder: () => setBuilderOpen(false),
       setBuilderOpen,
       addDefaultChart: handleAddDefaultChart,
+      onStart,
     }),
     [
-      builderOpen,
-      chartTypes?.length,
-      dashboard?.selectedTable,
       dashboardId,
+      builderOpen,
+      selectedTableInfo,
       panelRenderers,
+      chartTypes?.length,
       handleAddDefaultChart,
+      onStart,
     ],
   );
 
   return (
     <MosaicDashboardContext.Provider value={contextValue}>
       {children}
-      {dashboard?.selectedTable ? (
+      {selectedTableInfo ? (
         <MosaicChartBuilder
           open={builderOpen}
           onOpenChange={setBuilderOpen}
-          tableName={dashboard.selectedTable}
+          tableName={selectedTableInfo.table.table}
           columns={builderColumns}
           chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
@@ -164,13 +129,15 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
+  onStart?: MosaicDashboardInitialStateProps['onStart'];
 };
 
 function MosaicDashboardComponent({
   dashboardId,
+  onStart,
 }: MosaicDashboardProps): ReactElement {
   return (
-    <MosaicDashboardRoot dashboardId={dashboardId}>
+    <MosaicDashboardRoot dashboardId={dashboardId} onStart={onStart}>
       <div className="flex h-full flex-col">
         <MosaicDashboardToolbar />
         <div className="h-full overflow-y-auto">

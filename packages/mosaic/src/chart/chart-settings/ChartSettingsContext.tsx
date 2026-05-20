@@ -2,13 +2,12 @@ import {createContext, type ReactNode, useCallback, useContext} from 'react';
 import type {TableColumn} from '@sqlrooms/duckdb';
 import type {ChartConfig} from '../../chart-types/chart-config';
 import type {ChartType} from '../../chart-types/base-types';
+import {ColumnsProvider} from '../../chart-builders/ColumnsContext';
 
 type ChartSetting<T extends ChartConfig = ChartConfig> = T['settings'];
 
 interface ChartSettingsContextValue<T extends ChartConfig = ChartConfig> {
-  tableName?: string;
   config: T;
-  columns: TableColumn[];
   onChange: (config: T) => void;
   onChangeConfig: <K extends keyof ChartSetting<T>>(
     key: K,
@@ -85,16 +84,16 @@ export function ChartSettingsProvider({
   );
 
   return (
-    <ChartSettingsContext.Provider
-      value={{
-        tableName,
-        config,
-        columns,
-        onChange,
-        onChangeConfig,
-      }}
-    >
-      {children}
-    </ChartSettingsContext.Provider>
+    <ColumnsProvider columns={columns} tableName={tableName}>
+      <ChartSettingsContext.Provider
+        value={{
+          config,
+          onChange,
+          onChangeConfig,
+        }}
+      >
+        {children}
+      </ChartSettingsContext.Provider>
+    </ColumnsProvider>
   );
 }

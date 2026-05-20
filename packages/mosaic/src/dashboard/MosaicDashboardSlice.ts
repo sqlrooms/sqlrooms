@@ -1,6 +1,6 @@
 import {createId} from '@paralleldrive/cuid2';
 import {DbSliceState} from '@sqlrooms/db';
-import {type DataTable, type DuckDbSliceState} from '@sqlrooms/duckdb';
+import {type DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
   DEFAULT_GRID_COLS,
   getGridColsForBreakpoint,
@@ -33,6 +33,7 @@ import {
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
 import {ChartConfig} from '../chart-types/chart-config';
+import type {MosaicDashboardAddPanelAction} from './MosaicDashboardAddPanelAction';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -48,14 +49,6 @@ export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
   typeof MosaicDashboardLayoutType
->;
-
-export const MosaicDashboardPanelSource = z.object({
-  tableName: z.string().optional(),
-  sqlQuery: z.string().optional(),
-});
-export type MosaicDashboardPanelSource = z.infer<
-  typeof MosaicDashboardPanelSource
 >;
 
 // Profiler panel config
@@ -77,7 +70,6 @@ export const ChartPanelConfig = z.object({
   id: z.string(),
   type: z.literal(MOSAIC_DASHBOARD_CHART_PANEL_TYPE),
   title: z.string().default('Panel'),
-  source: MosaicDashboardPanelSource.optional(),
   config: ChartConfig,
 });
 export type ChartPanelConfig = z.infer<typeof ChartPanelConfig>;
@@ -86,7 +78,6 @@ export const ProfilerPanel = z.object({
   id: z.string(),
   type: z.literal(MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE),
   title: z.string().default('Panel'),
-  source: MosaicDashboardPanelSource.optional(),
   config: ProfilerPanelConfig,
 });
 export type ProfilerPanel = z.infer<typeof ProfilerPanel>;
@@ -95,7 +86,6 @@ export const TextPanel = z.object({
   id: z.string(),
   type: z.literal(MOSAIC_DASHBOARD_TEXT_PANEL_TYPE),
   title: z.string().default('Text'),
-  source: MosaicDashboardPanelSource.optional(),
   config: TextPanelConfig,
 });
 export type TextPanel = z.infer<typeof TextPanel>;
@@ -105,7 +95,6 @@ export const LegacyPanelConfig = z.object({
   id: z.string(),
   type: z.string(),
   title: z.string().default('Panel'),
-  source: MosaicDashboardPanelSource.optional(),
   config: z.record(z.string(), z.unknown()).default({}),
 });
 export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
@@ -125,7 +114,6 @@ export type MosaicDashboardPanelRendererProps<
   dashboard: MosaicDashboardEntry;
   panel: TPanel;
   selectionName: string;
-  resolvedSource?: MosaicDashboardPanelSource;
 };
 
 export type ChartPanelRendererProps =
@@ -160,48 +148,19 @@ export type PanelTypeMap = {
 // Panel renderers record - use type-erased renderers for runtime compatibility
 export type PanelRenderersRecord = Record<string, AnyPanelRenderer>;
 
-export type MosaicDashboardAddPanelActionContext = {
-  dashboardId: string;
-  dashboard: MosaicDashboardEntry | undefined;
-  selectedTable: DataTable | undefined;
-  tables: DataTable[];
-};
-
-export type MosaicDashboardAddPanelAction = {
-  type: string;
-  label: string;
-  icon?: ComponentType<{className?: string}>;
-  isEnabled?: (context: MosaicDashboardAddPanelActionContext) => boolean;
-  createPanel: (
-    context: MosaicDashboardAddPanelActionContext,
-  ) => MosaicDashboardPanelConfig | undefined;
-};
-
-export function createMosaicDashboardPanelConfig(options: {
-  type: string;
-  title: string;
-  source?: MosaicDashboardPanelSource;
-  config?: Record<string, unknown>;
-}): MosaicDashboardPanelConfig {
-  return {
-    id: createId(),
-    type: options.type,
-    title: options.title,
-    source: options.source,
-    config: options.config ?? {},
-  };
-}
+export type {
+  MosaicDashboardAddPanelActionContext,
+  MosaicDashboardAddPanelAction,
+} from './MosaicDashboardAddPanelAction';
 
 export function createMosaicDashboardChartPanelConfig(
   title: string,
   config: ChartConfig,
-  source?: MosaicDashboardPanelSource,
 ): ChartPanelConfig {
   return {
     id: createId(),
     type: MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
     title,
-    source,
     config,
   };
 }
@@ -209,34 +168,33 @@ export function createMosaicDashboardChartPanelConfig(
 export function createMosaicDashboardProfilerPanelConfig(
   options: {
     title?: string;
-    source?: MosaicDashboardPanelSource;
     pageSize?: number;
   } = {},
-): MosaicDashboardPanelConfig {
-  return createMosaicDashboardPanelConfig({
+): ProfilerPanel {
+  return {
+    id: createId(),
     type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-    title: options.title ?? 'Profiler',
-    source: options.source,
+    title: options.title ?? 'Data Table',
     config: {
       pageSize: options.pageSize ?? 10,
     },
-  });
+  };
 }
 
 export function createMosaicDashboardTextPanelConfig(
   options: {
     title?: string;
     content?: string;
-    source?: MosaicDashboardPanelSource;
   } = {},
-): MosaicDashboardPanelConfig {
+): TextPanel {
   return {
     id: createId(),
     type: MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
     title: options.title ?? 'Text',
-    source: options.source,
     config: {
       content: options.content ?? '',
+      toolbarOpen: true,
+      sourcePanelOpen: false,
     },
   };
 }
@@ -246,6 +204,7 @@ export const MosaicDashboardEntry = z.object({
   title: z.string().default('Dashboard'),
   layoutType: MosaicDashboardLayoutType.default('dock'),
   selectedTable: z.string().optional(),
+  lastSelectedTable: z.string().optional(),
   panels: z.array(MosaicDashboardPanelConfig).default([]),
   layout: LayoutNodeSchema.nullable().default(null),
   updatedAt: z.number().default(0),
@@ -286,6 +245,7 @@ export type MosaicDashboardSliceState = {
     removeDashboard: (dashboardId: string) => void;
     getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
     setSelectedTable: (dashboardId: string, tableName: string) => void;
+    setLastSelectedTable: (dashboardId: string, tableName: string) => void;
     panelRenderers: PanelRenderersRecord;
     registerPanelRenderer: (type: string, renderer: AnyPanelRenderer) => void;
     unregisterPanelRenderer: (type: string) => void;
@@ -803,39 +763,6 @@ function shouldEvictPanelRuntimeForPatch(
   return false;
 }
 
-/**
- * Type guard to check if a panel config has a source property.
- * All standard panel types (Chart, Profiler, Text) have optional sources.
- */
-export function panelHasSource(
-  panel: MosaicDashboardPanelConfig,
-): panel is ChartPanelConfig | ProfilerPanel | TextPanel {
-  return (
-    panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE ||
-    panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE ||
-    panel.type === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE
-  );
-}
-
-export function resolveMosaicDashboardPanelSource(
-  dashboard: MosaicDashboardEntry,
-  panel: MosaicDashboardPanelConfig,
-): MosaicDashboardPanelSource | undefined {
-  if (!panelHasSource(panel)) {
-    return undefined;
-  }
-  if (panel.source?.sqlQuery || panel.source?.tableName) {
-    return panel.source;
-  }
-  // Text panels typically don't need a table source
-  if (panel.type === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE) {
-    return undefined;
-  }
-  return dashboard.selectedTable
-    ? {tableName: dashboard.selectedTable}
-    : undefined;
-}
-
 export function createDefaultMosaicDashboardConfig(
   props?: Partial<MosaicDashboardSliceConfig>,
 ): MosaicDashboardSliceConfig {
@@ -932,6 +859,19 @@ export function createMosaicDashboardSlice(
                 draft.mosaicDashboard.config.dashboardsById[dashboardId];
               if (!dashboard) return;
               dashboard.selectedTable = tableName;
+              dashboard.updatedAt = Date.now();
+            }),
+          );
+        },
+
+        setLastSelectedTable(dashboardId, tableName) {
+          get().mosaicDashboard.ensureDashboard(dashboardId);
+          set((state) =>
+            produce(state, (draft) => {
+              const dashboard =
+                draft.mosaicDashboard.config.dashboardsById[dashboardId];
+              if (!dashboard) return;
+              dashboard.lastSelectedTable = tableName;
               dashboard.updatedAt = Date.now();
             }),
           );

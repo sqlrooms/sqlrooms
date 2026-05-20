@@ -4,7 +4,6 @@ import {DashboardPanelErrorBoundary} from './DashboardPanelErrorBoundary';
 import {MosaicDashboardPanelHeader} from './MosaicDashboardPanelHeader';
 import {
   getMosaicDashboardSelectionName,
-  resolveMosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
@@ -29,13 +28,6 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
     [dashboard?.panels, panelId],
   );
   const renderer = panel ? panelRenderers[panel.type] : undefined;
-  const resolvedSource = useMemo(
-    () =>
-      dashboard && panel
-        ? resolveMosaicDashboardPanelSource(dashboard, panel)
-        : undefined,
-    [dashboard, panel],
-  );
 
   if (!dashboard || !panel) {
     return (
@@ -54,7 +46,6 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
         dashboard={dashboard}
         panel={panel}
         renderer={renderer}
-        resolvedSource={resolvedSource}
         selectionName={selectionName}
       />
 
@@ -65,7 +56,6 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
               dashboardId={dashboardId}
               dashboard={dashboard}
               panel={panel}
-              resolvedSource={resolvedSource}
               selectionName={selectionName}
             />
           </DashboardPanelErrorBoundary>

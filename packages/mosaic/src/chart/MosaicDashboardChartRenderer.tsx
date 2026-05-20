@@ -14,6 +14,7 @@ import {MosaicDashboardChart} from './MosaicDashboardChart';
 const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   panel,
   dashboardId,
+  dashboard,
   selectionName,
 }) => {
   const connection = useStoreWithMosaicDashboard(
@@ -21,7 +22,7 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   );
 
   const chartTypeDef = useChartTypeDefinition(panel.config.chartType);
-  const tableName = panel.source?.tableName;
+  const tableName = dashboard.selectedTable;
 
   if (!chartTypeDef) {
     return (

@@ -10,13 +10,13 @@ import {
 
 function MosaicDashboardProfilerRenderer({
   panel,
-  resolvedSource,
+  dashboard,
   selectionName,
 }: ProfilerPanelRendererProps) {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
-  const tableName = resolvedSource?.tableName;
+  const tableName = dashboard.selectedTable;
   const pageSize =
     typeof panel.config.pageSize === 'number'
       ? panel.config.pageSize
@@ -25,7 +25,7 @@ function MosaicDashboardProfilerRenderer({
   if (!tableName) {
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Profiler panels require a table source.
+        Data Table panels require a table source.
       </div>
     );
   }

@@ -22,8 +22,18 @@ export {
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
+export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
+export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
+export {useTablesWithColumns} from './dashboard/useTablesWithColumns';
+export {MosaicDashboardPanelLayout} from './dashboard/MosaicDashboardPanelLayout';
 export {
-  createMosaicDashboardPanelConfig,
+  MosaicDashboardInitialState,
+  type MosaicDashboardInitialStateProps,
+} from './dashboard/MosaicDashboardInitialState';
+export {addProfilerPanelAction} from './profiler/addProfilerPanelAction';
+export {addTextPanelAction} from './text/addTextPanelAction';
+export {addChartPanelAction} from './chart/addChartPanelAction';
+export {
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardChartPanelConfig,
   createMosaicDashboardTextPanelConfig,
@@ -34,7 +44,6 @@ export {
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
   isChartPanelConfig,
-  panelHasSource,
   MOSAIC_DASHBOARD_PANEL,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
@@ -43,9 +52,7 @@ export {
   MosaicDashboardEntry,
   MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
-  MosaicDashboardPanelSource,
   MosaicDashboardSliceConfig,
-  resolveMosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
 export type {
@@ -56,7 +63,6 @@ export type {
   MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
   MosaicDashboardPanelRenderer,
   MosaicDashboardPanelRendererProps,
-  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
@@ -178,6 +184,15 @@ export type {ChartBuilderRootProps} from './chart-builders/ChartBuilderRoot';
 export {ChartBuilderRoot} from './chart-builders/ChartBuilderRoot';
 export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
 export {ChartBuilderFields} from './chart-builders/ChartBuilderFields';
+export {Field} from './chart-builders/Field';
+export {TableSelector} from './chart-builders/TableSelector';
+export {ColumnSelector} from './chart-builders/ColumnSelector';
+export {MultiFieldSelector} from './chart-builders/MultiFieldSelector';
+export {
+  ColumnsProvider,
+  useColumnsContext,
+  type ColumnsContextValue,
+} from './chart-builders/ColumnsContext';
 export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
 export {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';

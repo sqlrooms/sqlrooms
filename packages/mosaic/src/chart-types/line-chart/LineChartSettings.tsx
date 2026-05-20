@@ -6,14 +6,15 @@ import {TemporalGranularitySelector} from '../../chart-builders/TemporalGranular
 import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
 import {MultiFieldSelector} from '../../chart-builders/MultiFieldSelector';
 import {isTemporalType} from '../../chart-builders/constants';
+import {useColumnsContext} from '../../chart-builders/ColumnsContext';
 
 /**
  * Explicit settings component for line chart.
  * Composes primitive and compound components for full control over the UI.
  */
 export const LineChartSettingsComponent: FC = () => {
-  const {columns, onChangeConfig, config} =
-    useChartSettingsContext('line-chart');
+  const {onChangeConfig, config} = useChartSettingsContext('line-chart');
+  const {columns} = useColumnsContext();
 
   const xField = columns.find((c) => c.name === config.settings.x);
   const isXFieldTemporal = xField && isTemporalType(xField.type);

@@ -1,4 +1,5 @@
 import {createContext, useContext} from 'react';
+import type {MosaicDashboardInitialStateProps} from './MosaicDashboardInitialState';
 
 export type MosaicDashboardContextValue = {
   dashboardId: string;
@@ -8,6 +9,7 @@ export type MosaicDashboardContextValue = {
   closeBuilder: () => void;
   setBuilderOpen: (open: boolean) => void;
   addDefaultChart: () => void;
+  onStart?: MosaicDashboardInitialStateProps['onStart'];
 };
 
 export const MosaicDashboardContext =

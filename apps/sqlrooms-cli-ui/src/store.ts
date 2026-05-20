@@ -21,6 +21,7 @@ import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   deckMapDashboardPanelRenderer,
+  findLongitudeLatitudeColumns,
 } from '@sqlrooms/deck';
 import {
   createDefaultLoadTableSchemasFilter,
@@ -42,6 +43,7 @@ import {
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
   createDefaultChartTypes,
+  defaultAddPanelActions,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -161,25 +163,6 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
-const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
-const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
-
-function findColumnByName(table: DataTable, candidates: string[]) {
-  const candidateSet = new Set(candidates);
-  return table.columns.find((column) =>
-    candidateSet.has(column.name.toLowerCase()),
-  )?.name;
-}
-
-function findLongitudeLatitudeColumns(table?: DataTable) {
-  if (!table) return null;
-  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
-  return longitudeColumn && latitudeColumn
-    ? {longitudeColumn, latitudeColumn}
-    : null;
-}
-
 function quoteSqlIdentifier(identifier: string) {
   return `"${identifier.replace(/"/g, '""')}"`;
 }
@@ -194,17 +177,33 @@ function quoteTableReference(table: DataTable) {
 
 function createDeckMapPanelForTable(table: DataTable) {
   const coordinates = findLongitudeLatitudeColumns(table);
-  if (!coordinates) return undefined;
+
+  if (!coordinates) {
+    const tableName = table.table.table;
+    return createDeckMapDashboardPanelConfig({
+      title: `${tableName} map`,
+      source: {tableName},
+      datasets: {},
+      spec: {},
+    });
+  }
 
   const {longitudeColumn, latitudeColumn} = coordinates;
-  const datasetId = table.tableName;
+
+  const tableName = table.table.table;
+
+  const datasetId = tableName;
   const geometryColumn = '__sqlrooms_geom';
-  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
-  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
+  const quotedLongitude = longitudeColumn
+    ? quoteSqlIdentifier(longitudeColumn)
+    : undefined;
+  const quotedLatitude = latitudeColumn
+    ? quoteSqlIdentifier(latitudeColumn)
+    : undefined;
 
   return createDeckMapDashboardPanelConfig({
-    title: `${table.tableName} map`,
-    source: {tableName: table.tableName},
+    title: `${tableName} map`,
+    source: {tableName},
     spec: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [
@@ -248,8 +247,6 @@ const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
   type: DECK_MAP_DASHBOARD_PANEL_TYPE,
   label: 'Map',
   icon: MapIcon,
-  isEnabled: ({selectedTable}) =>
-    Boolean(findLongitudeLatitudeColumns(selectedTable)),
   createPanel: ({selectedTable}) =>
     selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
 };
@@ -505,7 +502,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createMosaicDashboardSlice({
-          addPanelActions: [deckMapDashboardAddPanelAction],
+          addPanelActions: [
+            ...defaultAddPanelActions,
+            deckMapDashboardAddPanelAction,
+          ],
           panelRenderers: createDefaultMosaicDashboardPanelRenderers({
             [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
           }),
