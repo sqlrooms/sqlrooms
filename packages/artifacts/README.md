@@ -96,6 +96,8 @@ removes the artifact registry entry.
   descriptors, open tab ids, selected id, and handlers.
 - `ArtifactTabs` is a compound component over `TabStrip` and
   `TabsLayout.TabContent`.
+- Pass `forceMountContent` to `ArtifactTabs` to keep visible artifact tab
+  panels mounted while hiding inactive panels.
 - `ArtifactTabs.useActions()` exposes the current tab adapter actions to custom
   subcomponents rendered under `ArtifactTabs`.
 - `createArtifactLayoutNode(artifactId, panelKey?)` creates a stable layout

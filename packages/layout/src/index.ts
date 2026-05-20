@@ -108,5 +108,6 @@ export {useExpandGridPanel} from './node-renderers/leaf-node-renderer/useExpandG
 export {useLeafLayoutPanelDraggable} from './node-renderers/leaf-node-renderer/LeafLayoutPanelDraggableContext';
 export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
+export type {TabsLayoutTabContentProps} from './node-renderers/tabs-node-renderer/TabsLayoutTabContent';
 export {DockLayout} from './node-renderers/dock-node-renderer/DockLayout';
 export {GridLayout} from './node-renderers/grid-node-renderer/GridLayout';
