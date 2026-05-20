@@ -10,6 +10,7 @@ import {
   createChatSearchRehypePlugin,
   useOptionalChatSearch,
 } from './ChatSearch';
+import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
@@ -24,16 +25,6 @@ type ThinkContent = {
   isComplete: boolean;
   index: number;
 };
-
-const markdownTableComponent: Components['table'] = ({
-  className,
-  node: _node,
-  ...props
-}) => (
-  <div className="max-w-full overflow-x-auto">
-    <table className={cn('w-max min-w-full', className)} {...props} />
-  </div>
-);
 
 // Constants moved outside component to prevent recreation
 const THINK_WORD_LIMIT = 10;

@@ -1,23 +1,13 @@
-import {cn} from '@sqlrooms/ui';
 import Markdown from 'react-markdown';
 import {Components} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
 
 export type ErrorMessageComponentProps = {
   errorMessage: string;
   components?: Partial<Components>;
 };
-
-const markdownTableComponent: Components['table'] = ({
-  className,
-  node: _node,
-  ...props
-}) => (
-  <div className="max-w-full overflow-x-auto">
-    <table className={cn('w-max min-w-full', className)} {...props} />
-  </div>
-);
 
 export function ErrorMessage(props: ErrorMessageComponentProps) {
   const components = {
