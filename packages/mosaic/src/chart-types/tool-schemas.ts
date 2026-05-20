@@ -4,7 +4,9 @@ export const BaseChartToolParameters = z.object({
   artifactId: z
     .string()
     .optional()
-    .describe('Optional dashboard artifact ID. Defaults to current dashboard.'),
+    .describe(
+      'Optional dashboard artifact ID. Prefer passing this explicitly; if omitted, the host may use an unambiguous primary dashboard context.',
+    ),
   tableName: z
     .string()
     .optional()

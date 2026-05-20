@@ -6,7 +6,9 @@ export {
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
+  getAiRunContextPrimaryItem,
   getAiRunContextItems,
+  setAiRunContextPrimaryItem,
 } from './schema/AnalysisSessionSchema';
 export type {
   AiRunContext,

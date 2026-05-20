@@ -1,6 +1,7 @@
 import type {ComponentType} from 'react';
 import type {
   AiRunContext,
+  AiRunContextItem,
   AiSliceConfig,
   AnalysisSessionSchema,
 } from '@sqlrooms/ai-config';
@@ -178,6 +179,9 @@ export type AiChatSendMessage = (message: {text: string}) => void;
 export type AiToolExecutionContext = {
   sessionId?: string;
   aiRunContext?: AiRunContext;
+  getAiRunContext?: () => AiRunContext | undefined;
+  setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+  setPrimaryRunContextItem?: (item: AiRunContextItem) => void;
 };
 
 /**
@@ -189,6 +193,10 @@ export interface AiStateForTransport {
   tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
+  setSessionRunContext: (
+    sessionId: string,
+    runContext: AiRunContext | undefined,
+  ) => void;
   getAbortController: (sessionId: string) => AbortController | undefined;
   setAbortController: (
     sessionId: string,

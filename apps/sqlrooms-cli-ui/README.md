@@ -67,3 +67,16 @@ Dashboard artifacts are created with either a `dock` or `grid` Mosaic dashboard
 layout. Explicit dashboard creation commands and AI tools require `layoutType`
 so the choice is made once at creation time; auto-created dashboards from chart
 or profiler flows use `grid`.
+
+## AI Artifact Context
+
+The assistant captures selected artifact context at run start. The first
+selected item is the primary context artifact unless the run context carries an
+explicit `primaryItemId`.
+
+Direct AI tools can list and read context artifacts with
+`list_context_artifacts` and `read_context_artifact`. Mutating tools should pass
+an explicit `artifactId`; if omitted, dashboard chart tools only use an
+unambiguous primary dashboard. Reference artifacts are not implicit mutation
+targets. `set_primary_context_artifact` updates the current run and session
+context when the assistant creates or switches to a new primary artifact.
