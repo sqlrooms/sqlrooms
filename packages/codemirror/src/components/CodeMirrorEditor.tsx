@@ -122,6 +122,7 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
 
     // Update listener
     extensionsList.push(
+      // eslint-disable-next-line react-hooks/refs
       EditorView.updateListener.of((update) => {
         if (!update.docChanged) {
           return;

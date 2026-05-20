@@ -1,16 +1,77 @@
-import React, {useMemo} from 'react';
+import React, {createContext, useContext, useMemo} from 'react';
 import {CircleXIcon, Loader2, CircleDotIcon, CircleIcon} from 'lucide-react';
 import {formatShortDuration} from '@sqlrooms/utils';
-import {cn, HoverCard, HoverCardContent, HoverCardTrigger} from '@sqlrooms/ui';
+import {
+  cn,
+  CopyButton,
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@sqlrooms/ui';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
-import {humanizeToolName, isDynamicToolPart, isToolPart} from '../utils';
+import {isDynamicToolPart, isToolPart} from '../utils';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
 import {type HoistableToolCall} from './collectHoistableRenderers';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
+
+// ---------------------------------------------------------------------------
+// Context for controlling ToolCallDetailHover visibility
+// ---------------------------------------------------------------------------
+
+const ShowToolCallDetailsContext = createContext(false);
+
+export const ShowToolCallDetailsProvider = ShowToolCallDetailsContext.Provider;
+
+function useShowToolCallDetails() {
+  return useContext(ShowToolCallDetailsContext);
+}
+
+// ---------------------------------------------------------------------------
+// Context for host-app-provided tool rendering behavior
+// ---------------------------------------------------------------------------
+
+/**
+ * Controls the segment-tree structure: which tool calls are treated as
+ * transparent wrappers whose children are promoted to the caller's level.
+ *
+ * - `isPassthroughTool`: when true, no summary line is rendered and nested
+ *   calls are flattened into the parent's segment list.
+ */
+export type ToolStructureBehavior = {
+  isPassthroughTool?: (toolCall: AgentToolCall) => boolean;
+};
+
+/**
+ * Controls how tool calls are labeled in the UI. All callbacks return
+ * `undefined` to fall back to the renderer's default.
+ *
+ * - `getToolDisplayName`: label for agent summary lines (ParentSummaryLine).
+ *   Falls back to the raw tool name.
+ * - `getActivityLabel`: label for leaf activity log lines (ActivityLogLine,
+ *   OrchestratorLogLineInner). Used only when the tool call has no
+ *   `reasoning` input field — a present `reasoning` always wins so that
+ *   model-provided thoughts are never hidden. Falls back to "Thinking..."
+ *   while pending, then to the raw tool name.
+ */
+export type ToolDisplayBehavior = {
+  getToolDisplayName?: (toolCall: AgentToolCall) => string | undefined;
+  getActivityLabel?: (toolCall: AgentToolCall) => string | undefined;
+};
+
+/** Combined structural + display customization passed via Chat.Root. */
+export type ToolRenderBehavior = ToolStructureBehavior & ToolDisplayBehavior;
+
+const ToolRenderBehaviorContext = createContext<ToolRenderBehavior>({});
+
+export const ToolRenderBehaviorProvider = ToolRenderBehaviorContext.Provider;
+
+export function useToolRenderBehavior(): ToolRenderBehavior {
+  return useContext(ToolRenderBehaviorContext);
+}
 
 // ---------------------------------------------------------------------------
 // Types for the flattened segment model
@@ -36,6 +97,8 @@ type FlatSegment = AgentSegment | ToolGroupSegment;
 const ActivityLogLine: React.FC<{
   toolCall: AgentToolCall;
 }> = ({toolCall}) => {
+  const showDetails = useShowToolCallDetails();
+  const {getActivityLabel} = useToolRenderBehavior();
   const isSuccess = toolCall.state === 'success';
   const isError = toolCall.state === 'error';
   const isPending = toolCall.state === 'pending';
@@ -46,13 +109,18 @@ const ActivityLogLine: React.FC<{
       : undefined;
   const reasoning = inputObj?.reasoning as string | undefined;
 
-  const label = reasoning || toolCall.toolName;
+  const label =
+    reasoning ??
+    (getActivityLabel ? getActivityLabel(toolCall) : undefined) ??
+    (isPending ? 'Thinking...' : toolCall.toolName);
 
   return (
     <div
       className={cn(
-        'grid min-w-0 grid-cols-[14px_minmax(0,1fr)_auto_auto] items-start gap-x-1.5 overflow-hidden py-0.5',
-        isError && 'text-red-600 dark:text-red-400',
+        'grid min-w-0 items-start gap-x-1.5 overflow-hidden py-0.5',
+        showDetails
+          ? 'grid-cols-[14px_minmax(0,1fr)_auto_auto]'
+          : 'grid-cols-[14px_minmax(0,1fr)_auto]',
         !isError && 'text-muted-foreground',
       )}
     >
@@ -65,7 +133,12 @@ const ActivityLogLine: React.FC<{
         )}
         {isError && <CircleXIcon className="h-3 w-3" />}
       </span>
-      <span className="min-w-0 leading-4 break-all whitespace-normal">
+      <span
+        className={cn(
+          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
+          reasoning && 'italic',
+        )}
+      >
         {label}
       </span>
       {toolCall.startedAt != null ? (
@@ -76,7 +149,7 @@ const ActivityLogLine: React.FC<{
       ) : (
         <span />
       )}
-      <ToolCallDetailHover toolCall={toolCall} />
+      {showDetails && <ToolCallDetailHover toolCall={toolCall} />}
     </div>
   );
 };
@@ -109,20 +182,13 @@ const LogLineElapsed: React.FC<{
 const ParentSummaryLine: React.FC<{
   toolCallId: string;
   toolName: string;
-  reasoning?: string;
   isComplete: boolean;
   startedAt?: number;
   completedAt?: number;
   toolCall?: AgentToolCall;
-}> = ({
-  toolCallId,
-  toolName,
-  reasoning,
-  isComplete,
-  startedAt,
-  completedAt,
-  toolCall,
-}) => {
+}> = ({toolCallId, toolName, isComplete, startedAt, completedAt, toolCall}) => {
+  const showDetails = useShowToolCallDetails();
+  const {getToolDisplayName} = useToolRenderBehavior();
   const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);
   const effectiveStartedAt = timing?.startedAt ?? startedAt;
   const effectiveCompletedAt = timing?.completedAt ?? completedAt;
@@ -131,12 +197,18 @@ const ParentSummaryLine: React.FC<{
     effectiveStartedAt,
     effectiveCompletedAt,
   );
-  const displayName = humanizeToolName(toolName);
+  const displayName =
+    (toolCall && getToolDisplayName
+      ? getToolDisplayName(toolCall)
+      : undefined) ?? toolName;
 
   return (
     <div
       className={cn(
-        'grid min-w-0 grid-cols-[16px_minmax(0,1fr)_auto_auto] items-start gap-x-2 py-1 text-xs',
+        'grid min-w-0 items-start gap-x-2 py-1 text-xs',
+        showDetails
+          ? 'grid-cols-[16px_minmax(0,1fr)_auto_auto]'
+          : 'grid-cols-[16px_minmax(0,1fr)_auto]',
       )}
     >
       <span className="flex h-4 w-4 items-center justify-center">
@@ -146,12 +218,7 @@ const ParentSummaryLine: React.FC<{
           <CircleIcon className="text-muted-foreground/30 h-2 w-2 fill-current" />
         )}
       </span>
-      <span className="min-w-0 leading-4 break-words">
-        <span className="font-medium">{displayName}</span>
-        {reasoning && (
-          <span className="ml-1.5 font-normal italic">{reasoning}</span>
-        )}
-      </span>
+      <span className="min-w-0 leading-4 font-medium">{displayName}</span>
       {elapsed ? (
         <span className="text-muted-foreground/50 shrink-0 text-[11px] tabular-nums">
           {elapsed}
@@ -163,7 +230,8 @@ const ParentSummaryLine: React.FC<{
       ) : (
         <span />
       )}
-      {toolCall ? <ToolCallDetailHover toolCall={toolCall} /> : <span />}
+      {showDetails &&
+        (toolCall ? <ToolCallDetailHover toolCall={toolCall} /> : <span />)}
     </div>
   );
 };
@@ -203,26 +271,56 @@ const ToolCallDetailHover: React.FC<{
       </div>
       {toolCall.input != null && (
         <>
-          <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-            Input
+          <div className="my-2 flex h-5 items-center">
+            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              Input
+            </span>
           </div>
-          <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-            {typeof toolCall.input === 'string'
-              ? toolCall.input
-              : JSON.stringify(toolCall.input, null, 2)}
-          </pre>
+          <div className="relative">
+            <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 pr-7 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+              {typeof toolCall.input === 'string'
+                ? toolCall.input
+                : JSON.stringify(toolCall.input, null, 2)}
+            </pre>
+            <div className="absolute top-1 right-1">
+              <CopyButton
+                text={
+                  typeof toolCall.input === 'string'
+                    ? toolCall.input
+                    : JSON.stringify(toolCall.input, null, 2)
+                }
+                size="xs"
+                className="h-5 w-5"
+              />
+            </div>
+          </div>
         </>
       )}
       {toolCall.output != null && (
         <>
-          <div className="mt-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-            Output
+          <div className="my-2 flex h-5 items-center">
+            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              Output
+            </span>
           </div>
-          <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-            {typeof toolCall.output === 'string'
-              ? toolCall.output
-              : JSON.stringify(toolCall.output, null, 2)}
-          </pre>
+          <div className="relative">
+            <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-gray-50 p-1.5 pr-7 font-mono text-[10px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+              {typeof toolCall.output === 'string'
+                ? toolCall.output
+                : JSON.stringify(toolCall.output, null, 2)}
+            </pre>
+            <div className="absolute top-1 right-1">
+              <CopyButton
+                text={
+                  typeof toolCall.output === 'string'
+                    ? toolCall.output
+                    : JSON.stringify(toolCall.output, null, 2)
+                }
+                size="xs"
+                className="h-5 w-5"
+              />
+            </div>
+          </div>
         </>
       )}
       {toolCall.errorText && (
@@ -287,23 +385,18 @@ function getNestedCalls(
   return agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? [];
 }
 
-function getReasoning(tc: AgentToolCall): string | undefined {
-  const inputObj =
-    tc.input && typeof tc.input === 'object'
-      ? (tc.input as Record<string, unknown>)
-      : undefined;
-  return inputObj?.reasoning as string | undefined;
-}
-
 // ---------------------------------------------------------------------------
 // buildFlatSegments — partition a list of tool calls into segments:
 //   consecutive non-agent tools => ToolGroupSegment
 //   agent calls => AgentSegment (recursed at render time)
+// Tools flagged as passthrough by the host app are collapsed: their children
+// are flattened into the caller's segment list so no summary line is emitted.
 // ---------------------------------------------------------------------------
 
 function buildFlatSegments(
   calls: AgentToolCall[],
   agentProgress: Record<string, AgentToolCall[]>,
+  isPassthroughTool?: (tc: AgentToolCall) => boolean,
 ): FlatSegment[] {
   const segments: FlatSegment[] = [];
   let pendingTools: AgentToolCall[] = [];
@@ -316,6 +409,24 @@ function buildFlatSegments(
   };
 
   for (const tc of calls) {
+    if (isPassthroughTool?.(tc)) {
+      const nested = getNestedCalls(tc, agentProgress);
+      const nestedSegments = buildFlatSegments(
+        nested,
+        agentProgress,
+        isPassthroughTool,
+      );
+      for (const seg of nestedSegments) {
+        if (seg.kind === 'tool-group') {
+          pendingTools.push(...seg.tools);
+        } else {
+          flushTools();
+          segments.push(seg);
+        }
+      }
+      continue;
+    }
+
     if (isAgentCall(tc, agentProgress)) {
       flushTools();
       segments.push({
@@ -341,7 +452,16 @@ const FlatSegmentList: React.FC<{
   agentProgress: Record<string, AgentToolCall[]>;
   hoistableSet: ReadonlySet<string>;
   toolRenderers: Record<string, unknown>;
-}> = ({segments, agentProgress, hoistableSet, toolRenderers}) => {
+  isPassthroughTool?: (tc: AgentToolCall) => boolean;
+  isAgentComplete?: boolean;
+}> = ({
+  segments,
+  agentProgress,
+  hoistableSet,
+  toolRenderers,
+  isPassthroughTool,
+  isAgentComplete,
+}) => {
   return (
     <>
       {segments.map((seg, idx) => {
@@ -350,9 +470,16 @@ const FlatSegmentList: React.FC<{
             (t) => t.state === 'pending' || t.state === 'approval-requested',
           );
 
+          const toolCount = seg.tools.length;
+          const allToolsDone = !anyPending && toolCount > 0;
+          const summaryLabel =
+            allToolsDone && isAgentComplete
+              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+              : undefined;
+
           return (
             <React.Fragment key={`tg-${idx}`}>
-              <ActivityBox isRunning={anyPending}>
+              <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
                 {seg.tools.map((tc) => {
                   const isHoisted =
                     hoistableSet.has(tc.toolName) &&
@@ -406,18 +533,20 @@ const FlatSegmentList: React.FC<{
 
         // Agent segment: render summary line, then recurse into sub-segments
         const {toolCall, nestedCalls} = seg;
-        const reasoning = getReasoning(toolCall);
         const isComplete =
           toolCall.state === 'success' || toolCall.state === 'error';
 
-        const childSegments = buildFlatSegments(nestedCalls, agentProgress);
+        const childSegments = buildFlatSegments(
+          nestedCalls,
+          agentProgress,
+          isPassthroughTool,
+        );
 
         return (
           <React.Fragment key={toolCall.toolCallId}>
             <ParentSummaryLine
               toolCallId={toolCall.toolCallId}
               toolName={toolCall.toolName}
-              reasoning={reasoning}
               isComplete={isComplete}
               startedAt={toolCall.startedAt}
               completedAt={toolCall.completedAt}
@@ -428,6 +557,8 @@ const FlatSegmentList: React.FC<{
               agentProgress={agentProgress}
               hoistableSet={hoistableSet}
               toolRenderers={toolRenderers}
+              isPassthroughTool={isPassthroughTool}
+              isAgentComplete={isComplete}
             />
           </React.Fragment>
         );
@@ -444,7 +575,8 @@ const FlatSegmentList: React.FC<{
 export const OrchestratorToolLogLine: React.FC<{
   part: UIMessagePart;
   toolCallId: string;
-}> = ({part, toolCallId}) => {
+  searchBlockId?: string;
+}> = ({part, toolCallId, searchBlockId}) => {
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
   const toolName = isDynamicToolPart(part)
@@ -457,31 +589,36 @@ export const OrchestratorToolLogLine: React.FC<{
   const isError = state === 'output-error' || state === 'output-denied';
   const isPending = !isSuccess && !isError;
 
-  const inputObj =
-    part.input && typeof part.input === 'object'
-      ? (part.input as Record<string, unknown>)
-      : undefined;
-  const reasoning = inputObj?.reasoning as string | undefined;
-  const label = reasoning || toolName;
+  const toolCall: AgentToolCall = {
+    toolCallId,
+    toolName,
+    input: part.input,
+    output: (part as Record<string, unknown>).output,
+    state: isError ? 'error' : isSuccess ? 'success' : 'pending',
+  };
 
   return (
     <OrchestratorLogLineInner
       toolCallId={toolCallId}
-      label={label}
       isPending={isPending}
       isSuccess={isSuccess}
       isError={isError}
+      toolCall={toolCall}
+      searchBlockId={searchBlockId}
     />
   );
 };
 
 const OrchestratorLogLineInner: React.FC<{
   toolCallId: string;
-  label: string;
   isPending: boolean;
   isSuccess: boolean;
   isError: boolean;
-}> = ({toolCallId, label, isPending, isSuccess, isError}) => {
+  toolCall: AgentToolCall;
+  searchBlockId?: string;
+}> = ({toolCallId, isPending, isSuccess, isError, toolCall, searchBlockId}) => {
+  const showDetails = useShowToolCallDetails();
+  const {getActivityLabel} = useToolRenderBehavior();
   const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);
   const elapsed = useElapsedTime(
     isPending,
@@ -489,11 +626,24 @@ const OrchestratorLogLineInner: React.FC<{
     timing?.completedAt,
   );
 
+  const inputObj =
+    toolCall.input && typeof toolCall.input === 'object'
+      ? (toolCall.input as Record<string, unknown>)
+      : undefined;
+  const reasoning = inputObj?.reasoning as string | undefined;
+
+  const label =
+    reasoning ??
+    (getActivityLabel ? getActivityLabel(toolCall) : undefined) ??
+    (isPending ? 'Thinking...' : toolCall.toolName);
+
   return (
     <div
       className={cn(
-        'grid min-w-0 grid-cols-[14px_minmax(0,1fr)_auto] items-start gap-x-1.5 overflow-hidden py-0.5',
-        isError && 'text-red-600 dark:text-red-400',
+        'grid min-w-0 items-start gap-x-1.5 overflow-hidden py-0.5',
+        showDetails
+          ? 'grid-cols-[14px_minmax(0,1fr)_auto_auto]'
+          : 'grid-cols-[14px_minmax(0,1fr)_auto]',
         !isError && 'text-muted-foreground',
       )}
     >
@@ -506,7 +656,12 @@ const OrchestratorLogLineInner: React.FC<{
         )}
         {isError && <CircleXIcon className="h-3 w-3" />}
       </span>
-      <span className="min-w-0 leading-4 break-all whitespace-normal">
+      <span
+        className={cn(
+          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
+          reasoning && 'italic',
+        )}
+      >
         {label}
       </span>
       {elapsed ? (
@@ -520,6 +675,7 @@ const OrchestratorLogLineInner: React.FC<{
       ) : (
         <span />
       )}
+      {showDetails && <ToolCallDetailHover toolCall={toolCall} />}
     </div>
   );
 };
@@ -545,6 +701,7 @@ export const FlatAgentRenderer: React.FC<{
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
   const hoistedRendererNames = useHoistedRenderers();
+  const {isPassthroughTool} = useToolRenderBehavior();
 
   const displayCalls = agentProgress[toolCallId] ?? agentToolCalls;
 
@@ -554,15 +711,9 @@ export const FlatAgentRenderer: React.FC<{
   );
 
   const segments = useMemo(
-    () => buildFlatSegments(displayCalls, agentProgress),
-    [displayCalls, agentProgress],
+    () => buildFlatSegments(displayCalls, agentProgress, isPassthroughTool),
+    [displayCalls, agentProgress, isPassthroughTool],
   );
-
-  const parentInputObj =
-    parentInput && typeof parentInput === 'object'
-      ? (parentInput as Record<string, unknown>)
-      : undefined;
-  const parentReasoning = parentInputObj?.reasoning as string | undefined;
 
   const parentToolCall = useMemo(
     (): AgentToolCall | undefined =>
@@ -577,13 +728,18 @@ export const FlatAgentRenderer: React.FC<{
     [toolCallId, parentToolName, parentInput, isComplete],
   );
 
+  const hideParentSummary = !!(
+    parentToolCall &&
+    isPassthroughTool &&
+    isPassthroughTool(parentToolCall)
+  );
+
   return (
     <div className="mt-1 flex w-full min-w-0 flex-col gap-1.5 overflow-hidden text-[0.9em]">
-      {parentToolName && (
+      {parentToolName && !hideParentSummary && (
         <ParentSummaryLine
           toolCallId={toolCallId}
           toolName={parentToolName}
-          reasoning={parentReasoning}
           isComplete={!!isComplete}
           toolCall={parentToolCall}
         />
@@ -594,6 +750,8 @@ export const FlatAgentRenderer: React.FC<{
         agentProgress={agentProgress}
         hoistableSet={hoistableSet}
         toolRenderers={toolRenderers}
+        isPassthroughTool={isPassthroughTool}
+        isAgentComplete={!!isComplete}
       />
     </div>
   );

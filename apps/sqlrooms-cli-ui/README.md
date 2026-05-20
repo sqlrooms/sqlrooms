@@ -10,21 +10,21 @@ In production (published `sqlrooms` wheel), the UI is served as **static assets*
 
 ## Dev mode (UI + Python server together)
 
-From `python/sqlrooms-cli`:
+From the repo root:
 
 ```bash
-pnpm dev
+pnpm dev cli
 ```
 
 This starts:
 
-- the Python server on `http://127.0.0.1:4173`
+- the Python API server on `http://127.0.0.1:4173` without serving static UI
 - the Vite UI on `http://localhost:4174` (proxying `/api` and `/config.json` to 4173)
 
 If you hit `address already in use`, pass different ports to the Python server:
 
 ```bash
-pnpm dev:server -- --port 4176 --ws-port 4002
+pnpm dev cli -- --port 4176 --ws-port 4002
 ```
 
 Then also update the Vite proxy target in `vite.config.ts` (or run Vite with a different proxy setup).
@@ -35,7 +35,7 @@ Terminal A (Python server):
 
 ```bash
 cd python/sqlrooms-cli
-pnpm dev:server
+pnpm dev -- --no-ui
 ```
 
 Terminal B (UI):
@@ -60,3 +60,10 @@ To copy it into the Python package bundle directory (so the published `sqlrooms`
 cd python/sqlrooms-cli
 pnpm build:ui
 ```
+
+## Dashboard Layouts
+
+Dashboard artifacts are created with either a `dock` or `grid` Mosaic dashboard
+layout. Explicit dashboard creation commands and AI tools require `layoutType`
+so the choice is made once at creation time; auto-created dashboards from chart
+or profiler flows use `grid`.

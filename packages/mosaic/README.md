@@ -41,6 +41,36 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
+Mosaic's pre-aggregation optimization creates `preagg_*` cache tables lazily
+when users interact with cross-filtered selections. By default Mosaic writes
+those tables to the persistent `mosaic` schema. If the DuckDB database is a user
+project file, point pre-aggregates at an attached cache database or disable them:
+
+```tsx
+const mosaicCacheDatabase = '__sqlrooms_mosaic_cache';
+
+const connector = createWebSocketDuckDbConnector({
+  initializationQuery: [
+    `ATTACH IF NOT EXISTS ':memory:' AS ${mosaicCacheDatabase}`,
+    `CREATE SCHEMA IF NOT EXISTS ${mosaicCacheDatabase}.mosaic`,
+  ].join('; '),
+});
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    // ... db slice using connector
+    ...createMosaicSlice({
+      preagg: {
+        schema: `${mosaicCacheDatabase}.mosaic`,
+      },
+    })(set, get, store),
+  }),
+);
+```
+
+Set `preagg.enabled` to `false` when you prefer to avoid pre-aggregate tables
+entirely.
+
 The Mosaic connection is automatically initialized when the DuckDB connector is ready. You can check the connection status:
 
 ```tsx
@@ -68,10 +98,9 @@ The `useMosaicClient` hook creates a Mosaic client that automatically queries da
 
 ```tsx
 import {Query, useMosaicClient} from '@sqlrooms/mosaic';
-import {Table} from 'apache-arrow';
 
 function MapView() {
-  const {data, isLoading, client} = useMosaicClient<Table>({
+  const {data, isLoading, client} = useMosaicClient({
     selectionName: 'brush', // Named selection for cross-filtering
     query: (filter: any) => {
       return Query.from('earthquakes')
@@ -88,6 +117,11 @@ function MapView() {
   return <div>Data loaded: {data?.numRows} rows</div>;
 }
 ```
+
+`useMosaicClient` returns an Apache Arrow table. Mosaic still uses its native
+table runtime internally, but that detail is hidden at the hook boundary so
+custom SQLRooms views can work with the same Arrow shape used by the DuckDB and
+deck packages.
 
 The hook accepts the following options:
 
@@ -132,6 +166,185 @@ function EarthquakeProfiler() {
 For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
 is still available when you need direct access to the profiler state for custom
 layout, sizing, or advanced composition.
+
+### Mosaic Dashboard Panels
+
+`MosaicDashboard` is a compound dashboard surface backed by generic dashboard
+panels instead of a chart-only list. Configure supported panel renderers and
+runtime add-panel actions when creating the dashboard slice.
+
+```tsx
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardChartPanelConfig,
+  createMosaicDashboardSlice,
+  MosaicDashboard,
+} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice({
+  panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
+  // Optional: pass chartTypes/chartBuilders to customize Add Chart.
+  // Optional: pass addPanelActions to add app-specific menu entries.
+});
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="main" />;
+}
+
+function addProfiler(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardProfilerPanelConfig({
+      source: {tableName: 'earthquakes'},
+    }),
+  );
+}
+
+function addBoxPlotChart(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardChartPanelConfig('Magnitude by Region', {
+      chartType: 'box-plot',
+      settings: {
+        x: 'region',
+        y: 'magnitude',
+      },
+    }),
+  );
+}
+```
+
+Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
+Existing persisted dashboards default to `dock`; pass `'grid'` to
+`createDashboard(title, 'grid')` or `ensureDashboard(id, title, 'grid')` when
+creating a dashboard that should use the scrollable grid renderer. Re-ensuring
+an existing dashboard does not convert between layout types.
+
+Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
+panel omits a source it falls back to the dashboard selected table. Panel renderer
+definitions and chart builder definitions are runtime-only and intentionally
+live outside persisted dashboard config.
+
+### AI Chart Tools
+
+`createChartTools` generates assistant tools for the built-in chart types. The
+injected `ChartToolDeps.resolveResources(params, context)` callback receives the
+tool execution context as its second argument. Client apps should prefer
+execution-scoped context, such as a captured AI run context, over live UI state
+when resolving implicit dashboard targets. Explicit `params.artifactId` should
+still take precedence.
+
+```ts
+import {
+  createChartTools,
+  createDefaultChartTypes,
+  type ChartToolDeps,
+} from '@sqlrooms/mosaic';
+
+const deps: ChartToolDeps = {
+  resolveResources: (params, context) => {
+    const sessionId = context?.sessionId;
+    const runContext = context?.aiRunContext;
+    const contextArtifactId = getDashboardArtifactIdFromRunContext(
+      runContext,
+      sessionId,
+    );
+
+    // Prefer execution-scoped context over live UI state for implicit targets.
+    // Explicit tool input still wins over anything derived from context.
+    const artifactId =
+      params.artifactId ??
+      contextArtifactId ??
+      getCurrentDashboardArtifactId();
+    const tableName = params.tableName ?? getSelectedTableName(artifactId);
+
+    return {
+      artifactId,
+      tableName,
+      columns: getTableColumns(tableName),
+    };
+  },
+  createChart: ({artifactId, tableName, title, config}) =>
+    addChartPanel({artifactId, tableName, title, config}),
+};
+
+const chartTools = createChartTools(
+  createDefaultChartTypes({includeCustomSpec: false}),
+  deps,
+);
+```
+
+### Box Plot Chart Type
+
+The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses
+a custom renderer instead of Vega-Lite. It calculates quartiles, whiskers, and
+outliers directly in DuckDB using SQL queries, then renders them with Observable
+Plot primitives. This approach provides better performance and more accurate
+statistical calculations than Observable Plot's built-in `boxY` mark.
+
+Box plots support:
+
+- Grouped box plots by categorical variable (x-axis)
+- Y-axis brushing for interactive filtering
+- Cross-filtering integration with other dashboard charts
+- Custom quartile calculation using DuckDB's `quantile_cont` function
+
+The renderer is modular and organized in the `chart-types/box-plot/renderer/`
+directory with separate concerns:
+
+- **BoxPlotPanelRenderer.tsx** - Main React component with drag interactions
+- **BoxPlotClient.ts** - Mosaic client for SQL-based data queries
+- **plot.ts** - Observable Plot rendering logic
+- **utils.ts** - Statistical calculations and coordinate transformations
+- **constants.ts** - Theme colors and layout constants
+
+### Chart Builder Compound Components
+
+The chart builder UI can be used as a compound component API for flexible composition:
+
+```tsx
+import {
+  ChartBuilderRoot,
+  ChartBuilderTrigger,
+  ChartBuilderDialogContent,
+  ChartBuilderContent,
+} from '@sqlrooms/mosaic';
+
+function MyDashboard() {
+  const columns = [...]; // Your table columns
+
+  return (
+    <ChartBuilderRoot
+      tableName="earthquakes"
+      columns={columns}
+      onCreateChart={(spec, title) => {
+        // Handle chart creation
+      }}
+      onCreateChartOutput={(output, title) => {
+        // Optional: handle non-spec outputs such as dashboard panel chart types.
+      }}
+    >
+      <ChartBuilderTrigger />
+      <ChartBuilderDialogContent>
+        <ChartBuilderContent />
+      </ChartBuilderDialogContent>
+    </ChartBuilderRoot>
+  );
+}
+```
+
+Available compound components:
+
+- `ChartBuilderRoot` - Context provider and dialog wrapper
+- `ChartBuilderTrigger` - Button to open the dialog
+- `ChartBuilderDialogContent` - Dialog content wrapper
+- `ChartBuilderContent` - Main chart builder UI (type grid + fields + actions)
+- `ChartBuilderTypeGrid` - Chart type selector grid
+- `ChartBuilderFields` - Field selector inputs
+- `ChartBuilderActions` - Back/Create buttons
+
+For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
 
 ### Working with Selections
 

@@ -10,12 +10,12 @@
   <img src="https://sqlrooms.org/media/examples/deckgl.webp" alt="SQLRooms Deck.gl geospatial visualization example" width=450>
 </a>
 
-An example demonstrating [deck.gl](https://deck.gl/) integration for geospatial data visualization. Features include:
+An example demonstrating [deck.gl](https://deck.gl/) integration for geospatial data visualization through [`@sqlrooms/deck`](../../packages/deck/README.md). Features include:
 
 - Load airports data file into DuckDB
-- Run SQL queries to filter and transform data
-- Visualize airport locations on an interactive map
-- High-performance WebGL-based rendering
+- Define a serializable deck.gl JSON layer spec separately from the data
+- Bind multiple named DuckDB-backed datasets into one map
+- Visualize airport locations on an interactive map with GeoArrow-backed point layers
 
 To create a new project from the deckgl example run this:
 

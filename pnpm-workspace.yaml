@@ -5,3 +5,11 @@ packages:
   - 'packages/kepler.gl/src/*'
   - 'apps/*'
   - 'python/*'
+allowBuilds:
+  '@mongodb-js/zstd': false
+  '@swc/core': true
+  '@vaadin/vaadin-usage-statistics': false
+  esbuild: true
+  node-liblzma: true
+  sharp: false
+  unrs-resolver: true

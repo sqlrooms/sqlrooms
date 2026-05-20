@@ -66,7 +66,6 @@ export const AnalysisResultsContainer: React.FC<{
           <div className="h-10 w-full shrink-0" />
         </div>
         <ScrollBar orientation="vertical" />
-        <ScrollBar orientation="horizontal" />
       </ScrollArea>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button

@@ -1,16 +1,16 @@
 {
   "name": "deckgl-example",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/mapbox": "^9.2.11",
+    "@sqlrooms/deck": "workspace:*",
     "@sqlrooms/discuss": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
@@ -18,12 +18,12 @@
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "deck.gl": "^9.2.11",
     "lucide-react": "^0.555.0",
     "maplibre-gl": "^5.12.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-map-gl": "^8.1.0"
+    "react-map-gl": "^8.1.1",
+    "zod": "4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
@@ -38,6 +38,6 @@
     "tailwindcss": "^4.1.18",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.34.0",
-    "vite": "^7.1.9"
+    "vite": "^8.0.5"
   }
 }

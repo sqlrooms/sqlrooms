@@ -1,7 +1,7 @@
-import {qualifySheetLocalResultNames} from '../src/sqlHelpers';
+import {qualifyArtifactLocalResultNames} from '../src/sqlHelpers';
 import type {Cell} from '../src/types';
 
-describe('qualifySheetLocalResultNames', () => {
+describe('qualifyArtifactLocalResultNames', () => {
   const cells: Record<string, Cell> = {
     a: {
       id: 'a',
@@ -18,38 +18,38 @@ describe('qualifySheetLocalResultNames', () => {
   it('qualifies unqualified same-sheet result names', () => {
     const sql =
       'select * from result_a join result_b on result_a.x = result_b.x';
-    const out = qualifySheetLocalResultNames({
+    const out = qualifyArtifactLocalResultNames({
       sql,
-      sheetSchema: 'sheet_1',
-      sheetCellIds: ['a', 'b'],
+      artifactSchema: 'artifact_1',
+      artifactCellIds: ['a', 'b'],
       cells,
       getSqlResultName: (id) => (cells[id]?.data as any)?.resultName,
     });
 
-    expect(out).toContain('sheet_1.result_a');
-    expect(out).toContain('sheet_1.result_b');
+    expect(out).toContain('artifact_1.result_a');
+    expect(out).toContain('artifact_1.result_b');
   });
 
   it('does not rewrite already-qualified names', () => {
     const sql = 'select * from other_schema.result_a join result_a on true';
-    const out = qualifySheetLocalResultNames({
+    const out = qualifyArtifactLocalResultNames({
       sql,
-      sheetSchema: 'sheet_1',
-      sheetCellIds: ['a'],
+      artifactSchema: 'artifact_1',
+      artifactCellIds: ['a'],
       cells,
       getSqlResultName: (id) => (cells[id]?.data as any)?.resultName,
     });
 
     expect(out).toContain('other_schema.result_a');
-    expect(out).toContain('sheet_1.result_a');
+    expect(out).toContain('artifact_1.result_a');
   });
 
   it('does not rewrite partial identifier matches', () => {
     const sql = 'select * from result_a_backup';
-    const out = qualifySheetLocalResultNames({
+    const out = qualifyArtifactLocalResultNames({
       sql,
-      sheetSchema: 'sheet_1',
-      sheetCellIds: ['a'],
+      artifactSchema: 'artifact_1',
+      artifactCellIds: ['a'],
       cells,
       getSqlResultName: (id) => (cells[id]?.data as any)?.resultName,
     });

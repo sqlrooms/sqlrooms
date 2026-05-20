@@ -83,6 +83,24 @@ export function AiPanel() {
 }
 ```
 
+## Local Agent Chat
+
+Use `Chat.LocalAgentRoot` when a transient surface should be driven by a
+pre-constructed `ToolLoopAgent` instead of the session-backed AI slice. The
+message and composer components stay under the same `Chat` compound API.
+
+```tsx
+<Chat.LocalAgentRoot
+  agent={agent}
+  initialSuggestions={['Get started', 'Show me an example']}
+  onMessagesChange={(msgs) => console.log(msgs)}
+>
+  <Chat.Messages />
+  <Chat.PromptSuggestions />
+  <Chat.Composer placeholder="Ask anything..." />
+</Chat.LocalAgentRoot>
+```
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`

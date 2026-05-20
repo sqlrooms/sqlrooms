@@ -4,6 +4,9 @@ export type RuntimeConfig = {
   llmProvider?: string;
   llmModel?: string;
   apiKey?: string;
+  syncEnabled?: boolean;
+  crdtWsUrl?: string;
+  crdtRoomId?: string;
   aiProviders?: Record<
     string,
     {

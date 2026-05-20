@@ -70,6 +70,7 @@ export function DbConnectionForm({editing, onDone}: DbConnectionFormProps) {
   React.useEffect(() => {
     if (editing) {
       suppressSyncRef.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEngineId(editing.engineId);
       setConnectionId(editing.id);
       setTitle(editing.title);

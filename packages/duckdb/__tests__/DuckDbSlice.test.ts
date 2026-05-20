@@ -1,8 +1,14 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
-import {createDuckDbSlice, DuckDbSliceState} from '../src/DuckDbSlice';
+import {
+  createDuckDbSlice,
+  defaultLoadSchemaCatalogFilter,
+  DuckDbSliceState,
+} from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
+import {DuckDbConnector} from '@sqlrooms/duckdb-core';
+import {loadSchemaCatalog} from '../src/loadTableSchemas';
 
 type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
 
@@ -266,6 +272,109 @@ describe('DuckDbSlice', () => {
 
       expect(rows.length).toBe(1);
       expect(rows[0]?.table_name).toBe('schema_test1');
+    });
+  });
+
+  describe('loadSchemaCatalog', () => {
+    it('should preserve empty schemas and empty attached database main schemas', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      await connector.query('CREATE SCHEMA empty_schema');
+      await connector.query("ATTACH ':memory:' AS attached_empty");
+      await connector.query('CREATE TABLE main.visible_table (id INT)');
+
+      const catalog = await loadSchemaCatalog(connector, {
+        filterFunction: defaultLoadSchemaCatalogFilter,
+      });
+
+      expect(
+        catalog.find(
+          (entry) =>
+            entry.database === 'memory' && entry.schema === 'empty_schema',
+        ),
+      ).toEqual({database: 'memory', schema: 'empty_schema', tables: []});
+
+      expect(
+        catalog.find(
+          (entry) =>
+            entry.database === 'attached_empty' && entry.schema === 'main',
+        ),
+      ).toEqual({database: 'attached_empty', schema: 'main', tables: []});
+
+      expect(
+        catalog
+          .find(
+            (entry) => entry.database === 'memory' && entry.schema === 'main',
+          )
+          ?.tables.map((table) => table.tableName),
+      ).toContain('visible_table');
+    });
+
+    it('should hide the temp database catalog by default', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      await connector.query('CREATE TEMP TABLE temp_table (id INT)');
+
+      const catalog = await loadSchemaCatalog(connector, {
+        filterFunction: defaultLoadSchemaCatalogFilter,
+      });
+
+      expect(catalog.some((entry) => entry.database === 'temp')).toBe(false);
+    });
+
+    it('should keep schemas when a table catalog filter removes their tables', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      await connector.query('CREATE SCHEMA filtered_schema');
+      await connector.query(
+        'CREATE TABLE filtered_schema.hidden_table (id INT)',
+      );
+
+      const catalog = await loadSchemaCatalog(connector, {
+        filterFunction: (entry) =>
+          entry.type === 'table'
+            ? entry.table.table !== 'hidden_table'
+            : defaultLoadSchemaCatalogFilter(entry),
+      });
+
+      expect(
+        catalog.find(
+          (entry) =>
+            entry.database === 'memory' && entry.schema === 'filtered_schema',
+        ),
+      ).toEqual({database: 'memory', schema: 'filtered_schema', tables: []});
+    });
+  });
+
+  describe('refreshTableSchemas', () => {
+    it('should issue a single catalog metadata query per refresh', async () => {
+      const connector = createNodeDuckDbConnector({dbPath: ':memory:'});
+      const querySql: string[] = [];
+      const countedConnector: DuckDbConnector = {
+        ...connector,
+        query(sql, options) {
+          querySql.push(sql);
+          return connector.query(sql, options);
+        },
+      };
+      const countedStore = createStore<TestStoreState>()((...args) => ({
+        ...createBaseRoomSlice()(...args),
+        ...createDuckDbSlice({connector: countedConnector})(...args),
+      }));
+
+      try {
+        await countedStore.getState().db.initialize();
+        await countedStore.getState().db.refreshTableSchemas();
+        querySql.length = 0;
+
+        await countedStore.getState().db.refreshTableSchemas();
+
+        expect(querySql).toHaveLength(2);
+        expect(querySql[0]).toContain('current_schema()');
+        expect(querySql[1]).toContain('FROM duckdb_schemas()');
+      } finally {
+        await countedStore.getState().db.destroy();
+      }
     });
   });
 

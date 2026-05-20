@@ -1,8 +1,8 @@
 {
   "name": "@sqlrooms/preset-typedoc",
-  "version": "0.29.0-rc.1",
-  "type": "module",
+  "version": "0.29.0-rc.5",
   "private": true,
+  "type": "module",
   "exports": {
     "default": "./typedoc-base-config.js"
   },

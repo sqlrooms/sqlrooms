@@ -1,0 +1,46 @@
+{
+  "name": "@sqlrooms/artifacts",
+  "version": "0.29.0-rc.5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.556.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/react": "*",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -121,6 +121,27 @@ async def test_write_upload_to_path_streams_files_larger_than_previous_cap(tmp_p
     assert target.stat().st_size == source_size
 
 
+def test_no_ui_keeps_api_but_does_not_mount_static_ui(tmp_path):
+    db_path = tmp_path / "test.db"
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<h1>SQLRooms UI</h1>", encoding="utf-8")
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+        serve_ui=False,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    assert client.get("/api/config").status_code == 200
+    assert client.get("/").status_code == 404
+
+
 def test_api_config_with_postgres_connector(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
