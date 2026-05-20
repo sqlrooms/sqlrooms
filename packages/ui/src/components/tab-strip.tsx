@@ -104,7 +104,6 @@ interface TabStripContextValue {
   onSelect?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
-  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
@@ -147,7 +146,6 @@ interface SortableTabProps {
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
-  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
   dndScopeId: string;
@@ -175,7 +173,6 @@ function SortableTab({
   onStartEditing,
   onStopEditing,
   onInlineRename,
-  renderTabTitle,
   renderTabMenu,
   renderTabLabel,
   dndScopeId,
@@ -222,7 +219,7 @@ function SortableTab({
           'data-[state=inactive]:hover:bg-primary/5',
           'group/tab flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
-          'py-0 pr-1 pl-4 font-normal data-[state=active]:shadow-none',
+          'py-0 pr-1 font-normal data-[state=active]:shadow-none',
           tabClassName,
           isEditing && 'focus-visible:ring-0',
         )}
@@ -241,14 +238,14 @@ function SortableTab({
             onDoubleClick={() => onStartEditing(tab.id)}
           >
             {!isEditing ? (
-              <div className="truncate text-sm">
+              <div className="truncate">
                 {renderTabLabel ? renderTabLabel(tab) : tab.name}
               </div>
             ) : (
               <EditableText
                 value={tab.name}
                 onChange={(newName) => onInlineRename(tab.id, newName)}
-                className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
+                className="h-6 min-w-0 flex-1 truncate shadow-none"
                 isEditing
                 autoFocus
                 selectOnFocus
@@ -409,7 +406,6 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     dndMode,
     dndScopeId,
     getTabDragData,
-    renderTabTitle,
     renderTabMenu,
     renderTabLabel,
     preventCloseLastTab,
@@ -534,7 +530,6 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
             onStartEditing={handleStartEditing}
             onStopEditing={handleStopEditing}
             onInlineRename={handleInlineRename}
-            renderTabTitle={renderTabTitle}
             renderTabMenu={renderTabMenu}
             renderTabLabel={renderTabLabel}
             dndScopeId={dndScopeId}
@@ -954,7 +949,7 @@ function DropdownTabItems({
             getItemClassName?.(tab),
           )}
         >
-          <span className="xs truncate pl-1">{tab.name}</span>
+          <span className="truncate pl-1 text-xs">{tab.name}</span>
           {renderActions && (
             <div className="flex items-center gap-2">{renderActions(tab)}</div>
           )}
@@ -1055,8 +1050,6 @@ export interface TabStripProps {
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
   onRename?: (tabId: string, newName: string) => void;
-  /** Render function for the tab's title. */
-  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for the tab's dropdown menu. Use TabStrip.MenuItem and TabStrip.MenuSeparator. */
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
@@ -1106,7 +1099,6 @@ function TabStripRoot({
   onSelect,
   onCreate,
   onRename,
-  renderTabTitle,
   renderTabMenu,
   renderSearchItemActions,
   renderTabLabel,
@@ -1295,7 +1287,6 @@ function TabStripRoot({
     onSelect,
     onCreate,
     onRename,
-    renderTabTitle,
     renderTabMenu,
     renderSearchItemActions,
     renderTabLabel,

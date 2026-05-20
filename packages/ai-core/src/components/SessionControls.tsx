@@ -1,4 +1,11 @@
-import {cn, Spinner, TabStrip} from '@sqlrooms/ui';
+import {
+  cn,
+  Spinner,
+  TabStrip,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {HistoryIcon, PencilIcon, TrashIcon} from 'lucide-react';
 import {useCallback, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
@@ -111,9 +118,9 @@ export const SessionControls: React.FC<{
     (tab: {id: string; name: string}) => (
       <div className="flex items-center gap-2">
         {getIsSessionRunning(tab.id) && (
-          <Spinner className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+          <Spinner className="text-muted-foreground block h-4 w-4 shrink-0 animate-spin" />
         )}
-        <span className="truncate">{tab.name}</span>
+        <span className="truncate text-xs leading-none">{tab.name}</span>
       </div>
     ),
     [getIsSessionRunning],
