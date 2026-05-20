@@ -25,6 +25,16 @@ type ThinkContent = {
   index: number;
 };
 
+const markdownTableComponent: Components['table'] = ({
+  className,
+  node: _node,
+  ...props
+}) => (
+  <div className="max-w-full overflow-x-auto">
+    <table className={cn('w-max min-w-full', className)} {...props} />
+  </div>
+);
+
 // Constants moved outside component to prevent recreation
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
@@ -204,6 +214,15 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     },
     [thinkContents, expandedThink, toggleThinkExpansion],
   );
+  const markdownComponents = useMemo(
+    () =>
+      ({
+        table: markdownTableComponent,
+        'think-block': thinkBlockComponent,
+        ...customMarkdownComponents,
+      }) as Partial<Components>,
+    [customMarkdownComponents, thinkBlockComponent],
+  );
 
   return (
     <MessageContainer
@@ -215,12 +234,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
         <Markdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={rehypePlugins}
-          components={
-            {
-              'think-block': thinkBlockComponent,
-              ...customMarkdownComponents,
-            } as Partial<Components>
-          }
+          components={markdownComponents}
         >
           {processedContent}
         </Markdown>
