@@ -169,7 +169,9 @@ export function withRunContextTools(
               {
                 ...options,
                 sessionId: args.sessionId,
-                aiRunContext: args.getAiRunContext?.() ?? args.aiRunContext,
+                aiRunContext: args.getAiRunContext
+                  ? args.getAiRunContext()
+                  : args.aiRunContext,
                 getAiRunContext: args.getAiRunContext,
                 setAiRunContext: args.setAiRunContext,
                 setPrimaryRunContextItem: args.setPrimaryRunContextItem,
