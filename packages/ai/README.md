@@ -128,7 +128,7 @@ argument. Apps can use `getRunContext` to capture selected artifacts at the
 start of a run, expose them in `formatRunContextInstructions`, and then let
 tools update the effective primary context with `setPrimaryRunContextItem`.
 Old contexts without `primaryItemId` remain valid; the first item is treated as
-primary.
+primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
 
 ## Use remote endpoint mode
 

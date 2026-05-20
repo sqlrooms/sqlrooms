@@ -104,3 +104,16 @@ removes the artifact registry entry.
   titles, icons, and components from the runtime type registry.
 
 Type definitions are runtime configuration and are not persisted.
+
+## AI Context Tools
+
+`@sqlrooms/artifacts/ai` provides reusable assistant tools for artifact context:
+
+- `list_context_artifacts`
+- `read_context_artifact`
+- `set_primary_context_artifact`
+
+Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
+`@sqlrooms/artifacts` with `@sqlrooms/ai`. The factory handles primary artifact
+selection and run-context updates; the app supplies artifact payload readers for
+domain-specific types such as documents or dashboards.
