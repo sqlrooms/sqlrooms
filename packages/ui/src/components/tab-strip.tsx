@@ -220,7 +220,7 @@ function SortableTab({
         data-state={isEditing ? 'editing' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
-          'group flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
+          'group/tab flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
           'py-0 pr-1 pl-4 font-normal data-[state=active]:shadow-none',
           tabClassName,
@@ -269,7 +269,7 @@ function SortableTab({
                   <button
                     type="button"
                     aria-label="Tab options"
-                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
+                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
                     onMouseDown={(event) => {
                       event.stopPropagation();
                       event.preventDefault();
@@ -291,7 +291,7 @@ function SortableTab({
               <button
                 type="button"
                 aria-label="Close tab"
-                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
+                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
                 onMouseDown={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
