@@ -24,7 +24,7 @@ Returns array of: {id, type, title, config} for each panel.`,
     inputSchema: ListPanelsToolParameters,
     execute: async (params) => {
       try {
-        const {artifactId} = deps.resolveResources(params);
+        const artifactId = deps.resolveArtifact(params.artifactId);
 
         const dashboard = deps.getDashboard(artifactId);
         if (!dashboard) {

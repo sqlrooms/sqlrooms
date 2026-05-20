@@ -35,9 +35,14 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
     inputSchema: BoxPlotToolParameters,
     execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(
-          params,
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
           context,
+        );
+        const {tableName, columns} = deps.resolveTable(
+          artifactId,
+          params.tableName,
         );
 
         // Validate settings

@@ -50,7 +50,11 @@ To UPDATE an existing profiler: provide the panelId parameter. Otherwise creates
     inputSchema: ProfilerToolParameters,
     execute: async (params) => {
       try {
-        const {artifactId, tableName} = deps.resolveResources(params);
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
+        );
+        const {tableName} = deps.resolveTable(artifactId, params.tableName);
 
         const result = createOrUpdateProfilerPanel(deps, {
           panelId: params.panelId,

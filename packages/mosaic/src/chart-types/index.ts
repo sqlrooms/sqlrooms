@@ -104,7 +104,7 @@ export function createDefaultChartTypes(options?: {
  * Dynamically generate AI tools from chart type definitions.
  *
  * @param chartTypes Array of chart type definitions
- * @param deps Dependencies needed by tool creators (resolveResources, createChart)
+ * @param deps Dependencies needed by tool creators (resolveArtifact, resolveTable, addPanel, etc.)
  * @param toolNamePrefix Prefix for generated tool names (default: 'create_dashboard_')
  * @returns Record mapping tool names to tool instances
  *

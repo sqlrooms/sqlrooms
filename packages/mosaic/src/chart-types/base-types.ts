@@ -43,28 +43,47 @@ export interface ChartBuilderField {
 }
 
 /**
+ * Result of table resolution, includes table name and column metadata.
+ */
+export interface ResolvedTable {
+  tableName: string;
+  columns: ChartBuilderColumn[];
+}
+
+/**
+ * Partial update to apply to a dashboard panel.
+ */
+export interface PanelPatch {
+  title?: string;
+  config?: any;
+}
+
+/**
  * Dependencies injected into dashboard tool creation functions.
  * Provides the resources and operations needed to create dashboard panels.
  */
-
 export interface DashboardToolDeps {
-  resolveResources: (
-    params: {
-      artifactId?: string;
-      tableName?: string;
-      createArtifactIfMissing?: boolean;
-    },
+  /**
+   * Resolves the dashboard artifact ID.
+   * Use this when you only need the artifact and not table information.
+   */
+  resolveArtifact: (
+    artifactId?: string,
+    createIfMissing?: boolean,
     context?: ChartToolExecutionContext,
-  ) => {
-    artifactId: string;
-    tableName: string;
-    columns: ChartBuilderColumn[];
-  };
+  ) => string;
+
+  /**
+   * Resolves table name and columns for a given dashboard artifact.
+   * Use this when you need table-specific information.
+   */
+  resolveTable: (artifactId: string, tableName?: string) => ResolvedTable;
+
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
     dashboardId: string,
     panelId: string,
-    patch: Partial<{title?: string; config?: any}>,
+    patch: Partial<PanelPatch>,
   ) => void;
   getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
   removePanel: (dashboardId: string, panelId: string) => void;

@@ -27,7 +27,7 @@ Use list_dashboard_panels first to discover panel IDs.`,
     inputSchema: RemovePanelToolParameters,
     execute: async (params) => {
       try {
-        const {artifactId} = deps.resolveResources(params);
+        const artifactId = deps.resolveArtifact(params.artifactId);
 
         deps.removePanel(artifactId, params.panelId);
 

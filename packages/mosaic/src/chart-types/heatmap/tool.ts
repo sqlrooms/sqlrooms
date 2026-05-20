@@ -30,9 +30,14 @@ Do NOT use for: individual point plots (use bubble-chart), single variable distr
     inputSchema: HeatmapToolParameters,
     execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(
-          params,
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
           context,
+        );
+        const {tableName, columns} = deps.resolveTable(
+          artifactId,
+          params.tableName,
         );
 
         // Validate settings

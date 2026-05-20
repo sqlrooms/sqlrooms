@@ -29,9 +29,14 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
     inputSchema: CountPlotToolParameters,
     execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(
-          params,
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
           context,
+        );
+        const {tableName, columns} = deps.resolveTable(
+          artifactId,
+          params.tableName,
         );
 
         // Validate settings - expect categorical columns

@@ -48,7 +48,10 @@ To UPDATE an existing text panel: provide the panelId parameter. Otherwise creat
     inputSchema: TextPanelToolParameters,
     execute: async (params) => {
       try {
-        const {artifactId} = deps.resolveResources(params);
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
+        );
 
         const result = createOrUpdateTextPanel(deps, {
           panelId: params.panelId,

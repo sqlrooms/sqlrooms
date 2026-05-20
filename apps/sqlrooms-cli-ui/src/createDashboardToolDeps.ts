@@ -121,15 +121,8 @@ export function createDashboardToolDeps(store: {
   };
 
   return {
-    resolveResources: (params, context) => {
-      const artifactId = resolveArtifact(
-        params.artifactId,
-        params.createArtifactIfMissing,
-        context,
-      );
-      const {tableName, columns} = resolveTable(artifactId, params.tableName);
-      return {artifactId, tableName, columns};
-    },
+    resolveArtifact,
+    resolveTable,
 
     addPanel: (dashboardId: string, panel: any) => {
       const state = store.getState();
