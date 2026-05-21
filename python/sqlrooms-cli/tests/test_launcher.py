@@ -1,8 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import UploadFile
+from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
+from sqlrooms.web.launcher import _write_upload_to_path
 from pathlib import Path
 
 
@@ -32,6 +35,7 @@ def test_api_config(server):
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
+    assert "wsAuthToken" in data
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):
@@ -76,6 +80,45 @@ def test_api_upload(server, tmp_path):
     assert "path" in data
     assert Path(data["path"]).name == "test.txt"
     assert Path(data["path"]).read_bytes() == file_content
+
+
+def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):
+    app = server._build_app()
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    client = TestClient(app)
+    with open(source, "rb") as f:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("large.bin", f, "application/octet-stream")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    uploaded = Path(data["path"])
+    assert uploaded.name == "large.bin"
+    assert uploaded.stat().st_size == source_size
+
+
+@pytest.mark.asyncio
+async def test_write_upload_to_path_streams_files_larger_than_previous_cap(tmp_path):
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    target = tmp_path / "uploaded.bin"
+    with open(source, "rb") as f:
+        bytes_written = await _write_upload_to_path(
+            UploadFile(file=f, filename="large.bin"),
+            target,
+        )
+
+    assert bytes_written == source_size
+    assert target.stat().st_size == source_size
 
 
 def test_no_ui_keeps_api_but_does_not_mount_static_ui(tmp_path):
@@ -328,3 +371,33 @@ schema = "PUBLIC"
     assert "account" not in entry
     assert "warehouse" not in entry
     assert "schema" not in entry
+
+
+def test_api_auth_allows_loopback_without_token(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is True
+
+
+def test_api_auth_requires_token_for_non_loopback(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("10.0.0.2", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is False

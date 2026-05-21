@@ -4,6 +4,8 @@ import time
 import asyncio
 import json
 import concurrent.futures
+import re
+import ipaddress
 
 import ujson
 from socketify import App, CompressOptions, OpCode
@@ -40,6 +42,36 @@ def _quote_ident(ident: str) -> str:
     return '"' + ident.replace('"', '""') + '"'
 
 
+_IDENT_SEGMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _normalize_target_relation(raw_name: str) -> str:
+    """
+    Validate and quote a target relation for CREATE TABLE.
+
+    Accepted forms:
+      - table
+      - schema.table
+
+    We intentionally reject quoted identifiers and any other SQL syntax to
+    prevent SQL injection through uploadArrow tableName.
+    """
+    name = (raw_name or "").strip()
+    if not name:
+        raise ValueError("tableName is required")
+    if len(name) > 255:
+        raise ValueError("tableName is too long")
+    parts = name.split(".")
+    if len(parts) not in (1, 2):
+        raise ValueError("tableName must be table or schema.table")
+    for part in parts:
+        if not _IDENT_SEGMENT_RE.fullmatch(part):
+            raise ValueError(
+                "tableName contains invalid characters; use letters, numbers, underscores"
+            )
+    return ".".join(_quote_ident(part) for part in parts)
+
+
 def _parse_framed_binary(message_bytes: bytes):
     if len(message_bytes) < 4:
         return None
@@ -53,6 +85,33 @@ def _parse_framed_binary(message_bytes: bytes):
         return None
     payload = message_bytes[4 + header_len :]
     return header, payload
+
+
+def _is_loopback_remote(addr) -> bool:
+    if addr is None:
+        return False
+    try:
+        if isinstance(addr, (bytes, bytearray)):
+            if len(addr) == 4:
+                return ipaddress.IPv4Address(bytes(addr)).is_loopback
+            if len(addr) == 16:
+                return ipaddress.IPv6Address(bytes(addr)).is_loopback
+        text = str(addr).strip()
+        if not text:
+            return False
+        # Common socketify textual forms.
+        if text.startswith("::ffff:"):
+            text = text[7:]
+        if ":" in text and text.count(":") == 1 and "." in text:
+            text = text.split(":", 1)[0]
+        if text.startswith("[") and "]" in text:
+            text = text[1 : text.index("]")]
+        if ":" in text and text.count(":") > 1:
+            # IPv6, possibly with port suffix not bracketed.
+            pass
+        return ipaddress.ip_address(text).is_loopback
+    except Exception:
+        return False
 
 
 async def handle_query_ws(send, cache, query):
@@ -113,7 +172,14 @@ async def handle_upload_arrow_ws(ws, header: dict, payload: bytes):
 
     tmp_rel = "__sqlrooms_upload_" + str(query_id).replace("-", "_")
     tmp_rel_q = _quote_ident(tmp_rel)
-    target_rel = table_name.strip()
+    try:
+        target_rel = _normalize_target_relation(table_name)
+    except ValueError as exc:
+        ws.send(
+            {"type": "error", "queryId": query_id, "error": str(exc)},
+            OpCode.TEXT,
+        )
+        return
 
     def _upload(cur):
         import pyarrow as pa
@@ -156,6 +222,7 @@ def server(
     meta_namespace: str = "__sqlrooms",
     allow_client_snapshots: bool = False,
     save_debounce_ms: int = 500,
+    local_only: bool = False,
 ):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
@@ -230,6 +297,17 @@ def server(
                 pass
 
     def ws_open(ws):
+        if local_only:
+            try:
+                if not _is_loopback_remote(ws.get_remote_address()):
+                    ws.end(1008, "local connections only")
+                    return
+            except Exception:
+                try:
+                    ws.end(1008, "local connections only")
+                except Exception:
+                    pass
+                return
         auth.on_open(ws)
         # No-op: per-connection state is created during upgrade.
         # Subscribe to a private per-connection channel so background tasks can deliver

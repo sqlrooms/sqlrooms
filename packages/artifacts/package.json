@@ -9,6 +9,17 @@
   "author": "SQLRooms Contributors",
   "sideEffects": false,
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "import": "./dist/ai.js"
+    }
+  },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,9 +36,11 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "ai": "^6.0.154",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
     "zod": "^4.1.8"

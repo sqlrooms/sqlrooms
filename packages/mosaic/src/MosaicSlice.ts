@@ -31,8 +31,13 @@ import {
   createMosaicTableFromArrowTable,
   toArrowClientResult,
 } from './tableInterop';
+import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
 
-export const MosaicSliceConfig = z.object({});
+export const MAX_DATA_POINTS = 10000;
+
+export const MosaicSliceConfig = z.object({
+  maxDataPoints: z.number().int().min(1).optional(),
+});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
 export type MosaicPreAggregateOptions = {
@@ -120,6 +125,7 @@ export function createDefaultMosaicConfig(
   props?: Partial<MosaicSliceConfig>,
 ): MosaicSliceConfig {
   return {
+    maxDataPoints: MAX_DATA_POINTS,
     ...props,
   } as MosaicSliceConfig;
 }
@@ -128,15 +134,34 @@ export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
   preagg?: MosaicPreAggregateOptions;
+  /**
+   * Maximum number of data points allowed in a chart query result.
+   * Charts that would render more than this limit will show an error instead.
+   * @default 10000
+   */
+  maxDataPoints?: number;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
+  const resolvedMaxDataPoints =
+    props.maxDataPoints ?? props.config?.maxDataPoints ?? MAX_DATA_POINTS;
+
+  // Validate maxDataPoints
+  if (!Number.isInteger(resolvedMaxDataPoints) || resolvedMaxDataPoints < 1) {
+    throw new Error(
+      `maxDataPoints must be a positive integer, got: ${resolvedMaxDataPoints}`,
+    );
+  }
+
   return createSlice<
     MosaicSliceState,
     BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
   >((set, get, store) => ({
     mosaic: {
-      config: createDefaultMosaicConfig(props?.config),
+      config: createDefaultMosaicConfig({
+        ...props?.config,
+        maxDataPoints: resolvedMaxDataPoints,
+      }),
       connection: {status: 'idle'},
       clients: {},
       selections: {},
@@ -169,6 +194,12 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
+
+          // Wrap coordinator query to validate result sizes
+          wrapCoordinatorWithValidation(
+            resolvedCoordinator,
+            resolvedMaxDataPoints,
+          );
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
@@ -273,6 +304,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
           client.enabled = false;
           options.queryError?.(error);
         };
@@ -380,6 +412,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
           client.enabled = false;
           options.onQueryError?.(error);
           options.queryError?.(error);

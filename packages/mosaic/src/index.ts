@@ -36,6 +36,11 @@ export {
   isChartPanelConfig,
   panelHasSource,
   MOSAIC_DASHBOARD_PANEL,
+  MosaicDashboardSliceConfig,
+  resolveMosaicDashboardPanelSource,
+  useStoreWithMosaicDashboard,
+} from './dashboard/MosaicDashboardSlice';
+export {
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
@@ -44,26 +49,25 @@ export {
   MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
   MosaicDashboardPanelSource,
-  MosaicDashboardSliceConfig,
-  resolveMosaicDashboardPanelSource,
-  useStoreWithMosaicDashboard,
-} from './dashboard/MosaicDashboardSlice';
+} from './dashboard/dashboard-types';
 export type {
   MosaicDashboardAddPanelAction,
   MosaicDashboardAddPanelActionContext,
   CreateMosaicDashboardSliceProps,
-  MosaicDashboardEntry as MosaicDashboardEntryType,
-  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
   MosaicDashboardPanelRenderer,
   MosaicDashboardPanelRendererProps,
-  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
   MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
   MosaicDashboardSliceState,
   MosaicDashboardStoreState,
+} from './dashboard/MosaicDashboardSlice';
+export type {
+  MosaicDashboardEntry as MosaicDashboardEntryType,
+  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
+  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
   ChartPanelConfig,
   TextPanel,
   TextPanelConfig,
-} from './dashboard/MosaicDashboardSlice';
+} from './dashboard/dashboard-types';
 export {
   createMosaicColorLegendPlot,
   MosaicColorLegend,
@@ -73,12 +77,14 @@ export {
   createDefaultMosaicConfig,
   createMosaicSlice,
   MosaicSliceConfig,
+  MAX_DATA_POINTS,
   type CreateMosaicSliceProps,
   type MosaicClientOptions,
   type MosaicPreAggregateOptions,
   type MosaicSliceState,
   type TrackedClient,
 } from './MosaicSlice';
+export {DataPointLimitError} from './DataPointLimitError';
 export {
   MosaicProfiler,
   type MosaicProfilerCompoundHeaderProps,
@@ -216,12 +222,21 @@ export {
   createBubbleChartAiTool,
   createBoxPlotAiTool,
   createChartTools,
+  // New panel and dashboard tools
+  createProfilerTool,
+  createTextPanelTool,
+  createListPanelsTool,
+  createRemovePanelTool,
+  ProfilerToolParameters,
+  TextPanelToolParameters,
+  ListPanelsToolParameters,
+  RemovePanelToolParameters,
 } from './chart-types';
 export type {
   ChartSettings,
   ChartType,
-  ChartToolDeps,
   ChartToolExecutionContext,
+  DashboardToolDeps,
   ResolvedChartResources,
   CreateChartParams,
   CreateChartResult,
@@ -231,6 +246,10 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
+  ProfilerToolParams,
+  TextPanelToolParams,
+  ListPanelsToolParams,
+  RemovePanelToolParams,
 } from './chart-types';
 export {
   buildChartTypeTitle,
@@ -248,3 +267,5 @@ export type {
   ChartTypeDefinition,
 } from './chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+
+// Dashboard agent

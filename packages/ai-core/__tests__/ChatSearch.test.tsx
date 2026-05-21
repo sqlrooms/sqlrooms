@@ -232,5 +232,4 @@ describe('Chat.Search', () => {
 
     cleanup(container, root);
   });
-
 });

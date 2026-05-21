@@ -159,7 +159,9 @@ export {
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
+  getAiRunContextPrimaryItem,
   getAiRunContextItems,
+  setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
 export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';

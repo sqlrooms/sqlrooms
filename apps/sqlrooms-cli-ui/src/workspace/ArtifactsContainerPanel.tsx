@@ -41,8 +41,10 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       panelKey="artifact"
       closeable={true}
       preventCloseLastTab={false}
+      forceMountContent
       dndMode="shared"
       dndScopeId="cli-artifact-tabs"
+      fontSize={13}
       renderTabMenu={(tab) => (
         <>
           <ArtifactTabs.MenuItem disabled>

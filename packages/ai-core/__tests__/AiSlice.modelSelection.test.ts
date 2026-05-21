@@ -1,8 +1,12 @@
-import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
+import {
+  AiSettingsSliceConfig,
+  setAiRunContextPrimaryItem,
+} from '@sqlrooms/ai-config';
 import type {AiRunContext} from '@sqlrooms/ai-config';
 import {jest} from '@jest/globals';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
+import {withRunContextTools} from '../src/chatTransport';
 
 type TestStoreState = AiSliceState & {
   aiSettings: {
@@ -156,5 +160,78 @@ describe('AiSlice model selection', () => {
       'Map B',
     );
     expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
+  });
+
+  it('keeps wrapped tool run context mutable across tool calls', async () => {
+    let runContext: AiRunContext | undefined = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'doc-1',
+          type: 'document',
+          title: 'Doc',
+        },
+      ],
+      primaryItemId: 'doc-1',
+      capturedAt: 1,
+    };
+    const setSessionRunContext = jest.fn(
+      (_sessionId: string, nextContext: AiRunContext | undefined) => {
+        runContext = nextContext;
+      },
+    );
+
+    const tools = withRunContextTools(
+      {
+        set_primary: {
+          execute: async (_input: unknown, context: any) => {
+            context.setPrimaryRunContextItem({
+              kind: 'artifact',
+              id: 'dashboard-1',
+              type: 'dashboard',
+              title: 'Dashboard',
+            });
+            return {success: true};
+          },
+        },
+        read_context: {
+          execute: async (_input: unknown, context: any) => ({
+            aiRunContextPrimaryItemId: context.aiRunContext?.primaryItemId,
+            liveRunContextPrimaryItemId:
+              context.getAiRunContext()?.primaryItemId,
+          }),
+        },
+      } as any,
+      {
+        sessionId: 'session-1',
+        aiRunContext: runContext,
+        getAiRunContext: () => runContext,
+        setAiRunContext: (nextContext) =>
+          setSessionRunContext('session-1', nextContext),
+        setPrimaryRunContextItem: (item) =>
+          setSessionRunContext(
+            'session-1',
+            setAiRunContextPrimaryItem(runContext, item),
+          ),
+        state: {
+          ai: {
+            setToolCallSession: jest.fn(),
+          },
+        } as any,
+      },
+    );
+
+    await tools.set_primary?.execute?.({}, {});
+    const result = (await tools.read_context?.execute?.({}, {})) as {
+      aiRunContextPrimaryItemId?: string;
+      liveRunContextPrimaryItemId?: string;
+    };
+
+    expect(result.aiRunContextPrimaryItemId).toBe('dashboard-1');
+    expect(result.liveRunContextPrimaryItemId).toBe('dashboard-1');
+    expect(setSessionRunContext).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({primaryItemId: 'dashboard-1'}),
+    );
   });
 });

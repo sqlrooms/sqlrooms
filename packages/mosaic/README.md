@@ -226,53 +226,52 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
-### AI Chart Tools
+### Dashboard AI Tools
 
-`createChartTools` generates assistant tools for the built-in chart types. The
-injected `ChartToolDeps.resolveResources(params, context)` callback receives the
-tool execution context as its second argument. Client apps should prefer
-execution-scoped context, such as a captured AI run context, over live UI state
-when resolving implicit dashboard targets. Explicit `params.artifactId` should
-still take precedence.
+`@sqlrooms/mosaic/ai` provides reusable assistant tools for dashboard authoring,
+including chart tools, profiler/text panel tools, panel management tools, and an
+optional exploratory `dashboard_agent`. Client apps supply a small adapter that
+maps Mosaic's generic dashboard operations to their store, artifact model, table
+metadata, and AI run context. When an AI run context is present, implicit
+dashboard targeting should resolve only a primary dashboard context item;
+reference-only dashboard artifacts should require an explicit `artifactId`.
 
 ```ts
 import {
-  createChartTools,
-  createDefaultChartTypes,
-  type ChartToolDeps,
-} from '@sqlrooms/mosaic';
+  createDashboardAiTools,
+  type DashboardAiAdapter,
+} from '@sqlrooms/mosaic/ai';
 
-const deps: ChartToolDeps = {
-  resolveResources: (params, context) => {
-    const sessionId = context?.sessionId;
-    const runContext = context?.aiRunContext;
-    const contextArtifactId = getDashboardArtifactIdFromRunContext(
-      runContext,
-      sessionId,
-    );
-
-    // Prefer execution-scoped context over live UI state for implicit targets.
-    // Explicit tool input still wins over anything derived from context.
-    const artifactId =
-      params.artifactId ??
-      contextArtifactId ??
-      getCurrentDashboardArtifactId();
-    const tableName = params.tableName ?? getSelectedTableName(artifactId);
-
-    return {
-      artifactId,
-      tableName,
-      columns: getTableColumns(tableName),
-    };
-  },
-  createChart: ({artifactId, tableName, title, config}) =>
-    addChartPanel({artifactId, tableName, title, config}),
+const adapter: DashboardAiAdapter<AppState> = {
+  getTables: (state) => state.db.tables,
+  hasRunContext: (state, context) => hasAiRunContext(context),
+  resolveContextDashboardArtifactId: (state, context) =>
+    getPrimaryDashboardArtifactIdFromRunContext(context, state),
+  makeDashboardPrimaryForRun: (state, artifactId, context) =>
+    makeArtifactPrimaryForAiRun(artifactId, context),
+  getCurrentDashboardArtifactId: (state) =>
+    state.dashboard.getCurrentDashboardArtifactId(),
+  createDashboardArtifact: (state, title, layoutType) =>
+    state.dashboard.createDashboardArtifact(title, layoutType),
+  isDashboardArtifact: (state, artifactId) =>
+    state.artifacts.getArtifact(artifactId)?.type === 'dashboard',
+  setCurrentArtifact: (state, artifactId) =>
+    state.artifacts.setCurrentArtifact(artifactId),
+  ensureDashboard: (state, dashboardId) =>
+    state.dashboard.ensureDashboardArtifact(dashboardId),
+  getDashboard: (state, dashboardId) =>
+    state.mosaicDashboard.getDashboard(dashboardId),
+  setSelectedTable: (state, dashboardId, tableName) =>
+    state.mosaicDashboard.setSelectedTable(dashboardId, tableName),
+  addPanel: (state, dashboardId, panel) =>
+    state.mosaicDashboard.addPanel(dashboardId, panel),
+  updatePanel: (state, dashboardId, panelId, patch) =>
+    state.mosaicDashboard.updatePanel(dashboardId, panelId, patch),
+  removePanel: (state, dashboardId, panelId) =>
+    state.mosaicDashboard.removePanel(dashboardId, panelId),
 };
 
-const chartTools = createChartTools(
-  createDefaultChartTypes({includeCustomSpec: false}),
-  deps,
-);
+const dashboardTools = createDashboardAiTools({store, adapter});
 ```
 
 ### Box Plot Chart Type
