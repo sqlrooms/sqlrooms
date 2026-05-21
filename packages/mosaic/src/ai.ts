@@ -33,6 +33,7 @@ import type {
   MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
+import {MAX_DATA_POINTS} from './MosaicSlice';
 
 export type {ChartToolExecutionContext} from './chart-types';
 
@@ -133,9 +134,9 @@ export type DashboardAgentResult = {
 export type CreateDashboardAgentToolOptions<TState> =
   CreateDashboardToolDepsOptions<TState> & {
     getModel: (args: {state: TState}) => LanguageModel;
-    createQueryTools?: (args: {
-      store: DashboardAiStore<TState>;
-    }) => Record<string, Tool>;
+    createQueryTools?: (args: {store: DashboardAiStore<TState>}) => {
+      query: Tool;
+    };
     runSubAgent: (args: {
       agent: ToolLoopAgent<any, any, any>;
       prompt: string;
@@ -366,7 +367,9 @@ export function createDashboardToolDeps<TState>({
     let targetArtifactId =
       artifactId ??
       contextDashboardArtifactId ??
-      (!hasRunContext ? adapter.getCurrentDashboardArtifactId(state) : undefined);
+      (!hasRunContext
+        ? adapter.getCurrentDashboardArtifactId(state)
+        : undefined);
 
     if (!targetArtifactId && hasRunContext) {
       throw new Error(
@@ -445,6 +448,7 @@ export function createDashboardToolDeps<TState>({
   };
 
   return {
+    maxDataPoints: MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {
@@ -612,22 +616,25 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
       const {prompt, tableName, dashboardTitle, maxSteps, temperature} = params;
 
+      let dashboardId = '';
+
       try {
         const state = store.getState();
         validateTableExists(state, adapter, tableName);
 
-        const dashboardId = getOrCreateDashboard(
+        dashboardId = getOrCreateDashboard(
           state,
           adapter,
           tableName,
           dashboardTitle,
         );
         adapter.setSelectedTable(state, dashboardId, tableName);
+        const queryTools = options.createQueryTools?.({store});
 
         const dashboardAgent = new ToolLoopAgent({
           model: options.getModel({state}),
           tools: {
-            ...(options.createQueryTools?.({store}) ?? {}),
+            ...(queryTools ? {query: queryTools.query} : {}),
             ...createDashboardAiTools({
               store,
               adapter,
@@ -673,7 +680,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
         return {
           success: false,
           finalOutput: friendlyMessage,
-          dashboardId: '',
+          dashboardId,
           error: errorMessage,
         };
       }

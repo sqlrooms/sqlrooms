@@ -21,7 +21,9 @@ export function dashboardAgentTool(store: StoreApi<RoomState>) {
           state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
       }).chatModel(modelId);
     },
-    createQueryTools: () => createDefaultAiTools(store, {query: {}}),
+    createQueryTools: () => ({
+      query: createDefaultAiTools(store, {query: {}}).query,
+    }),
     runSubAgent: ({agent, prompt, parentToolCallId, abortSignal}) =>
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
   });
