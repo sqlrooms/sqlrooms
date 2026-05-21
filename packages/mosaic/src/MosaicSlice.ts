@@ -36,7 +36,7 @@ import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
 export const MAX_DATA_POINTS = 10000;
 
 export const MosaicSliceConfig = z.object({
-  maxDataPoints: z.number().optional(),
+  maxDataPoints: z.number().int().min(1).optional(),
 });
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
@@ -143,7 +143,15 @@ export type CreateMosaicSliceProps = {
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
-  const maxDataPoints = props.maxDataPoints ?? MAX_DATA_POINTS;
+  const resolvedMaxDataPoints =
+    props.maxDataPoints ?? props.config?.maxDataPoints ?? MAX_DATA_POINTS;
+
+  // Validate maxDataPoints
+  if (!Number.isInteger(resolvedMaxDataPoints) || resolvedMaxDataPoints < 1) {
+    throw new Error(
+      `maxDataPoints must be a positive integer, got: ${resolvedMaxDataPoints}`,
+    );
+  }
 
   return createSlice<
     MosaicSliceState,
@@ -152,7 +160,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
     mosaic: {
       config: createDefaultMosaicConfig({
         ...props?.config,
-        maxDataPoints,
+        maxDataPoints: resolvedMaxDataPoints,
       }),
       connection: {status: 'idle'},
       clients: {},
@@ -188,7 +196,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           }
 
           // Wrap coordinator query to validate result sizes
-          wrapCoordinatorWithValidation(resolvedCoordinator, maxDataPoints);
+          wrapCoordinatorWithValidation(
+            resolvedCoordinator,
+            resolvedMaxDataPoints,
+          );
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
