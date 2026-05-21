@@ -30,9 +30,9 @@ import {
 } from './chart-types';
 import type {
   MosaicDashboardEntry,
-  MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
+import type {MosaicDashboardLayoutType} from './dashboard/core-types';
 import {MAX_DATA_POINTS} from './MosaicSlice';
 
 export type {ChartToolExecutionContext} from './chart-types';

@@ -5,37 +5,16 @@
 import {LayoutNode as LayoutNodeSchema} from '@sqlrooms/layout-config';
 import {z} from 'zod';
 import {ChartConfig} from '../chart-types/chart-config';
+import {
+  ProfilerPanelConfig,
+  TextPanelConfig,
+  MosaicDashboardLayoutType,
+  MosaicDashboardPanelSource,
+} from './core-types';
 
 export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
 export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
-
-export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
-export type MosaicDashboardLayoutType = z.infer<
-  typeof MosaicDashboardLayoutType
->;
-
-export const MosaicDashboardPanelSource = z.object({
-  tableName: z.string().optional(),
-  sqlQuery: z.string().optional(),
-});
-export type MosaicDashboardPanelSource = z.infer<
-  typeof MosaicDashboardPanelSource
->;
-
-// Profiler panel config
-export const ProfilerPanelConfig = z.object({
-  pageSize: z.number().optional(),
-});
-export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
-
-// Text panel config
-export const TextPanelConfig = z.object({
-  content: z.string().default(''),
-  toolbarOpen: z.boolean().default(true),
-  sourcePanelOpen: z.boolean().default(false),
-});
-export type TextPanelConfig = z.infer<typeof TextPanelConfig>;
 
 // Panel configs discriminated by type
 export const ChartPanelConfig = z.object({

@@ -25,6 +25,8 @@ import {type ChartConfig, type ChartType} from '../../chart-types';
 import {Button} from '@sqlrooms/ui';
 import {CodeIcon, XIcon} from 'lucide-react';
 import {useChartTypeDefinition} from '../../chart-types/useChartTypeDefinition';
+import {Field} from '../../chart-builders/Field';
+import {useColumnsContext} from '../../chart-builders/ColumnsContext';
 
 interface ChartSettingsRootProps {
   tableName?: string;
@@ -106,30 +108,38 @@ const ChartSettingsTypeSelector: FC = () => {
   };
 
   return (
-    <ChartTypeSelector
-      value={config.chartType}
-      onChange={handleChartTypeChange}
-    />
+    <Field label="Chart type" required>
+      <ChartTypeSelector
+        value={config.chartType}
+        onChange={handleChartTypeChange}
+      />
+    </Field>
   );
 };
 
 const ChartSettingsFields: FC = () => {
-  const {config, columns} = useChartSettingsContext();
+  const {config} = useChartSettingsContext();
+  const {columns} = useColumnsContext();
+
   const chartTypeDef = useChartTypeDefinition(config.chartType);
 
   if (!chartTypeDef) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Unknown chart type: {config.chartType}
-      </div>
+      <Field label="Chart type" required>
+        <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+          Unknown chart type: {config.chartType}
+        </div>
+      </Field>
     );
   }
 
   if (columns.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        No columns available
-      </div>
+      <Field label="Columns" required>
+        <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+          No columns available
+        </div>
+      </Field>
     );
   }
 

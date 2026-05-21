@@ -2,7 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from './base-types';
 import {createOrUpdateProfilerPanel} from './tool-helpers';
-import {ProfilerPanelConfig} from '../dashboard/dashboard-types';
+import {ProfilerPanelConfig} from '../dashboard/core-types';
 
 export const ProfilerToolParameters = z.object({
   artifactId: z

@@ -4,11 +4,11 @@ import {
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardTextPanelConfig,
 } from '../dashboard/MosaicDashboardSlice';
-import {
-  MosaicDashboardEntry,
+import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
+import type {
   ProfilerPanelConfig,
   TextPanelConfig,
-} from '../dashboard/dashboard-types';
+} from '../dashboard/core-types';
 import type {ChartConfig} from './chart-config';
 
 export interface PanelResult {
@@ -105,7 +105,6 @@ export function createOrUpdateChartPanel(
     const panel = createMosaicDashboardChartPanelConfig(
       params.title,
       params.config,
-      {tableName: params.tableName},
     );
 
     const panelId = deps.addPanel(params.dashboardId, panel);
@@ -148,7 +147,6 @@ export function createOrUpdateProfilerPanel(
     // Create new panel - create full panel config
     const panel = createMosaicDashboardProfilerPanelConfig({
       title: params.title,
-      source: {tableName: params.tableName},
       config: params.config,
     });
 

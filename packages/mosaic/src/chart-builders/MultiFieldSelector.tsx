@@ -4,7 +4,7 @@ import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
 import {AggregationSelector} from './AggregationSelector';
 import type {AggregateFunction} from '../chart-types/line-chart/schema';
-import {useChartSettingsContext} from '../chart/chart-settings/ChartSettingsContext';
+import {ColumnsProvider, useColumnsContext} from './ColumnsContext';
 import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
@@ -35,7 +35,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   onChange,
   showAggregation = false,
 }) => {
-  const {columns} = useChartSettingsContext();
+  const {columns, tableName} = useColumnsContext();
 
   const selectedFieldNames = useMemo(() => value.map((v) => v.field), [value]);
 
@@ -85,7 +85,6 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
             }}
           >
             <ColumnSelector
-              columns={columns}
               types={types}
               value={fieldConfig.field}
               onChange={(newField) => handleUpdate(index, {field: newField})}
@@ -112,13 +111,14 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
         );
       })}
 
-      <ColumnSelector
-        columns={availableColumns}
-        types={types}
-        value={undefined}
-        onChange={handleAdd}
-        placeholder="Select field..."
-      />
+      <ColumnsProvider columns={availableColumns} tableName={tableName}>
+        <ColumnSelector
+          types={types}
+          value={undefined}
+          onChange={handleAdd}
+          placeholder="Select field..."
+        />
+      </ColumnsProvider>
     </div>
   );
 };

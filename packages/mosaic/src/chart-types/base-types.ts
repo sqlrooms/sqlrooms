@@ -12,12 +12,11 @@ import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {
-  MosaicDashboardEntry,
   ProfilerPanelConfig,
   TextPanelConfig,
-} from '../dashboard/dashboard-types';
+} from '../dashboard/core-types';
+import type {MosaicDashboardEntry} from '../dashboard/dashboard-types';
 
-// Re-export ChartType for convenience
 export type {ChartType};
 
 /**
