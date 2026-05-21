@@ -65,7 +65,6 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
-import {computeKeplerDatasetLabel} from './qualifiedTableName';
 
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
@@ -568,12 +567,11 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
-            const label = computeKeplerDatasetLabel(String(tableName));
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {
                 id: tableName,
-                label,
+                label: String(tableName),
               },
               metadata: {tableName},
             };

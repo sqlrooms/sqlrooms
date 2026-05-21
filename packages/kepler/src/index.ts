@@ -42,11 +42,6 @@ export {KeplerS3Browser} from './components/KeplerS3Browser';
 export type {KeplerS3BrowserProps} from './components/KeplerS3Browser';
 export {KeplerSidePanels} from './components/KeplerSidePanels';
 export {useKeplerStateActions} from './hooks/useKeplerStateActions';
-export {
-  computeKeplerDatasetLabel,
-  normalizeIdentifierPart,
-  splitQualifiedIdentifier,
-} from './qualifiedTableName';
 
 // Re-export from @sqlrooms/kepler-config
 // Values also export their corresponding types automatically (Zod pattern)
