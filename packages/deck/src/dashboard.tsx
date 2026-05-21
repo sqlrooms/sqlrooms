@@ -2,6 +2,9 @@ import {WebMercatorViewport} from '@deck.gl/core';
 import type {ComponentProps} from 'react';
 import type DeckGLReact from '@deck.gl/react';
 import {MAX_MAP_DATA_POINTS} from './constants';
+
+type DeckProps = ComponentProps<typeof DeckGLReact>;
+
 import {
   escapeId,
   getColValAsNumber,
