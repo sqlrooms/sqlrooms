@@ -15,8 +15,6 @@ import {DIMENSIONS} from '@kepler.gl/constants';
 import {Layer} from '@kepler.gl/layers';
 import {Button} from '@sqlrooms/ui';
 import {
-  ArrowDown,
-  ArrowRight,
   ChevronDownIcon,
   ChevronRightIcon,
   EyeIcon,
@@ -29,8 +27,8 @@ import {useStoreWithKepler} from '../KeplerSlice';
 import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 const defaultActionIcons = {
-  expanded: ArrowDown as unknown as MapLegendIcons['expanded'],
-  collapsed: ArrowRight as unknown as MapLegendIcons['collapsed'],
+  expanded: ChevronDownIcon as unknown as MapLegendIcons['expanded'],
+  collapsed: ChevronRightIcon as unknown as MapLegendIcons['collapsed'],
 } satisfies MapLegendIcons;
 
 type KeplerGlContextValue = {
@@ -173,7 +171,6 @@ export function CustomMapLegendFactory(
         ref={containerRef}
         className="border-muted flex w-full flex-col items-center border-b"
       >
-        <style>{`.legend--layer__item .panel--header__action { display: none !important; }`}</style>
         <div
           className="flex w-full flex-row items-center gap-2"
           onClick={handleToggleExpanded}
@@ -199,7 +196,24 @@ export function CustomMapLegendFactory(
         </div>
 
         {isExpanded && (
-          <div className="w-full px-[8px] py-[5px] text-xs">
+          <div className="legend-content-wrapper w-full px-[8px] py-[5px] text-xs">
+            <style>{`
+              .legend-content-wrapper .legend--layer_size-title-row { display: flex; align-items: center; gap: 4px; }
+              .legend-content-wrapper .panel--header__action {
+                margin-left: 0;
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 6px;
+                cursor: pointer;
+              }
+              .legend-content-wrapper .panel--header__action:hover {
+                background-color: hsl(var(--accent));
+                color: hsl(var(--accent-foreground));
+              }
+            `}</style>
             <LayerLegendContent
               containerW={containerW}
               layer={layer}

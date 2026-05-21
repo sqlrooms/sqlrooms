@@ -4,6 +4,13 @@ import {
   type Selection,
 } from '@uwdata/mosaic-core';
 import type {ExprNode, FilterExpr} from '@uwdata/mosaic-sql';
+import {
+  assertChartDataPolicy,
+  createChartRuntimeIssueFromError,
+  type ChartDataPolicy,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
+} from '../chart-runtime';
 
 export type BoxPlotSummaryRow = {
   category: unknown;
@@ -31,7 +38,10 @@ export type BoxPlotState = {
 };
 
 export type BoxPlotClientOptions = {
+  dataPolicy?: ChartDataPolicy | null;
   onStateChange: (state: BoxPlotState) => void;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selection: Selection;
   tableName: string;
   x: string;
@@ -212,6 +222,9 @@ export class BoxPlotClient extends MosaicClient {
   private readonly x: string;
   private readonly y: string;
   private readonly selection: Selection;
+  private readonly dataPolicy?: ChartDataPolicy | null;
+  private readonly runtimeIssueContext?: ChartRuntimeIssueContext;
+  private readonly runtimeIssueReporter?: ChartRuntimeIssueReporter;
   private state: BoxPlotState = {
     isLoading: true,
     outliers: [],
@@ -221,7 +234,10 @@ export class BoxPlotClient extends MosaicClient {
 
   constructor(options: BoxPlotClientOptions) {
     super(options.selection);
+    this.dataPolicy = options.dataPolicy;
     this.onStateChange = options.onStateChange;
+    this.runtimeIssueContext = options.runtimeIssueContext;
+    this.runtimeIssueReporter = options.runtimeIssueReporter;
     this.tableName = options.tableName;
     this.x = options.x;
     this.y = options.y;
@@ -259,6 +275,25 @@ export class BoxPlotClient extends MosaicClient {
   }
 
   override queryResult(data: unknown): this {
+    try {
+      assertChartDataPolicy(this.dataPolicy, data);
+      this.runtimeIssueReporter?.clearIssue();
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error));
+      if (this.runtimeIssueContext) {
+        this.runtimeIssueReporter?.reportIssue(
+          createChartRuntimeIssueFromError(
+            normalizedError,
+            this.runtimeIssueContext,
+            this.dataPolicy,
+          ),
+        );
+      }
+      this.emitState({error: normalizedError, isLoading: false});
+      return this;
+    }
+
     const rows = rowsFromQueryResult<BoxPlotQueryRow>(data);
     const summaries: BoxPlotSummaryRow[] = [];
     const outliers: BoxPlotOutlierRow[] = [];
@@ -317,6 +352,15 @@ export class BoxPlotClient extends MosaicClient {
   }
 
   override queryError(error: Error): this {
+    if (this.runtimeIssueContext) {
+      this.runtimeIssueReporter?.reportIssue(
+        createChartRuntimeIssueFromError(
+          error,
+          this.runtimeIssueContext,
+          this.dataPolicy,
+        ),
+      );
+    }
     this.emitState({error, isLoading: false});
     return this;
   }

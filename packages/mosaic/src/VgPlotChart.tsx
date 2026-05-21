@@ -1,5 +1,5 @@
 import {Param, Selection} from '@uwdata/mosaic-core';
-import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
+import {Spec} from '@uwdata/mosaic-spec';
 import {
   FC,
   memo,
@@ -10,6 +10,19 @@ import {
   useState,
 } from 'react';
 import {PlotSize, ResponsivePlot} from './ResponsivePlot';
+import {useVgPlotChartError} from './useVgPlotChartError';
+import {
+  RetainedVgPlotChart,
+  useVgPlotChartRetention,
+  VgPlotChartRetention,
+} from './useVgPlotChartRetention';
+import {useVgPlotChartRender} from './useVgPlotChartRender';
+import {VgPlotChartError} from './VgPlotChartError';
+import type {
+  ChartDataPolicy,
+  ChartRuntimeIssueContext,
+  ChartRuntimeIssueReporter,
+} from './chart-runtime';
 
 type SpecProps = {
   spec: Spec;
@@ -26,27 +39,25 @@ type SpecProps = {
    * switches.
    */
   retention?: VgPlotChartRetention;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
 };
 type PlotProps = {plot: HTMLElement | SVGSVGElement};
 type VgPlotChartProps = SpecProps | PlotProps;
-type PlotDomElement = HTMLElement | SVGSVGElement;
 
-export type RetainedVgPlotChart = {
-  element: object;
-  params?: Map<string, Param<any> | Selection>;
-  specKey: string;
-};
+export function isSpecProps(props: VgPlotChartProps): props is SpecProps {
+  return 'spec' in props;
+}
 
-export type VgPlotChartRetention = {
-  chart?: RetainedVgPlotChart;
-  setChart: (chart: RetainedVgPlotChart) => void;
-};
+export function isPlotProps(props: VgPlotChartProps): props is PlotProps {
+  return 'plot' in props;
+}
 
-type PlotInstance = {
-  marks?: Array<{destroy?: () => void}>;
-  render?: () => Promise<unknown> | unknown;
-  setAttribute?: (name: string, value: unknown) => boolean;
-};
+// Re-export types for external use
+export type {VgPlotChartRetention} from './useVgPlotChartRetention';
+export {destroyRetainedVgPlotChart} from './useVgPlotChartRetention';
+export type {RetainedVgPlotChart} from './useVgPlotChartRetention';
 
 function areEquivalentParams(
   left?: Map<string, Param<any> | Selection>,
@@ -66,63 +77,6 @@ function areEquivalentParams(
   return true;
 }
 
-export function isSpecProps(props: VgPlotChartProps): props is SpecProps {
-  return 'spec' in props;
-}
-
-export function isPlotProps(props: VgPlotChartProps): props is PlotProps {
-  return 'plot' in props;
-}
-
-export function destroyRetainedVgPlotChart(chart: RetainedVgPlotChart) {
-  const plot = getPlotInstance(chart.element);
-  plot?.marks?.forEach((mark) => {
-    mark.destroy?.();
-  });
-}
-
-function getPlotInstance(element: object): PlotInstance | null {
-  const plot = (element as HTMLElement & {value?: unknown}).value;
-  return plot && typeof plot === 'object' ? (plot as PlotInstance) : null;
-}
-
-function resizeChartElement(element: object, size: PlotSize): boolean {
-  const plot = getPlotInstance(element);
-  if (!plot?.setAttribute || !plot.render) {
-    return false;
-  }
-
-  const widthChanged = plot.setAttribute('width', size.width);
-  const heightChanged = plot.setAttribute('height', size.height);
-  if (widthChanged || heightChanged) {
-    void plot.render();
-  }
-  return true;
-}
-
-async function createSpecChartElement(
-  spec: Spec,
-  size: PlotSize,
-  params?: Map<string, Param<any> | Selection>,
-): Promise<PlotDomElement> {
-  const sizedSpec = {
-    ...spec,
-    width: size.width,
-    height: size.height,
-  } as Spec;
-
-  const ast = await parseSpec(sizedSpec);
-  const options = params
-    ? {params: params as unknown as Map<string, Param<any>>}
-    : undefined;
-
-  return (await astToDOM(ast, options)).element;
-}
-
-function asPlotDomElement(element: object): PlotDomElement {
-  return element as PlotDomElement;
-}
-
 /**
  * Renders a Vega-Lite chart using the Mosaic library.
  *
@@ -134,11 +88,17 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
   (props) => {
     const [containerSize, setContainerSize] = useState<PlotSize | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const localSpecChartRef = useRef<RetainedVgPlotChart | null>(null);
-    const renderVersionRef = useRef(0);
+
     const specKey = useMemo(
       () => (isSpecProps(props) ? JSON.stringify(props.spec) : null),
       [props],
+    );
+
+    const {error, setError} = useVgPlotChartError(specKey);
+    const {getCachedChart, setCachedChart} = useVgPlotChartRetention(
+      specKey,
+      isSpecProps(props) ? props.params : undefined,
+      isSpecProps(props) ? props.retention : undefined,
     );
 
     const handleResize = useCallback((size: PlotSize) => {
@@ -150,69 +110,78 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
       });
     }, []);
 
+    const handleError = useCallback(
+      (error: Error) => {
+        setError(error);
+      },
+      [setError],
+    );
+
+    const handleChartCreated = useCallback(
+      (chart: RetainedVgPlotChart) => {
+        setCachedChart(chart);
+      },
+      [setCachedChart],
+    );
+
+    const cachedChart = useMemo(() => getCachedChart(), [getCachedChart]);
+
+    // Handle PlotProps: directly render the provided plot element
     useEffect(() => {
       const container = containerRef.current;
-      if (!container) {
+      if (!container || !isPlotProps(props)) {
         return;
       }
 
-      if (isPlotProps(props)) {
-        container.replaceChildren(props.plot);
-        return;
+      container.replaceChildren(props.plot);
+    }, [props]);
+
+    // Handle SpecProps: render from spec using hooks
+    const renderParams = useMemo(() => {
+      if (!isSpecProps(props)) {
+        return {
+          containerRef,
+          spec: {} as Spec,
+          specKey: null,
+          params: undefined,
+          containerSize: null,
+          cachedChart: null,
+          onChartCreated: handleChartCreated,
+          onError: handleError,
+          dataPolicy: undefined,
+          runtimeIssueContext: undefined,
+          runtimeIssueReporter: undefined,
+        };
       }
 
-      if (!containerSize) {
-        return;
-      }
-
-      const cached = props.retention?.chart;
-      const current =
-        localSpecChartRef.current &&
-        localSpecChartRef.current.specKey === specKey &&
-        areEquivalentParams(localSpecChartRef.current.params, props.params)
-          ? localSpecChartRef.current
-          : cached &&
-              cached.specKey === specKey &&
-              areEquivalentParams(cached.params, props.params)
-            ? cached
-            : null;
-
-      if (current) {
-        localSpecChartRef.current = current;
-        container.replaceChildren(asPlotDomElement(current.element));
-        resizeChartElement(current.element, containerSize);
-        return;
-      }
-
-      const renderVersion = ++renderVersionRef.current;
-      let cancelled = false;
-
-      void createSpecChartElement(props.spec, containerSize, props.params).then(
-        (element) => {
-          if (
-            cancelled ||
-            renderVersion !== renderVersionRef.current ||
-            !containerRef.current
-          ) {
-            return;
-          }
-
-          const nextChart = {
-            element,
-            params: props.params,
-            specKey: specKey ?? JSON.stringify(props.spec),
-          } satisfies RetainedVgPlotChart;
-
-          localSpecChartRef.current = nextChart;
-          props.retention?.setChart(nextChart);
-          containerRef.current.replaceChildren(element);
-        },
-      );
-
-      return () => {
-        cancelled = true;
+      return {
+        containerRef,
+        spec: props.spec,
+        specKey,
+        params: props.params,
+        containerSize,
+        cachedChart,
+        onChartCreated: handleChartCreated,
+        onError: handleError,
+        dataPolicy: props.dataPolicy,
+        runtimeIssueContext: props.runtimeIssueContext,
+        runtimeIssueReporter: props.runtimeIssueReporter,
       };
-    }, [containerSize, props, specKey]);
+    }, [
+      props,
+      specKey,
+      containerSize,
+      cachedChart,
+      handleChartCreated,
+      handleError,
+    ]);
+
+    useVgPlotChartRender(renderParams);
+
+    // Show error message if present
+    if (error) {
+      return <VgPlotChartError error={error} />;
+    }
 
     return (
       <ResponsivePlot
@@ -234,7 +203,19 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
         nextProps.params,
       );
       const retentionEqual = prevProps.retention === nextProps.retention;
-      return specEqual && paramsEqual && retentionEqual;
+      const policyEqual = prevProps.dataPolicy === nextProps.dataPolicy;
+      const issueReporterEqual =
+        prevProps.runtimeIssueReporter === nextProps.runtimeIssueReporter;
+      const issueContextEqual =
+        prevProps.runtimeIssueContext === nextProps.runtimeIssueContext;
+      return (
+        specEqual &&
+        paramsEqual &&
+        retentionEqual &&
+        policyEqual &&
+        issueContextEqual &&
+        issueReporterEqual
+      );
     }
     return false;
   },

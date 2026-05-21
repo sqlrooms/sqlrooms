@@ -17,6 +17,10 @@ export {
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
+export {
+  findLongitudeLatitudeColumns,
+  regenerateMapConfigForTable,
+} from './mapConfigUtils';
 export type {
   DeckMapDashboardFitToDataConfig,
   CreateDeckMapDashboardPanelConfigOptions,

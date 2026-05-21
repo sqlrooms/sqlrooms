@@ -17,5 +17,13 @@ export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   settingsComponent: LineChartSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createTool: createLineChartAiTool,
+  getDataPolicy: ({config, maxDataPoints}) =>
+    config.settings.xInterval
+      ? null
+      : {
+          maxRows: maxDataPoints,
+          reason:
+            'Unaggregated line charts render source rows. Add a temporal interval or use an aggregated chart for larger datasets.',
+        },
   createSpec: createLineChartSpec,
 };

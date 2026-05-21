@@ -87,6 +87,18 @@ createLayoutSlice({
 });
 ```
 
+## Tabs layout composition
+
+`TabsLayout.TabContent` accepts `forceMount` to keep all visible tab contents
+mounted while hiding inactive tabs. This is useful for expensive panels that
+should preserve local state or setup work during tab changes:
+
+```tsx
+<TabsLayout.TabContentContainer>
+  <TabsLayout.TabContent forceMount />
+</TabsLayout.TabContentContainer>
+```
+
 ## Area-based panel management
 
 Named `tabs` nodes (with an `id`) act as **areas** that can be managed programmatically:

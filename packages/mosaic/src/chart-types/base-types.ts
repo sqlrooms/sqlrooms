@@ -11,8 +11,19 @@ import type * as z from 'zod';
 import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
+import type {
+  ProfilerPanelConfig,
+  TextPanelConfig,
+} from '../dashboard/core-types';
+import type {MosaicDashboardEntry} from '../dashboard/dashboard-types';
+import type {
+  ChartDataPolicy,
+  ChartDataPolicyContext,
+  ChartRuntimeIssue,
+  ChartRuntimeIssueContext,
+  ChartRuntimeIssueReporter,
+} from '../chart-runtime';
 
-// Re-export ChartType for convenience
 export type {ChartType};
 
 /**
@@ -42,34 +53,59 @@ export interface ChartBuilderField {
 }
 
 /**
- * Dependencies injected into chart tool creation functions.
- * Provides the resources and operations needed to create charts.
+ * Result of table resolution, includes table name and column metadata.
  */
-export interface ChartToolDeps {
-  resolveResources: (
-    params: {
-      artifactId?: string;
-      tableName?: string;
-      createArtifactIfMissing?: boolean;
-    },
+export interface ResolvedTable {
+  tableName: string;
+  columns: ChartBuilderColumn[];
+}
+
+/**
+ * Partial update to apply to a dashboard panel.
+ * Config can be any of the panel config types (chart, profiler, or text).
+ */
+export interface PanelPatch {
+  title?: string;
+  source?: ChartBuilderPanelSource;
+  config?: ChartConfig | ProfilerPanelConfig | TextPanelConfig;
+}
+
+/**
+ * Dependencies injected into dashboard tool creation functions.
+ * Provides the resources and operations needed to create dashboard panels.
+ */
+export interface DashboardToolDeps {
+  /**
+   * Resolves the dashboard artifact ID.
+   * Use this when you only need the artifact and not table information.
+   */
+  resolveArtifact: (
+    artifactId?: string,
+    createIfMissing?: boolean,
     context?: ChartToolExecutionContext,
-  ) => {
-    artifactId: string;
-    tableName: string;
-    columns: ChartBuilderColumn[];
-  };
-  createChart: (params: {
-    artifactId: string;
-    tableName: string;
-    title: string;
-    config: any;
-  }) => {
-    panelId: string;
-    artifactId: string;
-    tableName: string;
-    title: string;
-    config: any;
-  };
+  ) => string;
+
+  /**
+   * Resolves table name and columns for a given dashboard artifact.
+   * Use this when you need table-specific information.
+   */
+  resolveTable: (artifactId: string, tableName?: string) => ResolvedTable;
+
+  addPanel: (dashboardId: string, panel: any) => string;
+  updatePanel: (
+    dashboardId: string,
+    panelId: string,
+    patch: Partial<PanelPatch>,
+  ) => void;
+  getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
+  getPanelIssue?: (
+    dashboardId: string,
+    panelId: string,
+  ) => ChartRuntimeIssue | undefined;
+  removePanel: (dashboardId: string, panelId: string) => void;
+  setCurrentArtifact: (artifactId: string) => void;
+
+  maxDataPoints: number;
 }
 
 export type ChartToolExecutionContext = object & {
@@ -112,6 +148,9 @@ export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
   tableName: string;
   config: TConfig;
   coordinator: Coordinator;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
   /**
    * Pre-defined params/selections to inject when rendering vgplot specs.
    * Keys are param names (without $), values are Param or Selection instances.
@@ -142,7 +181,11 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   /** Optional icon component for chart-type grids */
   icon: ComponentType<{className?: string}>;
   /** Optional function to create an AI tool for this chart type */
-  createTool?: (deps: ChartToolDeps) => Tool;
+  createTool?: (deps: DashboardToolDeps) => Tool;
+  /** Optional runtime data policy for renderer-specific query validation. */
+  getDataPolicy?: (
+    context: ChartDataPolicyContext<TConfig>,
+  ) => ChartDataPolicy | null | undefined;
 };
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =

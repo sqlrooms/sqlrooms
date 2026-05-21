@@ -19,15 +19,16 @@ import {
   useMosaicClient,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
-import {Button} from '@sqlrooms/ui';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Table as ArrowTable} from 'apache-arrow';
-import {FocusIcon, MapIcon} from 'lucide-react';
+import {FocusIcon, MapIcon, SettingsIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
-import type {DeckJsonMapProps} from './types';
+import {MapSettingsPanel} from './MapSettings';
+import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
   asDeckJsonMapConfig,
   createDeckMapDashboardDatasetQuery,
@@ -39,6 +40,7 @@ import {
   type DeckMapDashboardDatasetClientState,
   type DeckMapDashboardDatasetConfig,
   type DeckMapDashboardInteractionConfig,
+  type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
 
 function DeckMapDashboardDatasetClient({
@@ -263,6 +265,9 @@ function DeckMapDashboardHeaderActions({
   );
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
+
+  const isSettingsOpen = Boolean(mapConfig?.settingsOpen);
+
   const handleConfigApply = useCallback(
     (nextConfig: Record<string, unknown>) => {
       updatePanel(dashboardId, panel.id, {
@@ -272,8 +277,29 @@ function DeckMapDashboardHeaderActions({
     [dashboardId, panel.id, updatePanel],
   );
 
+  const handleToggleSettings = useCallback(() => {
+    updatePanel(dashboardId, panel.id, {
+      config: {...panel.config, settingsOpen: !isSettingsOpen},
+    });
+  }, [dashboardId, isSettingsOpen, panel.config, panel.id, updatePanel]);
+
   return (
     <div className="flex items-center gap-0.5">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="data-[state=active]:bg-accent h-6 w-6"
+            title="Map settings"
+            onClick={handleToggleSettings}
+            data-state={isSettingsOpen ? 'active' : 'inactive'}
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Map settings</TooltipContent>
+      </Tooltip>
       <DeckMapConfigPopoverEditor
         value={panel.config}
         onApply={handleConfigApply}
@@ -298,6 +324,7 @@ function DeckMapDashboardHeaderActions({
 
 function DeckMapDashboardRenderer({
   dashboard,
+  dashboardId,
   panel,
   selectionName,
 }: MosaicDashboardPanelRendererProps) {
@@ -305,7 +332,23 @@ function DeckMapDashboardRenderer({
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
   );
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
+
+  const isSettingsOpen = Boolean(
+    (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
+  );
+
+  const handleSettingsOpenChange = useCallback(
+    (isOpen: boolean) => {
+      updatePanel(dashboardId, panel.id, {
+        config: {...panel.config, settingsOpen: isOpen},
+      });
+    },
+    [dashboardId, panel.config, panel.id, updatePanel],
+  );
   const selection = useMemo<Selection>(
     () => getSelection(selectionName, 'crossfilter'),
     [getSelection, selectionName],
@@ -354,13 +397,6 @@ function DeckMapDashboardRenderer({
     };
   }, []);
 
-  const deckDatasets = useMemo<DeckJsonMapProps['datasets']>(() => {
-    if (!mapConfig) {
-      return {};
-    }
-
-    return createDeckMapDashboardDatasets(mapConfig, datasetStates);
-  }, [datasetStates, mapConfig]);
   const fitToData = mapConfig?.fitToData ?? null;
   const fitToDataSource = useMemo(
     () =>
@@ -596,37 +632,25 @@ function DeckMapDashboardRenderer({
     [didAutoFit, fitStateKey, fitToData, viewState],
   );
 
-  if (!mapConfig) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Invalid map panel config.
-      </div>
-    );
-  }
-
-  const datasetEntries = Object.entries(mapConfig.datasets);
-  if (!datasetEntries.length) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Map panels require at least one dataset.
-      </div>
-    );
-  }
-  const datasetErrors = Object.entries(datasetStates).filter(
-    ([, state]) => state.error,
+  const settingsContent = (
+    <MapSettingsPanel
+      dashboardId={dashboardId}
+      panel={panel}
+      onClose={() => handleSettingsOpenChange(false)}
+    />
   );
 
-  const interactionEvent = mapConfig.interaction?.event ?? 'hover';
-  const interactionDeckProps: DeckJsonMapProps['deckProps'] =
-    mapConfig.interaction
-      ? interactionEvent === 'click'
-        ? {onClick: handleBrushEvent}
-        : {onHover: handleBrushEvent}
-      : {};
-
-  return (
+  const mapContent = !mapConfig ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+      Invalid map panel config.
+    </div>
+  ) : Object.entries(mapConfig.datasets).length === 0 ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+      Map panels require at least one dataset.
+    </div>
+  ) : (
     <div ref={containerRef} className="relative h-full w-full">
-      {datasetEntries.map(([datasetId, dataset]) => (
+      {Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => (
         <DeckMapDashboardDatasetClient
           key={datasetId}
           dashboard={dashboard}
@@ -637,20 +661,25 @@ function DeckMapDashboardRenderer({
           selectionName={selectionName}
         />
       ))}
-      {datasetErrors.length ? (
-        <div className="bg-background/90 text-destructive absolute inset-x-4 top-4 z-10 rounded-md border p-3 text-sm shadow">
-          {datasetErrors.map(([datasetId, state]) => (
-            <div key={datasetId}>
-              Failed to load dataset &quot;{datasetId}&quot;:{' '}
-              {state.error?.message}
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {Object.entries(datasetStates)
+        .filter(([, state]) => state.error)
+        .map(([datasetId, state]) => (
+          <div
+            key={datasetId}
+            className="bg-background/90 text-destructive absolute inset-x-4 top-4 z-10 rounded-md border p-3 text-sm shadow"
+          >
+            Failed to load dataset &quot;{datasetId}&quot;:{' '}
+            {state.error?.message}
+          </div>
+        ))}
       <DeckJsonMap
         className="h-full w-full"
         spec={mapConfig.spec}
-        datasets={deckDatasets}
+        datasets={
+          mapConfig
+            ? createDeckMapDashboardDatasets(mapConfig, datasetStates)
+            : {}
+        }
         mapStyle={mapConfig.mapStyle}
         mapProps={mapConfig.mapProps}
         showLegends={mapConfig.showLegends}
@@ -658,8 +687,23 @@ function DeckMapDashboardRenderer({
           controller: true,
           ...(viewState ? {viewState} : {}),
           onViewStateChange: handleViewStateChange,
-          ...interactionDeckProps,
+          ...(mapConfig.interaction
+            ? (mapConfig.interaction.event ?? 'hover') === 'click'
+              ? {onClick: handleBrushEvent}
+              : {onHover: handleBrushEvent}
+            : {}),
         }}
+      />
+    </div>
+  );
+
+  return (
+    <div className="h-full min-h-0">
+      <MosaicDashboardPanelLayout
+        isOpen={isSettingsOpen}
+        onIsOpenChange={handleSettingsOpenChange}
+        settings={settingsContent}
+        content={mapContent}
       />
     </div>
   );
@@ -714,7 +758,6 @@ function createDeckMapPanelForTable(table: DataTable) {
 
   return createDeckMapDashboardPanelConfig({
     title: `${table.tableName} map`,
-    source: {tableName: table.tableName},
     spec: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [

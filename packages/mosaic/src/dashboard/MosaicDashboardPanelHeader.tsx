@@ -13,12 +13,13 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
+import type {
+  MosaicDashboardEntry,
+  MosaicDashboardPanelConfig,
+} from './dashboard-types';
 import {
-  type MosaicDashboardEntry,
-  type MosaicDashboardPanelConfig,
   type MosaicDashboardPanelRenderer,
   type MosaicDashboardPanelRendererProps,
-  type MosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 
@@ -27,20 +28,12 @@ type MosaicDashboardPanelHeaderProps = {
   dashboard?: MosaicDashboardEntry;
   panel?: MosaicDashboardPanelConfig;
   renderer?: MosaicDashboardPanelRenderer;
-  resolvedSource?: MosaicDashboardPanelSource;
   selectionName: string;
 };
 
 export const MosaicDashboardPanelHeader: FC<
   MosaicDashboardPanelHeaderProps
-> = ({
-  dashboardId,
-  dashboard,
-  panel,
-  renderer,
-  resolvedSource,
-  selectionName,
-}) => {
+> = ({dashboardId, dashboard, panel, renderer, selectionName}) => {
   const panelId = panel?.id;
   const removePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.removePanel,
@@ -64,7 +57,7 @@ export const MosaicDashboardPanelHeader: FC<
     : MoveHorizontalIcon;
   const rendererProps: MosaicDashboardPanelRendererProps | undefined =
     dashboard && panel
-      ? {dashboardId, dashboard, panel, resolvedSource, selectionName}
+      ? {dashboardId, dashboard, panel, selectionName}
       : undefined;
 
   return (

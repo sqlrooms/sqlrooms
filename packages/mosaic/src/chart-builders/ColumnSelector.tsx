@@ -5,12 +5,10 @@ import {
   QUANTITATIVE_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from './constants';
-import {useChartSettingsContext} from '../chart/chart-settings/ChartSettingsContext';
-import {TableColumn} from '@sqlrooms/db';
+import {useColumnsContext} from './ColumnsContext';
 
 export interface ColumnSelectorProps {
   types?: string[];
-  columns?: TableColumn[];
   value: string | undefined;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -21,7 +19,6 @@ export interface ColumnSelectorProps {
  * Removes the field prop requirement for easier composition.
  *
  * Can be used as:
- * - `<ColumnSelector types={...} />` - custom types
  * - `<ColumnSelector.Numeric />` - numeric types only
  * - `<ColumnSelector.Quantitative />` - numeric + temporal
  * - `<ColumnSelector.Categorical />` - text/enum types
@@ -30,10 +27,9 @@ const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
   types,
   value,
   onChange,
-  columns,
   placeholder,
 }) => {
-  const {columns: contextColumns} = useChartSettingsContext();
+  const {columns} = useColumnsContext();
 
   return (
     <FieldSelectorInput
@@ -42,10 +38,10 @@ const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
         label: '',
         types,
       }}
-      columns={columns ?? contextColumns}
       value={value}
+      columns={columns}
       onChange={onChange}
-      placeholder={placeholder}
+      placeholder={placeholder ?? 'Select column…'}
     />
   );
 };
