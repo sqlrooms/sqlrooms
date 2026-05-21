@@ -3,7 +3,14 @@ import {DataPointLimitError} from './DataPointLimitError';
 
 /**
  * Extract row count from various query result formats.
- * Supports Arrow tables, arrays, and Mosaic tables.
+ *
+ * Supports three result shapes:
+ * 1. Arrow table objects with a numeric `numRows` property
+ * 2. Plain arrays (uses `.length`)
+ * 3. Mosaic table-like objects exposing a `toArray()` method
+ *
+ * @param result - Query result in any of the supported formats
+ * @returns The number of rows, or 0 if the result is empty or unrecognized
  */
 function getQueryResultRowCount(result: unknown): number {
   if (!result) return 0;
@@ -24,6 +31,11 @@ function getQueryResultRowCount(result: unknown): number {
     return Array.isArray(arr) ? arr.length : 0;
   }
 
+  // Unrecognized format
+  console.warn(
+    'getQueryResultRowCount: unrecognized result format, expected Arrow table (numRows), array, or Mosaic table (toArray)',
+    result,
+  );
   return 0;
 }
 

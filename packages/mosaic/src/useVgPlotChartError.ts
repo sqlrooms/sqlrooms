@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 
 export type ErrorState = {
   error: Error;
@@ -16,12 +16,15 @@ export function useVgPlotChartError(specKey: string | null) {
   const currentError =
     errorState?.specKey === specKey ? errorState.error : null;
 
-  const setError = (error: Error) => {
-    setErrorState({
-      error,
-      specKey: specKey ?? '',
-    });
-  };
+  const setError = useCallback(
+    (error: Error) => {
+      setErrorState({
+        error,
+        specKey: specKey ?? '',
+      });
+    },
+    [specKey],
+  );
 
   return {error: currentError, setError};
 }

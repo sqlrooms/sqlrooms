@@ -129,10 +129,13 @@ export function useVgPlotChartRender({
             if (mark.queryError) {
               const originalQueryError = mark.queryError;
               mark.queryError = (error: any) => {
+                // Normalize error to Error instance
+                const normalizedError =
+                  error instanceof Error ? error : new Error(String(error));
                 // Call onError to display error in UI
-                onError(error);
+                onError(normalizedError);
                 // Update cached chart with error
-                nextChart.error = error;
+                nextChart.error = normalizedError;
                 // Call original to maintain Mosaic's internal state
                 originalQueryError.call(mark, error);
               };
@@ -145,8 +148,11 @@ export function useVgPlotChartRender({
           return;
         }
 
-        onError(error);
-        console.error('[VgPlotChart] Error rendering chart:', error);
+        // Normalize error to Error instance
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
+        onError(normalizedError);
+        console.error('[VgPlotChart] Error rendering chart:', normalizedError);
       });
 
     return () => {
