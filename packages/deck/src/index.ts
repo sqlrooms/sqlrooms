@@ -24,8 +24,19 @@ export {
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
 export {
+  createDeckMapDashboardConfigForTable,
+  createDeckMapDashboardPanelConfigForTable,
+  findDeckMapLongitudeLatitudeColumns,
   findLongitudeLatitudeColumns,
+  normalizeDeckMapFillColor,
+  quoteDeckMapSqlIdentifier,
+  quoteDeckMapSqlTableReference,
   regenerateMapConfigForTable,
+} from './mapConfigUtils';
+export type {
+  DeckMapConfigColumn,
+  DeckMapFillColor,
+  DeckMapTableReference,
 } from './mapConfigUtils';
 export type {
   DeckMapDashboardFitToDataConfig,
