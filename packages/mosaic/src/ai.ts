@@ -175,7 +175,7 @@ Dashboard authoring:
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
-- If the host app provides \`create_dashboard_map\`, use it for map/geospatial/location requests. Author its config as native Deck JSON with layer classes in \`spec.layers[].@@type\`, dataset bindings in \`_sqlroomsBinding.dataset\`, and table/query sources in \`config.datasets\`.
+- If the host app provides \`create_dashboard_map\`, use it for map/geospatial/location requests. Author its config as native Deck JSON with layer classes in \`spec.layers[].@@type\`, dataset bindings in \`_sqlroomsBinding.dataset\`, and table/query sources in \`config.datasets\`. For data-driven map colors, use color accessors such as \`getFillColor\`, \`getLineColor\`, \`getColor\`, \`getSourceColor\`, or \`getTargetColor\` with \`{"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}\`.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.

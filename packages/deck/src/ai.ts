@@ -122,7 +122,7 @@ export function createDeckMapConfigTool(): Tool {
   return tool({
     description: `Deck map config: validates and returns a reusable native Deck JSON map configuration without requiring a dashboard artifact.
 
-Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map config. Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets.`,
+Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map config. Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
     inputSchema: DeckMapConfigToolParameters,
     execute: async (params) => {
       try {
@@ -162,7 +162,7 @@ export function createDeckMapDashboardTool(deps: DashboardToolDeps): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
-Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets.`,
+Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
     inputSchema: DeckMapDashboardToolParameters,
     execute: async (params, context) => {
       try {

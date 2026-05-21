@@ -328,4 +328,32 @@ describe('createDeckJsonConfiguration', () => {
     expect(converted.layers[0]?.props.getFillColor).toEqual([1, 2, 3, 4]);
     expect(typeof converted.layers[0]?.props.getLineColor).toBe('function');
   });
+
+  it('compiles generic getColor colorScale accessors', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPathLayer',
+          id: 'paths',
+          getColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Viridis',
+            domain: 'auto',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(typeof converted.layers[0]?.props.getColor).toBe('function');
+  });
 });
