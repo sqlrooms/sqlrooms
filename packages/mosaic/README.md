@@ -226,67 +226,52 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
-### AI Chart Tools
+### Dashboard AI Tools
 
-`createChartTools` generates assistant tools for the built-in chart types. The
-injected `DashboardToolDeps` provides `resolveArtifact` and `resolveTable`
-methods that receive tool execution context. Client apps should prefer explicit
-`artifactId` parameters; if omitted, resolve only an unambiguous primary
-dashboard from execution-scoped context. Do not implicitly target reference-only
-context artifacts. Live UI state should be a fallback only when there is no run
-context.
+`@sqlrooms/mosaic/ai` provides reusable assistant tools for dashboard authoring,
+including chart tools, profiler/text panel tools, panel management tools, and an
+optional exploratory `dashboard_agent`. Client apps supply a small adapter that
+maps Mosaic's generic dashboard operations to their store, artifact model, table
+metadata, and AI run context. When an AI run context is present, implicit
+dashboard targeting should resolve only a primary dashboard context item;
+reference-only dashboard artifacts should require an explicit `artifactId`.
 
 ```ts
 import {
-  createChartTools,
-  createDefaultChartTypes,
-  type DashboardToolDeps,
-} from '@sqlrooms/mosaic';
+  createDashboardAiTools,
+  type DashboardAiAdapter,
+} from '@sqlrooms/mosaic/ai';
 
-const deps: DashboardToolDeps = {
-  resolveArtifact: (artifactId, createIfMissing, context) => {
-    const sessionId = context?.sessionId;
-    const runContext = context?.aiRunContext;
-    const primaryDashboardArtifactId =
-      getPrimaryDashboardArtifactIdFromRunContext(runContext, sessionId);
-
-    // Explicit tool input wins. Only a primary dashboard context may be used
-    // implicitly; reference artifacts should require artifactId.
-    const targetArtifactId =
-      artifactId ??
-      primaryDashboardArtifactId ??
-      getCurrentDashboardArtifactId();
-
-    if (!targetArtifactId && createIfMissing) {
-      return createDashboardArtifact();
-    }
-
-    if (!targetArtifactId) {
-      throw new Error('No dashboard artifact available');
-    }
-
-    return targetArtifactId;
-  },
-  resolveTable: (artifactId, tableName) => {
-    const resolvedTableName = tableName ?? getSelectedTableName(artifactId);
-    return {
-      tableName: resolvedTableName,
-      columns: getTableColumns(resolvedTableName),
-    };
-  },
-  addPanel: (dashboardId, panel) => addPanelToDashboard(dashboardId, panel),
-  updatePanel: (dashboardId, panelId, patch) =>
-    updateDashboardPanel(dashboardId, panelId, patch),
-  getDashboard: (dashboardId) => getDashboardById(dashboardId),
-  removePanel: (dashboardId, panelId) =>
-    removePanelFromDashboard(dashboardId, panelId),
-  setCurrentArtifact: (artifactId) => setCurrentDashboard(artifactId),
+const adapter: DashboardAiAdapter<AppState> = {
+  getTables: (state) => state.db.tables,
+  hasRunContext: (state, context) => hasAiRunContext(context),
+  resolveContextDashboardArtifactId: (state, context) =>
+    getPrimaryDashboardArtifactIdFromRunContext(context, state),
+  makeDashboardPrimaryForRun: (state, artifactId, context) =>
+    makeArtifactPrimaryForAiRun(artifactId, context),
+  getCurrentDashboardArtifactId: (state) =>
+    state.dashboard.getCurrentDashboardArtifactId(),
+  createDashboardArtifact: (state, title, layoutType) =>
+    state.dashboard.createDashboardArtifact(title, layoutType),
+  isDashboardArtifact: (state, artifactId) =>
+    state.artifacts.getArtifact(artifactId)?.type === 'dashboard',
+  setCurrentArtifact: (state, artifactId) =>
+    state.artifacts.setCurrentArtifact(artifactId),
+  ensureDashboard: (state, dashboardId) =>
+    state.dashboard.ensureDashboardArtifact(dashboardId),
+  getDashboard: (state, dashboardId) =>
+    state.mosaicDashboard.getDashboard(dashboardId),
+  setSelectedTable: (state, dashboardId, tableName) =>
+    state.mosaicDashboard.setSelectedTable(dashboardId, tableName),
+  addPanel: (state, dashboardId, panel) =>
+    state.mosaicDashboard.addPanel(dashboardId, panel),
+  updatePanel: (state, dashboardId, panelId, patch) =>
+    state.mosaicDashboard.updatePanel(dashboardId, panelId, patch),
+  removePanel: (state, dashboardId, panelId) =>
+    state.mosaicDashboard.removePanel(dashboardId, panelId),
 };
 
-const chartTools = createChartTools(
-  createDefaultChartTypes({includeCustomSpec: false}),
-  deps,
-);
+const dashboardTools = createDashboardAiTools({store, adapter});
 ```
 
 ### Box Plot Chart Type

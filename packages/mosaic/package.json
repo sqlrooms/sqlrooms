@@ -9,6 +9,24 @@
   "author": "SQLRooms Contributors",
   "sideEffects": false,
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "import": "./dist/ai.js",
+      "default": "./dist/ai.js"
+    },
+    "./dist/*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
+  },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

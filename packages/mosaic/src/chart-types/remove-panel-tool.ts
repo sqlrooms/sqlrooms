@@ -28,6 +28,18 @@ Use list_dashboard_panels first to discover panel IDs.`,
     execute: async (params) => {
       try {
         const artifactId = deps.resolveArtifact(params.artifactId);
+        const dashboard = deps.getDashboard(artifactId);
+        if (!dashboard) {
+          throw new Error(`Dashboard "${artifactId}" not found.`);
+        }
+        const panelExists = dashboard.panels.some(
+          (panel) => panel.id === params.panelId,
+        );
+        if (!panelExists) {
+          throw new Error(
+            `Panel "${params.panelId}" not found in dashboard "${artifactId}". Cannot remove.`,
+          );
+        }
 
         deps.removePanel(artifactId, params.panelId);
 

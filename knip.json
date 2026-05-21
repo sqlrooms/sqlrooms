@@ -4,26 +4,17 @@
     "interface": true,
     "type": true
   },
-  "ignoreDependencies": [
-    "identity-obj-proxy"
-  ],
+  "ignoreDependencies": ["identity-obj-proxy"],
   "ignore": [
     "python/**",
     "docs/**",
     "examples/app-builder/app-scaffolds/**",
-    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**",
-    "submodules/**"
+    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**"
   ],
-  "exclude": [
-    "exports",
-    "types",
-    "duplicates"
-  ],
+  "exclude": ["exports", "types", "duplicates"],
   "workspaces": {
     ".": {
-      "entry": [
-        "scripts/*.mjs"
-      ],
+      "entry": ["scripts/*.mjs"],
       "ignoreDependencies": [
         "@types/*",
         "@lerna-lite/*",
@@ -32,54 +23,32 @@
         "vitepress-plugin-llms",
         "typescript-language-server"
       ],
-      "ignoreBinaries": [
-        "madge",
-        "uv"
-      ]
+      "ignoreBinaries": ["madge", "uv"]
     },
     "packages/*": {
-      "entry": [
-        "src/index.{ts,tsx}"
-      ]
+      "entry": ["src/index.{ts,tsx}"]
     },
     "packages/artifacts": {
-      "ignoreDependencies": [
-        "ts-jest"
-      ]
+      "ignoreDependencies": ["ts-jest"]
     },
     "packages/preset-jest": {
-      "entry": [
-        "*.js"
-      ],
-      "ignoreDependencies": [
-        "@testing-library/*",
-        "jest-environment-jsdom"
-      ]
+      "entry": ["*.js"],
+      "ignoreDependencies": ["@testing-library/*", "jest-environment-jsdom"]
     },
     "packages/preset-eslint": {
-      "entry": [
-        "*.js"
-      ]
+      "entry": ["*.js"]
     },
     "packages/preset-typedoc": {
-      "entry": [
-        "*.js"
-      ]
+      "entry": ["*.js"]
     },
     "packages/preset-typescript": {
-      "entry": [
-        "*.json"
-      ]
+      "entry": ["*.json"]
     },
     "examples/*nextjs*": {
-      "entry": [
-        "src/app/**/{page.tsx,api/**/*.ts}"
-      ]
+      "entry": ["src/app/**/{page.tsx,api/**/*.ts}"]
     },
     "examples/*": {
-      "entry": [
-        "src/main.{ts,tsx}"
-      ]
+      "entry": ["src/main.{ts,tsx}"]
     },
     "apps/*": {}
   }
