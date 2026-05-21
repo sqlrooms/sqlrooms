@@ -48,6 +48,130 @@ async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
     return bytes_written
 
 
+def _normalize_config_string(value: Any) -> str | None:
+    if isinstance(value, (int, float)):
+        return str(value)
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _write_ai_settings_to_toml(config_path: Path, payload: dict[str, Any]) -> None:
+    """Write ``[ai]`` settings into a TOML config file.
+
+    Preserves unrelated sections and merges provider entries so existing
+    ``api_key_env`` references are not replaced with resolved secret values.
+    """
+    import tomlkit
+
+    if config_path.exists():
+        doc = tomlkit.parse(config_path.read_text(encoding="utf-8"))
+    else:
+        doc = tomlkit.document()
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    settings = payload.get("settings")
+    if not isinstance(settings, dict):
+        settings = payload
+
+    providers = settings.get("providers") or {}
+    if not isinstance(providers, dict):
+        raise ValueError("'settings.providers' must be an object.")
+
+    default_provider = _normalize_config_string(payload.get("defaultProvider"))
+    default_model = _normalize_config_string(payload.get("defaultModel"))
+
+    existing_by_id: dict[str, dict[str, Any]] = {}
+    existing_ai = doc.get("ai")
+    if isinstance(existing_ai, dict):
+        for entry in existing_ai.get("providers") or []:
+            if isinstance(entry, dict):
+                provider_id = _normalize_config_string(entry.get("id"))
+                if provider_id:
+                    existing_by_id[provider_id] = dict(entry)
+
+    ai_table = tomlkit.table()
+    if default_provider:
+        ai_table.add("default_provider", default_provider)
+    if default_model:
+        ai_table.add("default_model", default_model)
+
+    providers_aot = tomlkit.aot()
+    for provider_id, provider in providers.items():
+        if not isinstance(provider, dict):
+            continue
+        provider_name = _normalize_config_string(provider_id)
+        if not provider_name:
+            continue
+
+        existing = existing_by_id.get(provider_name, {})
+        item = tomlkit.table()
+        item.add("id", provider_name)
+        item.add("base_url", _normalize_config_string(provider.get("baseUrl")) or "")
+
+        api_key = _normalize_config_string(provider.get("apiKey")) or ""
+        api_key_env = _normalize_config_string(existing.get("api_key_env"))
+        env_value = os.environ.get(api_key_env, "") if api_key_env else ""
+        if api_key_env and (not api_key or api_key == env_value):
+            item.add("api_key_env", api_key_env)
+        elif api_key:
+            item.add("api_key", api_key)
+
+        models = tomlkit.array()
+        models.multiline(False)
+        for model in provider.get("models") or []:
+            if not isinstance(model, dict):
+                continue
+            model_name = _normalize_config_string(model.get("modelName"))
+            if model_name:
+                models.append(model_name)
+        item.add("models", models)
+        providers_aot.append(item)
+    ai_table.add("providers", providers_aot)
+
+    custom_models_raw = settings.get("customModels") or []
+    if not isinstance(custom_models_raw, list):
+        raise ValueError("'settings.customModels' must be an array.")
+    custom_models_aot = tomlkit.aot()
+    for custom_model in custom_models_raw:
+        if not isinstance(custom_model, dict):
+            continue
+        model_name = _normalize_config_string(custom_model.get("modelName"))
+        base_url = _normalize_config_string(custom_model.get("baseUrl"))
+        if not model_name or not base_url:
+            continue
+        item = tomlkit.table()
+        item.add("model_name", model_name)
+        item.add("base_url", base_url)
+        api_key = _normalize_config_string(custom_model.get("apiKey"))
+        if api_key:
+            item.add("api_key", api_key)
+        custom_models_aot.append(item)
+    if custom_models_aot:
+        ai_table.add("custom_models", custom_models_aot)
+
+    model_parameters = settings.get("modelParameters") or {}
+    if isinstance(model_parameters, dict):
+        params_table = tomlkit.table()
+        max_steps = model_parameters.get("maxSteps")
+        if isinstance(max_steps, (int, float)):
+            params_table.add("max_steps", int(max_steps))
+        additional_instruction = model_parameters.get("additionalInstruction")
+        if isinstance(additional_instruction, str):
+            params_table.add("additional_instruction", additional_instruction)
+        if params_table:
+            ai_table.add("model_parameters", params_table)
+
+    if "ai" in doc:
+        del doc["ai"]
+    doc.add("ai", ai_table)
+
+    raw = tomlkit.dumps(doc)
+    raw = re.sub(r"\n{3,}", "\n\n", raw)
+    config_path.write_text(raw, encoding="utf-8")
+
+
 def _write_db_connectors_to_toml(
     config_path: Path, connections: list[dict[str, Any]]
 ) -> None:
@@ -238,6 +362,8 @@ class SqlroomsHttpServer:
         llm_model: str | None = None,
         api_key: str | None = None,
         ai_providers: dict[str, dict[str, Any]] | None = None,
+        ai_custom_models: list[dict[str, Any]] | None = None,
+        ai_model_parameters: dict[str, Any] | None = None,
         connector_settings: list[PostgresConnectorSettings | SnowflakeConnectorSettings]
         | None = None,
         open_browser: bool = True,
@@ -268,6 +394,8 @@ class SqlroomsHttpServer:
         self.llm_model = llm_model
         self.api_key = api_key
         self.ai_providers = ai_providers or {}
+        self.ai_custom_models = ai_custom_models or []
+        self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
         self.sync_enabled = bool(sync_enabled)
@@ -351,12 +479,18 @@ class SqlroomsHttpServer:
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
+            "configWritable": self.config_path is not None,
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": f"ws://{self._public_host()}:{self.ws_port}",
             "crdtRoomId": (
                 f"sqlrooms-cli:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
             ),
             "aiProviders": self.ai_providers,
+            "aiSettings": {
+                "providers": self.ai_providers,
+                "customModels": self.ai_custom_models,
+                "modelParameters": self.ai_model_parameters,
+            },
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
             "dbBridge": {
@@ -452,6 +586,45 @@ class SqlroomsHttpServer:
                     "Failed to write db settings to %s: %s", self.config_path, exc
                 )
                 return JSONResponse({"error": str(exc)}, status_code=500)
+            return {"ok": True, "configPath": str(self.config_path)}
+
+        @app.put("/api/ai/settings")
+        async def put_ai_settings(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
+            if self.config_path is None:
+                return JSONResponse(
+                    {
+                        "error": "No config file available (started with --no-config or no config found)."
+                    },
+                    status_code=400,
+                )
+            try:
+                _write_ai_settings_to_toml(self.config_path, payload)
+            except Exception as exc:
+                logger.error(
+                    "Failed to write AI settings to %s: %s", self.config_path, exc
+                )
+                return JSONResponse({"error": str(exc)}, status_code=500)
+
+            settings = payload.get("settings")
+            if isinstance(settings, dict):
+                providers = settings.get("providers")
+                custom_models = settings.get("customModels")
+                model_parameters = settings.get("modelParameters")
+                if isinstance(providers, dict):
+                    self.ai_providers = providers
+                if isinstance(custom_models, list):
+                    self.ai_custom_models = custom_models
+                if isinstance(model_parameters, dict):
+                    self.ai_model_parameters = model_parameters
+            default_provider = _normalize_config_string(payload.get("defaultProvider"))
+            default_model = _normalize_config_string(payload.get("defaultModel"))
+            if default_provider:
+                self.llm_provider = default_provider
+            if default_model:
+                self.llm_model = default_model
             return {"ok": True, "configPath": str(self.config_path)}
 
         @app.post("/api/upload")

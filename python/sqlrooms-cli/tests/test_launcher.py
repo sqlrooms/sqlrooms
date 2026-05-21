@@ -4,6 +4,7 @@ from fastapi import UploadFile
 from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
 from pathlib import Path
@@ -371,6 +372,116 @@ schema = "PUBLIC"
     assert "account" not in entry
     assert "warehouse" not in entry
     assert "schema" not in entry
+
+
+def test_write_ai_settings_to_toml_preserves_api_key_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-secret")
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[other]
+value = "preserved"
+
+[ai]
+default_provider = "openai"
+default_model = "gpt-4.1"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-4.1"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    _write_ai_settings_to_toml(
+        config_path,
+        {
+            "defaultProvider": "openai",
+            "defaultModel": "gpt-5",
+            "settings": {
+                "providers": {
+                    "openai": {
+                        "baseUrl": "https://api.openai.com/v1",
+                        "apiKey": "env-secret",
+                        "models": [{"modelName": "gpt-5"}],
+                    }
+                },
+                "customModels": [
+                    {
+                        "modelName": "local-qwen",
+                        "baseUrl": "http://localhost:11434/v1",
+                        "apiKey": "local-key",
+                    }
+                ],
+                "modelParameters": {
+                    "maxSteps": 12,
+                    "additionalInstruction": "Be concise.",
+                },
+            },
+        },
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["other"]["value"] == "preserved"
+    assert doc["ai"]["default_model"] == "gpt-5"
+    provider = doc["ai"]["providers"][0]
+    assert provider["api_key_env"] == "OPENAI_API_KEY"
+    assert "api_key" not in provider
+    assert provider["models"] == ["gpt-5"]
+    assert doc["ai"]["custom_models"][0]["model_name"] == "local-qwen"
+    assert doc["ai"]["model_parameters"]["max_steps"] == 12
+
+
+def test_api_put_ai_settings_writes_config(tmp_path):
+    config_path = tmp_path / "config.toml"
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/ai/settings",
+        json={
+            "defaultProvider": "anthropic",
+            "defaultModel": "claude-4-sonnet",
+            "settings": {
+                "providers": {
+                    "anthropic": {
+                        "baseUrl": "https://api.anthropic.com",
+                        "apiKey": "anthropic-key",
+                        "models": [{"modelName": "claude-4-sonnet"}],
+                    }
+                },
+                "customModels": [],
+                "modelParameters": {
+                    "maxSteps": 8,
+                    "additionalInstruction": "",
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["ai"]["default_provider"] == "anthropic"
+    assert doc["ai"]["providers"][0]["api_key"] == "anthropic-key"
+    assert server.llm_provider == "anthropic"
 
 
 def test_api_auth_allows_loopback_without_token(server):

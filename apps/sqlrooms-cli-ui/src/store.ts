@@ -97,7 +97,11 @@ import {
 import {getDefaultScaffoldTree} from './helpers';
 import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
-import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
+import {
+  createDuckDbPersistStorage,
+  saveAiSettingsToServer,
+  uploadFileToServer,
+} from './serverApi';
 import {
   AppBuilderProjectConfig,
   AppBuilderProjectConfigSchema,
@@ -109,8 +113,11 @@ export type {RoomState} from './store-types';
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
-  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
+  (runtimeAiSettings.providers as AiSettingsSliceConfig['providers']) ||
+  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) ||
+  {};
 const defaultProviderFromConfig =
   runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
 const defaultModelFromProvider =
@@ -126,6 +133,7 @@ const CRDT_STORAGE_KEY = [
   runtimeConfig.dbPath || 'memory',
   'documents',
 ].join(':');
+const AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS = 500;
 
 function createCliCrdtSyncConnector() {
   if (!runtimeConfig.syncEnabled) return undefined;
@@ -567,7 +575,21 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createAiSettingsSlice({
-          config: {providers: runtimeAiProviders},
+          config: {
+            providers: runtimeAiProviders,
+            ...(runtimeAiSettings.customModels
+              ? {customModels: runtimeAiSettings.customModels}
+              : {}),
+            ...(runtimeAiSettings.modelParameters
+              ? {
+                  modelParameters: {
+                    maxSteps: runtimeAiSettings.modelParameters.maxSteps ?? 50,
+                    additionalInstruction:
+                      runtimeAiSettings.modelParameters.additionalInstruction ?? '',
+                  },
+                }
+              : {}),
+          },
         })(set, get, store),
 
         ...(() => {
@@ -668,3 +690,42 @@ if (bridgeConfig) {
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
 syncConnectionsToDb(roomStore);
+
+function getAiSettingsTomlPayload(state: RoomState) {
+  const currentSession = state.ai.getCurrentSession();
+  return {
+    settings: state.aiSettings.config,
+    defaultProvider: currentSession?.modelProvider || defaultProviderFromConfig,
+    defaultModel: currentSession?.model || defaultModelFromConfig,
+  };
+}
+
+function startAiSettingsTomlAutosave() {
+  if (!runtimeConfig.configWritable) return;
+
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastSnapshot = JSON.stringify(
+    getAiSettingsTomlPayload(roomStore.getState()),
+  );
+
+  roomStore.subscribe((state) => {
+    const snapshot = JSON.stringify(getAiSettingsTomlPayload(state));
+    if (snapshot === lastSnapshot) return;
+
+    lastSnapshot = snapshot;
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+    }
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      void saveAiSettingsToServer(
+        runtimeConfig,
+        JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
+      ).catch((error) => {
+        console.warn('Failed to save AI settings to SQLRooms config', error);
+      });
+    }, AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS);
+  });
+}
+
+startAiSettingsTomlAutosave();
