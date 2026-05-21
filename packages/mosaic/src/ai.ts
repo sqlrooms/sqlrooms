@@ -113,6 +113,7 @@ export type CreateDashboardToolDepsOptions<TState> = {
 export type CreateDashboardAiToolsOptions<TState> =
   CreateDashboardToolDepsOptions<TState> & {
     chartTypes?: ChartTypeDefinition<any>[];
+    extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
   };
 
 export type DashboardAgentToolCall = {
@@ -152,6 +153,7 @@ export type CreateDashboardAgentToolOptions<TState> =
     }) => Promise<DashboardAgentRunResult>;
     instructions?: string;
     chartTypes?: ChartTypeDefinition<any>[];
+    extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
   };
 
 export const DASHBOARD_AI_INSTRUCTIONS = `
@@ -173,6 +175,7 @@ Dashboard authoring:
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
+- If the host app provides \`create_dashboard_map\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
@@ -198,6 +201,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 **Panel Tools:**
 - create_dashboard_profiler - table statistics and column summaries
 - create_dashboard_text_panel - markdown annotations and insights
+- create_dashboard_map - geospatial point map when longitude/latitude or geometry columns are available (if provided by the host app)
 
 **Data Tools:**
 - query - execute SQL queries for data exploration
@@ -495,11 +499,13 @@ export function createDashboardAiTools<TState>({
   store,
   adapter,
   chartTypes,
+  extraTools,
 }: CreateDashboardAiToolsOptions<TState>): Record<string, Tool> {
   const deps = createDashboardToolDeps({store, adapter});
   const resolvedChartTypes =
     chartTypes ?? createDefaultChartTypes({includeCustomSpec: false});
   const chartTools = createChartTools(resolvedChartTypes, deps);
+  const hostTools = extraTools?.(deps) ?? {};
 
   return {
     create_dashboard_artifact: tool({
@@ -532,6 +538,7 @@ export function createDashboardAiTools<TState>({
     create_dashboard_text_panel: createTextPanelTool(deps),
     list_dashboard_panels: createListPanelsTool(deps),
     remove_dashboard_panel: createRemovePanelTool(deps),
+    ...hostTools,
   };
 }
 
@@ -656,6 +663,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
               store,
               adapter,
               chartTypes: options.chartTypes,
+              extraTools: options.extraTools,
             }),
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
