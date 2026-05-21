@@ -1,5 +1,5 @@
 import {useCallback, useMemo} from 'react';
-import {type MosaicDashboardAddPanelAction} from './dashboard-types';
+import {type MosaicDashboardAddPanelAction} from './action-types';
 import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
 import {useMosaicDashboardAddPanelActionContext} from './useMosaicDashboardAddPanelActionContext';
 

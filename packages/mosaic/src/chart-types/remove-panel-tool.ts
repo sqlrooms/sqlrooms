@@ -33,7 +33,7 @@ Use list_dashboard_panels first to discover panel IDs.`,
           throw new Error(`Dashboard "${artifactId}" not found.`);
         }
         const panelExists = dashboard.panels.some(
-          (panel) => panel.id === params.panelId,
+          (panel: {id: string}) => panel.id === params.panelId,
         );
         if (!panelExists) {
           throw new Error(

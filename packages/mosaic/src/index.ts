@@ -54,15 +54,13 @@ export {
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   MosaicDashboardEntry,
-  MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
-  MosaicDashboardPanelSource,
 } from './dashboard/dashboard-types';
 export type {
   MosaicDashboardAddPanelAction,
   MosaicDashboardAddPanelActionContext,
   OnStartDashboard,
-} from './dashboard/dashboard-types';
+} from './dashboard/action-types';
 export type {
   CreateMosaicDashboardSliceProps,
   MosaicDashboardPanelRenderer,
@@ -74,11 +72,15 @@ export type {
 export type {
   MosaicDashboardEntry as MosaicDashboardEntryType,
   MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
-  MosaicDashboardPanelSource as MosaicDashboardPanelSourceType,
   ChartPanelConfig,
   TextPanel,
-  TextPanelConfig,
 } from './dashboard/dashboard-types';
+export type {
+  MosaicDashboardLayoutType,
+  MosaicDashboardPanelSource,
+  ProfilerPanelConfig,
+  TextPanelConfig,
+} from './dashboard/core-types';
 export {
   createMosaicColorLegendPlot,
   MosaicColorLegend,

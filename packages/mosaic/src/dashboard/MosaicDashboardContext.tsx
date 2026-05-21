@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react';
-import type {OnStartDashboard} from './dashboard-types';
+import type {OnStartDashboard} from './action-types';
 
 export type MosaicDashboardContextValue = {
   dashboardId: string;

@@ -32,7 +32,7 @@ import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import type {MosaicDashboardAddPanelAction} from './dashboard-types';
+import type {MosaicDashboardAddPanelAction} from './action-types';
 
 /**
  * Panel key used for function-form panel definitions registered by

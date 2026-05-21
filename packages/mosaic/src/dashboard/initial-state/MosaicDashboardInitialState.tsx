@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import type {OnStartDashboard} from '../dashboard-types';
+import type {OnStartDashboard} from '../action-types';
 import {BuildDashboardWithAIPanel} from './BuildDashboardWithAIPanel';
 import {BuildDashboardManuallyPanel} from './BuildDashboardManuallyPanel';
 

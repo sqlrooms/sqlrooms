@@ -4,11 +4,11 @@ import {
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardTextPanelConfig,
 } from '../dashboard/MosaicDashboardSlice';
-import {
-  MosaicDashboardEntry,
+import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
+import type {
   ProfilerPanelConfig,
   TextPanelConfig,
-} from '../dashboard/dashboard-types';
+} from '../dashboard/core-types';
 import type {ChartConfig} from './chart-config';
 
 export interface PanelResult {

@@ -2,43 +2,19 @@
  * Core dashboard types - separated to avoid circular dependencies.
  */
 
-import type {ComponentType} from 'react';
-import type {DataTable} from '@sqlrooms/db';
-import type {ChartTypeDefinition} from '../chart-types/base-types';
 import {LayoutNode as LayoutNodeSchema} from '@sqlrooms/layout-config';
 import {z} from 'zod';
 import {ChartConfig} from '../chart-types/chart-config';
+import {
+  ProfilerPanelConfig,
+  TextPanelConfig,
+  MosaicDashboardLayoutType,
+  MosaicDashboardPanelSource,
+} from './core-types';
 
 export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
 export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
-
-export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
-export type MosaicDashboardLayoutType = z.infer<
-  typeof MosaicDashboardLayoutType
->;
-
-export const MosaicDashboardPanelSource = z.object({
-  tableName: z.string().optional(),
-  sqlQuery: z.string().optional(),
-});
-export type MosaicDashboardPanelSource = z.infer<
-  typeof MosaicDashboardPanelSource
->;
-
-// Profiler panel config
-export const ProfilerPanelConfig = z.object({
-  pageSize: z.number().optional(),
-});
-export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
-
-// Text panel config
-export const TextPanelConfig = z.object({
-  content: z.string().default(''),
-  toolbarOpen: z.boolean().default(true),
-  sourcePanelOpen: z.boolean().default(false),
-});
-export type TextPanelConfig = z.infer<typeof TextPanelConfig>;
 
 // Panel configs discriminated by type
 export const ChartPanelConfig = z.object({
@@ -96,23 +72,3 @@ export const MosaicDashboardEntry = z.object({
   updatedAt: z.number().default(0),
 });
 export type MosaicDashboardEntry = z.infer<typeof MosaicDashboardEntry>;
-
-export type MosaicDashboardAddPanelActionContext = {
-  dashboardId: string;
-  dashboard: MosaicDashboardEntry | undefined;
-  selectedTable: DataTable | undefined;
-  tables: DataTable[];
-  chartTypes: ChartTypeDefinition[] | undefined;
-};
-
-export type MosaicDashboardAddPanelAction = {
-  type: string;
-  label: string;
-  icon?: ComponentType<{className?: string}>;
-  isEnabled?: (context: MosaicDashboardAddPanelActionContext) => boolean;
-  createPanel: (
-    context: MosaicDashboardAddPanelActionContext,
-  ) => MosaicDashboardPanelConfig | undefined;
-};
-
-export type OnStartDashboard = (prompt: string) => void | Promise<void>;

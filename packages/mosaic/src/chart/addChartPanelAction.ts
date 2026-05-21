@@ -1,5 +1,5 @@
 import {BarChart3} from 'lucide-react';
-import {type MosaicDashboardAddPanelAction} from '../dashboard/dashboard-types';
+import {type MosaicDashboardAddPanelAction} from '../dashboard/action-types';
 import {
   createMosaicDashboardChartPanelConfig,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,

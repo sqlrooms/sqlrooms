@@ -16,7 +16,6 @@ import {FC, useCallback} from 'react';
 import type {
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,
-  MosaicDashboardPanelSource,
 } from './dashboard-types';
 import {
   type MosaicDashboardPanelRenderer,
