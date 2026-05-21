@@ -17,6 +17,8 @@ import type {
 } from '../dashboard/core-types';
 import type {MosaicDashboardEntry} from '../dashboard/dashboard-types';
 
+export type {ChartType};
+
 /**
  * Column info passed to chart builder UI
  */
