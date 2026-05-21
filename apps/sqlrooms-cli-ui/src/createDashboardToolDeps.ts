@@ -2,6 +2,7 @@ import {
   type DashboardToolDeps,
   type ChartBuilderColumn,
   type ChartToolExecutionContext,
+  MAX_DATA_POINTS,
 } from '@sqlrooms/mosaic';
 import type {RoomState} from './store';
 import {DataTable} from '@sqlrooms/db';
@@ -145,6 +146,7 @@ export function createDashboardToolDeps(store: {
   };
 
   return {
+    maxDataPoints: MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
 

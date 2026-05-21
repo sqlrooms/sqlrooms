@@ -27,6 +27,8 @@ Example queries: "distribution of population density", "show elevation distribut
 
 Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUMN_TYPES.join(', ')}).
 
+NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
+
 To UPDATE an existing histogram: provide the panelId parameter. Otherwise creates new panel.
 
 Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.

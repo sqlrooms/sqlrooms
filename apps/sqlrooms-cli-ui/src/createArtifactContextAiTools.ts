@@ -115,14 +115,11 @@ function createArtifactContextOptions(
     },
     onContextItemsChanged: ({state, items}) => {
       state.setAiContextItemIds(
-        items
-          .filter((item) => item.kind === 'artifact')
-          .map((item) => item.id),
+        items.filter((item) => item.kind === 'artifact').map((item) => item.id),
         'manual',
       );
     },
-    readArtifact: ({state, artifactId}) =>
-      readCliArtifact({state, artifactId}),
+    readArtifact: ({state, artifactId}) => readCliArtifact({state, artifactId}),
   };
 }
 

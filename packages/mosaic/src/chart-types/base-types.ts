@@ -94,6 +94,8 @@ export interface DashboardToolDeps {
   getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
   removePanel: (dashboardId: string, panelId: string) => void;
   setCurrentArtifact: (artifactId: string) => void;
+
+  maxDataPoints: number;
 }
 
 export type ChartToolExecutionContext = object & {

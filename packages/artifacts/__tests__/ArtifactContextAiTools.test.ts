@@ -93,9 +93,10 @@ describe('createArtifactContextAiTools', () => {
       {artifactId: 'dashboard-1', role: 'reference'},
     ]);
 
-    const setResult = await (
-      tools.set_primary_context_artifact as any
-    ).execute({artifactId: 'dashboard-1'}, executionContext);
+    const setResult = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'dashboard-1'},
+      executionContext,
+    );
 
     expect(setResult.llmResult).toMatchObject({
       success: true,
@@ -136,10 +137,9 @@ describe('createArtifactContextAiTools', () => {
       }),
     });
 
-    const readPrimaryResult = await (tools.read_context_artifact as any).execute(
-      {},
-      {getAiRunContext: () => runContext},
-    );
+    const readPrimaryResult = await (
+      tools.read_context_artifact as any
+    ).execute({}, {getAiRunContext: () => runContext});
     expect(readPrimaryResult.llmResult).toMatchObject({
       success: true,
       artifact: {artifactId: 'doc-1'},
@@ -148,10 +148,7 @@ describe('createArtifactContextAiTools', () => {
 
     const readOutsideContextResult = await (
       tools.read_context_artifact as any
-    ).execute(
-      {artifactId: 'doc-2'},
-      {getAiRunContext: () => runContext},
-    );
+    ).execute({artifactId: 'doc-2'}, {getAiRunContext: () => runContext});
     expect(readOutsideContextResult.llmResult).toMatchObject({
       success: false,
       errorMessage:

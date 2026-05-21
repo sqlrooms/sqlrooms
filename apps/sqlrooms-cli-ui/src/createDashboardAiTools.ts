@@ -64,7 +64,10 @@ export function createDashboardAiTools(store: StoreApi<RoomState>) {
       description:
         'Create a new dashboard artifact with a dock or grid layout and make it the active artifact. Use when no dashboard artifact exists yet.',
       inputSchema: DashboardCreateArtifactToolParameters,
-      execute: async (params: DashboardCreateArtifactToolParameters, options) => {
+      execute: async (
+        params: DashboardCreateArtifactToolParameters,
+        options,
+      ) => {
         const context = options as AiToolExecutionContext | undefined;
         const {title, layoutType} = params;
         const state = store.getState();

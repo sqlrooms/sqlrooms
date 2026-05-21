@@ -248,10 +248,7 @@ const deps: DashboardToolDeps = {
     const sessionId = context?.sessionId;
     const runContext = context?.aiRunContext;
     const primaryDashboardArtifactId =
-      getPrimaryDashboardArtifactIdFromRunContext(
-        runContext,
-        sessionId,
-      );
+      getPrimaryDashboardArtifactIdFromRunContext(runContext, sessionId);
 
     // Explicit tool input wins. Only a primary dashboard context may be used
     // implicitly; reference artifacts should require artifactId.

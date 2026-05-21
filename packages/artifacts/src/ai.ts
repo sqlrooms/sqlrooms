@@ -299,16 +299,15 @@ export function createArtifactContextAiTools<
         'List artifacts that the user added to the current AI run context, including which artifact is primary.',
       inputSchema: EmptyInput,
       execute: async (_params, executionOptions) => {
-        const context =
-          executionOptions as ArtifactContextToolExecutionContext | undefined;
+        const context = executionOptions as
+          | ArtifactContextToolExecutionContext
+          | undefined;
         const state = options.store.getState();
         const runContext = getExecutionRunContext(options, state, context);
         const primaryItem = getAiRunContextPrimaryItem(runContext);
         const artifacts = getAiRunContextItems(runContext)
           .filter((item) => item.kind === 'artifact')
-          .map((item) =>
-            contextArtifactSummary(state, item, primaryItem?.id),
-          );
+          .map((item) => contextArtifactSummary(state, item, primaryItem?.id));
 
         return {
           llmResult: {
@@ -325,8 +324,9 @@ export function createArtifactContextAiTools<
         'Read one artifact from the current AI run context. Defaults to the primary artifact. Use list_context_artifacts first when unsure.',
       inputSchema: ReadContextArtifactInput,
       execute: async (params, executionOptions) => {
-        const context =
-          executionOptions as ArtifactContextToolExecutionContext | undefined;
+        const context = executionOptions as
+          | ArtifactContextToolExecutionContext
+          | undefined;
         const state = options.store.getState();
         const runContext = getExecutionRunContext(options, state, context);
         const items = getAiRunContextItems(runContext).filter(
@@ -352,7 +352,8 @@ export function createArtifactContextAiTools<
           };
         }
 
-        const artifact = state.artifacts.config.artifactsById[requestedArtifactId];
+        const artifact =
+          state.artifacts.config.artifactsById[requestedArtifactId];
         if (!artifact) {
           return {
             llmResult: {
@@ -378,8 +379,9 @@ export function createArtifactContextAiTools<
         'Make an existing artifact the primary artifact for this AI run. Use after creating a new artifact or when the user asks to work on a specific artifact.',
       inputSchema: SetPrimaryContextArtifactInput,
       execute: async (params, executionOptions) => {
-        const context =
-          executionOptions as ArtifactContextToolExecutionContext | undefined;
+        const context = executionOptions as
+          | ArtifactContextToolExecutionContext
+          | undefined;
         const state = options.store.getState();
         const result = setPrimaryArtifact(
           options,
