@@ -18,5 +18,10 @@ export const bubbleChartChartType: SpecChartTypeDefinition<BubbleChartConfig> =
     settingsComponent: BubbleChartSettingsComponent,
     buildTitle: titleFromDescription(DESCRIPTION),
     createTool: createBubbleChartAiTool,
+    getDataPolicy: ({maxDataPoints}) => ({
+      maxRows: maxDataPoints,
+      reason:
+        'Bubble charts render one point per row. Use a heatmap or another aggregated chart for larger datasets.',
+    }),
     createSpec: createBubbleChartSpec,
   };

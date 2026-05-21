@@ -33,6 +33,7 @@ import {
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
 import type {MosaicDashboardAddPanelAction} from './action-types';
+import type {ChartRuntimeIssue} from '../chart-runtime';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -222,6 +223,11 @@ export type MosaicDashboardSliceState = {
        * config and must be evicted when their panel/dashboard lifecycle ends.
        */
       retainedChartsByPanelId: Record<string, RetainedVgPlotChart>;
+      /**
+       * Runtime-only chart issues keyed by `getMosaicDashboardPanelId`.
+       * These are live diagnostics for UI and AI tools, not persisted config.
+       */
+      panelIssuesByPanelId: Record<string, ChartRuntimeIssue>;
     };
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
@@ -260,6 +266,16 @@ export type MosaicDashboardSliceState = {
       panelId: string,
       chart: RetainedVgPlotChart,
     ) => void;
+    getPanelIssue: (
+      dashboardId: string,
+      panelId: string,
+    ) => ChartRuntimeIssue | undefined;
+    reportPanelIssue: (
+      dashboardId: string,
+      panelId: string,
+      issue: ChartRuntimeIssue,
+    ) => void;
+    clearPanelIssue: (dashboardId: string, panelId: string) => void;
     evictPanelRuntime: (dashboardId: string, panelId: string) => void;
     evictDashboardRuntime: (
       dashboardId: string,
@@ -781,6 +797,7 @@ export function createMosaicDashboardSlice(
         config: createDefaultMosaicDashboardConfig(props.config),
         runtime: {
           retainedChartsByPanelId: {},
+          panelIssuesByPanelId: {},
         },
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
@@ -994,6 +1011,58 @@ export function createMosaicDashboardSlice(
           }));
         },
 
+        getPanelIssue(dashboardId, panelId) {
+          return get().mosaicDashboard.runtime.panelIssuesByPanelId[
+            getMosaicDashboardPanelId(dashboardId, panelId)
+          ];
+        },
+
+        reportPanelIssue(dashboardId, panelId, issue) {
+          const runtimePanelId = getMosaicDashboardPanelId(
+            dashboardId,
+            panelId,
+          );
+          set((state) => ({
+            mosaicDashboard: {
+              ...state.mosaicDashboard,
+              runtime: {
+                ...state.mosaicDashboard.runtime,
+                panelIssuesByPanelId: {
+                  ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+                  [runtimePanelId]: issue,
+                },
+              },
+            },
+          }));
+        },
+
+        clearPanelIssue(dashboardId, panelId) {
+          const runtimePanelId = getMosaicDashboardPanelId(
+            dashboardId,
+            panelId,
+          );
+          if (
+            !get().mosaicDashboard.runtime.panelIssuesByPanelId[runtimePanelId]
+          ) {
+            return;
+          }
+          set((state) => {
+            const nextPanelIssuesByPanelId = {
+              ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+            };
+            delete nextPanelIssuesByPanelId[runtimePanelId];
+            return {
+              mosaicDashboard: {
+                ...state.mosaicDashboard,
+                runtime: {
+                  ...state.mosaicDashboard.runtime,
+                  panelIssuesByPanelId: nextPanelIssuesByPanelId,
+                },
+              },
+            };
+          });
+        },
+
         evictPanelRuntime(dashboardId, panelId) {
           const runtimePanelId = getMosaicDashboardPanelId(
             dashboardId,
@@ -1008,13 +1077,18 @@ export function createMosaicDashboardSlice(
             const nextRetainedChartsByPanelId = {
               ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
             };
+            const nextPanelIssuesByPanelId = {
+              ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+            };
             delete nextRetainedChartsByPanelId[runtimePanelId];
+            delete nextPanelIssuesByPanelId[runtimePanelId];
             return {
               mosaicDashboard: {
                 ...state.mosaicDashboard,
                 runtime: {
                   ...state.mosaicDashboard.runtime,
                   retainedChartsByPanelId: nextRetainedChartsByPanelId,
+                  panelIssuesByPanelId: nextPanelIssuesByPanelId,
                 },
               },
             };
@@ -1028,6 +1102,9 @@ export function createMosaicDashboardSlice(
           ).filter(([runtimePanelId]) =>
             runtimePanelId.startsWith(runtimePrefix),
           );
+          const existingIssueEntries = Object.keys(
+            get().mosaicDashboard.runtime.panelIssuesByPanelId,
+          ).filter((runtimePanelId) => runtimePanelId.startsWith(runtimePrefix));
 
           existingEntries.forEach(([, chart]) => {
             destroyDashboardRuntimeChart(chart);
@@ -1041,8 +1118,14 @@ export function createMosaicDashboardSlice(
             const nextRetainedChartsByPanelId = {
               ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
             };
+            const nextPanelIssuesByPanelId = {
+              ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+            };
             for (const [runtimePanelId] of existingEntries) {
               delete nextRetainedChartsByPanelId[runtimePanelId];
+            }
+            for (const runtimePanelId of existingIssueEntries) {
+              delete nextPanelIssuesByPanelId[runtimePanelId];
             }
             return {
               mosaicDashboard: {
@@ -1050,6 +1133,7 @@ export function createMosaicDashboardSlice(
                 runtime: {
                   ...state.mosaicDashboard.runtime,
                   retainedChartsByPanelId: nextRetainedChartsByPanelId,
+                  panelIssuesByPanelId: nextPanelIssuesByPanelId,
                 },
               },
             };
@@ -1068,6 +1152,7 @@ export function createMosaicDashboardSlice(
               runtime: {
                 ...state.mosaicDashboard.runtime,
                 retainedChartsByPanelId: {},
+                panelIssuesByPanelId: {},
               },
             },
           }));

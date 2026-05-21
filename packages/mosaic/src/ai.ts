@@ -34,6 +34,7 @@ import type {
 } from './dashboard/dashboard-types';
 import type {MosaicDashboardLayoutType} from './dashboard/core-types';
 import {MAX_DATA_POINTS} from './MosaicSlice';
+import type {ChartRuntimeIssue} from './chart-runtime';
 
 export type {ChartToolExecutionContext} from './chart-types';
 
@@ -80,6 +81,11 @@ export type DashboardAiAdapter<TState> = {
     state: TState,
     dashboardId: string,
   ) => MosaicDashboardEntry | undefined;
+  getPanelIssue?: (
+    state: TState,
+    dashboardId: string,
+    panelId: string,
+  ) => ChartRuntimeIssue | undefined;
   setSelectedTable: (
     state: TState,
     dashboardId: string,
@@ -170,6 +176,7 @@ Dashboard authoring:
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
+- \`list_dashboard_panels\` includes runtime issues when a chart failed. Use those issues to repair panels in place: convert too-large bubble charts to heatmaps, add \`xInterval\` to too-large line charts, and inspect columns/settings for SQL errors.
 `;
 
 export const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent that creates and modifies interactive data dashboards.
@@ -271,6 +278,7 @@ To update existing panels:
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Check before update:** Always call list_dashboard_panels before updating/removing panels
+- **Repair broken charts:** list_dashboard_panels may return an \`issue\` per panel. For \`too-much-data\`, switch to an aggregated chart or add aggregation. For \`sql-error\`, inspect available columns/types and update the broken panel in place.
 - **Validate columns:** Query tools will validate column existence and types
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach
 - **Use markdown formatting:** Use headings (##), bullet lists (-), and **bold** in text panels for readability`;
@@ -447,7 +455,7 @@ export function createDashboardToolDeps<TState>({
     );
   };
 
-  return {
+  const deps: DashboardToolDeps = {
     maxDataPoints: MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
@@ -472,6 +480,15 @@ export function createDashboardToolDeps<TState>({
       adapter.setCurrentArtifact(state, artifactId);
     },
   };
+
+  if (adapter.getPanelIssue) {
+    deps.getPanelIssue = (dashboardId, panelId) => {
+      const state = store.getState();
+      return adapter.getPanelIssue?.(state, dashboardId, panelId);
+    };
+  }
+
+  return deps;
 }
 
 export function createDashboardAiTools<TState>({

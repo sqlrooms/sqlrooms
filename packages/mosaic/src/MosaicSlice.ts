@@ -31,7 +31,6 @@ import {
   createMosaicTableFromArrowTable,
   toArrowClientResult,
 } from './tableInterop';
-import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
 
 export const MAX_DATA_POINTS = 10000;
 
@@ -195,11 +194,6 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
 
-          // Wrap coordinator query to validate result sizes
-          wrapCoordinatorWithValidation(
-            resolvedCoordinator,
-            resolvedMaxDataPoints,
-          );
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {

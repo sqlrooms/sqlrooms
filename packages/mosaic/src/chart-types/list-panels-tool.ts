@@ -16,11 +16,13 @@ export type ListPanelsToolParams = z.infer<typeof ListPanelsToolParameters>;
 
 export function createListPanelsTool(deps: DashboardToolDeps) {
   return tool({
-    description: `List dashboard panels: returns all panels in the current dashboard with their IDs, types, titles, and configurations.
+    description: `List dashboard panels: returns all panels in the current dashboard with their IDs, types, titles, configurations, and any current runtime issue.
 
 Use when: you need to discover panel IDs before updating or removing panels, or when user asks "what's on this dashboard".
 
-Returns array of: {id, type, title, config} for each panel.`,
+Runtime issues are transient chart diagnostics such as too-much-data or sql-error. If a panel has an issue, use the panel ID to update it in place with a safer chart configuration.
+
+Returns array of: {id, type, title, config, issue?} for each panel.`,
     inputSchema: ListPanelsToolParameters,
     execute: async (params) => {
       try {
@@ -36,12 +38,16 @@ Returns array of: {id, type, title, config} for each panel.`,
           };
         }
 
-        const panels = dashboard.panels.map((panel: any) => ({
-          id: panel.id,
-          type: panel.type,
-          title: panel.title,
-          config: panel.config,
-        }));
+        const panels = dashboard.panels.map((panel: any) => {
+          const issue = deps.getPanelIssue?.(artifactId, panel.id);
+          return {
+            id: panel.id,
+            type: panel.type,
+            title: panel.title,
+            config: panel.config,
+            ...(issue ? {issue} : {}),
+          };
+        });
 
         return {
           llmResult: {

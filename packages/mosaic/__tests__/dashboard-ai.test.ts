@@ -8,12 +8,14 @@ import type {
   MosaicDashboardEntry,
   MosaicDashboardLayoutType,
 } from '../src/dashboard/dashboard-types';
+import type {ChartRuntimeIssue} from '../src/chart-runtime';
 
 type TestState = {
   artifactsById: Record<string, {id: string; type: string; title: string}>;
   currentArtifactId?: string;
   tables: DashboardAiTable[];
   dashboardsById: Record<string, MosaicDashboardEntry>;
+  runtimeIssues: Record<string, ChartRuntimeIssue>;
   setCurrentArtifactCalls: string[];
   nextDashboardId: number;
 };
@@ -54,6 +56,7 @@ function createHarness(
       },
     ],
     dashboardsById: {},
+    runtimeIssues: {},
     setCurrentArtifactCalls: [],
     nextDashboardId: 1,
     ...overrides,
@@ -97,6 +100,8 @@ function createHarness(
       );
     },
     getDashboard: (current, dashboardId) => current.dashboardsById[dashboardId],
+    getPanelIssue: (current, dashboardId, panelId) =>
+      current.runtimeIssues[`${dashboardId}:${panelId}`],
     setSelectedTable: (current, dashboardId, tableName) => {
       current.dashboardsById[dashboardId]!.selectedTable = tableName;
     },
@@ -292,5 +297,57 @@ describe('dashboard AI tools', () => {
     expect(removeResult.llmResult.errorMessage).toContain(
       'Panel "missing-panel" not found',
     );
+  });
+
+  it('lists panel runtime issues for AI repair workflows', async () => {
+    const dashboardId = 'dashboard';
+    const panelId = 'panel-1';
+    const {store, adapter} = createHarness({
+      currentArtifactId: dashboardId,
+      artifactsById: {
+        [dashboardId]: {id: dashboardId, type: 'dashboard', title: 'Dashboard'},
+      },
+      dashboardsById: {
+        [dashboardId]: {
+          ...createDashboardEntry(dashboardId),
+          panels: [
+            {
+              id: panelId,
+              type: 'vgplot',
+              title: 'Magnitude vs depth',
+              config: {
+                chartType: 'bubble-chart',
+                settings: {x: 'magnitude', y: 'depth'},
+              },
+            },
+          ],
+        },
+      },
+      runtimeIssues: {
+        [`${dashboardId}:${panelId}`]: {
+          kind: 'too-much-data',
+          panelId,
+          chartType: 'bubble-chart',
+          message: 'Use a heatmap instead.',
+          recoverable: true,
+          rowCount: 20,
+          limit: 10,
+        },
+      },
+    });
+    const tools = createDashboardAiTools({store, adapter});
+
+    const result = await (tools.list_dashboard_panels as any).execute({
+      artifactId: dashboardId,
+      reasoning: 'inspect broken panels',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(result.llmResult.data.panels[0].issue).toMatchObject({
+      kind: 'too-much-data',
+      chartType: 'bubble-chart',
+      rowCount: 20,
+      limit: 10,
+    });
   });
 });
