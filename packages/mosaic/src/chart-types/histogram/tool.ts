@@ -11,6 +11,7 @@ import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
 import {createOrUpdateChartPanel} from '../tool-helpers';
+import {MAX_HISTOGRAM_DATA_POINTS} from './constants';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
   settings: HistogramChartSettings.required(),
@@ -27,7 +28,7 @@ Example queries: "distribution of population density", "show elevation distribut
 
 Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUMN_TYPES.join(', ')}).
 
-NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
+NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle datasets up to ${MAX_HISTOGRAM_DATA_POINTS.toLocaleString()} rows efficiently.
 
 To UPDATE an existing histogram: provide the panelId parameter. Otherwise creates new panel.
 

@@ -10,6 +10,7 @@ import {
   TEMPORAL_COLUMN_TYPES,
 } from '../../chart-builders/constants';
 import {createOrUpdateChartPanel} from '../tool-helpers';
+import {MAX_LINE_CHART_DATA_POINTS} from './constants';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;
@@ -34,7 +35,7 @@ Required:
 Optional: xInterval for temporal grouping (${TEMPORAL_INTERVALS.join(', ')}) when x is temporal (${TEMPORAL_COLUMN_TYPES.join(', ')}).
 Multiple yFields create multi-line chart for comparing metrics.
 
-NOTE: Line charts with aggregation (xInterval or aggregate functions) handle large datasets well. Without aggregation, line charts plot individual points and should not be used for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead.
+NOTE: Line charts with aggregation (xInterval or aggregate functions) handle large datasets well. Without aggregation, line charts plot individual points and should not be used for tables with more than ${MAX_LINE_CHART_DATA_POINTS.toLocaleString()} rows - use aggregated visualizations instead.
 
 To UPDATE an existing line chart: provide the panelId parameter. Otherwise creates new panel.
 

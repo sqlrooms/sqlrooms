@@ -5,18 +5,21 @@ import {BubbleChartSettingsComponent} from './BubbleChartSettings';
 import {createBubbleChartAiTool} from './tool';
 import {Workflow} from 'lucide-react';
 import {createBubbleChartSpec} from './spec';
-
-const DESCRIPTION = 'Create a bubble chart';
+import {
+  MAX_BUBBLE_CHART_DATA_POINTS,
+  BUBBLE_CHART_DESCRIPTION,
+} from './constants';
 
 export const bubbleChartChartType: SpecChartTypeDefinition<BubbleChartConfig> =
   {
     id: 'bubble-chart',
     label: 'Bubble Chart',
-    description: DESCRIPTION,
+    description: BUBBLE_CHART_DESCRIPTION,
     icon: Workflow,
     schema: BubbleChartSettings,
     settingsComponent: BubbleChartSettingsComponent,
-    buildTitle: titleFromDescription(DESCRIPTION),
+    buildTitle: titleFromDescription(BUBBLE_CHART_DESCRIPTION),
     createTool: createBubbleChartAiTool,
     createSpec: createBubbleChartSpec,
+    maxDataPoints: MAX_BUBBLE_CHART_DATA_POINTS,
   };

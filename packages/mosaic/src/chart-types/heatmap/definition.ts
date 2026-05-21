@@ -5,17 +5,17 @@ import {HeatmapSettingsComponent} from './HeatmapSettings';
 import {createHeatmapAiTool} from './tool';
 import {Grid3X3} from 'lucide-react';
 import {createHeatmapSpec} from './spec';
-
-const DESCRIPTION = 'Create a 2D heatmap of two fields';
+import {MAX_HEATMAP_DATA_POINTS, HEATMAP_DESCRIPTION} from './constants';
 
 export const heatmapChartType: SpecChartTypeDefinition<HeatmapChartConfig> = {
   id: 'heatmap',
   label: 'Heatmap',
-  description: DESCRIPTION,
+  description: HEATMAP_DESCRIPTION,
   icon: Grid3X3,
   schema: HeatmapChartSettings,
   settingsComponent: HeatmapSettingsComponent,
-  buildTitle: titleFromDescription(DESCRIPTION),
+  buildTitle: titleFromDescription(HEATMAP_DESCRIPTION),
   createTool: createHeatmapAiTool,
   createSpec: createHeatmapSpec,
+  maxDataPoints: MAX_HEATMAP_DATA_POINTS,
 };

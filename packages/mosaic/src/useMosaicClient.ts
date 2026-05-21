@@ -17,6 +17,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
     queryResult,
     queryError,
     enabled = true,
+    maxDataPoints,
   } = options;
 
   // Use stable id - generate once if not provided
@@ -60,6 +61,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
       selectionName,
       selection: directSelection,
       query: queryRef.current,
+      maxDataPoints,
       onQueryResult: (result) => {
         queryResultRef.current?.(toArrowClientResult(result));
       },
@@ -79,6 +81,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
     directSelection,
     ensureClient,
     destroyClient,
+    maxDataPoints,
   ]);
 
   return {

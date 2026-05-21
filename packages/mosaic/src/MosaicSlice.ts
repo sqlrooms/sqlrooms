@@ -26,19 +26,12 @@ import {
 import {Query} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
 import {produce} from 'immer';
-import {z} from 'zod';
 import {
   createMosaicTableFromArrowTable,
   toArrowClientResult,
 } from './tableInterop';
 import {wrapCoordinatorWithValidation} from './wrapCoordinatorWithValidation';
-
-export const MAX_DATA_POINTS = 10000;
-
-export const MosaicSliceConfig = z.object({
-  maxDataPoints: z.number().int().min(1).optional(),
-});
-export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
+import {wrapQueryWithMaxDataPoints} from './wrapQueryWithMaxDataPoints';
 
 export type MosaicPreAggregateOptions = {
   /** Database schema/namespace for Mosaic pre-aggregate tables. */
@@ -61,6 +54,8 @@ export type MosaicClientOptions = {
   queryResult?: (result: ArrowTable) => void;
   /** Callback when query execution fails */
   queryError?: (error: Error) => void;
+  /** Maximum data points for validation. Set to Infinity to disable. */
+  maxDataPoints?: number;
 };
 
 // Tracked client info
@@ -93,7 +88,6 @@ export type MosaicConnection =
 export type MosaicSliceState = {
   mosaic: SliceFunctions & {
     connection: MosaicConnection;
-    config: MosaicSliceConfig;
     /** Record of registered clients by id */
     clients: Record<string, TrackedClient>;
     /** Named selections for cross-filtering (e.g., 'brush', 'hover') */
@@ -121,47 +115,17 @@ export type MosaicSliceState = {
   };
 };
 
-export function createDefaultMosaicConfig(
-  props?: Partial<MosaicSliceConfig>,
-): MosaicSliceConfig {
-  return {
-    maxDataPoints: MAX_DATA_POINTS,
-    ...props,
-  } as MosaicSliceConfig;
-}
-
 export type CreateMosaicSliceProps = {
-  config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
   preagg?: MosaicPreAggregateOptions;
-  /**
-   * Maximum number of data points allowed in a chart query result.
-   * Charts that would render more than this limit will show an error instead.
-   * @default 10000
-   */
-  maxDataPoints?: number;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
-  const resolvedMaxDataPoints =
-    props.maxDataPoints ?? props.config?.maxDataPoints ?? MAX_DATA_POINTS;
-
-  // Validate maxDataPoints
-  if (!Number.isInteger(resolvedMaxDataPoints) || resolvedMaxDataPoints < 1) {
-    throw new Error(
-      `maxDataPoints must be a positive integer, got: ${resolvedMaxDataPoints}`,
-    );
-  }
-
   return createSlice<
     MosaicSliceState,
     BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
   >((set, get, store) => ({
     mosaic: {
-      config: createDefaultMosaicConfig({
-        ...props?.config,
-        maxDataPoints: resolvedMaxDataPoints,
-      }),
       connection: {status: 'idle'},
       clients: {},
       selections: {},
@@ -195,11 +159,9 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
 
-          // Wrap coordinator query to validate result sizes
-          wrapCoordinatorWithValidation(
-            resolvedCoordinator,
-            resolvedMaxDataPoints,
-          );
+          // Wrap coordinator query to validate result sizes for charts
+          // Each chart type and client can specify their own maxDataPoints limit
+          wrapCoordinatorWithValidation(resolvedCoordinator);
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {
@@ -221,14 +183,6 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
 
       async destroy() {
         get().mosaic.destroyAllClients();
-      },
-
-      setConfig(config: MosaicSliceConfig) {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.mosaic.config = config;
-          }),
-        );
       },
 
       getSelection(
@@ -267,6 +221,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           (options.selectionName
             ? get().mosaic.getSelection(options.selectionName)
             : undefined);
+
+        const wrappedQuery = wrapQueryWithMaxDataPoints(
+          options.query,
+          options.maxDataPoints,
+        );
 
         // Wrap queryResult to update store state AND call external callback
         const wrappedQueryResult = (data: unknown) => {
@@ -312,7 +271,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         const client = makeClient({
           coordinator: connection.coordinator,
           selection,
-          query: options.query,
+          query: wrappedQuery,
           queryResult: wrappedQueryResult,
           queryPending: wrappedQueryPending,
           queryError: wrappedQueryError,
@@ -373,6 +332,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           get().mosaic.destroyClient(options.id);
         }
 
+        const wrappedQuery = wrapQueryWithMaxDataPoints(
+          options.query,
+          options.maxDataPoints,
+        );
+
         // Create new client with wrapped queryResult that calls both store update and external callback
         const wrappedQueryResult = (data: unknown) => {
           set((state) =>
@@ -421,7 +385,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         const client = makeClient({
           coordinator: connection.coordinator,
           selection,
-          query: options.query,
+          query: wrappedQuery,
           queryResult: wrappedQueryResult,
           queryPending: wrappedQueryPending,
           queryError: wrappedQueryError,

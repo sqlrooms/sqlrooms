@@ -5,18 +5,17 @@ import {BoxPlotPanelRenderer} from './renderer/BoxPlotPanelRenderer';
 import {BoxPlotSettingsComponent} from './BoxPlotSettings';
 import {createBoxPlotAiTool} from './tool';
 import {AlignHorizontalDistributeCenter} from 'lucide-react';
-
-const DESCRIPTION = 'Create a box plot';
+import {BOX_PLOT_DESCRIPTION} from './constants';
 
 export const boxPlotChartType: ComponentChartTypeDefinition<BoxPlotChartConfig> =
   {
     id: 'box-plot',
     label: 'Box Plot',
-    description: DESCRIPTION,
+    description: BOX_PLOT_DESCRIPTION,
     icon: AlignHorizontalDistributeCenter,
     schema: BoxPlotChartSettings,
     settingsComponent: BoxPlotSettingsComponent,
-    buildTitle: titleFromDescription(DESCRIPTION),
+    buildTitle: titleFromDescription(BOX_PLOT_DESCRIPTION),
     renderer: BoxPlotPanelRenderer,
     createTool: createBoxPlotAiTool,
   };

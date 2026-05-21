@@ -42,6 +42,8 @@ export const MosaicDashboardChartContent: FC<
         spec={spec}
         retention={retention}
         params={params}
+        coordinator={connection.coordinator}
+        maxDataPoints={chartTypeDefinition.maxDataPoints}
       />
     );
   }

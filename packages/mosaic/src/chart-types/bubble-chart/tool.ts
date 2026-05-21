@@ -6,6 +6,7 @@ import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 import {createOrUpdateChartPanel} from '../tool-helpers';
+import {MAX_BUBBLE_CHART_DATA_POINTS} from './constants';
 
 export const BubbleChartToolParameters = BaseChartToolParameters.extend({
   settings: BubbleChartSettings.required(),
@@ -23,11 +24,11 @@ Example queries: "plot latitude vs longitude", "show correlation between elevati
 Required: x and y must be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}).
 Optional: size can encode a third numeric dimension (magnitude, frequency, count).
 
-IMPORTANT: Bubble charts render ALL rows as individual points. Do NOT create bubble charts for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead (histogram, count-plot, line-chart with time intervals, or heatmap).
+IMPORTANT: Bubble charts render ALL rows as individual points. Do NOT create bubble charts for tables with more than ${MAX_BUBBLE_CHART_DATA_POINTS.toLocaleString()} rows - use aggregated visualizations instead (histogram, count-plot, line-chart with time intervals, or heatmap).
 
 To UPDATE an existing bubble chart: provide the panelId parameter. Otherwise creates new panel.
 
-Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${deps.maxDataPoints.toLocaleString()} rows).`,
+Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart).`,
     inputSchema: BubbleChartToolParameters,
     execute: async (params, context) => {
       try {

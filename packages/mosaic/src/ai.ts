@@ -33,7 +33,6 @@ import type {
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
 import type {MosaicDashboardLayoutType} from './dashboard/core-types';
-import {MAX_DATA_POINTS} from './MosaicSlice';
 
 export type {ChartToolExecutionContext} from './chart-types';
 
@@ -448,7 +447,6 @@ export function createDashboardToolDeps<TState>({
   };
 
   return {
-    maxDataPoints: MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {

@@ -5,18 +5,17 @@ import {CountPlotSettingsComponent} from './CountPlotSettings';
 import {createCountPlotAiTool} from './tool';
 import {BarChartHorizontal} from 'lucide-react';
 import {createCountPlotSpec} from './spec';
-
-const DESCRIPTION = 'Create a count plot of a field';
+import {COUNT_PLOT_DESCRIPTION} from './constants';
 
 export const countPlotChartType: SpecChartTypeDefinition<CountPlotChartConfig> =
   {
     id: 'count-plot',
     label: 'Count Plot',
-    description: DESCRIPTION,
+    description: COUNT_PLOT_DESCRIPTION,
     icon: BarChartHorizontal,
     schema: CountPlotChartSettings,
     settingsComponent: CountPlotSettingsComponent,
-    buildTitle: titleFromDescription(DESCRIPTION),
+    buildTitle: titleFromDescription(COUNT_PLOT_DESCRIPTION),
     createTool: createCountPlotAiTool,
     createSpec: createCountPlotSpec,
   };

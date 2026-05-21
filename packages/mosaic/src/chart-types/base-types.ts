@@ -93,8 +93,6 @@ export interface DashboardToolDeps {
   getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
   removePanel: (dashboardId: string, panelId: string) => void;
   setCurrentArtifact: (artifactId: string) => void;
-
-  maxDataPoints: number;
 }
 
 export type ChartToolExecutionContext = object & {
@@ -168,6 +166,15 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   icon: ComponentType<{className?: string}>;
   /** Optional function to create an AI tool for this chart type */
   createTool?: (deps: DashboardToolDeps) => Tool;
+  /**
+   * Maximum number of data points this chart can handle.
+   * If undefined, uses the global default (10,000).
+   * Set to Infinity for charts that can handle unlimited data.
+   * @example
+   * maxDataPoints: 50000 // Heatmap can handle more data
+   * maxDataPoints: 5000  // Complex chart needs less data
+   */
+  maxDataPoints?: number;
 };
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =

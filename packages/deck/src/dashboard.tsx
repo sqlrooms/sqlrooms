@@ -1,8 +1,7 @@
 import {WebMercatorViewport} from '@deck.gl/core';
 import type {ComponentProps} from 'react';
 import type DeckGLReact from '@deck.gl/react';
-
-type DeckProps = ComponentProps<typeof DeckGLReact>;
+import {MAX_MAP_DATA_POINTS} from './constants';
 import {
   escapeId,
   getColValAsNumber,
@@ -85,6 +84,7 @@ function DeckMapDashboardDatasetClient({
     selectionName,
     query,
     enabled: Boolean(source),
+    maxDataPoints: MAX_MAP_DATA_POINTS,
   });
 
   useEffect(() => {

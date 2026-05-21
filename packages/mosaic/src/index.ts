@@ -87,16 +87,14 @@ export {
   type MosaicColorLegendProps,
 } from './MosaicColorLegend';
 export {
-  createDefaultMosaicConfig,
   createMosaicSlice,
-  MosaicSliceConfig,
-  MAX_DATA_POINTS,
   type CreateMosaicSliceProps,
   type MosaicClientOptions,
   type MosaicPreAggregateOptions,
   type MosaicSliceState,
   type TrackedClient,
 } from './MosaicSlice';
+export {setCoordinatorMaxDataPoints} from './wrapCoordinatorWithValidation';
 export {DataPointLimitError} from './DataPointLimitError';
 export {
   MosaicProfiler,

@@ -5,18 +5,18 @@ import {HistogramSettingsComponent} from './HistogramSettings';
 import {createHistogramAiTool} from './tool';
 import {BarChart3} from 'lucide-react';
 import {createHistogramSpec} from './spec';
-
-const DESCRIPTION = 'Create a histogram of a field';
+import {MAX_HISTOGRAM_DATA_POINTS, HISTOGRAM_DESCRIPTION} from './constants';
 
 export const histogramChartType: SpecChartTypeDefinition<HistogramChartConfig> =
   {
     id: 'histogram',
     label: 'Histogram',
-    description: DESCRIPTION,
+    description: HISTOGRAM_DESCRIPTION,
     icon: BarChart3,
     schema: HistogramChartSettings,
     settingsComponent: HistogramSettingsComponent,
-    buildTitle: titleFromDescription(DESCRIPTION),
+    buildTitle: titleFromDescription(HISTOGRAM_DESCRIPTION),
     createTool: createHistogramAiTool,
     createSpec: createHistogramSpec,
+    maxDataPoints: MAX_HISTOGRAM_DATA_POINTS,
   };

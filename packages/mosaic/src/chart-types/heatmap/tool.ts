@@ -6,6 +6,7 @@ import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
 import {createOrUpdateChartPanel} from '../tool-helpers';
+import {MAX_HEATMAP_DATA_POINTS} from './constants';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({
   settings: HeatmapChartSettings.required(),
@@ -22,7 +23,7 @@ Example queries: "heatmap of population density by latitude and longitude", "tem
 
 Required: x and y should be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}) for creating the grid.
 
-NOTE: Heatmaps aggregate data into grid cells and compute density/counts, so they handle large datasets efficiently (no data point limit). Heatmaps are a good alternative when bubble charts would exceed ${deps.maxDataPoints.toLocaleString()} rows.
+NOTE: Heatmaps aggregate data into grid cells and compute density/counts, so they handle datasets up to ${MAX_HEATMAP_DATA_POINTS.toLocaleString()} rows efficiently. Heatmaps are a good alternative for large datasets with overlapping points.
 
 To UPDATE an existing heatmap: provide the panelId parameter. Otherwise creates new panel.
 
