@@ -10,10 +10,15 @@ export {
   createDeckMapDashboardAiTools,
   createDeckMapDashboardTool,
   createDeckMapConfigTool,
+  DeckMapDashboardConfigParameter,
   DeckMapConfigToolParameters,
   DeckMapDashboardToolParameters,
 } from './ai';
-export type {DeckMapConfigToolParams, DeckMapDashboardToolParams} from './ai';
+export type {
+  DeckMapConfigToolParams,
+  DeckMapDashboardConfigToolConfig,
+  DeckMapDashboardToolParams,
+} from './ai';
 export {
   deckMapDashboardAddPanelAction,
   deckMapDashboardPanelRenderer,

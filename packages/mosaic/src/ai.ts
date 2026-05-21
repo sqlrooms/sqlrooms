@@ -175,7 +175,7 @@ Dashboard authoring:
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
-- If the host app provides \`create_dashboard_map\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns.
+- If the host app provides \`create_dashboard_map\`, use it for map/geospatial/location requests. Author its config as native Deck JSON with layer classes in \`spec.layers[].@@type\`, dataset bindings in \`_sqlroomsBinding.dataset\`, and table/query sources in \`config.datasets\`.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
@@ -201,7 +201,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 **Panel Tools:**
 - create_dashboard_profiler - table statistics and column summaries
 - create_dashboard_text_panel - markdown annotations and insights
-- create_dashboard_map - geospatial point map when longitude/latitude or geometry columns are available (if provided by the host app)
+- create_dashboard_map - native Deck JSON geospatial map panel (if provided by the host app)
 
 **Data Tools:**
 - query - execute SQL queries for data exploration

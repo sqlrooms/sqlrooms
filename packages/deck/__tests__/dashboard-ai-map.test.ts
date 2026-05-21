@@ -1,34 +1,88 @@
 import type {DashboardToolDeps} from '@sqlrooms/mosaic';
 import {createDeckMapConfigTool, createDeckMapDashboardTool} from '../src/ai';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
+import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
+
+const scatterConfig = {
+  spec: {
+    initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        id: 'earthquakes-points',
+        _sqlroomsBinding: {dataset: 'earthquakes'},
+        filled: true,
+        pickable: true,
+        radiusUnits: 'pixels',
+        getRadius: 4,
+        getFillColor: [56, 189, 248, 180],
+      },
+    ],
+  },
+  datasets: {
+    earthquakes: {
+      source: {tableName: 'earthquakes'},
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+  fitToData: {
+    dataset: 'earthquakes',
+    longitudeColumn: 'longitude',
+    latitudeColumn: 'latitude',
+  },
+};
+
+const multiLayerConfig = {
+  spec: {
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        id: 'earthquakes-points',
+        _sqlroomsBinding: {dataset: 'earthquakes'},
+        getRadius: 4,
+      },
+      {
+        '@@type': 'GeoArrowHeatmapLayer',
+        id: 'earthquakes-density',
+        _sqlroomsBinding: {dataset: 'earthquakes'},
+        getWeight: 'magnitude',
+      },
+    ],
+  },
+  datasets: {
+    earthquakes: {
+      source: {
+        sqlQuery:
+          'SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM earthquakes',
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+};
 
 function createDeps(): DashboardToolDeps & {
   panels: any[];
-  selectedTables: string[];
   currentArtifacts: string[];
 } {
   const panels: any[] = [];
-  const selectedTables: string[] = [];
   const currentArtifacts: string[] = [];
 
   return {
     panels,
-    selectedTables,
     currentArtifacts,
     maxDataPoints: 10_000,
     resolveArtifact: () => 'dashboard-1',
-    resolveTable: (_artifactId, tableName) => {
-      selectedTables.push(tableName ?? 'earthquakes');
-      return {
-        tableName: tableName ?? 'earthquakes',
-        columns: [
-          {name: 'id', type: 'INTEGER'},
-          {name: 'longitude', type: 'DOUBLE'},
-          {name: 'latitude', type: 'DOUBLE'},
-          {name: 'magnitude', type: 'DOUBLE'},
-        ],
-      };
-    },
+    resolveTable: () => ({
+      tableName: 'earthquakes',
+      columns: [
+        {name: 'id', type: 'INTEGER'},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+        {name: 'magnitude', type: 'DOUBLE'},
+      ],
+    }),
     addPanel: (_dashboardId, panel) => {
       panels.push(panel);
       return panel.id;
@@ -57,47 +111,48 @@ function createDeps(): DashboardToolDeps & {
 }
 
 describe('createDeckMapConfigTool', () => {
-  it('creates a deck map config without dashboard dependencies', async () => {
+  it('accepts and returns a native scatterplot Deck JSON map config', async () => {
     const tool = createDeckMapConfigTool();
 
     const result = await (tool as any).execute({
-      tableName: 'earthquakes',
       title: 'Standalone earthquake map',
-      columns: [
-        {name: 'longitude', type: 'DOUBLE'},
-        {name: 'latitude', type: 'DOUBLE'},
-      ],
+      config: scatterConfig,
       reasoning: 'show locations outside a dashboard',
     });
 
     expect(result.llmResult.success).toBe(true);
-    expect(result.llmResult.data).toMatchObject({
+    expect(result.llmResult.data).toEqual({
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: {
-        datasets: {
-          earthquakes: {
-            geometryColumn: '__sqlrooms_geom',
-            geometryEncodingHint: 'wkb',
-          },
-        },
-      },
+      config: scatterConfig,
     });
-    expect(
-      result.llmResult.data.config.datasets.earthquakes.source.sqlQuery,
-    ).toContain('ST_Point("longitude", "latitude")');
+  });
+
+  it('accepts multiple native Deck JSON layers', async () => {
+    const tool = createDeckMapConfigTool();
+
+    const result = await (tool as any).execute({
+      title: 'Earthquake point and density map',
+      config: multiLayerConfig,
+      reasoning: 'show points and density',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(result.llmResult.data.config.spec.layers).toEqual(
+      multiLayerConfig.spec.layers,
+    );
   });
 });
 
 describe('createDeckMapDashboardTool', () => {
-  it('creates a deck map panel from inferred longitude and latitude columns', async () => {
+  it('creates a deck map panel from a native Deck JSON config', async () => {
     const deps = createDeps();
     const tool = createDeckMapDashboardTool(deps);
 
     const result = await (tool as any).execute({
-      tableName: 'earthquakes',
       title: 'Earthquake map',
+      config: scatterConfig,
       reasoning: 'show locations',
     });
 
@@ -106,66 +161,61 @@ describe('createDeckMapDashboardTool', () => {
     expect(deps.panels[0]).toMatchObject({
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Earthquake map',
-      config: {
-        datasets: {
-          earthquakes: {
-            geometryColumn: '__sqlrooms_geom',
-            geometryEncodingHint: 'wkb',
-          },
-        },
-        fitToData: {
-          dataset: 'earthquakes',
-          longitudeColumn: 'longitude',
-          latitudeColumn: 'latitude',
-        },
-      },
+      config: scatterConfig,
     });
-    expect(
-      deps.panels[0].config.datasets.earthquakes.source.sqlQuery,
-    ).toContain('ST_Point("longitude", "latitude")');
     expect(deps.currentArtifacts).toEqual(['dashboard-1']);
   });
 
-  it('updates an existing map panel', async () => {
+  it('updates an existing map panel from a native Deck JSON config', async () => {
     const deps = createDeps();
     const tool = createDeckMapDashboardTool(deps);
     const createResult = await (tool as any).execute({
-      tableName: 'earthquakes',
       title: 'Original map',
+      config: scatterConfig,
       reasoning: 'show locations',
     });
     const panelId = createResult.llmResult.data.panelId;
 
     const updateResult = await (tool as any).execute({
-      tableName: 'earthquakes',
       panelId,
       title: 'Updated map',
-      pointRadius: 8,
-      reasoning: 'make points larger',
+      config: multiLayerConfig,
+      reasoning: 'add density layer',
     });
 
     expect(updateResult.llmResult.success).toBe(true);
     expect(deps.panels).toHaveLength(1);
-    expect(deps.panels[0].title).toBe('Updated map');
-    expect(deps.panels[0].config.spec.layers[0].getRadius).toBe(8);
+    expect(deps.panels[0]).toMatchObject({
+      title: 'Updated map',
+      config: multiLayerConfig,
+    });
   });
 
-  it('returns a useful error when no coordinates or geometry are available', async () => {
-    const deps = createDeps();
-    deps.resolveTable = () => ({
-      tableName: 'places',
-      columns: [{name: 'name', type: 'VARCHAR'}],
-    });
-    const tool = createDeckMapDashboardTool(deps);
-
-    const result = await (tool as any).execute({
-      tableName: 'places',
-      reasoning: 'show locations',
+  it('keeps the manual table helper as a lon/lat convenience path', () => {
+    const panel = createDeckMapDashboardPanelConfigForTable({
+      title: 'Earthquake map',
+      tableName: 'earthquakes',
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
     });
 
-    expect(result.llmResult.success).toBe(false);
-    expect(result.llmResult.errorMessage).toContain(
-      'Could not find longitude/latitude columns',
+    expect(panel.config).toMatchObject({
+      datasets: {
+        earthquakes: {
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    });
+    expect(panel.config.datasets.earthquakes.source.sqlQuery).toContain(
+      'ST_Point("longitude", "latitude")',
     );
   });
 });
