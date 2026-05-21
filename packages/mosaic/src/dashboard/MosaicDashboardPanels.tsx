@@ -14,7 +14,7 @@ import {
   MOSAIC_DASHBOARD_PANEL,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
-import {MosaicDashboardInitialState} from './MosaicDashboardInitialState';
+import {MosaicDashboardInitialState} from './initial-state/MosaicDashboardInitialState';
 
 const EMPTY_DASHBOARD_PANELS: MosaicDashboardPanelConfig[] = [];
 

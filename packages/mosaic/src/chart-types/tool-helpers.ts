@@ -105,7 +105,6 @@ export function createOrUpdateChartPanel(
     const panel = createMosaicDashboardChartPanelConfig(
       params.title,
       params.config,
-      {tableName: params.tableName},
     );
 
     const panelId = deps.addPanel(params.dashboardId, panel);
@@ -148,7 +147,6 @@ export function createOrUpdateProfilerPanel(
     // Create new panel - create full panel config
     const panel = createMosaicDashboardProfilerPanelConfig({
       title: params.title,
-      source: {tableName: params.tableName},
       config: params.config,
     });
 

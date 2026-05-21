@@ -185,7 +185,6 @@ function createDeckMapPanelForTable(table: DataTable) {
     const tableName = table.table.table;
     return createDeckMapDashboardPanelConfig({
       title: `${tableName} map`,
-      source: {tableName},
       datasets: {},
       spec: {},
     });
@@ -206,7 +205,6 @@ function createDeckMapPanelForTable(table: DataTable) {
 
   return createDeckMapDashboardPanelConfig({
     title: `${tableName} map`,
-    source: {tableName},
     spec: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [
@@ -358,16 +356,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
 
           const hasProfilerForTable = dashboard.panels.some(
-            (panel) =>
-              panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE &&
-              panel.source?.tableName === tableName,
+            (panel) => panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
           );
+
           if (!hasProfilerForTable) {
             get().mosaicDashboard.addPanel(
               artifactId,
               createMosaicDashboardProfilerPanelConfig({
                 title: `${tableName} profiler`,
-                source: {tableName},
               }),
             );
           }

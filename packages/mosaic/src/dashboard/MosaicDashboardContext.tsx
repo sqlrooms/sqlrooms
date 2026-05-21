@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react';
-import type {MosaicDashboardInitialStateProps} from './MosaicDashboardInitialState';
+import type {MosaicDashboardInitialStateProps} from './initial-state/MosaicDashboardInitialState';
 
 export type MosaicDashboardContextValue = {
   dashboardId: string;

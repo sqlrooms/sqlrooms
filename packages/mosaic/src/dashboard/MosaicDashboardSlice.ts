@@ -181,17 +181,17 @@ export function createMosaicDashboardProfilerPanelConfig(
 export function createMosaicDashboardTextPanelConfig(
   options: {
     title?: string;
-    content?: string;
+    config?: TextPanelConfig;
   } = {},
 ): TextPanel {
   return {
     id: createId(),
     type: MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
     title: options.title ?? 'Text',
-    config: {
-      content: options.content ?? '',
-      toolbarOpen: true,
+    config: options.config ?? {
+      toolbarOpen: false,
       sourcePanelOpen: false,
+      content: '',
     },
   };
 }

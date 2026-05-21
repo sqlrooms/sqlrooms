@@ -11,8 +11,7 @@ export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const ensureDashboardArtifact = useRoomStore(
     (state) => state.dashboard.ensureDashboardArtifact,
   );
-  const createSession = useRoomStore((state) => state.ai.createSession);
-  const setPrompt = useRoomStore((state) => state.ai.setPrompt);
+  const startNewSession = useRoomStore((state) => state.ai.startNewSession);
 
   useEffect(() => {
     if (artifact?.type === 'dashboard') {
@@ -21,17 +20,12 @@ export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
   }, [artifact?.type, artifactId, ensureDashboardArtifact]);
 
   const handleStart = useCallback(
-    async (tableName: string, prompt?: string) => {
-      if (prompt) {
-        // Create a new AI session for this analysis
-        const sessionId = createSession(`Analyze ${tableName}`);
-
-        // Set the prompt in the new session
-        const fullPrompt = `I want to analyze the "${tableName}" table. ${prompt}`;
-        setPrompt(sessionId, fullPrompt);
-      }
+    async (prompt: string) => {
+      // TODO: figure out a better way to instruct agent to use specific agent and dashboard artifact without hardcoding dashboard_agent in the prompt
+      const fullPrompt = `Use dashboard_agent to analyze the data and create charts in dashboard with id ${artifactId}. ${prompt}`;
+      await startNewSession('Dashboard Analysis', fullPrompt);
     },
-    [createSession, setPrompt],
+    [artifactId, startNewSession],
   );
 
   if (!artifact || artifact.type !== 'dashboard') {

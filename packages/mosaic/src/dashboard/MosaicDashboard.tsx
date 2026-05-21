@@ -18,7 +18,7 @@ import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
 import {ChartBuilderColumn} from '../chart-types/base-types';
 import {ChartConfig} from '../chart-types/chart-config';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
-import type {MosaicDashboardInitialStateProps} from './MosaicDashboardInitialState';
+import type {MosaicDashboardInitialStateProps} from './initial-state/MosaicDashboardInitialState';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;

@@ -153,6 +153,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
@@ -1107,6 +1108,35 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           // Send the message through the session's chat instance
           sendMessage({text: promptText});
+        },
+
+        /**
+         * Start a new session with a prompt and automatically begin analysis
+         */
+        startNewSession: async (name: string, prompt: string) => {
+          // Create the session
+          get().ai.createSession(name);
+
+          // Get the newly created session
+          const session = get().ai.getCurrentSession();
+          if (!session) {
+            console.error('Failed to create session');
+            return;
+          }
+
+          // Set the prompt
+          get().ai.setPrompt(session.id, prompt);
+
+          // TODO: why can't we run it without the timeout?
+          // Wait for SessionChatProvider to mount and register sendMessage
+          const tryStartAnalysis = async (): Promise<void> => {
+            // sendMessage is registered, now we can start analysis
+            await get().ai.startAnalysis(session.id);
+          };
+
+          setTimeout(() => {
+            void tryStartAnalysis();
+          }, 100);
         },
 
         cancelAnalysis: (sessionId: string) => {
