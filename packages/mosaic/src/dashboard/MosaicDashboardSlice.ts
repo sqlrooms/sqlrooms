@@ -357,7 +357,8 @@ function createDashboardGridItem(
 ): LayoutGridItem {
   const effectiveCols = Math.max(1, cols);
   const w =
-    panelType === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE
+    panelType === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE ||
+    panelType === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE
       ? effectiveCols
       : Math.max(1, Math.ceil(effectiveCols / 2));
   const h = 2;
