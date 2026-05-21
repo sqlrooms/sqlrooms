@@ -6,11 +6,14 @@
 export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
 export {
+  createDeckMapAiTools,
   createDeckMapDashboardAiTools,
   createDeckMapDashboardTool,
+  createDeckMapConfigTool,
+  DeckMapConfigToolParameters,
   DeckMapDashboardToolParameters,
 } from './ai';
-export type {DeckMapDashboardToolParams} from './ai';
+export type {DeckMapConfigToolParams, DeckMapDashboardToolParams} from './ai';
 export {
   deckMapDashboardAddPanelAction,
   deckMapDashboardPanelRenderer,

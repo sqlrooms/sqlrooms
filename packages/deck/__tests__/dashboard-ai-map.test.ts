@@ -1,5 +1,5 @@
 import type {DashboardToolDeps} from '@sqlrooms/mosaic';
-import {createDeckMapDashboardTool} from '../src/ai';
+import {createDeckMapConfigTool, createDeckMapDashboardTool} from '../src/ai';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
 
 function createDeps(): DashboardToolDeps & {
@@ -55,6 +55,40 @@ function createDeps(): DashboardToolDeps & {
     },
   };
 }
+
+describe('createDeckMapConfigTool', () => {
+  it('creates a deck map config without dashboard dependencies', async () => {
+    const tool = createDeckMapConfigTool();
+
+    const result = await (tool as any).execute({
+      tableName: 'earthquakes',
+      title: 'Standalone earthquake map',
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+      reasoning: 'show locations outside a dashboard',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(result.llmResult.data).toMatchObject({
+      kind: 'deck-map-config',
+      type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+      title: 'Standalone earthquake map',
+      config: {
+        datasets: {
+          earthquakes: {
+            geometryColumn: '__sqlrooms_geom',
+            geometryEncodingHint: 'wkb',
+          },
+        },
+      },
+    });
+    expect(
+      result.llmResult.data.config.datasets.earthquakes.source.sqlQuery,
+    ).toContain('ST_Point("longitude", "latitude")');
+  });
+});
 
 describe('createDeckMapDashboardTool', () => {
   it('creates a deck map panel from inferred longitude and latitude columns', async () => {
