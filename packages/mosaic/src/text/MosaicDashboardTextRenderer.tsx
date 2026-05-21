@@ -17,7 +17,7 @@ const MosaicDashboardTextRenderer: FC<TextPanelRendererProps> = ({
     (state) => state.mosaicDashboard.updatePanel,
   );
 
-  const toolbarOpen = panel.config.toolbarOpen ?? true;
+  const toolbarOpen = panel.config.toolbarOpen ?? false;
 
   const handleChange = useCallback(
     (value: string) => {
@@ -66,7 +66,7 @@ const TextPanelHeaderActions: FC<TextPanelRendererProps> = ({
     (state) => state.mosaicDashboard.updatePanel,
   );
 
-  const toolbarOpen = panel.config.toolbarOpen ?? true;
+  const toolbarOpen = panel.config.toolbarOpen ?? false;
 
   const handleToggleToolbar = useCallback(() => {
     updatePanel(dashboardId, panel.id, {
