@@ -24,10 +24,10 @@ describe('deck dashboard integration', () => {
   it('creates serializable dashboard map panel configs', () => {
     const panel = createDeckMapDashboardPanelConfig({
       title: 'Earthquakes',
-      source: {tableName: 'earthquakes'},
       spec: {layers: []},
       datasets: {
         earthquakes: {
+          source: {tableName: 'earthquakes'},
           geometryColumn: 'geom',
           geometryEncodingHint: 'wkb',
         },
@@ -42,11 +42,11 @@ describe('deck dashboard integration', () => {
 
     expect(panel.type).toBe(DECK_MAP_DASHBOARD_PANEL_TYPE);
     expect(panel.title).toBe('Earthquakes');
-    expect(panel.source).toEqual({tableName: 'earthquakes'});
     expect(panel.config).toEqual({
       spec: {layers: []},
       datasets: {
         earthquakes: {
+          source: {tableName: 'earthquakes'},
           geometryColumn: 'geom',
           geometryEncodingHint: 'wkb',
         },
@@ -60,10 +60,9 @@ describe('deck dashboard integration', () => {
     });
   });
 
-  it('resolves dataset source before panel and dashboard fallback sources', () => {
+  it('resolves dataset source before dashboard fallback source', () => {
     const dashboard = createDashboard('dashboard_table');
     const panel = createDeckMapDashboardPanelConfig({
-      source: {tableName: 'panel_table'},
       spec: {layers: []},
       datasets: {
         dataset: {
@@ -72,6 +71,7 @@ describe('deck dashboard integration', () => {
       },
     });
 
+    // Dataset source has priority
     expect(
       resolveDeckMapDashboardDatasetSource({
         dashboard,
@@ -81,23 +81,12 @@ describe('deck dashboard integration', () => {
         },
       }),
     ).toEqual({sqlQuery: 'SELECT * FROM dataset_table'});
+
+    // Falls back to dashboard source when no dataset source
     expect(
       resolveDeckMapDashboardDatasetSource({
         dashboard,
         panel,
-        dataset: {},
-      }),
-    ).toEqual({tableName: 'panel_table'});
-    const panelWithoutSource = {
-      id: panel.id,
-      type: panel.type,
-      title: panel.title,
-      config: panel.config,
-    };
-    expect(
-      resolveDeckMapDashboardDatasetSource({
-        dashboard,
-        panel: panelWithoutSource,
         dataset: {},
       }),
     ).toEqual({tableName: 'dashboard_table'});
