@@ -26,7 +26,11 @@ function getQueryResultRowCount(result: unknown): number {
   }
 
   // Mosaic table format with toArray
-  if (typeof result === 'object' && 'toArray' in result) {
+  if (
+    typeof result === 'object' &&
+    'toArray' in result &&
+    typeof (result as any).toArray === 'function'
+  ) {
     const arr = (result as any).toArray();
     return Array.isArray(arr) ? arr.length : 0;
   }

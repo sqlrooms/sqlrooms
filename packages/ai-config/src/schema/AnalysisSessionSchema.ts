@@ -41,6 +41,7 @@ const AiRunContextBaseSchema = z
   .object({
     items: z.array(AiRunContextItemSchema),
     primaryItemId: z.string().optional(),
+    primaryItemKind: z.string().optional(),
     capturedAt: z.number(),
   })
   .passthrough();
@@ -72,6 +73,15 @@ export const AiRunContextSchema = z.preprocess((data) => {
 }, AiRunContextBaseSchema);
 export type AiRunContext = z.infer<typeof AiRunContextSchema>;
 
+function getStringProperty(obj: unknown, key: string): string | undefined {
+  return obj &&
+    typeof obj === 'object' &&
+    key in obj &&
+    typeof (obj as Record<string, unknown>)[key] === 'string'
+    ? (obj as Record<string, string>)[key]
+    : undefined;
+}
+
 export function getAiRunContextItems(
   runContext: AiRunContext | unknown,
 ): AiRunContextItem[] {
@@ -94,17 +104,16 @@ export function getAiRunContextPrimaryItem(
   const items = getAiRunContextItems(runContext);
   if (items.length === 0) return undefined;
 
-  const primaryItemId =
-    runContext &&
-    typeof runContext === 'object' &&
-    'primaryItemId' in runContext &&
-    typeof runContext.primaryItemId === 'string'
-      ? runContext.primaryItemId
-      : undefined;
+  const primaryItemId = getStringProperty(runContext, 'primaryItemId');
+  const primaryItemKind = getStringProperty(runContext, 'primaryItemKind');
 
-  return primaryItemId
-    ? (items.find((item) => item.id === primaryItemId) ?? items[0])
-    : items[0];
+  return primaryItemId && primaryItemKind
+    ? (items.find(
+        (item) => item.id === primaryItemId && item.kind === primaryItemKind,
+      ) ?? items[0])
+    : primaryItemId
+      ? (items.find((item) => item.id === primaryItemId) ?? items[0])
+      : items[0];
 }
 
 export function setAiRunContextPrimaryItem(
@@ -121,6 +130,7 @@ export function setAiRunContextPrimaryItem(
     ...(baseContext ?? {}),
     items: [item, ...existingItems],
     primaryItemId: item.id,
+    primaryItemKind: item.kind,
     capturedAt: baseContext?.capturedAt ?? Date.now(),
   };
 }
