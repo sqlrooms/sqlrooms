@@ -345,6 +345,10 @@ export function createKeplerSlice({
       );
     }
 
+    function registerMapEntry(id: string) {
+      return registerEntry({id, ...basicKeplerProps});
+    }
+
     const keplerReducer = createKeplerReducer({reason: 'initialize'});
     const middlewares: Middleware[] = [
       taskMiddleware,
@@ -405,7 +409,7 @@ export function createKeplerSlice({
                 reason: 'initialize',
                 mapId: map.id,
                 name: map.name,
-              })(mapState, registerEntry({id: map.id})),
+              })(mapState, registerMapEntry(map.id)),
             {},
           );
           set({
@@ -601,7 +605,7 @@ export function createKeplerSlice({
                 reason: 'create-map',
                 mapId,
                 name,
-              })(draft.kepler.map, registerEntry({id: mapId}));
+              })(draft.kepler.map, registerMapEntry(mapId));
               draft.kepler.forwardDispatch[mapId] = getForwardDispatch(mapId);
             }),
           );
@@ -727,7 +731,7 @@ export function createKeplerSlice({
                 reason: 'duplicate-map',
                 mapId: newMapId,
                 name: `Copy of ${sourceMap.name}`,
-              })(draft.kepler.map, registerEntry({id: newMapId}));
+              })(draft.kepler.map, registerMapEntry(newMapId));
               draft.kepler.forwardDispatch[newMapId] =
                 getForwardDispatch(newMapId);
             }),
@@ -828,7 +832,7 @@ export function createKeplerSlice({
                 map: createKeplerReducer({
                   reason: 'register-map',
                   mapId,
-                })(get().kepler.map, registerEntry({id: mapId})),
+                })(get().kepler.map, registerMapEntry(mapId)),
                 forwardDispatch: {
                   ...get().kepler.forwardDispatch,
                   [mapId]: getForwardDispatch(mapId),
@@ -917,7 +921,7 @@ export function createKeplerSlice({
                 reason: 'sync-config',
                 mapId: map.id,
                 name: map.name,
-              })(draft.kepler.map, registerEntry({id: map.id}));
+              })(draft.kepler.map, registerMapEntry(map.id));
               draft.kepler.forwardDispatch[map.id] = getForwardDispatch(map.id);
             }
           }
