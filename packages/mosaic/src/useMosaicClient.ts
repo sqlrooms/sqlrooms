@@ -2,10 +2,20 @@ import {createId} from '@paralleldrive/cuid2';
 import {useEffect, useMemo, useRef} from 'react';
 import {type MosaicClientOptions, useStoreWithMosaic} from './MosaicSlice';
 import {toArrowClientResult} from './tableInterop';
+import {
+  assertChartDataPolicy,
+  createChartRuntimeIssueFromError,
+  type ChartDataPolicy,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
+} from './chart-runtime';
 
 export type UseMosaicClientOptions = MosaicClientOptions & {
   /** Whether to automatically connect when mosaic is ready */
   enabled?: boolean;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
 };
 
 export function useMosaicClient(options: UseMosaicClientOptions) {
@@ -17,6 +27,9 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
     queryResult,
     queryError,
     enabled = true,
+    dataPolicy,
+    runtimeIssueContext,
+    runtimeIssueReporter,
   } = options;
 
   // Use stable id - generate once if not provided
@@ -35,12 +48,25 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
   const queryRef = useRef(query);
   const queryResultRef = useRef(queryResult);
   const queryErrorRef = useRef(queryError);
+  const dataPolicyRef = useRef(dataPolicy);
+  const runtimeIssueContextRef = useRef(runtimeIssueContext);
+  const runtimeIssueReporterRef = useRef(runtimeIssueReporter);
 
   useEffect(() => {
     queryRef.current = query;
     queryResultRef.current = queryResult;
     queryErrorRef.current = queryError;
-  }, [query, queryError, queryResult]);
+    dataPolicyRef.current = dataPolicy;
+    runtimeIssueContextRef.current = runtimeIssueContext;
+    runtimeIssueReporterRef.current = runtimeIssueReporter;
+  }, [
+    dataPolicy,
+    query,
+    queryError,
+    queryResult,
+    runtimeIssueContext,
+    runtimeIssueReporter,
+  ]);
 
   const clientData = clientState?.data;
   const arrowData = useMemo(() => {
@@ -61,9 +87,36 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
       selection: directSelection,
       query: queryRef.current,
       onQueryResult: (result) => {
+        try {
+          assertChartDataPolicy(dataPolicyRef.current, result);
+          runtimeIssueReporterRef.current?.clearIssue();
+        } catch (error) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error));
+          if (runtimeIssueContextRef.current) {
+            runtimeIssueReporterRef.current?.reportIssue(
+              createChartRuntimeIssueFromError(
+                normalizedError,
+                runtimeIssueContextRef.current,
+                dataPolicyRef.current,
+              ),
+            );
+          }
+          queryErrorRef.current?.(normalizedError);
+          return;
+        }
         queryResultRef.current?.(toArrowClientResult(result));
       },
       onQueryError: (error) => {
+        if (runtimeIssueContextRef.current) {
+          runtimeIssueReporterRef.current?.reportIssue(
+            createChartRuntimeIssueFromError(
+              error,
+              runtimeIssueContextRef.current,
+              dataPolicyRef.current,
+            ),
+          );
+        }
         queryErrorRef.current?.(error);
       },
     });
