@@ -2136,9 +2136,6 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/monaco-editor':
-        specifier: workspace:*
-        version: link:../../packages/monaco-editor
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -2154,9 +2151,6 @@ importers:
       lucide-react:
         specifier: 0.544.0
         version: 0.544.0(react@19.2.1)
-      monaco-editor:
-        specifier: ^0.55.1
-        version: 0.55.1
       react:
         specifier: ^19.2.0
         version: 19.2.1

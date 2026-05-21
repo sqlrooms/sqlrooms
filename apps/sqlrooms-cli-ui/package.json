@@ -10,9 +10,6 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
-  "overrides": {
-    "@duckdb/duckdb-wasm": "1.33.1-dev55.0"
-  },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.22",
     "@sqlrooms/ai": "workspace:*",
