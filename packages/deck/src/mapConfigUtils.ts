@@ -123,8 +123,11 @@ function createDeckMapPointSourceSql(options: {
 }) {
   const quotedLongitude = quoteDeckMapSqlIdentifier(options.longitudeColumn);
   const quotedLatitude = quoteDeckMapSqlIdentifier(options.latitudeColumn);
+  const cleanedSourceSqlQuery = options.sourceSqlQuery
+    ?.trim()
+    .replace(/(?:\s*;+\s*)+$/, '');
   const baseSource = options.sourceSqlQuery
-    ? `(${options.sourceSqlQuery}) AS "__sqlrooms_dashboard_map_source"`
+    ? `(${cleanedSourceSqlQuery}) AS "__sqlrooms_dashboard_map_source"`
     : quoteDeckMapSqlTableReference(options.tableReference);
 
   return [

@@ -1,5 +1,10 @@
 import type {DashboardToolDeps} from '@sqlrooms/mosaic';
-import {createDeckMapConfigTool, createDeckMapDashboardTool} from '../src/ai';
+import {MAP_TOOL_KEY} from '@sqlrooms/mosaic/ai';
+import {
+  createDeckMapConfigTool,
+  createDeckMapDashboardAiTools,
+  createDeckMapDashboardTool,
+} from '../src/ai';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
 import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
 
@@ -146,6 +151,12 @@ describe('createDeckMapConfigTool', () => {
 });
 
 describe('createDeckMapDashboardTool', () => {
+  it('registers the dashboard map tool under the shared map tool key', () => {
+    const tools = createDeckMapDashboardAiTools(createDeps());
+
+    expect(tools[MAP_TOOL_KEY]).toBeDefined();
+  });
+
   it('creates a deck map panel from a native Deck JSON config', async () => {
     const deps = createDeps();
     const tool = createDeckMapDashboardTool(deps);
@@ -216,6 +227,22 @@ describe('createDeckMapDashboardTool', () => {
     });
     expect(panel.config.datasets.earthquakes.source.sqlQuery).toContain(
       'ST_Point("longitude", "latitude")',
+    );
+  });
+
+  it('strips trailing semicolons from wrapped manual source SQL queries', () => {
+    const panel = createDeckMapDashboardPanelConfigForTable({
+      title: 'Earthquake map',
+      tableName: 'earthquakes',
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+      sourceSqlQuery: ' SELECT * FROM earthquakes; ;  ',
+    });
+
+    expect(panel.config.datasets.earthquakes.source.sqlQuery).toContain(
+      'FROM (SELECT * FROM earthquakes) AS "__sqlrooms_dashboard_map_source"',
     );
   });
 });

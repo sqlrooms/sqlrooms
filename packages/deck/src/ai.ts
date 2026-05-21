@@ -1,6 +1,7 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from '@sqlrooms/mosaic';
+import {MAP_TOOL_KEY} from '@sqlrooms/mosaic/ai';
 import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
@@ -188,7 +189,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           }
           if (existingPanel.type !== DECK_MAP_DASHBOARD_PANEL_TYPE) {
             throw new Error(
-              `Panel "${params.panelId}" is not a map panel. Cannot update it with create_dashboard_map.`,
+              `Panel "${params.panelId}" is not a map panel. Cannot update it with ${MAP_TOOL_KEY}.`,
             );
           }
           deps.updatePanel(artifactId, params.panelId, {
@@ -244,6 +245,6 @@ export function createDeckMapDashboardAiTools(
   deps: DashboardToolDeps,
 ): Record<string, Tool> {
   return {
-    create_dashboard_map: createDeckMapDashboardTool(deps),
+    [MAP_TOOL_KEY]: createDeckMapDashboardTool(deps),
   };
 }

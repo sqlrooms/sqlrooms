@@ -239,6 +239,7 @@ reference-only dashboard artifacts should require an explicit `artifactId`.
 ```ts
 import {
   createDashboardAiTools,
+  MAP_TOOL_KEY,
   type DashboardAiAdapter,
 } from '@sqlrooms/mosaic/ai';
 
@@ -273,6 +274,10 @@ const adapter: DashboardAiAdapter<AppState> = {
 
 const dashboardTools = createDashboardAiTools({store, adapter});
 ```
+
+Host tools can be added with `extraTools`; they must not reuse built-in
+dashboard tool keys. Register geospatial map tools under `MAP_TOOL_KEY` so the
+dashboard prompts and tool registration stay aligned.
 
 ### Box Plot Chart Type
 

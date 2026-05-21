@@ -16,7 +16,7 @@ function getMutableAiRunContext(context?: ChartToolExecutionContext) {
   return (
     (
       context as
-        | (ChartToolExecutionContext & {getAztiRunContext?: () => unknown})
+        | (ChartToolExecutionContext & {getAiRunContext?: () => unknown})
         | undefined
     )?.getAiRunContext?.() ?? context?.aiRunContext
   );
