@@ -1,5 +1,5 @@
 import {MarkdownDocumentEditor} from '@sqlrooms/documents';
-import {Button} from '@sqlrooms/ui';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {ALargeSmallIcon, FileTextIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import type {TextPanel} from '../dashboard/dashboard-types';
@@ -78,15 +78,20 @@ const TextPanelHeaderActions: FC<TextPanelRendererProps> = ({
   }, [dashboardId, panel.id, panel.config, toolbarOpen, updatePanel]);
 
   return (
-    <Button
-      variant={toolbarOpen ? 'secondary' : 'ghost'}
-      size="icon"
-      className="h-6 w-6"
-      aria-label="Toggle formatting toolbar"
-      onClick={handleToggleToolbar}
-    >
-      <ALargeSmallIcon className="h-3.5 w-3.5" />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant={toolbarOpen ? 'secondary' : 'ghost'}
+          size="icon"
+          className="h-6 w-6"
+          aria-label="Toggle formatting toolbar"
+          onClick={handleToggleToolbar}
+        >
+          <ALargeSmallIcon className="h-3.5 w-3.5" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Toggle formatting toolbar</TooltipContent>
+    </Tooltip>
   );
 };
 
