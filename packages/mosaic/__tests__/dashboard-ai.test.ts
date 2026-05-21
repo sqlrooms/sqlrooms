@@ -1,6 +1,9 @@
 import {
   createDashboardAiTools,
   createDashboardToolDeps,
+  DASHBOARD_AGENT_INSTRUCTIONS,
+  DASHBOARD_AI_INSTRUCTIONS,
+  MAP_TOOL_KEY,
   type DashboardAiAdapter,
   type DashboardAiTable,
 } from '../src/ai';
@@ -207,6 +210,25 @@ describe('dashboard AI deps', () => {
 });
 
 describe('dashboard AI tools', () => {
+  it('includes the shared map tool key in dashboard prompts', () => {
+    expect(DASHBOARD_AI_INSTRUCTIONS).toContain(MAP_TOOL_KEY);
+    expect(DASHBOARD_AGENT_INSTRUCTIONS).toContain(MAP_TOOL_KEY);
+  });
+
+  it('rejects host tools that collide with built-in dashboard tools', () => {
+    const {store, adapter} = createHarness();
+
+    expect(() =>
+      createDashboardAiTools({
+        store,
+        adapter,
+        extraTools: () => ({
+          create_dashboard_artifact: {} as any,
+        }),
+      }),
+    ).toThrow('cannot override built-in tool "create_dashboard_artifact"');
+  });
+
   it('creates and updates chart, profiler, and text panels', async () => {
     const {store, adapter, state} = createHarness();
     const tools = createDashboardAiTools({store, adapter});

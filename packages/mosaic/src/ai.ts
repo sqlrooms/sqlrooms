@@ -107,6 +107,11 @@ export type CreateDashboardToolDepsOptions<TState> = {
 export type CreateDashboardAiToolsOptions<TState> =
   CreateDashboardToolDepsOptions<TState> & {
     chartTypes?: ChartTypeDefinition<any>[];
+    /**
+     * Host-provided dashboard tools keyed by their registered tool name.
+     * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
+     * stay in sync.
+     */
     extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
   };
 
@@ -147,8 +152,15 @@ export type CreateDashboardAgentToolOptions<TState> =
     }) => Promise<DashboardAgentRunResult>;
     instructions?: string;
     chartTypes?: ChartTypeDefinition<any>[];
+    /**
+     * Host-provided dashboard tools keyed by their registered tool name.
+     * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
+     * stay in sync.
+     */
     extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
   };
+
+export const MAP_TOOL_KEY = 'create_dashboard_map';
 
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
@@ -169,7 +181,7 @@ Dashboard authoring:
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
-- If the host app provides \`create_dashboard_map\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns.
+- If the host app provides \`${MAP_TOOL_KEY}\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
@@ -194,7 +206,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 **Panel Tools:**
 - create_dashboard_profiler - table statistics and column summaries
 - create_dashboard_text_panel - markdown annotations and insights
-- create_dashboard_map - geospatial point map when longitude/latitude or geometry columns are available (if provided by the host app)
+- ${MAP_TOOL_KEY} - geospatial point map when longitude/latitude or geometry columns are available (if provided by the host app)
 
 **Data Tools:**
 - query - execute SQL queries for data exploration
@@ -490,7 +502,7 @@ export function createDashboardAiTools<TState>({
   const chartTools = createChartTools(resolvedChartTypes, deps);
   const hostTools = extraTools?.(deps) ?? {};
 
-  return {
+  const builtInTools = {
     create_dashboard_artifact: tool({
       description:
         'Create a new dashboard artifact with a dock or grid layout and make it the active artifact. Use when no dashboard artifact exists yet.',
@@ -521,6 +533,18 @@ export function createDashboardAiTools<TState>({
     create_dashboard_text_panel: createTextPanelTool(deps),
     list_dashboard_panels: createListPanelsTool(deps),
     remove_dashboard_panel: createRemovePanelTool(deps),
+  };
+
+  for (const key of Object.keys(hostTools)) {
+    if (key in builtInTools) {
+      throw new Error(
+        `Dashboard extraTools cannot override built-in tool "${key}". Register the host tool under a unique key.`,
+      );
+    }
+  }
+
+  return {
+    ...builtInTools,
     ...hostTools,
   };
 }
