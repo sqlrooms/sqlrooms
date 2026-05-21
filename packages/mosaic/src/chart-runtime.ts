@@ -68,7 +68,15 @@ export function getQueryResultRowCount(result: unknown): number {
 
   console.warn(
     'getQueryResultRowCount: unrecognized result format, expected Arrow table (numRows), array, or table-like object with toArray()',
-    result,
+    {
+      type: typeof result,
+      isArray: Array.isArray(result),
+      hasToArray:
+        typeof result === 'object' &&
+        result !== null &&
+        'toArray' in result &&
+        typeof (result as {toArray?: unknown}).toArray === 'function',
+    },
   );
   return 0;
 }
@@ -77,7 +85,7 @@ export function assertChartDataPolicy(
   policy: ChartDataPolicy | null | undefined,
   result: unknown,
 ): void {
-  if (!policy || policy.disabled || !policy.maxRows) {
+  if (!policy || policy.disabled || policy.maxRows == null) {
     return;
   }
 

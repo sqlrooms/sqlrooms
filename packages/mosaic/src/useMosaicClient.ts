@@ -108,16 +108,18 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
         queryResultRef.current?.(toArrowClientResult(result));
       },
       onQueryError: (error) => {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
         if (runtimeIssueContextRef.current) {
           runtimeIssueReporterRef.current?.reportIssue(
             createChartRuntimeIssueFromError(
-              error,
+              normalizedError,
               runtimeIssueContextRef.current,
               dataPolicyRef.current,
             ),
           );
         }
-        queryErrorRef.current?.(error);
+        queryErrorRef.current?.(normalizedError);
       },
     });
 

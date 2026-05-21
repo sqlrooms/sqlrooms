@@ -20,18 +20,20 @@ describe('chart runtime data policy helpers', () => {
 
   it('skips disabled policies and supports custom size estimators', () => {
     expect(() =>
-      assertChartDataPolicy(
-        {disabled: true, maxRows: 1},
-        [{x: 1}, {x: 2}],
-      ),
+      assertChartDataPolicy({disabled: true, maxRows: 1}, [{x: 1}, {x: 2}]),
     ).not.toThrow();
 
     expect(() =>
-      assertChartDataPolicy(
-        {maxRows: 1, getResultSize: () => 2},
-        [{x: 1}],
-      ),
+      assertChartDataPolicy({maxRows: 1, getResultSize: () => 2}, [{x: 1}]),
     ).toThrow(DataPointLimitError);
+  });
+
+  it('treats maxRows: 0 as a valid hard limit', () => {
+    expect(() => assertChartDataPolicy({maxRows: 0}, [])).not.toThrow();
+
+    expect(() => assertChartDataPolicy({maxRows: 0}, [{x: 1}])).toThrow(
+      DataPointLimitError,
+    );
   });
 
   it('creates AI-visible too-much-data issues from limit errors', () => {

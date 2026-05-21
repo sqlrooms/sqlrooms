@@ -66,6 +66,69 @@ function asPlotDomElement(element: object): PlotDomElement {
   return element as PlotDomElement;
 }
 
+function wrapMarkHandlers(
+  chart: RetainedVgPlotChart,
+  onError: (error: Error) => void,
+  dataPolicy?: ChartDataPolicy | null,
+  runtimeIssueContext?: ChartRuntimeIssueContext,
+  runtimeIssueReporter?: ChartRuntimeIssueReporter,
+) {
+  const plot = getPlotInstance(chart.element);
+  if (!plot?.marks) {
+    return;
+  }
+
+  plot.marks.forEach((mark: QueryableMark) => {
+    if (mark.queryResult) {
+      const originalQueryResult = mark.queryResult;
+      mark.queryResult = (data: unknown) => {
+        try {
+          assertChartDataPolicy(dataPolicy, data);
+          runtimeIssueReporter?.clearIssue();
+          return originalQueryResult.call(mark, data);
+        } catch (error) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error));
+          onError(normalizedError);
+          chart.error = normalizedError;
+          if (runtimeIssueContext) {
+            runtimeIssueReporter?.reportIssue(
+              createChartRuntimeIssueFromError(
+                normalizedError,
+                runtimeIssueContext,
+                dataPolicy,
+              ),
+            );
+          }
+          if (mark.queryError) {
+            return mark.queryError(normalizedError);
+          }
+          return undefined;
+        }
+      };
+    }
+    if (mark.queryError) {
+      const originalQueryError = mark.queryError;
+      mark.queryError = (error: unknown) => {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
+        onError(normalizedError);
+        chart.error = normalizedError;
+        if (runtimeIssueContext) {
+          runtimeIssueReporter?.reportIssue(
+            createChartRuntimeIssueFromError(
+              normalizedError,
+              runtimeIssueContext,
+              dataPolicy,
+            ),
+          );
+        }
+        originalQueryError.call(mark, error);
+      };
+    }
+  });
+}
+
 type UseVgPlotChartRenderParams = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   spec: Spec;
@@ -109,6 +172,15 @@ export function useVgPlotChartRender({
       container.replaceChildren(asPlotDomElement(cachedChart.element));
       resizeChartElement(cachedChart.element, containerSize);
 
+      // Re-wrap mark handlers with fresh closures for dataPolicy/runtimeIssue reporting
+      wrapMarkHandlers(
+        cachedChart,
+        onError,
+        dataPolicy,
+        runtimeIssueContext,
+        runtimeIssueReporter,
+      );
+
       // Restore error state from cached chart
       if (cachedChart.error) {
         onError(cachedChart.error);
@@ -140,63 +212,14 @@ export function useVgPlotChartRender({
         onChartCreated(nextChart);
         containerRef.current.replaceChildren(element);
 
-        // Wrap marks queryError to catch runtime errors
-        const plot = getPlotInstance(element);
-        if (plot?.marks) {
-          plot.marks.forEach((mark: QueryableMark) => {
-            if (mark.queryResult) {
-              const originalQueryResult = mark.queryResult;
-              mark.queryResult = (data: unknown) => {
-                try {
-                  assertChartDataPolicy(dataPolicy, data);
-                  runtimeIssueReporter?.clearIssue();
-                  return originalQueryResult.call(mark, data);
-                } catch (error) {
-                  const normalizedError =
-                    error instanceof Error ? error : new Error(String(error));
-                  onError(normalizedError);
-                  nextChart.error = normalizedError;
-                  if (mark.queryError) {
-                    return mark.queryError(normalizedError);
-                  }
-                  if (runtimeIssueContext) {
-                    runtimeIssueReporter?.reportIssue(
-                      createChartRuntimeIssueFromError(
-                        normalizedError,
-                        runtimeIssueContext,
-                        dataPolicy,
-                      ),
-                    );
-                  }
-                  return undefined;
-                }
-              };
-            }
-            if (mark.queryError) {
-              const originalQueryError = mark.queryError;
-              mark.queryError = (error: unknown) => {
-                // Normalize error to Error instance
-                const normalizedError =
-                  error instanceof Error ? error : new Error(String(error));
-                // Call onError to display error in UI
-                onError(normalizedError);
-                // Update cached chart with error
-                nextChart.error = normalizedError;
-                if (runtimeIssueContext) {
-                  runtimeIssueReporter?.reportIssue(
-                    createChartRuntimeIssueFromError(
-                      normalizedError,
-                      runtimeIssueContext,
-                      dataPolicy,
-                    ),
-                  );
-                }
-                // Call original to maintain Mosaic's internal state
-                originalQueryError.call(mark, error);
-              };
-            }
-          });
-        }
+        // Wrap marks with runtime handlers
+        wrapMarkHandlers(
+          nextChart,
+          onError,
+          dataPolicy,
+          runtimeIssueContext,
+          runtimeIssueReporter,
+        );
       })
       .catch((error) => {
         if (cancelled) {
