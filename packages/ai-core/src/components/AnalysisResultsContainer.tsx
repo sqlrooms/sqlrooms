@@ -1,12 +1,12 @@
-import { cn, ScrollArea, ScrollBar } from '@sqlrooms/ui';
-import { ChevronDown } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
-import { Components } from 'react-markdown';
-import { useStoreWithAi } from '../AiSlice';
-import { useScrollToBottom } from '../hooks/useScrollToBottom';
-import { AnalysisResult } from './AnalysisResult';
-import { AiThinkingDots } from './AiThinkingDots';
-import type { ErrorMessageComponentProps } from './ErrorMessage';
+import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {ChevronDown} from 'lucide-react';
+import React, {useEffect, useRef} from 'react';
+import {Components} from 'react-markdown';
+import {useStoreWithAi} from '../AiSlice';
+import {useScrollToBottom} from '../hooks/useScrollToBottom';
+import {AnalysisResult} from './AnalysisResult';
+import {AiThinkingDots} from './AiThinkingDots';
+import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
@@ -19,75 +19,75 @@ export const AnalysisResultsContainer: React.FC<{
   hoistedRenderers,
   ErrorMessageComponent,
 }) => {
-    const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-    const sessionId = currentSession?.id;
-    const isRunning = useStoreWithAi((s) =>
-      sessionId ? s.ai.getIsRunning(sessionId) : false,
-    );
-    const currentAnalysisResults = useStoreWithAi((s) =>
-      s.ai.getAnalysisResults(),
-    );
-    const uiMessages = useStoreWithAi(
-      (s) => s.ai.getCurrentSession()?.uiMessages,
-    );
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const sessionId = currentSession?.id;
+  const isRunning = useStoreWithAi((s) =>
+    sessionId ? s.ai.getIsRunning(sessionId) : false,
+  );
+  const currentAnalysisResults = useStoreWithAi((s) =>
+    s.ai.getAnalysisResults(),
+  );
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages,
+  );
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const { showScrollButton, scrollToBottom } = useScrollToBottom({
-      containerRef,
-      dataToObserve: uiMessages,
-    });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const {showScrollButton, scrollToBottom} = useScrollToBottom({
+    containerRef,
+    dataToObserve: uiMessages,
+  });
 
-    // Scroll to bottom when analysis starts
-    useEffect(() => {
-      if (isRunning) {
-        scrollToBottom();
-      }
-    }, [isRunning, scrollToBottom]);
+  // Scroll to bottom when analysis starts
+  useEffect(() => {
+    if (isRunning) {
+      scrollToBottom();
+    }
+  }, [isRunning, scrollToBottom]);
 
-    // Scroll to bottom when switching chat tabs (sessions)
-    useEffect(() => {
-      if (!sessionId) return;
-      const container = containerRef.current;
-      if (!container) return;
-      container.scrollTop = container.scrollHeight;
-    }, [sessionId]);
-
-    return (
-      <div className={cn('relative flex h-full w-full flex-col', className)}>
-        <ScrollArea
-          viewportRef={containerRef}
-          className="flex w-full grow flex-col gap-5"
-        >
-          <div className="pr-3">
-            {currentAnalysisResults?.map((analysisResult) => (
-              <AnalysisResult
-                key={analysisResult.id}
-                analysisResult={analysisResult}
-                customMarkdownComponents={customMarkdownComponents}
-                hoistedRenderers={hoistedRenderers}
-                ErrorMessageComponent={ErrorMessageComponent}
-              />
-            ))}
-            {isRunning && (
-              <AiThinkingDots className="text-muted-foreground p-4" />
-            )}
-            <div className="h-10 w-full shrink-0" />
-          </div>
-          <ScrollBar orientation="vertical" />
-        </ScrollArea>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
-          <button
-            onClick={scrollToBottom}
-            className={cn(
-              'bg-primary hover:bg-primary/90 text-primary-foreground pointer-events-auto z-50',
-              'mb-6 translate-y-4 rounded-full p-2 opacity-0 shadow-md transition-all duration-200',
-              showScrollButton && 'translate-y-0 opacity-100',
-            )}
-            aria-label="Scroll to bottom"
-          >
-            <ChevronDown className="h-5 w-5" />
-          </button>
+  // Scroll to bottom when switching chat tabs (sessions)
+  useEffect(() => {
+    if (!sessionId) return;
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [sessionId]);
+  
+  return (
+    <div className={cn('relative flex h-full w-full flex-col', className)}>
+      <ScrollArea
+        viewportRef={containerRef}
+        className="flex w-full grow flex-col gap-5"
+      >
+        <div className="pr-3">
+          {currentAnalysisResults?.map((analysisResult) => (
+            <AnalysisResult
+              key={analysisResult.id}
+              analysisResult={analysisResult}
+              customMarkdownComponents={customMarkdownComponents}
+              hoistedRenderers={hoistedRenderers}
+              ErrorMessageComponent={ErrorMessageComponent}
+            />
+          ))}
+          {isRunning && (
+            <AiThinkingDots className="text-muted-foreground p-4" />
+          )}
+          <div className="h-10 w-full shrink-0" />
         </div>
+        <ScrollBar orientation="vertical" />
+      </ScrollArea>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+        <button
+          onClick={scrollToBottom}
+          className={cn(
+            'bg-primary hover:bg-primary/90 text-primary-foreground pointer-events-auto z-50',
+            'mb-6 translate-y-4 rounded-full p-2 opacity-0 shadow-md transition-all duration-200',
+            showScrollButton && 'translate-y-0 opacity-100',
+          )}
+          aria-label="Scroll to bottom"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </button>
       </div>
-    );
-  };
+    </div>
+  );
+};
