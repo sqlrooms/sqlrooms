@@ -29,7 +29,7 @@ export {MosaicDashboardPanelLayout} from './dashboard/MosaicDashboardPanelLayout
 export {
   MosaicDashboardInitialState,
   type MosaicDashboardInitialStateProps,
-} from './dashboard/MosaicDashboardInitialState';
+} from './dashboard/initial-state/MosaicDashboardInitialState';
 export {addProfilerPanelAction} from './profiler/addProfilerPanelAction';
 export {addTextPanelAction} from './text/addTextPanelAction';
 export {addChartPanelAction} from './chart/addChartPanelAction';
@@ -61,6 +61,9 @@ export {
 export type {
   MosaicDashboardAddPanelAction,
   MosaicDashboardAddPanelActionContext,
+  OnStartDashboard,
+} from './dashboard/dashboard-types';
+export type {
   CreateMosaicDashboardSliceProps,
   MosaicDashboardPanelRenderer,
   MosaicDashboardPanelRendererProps,

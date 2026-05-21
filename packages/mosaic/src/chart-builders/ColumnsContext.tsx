@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useMemo,
   type FC,
   type PropsWithChildren,
 } from 'react';
@@ -32,9 +33,9 @@ export const ColumnsProvider: FC<ColumnsProviderProps> = ({
   tableName,
   children,
 }) => {
+  const value = useMemo(() => ({columns, tableName}), [columns, tableName]);
+
   return (
-    <ColumnsContext.Provider value={{columns, tableName}}>
-      {children}
-    </ColumnsContext.Provider>
+    <ColumnsContext.Provider value={value}>{children}</ColumnsContext.Provider>
   );
 };

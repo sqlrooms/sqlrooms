@@ -1145,16 +1145,36 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // Set the prompt
           get().ai.setPrompt(session.id, prompt);
 
-          // TODO: why can't we run it without the timeout?
           // Wait for SessionChatProvider to mount and register sendMessage
-          const tryStartAnalysis = async (): Promise<void> => {
-            // sendMessage is registered, now we can start analysis
-            await get().ai.startAnalysis(session.id);
+          const waitForChatReadyAndStart = async (): Promise<void> => {
+            const maxAttempts = 50; // 50 * 20ms = 1 second max
+            let attempts = 0;
+
+            const checkAndStart = async () => {
+              const sendMessage = get().ai.getChatSendMessage(session.id);
+              if (sendMessage) {
+                // Chat provider is ready, start analysis
+                await get().ai.startAnalysis(session.id);
+                return;
+              }
+
+              attempts++;
+              if (attempts >= maxAttempts) {
+                console.error(
+                  'Timeout waiting for chat provider to register for session:',
+                  session.id,
+                );
+                return;
+              }
+
+              // Poll again after a short delay
+              setTimeout(checkAndStart, 20);
+            };
+
+            await checkAndStart();
           };
 
-          setTimeout(() => {
-            void tryStartAnalysis();
-          }, 100);
+          void waitForChatReadyAndStart();
         },
 
         cancelAnalysis: (sessionId: string) => {

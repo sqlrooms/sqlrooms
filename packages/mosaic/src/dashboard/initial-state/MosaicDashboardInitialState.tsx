@@ -1,9 +1,10 @@
 import {useState} from 'react';
+import type {OnStartDashboard} from '../dashboard-types';
 import {BuildDashboardWithAIPanel} from './BuildDashboardWithAIPanel';
 import {BuildDashboardManuallyPanel} from './BuildDashboardManuallyPanel';
 
 export interface MosaicDashboardInitialStateProps {
-  onStart?: (prompt: string) => void | Promise<void>;
+  onStart?: OnStartDashboard;
 }
 
 export const MosaicDashboardInitialState: React.FC<
@@ -17,7 +18,7 @@ export const MosaicDashboardInitialState: React.FC<
         <div className="text-center">
           <h2 className="text-lg font-semibold">Create Your Dashboard</h2>
           <p className="text-muted-foreground text-sm">
-            Choose how would you like to start
+            Choose how you&apos;d like to start
           </p>
         </div>
 

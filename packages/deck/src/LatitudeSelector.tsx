@@ -26,8 +26,6 @@ export const LatitudeSelector: FC<LatitudeSelectorProps> = ({
 
   const handleChange = useCallback(
     (latitudeColumn: string) => {
-      if (!currentLongitudeColumn) return;
-
       const newConfig = regenerateMapConfigForTable(
         panel,
         currentTable,

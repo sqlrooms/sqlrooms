@@ -1,5 +1,5 @@
 import {BarChart3} from 'lucide-react';
-import {type MosaicDashboardAddPanelAction} from '../dashboard/MosaicDashboardAddPanelAction';
+import {type MosaicDashboardAddPanelAction} from '../dashboard/dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
@@ -10,9 +10,9 @@ export const addChartPanelAction: MosaicDashboardAddPanelAction = {
   label: 'Chart',
   icon: BarChart3,
   isEnabled: ({chartTypes}) => Boolean(chartTypes?.length),
-  createPanel: () =>
+  createPanel: ({chartTypes}) =>
     createMosaicDashboardChartPanelConfig('New Chart', {
-      chartType: 'histogram',
+      chartType: chartTypes?.[0]?.id ?? 'histogram',
       settings: {},
       settingsOpen: true,
     }),

@@ -28,7 +28,7 @@ export const BuildDashboardManuallyPanel: React.FC<
   const [tableName, setTableName] = useState<string | undefined>(undefined);
 
   const handleStart = useCallback(() => {
-    if (!tableName) return;
+    if (!tableName || isStarting) return;
 
     onStartingChange(true);
     try {
@@ -56,6 +56,7 @@ export const BuildDashboardManuallyPanel: React.FC<
     addPanel,
     tables,
     onStartingChange,
+    isStarting,
   ]);
 
   return (

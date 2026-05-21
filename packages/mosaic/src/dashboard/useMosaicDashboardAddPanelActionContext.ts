@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {type MosaicDashboardAddPanelActionContext} from './MosaicDashboardAddPanelAction';
+import {type MosaicDashboardAddPanelActionContext} from './dashboard-types';
 import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
 import {useTablesWithColumns} from './useTablesWithColumns';

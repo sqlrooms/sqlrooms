@@ -18,7 +18,6 @@ export interface TableSelectorProps {
   value: string | undefined;
   onChange?: (tableName: string) => void;
   placeholder?: string;
-  required?: boolean;
 }
 
 /**

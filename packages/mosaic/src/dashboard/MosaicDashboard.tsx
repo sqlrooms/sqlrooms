@@ -89,7 +89,7 @@ export function MosaicDashboardRoot({
       canCreateChart: Boolean(
         selectedTableInfo &&
         panelRenderers[MOSAIC_DASHBOARD_CHART_PANEL_TYPE] &&
-        chartTypes?.length !== 0,
+        (chartTypes?.length ?? 0) !== 0,
       ),
       openBuilder: () => setBuilderOpen(true),
       closeBuilder: () => setBuilderOpen(false),

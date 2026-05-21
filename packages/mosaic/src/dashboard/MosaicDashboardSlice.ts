@@ -32,7 +32,7 @@ import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
-import type {MosaicDashboardAddPanelAction} from './MosaicDashboardAddPanelAction';
+import type {MosaicDashboardAddPanelAction} from './dashboard-types';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -146,11 +146,6 @@ export type PanelTypeMap = {
 
 // Panel renderers record - use type-erased renderers for runtime compatibility
 export type PanelRenderersRecord = Record<string, AnyPanelRenderer>;
-
-export type {
-  MosaicDashboardAddPanelActionContext,
-  MosaicDashboardAddPanelAction,
-} from './MosaicDashboardAddPanelAction';
 
 export function createMosaicDashboardChartPanelConfig(
   title: string,

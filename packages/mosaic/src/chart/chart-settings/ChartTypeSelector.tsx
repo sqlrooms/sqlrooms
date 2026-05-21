@@ -31,7 +31,7 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
 
     return (
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-8 text-xs">
+        <SelectTrigger className="h-8 text-xs" aria-label="Chart type">
           {selectedChartType ? (
             <div className="flex items-center gap-2">
               <SelectedChartTypeIcon className="h-3.5 w-3.5" />

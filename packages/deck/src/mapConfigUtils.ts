@@ -52,8 +52,12 @@ export function regenerateMapConfigForTable(
   const quotedLongitude = quoteSqlIdentifier(lonCol);
   const quotedLatitude = quoteSqlIdentifier(latCol);
 
+  const existingConfig = panel.config as any;
+
   return {
+    ...existingConfig,
     spec: {
+      ...(existingConfig.spec || {}),
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [
         {

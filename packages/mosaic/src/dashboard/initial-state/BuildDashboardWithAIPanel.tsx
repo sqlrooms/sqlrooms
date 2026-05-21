@@ -14,7 +14,7 @@ export const BuildDashboardWithAIPanel: React.FC<
   const [prompt, setPrompt] = useState<string>('');
 
   const handleStart = useCallback(async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || isStarting) return;
 
     onStartingChange(true);
     try {
@@ -24,7 +24,7 @@ export const BuildDashboardWithAIPanel: React.FC<
     } finally {
       onStartingChange(false);
     }
-  }, [prompt, onStart, onStartingChange]);
+  }, [prompt, onStart, onStartingChange, isStarting]);
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">

@@ -2,6 +2,9 @@
  * Core dashboard types - separated to avoid circular dependencies.
  */
 
+import type {ComponentType} from 'react';
+import type {DataTable} from '@sqlrooms/db';
+import type {ChartTypeDefinition} from '../chart-types/base-types';
 import {LayoutNode as LayoutNodeSchema} from '@sqlrooms/layout-config';
 import {z} from 'zod';
 import {ChartConfig} from '../chart-types/chart-config';
@@ -93,3 +96,23 @@ export const MosaicDashboardEntry = z.object({
   updatedAt: z.number().default(0),
 });
 export type MosaicDashboardEntry = z.infer<typeof MosaicDashboardEntry>;
+
+export type MosaicDashboardAddPanelActionContext = {
+  dashboardId: string;
+  dashboard: MosaicDashboardEntry | undefined;
+  selectedTable: DataTable | undefined;
+  tables: DataTable[];
+  chartTypes: ChartTypeDefinition[] | undefined;
+};
+
+export type MosaicDashboardAddPanelAction = {
+  type: string;
+  label: string;
+  icon?: ComponentType<{className?: string}>;
+  isEnabled?: (context: MosaicDashboardAddPanelActionContext) => boolean;
+  createPanel: (
+    context: MosaicDashboardAddPanelActionContext,
+  ) => MosaicDashboardPanelConfig | undefined;
+};
+
+export type OnStartDashboard = (prompt: string) => void | Promise<void>;

@@ -51,12 +51,15 @@ export const MosaicDashboardResetFiltersButton: FC<
     dashboardSelection?.reset();
   };
 
+  if (!hasActiveFilters) {
+    return null;
+  }
+
   return (
     <Button
       variant="link"
       size="sm"
       className="h-8 px-0"
-      disabled={!hasActiveFilters}
       onClick={handleResetFilters}
     >
       Reset filters

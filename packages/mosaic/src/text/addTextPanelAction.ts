@@ -1,5 +1,5 @@
 import {FileText} from 'lucide-react';
-import {type MosaicDashboardAddPanelAction} from '../dashboard/MosaicDashboardAddPanelAction';
+import {type MosaicDashboardAddPanelAction} from '../dashboard/dashboard-types';
 import {
   createMosaicDashboardTextPanelConfig,
   MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
