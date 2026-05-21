@@ -58,6 +58,7 @@ import {
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
+import {formatDateTimeSimple} from '@sqlrooms/utils';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -166,6 +167,11 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
+    getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
+    setSessionRunContext: (
+      sessionId: string,
+      runContext: AiRunContext | undefined,
+    ) => void;
     setSessionUiMessages: (
       sessionId: string,
       uiMessages: UIMessage[],
@@ -669,6 +675,29 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return sessions.find((session) => session.id === currentSessionId);
         },
 
+        getSessionRunContext: (sessionId: string) => {
+          const state = get();
+          return state.ai.config.sessions.find(
+            (session: AnalysisSessionSchema) => session.id === sessionId,
+          )?.runContext;
+        },
+
+        setSessionRunContext: (
+          sessionId: string,
+          runContext: AiRunContext | undefined,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.runContext = runContext;
+              }
+            }),
+          );
+        },
+
         /**
          * Create a new session with the given name and model settings
          */
@@ -684,18 +713,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           let sessionName = name;
           if (!sessionName) {
             // Generate a human-readable date and time for the session name
-            const now = new Date();
-            const formattedDate = now.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            });
-            const formattedTime = now.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: 'numeric',
-              hour12: true,
-            });
-            sessionName = `Session ${formattedDate} at ${formattedTime}`;
+            sessionName = formatDateTimeSimple();
           }
 
           set((state) =>

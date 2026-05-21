@@ -2557,6 +2557,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.3.0
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
@@ -2566,6 +2569,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      ai:
+        specifier: ^6.0.154
+        version: 6.0.177(zod@4.1.13)
       immer:
         specifier: ^11.0.1
         version: 11.1.8

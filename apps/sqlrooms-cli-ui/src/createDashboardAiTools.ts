@@ -11,6 +11,8 @@ import {
 import {RoomState} from './store-types';
 import {StoreApi} from 'zustand';
 import {createDashboardToolDeps} from './createDashboardToolDeps';
+import {makeArtifactPrimaryForAiRun} from './createArtifactContextAiTools';
+import type {AiToolExecutionContext} from '@sqlrooms/ai';
 
 const DashboardCreateArtifactToolParameters = z.object({
   title: z.string().optional(),
@@ -62,7 +64,11 @@ export function createDashboardAiTools(store: StoreApi<RoomState>) {
       description:
         'Create a new dashboard artifact with a dock or grid layout and make it the active artifact. Use when no dashboard artifact exists yet.',
       inputSchema: DashboardCreateArtifactToolParameters,
-      execute: async (params: DashboardCreateArtifactToolParameters) => {
+      execute: async (
+        params: DashboardCreateArtifactToolParameters,
+        options,
+      ) => {
+        const context = options as AiToolExecutionContext | undefined;
         const {title, layoutType} = params;
         const state = store.getState();
         const artifactId = state.dashboard.createDashboardArtifact(
@@ -70,6 +76,7 @@ export function createDashboardAiTools(store: StoreApi<RoomState>) {
           layoutType,
         );
         state.artifacts.setCurrentArtifact(artifactId);
+        makeArtifactPrimaryForAiRun(store, artifactId, context);
         return {
           llmResult: {
             success: true,

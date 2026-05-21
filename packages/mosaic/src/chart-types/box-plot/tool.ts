@@ -27,6 +27,8 @@ Required:
 - x: categorical/grouping column (${CATEGORICAL_COLUMN_TYPES.join(', ')}) - e.g., region, terrain type, zone classification
 - y: numeric (${NUMERIC_COLUMN_TYPES.join(', ')})
 
+NOTE: Box plots aggregate data by computing quartiles and outliers per group, so they handle large datasets efficiently (no data point limit).
+
 To UPDATE an existing box plot: provide the panelId parameter. Otherwise creates new panel.
 
 Best for: comparing distributions between groups, finding outliers per category, seeing spread and variance differences.

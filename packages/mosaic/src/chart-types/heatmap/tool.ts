@@ -22,6 +22,8 @@ Example queries: "heatmap of population density by latitude and longitude", "tem
 
 Required: x and y should be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}) for creating the grid.
 
+NOTE: Heatmaps aggregate data into grid cells and compute density/counts, so they handle large datasets efficiently (no data point limit). Heatmaps are a good alternative when bubble charts would exceed ${deps.maxDataPoints.toLocaleString()} rows.
+
 To UPDATE an existing heatmap: provide the panelId parameter. Otherwise creates new panel.
 
 Best for: large datasets with overlapping points, finding patterns/hotspots in 2D space, temporal patterns (hour×day), spatial density visualization.

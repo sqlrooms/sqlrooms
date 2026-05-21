@@ -23,9 +23,11 @@ Example queries: "plot latitude vs longitude", "show correlation between elevati
 Required: x and y must be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}).
 Optional: size can encode a third numeric dimension (magnitude, frequency, count).
 
+IMPORTANT: Bubble charts render ALL rows as individual points. Do NOT create bubble charts for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead (histogram, count-plot, line-chart with time intervals, or heatmap).
+
 To UPDATE an existing bubble chart: provide the panelId parameter. Otherwise creates new panel.
 
-Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart).`,
+Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${deps.maxDataPoints.toLocaleString()} rows).`,
     inputSchema: BubbleChartToolParameters,
     execute: async (params, context) => {
       try {
