@@ -68,7 +68,6 @@ function readCliArtifact({
           id: panel.id,
           type: panel.type,
           title: panel.title,
-          source: panel.source,
           config: panel.config,
         })),
       },
