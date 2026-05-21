@@ -1,15 +1,11 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from '@sqlrooms/mosaic';
+import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
 import {
-  createDeckMapDashboardPanelConfig,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  type DeckMapDashboardPanelConfig,
-} from './dashboardConfig';
-
-const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
-const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
-const DEFAULT_GEOMETRY_COLUMN = '__sqlrooms_geom';
+  createDeckMapDashboardPanelConfigForTable,
+  normalizeDeckMapFillColor,
+} from './mapConfigUtils';
 
 export const DeckMapDashboardToolParameters = z.object({
   artifactId: z
@@ -79,183 +75,6 @@ export type DeckMapDashboardToolParams = z.infer<
   typeof DeckMapDashboardToolParameters
 >;
 
-function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
-function quoteTableReference(tableName: string) {
-  return tableName
-    .split('.')
-    .map((part) => quoteSqlIdentifier(part))
-    .join('.');
-}
-
-function findColumnByName(
-  columns: {name: string}[],
-  candidates: string[],
-): string | undefined {
-  const candidateSet = new Set(candidates);
-  return columns.find((column) =>
-    candidateSet.has(column.name.toLowerCase()),
-  )?.name;
-}
-
-function ensureColumnExists(
-  columns: {name: string}[],
-  columnName: string,
-  role: string,
-) {
-  if (!columns.some((column) => column.name === columnName)) {
-    throw new Error(
-      `Unknown ${role} column "${columnName}". Available columns: ${columns
-        .map((column) => column.name)
-        .join(', ')}.`,
-    );
-  }
-}
-
-function resolveCoordinateColumns(options: {
-  columns: {name: string}[];
-  longitudeColumn?: string;
-  latitudeColumn?: string;
-}) {
-  const longitudeColumn =
-    options.longitudeColumn ??
-    findColumnByName(options.columns, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn =
-    options.latitudeColumn ??
-    findColumnByName(options.columns, LATITUDE_COLUMN_NAMES);
-
-  if (!longitudeColumn || !latitudeColumn) {
-    throw new Error(
-      'Could not find longitude/latitude columns. Pass longitudeColumn and latitudeColumn explicitly, or provide geometryColumn.',
-    );
-  }
-
-  ensureColumnExists(options.columns, longitudeColumn, 'longitude');
-  ensureColumnExists(options.columns, latitudeColumn, 'latitude');
-  return {longitudeColumn, latitudeColumn};
-}
-
-function createPointSourceSql(options: {
-  tableName: string;
-  sqlQuery?: string;
-  longitudeColumn: string;
-  latitudeColumn: string;
-  geometryColumn: string;
-}) {
-  const quotedLongitude = quoteSqlIdentifier(options.longitudeColumn);
-  const quotedLatitude = quoteSqlIdentifier(options.latitudeColumn);
-  const baseSource = options.sqlQuery
-    ? `(${options.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : quoteTableReference(options.tableName);
-
-  return [
-    `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(options.geometryColumn)}`,
-    `FROM ${baseSource}`,
-    `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
-  ].join(' ');
-}
-
-function normalizeFillColor(
-  fillColor?: number[],
-): [number, number, number] | [number, number, number, number] {
-  if (fillColor?.length === 3) {
-    return [fillColor[0]!, fillColor[1]!, fillColor[2]!];
-  }
-  if (fillColor?.length === 4) {
-    return [fillColor[0]!, fillColor[1]!, fillColor[2]!, fillColor[3]!];
-  }
-  return [56, 189, 248, 180];
-}
-
-function createMapPanelConfig(options: {
-  title: string;
-  tableName: string;
-  columns: {name: string}[];
-  longitudeColumn?: string;
-  latitudeColumn?: string;
-  geometryColumn?: string;
-  geometryEncodingHint?: 'geoarrow' | 'wkb' | 'wkt';
-  sqlQuery?: string;
-  pointRadius: number;
-  fillColor: [number, number, number] | [number, number, number, number];
-  mapStyle?: string;
-}) {
-  const datasetId = options.tableName;
-  const explicitGeometryColumn = options.geometryColumn?.trim() || undefined;
-  const coordinates = explicitGeometryColumn
-    ? undefined
-    : resolveCoordinateColumns({
-        columns: options.columns,
-        longitudeColumn: options.longitudeColumn,
-        latitudeColumn: options.latitudeColumn,
-      });
-  const geometryColumn = explicitGeometryColumn ?? DEFAULT_GEOMETRY_COLUMN;
-  const source = coordinates
-    ? {
-        sqlQuery: createPointSourceSql({
-          tableName: options.tableName,
-          sqlQuery: options.sqlQuery,
-          longitudeColumn: coordinates.longitudeColumn,
-          latitudeColumn: coordinates.latitudeColumn,
-          geometryColumn,
-        }),
-      }
-    : options.sqlQuery
-      ? {sqlQuery: options.sqlQuery}
-      : {tableName: options.tableName};
-
-  if (explicitGeometryColumn) {
-    ensureColumnExists(options.columns, explicitGeometryColumn, 'geometry');
-  }
-
-  const config: DeckMapDashboardPanelConfig = {
-    spec: {
-      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
-      layers: [
-        {
-          '@@type': 'GeoArrowScatterplotLayer',
-          id: datasetId,
-          _sqlroomsBinding: {dataset: datasetId},
-          filled: true,
-          stroked: false,
-          pickable: true,
-          radiusUnits: 'pixels',
-          getRadius: options.pointRadius,
-          getFillColor: options.fillColor,
-        },
-      ],
-    },
-    datasets: {
-      [datasetId]: {
-        source,
-        geometryColumn,
-        geometryEncodingHint: explicitGeometryColumn
-          ? options.geometryEncodingHint
-          : 'wkb',
-      },
-    },
-    ...(coordinates
-      ? {
-          fitToData: {
-            dataset: datasetId,
-            longitudeColumn: coordinates.longitudeColumn,
-            latitudeColumn: coordinates.latitudeColumn,
-            padding: 40,
-            maxZoom: 12,
-          },
-        }
-      : {}),
-    ...(options.mapStyle ? {mapStyle: options.mapStyle} : {}),
-  };
-
-  return createDeckMapDashboardPanelConfig({
-    title: options.title,
-    ...config,
-  });
-}
-
 export function createDeckMapDashboardTool(deps: DashboardToolDeps): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map in a Mosaic dashboard.
@@ -275,7 +94,7 @@ For point maps, pass longitudeColumn and latitudeColumn when column names are no
           artifactId,
           params.tableName,
         );
-        const panel = createMapPanelConfig({
+        const panel = createDeckMapDashboardPanelConfigForTable({
           title: params.title || 'Map',
           tableName,
           columns,
@@ -283,9 +102,9 @@ For point maps, pass longitudeColumn and latitudeColumn when column names are no
           latitudeColumn: params.latitudeColumn,
           geometryColumn: params.geometryColumn,
           geometryEncodingHint: params.geometryEncodingHint,
-          sqlQuery: params.sqlQuery,
+          sourceSqlQuery: params.sqlQuery,
           pointRadius: params.pointRadius,
-          fillColor: normalizeFillColor(params.fillColor),
+          fillColor: normalizeDeckMapFillColor(params.fillColor),
           mapStyle: params.mapStyle,
         });
 
