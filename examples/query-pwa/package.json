@@ -11,10 +11,10 @@
     "preview": "vite preview"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.32.0"
+    "@duckdb/duckdb-wasm": "1.33.1-dev55.0"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.32.0",
+    "@duckdb/duckdb-wasm": "1.33.1-dev55.0",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
