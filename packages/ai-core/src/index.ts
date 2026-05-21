@@ -41,7 +41,9 @@ export {
   AiRunContextSchema,
   AiSliceConfig,
   createDefaultAiConfig,
+  getAiRunContextPrimaryItem,
   getAiRunContextItems,
+  setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
 export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';

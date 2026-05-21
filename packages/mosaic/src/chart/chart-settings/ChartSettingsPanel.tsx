@@ -2,10 +2,8 @@ import {FC, useCallback} from 'react';
 import {ChartSettings} from './ChartSettings';
 import {type ChartConfig} from '../../chart-types/chart-config';
 import {useTableColumns} from './useTableColumns';
-import {
-  useStoreWithMosaicDashboard,
-  ChartPanelConfig,
-} from '../../dashboard/MosaicDashboardSlice';
+import type {ChartPanelConfig} from '../../dashboard/dashboard-types';
+import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 import {Spec} from '@uwdata/mosaic-spec';
 
 interface ChartSettingsPanelProps {

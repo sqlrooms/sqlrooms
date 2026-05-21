@@ -4,7 +4,7 @@ import {
   ChartRetainer,
   BrushSelectionParams,
 } from '../chart-types/base-types';
-import {ChartPanelConfig} from '../dashboard/MosaicDashboardSlice';
+import type {ChartPanelConfig} from '../dashboard/dashboard-types';
 import {MosaicReadyConnection} from '../MosaicSlice';
 
 export type MosaicDashboardComponentChartProps = {

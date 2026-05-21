@@ -25,13 +25,15 @@ import {
 import React, {useEffect, useMemo, useState} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {
+  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
+} from './dashboard-types';
+import {
   type MosaicDashboardAddPanelAction,
   type MosaicDashboardAddPanelActionContext,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardTextPanelConfig,
   getMosaicDashboardSelectionName,
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 

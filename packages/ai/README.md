@@ -123,6 +123,13 @@ createAiSlice({
 })(set, get, store);
 ```
 
+Tool `execute` callbacks receive hidden run-context helpers in their second
+argument. Apps can use `getRunContext` to capture selected artifacts at the
+start of a run, expose them in `formatRunContextInstructions`, and then let
+tools update the effective primary context with `setPrimaryRunContextItem`.
+Old contexts without `primaryItemId` remain valid; the first item is treated as
+primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
+
 ## Use remote endpoint mode
 
 If you want server-side model calls, set `chatEndPoint` and optional `chatHeaders`:

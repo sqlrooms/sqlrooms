@@ -229,44 +229,58 @@ live outside persisted dashboard config.
 ### AI Chart Tools
 
 `createChartTools` generates assistant tools for the built-in chart types. The
-injected `ChartToolDeps.resolveResources(params, context)` callback receives the
-tool execution context as its second argument. Client apps should prefer
-execution-scoped context, such as a captured AI run context, over live UI state
-when resolving implicit dashboard targets. Explicit `params.artifactId` should
-still take precedence.
+injected `DashboardToolDeps` provides `resolveArtifact` and `resolveTable`
+methods that receive tool execution context. Client apps should prefer explicit
+`artifactId` parameters; if omitted, resolve only an unambiguous primary
+dashboard from execution-scoped context. Do not implicitly target reference-only
+context artifacts. Live UI state should be a fallback only when there is no run
+context.
 
 ```ts
 import {
   createChartTools,
   createDefaultChartTypes,
-  type ChartToolDeps,
+  type DashboardToolDeps,
 } from '@sqlrooms/mosaic';
 
-const deps: ChartToolDeps = {
-  resolveResources: (params, context) => {
+const deps: DashboardToolDeps = {
+  resolveArtifact: (artifactId, createIfMissing, context) => {
     const sessionId = context?.sessionId;
     const runContext = context?.aiRunContext;
-    const contextArtifactId = getDashboardArtifactIdFromRunContext(
-      runContext,
-      sessionId,
-    );
+    const primaryDashboardArtifactId =
+      getPrimaryDashboardArtifactIdFromRunContext(runContext, sessionId);
 
-    // Prefer execution-scoped context over live UI state for implicit targets.
-    // Explicit tool input still wins over anything derived from context.
-    const artifactId =
-      params.artifactId ??
-      contextArtifactId ??
+    // Explicit tool input wins. Only a primary dashboard context may be used
+    // implicitly; reference artifacts should require artifactId.
+    const targetArtifactId =
+      artifactId ??
+      primaryDashboardArtifactId ??
       getCurrentDashboardArtifactId();
-    const tableName = params.tableName ?? getSelectedTableName(artifactId);
 
+    if (!targetArtifactId && createIfMissing) {
+      return createDashboardArtifact();
+    }
+
+    if (!targetArtifactId) {
+      throw new Error('No dashboard artifact available');
+    }
+
+    return targetArtifactId;
+  },
+  resolveTable: (artifactId, tableName) => {
+    const resolvedTableName = tableName ?? getSelectedTableName(artifactId);
     return {
-      artifactId,
-      tableName,
-      columns: getTableColumns(tableName),
+      tableName: resolvedTableName,
+      columns: getTableColumns(resolvedTableName),
     };
   },
-  createChart: ({artifactId, tableName, title, config}) =>
-    addChartPanel({artifactId, tableName, title, config}),
+  addPanel: (dashboardId, panel) => addPanelToDashboard(dashboardId, panel),
+  updatePanel: (dashboardId, panelId, patch) =>
+    updateDashboardPanel(dashboardId, panelId, patch),
+  getDashboard: (dashboardId) => getDashboardById(dashboardId),
+  removePanel: (dashboardId, panelId) =>
+    removePanelFromDashboard(dashboardId, panelId),
+  setCurrentArtifact: (artifactId) => setCurrentDashboard(artifactId),
 };
 
 const chartTools = createChartTools(

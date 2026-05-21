@@ -1,5 +1,9 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {
+  setAiRunContextPrimaryItem,
+  type AiRunContext,
+  type AnalysisSessionSchema,
+} from '@sqlrooms/ai-config';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {
@@ -130,10 +134,12 @@ function getSessionById(
     .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
 }
 
-function withRunContextTools(
+export function withRunContextTools(
   tools: ToolSet,
   args: AiToolExecutionContext & {
     state: AiSliceStateForTransport;
+    getAiRunContext?: () => AiRunContext | undefined;
+    setAiRunContext?: (runContext: AiRunContext | undefined) => void;
   },
 ): ToolSet {
   return Object.fromEntries(
@@ -163,7 +169,12 @@ function withRunContextTools(
               {
                 ...options,
                 sessionId: args.sessionId,
-                aiRunContext: args.aiRunContext,
+                aiRunContext: args.getAiRunContext
+                  ? args.getAiRunContext()
+                  : args.aiRunContext,
+                getAiRunContext: args.getAiRunContext,
+                setAiRunContext: args.setAiRunContext,
+                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
               } as never,
             );
           },
@@ -261,7 +272,11 @@ export function createLocalChatTransportFactory({
       const sessionFromBody = getSessionById(store, sessionId);
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
-      const aiRunContext = sessionFromBody?.runContext;
+      let aiRunContext = sessionFromBody?.runContext;
+      const setAiRunContext = (nextContext: AiRunContext | undefined) => {
+        aiRunContext = nextContext;
+        state.ai.setSessionRunContext(sessionId, nextContext);
+      };
 
       // Fetch API key and base URL dynamically to pick up settings changes
       const apiKey = state.ai.getApiKeyFromSettings();
@@ -293,6 +308,11 @@ export function createLocalChatTransportFactory({
         state,
         sessionId,
         aiRunContext,
+        getAiRunContext: () => aiRunContext,
+        setAiRunContext,
+        setPrimaryRunContextItem: (item) => {
+          setAiRunContext(setAiRunContextPrimaryItem(aiRunContext, item));
+        },
       });
 
       // get system instructions dynamically at request time to ensure fresh table schema
@@ -420,6 +440,7 @@ export function createRemoteChatTransportFactory(params: {
         modelProvider,
         model,
         instructions: getInstructions(),
+        runContext: sessionFromBody?.runContext,
         maxSteps: state.ai.getMaxStepsFromSettings(),
       };
 

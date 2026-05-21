@@ -28,6 +28,22 @@ const DATE_TIME_FORMAT = timeFormat('%a %Y-%m-%d %I:%M %p');
 const DATE_FORMAT = timeFormat('%Y-%m-%d');
 
 /**
+ * Returns local date string as  `YYYY-MM-DD HH:mm`
+ * 24-hour format, hours and mins only
+ *
+ * @param d
+ * @returns
+ */
+export const formatDateTimeSimple = (d?: Date) => {
+  const dd = dayjs(d);
+
+  const localDate = dd.format('YYYY-MM-DD');
+
+  const localTime = dd.format('HH:mm');
+  return `${localDate} ${localTime}`;
+};
+
+/**
  * Formats a date into a human-readable datetime string
  * @param d - Date to format (can be Date object, timestamp number, or bigint)
  * @returns Formatted string in "Day YYYY-MM-DD HH:MM AM/PM" format
@@ -92,22 +108,6 @@ export const formatTimeRelative = (d: ConfigType) => {
  */
 export const formatTimestampForFilename = () => {
   return dayjs().format('YYYY-MM-DDTHH-mm-ss');
-};
-
-/**
- * Extracts and formats an error message for display, removing common prefixes and truncating at first newline
- * @param e - Error object or any other value that can be converted to string
- * @returns Cleaned up error message string
- * @example
- * ```ts
- * getErrorMessageForDisplay(new Error("Query failed: Error: Invalid syntax\nMore details...")); // "Invalid syntax"
- * ```
- */
-export const getErrorMessageForDisplay = (e: unknown) => {
-  let msg = e instanceof Error ? e.message : String(e);
-  msg = msg.replace(/Query failed: Error: /, '');
-  const firstNl = msg.indexOf('\n');
-  return firstNl >= 0 ? msg.substring(0, firstNl) : msg;
 };
 
 /**

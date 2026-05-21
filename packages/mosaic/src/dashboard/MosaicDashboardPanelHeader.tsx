@@ -13,12 +13,14 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
+import type {
+  MosaicDashboardEntry,
+  MosaicDashboardPanelConfig,
+  MosaicDashboardPanelSource,
+} from './dashboard-types';
 import {
-  type MosaicDashboardEntry,
-  type MosaicDashboardPanelConfig,
   type MosaicDashboardPanelRenderer,
   type MosaicDashboardPanelRendererProps,
-  type MosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 

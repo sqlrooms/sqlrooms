@@ -19,7 +19,15 @@ import {
   shouldSuppressTextPart,
 } from '../utils';
 import {ActivityBox} from './ActivityBox';
-import {AnalysisAnswer} from './AnalysisAnswer';
+import {AnalysisAnswer, processAnalysisAnswerContent} from './AnalysisAnswer';
+import {
+  HighlightedChatSearchText,
+  markdownToPlainText,
+  normalizeChatSearchQuery,
+  useOptionalChatSearch,
+  useRegisterChatSearchBlocks,
+  type ChatSearchBlock,
+} from './ChatSearch';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {ExpandableContent} from './ExpandableContent';
 import {OrchestratorToolLogLine} from './FlatAgentRenderer';
@@ -117,13 +125,10 @@ function groupPartsIntoSegments(
   return segments;
 }
 
-const ReasoningBox: React.FC<{text: string; isRunning: boolean}> = ({
-  text,
-  isRunning,
-}) => {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-
+const ReasoningBox: React.FC<{
+  isRunning: boolean;
+  children: React.ReactNode;
+}> = ({isRunning, children}) => {
   return (
     <details className="border-border bg-muted/30 text-muted-foreground group rounded-md border text-xs">
       <summary className="hover:bg-muted/50 flex cursor-pointer items-center justify-between gap-2 px-3 py-2 font-medium select-none">
@@ -136,7 +141,7 @@ const ReasoningBox: React.FC<{text: string; isRunning: boolean}> = ({
         </span>
       </summary>
       <div className="border-border/70 max-h-64 overflow-auto border-t px-3 py-2 leading-relaxed whitespace-pre-wrap">
-        {text}
+        {children}
       </div>
     </details>
   );
@@ -196,6 +201,62 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const hoistableSet = useMemo(() => new Set(excludeList), [excludeList]);
 
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
+  const currentSessionId = useStoreWithAi(
+    (s) => s.ai.config.currentSessionId ?? '',
+  );
+  const searchBlockPrefix = `${currentSessionId}:${analysisResult.id}`;
+
+  const search = useOptionalChatSearch();
+  const hasActiveQuery =
+    !!search && normalizeChatSearchQuery(search.query).length > 0;
+
+  const searchBlocks = useMemo<ChatSearchBlock[]>(() => {
+    if (!hasActiveQuery) return [];
+    const blocks: ChatSearchBlock[] = [
+      {
+        id: `${searchBlockPrefix}:prompt`,
+        resultId: analysisResult.id,
+        text: analysisResult.prompt,
+      },
+    ];
+
+    uiMessageParts.forEach((part, index) => {
+      if (isTextPart(part)) {
+        blocks.push({
+          id: `${searchBlockPrefix}:text:${index}`,
+          resultId: analysisResult.id,
+          text: markdownToPlainText(
+            processAnalysisAnswerContent(part.text).processedContent,
+          ),
+        });
+      } else if (isReasoningPart(part)) {
+        blocks.push({
+          id: `${searchBlockPrefix}:reasoning:${index}`,
+          resultId: analysisResult.id,
+          text: part.text,
+        });
+      } else if (isToolPart(part) || isDynamicToolPart(part)) {
+        const toolName = getToolName(part);
+        if (toolName) {
+          blocks.push({
+            id: `${searchBlockPrefix}:tool:${index}`,
+            resultId: analysisResult.id,
+            text: toolName,
+          });
+        }
+      }
+    });
+
+    return blocks.filter((block) => block.text.trim().length > 0);
+  }, [
+    analysisResult.id,
+    analysisResult.prompt,
+    hasActiveQuery,
+    searchBlockPrefix,
+    uiMessageParts,
+  ]);
+
+  useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
   return (
     <HoistedRenderersProvider value={excludeList}>
@@ -205,14 +266,19 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             <SquareTerminalIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <ExpandableContent maxHeight={60} showLabels={false}>
-                <div className="break-words">{analysisResult.prompt}</div>
+                <div className="break-words">
+                  <HighlightedChatSearchText
+                    blockId={`${searchBlockPrefix}:prompt`}
+                    text={analysisResult.prompt}
+                  />
+                </div>
               </ExpandableContent>
             </div>
             <div className="shrink-0 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
               <CopyButton
                 text={analysisResult.prompt}
+                className="relative top-[2px] h-4 w-6"
                 tooltipLabel="Copy prompt"
-                className="h-6 w-6"
               />
             </div>
           </div>
@@ -251,6 +317,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                           <OrchestratorToolLogLine
                             part={p.part}
                             toolCallId={p.part.toolCallId}
+                            searchBlockId={`${searchBlockPrefix}:tool:${p.index}`}
                           />
                           {!isHoisted && (
                             <ToolPartRenderer
@@ -301,18 +368,24 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   key={`text-${index}`}
                   content={part.text}
                   isAnswer={index === uiMessageParts.length - 1}
+                  searchBlockId={`${searchBlockPrefix}:text:${index}`}
                   customMarkdownComponents={customMarkdownComponents}
                 />
               );
             }
 
             if (isReasoningPart(part)) {
+              if (!part.text.trim()) return null;
               return (
                 <ReasoningBox
                   key={`reasoning-${index}`}
-                  text={part.text}
                   isRunning={!analysisResult.isCompleted}
-                />
+                >
+                  <HighlightedChatSearchText
+                    blockId={`${searchBlockPrefix}:reasoning:${index}`}
+                    text={part.text}
+                  />
+                </ReasoningBox>
               );
             }
 

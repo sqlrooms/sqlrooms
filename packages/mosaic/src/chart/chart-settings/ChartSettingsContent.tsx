@@ -1,6 +1,6 @@
 import {FC, useCallback, useState} from 'react';
 import {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
-import {ChartPanelConfig} from '../../dashboard/MosaicDashboardSlice';
+import type {ChartPanelConfig} from '../../dashboard/dashboard-types';
 import {Spec} from '@uwdata/mosaic-spec';
 import {ChartSettingsPanel} from './ChartSettingsPanel';
 

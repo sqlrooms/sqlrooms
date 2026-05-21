@@ -1,16 +1,22 @@
 import {
-  createMosaicDashboardChartPanelConfig,
-  createDefaultChartTypes,
-  type ChartToolDeps,
+  type DashboardToolDeps,
   type ChartBuilderColumn,
   type ChartToolExecutionContext,
   MAX_DATA_POINTS,
 } from '@sqlrooms/mosaic';
 import type {RoomState} from './store';
 import {DataTable} from '@sqlrooms/db';
-import {getAiRunContextItems} from '@sqlrooms/ai';
+import {getAiRunContextItems, getAiRunContextPrimaryItem} from '@sqlrooms/ai';
 
-const aiChartTypes = createDefaultChartTypes({includeCustomSpec: false});
+function getMutableAiRunContext(context?: ChartToolExecutionContext) {
+  return (
+    (
+      context as
+        | (ChartToolExecutionContext & {getAiRunContext?: () => unknown})
+        | undefined
+    )?.getAiRunContext?.() ?? context?.aiRunContext
+  );
+}
 
 // Helper functions
 function getTablesWithColumns(state: RoomState): DataTable[] {
@@ -34,18 +40,19 @@ function findTableColumns(
 }
 
 // Create dependencies for tool execution
-export function createChartToolDeps(store: {
+export function createDashboardToolDeps(store: {
   getState: () => RoomState;
-}): ChartToolDeps {
+}): DashboardToolDeps {
   const getRunContextDashboardArtifactId = (
     state: RoomState,
     context?: ChartToolExecutionContext,
   ) => {
-    const contextItems = getAiRunContextItems(context?.aiRunContext);
-    return contextItems.find((item) => {
-      const artifact = state.artifacts.config.artifactsById[item.id];
-      return artifact?.type === 'dashboard';
-    })?.id;
+    const primaryItem = getAiRunContextPrimaryItem(
+      getMutableAiRunContext(context),
+    );
+    if (!primaryItem) return undefined;
+    const artifact = state.artifacts.config.artifactsById[primaryItem.id];
+    return artifact?.type === 'dashboard' ? primaryItem.id : undefined;
   };
 
   const resolveArtifact = (
@@ -54,10 +61,23 @@ export function createChartToolDeps(store: {
     context?: ChartToolExecutionContext,
   ): string => {
     const state = store.getState();
+    const runContext = getMutableAiRunContext(context);
+    const hasRunContext = getAiRunContextItems(runContext).length > 0;
+    const runContextDashboardArtifactId = getRunContextDashboardArtifactId(
+      state,
+      context,
+    );
     let targetArtifactId =
       artifactId ??
-      getRunContextDashboardArtifactId(state, context) ??
-      state.dashboard.getCurrentDashboardArtifactId();
+      runContextDashboardArtifactId ??
+      (!hasRunContext
+        ? state.dashboard.getCurrentDashboardArtifactId()
+        : undefined);
+    if (!targetArtifactId && hasRunContext) {
+      throw new Error(
+        'No primary dashboard artifact is available in the current run context. Pass artifactId explicitly or use set_primary_context_artifact first.',
+      );
+    }
     if (!targetArtifactId && createIfMissing) {
       targetArtifactId = state.dashboard.createDashboardArtifact(
         undefined,
@@ -127,39 +147,36 @@ export function createChartToolDeps(store: {
 
   return {
     maxDataPoints: MAX_DATA_POINTS,
-    resolveResources: (params, context) => {
-      const artifactId = resolveArtifact(
-        params.artifactId,
-        params.createArtifactIfMissing,
-        context,
-      );
-      const {tableName, columns} = resolveTable(artifactId, params.tableName);
-      return {artifactId, tableName, columns};
+    resolveArtifact,
+    resolveTable,
+
+    addPanel: (dashboardId: string, panel: any) => {
+      const state = store.getState();
+      return state.mosaicDashboard.addPanel(dashboardId, panel);
     },
 
-    createChart: ({artifactId, tableName, title, config}) => {
+    updatePanel: (
+      dashboardId: string,
+      panelId: string,
+      patch: Partial<{title?: string; config?: any}>,
+    ) => {
       const state = store.getState();
-      const chartTypeDef = aiChartTypes.find(
-        (ct) => ct.id === config.chartType,
-      );
-      if (!chartTypeDef) {
-        throw new Error(`Unknown chart type "${config.chartType}".`);
-      }
+      state.mosaicDashboard.updatePanel(dashboardId, panelId, patch);
+    },
 
-      const panel = createMosaicDashboardChartPanelConfig(title, config, {
-        tableName,
-      });
+    getDashboard: (dashboardId: string) => {
+      const state = store.getState();
+      return state.mosaicDashboard.getDashboard(dashboardId);
+    },
 
-      state.mosaicDashboard.addPanel(artifactId, panel);
+    removePanel: (dashboardId: string, panelId: string) => {
+      const state = store.getState();
+      state.mosaicDashboard.removePanel(dashboardId, panelId);
+    },
+
+    setCurrentArtifact: (artifactId: string) => {
+      const state = store.getState();
       state.artifacts.setCurrentArtifact(artifactId);
-
-      return {
-        panelId: panel.id,
-        config,
-        artifactId,
-        tableName,
-        title,
-      };
     },
   };
 }

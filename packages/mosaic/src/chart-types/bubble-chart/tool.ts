@@ -2,9 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {BubbleChartSettings} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
-import {type ChartToolDeps} from '../base-types';
+import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../chart-builders/constants';
+import {createOrUpdateChartPanel} from '../tool-helpers';
 
 export const BubbleChartToolParameters = BaseChartToolParameters.extend({
   settings: BubbleChartSettings.required(),
@@ -12,7 +13,7 @@ export const BubbleChartToolParameters = BaseChartToolParameters.extend({
 
 export type BubbleChartToolParams = z.infer<typeof BubbleChartToolParameters>;
 
-export function createBubbleChartAiTool(deps: ChartToolDeps) {
+export function createBubbleChartAiTool(deps: DashboardToolDeps) {
   return tool({
     description: `Bubble/scatter chart: plots individual points positioned by two numeric columns (x, y), with optional size dimension.
 
@@ -24,13 +25,20 @@ Optional: size can encode a third numeric dimension (magnitude, frequency, count
 
 IMPORTANT: Bubble charts render ALL rows as individual points. Do NOT create bubble charts for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead (histogram, count-plot, line-chart with time intervals, or heatmap).
 
+To UPDATE an existing bubble chart: provide the panelId parameter. Otherwise creates new panel.
+
 Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${deps.maxDataPoints.toLocaleString()} rows).`,
     inputSchema: BubbleChartToolParameters,
     execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(
-          params,
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
           context,
+        );
+        const {tableName, columns} = deps.resolveTable(
+          artifactId,
+          params.tableName,
         );
 
         // Validate settings
@@ -48,25 +56,26 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
           'y',
         );
 
-        const title =
-          params.settings.x && params.settings.y
-            ? `Bubble chart - ${params.settings.x} vs ${params.settings.y}`
-            : 'Bubble chart';
-
-        const result = deps.createChart({
-          artifactId,
+        const result = createOrUpdateChartPanel(deps, {
+          panelId: params.panelId,
+          dashboardId: artifactId,
           tableName,
+          title:
+            params.settings.x && params.settings.y
+              ? `Bubble chart - ${params.settings.x} vs ${params.settings.y}`
+              : 'Bubble chart',
           config: {
             chartType: 'bubble-chart',
             settings: params.settings,
           },
-          title,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Created bubble chart "${result.title}".`,
+            details: params.panelId
+              ? `Updated bubble chart "${result.title}".`
+              : `Created bubble chart "${result.title}".`,
             data: result,
           },
         };

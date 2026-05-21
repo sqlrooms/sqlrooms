@@ -1,10 +1,16 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {HistogramChartSettings} from './schema';
+import {
+  HistogramChartSettings,
+  MIN_BINS_COUNT,
+  MAX_BINS_COUNT,
+  DEFAULT_BINS_COUNT,
+} from './schema';
 import {BaseChartToolParameters} from '../tool-schemas';
-import type {ChartToolDeps} from '../base-types';
+import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../chart-builders/constants';
+import {createOrUpdateChartPanel} from '../tool-helpers';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
   settings: HistogramChartSettings.required(),
@@ -12,7 +18,7 @@ export const HistogramToolParameters = BaseChartToolParameters.extend({
 
 export type HistogramToolParams = z.infer<typeof HistogramToolParameters>;
 
-export function createHistogramAiTool(deps: ChartToolDeps) {
+export function createHistogramAiTool(deps: DashboardToolDeps) {
   return tool({
     description: `Histogram: shows distribution of numeric values by automatically grouping data into bins/ranges.
 
@@ -23,14 +29,23 @@ Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUM
 
 NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
 
+To UPDATE an existing histogram: provide the panelId parameter. Otherwise creates new panel.
+
+Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.
+
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use bubble-chart), time series trends (use line-chart).`,
     inputSchema: HistogramToolParameters,
     execute: async (params, context) => {
       try {
-        const {artifactId, tableName, columns} = deps.resolveResources(
-          params,
+        const artifactId = deps.resolveArtifact(
+          params.artifactId,
+          params.createArtifactIfMissing,
           context,
+        );
+        const {tableName, columns} = deps.resolveTable(
+          artifactId,
+          params.tableName,
         );
 
         // Validate settings
@@ -41,22 +56,23 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
           'field',
         );
 
-        const title = `Histogram of ${params.settings.field}`;
-
-        const result = deps.createChart({
-          artifactId,
+        const result = createOrUpdateChartPanel(deps, {
+          panelId: params.panelId,
+          dashboardId: artifactId,
           tableName,
+          title: `Histogram of ${params.settings.field}`,
           config: {
             chartType: 'histogram',
             settings: params.settings,
           },
-          title,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Created histogram "${result.title}".`,
+            details: params.panelId
+              ? `Updated histogram "${result.title}".`
+              : `Created histogram "${result.title}".`,
             data: result,
           },
         };

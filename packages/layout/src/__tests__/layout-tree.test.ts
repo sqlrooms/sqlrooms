@@ -505,8 +505,18 @@ describe('layout-tree', () => {
           id: 'split-1',
           direction: 'row',
           children: [
-            {type: 'panel', id: 'panel-1', panel: 'panel-1', defaultSize: '50%'},
-            {type: 'panel', id: 'panel-2', panel: 'panel-2', defaultSize: '50%'},
+            {
+              type: 'panel',
+              id: 'panel-1',
+              panel: 'panel-1',
+              defaultSize: '50%',
+            },
+            {
+              type: 'panel',
+              id: 'panel-2',
+              panel: 'panel-2',
+              defaultSize: '50%',
+            },
           ],
         },
       };
@@ -599,11 +609,7 @@ describe('layout-tree', () => {
         ],
       };
 
-      const nextLayout = updateLayoutNodeById(
-        layout,
-        'right',
-        (node) => node,
-      );
+      const nextLayout = updateLayoutNodeById(layout, 'right', (node) => node);
 
       expect(nextLayout).toBe(layout);
     });
