@@ -39,9 +39,7 @@ function createDashboardEntry(
   };
 }
 
-function createHarness(
-  overrides: Partial<TestState> = {},
-): {
+function createHarness(overrides: Partial<TestState> = {}): {
   store: {getState: () => TestState};
   state: TestState;
   adapter: DashboardAiAdapter<TestState>;
@@ -71,7 +69,8 @@ function createHarness(
       (context as {dashboardId?: string} | undefined)?.dashboardId,
     getCurrentDashboardArtifactId: (current) => {
       const artifactId = current.currentArtifactId;
-      return artifactId && current.artifactsById[artifactId]?.type === 'dashboard'
+      return artifactId &&
+        current.artifactsById[artifactId]?.type === 'dashboard'
         ? artifactId
         : undefined;
     },
@@ -144,6 +143,15 @@ describe('dashboard AI deps', () => {
     expect(artifactId).toBe('dashboard-1');
     expect(state.currentArtifactId).toBe(artifactId);
     expect(state.setCurrentArtifactCalls).toEqual([artifactId]);
+  });
+
+  it('uses the host max data point limit when provided', () => {
+    const {store, adapter} = createHarness();
+    adapter.getMaxDataPoints = () => 25_000;
+
+    const deps = createDashboardToolDeps({store, adapter});
+
+    expect(deps.maxDataPoints).toBe(25_000);
   });
 
   it('resolves explicit artifact before context and current artifact', () => {
@@ -238,13 +246,14 @@ describe('dashboard AI tools', () => {
     const {store, adapter, state} = createHarness();
     const tools = createDashboardAiTools({store, adapter});
 
-    const histogramResult = await (tools.create_dashboard_histogram as any)
-      .execute({
-        tableName: 'earthquakes',
-        createArtifactIfMissing: true,
-        settings: {field: 'magnitude'},
-        reasoning: 'test',
-      });
+    const histogramResult = await (
+      tools.create_dashboard_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      createArtifactIfMissing: true,
+      settings: {field: 'magnitude'},
+      reasoning: 'test',
+    });
     const dashboardId = histogramResult.llmResult.data.artifactId;
     const chartPanelId = histogramResult.llmResult.data.panelId;
 
@@ -252,34 +261,38 @@ describe('dashboard AI tools', () => {
     expect(state.currentArtifactId).toBe(dashboardId);
     expect(state.dashboardsById[dashboardId]!.panels).toHaveLength(1);
 
-    const updateResult = await (tools.create_dashboard_histogram as any)
-      .execute({
-        artifactId: dashboardId,
-        tableName: 'earthquakes',
-        panelId: chartPanelId,
-        settings: {field: 'magnitude', maxBins: 30},
-        reasoning: 'test',
-      });
+    const updateResult = await (
+      tools.create_dashboard_histogram as any
+    ).execute({
+      artifactId: dashboardId,
+      tableName: 'earthquakes',
+      panelId: chartPanelId,
+      settings: {field: 'magnitude', maxBins: 30},
+      reasoning: 'test',
+    });
     expect(updateResult.llmResult.success).toBe(true);
     expect(
       state.dashboardsById[dashboardId]!.panels[0]!.config.settings.maxBins,
     ).toBe(30);
 
-    const profilerResult = await (tools.create_dashboard_profiler as any)
-      .execute({
-        artifactId: dashboardId,
-        tableName: 'earthquakes',
-        title: 'Profile',
-        reasoning: 'test',
-      });
-    expect(profilerResult.llmResult.success).toBe(true);
-
-    const textResult = await (tools.create_dashboard_text_panel as any).execute({
+    const profilerResult = await (
+      tools.create_dashboard_profiler as any
+    ).execute({
       artifactId: dashboardId,
-      title: 'Notes',
-      content: 'Findings',
+      tableName: 'earthquakes',
+      title: 'Profile',
       reasoning: 'test',
     });
+    expect(profilerResult.llmResult.success).toBe(true);
+
+    const textResult = await (tools.create_dashboard_text_panel as any).execute(
+      {
+        artifactId: dashboardId,
+        title: 'Notes',
+        content: 'Findings',
+        reasoning: 'test',
+      },
+    );
     expect(textResult.llmResult.success).toBe(true);
     expect(state.dashboardsById[dashboardId]!.panels).toHaveLength(3);
   });
@@ -297,14 +310,15 @@ describe('dashboard AI tools', () => {
     });
     const tools = createDashboardAiTools({store, adapter});
 
-    const updateResult = await (tools.create_dashboard_text_panel as any)
-      .execute({
-        artifactId: dashboardId,
-        panelId: 'missing-panel',
-        title: 'Notes',
-        content: 'Findings',
-        reasoning: 'test',
-      });
+    const updateResult = await (
+      tools.create_dashboard_text_panel as any
+    ).execute({
+      artifactId: dashboardId,
+      panelId: 'missing-panel',
+      title: 'Notes',
+      content: 'Findings',
+      reasoning: 'test',
+    });
     const removeResult = await (tools.remove_dashboard_panel as any).execute({
       artifactId: dashboardId,
       panelId: 'missing-panel',

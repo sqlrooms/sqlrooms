@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const CountPlotChartSettings = z.object({
   field: z
@@ -13,6 +14,7 @@ export const CountPlotChartConfig = z.object({
   chartType: z.literal('count-plot'),
   settings: CountPlotChartSettings,
   settingsOpen: z.boolean().optional(),
+  dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
 export type CountPlotChartConfig = z.infer<typeof CountPlotChartConfig>;

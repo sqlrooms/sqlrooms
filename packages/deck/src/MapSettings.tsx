@@ -16,6 +16,7 @@ import {
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
 import {
   Button,
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -27,17 +28,21 @@ import {XIcon} from 'lucide-react';
 import {LatitudeSelector} from './LatitudeSelector';
 import {LongitudeSelector} from './LongitudeSelector';
 import type {DeckMapDashboardPanelConfig} from './dashboardConfig';
+import {DEFAULT_DECK_MAP_MAX_DATA_POINTS} from './dashboardConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
   DECK_MAP_COLOR_SCALE_TYPE_OPTIONS,
   DECK_MAP_LAYER_TYPE_OPTIONS,
   getDeckMapColorAccessorOptions,
+  getDeckMapLayerDatasetId,
   getDeckMapLayerColorScale,
   getDeckMapLayerRecords,
   setDeckMapLayerColorScale,
+  setDeckMapLayerGeometryColumn,
   setDeckMapLayerType,
   type DeckMapLayerColorAccessor,
+  usesGeometryColumnSetting,
 } from './mapLayerConfigUtils';
 
 interface MapSettingsPanelProps {
@@ -83,6 +88,13 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const layers = getDeckMapLayerRecords(mapConfig);
   const activeLayerIndex = Math.min(layerIndex, Math.max(layers.length - 1, 0));
   const activeLayer = layers[activeLayerIndex];
+  const activeLayerDatasetId = getDeckMapLayerDatasetId(activeLayer);
+  const activeLayerDataset = activeLayerDatasetId
+    ? mapConfig.datasets?.[activeLayerDatasetId]
+    : undefined;
+  const showGeometryColumnSetting = usesGeometryColumnSetting(
+    activeLayer?.['@@type'],
+  );
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -95,6 +107,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
   const firstColumnName = currentTable?.columns[0]?.name;
+  const maxRows =
+    mapConfig.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
@@ -163,7 +177,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </Button>
         )}
       </div>
-      <div className="flex flex-col gap-3 p-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2">
         {layers.length > 0 && (
           <div className="flex flex-col gap-3">
             {layers.length > 1 && (
@@ -327,7 +341,27 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </div>
         )}
 
-        {currentTable && (
+        {currentTable && showGeometryColumnSetting && (
+          <ColumnsProvider columns={currentTable.columns} tableName={tableName}>
+            <Field label="Geometry column" required>
+              <ColumnSelector
+                value={activeLayerDataset?.geometryColumn}
+                onChange={(geometryColumn) =>
+                  applyConfig(
+                    setDeckMapLayerGeometryColumn(
+                      mapConfig,
+                      activeLayerIndex,
+                      geometryColumn,
+                    ),
+                  )
+                }
+                placeholder="Select geometry column..."
+              />
+            </Field>
+          </ColumnsProvider>
+        )}
+
+        {currentTable && !showGeometryColumnSetting && (
           <ColumnsProvider columns={currentTable.columns} tableName={tableName}>
             <Field label="Latitude column" required>
               <LatitudeSelector
@@ -345,6 +379,27 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
             </Field>
           </ColumnsProvider>
         )}
+
+        <Field label="Max rows">
+          <Input
+            type="number"
+            min={1}
+            value={maxRows}
+            className="no-spinner"
+            onChange={(event) => {
+              const parsed = Number.parseInt(event.target.value, 10);
+              if (!Number.isFinite(parsed) || parsed < 1) return;
+              applyConfig({
+                ...mapConfig,
+                dataPolicy: {
+                  ...mapConfig.dataPolicy,
+                  maxRows: parsed,
+                },
+              });
+            }}
+            placeholder={String(DEFAULT_DECK_MAP_MAX_DATA_POINTS)}
+          />
+        </Field>
       </div>
     </div>
   );

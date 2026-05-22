@@ -50,6 +50,7 @@ export type DashboardAiTable = {
 
 export type DashboardAiAdapter<TState> = {
   getTables: (state: TState) => DashboardAiTable[];
+  getMaxDataPoints?: (state: TState) => number | undefined;
   hasRunContext?: (
     state: TState,
     context?: ChartToolExecutionContext,
@@ -471,8 +472,11 @@ export function createDashboardToolDeps<TState>({
     );
   };
 
+  const state = store.getState();
+  const maxDataPoints = adapter.getMaxDataPoints?.(state) ?? MAX_DATA_POINTS;
+
   const deps: DashboardToolDeps = {
-    maxDataPoints: MAX_DATA_POINTS,
+    maxDataPoints,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {

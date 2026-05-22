@@ -15,6 +15,10 @@ import {
   type MosaicDashboardPanelRenderer,
   type MosaicDashboardPanelRendererProps,
   sql,
+  type ChartDataPolicy,
+  type ChartRuntimeIssue,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
   useMosaicClient,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
@@ -32,35 +36,82 @@ import {
   asDeckJsonMapConfig,
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
+  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
   type DeckMapDashboardDatasetConfig,
+  type DeckMapDataPolicyOverride,
   type DeckMapDashboardInteractionConfig,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
 import {
   createDeckMapDashboardPanelConfigForTable,
+  findGeometryColumn,
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
+
+function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
+  const title =
+    issue.kind === 'too-much-data'
+      ? 'Too much data'
+      : issue.kind === 'sql-error'
+        ? 'Map query failed'
+        : 'Unable to display map';
+
+  return (
+    <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+      <div className="mb-2 text-center font-semibold">{title}</div>
+      <div className="text-center text-sm whitespace-pre-wrap">
+        {issue.message}
+      </div>
+    </div>
+  );
+}
+
+function resolveDeckMapDataPolicy(
+  basePolicy: ChartDataPolicy,
+  override: DeckMapDataPolicyOverride | undefined,
+): ChartDataPolicy {
+  if (!override) {
+    return basePolicy;
+  }
+  if (override.disabled) {
+    return {
+      ...basePolicy,
+      disabled: true,
+    };
+  }
+  return {
+    ...basePolicy,
+    ...(override.maxRows !== undefined ? {maxRows: override.maxRows} : {}),
+    ...(override.reason !== undefined ? {reason: override.reason} : {}),
+  };
+}
 
 function DeckMapDashboardDatasetClient({
   dashboard,
   dataset,
   datasetId,
+  dataPolicy,
   panel,
   onDatasetState,
+  runtimeIssueContext,
+  runtimeIssueReporter,
   selectionName,
 }: {
   dashboard: MosaicDashboardEntryType;
   dataset: DeckMapDashboardDatasetConfig;
   datasetId: string;
+  dataPolicy?: ChartDataPolicy | null;
   panel: MosaicDashboardPanelConfigType;
   onDatasetState: (
     datasetId: string,
     state: DeckMapDashboardDatasetClientState | undefined,
   ) => void;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selectionName: string;
 }) {
   const source = useMemo(
@@ -86,7 +137,10 @@ function DeckMapDashboardDatasetClient({
     id: `${panel.id}:${datasetId}`,
     selectionName,
     query,
+    dataPolicy,
     enabled: Boolean(source),
+    runtimeIssueContext,
+    runtimeIssueReporter,
   });
 
   useEffect(() => {
@@ -337,6 +391,15 @@ function DeckMapDashboardRenderer({
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
+  const issue = useStoreWithMosaicDashboard((state) =>
+    state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),
+  );
+  const reportPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.reportPanelIssue,
+  );
+  const clearPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.clearPanelIssue,
+  );
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
 
   const isSettingsOpen = Boolean(
@@ -377,6 +440,37 @@ function DeckMapDashboardRenderer({
       });
     },
     [],
+  );
+
+  const dataPolicy = useMemo<ChartDataPolicy>(
+    () =>
+      resolveDeckMapDataPolicy(
+        {
+          maxRows: DEFAULT_DECK_MAP_MAX_DATA_POINTS,
+          reason:
+            'Map panels render source rows as interactive deck.gl features. Filter, aggregate, or switch to a smaller source query before rendering this map.',
+        },
+        mapConfig?.dataPolicy,
+      ),
+    [mapConfig?.dataPolicy],
+  );
+  const runtimeIssueContext = useMemo(
+    () => ({
+      panelId: panel.id,
+      chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+    }),
+    [panel.id],
+  );
+  const runtimeIssueReporter = useMemo<ChartRuntimeIssueReporter>(
+    () => ({
+      reportIssue: (issueToReport) => {
+        reportPanelIssue(dashboardId, panel.id, issueToReport);
+      },
+      clearIssue: () => {
+        clearPanelIssue(dashboardId, panel.id);
+      },
+    }),
+    [clearPanelIssue, dashboardId, panel.id, reportPanelIssue],
   );
 
   useEffect(() => {
@@ -646,6 +740,8 @@ function DeckMapDashboardRenderer({
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Invalid map panel config.
     </div>
+  ) : issue ? (
+    <DeckMapRuntimeIssuePanel issue={issue} />
   ) : Object.entries(mapConfig.datasets).length === 0 ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Map panels require at least one dataset.
@@ -658,8 +754,11 @@ function DeckMapDashboardRenderer({
           dashboard={dashboard}
           dataset={dataset}
           datasetId={datasetId}
+          dataPolicy={dataPolicy}
           panel={panel}
           onDatasetState={handleDatasetState}
+          runtimeIssueContext={runtimeIssueContext}
+          runtimeIssueReporter={runtimeIssueReporter}
           selectionName={selectionName}
         />
       ))}
@@ -723,7 +822,10 @@ export const deckMapDashboardAddPanelAction: import('@sqlrooms/mosaic').MosaicDa
     label: 'Map',
     icon: MapIcon,
     isEnabled: ({selectedTable}) =>
-      Boolean(findLongitudeLatitudeColumns(selectedTable)),
+      Boolean(
+        findLongitudeLatitudeColumns(selectedTable) ??
+        findGeometryColumn(selectedTable),
+      ),
     createPanel: ({selectedTable}) =>
       selectedTable
         ? createDeckMapDashboardPanelConfigForTable({

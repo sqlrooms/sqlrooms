@@ -8,6 +8,18 @@ import {
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
 
+export const DECK_MAP_AI_INSTRUCTIONS = `
+Deck map tools:
+- create_deck_map_config validates and returns a reusable native Deck JSON map config without requiring a dashboard artifact.
+- create_dashboard_map creates or updates an interactive map panel inside a dashboard from a native Deck JSON map config.
+- Use map tools when the user asks for a map, geospatial/spatial visualization, locations, longitude/latitude data, or geometry columns.
+- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, or GeoArrowArcLayer.
+- Bind layers to datasets with _sqlroomsBinding.dataset and put tableName or sqlQuery sources in config.datasets.
+- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor.
+- Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
+- After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
+`;
+
 const DeckMapLayerBindingConfig = z.looseObject({
   dataset: z.string().optional(),
   geometryColumn: z.string().optional(),
@@ -42,6 +54,12 @@ const DeckMapDatasetConfig = z.looseObject({
   geometryEncodingHint: z.enum(['geoarrow', 'wkb', 'wkt']).optional(),
 });
 
+const DeckMapDataPolicyConfig = z.looseObject({
+  disabled: z.boolean().optional(),
+  maxRows: z.number().int().min(1).optional(),
+  reason: z.string().optional(),
+});
+
 export const DeckMapDashboardConfigParameter = z.looseObject({
   spec: DeckMapSpec.describe(
     'Deck JSON map spec as an object. Use spec.layers[].@@type for layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, or GeoArrowArcLayer.',
@@ -56,6 +74,9 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
   showLegends: z.boolean().optional(),
   interaction: z.record(z.string(), z.unknown()).optional(),
   fitToData: z.record(z.string(), z.unknown()).optional(),
+  dataPolicy: DeckMapDataPolicyConfig.optional().describe(
+    'Optional per-map runtime data policy. Maps default to 100000 rows; set maxRows for a panel-specific override or disabled=true to bypass row-count validation.',
+  ),
   settingsOpen: z.boolean().optional(),
 });
 
@@ -68,37 +89,44 @@ export const DeckMapConfigToolParameters = z.object({
   config: DeckMapDashboardConfigParameter.describe(
     'Native Deck JSON dashboard map config. This is the canonical map representation.',
   ),
-  reasoning: z.string().describe('Brief rationale for creating the map config.'),
+  reasoning: z
+    .string()
+    .describe('Brief rationale for creating the map config.'),
 });
 
 export type DeckMapConfigToolParams = z.infer<
   typeof DeckMapConfigToolParameters
 >;
 
-export const DeckMapDashboardToolParameters = DeckMapConfigToolParameters.extend({
-  artifactId: z
-    .string()
-    .optional()
-    .describe('Optional dashboard artifact ID. Defaults to current dashboard.'),
-  tableName: z
-    .string()
-    .optional()
-    .describe(
-      'Optional table name used only to select/resolve the target dashboard table. Data sources still come from config.datasets.',
-    ),
-  createArtifactIfMissing: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe('If true, create dashboard artifact if missing.'),
-  panelId: z
-    .string()
-    .optional()
-    .describe(
-      'Optional panel ID. If provided, updates the existing map panel instead of creating a new one.',
-    ),
-  reasoning: z.string().describe('Brief rationale for creating the map panel.'),
-});
+export const DeckMapDashboardToolParameters =
+  DeckMapConfigToolParameters.extend({
+    artifactId: z
+      .string()
+      .optional()
+      .describe(
+        'Optional dashboard artifact ID. Defaults to current dashboard.',
+      ),
+    tableName: z
+      .string()
+      .optional()
+      .describe(
+        'Optional table name used only to select/resolve the target dashboard table. Data sources still come from config.datasets.',
+      ),
+    createArtifactIfMissing: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe('If true, create dashboard artifact if missing.'),
+    panelId: z
+      .string()
+      .optional()
+      .describe(
+        'Optional panel ID. If provided, updates the existing map panel instead of creating a new one.',
+      ),
+    reasoning: z
+      .string()
+      .describe('Brief rationale for creating the map panel.'),
+  });
 
 export type DeckMapDashboardToolParams = z.infer<
   typeof DeckMapDashboardToolParameters

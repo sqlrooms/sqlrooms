@@ -245,4 +245,33 @@ describe('createDeckMapDashboardTool', () => {
       'FROM (SELECT * FROM earthquakes) AS "__sqlrooms_dashboard_map_source"',
     );
   });
+
+  it('creates a geometry-backed map config when a geometry column is available', () => {
+    const panel = createDeckMapDashboardPanelConfigForTable({
+      title: 'Store polygons',
+      tableName: 'stores',
+      columns: [
+        {name: 'store_id', type: 'INTEGER'},
+        {name: 'geometry', type: 'GEOMETRY'},
+      ],
+    });
+
+    expect(panel.config).toMatchObject({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'stores'},
+          },
+        ],
+      },
+      datasets: {
+        stores: {
+          source: {tableName: 'stores'},
+          geometryColumn: 'geometry',
+        },
+      },
+    });
+    expect(panel.config.fitToData).toBeUndefined();
+  });
 });

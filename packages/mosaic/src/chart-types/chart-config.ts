@@ -13,6 +13,7 @@ import {BubbleChartConfig} from './bubble-chart/schema';
 import {HeatmapChartConfig} from './heatmap/schema';
 import {BoxPlotChartConfig} from './box-plot/schema';
 import {CustomSpecChartConfig} from './custom-spec/schema';
+import {ChartDataPolicyOverrideConfig} from './data-policy-schema';
 
 export const CustomChartSettings = z.record(z.string(), z.unknown());
 
@@ -44,6 +45,7 @@ export const CustomChartConfig = z.object({
   }),
   settings: CustomChartSettings,
   settingsOpen: z.boolean().optional(),
+  dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
 export type CustomChartConfig = z.infer<typeof CustomChartConfig>;

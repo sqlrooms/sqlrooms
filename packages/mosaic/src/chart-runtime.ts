@@ -14,6 +14,15 @@ export type ChartDataPolicy = {
   getResultSize?: (result: unknown) => number;
 };
 
+export type ChartDataPolicyOverride = {
+  /** Disable runtime row-count validation for this panel. */
+  disabled?: boolean;
+  /** Override the maximum allowed result rows for this panel. */
+  maxRows?: number;
+  /** Optional panel-specific explanation shown when the policy trips. */
+  reason?: string;
+};
+
 export type ChartDataPolicyContext<TConfig> = {
   tableName: string;
   config: TConfig;
@@ -96,6 +105,28 @@ export function assertChartDataPolicy(
   if (rowCount > policy.maxRows) {
     throw new DataPointLimitError(rowCount, policy.maxRows);
   }
+}
+
+export function resolveChartDataPolicy(
+  basePolicy: ChartDataPolicy | null | undefined,
+  override: ChartDataPolicyOverride | null | undefined,
+): ChartDataPolicy | null {
+  if (!override) {
+    return basePolicy ?? null;
+  }
+
+  if (override.disabled) {
+    return {
+      ...(basePolicy ?? {}),
+      disabled: true,
+    };
+  }
+
+  return {
+    ...(basePolicy ?? {}),
+    ...(override.maxRows !== undefined ? {maxRows: override.maxRows} : {}),
+    ...(override.reason !== undefined ? {reason: override.reason} : {}),
+  };
 }
 
 export function createChartRuntimeIssueFromError(

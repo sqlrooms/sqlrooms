@@ -55,6 +55,17 @@ export const DECK_MAP_COLOR_SCALE_TYPE_OPTIONS: ReadonlyArray<{
   {value: 'categorical', label: 'Categorical', defaultScheme: 'Tableau10'},
 ];
 
+const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
+  'geoarrowpolygonlayer',
+  'geoarrowsolidpolygonlayer',
+  'geojsonlayer',
+  'polygonlayer',
+  'solidpolygonlayer',
+  'geojson',
+  'polygon',
+  'solid polygon',
+]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -70,6 +81,21 @@ export function getDeckMapLayerRecords(
 ): DeckMapLayerRecord[] {
   const layers = getObjectSpec(config)?.layers;
   return Array.isArray(layers) ? layers.filter(isRecord) : [];
+}
+
+export function getDeckMapLayerDatasetId(
+  layer: DeckMapLayerRecord | undefined,
+): string | undefined {
+  const binding = layer?._sqlroomsBinding;
+  if (!isRecord(binding)) return undefined;
+  return typeof binding.dataset === 'string' ? binding.dataset : undefined;
+}
+
+export function usesGeometryColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    GEOMETRY_COLUMN_LAYER_TYPES.has(layerType.toLowerCase())
+  );
 }
 
 export function getDeckMapColorAccessorOptions(
@@ -135,6 +161,29 @@ export function setDeckMapLayerType(
   }));
 }
 
+export function setDeckMapLayerGeometryColumn(
+  config: DeckMapDashboardPanelConfig,
+  layerIndex: number,
+  geometryColumn: string,
+): DeckMapDashboardPanelConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  return {
+    ...config,
+    datasets: {
+      ...config.datasets,
+      [datasetId]: {
+        ...config.datasets[datasetId],
+        geometryColumn,
+      },
+    },
+  };
+}
+
 export function getDeckMapLayerColorScale(
   layer: DeckMapLayerRecord | undefined,
   accessor: DeckMapLayerColorAccessor,
@@ -191,9 +240,10 @@ export function createDeckMapLayerColorScale(options: {
     return {
       ...base,
       type,
-      scheme: scheme as Extract<ColorScaleConfig, {type: 'categorical'}>[
-        'scheme'
-      ],
+      scheme: scheme as Extract<
+        ColorScaleConfig,
+        {type: 'categorical'}
+      >['scheme'],
     };
   }
 
@@ -201,9 +251,10 @@ export function createDeckMapLayerColorScale(options: {
     return {
       ...base,
       type,
-      scheme: scheme as Extract<ColorScaleConfig, {type: 'diverging'}>[
-        'scheme'
-      ],
+      scheme: scheme as Extract<
+        ColorScaleConfig,
+        {type: 'diverging'}
+      >['scheme'],
       domain: 'auto',
     };
   }
@@ -212,9 +263,7 @@ export function createDeckMapLayerColorScale(options: {
     return {
       ...base,
       type,
-      scheme: scheme as Extract<ColorScaleConfig, {type: 'quantize'}>[
-        'scheme'
-      ],
+      scheme: scheme as Extract<ColorScaleConfig, {type: 'quantize'}>['scheme'],
       domain: 'auto',
     };
   }
@@ -223,9 +272,7 @@ export function createDeckMapLayerColorScale(options: {
     return {
       ...base,
       type,
-      scheme: scheme as Extract<ColorScaleConfig, {type: 'quantile'}>[
-        'scheme'
-      ],
+      scheme: scheme as Extract<ColorScaleConfig, {type: 'quantile'}>['scheme'],
     };
   }
 
@@ -233,9 +280,10 @@ export function createDeckMapLayerColorScale(options: {
     return {
       ...base,
       type,
-      scheme: scheme as Extract<ColorScaleConfig, {type: 'threshold'}>[
-        'scheme'
-      ],
+      scheme: scheme as Extract<
+        ColorScaleConfig,
+        {type: 'threshold'}
+      >['scheme'],
       thresholds: [],
     };
   }
@@ -243,9 +291,7 @@ export function createDeckMapLayerColorScale(options: {
   return {
     ...base,
     type: 'sequential',
-    scheme: scheme as Extract<ColorScaleConfig, {type: 'sequential'}>[
-      'scheme'
-    ],
+    scheme: scheme as Extract<ColorScaleConfig, {type: 'sequential'}>['scheme'],
     domain: 'auto',
   };
 }
