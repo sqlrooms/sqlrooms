@@ -1,7 +1,6 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
-import type {DashboardToolDeps} from '@sqlrooms/mosaic';
-import {MAP_TOOL_KEY} from '@sqlrooms/mosaic/ai';
+import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
 import {
   createDeckMapDashboardPanelConfigForTable,

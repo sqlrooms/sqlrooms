@@ -127,6 +127,7 @@ export {
 } from './ResponsivePlot';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
+export {MAP_TOOL_KEY} from './ai';
 
 // Compound components
 export {MosaicChart} from './MosaicChart';

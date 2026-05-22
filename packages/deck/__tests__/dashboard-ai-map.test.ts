@@ -1,5 +1,4 @@
-import type {DashboardToolDeps} from '@sqlrooms/mosaic';
-import {MAP_TOOL_KEY} from '@sqlrooms/mosaic/ai';
+import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
 import {
   createDeckMapConfigTool,
   createDeckMapDashboardAiTools,
