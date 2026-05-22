@@ -18,11 +18,7 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  deckMapDashboardAddPanelAction,
-  deckMapDashboardPanelRenderer,
-} from '@sqlrooms/deck';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
 import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
@@ -36,14 +32,11 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
-  createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
-  createDefaultChartTypes,
-  defaultAddPanelActions,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -433,16 +426,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createMosaicDashboardSlice({
-          addPanelActions: [
-            ...defaultAddPanelActions,
-            deckMapDashboardAddPanelAction,
-          ],
-          panelRenderers: createDefaultMosaicDashboardPanelRenderers({
-            [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
-          }),
-          chartTypes: createDefaultChartTypes(),
-        })(set, get, store),
+        ...createMosaicDashboardSlice(createDeckMapDashboardSliceOptions())(
+          set,
+          get,
+          store,
+        ),
 
         ...createSqlEditorSlice()(set, get, store),
 

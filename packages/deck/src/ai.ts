@@ -1,7 +1,14 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import type {DashboardToolDeps} from '@sqlrooms/mosaic';
-import {MAP_TOOL_KEY} from '@sqlrooms/mosaic/ai';
+import {
+  DASHBOARD_AI_INSTRUCTIONS,
+  MAP_TOOL_KEY,
+  createDashboardAgentTool,
+  createDashboardAiTools as createMosaicDashboardAiTools,
+  type CreateDashboardAgentToolOptions,
+  type CreateDashboardAiToolsOptions,
+} from '@sqlrooms/mosaic/ai';
 import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
@@ -19,6 +26,37 @@ Deck map tools:
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
 `;
+
+function createDeckMapDashboardExtraTools(
+  extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>,
+) {
+  return (deps: DashboardToolDeps) => ({
+    ...createDeckMapDashboardAiTools(deps),
+    ...(extraTools?.(deps) ?? {}),
+  });
+}
+
+export function getDashboardWithDeckMapAiInstructions() {
+  return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
+}
+
+export function createDashboardWithDeckMapAiTools<TState>(
+  options: CreateDashboardAiToolsOptions<TState>,
+): Record<string, Tool> {
+  return createMosaicDashboardAiTools({
+    ...options,
+    extraTools: createDeckMapDashboardExtraTools(options.extraTools),
+  });
+}
+
+export function createDashboardAgentToolWithDeckMaps<TState>(
+  options: CreateDashboardAgentToolOptions<TState>,
+): Tool {
+  return createDashboardAgentTool({
+    ...options,
+    extraTools: createDeckMapDashboardExtraTools(options.extraTools),
+  }) as Tool;
+}
 
 const DeckMapLayerBindingConfig = z.looseObject({
   dataset: z.string().optional(),

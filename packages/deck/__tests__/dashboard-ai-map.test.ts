@@ -1,9 +1,13 @@
 import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
 import {
+  createDashboardWithDeckMapAiTools,
   createDeckMapConfigTool,
   createDeckMapDashboardAiTools,
   createDeckMapDashboardTool,
+  getDashboardWithDeckMapAiInstructions,
 } from '../src/ai';
+import {deckMapDashboardAddPanelAction} from '../src/dashboard';
+import {createDeckMapDashboardSliceOptions} from '../src/dashboardIntegration';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
 import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
 
@@ -154,6 +158,44 @@ describe('createDeckMapDashboardTool', () => {
     const tools = createDeckMapDashboardAiTools(createDeps());
 
     expect(tools[MAP_TOOL_KEY]).toBeDefined();
+  });
+
+  it('composes reusable dashboard tools with the deck map dashboard tool', () => {
+    const tools = createDashboardWithDeckMapAiTools({
+      store: {getState: () => ({})},
+      adapter: {
+        getTables: () => [],
+        getCurrentDashboardArtifactId: () => undefined,
+        createDashboardArtifact: () => 'dashboard-1',
+        isDashboardArtifact: () => true,
+        setCurrentArtifact: () => {},
+        ensureDashboard: () => {},
+        getDashboard: () => undefined,
+        setSelectedTable: () => {},
+        addPanel: () => 'panel-1',
+        updatePanel: () => {},
+        removePanel: () => {},
+      },
+    });
+
+    expect(tools[MAP_TOOL_KEY]).toBeDefined();
+    expect(tools.create_dashboard_artifact).toBeDefined();
+  });
+
+  it('includes deck map guidance in reusable dashboard instructions', () => {
+    expect(getDashboardWithDeckMapAiInstructions()).toContain(
+      'create_dashboard_map',
+    );
+  });
+
+  it('provides default dashboard slice options with the deck map panel action', () => {
+    const options = createDeckMapDashboardSliceOptions();
+
+    expect(
+      options.panelRenderers?.[DECK_MAP_DASHBOARD_PANEL_TYPE],
+    ).toBeDefined();
+    expect(options.addPanelActions).toContain(deckMapDashboardAddPanelAction);
+    expect(options.chartTypes?.length).toBeGreaterThan(0);
   });
 
   it('creates a deck map panel from a native Deck JSON config', async () => {
