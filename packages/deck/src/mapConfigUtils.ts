@@ -126,7 +126,7 @@ function createDeckMapPointSourceSql(options: {
   const cleanedSourceSqlQuery = options.sourceSqlQuery
     ?.trim()
     .replace(/(?:\s*;+\s*)+$/, '');
-  const baseSource = options.sourceSqlQuery
+  const baseSource = cleanedSourceSqlQuery
     ? `(${cleanedSourceSqlQuery}) AS "__sqlrooms_dashboard_map_source"`
     : quoteDeckMapSqlTableReference(options.tableReference);
 

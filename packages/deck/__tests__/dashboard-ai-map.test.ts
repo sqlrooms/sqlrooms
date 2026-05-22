@@ -155,6 +155,23 @@ describe('createDeckMapDashboardTool', () => {
     );
   });
 
+  it('falls back to table reference when cleaned source SQL is empty', async () => {
+    const deps = createDeps();
+    const tool = createDeckMapDashboardTool(deps);
+
+    const result = await (tool as any).execute({
+      tableName: 'earthquakes',
+      sqlQuery: ' ; ',
+      title: 'Earthquake map',
+      reasoning: 'show locations',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(
+      deps.panels[0].config.datasets.earthquakes.source.sqlQuery,
+    ).toContain('FROM "earthquakes"');
+  });
+
   it('updates an existing map panel', async () => {
     const deps = createDeps();
     const tool = createDeckMapDashboardTool(deps);
