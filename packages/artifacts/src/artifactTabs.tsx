@@ -505,6 +505,12 @@ export type ArtifactTabsProps = Omit<
     ) => React.ReactNode;
     emptyContent?: React.ReactNode;
     content?: React.ReactNode;
+    /**
+     * Keep visible artifact tab panels mounted and hide inactive panels.
+     *
+     * Ignored when a custom `content` renderer is provided.
+     */
+    forceMountContent?: boolean;
     overlay?:
       | React.ReactNode
       | ((actions: UseArtifactTabsResult) => React.ReactNode);
@@ -519,9 +525,11 @@ function ArtifactTabsRoot({
   renderSearchItemActions,
   emptyContent,
   content,
+  forceMountContent = false,
   overlay,
   closeable = true,
   preventCloseLastTab = false,
+  getTabDragData,
   ...props
 }: ArtifactTabsProps) {
   const artifactTabs = useArtifactTabs({types, tabsId, panelKey});
@@ -553,6 +561,17 @@ function ArtifactTabsRoot({
                 )
             : undefined
         }
+        getTabDragData={(tab) => {
+          const artifactTab = tab as ArtifactTabDescriptor;
+          const userData = getTabDragData?.(artifactTab);
+          return {
+            kind: 'artifact',
+            id: artifactTab.artifact.id,
+            type: artifactTab.artifact.type,
+            title: artifactTab.artifact.title,
+            ...userData,
+          };
+        }}
       >
         {children ?? (
           <>
@@ -563,7 +582,7 @@ function ArtifactTabsRoot({
         )}
       </TabStrip>
       <TabsLayout.TabContentContainer>
-        {content ?? <TabsLayout.TabContent />}
+        {content ?? <TabsLayout.TabContent forceMount={forceMountContent} />}
         {artifactTabs.tabs.length === 0 ? emptyContent : null}
       </TabsLayout.TabContentContainer>
       {typeof overlay === 'function' ? overlay(artifactTabs) : overlay}

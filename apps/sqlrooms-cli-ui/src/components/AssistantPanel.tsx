@@ -1,132 +1,55 @@
-import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
 import {RoomPanelHeader} from '@sqlrooms/room-shell';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  SkeletonPane,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  useDisclosure,
-} from '@sqlrooms/ui';
-import {Settings} from 'lucide-react';
-import React from 'react';
+import {Button, useDisclosure} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
+import React, {useEffect} from 'react';
 import {useRoomStore} from '../store';
+import {AssistantChatContainer} from './AssistantChatContainer';
+import {AssistantSettingsDialog} from './AssistantSettingsDialog';
+import {useAssistantContextDropTarget} from './assistantUtils';
 
 export const AssistantPanel: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
-  const isDataAvailable = useRoomStore((state) => state.room.initialized);
-  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
+  const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const settingsPanelOpen = useDisclosure();
+  const contextDropTarget = useAssistantContextDropTarget();
+
+  useEffect(() => {
+    if (!currentSessionId && settingsPanelOpen.isOpen) {
+      settingsPanelOpen.onClose();
+    }
+  }, [currentSessionId, settingsPanelOpen.isOpen, settingsPanelOpen.onClose]);
 
   return (
     <div className="flex h-full flex-col p-2">
-      <RoomPanelHeader />
-      <Chat.Root>
-        <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <Chat.Sessions className="w-full" />
-            {currentSessionId && (
-              <Dialog
-                open={settingsPanelOpen.isOpen}
-                onOpenChange={(open) => {
-                  if (open) {
-                    settingsPanelOpen.onOpen();
-                  } else {
-                    settingsPanelOpen.onClose();
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="hover:bg-accent flex items-center justify-center transition-colors"
-                    title="Configuration"
-                    size="sm"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="flex h-[80vh] w-[90vw] max-w-3xl flex-col overflow-hidden">
-                  <DialogHeader>
-                    <DialogTitle>AI Assistant Settings</DialogTitle>
-                  </DialogHeader>
-                  <Tabs
-                    defaultValue="providers"
-                    className="flex min-h-0 flex-1 flex-col"
-                  >
-                    <TabsList className="grid w-full shrink-0 grid-cols-3">
-                      <TabsTrigger value="providers">Providers</TabsTrigger>
-                      <TabsTrigger value="models">Models</TabsTrigger>
-                      <TabsTrigger value="parameters">Parameters</TabsTrigger>
-                    </TabsList>
-                    <TabsContent
-                      value="providers"
-                      className="flex-1 overflow-y-auto"
-                    >
-                      <AiSettingsPanel.ProvidersSettings />
-                    </TabsContent>
-                    <TabsContent
-                      value="models"
-                      className="flex-1 overflow-y-auto"
-                    >
-                      <AiSettingsPanel.ModelsSettings />
-                    </TabsContent>
-                    <TabsContent
-                      value="parameters"
-                      className="flex-1 overflow-y-auto"
-                    >
-                      <AiSettingsPanel.ModelParametersSettings />
-                    </TabsContent>
-                  </Tabs>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-          <div className="print-container grow overflow-auto">
-            {!currentSessionId ? (
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                <p className="text-muted-foreground mt-4">
-                  No session selected
-                </p>
-              </div>
-            ) : isDataAvailable ? (
-              <Chat.Messages key={currentSessionId} />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                <SkeletonPane className="p-4" />
-                <p className="text-muted-foreground mt-4">
-                  Loading database...
-                </p>
-              </div>
-            )}
-          </div>{' '}
-          <Chat.PromptSuggestions>
-            <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
-            <Chat.PromptSuggestions.Item text="Show me a summary of the data" />
-            <Chat.PromptSuggestions.Item text="What are the key trends?" />
-            <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
-          </Chat.PromptSuggestions>
-          <Chat.Composer placeholder="What would you like to learn about the data?">
-            <Chat.InlineApiKeyInput
-              onSaveApiKey={(provider, apiKey) => {
-                updateProvider(provider, {apiKey});
+      <RoomPanelHeader>
+        <div className="ml-auto flex items-center gap-1">
+          {currentSessionId && (
+            <AssistantSettingsDialog
+              isOpen={settingsPanelOpen.isOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  settingsPanelOpen.onOpen();
+                } else {
+                  settingsPanelOpen.onClose();
+                }
               }}
             />
-            <div className="flex items-center justify-end gap-2">
-              <Chat.PromptSuggestions.VisibilityToggle />
-              <Chat.ModelSelector />
-            </div>
-          </Chat.Composer>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6"
+            title="Close panel"
+            aria-label="Close panel"
+            onClick={() => toggleCollapsed('assistant-sidebar')}
+          >
+            <XIcon className="h-3.5 w-3.5" />
+          </Button>
         </div>
-      </Chat.Root>
+      </RoomPanelHeader>
+      <AssistantChatContainer contextDropTarget={contextDropTarget} />
     </div>
   );
 };

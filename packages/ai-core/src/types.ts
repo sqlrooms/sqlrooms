@@ -1,5 +1,10 @@
 import type {ComponentType} from 'react';
-import type {AiSliceConfig, AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {
+  AiRunContext,
+  AiRunContextItem,
+  AiSliceConfig,
+  AnalysisSessionSchema,
+} from '@sqlrooms/ai-config';
 import type {
   UIMessage,
   ToolSet,
@@ -171,6 +176,14 @@ export type AddToolApprovalResponse = (options: {
 
 export type AiChatSendMessage = (message: {text: string}) => void;
 
+export type AiToolExecutionContext = {
+  sessionId?: string;
+  aiRunContext?: AiRunContext;
+  getAiRunContext?: () => AiRunContext | undefined;
+  setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+  setPrimaryRunContextItem?: (item: AiRunContextItem) => void;
+};
+
 /**
  * Minimal interface for the AI state accessed by chat transport functions.
  * This allows chatTransport.ts to avoid importing from AiSlice.ts directly.
@@ -180,6 +193,11 @@ export interface AiStateForTransport {
   tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
+  getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
+  setSessionRunContext: (
+    sessionId: string,
+    runContext: AiRunContext | undefined,
+  ) => void;
   getAbortController: (sessionId: string) => AbortController | undefined;
   setAbortController: (
     sessionId: string,
@@ -215,7 +233,7 @@ export interface AiStateForTransport {
   ) => void;
   readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
   clearAbortSnapshots?: () => void;
-  getFullInstructions: () => string;
+  getFullInstructions: (sessionId?: string) => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;
   /** Get base URL from settings for the current session's provider */

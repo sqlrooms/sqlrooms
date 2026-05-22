@@ -1,6 +1,6 @@
 import {cn} from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import React from 'react';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderActions} from './ChartBuilderActions';
 import {useChartBuilderContext} from './ChartBuilderContext';
 import {ChartBuilderFields} from './ChartBuilderFields';
@@ -8,9 +8,8 @@ import {ChartBuilderRoot, type ChartBuilderRootProps} from './ChartBuilderRoot';
 import {ChartBuilderTypeGrid} from './ChartBuilderTypeGrid';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 type StandaloneChartBuilderContentProps = {
   /** Table name to use in generated specs */
@@ -18,11 +17,9 @@ type StandaloneChartBuilderContentProps = {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
-  /** Preferred shared chart-type customization surface */
+  onCreateChart: (title: string, config: ChartConfig) => void;
+  /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
   /** Custom class name */
   className?: string;
 };

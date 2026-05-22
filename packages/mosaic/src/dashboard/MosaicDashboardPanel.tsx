@@ -1,9 +1,9 @@
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useMemo} from 'react';
+import {DashboardPanelErrorBoundary} from './DashboardPanelErrorBoundary';
 import {MosaicDashboardPanelHeader} from './MosaicDashboardPanelHeader';
 import {
   getMosaicDashboardSelectionName,
-  resolveMosaicDashboardPanelSource,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
@@ -28,13 +28,6 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
     [dashboard?.panels, panelId],
   );
   const renderer = panel ? panelRenderers[panel.type] : undefined;
-  const resolvedSource = useMemo(
-    () =>
-      dashboard && panel
-        ? resolveMosaicDashboardPanelSource(dashboard, panel)
-        : undefined,
-    [dashboard, panel],
-  );
 
   if (!dashboard || !panel) {
     return (
@@ -53,19 +46,19 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
         dashboard={dashboard}
         panel={panel}
         renderer={renderer}
-        resolvedSource={resolvedSource}
         selectionName={selectionName}
       />
 
       <div className="min-h-0 flex-1 overflow-hidden">
         {RendererComponent ? (
-          <RendererComponent
-            dashboardId={dashboardId}
-            dashboard={dashboard}
-            panel={panel}
-            resolvedSource={resolvedSource}
-            selectionName={selectionName}
-          />
+          <DashboardPanelErrorBoundary panelType={panel.type}>
+            <RendererComponent
+              dashboardId={dashboardId}
+              dashboard={dashboard}
+              panel={panel}
+              selectionName={selectionName}
+            />
+          </DashboardPanelErrorBoundary>
         ) : (
           <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
             Unsupported dashboard panel type: {panel.type}

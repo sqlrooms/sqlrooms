@@ -7,16 +7,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {Plus} from 'lucide-react';
-import React from 'react';
+import React, {PropsWithChildren} from 'react';
+import type {ChartConfig} from '../chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../chart-types/base-types';
 
 export type ChartBuilderTriggerProps = ButtonProps;
 
@@ -39,14 +38,13 @@ export const ChartBuilderTrigger = React.forwardRef<
 });
 ChartBuilderTrigger.displayName = 'ChartBuilderTrigger';
 
-export interface ChartBuilderDialogContentProps {
+export type ChartBuilderDialogContentProps = PropsWithChildren<{
   /** Override dialog title (default "Add Chart") */
   title?: string;
   /** Override dialog description */
   description?: string;
   className?: string;
-  children?: React.ReactNode;
-}
+}>;
 
 /**
  * The dialog content pane that renders the chart-builder steps.
@@ -81,11 +79,9 @@ export interface ChartBuilderDialogProps {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
-  /** Preferred shared chart-type customization surface */
+  onCreateChart: (title: string, config: ChartConfig) => void;
+  /** Optional chart types to show (defaults to all registered types) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
 }
 
 /**
@@ -106,7 +102,6 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   columns,
   onCreateChart,
   chartTypes,
-  builders,
 }) => (
   <ChartBuilderRoot
     open={open}
@@ -115,7 +110,6 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
     columns={columns}
     onCreateChart={onCreateChart}
     chartTypes={chartTypes}
-    builders={builders}
   >
     <ChartBuilderDialogContent />
   </ChartBuilderRoot>

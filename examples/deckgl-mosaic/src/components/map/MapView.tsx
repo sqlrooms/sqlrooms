@@ -55,11 +55,7 @@ export const MapView: FC<{className?: string}> = ({className}) => {
 
   const lastUpdateRef = useRef<number>(0);
 
-  const {
-    data: rawData,
-    isLoading,
-    client,
-  } = useMosaicClient({
+  const {data: rawData, client} = useMosaicClient({
     selectionName: 'brush',
     query: (filter: any) =>
       Query.from('earthquakes')
@@ -81,7 +77,7 @@ export const MapView: FC<{className?: string}> = ({className}) => {
     }),
     [rawData],
   );
-  const dbReady = !isLoading && rawData !== null;
+  const dbReady = rawData !== null;
   const {resolvedTheme} = useTheme();
   const colorScale = useMemo(() => {
     return {
@@ -133,10 +129,20 @@ export const MapView: FC<{className?: string}> = ({className}) => {
   );
 
   const onHover = (info: {coordinate?: [number, number]}) => {
-    if (!info.coordinate || !enableBrushing || !client) {
+    if (!enableBrushing || !client) {
       return;
     }
     if (!syncCharts) {
+      return;
+    }
+
+    if (!info.coordinate) {
+      brush?.update({
+        source: client,
+        value: null,
+        predicate: null as any,
+      });
+      lastUpdateRef.current = 0;
       return;
     }
 

@@ -1,6 +1,6 @@
 import {
   isLayoutDockNode,
-  LayoutDockNode,
+  isLayoutGridNode,
   LayoutNode,
   LayoutRenderer,
 } from '@sqlrooms/layout';
@@ -8,12 +8,13 @@ import {useCallback, useEffect, useMemo} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanelDragOverlay} from './MosaicDashboardPanelDragOverlay';
 import {MosaicDashboardPanel} from './MosaicDashboardPanel';
+import type {MosaicDashboardPanelConfig} from './dashboard-types';
 import {
   getMosaicDashboardDockId,
   MOSAIC_DASHBOARD_PANEL,
-  type MosaicDashboardPanelConfig,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
+import {MosaicDashboardInitialState} from './initial-state/MosaicDashboardInitialState';
 
 const EMPTY_DASHBOARD_PANELS: MosaicDashboardPanelConfig[] = [];
 
@@ -37,6 +38,11 @@ export const MosaicDashboardPanels: React.FC = () => {
     (state) =>
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.layout ?? null,
   );
+  const dashboardLayoutType = useStoreWithMosaicDashboard(
+    (state) =>
+      state.mosaicDashboard.config.dashboardsById[dashboardId]?.layoutType ??
+      'dock',
+  );
 
   useEffect(() => {
     registerPanel(MOSAIC_DASHBOARD_PANEL, () => ({
@@ -49,14 +55,17 @@ export const MosaicDashboardPanels: React.FC = () => {
     };
   }, [registerPanel, unregisterPanel]);
 
-  const dockNode: LayoutDockNode | null = useMemo(() => {
+  const rootLayout: LayoutNode | null = useMemo(() => {
     if (!dashboardLayout) return null;
+    if (dashboardLayoutType === 'grid') {
+      return isLayoutGridNode(dashboardLayout) ? dashboardLayout : null;
+    }
     return {
       type: 'dock',
       id: getMosaicDashboardDockId(dashboardId),
       root: dashboardLayout,
     };
-  }, [dashboardId, dashboardLayout]);
+  }, [dashboardId, dashboardLayout, dashboardLayoutType]);
 
   const handleLayoutChange = useCallback(
     (nextLayout: LayoutNode | null) => {
@@ -69,18 +78,16 @@ export const MosaicDashboardPanels: React.FC = () => {
     [dashboardId, setLayout],
   );
 
-  if (!panels.length || !dockNode) {
-    return (
-      <div className="text-muted-foreground flex min-h-[240px] items-center justify-center rounded-md border border-dashed p-6 text-sm">
-        Add a chart, profiler, or map to start building this dashboard.
-      </div>
-    );
+  const {onStart} = useMosaicDashboardContext();
+
+  if (!panels.length || !rootLayout) {
+    return <MosaicDashboardInitialState onStart={onStart} />;
   }
 
   return (
     <div className="h-full min-h-[360px]">
       <LayoutRenderer
-        rootLayout={dockNode}
+        rootLayout={rootLayout}
         onLayoutChange={handleLayoutChange}
       />
     </div>

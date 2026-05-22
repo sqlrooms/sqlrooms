@@ -363,6 +363,11 @@ def main(
         "--ui",
         help="Optional path to a custom UI bundle directory (Vite dist). If omitted, uses the bundled default UI.",
     ),
+    no_ui: bool = typer.Option(
+        False,
+        "--no-ui",
+        help="Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.",
+    ),
     sync: bool = typer.Option(
         False,
         "--sync",
@@ -419,6 +424,7 @@ def main(
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,
+        serve_ui=not no_ui,
         config_path=save_config_path,
     )
     try:

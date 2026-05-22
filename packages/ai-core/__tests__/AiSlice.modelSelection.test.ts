@@ -1,6 +1,12 @@
-import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
+import {
+  AiSettingsSliceConfig,
+  setAiRunContextPrimaryItem,
+} from '@sqlrooms/ai-config';
+import type {AiRunContext} from '@sqlrooms/ai-config';
+import {jest} from '@jest/globals';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
+import {withRunContextTools} from '../src/chatTransport';
 
 type TestStoreState = AiSliceState & {
   aiSettings: {
@@ -8,7 +14,9 @@ type TestStoreState = AiSliceState & {
   };
 };
 
-function createTestStore() {
+function createTestStore(options?: {
+  getRunContext?: () => AiRunContext | undefined;
+}) {
   const now = Date.now();
   const settingsConfig: AiSettingsSliceConfig = {
     providers: {
@@ -34,6 +42,11 @@ function createTestStore() {
     ...createAiSlice({
       tools: {} as any,
       getInstructions: () => 'test instructions',
+      getRunContext: options?.getRunContext,
+      formatRunContextInstructions: ({runContext}) => {
+        const mainItem = runContext.items[0];
+        return mainItem ? `Context: ${mainItem.type} ${mainItem.title}` : '';
+      },
       defaultProvider: 'openai',
       defaultModel: 'shared-model',
       config: {
@@ -102,5 +115,123 @@ describe('AiSlice model selection', () => {
     expect(currentSession?.id).not.toBe(previousSessionId);
     expect(currentSession?.modelProvider).toBe('anthropic');
     expect(currentSession?.model).toBe('shared-model');
+  });
+
+  it('captures run context once when starting analysis', async () => {
+    const contextA: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'map-a',
+          type: 'map',
+          title: 'Map A',
+        },
+      ],
+      capturedAt: 1,
+    };
+    const contextB: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'map-b',
+          type: 'map',
+          title: 'Map B',
+        },
+      ],
+      capturedAt: 2,
+    };
+    let activeContext = contextA;
+    const store = createTestStore({
+      getRunContext: () => activeContext,
+    });
+    const sendMessage = jest.fn();
+
+    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    store.getState().ai.setPrompt('session-1', 'hello');
+    await store.getState().ai.startAnalysis('session-1');
+    activeContext = contextB;
+
+    const session = store.getState().ai.config.sessions[0];
+    expect(session?.runContext).toEqual(contextA);
+    expect(store.getState().ai.getFullInstructions('session-1')).toContain(
+      'Map A',
+    );
+    expect(store.getState().ai.getFullInstructions('session-1')).not.toContain(
+      'Map B',
+    );
+    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
+  });
+
+  it('keeps wrapped tool run context mutable across tool calls', async () => {
+    let runContext: AiRunContext | undefined = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'doc-1',
+          type: 'document',
+          title: 'Doc',
+        },
+      ],
+      primaryItemId: 'doc-1',
+      capturedAt: 1,
+    };
+    const setSessionRunContext = jest.fn(
+      (_sessionId: string, nextContext: AiRunContext | undefined) => {
+        runContext = nextContext;
+      },
+    );
+
+    const tools = withRunContextTools(
+      {
+        set_primary: {
+          execute: async (_input: unknown, context: any) => {
+            context.setPrimaryRunContextItem({
+              kind: 'artifact',
+              id: 'dashboard-1',
+              type: 'dashboard',
+              title: 'Dashboard',
+            });
+            return {success: true};
+          },
+        },
+        read_context: {
+          execute: async (_input: unknown, context: any) => ({
+            aiRunContextPrimaryItemId: context.aiRunContext?.primaryItemId,
+            liveRunContextPrimaryItemId:
+              context.getAiRunContext()?.primaryItemId,
+          }),
+        },
+      } as any,
+      {
+        sessionId: 'session-1',
+        aiRunContext: runContext,
+        getAiRunContext: () => runContext,
+        setAiRunContext: (nextContext) =>
+          setSessionRunContext('session-1', nextContext),
+        setPrimaryRunContextItem: (item) =>
+          setSessionRunContext(
+            'session-1',
+            setAiRunContextPrimaryItem(runContext, item),
+          ),
+        state: {
+          ai: {
+            setToolCallSession: jest.fn(),
+          },
+        } as any,
+      },
+    );
+
+    await tools.set_primary?.execute?.({}, {});
+    const result = (await tools.read_context?.execute?.({}, {})) as {
+      aiRunContextPrimaryItemId?: string;
+      liveRunContextPrimaryItemId?: string;
+    };
+
+    expect(result.aiRunContextPrimaryItemId).toBe('dashboard-1');
+    expect(result.liveRunContextPrimaryItemId).toBe('dashboard-1');
+    expect(setSessionRunContext).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({primaryItemId: 'dashboard-1'}),
+    );
   });
 });

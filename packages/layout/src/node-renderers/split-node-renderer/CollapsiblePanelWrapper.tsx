@@ -1,6 +1,9 @@
 import {ResizablePanel} from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useCallback, useEffect, useRef} from 'react';
-import {type PanelImperativeHandle} from 'react-resizable-panels';
+import {
+  type PanelImperativeHandle,
+  type PanelSize,
+} from 'react-resizable-panels';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {LayoutNodeSize} from '@sqlrooms/layout-config';
 
@@ -13,6 +16,11 @@ const DEFAULT_COLLAPSIBLE_MIN_SIZE = '10%';
 export type CollapsiblePanelWrapperProps = {
   panelId: string;
   collapsed: boolean;
+  onResize?: (
+    panelSize: PanelSize,
+    id: string | number | undefined,
+    prevPanelSize: PanelSize | undefined,
+  ) => void;
 } & LayoutNodeSize;
 
 export const CollapsiblePanelWrapper: FC<
@@ -25,6 +33,7 @@ export const CollapsiblePanelWrapper: FC<
   defaultSize,
   minSize,
   maxSize,
+  onResize,
   children,
 }) => {
   const {onCollapse, onExpand} = useLayoutRendererContext();
@@ -45,19 +54,28 @@ export const CollapsiblePanelWrapper: FC<
     }
   }, [collapsed]);
 
-  const handleResize = useCallback(() => {
-    const handle = panelRef.current;
+  const handleResize = useCallback(
+    (
+      panelSize: PanelSize,
+      id: string | number | undefined,
+      prevPanelSize: PanelSize | undefined,
+    ) => {
+      const handle = panelRef.current;
 
-    if (!panelId || !handle) {
-      return;
-    }
+      if (!panelId || !handle) {
+        return;
+      }
 
-    if (collapsed && !handle.isCollapsed()) {
-      onExpand?.(panelId);
-    } else if (!collapsed && handle.isCollapsed()) {
-      onCollapse?.(panelId);
-    }
-  }, [panelId, collapsed, onExpand, onCollapse]);
+      if (collapsed && !handle.isCollapsed()) {
+        onExpand?.(panelId);
+      } else if (!collapsed && handle.isCollapsed()) {
+        onCollapse?.(panelId);
+      }
+
+      onResize?.(panelSize, id, prevPanelSize);
+    },
+    [panelId, collapsed, onExpand, onCollapse, onResize],
+  );
 
   const effectiveMinSize =
     minSize ?? (collapsible ? DEFAULT_COLLAPSIBLE_MIN_SIZE : undefined);

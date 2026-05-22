@@ -1,4 +1,7 @@
-import {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {
+  AnalysisSessionSchema,
+  getAiRunContextPrimaryItem,
+} from '@sqlrooms/ai-config';
 
 /** Minimal valid base fields required by the schema after migration */
 const baseFields = {
@@ -81,6 +84,96 @@ describe('AnalysisSession migration', () => {
       const result = AnalysisSessionSchema.parse(raw);
       expect(result.uiMessages).toHaveLength(1);
       expect(result.uiMessages[0]?.id).toBe('msg-2');
+    });
+
+    it('migrates optional legacy artifact run context', () => {
+      const raw = {
+        ...baseFields,
+        uiMessages: [],
+        runContext: {
+          kind: 'artifact',
+          id: 'map-1',
+          type: 'map',
+          title: 'Map A',
+          capturedAt: 123,
+        },
+      };
+      const result = AnalysisSessionSchema.parse(raw);
+      expect(result.runContext).toEqual({
+        items: [
+          {
+            kind: 'artifact',
+            id: 'map-1',
+            type: 'map',
+            title: 'Map A',
+          },
+        ],
+        capturedAt: 123,
+      });
+    });
+
+    it('preserves ordered multi-item run context', () => {
+      const raw = {
+        ...baseFields,
+        uiMessages: [],
+        runContext: {
+          items: [
+            {
+              kind: 'artifact',
+              id: 'map-1',
+              type: 'map',
+              title: 'Map A',
+            },
+            {
+              kind: 'artifact',
+              id: 'dashboard-1',
+              type: 'dashboard',
+              title: 'Dashboard',
+            },
+          ],
+          capturedAt: 123,
+        },
+      };
+      const result = AnalysisSessionSchema.parse(raw);
+      expect(result.runContext).toEqual(raw.runContext);
+      expect(getAiRunContextPrimaryItem(result.runContext)?.id).toBe('map-1');
+    });
+
+    it('uses primaryItemId when present in run context', () => {
+      const raw = {
+        ...baseFields,
+        uiMessages: [],
+        runContext: {
+          primaryItemId: 'dashboard-1',
+          items: [
+            {
+              kind: 'artifact',
+              id: 'map-1',
+              type: 'map',
+              title: 'Map A',
+            },
+            {
+              kind: 'artifact',
+              id: 'dashboard-1',
+              type: 'dashboard',
+              title: 'Dashboard',
+            },
+          ],
+          capturedAt: 123,
+        },
+      };
+      const result = AnalysisSessionSchema.parse(raw);
+      expect(getAiRunContextPrimaryItem(result.runContext)?.id).toBe(
+        'dashboard-1',
+      );
+    });
+
+    it('keeps run context optional for old sessions', () => {
+      const result = AnalysisSessionSchema.parse({
+        ...baseFields,
+        uiMessages: [],
+      });
+      expect(result.runContext).toBeUndefined();
     });
   });
 });

@@ -32,8 +32,19 @@ import {
   toArrowClientResult,
 } from './tableInterop';
 
-export const MosaicSliceConfig = z.object({});
+export const MAX_DATA_POINTS = 10000;
+
+export const MosaicSliceConfig = z.object({
+  maxDataPoints: z.number().int().min(1).optional(),
+});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
+
+export type MosaicPreAggregateOptions = {
+  /** Database schema/namespace for Mosaic pre-aggregate tables. */
+  schema?: string;
+  /** Enable or disable Mosaic's pre-aggregation optimization. */
+  enabled?: boolean;
+};
 
 // Client configuration options
 export type MosaicClientOptions = {
@@ -63,12 +74,24 @@ export type TrackedClient = {
   queryResultCallback?: (result: ArrowTable) => void; // External callback
 };
 
+export type MosaicIdleConnection = {status: 'idle'};
+export type MosaicLoadingConnection = {status: 'loading'};
+export type MosaicReadyConnection = {
+  status: 'ready';
+  connector?: Connector;
+  coordinator: Coordinator;
+};
+export type MosaicErrorConnection = {status: 'error'; error: unknown};
+
+export type MosaicConnection =
+  | MosaicIdleConnection
+  | MosaicLoadingConnection
+  | MosaicReadyConnection
+  | MosaicErrorConnection;
+
 export type MosaicSliceState = {
   mosaic: SliceFunctions & {
-    connection:
-      | {status: 'idle' | 'loading'}
-      | {status: 'ready'; connector?: Connector; coordinator: Coordinator}
-      | {status: 'error'; error: unknown};
+    connection: MosaicConnection;
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
     clients: Record<string, TrackedClient>;
@@ -101,6 +124,7 @@ export function createDefaultMosaicConfig(
   props?: Partial<MosaicSliceConfig>,
 ): MosaicSliceConfig {
   return {
+    maxDataPoints: MAX_DATA_POINTS,
     ...props,
   } as MosaicSliceConfig;
 }
@@ -108,15 +132,35 @@ export function createDefaultMosaicConfig(
 export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
+  preagg?: MosaicPreAggregateOptions;
+  /**
+   * Maximum number of data points allowed in a chart query result.
+   * Charts that would render more than this limit will show an error instead.
+   * @default 10000
+   */
+  maxDataPoints?: number;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
+  const resolvedMaxDataPoints =
+    props.maxDataPoints ?? props.config?.maxDataPoints ?? MAX_DATA_POINTS;
+
+  // Validate maxDataPoints
+  if (!Number.isInteger(resolvedMaxDataPoints) || resolvedMaxDataPoints < 1) {
+    throw new Error(
+      `maxDataPoints must be a positive integer, got: ${resolvedMaxDataPoints}`,
+    );
+  }
+
   return createSlice<
     MosaicSliceState,
     BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
   >((set, get, store) => ({
     mosaic: {
-      config: createDefaultMosaicConfig(props?.config),
+      config: createDefaultMosaicConfig({
+        ...props?.config,
+        maxDataPoints: resolvedMaxDataPoints,
+      }),
       connection: {status: 'idle'},
       clients: {},
       selections: {},
@@ -132,16 +176,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         try {
           if (props.coordinator) {
             resolvedCoordinator = props.coordinator;
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
           } else {
             const dbConnector = await get().db.getConnector();
             resolvedCoordinator = coordinator();
             mosaicConnector = isWasmDuckDbConnector(dbConnector)
               ? await wasmConnector({
-                  // @ts-expect-error - We install a different version of duckdb-wasm
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - We might be using a different version of duckdb-wasm than mosaic expects
                   duckDb: dbConnector.getDb(),
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - same version mismatch
                   connection: dbConnector.getConnection(),
                 })
               : createDuckDbMosaicConnector(dbConnector);
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
         } catch (error) {
@@ -248,6 +297,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
           client.enabled = false;
           options.queryError?.(error);
         };
@@ -355,6 +405,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
           client.enabled = false;
           options.onQueryError?.(error);
           options.queryError?.(error);
@@ -416,6 +467,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
     },
   }));
+}
+
+function applyMosaicPreAggregateOptions(
+  mosaicCoordinator: Coordinator,
+  options?: MosaicPreAggregateOptions,
+) {
+  if (!options) {
+    return;
+  }
+  if (options.schema !== undefined) {
+    mosaicCoordinator.preaggregator.schema = options.schema;
+  }
+  if (options.enabled !== undefined) {
+    mosaicCoordinator.preaggregator.enabled = options.enabled;
+  }
 }
 
 export type DuckDbSliceStateWithMosaic = DuckDbSliceState & MosaicSliceState;

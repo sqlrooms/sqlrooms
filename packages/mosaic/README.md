@@ -41,6 +41,36 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
+Mosaic's pre-aggregation optimization creates `preagg_*` cache tables lazily
+when users interact with cross-filtered selections. By default Mosaic writes
+those tables to the persistent `mosaic` schema. If the DuckDB database is a user
+project file, point pre-aggregates at an attached cache database or disable them:
+
+```tsx
+const mosaicCacheDatabase = '__sqlrooms_mosaic_cache';
+
+const connector = createWebSocketDuckDbConnector({
+  initializationQuery: [
+    `ATTACH IF NOT EXISTS ':memory:' AS ${mosaicCacheDatabase}`,
+    `CREATE SCHEMA IF NOT EXISTS ${mosaicCacheDatabase}.mosaic`,
+  ].join('; '),
+});
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    // ... db slice using connector
+    ...createMosaicSlice({
+      preagg: {
+        schema: `${mosaicCacheDatabase}.mosaic`,
+      },
+    })(set, get, store),
+  }),
+);
+```
+
+Set `preagg.enabled` to `false` when you prefer to avoid pre-aggregate tables
+entirely.
+
 The Mosaic connection is automatically initialized when the DuckDB connector is ready. You can check the connection status:
 
 ```tsx
@@ -147,8 +177,8 @@ runtime add-panel actions when creating the dashboard slice.
 import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardChartPanelConfig,
   createMosaicDashboardSlice,
-  createMosaicDashboardVgPlotPanelConfig,
   MosaicDashboard,
 } from '@sqlrooms/mosaic';
 
@@ -170,12 +200,103 @@ function addProfiler(store: RoomStore) {
     }),
   );
 }
+
+function addBoxPlotChart(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardChartPanelConfig('Magnitude by Region', {
+      chartType: 'box-plot',
+      settings: {
+        x: 'region',
+        y: 'magnitude',
+      },
+    }),
+  );
+}
 ```
+
+Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
+Existing persisted dashboards default to `dock`; pass `'grid'` to
+`createDashboard(title, 'grid')` or `ensureDashboard(id, title, 'grid')` when
+creating a dashboard that should use the scrollable grid renderer. Re-ensuring
+an existing dashboard does not convert between layout types.
 
 Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
 panel omits a source it falls back to the dashboard selected table. Panel renderer
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
+
+### Dashboard AI Tools
+
+`@sqlrooms/mosaic/ai` provides reusable assistant tools for dashboard authoring,
+including chart tools, profiler/text panel tools, panel management tools, and an
+optional exploratory `dashboard_agent`. Client apps supply a small adapter that
+maps Mosaic's generic dashboard operations to their store, artifact model, table
+metadata, and AI run context. When an AI run context is present, implicit
+dashboard targeting should resolve only a primary dashboard context item;
+reference-only dashboard artifacts should require an explicit `artifactId`.
+
+```ts
+import {
+  createDashboardAiTools,
+  type DashboardAiAdapter,
+} from '@sqlrooms/mosaic/ai';
+
+const adapter: DashboardAiAdapter<AppState> = {
+  getTables: (state) => state.db.tables,
+  hasRunContext: (state, context) => hasAiRunContext(context),
+  resolveContextDashboardArtifactId: (state, context) =>
+    getPrimaryDashboardArtifactIdFromRunContext(context, state),
+  makeDashboardPrimaryForRun: (state, artifactId, context) =>
+    makeArtifactPrimaryForAiRun(artifactId, context),
+  getCurrentDashboardArtifactId: (state) =>
+    state.dashboard.getCurrentDashboardArtifactId(),
+  createDashboardArtifact: (state, title, layoutType) =>
+    state.dashboard.createDashboardArtifact(title, layoutType),
+  isDashboardArtifact: (state, artifactId) =>
+    state.artifacts.getArtifact(artifactId)?.type === 'dashboard',
+  setCurrentArtifact: (state, artifactId) =>
+    state.artifacts.setCurrentArtifact(artifactId),
+  ensureDashboard: (state, dashboardId) =>
+    state.dashboard.ensureDashboardArtifact(dashboardId),
+  getDashboard: (state, dashboardId) =>
+    state.mosaicDashboard.getDashboard(dashboardId),
+  setSelectedTable: (state, dashboardId, tableName) =>
+    state.mosaicDashboard.setSelectedTable(dashboardId, tableName),
+  addPanel: (state, dashboardId, panel) =>
+    state.mosaicDashboard.addPanel(dashboardId, panel),
+  updatePanel: (state, dashboardId, panelId, patch) =>
+    state.mosaicDashboard.updatePanel(dashboardId, panelId, patch),
+  removePanel: (state, dashboardId, panelId) =>
+    state.mosaicDashboard.removePanel(dashboardId, panelId),
+};
+
+const dashboardTools = createDashboardAiTools({store, adapter});
+```
+
+### Box Plot Chart Type
+
+The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses
+a custom renderer instead of Vega-Lite. It calculates quartiles, whiskers, and
+outliers directly in DuckDB using SQL queries, then renders them with Observable
+Plot primitives. This approach provides better performance and more accurate
+statistical calculations than Observable Plot's built-in `boxY` mark.
+
+Box plots support:
+
+- Grouped box plots by categorical variable (x-axis)
+- Y-axis brushing for interactive filtering
+- Cross-filtering integration with other dashboard charts
+- Custom quartile calculation using DuckDB's `quantile_cont` function
+
+The renderer is modular and organized in the `chart-types/box-plot/renderer/`
+directory with separate concerns:
+
+- **BoxPlotPanelRenderer.tsx** - Main React component with drag interactions
+- **BoxPlotClient.ts** - Mosaic client for SQL-based data queries
+- **plot.ts** - Observable Plot rendering logic
+- **utils.ts** - Statistical calculations and coordinate transformations
+- **constants.ts** - Theme colors and layout constants
 
 ### Chart Builder Compound Components
 
@@ -198,6 +319,9 @@ function MyDashboard() {
       columns={columns}
       onCreateChart={(spec, title) => {
         // Handle chart creation
+      }}
+      onCreateChartOutput={(output, title) => {
+        // Optional: handle non-spec outputs such as dashboard panel chart types.
       }}
     >
       <ChartBuilderTrigger />

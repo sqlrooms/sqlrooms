@@ -2,7 +2,10 @@ import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
+import {CrdtSliceState} from '@sqlrooms/crdt';
+import {DocumentsSliceState} from '@sqlrooms/documents';
 import type {
+  MosaicDashboardLayoutType,
   MosaicDashboardSliceState,
   MosaicSliceState,
 } from '@sqlrooms/mosaic';
@@ -41,8 +44,17 @@ export type RoomState = RoomShellSliceState &
   CellsSliceState &
   NotebookSliceState &
   CanvasSliceState &
+  DocumentsSliceState &
+  CrdtSliceState &
   WebContainerSliceState &
   DbSettingsSliceState & {
+    aiContextMode: 'auto' | 'manual';
+    aiContextItemIds: string[];
+    setAiContextItemIds: (
+      artifactIds: string[],
+      mode?: 'auto' | 'manual',
+    ) => void;
+    replaceAiContextWithArtifact: (artifactId: string) => void;
     appProject: {
       config: AppBuilderProjectConfig;
       upsertArtifactApp: (
@@ -65,10 +77,10 @@ export type RoomState = RoomShellSliceState &
       destroy?: () => Promise<void>;
       ensureDashboardArtifact: (artifactId: string) => void;
       addProfilerForTable: (tableName: string) => string | undefined;
-      setDashboardVgPlot: (artifactId: string, vgplot: string) => void;
-      getDashboardVgPlot: (artifactId: string) => string | undefined;
       getCurrentDashboardArtifactId: () => string | undefined;
-      createDashboardArtifact: (title?: string) => string;
-      setCurrentDashboardVgPlot: (vgplot: string) => string;
+      createDashboardArtifact: (
+        title?: string,
+        layoutType?: MosaicDashboardLayoutType,
+      ) => string;
     };
   };

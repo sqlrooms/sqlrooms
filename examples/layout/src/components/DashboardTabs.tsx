@@ -12,6 +12,7 @@ export const DashboardTabs: RoomPanelComponent = ({panelId}) => {
     if (!panelId) {
       return;
     }
+
     const activeTabId = getActiveTab(panelId);
     if (!activeTabId) {
       return;

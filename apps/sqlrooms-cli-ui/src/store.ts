@@ -2,11 +2,15 @@ import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
   AiSliceConfig,
+  getAiRunContextPrimaryItem,
+  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
+  type AiRunContext,
+  type AiRunContextItem,
 } from '@sqlrooms/ai';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
@@ -18,22 +22,31 @@ import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   deckMapDashboardPanelRenderer,
+  findLongitudeLatitudeColumns,
 } from '@sqlrooms/deck';
 import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
+  defaultLoadSchemaCatalogFilter,
   type DataTable,
   QualifiedTableName,
+  type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
+import {
+  createCrdtSlice,
+  createIndexedDbDocStorage,
+  createWebSocketSyncConnector,
+} from '@sqlrooms/crdt';
 import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
-  createMosaicDashboardVgPlotPanelConfig,
   createMosaicSlice,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
   type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
+  createDefaultChartTypes,
+  defaultAddPanelActions,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -47,7 +60,11 @@ import {
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {
+  createChartImageForMarkdownTool,
+  createVegaChartTool,
+  VegaChartToolResult,
+} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   createWebContainerToolkit,
@@ -61,11 +78,20 @@ import {
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
+import {
+  createDocumentCommands,
+  createDocumentsSlice,
+  DOCUMENT_AI_INSTRUCTIONS,
+  DocumentsSliceConfig,
+} from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
   getDashboardAiInstructions,
 } from './createDashboardAiTools';
+import {dashboardAgentTool} from './createDashboardAgent';
+import {createArtifactContextAiTools} from './createArtifactContextAiTools';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
@@ -79,9 +105,10 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
-import {parseVgPlotSpecString} from './vgplot';
 
 export type {RoomState} from './store-types';
+
+const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiProviders =
@@ -92,10 +119,36 @@ const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
+const MOSAIC_PREAGG_SCHEMA = 'mosaic';
+const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CRDT_STORAGE_KEY = [
+  'sqlrooms-cli',
+  runtimeConfig.metaNamespace || '__sqlrooms',
+  runtimeConfig.dbPath || 'memory',
+  'documents',
+].join(':');
+
+function createCliCrdtSyncConnector() {
+  if (!runtimeConfig.syncEnabled) return undefined;
+  return createWebSocketSyncConnector({
+    url:
+      runtimeConfig.crdtWsUrl || runtimeConfig.wsUrl || 'ws://localhost:4000',
+    roomId:
+      runtimeConfig.crdtRoomId ||
+      `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    sendSnapshotOnConnect: false,
+  });
+}
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
-  initializationQuery: 'INSTALL spatial; LOAD spatial;',
+  initializationQuery: [
+    'INSTALL spatial',
+    'LOAD spatial',
+    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
+    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
+  ].join('; '),
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -115,25 +168,6 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
-const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
-const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
-
-function findColumnByName(table: DataTable, candidates: string[]) {
-  const candidateSet = new Set(candidates);
-  return table.columns.find((column) =>
-    candidateSet.has(column.name.toLowerCase()),
-  )?.name;
-}
-
-function findLongitudeLatitudeColumns(table?: DataTable) {
-  if (!table) return null;
-  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
-  return longitudeColumn && latitudeColumn
-    ? {longitudeColumn, latitudeColumn}
-    : null;
-}
-
 function quoteSqlIdentifier(identifier: string) {
   return `"${identifier.replace(/"/g, '""')}"`;
 }
@@ -148,17 +182,31 @@ function quoteTableReference(table: DataTable) {
 
 function createDeckMapPanelForTable(table: DataTable) {
   const coordinates = findLongitudeLatitudeColumns(table);
-  if (!coordinates) return undefined;
+
+  if (!coordinates) {
+    const tableName = table.table.table;
+    return createDeckMapDashboardPanelConfig({
+      title: `${tableName} map`,
+      datasets: {},
+      spec: {},
+    });
+  }
 
   const {longitudeColumn, latitudeColumn} = coordinates;
-  const datasetId = table.tableName;
+
+  const tableName = table.table.table;
+
+  const datasetId = tableName;
   const geometryColumn = '__sqlrooms_geom';
-  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
-  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
+  const quotedLongitude = longitudeColumn
+    ? quoteSqlIdentifier(longitudeColumn)
+    : undefined;
+  const quotedLatitude = latitudeColumn
+    ? quoteSqlIdentifier(latitudeColumn)
+    : undefined;
 
   return createDeckMapDashboardPanelConfig({
-    title: `${table.tableName} map`,
-    source: {tableName: table.tableName},
+    title: `${tableName} map`,
     spec: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [
@@ -202,8 +250,6 @@ const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
   type: DECK_MAP_DASHBOARD_PANEL_TYPE,
   label: 'Map',
   icon: MapIcon,
-  isEnabled: ({selectedTable}) =>
-    Boolean(findLongitudeLatitudeColumns(selectedTable)),
   createPanel: ({selectedTable}) =>
     selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
 };
@@ -218,6 +264,7 @@ const sliceConfigSchemas = {
   cells: CellsSliceConfig,
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
+  documents: DocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -260,6 +307,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
         )?.id;
+      const getRunContextDashboardArtifactId = () => {
+        const currentSession = get().ai.getCurrentSession();
+        const primaryItem = getAiRunContextPrimaryItem(
+          currentSession?.runContext,
+        );
+        if (!primaryItem) return undefined;
+        const artifact = get().artifacts.config.artifactsById[primaryItem.id];
+        return artifact?.type === 'dashboard' ? primaryItem.id : undefined;
+      };
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -268,9 +324,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
+          registerCommandsForOwner(
+            store,
+            DOCUMENT_COMMAND_OWNER,
+            createDocumentCommands<RoomState>(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -284,7 +346,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().dashboard.getCurrentDashboardArtifactId();
           const artifactId =
             existingDashboardArtifactId ??
-            get().dashboard.createDashboardArtifact('Dashboard');
+            get().dashboard.createDashboardArtifact('Dashboard', 'grid');
           if (!existingDashboardArtifactId) {
             get().artifacts.setCurrentArtifact(artifactId);
           }
@@ -297,62 +359,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
 
           const hasProfilerForTable = dashboard.panels.some(
-            (panel) =>
-              panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE &&
-              panel.source?.tableName === tableName,
+            (panel) => panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
           );
+
           if (!hasProfilerForTable) {
             get().mosaicDashboard.addPanel(
               artifactId,
               createMosaicDashboardProfilerPanelConfig({
                 title: `${tableName} profiler`,
-                source: {tableName},
               }),
             );
           }
 
           return artifactId;
         },
-        setDashboardVgPlot: (artifactId, vgplot) => {
-          const artifact = get().artifacts.getArtifact(artifactId);
-          if (!artifact) {
-            throw new Error(`Unknown artifact "${artifactId}".`);
-          }
-          if (artifact.type !== 'dashboard') {
-            throw new Error(
-              `Artifact "${artifactId}" is not a dashboard artifact.`,
-            );
-          }
-          const {parsed} = parseVgPlotSpecString(vgplot);
-          get().dashboard.ensureDashboardArtifact(artifactId);
-          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
-          const primaryPanel = dashboard?.panels.find(
-            (panel) => panel.type === 'vgplot',
-          );
-          if (primaryPanel) {
-            get().mosaicDashboard.updatePanel(artifactId, primaryPanel.id, {
-              config: {
-                ...primaryPanel.config,
-                vgplot: parsed,
-              },
-            });
-            return;
-          }
-          get().mosaicDashboard.addPanel(
-            artifactId,
-            createMosaicDashboardVgPlotPanelConfig(parsed, 'Chart 1'),
-          );
-        },
-        getDashboardVgPlot: (artifactId) =>
-          (() => {
-            const spec = get()
-              .mosaicDashboard.getDashboard(artifactId)
-              ?.panels.find((panel) => panel.type === 'vgplot')?.config.vgplot;
-            return spec && typeof spec === 'object'
-              ? JSON.stringify(spec, null, 2)
-              : undefined;
-          })(),
         getCurrentDashboardArtifactId: () => {
+          const contextDashboardArtifactId = getRunContextDashboardArtifactId();
+          if (contextDashboardArtifactId) {
+            return contextDashboardArtifactId;
+          }
           const currentArtifactId = get().artifacts.config.currentArtifactId;
           const currentArtifact = currentArtifactId
             ? get().artifacts.config.artifactsById[currentArtifactId]
@@ -362,7 +387,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           return getFirstDashboardArtifactId();
         },
-        createDashboardArtifact: (title) => {
+        createDashboardArtifact: (title, layoutType = 'grid') => {
           const artifactId = get().artifacts.createArtifact({
             type: 'dashboard',
             title: title ?? 'Dashboard',
@@ -370,17 +395,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           get().mosaicDashboard.ensureDashboard(
             artifactId,
             title ?? 'Dashboard',
+            layoutType,
           );
           return artifactId;
-        },
-        setCurrentDashboardVgPlot: (vgplot) => {
-          const state = get();
-          const targetArtifactId =
-            state.dashboard.getCurrentDashboardArtifactId() ??
-            state.dashboard.createDashboardArtifact();
-          state.dashboard.setDashboardVgPlot(targetArtifactId, vgplot);
-          state.artifacts.setCurrentArtifact(targetArtifactId);
-          return targetArtifactId;
         },
       };
 
@@ -472,6 +489,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   );
                 };
               })(),
+              loadSchemaCatalogFilter: (entry: SchemaCatalogFilterEntry) => {
+                if (!defaultLoadSchemaCatalogFilter(entry)) {
+                  return false;
+                }
+                if (
+                  entry.type === 'schema' &&
+                  entry.database === get().db.currentDatabase &&
+                  entry.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                if (
+                  entry.type === 'table' &&
+                  entry.table.database === get().db.currentDatabase &&
+                  entry.table.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                return true;
+              },
             },
           },
         })(set, get, store),
@@ -480,13 +517,21 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
 
-        ...createMosaicSlice()(set, get, store),
+        ...createMosaicSlice({
+          preagg: {
+            schema: MOSAIC_PREAGG_SCHEMA_REF,
+          },
+        })(set, get, store),
 
         ...createMosaicDashboardSlice({
-          addPanelActions: [deckMapDashboardAddPanelAction],
+          addPanelActions: [
+            ...defaultAddPanelActions,
+            deckMapDashboardAddPanelAction,
+          ],
           panelRenderers: createDefaultMosaicDashboardPanelRenderers({
             [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
           }),
+          chartTypes: createDefaultChartTypes(),
         })(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),
@@ -498,6 +543,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createNotebookSlice()(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
+
+        ...createDocumentsSlice()(set, get, store),
+
+        ...createCrdtSlice<RoomState>({
+          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+          sync: createCliCrdtSyncConnector(),
+          mirrors: {
+            documentState: createDocumentsCrdtMirror<RoomState>(),
+          },
+        })(set, get, store),
 
         ...createWebContainerSlice({
           autoInitialize: false,
@@ -523,12 +578,59 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
+            getRunContext: () => {
+              const state = store.getState();
+              const {artifactsById} = state.artifacts.config;
+              const items = Array.from(new Set(state.aiContextItemIds))
+                .map((artifactId): AiRunContextItem | undefined => {
+                  const artifact = artifactsById[artifactId];
+                  if (!artifact) return undefined;
+                  return {
+                    kind: 'artifact',
+                    id: artifact.id,
+                    type: artifact.type,
+                    title: artifact.title,
+                  };
+                })
+                .filter(Boolean) as AiRunContextItem[];
+              if (items.length === 0) return undefined;
+              return {
+                items,
+                primaryItemId: items[0]?.id,
+                capturedAt: Date.now(),
+              } satisfies AiRunContext;
+            },
+            formatRunContextInstructions: ({runContext}) => {
+              const artifactItems = getAiRunContextItems(runContext).filter(
+                (item) => item.kind === 'artifact',
+              );
+              if (artifactItems.length === 0) return '';
+              const mainItem =
+                getAiRunContextPrimaryItem(runContext) ?? artifactItems[0];
+              if (!mainItem) return '';
+              const additionalItems = artifactItems.filter(
+                (item) => item.id !== mainItem.id,
+              );
+              const artifactType = mainItem.type ?? 'artifact';
+              return [
+                'Current artifact context:',
+                `- Primary target: ${artifactType} "${mainItem.title}" (id: ${mainItem.id}). Pass this id as artifactId when using a tool that should modify it.`,
+                ...additionalItems.map(
+                  (item) =>
+                    `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
+                ),
+                '- Additional context items are reference-only by default; tools will not implicitly target them. Use set_primary_context_artifact before modifying a reference artifact.',
+              ].join('\n');
+            },
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
+              ...createArtifactContextAiTools(store),
               ...createDashboardAiTools(store),
+              dashboard_agent: dashboardAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
+              chart_image_for_markdown: createChartImageForMarkdownTool(store),
             },
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
@@ -537,6 +639,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
+        aiContextMode: 'auto',
+        aiContextItemIds: [],
+        setAiContextItemIds: (artifactIds, mode) => {
+          set({
+            aiContextItemIds: Array.from(new Set(artifactIds)),
+            ...(mode ? {aiContextMode: mode} : {}),
+          });
+        },
+        replaceAiContextWithArtifact: (artifactId) => {
+          set({aiContextItemIds: [artifactId]});
+        },
       };
     },
   ),

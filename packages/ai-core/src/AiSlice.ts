@@ -5,6 +5,7 @@ import {
   AnalysisSessionSchema,
   createDefaultAiConfig,
 } from '@sqlrooms/ai-config';
+import type {AiRunContext} from '@sqlrooms/ai-config';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -28,7 +29,6 @@ import {
   createRemoteChatTransportFactory,
 } from './chatTransport';
 import {
-  AI_DEFAULT_TEMPERATURE,
   ANALYSIS_CANCELLED,
   ANALYSIS_PENDING_ID,
   SESSION_DELETED,
@@ -58,6 +58,7 @@ import {
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
+import {formatDateTimeSimple} from '@sqlrooms/utils';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -153,6 +154,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
@@ -165,6 +167,11 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
+    getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
+    setSessionRunContext: (
+      sessionId: string,
+      runContext: AiRunContext | undefined,
+    ) => void;
     setSessionUiMessages: (
       sessionId: string,
       uiMessages: UIMessage[],
@@ -176,7 +183,7 @@ export type AiSliceState = {
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
-    getFullInstructions: () => string;
+    getFullInstructions: (sessionId?: string) => string;
     getLocalChatTransport: (
       sessionId: string,
     ) => DefaultChatTransport<UIMessage>;
@@ -221,7 +228,15 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   initialPrompt?: string;
   tools: TTools;
   toolRenderers?: ToolRenderers<TTools>;
-  getInstructions: () => string;
+  getInstructions: (args?: {
+    session?: AnalysisSessionSchema;
+    runContext?: AiRunContext;
+  }) => string;
+  getRunContext?: () => AiRunContext | undefined;
+  formatRunContextInstructions?: (args: {
+    runContext: AiRunContext;
+    session?: AnalysisSessionSchema;
+  }) => string;
   defaultProvider?: string;
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
@@ -252,6 +267,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
+    getRunContext,
+    formatRunContextInstructions,
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
@@ -658,6 +675,29 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return sessions.find((session) => session.id === currentSessionId);
         },
 
+        getSessionRunContext: (sessionId: string) => {
+          const state = get();
+          return state.ai.config.sessions.find(
+            (session: AnalysisSessionSchema) => session.id === sessionId,
+          )?.runContext;
+        },
+
+        setSessionRunContext: (
+          sessionId: string,
+          runContext: AiRunContext | undefined,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.runContext = runContext;
+              }
+            }),
+          );
+        },
+
         /**
          * Create a new session with the given name and model settings
          */
@@ -673,18 +713,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           let sessionName = name;
           if (!sessionName) {
             // Generate a human-readable date and time for the session name
-            const now = new Date();
-            const formattedDate = now.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            });
-            const formattedTime = now.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: 'numeric',
-              hour12: true,
-            });
-            sessionName = `Session ${formattedDate} at ${formattedTime}`;
+            sessionName = formatDateTimeSimple();
           }
 
           set((state) =>
@@ -937,10 +966,27 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return 50;
         },
 
-        getFullInstructions: () => {
+        getFullInstructions: (sessionId?: string) => {
           const store = get();
+          const session = sessionId
+            ? store.ai.config.sessions.find(
+                (candidate: AnalysisSessionSchema) =>
+                  candidate.id === sessionId,
+              )
+            : getCurrentSessionFromState(store);
+          const runContext = session?.runContext;
 
-          let instructions = getInstructions();
+          let instructions = getInstructions({session, runContext});
+
+          if (runContext && formatRunContextInstructions) {
+            const contextInstructions = formatRunContextInstructions({
+              runContext,
+              session,
+            });
+            if (contextInstructions.trim().length > 0) {
+              instructions = `${instructions}\n\n${contextInstructions}`;
+            }
+          }
 
           // Fall back to settings
           if (hasAiSettingsConfig(store)) {
@@ -1000,9 +1046,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           try {
             const response = await generateText({
               model,
-              temperature: AI_DEFAULT_TEMPERATURE,
               messages: [{role: 'user', content: prompt}],
-              system: systemInstructions || state.ai.getFullInstructions(),
+              system:
+                systemInstructions ||
+                state.ai.getFullInstructions(currentSession?.id),
               abortSignal: abortSignal,
               ...(useTools ? {tools: toolsWithoutExecute as ToolSet} : {}),
             });
@@ -1056,6 +1103,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               );
               if (draftSession) {
                 draftSession.isRunning = true;
+                draftSession.runContext = getRunContext?.();
                 draftSession.prompt = '';
                 draft.ai.promptSuggestionsVisible = false;
 
@@ -1078,6 +1126,55 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           // Send the message through the session's chat instance
           sendMessage({text: promptText});
+        },
+
+        /**
+         * Start a new session with a prompt and automatically begin analysis
+         */
+        startNewSession: async (name: string, prompt: string) => {
+          // Create the session
+          get().ai.createSession(name);
+
+          // Get the newly created session
+          const session = get().ai.getCurrentSession();
+          if (!session) {
+            console.error('Failed to create session');
+            return;
+          }
+
+          // Set the prompt
+          get().ai.setPrompt(session.id, prompt);
+
+          // Wait for SessionChatProvider to mount and register sendMessage
+          const waitForChatReadyAndStart = async (): Promise<void> => {
+            const maxAttempts = 50; // 50 * 20ms = 1 second max
+            let attempts = 0;
+
+            const checkAndStart = async () => {
+              const sendMessage = get().ai.getChatSendMessage(session.id);
+              if (sendMessage) {
+                // Chat provider is ready, start analysis
+                await get().ai.startAnalysis(session.id);
+                return;
+              }
+
+              attempts++;
+              if (attempts >= maxAttempts) {
+                console.error(
+                  'Timeout waiting for chat provider to register for session:',
+                  session.id,
+                );
+                return;
+              }
+
+              // Poll again after a short delay
+              setTimeout(checkAndStart, 20);
+            };
+
+            await checkAndStart();
+          };
+
+          void waitForChatReadyAndStart();
         },
 
         cancelAnalysis: (sessionId: string) => {
@@ -1233,7 +1330,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             store,
             defaultProvider: defaultProvider,
             defaultModel: defaultModel,
-            getInstructions: () => store.getState().ai.getFullInstructions(),
+            getInstructions: () =>
+              store.getState().ai.getFullInstructions(sessionId),
             getCustomModel,
             sessionId,
           })();
@@ -1249,7 +1347,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             defaultProvider,
             defaultModel,
             sessionId,
-            getInstructions: () => store.getState().ai.getFullInstructions(),
+            getInstructions: () =>
+              store.getState().ai.getFullInstructions(sessionId),
           })(endpoint, headers),
 
         ...createChatHandlers({store}),

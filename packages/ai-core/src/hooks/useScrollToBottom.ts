@@ -78,7 +78,8 @@ export function useScrollToBottom<T extends HTMLElement | null>({
    */
   dataToObserve,
   containerRef,
-  // endRef is kept in the signature for backward compatibility but is no longer used
+  // endRef kept in signature for backward compatibility but no longer used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   endRef: _endRef,
   /**
    * Whether to scroll to bottom on initial load.

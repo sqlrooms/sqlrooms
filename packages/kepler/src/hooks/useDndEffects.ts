@@ -17,7 +17,7 @@ type DndEffectsHook = {
 };
 
 const useDndEffects: (
-  mapId: string,
+  mapId: string | undefined,
   effects: Effect[],
   effectOrder: string[],
 ) => DndEffectsHook = (mapId, effects, effectOrder) => {
@@ -32,6 +32,7 @@ const useDndEffects: (
   const onEffectDragStart = useCallback(
     (event: DragStartEvent) => {
       const {active} = event;
+      if (!mapId) return;
       const newActiveEffect = effects.find((effect) => effect.id === active.id);
       if (newActiveEffect) {
         setActiveEffect(newActiveEffect);
@@ -49,6 +50,7 @@ const useDndEffects: (
   const onEffectDragEnd = useCallback(
     (event: DragEndEvent) => {
       const {active, over} = event;
+      if (!mapId) return;
 
       const {id: activeEffectId} = active;
       const overType = over?.data?.current?.type;

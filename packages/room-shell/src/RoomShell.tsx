@@ -1,4 +1,4 @@
-import {LayoutRenderer} from '@sqlrooms/layout';
+import {LayoutRenderer, RoomDndProvider} from '@sqlrooms/layout';
 import type {LayoutNode} from '@sqlrooms/layout-config';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
@@ -27,15 +27,17 @@ export function RoomShellBase({
   className?: string;
   roomStore?: RoomShellStore;
 }>) {
+  const CustomErrorBoundary =
+    roomStore?.getState().room.CustomErrorBoundary ?? ErrorBoundary;
   return (
     <RoomStateProvider roomStore={roomStore}>
       <div className={cn('flex h-full w-full', className)}>
-        <ErrorBoundary>
+        <CustomErrorBoundary>
           <Suspense fallback={<SpinnerPane h="100%" />}>
             <TooltipProvider>{children}</TooltipProvider>
             <Toaster />
           </Suspense>
-        </ErrorBoundary>
+        </CustomErrorBoundary>
       </div>
     </RoomStateProvider>
   );
@@ -173,6 +175,7 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
 };
 
 export const RoomShell = Object.assign(RoomShellBase, {
+  DndProvider: RoomDndProvider,
   /**
    * @deprecated Use SidebarContainer instead
    */

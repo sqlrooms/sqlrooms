@@ -8,9 +8,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
+  toast,
 } from '@sqlrooms/ui';
-import {PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
+import {
+  BarChart3Icon,
+  PencilIcon,
+  PlusIcon,
+  SparklesIcon,
+  TrashIcon,
+} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
@@ -31,6 +41,10 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       panelKey="artifact"
       closeable={true}
       preventCloseLastTab={false}
+      forceMountContent
+      dndMode="shared"
+      dndScopeId="cli-artifact-tabs"
+      fontSize={13}
       renderTabMenu={(tab) => (
         <>
           <ArtifactTabs.MenuItem disabled>
@@ -64,22 +78,91 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
 };
 
 function CliArtifactAddMenu() {
+  const artifactTabs = ArtifactTabs.useActions();
+  const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
+
+  const invokeCreateArtifactCommand = useCallback(
+    async (commandId: string, input?: Record<string, unknown>) => {
+      let result: Awaited<ReturnType<typeof invokeCommand>>;
+      try {
+        result = await invokeCommand(commandId, input, {
+          surface: 'api',
+          actor: 'artifact-tabstrip',
+        });
+      } catch (error) {
+        toast.error('Failed to create artifact', {
+          description:
+            error instanceof Error
+              ? error.message
+              : 'An unknown error occurred',
+        });
+        return;
+      }
+      const artifactId =
+        result.success &&
+        result.data &&
+        typeof result.data === 'object' &&
+        'artifactId' in result.data &&
+        typeof result.data.artifactId === 'string'
+          ? result.data.artifactId
+          : undefined;
+      if (artifactId) {
+        artifactTabs.selectArtifact(artifactId);
+      }
+    },
+    [artifactTabs, invokeCommand],
+  );
+
   return (
-    <ArtifactTabs.AddMenu>
-      {(artifactTabs) =>
-        CLI_ARTIFACT_TYPES.map((artifactType) => {
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-full shrink-0"
+          aria-label="Add new artifact"
+        >
+          <PlusIcon className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem
+          onClick={() =>
+            void invokeCreateArtifactCommand('dashboard.create-artifact', {
+              layoutType: 'grid',
+            })
+          }
+        >
+          <BarChart3Icon /> Dashboard
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() =>
+            void invokeCreateArtifactCommand('dashboard.create-artifact', {
+              layoutType: 'dock',
+            })
+          }
+        >
+          <BarChart3Icon /> Dashboard (dock)
+        </DropdownMenuItem>
+        {CLI_ARTIFACT_TYPES.filter(
+          (artifactType) => artifactType !== 'dashboard',
+        ).map((artifactType) => {
           const type = ARTIFACT_TYPES[artifactType];
           return (
             <DropdownMenuItem
               key={artifactType}
-              onClick={() => artifactTabs.createArtifact(artifactType)}
+              onClick={() =>
+                void invokeCreateArtifactCommand(
+                  `${artifactType}.create-artifact`,
+                )
+              }
             >
               <type.icon /> {`New ${type.label}`}
             </DropdownMenuItem>
           );
-        })
-      }
-    </ArtifactTabs.AddMenu>
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

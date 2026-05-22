@@ -1,6 +1,6 @@
 import {MosaicDashboard} from '@sqlrooms/mosaic';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {useEffect} from 'react';
+import {useCallback, useEffect} from 'react';
 import {useRoomStore} from '../../store';
 
 export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
@@ -11,6 +11,7 @@ export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const ensureDashboardArtifact = useRoomStore(
     (state) => state.dashboard.ensureDashboardArtifact,
   );
+  const startNewSession = useRoomStore((state) => state.ai.startNewSession);
 
   useEffect(() => {
     if (artifact?.type === 'dashboard') {
@@ -18,9 +19,18 @@ export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
     }
   }, [artifact?.type, artifactId, ensureDashboardArtifact]);
 
+  const handleStart = useCallback(
+    async (prompt: string) => {
+      // TODO: figure out a better way to instruct agent to use specific agent and dashboard artifact without hardcoding dashboard_agent in the prompt
+      const fullPrompt = `Use dashboard_agent to analyze the data and create charts in dashboard with id ${artifactId}. ${prompt}`;
+      await startNewSession('Dashboard Analysis', fullPrompt);
+    },
+    [artifactId, startNewSession],
+  );
+
   if (!artifact || artifact.type !== 'dashboard') {
     return null;
   }
 
-  return <MosaicDashboard dashboardId={artifactId} />;
+  return <MosaicDashboard dashboardId={artifactId} onStart={handleStart} />;
 };

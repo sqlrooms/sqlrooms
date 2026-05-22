@@ -8,6 +8,7 @@ import tempfile
 import threading
 import webbrowser
 import json
+import secrets
 from pathlib import Path
 from typing import Any, Dict
 
@@ -35,6 +36,16 @@ from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
+UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
+
+
+async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
+    bytes_written = 0
+    with open(target, "wb") as f:
+        while chunk := await file.read(UPLOAD_COPY_CHUNK_SIZE):
+            bytes_written += len(chunk)
+            f.write(chunk)
+    return bytes_written
 
 
 def _write_db_connectors_to_toml(
@@ -231,6 +242,7 @@ class SqlroomsHttpServer:
         | None = None,
         open_browser: bool = True,
         ui_dir: str | None = None,
+        serve_ui: bool = True,
         config_path: Path | None = None,
     ):
         db_path_str = str(db_path)
@@ -257,9 +269,11 @@ class SqlroomsHttpServer:
         self.api_key = api_key
         self.ai_providers = ai_providers or {}
         self.open_browser = open_browser
+        self.serve_ui = serve_ui
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
+        self.session_token = secrets.token_urlsafe(24)
         self.db_bridge_registry = build_cli_db_bridge_registry(
             bridge_id=DB_BRIDGE_ID,
             connector_settings=connector_settings,
@@ -294,7 +308,7 @@ class SqlroomsHttpServer:
         self._start_duckdb_backend()
         app = self._build_app()
 
-        if self.open_browser:
+        if self.open_browser and self.serve_ui:
             threading.Timer(1.0, self._open_browser).start()
 
         config = uvicorn.Config(
@@ -332,10 +346,16 @@ class SqlroomsHttpServer:
     def _runtime_config(self) -> Dict[str, Any]:
         return {
             "wsUrl": f"ws://{self._public_host()}:{self.ws_port}",
+            "wsAuthToken": self.session_token,
             "apiBaseUrl": "",
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
+            "syncEnabled": self.sync_enabled,
+            "crdtWsUrl": f"ws://{self._public_host()}:{self.ws_port}",
+            "crdtRoomId": (
+                f"sqlrooms-cli:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
+            ),
             "aiProviders": self.ai_providers,
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
@@ -348,14 +368,35 @@ class SqlroomsHttpServer:
             },
         }
 
+    def _is_authorized_request(self, request: Request) -> bool:
+        client_host = (request.client.host if request.client else "") or ""
+        if client_host in {"", "127.0.0.1", "::1", "localhost", "testclient"}:
+            return True
+        auth_header = (request.headers.get("authorization") or "").strip()
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
+            if token == self.session_token:
+                return True
+        token_header = (request.headers.get("x-sqlrooms-token") or "").strip()
+        return token_header == self.session_token
+
+    def _require_api_auth(self, request: Request):
+        if self._is_authorized_request(request):
+            return None
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
     def _build_app(self) -> FastAPI:
         app = FastAPI(title="sqlrooms", version="0.1.0")
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_origins=[
+                f"http://localhost:{self.port}",
+                f"http://127.0.0.1:{self.port}",
+                f"http://{self._public_host()}:{self.port}",
+            ],
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "X-SQLRooms-Token"],
         )
 
         @app.middleware("http")
@@ -387,7 +428,10 @@ class SqlroomsHttpServer:
             }
 
         @app.put("/api/db/settings")
-        async def put_db_settings(payload: Dict[str, Any]):
+        async def put_db_settings(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             if self.config_path is None:
                 return JSONResponse(
                     {
@@ -411,16 +455,20 @@ class SqlroomsHttpServer:
             return {"ok": True, "configPath": str(self.config_path)}
 
         @app.post("/api/upload")
-        async def upload_file(file: UploadFile = File(...)):
-            content = await file.read()
+        async def upload_file(request: Request, file: UploadFile = File(...)):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             safe_name = _sanitize_filename(file.filename)
             target = self.upload_dir / safe_name
-            with open(target, "wb") as f:
-                f.write(content)
+            await _write_upload_to_path(file, target)
             return {"path": str(target)}
 
         @app.post("/api/db/test-connection")
-        async def test_connection(payload: Dict[str, Any]):
+        async def test_connection(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             connection_id = payload.get("connectionId")
             engine = payload.get("engine")
             config = payload.get("config")
@@ -445,7 +493,10 @@ class SqlroomsHttpServer:
                 return {"ok": False, "error": str(exc)}
 
         @app.post("/api/db/list-catalog")
-        async def list_catalog(payload: Dict[str, Any]):
+        async def list_catalog(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
                 return {
@@ -462,7 +513,10 @@ class SqlroomsHttpServer:
                 return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
 
         @app.post("/api/db/execute-query")
-        async def execute_query(payload: Dict[str, Any]):
+        async def execute_query(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
                 return JSONResponse(
@@ -489,7 +543,10 @@ class SqlroomsHttpServer:
                 return JSONResponse({"error": str(exc)}, status_code=500)
 
         @app.post("/api/db/fetch-arrow")
-        async def fetch_arrow(payload: Dict[str, Any]):
+        async def fetch_arrow(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
                 return JSONResponse(
@@ -514,6 +571,9 @@ class SqlroomsHttpServer:
 
         @app.post("/api/db/fetch-arrow-stream")
         async def fetch_arrow_stream(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             connection_id = payload.get("connectionId")
             if not isinstance(connection_id, str) or not connection_id.strip():
                 return JSONResponse(
@@ -555,7 +615,10 @@ class SqlroomsHttpServer:
             return StreamingResponse(_stream(), media_type="application/octet-stream")
 
         @app.post("/api/db/cancel-query")
-        async def cancel_query(payload: Dict[str, Any]):
+        async def cancel_query(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             query_id = payload.get("queryId")
             connection_id = payload.get("connectionId")
             if not isinstance(query_id, str) or not query_id.strip():
@@ -574,7 +637,10 @@ class SqlroomsHttpServer:
                 return {"cancelled": False}
 
         @app.post("/api/project/query")
-        async def project_query(payload: Dict[str, Any]):
+        async def project_query(payload: Dict[str, Any], request: Request):
+            unauthorized = self._require_api_auth(request)
+            if unauthorized is not None:
+                return unauthorized
             sql = str(payload.get("sql") or "")
             if not _is_select_only_sql(sql):
                 return JSONResponse(
@@ -613,7 +679,7 @@ class SqlroomsHttpServer:
                 return JSONResponse({"error": str(exc)}, status_code=400)
             return data
 
-        if self.static_dir.exists():
+        if self.serve_ui and self.static_dir.exists():
             app.mount(
                 "/",
                 StaticFiles(directory=self.static_dir, html=True),
@@ -625,10 +691,14 @@ class SqlroomsHttpServer:
                 if self.index_html.exists():
                     return FileResponse(self.index_html)
                 return JSONResponse({"error": "UI bundle not found"}, status_code=404)
-        else:
+        elif self.serve_ui:
             logger.warning(
                 "Static bundle missing at %s. UI will not load until built.",
                 self.index_html,
+            )
+        else:
+            logger.info(
+                "Static UI serving is disabled; API endpoints remain available."
             )
 
         return app
@@ -658,6 +728,7 @@ class SqlroomsHttpServer:
                 allow_client_snapshots=bool(
                     self.sync_enabled and self.duckdb_database == ":memory:"
                 ),
+                local_only=True,
             )
         finally:
             signal.signal = original_signal  # type: ignore
