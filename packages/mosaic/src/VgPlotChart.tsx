@@ -18,6 +18,11 @@ import {
 } from './useVgPlotChartRetention';
 import {useVgPlotChartRender} from './useVgPlotChartRender';
 import {VgPlotChartError} from './VgPlotChartError';
+import type {
+  ChartDataPolicy,
+  ChartRuntimeIssueContext,
+  ChartRuntimeIssueReporter,
+} from './chart-runtime';
 
 type SpecProps = {
   spec: Spec;
@@ -34,6 +39,9 @@ type SpecProps = {
    * switches.
    */
   retention?: VgPlotChartRetention;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
 };
 type PlotProps = {plot: HTMLElement | SVGSVGElement};
 type VgPlotChartProps = SpecProps | PlotProps;
@@ -140,6 +148,9 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
           cachedChart: null,
           onChartCreated: handleChartCreated,
           onError: handleError,
+          dataPolicy: undefined,
+          runtimeIssueContext: undefined,
+          runtimeIssueReporter: undefined,
         };
       }
 
@@ -152,6 +163,9 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
         cachedChart,
         onChartCreated: handleChartCreated,
         onError: handleError,
+        dataPolicy: props.dataPolicy,
+        runtimeIssueContext: props.runtimeIssueContext,
+        runtimeIssueReporter: props.runtimeIssueReporter,
       };
     }, [
       props,
@@ -189,7 +203,19 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
         nextProps.params,
       );
       const retentionEqual = prevProps.retention === nextProps.retention;
-      return specEqual && paramsEqual && retentionEqual;
+      const policyEqual = prevProps.dataPolicy === nextProps.dataPolicy;
+      const issueReporterEqual =
+        prevProps.runtimeIssueReporter === nextProps.runtimeIssueReporter;
+      const issueContextEqual =
+        prevProps.runtimeIssueContext === nextProps.runtimeIssueContext;
+      return (
+        specEqual &&
+        paramsEqual &&
+        retentionEqual &&
+        policyEqual &&
+        issueContextEqual &&
+        issueReporterEqual
+      );
     }
     return false;
   },

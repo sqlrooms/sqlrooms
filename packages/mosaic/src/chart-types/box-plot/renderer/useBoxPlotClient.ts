@@ -2,15 +2,31 @@ import {Coordinator, Selection} from '@uwdata/mosaic-core';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {BoxPlotClient, type BoxPlotState} from '../../../boxplot/BoxPlotClient';
 import type {BrushSelectionParams} from '../../base-types';
+import type {
+  ChartDataPolicy,
+  ChartRuntimeIssueContext,
+  ChartRuntimeIssueReporter,
+} from '../../../chart-runtime';
 import {BoxPlotChartSettings} from '../schema';
 
 export function useBoxPlotClient(args: {
   config: BoxPlotChartSettings | null;
   coordinator: Coordinator;
+  dataPolicy?: ChartDataPolicy | null;
   params?: BrushSelectionParams;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
   tableName: string;
 }) {
-  const {config, coordinator, params, tableName} = args;
+  const {
+    config,
+    coordinator,
+    dataPolicy,
+    params,
+    runtimeIssueContext,
+    runtimeIssueReporter,
+    tableName,
+  } = args;
   const [state, setState] = useState<BoxPlotState>({
     isLoading: true,
     outliers: [],
@@ -36,7 +52,10 @@ export function useBoxPlotClient(args: {
     }
 
     const client = new BoxPlotClient({
+      dataPolicy,
       onStateChange: setState,
+      runtimeIssueContext,
+      runtimeIssueReporter,
       selection,
       tableName,
       x: config.x,
@@ -51,7 +70,15 @@ export function useBoxPlotClient(args: {
         clientRef.current = null;
       }
     };
-  }, [config, coordinator, selection, tableName]);
+  }, [
+    config,
+    coordinator,
+    dataPolicy,
+    runtimeIssueContext,
+    runtimeIssueReporter,
+    selection,
+    tableName,
+  ]);
 
   return {clientRef, state};
 }

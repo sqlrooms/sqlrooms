@@ -8,7 +8,7 @@ type VgPlotChartErrorProps = {
 export const VgPlotChartError: FC<VgPlotChartErrorProps> = ({error}) => {
   const title =
     error instanceof DataPointLimitError
-      ? 'Too many data points'
+      ? 'Too much data'
       : 'Unable to display chart';
 
   return (

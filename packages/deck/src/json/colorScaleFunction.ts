@@ -31,12 +31,24 @@ export function isColorScaleMarker(value: unknown): value is ColorScaleMarker {
   );
 }
 
-export function getColorScale(
-  props: Record<string, unknown>,
-):
-  | {propName: 'getFillColor' | 'getLineColor'; colorScale: ColorScaleConfig}
+export function getColorScale(props: Record<string, unknown>):
+  | {
+      propName:
+        | 'getFillColor'
+        | 'getLineColor'
+        | 'getColor'
+        | 'getSourceColor'
+        | 'getTargetColor';
+      colorScale: ColorScaleConfig;
+    }
   | undefined {
-  for (const propName of ['getFillColor', 'getLineColor'] as const) {
+  for (const propName of [
+    'getFillColor',
+    'getLineColor',
+    'getColor',
+    'getSourceColor',
+    'getTargetColor',
+  ] as const) {
     const value = props[propName];
     if (isColorScaleMarker(value)) {
       return {

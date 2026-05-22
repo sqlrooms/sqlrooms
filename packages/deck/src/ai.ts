@@ -1,161 +1,160 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
 import {
-  createDeckMapDashboardPanelConfigForTable,
-  normalizeDeckMapFillColor,
-} from './mapConfigUtils';
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  type DeckMapDashboardPanelConfig,
+} from './dashboardConfig';
 
-const DeckMapColumn = z.object({
-  name: z.string().describe('Column name.'),
-  type: z.string().optional().describe('Optional SQL/DuckDB column type.'),
+export const DECK_MAP_AI_INSTRUCTIONS = `
+Deck map tools:
+- create_deck_map_config validates and returns a reusable native Deck JSON map config without requiring a dashboard artifact.
+- create_dashboard_map creates or updates an interactive map panel inside a dashboard from a native Deck JSON map config.
+- Use map tools when the user asks for a map, geospatial/spatial visualization, locations, longitude/latitude data, or geometry columns.
+- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, or GeoArrowArcLayer.
+- Bind layers to datasets with _sqlroomsBinding.dataset and put tableName or sqlQuery sources in config.datasets.
+- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor.
+- Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
+- After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
+`;
+
+const DeckMapLayerBindingConfig = z.looseObject({
+  dataset: z.string().optional(),
+  geometryColumn: z.string().optional(),
+  geometryEncodingHint: z.enum(['geoarrow', 'wkb', 'wkt']).optional(),
+  sourceGeometryColumn: z.string().optional(),
+  targetGeometryColumn: z.string().optional(),
+  timestampColumn: z.string().optional(),
+  hexagonColumn: z.string().optional(),
 });
 
-const DeckMapBaseToolParameters = z.object({
+const DeckMapLayerSpec = z.looseObject({
+  '@@type': z.string().optional(),
+  id: z.string().optional(),
+  _sqlroomsBinding: DeckMapLayerBindingConfig.optional(),
+});
+
+const DeckMapSpec = z.looseObject({
+  initialViewState: z.record(z.string(), z.unknown()).optional(),
+  viewState: z.record(z.string(), z.unknown()).optional(),
+  controller: z.unknown().optional(),
+  layers: z.array(DeckMapLayerSpec).optional(),
+});
+
+const DeckMapDatasetSource = z.looseObject({
+  tableName: z.string().optional(),
+  sqlQuery: z.string().optional(),
+});
+
+const DeckMapDatasetConfig = z.looseObject({
+  source: DeckMapDatasetSource.optional(),
+  geometryColumn: z.string().optional(),
+  geometryEncodingHint: z.enum(['geoarrow', 'wkb', 'wkt']).optional(),
+});
+
+const DeckMapDataPolicyConfig = z.looseObject({
+  disabled: z.boolean().optional(),
+  maxRows: z.number().int().min(1).optional(),
+  reason: z.string().optional(),
+});
+
+export const DeckMapDashboardConfigParameter = z.looseObject({
+  spec: DeckMapSpec.describe(
+    'Deck JSON map spec as an object. Use spec.layers[].@@type for layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, or GeoArrowArcLayer.',
+  ),
+  datasets: z
+    .record(z.string(), DeckMapDatasetConfig)
+    .describe(
+      'Datasets keyed by dataset id. Layers bind to these ids through _sqlroomsBinding.dataset. Each dataset source may use tableName or sqlQuery.',
+    ),
+  mapStyle: z.string().optional(),
+  mapProps: z.record(z.string(), z.unknown()).optional(),
+  showLegends: z.boolean().optional(),
+  interaction: z.record(z.string(), z.unknown()).optional(),
+  fitToData: z.record(z.string(), z.unknown()).optional(),
+  dataPolicy: DeckMapDataPolicyConfig.optional().describe(
+    'Optional per-map runtime data policy. Maps default to 100000 rows; set maxRows for a panel-specific override or disabled=true to bypass row-count validation.',
+  ),
+  settingsOpen: z.boolean().optional(),
+});
+
+export type DeckMapDashboardConfigToolConfig = z.infer<
+  typeof DeckMapDashboardConfigParameter
+>;
+
+export const DeckMapConfigToolParameters = z.object({
   title: z.string().optional().default('Map').describe('Map title.'),
-  longitudeColumn: z
+  config: DeckMapDashboardConfigParameter.describe(
+    'Native Deck JSON dashboard map config. This is the canonical map representation.',
+  ),
+  reasoning: z
     .string()
-    .optional()
-    .describe(
-      'Longitude column. If omitted, common names like longitude, lon, lng, long, or x are auto-detected from columns.',
-    ),
-  latitudeColumn: z
-    .string()
-    .optional()
-    .describe(
-      'Latitude column. If omitted, common names like latitude, lat, or y are auto-detected from columns.',
-    ),
-  geometryColumn: z
-    .string()
-    .optional()
-    .describe(
-      'Existing geometry column to render. If omitted, a WKB point geometry is generated from longitude/latitude.',
-    ),
-  geometryEncodingHint: z
-    .enum(['geoarrow', 'wkb', 'wkt'])
-    .optional()
-    .describe('Encoding hint for geometryColumn. Use wkb for WKB and wkt for WKT.'),
-  sqlQuery: z
-    .string()
-    .optional()
-    .describe(
-      'Optional SQL query to use as the map source. If omitted, the tableName/tableReference is used.',
-    ),
-  pointRadius: z
-    .number()
-    .optional()
-    .default(4)
-    .describe('Point radius in pixels for generated point maps.'),
-  fillColor: z
-    .array(z.number())
-    .min(3)
-    .max(4)
-    .optional()
-    .describe('RGB or RGBA fill color for generated point maps.'),
-  mapStyle: z.string().optional().describe('Optional MapLibre map style URL.'),
-});
-
-export const DeckMapConfigToolParameters = DeckMapBaseToolParameters.extend({
-  tableName: z
-    .string()
-    .describe('Table or dataset name used as the map dataset id.'),
-  columns: z
-    .array(DeckMapColumn)
-    .optional()
-    .describe(
-      'Available columns for auto-detecting/validating longitude, latitude, or geometry. Provide when column names are not passed explicitly.',
-    ),
-  tableReference: z
-    .string()
-    .optional()
-    .describe(
-      'Optional SQL table reference to query. Defaults to tableName. Use a fully qualified name if needed.',
-    ),
-  reasoning: z.string().describe('Brief rationale for creating the map config.'),
+    .describe('Brief rationale for creating the map config.'),
 });
 
 export type DeckMapConfigToolParams = z.infer<
   typeof DeckMapConfigToolParameters
 >;
 
-export const DeckMapDashboardToolParameters = DeckMapBaseToolParameters.extend({
-  artifactId: z
-    .string()
-    .optional()
-    .describe('Optional dashboard artifact ID. Defaults to current dashboard.'),
-  tableName: z
-    .string()
-    .optional()
-    .describe('Optional table name. Use when no table is selected yet.'),
-  createArtifactIfMissing: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe('If true, create dashboard artifact if missing.'),
-  panelId: z
-    .string()
-    .optional()
-    .describe(
-      'Optional panel ID. If provided, updates the existing map panel instead of creating a new one.',
-    ),
-  reasoning: z.string().describe('Brief rationale for creating the map panel.'),
-});
+export const DeckMapDashboardToolParameters =
+  DeckMapConfigToolParameters.extend({
+    artifactId: z
+      .string()
+      .optional()
+      .describe(
+        'Optional dashboard artifact ID. Defaults to current dashboard.',
+      ),
+    tableName: z
+      .string()
+      .optional()
+      .describe(
+        'Optional table name used only to select/resolve the target dashboard table. Data sources still come from config.datasets.',
+      ),
+    createArtifactIfMissing: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe('If true, create dashboard artifact if missing.'),
+    panelId: z
+      .string()
+      .optional()
+      .describe(
+        'Optional panel ID. If provided, updates the existing map panel instead of creating a new one.',
+      ),
+    reasoning: z
+      .string()
+      .describe('Brief rationale for creating the map panel.'),
+  });
 
 export type DeckMapDashboardToolParams = z.infer<
   typeof DeckMapDashboardToolParameters
 >;
 
-function getColumnsForConfig(
-  params: Pick<
-    DeckMapConfigToolParams,
-    'columns' | 'longitudeColumn' | 'latitudeColumn' | 'geometryColumn'
-  >,
-) {
-  if (params.columns?.length) return params.columns;
-
-  const explicitColumns = [
-    params.longitudeColumn,
-    params.latitudeColumn,
-    params.geometryColumn,
-  ].filter((column): column is string => Boolean(column));
-  if (explicitColumns.length > 0) {
-    return Array.from(new Set(explicitColumns)).map((name) => ({name}));
-  }
-
-  throw new Error(
-    'Provide columns for coordinate auto-detection, or pass longitudeColumn and latitudeColumn explicitly, or provide geometryColumn.',
-  );
+function cloneConfig(
+  config: DeckMapDashboardConfigToolConfig,
+): DeckMapDashboardPanelConfig {
+  return JSON.parse(JSON.stringify(config)) as DeckMapDashboardPanelConfig;
 }
 
-function createDeckMapPanelFromToolParams(params: DeckMapConfigToolParams) {
-  return createDeckMapDashboardPanelConfigForTable({
+function createDeckMapPanelFromNativeConfig(
+  params: Pick<DeckMapConfigToolParams, 'title' | 'config'>,
+) {
+  return createDeckMapDashboardPanelConfig({
     title: params.title || 'Map',
-    tableName: params.tableName,
-    columns: getColumnsForConfig(params),
-    tableReference: params.tableReference,
-    longitudeColumn: params.longitudeColumn,
-    latitudeColumn: params.latitudeColumn,
-    geometryColumn: params.geometryColumn,
-    geometryEncodingHint: params.geometryEncodingHint,
-    sourceSqlQuery: params.sqlQuery,
-    pointRadius: params.pointRadius,
-    fillColor: normalizeDeckMapFillColor(params.fillColor),
-    mapStyle: params.mapStyle,
+    ...cloneConfig(params.config),
   });
 }
 
 export function createDeckMapConfigTool(): Tool {
   return tool({
-    description: `Deck map config: creates a reusable Deck JSON map configuration without requiring a dashboard artifact.
+    description: `Deck map config: validates and returns a reusable native Deck JSON map configuration without requiring a dashboard artifact.
 
-Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map config for locations, points, longitude/latitude data, or geometry columns.
-
-For point maps, pass columns for auto-detection or pass longitudeColumn and latitudeColumn explicitly. If the table already has geometry, pass geometryColumn and geometryEncodingHint.`,
+Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map config. Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
     inputSchema: DeckMapConfigToolParameters,
     execute: async (params) => {
       try {
-        const panel = createDeckMapPanelFromToolParams(params);
+        const panel = createDeckMapPanelFromNativeConfig(params);
         return {
           llmResult: {
             success: true,
@@ -189,11 +188,9 @@ export function createDeckMapAiTools(): Record<string, Tool> {
 
 export function createDeckMapDashboardTool(deps: DashboardToolDeps): Tool {
   return tool({
-    description: `Deck map panel: creates or updates an interactive geospatial map in a Mosaic dashboard.
+    description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
-Use when: the user asks for a map in a dashboard, geographic/spatial visualization, locations, points, longitude/latitude data, or geometry columns.
-
-For point maps, pass longitudeColumn and latitudeColumn when column names are not obvious. If the table already has geometry, pass geometryColumn and geometryEncodingHint.`,
+Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
     inputSchema: DeckMapDashboardToolParameters,
     execute: async (params, context) => {
       try {
@@ -202,24 +199,10 @@ For point maps, pass longitudeColumn and latitudeColumn when column names are no
           params.createArtifactIfMissing,
           context,
         );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
-        const panel = createDeckMapPanelFromToolParams({
-          title: params.title || 'Map',
-          tableName,
-          columns,
-          longitudeColumn: params.longitudeColumn,
-          latitudeColumn: params.latitudeColumn,
-          geometryColumn: params.geometryColumn,
-          geometryEncodingHint: params.geometryEncodingHint,
-          sqlQuery: params.sqlQuery,
-          pointRadius: params.pointRadius,
-          fillColor: params.fillColor,
-          mapStyle: params.mapStyle,
-          reasoning: params.reasoning,
-        });
+        if (params.tableName) {
+          deps.resolveTable(artifactId, params.tableName);
+        }
+        const panel = createDeckMapPanelFromNativeConfig(params);
 
         if (params.panelId) {
           const dashboard = deps.getDashboard(artifactId);

@@ -99,6 +99,18 @@ export {
 } from './MosaicSlice';
 export {DataPointLimitError} from './DataPointLimitError';
 export {
+  assertChartDataPolicy,
+  createChartRuntimeIssueFromError,
+  getQueryResultRowCount,
+  resolveChartDataPolicy,
+  type ChartDataPolicy,
+  type ChartDataPolicyOverride,
+  type ChartDataPolicyContext,
+  type ChartRuntimeIssue,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
+} from './chart-runtime';
+export {
   MosaicProfiler,
   type MosaicProfilerCompoundHeaderProps,
   type MosaicProfilerCompoundRowsProps,

@@ -19,4 +19,9 @@ export const boxPlotChartType: ComponentChartTypeDefinition<BoxPlotChartConfig> 
     buildTitle: titleFromDescription(DESCRIPTION),
     renderer: BoxPlotPanelRenderer,
     createTool: createBoxPlotAiTool,
+    getDataPolicy: ({maxDataPoints}) => ({
+      maxRows: maxDataPoints,
+      reason:
+        'Box plots render summaries plus outlier points. Too many outliers can make the chart too expensive to render.',
+    }),
   };

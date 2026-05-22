@@ -34,6 +34,7 @@ import type {
 } from './dashboard/dashboard-types';
 import type {MosaicDashboardLayoutType} from './dashboard/core-types';
 import {MAX_DATA_POINTS} from './MosaicSlice';
+import type {ChartRuntimeIssue} from './chart-runtime';
 
 export type {ChartToolExecutionContext} from './chart-types';
 
@@ -49,6 +50,7 @@ export type DashboardAiTable = {
 
 export type DashboardAiAdapter<TState> = {
   getTables: (state: TState) => DashboardAiTable[];
+  getMaxDataPoints?: (state: TState) => number | undefined;
   hasRunContext?: (
     state: TState,
     context?: ChartToolExecutionContext,
@@ -80,6 +82,11 @@ export type DashboardAiAdapter<TState> = {
     state: TState,
     dashboardId: string,
   ) => MosaicDashboardEntry | undefined;
+  getPanelIssue?: (
+    state: TState,
+    dashboardId: string,
+    panelId: string,
+  ) => ChartRuntimeIssue | undefined;
   setSelectedTable: (
     state: TState,
     dashboardId: string,
@@ -181,10 +188,11 @@ Dashboard authoring:
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
-- If the host app provides \`${MAP_TOOL_KEY}\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns.
+- If the host app provides \`${MAP_TOOL_KEY}\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns. Author its config as native Deck JSON with layer classes in \`spec.layers[].@@type\`, dataset bindings in \`_sqlroomsBinding.dataset\`, and table/query sources in \`config.datasets\`. For data-driven map colors, use color accessors such as \`getFillColor\`, \`getLineColor\`, \`getColor\`, \`getSourceColor\`, or \`getTargetColor\` with \`{"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}\`.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
+- \`list_dashboard_panels\` includes runtime issues when a chart failed. Use those issues to repair panels in place: convert too-large bubble charts to heatmaps, add \`xInterval\` to too-large line charts, and inspect columns/settings for SQL errors.
 `;
 
 export const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent that creates and modifies interactive data dashboards.
@@ -206,7 +214,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 **Panel Tools:**
 - create_dashboard_profiler - table statistics and column summaries
 - create_dashboard_text_panel - markdown annotations and insights
-- ${MAP_TOOL_KEY} - geospatial point map when longitude/latitude or geometry columns are available (if provided by the host app)
+- ${MAP_TOOL_KEY} - native Deck JSON geospatial map panel (if provided by the host app)
 
 **Data Tools:**
 - query - execute SQL queries for data exploration
@@ -287,6 +295,7 @@ To update existing panels:
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Check before update:** Always call list_dashboard_panels before updating/removing panels
+- **Repair broken charts:** list_dashboard_panels may return an \`issue\` per panel. For \`too-much-data\`, switch to an aggregated chart or add aggregation. For \`sql-error\`, inspect available columns/types and update the broken panel in place.
 - **Validate columns:** Query tools will validate column existence and types
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach
 - **Use markdown formatting:** Use headings (##), bullet lists (-), and **bold** in text panels for readability`;
@@ -463,8 +472,11 @@ export function createDashboardToolDeps<TState>({
     );
   };
 
-  return {
-    maxDataPoints: MAX_DATA_POINTS,
+  const state = store.getState();
+  const maxDataPoints = adapter.getMaxDataPoints?.(state) ?? MAX_DATA_POINTS;
+
+  const deps: DashboardToolDeps = {
+    maxDataPoints,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {
@@ -488,6 +500,15 @@ export function createDashboardToolDeps<TState>({
       adapter.setCurrentArtifact(state, artifactId);
     },
   };
+
+  if (adapter.getPanelIssue) {
+    deps.getPanelIssue = (dashboardId, panelId) => {
+      const state = store.getState();
+      return adapter.getPanelIssue?.(state, dashboardId, panelId);
+    };
+  }
+
+  return deps;
 }
 
 export function createDashboardAiTools<TState>({

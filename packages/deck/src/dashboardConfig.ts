@@ -9,6 +9,13 @@ import type {Table as ArrowTable} from 'apache-arrow';
 import type {DeckJsonMapProps, DeckSqlDatasetInput} from './types';
 
 export const DECK_MAP_DASHBOARD_PANEL_TYPE = 'deck-json-map';
+export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 100_000;
+
+export type DeckMapDataPolicyOverride = {
+  disabled?: boolean;
+  maxRows?: number;
+  reason?: string;
+};
 
 export type DeckMapDashboardDatasetConfig = Omit<
   DeckSqlDatasetInput,
@@ -42,6 +49,7 @@ export type DeckMapDashboardPanelConfig = {
   showLegends?: boolean;
   interaction?: DeckMapDashboardInteractionConfig;
   fitToData?: DeckMapDashboardFitToDataConfig;
+  dataPolicy?: DeckMapDataPolicyOverride;
   settingsOpen?: boolean;
 };
 

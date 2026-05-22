@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 // Temporal interval enum
 export const TemporalInterval = z.enum([
@@ -47,6 +48,7 @@ export const LineChartConfig = z.object({
   chartType: z.literal('line-chart'),
   settings: LineChartSettings,
   settingsOpen: z.boolean().optional(),
+  dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
 export type LineChartConfig = z.infer<typeof LineChartConfig>;

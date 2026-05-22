@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const BubbleChartSettings = z.object({
   x: z.string().optional().describe('Numeric column for X axis position'),
@@ -15,6 +16,7 @@ export const BubbleChartConfig = z.object({
   chartType: z.literal('bubble-chart'),
   settings: BubbleChartSettings,
   settingsOpen: z.boolean().optional(),
+  dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
 export type BubbleChartConfig = z.infer<typeof BubbleChartConfig>;

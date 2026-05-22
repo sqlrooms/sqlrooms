@@ -3,11 +3,23 @@ import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
 import {useEffect, useRef} from 'react';
 import {PlotSize} from './ResponsivePlot';
 import {RetainedVgPlotChart} from './useVgPlotChartRetention';
+import {
+  assertChartDataPolicy,
+  createChartRuntimeIssueFromError,
+  type ChartDataPolicy,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
+} from './chart-runtime';
 
 type PlotDomElement = HTMLElement | SVGSVGElement;
 
+type QueryableMark = {
+  queryResult?: (data: unknown) => unknown;
+  queryError?: (error: unknown) => unknown;
+};
+
 type PlotInstance = {
-  marks?: Array<{destroy?: () => void}>;
+  marks?: Array<{destroy?: () => void} & QueryableMark>;
   render?: () => Promise<unknown> | unknown;
   setAttribute?: (name: string, value: unknown) => boolean;
 };
@@ -54,6 +66,69 @@ function asPlotDomElement(element: object): PlotDomElement {
   return element as PlotDomElement;
 }
 
+function wrapMarkHandlers(
+  chart: RetainedVgPlotChart,
+  onError: (error: Error) => void,
+  dataPolicy?: ChartDataPolicy | null,
+  runtimeIssueContext?: ChartRuntimeIssueContext,
+  runtimeIssueReporter?: ChartRuntimeIssueReporter,
+) {
+  const plot = getPlotInstance(chart.element);
+  if (!plot?.marks) {
+    return;
+  }
+
+  plot.marks.forEach((mark: QueryableMark) => {
+    if (mark.queryResult) {
+      const originalQueryResult = mark.queryResult;
+      mark.queryResult = (data: unknown) => {
+        try {
+          assertChartDataPolicy(dataPolicy, data);
+          runtimeIssueReporter?.clearIssue();
+          return originalQueryResult.call(mark, data);
+        } catch (error) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error));
+          onError(normalizedError);
+          chart.error = normalizedError;
+          if (runtimeIssueContext) {
+            runtimeIssueReporter?.reportIssue(
+              createChartRuntimeIssueFromError(
+                normalizedError,
+                runtimeIssueContext,
+                dataPolicy,
+              ),
+            );
+          }
+          if (mark.queryError) {
+            return mark.queryError(normalizedError);
+          }
+          return undefined;
+        }
+      };
+    }
+    if (mark.queryError) {
+      const originalQueryError = mark.queryError;
+      mark.queryError = (error: unknown) => {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
+        onError(normalizedError);
+        chart.error = normalizedError;
+        if (runtimeIssueContext) {
+          runtimeIssueReporter?.reportIssue(
+            createChartRuntimeIssueFromError(
+              normalizedError,
+              runtimeIssueContext,
+              dataPolicy,
+            ),
+          );
+        }
+        originalQueryError.call(mark, error);
+      };
+    }
+  });
+}
+
 type UseVgPlotChartRenderParams = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   spec: Spec;
@@ -63,6 +138,9 @@ type UseVgPlotChartRenderParams = {
   cachedChart: RetainedVgPlotChart | null;
   onChartCreated: (chart: RetainedVgPlotChart) => void;
   onError: (error: Error) => void;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
 };
 
 /**
@@ -77,6 +155,9 @@ export function useVgPlotChartRender({
   cachedChart,
   onChartCreated,
   onError,
+  dataPolicy,
+  runtimeIssueContext,
+  runtimeIssueReporter,
 }: UseVgPlotChartRenderParams) {
   const renderVersionRef = useRef(0);
 
@@ -90,6 +171,15 @@ export function useVgPlotChartRender({
     if (cachedChart) {
       container.replaceChildren(asPlotDomElement(cachedChart.element));
       resizeChartElement(cachedChart.element, containerSize);
+
+      // Re-wrap mark handlers with fresh closures for dataPolicy/runtimeIssue reporting
+      wrapMarkHandlers(
+        cachedChart,
+        onError,
+        dataPolicy,
+        runtimeIssueContext,
+        runtimeIssueReporter,
+      );
 
       // Restore error state from cached chart
       if (cachedChart.error) {
@@ -122,26 +212,14 @@ export function useVgPlotChartRender({
         onChartCreated(nextChart);
         containerRef.current.replaceChildren(element);
 
-        // Wrap marks queryError to catch runtime errors
-        const plot = getPlotInstance(element);
-        if (plot?.marks) {
-          plot.marks.forEach((mark: any) => {
-            if (mark.queryError) {
-              const originalQueryError = mark.queryError;
-              mark.queryError = (error: any) => {
-                // Normalize error to Error instance
-                const normalizedError =
-                  error instanceof Error ? error : new Error(String(error));
-                // Call onError to display error in UI
-                onError(normalizedError);
-                // Update cached chart with error
-                nextChart.error = normalizedError;
-                // Call original to maintain Mosaic's internal state
-                originalQueryError.call(mark, error);
-              };
-            }
-          });
-        }
+        // Wrap marks with runtime handlers
+        wrapMarkHandlers(
+          nextChart,
+          onError,
+          dataPolicy,
+          runtimeIssueContext,
+          runtimeIssueReporter,
+        );
       })
       .catch((error) => {
         if (cancelled) {
@@ -152,6 +230,15 @@ export function useVgPlotChartRender({
         const normalizedError =
           error instanceof Error ? error : new Error(String(error));
         onError(normalizedError);
+        if (runtimeIssueContext) {
+          runtimeIssueReporter?.reportIssue({
+            kind: 'render-error',
+            panelId: runtimeIssueContext.panelId,
+            chartType: runtimeIssueContext.chartType,
+            message: normalizedError.message,
+            recoverable: false,
+          });
+        }
         console.error('[VgPlotChart] Error rendering chart:', normalizedError);
       });
 
@@ -159,5 +246,14 @@ export function useVgPlotChartRender({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerSize, specKey, cachedChart, onChartCreated, onError]);
+  }, [
+    containerSize,
+    specKey,
+    cachedChart,
+    onChartCreated,
+    onError,
+    dataPolicy,
+    runtimeIssueContext,
+    runtimeIssueReporter,
+  ]);
 }

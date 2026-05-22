@@ -8,10 +8,11 @@ import type {GeometryEncodingHint} from './prepare/types';
 
 const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
 const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
+const GEOMETRY_COLUMN_NAMES = ['geometry', 'geom'];
 const DEFAULT_GEOMETRY_COLUMN = '__sqlrooms_geom';
 const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
 
-export type DeckMapConfigColumn = {name: string};
+export type DeckMapConfigColumn = {name: string; type?: string};
 export type DeckMapTableReference =
   | string
   | {
@@ -28,9 +29,8 @@ function findColumnByName(
   candidates: string[],
 ) {
   const candidateSet = new Set(candidates);
-  return columns.find((column) =>
-    candidateSet.has(column.name.toLowerCase()),
-  )?.name;
+  return columns.find((column) => candidateSet.has(column.name.toLowerCase()))
+    ?.name;
 }
 
 export function findDeckMapLongitudeLatitudeColumns(
@@ -47,6 +47,53 @@ export function findDeckMapLongitudeLatitudeColumns(
 export function findLongitudeLatitudeColumns(table?: DataTable) {
   if (!table) return null;
   return findDeckMapLongitudeLatitudeColumns(table.columns);
+}
+
+function inferGeometryEncodingHint(
+  column: DeckMapConfigColumn,
+): GeometryEncodingHint | undefined {
+  const type = column.type?.toLowerCase();
+  if (!type) return undefined;
+  if (
+    type.includes('wkb') ||
+    type.includes('blob') ||
+    type.includes('binary')
+  ) {
+    return 'wkb';
+  }
+  if (
+    type.includes('wkt') ||
+    type.includes('varchar') ||
+    type.includes('text')
+  ) {
+    return 'wkt';
+  }
+  return undefined;
+}
+
+export function findDeckMapGeometryColumn(columns?: DeckMapConfigColumn[]) {
+  if (!columns) return null;
+
+  const namedGeometryColumn = findColumnByName(columns, GEOMETRY_COLUMN_NAMES);
+  const geometryColumn =
+    (namedGeometryColumn
+      ? columns.find((column) => column.name === namedGeometryColumn)
+      : undefined) ??
+    columns.find((column) => {
+      const type = column.type?.toLowerCase() ?? '';
+      return type.includes('geometry') || type.includes('geoarrow');
+    });
+
+  if (!geometryColumn) return null;
+  return {
+    geometryColumn: geometryColumn.name,
+    geometryEncodingHint: inferGeometryEncodingHint(geometryColumn),
+  };
+}
+
+export function findGeometryColumn(table?: DataTable) {
+  if (!table) return null;
+  return findDeckMapGeometryColumn(table.columns);
 }
 
 export function quoteDeckMapSqlIdentifier(identifier: string) {
@@ -164,14 +211,33 @@ export function createDeckMapDashboardConfigForTable(options: {
 }): DeckMapDashboardPanelConfig {
   const datasetId = options.tableName;
   const explicitGeometryColumn = options.geometryColumn?.trim() || undefined;
-  const coordinates = explicitGeometryColumn
+  const detectedCoordinates =
+    options.longitudeColumn && options.latitudeColumn
+      ? {
+          longitudeColumn: options.longitudeColumn,
+          latitudeColumn: options.latitudeColumn,
+        }
+      : findDeckMapLongitudeLatitudeColumns(options.columns);
+  const detectedGeometryColumn = explicitGeometryColumn
+    ? {
+        geometryColumn: explicitGeometryColumn,
+        geometryEncodingHint: options.geometryEncodingHint,
+      }
+    : detectedCoordinates
+      ? null
+      : findDeckMapGeometryColumn(options.columns);
+  const coordinates = detectedGeometryColumn
     ? undefined
     : resolveDeckMapCoordinateColumns({
         columns: options.columns,
         longitudeColumn: options.longitudeColumn,
         latitudeColumn: options.latitudeColumn,
       });
-  const geometryColumn = explicitGeometryColumn ?? DEFAULT_GEOMETRY_COLUMN;
+  const geometryColumn =
+    detectedGeometryColumn?.geometryColumn ?? DEFAULT_GEOMETRY_COLUMN;
+  const geometryEncodingHint =
+    options.geometryEncodingHint ??
+    detectedGeometryColumn?.geometryEncodingHint;
   const source = coordinates
     ? {
         sqlQuery: createDeckMapPointSourceSql({
@@ -186,8 +252,12 @@ export function createDeckMapDashboardConfigForTable(options: {
       ? {sqlQuery: options.sourceSqlQuery}
       : {tableName: options.tableName};
 
-  if (explicitGeometryColumn) {
-    ensureDeckMapColumnExists(options.columns, explicitGeometryColumn, 'geometry');
+  if (detectedGeometryColumn) {
+    ensureDeckMapColumnExists(
+      options.columns,
+      detectedGeometryColumn.geometryColumn,
+      'geometry',
+    );
   }
 
   return {
@@ -195,7 +265,9 @@ export function createDeckMapDashboardConfigForTable(options: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [
         {
-          '@@type': 'GeoArrowScatterplotLayer',
+          '@@type': coordinates
+            ? 'GeoArrowScatterplotLayer'
+            : 'GeoArrowPolygonLayer',
           id: datasetId,
           _sqlroomsBinding: {dataset: datasetId},
           filled: true,
@@ -211,9 +283,7 @@ export function createDeckMapDashboardConfigForTable(options: {
       [datasetId]: {
         source,
         geometryColumn,
-        geometryEncodingHint: explicitGeometryColumn
-          ? options.geometryEncodingHint
-          : 'wkb',
+        geometryEncodingHint: coordinates ? 'wkb' : geometryEncodingHint,
       },
     },
     ...(coordinates
@@ -257,7 +327,11 @@ export function regenerateMapConfigForTable(
   longitudeColumn?: string,
   latitudeColumn?: string,
 ) {
-  if (!(longitudeColumn && latitudeColumn) && !findLongitudeLatitudeColumns(table)) {
+  if (
+    !(longitudeColumn && latitudeColumn) &&
+    !findLongitudeLatitudeColumns(table) &&
+    !findGeometryColumn(table)
+  ) {
     return panel.config;
   }
 

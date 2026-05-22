@@ -16,5 +16,10 @@ export const customSpecChartType: SpecChartTypeDefinition<CustomSpecChartConfig>
     schema: CustomSpecChartSettings,
     settingsComponent: CustomSpecSettingsComponent,
     buildTitle: titleFromDescription(DESCRIPTION),
+    getDataPolicy: ({maxDataPoints}) => ({
+      maxRows: maxDataPoints,
+      reason:
+        'Custom specs are validated conservatively because SQLRooms cannot infer whether each mark is aggregated.',
+    }),
     createSpec: createCustomSpec,
   };
