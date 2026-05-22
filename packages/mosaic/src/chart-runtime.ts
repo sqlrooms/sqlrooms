@@ -1,5 +1,7 @@
 import {DataPointLimitError} from './DataPointLimitError';
 
+export const DEFAULT_CHART_MAX_DATA_POINTS = 10_000;
+
 export type ChartDataPolicy = {
   /**
    * Disable runtime row-count validation for charts whose query result size
@@ -26,7 +28,6 @@ export type ChartDataPolicyOverride = {
 export type ChartDataPolicyContext<TConfig> = {
   tableName: string;
   config: TConfig;
-  maxDataPoints: number;
 };
 
 export type ChartRuntimeIssueKind =

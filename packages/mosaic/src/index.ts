@@ -90,7 +90,6 @@ export {
   createDefaultMosaicConfig,
   createMosaicSlice,
   MosaicSliceConfig,
-  MAX_DATA_POINTS,
   type CreateMosaicSliceProps,
   type MosaicClientOptions,
   type MosaicPreAggregateOptions,
@@ -99,6 +98,7 @@ export {
 } from './MosaicSlice';
 export {DataPointLimitError} from './DataPointLimitError';
 export {
+  DEFAULT_CHART_MAX_DATA_POINTS,
   assertChartDataPolicy,
   createChartRuntimeIssueFromError,
   getQueryResultRowCount,

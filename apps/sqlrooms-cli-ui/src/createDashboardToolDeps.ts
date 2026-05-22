@@ -26,8 +26,6 @@ export function createDashboardAiAdapter(
   store: StoreApi<RoomState>,
 ): DashboardAiAdapter<RoomState> {
   return {
-    getMaxDataPoints: (state) =>
-      (state as Partial<RoomState> | undefined)?.mosaic?.config.maxDataPoints,
     getTables: (state) =>
       state.db.tables.map((table) => ({
         tableName: table.tableName,

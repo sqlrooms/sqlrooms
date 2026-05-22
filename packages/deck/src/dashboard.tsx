@@ -36,16 +36,15 @@ import {
   asDeckJsonMapConfig,
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
-  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
   type DeckMapDashboardDatasetConfig,
-  type DeckMapDataPolicyOverride,
   type DeckMapDashboardInteractionConfig,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
+import {getDeckMapDataPolicy} from './mapDataPolicy';
 import {
   createDeckMapDashboardPanelConfigForTable,
   findGeometryColumn,
@@ -68,26 +67,6 @@ function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
       </div>
     </div>
   );
-}
-
-function resolveDeckMapDataPolicy(
-  basePolicy: ChartDataPolicy,
-  override: DeckMapDataPolicyOverride | undefined,
-): ChartDataPolicy {
-  if (!override) {
-    return basePolicy;
-  }
-  if (override.disabled) {
-    return {
-      ...basePolicy,
-      disabled: true,
-    };
-  }
-  return {
-    ...basePolicy,
-    ...(override.maxRows !== undefined ? {maxRows: override.maxRows} : {}),
-    ...(override.reason !== undefined ? {reason: override.reason} : {}),
-  };
 }
 
 function DeckMapDashboardDatasetClient({
@@ -443,16 +422,8 @@ function DeckMapDashboardRenderer({
   );
 
   const dataPolicy = useMemo<ChartDataPolicy>(
-    () =>
-      resolveDeckMapDataPolicy(
-        {
-          maxRows: DEFAULT_DECK_MAP_MAX_DATA_POINTS,
-          reason:
-            'Map panels render source rows as interactive deck.gl features. Filter, aggregate, or switch to a smaller source query before rendering this map.',
-        },
-        mapConfig?.dataPolicy,
-      ),
-    [mapConfig?.dataPolicy],
+    () => getDeckMapDataPolicy(mapConfig),
+    [mapConfig],
   );
   const runtimeIssueContext = useMemo(
     () => ({

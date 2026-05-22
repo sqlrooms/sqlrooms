@@ -38,9 +38,6 @@ export const MosaicDashboardChartContent: FC<
 }) => {
   const retention = useChartRetainer(dashboardId, panel.id);
   const params = useBrushSelectionParams(selectionName);
-  const maxDataPoints = useStoreWithMosaicDashboard(
-    (state) => state.mosaic.config.maxDataPoints,
-  );
   const issue = useStoreWithMosaicDashboard((state) =>
     state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),
   );
@@ -55,10 +52,9 @@ export const MosaicDashboardChartContent: FC<
       chartTypeDefinition.getDataPolicy?.({
         tableName,
         config: panel.config,
-        maxDataPoints: maxDataPoints ?? 10000,
       }) ?? null;
     return resolveChartDataPolicy(defaultPolicy, panel.config.dataPolicy);
-  }, [chartTypeDefinition, maxDataPoints, panel.config, tableName]);
+  }, [chartTypeDefinition, panel.config, tableName]);
   const runtimeIssueReporter = useMemo(
     () => ({
       reportIssue: (issueToReport: ChartRuntimeIssue) => {

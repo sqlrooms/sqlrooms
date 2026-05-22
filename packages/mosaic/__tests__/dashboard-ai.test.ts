@@ -145,13 +145,12 @@ describe('dashboard AI deps', () => {
     expect(state.setCurrentArtifactCalls).toEqual([artifactId]);
   });
 
-  it('uses the host max data point limit when provided', () => {
+  it('uses the chart package default max data point limit for AI guidance', () => {
     const {store, adapter} = createHarness();
-    adapter.getMaxDataPoints = () => 25_000;
 
     const deps = createDashboardToolDeps({store, adapter});
 
-    expect(deps.maxDataPoints).toBe(25_000);
+    expect(deps.maxDataPoints).toBe(10_000);
   });
 
   it('resolves explicit artifact before context and current artifact', () => {

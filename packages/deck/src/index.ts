@@ -29,9 +29,11 @@ export {
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
   createDeckMapDashboardPanelConfig,
+  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
+export {getDeckMapDataPolicy} from './mapDataPolicy';
 export {
   createDeckMapDashboardConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
@@ -52,6 +54,7 @@ export type {
   CreateDeckMapDashboardPanelConfigOptions,
   DeckMapDashboardDatasetClientState,
   DeckMapDashboardDatasetConfig,
+  DeckMapDataPolicyOverride,
   DeckMapDashboardInteractionConfig,
   DeckMapDashboardPanelConfig,
 } from './dashboardConfig';

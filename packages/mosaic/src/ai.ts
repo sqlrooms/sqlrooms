@@ -33,8 +33,10 @@ import type {
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
 import type {MosaicDashboardLayoutType} from './dashboard/core-types';
-import {MAX_DATA_POINTS} from './MosaicSlice';
-import type {ChartRuntimeIssue} from './chart-runtime';
+import {
+  DEFAULT_CHART_MAX_DATA_POINTS,
+  type ChartRuntimeIssue,
+} from './chart-runtime';
 
 export type {ChartToolExecutionContext} from './chart-types';
 
@@ -50,7 +52,6 @@ export type DashboardAiTable = {
 
 export type DashboardAiAdapter<TState> = {
   getTables: (state: TState) => DashboardAiTable[];
-  getMaxDataPoints?: (state: TState) => number | undefined;
   hasRunContext?: (
     state: TState,
     context?: ChartToolExecutionContext,
@@ -472,18 +473,8 @@ export function createDashboardToolDeps<TState>({
     );
   };
 
-  const getMaxDataPoints = () => {
-    try {
-      const state = store.getState();
-      return state ? adapter.getMaxDataPoints?.(state) : undefined;
-    } catch {
-      return undefined;
-    }
-  };
-  const maxDataPoints = getMaxDataPoints() ?? MAX_DATA_POINTS;
-
   const deps: DashboardToolDeps = {
-    maxDataPoints,
+    maxDataPoints: DEFAULT_CHART_MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {
