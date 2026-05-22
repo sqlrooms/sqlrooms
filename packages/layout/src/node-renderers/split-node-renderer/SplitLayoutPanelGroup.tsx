@@ -17,15 +17,15 @@ export type RenderPanelProps = {
 
 function formatResizedDefaultSize(
   layoutSize: number,
-  groupSize: number,
+  panelSizeInPixels: number | undefined,
   previousDefaultSize: string | number | undefined,
 ) {
   const asPercentage = Number(layoutSize.toFixed(4));
   const inPixels =
-    groupSize > 0 ? Math.round((layoutSize / 100) * groupSize) : 0;
+    panelSizeInPixels === undefined ? undefined : Math.round(panelSizeInPixels);
 
   if (typeof previousDefaultSize === 'number') {
-    return inPixels;
+    return inPixels ?? previousDefaultSize;
   }
 
   if (typeof previousDefaultSize === 'string') {
@@ -34,11 +34,25 @@ function formatResizedDefaultSize(
       return `${asPercentage}%`;
     }
     if (trimmedSize.endsWith('px')) {
-      return `${inPixels}px`;
+      return inPixels === undefined ? previousDefaultSize : `${inPixels}px`;
     }
   }
 
   return `${asPercentage}%`;
+}
+
+function getPanelSizeInPixels(
+  groupElement: HTMLDivElement | null,
+  panelId: string,
+  direction: 'row' | 'column',
+) {
+  const panelElement = Array.from(
+    groupElement?.querySelectorAll<HTMLElement>('[data-panel]') ?? [],
+  ).find((element) => element.id === panelId);
+
+  return direction === 'column'
+    ? panelElement?.offsetHeight
+    : panelElement?.offsetWidth;
 }
 
 function updateNodeDefaultSize(
@@ -81,13 +95,6 @@ export const SplitLayoutPanelGroup: FC<PropsWithChildren> = ({children}) => {
         return;
       }
 
-      const groupElement = groupElementRef.current;
-      const groupSize = groupElement
-        ? parentNode.direction === 'column'
-          ? groupElement.offsetHeight
-          : groupElement.offsetWidth
-        : 0;
-
       let nextRootLayout = rootLayout;
 
       for (const child of parentNode.children) {
@@ -101,9 +108,14 @@ export const SplitLayoutPanelGroup: FC<PropsWithChildren> = ({children}) => {
         const previousDefaultSize = isLayoutNodeKey(child)
           ? undefined
           : child.defaultSize;
+        const panelSizeInPixels = getPanelSizeInPixels(
+          groupElementRef.current,
+          panelId,
+          parentNode.direction,
+        );
         const defaultSize = formatResizedDefaultSize(
           layoutSize,
-          groupSize,
+          panelSizeInPixels,
           previousDefaultSize,
         );
 
