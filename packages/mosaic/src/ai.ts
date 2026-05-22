@@ -472,8 +472,15 @@ export function createDashboardToolDeps<TState>({
     );
   };
 
-  const state = store.getState();
-  const maxDataPoints = adapter.getMaxDataPoints?.(state) ?? MAX_DATA_POINTS;
+  const getMaxDataPoints = () => {
+    try {
+      const state = store.getState();
+      return state ? adapter.getMaxDataPoints?.(state) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const maxDataPoints = getMaxDataPoints() ?? MAX_DATA_POINTS;
 
   const deps: DashboardToolDeps = {
     maxDataPoints,
