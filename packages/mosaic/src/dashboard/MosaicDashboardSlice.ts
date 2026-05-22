@@ -1105,7 +1105,9 @@ export function createMosaicDashboardSlice(
           );
           const existingIssueEntries = Object.keys(
             get().mosaicDashboard.runtime.panelIssuesByPanelId,
-          ).filter((runtimePanelId) => runtimePanelId.startsWith(runtimePrefix));
+          ).filter((runtimePanelId) =>
+            runtimePanelId.startsWith(runtimePrefix),
+          );
 
           existingEntries.forEach(([, chart]) => {
             destroyDashboardRuntimeChart(chart);

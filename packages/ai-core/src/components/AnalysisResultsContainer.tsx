@@ -51,7 +51,7 @@ export const AnalysisResultsContainer: React.FC<{
     if (!container) return;
     container.scrollTop = container.scrollHeight;
   }, [sessionId]);
-  
+
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea

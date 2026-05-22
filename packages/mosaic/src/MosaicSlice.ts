@@ -193,7 +193,6 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
-
         } catch (error) {
           set((state) =>
             produce(state, (draft) => {

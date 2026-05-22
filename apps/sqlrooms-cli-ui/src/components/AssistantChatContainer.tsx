@@ -12,9 +12,9 @@ interface AssistantChatContainerProps {
   };
 }
 
-export const AssistantChatContainer: React.FC<
-  AssistantChatContainerProps
-> = ({contextDropTarget}) => {
+export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
+  contextDropTarget,
+}) => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
