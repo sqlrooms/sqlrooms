@@ -5,7 +5,7 @@ import {
 import {
   DECK_MAP_AI_INSTRUCTIONS,
   createDeckMapDashboardAiTools,
-} from '@sqlrooms/deck/ai';
+} from '@sqlrooms/deck';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createDashboardAiAdapter} from './createDashboardToolDeps';

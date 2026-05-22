@@ -6,6 +6,7 @@
 export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
 export {
+  DECK_MAP_AI_INSTRUCTIONS,
   createDeckMapAiTools,
   createDeckMapDashboardAiTools,
   createDeckMapDashboardTool,
