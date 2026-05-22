@@ -3181,7 +3181,7 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.33.1-dev55.0
+        specifier: ^1.32.0 || 1.33.1-dev55.0
         version: 1.33.1-dev55.0
       '@sqlrooms/duckdb-core':
         specifier: workspace:*
@@ -5604,6 +5604,12 @@ packages:
         optional: true
       search-insights:
         optional: true
+
+  '@duckdb/duckdb-wasm@1.30.0':
+    resolution: {integrity: sha512-9aWrm+4ayl4sTlvGtl/b+LxrUyXaac3yyVqkoJ3F7Vkd62PoS8PcQIRJ/KjXBW36LP1CnPY5jjvFyIcTFLtcXA==}
+
+  '@duckdb/duckdb-wasm@1.32.0':
+    resolution: {integrity: sha512-IewXTNYEjsZCPE9weUWgtjGxUlMRo7qhX0GF6tq/KjK8bnY+RAl4cyUdYUfcdzbyb4b9ZxPC+FOsCcxgaKFWMg==}
 
   '@duckdb/duckdb-wasm@1.33.1-dev55.0':
     resolution: {integrity: sha512-hY3w3Qu8u6Sk9zxZScc4/lVuffP3tVTAHCy0YECgeiUK8+mG9kGgSvwtBCgTHtVlIZFC8QrMkPCluO4u/KBNWA==}
@@ -18607,6 +18613,14 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
+  '@duckdb/duckdb-wasm@1.30.0':
+    dependencies:
+      apache-arrow: 17.0.0
+
+  '@duckdb/duckdb-wasm@1.32.0':
+    dependencies:
+      apache-arrow: 17.0.0
+
   '@duckdb/duckdb-wasm@1.33.1-dev55.0':
     dependencies:
       apache-arrow: 17.0.0
@@ -19812,7 +19826,7 @@ snapshots:
 
   '@kepler.gl/duckdb@3.3.0-alpha.0(c30fd7bcdac25c83aeb1de6aeaec9fb9)':
     dependencies:
-      '@duckdb/duckdb-wasm': 1.33.1-dev55.0
+      '@duckdb/duckdb-wasm': 1.32.0
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/processors': 3.3.0-alpha.0(095e19d94940d1392892b44706852835)
@@ -24659,7 +24673,7 @@ snapshots:
 
   '@uwdata/mosaic-core@0.21.1':
     dependencies:
-      '@duckdb/duckdb-wasm': 1.33.1-dev55.0
+      '@duckdb/duckdb-wasm': 1.30.0
       '@uwdata/flechette': 2.5.0
       '@uwdata/mosaic-sql': 0.21.1
 
