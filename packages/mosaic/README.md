@@ -228,7 +228,7 @@ live outside persisted dashboard config.
 
 ### Dashboard AI Tools
 
-`@sqlrooms/mosaic/ai` provides reusable assistant tools for dashboard authoring,
+`@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,
 including chart tools, profiler/text panel tools, panel management tools, and an
 optional exploratory `dashboard_agent`. Client apps supply a small adapter that
 maps Mosaic's generic dashboard operations to their store, artifact model, table
@@ -241,7 +241,7 @@ import {
   createDashboardAiTools,
   MAP_TOOL_KEY,
   type DashboardAiAdapter,
-} from '@sqlrooms/mosaic/ai';
+} from '@sqlrooms/mosaic';
 
 const adapter: DashboardAiAdapter<AppState> = {
   getTables: (state) => state.db.tables,

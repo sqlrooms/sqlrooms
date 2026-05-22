@@ -139,7 +139,23 @@ export {
 } from './ResponsivePlot';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
-export {MAP_TOOL_KEY} from './ai';
+export {
+  DASHBOARD_AI_INSTRUCTIONS,
+  MAP_TOOL_KEY,
+  createDashboardAgentTool,
+  createDashboardAiTools,
+} from './ai';
+export type {
+  CreateDashboardAgentToolOptions,
+  CreateDashboardAiToolsOptions,
+  DashboardAgentResult,
+  DashboardAgentRunResult,
+  DashboardAgentToolCall,
+  DashboardAiAdapter,
+  DashboardAiStore,
+  DashboardAiTable,
+  CreateDashboardToolDepsOptions,
+} from './ai';
 
 // Compound components
 export {MosaicChart} from './MosaicChart';
