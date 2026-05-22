@@ -228,7 +228,7 @@ live outside persisted dashboard config.
 
 ### Dashboard AI Tools
 
-`@sqlrooms/mosaic/ai` provides reusable assistant tools for dashboard authoring,
+`@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,
 including chart tools, profiler/text panel tools, panel management tools, and an
 optional exploratory `dashboard_agent`. Client apps supply a small adapter that
 maps Mosaic's generic dashboard operations to their store, artifact model, table
@@ -239,8 +239,9 @@ reference-only dashboard artifacts should require an explicit `artifactId`.
 ```ts
 import {
   createDashboardAiTools,
+  MAP_TOOL_KEY,
   type DashboardAiAdapter,
-} from '@sqlrooms/mosaic/ai';
+} from '@sqlrooms/mosaic';
 
 const adapter: DashboardAiAdapter<AppState> = {
   getTables: (state) => state.db.tables,
@@ -273,6 +274,10 @@ const adapter: DashboardAiAdapter<AppState> = {
 
 const dashboardTools = createDashboardAiTools({store, adapter});
 ```
+
+Host tools can be added with `extraTools`; they must not reuse built-in
+dashboard tool keys. Register geospatial map tools under `MAP_TOOL_KEY` so the
+dashboard prompts and tool registration stay aligned.
 
 ### Box Plot Chart Type
 

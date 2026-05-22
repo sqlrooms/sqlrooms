@@ -13,7 +13,7 @@ import {useChartRetainer} from './useChartRetainer';
 import {useBrushSelectionParams} from './useBrushSelectionParams';
 import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 import {ChartRuntimeIssuePanel} from './ChartRuntimeIssuePanel';
-import type {ChartRuntimeIssue} from '../chart-runtime';
+import {resolveChartDataPolicy, type ChartRuntimeIssue} from '../chart-runtime';
 
 export type MosaicDashboardChartContentProps = {
   chartTypeDefinition: ChartTypeDefinition;
@@ -38,9 +38,6 @@ export const MosaicDashboardChartContent: FC<
 }) => {
   const retention = useChartRetainer(dashboardId, panel.id);
   const params = useBrushSelectionParams(selectionName);
-  const maxDataPoints = useStoreWithMosaicDashboard(
-    (state) => state.mosaic.config.maxDataPoints,
-  );
   const issue = useStoreWithMosaicDashboard((state) =>
     state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),
   );
@@ -50,15 +47,14 @@ export const MosaicDashboardChartContent: FC<
   const clearPanelIssue = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.clearPanelIssue,
   );
-  const dataPolicy = useMemo(
-    () =>
+  const dataPolicy = useMemo(() => {
+    const defaultPolicy =
       chartTypeDefinition.getDataPolicy?.({
         tableName,
         config: panel.config,
-        maxDataPoints: maxDataPoints ?? 10000,
-      }) ?? null,
-    [chartTypeDefinition, maxDataPoints, panel.config, tableName],
-  );
+      }) ?? null;
+    return resolveChartDataPolicy(defaultPolicy, panel.config.dataPolicy);
+  }, [chartTypeDefinition, panel.config, tableName]);
   const runtimeIssueReporter = useMemo(
     () => ({
       reportIssue: (issueToReport: ChartRuntimeIssue) => {

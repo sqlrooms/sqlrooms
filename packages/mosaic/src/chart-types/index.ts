@@ -15,6 +15,7 @@ import type {ChartTypeDefinition} from './base-types';
 // (chart-types/index imports Settings components, which import ChartSettingsContext,
 // which imports ChartConfig)
 export {ChartConfig, type ChartSettings, type ChartType} from './chart-config';
+export * from './data-policy-schema';
 
 // Re-export schemas
 export * from './histogram/schema';

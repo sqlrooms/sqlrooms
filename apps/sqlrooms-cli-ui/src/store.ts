@@ -18,17 +18,11 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {
-  createDeckMapDashboardPanelConfig,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  deckMapDashboardPanelRenderer,
-  findLongitudeLatitudeColumns,
-} from '@sqlrooms/deck';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
 import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
-  type DataTable,
   QualifiedTableName,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
@@ -38,15 +32,11 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
-  createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-  type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
-  createDefaultChartTypes,
-  defaultAddPanelActions,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -71,7 +61,6 @@ import {
   WebContainerPersistConfig,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
-import {MapIcon} from 'lucide-react';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
@@ -167,92 +156,6 @@ function getRuntimeBridgeConfig() {
   }
   return undefined;
 }
-
-function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
-function quoteTableReference(table: DataTable) {
-  const qualifiedName = table.table;
-  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
-    .filter((part): part is string => Boolean(part))
-    .map(quoteSqlIdentifier)
-    .join('.');
-}
-
-function createDeckMapPanelForTable(table: DataTable) {
-  const coordinates = findLongitudeLatitudeColumns(table);
-
-  if (!coordinates) {
-    const tableName = table.table.table;
-    return createDeckMapDashboardPanelConfig({
-      title: `${tableName} map`,
-      datasets: {},
-      spec: {},
-    });
-  }
-
-  const {longitudeColumn, latitudeColumn} = coordinates;
-
-  const tableName = table.table.table;
-
-  const datasetId = tableName;
-  const geometryColumn = '__sqlrooms_geom';
-  const quotedLongitude = longitudeColumn
-    ? quoteSqlIdentifier(longitudeColumn)
-    : undefined;
-  const quotedLatitude = latitudeColumn
-    ? quoteSqlIdentifier(latitudeColumn)
-    : undefined;
-
-  return createDeckMapDashboardPanelConfig({
-    title: `${tableName} map`,
-    spec: {
-      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
-      layers: [
-        {
-          '@@type': 'GeoArrowScatterplotLayer',
-          id: datasetId,
-          _sqlroomsBinding: {dataset: datasetId},
-          filled: true,
-          stroked: false,
-          pickable: true,
-          radiusUnits: 'pixels',
-          getRadius: 4,
-          getFillColor: [56, 189, 248, 180],
-        },
-      ],
-    },
-    datasets: {
-      [datasetId]: {
-        source: {
-          sqlQuery: [
-            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
-            `FROM ${quoteTableReference(table)}`,
-            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
-          ].join(' '),
-        },
-        geometryColumn,
-        geometryEncodingHint: 'wkb',
-      },
-    },
-    fitToData: {
-      dataset: datasetId,
-      longitudeColumn,
-      latitudeColumn,
-      padding: 40,
-      maxZoom: 12,
-    },
-  });
-}
-
-const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
-  type: DECK_MAP_DASHBOARD_PANEL_TYPE,
-  label: 'Map',
-  icon: MapIcon,
-  createPanel: ({selectedTable}) =>
-    selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
-};
 
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
@@ -523,16 +426,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createMosaicDashboardSlice({
-          addPanelActions: [
-            ...defaultAddPanelActions,
-            deckMapDashboardAddPanelAction,
-          ],
-          panelRenderers: createDefaultMosaicDashboardPanelRenderers({
-            [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
-          }),
-          chartTypes: createDefaultChartTypes(),
-        })(set, get, store),
+        ...createMosaicDashboardSlice(createDeckMapDashboardSliceOptions())(
+          set,
+          get,
+          store,
+        ),
 
         ...createSqlEditorSlice()(set, get, store),
 

@@ -1,19 +1,23 @@
+import {DASHBOARD_AI_INSTRUCTIONS} from '@sqlrooms/mosaic/ai';
 import {
-  DASHBOARD_AI_INSTRUCTIONS,
-  createDashboardAiTools as createReusableDashboardAiTools,
-} from '@sqlrooms/mosaic/ai';
+  createDashboardWithDeckMapAiTools,
+  getDashboardWithDeckMapAiInstructions,
+} from '@sqlrooms/deck';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createDashboardAiAdapter} from './createDashboardToolDeps';
 
 export {DASHBOARD_AI_INSTRUCTIONS};
 
-export function getDashboardAiInstructions(_store: StoreApi<RoomState>) {
-  return DASHBOARD_AI_INSTRUCTIONS.trim();
+export function getDashboardAiInstructions(
+  _store: StoreApi<RoomState>,
+  _runContext?: unknown,
+) {
+  return getDashboardWithDeckMapAiInstructions();
 }
 
 export function createDashboardAiTools(store: StoreApi<RoomState>) {
-  return createReusableDashboardAiTools({
+  return createDashboardWithDeckMapAiTools({
     store,
     adapter: createDashboardAiAdapter(store),
   });

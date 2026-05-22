@@ -3013,6 +3013,9 @@ importers:
       '@uwdata/mosaic-sql':
         specifier: ^0.21.0
         version: 0.21.1
+      ai:
+        specifier: ^6.0.159
+        version: 6.0.177(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0

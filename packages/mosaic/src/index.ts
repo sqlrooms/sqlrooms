@@ -90,7 +90,6 @@ export {
   createDefaultMosaicConfig,
   createMosaicSlice,
   MosaicSliceConfig,
-  MAX_DATA_POINTS,
   type CreateMosaicSliceProps,
   type MosaicClientOptions,
   type MosaicPreAggregateOptions,
@@ -99,10 +98,13 @@ export {
 } from './MosaicSlice';
 export {DataPointLimitError} from './DataPointLimitError';
 export {
+  DEFAULT_CHART_MAX_DATA_POINTS,
   assertChartDataPolicy,
   createChartRuntimeIssueFromError,
   getQueryResultRowCount,
+  resolveChartDataPolicy,
   type ChartDataPolicy,
+  type ChartDataPolicyOverride,
   type ChartDataPolicyContext,
   type ChartRuntimeIssue,
   type ChartRuntimeIssueContext,
@@ -137,6 +139,23 @@ export {
 } from './ResponsivePlot';
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
+export {
+  DASHBOARD_AI_INSTRUCTIONS,
+  MAP_TOOL_KEY,
+  createDashboardAgentTool,
+  createDashboardAiTools,
+} from './ai';
+export type {
+  CreateDashboardAgentToolOptions,
+  CreateDashboardAiToolsOptions,
+  DashboardAgentResult,
+  DashboardAgentRunResult,
+  DashboardAgentToolCall,
+  DashboardAiAdapter,
+  DashboardAiStore,
+  DashboardAiTable,
+  CreateDashboardToolDepsOptions,
+} from './ai';
 
 // Compound components
 export {MosaicChart} from './MosaicChart';
