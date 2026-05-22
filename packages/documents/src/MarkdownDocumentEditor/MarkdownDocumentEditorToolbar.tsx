@@ -25,7 +25,7 @@ export const MarkdownDocumentEditorToolbar: FC<
       <div className="flex-1" />
       <Button
         type="button"
-        size="sm"
+        size="icon"
         variant={sourcePanelOpen ? 'secondary' : 'ghost'}
         className="h-8 gap-2"
         aria-pressed={sourcePanelOpen}
@@ -35,7 +35,6 @@ export const MarkdownDocumentEditorToolbar: FC<
         onClick={() => setSourcePanelOpen(!sourcePanelOpen)}
       >
         <FileCodeCornerIcon className="h-4 w-4" />
-        Markdown
       </Button>
     </div>
   );

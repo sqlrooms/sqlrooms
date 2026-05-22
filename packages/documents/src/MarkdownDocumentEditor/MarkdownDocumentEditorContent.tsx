@@ -60,7 +60,8 @@ export const MarkdownDocumentEditorContent: FC<
         <ResizableHandle className="w-px" />
         <ResizablePanel
           ref={panelRef}
-          minSize={20}
+          minSize="30%"
+          maxSize="50%"
           collapsible={true}
           collapsedSize={0}
           className="overflow-auto"
@@ -69,7 +70,6 @@ export const MarkdownDocumentEditorContent: FC<
           <div className="flex h-full flex-col">
             <div className="border-border flex h-10 shrink-0 items-center gap-2 border-b px-3">
               <FileCodeCornerIcon className="text-muted-foreground h-4 w-4" />
-              <span className="text-sm font-medium">Markdown</span>
               <div className="flex-1" />
               <Button
                 type="button"
