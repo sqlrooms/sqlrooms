@@ -60,10 +60,26 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
+/**
+ * Controls how deck.gl integrates with the MapLibre basemap.
+ *
+ * - `'overlaid'` — MapLibre is the root; deck.gl renders as an overlay via
+ *   `MapboxOverlay`. MapLibre controls and attribution stay on top.
+ * - `'interleaved'` — Same as overlaid but with `interleaved: true`, allowing
+ *   deck layers to be inserted between MapLibre layers.
+ * - `'reverse-controlled'` — deck.gl is the root; MapLibre is a child. This is
+ *   the legacy mode where deck layers render on top of all MapLibre UI.
+ */
+export type DeckMapIntegrationMode =
+  | 'overlaid'
+  | 'interleaved'
+  | 'reverse-controlled';
+
 export type DeckJsonMapProps = {
   spec: string | Record<string, unknown>;
   datasets: Record<string, DeckDatasetInput>;
   mapStyle?: string;
+  integrationMode?: DeckMapIntegrationMode;
   deckProps?: Partial<DeckProps>;
   mapProps?: Partial<MapProps>;
   showLegends?: boolean;

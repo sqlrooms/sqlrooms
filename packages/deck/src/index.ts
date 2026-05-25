@@ -90,6 +90,7 @@ export type {
   DeckDatasetInput,
   DeckJsonMapProps,
   DeckJsonSpecDatasetHint,
+  DeckMapIntegrationMode,
   DeckSqlDatasetInput,
   DeckTable,
   PreparedDeckDatasetState,

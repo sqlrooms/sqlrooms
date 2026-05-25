@@ -1,11 +1,12 @@
 import {JSONConverter} from '@deck.gl/json';
+import {MapboxOverlay} from '@deck.gl/mapbox';
 import type {DeckGLRef} from '@deck.gl/react';
 import DeckGL from '@deck.gl/react';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {useEffect, useMemo, useRef} from 'react';
-import Map from 'react-map-gl/maplibre';
+import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
@@ -14,7 +15,11 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import type {DeckJsonMapProps, PreparedDeckDatasetState} from './types';
+import type {
+  DeckJsonMapProps,
+  DeckMapIntegrationMode,
+  PreparedDeckDatasetState,
+} from './types';
 import {useDeckLayersReadyRedraw} from './useDeckLayersReadyRedraw';
 
 const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
@@ -136,10 +141,24 @@ function renderDatasetErrorOverlay(
   );
 }
 
+const DEFAULT_INTEGRATION_MODE: DeckMapIntegrationMode = 'overlaid';
+
+function DeckOverlayControl({
+  interleaved,
+  ...deckProps
+}: {interleaved: boolean} & Record<string, unknown>) {
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({interleaved, ...deckProps}),
+  );
+  overlay.setProps({...deckProps, interleaved});
+  return null;
+}
+
 export function DeckJsonMap({
   spec,
   datasets,
   mapStyle,
+  integrationMode = DEFAULT_INTEGRATION_MODE,
   deckProps,
   mapProps,
   showLegends = true,
@@ -262,6 +281,8 @@ export function DeckJsonMap({
     [availableSpec, datasetIds, datasetStates, showLegends],
   );
 
+  const useOverlayMode = integrationMode !== 'reverse-controlled';
+
   return (
     <div className={cn('relative h-full w-full', className)}>
       {hasRenderingError ? (
@@ -272,9 +293,22 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL ref={deckRef} {...(mergedDeckProps as object)}>
-        <Map {...(mergedMapProps as object)}>{children}</Map>
-      </DeckGL>
+      {useOverlayMode ? (
+        <Map
+          {...(mergedMapProps as object)}
+          style={{width: '100%', height: '100%'}}
+        >
+          <DeckOverlayControl
+            interleaved={integrationMode === 'interleaved'}
+            {...mergedDeckProps}
+          />
+          {children}
+        </Map>
+      ) : (
+        <DeckGL ref={deckRef} {...(mergedDeckProps as object)}>
+          <Map {...(mergedMapProps as object)}>{children}</Map>
+        </DeckGL>
+      )}
 
       {renderDatasetErrorOverlay(datasetStates)}
       {!hasRenderingError && showLegends ? (
