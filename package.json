@@ -109,9 +109,6 @@
       "msw",
       "unrs-resolver"
     ],
-    "patchedDependencies": {
-      "sigstore@4.1.0": "patches/sigstore@4.1.0.patch"
-    },
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",
       "@vaadin/vaadin-usage-statistics",

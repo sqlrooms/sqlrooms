@@ -298,11 +298,21 @@ Canonical package combos:
   },
   transformPageData(pageData) {
     const canonicalUrl = publicUrl(pageData.relativePath);
+    const frontmatterHead = pageData.frontmatter.head;
 
-    pageData.frontmatter.head ??= [];
-    pageData.frontmatter.head.push([
-      'link',
-      {rel: 'canonical', href: canonicalUrl},
-    ]);
+    pageData.frontmatter.head = Array.isArray(frontmatterHead)
+      ? frontmatterHead
+      : [];
+
+    const hasCanonical = pageData.frontmatter.head.some(
+      (entry) => entry[0] === 'link' && entry[1]?.rel === 'canonical',
+    );
+
+    if (!hasCanonical) {
+      pageData.frontmatter.head.push([
+        'link',
+        {rel: 'canonical', href: canonicalUrl},
+      ]);
+    }
   },
 });
