@@ -148,9 +148,9 @@ function DeckOverlayControl({
   ...deckProps
 }: {interleaved: boolean} & Record<string, unknown>) {
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({interleaved, ...deckProps}),
+    () => new MapboxOverlay({interleaved}),
   );
-  overlay.setProps({...deckProps, interleaved});
+  overlay.setProps(deckProps);
   return null;
 }
 
