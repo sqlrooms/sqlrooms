@@ -19,8 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from diskcache import Cache
 from sqlrooms.server import db_async
+from sqlrooms.server.cache import QueryCache
 from sqlrooms.server.server import server as duckdb_ws_server
 
 from .db_bridge import (
@@ -717,7 +717,7 @@ class SqlroomsHttpServer:
         signal.signal = _noop_signal  # type: ignore
         try:
             db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
-            cache = Cache()
+            cache = QueryCache()
             duckdb_ws_server(
                 cache,
                 self.ws_port,
