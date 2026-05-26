@@ -1,11 +1,10 @@
 import {JSONConverter} from '@deck.gl/json';
-import type {DeckGLRef} from '@deck.gl/react';
-import DeckGL from '@deck.gl/react';
+import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {useEffect, useMemo, useRef} from 'react';
-import Map from 'react-map-gl/maplibre';
+import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
@@ -15,7 +14,6 @@ import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import type {DeckJsonMapProps, PreparedDeckDatasetState} from './types';
-import {useDeckLayersReadyRedraw} from './useDeckLayersReadyRedraw';
 
 const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
   light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
@@ -136,10 +134,22 @@ function renderDatasetErrorOverlay(
   );
 }
 
+function DeckOverlayControl({
+  interleaved,
+  ...deckProps
+}: {interleaved: boolean} & Record<string, unknown>) {
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({interleaved}),
+  );
+  overlay.setProps(deckProps);
+  return null;
+}
+
 export function DeckJsonMap({
   spec,
   datasets,
   mapStyle,
+  interleaved = false,
   deckProps,
   mapProps,
   showLegends = true,
@@ -225,17 +235,11 @@ export function DeckJsonMap({
   const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
   const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
   const hasRenderingError = Boolean(convertedDeckPropsResult.error);
-  const deckRef = useRef<DeckGLRef>(null);
   const mergedLayers = hasRenderingError
     ? []
     : (deckProps?.layers ??
       (convertedDeckProps.layers as unknown[] | undefined) ??
       []);
-  useDeckLayersReadyRedraw({
-    deckRef,
-    hasRenderingError,
-    layers: mergedLayers,
-  });
 
   const mergedDeckProps = {
     ...convertedDeckProps,
@@ -272,9 +276,13 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL ref={deckRef} {...(mergedDeckProps as object)}>
-        <Map {...(mergedMapProps as object)}>{children}</Map>
-      </DeckGL>
+      <Map
+        {...(mergedMapProps as object)}
+        style={{width: '100%', height: '100%', ...mapProps?.style}}
+      >
+        <DeckOverlayControl interleaved={interleaved} {...mergedDeckProps} />
+        {children}
+      </Map>
 
       {renderDatasetErrorOverlay(datasetStates)}
       {!hasRenderingError && showLegends ? (

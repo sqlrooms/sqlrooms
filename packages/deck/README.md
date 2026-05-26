@@ -204,12 +204,22 @@ payload in React.
 
 - `spec`: a JSON-like deck.gl spec object or JSON string
 - `datasets`: a dataset registry keyed by dataset id
+- `interleaved`: when true, deck layers insert into MapLibre's layer stack (requires WebGL2). Default: `false`
 - `deckProps`: runtime-only deck props such as `getTooltip`, `onHover`, `onClick`
 - `mapProps`: runtime-only MapLibre props
 - `showLegends`: whether SQLRooms-generated color legends should render
 
 `spec` stays serializable; callbacks and runtime behavior belong in `deckProps`
 or `mapProps`.
+
+By default, MapLibre is the root and deck.gl renders in a separate overlay
+canvas via `MapboxOverlay`. MapLibre controls and attribution remain accessible.
+Set `interleaved` to `true` to insert deck layers into MapLibre's layer stack
+(e.g. render points under map labels). This requires WebGL2 (MapLibre GL v3+).
+
+```tsx
+<DeckJsonMap spec={spec} datasets={datasets} interleaved />
+```
 
 ### Dataset Registry
 
