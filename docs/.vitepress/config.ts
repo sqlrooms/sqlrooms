@@ -4,8 +4,10 @@ import {apiSidebarConfig} from './gen-api-sidebar';
 
 const SITE_URL = 'https://sqlrooms.org';
 
-function publicUrl(relativePath: string) {
-  return `${SITE_URL}/${relativePath || ''}`
+function publicUrl(relativePath?: string) {
+  const normalizedRelativePath = (relativePath || '').replace(/^\/+/, '');
+
+  return `${SITE_URL}/${normalizedRelativePath}`
     .replace(/index\.md$/, '')
     .replace(/\.md$/, '.html');
 }
