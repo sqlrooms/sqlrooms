@@ -24,7 +24,7 @@
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo && shx rm -rf examples/**/node_modules/.vite",
     "dev": "node scripts/dev.mjs",
     "docs:build": "pnpm run docs:clean && pnpm run docs:build:typedoc && pnpm run docs:build:vitepress",
-    "docs:build:typedoc": "pnpm run check:typedoc-links && turbo typedoc --filter=@sqlrooms/* && node scripts/fix-typedoc-package-titles.mjs",
+    "docs:build:typedoc": "pnpm run check:typedoc-links && turbo typedoc --filter=@sqlrooms/* --concurrency=5 && node scripts/fix-typedoc-package-titles.mjs",
     "docs:build:vitepress": "vitepress build docs && node scripts/fix-llms-api-links.mjs",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
