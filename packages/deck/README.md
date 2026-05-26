@@ -204,7 +204,7 @@ payload in React.
 
 - `spec`: a JSON-like deck.gl spec object or JSON string
 - `datasets`: a dataset registry keyed by dataset id
-- `integrationMode`: how deck.gl integrates with MapLibre (default: `'overlaid'`)
+- `interleaved`: when true, deck layers insert into MapLibre's layer stack (requires WebGL2). Default: `false`
 - `deckProps`: runtime-only deck props such as `getTooltip`, `onHover`, `onClick`
 - `mapProps`: runtime-only MapLibre props
 - `showLegends`: whether SQLRooms-generated color legends should render
@@ -212,19 +212,13 @@ payload in React.
 `spec` stays serializable; callbacks and runtime behavior belong in `deckProps`
 or `mapProps`.
 
-### Integration Modes
-
-`integrationMode` controls how deck.gl layers render relative to the MapLibre
-basemap:
-
-| Mode                   | Description                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `'overlaid'`           | MapLibre is root; deck renders in a separate overlay canvas. MapLibre controls and attribution remain accessible. **Default.** |
-| `'interleaved'`        | Like overlaid, but deck layers insert into MapLibre's layer stack (requires WebGL2).                                           |
-| `'reverse-controlled'` | deck.gl is root; MapLibre is a child. Legacy mode where deck layers render on top of all MapLibre UI.                          |
+By default, MapLibre is the root and deck.gl renders in a separate overlay
+canvas via `MapboxOverlay`. MapLibre controls and attribution remain accessible.
+Set `interleaved` to `true` to insert deck layers into MapLibre's layer stack
+(e.g. render points under map labels). This requires WebGL2 (MapLibre GL v3+).
 
 ```tsx
-<DeckJsonMap spec={spec} datasets={datasets} integrationMode="overlaid" />
+<DeckJsonMap spec={spec} datasets={datasets} interleaved />
 ```
 
 ### Dataset Registry
