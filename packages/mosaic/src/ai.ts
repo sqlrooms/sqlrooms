@@ -30,10 +30,13 @@ import {
 } from './chart-types';
 import type {
   MosaicDashboardEntry,
-  MosaicDashboardLayoutType,
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
-import {MAX_DATA_POINTS} from './MosaicSlice';
+import type {MosaicDashboardLayoutType} from './dashboard/core-types';
+import {
+  DEFAULT_CHART_MAX_DATA_POINTS,
+  type ChartRuntimeIssue,
+} from './chart-runtime';
 
 export type {ChartToolExecutionContext} from './chart-types';
 
@@ -80,6 +83,11 @@ export type DashboardAiAdapter<TState> = {
     state: TState,
     dashboardId: string,
   ) => MosaicDashboardEntry | undefined;
+  getPanelIssue?: (
+    state: TState,
+    dashboardId: string,
+    panelId: string,
+  ) => ChartRuntimeIssue | undefined;
   setSelectedTable: (
     state: TState,
     dashboardId: string,
@@ -107,6 +115,12 @@ export type CreateDashboardToolDepsOptions<TState> = {
 export type CreateDashboardAiToolsOptions<TState> =
   CreateDashboardToolDepsOptions<TState> & {
     chartTypes?: ChartTypeDefinition<any>[];
+    /**
+     * Host-provided dashboard tools keyed by their registered tool name.
+     * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
+     * stay in sync.
+     */
+    extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
   };
 
 export type DashboardAgentToolCall = {
@@ -146,7 +160,15 @@ export type CreateDashboardAgentToolOptions<TState> =
     }) => Promise<DashboardAgentRunResult>;
     instructions?: string;
     chartTypes?: ChartTypeDefinition<any>[];
+    /**
+     * Host-provided dashboard tools keyed by their registered tool name.
+     * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
+     * stay in sync.
+     */
+    extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
   };
+
+export const MAP_TOOL_KEY = 'create_dashboard_map';
 
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
@@ -167,9 +189,11 @@ Dashboard authoring:
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
+- If the host app provides \`${MAP_TOOL_KEY}\`, use it for map/geospatial/location requests and tables with longitude/latitude or geometry columns. Author its config as native Deck JSON with layer classes in \`spec.layers[].@@type\`, dataset bindings in \`_sqlroomsBinding.dataset\`, and table/query sources in \`config.datasets\`. For data-driven map colors, use color accessors such as \`getFillColor\`, \`getLineColor\`, \`getColor\`, \`getSourceColor\`, or \`getTargetColor\` with \`{"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}\`.
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
+- \`list_dashboard_panels\` includes runtime issues when a chart failed. Use those issues to repair panels in place: convert too-large bubble charts to heatmaps, add \`xInterval\` to too-large line charts, and inspect columns/settings for SQL errors.
 `;
 
 export const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent that creates and modifies interactive data dashboards.
@@ -191,6 +215,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 **Panel Tools:**
 - create_dashboard_profiler - table statistics and column summaries
 - create_dashboard_text_panel - markdown annotations and insights
+- ${MAP_TOOL_KEY} - native Deck JSON geospatial map panel (if provided by the host app)
 
 **Data Tools:**
 - query - execute SQL queries for data exploration
@@ -271,6 +296,7 @@ To update existing panels:
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Check before update:** Always call list_dashboard_panels before updating/removing panels
+- **Repair broken charts:** list_dashboard_panels may return an \`issue\` per panel. For \`too-much-data\`, switch to an aggregated chart or add aggregation. For \`sql-error\`, inspect available columns/types and update the broken panel in place.
 - **Validate columns:** Query tools will validate column existence and types
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach
 - **Use markdown formatting:** Use headings (##), bullet lists (-), and **bold** in text panels for readability`;
@@ -447,8 +473,8 @@ export function createDashboardToolDeps<TState>({
     );
   };
 
-  return {
-    maxDataPoints: MAX_DATA_POINTS,
+  const deps: DashboardToolDeps = {
+    maxDataPoints: DEFAULT_CHART_MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {
@@ -472,19 +498,30 @@ export function createDashboardToolDeps<TState>({
       adapter.setCurrentArtifact(state, artifactId);
     },
   };
+
+  if (adapter.getPanelIssue) {
+    deps.getPanelIssue = (dashboardId, panelId) => {
+      const state = store.getState();
+      return adapter.getPanelIssue?.(state, dashboardId, panelId);
+    };
+  }
+
+  return deps;
 }
 
 export function createDashboardAiTools<TState>({
   store,
   adapter,
   chartTypes,
+  extraTools,
 }: CreateDashboardAiToolsOptions<TState>): Record<string, Tool> {
   const deps = createDashboardToolDeps({store, adapter});
   const resolvedChartTypes =
     chartTypes ?? createDefaultChartTypes({includeCustomSpec: false});
   const chartTools = createChartTools(resolvedChartTypes, deps);
+  const hostTools = extraTools?.(deps) ?? {};
 
-  return {
+  const builtInTools = {
     create_dashboard_artifact: tool({
       description:
         'Create a new dashboard artifact with a dock or grid layout and make it the active artifact. Use when no dashboard artifact exists yet.',
@@ -515,6 +552,19 @@ export function createDashboardAiTools<TState>({
     create_dashboard_text_panel: createTextPanelTool(deps),
     list_dashboard_panels: createListPanelsTool(deps),
     remove_dashboard_panel: createRemovePanelTool(deps),
+  };
+
+  for (const key of Object.keys(hostTools)) {
+    if (key in builtInTools) {
+      throw new Error(
+        `Dashboard extraTools cannot override built-in tool "${key}". Register the host tool under a unique key.`,
+      );
+    }
+  }
+
+  return {
+    ...builtInTools,
+    ...hostTools,
   };
 }
 
@@ -639,6 +689,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
               store,
               adapter,
               chartTypes: options.chartTypes,
+              extraTools: options.extraTools,
             }),
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),

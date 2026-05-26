@@ -18,16 +18,11 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {
-  createDeckMapDashboardPanelConfig,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  deckMapDashboardPanelRenderer,
-} from '@sqlrooms/deck';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
 import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
-  type DataTable,
   QualifiedTableName,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
@@ -37,14 +32,11 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
-  createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardProfilerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
   MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-  type MosaicDashboardAddPanelAction,
   MosaicDashboardSliceConfig,
-  createDefaultChartTypes,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {
@@ -69,7 +61,6 @@ import {
   WebContainerPersistConfig,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
-import {MapIcon} from 'lucide-react';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
@@ -173,99 +164,6 @@ function getRuntimeBridgeConfig() {
   }
   return undefined;
 }
-
-const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
-const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
-
-function findColumnByName(table: DataTable, candidates: string[]) {
-  const candidateSet = new Set(candidates);
-  return table.columns.find((column) =>
-    candidateSet.has(column.name.toLowerCase()),
-  )?.name;
-}
-
-function findLongitudeLatitudeColumns(table?: DataTable) {
-  if (!table) return null;
-  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
-  return longitudeColumn && latitudeColumn
-    ? {longitudeColumn, latitudeColumn}
-    : null;
-}
-
-function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
-function quoteTableReference(table: DataTable) {
-  const qualifiedName = table.table;
-  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
-    .filter((part): part is string => Boolean(part))
-    .map(quoteSqlIdentifier)
-    .join('.');
-}
-
-function createDeckMapPanelForTable(table: DataTable) {
-  const coordinates = findLongitudeLatitudeColumns(table);
-  if (!coordinates) return undefined;
-
-  const {longitudeColumn, latitudeColumn} = coordinates;
-  const datasetId = table.tableName;
-  const geometryColumn = '__sqlrooms_geom';
-  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
-  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
-
-  return createDeckMapDashboardPanelConfig({
-    title: `${table.tableName} map`,
-    source: {tableName: table.tableName},
-    spec: {
-      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
-      layers: [
-        {
-          '@@type': 'GeoArrowScatterplotLayer',
-          id: datasetId,
-          _sqlroomsBinding: {dataset: datasetId},
-          filled: true,
-          stroked: false,
-          pickable: true,
-          radiusUnits: 'pixels',
-          getRadius: 4,
-          getFillColor: [56, 189, 248, 180],
-        },
-      ],
-    },
-    datasets: {
-      [datasetId]: {
-        source: {
-          sqlQuery: [
-            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
-            `FROM ${quoteTableReference(table)}`,
-            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
-          ].join(' '),
-        },
-        geometryColumn,
-        geometryEncodingHint: 'wkb',
-      },
-    },
-    fitToData: {
-      dataset: datasetId,
-      longitudeColumn,
-      latitudeColumn,
-      padding: 40,
-      maxZoom: 12,
-    },
-  });
-}
-
-const deckMapDashboardAddPanelAction: MosaicDashboardAddPanelAction = {
-  type: DECK_MAP_DASHBOARD_PANEL_TYPE,
-  label: 'Map',
-  icon: MapIcon,
-  isEnabled: ({selectedTable}) =>
-    Boolean(findLongitudeLatitudeColumns(selectedTable)),
-  createPanel: ({selectedTable}) =>
-    selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
-};
 
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
@@ -372,16 +270,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
 
           const hasProfilerForTable = dashboard.panels.some(
-            (panel) =>
-              panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE &&
-              panel.source?.tableName === tableName,
+            (panel) => panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
           );
+
           if (!hasProfilerForTable) {
             get().mosaicDashboard.addPanel(
               artifactId,
               createMosaicDashboardProfilerPanelConfig({
                 title: `${tableName} profiler`,
-                source: {tableName},
               }),
             );
           }
@@ -538,13 +434,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createMosaicDashboardSlice({
-          addPanelActions: [deckMapDashboardAddPanelAction],
-          panelRenderers: createDefaultMosaicDashboardPanelRenderers({
-            [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
-          }),
-          chartTypes: createDefaultChartTypes(),
-        })(set, get, store),
+        ...createMosaicDashboardSlice(createDeckMapDashboardSliceOptions())(
+          set,
+          get,
+          store,
+        ),
 
         ...createSqlEditorSlice()(set, get, store),
 

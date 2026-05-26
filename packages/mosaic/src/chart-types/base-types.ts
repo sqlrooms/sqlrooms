@@ -12,12 +12,18 @@ import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {
-  MosaicDashboardEntry,
   ProfilerPanelConfig,
   TextPanelConfig,
-} from '../dashboard/dashboard-types';
+} from '../dashboard/core-types';
+import type {MosaicDashboardEntry} from '../dashboard/dashboard-types';
+import type {
+  ChartDataPolicy,
+  ChartDataPolicyContext,
+  ChartRuntimeIssue,
+  ChartRuntimeIssueContext,
+  ChartRuntimeIssueReporter,
+} from '../chart-runtime';
 
-// Re-export ChartType for convenience
 export type {ChartType};
 
 /**
@@ -92,6 +98,10 @@ export interface DashboardToolDeps {
     patch: Partial<PanelPatch>,
   ) => void;
   getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
+  getPanelIssue?: (
+    dashboardId: string,
+    panelId: string,
+  ) => ChartRuntimeIssue | undefined;
   removePanel: (dashboardId: string, panelId: string) => void;
   setCurrentArtifact: (artifactId: string) => void;
 
@@ -138,6 +148,9 @@ export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
   tableName: string;
   config: TConfig;
   coordinator: Coordinator;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
   /**
    * Pre-defined params/selections to inject when rendering vgplot specs.
    * Keys are param names (without $), values are Param or Selection instances.
@@ -169,6 +182,10 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   icon: ComponentType<{className?: string}>;
   /** Optional function to create an AI tool for this chart type */
   createTool?: (deps: DashboardToolDeps) => Tool;
+  /** Optional runtime data policy for renderer-specific query validation. */
+  getDataPolicy?: (
+    context: ChartDataPolicyContext<TConfig>,
+  ) => ChartDataPolicy | null | undefined;
 };
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =

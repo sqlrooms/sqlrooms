@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const BoxPlotChartSettings = z.object({
   x: z.string().describe('Categorical column for grouping'),
@@ -11,6 +12,7 @@ export const BoxPlotChartConfig = z.object({
   chartType: z.literal('box-plot'),
   settings: BoxPlotChartSettings,
   settingsOpen: z.boolean().optional(),
+  dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
 export type BoxPlotChartConfig = z.infer<typeof BoxPlotChartConfig>;

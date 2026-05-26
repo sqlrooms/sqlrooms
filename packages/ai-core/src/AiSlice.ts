@@ -154,6 +154,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
@@ -1125,6 +1126,55 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           // Send the message through the session's chat instance
           sendMessage({text: promptText});
+        },
+
+        /**
+         * Start a new session with a prompt and automatically begin analysis
+         */
+        startNewSession: async (name: string, prompt: string) => {
+          // Create the session
+          get().ai.createSession(name);
+
+          // Get the newly created session
+          const session = get().ai.getCurrentSession();
+          if (!session) {
+            console.error('Failed to create session');
+            return;
+          }
+
+          // Set the prompt
+          get().ai.setPrompt(session.id, prompt);
+
+          // Wait for SessionChatProvider to mount and register sendMessage
+          const waitForChatReadyAndStart = async (): Promise<void> => {
+            const maxAttempts = 50; // 50 * 20ms = 1 second max
+            let attempts = 0;
+
+            const checkAndStart = async () => {
+              const sendMessage = get().ai.getChatSendMessage(session.id);
+              if (sendMessage) {
+                // Chat provider is ready, start analysis
+                await get().ai.startAnalysis(session.id);
+                return;
+              }
+
+              attempts++;
+              if (attempts >= maxAttempts) {
+                console.error(
+                  'Timeout waiting for chat provider to register for session:',
+                  session.id,
+                );
+                return;
+              }
+
+              // Poll again after a short delay
+              setTimeout(checkAndStart, 20);
+            };
+
+            await checkAndStart();
+          };
+
+          void waitForChatReadyAndStart();
         },
 
         cancelAnalysis: (sessionId: string) => {

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const MIN_BINS_COUNT = 1;
 export const MAX_BINS_COUNT = 1000;
@@ -27,6 +28,7 @@ export const HistogramChartConfig = z.object({
   chartType: z.literal('histogram'),
   settings: HistogramChartSettings,
   settingsOpen: z.boolean().optional(),
+  dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
 export type HistogramChartConfig = z.infer<typeof HistogramChartConfig>;

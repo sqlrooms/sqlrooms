@@ -6,7 +6,6 @@ import {
 } from '@sqlrooms/layout';
 import {useCallback, useEffect, useMemo} from 'react';
 import {useMosaicDashboardContext} from './MosaicDashboardContext';
-import {MosaicDashboardEmptyState} from './MosaicDashboardEmptyState';
 import {MosaicDashboardPanelDragOverlay} from './MosaicDashboardPanelDragOverlay';
 import {MosaicDashboardPanel} from './MosaicDashboardPanel';
 import type {MosaicDashboardPanelConfig} from './dashboard-types';
@@ -15,6 +14,7 @@ import {
   MOSAIC_DASHBOARD_PANEL,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
+import {MosaicDashboardInitialState} from './initial-state/MosaicDashboardInitialState';
 
 const EMPTY_DASHBOARD_PANELS: MosaicDashboardPanelConfig[] = [];
 
@@ -78,8 +78,10 @@ export const MosaicDashboardPanels: React.FC = () => {
     [dashboardId, setLayout],
   );
 
+  const {onStart} = useMosaicDashboardContext();
+
   if (!panels.length || !rootLayout) {
-    return <MosaicDashboardEmptyState />;
+    return <MosaicDashboardInitialState onStart={onStart} />;
   }
 
   return (

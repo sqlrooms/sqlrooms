@@ -145,6 +145,7 @@ export function DeckJsonMap({
   showLegends = true,
   className,
   children,
+  onDatasetStatesChange,
 }: DeckJsonMapProps) {
   const normalizedDatasets = useMemo(
     () => normalizeDatasets(datasets),
@@ -155,6 +156,7 @@ export function DeckJsonMap({
     [normalizedDatasets],
   );
   const datasetStates = usePreparedDatasetStates(normalizedDatasets);
+  const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
 
   const {spec: parsedSpec, error: specError} = useMemo(
     () => parseSpec(spec),
@@ -204,6 +206,14 @@ export function DeckJsonMap({
       console.error(convertedDeckPropsResult.error);
     }
   }, [convertedDeckPropsResult.error]);
+
+  useEffect(() => {
+    onDatasetStatesChangeRef.current = onDatasetStatesChange;
+  }, [onDatasetStatesChange]);
+
+  useEffect(() => {
+    onDatasetStatesChangeRef.current?.(datasetStates);
+  }, [datasetStates]);
 
   const fallbackDeckProps = useMemo(
     () => extractFallbackDeckProps(availableSpec),

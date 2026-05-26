@@ -7,7 +7,6 @@ import {
   escapeId,
   getColValAsNumber,
   useStoreWithDuckDb,
-  type DataTable,
 } from '@sqlrooms/duckdb';
 import {
   column,
@@ -16,47 +15,82 @@ import {
   type MosaicDashboardPanelRenderer,
   type MosaicDashboardPanelRendererProps,
   sql,
+  type ChartDataPolicy,
+  type ChartRuntimeIssue,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
   useMosaicClient,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
-import {Button} from '@sqlrooms/ui';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Table as ArrowTable} from 'apache-arrow';
-import {FocusIcon, MapIcon} from 'lucide-react';
+import {FocusIcon, MapIcon, SettingsIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
-import type {DeckJsonMapProps} from './types';
+import {MapSettingsPanel} from './MapSettings';
+import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
   asDeckJsonMapConfig,
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
-  createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
   type DeckMapDashboardDatasetConfig,
   type DeckMapDashboardInteractionConfig,
+  type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
+import {getDeckMapDataPolicy} from './mapDataPolicy';
+import {
+  createDeckMapDashboardPanelConfigForTable,
+  findGeometryColumn,
+  findLongitudeLatitudeColumns,
+} from './mapConfigUtils';
+
+function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
+  const title =
+    issue.kind === 'too-much-data'
+      ? 'Too much data'
+      : issue.kind === 'sql-error'
+        ? 'Map query failed'
+        : 'Unable to display map';
+
+  return (
+    <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+      <div className="mb-2 text-center font-semibold">{title}</div>
+      <div className="text-center text-sm whitespace-pre-wrap">
+        {issue.message}
+      </div>
+    </div>
+  );
+}
 
 function DeckMapDashboardDatasetClient({
   dashboard,
   dataset,
   datasetId,
+  dataPolicy,
   panel,
   onDatasetState,
+  runtimeIssueContext,
+  runtimeIssueReporter,
   selectionName,
 }: {
   dashboard: MosaicDashboardEntryType;
   dataset: DeckMapDashboardDatasetConfig;
   datasetId: string;
+  dataPolicy?: ChartDataPolicy | null;
   panel: MosaicDashboardPanelConfigType;
   onDatasetState: (
     datasetId: string,
     state: DeckMapDashboardDatasetClientState | undefined,
   ) => void;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selectionName: string;
 }) {
   const source = useMemo(
@@ -82,7 +116,10 @@ function DeckMapDashboardDatasetClient({
     id: `${panel.id}:${datasetId}`,
     selectionName,
     query,
+    dataPolicy,
     enabled: Boolean(source),
+    runtimeIssueContext,
+    runtimeIssueReporter,
   });
 
   useEffect(() => {
@@ -263,6 +300,9 @@ function DeckMapDashboardHeaderActions({
   );
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
+
+  const isSettingsOpen = Boolean(mapConfig?.settingsOpen);
+
   const handleConfigApply = useCallback(
     (nextConfig: Record<string, unknown>) => {
       updatePanel(dashboardId, panel.id, {
@@ -272,8 +312,29 @@ function DeckMapDashboardHeaderActions({
     [dashboardId, panel.id, updatePanel],
   );
 
+  const handleToggleSettings = useCallback(() => {
+    updatePanel(dashboardId, panel.id, {
+      config: {...panel.config, settingsOpen: !isSettingsOpen},
+    });
+  }, [dashboardId, isSettingsOpen, panel.config, panel.id, updatePanel]);
+
   return (
     <div className="flex items-center gap-0.5">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="data-[state=active]:bg-accent h-6 w-6"
+            title="Map settings"
+            onClick={handleToggleSettings}
+            data-state={isSettingsOpen ? 'active' : 'inactive'}
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Map settings</TooltipContent>
+      </Tooltip>
       <DeckMapConfigPopoverEditor
         value={panel.config}
         onApply={handleConfigApply}
@@ -298,6 +359,7 @@ function DeckMapDashboardHeaderActions({
 
 function DeckMapDashboardRenderer({
   dashboard,
+  dashboardId,
   panel,
   selectionName,
 }: MosaicDashboardPanelRendererProps) {
@@ -305,7 +367,32 @@ function DeckMapDashboardRenderer({
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
   );
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
+  const issue = useStoreWithMosaicDashboard((state) =>
+    state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),
+  );
+  const reportPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.reportPanelIssue,
+  );
+  const clearPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.clearPanelIssue,
+  );
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
+
+  const isSettingsOpen = Boolean(
+    (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
+  );
+
+  const handleSettingsOpenChange = useCallback(
+    (isOpen: boolean) => {
+      updatePanel(dashboardId, panel.id, {
+        config: {...panel.config, settingsOpen: isOpen},
+      });
+    },
+    [dashboardId, panel.config, panel.id, updatePanel],
+  );
   const selection = useMemo<Selection>(
     () => getSelection(selectionName, 'crossfilter'),
     [getSelection, selectionName],
@@ -334,6 +421,29 @@ function DeckMapDashboardRenderer({
     [],
   );
 
+  const dataPolicy = useMemo<ChartDataPolicy>(
+    () => getDeckMapDataPolicy(mapConfig),
+    [mapConfig],
+  );
+  const runtimeIssueContext = useMemo(
+    () => ({
+      panelId: panel.id,
+      chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+    }),
+    [panel.id],
+  );
+  const runtimeIssueReporter = useMemo<ChartRuntimeIssueReporter>(
+    () => ({
+      reportIssue: (issueToReport) => {
+        reportPanelIssue(dashboardId, panel.id, issueToReport);
+      },
+      clearIssue: () => {
+        clearPanelIssue(dashboardId, panel.id);
+      },
+    }),
+    [clearPanelIssue, dashboardId, panel.id, reportPanelIssue],
+  );
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -354,13 +464,6 @@ function DeckMapDashboardRenderer({
     };
   }, []);
 
-  const deckDatasets = useMemo<DeckJsonMapProps['datasets']>(() => {
-    if (!mapConfig) {
-      return {};
-    }
-
-    return createDeckMapDashboardDatasets(mapConfig, datasetStates);
-  }, [datasetStates, mapConfig]);
   const fitToData = mapConfig?.fitToData ?? null;
   const fitToDataSource = useMemo(
     () =>
@@ -596,61 +699,59 @@ function DeckMapDashboardRenderer({
     [didAutoFit, fitStateKey, fitToData, viewState],
   );
 
-  if (!mapConfig) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Invalid map panel config.
-      </div>
-    );
-  }
-
-  const datasetEntries = Object.entries(mapConfig.datasets);
-  if (!datasetEntries.length) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Map panels require at least one dataset.
-      </div>
-    );
-  }
-  const datasetErrors = Object.entries(datasetStates).filter(
-    ([, state]) => state.error,
+  const settingsContent = (
+    <MapSettingsPanel
+      dashboardId={dashboardId}
+      panel={panel}
+      onClose={() => handleSettingsOpenChange(false)}
+    />
   );
 
-  const interactionEvent = mapConfig.interaction?.event ?? 'hover';
-  const interactionDeckProps: DeckJsonMapProps['deckProps'] =
-    mapConfig.interaction
-      ? interactionEvent === 'click'
-        ? {onClick: handleBrushEvent}
-        : {onHover: handleBrushEvent}
-      : {};
-
-  return (
+  const mapContent = !mapConfig ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+      Invalid map panel config.
+    </div>
+  ) : issue ? (
+    <DeckMapRuntimeIssuePanel issue={issue} />
+  ) : Object.entries(mapConfig.datasets).length === 0 ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+      Map panels require at least one dataset.
+    </div>
+  ) : (
     <div ref={containerRef} className="relative h-full w-full">
-      {datasetEntries.map(([datasetId, dataset]) => (
+      {Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => (
         <DeckMapDashboardDatasetClient
           key={datasetId}
           dashboard={dashboard}
           dataset={dataset}
           datasetId={datasetId}
+          dataPolicy={dataPolicy}
           panel={panel}
           onDatasetState={handleDatasetState}
+          runtimeIssueContext={runtimeIssueContext}
+          runtimeIssueReporter={runtimeIssueReporter}
           selectionName={selectionName}
         />
       ))}
-      {datasetErrors.length ? (
-        <div className="bg-background/90 text-destructive absolute inset-x-4 top-4 z-10 rounded-md border p-3 text-sm shadow">
-          {datasetErrors.map(([datasetId, state]) => (
-            <div key={datasetId}>
-              Failed to load dataset &quot;{datasetId}&quot;:{' '}
-              {state.error?.message}
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {Object.entries(datasetStates)
+        .filter(([, state]) => state.error)
+        .map(([datasetId, state]) => (
+          <div
+            key={datasetId}
+            className="bg-background/90 text-destructive absolute inset-x-4 top-4 z-10 rounded-md border p-3 text-sm shadow"
+          >
+            Failed to load dataset &quot;{datasetId}&quot;:{' '}
+            {state.error?.message}
+          </div>
+        ))}
       <DeckJsonMap
         className="h-full w-full"
         spec={mapConfig.spec}
-        datasets={deckDatasets}
+        datasets={
+          mapConfig
+            ? createDeckMapDashboardDatasets(mapConfig, datasetStates)
+            : {}
+        }
         mapStyle={mapConfig.mapStyle}
         mapProps={mapConfig.mapProps}
         showLegends={mapConfig.showLegends}
@@ -658,8 +759,23 @@ function DeckMapDashboardRenderer({
           controller: true,
           ...(viewState ? {viewState} : {}),
           onViewStateChange: handleViewStateChange,
-          ...interactionDeckProps,
+          ...(mapConfig.interaction
+            ? (mapConfig.interaction.event ?? 'hover') === 'click'
+              ? {onClick: handleBrushEvent}
+              : {onHover: handleBrushEvent}
+            : {}),
         }}
+      />
+    </div>
+  );
+
+  return (
+    <div className="h-full min-h-0">
+      <MosaicDashboardPanelLayout
+        isOpen={isSettingsOpen}
+        onIsOpenChange={handleSettingsOpenChange}
+        settings={settingsContent}
+        content={mapContent}
       />
     </div>
   );
@@ -671,96 +787,23 @@ export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
   icon: MapIcon,
 };
 
-const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
-const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
-
-function findColumnByName(table: DataTable, candidates: string[]) {
-  const candidateSet = new Set(candidates);
-  return table.columns.find((column) =>
-    candidateSet.has(column.name.toLowerCase()),
-  )?.name;
-}
-
-function findLongitudeLatitudeColumns(table?: DataTable) {
-  if (!table) return null;
-  const longitudeColumn = findColumnByName(table, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn = findColumnByName(table, LATITUDE_COLUMN_NAMES);
-  return longitudeColumn && latitudeColumn
-    ? {longitudeColumn, latitudeColumn}
-    : null;
-}
-
-function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
-function quoteTableReference(table: DataTable) {
-  const qualifiedName = table.table;
-  return [qualifiedName.database, qualifiedName.schema, qualifiedName.table]
-    .filter((part): part is string => Boolean(part))
-    .map(quoteSqlIdentifier)
-    .join('.');
-}
-
-function createDeckMapPanelForTable(table: DataTable) {
-  const coordinates = findLongitudeLatitudeColumns(table);
-  if (!coordinates) return undefined;
-
-  const {longitudeColumn, latitudeColumn} = coordinates;
-  const datasetId = table.tableName;
-  const geometryColumn = '__sqlrooms_geom';
-  const quotedLongitude = quoteSqlIdentifier(longitudeColumn);
-  const quotedLatitude = quoteSqlIdentifier(latitudeColumn);
-
-  return createDeckMapDashboardPanelConfig({
-    title: `${table.tableName} map`,
-    source: {tableName: table.tableName},
-    spec: {
-      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
-      layers: [
-        {
-          '@@type': 'GeoArrowScatterplotLayer',
-          id: datasetId,
-          _sqlroomsBinding: {dataset: datasetId},
-          filled: true,
-          stroked: false,
-          pickable: true,
-          radiusUnits: 'pixels',
-          getRadius: 4,
-          getFillColor: [56, 189, 248, 180],
-        },
-      ],
-    },
-    datasets: {
-      [datasetId]: {
-        source: {
-          sqlQuery: [
-            `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteSqlIdentifier(geometryColumn)}`,
-            `FROM ${quoteTableReference(table)}`,
-            `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
-          ].join(' '),
-        },
-        geometryColumn,
-        geometryEncodingHint: 'wkb',
-      },
-    },
-    fitToData: {
-      dataset: datasetId,
-      longitudeColumn,
-      latitudeColumn,
-      padding: 40,
-      maxZoom: 12,
-    },
-  });
-}
-
 export const deckMapDashboardAddPanelAction: import('@sqlrooms/mosaic').MosaicDashboardAddPanelAction =
   {
     type: DECK_MAP_DASHBOARD_PANEL_TYPE,
     label: 'Map',
     icon: MapIcon,
     isEnabled: ({selectedTable}) =>
-      Boolean(findLongitudeLatitudeColumns(selectedTable)),
+      Boolean(
+        findLongitudeLatitudeColumns(selectedTable) ??
+        findGeometryColumn(selectedTable),
+      ),
     createPanel: ({selectedTable}) =>
-      selectedTable ? createDeckMapPanelForTable(selectedTable) : undefined,
+      selectedTable
+        ? createDeckMapDashboardPanelConfigForTable({
+            title: `${selectedTable.tableName} map`,
+            tableName: selectedTable.tableName,
+            columns: selectedTable.columns,
+            tableReference: selectedTable.table,
+          })
+        : undefined,
   };

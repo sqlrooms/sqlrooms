@@ -44,6 +44,14 @@ export const AnalysisResultsContainer: React.FC<{
     }
   }, [isRunning, scrollToBottom]);
 
+  // Scroll to bottom when switching chat tabs (sessions)
+  useEffect(() => {
+    if (!sessionId) return;
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [sessionId]);
+
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
