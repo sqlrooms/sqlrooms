@@ -2,6 +2,14 @@ import {defineConfig} from 'vitepress';
 import llmstxt from 'vitepress-plugin-llms';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
+const SITE_URL = 'https://sqlrooms.org';
+
+function publicUrl(relativePath: string) {
+  return `${SITE_URL}/${relativePath || ''}`
+    .replace(/index\.md$/, '')
+    .replace(/\.md$/, '.html');
+}
+
 const PACKAGE_CATEGORIES = {
   'Core Packages': [
     'ai',
@@ -52,7 +60,7 @@ export default defineConfig({
     plugins: [
       // @ts-ignore
       llmstxt({
-        domain: 'https://sqlrooms.org',
+        domain: SITE_URL,
         ignoreFiles: [
           // Omit generated media and non-reference pages from all LLM outputs.
           'api/**/_media/**',
@@ -123,6 +131,9 @@ Canonical package combos:
   description:
     'An open source React toolkit for human + agent collaborative analytics apps',
   base: '/',
+  sitemap: {
+    hostname: SITE_URL,
+  },
   head: [
     ['link', {rel: 'icon', href: '/logo.png'}],
     [
@@ -252,26 +263,24 @@ Canonical package combos:
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
   },
-  transformHead({page, siteData}: any) {
-    const url = `https://sqlrooms.org/${page.relativePath || ''}`
-      .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html');
+  transformHead({pageData, siteData}: any) {
+    const url = publicUrl(pageData.relativePath);
 
-    const frontmatter = page.frontmatter || {};
+    const frontmatter = pageData.frontmatter || {};
     const isHome =
-      frontmatter.layout === 'home' || page.relativePath === 'index.md';
+      frontmatter.layout === 'home' || pageData.relativePath === 'index.md';
 
     const hero = (frontmatter.hero as any) || {};
 
     const title = isHome
       ? `${hero.name || siteData.title} – ${hero.text || ''}`.trim()
-      : page.title || siteData.title;
+      : pageData.title || siteData.title;
 
     const description = isHome
       ? hero.tagline || siteData.description
       : frontmatter.description || siteData.description;
 
-    const image = 'https://sqlrooms.org/sqlrooms-og.webp';
+    const image = `${SITE_URL}/sqlrooms-og.webp`;
 
     return [
       ['meta', {property: 'og:type', content: 'website'}],
@@ -286,9 +295,7 @@ Canonical package combos:
     ];
   },
   transformPageData(pageData) {
-    const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
-      .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html');
+    const canonicalUrl = publicUrl(pageData.relativePath);
 
     pageData.frontmatter.head ??= [];
     pageData.frontmatter.head.push([
