@@ -11,19 +11,17 @@
     "preview": "vite preview"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.32.0"
+    "@duckdb/duckdb-wasm": "1.33.1-dev55.0"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.32.0",
+    "@duckdb/duckdb-wasm": "1.33.1-dev55.0",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "0.544.0",
-    "monaco-editor": "^0.55.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.1.8"
