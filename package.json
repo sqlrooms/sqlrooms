@@ -89,7 +89,7 @@
     "sort-package-json": "^3.6.1",
     "turbo": "^2.9.14",
     "typedoc": "0.28.15",
-    "typedoc-plugin-markdown": "4.9.0",
+    "typedoc-plugin-markdown": "4.11.0",
     "typedoc-plugin-zod": "1.4.3",
     "typedoc-vitepress-theme": "1.1.2",
     "typescript": "5.9.3",
@@ -110,8 +110,7 @@
       "unrs-resolver"
     ],
     "patchedDependencies": {
-      "sigstore@4.1.0": "patches/sigstore@4.1.0.patch",
-      "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
+      "sigstore@4.1.0": "patches/sigstore@4.1.0.patch"
     },
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",

@@ -30,6 +30,8 @@ overrides:
   vite@<=6.4.1: 6.4.2
   ws@>=8.0.0 <8.20.1: 8.20.1
   zod: 4.1.13
+patchedDependencies:
+  sigstore@4.1.0: patches/sigstore@4.1.0.patch
 allowBuilds:
   '@mongodb-js/zstd': false
   '@swc/core': true
