@@ -480,8 +480,47 @@ def test_api_put_ai_settings_writes_config(tmp_path):
     with config_path.open("rb") as fh:
         doc = tomllib.load(fh)
     assert doc["ai"]["default_provider"] == "anthropic"
+    assert doc["ai"]["default_model"] == "claude-4-sonnet"
     assert doc["ai"]["providers"][0]["api_key"] == "anthropic-key"
+    assert doc["ai"]["model_parameters"]["max_steps"] == 8
+    assert doc["ai"]["model_parameters"]["additional_instruction"] == ""
     assert server.llm_provider == "anthropic"
+    assert server.llm_model == "claude-4-sonnet"
+    assert server.ai_model_parameters["maxSteps"] == 8
+    assert server.ai_model_parameters["additionalInstruction"] == ""
+
+
+def test_api_put_ai_settings_rejects_fractional_max_steps(tmp_path):
+    config_path = tmp_path / "config.toml"
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/ai/settings",
+        json={
+            "defaultProvider": "anthropic",
+            "defaultModel": "claude-4-sonnet",
+            "settings": {
+                "providers": {},
+                "modelParameters": {
+                    "maxSteps": 8.5,
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert "maxSteps" in response.json()["error"]
+    assert not config_path.exists()
+    assert server.llm_provider is None
 
 
 def test_api_auth_allows_loopback_without_token(server):

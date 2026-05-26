@@ -154,9 +154,13 @@ def _write_ai_settings_to_toml(config_path: Path, payload: dict[str, Any]) -> No
     model_parameters = settings.get("modelParameters") or {}
     if isinstance(model_parameters, dict):
         params_table = tomlkit.table()
-        max_steps = model_parameters.get("maxSteps")
-        if isinstance(max_steps, (int, float)):
-            params_table.add("max_steps", int(max_steps))
+        if "maxSteps" in model_parameters:
+            max_steps = model_parameters.get("maxSteps")
+            if not isinstance(max_steps, int) or isinstance(max_steps, bool):
+                raise ValueError(
+                    "'settings.modelParameters.maxSteps' must be an integer."
+                )
+            params_table.add("max_steps", max_steps)
         additional_instruction = model_parameters.get("additionalInstruction")
         if isinstance(additional_instruction, str):
             params_table.add("additional_instruction", additional_instruction)
@@ -602,6 +606,8 @@ class SqlroomsHttpServer:
                 )
             try:
                 _write_ai_settings_to_toml(self.config_path, payload)
+            except ValueError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
             except Exception as exc:
                 logger.error(
                     "Failed to write AI settings to %s: %s", self.config_path, exc

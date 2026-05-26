@@ -47,7 +47,7 @@ Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/confi
 
 `sqlrooms` reads AI provider and connector settings from a TOML config file.
 AI settings changed in the CLI UI are saved back to this file automatically
-when config loading is enabled:
+when config loading is enabled and the config file is writable:
 
 - macOS / Linux: `~/.config/sqlrooms/config.toml`
 - Windows: `%APPDATA%\sqlrooms\config.toml`

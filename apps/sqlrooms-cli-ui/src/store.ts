@@ -74,6 +74,7 @@ import {
   DocumentsSliceConfig,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
+import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -102,6 +103,7 @@ import {
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
@@ -606,7 +608,6 @@ function startAiSettingsTomlAutosave() {
     const snapshot = JSON.stringify(getAiSettingsTomlPayload(state));
     if (snapshot === lastSnapshot) return;
 
-    lastSnapshot = snapshot;
     if (saveTimer) {
       clearTimeout(saveTimer);
     }
@@ -615,9 +616,18 @@ function startAiSettingsTomlAutosave() {
       void saveAiSettingsToServer(
         runtimeConfig,
         JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
-      ).catch((error) => {
-        console.warn('Failed to save AI settings to SQLRooms config', error);
-      });
+      )
+        .then(() => {
+          lastSnapshot = snapshot;
+        })
+        .catch((error) => {
+          console.warn('Failed to save AI settings to SQLRooms config', error);
+          toast.error('Failed to save AI settings', {
+            id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
+            description:
+              'Your changes are still in this session, but could not be written to the SQLRooms config file.',
+          });
+        });
     }, AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS);
   });
 }
