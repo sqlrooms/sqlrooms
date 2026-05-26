@@ -3,6 +3,38 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.6](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.5...v0.29.0-rc.6) (2026-05-26)
+
+### Bug Fixes
+
+* add fix to scroll to bottom ([#658](https://github.com/sqlrooms/sqlrooms/issues/658)) ([b4c73bb](https://github.com/sqlrooms/sqlrooms/commit/b4c73bb552ab1cfdfc9e47672b4c14667674491e))
+* Ai styling fixes ([#644](https://github.com/sqlrooms/sqlrooms/issues/644)) ([14b698a](https://github.com/sqlrooms/sqlrooms/commit/14b698add6e9e7f56e83b8d8df683b2ce7a2c361))
+* Layout: Prevent panel resize from being stuck ([#660](https://github.com/sqlrooms/sqlrooms/issues/660)) ([ce18931](https://github.com/sqlrooms/sqlrooms/commit/ce189319c7fb095b78c05bec7e3d383b703c453f))
+* properly pass props to kepler internal redux state ([#655](https://github.com/sqlrooms/sqlrooms/issues/655)) ([4a5f630](https://github.com/sqlrooms/sqlrooms/commit/4a5f63076f16c3b888942db40bcd4ecd60f56b10))
+* Remove tooltip provider from sidebar ([#642](https://github.com/sqlrooms/sqlrooms/issues/642)) ([5374c20](https://github.com/sqlrooms/sqlrooms/commit/5374c206c1059e5980b690b831fbde4e0f0a9147))
+* Update dependencies to address vulnerabilities ([#663](https://github.com/sqlrooms/sqlrooms/issues/663)) ([0b2cbb9](https://github.com/sqlrooms/sqlrooms/commit/0b2cbb971aa2a4177891e0a8690348159ad03b0f))
+
+### Features
+
+* Add chart-owned runtime data limits and issue reporting ([#656](https://github.com/sqlrooms/sqlrooms/issues/656)) ([6c65b20](https://github.com/sqlrooms/sqlrooms/commit/6c65b206ad2687561333cc764e0e302ceeee45ea))
+* add expand button to categorical legend ([#647](https://github.com/sqlrooms/sqlrooms/issues/647)) ([94ca393](https://github.com/sqlrooms/sqlrooms/commit/94ca3931a64f0a7d2da881f08b0e16463442b9b4))
+* add maxBins configuration to histogram  ([#637](https://github.com/sqlrooms/sqlrooms/issues/637)) ([dbde573](https://github.com/sqlrooms/sqlrooms/commit/dbde5733763dbab518e30b993ed3a83089a15070))
+* add overlaid integration mode to DeckJsonMap ([#661](https://github.com/sqlrooms/sqlrooms/issues/661)) ([3478884](https://github.com/sqlrooms/sqlrooms/commit/3478884de5f32fd0bb0f82aaa8e45541fdf0641f))
+* Add primary artifact run context tools ([#646](https://github.com/sqlrooms/sqlrooms/issues/646)) ([8537413](https://github.com/sqlrooms/sqlrooms/commit/8537413fba9ac430b35fbeb6ba0cfc01f124b805))
+* Add transcript text search to AI chat ([#628](https://github.com/sqlrooms/sqlrooms/issues/628)) ([75dfde2](https://github.com/sqlrooms/sqlrooms/commit/75dfde2881681e743a2b8c3516c4a3426cfce708))
+* Adding forceMount option to TabsLayout ([#645](https://github.com/sqlrooms/sqlrooms/issues/645)) ([f0978ef](https://github.com/sqlrooms/sqlrooms/commit/f0978ef6573c5bac5d8863a173dabad3324712ae))
+* Agent sessions UI improvements ([#649](https://github.com/sqlrooms/sqlrooms/issues/649)) ([8b7e71e](https://github.com/sqlrooms/sqlrooms/commit/8b7e71eabbd053ad368d665f1962bf0192633fe0))
+* ai powered dashboards ([#634](https://github.com/sqlrooms/sqlrooms/issues/634)) ([54b7962](https://github.com/sqlrooms/sqlrooms/commit/54b796214f3a7f4003a31bbae3de1745532ae395))
+* Deck map ai tool ([#654](https://github.com/sqlrooms/sqlrooms/issues/654)) ([3f47820](https://github.com/sqlrooms/sqlrooms/commit/3f478202a23c9cde01c6eaaf3fee2aa54644ed11))
+* enhanced dasboard creation ([#651](https://github.com/sqlrooms/sqlrooms/issues/651)) ([f3f0b9e](https://github.com/sqlrooms/sqlrooms/commit/f3f0b9e2318e31e1c5380ccde84b439be32cf2c6))
+* expand deck example with Overture buildings ([#570](https://github.com/sqlrooms/sqlrooms/issues/570)) ([da3cebe](https://github.com/sqlrooms/sqlrooms/commit/da3cebe4a3206c0c3037ff956dd468139ea9b434))
+* Harden Python server and CLI launcher against SQL injection and remote exposure ([#557](https://github.com/sqlrooms/sqlrooms/issues/557)) ([6f16ee5](https://github.com/sqlrooms/sqlrooms/commit/6f16ee5b35eb50f180f4fe8d48e6a82c8aea7a59))
+* implement data point limit validation and error handling in charts ([#638](https://github.com/sqlrooms/sqlrooms/issues/638)) ([dfa39de](https://github.com/sqlrooms/sqlrooms/commit/dfa39ded1867c6f6bd92814b4e183b38dc2d46fc))
+* show all schemas in the datasource panel ([#639](https://github.com/sqlrooms/sqlrooms/issues/639)) ([cb9a590](https://github.com/sqlrooms/sqlrooms/commit/cb9a590b63897a9e10e2d226174673ea6eca8a1c))
+* Stabilize targeted dev startup order ([#648](https://github.com/sqlrooms/sqlrooms/issues/648)) ([8824c05](https://github.com/sqlrooms/sqlrooms/commit/8824c059014e0d3affc7bc9605d7d97044b08eb5))
+* text panel improvements ([#657](https://github.com/sqlrooms/sqlrooms/issues/657)) ([6a286dc](https://github.com/sqlrooms/sqlrooms/commit/6a286dcbd133aaec8e99707c4621b818a6050110))
+* Upgrade DuckDB to 1.5.3 ([#659](https://github.com/sqlrooms/sqlrooms/issues/659)) ([cc15a10](https://github.com/sqlrooms/sqlrooms/commit/cc15a10a44687163c3c8d6d00423cc3e57dd3036))
+
 # [0.29.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.4...v0.29.0-rc.5) (2026-05-18)
 
 ### Bug Fixes
