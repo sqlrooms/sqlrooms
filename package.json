@@ -24,7 +24,7 @@
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo && shx rm -rf examples/**/node_modules/.vite",
     "dev": "node scripts/dev.mjs",
     "docs:build": "pnpm run docs:clean && pnpm run docs:build:typedoc && pnpm run docs:build:vitepress",
-    "docs:build:typedoc": "pnpm run check:typedoc-links && turbo typedoc --filter=@sqlrooms/* && node scripts/fix-typedoc-package-titles.mjs",
+    "docs:build:typedoc": "pnpm run check:typedoc-links && turbo typedoc --filter=@sqlrooms/* --concurrency=5 && node scripts/fix-typedoc-package-titles.mjs",
     "docs:build:vitepress": "vitepress build docs && node scripts/fix-llms-api-links.mjs",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
@@ -89,7 +89,7 @@
     "sort-package-json": "^3.6.1",
     "turbo": "^2.9.14",
     "typedoc": "0.28.15",
-    "typedoc-plugin-markdown": "4.9.0",
+    "typedoc-plugin-markdown": "4.11.0",
     "typedoc-plugin-zod": "1.4.3",
     "typedoc-vitepress-theme": "1.1.2",
     "typescript": "5.9.3",
@@ -109,10 +109,6 @@
       "msw",
       "unrs-resolver"
     ],
-    "patchedDependencies": {
-      "sigstore@4.1.0": "patches/sigstore@4.1.0.patch",
-      "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
-    },
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",
       "@vaadin/vaadin-usage-statistics",

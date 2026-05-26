@@ -19,6 +19,7 @@ export {
   type DuckDbConnectorOptions,
   type DuckDbConnectorType,
   type WasmDuckDbConnector,
+  type WasmDuckDbConnectorOptions,
 } from './connectors/createDuckDbConnector';
 
 export {
@@ -40,8 +41,11 @@ export {
 export {
   loadSchemaCatalog,
   type LoadSchemaCatalogFilterFunction,
+  type LoadSchemaCatalogOptions,
+  type LoadTableSchemasFilterFunction,
   type SchemaCatalogFilterEntry,
   type LoadTableSchemasFilter,
+  type LoadTableSchemasOptions,
 } from './loadTableSchemas';
 
 export {useExportToCsv, type UseExportToCsvReturn} from './use-export-to-csv';
