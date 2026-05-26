@@ -2122,17 +2122,14 @@ importers:
   examples/query-pwa:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.32.0
-        version: 1.32.0
+        specifier: 1.33.1-dev55.0
+        version: 1.33.1-dev55.0
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/monaco-editor':
-        specifier: workspace:*
-        version: link:../../packages/monaco-editor
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -2148,9 +2145,6 @@ importers:
       lucide-react:
         specifier: 0.544.0
         version: 0.544.0(react@19.2.1)
-      monaco-editor:
-        specifier: ^0.55.1
-        version: 0.55.1
       react:
         specifier: ^19.2.0
         version: 19.2.1
@@ -3184,8 +3178,8 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.32.0
-        version: 1.32.0
+        specifier: ^1.32.0 || 1.33.1-dev55.0
+        version: 1.33.1-dev55.0
       '@sqlrooms/duckdb-core':
         specifier: workspace:*
         version: link:../duckdb-core
@@ -5613,6 +5607,9 @@ packages:
 
   '@duckdb/duckdb-wasm@1.32.0':
     resolution: {integrity: sha512-IewXTNYEjsZCPE9weUWgtjGxUlMRo7qhX0GF6tq/KjK8bnY+RAl4cyUdYUfcdzbyb4b9ZxPC+FOsCcxgaKFWMg==}
+
+  '@duckdb/duckdb-wasm@1.33.1-dev55.0':
+    resolution: {integrity: sha512-hY3w3Qu8u6Sk9zxZScc4/lVuffP3tVTAHCy0YECgeiUK8+mG9kGgSvwtBCgTHtVlIZFC8QrMkPCluO4u/KBNWA==}
 
   '@duckdb/node-api@1.4.4-r.3':
     resolution: {integrity: sha512-zsTihV7WTGp+n6nI0rNY+cNamKiN9lj0YTS4jrjBMd5ESJpDIJNJOB3o0xBbBghalgGu6PZfZOIcNofUbUHAYg==}
@@ -14208,6 +14205,10 @@ packages:
 
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
+  qs@6.15.2:
+    resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
+    engines: {node: '>=0.6'}
+
   quadbin@0.4.2:
     resolution: {integrity: sha512-1NFzjFVM23Um51/ttD6lFDqGtUHNS5Ky1slZHk3YPwMbC+7Jl3ULLb4QvDo6+Nerv8b8SgUV+ysOhziUh4B5cQ==}
     engines: {node: '>=18'}
@@ -18616,6 +18617,11 @@ snapshots:
   '@duckdb/duckdb-wasm@1.32.0':
     dependencies:
       apache-arrow: 17.0.0
+
+  '@duckdb/duckdb-wasm@1.33.1-dev55.0':
+    dependencies:
+      apache-arrow: 17.0.0
+      qs: 6.15.2
 
   '@duckdb/node-api@1.4.4-r.3':
     dependencies:
@@ -30038,6 +30044,10 @@ snapshots:
   pure-rand@7.0.1: {}
 
   q@1.5.1: {}
+
+  qs@6.15.2:
+    dependencies:
+      side-channel: 1.1.0
 
   quadbin@0.4.2:
     dependencies:

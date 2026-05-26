@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.32.0"
+    "@duckdb/duckdb-wasm": "1.33.1-dev55.0"
   },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
