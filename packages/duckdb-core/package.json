@@ -25,8 +25,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@sqlrooms/room-config": "workspace:*",
-    "@sqlrooms/utils": "workspace:*"
+    "@sqlrooms/room-config": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
