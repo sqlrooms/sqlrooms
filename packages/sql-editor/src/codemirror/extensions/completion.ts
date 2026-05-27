@@ -1,18 +1,68 @@
 import {
   type CompletionContext as CMCompletionContext,
   type Completion,
+  type CompletionSource,
   autocompletion,
+  ifNotIn,
 } from '@codemirror/autocomplete';
+import type {LRLanguage} from '@codemirror/language';
 import type {Extension} from '@codemirror/state';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
+import type {DataTable} from '@sqlrooms/duckdb';
 
 export interface CompletionContext {
-  getKeywordSuggestions?: () => string[];
+  language: LRLanguage;
+  currentSchemas: DataTable[];
   getFunctionSuggestions?: (
     query: string,
   ) => Promise<GroupedFunctionSuggestion[]>;
+}
+
+function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
+  const options = tables.flatMap((table): Completion[] => {
+    const tableName = table.table.table;
+
+    return table.columns.map((column) => ({
+      label: column.name,
+      type: 'property',
+      detail: `${tableName} - ${column.type}`,
+      boost: 5,
+    }));
+  });
+
+  return (completionContext: CMCompletionContext) => {
+    if (options.length === 0) {
+      return null;
+    }
+
+    const word = completionContext.matchBefore(/\w*/);
+    if (!word || (word.from === word.to && !completionContext.explicit)) {
+      return null;
+    }
+
+    const line = completionContext.state.doc.lineAt(completionContext.pos);
+    const textBeforeCursor = line.text.slice(
+      0,
+      completionContext.pos - line.from,
+    );
+
+    if (
+      /\.\w*$/.test(textBeforeCursor) ||
+      /\b(from|join|into|update|table|describe|desc|attach)\s+(?:"[^"]*"?|[\w]*)$/i.test(
+        textBeforeCursor,
+      )
+    ) {
+      return null;
+    }
+
+    return {
+      from: word.from,
+      options,
+      validFor: /^\w*$/,
+    };
+  };
 }
 
 /**
@@ -20,10 +70,13 @@ export interface CompletionContext {
  * Complements marimo-sql's base SQL completions (keywords, tables, columns, CTEs).
  */
 export function createCompletion({
-  getKeywordSuggestions,
+  language,
+  currentSchemas,
   getFunctionSuggestions,
 }: CompletionContext): Extension {
-  const completionSource = async (completionContext: CMCompletionContext) => {
+  const completionSource: CompletionSource = async (
+    completionContext: CMCompletionContext,
+  ) => {
     const suggestions: Completion[] = [];
 
     // Get word at cursor for matching
@@ -31,16 +84,6 @@ export function createCompletion({
     if (!word || (word.from === word.to && !completionContext.explicit)) {
       return null;
     }
-
-    // Add keywords
-    const keywords = getKeywordSuggestions?.() ?? [];
-    keywords.forEach((keyword) => {
-      suggestions.push({
-        label: keyword,
-        type: 'keyword',
-        boost: 5,
-      });
-    });
 
     // Add dynamic function suggestions with documentation
     if (getFunctionSuggestions && word.text) {
@@ -57,7 +100,7 @@ export function createCompletion({
                 renderComponentToDomElement(FunctionDocumentation, {
                   functions: overloads,
                 }),
-              boost: 5,
+              boost: -20,
             };
           }),
         );
@@ -70,15 +113,28 @@ export function createCompletion({
       ? {
           from: word.from,
           options: suggestions,
+          validFor: /^\w*$/,
         }
       : null;
   };
 
-  // Override default SQL completions with our custom completion source
-  return autocompletion({
-    override: [completionSource],
-    // Don't auto-select the first item when completion list opens
-    // This prevents the info tooltip from showing immediately
-    selectOnOpen: false,
-  });
+  return [
+    language.data.of({
+      autocomplete: ifNotIn(
+        ['QuotedIdentifier', 'String', 'LineComment', 'BlockComment'],
+        createColumnCompletionSource(currentSchemas),
+      ),
+    }),
+    language.data.of({
+      autocomplete: ifNotIn(
+        ['QuotedIdentifier', 'String', 'LineComment', 'BlockComment', '.'],
+        completionSource,
+      ),
+    }),
+    autocompletion({
+      selectOnOpen: true,
+      filterStrict: true,
+      interactionDelay: 0,
+    }),
+  ];
 }

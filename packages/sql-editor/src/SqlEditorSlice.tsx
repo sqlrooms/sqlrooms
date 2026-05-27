@@ -250,33 +250,28 @@ export function createSqlEditorSlice({
         },
 
         deleteQueryTab: (queryId) => {
-          const sqlEditorConfig = get().sqlEditor.config;
-          const queries = sqlEditorConfig.queries;
-          const openTabs = sqlEditorConfig.openTabs;
-
-          if (queries.length <= 1) {
-            // Don't delete the last query
-            return;
-          }
-
-          const wasSelected = sqlEditorConfig.selectedQueryId === queryId;
-          const deletingOpenIndex = openTabs.indexOf(queryId);
-          const filteredQueries = queries.filter((q) => q.id !== queryId);
-
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.queries = filteredQueries;
-              draft.sqlEditor.config.openTabs = openTabs.filter(
+              const config = draft.sqlEditor.config;
+
+              if (config.queries.length <= 1) {
+                // Don't delete the last query
+                return;
+              }
+
+              const wasSelected = config.selectedQueryId === queryId;
+              const deletingOpenIndex = config.openTabs.indexOf(queryId);
+
+              config.queries = config.queries.filter((q) => q.id !== queryId);
+              config.openTabs = config.openTabs.filter(
                 (id) => id !== queryId,
               );
-              const {[queryId]: _removed, ...rest} =
-                draft.sqlEditor.queryResultsById;
-              draft.sqlEditor.queryResultsById = rest;
+              delete draft.sqlEditor.queryResultsById[queryId];
 
               // If we deleted the selected query, select another one
               if (wasSelected) {
-                const newOpenTabs = draft.sqlEditor.config.openTabs;
-                const remainingQueries = draft.sqlEditor.config.queries;
+                const newOpenTabs = config.openTabs;
+                const remainingQueries = config.queries;
 
                 if (newOpenTabs.length > 0) {
                   // Select from remaining open tabs
@@ -286,11 +281,10 @@ export function createSqlEditorSlice({
                       : Math.min(deletingOpenIndex - 1, newOpenTabs.length - 1);
                   const newSelectedId = newOpenTabs[newIndex];
                   if (newSelectedId) {
-                    draft.sqlEditor.config.selectedQueryId = newSelectedId;
-                    const newSelectedQuery =
-                      draft.sqlEditor.config.queries.find(
-                        (q) => q.id === newSelectedId,
-                      );
+                    config.selectedQueryId = newSelectedId;
+                    const newSelectedQuery = config.queries.find(
+                      (q) => q.id === newSelectedId,
+                    );
                     if (newSelectedQuery) {
                       newSelectedQuery.lastOpenedAt = Date.now();
                     }
@@ -299,8 +293,8 @@ export function createSqlEditorSlice({
                   // No open tabs left, open a closed query
                   const queryToOpen = remainingQueries[0];
                   if (queryToOpen) {
-                    draft.sqlEditor.config.openTabs.push(queryToOpen.id);
-                    draft.sqlEditor.config.selectedQueryId = queryToOpen.id;
+                    config.openTabs.push(queryToOpen.id);
+                    config.selectedQueryId = queryToOpen.id;
                     queryToOpen.lastOpenedAt = Date.now();
                   }
                 }

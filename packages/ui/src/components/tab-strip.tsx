@@ -255,7 +255,8 @@ function SortableTab({
             data-editing={isEditing ? '' : undefined}
             className={cn(
               ...TAB_STRIP_BUTTON_CLASSNAMES,
-              'flex-1 justify-start gap-1',
+              'flex-1 gap-1',
+              isEditing ? 'justify-start' : 'justify-center text-center',
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
               isEditing && 'focus-visible:ring-0',
             )}
@@ -263,7 +264,7 @@ function SortableTab({
             onDoubleClick={() => onStartEditing(tab.id)}
           >
             {!isEditing ? (
-              <div className="truncate">
+              <div className="min-w-0 flex-1 truncate text-center">
                 {renderTabLabel ? renderTabLabel(tab) : tab.name}
               </div>
             ) : (
