@@ -633,6 +633,7 @@ function startAiSettingsTomlAutosave() {
   if (!runtimeConfig.configWritable) return;
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let latestSaveRequestId = 0;
   let lastSnapshot = JSON.stringify(
     getAiSettingsTomlPayload(roomStore.getState()),
   );
@@ -646,14 +647,17 @@ function startAiSettingsTomlAutosave() {
     }
     saveTimer = setTimeout(() => {
       saveTimer = null;
+      const saveRequestId = ++latestSaveRequestId;
       void saveAiSettingsToServer(
         runtimeConfig,
         JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
       )
         .then(() => {
+          if (saveRequestId !== latestSaveRequestId) return;
           lastSnapshot = snapshot;
         })
         .catch((error) => {
+          if (saveRequestId !== latestSaveRequestId) return;
           console.warn('Failed to save AI settings to SQLRooms config', error);
           toast.error('Failed to save AI settings', {
             id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
