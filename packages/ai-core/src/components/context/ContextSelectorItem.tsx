@@ -26,7 +26,7 @@ export const ContextSelectorItemComponent: FC<ContextSelectorItemProps> = ({
         item.type,
         item.subtitle,
         ...(item.keywords ?? []),
-      ].filter(Boolean) as string[],
+      ].filter((item): item is string => Boolean(item)),
     [item],
   );
 
@@ -48,20 +48,20 @@ export const ContextSelectorItemComponent: FC<ContextSelectorItemProps> = ({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate">{item.title}</span>
-            {item.subtitle ? (
+            {item.subtitle && (
               <span className="text-muted-foreground block truncate text-xs">
                 {item.subtitle}
               </span>
-            ) : null}
+            )}
           </span>
           <span className="text-muted-foreground text-xs capitalize">
             {defaultTypeLabel(item)}
           </span>
-          {running ? (
+          {running && (
             <UiBadge variant="secondary" className="h-5 px-1.5 text-[10px]">
               Running
             </UiBadge>
-          ) : null}
+          )}
         </>
       )}
     </CommandItem>
