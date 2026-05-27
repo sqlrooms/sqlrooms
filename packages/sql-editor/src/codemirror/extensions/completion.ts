@@ -5,13 +5,15 @@ import {
   type CompletionSource,
   autocompletion,
   ifNotIn,
+  insertCompletionText,
 } from '@codemirror/autocomplete';
 import type {LRLanguage} from '@codemirror/language';
 import type {Extension} from '@codemirror/state';
+import type {EditorView} from '@codemirror/view';
 import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
-import type {DataTable} from '@sqlrooms/duckdb';
+import {escapeId, type DataTable} from '@sqlrooms/duckdb';
 
 const FUNCTION_INFO_DELAY_MS = 750;
 const ACTIVATE_ON_TYPING_DELAY_MS = 500;
@@ -24,16 +26,49 @@ export interface CompletionContext {
   ) => Promise<GroupedFunctionSuggestion[]>;
 }
 
+function needsIdentifierQuotes(identifier: string): boolean {
+  return !/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier);
+}
+
+function createColumnCompletion(column: {
+  name: string;
+  type: string;
+  tableName: string;
+}): Completion {
+  const applyQuotedIdentifier = (
+    view: EditorView,
+    _completion: Completion,
+    from: number,
+    to: number,
+  ) => {
+    const replaceFrom =
+      from > 0 && view.state.sliceDoc(from - 1, from) === '"' ? from - 1 : from;
+
+    view.dispatch(
+      insertCompletionText(view.state, escapeId(column.name), replaceFrom, to),
+    );
+  };
+
+  return {
+    label: column.name,
+    type: 'property',
+    detail: `${column.tableName} - ${column.type}`,
+    apply: needsIdentifierQuotes(column.name) ? applyQuotedIdentifier : undefined,
+    boost: 5,
+  };
+}
+
 function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
   const options = tables.flatMap((table): Completion[] => {
     const tableName = table.table.table;
 
-    return table.columns.map((column) => ({
-      label: column.name,
-      type: 'property',
-      detail: `${tableName} - ${column.type}`,
-      boost: 5,
-    }));
+    return table.columns.map((column) =>
+      createColumnCompletion({
+        name: column.name,
+        type: column.type,
+        tableName,
+      }),
+    );
   });
 
   return (completionContext: CMCompletionContext) => {
@@ -41,7 +76,7 @@ function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
       return null;
     }
 
-    const word = completionContext.matchBefore(/\w*/);
+    const word = completionContext.matchBefore(/[\w-]*/);
     if (!word || word.from === word.to) {
       return null;
     }
@@ -53,8 +88,8 @@ function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
     );
 
     if (
-      /\.\w*$/.test(textBeforeCursor) ||
-      /\b(from|join|into|update|table|describe|desc|attach)\s+(?:"[^"]*"?|[\w]*)$/i.test(
+      /\.[\w-]*$/.test(textBeforeCursor) ||
+      /\b(from|join|into|update|table|describe|desc|attach)\s+(?:"[^"]*"?|[\w-]*)$/i.test(
         textBeforeCursor,
       )
     ) {
@@ -64,7 +99,7 @@ function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
     return {
       from: word.from,
       options,
-      validFor: /^\w*$/,
+      validFor: /^[\w-]*$/,
     };
   };
 }
@@ -136,7 +171,7 @@ export function createCompletion({
   return [
     language.data.of({
       autocomplete: ifNotIn(
-        ['QuotedIdentifier', 'String', 'LineComment', 'BlockComment'],
+        ['String', 'LineComment', 'BlockComment'],
         createColumnCompletionSource(currentSchemas),
       ),
     }),
