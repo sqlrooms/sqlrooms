@@ -1,6 +1,7 @@
 import {
   type CompletionContext as CMCompletionContext,
   type Completion,
+  type CompletionInfo,
   type CompletionSource,
   autocompletion,
   ifNotIn,
@@ -11,6 +12,9 @@ import {FunctionDocumentation} from '../../components/FunctionDocumentation';
 import {renderComponentToDomElement} from '@sqlrooms/utils';
 import type {GroupedFunctionSuggestion} from '@sqlrooms/db';
 import type {DataTable} from '@sqlrooms/duckdb';
+
+const FUNCTION_INFO_DELAY_MS = 750;
+const ACTIVATE_ON_TYPING_DELAY_MS = 500;
 
 export interface CompletionContext {
   language: LRLanguage;
@@ -38,7 +42,7 @@ function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
     }
 
     const word = completionContext.matchBefore(/\w*/);
-    if (!word || (word.from === word.to && !completionContext.explicit)) {
+    if (!word || word.from === word.to) {
       return null;
     }
 
@@ -63,6 +67,20 @@ function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
       validFor: /^\w*$/,
     };
   };
+}
+
+function delayedFunctionInfo(
+  functions: GroupedFunctionSuggestion['overloads'],
+): Promise<CompletionInfo> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(() => {
+      resolve(
+        renderComponentToDomElement(FunctionDocumentation, {
+          functions,
+        }),
+      );
+    }, FUNCTION_INFO_DELAY_MS);
+  });
 }
 
 /**
@@ -96,10 +114,7 @@ export function createCompletion({
               label: name,
               type: 'method',
               detail: overloads[0]?.description ?? '',
-              info: () =>
-                renderComponentToDomElement(FunctionDocumentation, {
-                  functions: overloads,
-                }),
+              info: () => delayedFunctionInfo(overloads),
               boost: -20,
             };
           }),
@@ -134,7 +149,7 @@ export function createCompletion({
     autocompletion({
       selectOnOpen: true,
       filterStrict: true,
-      interactionDelay: 0,
+      activateOnTypingDelay: ACTIVATE_ON_TYPING_DELAY_MS,
     }),
   ];
 }

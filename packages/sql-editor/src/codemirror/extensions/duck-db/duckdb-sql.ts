@@ -11,16 +11,41 @@ export const SqlRoomsDuckDBDialect = SQLDialect.define({
   ),
 });
 
+const STARTER_KEYWORD_SORT_TEXT = new Map(
+  [
+    'SELECT',
+    'FROM',
+    'WITH',
+    'CREATE',
+    'INSERT',
+    'UPDATE',
+    'DELETE',
+    'COPY',
+    'DESCRIBE',
+    'SHOW',
+    'EXPLAIN',
+    'SUMMARIZE',
+    'ATTACH',
+    'INSTALL',
+    'LOAD',
+  ].map((keyword, index) => [keyword, String(index).padStart(2, '0')]),
+);
+
 /** Creates SQL language extension with DuckDB dialect and keyword completion */
 export function createDuckDbSql(schema: SQLNamespace): LanguageSupport {
   return sql({
     dialect: SqlRoomsDuckDBDialect,
     schema,
     upperCaseKeywords: true,
-    keywordCompletion: (label, type) => ({
-      label,
-      type,
-      boost: 30,
-    }),
+    keywordCompletion: (label, type) => {
+      const starterSortText = STARTER_KEYWORD_SORT_TEXT.get(label);
+
+      return {
+        label,
+        type,
+        boost: starterSortText ? 50 : 0,
+        sortText: starterSortText ?? label,
+      };
+    },
   });
 }
