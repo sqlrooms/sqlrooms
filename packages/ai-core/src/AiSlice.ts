@@ -406,6 +406,15 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         sessionIdSet.has(id),
       );
     }
+    if (
+      baseConfig.currentSessionId &&
+      !baseConfig.openSessionTabs?.includes(baseConfig.currentSessionId)
+    ) {
+      baseConfig.openSessionTabs = [
+        baseConfig.currentSessionId,
+        ...(baseConfig.openSessionTabs ?? []),
+      ];
+    }
     // Ensure openSessionTabs is initialized with current session if empty/missing
     if (
       !baseConfig.openSessionTabs ||

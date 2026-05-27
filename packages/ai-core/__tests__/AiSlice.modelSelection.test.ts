@@ -94,6 +94,56 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
+  it('opens the repaired current session when initialized with a stale current session id', () => {
+    const now = Date.now();
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        config: {
+          currentSessionId: 'missing-session',
+          openSessionTabs: ['session-2'],
+          sessions: [
+            {
+              id: 'session-1',
+              name: 'Session 1',
+              modelProvider: 'openai',
+              model: 'shared-model',
+              analysisResults: [],
+              createdAt: new Date(now),
+              uiMessages: [],
+              messagesRevision: 0,
+              prompt: '',
+              isRunning: false,
+              lastOpenedAt: now,
+            },
+            {
+              id: 'session-2',
+              name: 'Session 2',
+              modelProvider: 'openai',
+              model: 'shared-model',
+              analysisResults: [],
+              createdAt: new Date(now),
+              uiMessages: [],
+              messagesRevision: 0,
+              prompt: '',
+              isRunning: false,
+              lastOpenedAt: now,
+            },
+          ],
+        },
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    expect(store.getState().ai.config.openSessionTabs).toEqual([
+      'session-1',
+      'session-2',
+    ]);
+  });
+
   it('allows deleting the last session', () => {
     const store = createTestStore();
 
