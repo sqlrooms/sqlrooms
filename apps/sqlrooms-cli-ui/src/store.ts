@@ -27,6 +27,7 @@ import {
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
+  CrdtSliceState,
   createCrdtSlice,
   createIndexedDbDocStorage,
   createWebSocketSyncConnector,
@@ -138,6 +139,18 @@ function createCliCrdtSyncConnector() {
       `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
     sendSnapshotOnConnect: false,
   });
+}
+
+function createDisabledCrdtState(): CrdtSliceState {
+  return {
+    crdt: {
+      status: 'idle',
+      connectionStatus: 'idle',
+      setConnectionStatus: () => {},
+      initialize: async () => {},
+      destroy: async () => {},
+    },
+  };
 }
 
 const connector = createWebSocketDuckDbConnector({
@@ -454,13 +467,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createDocumentsSlice()(set, get, store),
 
-        ...createCrdtSlice<RoomState>({
-          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
-          sync: createCliCrdtSyncConnector(),
-          mirrors: {
-            documentState: createDocumentsCrdtMirror<RoomState>(),
-          },
-        })(set, get, store),
+        ...(runtimeConfig.syncEnabled
+          ? createCrdtSlice<RoomState>({
+              storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+              sync: createCliCrdtSyncConnector(),
+              mirrors: {
+                documentState: createDocumentsCrdtMirror<RoomState>(),
+              },
+            })(set, get, store)
+          : createDisabledCrdtState()),
 
         ...createWebContainerSlice({
           autoInitialize: false,
