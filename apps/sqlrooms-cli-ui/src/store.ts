@@ -198,6 +198,21 @@ const sliceConfigSchemas = {
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
 
+function getAvailableAiModels(config: AiSettingsSliceConfig) {
+  return [
+    ...Object.entries(config.providers).flatMap(([provider, providerConfig]) =>
+      providerConfig.models.map((model) => ({
+        provider,
+        value: model.modelName,
+      })),
+    ),
+    ...config.customModels.map((model) => ({
+      provider: 'custom',
+      value: model.modelName,
+    })),
+  ];
+}
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
     {
@@ -496,7 +511,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   modelParameters: {
                     maxSteps: runtimeAiSettings.modelParameters.maxSteps ?? 50,
                     additionalInstruction:
-                      runtimeAiSettings.modelParameters.additionalInstruction ?? '',
+                      runtimeAiSettings.modelParameters.additionalInstruction ??
+                      '',
                   },
                 }
               : {}),
@@ -509,6 +525,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
+            getAvailableModels: () =>
+              getAvailableAiModels(get().aiSettings.config),
             getApiKey: (provider) =>
               get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||

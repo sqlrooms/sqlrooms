@@ -126,21 +126,17 @@ export const SessionControls: React.FC<{
           <PencilIcon className="mr-2 h-4 w-4" />
           Rename
         </TabStrip.MenuItem>
-        {sessions.length > 1 && (
-          <>
-            <TabStrip.MenuSeparator />
-            <TabStrip.MenuItem
-              variant="destructive"
-              onClick={() => handleDelete(tab.id)}
-            >
-              <TrashIcon className="mr-2 h-4 w-4" />
-              Delete
-            </TabStrip.MenuItem>
-          </>
-        )}
+        <TabStrip.MenuSeparator />
+        <TabStrip.MenuItem
+          variant="destructive"
+          onClick={() => handleDelete(tab.id)}
+        >
+          <TrashIcon className="mr-2 h-4 w-4" />
+          Delete
+        </TabStrip.MenuItem>
       </>
     ),
-    [handleRenameRequest, handleDelete, sessions.length],
+    [handleRenameRequest, handleDelete],
   );
 
   const renderSearchItemActions = useCallback(
@@ -151,16 +147,14 @@ export const SessionControls: React.FC<{
           aria-label={`Rename ${tab.name}`}
           onClick={() => handleRenameRequest(tab.id)}
         />
-        {sessions.length > 1 && (
-          <TabStrip.SearchItemAction
-            icon={<TrashIcon className="h-3 w-3" />}
-            aria-label={`Delete ${tab.name}`}
-            onClick={() => handleDelete(tab.id)}
-          />
-        )}
+        <TabStrip.SearchItemAction
+          icon={<TrashIcon className="h-3 w-3" />}
+          aria-label={`Delete ${tab.name}`}
+          onClick={() => handleDelete(tab.id)}
+        />
       </>
     ),
-    [handleRenameRequest, handleDelete, sessions.length],
+    [handleRenameRequest, handleDelete],
   );
 
   return (

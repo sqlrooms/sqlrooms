@@ -9,7 +9,7 @@ import {useAssistantContextDropTarget} from './assistantUtils';
 
 export const AssistantPanel: React.FC = () => {
   const currentSessionId = useRoomStore(
-    (s) => s.ai.config.currentSessionId || null,
+    (s) => s.ai.getCurrentSession()?.id || null,
   );
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const settingsPanelOpen = useDisclosure();
