@@ -13,9 +13,10 @@ import {
   useRef,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import {CHAT_CONTEXT_SELECTOR_SLOT, ContextSelector} from './ContextSelector';
 import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
+import {ContextSelector} from './context/ContextSelector';
+import {CHAT_CONTEXT_SELECTOR_SLOT} from './context/types';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;

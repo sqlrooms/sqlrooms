@@ -74,6 +74,8 @@ export {
   createTypedRowAccessor,
   escapeId,
   escapeVal,
+  findTableInSchemaTrees,
+  getAllTablesFromSchemaTrees,
   getArrowColumnTypeCategory,
   getColValAsNumber,
   getDuckDbTypeCategory,
