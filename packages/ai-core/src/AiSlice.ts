@@ -239,6 +239,7 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   }) => string;
   defaultProvider?: string;
   defaultModel?: string;
+  getAvailableModels?: () => Array<{provider: string; value: string}>;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: () => LanguageModel | undefined;
   getProviderOptions?: GetProviderOptions;
@@ -263,6 +264,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
+    getAvailableModels,
     getCustomModel,
     getProviderOptions,
     chatEndPoint = '',
@@ -341,6 +343,44 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     >();
     const abortSnapshotMap = new Map<string, AgentProgressSnapshot>();
 
+    const getResolvedModelSelection = (
+      candidateProvider?: string,
+      candidateModel?: string,
+    ): {modelProvider: string; model: string} => {
+      const availableModels = getAvailableModels?.() ?? [];
+      const modelIsAvailable = (
+        provider: string | undefined,
+        model: string | undefined,
+      ) =>
+        Boolean(
+          provider &&
+          model &&
+          (availableModels.length === 0 ||
+            availableModels.some(
+              (candidate) =>
+                candidate.provider === provider && candidate.value === model,
+            )),
+        );
+
+      if (modelIsAvailable(candidateProvider, candidateModel)) {
+        return {modelProvider: candidateProvider!, model: candidateModel!};
+      }
+
+      if (modelIsAvailable(defaultProvider, defaultModel)) {
+        return {modelProvider: defaultProvider, model: defaultModel};
+      }
+
+      const firstAvailableModel = availableModels[0];
+      if (firstAvailableModel) {
+        return {
+          modelProvider: firstAvailableModel.provider,
+          model: firstAvailableModel.value,
+        };
+      }
+
+      return {modelProvider: defaultProvider, model: defaultModel};
+    };
+
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
     if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
@@ -355,10 +395,25 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
     // Clean up openSessionTabs for sessions that no longer exist and ensure it's initialized
     const sessionIdSet = new Set(baseConfig.sessions.map((s) => s.id));
+    if (
+      !baseConfig.currentSessionId ||
+      !sessionIdSet.has(baseConfig.currentSessionId)
+    ) {
+      baseConfig.currentSessionId = baseConfig.sessions[0]?.id;
+    }
     if (baseConfig.openSessionTabs && baseConfig.openSessionTabs.length > 0) {
       baseConfig.openSessionTabs = baseConfig.openSessionTabs.filter((id) =>
         sessionIdSet.has(id),
       );
+    }
+    if (
+      baseConfig.currentSessionId &&
+      !baseConfig.openSessionTabs?.includes(baseConfig.currentSessionId)
+    ) {
+      baseConfig.openSessionTabs = [
+        baseConfig.currentSessionId,
+        ...(baseConfig.openSessionTabs ?? []),
+      ];
     }
     // Ensure openSessionTabs is initialized with current session if empty/missing
     if (
@@ -707,6 +762,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           model?: string,
         ) => {
           const currentSession = get().ai.getCurrentSession();
+          const modelSelection = getResolvedModelSelection(
+            modelProvider || currentSession?.modelProvider,
+            model || currentSession?.model,
+          );
           const newSessionId = createId();
 
           // Generate a default name if none is provided
@@ -723,11 +782,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               draft.ai.config.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
-                modelProvider:
-                  modelProvider ||
-                  currentSession?.modelProvider ||
-                  defaultProvider,
-                model: model || currentSession?.model || defaultModel,
+                modelProvider: modelSelection.modelProvider,
+                model: modelSelection.model,
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
@@ -826,26 +882,31 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (sessionIndex !== -1) {
-                // Don't delete the last session
-                if (draft.ai.config.sessions.length > 1) {
-                  draft.ai.config.sessions.splice(sessionIndex, 1);
-                  // Remove from open tabs
-                  if (draft.ai.config.openSessionTabs) {
-                    draft.ai.config.openSessionTabs =
-                      draft.ai.config.openSessionTabs.filter(
-                        (id) => id !== sessionId,
-                      );
-                  }
-                  // If we deleted the current session, switch to another one
-                  if (draft.ai.config.currentSessionId === sessionId) {
-                    // Make sure there's at least one session before accessing its id
-                    if (draft.ai.config.sessions.length > 0) {
-                      const firstSession = draft.ai.config.sessions[0];
-                      if (firstSession) {
-                        draft.ai.config.currentSessionId = firstSession.id;
-                        firstSession.lastOpenedAt = now;
-                      }
+                draft.ai.config.sessions.splice(sessionIndex, 1);
+                if (draft.ai.config.openSessionTabs) {
+                  draft.ai.config.openSessionTabs =
+                    draft.ai.config.openSessionTabs.filter(
+                      (id) => id !== sessionId,
+                    );
+                }
+                if (draft.ai.config.currentSessionId === sessionId) {
+                  const firstSession = draft.ai.config.sessions[0];
+                  if (firstSession) {
+                    draft.ai.config.currentSessionId = firstSession.id;
+                    firstSession.lastOpenedAt = now;
+                    if (
+                      !draft.ai.config.openSessionTabs?.includes(
+                        firstSession.id,
+                      )
+                    ) {
+                      draft.ai.config.openSessionTabs = [
+                        ...(draft.ai.config.openSessionTabs ?? []),
+                        firstSession.id,
+                      ];
                     }
+                  } else {
+                    draft.ai.config.currentSessionId = undefined;
+                    draft.ai.config.openSessionTabs = [];
                   }
                 }
               }
@@ -1501,9 +1562,6 @@ function createAiCommands(): RoomCommand<AiCommandStoreState>[] {
         const state = getState();
         const {sessionId} = input as AiSessionIdInput;
         ensureSessionExists(state, sessionId);
-        if (state.ai.config.sessions.length <= 1) {
-          throw new Error('Cannot delete the last remaining AI session.');
-        }
       },
       execute: ({getState}, input) => {
         const {sessionId} = input as AiSessionIdInput;

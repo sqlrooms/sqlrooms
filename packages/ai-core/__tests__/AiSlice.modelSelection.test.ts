@@ -76,6 +76,108 @@ function createTestStore(options?: {
 }
 
 describe('AiSlice model selection', () => {
+  it('does not keep a phantom current session when initialized with no sessions', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        config: {
+          sessions: [],
+        },
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+    expect(store.getState().ai.config.openSessionTabs).toEqual([]);
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+  });
+
+  it('opens the repaired current session when initialized with a stale current session id', () => {
+    const now = Date.now();
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        config: {
+          currentSessionId: 'missing-session',
+          openSessionTabs: ['session-2'],
+          sessions: [
+            {
+              id: 'session-1',
+              name: 'Session 1',
+              modelProvider: 'openai',
+              model: 'shared-model',
+              analysisResults: [],
+              createdAt: new Date(now),
+              uiMessages: [],
+              messagesRevision: 0,
+              prompt: '',
+              isRunning: false,
+              lastOpenedAt: now,
+            },
+            {
+              id: 'session-2',
+              name: 'Session 2',
+              modelProvider: 'openai',
+              model: 'shared-model',
+              analysisResults: [],
+              createdAt: new Date(now),
+              uiMessages: [],
+              messagesRevision: 0,
+              prompt: '',
+              isRunning: false,
+              lastOpenedAt: now,
+            },
+          ],
+        },
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    expect(store.getState().ai.config.openSessionTabs).toEqual([
+      'session-1',
+      'session-2',
+    ]);
+  });
+
+  it('allows deleting the last session', () => {
+    const store = createTestStore();
+
+    store.getState().ai.deleteSession('session-1');
+
+    expect(store.getState().ai.config.sessions).toEqual([]);
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+    expect(store.getState().ai.config.openSessionTabs).toEqual([]);
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+  });
+
+  it('uses the first available model when creating a session with no valid default', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'missing-model',
+        getAvailableModels: () => [
+          {provider: 'anthropic', value: 'claude-sonnet-4.5'},
+        ],
+        config: {
+          sessions: [],
+        },
+      })(set, get, store),
+    );
+
+    store.getState().ai.createSession();
+
+    const session = store.getState().ai.getCurrentSession();
+    expect(session?.modelProvider).toBe('anthropic');
+    expect(session?.model).toBe('claude-sonnet-4.5');
+  });
+
   it('switches provider without ambiguity when model names are identical', () => {
     const store = createTestStore();
 

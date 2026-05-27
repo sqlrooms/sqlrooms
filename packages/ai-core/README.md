@@ -19,6 +19,7 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `tools` – an AI SDK `ToolSet` (created via the `tool()` helper from `ai`)
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
+- `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 

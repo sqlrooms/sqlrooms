@@ -27,6 +27,7 @@ import {
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
+  CrdtSliceState,
   createCrdtSlice,
   createIndexedDbDocStorage,
   createWebSocketSyncConnector,
@@ -74,6 +75,7 @@ import {
   DocumentsSliceConfig,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
+import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {
   createDashboardAiTools,
@@ -88,7 +90,11 @@ import {
 import {getDefaultScaffoldTree} from './helpers';
 import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
-import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
+import {
+  createDuckDbPersistStorage,
+  saveAiSettingsToServer,
+  uploadFileToServer,
+} from './serverApi';
 import {
   AppBuilderProjectConfig,
   AppBuilderProjectConfigSchema,
@@ -98,10 +104,14 @@ import {
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
-  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
+  (runtimeAiSettings.providers as AiSettingsSliceConfig['providers']) ||
+  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) ||
+  {};
 const defaultProviderFromConfig =
   runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
 const defaultModelFromProvider =
@@ -117,6 +127,7 @@ const CRDT_STORAGE_KEY = [
   runtimeConfig.dbPath || 'memory',
   'documents',
 ].join(':');
+const AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS = 500;
 
 function createCliCrdtSyncConnector() {
   if (!runtimeConfig.syncEnabled) return undefined;
@@ -128,6 +139,18 @@ function createCliCrdtSyncConnector() {
       `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
     sendSnapshotOnConnect: false,
   });
+}
+
+function createDisabledCrdtState(): CrdtSliceState {
+  return {
+    crdt: {
+      status: 'idle',
+      connectionStatus: 'idle',
+      setConnectionStatus: () => {},
+      initialize: async () => {},
+      destroy: async () => {},
+    },
+  };
 }
 
 const connector = createWebSocketDuckDbConnector({
@@ -174,6 +197,21 @@ const sliceConfigSchemas = {
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+
+function getAvailableAiModels(config: AiSettingsSliceConfig) {
+  return [
+    ...Object.entries(config.providers).flatMap(([provider, providerConfig]) =>
+      providerConfig.models.map((model) => ({
+        provider,
+        value: model.modelName,
+      })),
+    ),
+    ...config.customModels.map((model) => ({
+      provider: 'custom',
+      value: model.modelName,
+    })),
+  ];
+}
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
@@ -444,13 +482,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createDocumentsSlice()(set, get, store),
 
-        ...createCrdtSlice<RoomState>({
-          storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
-          sync: createCliCrdtSyncConnector(),
-          mirrors: {
-            documentState: createDocumentsCrdtMirror<RoomState>(),
-          },
-        })(set, get, store),
+        ...(runtimeConfig.syncEnabled
+          ? createCrdtSlice<RoomState>({
+              storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+              sync: createCliCrdtSyncConnector(),
+              mirrors: {
+                documentState: createDocumentsCrdtMirror<RoomState>(),
+              },
+            })(set, get, store)
+          : createDisabledCrdtState()),
 
         ...createWebContainerSlice({
           autoInitialize: false,
@@ -461,7 +501,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createAiSettingsSlice({
-          config: {providers: runtimeAiProviders},
+          config: {
+            providers: runtimeAiProviders,
+            ...(runtimeAiSettings.customModels
+              ? {customModels: runtimeAiSettings.customModels}
+              : {}),
+            ...(runtimeAiSettings.modelParameters
+              ? {
+                  modelParameters: {
+                    maxSteps: runtimeAiSettings.modelParameters.maxSteps ?? 50,
+                    additionalInstruction:
+                      runtimeAiSettings.modelParameters.additionalInstruction ??
+                      '',
+                  },
+                }
+              : {}),
+          },
         })(set, get, store),
 
         ...(() => {
@@ -470,6 +525,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
+            getAvailableModels: () =>
+              getAvailableAiModels(get().aiSettings.config),
             getApiKey: (provider) =>
               get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||
@@ -562,3 +619,54 @@ if (bridgeConfig) {
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
 syncConnectionsToDb(roomStore);
+
+function getAiSettingsTomlPayload(state: RoomState) {
+  const currentSession = state.ai.getCurrentSession();
+  return {
+    settings: state.aiSettings.config,
+    defaultProvider: currentSession?.modelProvider || defaultProviderFromConfig,
+    defaultModel: currentSession?.model || defaultModelFromConfig,
+  };
+}
+
+function startAiSettingsTomlAutosave() {
+  if (!runtimeConfig.configWritable) return;
+
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let latestSaveRequestId = 0;
+  let lastSnapshot = JSON.stringify(
+    getAiSettingsTomlPayload(roomStore.getState()),
+  );
+
+  roomStore.subscribe((state) => {
+    const snapshot = JSON.stringify(getAiSettingsTomlPayload(state));
+    if (snapshot === lastSnapshot) return;
+
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+    }
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      const saveRequestId = ++latestSaveRequestId;
+      void saveAiSettingsToServer(
+        runtimeConfig,
+        JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
+      )
+        .then(() => {
+          if (saveRequestId !== latestSaveRequestId) return;
+          lastSnapshot = snapshot;
+        })
+        .catch((error) => {
+          if (saveRequestId !== latestSaveRequestId) return;
+          console.warn('Failed to save AI settings to SQLRooms config', error);
+          toast.error('Failed to save AI settings', {
+            id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
+            description:
+              'Your changes are still in this session, but could not be written to the SQLRooms config file.',
+          });
+        });
+    }, AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS);
+  });
+}
+
+startAiSettingsTomlAutosave();
