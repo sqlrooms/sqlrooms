@@ -275,11 +275,14 @@ export function createSqlEditorSlice({
 
                 if (newOpenTabs.length > 0) {
                   // Select from remaining open tabs
-                  const newIndex =
-                    deletingOpenIndex === 0
-                      ? 0
-                      : Math.min(deletingOpenIndex - 1, newOpenTabs.length - 1);
-                  const newSelectedId = newOpenTabs[newIndex];
+                  const baseIndex =
+                    deletingOpenIndex <= 0 ? 0 : deletingOpenIndex - 1;
+                  const newIndex = Math.min(
+                    baseIndex,
+                    newOpenTabs.length - 1,
+                  );
+                  const newSelectedId =
+                    newOpenTabs[newIndex] ?? remainingQueries[0]?.id;
                   if (newSelectedId) {
                     config.selectedQueryId = newSelectedId;
                     const newSelectedQuery = config.queries.find(

@@ -8,6 +8,28 @@ function namespaceKey(name: string): string {
   return name.replace(/\./g, '\\.');
 }
 
+function isNamespaceRecord(
+  value: SQLNamespace | undefined,
+): value is NamespaceRecord {
+  return (
+    !Array.isArray(value) &&
+    typeof value === 'object' &&
+    value !== null &&
+    !('self' in value)
+  );
+}
+
+function isNamespaceWithRecordChildren(
+  value: SQLNamespace | undefined,
+): value is {self: Completion; children: NamespaceRecord} {
+  return (
+    !!value &&
+    !Array.isArray(value) &&
+    'children' in value &&
+    isNamespaceRecord(value.children)
+  );
+}
+
 function columnsNamespace(table: DataTable): readonly Completion[] {
   return table.columns.map((col) => ({
     label: col.name,
@@ -39,12 +61,11 @@ function getChildren(namespace: NamespaceRecord, name: string): NamespaceRecord 
   const key = namespaceKey(name);
   const existing = namespace[key];
 
-  if (existing && !Array.isArray(existing) && 'children' in existing) {
-    return existing.children as NamespaceRecord;
+  if (isNamespaceWithRecordChildren(existing)) {
+    return existing.children;
   }
 
-  const children: NamespaceRecord =
-    existing && !Array.isArray(existing) ? (existing as NamespaceRecord) : {};
+  const children: NamespaceRecord = isNamespaceRecord(existing) ? existing : {};
 
   namespace[key] = selfNamespace(name, 'namespace', children, undefined, 15);
   return children;

@@ -26,26 +26,28 @@ export interface CompletionContext {
   ) => Promise<GroupedFunctionSuggestion[]>;
 }
 
-function needsIdentifierQuotes(identifier: string): boolean {
-  return !/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier);
-}
-
 function createColumnCompletion(column: {
   name: string;
   type: string;
   tableName: string;
 }): Completion {
-  const applyQuotedIdentifier = (
+  const applyIdentifier = (
     view: EditorView,
     _completion: Completion,
     from: number,
     to: number,
   ) => {
+    const escaped = escapeId(column.name);
+    const previousCharacter =
+      from > 0 ? view.state.sliceDoc(from - 1, from) : '';
     const replaceFrom =
-      from > 0 && view.state.sliceDoc(from - 1, from) === '"' ? from - 1 : from;
+      escaped.startsWith('"') &&
+      (previousCharacter === '"' || previousCharacter === "'")
+        ? from - 1
+        : from;
 
     view.dispatch(
-      insertCompletionText(view.state, escapeId(column.name), replaceFrom, to),
+      insertCompletionText(view.state, escaped, replaceFrom, to),
     );
   };
 
@@ -53,7 +55,7 @@ function createColumnCompletion(column: {
     label: column.name,
     type: 'property',
     detail: `${column.tableName} - ${column.type}`,
-    apply: needsIdentifierQuotes(column.name) ? applyQuotedIdentifier : undefined,
+    apply: applyIdentifier,
     boost: 5,
   };
 }
@@ -81,13 +83,18 @@ function createColumnCompletionSource(tables: DataTable[]): CompletionSource {
       return null;
     }
 
-    const line = completionContext.state.doc.lineAt(completionContext.pos);
-    const textBeforeCursor = line.text.slice(
-      0,
-      completionContext.pos - line.from,
+    const textBeforeCursor = completionContext.state.sliceDoc(
+      Math.max(0, completionContext.pos - 200),
+      completionContext.pos,
     );
+    const previousCharacter =
+      word.from > 0
+        ? completionContext.state.sliceDoc(word.from - 1, word.from)
+        : '';
+    const isSingleQuotedPrefix = previousCharacter === "'";
 
     if (
+      (isSingleQuotedPrefix && !word.text.includes('-')) ||
       /\.[\w-]*$/.test(textBeforeCursor) ||
       /\b(from|join|into|update|table|describe|desc|attach)\s+(?:"[^"]*"?|[\w-]*)$/i.test(
         textBeforeCursor,
@@ -171,7 +178,7 @@ export function createCompletion({
   return [
     language.data.of({
       autocomplete: ifNotIn(
-        ['String', 'LineComment', 'BlockComment'],
+        ['LineComment', 'BlockComment'],
         createColumnCompletionSource(currentSchemas),
       ),
     }),
