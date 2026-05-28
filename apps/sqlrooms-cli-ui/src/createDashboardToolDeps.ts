@@ -9,7 +9,7 @@ import {
   createDashboardToolDeps as createReusableDashboardToolDeps,
 } from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
-import {makeArtifactPrimaryForAiRun} from './createArtifactContextAiTools';
+import {makeArtifactPrimaryForAiRun} from './context/createArtifactContextAiTools';
 import type {RoomState} from './store-types';
 
 function getMutableAiRunContext(context?: ChartToolExecutionContext) {

@@ -5,7 +5,7 @@ import {
   type ArtifactContextToolsOptions,
 } from '@sqlrooms/artifacts/ai';
 import type {StoreApi} from 'zustand';
-import type {RoomState} from './store-types';
+import type {RoomState} from '../store-types';
 
 function readCliArtifact({
   state,
@@ -114,7 +114,7 @@ function createArtifactContextOptions(
     },
     onContextItemsChanged: ({state, items}) => {
       state.setAiContextItemIds(
-        items.filter((item) => item.kind === 'artifact').map((item) => item.id),
+        items.map((item) => item.id),
         'manual',
       );
     },

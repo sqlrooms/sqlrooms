@@ -3,14 +3,11 @@ import {
   AiSettingsSliceConfig,
   AiSliceConfig,
   getAiRunContextPrimaryItem,
-  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
-  type AiRunContext,
-  type AiRunContextItem,
 } from '@sqlrooms/ai';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
@@ -23,9 +20,6 @@ import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
-  findTableInSchemaTrees,
-  getAllTablesFromSchemaTrees,
-  makeQualifiedTableName,
   QualifiedTableName,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
@@ -85,8 +79,10 @@ import {
   getDashboardAiInstructions,
 } from './createDashboardAiTools';
 import {dashboardAgentTool} from './createDashboardAgent';
-import {createArtifactContextAiTools} from './createArtifactContextAiTools';
+import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {createTableContextAiTools} from './createTableContextAiTools';
+import {formatRunContextInstructions} from './context/formatRunContextInstructions';
+import {getRunContext} from './context/getRunContext';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
@@ -538,141 +534,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
-            getRunContext: () => {
-              const state = store.getState();
-              const {artifactsById} = state.artifacts.config;
-              const {schemaTrees} = state.db;
-
-              // Build a map of qualified table names to table objects
-              const tablesByQualifiedName = new Map<
-                string,
-                {
-                  database?: string;
-                  schema?: string;
-                  table: string;
-                  isView: boolean;
-                }
-              >();
-
-              const allTables = getAllTablesFromSchemaTrees(schemaTrees);
-              for (const tableObj of allTables) {
-                const qualifiedName = makeQualifiedTableName({
-                  database: tableObj.table.database,
-                  schema: tableObj.table.schema,
-                  table: tableObj.table.table,
-                }).toString();
-                tablesByQualifiedName.set(qualifiedName, {
-                  database: tableObj.table.database,
-                  schema: tableObj.table.schema,
-                  table: tableObj.table.table,
-                  isView: tableObj.isView,
-                });
-              }
-
-              const items = Array.from(new Set(state.aiContextItemIds))
-                .map((itemId): AiRunContextItem | undefined => {
-                  // Check if it's an artifact
-                  const artifact = artifactsById[itemId];
-                  if (artifact) {
-                    return {
-                      kind: 'artifact',
-                      id: artifact.id,
-                      type: artifact.type,
-                      title: artifact.title,
-                    };
-                  }
-
-                  // Check if it's a table
-                  const table = tablesByQualifiedName.get(itemId);
-                  if (table) {
-                    return {
-                      kind: 'table',
-                      id: itemId,
-                      type: table.isView ? 'view' : 'table',
-                      title: table.table,
-                      subtitle: `${table.database}.${table.schema}`,
-                    };
-                  }
-
-                  return undefined;
-                })
-                .filter(Boolean) as AiRunContextItem[];
-
-              if (items.length === 0) return undefined;
-              return {
-                items,
-                primaryItemId: items[0]?.id,
-                capturedAt: Date.now(),
-              } satisfies AiRunContext;
-            },
-            formatRunContextInstructions: ({runContext}) => {
-              const allItems = getAiRunContextItems(runContext);
-              const artifactItems = allItems.filter(
-                (item) => item.kind === 'artifact',
-              );
-              const tableItems = allItems.filter(
-                (item) => item.kind === 'table',
-              );
-
-              if (artifactItems.length === 0 && tableItems.length === 0)
-                return '';
-
-              const sections: string[] = [];
-
-              // Artifact context section
-              if (artifactItems.length > 0) {
-                const mainItem =
-                  getAiRunContextPrimaryItem(runContext) ?? artifactItems[0];
-                const additionalItems = artifactItems.filter(
-                  (item) => item.id !== mainItem?.id,
-                );
-                const artifactType = mainItem?.type ?? 'artifact';
-
-                sections.push(
-                  'Current artifact context:',
-                  `- Primary target: ${artifactType} "${mainItem?.title}" (id: ${mainItem?.id}). Pass this id as artifactId when using a tool that should modify it.`,
-                  ...additionalItems.map(
-                    (item) =>
-                      `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
-                  ),
-                  '- Additional context items are reference-only by default; tools will not implicitly target them. Use set_primary_context_artifact before modifying a reference artifact.',
-                );
-              }
-
-              // Table context section
-              if (tableItems.length > 0) {
-                const state = store.getState();
-                const {schemaTrees} = state.db;
-
-                const tableDetails = tableItems.map((item) => {
-                  // Find table metadata from schemaTrees
-                  const tableObj = findTableInSchemaTrees(
-                    schemaTrees,
-                    item.id,
-                    makeQualifiedTableName,
-                  );
-
-                  const columnCount = tableObj?.columns.length ?? 0;
-                  const rowCount = tableObj?.rowCount;
-
-                  const typeLabel = item.type === 'view' ? 'view' : 'table';
-                  const rowInfo =
-                    rowCount !== undefined
-                      ? `, ${rowCount.toLocaleString()} rows`
-                      : '';
-                  return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columnCount} columns${rowInfo})`;
-                });
-
-                sections.push(
-                  '',
-                  `Current table context (${tableItems.length} ${tableItems.length === 1 ? 'table' : 'tables'}):`,
-                  ...tableDetails,
-                  '- Use these tables in your queries. Query with their qualified names for clarity.',
-                );
-              }
-
-              return sections.join('\n');
-            },
+            getRunContext: () => getRunContext(store),
+            formatRunContextInstructions: ({runContext}) =>
+              formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
