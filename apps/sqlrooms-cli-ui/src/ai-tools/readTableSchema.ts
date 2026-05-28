@@ -67,7 +67,7 @@ export function createReadTableSchemaTool(store: StoreApi<RoomState>) {
         return {
           llmResult: {
             success: false,
-            errorMessage: `Table "${targetTableId}" is not in the current context. Use list_context_tables to see available tables.`,
+            errorMessage: `Table "${targetTableId}" is not in the current context. Available tables are listed in the system prompt.`,
           },
         };
       }
