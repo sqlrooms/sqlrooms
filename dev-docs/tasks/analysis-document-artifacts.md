@@ -6,7 +6,7 @@
 - [x] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
 - [x] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
 - [x] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
-- [ ] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
+- [x] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
 - [ ] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
 - [ ] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
 - [ ] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
@@ -601,6 +601,8 @@ Checks:
 
 ### Stage 5: Standalone Analysis Chart Blocks
 
+Status: Implemented on 2026-05-28.
+
 Wire standalone chart blocks into the analysis document renderer and state.
 
 Likely changes:
@@ -630,7 +632,7 @@ Checks:
 
 - `pnpm --filter @sqlrooms/documents test`
 - `pnpm --filter @sqlrooms/mosaic test`
-- `pnpm --filter sqlrooms-cli-ui typecheck`
+- `pnpm --filter sqlrooms-cli-app typecheck`
 
 ### Stage 6: CLI Integration and Dashboard Embeds
 
@@ -899,3 +901,13 @@ Checks:
   `pnpm --filter @sqlrooms/mosaic typecheck`,
   `pnpm --filter @sqlrooms/mosaic lint`, and
   `pnpm --filter @sqlrooms/mosaic build`.
+- 2026-05-28: Stage 5 implemented. Added the CLI `AnalysisChartRenderer` that
+  validates analysis chart block `ChartConfig`, derives analysis-scoped
+  selection/runtime keys, renders `MosaicChartView`, and reuses
+  `MosaicChartSettingsPanel` for block-level chart settings. Added an
+  `AnalysisArtifact` wrapper with the chart renderer provider and wired
+  `analysisDocuments` into CLI persistence/state. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/mosaic test`,
+  `pnpm --filter sqlrooms-cli-app typecheck`, and
+  `pnpm --filter sqlrooms-cli-app lint`.

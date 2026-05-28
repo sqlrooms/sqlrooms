@@ -66,6 +66,8 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
+  AnalysisDocumentsSliceConfig,
+  createAnalysisDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DOCUMENT_AI_INSTRUCTIONS,
@@ -190,6 +192,7 @@ const sliceConfigSchemas = {
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
   documents: DocumentsSliceConfig,
+  analysisDocuments: AnalysisDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -480,6 +483,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createCanvasSlice()(set, get, store),
 
         ...createDocumentsSlice()(set, get, store),
+
+        ...createAnalysisDocumentsSlice<RoomState>()(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({
