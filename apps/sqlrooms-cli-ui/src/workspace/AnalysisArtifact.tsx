@@ -2,9 +2,10 @@ import {
   AnalysisChartRendererProvider,
   AnalysisDocumentArtifact,
   AnalysisEmbedRendererProvider,
+  type AnalysisArtifactEmbedType,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {useEffect} from 'react';
+import {useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {AnalysisChartRenderer} from './AnalysisChartRenderer';
 import {AnalysisDashboardEmbedRenderer} from './AnalysisDashboardEmbedRenderer';
@@ -24,6 +25,36 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
     }
   }, [artifact?.type, artifactId, ensureAnalysis]);
 
+  const artifactTypes = useMemo<AnalysisArtifactEmbedType[]>(
+    () => [
+      {
+        artifactType: 'dashboard',
+        label: 'Dashboard',
+        description: 'Embedded dashboard',
+        createNode: (blockId) => {
+          const state = useRoomStore.getState();
+          const dashboardArtifactId = state.artifacts.createArtifact({
+            type: 'dashboard',
+            title: 'Embedded Dashboard',
+            visibility: 'embedded',
+            parentArtifactId: artifactId,
+          });
+          state.dashboard.ensureDashboardArtifact(dashboardArtifactId);
+          return {
+            type: 'analysisArtifactEmbed',
+            attrs: {
+              id: blockId,
+              artifactId: dashboardArtifactId,
+              artifactType: 'dashboard',
+              caption: '',
+            },
+          };
+        },
+      },
+    ],
+    [artifactId],
+  );
+
   if (!artifact || artifact.type !== 'analysis') {
     return null;
   }
@@ -32,6 +63,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
     <AnalysisChartRendererProvider renderer={AnalysisChartRenderer}>
       <AnalysisEmbedRendererProvider
         renderers={{dashboard: AnalysisDashboardEmbedRenderer}}
+        artifactTypes={artifactTypes}
       >
         <AnalysisDocumentArtifact artifactId={artifactId} />
       </AnalysisEmbedRendererProvider>

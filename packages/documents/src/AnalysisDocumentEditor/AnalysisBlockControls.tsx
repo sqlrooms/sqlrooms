@@ -33,6 +33,10 @@ import {
   useRef,
   useState,
 } from 'react';
+import {
+  type AnalysisArtifactEmbedType,
+  useAnalysisArtifactEmbedTypes,
+} from '../AnalysisEmbedRendererContext';
 import {useAnalysisDocumentEditorContext} from './AnalysisDocumentEditorContext';
 
 type BlockControlState = {
@@ -53,6 +57,14 @@ type BlockMenuItem = {
   icon: FC<{className?: string}>;
   createNode: (id: string) => Record<string, unknown>;
 };
+
+function labelFromArtifactType(artifactType: string) {
+  return artifactType
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
 
 function directEditorChild(
   editorElement: HTMLElement,
@@ -85,7 +97,34 @@ function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
 }
 
-function buildBlockMenuItems(): BlockMenuItem[] {
+function buildEmbedMenuItems(
+  artifactTypes: AnalysisArtifactEmbedType[],
+): BlockMenuItem[] {
+  return artifactTypes.map((artifactType) => {
+    const label =
+      artifactType.label ?? labelFromArtifactType(artifactType.artifactType);
+    return {
+      label,
+      description: artifactType.description ?? `Embed ${label}`,
+      icon: Rows3Icon,
+      createNode:
+        artifactType.createNode ??
+        ((id: string) => ({
+          type: 'analysisArtifactEmbed',
+          attrs: {
+            id,
+            artifactId: '',
+            artifactType: artifactType.artifactType,
+            caption: '',
+          },
+        })),
+    };
+  });
+}
+
+function buildBlockMenuItems(
+  artifactTypes: AnalysisArtifactEmbedType[],
+): BlockMenuItem[] {
   return [
     {
       label: 'Text',
@@ -183,15 +222,7 @@ function buildBlockMenuItems(): BlockMenuItem[] {
         attrs: {id, tableName: '', config: {}, caption: ''},
       }),
     },
-    {
-      label: 'Embed',
-      description: 'Artifact embed',
-      icon: Rows3Icon,
-      createNode: (id) => ({
-        type: 'analysisArtifactEmbed',
-        attrs: {id, artifactId: '', artifactType: '', caption: ''},
-      }),
-    },
+    ...buildEmbedMenuItems(artifactTypes),
   ];
 }
 
@@ -200,6 +231,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
 }) => {
   const {editor, readOnly, generateBlockId} =
     useAnalysisDocumentEditorContext();
+  const artifactTypes = useAnalysisArtifactEmbedTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
@@ -207,7 +239,10 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
-  const blockMenuItems = useMemo(() => buildBlockMenuItems(), []);
+  const blockMenuItems = useMemo(
+    () => buildBlockMenuItems(artifactTypes),
+    [artifactTypes],
+  );
 
   const cancelHide = useCallback(() => {
     if (hideTimerRef.current == null) return;

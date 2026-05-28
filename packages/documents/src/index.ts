@@ -57,6 +57,8 @@ export {
 export {
   AnalysisEmbedRendererProvider,
   useAnalysisArtifactEmbedRenderer,
+  useAnalysisArtifactEmbedTypes,
+  type AnalysisArtifactEmbedType,
   type AnalysisArtifactEmbedRenderer,
   type AnalysisArtifactEmbedRendererProps,
   type AnalysisArtifactEmbedRenderers,

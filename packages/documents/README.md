@@ -159,6 +159,22 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
     renderers={{
       dashboard: EmbeddedDashboardRenderer,
     }}
+    artifactTypes={[
+      {
+        artifactType: 'dashboard',
+        label: 'Dashboard',
+        description: 'Embedded dashboard',
+        createNode: (blockId) => ({
+          type: 'analysisArtifactEmbed',
+          attrs: {
+            id: blockId,
+            artifactId: createEmbeddedDashboardArtifact(),
+            artifactType: 'dashboard',
+            caption: '',
+          },
+        }),
+      },
+    ]}
   >
     <AnalysisDocumentArtifact artifactId={analysisArtifactId} />
   </AnalysisEmbedRendererProvider>
@@ -166,7 +182,9 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
 ```
 
 If no renderer is registered, chart and embed blocks render a clear unsupported
-state while preserving their Tiptap JSON attributes.
+state while preserving their Tiptap JSON attributes. `artifactTypes` is optional;
+when omitted, the editor derives plus-menu embed entries from the renderer keys
+and inserts a block with only `artifactType` prefilled.
 
 ### Standalone Chart Blocks
 

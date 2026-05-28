@@ -23,22 +23,42 @@ export type AnalysisArtifactEmbedRenderers = Record<
   AnalysisArtifactEmbedRenderer
 >;
 
+export type AnalysisArtifactEmbedType = {
+  artifactType: string;
+  label?: string;
+  description?: string;
+  createNode?: (blockId: string) => Record<string, unknown>;
+};
+
 type AnalysisEmbedRendererContextValue = {
   renderers: AnalysisArtifactEmbedRenderers;
+  artifactTypes: AnalysisArtifactEmbedType[];
 };
 
 const AnalysisEmbedRendererContext =
-  createContext<AnalysisEmbedRendererContextValue>({renderers: {}});
+  createContext<AnalysisEmbedRendererContextValue>({
+    renderers: {},
+    artifactTypes: [],
+  });
 
 export type AnalysisEmbedRendererProviderProps = PropsWithChildren<{
   renderers?: AnalysisArtifactEmbedRenderers;
+  artifactTypes?: AnalysisArtifactEmbedType[];
 }>;
 
 export const AnalysisEmbedRendererProvider: FC<
   AnalysisEmbedRendererProviderProps
-> = ({renderers = {}, children}) => {
+> = ({renderers = {}, artifactTypes, children}) => {
+  const supportedArtifactTypes =
+    artifactTypes ??
+    Object.keys(renderers).map((artifactType) => ({
+      artifactType,
+    }));
+
   return (
-    <AnalysisEmbedRendererContext.Provider value={{renderers}}>
+    <AnalysisEmbedRendererContext.Provider
+      value={{renderers, artifactTypes: supportedArtifactTypes}}
+    >
       {children}
     </AnalysisEmbedRendererContext.Provider>
   );
@@ -46,4 +66,8 @@ export const AnalysisEmbedRendererProvider: FC<
 
 export function useAnalysisArtifactEmbedRenderer(artifactType: string) {
   return useContext(AnalysisEmbedRendererContext).renderers[artifactType];
+}
+
+export function useAnalysisArtifactEmbedTypes() {
+  return useContext(AnalysisEmbedRendererContext).artifactTypes;
 }
