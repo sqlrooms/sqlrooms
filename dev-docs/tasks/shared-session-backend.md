@@ -368,6 +368,17 @@ Likely work:
   - max WebSocket payload size by mode.
   - query timeout or statement timeout where practical.
   - output row/byte limits for HTTP bridge endpoints.
+- Add an upload lifecycle policy:
+  - associate every uploaded file with `session_id` and record enough metadata to
+    restore or clean it up deterministically.
+  - choose retention semantics for shared sessions: session lifetime, time-based
+    expiry, size-based quota, or platform-managed durable storage.
+  - define cleanup on explicit session termination, idle timeout, failed upload,
+    and abandoned session startup.
+  - define restart behavior: whether uploads live on a durable volume, are copied
+    to object storage, or must be rehydrated from a manifest.
+  - ensure DuckDB tables that reference uploaded files either keep working after
+    restart or fail with a recoverable missing-upload diagnostic.
 - Add structured logs for session id, room id, connection lifecycle, auth
   failures, query start/end, and CRDT flushes.
 
@@ -376,6 +387,10 @@ Acceptance criteria:
 - A shared-session runtime can start, report healthy/ready, accept users, flush
   state, and stop without losing recent CRDT changes.
 - Operational limits are documented and have conservative defaults.
+- Uploaded files are session-associated, bounded by quota, and covered by a
+  documented retention/cleanup policy.
+- Restart behavior for uploaded files is deterministic and included in the
+  shared-session smoke checklist.
 - Logs include enough identifiers to debug one runtime without exposing secrets.
 - Local CLI behavior remains simple.
 
@@ -386,6 +401,7 @@ Files/modules likely to change:
 - `python/sqlrooms-server/sqlrooms/server/db_async.py`
 - `python/sqlrooms-server/sqlrooms/server/crdt/state.py`
 - `python/sqlrooms-cli/sqlrooms/web/launcher.py`
+- `apps/sqlrooms-cli-ui/src/serverApi.ts`
 - `python/sqlrooms-server/README.md`
 - `python/sqlrooms-cli/README.md`
 
@@ -395,7 +411,11 @@ Tests/checks after stage:
 - `uv run --project python/sqlrooms-cli pytest`
 - Add tests for CRDT flush on close/shutdown.
 - Add tests for configured upload/payload limit behavior where practical.
+- Add tests for session-scoped upload paths, upload metadata, cleanup, and
+  restart behavior where practical.
 - Manual stop/restart smoke test with recent edits.
+- Manual upload smoke test: upload data, create/query table, stop/restart
+  runtime, verify expected restoration or recoverable missing-upload behavior.
 
 ### Stage 7: Add Connection Reconnect and Hibernation Semantics
 
@@ -534,7 +554,10 @@ Tests/checks after stage:
 - How much raw SQL execution should collaborators get? A first shared-session
   server may accept full read-write DuckDB access, but that should be explicit.
 - How should uploads be retained, garbage-collected, and associated with a
-  session when the runtime is ephemeral?
+  session when the runtime is ephemeral? Stage 6 should choose the first policy,
+  but the exact platform persistence mechanism may still vary.
+- Should uploaded files be part of the durable session artifact, or should DuckDB
+  ingest/copy data into managed tables so the original upload can be discarded?
 - What persistence model should sprites.dev provide: durable volume, exported
   DuckDB files, object storage checkpoint, or something else?
 - Does sprites.dev wake a runtime automatically on any HTTP/WS request, or does
