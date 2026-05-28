@@ -10,12 +10,18 @@ import {
 import {createCrdtSlice, type CrdtSliceState} from '@sqlrooms/crdt';
 import {LoroDoc} from 'loro-crdt';
 import {createStore} from 'zustand';
-import {createDocumentsSlice, type DocumentsSliceState} from '../src';
+import {
+  createAnalysisDocumentsSlice,
+  createDocumentsSlice,
+  type AnalysisDocumentsSliceState,
+  type DocumentsSliceState,
+} from '../src';
 import {createDocumentsCrdtMirror} from '../src/crdt';
 
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
   DocumentsSliceState &
+  AnalysisDocumentsSliceState &
   CrdtSliceState;
 
 function createTestStore(doc: LoroDoc) {
@@ -28,12 +34,18 @@ function createTestStore(doc: LoroDoc) {
       },
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
+    analysis: {label: 'Analysis', defaultTitle: 'Analysis'},
   });
 
   return createStore<TestRoomState>()((set, get, store) => ({
     ...createBaseRoomSlice()(set, get, store),
     ...createArtifactsSlice<TestRoomState>({artifactTypes})(set, get, store),
     ...createDocumentsSlice<TestRoomState>({now: () => 123})(set, get, store),
+    ...createAnalysisDocumentsSlice<TestRoomState>({now: () => 456})(
+      set,
+      get,
+      store,
+    ),
     ...createCrdtSlice<TestRoomState>({
       doc,
       mirrors: {
@@ -164,6 +176,90 @@ describe('documents CRDT mirrors', () => {
       dashboardId,
       'doc-1',
       'doc-2',
+    ]);
+  });
+
+  it('mirrors analysis documents and embedded child artifact metadata', async () => {
+    const docA = new LoroDoc();
+    const storeA = createTestStore(docA);
+    await storeA.getState().crdt.initialize();
+
+    const analysisId = storeA.getState().artifacts.createArtifact({
+      id: 'analysis-1',
+      type: 'analysis',
+      title: 'Analysis',
+    });
+    const dashboardId = storeA.getState().artifacts.createArtifact({
+      id: 'dashboard-embedded-1',
+      type: 'dashboard',
+      title: 'Embedded Dashboard',
+      visibility: 'embedded',
+      parentArtifactId: analysisId,
+    });
+    storeA.getState().analysisDocuments.appendBlocks(analysisId, [
+      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'chart',
+        type: 'chart',
+        tableName: 'sales',
+        config: {
+          chartType: 'histogram',
+          settings: {x: 'revenue'},
+        },
+        selectionGroupId: 'overview',
+      },
+      {
+        id: 'embed',
+        type: 'artifactEmbed',
+        artifactId: dashboardId,
+        artifactType: 'dashboard',
+      },
+    ]);
+    await waitForCondition(() =>
+      JSON.stringify(docA.toJSON()).includes('dashboard-embedded-1'),
+    );
+
+    const snapshot = docA.export({mode: 'snapshot'});
+    const docB = new LoroDoc();
+    docB.import(snapshot);
+    docB.checkoutToLatest();
+    const storeB = createTestStore(docB);
+    await storeB.getState().crdt.initialize();
+    await waitForCondition(() =>
+      Boolean(storeB.getState().artifacts.getArtifact(analysisId)),
+    );
+
+    expect(storeB.getState().artifacts.getArtifact(analysisId)).toMatchObject({
+      id: analysisId,
+      type: 'analysis',
+      title: 'Analysis',
+      visibility: 'workspace',
+    });
+    expect(storeB.getState().artifacts.getArtifact(dashboardId)).toMatchObject({
+      id: dashboardId,
+      type: 'dashboard',
+      title: 'Embedded Dashboard',
+      visibility: 'embedded',
+      parentArtifactId: analysisId,
+    });
+    expect(storeB.getState().analysisDocuments.getBlocks(analysisId)).toEqual([
+      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'chart',
+        type: 'chart',
+        tableName: 'sales',
+        config: {
+          chartType: 'histogram',
+          settings: {x: 'revenue'},
+        },
+        selectionGroupId: 'overview',
+      },
+      {
+        id: 'embed',
+        type: 'artifactEmbed',
+        artifactId: dashboardId,
+        artifactType: 'dashboard',
+      },
     ]);
   });
 

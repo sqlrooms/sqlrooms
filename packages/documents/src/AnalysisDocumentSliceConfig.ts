@@ -172,6 +172,10 @@ function nodeId(node: AnalysisDocumentNode): string {
   return typeof id === 'string' ? id : '';
 }
 
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function createEmptyAnalysisDocumentContent(): AnalysisDocumentContent {
   return {type: 'doc', content: []};
 }
@@ -234,7 +238,7 @@ export function analysisBlockToNode(
         attrs: {
           id: block.id,
           assetId: block.assetId,
-          caption: block.caption,
+          ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
       };
     case 'chartImage':
@@ -243,7 +247,7 @@ export function analysisBlockToNode(
         attrs: {
           id: block.id,
           assetId: block.assetId,
-          caption: block.caption,
+          ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
       };
     case 'chart':
@@ -253,8 +257,10 @@ export function analysisBlockToNode(
           id: block.id,
           tableName: block.tableName,
           config: block.config,
-          selectionGroupId: block.selectionGroupId,
-          caption: block.caption,
+          ...(block.selectionGroupId !== undefined
+            ? {selectionGroupId: block.selectionGroupId}
+            : {}),
+          ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
       };
     case 'artifactEmbed':
@@ -264,7 +270,7 @@ export function analysisBlockToNode(
           id: block.id,
           artifactId: block.artifactId,
           artifactType: block.artifactType,
-          caption: block.caption,
+          ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
       };
   }
@@ -318,14 +324,14 @@ export function analysisNodeToBlock(
         id,
         type: 'image',
         assetId: node.attrs?.assetId,
-        caption: node.attrs?.caption,
+        caption: optionalString(node.attrs?.caption),
       });
     case 'analysisChartImage':
       return AnalysisChartImageBlock.parse({
         id,
         type: 'chartImage',
         assetId: node.attrs?.assetId,
-        caption: node.attrs?.caption,
+        caption: optionalString(node.attrs?.caption),
       });
     case 'analysisChart':
       return AnalysisChartBlock.parse({
@@ -333,8 +339,8 @@ export function analysisNodeToBlock(
         type: 'chart',
         tableName: node.attrs?.tableName,
         config: node.attrs?.config,
-        selectionGroupId: node.attrs?.selectionGroupId,
-        caption: node.attrs?.caption,
+        selectionGroupId: optionalString(node.attrs?.selectionGroupId),
+        caption: optionalString(node.attrs?.caption),
       });
     case 'analysisArtifactEmbed':
       return AnalysisArtifactEmbedBlock.parse({
@@ -342,7 +348,7 @@ export function analysisNodeToBlock(
         type: 'artifactEmbed',
         artifactId: node.attrs?.artifactId,
         artifactType: node.attrs?.artifactType,
-        caption: node.attrs?.caption,
+        caption: optionalString(node.attrs?.caption),
       });
     default:
       return undefined;

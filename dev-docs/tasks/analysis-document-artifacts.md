@@ -10,7 +10,7 @@
 - [x] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
 - [x] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
 - [x] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
-- [ ] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
+- [x] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
 - [ ] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
 
 ## Goal
@@ -741,6 +741,8 @@ Checks:
 
 ### Stage 9: CRDT and Sync Follow-Up
 
+Status: Implemented on 2026-05-28.
+
 Add analysis document CRDT coverage and decide dashboard sync boundaries.
 
 Likely changes:
@@ -760,12 +762,17 @@ Acceptance criteria:
 - Existing Markdown document CRDT behavior is unchanged.
 - Embedded dashboard child artifact metadata is preserved.
 - The feature has a documented answer for whether dashboard backing state is
-  synced by this mirror or by app persistence only.
+  synced by this mirror or by app persistence only. The current boundary is:
+  this mirror syncs the embedded dashboard artifact metadata and analysis embed
+  block reference, while Mosaic dashboard backing state remains outside this
+  document mirror and continues to rely on the host app's Mosaic persistence or
+  a future Mosaic-specific CRDT mirror.
 
 Checks:
 
 - `pnpm --filter @sqlrooms/documents test`
 - `pnpm --filter @sqlrooms/documents typecheck`
+- `pnpm --filter @sqlrooms/documents lint`
 
 ### Stage 10: Documentation, Example, and Polish
 
@@ -947,3 +954,12 @@ Checks:
   `pnpm --filter @sqlrooms/documents lint`,
   `pnpm --filter sqlrooms-cli-app typecheck`, and
   `pnpm --filter sqlrooms-cli-app lint`.
+- 2026-05-28: Stage 9 implemented. Extended the document CRDT mirror to sync
+  Analysis artifact metadata, structured Tiptap JSON content, assets, and
+  embedded child artifact metadata alongside existing Markdown documents. Added
+  regression coverage for Analysis snapshot round-trips, embedded dashboard
+  metadata, and existing Markdown preservation. Normalized optional Analysis
+  block attrs that can round-trip through Loro as `null`. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`, and
+  `pnpm --filter @sqlrooms/documents lint`.
