@@ -45,6 +45,21 @@ export {
   type CreateAnalysisDocumentsSliceProps,
 } from './AnalysisDocumentsSlice';
 export {
+  AnalysisChartRendererProvider,
+  useAnalysisChartRenderer,
+  type AnalysisChartRenderer,
+  type AnalysisChartRendererProps,
+  type AnalysisChartRendererProviderProps,
+} from './AnalysisChartRendererContext';
+export {
+  AnalysisEmbedRendererProvider,
+  useAnalysisArtifactEmbedRenderer,
+  type AnalysisArtifactEmbedRenderer,
+  type AnalysisArtifactEmbedRendererProps,
+  type AnalysisArtifactEmbedRenderers,
+  type AnalysisEmbedRendererProviderProps,
+} from './AnalysisEmbedRendererContext';
+export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
   type CreateDocumentsSliceProps,
@@ -55,6 +70,26 @@ export {
   createDocumentCommands,
   DOCUMENT_AI_INSTRUCTIONS,
 } from './documentCommands';
+export {AnalysisDocumentEditor} from './AnalysisDocumentEditor';
+export {
+  AnalysisDocumentEditorRoot,
+  type AnalysisDocumentEditorRootProps,
+} from './AnalysisDocumentEditor/AnalysisDocumentEditorRoot';
+export {
+  AnalysisDocumentEditorContent,
+  type AnalysisDocumentEditorContentProps,
+} from './AnalysisDocumentEditor/AnalysisDocumentEditorContent';
+export {
+  AnalysisDocumentToolbar,
+  type AnalysisDocumentToolbarProps,
+} from './AnalysisDocumentEditor/AnalysisDocumentToolbar';
+export {
+  createDefaultAnalysisBlockId,
+  normalizeAnalysisDocumentContent,
+  useAnalysisDocumentEditorContext,
+  type AnalysisDocumentEditorContextValue,
+} from './AnalysisDocumentEditor/AnalysisDocumentEditorContext';
+export {AnalysisDocumentArtifact} from './AnalysisDocument';
 export {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 export {
   MarkdownDocumentEditorRoot,
@@ -70,6 +105,7 @@ export {
   type MarkdownDocumentEditorContentProps,
 } from './MarkdownDocumentEditor/MarkdownDocumentEditorContent';
 export {MarkdownDocument} from './MarkdownDocument';
+export {useStoreWithAnalysisDocuments} from './useStoreWithAnalysisDocuments';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {
   buildKnowledgeIndex,

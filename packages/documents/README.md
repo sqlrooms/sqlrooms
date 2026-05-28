@@ -118,8 +118,28 @@ const roomStore = createRoomStore(
 The slice can create analysis documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, rich text, lists, todos, images, chart images,
-standalone chart placeholders, and artifact embeds. The editor, renderers,
-commands, and artifact registration are intentionally staged separately.
+standalone chart placeholders, and artifact embeds. Commands and artifact
+registration are intentionally staged separately.
+
+`AnalysisDocumentArtifact` and `AnalysisDocumentEditor` provide the first rich
+editor surface for this structured state. The editor owns Tiptap nodes for
+SQLRooms custom blocks, but chart rendering and artifact embeds are
+host-provided so `@sqlrooms/documents` does not import Mosaic:
+
+```tsx
+<AnalysisChartRendererProvider renderer={MosaicAnalysisChartRenderer}>
+  <AnalysisEmbedRendererProvider
+    renderers={{
+      dashboard: EmbeddedDashboardRenderer,
+    }}
+  >
+    <AnalysisDocumentArtifact artifactId={analysisArtifactId} />
+  </AnalysisEmbedRendererProvider>
+</AnalysisChartRendererProvider>
+```
+
+If no renderer is registered, chart and embed blocks render a clear unsupported
+state while preserving their Tiptap JSON attributes.
 
 ## Commands
 

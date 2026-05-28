@@ -9,6 +9,7 @@ import {
   analysisContentToBlocks,
   createAnalysisDocumentsSlice,
   createEmptyAnalysisDocumentContent,
+  normalizeAnalysisDocumentContent,
   type AnalysisBlockType,
   type AnalysisDocumentsSliceState,
 } from '../src';
@@ -134,14 +135,18 @@ describe('AnalysisDocumentsSlice', () => {
     ]);
 
     expect(
-      store.getState().analysisDocuments.updateBlock('analysis-1', 'paragraph', {
-        id: 'ignored-id',
-        type: 'paragraph',
-        text: 'Updated note',
-      }),
+      store
+        .getState()
+        .analysisDocuments.updateBlock('analysis-1', 'paragraph', {
+          id: 'ignored-id',
+          type: 'paragraph',
+          text: 'Updated note',
+        }),
     ).toBe(true);
     expect(
-      store.getState().analysisDocuments.moveBlock('analysis-1', 'paragraph', 0),
+      store
+        .getState()
+        .analysisDocuments.moveBlock('analysis-1', 'paragraph', 0),
     ).toBe(true);
     expect(
       store.getState().analysisDocuments.removeBlock('analysis-1', 'heading'),
@@ -218,6 +223,35 @@ describe('AnalysisDocumentsSlice', () => {
     };
 
     expect(analysisContentToBlocks(content)).toEqual(blocks);
+  });
+
+  it('backfills missing top-level block IDs for editor content', () => {
+    let nextId = 1;
+    const result = normalizeAnalysisDocumentContent(
+      {
+        type: 'doc',
+        content: [
+          {type: 'paragraph', content: [{type: 'text', text: 'Missing id'}]},
+          {
+            type: 'analysisChart',
+            attrs: {id: 'chart-1', tableName: 'sales', config: {}},
+          },
+        ],
+      },
+      () => `block-${nextId++}`,
+    );
+
+    expect(result.content).toEqual([
+      {
+        type: 'paragraph',
+        attrs: {id: 'block-1'},
+        content: [{type: 'text', text: 'Missing id'}],
+      },
+      {
+        type: 'analysisChart',
+        attrs: {id: 'chart-1', tableName: 'sales', config: {}},
+      },
+    ]);
   });
 
   it('defaults content for legacy analysis records', () => {

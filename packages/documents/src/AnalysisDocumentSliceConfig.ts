@@ -42,9 +42,7 @@ export const AnalysisDocumentContent = z
     content: z.array(AnalysisDocumentNode).default([]),
   })
   .passthrough();
-export type AnalysisDocumentContent = z.infer<
-  typeof AnalysisDocumentContent
->;
+export type AnalysisDocumentContent = z.infer<typeof AnalysisDocumentContent>;
 
 export const AnalysisDocument = z.object({
   id: z.string(),
@@ -74,12 +72,10 @@ export type AnalysisDocumentsSliceConfig = z.infer<
   typeof AnalysisDocumentsSliceConfig
 >;
 
-const TextContent = z.array(
-  z.object({
-    type: z.literal('text'),
-    text: z.string(),
-  }),
-);
+type TextContent = Array<{
+  type: 'text';
+  text: string;
+}>;
 
 const AnalysisTextBlockBase = {
   id: z.string(),
@@ -162,7 +158,7 @@ export const AnalysisBlock = z.discriminatedUnion('type', [
 ]);
 export type AnalysisBlock = z.infer<typeof AnalysisBlock>;
 
-function textContent(text: string): z.infer<typeof TextContent> | undefined {
+function textContent(text: string): TextContent | undefined {
   return text ? [{type: 'text', text}] : undefined;
 }
 
@@ -180,7 +176,9 @@ export function createEmptyAnalysisDocumentContent(): AnalysisDocumentContent {
   return {type: 'doc', content: []};
 }
 
-export function analysisBlockToNode(block: AnalysisBlock): AnalysisDocumentNode {
+export function analysisBlockToNode(
+  block: AnalysisBlock,
+): AnalysisDocumentNode {
   switch (block.type) {
     case 'heading':
       return {

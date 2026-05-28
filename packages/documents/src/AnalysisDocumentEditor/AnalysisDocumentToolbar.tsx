@@ -1,0 +1,115 @@
+import {Button, cn} from '@sqlrooms/ui';
+import {
+  BarChart3Icon,
+  GalleryHorizontalEndIcon,
+  ImageIcon,
+  PilcrowIcon,
+} from 'lucide-react';
+import type {FC} from 'react';
+import {RichToolbar} from '../MarkdownDocumentEditor/RichToolbar';
+import {useAnalysisDocumentEditorContext} from './AnalysisDocumentEditorContext';
+
+export type AnalysisDocumentToolbarProps = {
+  className?: string;
+};
+
+export const AnalysisDocumentToolbar: FC<AnalysisDocumentToolbarProps> = ({
+  className,
+}) => {
+  const {editor, readOnly, generateBlockId} =
+    useAnalysisDocumentEditorContext();
+
+  const insertAtomBlock = (type: string, attrs: Record<string, unknown>) => {
+    editor
+      ?.chain()
+      .focus()
+      .insertContent({
+        type,
+        attrs: {id: generateBlockId(), ...attrs},
+      })
+      .run();
+  };
+
+  return (
+    <div
+      className={cn(
+        'border-border flex shrink-0 items-center gap-1 overflow-x-auto border-b px-3 py-2',
+        className,
+      )}
+    >
+      <RichToolbar editor={editor} disabled={readOnly} />
+      <div className="bg-border mx-1 h-6 w-px" />
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        disabled={!editor || readOnly}
+        title="Insert paragraph"
+        aria-label="Insert paragraph"
+        onClick={() =>
+          editor
+            ?.chain()
+            .focus()
+            .insertContent({
+              type: 'paragraph',
+              attrs: {id: generateBlockId()},
+            })
+            .run()
+        }
+      >
+        <PilcrowIcon className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        disabled={!editor || readOnly}
+        title="Insert image block"
+        aria-label="Insert image block"
+        onClick={() =>
+          insertAtomBlock('analysisImage', {assetId: '', caption: ''})
+        }
+      >
+        <ImageIcon className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        disabled={!editor || readOnly}
+        title="Insert chart block"
+        aria-label="Insert chart block"
+        onClick={() =>
+          insertAtomBlock('analysisChart', {
+            tableName: '',
+            config: {},
+            caption: '',
+          })
+        }
+      >
+        <BarChart3Icon className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        disabled={!editor || readOnly}
+        title="Insert artifact embed"
+        aria-label="Insert artifact embed"
+        onClick={() =>
+          insertAtomBlock('analysisArtifactEmbed', {
+            artifactId: '',
+            artifactType: '',
+            caption: '',
+          })
+        }
+      >
+        <GalleryHorizontalEndIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};

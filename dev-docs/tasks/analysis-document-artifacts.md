@@ -4,7 +4,7 @@
 
 - [x] [Stage 1: Structured Analysis State](#stage-1-structured-analysis-state)
 - [x] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
-- [ ] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
+- [x] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
 - [ ] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
 - [ ] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
 - [ ] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
@@ -524,6 +524,8 @@ Checks:
 
 ### Stage 3: Tiptap Analysis Editor and Renderer Registry
 
+Status: Implemented on 2026-05-28.
+
 Add the top-level `AnalysisDocument` component, Tiptap editor shell, custom
 SQLRooms block node extensions, and a generic embed renderer registry.
 
@@ -874,3 +876,13 @@ Checks:
   an `includeEmbedded` opt-in, and documented the embedded-child policy.
   Checks passed: `pnpm --filter @sqlrooms/artifacts test` and
   `pnpm --filter @sqlrooms/artifacts typecheck`.
+- 2026-05-28: Stage 3 implemented. Added the `AnalysisDocumentArtifact`
+  component, controlled `AnalysisDocumentEditor`, custom Tiptap atom nodes and
+  React NodeViews for analysis rich text, images, chart images, standalone
+  charts, and artifact embeds. Added host-provided chart/embed renderer
+  contexts so `@sqlrooms/documents` remains independent from Mosaic, plus a
+  top-level block id normalization pass for editor content. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`, and
+  `pnpm --filter @sqlrooms/documents build`.
