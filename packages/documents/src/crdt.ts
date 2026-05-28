@@ -1,4 +1,5 @@
 import {
+  ArtifactMetadata,
   ArtifactsSliceConfig,
   type ArtifactMetadataType,
   type ArtifactsSliceState,
@@ -144,11 +145,11 @@ export function createDocumentsCrdtMirror<
         Object.fromEntries(
           incomingArtifacts.map((artifact) => [
             artifact.id,
-            {
+            ArtifactMetadata.parse({
               id: artifact.id,
               type: 'document',
               title: artifact.title,
-            },
+            }),
           ]),
         );
       const documents = documentsArrayToRecord(incomingDocuments);

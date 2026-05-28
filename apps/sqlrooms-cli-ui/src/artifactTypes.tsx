@@ -6,10 +6,12 @@ import {
   AppWindow,
   BarChart3,
   FileText,
+  FileStackIcon,
   LayoutDashboardIcon,
   ScrollTextIcon,
 } from 'lucide-react';
 import type {RoomState} from './store-types';
+import {AnalysisArtifact} from './workspace/AnalysisArtifact';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DocumentArtifact} from './workspace/DocumentArtifact';
@@ -17,6 +19,7 @@ import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 
 export const CLI_ARTIFACT_TYPES = [
+  'analysis',
   'dashboard',
   'notebook',
   'document',
@@ -26,6 +29,21 @@ export const CLI_ARTIFACT_TYPES = [
 export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
 export const ARTIFACT_TYPES = defineArtifactTypes({
+  analysis: {
+    label: 'Analysis',
+    defaultTitle: 'Analysis',
+    icon: FileStackIcon,
+    component: AnalysisArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().analysisDocuments.removeAnalysis(artifactId);
+    },
+  },
   dashboard: {
     label: 'Dashboard',
     defaultTitle: 'Dashboard',

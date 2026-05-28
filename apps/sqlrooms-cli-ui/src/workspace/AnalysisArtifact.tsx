@@ -1,11 +1,13 @@
 import {
   AnalysisChartRendererProvider,
   AnalysisDocumentArtifact,
+  AnalysisEmbedRendererProvider,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect} from 'react';
 import {useRoomStore} from '../store';
 import {AnalysisChartRenderer} from './AnalysisChartRenderer';
+import {AnalysisDashboardEmbedRenderer} from './AnalysisDashboardEmbedRenderer';
 
 export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
@@ -28,7 +30,11 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
 
   return (
     <AnalysisChartRendererProvider renderer={AnalysisChartRenderer}>
-      <AnalysisDocumentArtifact artifactId={artifactId} />
+      <AnalysisEmbedRendererProvider
+        renderers={{dashboard: AnalysisDashboardEmbedRenderer}}
+      >
+        <AnalysisDocumentArtifact artifactId={artifactId} />
+      </AnalysisEmbedRendererProvider>
     </AnalysisChartRendererProvider>
   );
 };

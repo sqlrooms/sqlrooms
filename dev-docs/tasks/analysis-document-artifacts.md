@@ -7,7 +7,7 @@
 - [x] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
 - [x] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
 - [x] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
-- [ ] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
+- [x] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
 - [ ] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
 - [ ] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
 - [ ] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
@@ -636,6 +636,8 @@ Checks:
 
 ### Stage 6: CLI Integration and Dashboard Embeds
 
+Status: Implemented on 2026-05-28.
+
 Register the `analysis` artifact type in the CLI UI and provide a dashboard
 embed renderer.
 
@@ -911,3 +913,14 @@ Checks:
   `pnpm --filter @sqlrooms/mosaic test`,
   `pnpm --filter sqlrooms-cli-app typecheck`, and
   `pnpm --filter sqlrooms-cli-app lint`.
+- 2026-05-28: Stage 6 implemented. Registered `analysis` as a CLI artifact
+  type, added create/select initialization for analysis artifacts, wired
+  dashboard artifact embeds through `AnalysisEmbedRendererProvider`, and taught
+  artifact context reads to return analysis block summaries plus asset metadata.
+  Also fixed document CRDT artifact metadata reconstruction to preserve the
+  Stage 2 `visibility` default during full builds. Checks passed:
+  `pnpm --filter sqlrooms-cli-app typecheck`,
+  `pnpm --filter sqlrooms-cli-app lint`,
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`, and `pnpm build`. Manual CLI
+  UI smoke testing remains pending.
