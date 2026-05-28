@@ -9,7 +9,7 @@
 - [x] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
 - [x] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
 - [x] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
-- [ ] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
+- [x] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
 - [ ] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
 - [ ] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
 
@@ -703,6 +703,8 @@ Checks:
 
 ### Stage 8: AI Authoring Tools and Agent
 
+Status: Implemented on 2026-05-28.
+
 Expose analysis AI instructions and a dedicated authoring agent/tool.
 
 Likely changes:
@@ -932,6 +934,15 @@ Checks:
   dashboard embedding via embedded dashboard artifacts. Registered the commands
   and AI instructions in the CLI app. Checks passed:
   `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`,
+  `pnpm --filter sqlrooms-cli-app typecheck`, and
+  `pnpm --filter sqlrooms-cli-app lint`.
+- 2026-05-28: Stage 8 implemented. Added `analysisAi.ts` with the
+  `analysis_agent` tool contract, supported analysis command IDs, reusable
+  authoring instructions, and typed plan/result shapes for host-provided
+  analysis authoring agents. Included those instructions in the CLI assistant
+  system prompt. Checks passed: `pnpm --filter @sqlrooms/documents test`,
   `pnpm --filter @sqlrooms/documents typecheck`,
   `pnpm --filter @sqlrooms/documents lint`,
   `pnpm --filter sqlrooms-cli-app typecheck`, and

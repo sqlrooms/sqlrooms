@@ -69,6 +69,7 @@ import {
   ANALYSIS_AI_INSTRUCTIONS,
   AnalysisDocumentsSliceConfig,
   createAnalysisCommands,
+  createAnalysisAuthoringInstructions,
   createAnalysisDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
@@ -546,7 +547,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${ANALYSIS_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${ANALYSIS_AI_INSTRUCTIONS}\n\n${createAnalysisAuthoringInstructions()}`,
             getRunContext: () => getRunContext(store),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

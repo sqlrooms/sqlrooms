@@ -173,6 +173,11 @@ artifacts:
 Register these commands alongside `ANALYSIS_AI_INSTRUCTIONS` when exposing
 Analysis artifacts to an assistant.
 
+`createAnalysisAuthoringInstructions()` adds a higher-level authoring contract
+for assistants or host-provided sub-agents. It names the analysis command set,
+explains when to use standalone chart blocks versus dashboard embeds, and keeps
+selection-group behavior explicit.
+
 ## CRDT
 
 `@sqlrooms/documents/crdt` exposes Loro Mirror bindings for document state:

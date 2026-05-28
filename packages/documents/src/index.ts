@@ -74,6 +74,15 @@ export {
   ANALYSIS_AI_INSTRUCTIONS,
   createAnalysisCommands,
 } from './analysisCommands';
+export {
+  ANALYSIS_AGENT_COMMAND_IDS,
+  ANALYSIS_AGENT_TOOL_NAME,
+  createAnalysisAuthoringInstructions,
+  type AnalysisAgentCommandId,
+  type AnalysisAgentPlanStep,
+  type AnalysisAgentResult,
+  type CreateAnalysisAuthoringInstructionsOptions,
+} from './analysisAi';
 export {AnalysisDocumentEditor} from './AnalysisDocumentEditor';
 export {
   AnalysisDocumentEditorRoot,
