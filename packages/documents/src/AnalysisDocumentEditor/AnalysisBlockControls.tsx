@@ -80,6 +80,11 @@ function getBlockPos(editor: Editor, element: HTMLElement) {
   }
 }
 
+function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  return event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
 function buildBlockMenuItems(): BlockMenuItem[] {
   return [
     {
@@ -201,19 +206,36 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
+  const hideTimerRef = useRef<number | null>(null);
   const blockMenuItems = useMemo(() => buildBlockMenuItems(), []);
+
+  const cancelHide = useCallback(() => {
+    if (hideTimerRef.current == null) return;
+    window.clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = null;
+  }, []);
+
+  const scheduleHide = useCallback(() => {
+    if (menuOpen) return;
+    cancelHide();
+    hideTimerRef.current = window.setTimeout(() => {
+      setActiveBlock(null);
+      hideTimerRef.current = null;
+    }, 180);
+  }, [cancelHide, menuOpen]);
 
   const updateActiveBlock = useCallback(
     (element: HTMLElement | null) => {
       if (!editor || !scrollElement || !element) {
-        if (!menuOpen) setActiveBlock(null);
+        if (!menuOpen) scheduleHide();
         return;
       }
       const pos = getBlockPos(editor, element);
       if (pos == null || !getNodeAt(editor, pos)) {
-        if (!menuOpen) setActiveBlock(null);
+        if (!menuOpen) scheduleHide();
         return;
       }
+      cancelHide();
       const elementRect = element.getBoundingClientRect();
       const scrollRect = scrollElement.getBoundingClientRect();
       setActiveBlock({
@@ -222,7 +244,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
         top: elementRect.top - scrollRect.top + scrollElement.scrollTop,
       });
     },
-    [editor, menuOpen, scrollElement],
+    [cancelHide, editor, menuOpen, scheduleHide, scrollElement],
   );
 
   useEffect(() => {
@@ -234,13 +256,21 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
         event.target instanceof Node &&
         controlsRef.current?.contains(event.target)
       ) {
+        cancelHide();
         return;
       }
-      updateActiveBlock(directEditorChild(editorElement, event.target));
+      const hoveredBlock = directEditorChild(editorElement, event.target);
+      if (hoveredBlock) {
+        updateActiveBlock(hoveredBlock);
+        return;
+      }
+      if (activeBlock && isPointerInElementRow(event, activeBlock.element)) {
+        updateActiveBlock(activeBlock.element);
+        return;
+      }
+      updateActiveBlock(null);
     };
-    const handleMouseLeave = () => {
-      if (!menuOpen) setActiveBlock(null);
-    };
+    const handleMouseLeave = () => scheduleHide();
     const handleScroll = () => {
       if (activeBlock) updateActiveBlock(activeBlock.element);
     };
@@ -251,6 +281,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     window.addEventListener('resize', handleScroll);
 
     return () => {
+      cancelHide();
       scrollElement.removeEventListener('mousemove', handleMouseMove);
       scrollElement.removeEventListener('mouseleave', handleMouseLeave);
       scrollElement.removeEventListener('scroll', handleScroll);
@@ -258,9 +289,11 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     };
   }, [
     activeBlock,
+    cancelHide,
     editor,
     menuOpen,
     readOnly,
+    scheduleHide,
     scrollElement,
     updateActiveBlock,
   ]);
