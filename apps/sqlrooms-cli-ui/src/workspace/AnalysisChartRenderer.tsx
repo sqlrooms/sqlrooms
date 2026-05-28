@@ -8,7 +8,7 @@ import {
 } from '@sqlrooms/mosaic';
 import {Button, cn} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
-import {useCallback, useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo, useRef} from 'react';
 import {parseAnalysisChartConfig} from './analysisChartConfig';
 
 function getAnalysisChartSelectionName({
@@ -31,6 +31,10 @@ function getAnalysisChartRuntimeKey({
   return `analysis:${analysisId}:chart-block:${blockId}`;
 }
 
+function stableStringify(value: unknown) {
+  return JSON.stringify(value);
+}
+
 export const AnalysisChartRenderer = ({
   analysisId,
   blockId,
@@ -43,6 +47,17 @@ export const AnalysisChartRenderer = ({
   onConfigChange,
   onCaptionChange,
 }: AnalysisChartRendererProps) => {
+  const onTableNameChangeRef = useRef(onTableNameChange);
+  const onConfigChangeRef = useRef(onConfigChange);
+
+  useEffect(() => {
+    onTableNameChangeRef.current = onTableNameChange;
+  }, [onTableNameChange]);
+
+  useEffect(() => {
+    onConfigChangeRef.current = onConfigChange;
+  }, [onConfigChange]);
+
   const tables = useTablesWithColumns();
   const fallbackTable = tables[0];
   const fallbackField = fallbackTable?.columns?.[0]?.name;
@@ -58,6 +73,7 @@ export const AnalysisChartRenderer = ({
     () => parseAnalysisChartConfig(config, defaultConfig),
     [config, defaultConfig],
   );
+  const configKey = stableStringify(config);
   const chartConfig = parsedConfig.success ? parsedConfig.config : undefined;
   const selectionName = getAnalysisChartSelectionName({
     analysisId,
@@ -82,16 +98,20 @@ export const AnalysisChartRenderer = ({
   );
 
   useEffect(() => {
-    if (parsedConfig.success && parsedConfig.normalized) {
-      onConfigChange?.(parsedConfig.config);
+    if (
+      parsedConfig.success &&
+      parsedConfig.normalized &&
+      configKey !== stableStringify(parsedConfig.config)
+    ) {
+      onConfigChangeRef.current?.(parsedConfig.config);
     }
-  }, [onConfigChange, parsedConfig]);
+  }, [configKey, parsedConfig]);
 
   useEffect(() => {
     if (!tableName && effectiveTableName) {
-      onTableNameChange?.(effectiveTableName);
+      onTableNameChangeRef.current?.(effectiveTableName);
     }
-  }, [effectiveTableName, onTableNameChange, tableName]);
+  }, [effectiveTableName, tableName]);
 
   if (!chartConfig) {
     return (

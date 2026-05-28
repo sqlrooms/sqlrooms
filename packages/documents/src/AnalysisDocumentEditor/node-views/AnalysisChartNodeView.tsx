@@ -1,6 +1,6 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
-import {createElement, type FC} from 'react';
+import {createElement, useCallback, type FC} from 'react';
 import {useAnalysisChartRenderer} from '../../AnalysisChartRendererContext';
 import {useAnalysisDocumentEditorContext} from '../AnalysisDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
@@ -24,6 +24,19 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
   const config = attrs.config ?? {};
+  const handleTableNameChange = useCallback(
+    (nextTableName: string) => updateAttributes({tableName: nextTableName}),
+    [updateAttributes],
+  );
+  const handleConfigChange = useCallback(
+    (nextConfig: unknown) => updateAttributes({config: nextConfig}),
+    [updateAttributes],
+  );
+  const handleCaptionChange = useCallback(
+    (nextCaption: string | undefined) =>
+      updateAttributes({caption: nextCaption}),
+    [updateAttributes],
+  );
 
   return (
     <NodeViewWrapper
@@ -42,12 +55,9 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
           selectionGroupId,
           caption,
           readOnly,
-          onTableNameChange: (nextTableName: string) =>
-            updateAttributes({tableName: nextTableName}),
-          onConfigChange: (nextConfig: unknown) =>
-            updateAttributes({config: nextConfig}),
-          onCaptionChange: (nextCaption: string | undefined) =>
-            updateAttributes({caption: nextCaption}),
+          onTableNameChange: handleTableNameChange,
+          onConfigChange: handleConfigChange,
+          onCaptionChange: handleCaptionChange,
         })
       ) : (
         <div className="p-4">
