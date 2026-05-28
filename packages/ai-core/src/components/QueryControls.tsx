@@ -11,12 +11,15 @@ import {
   ReactNode,
   Ref,
   useRef,
+  useMemo,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
 import {ContextSelector} from './context/ContextSelector';
 import {CHAT_CONTEXT_SELECTOR_SLOT} from './context/types';
+import {hasAiSettingsConfig} from '../hasAiSettingsConfig';
+import {extractModelsFromSettings} from '../utils';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -105,9 +108,23 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
   const model = currentSession?.model;
+  const modelProvider = currentSession?.modelProvider;
 
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
   const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
+  const aiSettingsConfig = useStoreWithAi((s) =>
+    hasAiSettingsConfig(s) ? s.aiSettings.config : undefined,
+  );
+  const settingsModels = useMemo(
+    () => (aiSettingsConfig ? extractModelsFromSettings(aiSettingsConfig) : []),
+    [aiSettingsConfig],
+  );
+  const hasSelectedModel = aiSettingsConfig
+    ? settingsModels.some(
+        (candidate) =>
+          candidate.provider === modelProvider && candidate.value === model,
+      )
+    : Boolean(modelProvider && model);
 
   // Extract special composer controls from children
   const {inlineApiKeyInput, contextSelectors, otherChildren} =
@@ -118,6 +135,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   // - There's an API key error (invalid key)
   const showApiKeyInput =
     inlineApiKeyInput !== null &&
+    hasSelectedModel &&
     (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
 
   const isRunning = useStoreWithAi((s) =>
@@ -153,17 +171,26 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           !isSummarizing &&
           !isRunning &&
           sessionId &&
-          model &&
+          hasSelectedModel &&
           prompt.trim().length
         ) {
           runAnalysis(sessionId);
         }
       }
     },
-    [isSummarizing, isRunning, sessionId, model, prompt, runAnalysis],
+    [
+      isSummarizing,
+      isRunning,
+      sessionId,
+      hasSelectedModel,
+      prompt,
+      runAnalysis,
+    ],
   );
 
-  const canStart = Boolean(sessionId && model && prompt.trim().length);
+  const canStart = Boolean(
+    sessionId && hasSelectedModel && prompt.trim().length,
+  );
 
   const handleClickRunOrCancel = useCallback(() => {
     if (!sessionId) return;
@@ -241,7 +268,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   }
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder={placeholder}
+                placeholder={
+                  hasSelectedModel ? placeholder : 'No model selected'
+                }
                 autoFocus
               />
               <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
@@ -343,7 +372,7 @@ const InlineApiKeyInputRenderer: React.FC<{
   const [apiKeyInput, setApiKeyInput] = useState('');
 
   const modelProvider = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.modelProvider || 'openai',
+    (s) => s.ai.getCurrentSession()?.modelProvider,
   );
   const setApiKeyError = useStoreWithAi((s) => s.ai.setApiKeyError);
 
@@ -394,7 +423,9 @@ const InlineApiKeyInputRenderer: React.FC<{
   const canSave = Boolean(apiKeyInput.trim().length && modelProvider);
 
   const formatProviderLabel = (provider: string) =>
-    provider.charAt(0).toUpperCase() + provider.slice(1);
+    provider.toLowerCase() === 'openai'
+      ? 'OpenAI'
+      : provider.charAt(0).toUpperCase() + provider.slice(1);
 
   return (
     <>
@@ -405,7 +436,11 @@ const InlineApiKeyInputRenderer: React.FC<{
         value={apiKeyInput}
         onChange={(e) => setApiKeyInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={`Enter your ${formatProviderLabel(modelProvider)} API key...`}
+        placeholder={
+          modelProvider
+            ? `Enter your ${formatProviderLabel(modelProvider)} API key...`
+            : 'No model selected'
+        }
         autoFocus
         autoComplete="off"
       />

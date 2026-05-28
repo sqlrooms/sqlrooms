@@ -28,7 +28,7 @@ export const AssistantSettingsDialog: React.FC<
         <Button
           variant="ghost"
           size="icon"
-          className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6"
+          className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6 shrink-0 focus-visible:ring-offset-0 focus-visible:ring-inset"
           title="AI Assistant Settings"
           aria-label="AI Assistant Settings"
         >
@@ -45,14 +45,20 @@ export const AssistantSettingsDialog: React.FC<
             <TabsTrigger value="models">Models</TabsTrigger>
             <TabsTrigger value="parameters">Parameters</TabsTrigger>
           </TabsList>
-          <TabsContent value="providers" className="flex-1 overflow-y-auto">
-            <AiSettingsPanel.ProvidersSettings />
+          <TabsContent
+            value="providers"
+            className="flex-1 overflow-y-auto pt-4"
+          >
+            <AiSettingsPanel.ProvidersSettings showTitle={false} />
           </TabsContent>
-          <TabsContent value="models" className="flex-1 overflow-y-auto">
-            <AiSettingsPanel.ModelsSettings />
+          <TabsContent value="models" className="flex-1 overflow-y-auto pt-4">
+            <AiSettingsPanel.ModelsSettings showTitle={false} />
           </TabsContent>
-          <TabsContent value="parameters" className="flex-1 overflow-y-auto">
-            <AiSettingsPanel.ModelParametersSettings />
+          <TabsContent
+            value="parameters"
+            className="flex-1 overflow-y-auto pt-4"
+          >
+            <AiSettingsPanel.ModelParametersSettings showTitle={false} />
           </TabsContent>
         </Tabs>
       </DialogContent>

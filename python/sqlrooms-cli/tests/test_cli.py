@@ -89,16 +89,35 @@ id = "anthropic"
 base_url = "https://api.anthropic.com"
 api_key = "anthropic-key"
 models = ["claude-4-sonnet"]
+
+[[ai.custom_models]]
+model_name = "local-qwen"
+base_url = "http://localhost:11434/v1"
+api_key = "local-key"
+
+[ai.model_parameters]
+max_steps = 9
+additional_instruction = "Prefer short answers."
 """.strip(),
         encoding="utf-8",
     )
 
-    default_provider, default_model, providers = _load_ai_runtime_config(config_path)
+    (
+        default_provider,
+        default_model,
+        providers,
+        custom_models,
+        model_parameters,
+    ) = _load_ai_runtime_config(config_path)
     assert default_provider == "openai"
     assert default_model == "gpt-5"
     assert providers["openai"]["apiKey"] == "env-openai-key"
     assert providers["openai"]["models"][0]["modelName"] == "gpt-5"
     assert providers["anthropic"]["apiKey"] == "anthropic-key"
+    assert custom_models[0]["modelName"] == "local-qwen"
+    assert custom_models[0]["apiKey"] == "local-key"
+    assert model_parameters["maxSteps"] == 9
+    assert model_parameters["additionalInstruction"] == "Prefer short answers."
 
 
 def test_load_connector_config_rejects_duplicate_ids(tmp_path):

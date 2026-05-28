@@ -149,13 +149,19 @@ def _load_connector_config(
 
 def _load_ai_runtime_config(
     path: Path | None,
-) -> tuple[str | None, str | None, dict[str, dict[str, Any]]]:
+) -> tuple[
+    str | None,
+    str | None,
+    dict[str, dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, Any],
+]:
     if path is None:
-        return (None, None, {})
+        return (None, None, {}, [], {})
     raw = _read_toml(path)
     ai = raw.get("ai")
     if not isinstance(ai, dict):
-        return (None, None, {})
+        return (None, None, {}, [], {})
 
     default_provider = _normalize_config_string(ai.get("default_provider"))
     default_model = _normalize_config_string(ai.get("default_model"))
@@ -193,7 +199,54 @@ def _load_ai_runtime_config(
             "models": models,
         }
 
-    if default_provider and default_provider not in providers:
+    custom_models_raw = ai.get("custom_models") or []
+    if not isinstance(custom_models_raw, list):
+        raise RuntimeError("'ai.custom_models' must be an array in SQLRooms config.")
+    custom_models: list[dict[str, Any]] = []
+    for idx, item in enumerate(custom_models_raw):
+        if not isinstance(item, dict):
+            raise RuntimeError(
+                f"AI custom model entry at index {idx} must be an object."
+            )
+        model_name = _normalize_config_string(
+            item.get("model_name") or item.get("modelName")
+        )
+        base_url = _normalize_config_string(item.get("base_url") or item.get("baseUrl"))
+        if not model_name or not base_url:
+            raise RuntimeError(
+                f"AI custom model entry at index {idx} requires 'model_name' and 'base_url'."
+            )
+        custom_models.append(
+            {
+                "modelName": model_name,
+                "baseUrl": base_url,
+                "apiKey": _normalize_config_string(item.get("api_key")) or "",
+            }
+        )
+
+    model_parameters_raw = ai.get("model_parameters") or {}
+    if not isinstance(model_parameters_raw, dict):
+        raise RuntimeError(
+            "'ai.model_parameters' must be an object in SQLRooms config."
+        )
+    model_parameters: dict[str, Any] = {}
+    if "max_steps" in model_parameters_raw:
+        max_steps = model_parameters_raw.get("max_steps")
+        if not isinstance(max_steps, int):
+            raise RuntimeError("'ai.model_parameters.max_steps' must be an integer.")
+        model_parameters["maxSteps"] = max_steps
+    additional_instruction = model_parameters_raw.get(
+        "additional_instruction",
+        model_parameters_raw.get("additionalInstruction"),
+    )
+    if isinstance(additional_instruction, str):
+        model_parameters["additionalInstruction"] = additional_instruction
+
+    if (
+        default_provider
+        and default_provider not in providers
+        and default_provider != "custom"
+    ):
         raise RuntimeError(
             f"AI default_provider '{default_provider}' is not defined under ai.providers."
         )
@@ -205,8 +258,10 @@ def _load_ai_runtime_config(
         models = provider.get("models") or []
         if models:
             default_model = models[0].get("modelName")
+    if default_provider == "custom" and not default_model and custom_models:
+        default_model = custom_models[0].get("modelName")
     logger.info("Loaded SQLRooms AI config from %s", path)
-    return (default_provider, default_model, providers)
+    return (default_provider, default_model, providers, custom_models, model_parameters)
 
 
 @app.command("export")
@@ -392,7 +447,13 @@ def main(
     try:
         config_path = _resolve_config_path(config, no_config=no_config)
         connector_settings = _load_connector_config(config_path)
-        llm_provider, llm_model, ai_providers = _load_ai_runtime_config(config_path)
+        (
+            llm_provider,
+            llm_model,
+            ai_providers,
+            ai_custom_models,
+            ai_model_parameters,
+        ) = _load_ai_runtime_config(config_path)
     except Exception as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
@@ -421,6 +482,8 @@ def main(
         llm_model=llm_model,
         api_key=selected_api_key,
         ai_providers=ai_providers,
+        ai_custom_models=ai_custom_models,
+        ai_model_parameters=ai_model_parameters,
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,

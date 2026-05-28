@@ -1,5 +1,6 @@
 import {PersistStorage, StorageValue} from 'zustand/middleware';
 import {RuntimeConfig} from './runtimeConfig';
+import type {AiSettingsSliceConfig} from '@sqlrooms/ai';
 
 type DuckDbLikeConnector = {
   query: (sql: string) => PromiseLike<any>;
@@ -143,6 +144,34 @@ export function createDuckDbPersistStorage(
 
 function getApiBaseUrl(config: RuntimeConfig): string {
   return (config.apiBaseUrl || '').replace(/\/$/, '');
+}
+
+function getApiHeaders(config: RuntimeConfig): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    ...(config.wsAuthToken ? {'X-SQLRooms-Token': config.wsAuthToken} : {}),
+  };
+}
+
+export async function saveAiSettingsToServer(
+  config: RuntimeConfig,
+  payload: {
+    settings: AiSettingsSliceConfig;
+    defaultProvider?: string;
+    defaultModel?: string;
+  },
+): Promise<void> {
+  const res = await fetch(`${getApiBaseUrl(config)}/api/ai/settings`, {
+    method: 'PUT',
+    headers: getApiHeaders(config),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const msg =
+      (body as {error?: string}).error ?? `Server returned ${res.status}`;
+    throw new Error(msg);
+  }
 }
 
 const SAFE_PATH_RE = /^[A-Za-z0-9_\-./:\\]+$/;
