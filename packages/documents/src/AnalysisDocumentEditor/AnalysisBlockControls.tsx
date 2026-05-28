@@ -243,6 +243,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   const controlsRef = useRef<HTMLDivElement>(null);
   const handleButtonRef = useRef<HTMLButtonElement>(null);
   const hideTimerRef = useRef<number | null>(null);
+  const tooltipTimerRef = useRef<number | null>(null);
   const blockMenuItems = useMemo(
     () => buildBlockMenuItems(artifactTypes),
     [artifactTypes],
@@ -254,6 +255,28 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     window.clearTimeout(hideTimerRef.current);
     hideTimerRef.current = null;
   }, []);
+
+  const cancelTooltip = useCallback(() => {
+    if (tooltipTimerRef.current != null) {
+      window.clearTimeout(tooltipTimerRef.current);
+      tooltipTimerRef.current = null;
+    }
+    setHandleTooltipOpen(false);
+  }, []);
+
+  const scheduleTooltip = useCallback(() => {
+    if (
+      handleMenuOpen ||
+      handleTooltipOpen ||
+      tooltipTimerRef.current != null
+    ) {
+      return;
+    }
+    tooltipTimerRef.current = window.setTimeout(() => {
+      setHandleTooltipOpen(true);
+      tooltipTimerRef.current = null;
+    }, 500);
+  }, [handleMenuOpen, handleTooltipOpen]);
 
   const scheduleHide = useCallback(() => {
     if (menuOpen) return;
@@ -297,14 +320,17 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
         controlsRef.current?.contains(event.target)
       ) {
         cancelHide();
-        setHandleTooltipOpen(
-          Boolean(
-            !handleMenuOpen && handleButtonRef.current?.contains(event.target),
-          ),
-        );
+        if (
+          !handleMenuOpen &&
+          handleButtonRef.current?.contains(event.target)
+        ) {
+          scheduleTooltip();
+        } else {
+          cancelTooltip();
+        }
         return;
       }
-      setHandleTooltipOpen(false);
+      cancelTooltip();
       const hoveredBlock = directEditorChild(editorElement, event.target);
       if (hoveredBlock) {
         updateActiveBlock(hoveredBlock);
@@ -317,7 +343,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
       updateActiveBlock(null);
     };
     const handleMouseLeave = () => {
-      setHandleTooltipOpen(false);
+      cancelTooltip();
       scheduleHide();
     };
     const handleScroll = () => {
@@ -331,6 +357,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
 
     return () => {
       cancelHide();
+      cancelTooltip();
       scrollElement.removeEventListener('mousemove', handleMouseMove);
       scrollElement.removeEventListener('mouseleave', handleMouseLeave);
       scrollElement.removeEventListener('scroll', handleScroll);
@@ -339,11 +366,13 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   }, [
     activeBlock,
     cancelHide,
+    cancelTooltip,
     editor,
     handleMenuOpen,
     menuOpen,
     readOnly,
     scheduleHide,
+    scheduleTooltip,
     scrollElement,
     updateActiveBlock,
   ]);
@@ -391,7 +420,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     if (!editor || !activeBlock) return;
     const node = getNodeAt(editor, activeBlock.pos);
     if (!node) return;
-    setHandleTooltipOpen(false);
+    cancelTooltip();
     dragSourceRef.current = {pos: activeBlock.pos, node};
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('application/x-sqlrooms-analysis-block', 'move');
@@ -455,28 +484,6 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     };
   }, [editor, readOnly, scrollElement]);
 
-  useEffect(() => {
-    if (!editor || readOnly) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '/' || (!event.metaKey && !event.ctrlKey)) return;
-      if (!editor.isFocused) return;
-      event.preventDefault();
-      const selection = editor.state.selection;
-      const pos =
-        selection.$from.depth > 0 ? selection.$from.before(1) : selection.from;
-      const element = editor.view.nodeDOM(pos);
-      if (element instanceof HTMLElement) {
-        updateActiveBlock(element);
-      }
-      setInsertMenuOpen(false);
-      setHandleMenuOpen(true);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editor, readOnly, updateActiveBlock]);
-
   if (!editor || readOnly || !activeBlock) {
     return null;
   }
@@ -525,7 +532,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
         open={handleMenuOpen}
         onOpenChange={(open) => {
           setHandleMenuOpen(open);
-          if (open) setHandleTooltipOpen(false);
+          if (open) cancelTooltip();
         }}
       >
         <div className="pointer-events-auto relative">
@@ -543,16 +550,22 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
                 handleTooltipOpen ? 'analysis-block-handle-tooltip' : undefined
               }
               onFocus={() => {
-                if (!handleMenuOpen) setHandleTooltipOpen(true);
+                scheduleTooltip();
               }}
-              onBlur={() => setHandleTooltipOpen(false)}
+              onBlur={cancelTooltip}
+              onPointerEnter={() => {
+                scheduleTooltip();
+              }}
+              onMouseEnter={() => {
+                scheduleTooltip();
+              }}
               onPointerMove={() => {
-                if (!handleMenuOpen) setHandleTooltipOpen(true);
+                scheduleTooltip();
               }}
               onMouseMove={() => {
-                if (!handleMenuOpen) setHandleTooltipOpen(true);
+                scheduleTooltip();
               }}
-              onPointerLeave={() => setHandleTooltipOpen(false)}
+              onPointerLeave={cancelTooltip}
               onMouseDown={handlePlusMouseDown}
               onDragStart={handleDragStart}
             >
@@ -563,14 +576,14 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
             <div
               id="analysis-block-handle-tooltip"
               role="tooltip"
-              className="bg-popover text-popover-foreground border-border pointer-events-none absolute top-9 left-0 z-50 w-max rounded-md border px-3 py-2 text-center text-sm shadow-md"
+              className="bg-popover text-popover-foreground border-border pointer-events-none absolute top-9 left-0 z-50 w-max rounded-md border px-2.5 py-1.5 text-center text-xs shadow-md"
             >
               <div>
                 <span className="font-medium">Drag</span>{' '}
                 <span className="text-muted-foreground">to move</span>
               </div>
               <div>
-                <span className="font-medium">Click or ⌘/</span>{' '}
+                <span className="font-medium">Click</span>{' '}
                 <span className="text-muted-foreground">to open menu</span>
               </div>
             </div>
