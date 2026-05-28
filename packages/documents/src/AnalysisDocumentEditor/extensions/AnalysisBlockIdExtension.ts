@@ -30,6 +30,19 @@ function getNestedExtensions(extension: ExtensionLike): ExtensionLike[] {
   return Array.isArray(nested) ? nested.filter(isExtensionLike) : [];
 }
 
+/**
+ * Finds the node names that should behave as Analysis document blocks.
+ *
+ * Analysis documents store a stable `attrs.id` on each top-level block so
+ * command tools, block controls, and external store updates can refer to a
+ * block without depending on its current document position. Some of these
+ * blocks come from composite extensions such as `StarterKit`, so the helper
+ * recursively walks the registered Tiptap extensions and selects node
+ * extensions whose schema group contains `block`.
+ *
+ * Keeping this derived from the editor's actual extension set avoids a
+ * duplicate hardcoded list that can drift when new block extensions are added.
+ */
 export function getBlockNodeExtensionNames(extensions: readonly unknown[]) {
   const names = new Set<string>();
   const visit = (extension: ExtensionLike) => {
@@ -52,6 +65,20 @@ export function getBlockNodeExtensionNames(extensions: readonly unknown[]) {
   return [...names];
 }
 
+/**
+ * Adds the Analysis block id attribute to all block node types used by the
+ * editor.
+ *
+ * Tiptap drops unknown attrs when serializing nodes. Without this extension,
+ * built-in nodes such as paragraphs and headings would lose `attrs.id` after an
+ * edit. The Analysis normalizer would then generate replacement ids, the
+ * external document value would appear different, and the editor would be
+ * forced through `setContent`, which can move the selection to the end of the
+ * document.
+ *
+ * The id is also rendered as `data-analysis-block-id` so it survives HTML
+ * parse/render cycles and can be inspected in the DOM during debugging.
+ */
 export const AnalysisBlockIdExtension =
   Extension.create<AnalysisBlockIdOptions>({
     name: 'analysisBlockId',
