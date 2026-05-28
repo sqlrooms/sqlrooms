@@ -22,6 +22,7 @@ import {
   PlusIcon,
   QuoteIcon,
   Rows3Icon,
+  Trash2Icon,
 } from 'lucide-react';
 import {
   type DragEvent,
@@ -235,14 +236,18 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [insertMenuOpen, setInsertMenuOpen] = useState(false);
+  const [handleMenuOpen, setHandleMenuOpen] = useState(false);
+  const [handleTooltipOpen, setHandleTooltipOpen] = useState(false);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
+  const handleButtonRef = useRef<HTMLButtonElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const blockMenuItems = useMemo(
     () => buildBlockMenuItems(artifactTypes),
     [artifactTypes],
   );
+  const menuOpen = insertMenuOpen || handleMenuOpen;
 
   const cancelHide = useCallback(() => {
     if (hideTimerRef.current == null) return;
@@ -292,8 +297,14 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
         controlsRef.current?.contains(event.target)
       ) {
         cancelHide();
+        setHandleTooltipOpen(
+          Boolean(
+            !handleMenuOpen && handleButtonRef.current?.contains(event.target),
+          ),
+        );
         return;
       }
+      setHandleTooltipOpen(false);
       const hoveredBlock = directEditorChild(editorElement, event.target);
       if (hoveredBlock) {
         updateActiveBlock(hoveredBlock);
@@ -305,7 +316,10 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
       }
       updateActiveBlock(null);
     };
-    const handleMouseLeave = () => scheduleHide();
+    const handleMouseLeave = () => {
+      setHandleTooltipOpen(false);
+      scheduleHide();
+    };
     const handleScroll = () => {
       if (activeBlock) updateActiveBlock(activeBlock.element);
     };
@@ -326,6 +340,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     activeBlock,
     cancelHide,
     editor,
+    handleMenuOpen,
     menuOpen,
     readOnly,
     scheduleHide,
@@ -350,6 +365,24 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     [activeBlock, editor, generateBlockId],
   );
 
+  const deleteActiveBlock = useCallback(() => {
+    if (!editor || !activeBlock) return;
+    const node = getNodeAt(editor, activeBlock.pos);
+    const paragraph = editor.schema.nodes.paragraph;
+    if (!node || !paragraph) return;
+
+    const tr = editor.state.tr.delete(
+      activeBlock.pos,
+      activeBlock.pos + node.nodeSize,
+    );
+    if (tr.doc.childCount === 0) {
+      tr.insert(0, paragraph.create({id: generateBlockId()}));
+    }
+    editor.view.dispatch(tr.scrollIntoView());
+    editor.commands.focus();
+    setActiveBlock(null);
+  }, [activeBlock, editor, generateBlockId]);
+
   const handlePlusMouseDown = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
@@ -358,6 +391,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     if (!editor || !activeBlock) return;
     const node = getNodeAt(editor, activeBlock.pos);
     if (!node) return;
+    setHandleTooltipOpen(false);
     dragSourceRef.current = {pos: activeBlock.pos, node};
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('application/x-sqlrooms-analysis-block', 'move');
@@ -421,6 +455,28 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     };
   }, [editor, readOnly, scrollElement]);
 
+  useEffect(() => {
+    if (!editor || readOnly) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/' || (!event.metaKey && !event.ctrlKey)) return;
+      if (!editor.isFocused) return;
+      event.preventDefault();
+      const selection = editor.state.selection;
+      const pos =
+        selection.$from.depth > 0 ? selection.$from.before(1) : selection.from;
+      const element = editor.view.nodeDOM(pos);
+      if (element instanceof HTMLElement) {
+        updateActiveBlock(element);
+      }
+      setInsertMenuOpen(false);
+      setHandleMenuOpen(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editor, readOnly, updateActiveBlock]);
+
   if (!editor || readOnly || !activeBlock) {
     return null;
   }
@@ -431,7 +487,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
       className="pointer-events-none absolute left-2 z-20 flex w-12 items-center justify-end gap-1"
       style={{top: activeBlock.top}}
     >
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+      <DropdownMenu open={insertMenuOpen} onOpenChange={setInsertMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             type="button"
@@ -465,20 +521,71 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <button
-        type="button"
-        draggable
-        className={cn(
-          'pointer-events-auto flex h-7 w-7 cursor-grab items-center justify-center rounded-md opacity-70',
-          'hover:bg-accent hover:text-accent-foreground hover:opacity-100 active:cursor-grabbing',
-        )}
-        aria-label="Drag block"
-        title="Drag to move"
-        onMouseDown={handlePlusMouseDown}
-        onDragStart={handleDragStart}
+      <DropdownMenu
+        open={handleMenuOpen}
+        onOpenChange={(open) => {
+          setHandleMenuOpen(open);
+          if (open) setHandleTooltipOpen(false);
+        }}
       >
-        <GripVerticalIcon className="h-4 w-4" />
-      </button>
+        <div className="pointer-events-auto relative">
+          <DropdownMenuTrigger asChild>
+            <button
+              ref={handleButtonRef}
+              type="button"
+              draggable
+              className={cn(
+                'flex h-7 w-7 cursor-grab items-center justify-center rounded-md opacity-70',
+                'hover:bg-accent hover:text-accent-foreground hover:opacity-100 active:cursor-grabbing',
+              )}
+              aria-label="Block options"
+              aria-describedby={
+                handleTooltipOpen ? 'analysis-block-handle-tooltip' : undefined
+              }
+              onFocus={() => {
+                if (!handleMenuOpen) setHandleTooltipOpen(true);
+              }}
+              onBlur={() => setHandleTooltipOpen(false)}
+              onPointerMove={() => {
+                if (!handleMenuOpen) setHandleTooltipOpen(true);
+              }}
+              onMouseMove={() => {
+                if (!handleMenuOpen) setHandleTooltipOpen(true);
+              }}
+              onPointerLeave={() => setHandleTooltipOpen(false)}
+              onMouseDown={handlePlusMouseDown}
+              onDragStart={handleDragStart}
+            >
+              <GripVerticalIcon className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          {handleTooltipOpen ? (
+            <div
+              id="analysis-block-handle-tooltip"
+              role="tooltip"
+              className="bg-popover text-popover-foreground border-border pointer-events-none absolute top-9 left-0 z-50 w-max rounded-md border px-3 py-2 text-center text-sm shadow-md"
+            >
+              <div>
+                <span className="font-medium">Drag</span>{' '}
+                <span className="text-muted-foreground">to move</span>
+              </div>
+              <div>
+                <span className="font-medium">Click or ⌘/</span>{' '}
+                <span className="text-muted-foreground">to open menu</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <DropdownMenuContent align="start" side="right" className="w-44">
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={deleteActiveBlock}
+          >
+            <Trash2Icon className="h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
