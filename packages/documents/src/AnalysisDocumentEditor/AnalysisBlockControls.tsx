@@ -200,6 +200,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const blockMenuItems = useMemo(() => buildBlockMenuItems(), []);
 
   const updateActiveBlock = useCallback(
@@ -229,6 +230,12 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     const editorElement = editor.view.dom as HTMLElement;
 
     const handleMouseMove = (event: MouseEvent) => {
+      if (
+        event.target instanceof Node &&
+        controlsRef.current?.contains(event.target)
+      ) {
+        return;
+      }
       updateActiveBlock(directEditorChild(editorElement, event.target));
     };
     const handleMouseLeave = () => {
@@ -238,14 +245,14 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
       if (activeBlock) updateActiveBlock(activeBlock.element);
     };
 
-    editorElement.addEventListener('mousemove', handleMouseMove);
-    editorElement.addEventListener('mouseleave', handleMouseLeave);
+    scrollElement.addEventListener('mousemove', handleMouseMove);
+    scrollElement.addEventListener('mouseleave', handleMouseLeave);
     scrollElement.addEventListener('scroll', handleScroll, {passive: true});
     window.addEventListener('resize', handleScroll);
 
     return () => {
-      editorElement.removeEventListener('mousemove', handleMouseMove);
-      editorElement.removeEventListener('mouseleave', handleMouseLeave);
+      scrollElement.removeEventListener('mousemove', handleMouseMove);
+      scrollElement.removeEventListener('mouseleave', handleMouseLeave);
       scrollElement.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
@@ -352,6 +359,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
 
   return (
     <div
+      ref={controlsRef}
       className="pointer-events-none absolute left-2 z-20 flex w-12 items-center justify-end gap-1"
       style={{top: activeBlock.top}}
     >
