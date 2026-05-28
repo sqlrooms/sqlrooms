@@ -5,7 +5,7 @@
 - [x] [Stage 1: Structured Analysis State](#stage-1-structured-analysis-state)
 - [x] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
 - [x] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
-- [ ] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
+- [x] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
 - [ ] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
 - [ ] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
 - [ ] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
@@ -566,6 +566,8 @@ Checks:
 
 ### Stage 4: Shared Mosaic Chart Primitive
 
+Status: Implemented on 2026-05-28.
+
 Extract dashboard chart internals into a reusable chart component that can be
 used by dashboard panels and standalone analysis chart blocks.
 
@@ -886,3 +888,14 @@ Checks:
   `pnpm --filter @sqlrooms/documents typecheck`,
   `pnpm --filter @sqlrooms/documents lint`, and
   `pnpm --filter @sqlrooms/documents build`.
+- 2026-05-28: Stage 4 implemented. Added `MosaicChartView` as the shared
+  Mosaic/vgplot chart runtime primitive and `MosaicChartSettingsPanel` as the
+  dashboard-independent settings UI. Dashboard chart panels now wrap the shared
+  chart view with dashboard-scoped selection, retention, and runtime issue
+  keys. Mosaic dashboard runtime also exposes caller-provided key APIs so
+  future analysis chart blocks can keep retained chart instances and runtime
+  issues isolated from dashboard panels. Checks passed:
+  `pnpm --filter @sqlrooms/mosaic test`,
+  `pnpm --filter @sqlrooms/mosaic typecheck`,
+  `pnpm --filter @sqlrooms/mosaic lint`, and
+  `pnpm --filter @sqlrooms/mosaic build`.

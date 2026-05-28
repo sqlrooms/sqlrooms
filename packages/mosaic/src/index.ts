@@ -98,6 +98,19 @@ export {
 } from './MosaicSlice';
 export {DataPointLimitError} from './DataPointLimitError';
 export {
+  MosaicChartView,
+  type MosaicChartViewProps,
+} from './chart/MosaicChartView';
+export {
+  MosaicChartSettingsPanel,
+  type MosaicChartSettingsPanelProps,
+} from './chart/MosaicChartSettingsPanel';
+export {useBrushSelectionParams} from './chart/useBrushSelectionParams';
+export {
+  useChartRetainer,
+  useChartRetainerByKey,
+} from './chart/useChartRetainer';
+export {
   DEFAULT_CHART_MAX_DATA_POINTS,
   assertChartDataPolicy,
   createChartRuntimeIssueFromError,

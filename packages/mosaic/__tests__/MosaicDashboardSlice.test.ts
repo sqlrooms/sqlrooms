@@ -469,6 +469,44 @@ describe('MosaicDashboardSlice generic panels', () => {
     ).toBeUndefined();
   });
 
+  it('tracks retained charts and runtime issues by caller-provided keys', () => {
+    const store = createTestStore();
+    const runtime = createRuntimeChart();
+    const runtimeKey = 'analysis:analysis-1:chart-block:chart-1';
+
+    store
+      .getState()
+      .mosaicDashboard.setRetainedChartByKey(runtimeKey, runtime.chart);
+    store.getState().mosaicDashboard.reportPanelIssueByKey(runtimeKey, {
+      kind: 'too-much-data',
+      panelId: runtimeKey,
+      chartType: 'histogram',
+      message: 'Limited result set',
+      recoverable: true,
+    });
+
+    expect(
+      store.getState().mosaicDashboard.getRetainedChartByKey(runtimeKey),
+    ).toBe(runtime.chart);
+    expect(
+      store.getState().mosaicDashboard.getPanelIssueByKey(runtimeKey),
+    ).toMatchObject({
+      kind: 'too-much-data',
+      panelId: runtimeKey,
+      chartType: 'histogram',
+    });
+
+    store.getState().mosaicDashboard.evictPanelRuntimeByKey(runtimeKey);
+
+    expect(runtime.destroy).toHaveBeenCalledTimes(1);
+    expect(
+      store.getState().mosaicDashboard.getRetainedChartByKey(runtimeKey),
+    ).toBeUndefined();
+    expect(
+      store.getState().mosaicDashboard.getPanelIssueByKey(runtimeKey),
+    ).toBeUndefined();
+  });
+
   it('evicts dashboard runtime and resets only that dashboard selection', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-runtime-2';

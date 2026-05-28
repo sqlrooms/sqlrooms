@@ -261,22 +261,36 @@ export type MosaicDashboardSliceState = {
       dashboardId: string,
       panelId: string,
     ) => RetainedVgPlotChart | undefined;
+    getRetainedChartByKey: (
+      runtimeKey: string,
+    ) => RetainedVgPlotChart | undefined;
     setRetainedChart: (
       dashboardId: string,
       panelId: string,
+      chart: RetainedVgPlotChart,
+    ) => void;
+    setRetainedChartByKey: (
+      runtimeKey: string,
       chart: RetainedVgPlotChart,
     ) => void;
     getPanelIssue: (
       dashboardId: string,
       panelId: string,
     ) => ChartRuntimeIssue | undefined;
+    getPanelIssueByKey: (runtimeKey: string) => ChartRuntimeIssue | undefined;
     reportPanelIssue: (
       dashboardId: string,
       panelId: string,
       issue: ChartRuntimeIssue,
     ) => void;
+    reportPanelIssueByKey: (
+      runtimeKey: string,
+      issue: ChartRuntimeIssue,
+    ) => void;
     clearPanelIssue: (dashboardId: string, panelId: string) => void;
+    clearPanelIssueByKey: (runtimeKey: string) => void;
     evictPanelRuntime: (dashboardId: string, panelId: string) => void;
+    evictPanelRuntimeByKey: (runtimeKey: string) => void;
     evictDashboardRuntime: (
       dashboardId: string,
       options?: {resetSelection?: boolean},
@@ -981,20 +995,27 @@ export function createMosaicDashboardSlice(
         },
 
         getRetainedChart(dashboardId, panelId) {
+          return get().mosaicDashboard.getRetainedChartByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+          );
+        },
+
+        getRetainedChartByKey(runtimeKey) {
           return get().mosaicDashboard.runtime.retainedChartsByPanelId[
-            getMosaicDashboardPanelId(dashboardId, panelId)
+            runtimeKey
           ];
         },
 
         setRetainedChart(dashboardId, panelId, chart) {
-          const runtimePanelId = getMosaicDashboardPanelId(
-            dashboardId,
-            panelId,
+          get().mosaicDashboard.setRetainedChartByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+            chart,
           );
+        },
+
+        setRetainedChartByKey(runtimeKey, chart) {
           const previous =
-            get().mosaicDashboard.runtime.retainedChartsByPanelId[
-              runtimePanelId
-            ];
+            get().mosaicDashboard.runtime.retainedChartsByPanelId[runtimeKey];
           if (previous && previous !== chart) {
             destroyDashboardRuntimeChart(previous);
           }
@@ -1005,7 +1026,7 @@ export function createMosaicDashboardSlice(
                 ...state.mosaicDashboard.runtime,
                 retainedChartsByPanelId: {
                   ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
-                  [runtimePanelId]: chart,
+                  [runtimeKey]: chart,
                 },
               },
             },
@@ -1013,16 +1034,23 @@ export function createMosaicDashboardSlice(
         },
 
         getPanelIssue(dashboardId, panelId) {
-          return get().mosaicDashboard.runtime.panelIssuesByPanelId[
-            getMosaicDashboardPanelId(dashboardId, panelId)
-          ];
+          return get().mosaicDashboard.getPanelIssueByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+          );
+        },
+
+        getPanelIssueByKey(runtimeKey) {
+          return get().mosaicDashboard.runtime.panelIssuesByPanelId[runtimeKey];
         },
 
         reportPanelIssue(dashboardId, panelId, issue) {
-          const runtimePanelId = getMosaicDashboardPanelId(
-            dashboardId,
-            panelId,
+          get().mosaicDashboard.reportPanelIssueByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+            issue,
           );
+        },
+
+        reportPanelIssueByKey(runtimeKey, issue) {
           set((state) => ({
             mosaicDashboard: {
               ...state.mosaicDashboard,
@@ -1030,7 +1058,7 @@ export function createMosaicDashboardSlice(
                 ...state.mosaicDashboard.runtime,
                 panelIssuesByPanelId: {
                   ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
-                  [runtimePanelId]: issue,
+                  [runtimeKey]: issue,
                 },
               },
             },
@@ -1038,20 +1066,20 @@ export function createMosaicDashboardSlice(
         },
 
         clearPanelIssue(dashboardId, panelId) {
-          const runtimePanelId = getMosaicDashboardPanelId(
-            dashboardId,
-            panelId,
+          get().mosaicDashboard.clearPanelIssueByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
           );
-          if (
-            !get().mosaicDashboard.runtime.panelIssuesByPanelId[runtimePanelId]
-          ) {
+        },
+
+        clearPanelIssueByKey(runtimeKey) {
+          if (!get().mosaicDashboard.runtime.panelIssuesByPanelId[runtimeKey]) {
             return;
           }
           set((state) => {
             const nextPanelIssuesByPanelId = {
               ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
             };
-            delete nextPanelIssuesByPanelId[runtimePanelId];
+            delete nextPanelIssuesByPanelId[runtimeKey];
             return {
               mosaicDashboard: {
                 ...state.mosaicDashboard,
@@ -1065,14 +1093,14 @@ export function createMosaicDashboardSlice(
         },
 
         evictPanelRuntime(dashboardId, panelId) {
-          const runtimePanelId = getMosaicDashboardPanelId(
-            dashboardId,
-            panelId,
+          get().mosaicDashboard.evictPanelRuntimeByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
           );
+        },
+
+        evictPanelRuntimeByKey(runtimeKey) {
           const existing =
-            get().mosaicDashboard.runtime.retainedChartsByPanelId[
-              runtimePanelId
-            ];
+            get().mosaicDashboard.runtime.retainedChartsByPanelId[runtimeKey];
           destroyDashboardRuntimeChart(existing);
           set((state) => {
             const nextRetainedChartsByPanelId = {
@@ -1081,8 +1109,8 @@ export function createMosaicDashboardSlice(
             const nextPanelIssuesByPanelId = {
               ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
             };
-            delete nextRetainedChartsByPanelId[runtimePanelId];
-            delete nextPanelIssuesByPanelId[runtimePanelId];
+            delete nextRetainedChartsByPanelId[runtimeKey];
+            delete nextPanelIssuesByPanelId[runtimeKey];
             return {
               mosaicDashboard: {
                 ...state.mosaicDashboard,
