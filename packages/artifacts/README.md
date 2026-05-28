@@ -6,6 +6,11 @@ Artifacts are durable workspace entries. Artifact tabs are the layout/UI adapter
 for opening, closing, renaming, reordering, searching, and deleting those
 entries.
 
+Artifacts can be top-level workspace entries or embedded child entries. Embedded
+artifacts use `visibility: 'embedded'` and `parentArtifactId` on their metadata;
+they stay in the artifact registry for lifecycle and persistence, but
+`ArtifactTabs` hides them by default.
+
 ## Usage
 
 ```tsx
@@ -90,10 +95,27 @@ tab adapter hides the layout tab so it can be reopened from search.
 `deleteArtifact` is destructive. It runs close and delete lifecycle hooks, then
 removes the artifact registry entry.
 
+`createArtifact` and `ensureArtifact` accept optional embedded-child metadata:
+
+```ts
+artifacts.createArtifact({
+  type: 'dashboard',
+  title: 'Embedded Dashboard',
+  visibility: 'embedded',
+  parentArtifactId: analysisArtifactId,
+});
+```
+
+Deleting a parent artifact does not cascade-delete child artifacts by default.
+Callers that own embedded children should apply their own cascade policy in the
+parent artifact lifecycle hook.
+
 ## Artifact Tabs
 
 - `useArtifactTabs({tabsId?, types?, panelKey?})` returns TabStrip-compatible
   descriptors, open tab ids, selected id, and handlers.
+- Embedded artifacts are omitted from tabs and search by default. Pass
+  `includeEmbedded: true` when a specialized surface needs to show or open them.
 - `ArtifactTabs` is a compound component over `TabStrip` and
   `TabsLayout.TabContent`.
 - Pass `forceMountContent` to `ArtifactTabs` to keep visible artifact tab

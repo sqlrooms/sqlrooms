@@ -3,7 +3,7 @@
 ## Implementation Checklist
 
 - [x] [Stage 1: Structured Analysis State](#stage-1-structured-analysis-state)
-- [ ] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
+- [x] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
 - [ ] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
 - [ ] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
 - [ ] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
@@ -169,7 +169,12 @@ type AnalysisBlock =
       selectionGroupId?: string;
       caption?: string;
     }
-  | {id: string; type: 'artifactEmbed'; artifactId: string; artifactType: string};
+  | {
+      id: string;
+      type: 'artifactEmbed';
+      artifactId: string;
+      artifactType: string;
+    };
 ```
 
 Each top-level editable block node must have a stable `id` attribute. Use the
@@ -400,7 +405,10 @@ type AnalysisChartRenderer = React.ComponentType<{
 
 type AnalysisArtifactEmbedRenderer = {
   artifactType: string;
-  component: React.ComponentType<{artifactId: string; parentArtifactId: string}>;
+  component: React.ComponentType<{
+    artifactId: string;
+    parentArtifactId: string;
+  }>;
 };
 ```
 
@@ -487,6 +495,8 @@ Checks:
 - `pnpm --filter @sqlrooms/documents typecheck`
 
 ### Stage 2: Embedded Artifact Metadata
+
+Status: Implemented on 2026-05-28.
 
 Add embedded-child metadata to artifact records and update artifact tab behavior.
 
@@ -857,3 +867,10 @@ Checks:
   `pnpm build`, `pnpm --filter @sqlrooms/documents test`,
   `pnpm --filter @sqlrooms/documents typecheck`, and
   `pnpm --filter @sqlrooms/documents build`.
+- 2026-05-28: Stage 2 implemented. Added artifact `visibility` and
+  `parentArtifactId` metadata, preserved embedded metadata through artifact
+  create/ensure flows, prevented embedded artifacts from becoming the implicit
+  current artifact, hid embedded artifacts from `ArtifactTabs` by default with
+  an `includeEmbedded` opt-in, and documented the embedded-child policy.
+  Checks passed: `pnpm --filter @sqlrooms/artifacts test` and
+  `pnpm --filter @sqlrooms/artifacts typecheck`.

@@ -3,10 +3,15 @@ import {z} from 'zod';
 export const ArtifactType = z.string();
 export type ArtifactType = z.infer<typeof ArtifactType>;
 
+export const ArtifactVisibility = z.enum(['workspace', 'embedded']);
+export type ArtifactVisibility = z.infer<typeof ArtifactVisibility>;
+
 export const ArtifactMetadata = z.object({
   id: z.string(),
   type: ArtifactType,
   title: z.string().default('Untitled'),
+  visibility: ArtifactVisibility.default('workspace'),
+  parentArtifactId: z.string().optional(),
 });
 export type ArtifactMetadata = z.infer<typeof ArtifactMetadata>;
 
