@@ -87,6 +87,40 @@ The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
 managing image assets alongside Markdown content. SVG assets may use `utf8` or
 `base64` encoding; PNG assets must use `base64` encoding.
 
+## Analysis Documents
+
+`createAnalysisDocumentsSlice()` exposes the early structured state model for
+the planned `analysis` artifact type. Analysis documents persist
+Tiptap/ProseMirror JSON as their canonical content and provide block DTO helpers
+for command and AI authoring surfaces:
+
+```tsx
+import {
+  AnalysisDocumentsSliceConfig,
+  createAnalysisDocumentsSlice,
+} from '@sqlrooms/documents';
+
+const roomStore = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'my-room',
+      sliceConfigSchemas: {
+        analysisDocuments: AnalysisDocumentsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createAnalysisDocumentsSlice()(set, get, store),
+    }),
+  ),
+);
+```
+
+The slice can create analysis documents, replace the Tiptap JSON body, and
+append/insert/update/remove/reorder top-level blocks. Supported block DTOs
+include headings, paragraphs, rich text, lists, todos, images, chart images,
+standalone chart placeholders, and artifact embeds. The editor, renderers,
+commands, and artifact registration are intentionally staged separately.
+
 ## Commands
 
 `createDocumentCommands()` registers AI- and palette-friendly commands for

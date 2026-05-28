@@ -1,5 +1,18 @@
 # Analysis Document Artifacts
 
+## Implementation Checklist
+
+- [x] [Stage 1: Structured Analysis State](#stage-1-structured-analysis-state)
+- [ ] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
+- [ ] [Stage 3: Tiptap Analysis Editor and Renderer Registry](#stage-3-tiptap-analysis-editor-and-renderer-registry)
+- [ ] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
+- [ ] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
+- [ ] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
+- [ ] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
+- [ ] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
+- [ ] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
+- [ ] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
+
 ## Goal
 
 Introduce a new parent artifact type in `@sqlrooms/documents` for Notion-like,
@@ -445,6 +458,8 @@ Each stage should be reviewable as a separate commit.
 
 ### Stage 1: Structured Analysis State
 
+Status: Implemented on 2026-05-28.
+
 Implement schemas and slice methods for analysis documents in
 `@sqlrooms/documents`.
 
@@ -835,3 +850,10 @@ Checks:
 
 - 2026-05-28: Plan created after repository inspection. No implementation code
   changed.
+- 2026-05-28: Stage 1 implemented. Added analysis document schemas backed by
+  Tiptap/ProseMirror JSON, command-friendly block DTO conversion helpers, a
+  Zustand analysis document slice for ensure/remove/content/block mutations,
+  public exports, focused tests, and README coverage. Checks passed:
+  `pnpm build`, `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`, and
+  `pnpm --filter @sqlrooms/documents build`.
