@@ -13,6 +13,7 @@ export type AnalysisChartRendererProps = {
   selectionGroupId?: string;
   caption?: string;
   readOnly?: boolean;
+  onTableNameChange?: (tableName: string) => void;
   onConfigChange?: (config: unknown) => void;
   onCaptionChange?: (caption: string | undefined) => void;
 };

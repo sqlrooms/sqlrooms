@@ -42,6 +42,8 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
           selectionGroupId,
           caption,
           readOnly,
+          onTableNameChange: (nextTableName: string) =>
+            updateAttributes({tableName: nextTableName}),
           onConfigChange: (nextConfig: unknown) =>
             updateAttributes({config: nextConfig}),
           onCaptionChange: (nextCaption: string | undefined) =>

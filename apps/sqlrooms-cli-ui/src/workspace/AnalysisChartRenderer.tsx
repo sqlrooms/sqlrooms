@@ -1,13 +1,15 @@
 import type {AnalysisChartRendererProps} from '@sqlrooms/documents';
 import {
-  ChartConfig,
   MosaicChartSettingsPanel,
   MosaicChartView,
   MosaicDashboardPanelLayout,
+  useTablesWithColumns,
+  type ChartConfig,
 } from '@sqlrooms/mosaic';
 import {Button, cn} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
-import {useCallback} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
+import {parseAnalysisChartConfig} from './analysisChartConfig';
 
 function getAnalysisChartSelectionName({
   analysisId,
@@ -37,11 +39,26 @@ export const AnalysisChartRenderer = ({
   selectionGroupId,
   caption,
   readOnly,
+  onTableNameChange,
   onConfigChange,
   onCaptionChange,
 }: AnalysisChartRendererProps) => {
-  const parsedConfig = ChartConfig.safeParse(config);
-  const chartConfig = parsedConfig.success ? parsedConfig.data : undefined;
+  const tables = useTablesWithColumns();
+  const fallbackTable = tables[0];
+  const fallbackField = fallbackTable?.columns?.[0]?.name;
+  const effectiveTableName = tableName || fallbackTable?.table.table || '';
+  const defaultConfig = useMemo<ChartConfig>(() => {
+    return {
+      chartType: 'count-plot',
+      settings: fallbackField ? {field: fallbackField} : {},
+      settingsOpen: true,
+    };
+  }, [fallbackField]);
+  const parsedConfig = useMemo(
+    () => parseAnalysisChartConfig(config, defaultConfig),
+    [config, defaultConfig],
+  );
+  const chartConfig = parsedConfig.success ? parsedConfig.config : undefined;
   const selectionName = getAnalysisChartSelectionName({
     analysisId,
     blockId,
@@ -64,6 +81,18 @@ export const AnalysisChartRenderer = ({
     [onConfigChange],
   );
 
+  useEffect(() => {
+    if (parsedConfig.success && parsedConfig.normalized) {
+      onConfigChange?.(parsedConfig.config);
+    }
+  }, [onConfigChange, parsedConfig]);
+
+  useEffect(() => {
+    if (!tableName && effectiveTableName) {
+      onTableNameChange?.(effectiveTableName);
+    }
+  }, [effectiveTableName, onTableNameChange, tableName]);
+
   if (!chartConfig) {
     return (
       <div className="p-4">
@@ -71,13 +100,18 @@ export const AnalysisChartRenderer = ({
         <div className="text-muted-foreground mt-1 text-sm">
           This analysis chart block could not be parsed as a Mosaic ChartConfig.
         </div>
+        {!parsedConfig.success ? (
+          <div className="text-muted-foreground mt-2 text-xs">
+            {parsedConfig.error}
+          </div>
+        ) : null}
       </div>
     );
   }
 
   const settings = (
     <MosaicChartSettingsPanel
-      tableName={tableName}
+      tableName={effectiveTableName}
       config={chartConfig}
       onChange={handleConfigChange}
       onClose={() => handleSettingsOpenChange(false)}
@@ -86,7 +120,7 @@ export const AnalysisChartRenderer = ({
   const content = (
     <div className="h-full overflow-auto p-2">
       <MosaicChartView
-        tableName={tableName}
+        tableName={effectiveTableName}
         config={chartConfig}
         selectionName={selectionName}
         retentionKey={runtimeKey}
@@ -101,13 +135,13 @@ export const AnalysisChartRenderer = ({
       <div className="border-border flex min-h-10 items-center gap-2 border-b px-3 py-2">
         {readOnly ? (
           <div className="min-w-0 flex-1 truncate text-sm font-medium">
-            {caption || tableName || 'Chart'}
+            {caption || effectiveTableName || 'Chart'}
           </div>
         ) : (
           <input
             className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
             value={caption ?? ''}
-            placeholder={tableName || 'Chart caption'}
+            placeholder={effectiveTableName || 'Chart caption'}
             aria-label="Chart caption"
             onChange={(event) =>
               onCaptionChange?.(event.target.value || undefined)
