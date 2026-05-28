@@ -68,6 +68,21 @@ layout. Explicit dashboard creation commands and AI tools require `layoutType`
 so the choice is made once at creation time; auto-created dashboards from chart
 or profiler flows use `grid`.
 
+## Analysis Artifacts
+
+Analysis artifacts are block-composed documents for narrative analytical work.
+They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
+embedded dashboard artifacts.
+
+Standalone chart blocks reuse the same Mosaic chart view and settings panel as
+dashboard charts. Charts with the same `selectionGroupId` in one Analysis share
+a crossfilter selection; charts without a group are independent.
+
+Embedded dashboards are stored as child dashboard artifacts with
+`visibility: embedded` and `parentArtifactId` set to the owning Analysis id.
+Each embedded dashboard keeps its own dashboard id and Mosaic selection scope,
+so multiple dashboards in one Analysis crossfilter independently.
+
 ## AI Artifact Context
 
 The assistant captures selected artifact context at run start. The first

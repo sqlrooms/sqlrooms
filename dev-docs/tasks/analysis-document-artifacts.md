@@ -11,7 +11,7 @@
 - [x] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
 - [x] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
 - [x] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
-- [ ] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
+- [x] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
 
 ## Goal
 
@@ -776,6 +776,8 @@ Checks:
 
 ### Stage 10: Documentation, Example, and Polish
 
+Status: Implemented on 2026-05-28.
+
 Document the public API and add a small usage example.
 
 Likely changes:
@@ -963,3 +965,10 @@ Checks:
   `pnpm --filter @sqlrooms/documents test`,
   `pnpm --filter @sqlrooms/documents typecheck`, and
   `pnpm --filter @sqlrooms/documents lint`.
+- 2026-05-28: Stage 10 implemented. Updated public documentation for Analysis
+  artifact registration, standalone Mosaic/vgplot chart blocks, chart selection
+  groups, embedded dashboard independence, Analysis AI commands, and CRDT sync
+  boundaries. Added package-list and CLI UI notes for the new artifact type.
+  Checks passed: `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`, `pnpm build`, and `pnpm lint`.

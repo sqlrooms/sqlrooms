@@ -1,13 +1,22 @@
-Artifact-scoped Markdown documents and knowledge-index utilities for SQLRooms.
+Artifact-scoped Markdown documents, structured Analysis artifacts, and
+knowledge-index utilities for SQLRooms.
 
 ## Usage
 
 ```tsx
 import {
   DOCUMENT_AI_INSTRUCTIONS,
+  ANALYSIS_AI_INSTRUCTIONS,
+  AnalysisDocumentArtifact,
+  AnalysisDocumentsSliceConfig,
+  AnalysisChartRendererProvider,
+  AnalysisEmbedRendererProvider,
   DocumentsSliceConfig,
   MarkdownDocument,
   buildKnowledgeIndex,
+  createAnalysisCommands,
+  createAnalysisAuthoringInstructions,
+  createAnalysisDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
 } from '@sqlrooms/documents';
@@ -29,6 +38,20 @@ const artifactTypes = defineArtifactTypes({
       store.getState().documents.removeDocument(artifactId);
     },
   },
+  analysis: {
+    label: 'Analysis',
+    defaultTitle: 'Analysis',
+    component: AnalysisDocumentArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().analysisDocuments.removeAnalysis(artifactId);
+    },
+  },
 });
 
 const roomStore = createRoomStore(
@@ -37,10 +60,12 @@ const roomStore = createRoomStore(
       name: 'my-room',
       sliceConfigSchemas: {
         documents: DocumentsSliceConfig,
+        analysisDocuments: AnalysisDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
       ...createDocumentsSlice()(set, get, store),
+      ...createAnalysisDocumentsSlice()(set, get, store),
     }),
   ),
 );
@@ -89,10 +114,13 @@ managing image assets alongside Markdown content. SVG assets may use `utf8` or
 
 ## Analysis Documents
 
-`createAnalysisDocumentsSlice()` exposes the early structured state model for
-the planned `analysis` artifact type. Analysis documents persist
-Tiptap/ProseMirror JSON as their canonical content and provide block DTO helpers
-for command and AI authoring surfaces:
+`createAnalysisDocumentsSlice()` exposes structured state for the `analysis`
+artifact type. Use Analysis artifacts for narrative analytical writeups made of
+composable blocks: rich text, lists, images, standalone Mosaic/vgplot charts,
+and embedded artifacts such as dashboards.
+
+Analysis documents persist Tiptap/ProseMirror JSON as their canonical content
+and provide block DTO helpers for command and AI authoring surfaces:
 
 ```tsx
 import {
@@ -118,8 +146,7 @@ const roomStore = createRoomStore(
 The slice can create analysis documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, rich text, lists, todos, images, chart images,
-standalone chart placeholders, and artifact embeds. Commands and artifact
-registration are intentionally staged separately.
+standalone chart blocks, and artifact embeds.
 
 `AnalysisDocumentArtifact` and `AnalysisDocumentEditor` provide the first rich
 editor surface for this structured state. The editor owns Tiptap nodes for
@@ -140,6 +167,61 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
 
 If no renderer is registered, chart and embed blocks render a clear unsupported
 state while preserving their Tiptap JSON attributes.
+
+### Standalone Chart Blocks
+
+Standalone `chart` blocks are meant for focused, in-document charts. They store
+the target `tableName`, a Mosaic `ChartConfig`, an optional caption, and an
+optional `selectionGroupId`:
+
+```ts
+analysisDocuments.appendBlocks(analysisArtifactId, [
+  {
+    id: 'revenue-histogram',
+    type: 'chart',
+    tableName: 'sales',
+    config: {
+      chartType: 'histogram',
+      settings: {x: 'revenue'},
+    },
+    selectionGroupId: 'overview',
+    caption: 'Revenue distribution',
+  },
+]);
+```
+
+Hosts can render these blocks with the same Mosaic/vgplot chart implementation
+and settings UI used inside dashboard panels, without embedding a full
+dashboard. Charts with the same `selectionGroupId` in one Analysis share a
+crossfilter selection. Charts without a group get independent
+analysis/block-scoped selections.
+
+### Dashboard Embeds
+
+Use an `artifactEmbed` block when the document needs a multi-panel interactive
+dashboard:
+
+```ts
+analysisDocuments.appendBlocks(analysisArtifactId, [
+  {
+    id: 'regional-dashboard',
+    type: 'artifactEmbed',
+    artifactId: dashboardArtifactId,
+    artifactType: 'dashboard',
+    caption: 'Regional dashboard',
+  },
+]);
+```
+
+Embedded dashboards should be created as normal dashboard artifacts with
+`visibility: 'embedded'` and `parentArtifactId` set to the owning Analysis id.
+Each embedded dashboard keeps its own dashboard id, Mosaic runtime keys, and
+selection name, so multiple dashboards inside one Analysis crossfilter
+independently.
+
+Standalone chart blocks are best for one chart with local context. Dashboard
+embeds are best for coordinated multi-panel views, richer dashboard layout, or
+when dashboard AI tools are the natural authoring path.
 
 ## Commands
 
@@ -190,9 +272,14 @@ createCrdtSlice({
 });
 ```
 
-`createDocumentsCrdtMirror()` syncs Markdown document bodies, document image
-assets, and document artifact metadata so remote documents can appear in
-artifact tabs. The current artifact selection is kept local.
+`createDocumentsCrdtMirror()` syncs Markdown document bodies, Analysis document
+Tiptap JSON content, document-owned assets, standalone chart block configs,
+Analysis/document artifact metadata, embedded child artifact metadata, and
+document artifact tab order. The current artifact selection is kept local.
+
+Embedded dashboard artifact metadata syncs through this mirror, but Mosaic
+dashboard backing state does not. Dashboard state should continue to use the
+host app's Mosaic persistence, or a future Mosaic-specific CRDT mirror.
 
 ## Knowledge Index
 

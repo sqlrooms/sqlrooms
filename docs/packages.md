@@ -20,6 +20,7 @@ Each package can be installed independently via `pnpm add @sqlrooms/<name>` and 
 
 - **[@sqlrooms/cosmos](/api/cosmos/)** — High‑performance WebGL graph visualization with Cosmos.
 - **[@sqlrooms/data-table](/api/data-table/)** — Interactive data grid for SQL results with sorting and pagination.
+- **[@sqlrooms/documents](/api/documents/)** — Markdown document artifacts, structured Analysis artifacts, rich editors, document assets, and document/Analysis CRDT sync.
 - **[@sqlrooms/discuss](/api/discuss/)** — Threaded discussion system with anchor links to data points.
 - **[@sqlrooms/dropzone](/api/dropzone/)** — Drag‑and‑drop file uploads with type validation and progress tracking.
 - **[@sqlrooms/monaco-editor](/api/monaco-editor/)** — VS Code's Monaco editor with SQL‑aware autocompletion.
