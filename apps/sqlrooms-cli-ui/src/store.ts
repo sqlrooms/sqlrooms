@@ -66,7 +66,9 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
+  ANALYSIS_AI_INSTRUCTIONS,
   AnalysisDocumentsSliceConfig,
+  createAnalysisCommands,
   createAnalysisDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
@@ -105,6 +107,7 @@ import {
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const ANALYSIS_COMMAND_OWNER = '@sqlrooms/documents/analysis';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -272,10 +275,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DOCUMENT_COMMAND_OWNER,
             createDocumentCommands<RoomState>(),
           );
+          registerCommandsForOwner(
+            store,
+            ANALYSIS_COMMAND_OWNER,
+            createAnalysisCommands<RoomState>(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, ANALYSIS_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -537,7 +546,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${ANALYSIS_AI_INSTRUCTIONS}`,
             getRunContext: () => getRunContext(store),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

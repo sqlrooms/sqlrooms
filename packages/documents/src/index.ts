@@ -70,6 +70,10 @@ export {
   createDocumentCommands,
   DOCUMENT_AI_INSTRUCTIONS,
 } from './documentCommands';
+export {
+  ANALYSIS_AI_INSTRUCTIONS,
+  createAnalysisCommands,
+} from './analysisCommands';
 export {AnalysisDocumentEditor} from './AnalysisDocumentEditor';
 export {
   AnalysisDocumentEditorRoot,

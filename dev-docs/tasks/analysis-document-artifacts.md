@@ -8,7 +8,7 @@
 - [x] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
 - [x] [Stage 5: Standalone Analysis Chart Blocks](#stage-5-standalone-analysis-chart-blocks)
 - [x] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
-- [ ] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
+- [x] [Stage 7: Analysis Commands](#stage-7-analysis-commands)
 - [ ] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
 - [ ] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
 - [ ] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
@@ -672,6 +672,8 @@ Checks:
 
 ### Stage 7: Analysis Commands
 
+Status: Implemented on 2026-05-28.
+
 Add command-registry operations for analysis documents.
 
 Likely changes:
@@ -924,3 +926,13 @@ Checks:
   `pnpm --filter @sqlrooms/documents test`,
   `pnpm --filter @sqlrooms/documents typecheck`, and `pnpm build`. Manual CLI
   UI smoke testing remains pending.
+- 2026-05-28: Stage 7 implemented. Added `createAnalysisCommands()` and
+  `ANALYSIS_AI_INSTRUCTIONS`, covering list/get/create, block
+  append/insert/update/remove/move, standalone chart block creation, and
+  dashboard embedding via embedded dashboard artifacts. Registered the commands
+  and AI instructions in the CLI app. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`,
+  `pnpm --filter sqlrooms-cli-app typecheck`, and
+  `pnpm --filter sqlrooms-cli-app lint`.

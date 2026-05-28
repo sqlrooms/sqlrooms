@@ -156,6 +156,23 @@ Register the commands with your room command slice and include
 `DOCUMENT_AI_INSTRUCTIONS` in your AI system prompt when exposing
 `list_commands` and `execute_command` tools.
 
+`createAnalysisCommands()` registers commands for structured Analysis
+artifacts:
+
+- `analysis.list`
+- `analysis.get`
+- `analysis.create`
+- `analysis.append-blocks`
+- `analysis.insert-blocks`
+- `analysis.update-block`
+- `analysis.remove-block`
+- `analysis.move-block`
+- `analysis.create-chart-block`
+- `analysis.embed-dashboard`
+
+Register these commands alongside `ANALYSIS_AI_INSTRUCTIONS` when exposing
+Analysis artifacts to an assistant.
+
 ## CRDT
 
 `@sqlrooms/documents/crdt` exposes Loro Mirror bindings for document state:
