@@ -72,7 +72,9 @@ function getNodeAt(editor: Editor, pos: number) {
 
 function getBlockPos(editor: Editor, element: HTMLElement) {
   try {
-    return editor.view.posAtDOM(element, 0);
+    const pos = editor.view.posAtDOM(element, 0);
+    const resolvedPos = editor.state.doc.resolve(pos);
+    return resolvedPos.depth > 0 ? resolvedPos.before(1) : pos;
   } catch {
     return null;
   }
@@ -350,7 +352,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
 
   return (
     <div
-      className="pointer-events-none absolute left-1 z-20 flex items-center gap-1"
+      className="pointer-events-none absolute left-2 z-20 flex w-12 items-center justify-end gap-1"
       style={{top: activeBlock.top}}
     >
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

@@ -18,12 +18,11 @@ export const AnalysisDocumentEditorContent: FC<
   );
 
   return (
-    <div className="relative h-full min-h-0 flex-1">
-      <EditorContent
-        ref={setScrollElement}
-        editor={editor}
-        className={cn('h-full min-h-0 overflow-auto', className)}
-      />
+    <div
+      ref={setScrollElement}
+      className={cn('relative h-full min-h-0 flex-1 overflow-auto', className)}
+    >
+      <EditorContent editor={editor} className="min-h-full" />
       <AnalysisBlockControls scrollElement={scrollElement} />
     </div>
   );
