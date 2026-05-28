@@ -17,6 +17,10 @@ import {
 import type {AnalysisDocumentContent} from '../AnalysisDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
 import {AnalysisArtifactEmbedNode} from './extensions/AnalysisArtifactEmbedNode';
+import {
+  AnalysisBlockIdExtension,
+  analysisBlockNodeTypesWithIds,
+} from './extensions/AnalysisBlockIdExtension';
 import {AnalysisChartImageNode} from './extensions/AnalysisChartImageNode';
 import {AnalysisChartNode} from './extensions/AnalysisChartNode';
 import {AnalysisImageNode} from './extensions/AnalysisImageNode';
@@ -41,6 +45,13 @@ function stableStringify(value: unknown) {
   return JSON.stringify(value);
 }
 
+function hasMissingTopLevelBlockIds(value: AnalysisDocumentContent) {
+  return value.content.some((node) => {
+    if (!analysisBlockNodeTypesWithIds.includes(node.type)) return false;
+    return typeof node.attrs?.id !== 'string';
+  });
+}
+
 export const AnalysisDocumentEditorRoot: FC<
   AnalysisDocumentEditorRootProps
 > = ({
@@ -54,6 +65,7 @@ export const AnalysisDocumentEditorRoot: FC<
 }) => {
   const onChangeRef = useRef(onChange);
   const generateBlockIdRef = useRef(generateBlockId);
+  const lastEmittedContentKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -70,21 +82,25 @@ export const AnalysisDocumentEditorRoot: FC<
   );
   const normalizedValueKey = stableStringify(normalizedValue);
 
-  const extensions = [
-    StarterKit.configure({link: false}),
-    Link.configure({openOnClick: false}),
-    TaskList,
-    TaskItem.configure({nested: true}),
-    Table.configure({resizable: true}),
-    TableRow,
-    TableHeader,
-    TableCell,
-    AnalysisRichTextNode,
-    AnalysisImageNode,
-    AnalysisChartImageNode,
-    AnalysisChartNode,
-    AnalysisArtifactEmbedNode,
-  ];
+  const extensions = useMemo(
+    () => [
+      StarterKit.configure({link: false}),
+      Link.configure({openOnClick: false}),
+      TaskList,
+      TaskItem.configure({nested: true}),
+      Table.configure({resizable: true}),
+      TableRow,
+      TableHeader,
+      TableCell,
+      AnalysisBlockIdExtension,
+      AnalysisRichTextNode,
+      AnalysisImageNode,
+      AnalysisChartImageNode,
+      AnalysisChartNode,
+      AnalysisArtifactEmbedNode,
+    ],
+    [],
+  );
 
   const editor = useEditor({
     extensions,
@@ -96,6 +112,7 @@ export const AnalysisDocumentEditorRoot: FC<
         editor.getJSON() as AnalysisDocumentContent,
         () => generateBlockIdRef.current(),
       );
+      lastEmittedContentKeyRef.current = stableStringify(nextContent);
       onChangeRef.current(nextContent);
     },
     editorProps: {
@@ -113,10 +130,31 @@ export const AnalysisDocumentEditorRoot: FC<
   }, [normalizedValue, normalizedValueKey, valueKey]);
 
   useEffect(() => {
-    if (!editor || stableStringify(editor.getJSON()) === normalizedValueKey) {
+    if (!editor) {
       return;
     }
+    const editorContent = editor.getJSON() as AnalysisDocumentContent;
+    if (stableStringify(editorContent) === normalizedValueKey) {
+      return;
+    }
+    const shouldBackfillEditorIds =
+      lastEmittedContentKeyRef.current === normalizedValueKey &&
+      hasMissingTopLevelBlockIds(editorContent);
+    if (
+      lastEmittedContentKeyRef.current === normalizedValueKey &&
+      !shouldBackfillEditorIds
+    ) {
+      return;
+    }
+    const selection = editor.state.selection;
+    const restoreSelection = editor.isFocused;
     editor.commands.setContent(normalizedValue, {emitUpdate: false});
+    if (restoreSelection) {
+      editor.commands.setTextSelection({
+        from: selection.from,
+        to: selection.to,
+      });
+    }
   }, [editor, normalizedValue, normalizedValueKey]);
 
   useEffect(() => {
