@@ -37,29 +37,13 @@ function defaultGenerateBlockId() {
   return `analysis-block-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-const blockTypesWithIds = new Set([
-  'heading',
-  'paragraph',
-  'blockquote',
-  'codeBlock',
-  'horizontalRule',
-  'bulletList',
-  'orderedList',
-  'taskList',
-  'analysisRichText',
-  'analysisImage',
-  'analysisChartImage',
-  'analysisChart',
-  'analysisArtifactEmbed',
-]);
-
 function cloneNodeWithId(
   node: AnalysisDocumentNode,
   generateBlockId: () => string,
 ): AnalysisDocumentNode {
   const content = node.content?.map((child) => ({...child}));
   const id = node.attrs?.id;
-  if (!blockTypesWithIds.has(node.type) || typeof id === 'string') {
+  if (typeof id === 'string') {
     return content ? {...node, content} : {...node};
   }
   return {

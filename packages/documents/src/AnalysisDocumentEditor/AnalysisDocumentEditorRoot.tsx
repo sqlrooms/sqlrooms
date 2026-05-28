@@ -19,7 +19,7 @@ import type {DocumentAsset} from '../DocumentsSliceConfig';
 import {AnalysisArtifactEmbedNode} from './extensions/AnalysisArtifactEmbedNode';
 import {
   AnalysisBlockIdExtension,
-  analysisBlockNodeTypesWithIds,
+  getBlockNodeExtensionNames,
 } from './extensions/AnalysisBlockIdExtension';
 import {AnalysisChartImageNode} from './extensions/AnalysisChartImageNode';
 import {AnalysisChartNode} from './extensions/AnalysisChartNode';
@@ -46,10 +46,7 @@ function stableStringify(value: unknown) {
 }
 
 function hasMissingTopLevelBlockIds(value: AnalysisDocumentContent) {
-  return value.content.some((node) => {
-    if (!analysisBlockNodeTypesWithIds.includes(node.type)) return false;
-    return typeof node.attrs?.id !== 'string';
-  });
+  return value.content.some((node) => typeof node.attrs?.id !== 'string');
 }
 
 export const AnalysisDocumentEditorRoot: FC<
@@ -82,8 +79,8 @@ export const AnalysisDocumentEditorRoot: FC<
   );
   const normalizedValueKey = stableStringify(normalizedValue);
 
-  const extensions = useMemo(
-    () => [
+  const extensions = useMemo(() => {
+    const documentExtensions = [
       StarterKit.configure({link: false}),
       Link.configure({openOnClick: false}),
       TaskList,
@@ -92,15 +89,19 @@ export const AnalysisDocumentEditorRoot: FC<
       TableRow,
       TableHeader,
       TableCell,
-      AnalysisBlockIdExtension,
       AnalysisRichTextNode,
       AnalysisImageNode,
       AnalysisChartImageNode,
       AnalysisChartNode,
       AnalysisArtifactEmbedNode,
-    ],
-    [],
-  );
+    ];
+    return [
+      AnalysisBlockIdExtension.configure({
+        types: getBlockNodeExtensionNames(documentExtensions),
+      }),
+      ...documentExtensions,
+    ];
+  }, []);
 
   const editor = useEditor({
     extensions,
