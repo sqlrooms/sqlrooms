@@ -27,6 +27,7 @@ import {AnalysisImageNode} from './extensions/AnalysisImageNode';
 import {AnalysisRichTextNode} from './extensions/AnalysisRichTextNode';
 import {
   AnalysisDocumentEditorContext,
+  type AnalysisDocumentEditorChangeHandler,
   createDefaultAnalysisBlockId,
   normalizeAnalysisDocumentContent,
   type AnalysisDocumentEditorContextValue,
@@ -35,8 +36,10 @@ import {
 export type AnalysisDocumentEditorRootProps = PropsWithChildren<{
   analysisId: string;
   value: AnalysisDocumentContent;
-  onChange: (value: AnalysisDocumentContent) => void;
+  onChange: AnalysisDocumentEditorChangeHandler;
   assets?: Record<string, DocumentAsset>;
+  syncRevision?: number;
+  syncSourceId?: string;
   readOnly?: boolean;
   generateBlockId?: () => string;
 }>;
@@ -49,6 +52,14 @@ function hasMissingTopLevelBlockIds(value: AnalysisDocumentContent) {
   return value.content.some((node) => typeof node.attrs?.id !== 'string');
 }
 
+function createEditorSourceId() {
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (randomUUID) {
+    return `analysis-editor:${randomUUID.call(globalThis.crypto)}`;
+  }
+  return `analysis-editor:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+}
+
 export const AnalysisDocumentEditorRoot: FC<
   AnalysisDocumentEditorRootProps
 > = ({
@@ -56,12 +67,15 @@ export const AnalysisDocumentEditorRoot: FC<
   value,
   onChange,
   assets = {},
+  syncRevision,
+  syncSourceId,
   readOnly = false,
   generateBlockId = createDefaultAnalysisBlockId,
   children,
 }) => {
   const onChangeRef = useRef(onChange);
   const generateBlockIdRef = useRef(generateBlockId);
+  const editorSourceIdRef = useRef(createEditorSourceId());
   const lastEmittedContentKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -114,7 +128,10 @@ export const AnalysisDocumentEditorRoot: FC<
         () => generateBlockIdRef.current(),
       );
       lastEmittedContentKeyRef.current = stableStringify(nextContent);
-      onChangeRef.current(nextContent);
+      onChangeRef.current(nextContent, {
+        origin: 'editor',
+        sourceId: editorSourceIdRef.current,
+      });
     },
     editorProps: {
       attributes: {
@@ -138,13 +155,12 @@ export const AnalysisDocumentEditorRoot: FC<
     if (stableStringify(editorContent) === normalizedValueKey) {
       return;
     }
+    const isOwnStoreEcho =
+      syncSourceId === editorSourceIdRef.current &&
+      lastEmittedContentKeyRef.current === normalizedValueKey;
     const shouldBackfillEditorIds =
-      lastEmittedContentKeyRef.current === normalizedValueKey &&
-      hasMissingTopLevelBlockIds(editorContent);
-    if (
-      lastEmittedContentKeyRef.current === normalizedValueKey &&
-      !shouldBackfillEditorIds
-    ) {
+      isOwnStoreEcho && hasMissingTopLevelBlockIds(editorContent);
+    if (isOwnStoreEcho && !shouldBackfillEditorIds) {
       return;
     }
     const selection = editor.state.selection;
@@ -156,7 +172,7 @@ export const AnalysisDocumentEditorRoot: FC<
         to: selection.to,
       });
     }
-  }, [editor, normalizedValue, normalizedValueKey]);
+  }, [editor, normalizedValue, normalizedValueKey, syncRevision, syncSourceId]);
 
   useEffect(() => {
     editor?.setEditable(!readOnly);

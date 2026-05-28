@@ -4,14 +4,20 @@ import type {
   AnalysisDocumentContent,
   AnalysisDocumentNode,
 } from '../AnalysisDocumentSliceConfig';
+import type {AnalysisDocumentMutationMetadata} from '../AnalysisDocumentsSlice';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
+
+export type AnalysisDocumentEditorChangeHandler = (
+  value: AnalysisDocumentContent,
+  metadata?: AnalysisDocumentMutationMetadata,
+) => void;
 
 export type AnalysisDocumentEditorContextValue = {
   editor: Editor | null;
   analysisId: string;
   value: AnalysisDocumentContent;
   assets: Record<string, DocumentAsset>;
-  onChange: (value: AnalysisDocumentContent) => void;
+  onChange: AnalysisDocumentEditorChangeHandler;
   readOnly: boolean;
   generateBlockId: () => string;
 };

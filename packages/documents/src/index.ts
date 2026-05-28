@@ -41,6 +41,9 @@ export {
 export {
   createAnalysisDocumentsSlice,
   createDefaultAnalysisDocumentsConfig,
+  type AnalysisDocumentMutationMetadata,
+  type AnalysisDocumentMutationOrigin,
+  type AnalysisDocumentSyncMetadata,
   type AnalysisDocumentsSliceState,
   type CreateAnalysisDocumentsSliceProps,
 } from './AnalysisDocumentsSlice';

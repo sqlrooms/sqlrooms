@@ -164,6 +164,49 @@ describe('AnalysisDocumentsSlice', () => {
     ]);
   });
 
+  it('tracks local sync metadata separately from persisted analysis content', () => {
+    const store = createTestStore();
+
+    store.getState().analysisDocuments.setContent(
+      'analysis-1',
+      {
+        type: 'doc',
+        content: [
+          analysisBlockToNode({
+            id: 'paragraph',
+            type: 'paragraph',
+            text: 'Draft',
+          }),
+        ],
+      },
+      {origin: 'editor', sourceId: 'editor-1'},
+    );
+
+    expect(
+      store.getState().analysisDocuments.getSyncMetadata('analysis-1'),
+    ).toEqual({
+      revision: 1,
+      origin: 'editor',
+      sourceId: 'editor-1',
+    });
+    expect(
+      store.getState().analysisDocuments.getAnalysis('analysis-1'),
+    ).not.toHaveProperty('syncMetadata');
+
+    store
+      .getState()
+      .analysisDocuments.appendBlocks('analysis-1', [
+        {id: 'heading', type: 'heading', level: 1, text: 'External edit'},
+      ]);
+
+    expect(
+      store.getState().analysisDocuments.getSyncMetadata('analysis-1'),
+    ).toEqual({
+      revision: 2,
+      origin: 'external',
+    });
+  });
+
   it('returns false for missing block mutations', () => {
     const store = createTestStore();
     store.getState().analysisDocuments.ensureAnalysis('analysis-1');

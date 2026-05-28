@@ -15,9 +15,23 @@ import {
   type AnalysisDocumentsSliceConfig as AnalysisDocumentsSliceConfigType,
 } from './AnalysisDocumentSliceConfig';
 
+export type AnalysisDocumentMutationOrigin = 'editor' | 'external';
+
+export type AnalysisDocumentMutationMetadata = {
+  origin?: AnalysisDocumentMutationOrigin;
+  sourceId?: string;
+};
+
+export type AnalysisDocumentSyncMetadata = {
+  revision: number;
+  origin: AnalysisDocumentMutationOrigin;
+  sourceId?: string;
+};
+
 export type AnalysisDocumentsSliceState = {
   analysisDocuments: {
     config: AnalysisDocumentsSliceConfigType;
+    syncMetadata: Record<string, AnalysisDocumentSyncMetadata>;
     setConfig: (config: AnalysisDocumentsSliceConfigType) => void;
     ensureAnalysis: (
       artifactId: string,
@@ -27,6 +41,7 @@ export type AnalysisDocumentsSliceState = {
     setContent: (
       artifactId: string,
       content: AnalysisDocumentContentType,
+      metadata?: AnalysisDocumentMutationMetadata,
     ) => void;
     appendBlocks: (artifactId: string, blocks: AnalysisBlockType[]) => void;
     insertBlocks: (
@@ -46,6 +61,9 @@ export type AnalysisDocumentsSliceState = {
       toIndex: number,
     ) => boolean;
     getAnalysis: (artifactId: string) => AnalysisDocumentType | undefined;
+    getSyncMetadata: (
+      artifactId: string,
+    ) => AnalysisDocumentSyncMetadata | undefined;
     getBlocks: (artifactId: string) => AnalysisBlockType[];
   };
 };
@@ -69,7 +87,9 @@ function normalizeContent(
   );
 }
 
-function nodesFromBlocks(blocks: AnalysisBlockType[]): AnalysisDocumentNodeType[] {
+function nodesFromBlocks(
+  blocks: AnalysisBlockType[],
+): AnalysisDocumentNodeType[] {
   return blocks.map((block) => analysisBlockToNode(AnalysisBlock.parse(block)));
 }
 
@@ -83,6 +103,17 @@ function getNodeId(node: AnalysisDocumentNodeType): string | undefined {
   return typeof id === 'string' ? id : undefined;
 }
 
+function nextSyncMetadata(
+  previous: AnalysisDocumentSyncMetadata | undefined,
+  metadata: AnalysisDocumentMutationMetadata = {},
+): AnalysisDocumentSyncMetadata {
+  return {
+    revision: (previous?.revision ?? 0) + 1,
+    origin: metadata.origin ?? 'external',
+    ...(metadata.sourceId ? {sourceId: metadata.sourceId} : {}),
+  };
+}
+
 export function createAnalysisDocumentsSlice<
   TRoomState extends BaseRoomStoreState & AnalysisDocumentsSliceState,
 >(props: CreateAnalysisDocumentsSliceProps = {}) {
@@ -91,12 +122,29 @@ export function createAnalysisDocumentsSlice<
   return createSlice<AnalysisDocumentsSliceState, TRoomState>((set, get) => ({
     analysisDocuments: {
       config: createDefaultAnalysisDocumentsConfig(props.config),
+      syncMetadata: {},
 
       setConfig(config) {
         set((state) =>
           produce(state, (draft) => {
             draft.analysisDocuments.config =
               AnalysisDocumentsSliceConfig.parse(config);
+            const artifactIds = new Set(
+              Object.keys(draft.analysisDocuments.config.artifacts),
+            );
+            for (const artifactId of artifactIds) {
+              draft.analysisDocuments.syncMetadata[artifactId] =
+                nextSyncMetadata(
+                  draft.analysisDocuments.syncMetadata[artifactId],
+                );
+            }
+            for (const artifactId of Object.keys(
+              draft.analysisDocuments.syncMetadata,
+            )) {
+              if (!artifactIds.has(artifactId)) {
+                delete draft.analysisDocuments.syncMetadata[artifactId];
+              }
+            }
           }),
         );
       },
@@ -111,6 +159,9 @@ export function createAnalysisDocumentsSlice<
                 content: normalizeContent(content),
                 updatedAt: now(),
               });
+            draft.analysisDocuments.syncMetadata[artifactId] = nextSyncMetadata(
+              draft.analysisDocuments.syncMetadata[artifactId],
+            );
           }),
         );
       },
@@ -119,11 +170,12 @@ export function createAnalysisDocumentsSlice<
         set((state) =>
           produce(state, (draft) => {
             delete draft.analysisDocuments.config.artifacts[artifactId];
+            delete draft.analysisDocuments.syncMetadata[artifactId];
           }),
         );
       },
 
-      setContent(artifactId, content) {
+      setContent(artifactId, content, metadata) {
         set((state) =>
           produce(state, (draft) => {
             const parsedContent = normalizeContent(content);
@@ -132,6 +184,11 @@ export function createAnalysisDocumentsSlice<
             if (existing) {
               existing.content = parsedContent;
               existing.updatedAt = now();
+              draft.analysisDocuments.syncMetadata[artifactId] =
+                nextSyncMetadata(
+                  draft.analysisDocuments.syncMetadata[artifactId],
+                  metadata,
+                );
               return;
             }
             draft.analysisDocuments.config.artifacts[artifactId] =
@@ -140,6 +197,10 @@ export function createAnalysisDocumentsSlice<
                 content: parsedContent,
                 updatedAt: now(),
               });
+            draft.analysisDocuments.syncMetadata[artifactId] = nextSyncMetadata(
+              draft.analysisDocuments.syncMetadata[artifactId],
+              metadata,
+            );
           }),
         );
       },
@@ -168,11 +229,22 @@ export function createAnalysisDocumentsSlice<
                   },
                   updatedAt: now(),
                 });
+              draft.analysisDocuments.syncMetadata[artifactId] =
+                nextSyncMetadata(
+                  draft.analysisDocuments.syncMetadata[artifactId],
+                );
               return;
             }
             const content = existing.content.content;
-            content.splice(clampInsertIndex(index, content.length), 0, ...nodes);
+            content.splice(
+              clampInsertIndex(index, content.length),
+              0,
+              ...nodes,
+            );
             existing.updatedAt = now();
+            draft.analysisDocuments.syncMetadata[artifactId] = nextSyncMetadata(
+              draft.analysisDocuments.syncMetadata[artifactId],
+            );
           }),
         );
       },
@@ -192,6 +264,9 @@ export function createAnalysisDocumentsSlice<
             if (index < 0) return;
             existing.content.content[index] = nextNode;
             existing.updatedAt = now();
+            draft.analysisDocuments.syncMetadata[artifactId] = nextSyncMetadata(
+              draft.analysisDocuments.syncMetadata[artifactId],
+            );
             updated = true;
           }),
         );
@@ -211,6 +286,9 @@ export function createAnalysisDocumentsSlice<
             if (nextContent.length === existing.content.content.length) return;
             existing.content.content = nextContent;
             existing.updatedAt = now();
+            draft.analysisDocuments.syncMetadata[artifactId] = nextSyncMetadata(
+              draft.analysisDocuments.syncMetadata[artifactId],
+            );
             removed = true;
           }),
         );
@@ -233,6 +311,9 @@ export function createAnalysisDocumentsSlice<
             if (!node) return;
             content.splice(clampInsertIndex(toIndex, content.length), 0, node);
             existing.updatedAt = now();
+            draft.analysisDocuments.syncMetadata[artifactId] = nextSyncMetadata(
+              draft.analysisDocuments.syncMetadata[artifactId],
+            );
             moved = true;
           }),
         );
@@ -243,9 +324,12 @@ export function createAnalysisDocumentsSlice<
         return get().analysisDocuments.config.artifacts[artifactId];
       },
 
+      getSyncMetadata(artifactId) {
+        return get().analysisDocuments.syncMetadata[artifactId];
+      },
+
       getBlocks(artifactId) {
-        const analysis =
-          get().analysisDocuments.config.artifacts[artifactId];
+        const analysis = get().analysisDocuments.config.artifacts[artifactId];
         return analysis ? analysisContentToBlocks(analysis.content) : [];
       },
     },
