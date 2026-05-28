@@ -86,7 +86,11 @@ const AnalysisCreateChartBlockInput = z.object({
   artifactId: z.string().describe('Target analysis artifact ID.'),
   blockId: z.string().optional().describe('Optional explicit chart block ID.'),
   tableName: z.string().describe('Mosaic table name to render.'),
-  config: z.unknown().describe('Mosaic ChartConfig payload.'),
+  config: z
+    .unknown()
+    .describe(
+      'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.',
+    ),
   selectionGroupId: z
     .string()
     .optional()

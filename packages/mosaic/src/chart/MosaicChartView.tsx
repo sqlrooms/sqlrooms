@@ -1,4 +1,4 @@
-import {SpinnerPane} from '@sqlrooms/ui';
+import {SpinnerPane, cn} from '@sqlrooms/ui';
 import {type FC, createElement, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
 import type {
@@ -140,7 +140,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     }
 
     return (
-      <div className={className}>
+      <div className={cn('h-full w-full', className)}>
         <VgPlotChart
           spec={spec.spec}
           params={params}
@@ -155,7 +155,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
 
   if (isComponentChartType(resolvedChartTypeDefinition)) {
     return (
-      <div className={className}>
+      <div className={cn('h-full w-full', className)}>
         {createElement(resolvedChartTypeDefinition.renderer, {
           tableName,
           config,

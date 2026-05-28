@@ -182,7 +182,7 @@ analysisDocuments.appendBlocks(analysisArtifactId, [
     tableName: 'sales',
     config: {
       chartType: 'histogram',
-      settings: {x: 'revenue'},
+      settings: {field: 'revenue'},
     },
     selectionGroupId: 'overview',
     caption: 'Revenue distribution',

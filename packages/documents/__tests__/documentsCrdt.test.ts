@@ -204,7 +204,7 @@ describe('documents CRDT mirrors', () => {
         tableName: 'sales',
         config: {
           chartType: 'histogram',
-          settings: {x: 'revenue'},
+          settings: {field: 'revenue'},
         },
         selectionGroupId: 'overview',
       },
@@ -250,7 +250,7 @@ describe('documents CRDT mirrors', () => {
         tableName: 'sales',
         config: {
           chartType: 'histogram',
-          settings: {x: 'revenue'},
+          settings: {field: 'revenue'},
         },
         selectionGroupId: 'overview',
       },
