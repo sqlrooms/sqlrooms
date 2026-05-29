@@ -65,6 +65,7 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+import {getTableNameFromQualified} from '@sqlrooms/duckdb-core';
 
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
@@ -571,9 +572,10 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
+            const label = getTableNameFromQualified(String(tableName));
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
-              info: {label: tableName, id: tableName},
+              info: {label, id: tableName},
               metadata: {tableName},
             };
             get().kepler.dispatchAction(
@@ -651,20 +653,19 @@ export function createKeplerSlice({
                   }
                 }
 
-                const availableTables = new Set(
-                  get()
-                    .db.tables.filter((t) => t.table.schema === 'main')
-                    .map((t) => t.table.table),
-                );
-
                 for (const dataId of referencedDataIds) {
-                  if (
-                    !keplerDatasets?.[dataId] &&
-                    availableTables.has(dataId)
-                  ) {
+                  if (keplerDatasets?.[dataId]) {
+                    continue;
+                  }
+                  try {
                     await get().kepler.addTableToMap(mapId, dataId, {
                       autoCreateLayers: false,
                       centerMap: false,
+                    });
+                  } catch (e) {
+                    console.error('syncKeplerDatasets: addTableToMap failed', {
+                      dataId,
+                      e,
                     });
                   }
                 }
