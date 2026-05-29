@@ -220,9 +220,6 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.4
-      ai:
-        specifier: ^6.0.154
-        version: 6.0.177(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
