@@ -1,5 +1,10 @@
 # Root Resources and Block Embeds
 
+Status: superseded by `dev-docs/tasks/stateful-blocks-artifact-shells.md`.
+The current decision is to keep artifacts as workspace shells, use direct
+stateful blocks inside blocks documents, and not reintroduce artifact embed
+blocks unless a future explicit reference-block design is needed.
+
 ## Todo Checklist
 
 - [ ] [Stage 1: Vocabulary and Invariants](#stage-1-vocabulary-and-invariants)

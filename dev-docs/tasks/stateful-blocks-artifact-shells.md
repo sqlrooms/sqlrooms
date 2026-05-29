@@ -11,7 +11,7 @@
 - [x] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
 - [x] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
 - [x] [Stage 9: AI and Command Integration](#stage-9-ai-and-command-integration)
-- [ ] [Stage 10: Migration and Package Boundary Decision](#stage-10-migration-and-package-boundary-decision)
+- [x] [Stage 10: Migration and Package Boundary Decision](#stage-10-migration-and-package-boundary-decision)
 
 ## Goal
 
@@ -667,6 +667,50 @@ Tests/checks:
 
 - Documentation review.
 
+## Evaluation After Stage 10
+
+Decision: the stateful block migration is worth continuing for reusable
+single-surface analytical implementations, but it should not become a broad
+rename or package collapse yet.
+
+Package boundary outcome:
+
+- Keep `@sqlrooms/artifacts` as the workspace shell layer for tabs, current
+  selection, title, visibility, lifecycle hooks, and AI context.
+- Keep `@sqlrooms/blocks` as a shared contract package for block vocabulary,
+  capabilities, references, ownership, and stateful block definitions.
+- Keep concrete stateful block definitions in owning feature packages:
+  dashboard in `@sqlrooms/mosaic`, pivot in `@sqlrooms/pivot`, Markdown document
+  in `@sqlrooms/documents`, and future notebook/canvas/app adapters in their
+  respective packages.
+- Keep `@sqlrooms/documents` as the rich block-container/editor package, not as
+  the owner of every concrete block runtime.
+- Do not deprecate `@sqlrooms/artifacts` now. The artifact-shell bridge is
+  valuable because it lets a stateful block appear as a top-level workspace
+  resource without duplicating lifecycle mappings.
+
+Migration decision:
+
+- Continue using stateful block adapters for dashboard, pivot, Markdown
+  document, and similarly scoped future surfaces.
+- Defer notebook/canvas/app conversion until copy/duplicate semantics and
+  runtime ownership are boringly reliable.
+- Do not migrate persisted state just for naming consistency. Existing feature
+  slices remain the backing state stores.
+- Do not reintroduce artifact embeds. If shared references become important,
+  design an explicit reference block with ownership semantics instead.
+
+Follow-up parking lot:
+
+- Normalize copy/paste and duplicate flows so owned stateful blocks get fresh
+  `blockInstanceId` values.
+- Add richer host tools for populating dashboard/pivot state after
+  `create-stateful-block`.
+- Revisit notebooks after the cells/blocks convergence plan reaches its core
+  execution-graph decisions.
+- Consider an ADR only after notebook/canvas/app experiments validate the same
+  model beyond single-surface blocks.
+
 ## Risks and Open Questions
 
 - Stateful block abstraction may hide important lifecycle differences between
@@ -958,3 +1002,6 @@ Recommended next step:
   `create-stateful-block` command, host-registered stateful block command
   types, CLI Analysis registration for dashboard/pivot/document, and updated AI
   instructions.
+- 2026-05-29: Completed Stage 10 by recording the package-boundary decision:
+  continue stateful blocks for reusable implementations, keep artifacts as
+  workspace shells, and defer broader package migration.
