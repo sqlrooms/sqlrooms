@@ -137,14 +137,6 @@ export const BlocksDocumentChartBlock = z.object({
   caption: z.string().optional(),
 });
 
-export const BlocksDocumentArtifactEmbedBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
-  type: z.literal('artifactEmbed'),
-  artifactId: z.string(),
-  artifactType: z.string(),
-  caption: z.string().optional(),
-});
-
 export const BlocksDocumentStatefulBlockBlock = z.object({
   ...BlocksDocumentTextBlockBase,
   type: z.literal('statefulBlock'),
@@ -164,7 +156,6 @@ export const BlocksDocumentBlock = z.discriminatedUnion('type', [
   BlocksDocumentImageBlock,
   BlocksDocumentChartImageBlock,
   BlocksDocumentChartBlock,
-  BlocksDocumentArtifactEmbedBlock,
   BlocksDocumentStatefulBlockBlock,
 ]);
 export type BlocksDocumentBlock = z.infer<typeof BlocksDocumentBlock>;
@@ -274,16 +265,6 @@ export function blocksDocumentBlockToNode(
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
       };
-    case 'artifactEmbed':
-      return {
-        type: 'blocksDocumentArtifactEmbed',
-        attrs: {
-          id: block.id,
-          artifactId: block.artifactId,
-          artifactType: block.artifactType,
-          ...(block.caption !== undefined ? {caption: block.caption} : {}),
-        },
-      };
     case 'statefulBlock':
       return {
         type: 'blocksDocumentStatefulBlock',
@@ -363,14 +344,6 @@ export function blocksDocumentNodeToBlock(
         tableName: node.attrs?.tableName,
         config: node.attrs?.config,
         selectionGroupId: optionalString(node.attrs?.selectionGroupId),
-        caption: optionalString(node.attrs?.caption),
-      });
-    case 'blocksDocumentArtifactEmbed':
-      return BlocksDocumentArtifactEmbedBlock.parse({
-        id,
-        type: 'artifactEmbed',
-        artifactId: node.attrs?.artifactId,
-        artifactType: node.attrs?.artifactType,
         caption: optionalString(node.attrs?.caption),
       });
     case 'blocksDocumentStatefulBlock':

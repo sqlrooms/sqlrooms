@@ -72,16 +72,17 @@ or profiler flows use `grid`.
 
 Analysis artifacts are block-composed documents for narrative analytical work.
 They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
-embedded dashboard artifacts.
+direct stateful blocks such as dashboards, pivot tables, and Markdown
+documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Analysis share
 a crossfilter selection; charts without a group are independent.
 
-Embedded dashboards are stored as child dashboard artifacts with
-`visibility: embedded` and `parentArtifactId` set to the owning Analysis id.
-Each embedded dashboard keeps its own dashboard id and Mosaic selection scope,
-so multiple dashboards in one Analysis crossfilter independently.
+Hosted dashboards are stored as direct stateful blocks keyed by their block
+instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
+selection scope, so multiple dashboards in one Analysis crossfilter
+independently.
 
 ## AI Artifact Context
 

@@ -9,7 +9,7 @@ import {
   BlocksDocumentArtifact,
   BlocksDocumentsSliceConfig,
   BlocksDocumentChartRendererProvider,
-  BlocksDocumentEmbedRendererProvider,
+  BlocksDocumentStatefulBlockRendererProvider,
   DocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlocksDocumentCommands,
@@ -108,7 +108,8 @@ managing image assets alongside Markdown content. SVG assets may use `utf8` or
 
 `createBlocksDocumentsSlice()` exposes structured state for artifact types
 backed by composable blocks: rich text, lists, images, standalone Mosaic/vgplot
-charts, and embedded artifacts such as dashboards.
+charts, and direct stateful blocks such as dashboards, pivots, or Markdown
+documents.
 
 Blocks documents persist Tiptap/ProseMirror JSON as their canonical content
 and provide block DTO helpers for command and AI authoring surfaces:
@@ -137,30 +138,34 @@ const roomStore = createRoomStore(
 The slice can create blocks documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, rich text, lists, todos, images, chart images,
-standalone chart blocks, direct stateful blocks, and artifact embeds.
+standalone chart blocks, and direct stateful blocks.
 
 `BlocksDocumentArtifact` and `BlocksDocumentEditor` provide the first rich
 editor surface for this structured state. The editor owns Tiptap nodes for
-SQLRooms custom blocks, but chart rendering and artifact embeds are
-host-provided so `@sqlrooms/documents` does not import Mosaic:
+SQLRooms custom blocks, but chart and stateful block rendering are
+host-provided so `@sqlrooms/documents` does not import Mosaic, pivot, or other
+feature packages:
 
 ```tsx
 <BlocksDocumentChartRendererProvider renderer={MosaicBlocksDocumentChartRenderer}>
-  <BlocksDocumentEmbedRendererProvider
+  <BlocksDocumentStatefulBlockRendererProvider
     renderers={{
-      dashboard: EmbeddedDashboardRenderer,
+      dashboard: DashboardBlockRenderer,
+      pivot: PivotBlockRenderer,
     }}
-    artifactTypes={[
+    blockTypes={[
       {
-        artifactType: 'dashboard',
+        blockType: 'dashboard',
         label: 'Dashboard',
-        description: 'Embedded dashboard',
+        description: 'Interactive dashboard',
         createNode: (blockId) => ({
-          type: 'blocksDocumentArtifactEmbed',
+          type: 'blocksDocumentStatefulBlock',
           attrs: {
             id: blockId,
-            artifactId: createEmbeddedDashboardArtifact(),
-            artifactType: 'dashboard',
+            blockType: 'dashboard',
+            blockInstanceId: createDashboardBlockState(blockId),
+            ownership: 'owned',
+            title: 'Dashboard',
             caption: '',
           },
         }),
@@ -168,14 +173,13 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
     ]}
   >
     <BlocksDocumentArtifact artifactId={blocksDocumentArtifactId} />
-  </BlocksDocumentEmbedRendererProvider>
+  </BlocksDocumentStatefulBlockRendererProvider>
 </BlocksDocumentChartRendererProvider>
 ```
 
-If no renderer is registered, chart and embed blocks render a clear unsupported
-state while preserving their Tiptap JSON attributes. `artifactTypes` is optional;
-when omitted, the editor derives plus-menu embed entries from the renderer keys
-and inserts a block with only `artifactType` prefilled.
+If no renderer is registered, chart and stateful blocks render a clear
+unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
+controls the host-specific entries shown in the plus menu.
 
 ### Stateful Blocks
 
@@ -215,9 +219,9 @@ Hosts provide renderers through `BlocksDocumentStatefulBlockRendererProvider`:
 </BlocksDocumentStatefulBlockRendererProvider>
 ```
 
-Artifact embeds remain supported for compatibility and for explicit references
-to existing top-level artifacts. New dashboard/pivot-style document blocks
-should generally prefer `statefulBlock`.
+Top-level artifacts should wrap stateful blocks or block containers at the
+workspace/tab layer. Blocks documents host the stateful block directly instead
+of embedding an artifact shell.
 
 ### Standalone Chart Blocks
 
@@ -247,33 +251,16 @@ dashboard. Charts with the same `selectionGroupId` in one blocks document share
 a crossfilter selection. Charts without a group get independent
 document/block-scoped selections.
 
-### Dashboard Embeds
+### Hosted Dashboards
 
-Use an `artifactEmbed` block when the document needs a multi-panel interactive
-dashboard:
-
-```ts
-blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
-  {
-    id: 'regional-dashboard',
-    type: 'artifactEmbed',
-    artifactId: dashboardArtifactId,
-    artifactType: 'dashboard',
-    caption: 'Regional dashboard',
-  },
-]);
-```
-
-Embedded dashboards should be created as normal dashboard artifacts with
-`visibility: 'embedded'` and `parentArtifactId` set to the owning blocks
-document id.
-Each embedded dashboard keeps its own dashboard id, Mosaic runtime keys, and
-selection name, so multiple dashboards inside one blocks document crossfilter
-independently.
+Use a `statefulBlock` block when the document needs a multi-panel interactive
+dashboard. The block instance id should map to dashboard state in the host app's
+Mosaic slice, while the top-level artifact shell remains optional for workspace
+navigation.
 
 Standalone chart blocks are best for one chart with local context. Dashboard
-embeds are best for coordinated multi-panel views, richer dashboard layout, or
-when dashboard AI tools are the natural authoring path.
+stateful blocks are best for coordinated multi-panel views, richer dashboard
+layout, or when dashboard AI tools are the natural authoring path.
 
 ## Commands
 
@@ -302,7 +289,6 @@ document artifacts. By default the command IDs are:
 - `blocks-document.remove-block`
 - `blocks-document.move-block`
 - `blocks-document.create-chart-block`
-- `blocks-document.embed-dashboard`
 
 Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
 to expose the same command surface under product-specific names while keeping
@@ -312,8 +298,8 @@ to an assistant.
 
 `createBlocksDocumentAuthoringInstructions()` adds a higher-level authoring
 contract for assistants or host-provided sub-agents. It names the configured
-command set, explains when to use standalone chart blocks versus dashboard
-embeds, and keeps selection-group behavior explicit.
+command set, explains when to use standalone chart blocks versus host-provided
+stateful blocks, and keeps selection-group behavior explicit.
 
 ## CRDT
 
@@ -329,8 +315,8 @@ createCrdtSlice({
 
 `createDocumentsCrdtMirror()` syncs Markdown document bodies, blocks document
 Tiptap JSON content, document-owned assets, standalone chart block configs,
-blocks document/document artifact metadata, embedded child artifact metadata, and
-document artifact tab order. The current artifact selection is kept local.
+blocks document/document artifact metadata, and document artifact tab order.
+The current artifact selection is kept local.
 
 By default, the mirror treats `blocks-document` artifacts as blocks documents.
 Hosts with their own artifact type names can pass
@@ -342,9 +328,8 @@ createDocumentsCrdtMirror({
 });
 ```
 
-Embedded dashboard artifact metadata syncs through this mirror, but Mosaic
-dashboard backing state does not. Dashboard state should continue to use the
-host app's Mosaic persistence, or a future Mosaic-specific CRDT mirror.
+Hosted dashboard state should continue to use the host app's Mosaic persistence,
+or a future Mosaic-specific CRDT mirror.
 
 ## Knowledge Index
 

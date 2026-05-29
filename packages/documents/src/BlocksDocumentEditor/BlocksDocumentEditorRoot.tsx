@@ -16,7 +16,6 @@ import {
 } from 'react';
 import type {BlocksDocumentContent} from '../BlocksDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
-import {BlocksDocumentArtifactEmbedNode} from './extensions/BlocksDocumentArtifactEmbedNode';
 import {
   BlocksDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
@@ -110,7 +109,6 @@ export const BlocksDocumentEditorRoot: FC<
       BlocksDocumentImageNode,
       BlocksDocumentChartImageNode,
       BlocksDocumentChartNode,
-      BlocksDocumentArtifactEmbedNode,
       BlocksDocumentStatefulBlockNode,
     ];
     return [

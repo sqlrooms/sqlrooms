@@ -259,13 +259,6 @@ describe('BlocksDocumentsSlice', () => {
         caption: 'Live chart',
       },
       {
-        id: 'dashboard',
-        type: 'artifactEmbed',
-        artifactId: 'dashboard-1',
-        artifactType: 'dashboard',
-        caption: 'Dashboard',
-      },
-      {
         id: 'pivot-block',
         type: 'statefulBlock',
         blockType: 'pivot',

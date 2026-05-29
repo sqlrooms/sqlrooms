@@ -142,7 +142,7 @@ describe('blocks document commands', () => {
     ]);
   });
 
-  it('creates chart blocks and embedded dashboard blocks', async () => {
+  it('creates chart blocks', async () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
@@ -159,25 +159,6 @@ describe('blocks document commands', () => {
         selectionGroupId: 'overview',
         caption: 'Revenue',
       });
-    const embedResult = await store
-      .getState()
-      .commands.invokeCommand('blocks-document.embed-dashboard', {
-        artifactId,
-        blockId: 'dashboard-1',
-        dashboardTitle: 'Dashboard',
-        caption: 'Details',
-      });
-
-    const dashboardArtifactId = (embedResult.data as any)
-      .dashboardArtifactId as string;
-    expect(
-      store.getState().artifacts.getArtifact(dashboardArtifactId),
-    ).toMatchObject({
-      type: 'dashboard',
-      title: 'Dashboard',
-      visibility: 'embedded',
-      parentArtifactId: artifactId,
-    });
     expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'chart-1',
@@ -186,13 +167,6 @@ describe('blocks document commands', () => {
         config: {chartType: 'histogram', settings: {field: 'revenue'}},
         selectionGroupId: 'overview',
         caption: 'Revenue',
-      },
-      {
-        id: 'dashboard-1',
-        type: 'artifactEmbed',
-        artifactId: dashboardArtifactId,
-        artifactType: 'dashboard',
-        caption: 'Details',
       },
     ]);
   });

@@ -1,7 +1,6 @@
 import {Button, cn} from '@sqlrooms/ui';
 import {
   BarChart3Icon,
-  GalleryHorizontalEndIcon,
   ImageIcon,
   PilcrowIcon,
 } from 'lucide-react';
@@ -91,24 +90,6 @@ export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
         }
       >
         <BarChart3Icon className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="h-8 w-8"
-        disabled={!editor || readOnly}
-        title="Insert artifact embed"
-        aria-label="Insert artifact embed"
-        onClick={() =>
-          insertAtomBlock('blocksDocumentArtifactEmbed', {
-            artifactId: '',
-            artifactType: '',
-            caption: '',
-          })
-        }
-      >
-        <GalleryHorizontalEndIcon className="h-4 w-4" />
       </Button>
     </div>
   );

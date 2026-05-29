@@ -12,7 +12,6 @@ export {
   type DocumentsSliceConfig as DocumentsSliceConfigType,
 } from './DocumentsSliceConfig';
 export {
-  BlocksDocumentArtifactEmbedBlock,
   BlocksDocumentBlock,
   BlocksDocumentChartBlock,
   BlocksDocumentChartImageBlock,
@@ -55,16 +54,6 @@ export {
   type BlocksDocumentChartRendererProps,
   type BlocksDocumentChartRendererProviderProps,
 } from './BlocksDocumentChartRendererContext';
-export {
-  BlocksDocumentEmbedRendererProvider,
-  useBlocksDocumentArtifactEmbedRenderer,
-  useBlocksDocumentArtifactEmbedTypes,
-  type BlocksDocumentArtifactEmbedType,
-  type BlocksDocumentArtifactEmbedRenderer,
-  type BlocksDocumentArtifactEmbedRendererProps,
-  type BlocksDocumentArtifactEmbedRenderers,
-  type BlocksDocumentEmbedRendererProviderProps,
-} from './BlocksDocumentEmbedRendererContext';
 export {
   BlocksDocumentStatefulBlockRendererProvider,
   useBlocksDocumentStatefulBlockRenderer,

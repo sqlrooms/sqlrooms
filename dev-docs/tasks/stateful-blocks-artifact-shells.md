@@ -97,8 +97,8 @@ when their main purpose is hosting and composing other blocks.
   dashboard/panel ids.
 - Dashboard panels are already block-like subunits with ids, types, titles, and
   configs.
-- Embedded dashboards currently work by embedding a dashboard artifact id inside
-  a blocks document.
+- Dashboards inside blocks documents now use direct stateful block hosting
+  rather than artifact embeds.
 
 ### Pivot Tables
 
@@ -335,7 +335,8 @@ Acceptance criteria:
 
 - Top-level dashboard artifacts still behave the same.
 - Dashboard lifecycle is expressible through the stateful block adapter.
-- Embedded dashboard behavior remains unchanged until Stage 6.
+- Embedded dashboard behavior should move from artifact embeds to direct
+  stateful block hosting.
 - No dashboard persisted-state migration is required.
 
 Likely files/modules:
@@ -492,7 +493,8 @@ type StatefulBlockEmbed = {
   block definition renderer.
 - Decide whether creating the document block creates a new block instance or
   references an existing one.
-- Keep existing artifact embeds as a compatibility path.
+- Remove artifact embeds from blocks documents if backward compatibility is not
+  required.
 
 Acceptance criteria:
 
@@ -500,7 +502,8 @@ Acceptance criteria:
   an artifact first.
 - Multiple instances in one document have independent backing state unless they
   intentionally reference the same instance id.
-- Existing artifact embeds keep working.
+- Blocks documents no longer expose artifact embed authoring or rendering
+  paths.
 
 Likely files/modules:
 
@@ -588,8 +591,7 @@ Implementation notes:
 - AI instructions should explain:
   - use hosted stateful blocks for local composition
   - use artifact shells for top-level workspace resources
-  - use existing artifact embeds for compatibility or when referencing a
-    top-level resource
+  - use explicit stateful blocks for feature-backed content
 - Keep command IDs stable where possible.
 
 Acceptance criteria:
@@ -628,7 +630,8 @@ Decision questions:
   definitions?
 - Should dashboard/pivot artifact APIs be renamed, or should artifact shells
   remain public?
-- Can existing artifact embeds remain indefinitely as resource references?
+- Do we need an explicit reference block later for shared, non-owned stateful
+  block instances?
 - Is persisted state migration worth it, or are adapters enough?
 
 Recommended default:
@@ -809,9 +812,9 @@ What changed in the model:
   host and compose blocks, not to be embedded as a reusable single-surface block.
 - `notebook`, `canvas`, and `app` remain deferred until their ownership,
   execution, or runtime lifecycles are clearer.
-- Artifact embeds are still needed as an explicit compatibility/reference path,
-  even as new dashboard/pivot/document placements can use direct stateful block
-  hosting.
+- Artifact embeds are no longer part of the target model because backward
+  compatibility is not required; a future reference block can be designed
+  explicitly if shared references become important.
 
 Recommended next step:
 
@@ -831,11 +834,8 @@ What worked:
 - Dashboard, pivot, and Markdown document can be inserted into Analysis
   documents as direct stateful blocks without creating hidden embedded artifact
   shells.
-- Existing `artifactEmbed` blocks remain renderable as a compatibility path for
-  previously persisted documents and for explicit artifact references.
 - The Analysis insert menu now uses direct stateful block menu entries for
-  dashboard, pivot, and document, while artifact embed menu entries are
-  suppressed.
+  dashboard, pivot, and document.
 
 What still needs proof:
 
@@ -845,9 +845,9 @@ What still needs proof:
   slice state behind until Stage 8 defines ownership cleanup.
 - Duplicating a block will duplicate the same `blockInstanceId` unless a later
   copy/paste normalization step rewrites ids and ownership metadata.
-- AI commands still create dashboard embeds through the compatibility command;
-  Stage 9 should switch new AI-authored dashboard/pivot/document blocks to the
-  direct stateful-block path.
+- The generic `embed-dashboard` command has been removed; Stage 9 should add
+  host-specific AI tools for creating dashboard/pivot/document stateful blocks
+  with their backing state.
 
 Recommended next step:
 
@@ -884,5 +884,6 @@ Recommended next step:
   `analysis` as a BlocksDocument container artifact.
 - 2026-05-29: Completed Stage 7 by adding a direct
   `blocksDocumentStatefulBlock` host node, renderer registry, DTO conversion,
-  and Analysis document dashboard/pivot/document stateful block renderers while
-  keeping artifact embeds as compatibility renderers.
+  and Analysis document dashboard/pivot/document stateful block renderers.
+- 2026-05-29: Removed blocks document artifact embeds from the target model and
+  implementation so documents compose direct blocks only.

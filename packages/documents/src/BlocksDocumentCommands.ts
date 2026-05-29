@@ -21,7 +21,6 @@ export const BLOCKS_DOCUMENT_COMMAND_SUFFIXES = [
   'remove-block',
   'move-block',
   'create-chart-block',
-  'embed-dashboard',
 ] as const;
 
 export type BlocksDocumentCommandSuffix =
@@ -33,7 +32,6 @@ export type CreateBlocksDocumentCommandsOptions = {
   commandNamespace?: string;
   commandGroup?: string;
   defaultTitle?: string;
-  defaultEmbeddedDashboardTitle?: string;
 };
 
 type BlocksDocumentCommandState = BaseRoomStoreState & {
@@ -122,25 +120,6 @@ const BlocksDocumentCreateChartBlockInput = z.object({
     .describe('Optional top-level insertion index. Defaults to append.'),
 });
 
-const BlocksDocumentEmbedDashboardInput = z.object({
-  artifactId: z.string().describe('Target blocks document artifact ID.'),
-  blockId: z.string().optional().describe('Optional explicit embed block ID.'),
-  dashboardArtifactId: z
-    .string()
-    .optional()
-    .describe('Existing dashboard artifact to embed.'),
-  dashboardTitle: z
-    .string()
-    .optional()
-    .describe('Title for a newly-created embedded dashboard.'),
-  caption: z.string().optional().describe('Optional embed caption.'),
-  index: z
-    .number()
-    .int()
-    .optional()
-    .describe('Optional top-level insertion index. Defaults to append.'),
-});
-
 function lowerLabel(label: string) {
   return label.toLocaleLowerCase();
 }
@@ -161,7 +140,6 @@ export function createBlocksDocumentCommands<
   commandNamespace = 'blocks-document',
   commandGroup = artifactLabel,
   defaultTitle = artifactLabel,
-  defaultEmbeddedDashboardTitle = 'Embedded Dashboard',
 }: CreateBlocksDocumentCommandsOptions = {}): RoomCommand<TRoomState>[] {
   const label = artifactLabel;
   const labelLower = lowerLabel(label);
@@ -486,76 +464,6 @@ export function createBlocksDocumentCommands<
           artifactId,
           labelLower,
           {block},
-        );
-      },
-    },
-    'embed-dashboard': {
-      id: commandId('embed-dashboard'),
-      name: `Embed dashboard in ${labelLower}`,
-      description:
-        'Embed an existing dashboard artifact or create a new embedded dashboard block',
-      group: commandGroup,
-      keywords: [labelLower, 'dashboard', 'embed', 'block'],
-      inputSchema: BlocksDocumentEmbedDashboardInput,
-      inputDescription: `${label} artifact ID plus existing dashboardArtifactId or dashboardTitle.`,
-      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
-      execute: ({getState}, input) => {
-        const state = getState();
-        const {
-          artifactId,
-          blockId = createBlocksDocumentBlockId(),
-          dashboardArtifactId,
-          dashboardTitle = defaultEmbeddedDashboardTitle,
-          caption,
-          index,
-        } = input as z.infer<typeof BlocksDocumentEmbedDashboardInput>;
-        const resolved = resolveBlocksDocumentArtifact(
-          state,
-          artifactId,
-          commandId('embed-dashboard'),
-          artifactType,
-          label,
-          labelLower,
-        );
-        if (!resolved.success) return resolved;
-        const embeddedDashboardId =
-          dashboardArtifactId ??
-          state.artifacts.createArtifact({
-            type: 'dashboard',
-            title: dashboardTitle,
-            visibility: 'embedded',
-            parentArtifactId: artifactId,
-          });
-        const dashboardArtifact =
-          state.artifacts.getArtifact(embeddedDashboardId);
-        if (!dashboardArtifact) {
-          return {
-            success: false,
-            commandId: commandId('embed-dashboard'),
-            error: `Unknown dashboard artifact "${embeddedDashboardId}".`,
-          };
-        }
-        if (dashboardArtifact.type !== 'dashboard') {
-          return {
-            success: false,
-            commandId: commandId('embed-dashboard'),
-            error: `Artifact "${embeddedDashboardId}" is not a dashboard artifact.`,
-          };
-        }
-        const block: BlocksDocumentBlockType = {
-          id: blockId,
-          type: 'artifactEmbed',
-          artifactId: embeddedDashboardId,
-          artifactType: 'dashboard',
-          caption,
-        };
-        insertOrAppendBlocks(state, artifactId, [block], index);
-        return blockMutationSuccess(
-          state,
-          commandId('embed-dashboard'),
-          artifactId,
-          labelLower,
-          {block, dashboardArtifactId: embeddedDashboardId},
         );
       },
     },

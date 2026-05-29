@@ -1,9 +1,7 @@
 import {
   BlocksDocumentChartRendererProvider,
   BlocksDocumentArtifact,
-  BlocksDocumentEmbedRendererProvider,
   BlocksDocumentStatefulBlockRendererProvider,
-  type BlocksDocumentArtifactEmbedRenderer,
   type BlocksDocumentStatefulBlockRenderer,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
@@ -15,20 +13,8 @@ import {
 } from '../statefulBlockArtifactConfigs';
 import {AnalysisChartRenderer} from './AnalysisChartRenderer';
 import {AnalysisDashboardBlockRenderer} from './AnalysisDashboardBlockRenderer';
-import {AnalysisDashboardEmbedRenderer} from './AnalysisDashboardEmbedRenderer';
 import {AnalysisMarkdownDocumentBlockRenderer} from './AnalysisMarkdownDocumentBlockRenderer';
 import {AnalysisPivotBlockRenderer} from './AnalysisPivotBlockRenderer';
-import {AnalysisPivotEmbedRenderer} from './AnalysisPivotEmbedRenderer';
-
-type ArtifactEmbedCompatibilityType = 'dashboard' | 'pivot';
-
-const ANALYSIS_EMBED_RENDERERS = {
-  dashboard: AnalysisDashboardEmbedRenderer,
-  pivot: AnalysisPivotEmbedRenderer,
-} satisfies Record<
-  ArtifactEmbedCompatibilityType,
-  BlocksDocumentArtifactEmbedRenderer
->;
 
 const ANALYSIS_STATEFUL_BLOCK_RENDERERS = {
   dashboard: AnalysisDashboardBlockRenderer,
@@ -72,12 +58,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
         renderers={ANALYSIS_STATEFUL_BLOCK_RENDERERS}
         blockTypes={statefulBlockTypes}
       >
-        <BlocksDocumentEmbedRendererProvider
-          renderers={ANALYSIS_EMBED_RENDERERS}
-          artifactTypes={[]}
-        >
-          <BlocksDocumentArtifact artifactId={artifactId} />
-        </BlocksDocumentEmbedRendererProvider>
+        <BlocksDocumentArtifact artifactId={artifactId} />
       </BlocksDocumentStatefulBlockRendererProvider>
     </BlocksDocumentChartRendererProvider>
   );

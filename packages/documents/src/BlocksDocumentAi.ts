@@ -19,13 +19,12 @@ export function createBlocksDocumentAuthoringInstructions({
   const artifactLabelLower = artifactLabel.toLocaleLowerCase();
   return `
 ${artifactLabel} authoring:
-- Prefer a ${artifactLabel} artifact when the user asks for a narrative, report, notebook-like document, or mixed text/chart/dashboard output.
+- Prefer a ${artifactLabel} artifact when the user asks for a narrative, report, notebook-like document, or mixed text/chart output.
 - Use ${commandToolName} with ${artifactLabelLower} commands for deterministic edits. The supported command IDs are: ${commandIds.join(', ')}.
 - Use ${commandNamespace}.create-chart-block for focused standalone charts that should live directly in the document.
-- Use ${commandNamespace}.embed-dashboard when a multi-panel interactive dashboard is useful; this creates or references a dashboard artifact block.
 - Give independent standalone chart blocks separate selection groups by default. Reuse selectionGroupId only when the charts should crossfilter together.
-- Embedded dashboards keep their own dashboard-scoped crossfilter state; do not reuse standalone chart selection groups for dashboard embeds.
-- If ${blocksDocumentAgentToolName} is available, use it for multi-step ${artifactLabelLower} authoring plans that combine narrative blocks, standalone charts, and dashboard embeds.
+- Use host-specific stateful block tools when available for dashboards, pivots, or other interactive surfaces that need backing feature state.
+- If ${blocksDocumentAgentToolName} is available, use it for multi-step ${artifactLabelLower} authoring plans that combine narrative blocks, standalone charts, and hosted stateful blocks.
 `.trim();
 }
 
@@ -42,7 +41,7 @@ ${artifactLabel} artifacts:
 - Use ${commandNamespace}.create to create a new ${artifactLabel.toLocaleLowerCase()} artifact.
 - Use ${commandNamespace}.append-blocks, ${commandNamespace}.insert-blocks, ${commandNamespace}.update-block, ${commandNamespace}.remove-block, and ${commandNamespace}.move-block for deterministic block edits.
 - Use ${commandNamespace}.create-chart-block for standalone Mosaic/vgplot chart blocks.
-- Use ${commandNamespace}.embed-dashboard to embed an existing dashboard or create a new embedded dashboard artifact block.
+- Use host-specific stateful block tools for dashboards, pivots, documents, or other feature-backed blocks.
 `.trim();
 }
 
@@ -63,10 +62,10 @@ export type BlocksDocumentAgentPlanStep =
       selectionGroupId?: string;
     }
   | {
-      type: 'embed-dashboard';
+      type: 'create-stateful-block';
       artifactId: string;
-      dashboardArtifactId?: string;
-      dashboardTitle?: string;
+      blockType: string;
+      blockInstanceId?: string;
     };
 
 export type BlocksDocumentAgentResult = {

@@ -14,7 +14,7 @@ describe('blocks document AI helpers', () => {
     expect(createBlocksDocumentCommandIds()).toContain(
       'blocks-document.create-chart-block',
     );
-    expect(createBlocksDocumentCommandIds()).toContain(
+    expect(createBlocksDocumentCommandIds()).not.toContain(
       'blocks-document.embed-dashboard',
     );
   });

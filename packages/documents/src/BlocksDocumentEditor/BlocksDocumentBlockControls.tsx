@@ -39,10 +39,6 @@ import {
   useState,
 } from 'react';
 import {
-  type BlocksDocumentArtifactEmbedType,
-  useBlocksDocumentArtifactEmbedTypes,
-} from '../BlocksDocumentEmbedRendererContext';
-import {
   type BlocksDocumentStatefulBlockType,
   useBlocksDocumentStatefulBlockTypes,
 } from '../BlocksDocumentStatefulBlockRendererContext';
@@ -110,31 +106,6 @@ function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
 }
 
-function buildEmbedMenuItems(
-  artifactTypes: BlocksDocumentArtifactEmbedType[],
-): BlockMenuItem[] {
-  return artifactTypes.map((artifactType) => {
-    const label =
-      artifactType.label ?? labelFromArtifactType(artifactType.artifactType);
-    return {
-      label,
-      description: artifactType.description ?? `Embed ${label}`,
-      icon: Rows3Icon,
-      createNode:
-        artifactType.createNode ??
-        ((id: string) => ({
-          type: 'blocksDocumentArtifactEmbed',
-          attrs: {
-            id,
-            artifactId: '',
-            artifactType: artifactType.artifactType,
-            caption: '',
-          },
-        })),
-    };
-  });
-}
-
 function buildStatefulBlockMenuItems(
   blockTypes: BlocksDocumentStatefulBlockType[],
 ): BlockMenuItem[] {
@@ -162,7 +133,6 @@ function buildStatefulBlockMenuItems(
 }
 
 function buildBlockMenuItems(
-  artifactTypes: BlocksDocumentArtifactEmbedType[],
   statefulBlockTypes: BlocksDocumentStatefulBlockType[],
 ): BlockMenuItem[] {
   return [
@@ -263,7 +233,6 @@ function buildBlockMenuItems(
       }),
     },
     ...buildStatefulBlockMenuItems(statefulBlockTypes),
-    ...buildEmbedMenuItems(artifactTypes),
   ];
 }
 
@@ -272,7 +241,6 @@ export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> =
 }) => {
   const {editor, readOnly, generateBlockId} =
     useBlocksDocumentEditorContext();
-  const artifactTypes = useBlocksDocumentArtifactEmbedTypes();
   const statefulBlockTypes = useBlocksDocumentStatefulBlockTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
@@ -283,8 +251,8 @@ export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> =
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const blockMenuItems = useMemo(
-    () => buildBlockMenuItems(artifactTypes, statefulBlockTypes),
-    [artifactTypes, statefulBlockTypes],
+    () => buildBlockMenuItems(statefulBlockTypes),
+    [statefulBlockTypes],
   );
   const menuOpen = insertMenuOpen || handleMenuOpen;
 

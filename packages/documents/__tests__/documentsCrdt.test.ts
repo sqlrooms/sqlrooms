@@ -182,7 +182,7 @@ describe('documents CRDT mirrors', () => {
     ]);
   });
 
-  it('mirrors blocks documents and embedded child artifact metadata', async () => {
+  it('mirrors blocks documents and hosted stateful block references', async () => {
     const docA = new LoroDoc();
     const storeA = createTestStore(docA);
     await storeA.getState().crdt.initialize();
@@ -191,13 +191,6 @@ describe('documents CRDT mirrors', () => {
       id: 'blocks-document-1',
       type: 'blocks-document',
       title: 'Blocks Document',
-    });
-    const dashboardId = storeA.getState().artifacts.createArtifact({
-      id: 'dashboard-embedded-1',
-      type: 'dashboard',
-      title: 'Embedded Dashboard',
-      visibility: 'embedded',
-      parentArtifactId: blocksDocumentId,
     });
     storeA.getState().blocksDocuments.appendBlocks(blocksDocumentId, [
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
@@ -212,10 +205,12 @@ describe('documents CRDT mirrors', () => {
         selectionGroupId: 'overview',
       },
       {
-        id: 'embed',
-        type: 'artifactEmbed',
-        artifactId: dashboardId,
-        artifactType: 'dashboard',
+        id: 'dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-embedded-1',
+        ownership: 'owned',
+        title: 'Embedded Dashboard',
       },
     ]);
     await waitForCondition(() =>
@@ -240,13 +235,6 @@ describe('documents CRDT mirrors', () => {
       title: 'Blocks Document',
       visibility: 'workspace',
     });
-    expect(storeB.getState().artifacts.getArtifact(dashboardId)).toMatchObject({
-      id: dashboardId,
-      type: 'dashboard',
-      title: 'Embedded Dashboard',
-      visibility: 'embedded',
-      parentArtifactId: blocksDocumentId,
-    });
     expect(
       storeB.getState().blocksDocuments.getBlocks(blocksDocumentId),
     ).toEqual([
@@ -262,10 +250,12 @@ describe('documents CRDT mirrors', () => {
         selectionGroupId: 'overview',
       },
       {
-        id: 'embed',
-        type: 'artifactEmbed',
-        artifactId: dashboardId,
-        artifactType: 'dashboard',
+        id: 'dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-embedded-1',
+        ownership: 'owned',
+        title: 'Embedded Dashboard',
       },
     ]);
   });
