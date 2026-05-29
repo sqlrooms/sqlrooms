@@ -5,11 +5,11 @@
 
 export {
   DocumentAsset,
-  DocumentArtifact,
   type DocumentAsset as DocumentAssetType,
   DocumentsSliceConfig,
-  type DocumentArtifact as DocumentArtifactType,
   type DocumentsSliceConfig as DocumentsSliceConfigType,
+  MarkdownDocumentState,
+  type MarkdownDocumentState as MarkdownDocumentStateType,
 } from './DocumentsSliceConfig';
 export {
   BlockDocumentBlock,

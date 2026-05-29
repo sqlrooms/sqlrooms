@@ -25,17 +25,17 @@ export const DocumentAsset = z.discriminatedUnion('mediaType', [
 ]);
 export type DocumentAsset = z.infer<typeof DocumentAsset>;
 
-export const DocumentArtifact = z.object({
+export const MarkdownDocumentState = z.object({
   id: z.string(),
   markdown: z.string().default(''),
   assets: z.record(z.string(), DocumentAsset).default({}),
   updatedAt: z.number().default(0),
 });
-export type DocumentArtifact = z.infer<typeof DocumentArtifact>;
+export type MarkdownDocumentState = z.infer<typeof MarkdownDocumentState>;
 
 export const DocumentsSliceConfig = z.object({
   artifacts: z
-    .record(z.string(), DocumentArtifact)
+    .record(z.string(), MarkdownDocumentState)
     .default({})
     .superRefine((artifacts, ctx) => {
       for (const [key, artifact] of Object.entries(artifacts)) {
