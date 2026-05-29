@@ -1,4 +1,4 @@
-Artifact-scoped Markdown documents, structured blocks documents, and
+Artifact-scoped Markdown documents, structured block documents, and
 knowledge-index utilities for SQLRooms.
 
 ## Usage
@@ -6,16 +6,16 @@ knowledge-index utilities for SQLRooms.
 ```tsx
 import {
   DOCUMENT_AI_INSTRUCTIONS,
-  BlocksDocumentArtifact,
-  BlocksDocumentsSliceConfig,
-  BlocksDocumentChartRendererProvider,
-  BlocksDocumentStatefulBlockRendererProvider,
+  BlockDocumentArtifact,
+  BlockDocumentsSliceConfig,
+  BlockDocumentChartRendererProvider,
+  BlockDocumentStatefulBlockRendererProvider,
   DocumentsSliceConfig,
   buildKnowledgeIndex,
-  createBlocksDocumentCommands,
-  createBlocksDocumentAiInstructions,
-  createBlocksDocumentAuthoringInstructions,
-  createBlocksDocumentsSlice,
+  createBlockDocumentCommands,
+  createBlockDocumentAiInstructions,
+  createBlockDocumentAuthoringInstructions,
+  createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
@@ -30,18 +30,18 @@ const documentBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
   document: createArtifactTypeFromStatefulBlock(documentBlockDefinition),
-  'blocks-document': {
-    label: 'Blocks Document',
-    defaultTitle: 'Blocks Document',
-    component: BlocksDocumentArtifact,
+  'block-document': {
+    label: 'Block Document',
+    defaultTitle: 'Block Document',
+    component: BlockDocumentArtifact,
     onCreate: ({artifactId, store}) => {
-      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
     onEnsure: ({artifactId, store}) => {
-      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
     onDelete: ({artifactId, store}) => {
-      store.getState().blocksDocuments.removeBlocksDocument(artifactId);
+      store.getState().blockDocuments.removeBlockDocument(artifactId);
     },
   },
 });
@@ -52,12 +52,12 @@ const roomStore = createRoomStore(
       name: 'my-room',
       sliceConfigSchemas: {
         documents: DocumentsSliceConfig,
-        blocksDocuments: BlocksDocumentsSliceConfig,
+        blockDocuments: BlockDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
       ...createDocumentsSlice()(set, get, store),
-      ...createBlocksDocumentsSlice({
+      ...createBlockDocumentsSlice({
         onDeleteOwnedStatefulBlock: ({
           blockType,
           blockInstanceId,
@@ -114,20 +114,20 @@ The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
 managing image assets alongside Markdown content. SVG assets may use `utf8` or
 `base64` encoding; PNG assets must use `base64` encoding.
 
-## Blocks Documents
+## Block Documents
 
-`createBlocksDocumentsSlice()` exposes structured state for artifact types
+`createBlockDocumentsSlice()` exposes structured state for artifact types
 backed by composable blocks: rich text, lists, images, standalone Mosaic/vgplot
 charts, and direct stateful blocks such as dashboards, pivots, or Markdown
 documents.
 
-Blocks documents persist Tiptap/ProseMirror JSON as their canonical content
+Block documents persist Tiptap/ProseMirror JSON as their canonical content
 and provide block DTO helpers for command and AI authoring surfaces:
 
 ```tsx
 import {
-  BlocksDocumentsSliceConfig,
-  createBlocksDocumentsSlice,
+  BlockDocumentsSliceConfig,
+  createBlockDocumentsSlice,
 } from '@sqlrooms/documents';
 
 const roomStore = createRoomStore(
@@ -135,32 +135,30 @@ const roomStore = createRoomStore(
     {
       name: 'my-room',
       sliceConfigSchemas: {
-        blocksDocuments: BlocksDocumentsSliceConfig,
+        blockDocuments: BlockDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
-      ...createBlocksDocumentsSlice()(set, get, store),
+      ...createBlockDocumentsSlice()(set, get, store),
     }),
   ),
 );
 ```
 
-The slice can create blocks documents, replace the Tiptap JSON body, and
+The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, rich text, lists, todos, images, chart images,
 standalone chart blocks, and direct stateful blocks.
 
-`BlocksDocumentArtifact` and `BlocksDocumentEditor` provide the first rich
+`BlockDocumentArtifact` and `BlockDocumentEditor` provide the first rich
 editor surface for this structured state. The editor owns Tiptap nodes for
 SQLRooms custom blocks, but chart and stateful block rendering are
 host-provided so `@sqlrooms/documents` does not import Mosaic, pivot, or other
 feature packages:
 
 ```tsx
-<BlocksDocumentChartRendererProvider
-  renderer={MosaicBlocksDocumentChartRenderer}
->
-  <BlocksDocumentStatefulBlockRendererProvider
+<BlockDocumentChartRendererProvider renderer={MosaicBlockDocumentChartRenderer}>
+  <BlockDocumentStatefulBlockRendererProvider
     renderers={{
       dashboard: DashboardBlockRenderer,
       pivot: PivotBlockRenderer,
@@ -171,7 +169,7 @@ feature packages:
         label: 'Dashboard',
         description: 'Interactive dashboard',
         createNode: (blockId) => ({
-          type: 'blocksDocumentStatefulBlock',
+          type: 'blockDocumentStatefulBlock',
           attrs: {
             id: blockId,
             blockType: 'dashboard',
@@ -184,9 +182,9 @@ feature packages:
       },
     ]}
   >
-    <BlocksDocumentArtifact artifactId={blocksDocumentArtifactId} />
-  </BlocksDocumentStatefulBlockRendererProvider>
-</BlocksDocumentChartRendererProvider>
+    <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+  </BlockDocumentStatefulBlockRendererProvider>
+</BlockDocumentChartRendererProvider>
 ```
 
 If no renderer is registered, chart and stateful blocks render a clear
@@ -199,7 +197,7 @@ Use a `statefulBlock` block when the document should host a stateful SQLRooms
 surface directly, without wrapping it in an artifact shell:
 
 ```ts
-blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
+blockDocuments.appendBlocks(blockDocumentArtifactId, [
   {
     id: 'pivot-block',
     type: 'statefulBlock',
@@ -211,10 +209,10 @@ blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
 ]);
 ```
 
-Hosts provide renderers through `BlocksDocumentStatefulBlockRendererProvider`:
+Hosts provide renderers through `BlockDocumentStatefulBlockRendererProvider`:
 
 ```tsx
-<BlocksDocumentStatefulBlockRendererProvider
+<BlockDocumentStatefulBlockRendererProvider
   renderers={{
     pivot: PivotBlockRenderer,
     dashboard: DashboardBlockRenderer,
@@ -227,18 +225,18 @@ Hosts provide renderers through `BlocksDocumentStatefulBlockRendererProvider`:
     },
   ]}
 >
-  <BlocksDocumentArtifact artifactId={blocksDocumentArtifactId} />
-</BlocksDocumentStatefulBlockRendererProvider>
+  <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+</BlockDocumentStatefulBlockRendererProvider>
 ```
 
 Top-level artifacts should wrap stateful blocks or block containers at the
-workspace/tab layer. Blocks documents host the stateful block directly instead
+workspace/tab layer. Block documents host the stateful block directly instead
 of embedding an artifact shell.
 
 Owned stateful blocks are lifecycle-managed by the host app. Pass
 `onCreateOwnedStatefulBlock` to initialize feature state when a new owned block
 reference appears, and `onDeleteOwnedStatefulBlock` to clean it up when an owned
-block is removed from a document or when its owning blocks document is deleted.
+block is removed from a document or when its owning block document is deleted.
 Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
 by the documents slice.
 Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
@@ -256,7 +254,7 @@ the target `tableName`, a Mosaic `ChartConfig`, an optional caption, and an
 optional `selectionGroupId`:
 
 ```ts
-blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
+blockDocuments.appendBlocks(blockDocumentArtifactId, [
   {
     id: 'revenue-histogram',
     type: 'chart',
@@ -273,7 +271,7 @@ blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
 
 Hosts can render these blocks with the same Mosaic/vgplot chart implementation
 and settings UI used inside dashboard panels, without embedding a full
-dashboard. Charts with the same `selectionGroupId` in one blocks document share
+dashboard. Charts with the same `selectionGroupId` in one block document share
 a crossfilter selection. Charts without a group get independent
 document/block-scoped selections.
 
@@ -303,30 +301,30 @@ Register the commands with your room command slice and include
 `DOCUMENT_AI_INSTRUCTIONS` in your AI system prompt when exposing
 `list_commands` and `execute_command` tools.
 
-`createBlocksDocumentCommands()` registers commands for structured blocks
+`createBlockDocumentCommands()` registers commands for structured blocks
 document artifacts. By default the command IDs are:
 
-- `blocks-document.list`
-- `blocks-document.get`
-- `blocks-document.create`
-- `blocks-document.append-blocks`
-- `blocks-document.insert-blocks`
-- `blocks-document.update-block`
-- `blocks-document.remove-block`
-- `blocks-document.move-block`
-- `blocks-document.create-chart-block`
-- `blocks-document.create-stateful-block`
+- `block-document.list`
+- `block-document.get`
+- `block-document.create`
+- `block-document.append-blocks`
+- `block-document.insert-blocks`
+- `block-document.update-block`
+- `block-document.remove-block`
+- `block-document.move-block`
+- `block-document.create-chart-block`
+- `block-document.create-stateful-block`
 
 Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
 to expose the same command surface under product-specific names while keeping
 the package API generic. Register these commands alongside
-`createBlocksDocumentAiInstructions()` when exposing blocks document artifacts
+`createBlockDocumentAiInstructions()` when exposing block document artifacts
 to an assistant.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
-types to `blocks-document.create-stateful-block`.
+types to `block-document.create-stateful-block`.
 
-`createBlocksDocumentAuthoringInstructions()` adds a higher-level authoring
+`createBlockDocumentAuthoringInstructions()` adds a higher-level authoring
 contract for assistants or host-provided sub-agents. It names the configured
 command set, explains when to use standalone chart blocks versus host-provided
 stateful blocks, and keeps selection-group behavior explicit.
@@ -343,18 +341,18 @@ createCrdtSlice({
 });
 ```
 
-`createDocumentsCrdtMirror()` syncs Markdown document bodies, blocks document
+`createDocumentsCrdtMirror()` syncs Markdown document bodies, block document
 Tiptap JSON content, document-owned assets, standalone chart block configs,
-blocks document/document artifact metadata, and document artifact tab order.
+block document/document artifact metadata, and document artifact tab order.
 The current artifact selection is kept local.
 
-By default, the mirror treats `blocks-document` artifacts as blocks documents.
+By default, the mirror treats `block-document` artifacts as block documents.
 Hosts with their own artifact type names can pass
-`blocksDocumentArtifactTypes`, for example:
+`blockDocumentArtifactTypes`, for example:
 
 ```ts
 createDocumentsCrdtMirror({
-  blocksDocumentArtifactTypes: ['report'],
+  blockDocumentArtifactTypes: ['report'],
 });
 ```
 

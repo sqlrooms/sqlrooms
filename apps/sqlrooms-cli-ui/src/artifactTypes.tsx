@@ -6,7 +6,12 @@ import {
 import {createMarkdownDocumentBlockDefinition} from '@sqlrooms/documents';
 import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
 import {createPivotBlockDefinition} from '@sqlrooms/pivot';
-import {AppWindow, FileText, FileStackIcon, LayoutDashboardIcon} from 'lucide-react';
+import {
+  AppWindow,
+  FileText,
+  FileStackIcon,
+  LayoutDashboardIcon,
+} from 'lucide-react';
 import type {RoomState} from './store-types';
 import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
 import {AnalysisArtifact} from './workspace/AnalysisArtifact';
@@ -51,13 +56,13 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
     icon: FileStackIcon,
     component: AnalysisArtifact,
     onCreate: ({artifactId, store}) => {
-      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
     onEnsure: ({artifactId, store}) => {
-      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
     onDelete: ({artifactId, store}) => {
-      store.getState().blocksDocuments.removeBlocksDocument(artifactId);
+      store.getState().blockDocuments.removeBlockDocument(artifactId);
     },
   },
   dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
@@ -77,7 +82,9 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
       store.getState().notebook.removeArtifact(artifactId);
     },
   },
-  document: createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
+  document: createArtifactTypeFromStatefulBlock(
+    markdownDocumentBlockDefinition,
+  ),
   canvas: {
     label: 'Canvas',
     defaultTitle: 'Canvas',

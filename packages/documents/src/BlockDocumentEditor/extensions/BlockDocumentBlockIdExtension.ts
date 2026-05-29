@@ -1,6 +1,6 @@
 import {Extension} from '@tiptap/react';
 
-type BlocksDocumentBlockIdOptions = {
+type BlockDocumentBlockIdOptions = {
   types: string[];
 };
 
@@ -31,9 +31,9 @@ function getNestedExtensions(extension: ExtensionLike): ExtensionLike[] {
 }
 
 /**
- * Finds the node names that should behave as blocks document blocks.
+ * Finds the node names that should behave as block document blocks.
  *
- * Blocks documents store a stable `attrs.id` on each top-level block so
+ * Block documents store a stable `attrs.id` on each top-level block so
  * command tools, block controls, and external store updates can refer to a
  * block without depending on its current document position. Some of these
  * blocks come from composite extensions such as `StarterKit`, so the helper
@@ -66,22 +66,22 @@ export function getBlockNodeExtensionNames(extensions: readonly unknown[]) {
 }
 
 /**
- * Adds the blocks document block id attribute to all block node types used by
+ * Adds the block document block id attribute to all block node types used by
  * the editor.
  *
  * Tiptap drops unknown attrs when serializing nodes. Without this extension,
  * built-in nodes such as paragraphs and headings would lose `attrs.id` after an
- * edit. The blocks document normalizer would then generate replacement ids, the
+ * edit. The block document normalizer would then generate replacement ids, the
  * external document value would appear different, and the editor would be
  * forced through `setContent`, which can move the selection to the end of the
  * document.
  *
- * The id is also rendered as `data-blocks-document-block-id` so it survives HTML
+ * The id is also rendered as `data-block-document-block-id` so it survives HTML
  * parse/render cycles and can be inspected in the DOM during debugging.
  */
-export const BlocksDocumentBlockIdExtension =
-  Extension.create<BlocksDocumentBlockIdOptions>({
-    name: 'blocksDocumentBlockId',
+export const BlockDocumentBlockIdExtension =
+  Extension.create<BlockDocumentBlockIdOptions>({
+    name: 'blockDocumentBlockId',
 
     addOptions() {
       return {
@@ -99,10 +99,10 @@ export const BlocksDocumentBlockIdExtension =
             id: {
               default: null,
               parseHTML: (element) =>
-                element.getAttribute('data-blocks-document-block-id'),
+                element.getAttribute('data-block-document-block-id'),
               renderHTML: (attributes) => {
                 if (typeof attributes.id !== 'string') return {};
-                return {'data-blocks-document-block-id': attributes.id};
+                return {'data-block-document-block-id': attributes.id};
               },
             },
           },

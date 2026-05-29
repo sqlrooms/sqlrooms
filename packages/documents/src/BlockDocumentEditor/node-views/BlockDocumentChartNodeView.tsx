@@ -1,23 +1,21 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import {createElement, useCallback, type FC} from 'react';
-import {useBlocksDocumentChartRenderer} from '../../BlocksDocumentChartRendererContext';
-import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
+import {useBlockDocumentChartRenderer} from '../../BlockDocumentChartRendererContext';
+import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
-type BlocksDocumentChartNodeViewProps = {
+type BlockDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
-export const BlocksDocumentChartNodeView: FC<BlocksDocumentChartNodeViewProps> = ({
-  node,
-  selected,
-  updateAttributes,
-}) => {
-  const {documentId, readOnly} = useBlocksDocumentEditorContext();
-  const Renderer = useBlocksDocumentChartRenderer();
+export const BlockDocumentChartNodeView: FC<
+  BlockDocumentChartNodeViewProps
+> = ({node, selected, updateAttributes}) => {
+  const {documentId, readOnly} = useBlockDocumentEditorContext();
+  const Renderer = useBlockDocumentChartRenderer();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const tableName = optionalString(attrs.tableName) ?? '';
@@ -63,7 +61,7 @@ export const BlocksDocumentChartNodeView: FC<BlocksDocumentChartNodeViewProps> =
         <div className="p-4">
           <div className="text-sm font-medium">Chart block</div>
           <div className="text-muted-foreground mt-1 text-sm">
-            No blocks document chart renderer is registered.
+            No block document chart renderer is registered.
           </div>
           <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
             <span>Table: {tableName || 'Unconfigured'}</span>

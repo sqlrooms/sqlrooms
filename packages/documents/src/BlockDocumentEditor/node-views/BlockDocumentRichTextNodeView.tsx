@@ -3,15 +3,14 @@ import {NodeViewWrapper} from '@tiptap/react';
 import type {FC} from 'react';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
-type BlocksDocumentRichTextNodeViewProps = {
+type BlockDocumentRichTextNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
 };
 
-export const BlocksDocumentRichTextNodeView: FC<BlocksDocumentRichTextNodeViewProps> = ({
-  node,
-  selected,
-}) => {
+export const BlockDocumentRichTextNodeView: FC<
+  BlockDocumentRichTextNodeViewProps
+> = ({node, selected}) => {
   const attrs = unknownRecord(node.attrs);
   const markdown = optionalString(attrs.markdown);
 

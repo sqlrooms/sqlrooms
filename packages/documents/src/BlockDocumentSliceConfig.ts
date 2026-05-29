@@ -1,60 +1,59 @@
 import {z} from 'zod';
 import {DocumentAsset} from './DocumentsSliceConfig';
 
-export type BlocksDocumentMark = {
+export type BlockDocumentMark = {
   type: string;
   attrs?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
-export type BlocksDocumentNode = {
+export type BlockDocumentNode = {
   type: string;
   attrs?: Record<string, unknown>;
-  content?: BlocksDocumentNode[];
-  marks?: BlocksDocumentMark[];
+  content?: BlockDocumentNode[];
+  marks?: BlockDocumentMark[];
   text?: string;
   [key: string]: unknown;
 };
 
-export const BlocksDocumentMark: z.ZodType<BlocksDocumentMark> = z
+export const BlockDocumentMark: z.ZodType<BlockDocumentMark> = z
   .object({
     type: z.string(),
     attrs: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
-export const BlocksDocumentNode: z.ZodType<BlocksDocumentNode> = z.lazy(
-  () =>
-    z
-      .object({
-        type: z.string(),
-        attrs: z.record(z.string(), z.unknown()).optional(),
-        content: z.array(BlocksDocumentNode).optional(),
-        marks: z.array(BlocksDocumentMark).optional(),
-        text: z.string().optional(),
-      })
-      .passthrough(),
+export const BlockDocumentNode: z.ZodType<BlockDocumentNode> = z.lazy(() =>
+  z
+    .object({
+      type: z.string(),
+      attrs: z.record(z.string(), z.unknown()).optional(),
+      content: z.array(BlockDocumentNode).optional(),
+      marks: z.array(BlockDocumentMark).optional(),
+      text: z.string().optional(),
+    })
+    .passthrough(),
 );
 
-export const BlocksDocumentContent = z
+export const BlockDocumentContent = z
   .object({
     type: z.literal('doc'),
-    content: z.array(BlocksDocumentNode).default([]),
+    content: z.array(BlockDocumentNode).default([]),
   })
   .passthrough();
-export type BlocksDocumentContent = z.infer<typeof BlocksDocumentContent>;
+export type BlockDocumentContent = z.infer<typeof BlockDocumentContent>;
 
-export const BlocksDocument = z.object({
+export const BlockDocument = z.object({
   id: z.string(),
-  content: BlocksDocumentContent.default({type: 'doc', content: []}),
+  content: BlockDocumentContent.default({type: 'doc', content: []}),
   assets: z.record(z.string(), DocumentAsset).default({}),
   updatedAt: z.number().default(0),
 });
-export type BlocksDocument = z.infer<typeof BlocksDocument>;
+export type BlockDocument = z.infer<typeof BlockDocument>;
 
-export const BlocksDocumentsSliceConfig = z.object({
+export const BlockDocumentsSliceConfig = z.object({
   artifacts: z
-    .record(z.string(), BlocksDocument)
+    .record(z.string(), BlockDocument)
     .default({})
     .superRefine((artifacts, ctx) => {
       for (const [key, artifact] of Object.entries(artifacts)) {
@@ -62,14 +61,14 @@ export const BlocksDocumentsSliceConfig = z.object({
           ctx.addIssue({
             code: 'custom',
             path: [key, 'id'],
-            message: `Blocks document key "${key}" does not match document id "${artifact.id}"`,
+            message: `Block document key "${key}" does not match document id "${artifact.id}"`,
           });
         }
       }
     }),
 });
-export type BlocksDocumentsSliceConfig = z.infer<
-  typeof BlocksDocumentsSliceConfig
+export type BlockDocumentsSliceConfig = z.infer<
+  typeof BlockDocumentsSliceConfig
 >;
 
 type TextContent = Array<{
@@ -77,59 +76,59 @@ type TextContent = Array<{
   text: string;
 }>;
 
-const BlocksDocumentTextBlockBase = {
+const BlockDocumentTextBlockBase = {
   id: z.string(),
 };
 
-export const BlocksDocumentHeadingBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentHeadingBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('heading'),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   text: z.string(),
 });
 
-export const BlocksDocumentParagraphBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentParagraphBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('paragraph'),
   text: z.string(),
 });
 
-export const BlocksDocumentRichTextBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentRichTextBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('richText'),
   markdown: z.string(),
 });
 
-export const BlocksDocumentListBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentListBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('list'),
   ordered: z.boolean().optional(),
   items: z.array(z.string()),
 });
 
-export const BlocksDocumentTodoBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentTodoBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('todo'),
   checked: z.boolean(),
   text: z.string(),
 });
 
-export const BlocksDocumentImageBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentImageBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('image'),
   assetId: z.string(),
   caption: z.string().optional(),
 });
 
-export const BlocksDocumentChartImageBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentChartImageBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('chartImage'),
   assetId: z.string(),
   caption: z.string().optional(),
 });
 
-export const BlocksDocumentChartBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentChartBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('chart'),
   tableName: z.string(),
   config: z.unknown(),
@@ -137,8 +136,8 @@ export const BlocksDocumentChartBlock = z.object({
   caption: z.string().optional(),
 });
 
-export const BlocksDocumentStatefulBlockBlock = z.object({
-  ...BlocksDocumentTextBlockBase,
+export const BlockDocumentStatefulBlockBlock = z.object({
+  ...BlockDocumentTextBlockBase,
   type: z.literal('statefulBlock'),
   blockType: z.string(),
   blockInstanceId: z.string(),
@@ -147,29 +146,29 @@ export const BlocksDocumentStatefulBlockBlock = z.object({
   caption: z.string().optional(),
 });
 
-export const BlocksDocumentBlock = z.discriminatedUnion('type', [
-  BlocksDocumentHeadingBlock,
-  BlocksDocumentParagraphBlock,
-  BlocksDocumentRichTextBlock,
-  BlocksDocumentListBlock,
-  BlocksDocumentTodoBlock,
-  BlocksDocumentImageBlock,
-  BlocksDocumentChartImageBlock,
-  BlocksDocumentChartBlock,
-  BlocksDocumentStatefulBlockBlock,
+export const BlockDocumentBlock = z.discriminatedUnion('type', [
+  BlockDocumentHeadingBlock,
+  BlockDocumentParagraphBlock,
+  BlockDocumentRichTextBlock,
+  BlockDocumentListBlock,
+  BlockDocumentTodoBlock,
+  BlockDocumentImageBlock,
+  BlockDocumentChartImageBlock,
+  BlockDocumentChartBlock,
+  BlockDocumentStatefulBlockBlock,
 ]);
-export type BlocksDocumentBlock = z.infer<typeof BlocksDocumentBlock>;
+export type BlockDocumentBlock = z.infer<typeof BlockDocumentBlock>;
 
 function textContent(text: string): TextContent | undefined {
   return text ? [{type: 'text', text}] : undefined;
 }
 
-function textFromNode(node: BlocksDocumentNode | undefined): string {
+function textFromNode(node: BlockDocumentNode | undefined): string {
   if (!node?.content) return node?.text ?? '';
   return node.content.map((child) => textFromNode(child)).join('');
 }
 
-function nodeId(node: BlocksDocumentNode): string {
+function nodeId(node: BlockDocumentNode): string {
   const id = node.attrs?.id;
   return typeof id === 'string' ? id : '';
 }
@@ -178,13 +177,13 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-export function createEmptyBlocksDocumentContent(): BlocksDocumentContent {
+export function createEmptyBlockDocumentContent(): BlockDocumentContent {
   return {type: 'doc', content: []};
 }
 
-export function blocksDocumentBlockToNode(
-  block: BlocksDocumentBlock,
-): BlocksDocumentNode {
+export function blockDocumentBlockToNode(
+  block: BlockDocumentBlock,
+): BlockDocumentNode {
   switch (block.type) {
     case 'heading':
       return {
@@ -200,7 +199,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'richText':
       return {
-        type: 'blocksDocumentRichText',
+        type: 'blockDocumentRichText',
         attrs: {id: block.id, markdown: block.markdown},
       };
     case 'list':
@@ -236,7 +235,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'image':
       return {
-        type: 'blocksDocumentImage',
+        type: 'blockDocumentImage',
         attrs: {
           id: block.id,
           assetId: block.assetId,
@@ -245,7 +244,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'chartImage':
       return {
-        type: 'blocksDocumentChartImage',
+        type: 'blockDocumentChartImage',
         attrs: {
           id: block.id,
           assetId: block.assetId,
@@ -254,7 +253,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'chart':
       return {
-        type: 'blocksDocumentChart',
+        type: 'blockDocumentChart',
         attrs: {
           id: block.id,
           tableName: block.tableName,
@@ -267,12 +266,14 @@ export function blocksDocumentBlockToNode(
       };
     case 'statefulBlock':
       return {
-        type: 'blocksDocumentStatefulBlock',
+        type: 'blockDocumentStatefulBlock',
         attrs: {
           id: block.id,
           blockType: block.blockType,
           blockInstanceId: block.blockInstanceId,
-          ...(block.ownership !== undefined ? {ownership: block.ownership} : {}),
+          ...(block.ownership !== undefined
+            ? {ownership: block.ownership}
+            : {}),
           ...(block.title !== undefined ? {title: block.title} : {}),
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
@@ -280,16 +281,16 @@ export function blocksDocumentBlockToNode(
   }
 }
 
-export function blocksDocumentNodeToBlock(
-  node: BlocksDocumentNode,
-): BlocksDocumentBlock | undefined {
+export function blockDocumentNodeToBlock(
+  node: BlockDocumentNode,
+): BlockDocumentBlock | undefined {
   const id = nodeId(node);
   if (!id) return undefined;
 
   switch (node.type) {
     case 'heading': {
       const level = node.attrs?.level;
-      return BlocksDocumentHeadingBlock.parse({
+      return BlockDocumentHeadingBlock.parse({
         id,
         type: 'heading',
         level: level === 1 || level === 2 || level === 3 ? level : 1,
@@ -298,7 +299,7 @@ export function blocksDocumentNodeToBlock(
     }
     case 'paragraph':
       return {id, type: 'paragraph', text: textFromNode(node)};
-    case 'blocksDocumentRichText':
+    case 'blockDocumentRichText':
       return {
         id,
         type: 'richText',
@@ -323,22 +324,22 @@ export function blocksDocumentNodeToBlock(
         text: textFromNode(item?.content?.[0]),
       };
     }
-    case 'blocksDocumentImage':
-      return BlocksDocumentImageBlock.parse({
+    case 'blockDocumentImage':
+      return BlockDocumentImageBlock.parse({
         id,
         type: 'image',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
-    case 'blocksDocumentChartImage':
-      return BlocksDocumentChartImageBlock.parse({
+    case 'blockDocumentChartImage':
+      return BlockDocumentChartImageBlock.parse({
         id,
         type: 'chartImage',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
-    case 'blocksDocumentChart':
-      return BlocksDocumentChartBlock.parse({
+    case 'blockDocumentChart':
+      return BlockDocumentChartBlock.parse({
         id,
         type: 'chart',
         tableName: node.attrs?.tableName,
@@ -346,8 +347,8 @@ export function blocksDocumentNodeToBlock(
         selectionGroupId: optionalString(node.attrs?.selectionGroupId),
         caption: optionalString(node.attrs?.caption),
       });
-    case 'blocksDocumentStatefulBlock':
-      return BlocksDocumentStatefulBlockBlock.parse({
+    case 'blockDocumentStatefulBlock':
+      return BlockDocumentStatefulBlockBlock.parse({
         id,
         type: 'statefulBlock',
         blockType: node.attrs?.blockType,
@@ -361,10 +362,10 @@ export function blocksDocumentNodeToBlock(
   }
 }
 
-export function blocksDocumentContentToBlocks(
-  content: BlocksDocumentContent,
-): BlocksDocumentBlock[] {
+export function blockDocumentContentToBlocks(
+  content: BlockDocumentContent,
+): BlockDocumentBlock[] {
   return content.content
-    .map((node) => blocksDocumentNodeToBlock(node))
-    .filter((block): block is BlocksDocumentBlock => Boolean(block));
+    .map((node) => blockDocumentNodeToBlock(node))
+    .filter((block): block is BlockDocumentBlock => Boolean(block));
 }

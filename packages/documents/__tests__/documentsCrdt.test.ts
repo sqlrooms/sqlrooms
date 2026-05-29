@@ -11,9 +11,9 @@ import {createCrdtSlice, type CrdtSliceState} from '@sqlrooms/crdt';
 import {LoroDoc} from 'loro-crdt';
 import {createStore} from 'zustand';
 import {
-  createBlocksDocumentsSlice,
+  createBlockDocumentsSlice,
   createDocumentsSlice,
-  type BlocksDocumentsSliceState,
+  type BlockDocumentsSliceState,
   type DocumentsSliceState,
 } from '../src';
 import {createDocumentsCrdtMirror} from '../src/crdt';
@@ -21,7 +21,7 @@ import {createDocumentsCrdtMirror} from '../src/crdt';
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
   DocumentsSliceState &
-  BlocksDocumentsSliceState &
+  BlockDocumentsSliceState &
   CrdtSliceState;
 
 function createTestStore(doc: LoroDoc) {
@@ -34,9 +34,9 @@ function createTestStore(doc: LoroDoc) {
       },
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
-    'blocks-document': {
-      label: 'Blocks Document',
-      defaultTitle: 'Blocks Document',
+    'block-document': {
+      label: 'Block Document',
+      defaultTitle: 'Block Document',
     },
   });
 
@@ -44,7 +44,7 @@ function createTestStore(doc: LoroDoc) {
     ...createBaseRoomSlice()(set, get, store),
     ...createArtifactsSlice<TestRoomState>({artifactTypes})(set, get, store),
     ...createDocumentsSlice<TestRoomState>({now: () => 123})(set, get, store),
-    ...createBlocksDocumentsSlice<TestRoomState>({now: () => 456})(
+    ...createBlockDocumentsSlice<TestRoomState>({now: () => 456})(
       set,
       get,
       store,
@@ -182,17 +182,17 @@ describe('documents CRDT mirrors', () => {
     ]);
   });
 
-  it('mirrors blocks documents and hosted stateful block references', async () => {
+  it('mirrors block documents and hosted stateful block references', async () => {
     const docA = new LoroDoc();
     const storeA = createTestStore(docA);
     await storeA.getState().crdt.initialize();
 
-    const blocksDocumentId = storeA.getState().artifacts.createArtifact({
-      id: 'blocks-document-1',
-      type: 'blocks-document',
-      title: 'Blocks Document',
+    const blockDocumentId = storeA.getState().artifacts.createArtifact({
+      id: 'block-document-1',
+      type: 'block-document',
+      title: 'Block Document',
     });
-    storeA.getState().blocksDocuments.appendBlocks(blocksDocumentId, [
+    storeA.getState().blockDocuments.appendBlocks(blockDocumentId, [
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
       {
         id: 'chart',
@@ -224,40 +224,40 @@ describe('documents CRDT mirrors', () => {
     const storeB = createTestStore(docB);
     await storeB.getState().crdt.initialize();
     await waitForCondition(() =>
-      Boolean(storeB.getState().artifacts.getArtifact(blocksDocumentId)),
+      Boolean(storeB.getState().artifacts.getArtifact(blockDocumentId)),
     );
 
     expect(
-      storeB.getState().artifacts.getArtifact(blocksDocumentId),
+      storeB.getState().artifacts.getArtifact(blockDocumentId),
     ).toMatchObject({
-      id: blocksDocumentId,
-      type: 'blocks-document',
-      title: 'Blocks Document',
+      id: blockDocumentId,
+      type: 'block-document',
+      title: 'Block Document',
       visibility: 'workspace',
     });
-    expect(
-      storeB.getState().blocksDocuments.getBlocks(blocksDocumentId),
-    ).toEqual([
-      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
-      {
-        id: 'chart',
-        type: 'chart',
-        tableName: 'sales',
-        config: {
-          chartType: 'histogram',
-          settings: {field: 'revenue'},
+    expect(storeB.getState().blockDocuments.getBlocks(blockDocumentId)).toEqual(
+      [
+        {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+        {
+          id: 'chart',
+          type: 'chart',
+          tableName: 'sales',
+          config: {
+            chartType: 'histogram',
+            settings: {field: 'revenue'},
+          },
+          selectionGroupId: 'overview',
         },
-        selectionGroupId: 'overview',
-      },
-      {
-        id: 'dashboard',
-        type: 'statefulBlock',
-        blockType: 'dashboard',
-        blockInstanceId: 'dashboard-embedded-1',
-        ownership: 'owned',
-        title: 'Embedded Dashboard',
-      },
-    ]);
+        {
+          id: 'dashboard',
+          type: 'statefulBlock',
+          blockType: 'dashboard',
+          blockInstanceId: 'dashboard-embedded-1',
+          ownership: 'owned',
+          title: 'Embedded Dashboard',
+        },
+      ],
+    );
   });
 
   it('preserves falsy asset metadata from incoming CRDT snapshots', () => {

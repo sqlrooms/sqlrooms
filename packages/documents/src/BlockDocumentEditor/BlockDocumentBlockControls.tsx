@@ -39,10 +39,10 @@ import {
   useState,
 } from 'react';
 import {
-  type BlocksDocumentStatefulBlockType,
-  useBlocksDocumentStatefulBlockTypes,
-} from '../BlocksDocumentStatefulBlockRendererContext';
-import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
+  type BlockDocumentStatefulBlockType,
+  useBlockDocumentStatefulBlockTypes,
+} from '../BlockDocumentStatefulBlockRendererContext';
+import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
 
 type BlockControlState = {
   element: HTMLElement;
@@ -52,7 +52,7 @@ type BlockControlState = {
 
 type DraggableNode = NonNullable<ReturnType<Editor['state']['doc']['nodeAt']>>;
 
-type BlocksDocumentBlockControlsProps = {
+type BlockDocumentBlockControlsProps = {
   scrollElement: HTMLElement | null;
 };
 
@@ -107,7 +107,7 @@ function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
 }
 
 function buildStatefulBlockMenuItems(
-  blockTypes: BlocksDocumentStatefulBlockType[],
+  blockTypes: BlockDocumentStatefulBlockType[],
 ): BlockMenuItem[] {
   return blockTypes.map((blockType) => {
     const label = blockType.label ?? labelFromBlockType(blockType.blockType);
@@ -118,7 +118,7 @@ function buildStatefulBlockMenuItems(
       createNode:
         blockType.createNode ??
         ((id: string) => ({
-          type: 'blocksDocumentStatefulBlock',
+          type: 'blockDocumentStatefulBlock',
           attrs: {
             id,
             blockType: blockType.blockType,
@@ -133,7 +133,7 @@ function buildStatefulBlockMenuItems(
 }
 
 function buildBlockMenuItems(
-  statefulBlockTypes: BlocksDocumentStatefulBlockType[],
+  statefulBlockTypes: BlockDocumentStatefulBlockType[],
 ): BlockMenuItem[] {
   return [
     {
@@ -219,7 +219,7 @@ function buildBlockMenuItems(
       description: 'Document image block',
       icon: ImageIcon,
       createNode: (id) => ({
-        type: 'blocksDocumentImage',
+        type: 'blockDocumentImage',
         attrs: {id, assetId: '', caption: ''},
       }),
     },
@@ -228,7 +228,7 @@ function buildBlockMenuItems(
       description: 'Standalone chart block',
       icon: BarChart3Icon,
       createNode: (id) => ({
-        type: 'blocksDocumentChart',
+        type: 'blockDocumentChart',
         attrs: {id, tableName: '', config: {}, caption: ''},
       }),
     },
@@ -236,12 +236,11 @@ function buildBlockMenuItems(
   ];
 }
 
-export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> = ({
-  scrollElement,
-}) => {
-  const {editor, readOnly, generateBlockId} =
-    useBlocksDocumentEditorContext();
-  const statefulBlockTypes = useBlocksDocumentStatefulBlockTypes();
+export const BlockDocumentBlockControls: FC<
+  BlockDocumentBlockControlsProps
+> = ({scrollElement}) => {
+  const {editor, readOnly, generateBlockId} = useBlockDocumentEditorContext();
+  const statefulBlockTypes = useBlockDocumentStatefulBlockTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
@@ -391,7 +390,7 @@ export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> =
     dragSourceRef.current = {pos: activeBlock.pos, node};
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData(
-      'application/x-sqlrooms-blocks-document-block',
+      'application/x-sqlrooms-block-document-block',
       'move',
     );
   };

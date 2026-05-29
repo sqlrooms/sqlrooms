@@ -8,7 +8,7 @@
 - [x] [Stage 4: Dashboard Block Adapter](#stage-4-dashboard-block-adapter)
 - [x] [Stage 5: Pivot Block Adapter](#stage-5-pivot-block-adapter)
 - [x] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
-- [x] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
+- [x] [Stage 7: Block Document Stateful Block Host](#stage-7-block-document-stateful-block-host)
 - [x] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
 - [x] [Stage 9: AI and Command Integration](#stage-9-ai-and-command-integration)
 - [x] [Stage 10: Migration and Package Boundary Decision](#stage-10-migration-and-package-boundary-decision)
@@ -34,7 +34,7 @@ Artifact/resource shell
   - id/title/type/lifecycle/tab/current selection
   - body: one stateful block or one block container
 
-Blocks document
+Block document
   - artifact shell whose body is a block tree/container
 
 Notebook
@@ -51,7 +51,7 @@ The desired end state is one mapping source:
 const ARTIFACT_TYPES = defineArtifactTypes({
   dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
   notebook: createArtifactTypeFromStatefulBlock(notebookBlockDefinition),
-  analysis: createBlocksDocumentArtifactType(blocksDocumentDefinition),
+  analysis: createBlockDocumentArtifactType(blockDocumentDefinition),
   document: createArtifactTypeFromStatefulBlock(
     markdownDocumentBlockDefinition,
   ),
@@ -99,7 +99,7 @@ when their main purpose is hosting and composing other blocks.
   dashboard/panel ids.
 - Dashboard panels are already block-like subunits with ids, types, titles, and
   configs.
-- Dashboards inside blocks documents now use direct stateful block hosting
+- Dashboards inside block documents now use direct stateful block hosting
   rather than artifact embeds.
 
 ### Pivot Tables
@@ -112,7 +112,7 @@ when their main purpose is hosting and composing other blocks.
   pivot can participate as an executable/cell-like implementation as well as a
   standalone view.
 
-### Blocks Documents
+### Block Documents
 
 - `@sqlrooms/documents` can host content blocks and artifact/root-resource
   embeds.
@@ -123,7 +123,7 @@ when their main purpose is hosting and composing other blocks.
 
 ### Other Artifact Types
 
-- `analysis` is a shell around `BlocksDocument` state.
+- `analysis` is a shell around `BlockDocument` state.
 - `document` is a shell around Markdown document state.
 - `notebook` is a shell around notebook/cell artifact state.
 - `canvas` is a shell around canvas state.
@@ -146,7 +146,7 @@ The sequence should be:
    generated relations and runtime status.
 5. Convert current artifact type definitions to use the single bridge where
    practical, so mappings are not maintained twice.
-6. Let blocks documents host stateful block instances directly.
+6. Let block documents host stateful block instances directly.
 7. Decide whether any public package/API changes are justified.
 
 ## Stages
@@ -417,7 +417,7 @@ Implementation notes:
   - `dashboard`
   - `pivot`
   - `document` / Markdown document
-- Keep `analysis` as a BlocksDocument container artifact, not a reusable
+- Keep `analysis` as a BlockDocument container artifact, not a reusable
   stateful block implementation.
 - Defer container/runtime-heavy artifact types until their contracts are clearer:
   - `notebook`
@@ -469,9 +469,9 @@ Tests/checks:
 - `pnpm build`
 - Manual browser smoke checks for each converted top-level artifact type.
 
-### Stage 7: Blocks Document Stateful Block Host
+### Stage 7: Block Document Stateful Block Host
 
-Let blocks documents host stateful block instances directly, starting with one
+Let block documents host stateful block instances directly, starting with one
 candidate such as dashboard or pivot.
 
 Implementation notes:
@@ -495,25 +495,25 @@ type StatefulBlockEmbed = {
   block definition renderer.
 - Decide whether creating the document block creates a new block instance or
   references an existing one.
-- Remove artifact embeds from blocks documents if backward compatibility is not
+- Remove artifact embeds from block documents if backward compatibility is not
   required.
 
 Acceptance criteria:
 
-- A blocks document can host at least one stateful block without wrapping it as
+- A block document can host at least one stateful block without wrapping it as
   an artifact first.
 - Multiple instances in one document have independent backing state unless they
   intentionally reference the same instance id.
-- Blocks documents no longer expose artifact embed authoring or rendering
+- Block documents no longer expose artifact embed authoring or rendering
   paths.
 
 Likely files/modules:
 
-- `packages/documents/src/BlocksDocumentSliceConfig.ts`
-- `packages/documents/src/BlocksDocumentEditor/extensions/*`
-- `packages/documents/src/BlocksDocumentEditor/node-views/*`
-- `packages/documents/src/BlocksDocumentCommands.ts`
-- `packages/documents/src/BlocksDocumentAi.ts`
+- `packages/documents/src/BlockDocumentSliceConfig.ts`
+- `packages/documents/src/BlockDocumentEditor/extensions/*`
+- `packages/documents/src/BlockDocumentEditor/node-views/*`
+- `packages/documents/src/BlockDocumentCommands.ts`
+- `packages/documents/src/BlockDocumentAi.ts`
 - Candidate feature-package stateful block adapter
 - CLI document renderer providers
 
@@ -539,7 +539,7 @@ Implementation notes:
 
 - Decide and document instance ownership:
   - owned by artifact shell
-  - owned by blocks document block
+  - owned by block document block
   - shared reference
   - external resource reference
 - Add metadata if needed:
@@ -558,7 +558,7 @@ type StatefulBlockReference = {
 
 Acceptance criteria:
 
-- Deleting a blocks document does not accidentally delete shared dashboard/pivot
+- Deleting a block document does not accidentally delete shared dashboard/pivot
   state.
 - Deleting an owned stateful block cleans up backing state and runtime caches.
 - Title/rename behavior is predictable.
@@ -585,7 +585,7 @@ single-block artifacts depending on context.
 
 Implementation notes:
 
-- Blocks document commands should be able to:
+- Block document commands should be able to:
   - create dashboard/pivot as hosted stateful block
   - wrap dashboard/pivot as artifact shell when the user asks for a top-level
     artifact
@@ -598,15 +598,15 @@ Implementation notes:
 
 Acceptance criteria:
 
-- AI can create a dashboard/pivot block in a blocks document.
+- AI can create a dashboard/pivot block in a block document.
 - AI can create a top-level dashboard/pivot artifact using the same underlying
   block implementation.
 - Tool output clearly reports ownership and instance ids.
 
 Likely files/modules:
 
-- `packages/documents/src/BlocksDocumentCommands.ts`
-- `packages/documents/src/BlocksDocumentAi.ts`
+- `packages/documents/src/BlockDocumentCommands.ts`
+- `packages/documents/src/BlockDocumentAi.ts`
 - `packages/artifacts/src/ai.ts`
 - `apps/sqlrooms-cli-ui/src/store.ts`
 - Candidate block adapter packages
@@ -745,7 +745,7 @@ What worked:
 
 What still needs proof:
 
-- A real dashboard or blocks-document adapter must show whether the contract
+- A real dashboard or block-document adapter must show whether the contract
   shape is ergonomic outside tests.
 - Artifact shell rendering currently passes only shell metadata; real adapters
   may need attrs, read-only mode, or host-specific context.
@@ -844,7 +844,7 @@ What worked:
   block definitions and can be wrapped as top-level artifacts through the same
   bridge.
 - Markdown document is a useful third data point because it is a report-like
-  text surface that may also be useful inside a blocks document.
+  text surface that may also be useful inside a block document.
 - The CLI `document` artifact no longer needs its own hand-written lifecycle
   mapping; it is generated from `createMarkdownDocumentBlockDefinition(...)`.
 - The Analysis insert menu can expose `Document` as a direct hosted stateful
@@ -852,7 +852,7 @@ What worked:
 
 What changed in the model:
 
-- `analysis` should remain a BlocksDocument container artifact. It is meant to
+- `analysis` should remain a BlockDocument container artifact. It is meant to
   host and compose blocks, not to be embedded as a reusable single-surface block.
 - `notebook`, `canvas`, and `app` remain deferred until their ownership,
   execution, or runtime lifecycles are clearer.
@@ -873,8 +873,8 @@ needs to become the next design focus.
 
 What worked:
 
-- Blocks documents now have a `statefulBlock` DTO and a
-  `blocksDocumentStatefulBlock` Tiptap node for direct stateful block hosting.
+- Block documents now have a `statefulBlock` DTO and a
+  `blockDocumentStatefulBlock` Tiptap node for direct stateful block hosting.
 - Dashboard, pivot, and Markdown document can be inserted into Analysis
   documents as direct stateful blocks without creating hidden embedded artifact
   shells.
@@ -905,10 +905,10 @@ have enough lifecycle semantics for normal create, rename, and delete flows.
 
 What worked:
 
-- `createBlocksDocumentsSlice()` now accepts host callbacks for owned stateful
+- `createBlockDocumentsSlice()` now accepts host callbacks for owned stateful
   block delete and rename events.
 - Removing an owned dashboard/pivot/document block, replacing document content,
-  or deleting the containing blocks document can clean up backing feature state.
+  or deleting the containing block document can clean up backing feature state.
 - `shared` and `external` stateful block references are intentionally not
   deleted by the documents slice.
 - Block `title` changes can be synchronized into backing state through a host
@@ -937,7 +937,7 @@ needed for AI-authored dashboard/pivot/document content.
 
 What worked:
 
-- `createBlocksDocumentCommands()` now exposes
+- `createBlockDocumentCommands()` now exposes
   `create-stateful-block`.
 - Hosts can register supported stateful block command types with default
   titles and backing-state creation hooks.
@@ -987,11 +987,11 @@ Recommended next step:
 - 2026-05-29: Completed Stage 6 by adding
   `createMarkdownDocumentBlockDefinition(...)`, converting the CLI Markdown
   document artifact to the single-block shell bridge, and intentionally keeping
-  `analysis` as a BlocksDocument container artifact.
+  `analysis` as a BlockDocument container artifact.
 - 2026-05-29: Completed Stage 7 by adding a direct
-  `blocksDocumentStatefulBlock` host node, renderer registry, DTO conversion,
+  `blockDocumentStatefulBlock` host node, renderer registry, DTO conversion,
   and Analysis document dashboard/pivot/document stateful block renderers.
-- 2026-05-29: Removed blocks document artifact embeds from the target model and
+- 2026-05-29: Removed block document artifact embeds from the target model and
   implementation so documents compose direct blocks only.
 - 2026-05-29: Completed Stage 8 by adding owned stateful block delete and rename
   lifecycle callbacks to `@sqlrooms/documents`, wiring CLI dashboard/pivot/
@@ -1006,3 +1006,7 @@ Recommended next step:
 - 2026-05-29: Hardened owned stateful block lifecycle by normalizing
   copy/paste/duplicate flows to fresh block and instance ids, and by adding an
   owned stateful block create callback for backing-state initialization.
+- 2026-05-29: Renamed the generic document terminology to the singular
+  `BlockDocument*`/`blockDocument*` form, including command ids, CRDT keys,
+  Tiptap node names, public exports, tests, and docs. CLI `analysis` remains
+  the user-facing artifact name.

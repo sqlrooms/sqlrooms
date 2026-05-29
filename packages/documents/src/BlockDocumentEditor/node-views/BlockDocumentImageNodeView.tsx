@@ -1,30 +1,27 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import type {FC} from 'react';
-import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
+import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {
   documentAssetToDataUrl,
   optionalString,
   unknownRecord,
 } from './nodeViewUtils';
 
-type BlocksDocumentNodeViewProps = {
+type BlockDocumentNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
-type BlocksDocumentImageNodeViewProps = BlocksDocumentNodeViewProps & {
+type BlockDocumentImageNodeViewProps = BlockDocumentNodeViewProps & {
   label?: string;
 };
 
-export const BlocksDocumentImageNodeView: FC<BlocksDocumentImageNodeViewProps> = ({
-  node,
-  selected,
-  updateAttributes,
-  label = 'Image',
-}) => {
-  const {assets, readOnly} = useBlocksDocumentEditorContext();
+export const BlockDocumentImageNodeView: FC<
+  BlockDocumentImageNodeViewProps
+> = ({node, selected, updateAttributes, label = 'Image'}) => {
+  const {assets, readOnly} = useBlockDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
   const assetId = optionalString(attrs.assetId);
   const caption = optionalString(attrs.caption);

@@ -1,22 +1,17 @@
 import {Button, cn} from '@sqlrooms/ui';
-import {
-  BarChart3Icon,
-  ImageIcon,
-  PilcrowIcon,
-} from 'lucide-react';
+import {BarChart3Icon, ImageIcon, PilcrowIcon} from 'lucide-react';
 import type {FC} from 'react';
 import {RichToolbar} from '../MarkdownDocumentEditor/RichToolbar';
-import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
+import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
 
-export type BlocksDocumentToolbarProps = {
+export type BlockDocumentToolbarProps = {
   className?: string;
 };
 
-export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
+export const BlockDocumentToolbar: FC<BlockDocumentToolbarProps> = ({
   className,
 }) => {
-  const {editor, readOnly, generateBlockId} =
-    useBlocksDocumentEditorContext();
+  const {editor, readOnly, generateBlockId} = useBlockDocumentEditorContext();
 
   const insertAtomBlock = (type: string, attrs: Record<string, unknown>) => {
     editor
@@ -68,7 +63,7 @@ export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
         title="Insert image block"
         aria-label="Insert image block"
         onClick={() =>
-          insertAtomBlock('blocksDocumentImage', {assetId: '', caption: ''})
+          insertAtomBlock('blockDocumentImage', {assetId: '', caption: ''})
         }
       >
         <ImageIcon className="h-4 w-4" />
@@ -82,7 +77,7 @@ export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
         title="Insert chart block"
         aria-label="Insert chart block"
         onClick={() =>
-          insertAtomBlock('blocksDocumentChart', {
+          insertAtomBlock('blockDocumentChart', {
             tableName: '',
             config: {},
             caption: '',

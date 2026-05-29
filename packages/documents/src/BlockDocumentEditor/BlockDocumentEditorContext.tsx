@@ -1,35 +1,35 @@
 import type {Editor} from '@tiptap/react';
 import {createContext, useContext} from 'react';
 import type {
-  BlocksDocumentContent,
-  BlocksDocumentNode,
-} from '../BlocksDocumentSliceConfig';
-import type {BlocksDocumentMutationMetadata} from '../BlocksDocumentsSlice';
+  BlockDocumentContent,
+  BlockDocumentNode,
+} from '../BlockDocumentSliceConfig';
+import type {BlockDocumentMutationMetadata} from '../BlockDocumentsSlice';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
 
-export type BlocksDocumentEditorChangeHandler = (
-  value: BlocksDocumentContent,
-  metadata?: BlocksDocumentMutationMetadata,
+export type BlockDocumentEditorChangeHandler = (
+  value: BlockDocumentContent,
+  metadata?: BlockDocumentMutationMetadata,
 ) => void;
 
-export type BlocksDocumentEditorContextValue = {
+export type BlockDocumentEditorContextValue = {
   editor: Editor | null;
   documentId: string;
-  value: BlocksDocumentContent;
+  value: BlockDocumentContent;
   assets: Record<string, DocumentAsset>;
-  onChange: BlocksDocumentEditorChangeHandler;
+  onChange: BlockDocumentEditorChangeHandler;
   readOnly: boolean;
   generateBlockId: () => string;
 };
 
-export const BlocksDocumentEditorContext =
-  createContext<BlocksDocumentEditorContextValue | null>(null);
+export const BlockDocumentEditorContext =
+  createContext<BlockDocumentEditorContextValue | null>(null);
 
-export function useBlocksDocumentEditorContext() {
-  const context = useContext(BlocksDocumentEditorContext);
+export function useBlockDocumentEditorContext() {
+  const context = useContext(BlockDocumentEditorContext);
   if (!context) {
     throw new Error(
-      'BlocksDocumentEditor compound components must be used within BlocksDocumentEditor.Root',
+      'BlockDocumentEditor compound components must be used within BlockDocumentEditor.Root',
     );
   }
   return context;
@@ -40,7 +40,7 @@ function defaultGenerateBlockId() {
   if (randomUUID) {
     return randomUUID.call(globalThis.crypto);
   }
-  return `blocks-document-block-${Date.now()}-${Math.random()
+  return `block-document-block-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2)}`;
 }
@@ -49,7 +49,7 @@ function stringAttr(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-type BlocksDocumentNormalizationState = {
+type BlockDocumentNormalizationState = {
   seenBlockIds: Set<string>;
   seenOwnedStatefulBlockKeys: Set<string>;
 };
@@ -76,10 +76,10 @@ function uniqueOwnedStatefulBlockInstanceId(
 }
 
 function cloneNodeWithNormalizedIds(
-  node: BlocksDocumentNode,
+  node: BlockDocumentNode,
   generateBlockId: () => string,
-  state: BlocksDocumentNormalizationState,
-): BlocksDocumentNode {
+  state: BlockDocumentNormalizationState,
+): BlockDocumentNode {
   const content = node.content?.map((child) => ({...child}));
   const attrs = {...node.attrs};
   const existingId = stringAttr(attrs.id);
@@ -90,7 +90,7 @@ function cloneNodeWithNormalizedIds(
   state.seenBlockIds.add(id);
   attrs.id = id;
 
-  if (node.type === 'blocksDocumentStatefulBlock') {
+  if (node.type === 'blockDocumentStatefulBlock') {
     const ownership = stringAttr(attrs.ownership) ?? 'owned';
     const blockType = stringAttr(attrs.blockType);
     const blockInstanceId = stringAttr(attrs.blockInstanceId) ?? id;
@@ -115,7 +115,7 @@ function cloneNodeWithNormalizedIds(
   };
 }
 
-export function hasUnnormalizedBlocksDocumentIds(value: BlocksDocumentContent) {
+export function hasUnnormalizedBlockDocumentIds(value: BlockDocumentContent) {
   const seenBlockIds = new Set<string>();
   const seenOwnedStatefulBlockKeys = new Set<string>();
   for (const node of value.content) {
@@ -123,7 +123,7 @@ export function hasUnnormalizedBlocksDocumentIds(value: BlocksDocumentContent) {
     if (!id || seenBlockIds.has(id)) return true;
     seenBlockIds.add(id);
 
-    if (node.type !== 'blocksDocumentStatefulBlock') continue;
+    if (node.type !== 'blockDocumentStatefulBlock') continue;
     const ownership = stringAttr(node.attrs?.ownership) ?? 'owned';
     if (ownership !== 'owned') continue;
     const blockType = stringAttr(node.attrs?.blockType);
@@ -135,11 +135,11 @@ export function hasUnnormalizedBlocksDocumentIds(value: BlocksDocumentContent) {
   return false;
 }
 
-export function normalizeBlocksDocumentContent(
-  value: BlocksDocumentContent,
+export function normalizeBlockDocumentContent(
+  value: BlockDocumentContent,
   generateBlockId: () => string = defaultGenerateBlockId,
-): BlocksDocumentContent {
-  const state: BlocksDocumentNormalizationState = {
+): BlockDocumentContent {
+  const state: BlockDocumentNormalizationState = {
     seenBlockIds: new Set(),
     seenOwnedStatefulBlockKeys: new Set(),
   };
@@ -152,6 +152,6 @@ export function normalizeBlocksDocumentContent(
   };
 }
 
-export function createDefaultBlocksDocumentBlockId() {
+export function createDefaultBlockDocumentBlockId() {
   return defaultGenerateBlockId();
 }

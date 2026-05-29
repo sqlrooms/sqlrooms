@@ -1,6 +1,6 @@
 import type {
-  BlocksDocumentStatefulBlockCommandType,
-  BlocksDocumentStatefulBlockType,
+  BlockDocumentStatefulBlockCommandType,
+  BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
 import type {RoomState} from './store-types';
 
@@ -75,7 +75,7 @@ export function createStatefulBlockTypes({
   getState,
 }: {
   getState: () => RoomState;
-}): BlocksDocumentStatefulBlockType[] {
+}): BlockDocumentStatefulBlockType[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
     const config = STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
     return {
@@ -86,7 +86,7 @@ export function createStatefulBlockTypes({
         const state = getState();
         config.ensureState(state, blockId, config.embeddedTitle);
         return {
-          type: 'blocksDocumentStatefulBlock',
+          type: 'blockDocumentStatefulBlock',
           attrs: {
             id: blockId,
             blockType: config.artifactType,
@@ -101,7 +101,7 @@ export function createStatefulBlockTypes({
   });
 }
 
-export function createStatefulBlockCommandTypes(): BlocksDocumentStatefulBlockCommandType<RoomState>[] {
+export function createStatefulBlockCommandTypes(): BlockDocumentStatefulBlockCommandType<RoomState>[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
     const config = STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
     return {

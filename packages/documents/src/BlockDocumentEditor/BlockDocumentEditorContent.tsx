@@ -2,17 +2,17 @@ import {cn} from '@sqlrooms/ui';
 import {EditorContent} from '@tiptap/react';
 import type {FC} from 'react';
 import {useState} from 'react';
-import {BlocksDocumentBlockControls} from './BlocksDocumentBlockControls';
-import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
+import {BlockDocumentBlockControls} from './BlockDocumentBlockControls';
+import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
 
-export type BlocksDocumentEditorContentProps = {
+export type BlockDocumentEditorContentProps = {
   className?: string;
 };
 
-export const BlocksDocumentEditorContent: FC<
-  BlocksDocumentEditorContentProps
+export const BlockDocumentEditorContent: FC<
+  BlockDocumentEditorContentProps
 > = ({className}) => {
-  const {editor} = useBlocksDocumentEditorContext();
+  const {editor} = useBlockDocumentEditorContext();
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
@@ -23,7 +23,7 @@ export const BlocksDocumentEditorContent: FC<
       className={cn('relative h-full min-h-0 flex-1 overflow-auto', className)}
     >
       <EditorContent editor={editor} className="min-h-full" />
-      <BlocksDocumentBlockControls scrollElement={scrollElement} />
+      <BlockDocumentBlockControls scrollElement={scrollElement} />
     </div>
   );
 };

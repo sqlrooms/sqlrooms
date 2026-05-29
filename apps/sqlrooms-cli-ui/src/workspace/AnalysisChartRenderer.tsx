@@ -1,4 +1,4 @@
-import type {BlocksDocumentChartRendererProps} from '@sqlrooms/documents';
+import type {BlockDocumentChartRendererProps} from '@sqlrooms/documents';
 import {
   MosaicChartSettingsPanel,
   MosaicChartView,
@@ -11,12 +11,12 @@ import {Settings2Icon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import {parseAnalysisChartConfig} from './analysisChartConfig';
 
-function getBlocksDocumentChartSelectionName({
+function getBlockDocumentChartSelectionName({
   documentId,
   blockId,
   selectionGroupId,
 }: Pick<
-  BlocksDocumentChartRendererProps,
+  BlockDocumentChartRendererProps,
   'documentId' | 'blockId' | 'selectionGroupId'
 >) {
   return selectionGroupId
@@ -24,10 +24,10 @@ function getBlocksDocumentChartSelectionName({
     : `analysis:${documentId}:chart-block:${blockId}:brush`;
 }
 
-function getBlocksDocumentChartRuntimeKey({
+function getBlockDocumentChartRuntimeKey({
   documentId,
   blockId,
-}: Pick<BlocksDocumentChartRendererProps, 'documentId' | 'blockId'>) {
+}: Pick<BlockDocumentChartRendererProps, 'documentId' | 'blockId'>) {
   return `analysis:${documentId}:chart-block:${blockId}`;
 }
 
@@ -46,7 +46,7 @@ export const AnalysisChartRenderer = ({
   onTableNameChange,
   onConfigChange,
   onCaptionChange,
-}: BlocksDocumentChartRendererProps) => {
+}: BlockDocumentChartRendererProps) => {
   const onTableNameChangeRef = useRef(onTableNameChange);
   const onConfigChangeRef = useRef(onConfigChange);
 
@@ -75,12 +75,12 @@ export const AnalysisChartRenderer = ({
   );
   const configKey = stableStringify(config);
   const chartConfig = parsedConfig.success ? parsedConfig.config : undefined;
-  const selectionName = getBlocksDocumentChartSelectionName({
+  const selectionName = getBlockDocumentChartSelectionName({
     documentId,
     blockId,
     selectionGroupId,
   });
-  const runtimeKey = getBlocksDocumentChartRuntimeKey({documentId, blockId});
+  const runtimeKey = getBlockDocumentChartRuntimeKey({documentId, blockId});
 
   const handleSettingsOpenChange = useCallback(
     (settingsOpen: boolean) => {

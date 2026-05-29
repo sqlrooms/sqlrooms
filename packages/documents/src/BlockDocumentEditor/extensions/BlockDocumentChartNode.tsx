@@ -1,8 +1,8 @@
 import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
-import {BlocksDocumentChartNodeView} from '../node-views/BlocksDocumentChartNodeView';
+import {BlockDocumentChartNodeView} from '../node-views/BlockDocumentChartNodeView';
 
-export const BlocksDocumentChartNode = Node.create({
-  name: 'blocksDocumentChart',
+export const BlockDocumentChartNode = Node.create({
+  name: 'blockDocumentChart',
   group: 'block',
   atom: true,
   selectable: true,
@@ -20,17 +20,17 @@ export const BlocksDocumentChartNode = Node.create({
   },
 
   parseHTML() {
-    return [{tag: 'div[data-type="blocks-document-chart"]'}];
+    return [{tag: 'div[data-type="block-document-chart"]'}];
   },
 
   renderHTML({HTMLAttributes}) {
     return [
       'div',
-      mergeAttributes(HTMLAttributes, {'data-type': 'blocks-document-chart'}),
+      mergeAttributes(HTMLAttributes, {'data-type': 'block-document-chart'}),
     ];
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(BlocksDocumentChartNodeView);
+    return ReactNodeViewRenderer(BlockDocumentChartNodeView);
   },
 });

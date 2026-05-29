@@ -67,11 +67,11 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
-  createBlocksDocumentAiInstructions,
-  BlocksDocumentsSliceConfig,
-  createBlocksDocumentCommands,
-  createBlocksDocumentAuthoringInstructions,
-  createBlocksDocumentsSlice,
+  createBlockDocumentAiInstructions,
+  BlockDocumentsSliceConfig,
+  createBlockDocumentCommands,
+  createBlockDocumentAuthoringInstructions,
+  createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DOCUMENT_AI_INSTRUCTIONS,
@@ -115,13 +115,13 @@ export type {RoomState} from './store-types';
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const ANALYSIS_COMMAND_OWNER = '@sqlrooms/documents/analysis';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
-const ANALYSIS_BLOCKS_DOCUMENT_OPTIONS = {
+const ANALYSIS_BLOCK_DOCUMENT_OPTIONS = {
   artifactType: 'analysis',
   artifactLabel: 'Analysis',
   commandNamespace: 'analysis',
   commandGroup: 'Analysis',
   defaultTitle: 'Analysis',
-  blocksDocumentAgentToolName: 'analysis_agent',
+  blockDocumentAgentToolName: 'analysis_agent',
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -209,7 +209,7 @@ const sliceConfigSchemas = {
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
   documents: DocumentsSliceConfig,
-  blocksDocuments: BlocksDocumentsSliceConfig,
+  blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -293,8 +293,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           registerCommandsForOwner(
             store,
             ANALYSIS_COMMAND_OWNER,
-            createBlocksDocumentCommands<RoomState>({
-              ...ANALYSIS_BLOCKS_DOCUMENT_OPTIONS,
+            createBlockDocumentCommands<RoomState>({
+              ...ANALYSIS_BLOCK_DOCUMENT_OPTIONS,
               statefulBlockTypes: createStatefulBlockCommandTypes(),
             }),
           );
@@ -513,7 +513,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createDocumentsSlice()(set, get, store),
 
-        ...createBlocksDocumentsSlice<RoomState>({
+        ...createBlockDocumentsSlice<RoomState>({
           onCreateOwnedStatefulBlock: ({
             blockInstanceId,
             blockType,
@@ -563,7 +563,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               sync: createCliCrdtSyncConnector(),
               mirrors: {
                 documentState: createDocumentsCrdtMirror<RoomState>({
-                  blocksDocumentArtifactTypes: ['analysis'],
+                  blockDocumentArtifactTypes: ['analysis'],
                 }),
               },
             })(set, get, store)
@@ -610,7 +610,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlocksDocumentAiInstructions(ANALYSIS_BLOCKS_DOCUMENT_OPTIONS)}\n\n${createBlocksDocumentAuthoringInstructions(ANALYSIS_BLOCKS_DOCUMENT_OPTIONS)}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(ANALYSIS_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(ANALYSIS_BLOCK_DOCUMENT_OPTIONS)}`,
             getRunContext: () => getRunContext(store),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

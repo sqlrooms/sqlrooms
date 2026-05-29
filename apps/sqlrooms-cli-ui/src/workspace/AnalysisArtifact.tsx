@@ -1,8 +1,8 @@
 import {
-  BlocksDocumentChartRendererProvider,
-  BlocksDocumentArtifact,
-  BlocksDocumentStatefulBlockRendererProvider,
-  type BlocksDocumentStatefulBlockRenderer,
+  BlockDocumentChartRendererProvider,
+  BlockDocumentArtifact,
+  BlockDocumentStatefulBlockRendererProvider,
+  type BlockDocumentStatefulBlockRenderer,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect, useMemo} from 'react';
@@ -22,7 +22,7 @@ const ANALYSIS_STATEFUL_BLOCK_RENDERERS = {
   document: AnalysisMarkdownDocumentBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
-  BlocksDocumentStatefulBlockRenderer
+  BlockDocumentStatefulBlockRenderer
 >;
 
 export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
@@ -30,15 +30,15 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
   );
-  const ensureBlocksDocument = useRoomStore(
-    (state) => state.blocksDocuments.ensureBlocksDocument,
+  const ensureBlockDocument = useRoomStore(
+    (state) => state.blockDocuments.ensureBlockDocument,
   );
 
   useEffect(() => {
     if (artifact?.type === 'analysis') {
-      ensureBlocksDocument(artifactId);
+      ensureBlockDocument(artifactId);
     }
-  }, [artifact?.type, artifactId, ensureBlocksDocument]);
+  }, [artifact?.type, artifactId, ensureBlockDocument]);
 
   const statefulBlockTypes = useMemo(
     () =>
@@ -53,13 +53,13 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   }
 
   return (
-    <BlocksDocumentChartRendererProvider renderer={AnalysisChartRenderer}>
-      <BlocksDocumentStatefulBlockRendererProvider
+    <BlockDocumentChartRendererProvider renderer={AnalysisChartRenderer}>
+      <BlockDocumentStatefulBlockRendererProvider
         renderers={ANALYSIS_STATEFUL_BLOCK_RENDERERS}
         blockTypes={statefulBlockTypes}
       >
-        <BlocksDocumentArtifact artifactId={artifactId} />
-      </BlocksDocumentStatefulBlockRendererProvider>
-    </BlocksDocumentChartRendererProvider>
+        <BlockDocumentArtifact artifactId={artifactId} />
+      </BlockDocumentStatefulBlockRendererProvider>
+    </BlockDocumentChartRendererProvider>
   );
 };

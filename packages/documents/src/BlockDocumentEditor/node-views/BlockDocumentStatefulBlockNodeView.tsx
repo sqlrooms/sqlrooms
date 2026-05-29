@@ -1,20 +1,20 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import {createElement, type FC} from 'react';
-import {useBlocksDocumentStatefulBlockRenderer} from '../../BlocksDocumentStatefulBlockRendererContext';
-import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
+import {useBlockDocumentStatefulBlockRenderer} from '../../BlockDocumentStatefulBlockRendererContext';
+import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
-type BlocksDocumentStatefulBlockNodeViewProps = {
+type BlockDocumentStatefulBlockNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
-export const BlocksDocumentStatefulBlockNodeView: FC<
-  BlocksDocumentStatefulBlockNodeViewProps
+export const BlockDocumentStatefulBlockNodeView: FC<
+  BlockDocumentStatefulBlockNodeViewProps
 > = ({node, selected, updateAttributes}) => {
-  const {documentId, readOnly} = useBlocksDocumentEditorContext();
+  const {documentId, readOnly} = useBlockDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const blockType = optionalString(attrs.blockType) ?? '';
@@ -22,7 +22,7 @@ export const BlocksDocumentStatefulBlockNodeView: FC<
   const ownership = optionalString(attrs.ownership);
   const title = optionalString(attrs.title);
   const caption = optionalString(attrs.caption);
-  const Renderer = useBlocksDocumentStatefulBlockRenderer(blockType);
+  const Renderer = useBlockDocumentStatefulBlockRenderer(blockType);
 
   return (
     <NodeViewWrapper

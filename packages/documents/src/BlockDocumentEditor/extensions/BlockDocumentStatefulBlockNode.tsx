@@ -1,8 +1,8 @@
 import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
-import {BlocksDocumentStatefulBlockNodeView} from '../node-views/BlocksDocumentStatefulBlockNodeView';
+import {BlockDocumentStatefulBlockNodeView} from '../node-views/BlockDocumentStatefulBlockNodeView';
 
-export const BlocksDocumentStatefulBlockNode = Node.create({
-  name: 'blocksDocumentStatefulBlock',
+export const BlockDocumentStatefulBlockNode = Node.create({
+  name: 'blockDocumentStatefulBlock',
   group: 'block',
   atom: true,
   selectable: true,
@@ -21,19 +21,19 @@ export const BlocksDocumentStatefulBlockNode = Node.create({
   },
 
   parseHTML() {
-    return [{tag: 'div[data-type="blocks-document-stateful-block"]'}];
+    return [{tag: 'div[data-type="block-document-stateful-block"]'}];
   },
 
   renderHTML({HTMLAttributes}) {
     return [
       'div',
       mergeAttributes(HTMLAttributes, {
-        'data-type': 'blocks-document-stateful-block',
+        'data-type': 'block-document-stateful-block',
       }),
     ];
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(BlocksDocumentStatefulBlockNodeView);
+    return ReactNodeViewRenderer(BlockDocumentStatefulBlockNodeView);
   },
 });

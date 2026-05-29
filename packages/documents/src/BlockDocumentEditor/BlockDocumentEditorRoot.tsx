@@ -14,30 +14,30 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import type {BlocksDocumentContent} from '../BlocksDocumentSliceConfig';
+import type {BlockDocumentContent} from '../BlockDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
 import {
-  BlocksDocumentBlockIdExtension,
+  BlockDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
-} from './extensions/BlocksDocumentBlockIdExtension';
-import {BlocksDocumentChartImageNode} from './extensions/BlocksDocumentChartImageNode';
-import {BlocksDocumentChartNode} from './extensions/BlocksDocumentChartNode';
-import {BlocksDocumentImageNode} from './extensions/BlocksDocumentImageNode';
-import {BlocksDocumentRichTextNode} from './extensions/BlocksDocumentRichTextNode';
-import {BlocksDocumentStatefulBlockNode} from './extensions/BlocksDocumentStatefulBlockNode';
+} from './extensions/BlockDocumentBlockIdExtension';
+import {BlockDocumentChartImageNode} from './extensions/BlockDocumentChartImageNode';
+import {BlockDocumentChartNode} from './extensions/BlockDocumentChartNode';
+import {BlockDocumentImageNode} from './extensions/BlockDocumentImageNode';
+import {BlockDocumentRichTextNode} from './extensions/BlockDocumentRichTextNode';
+import {BlockDocumentStatefulBlockNode} from './extensions/BlockDocumentStatefulBlockNode';
 import {
-  BlocksDocumentEditorContext,
-  type BlocksDocumentEditorChangeHandler,
-  createDefaultBlocksDocumentBlockId,
-  hasUnnormalizedBlocksDocumentIds,
-  normalizeBlocksDocumentContent,
-  type BlocksDocumentEditorContextValue,
-} from './BlocksDocumentEditorContext';
+  BlockDocumentEditorContext,
+  type BlockDocumentEditorChangeHandler,
+  createDefaultBlockDocumentBlockId,
+  hasUnnormalizedBlockDocumentIds,
+  normalizeBlockDocumentContent,
+  type BlockDocumentEditorContextValue,
+} from './BlockDocumentEditorContext';
 
-export type BlocksDocumentEditorRootProps = PropsWithChildren<{
+export type BlockDocumentEditorRootProps = PropsWithChildren<{
   documentId: string;
-  value: BlocksDocumentContent;
-  onChange: BlocksDocumentEditorChangeHandler;
+  value: BlockDocumentContent;
+  onChange: BlockDocumentEditorChangeHandler;
   assets?: Record<string, DocumentAsset>;
   syncRevision?: number;
   syncSourceId?: string;
@@ -52,14 +52,14 @@ function stableStringify(value: unknown) {
 function createEditorSourceId() {
   const randomUUID = globalThis.crypto?.randomUUID;
   if (randomUUID) {
-    return `blocks-document-editor:${randomUUID.call(globalThis.crypto)}`;
+    return `block-document-editor:${randomUUID.call(globalThis.crypto)}`;
   }
-  return `blocks-document-editor:${Date.now()}:${Math.random()
+  return `block-document-editor:${Date.now()}:${Math.random()
     .toString(36)
     .slice(2)}`;
 }
 
-export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
+export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   documentId,
   value,
   onChange,
@@ -67,7 +67,7 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
   syncRevision,
   syncSourceId,
   readOnly = false,
-  generateBlockId = createDefaultBlocksDocumentBlockId,
+  generateBlockId = createDefaultBlockDocumentBlockId,
   children,
 }) => {
   const onChangeRef = useRef(onChange);
@@ -85,7 +85,7 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
 
   const valueKey = stableStringify(value);
   const normalizedValue = useMemo(
-    () => normalizeBlocksDocumentContent(value, generateBlockId),
+    () => normalizeBlockDocumentContent(value, generateBlockId),
     [generateBlockId, value],
   );
   const normalizedValueKey = stableStringify(normalizedValue);
@@ -100,14 +100,14 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
       TableRow,
       TableHeader,
       TableCell,
-      BlocksDocumentRichTextNode,
-      BlocksDocumentImageNode,
-      BlocksDocumentChartImageNode,
-      BlocksDocumentChartNode,
-      BlocksDocumentStatefulBlockNode,
+      BlockDocumentRichTextNode,
+      BlockDocumentImageNode,
+      BlockDocumentChartImageNode,
+      BlockDocumentChartNode,
+      BlockDocumentStatefulBlockNode,
     ];
     return [
-      BlocksDocumentBlockIdExtension.configure({
+      BlockDocumentBlockIdExtension.configure({
         types: getBlockNodeExtensionNames(documentExtensions),
       }),
       ...documentExtensions,
@@ -120,8 +120,8 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
     editable: !readOnly,
     immediatelyRender: false,
     onUpdate: ({editor}) => {
-      const nextContent = normalizeBlocksDocumentContent(
-        editor.getJSON() as BlocksDocumentContent,
+      const nextContent = normalizeBlockDocumentContent(
+        editor.getJSON() as BlockDocumentContent,
         () => generateBlockIdRef.current(),
       );
       lastEmittedContentKeyRef.current = stableStringify(nextContent);
@@ -148,7 +148,7 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
     if (!editor) {
       return;
     }
-    const editorContent = editor.getJSON() as BlocksDocumentContent;
+    const editorContent = editor.getJSON() as BlockDocumentContent;
     if (stableStringify(editorContent) === normalizedValueKey) {
       return;
     }
@@ -156,7 +156,7 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
       syncSourceId === editorSourceIdRef.current &&
       lastEmittedContentKeyRef.current === normalizedValueKey;
     const shouldBackfillEditorIds =
-      isOwnStoreEcho && hasUnnormalizedBlocksDocumentIds(editorContent);
+      isOwnStoreEcho && hasUnnormalizedBlockDocumentIds(editorContent);
     if (isOwnStoreEcho && !shouldBackfillEditorIds) {
       return;
     }
@@ -175,7 +175,7 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
     editor?.setEditable(!readOnly);
   }, [editor, readOnly]);
 
-  const contextValue: BlocksDocumentEditorContextValue = {
+  const contextValue: BlockDocumentEditorContextValue = {
     editor,
     documentId,
     value: normalizedValue,
@@ -186,8 +186,8 @@ export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
   };
 
   return (
-    <BlocksDocumentEditorContext.Provider value={contextValue}>
+    <BlockDocumentEditorContext.Provider value={contextValue}>
       <div className="flex h-full min-h-0 flex-col">{children}</div>
-    </BlocksDocumentEditorContext.Provider>
+    </BlockDocumentEditorContext.Provider>
   );
 };

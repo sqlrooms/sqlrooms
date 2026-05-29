@@ -12,63 +12,63 @@ export {
   type DocumentsSliceConfig as DocumentsSliceConfigType,
 } from './DocumentsSliceConfig';
 export {
-  BlocksDocumentBlock,
-  BlocksDocumentChartBlock,
-  BlocksDocumentChartImageBlock,
-  BlocksDocument,
-  BlocksDocumentContent,
-  BlocksDocumentMark,
-  BlocksDocumentNode,
-  BlocksDocumentsSliceConfig,
-  BlocksDocumentHeadingBlock,
-  BlocksDocumentImageBlock,
-  BlocksDocumentListBlock,
-  BlocksDocumentParagraphBlock,
-  BlocksDocumentRichTextBlock,
-  BlocksDocumentStatefulBlockBlock,
-  BlocksDocumentTodoBlock,
-  blocksDocumentBlockToNode,
-  blocksDocumentContentToBlocks,
-  blocksDocumentNodeToBlock,
-  createEmptyBlocksDocumentContent,
-  type BlocksDocumentBlock as BlocksDocumentBlockType,
-  type BlocksDocument as BlocksDocumentType,
-  type BlocksDocumentContent as BlocksDocumentContentType,
-  type BlocksDocumentMark as BlocksDocumentMarkType,
-  type BlocksDocumentNode as BlocksDocumentNodeType,
-  type BlocksDocumentsSliceConfig as BlocksDocumentsSliceConfigType,
-} from './BlocksDocumentSliceConfig';
+  BlockDocumentBlock,
+  BlockDocumentChartBlock,
+  BlockDocumentChartImageBlock,
+  BlockDocument,
+  BlockDocumentContent,
+  BlockDocumentMark,
+  BlockDocumentNode,
+  BlockDocumentsSliceConfig,
+  BlockDocumentHeadingBlock,
+  BlockDocumentImageBlock,
+  BlockDocumentListBlock,
+  BlockDocumentParagraphBlock,
+  BlockDocumentRichTextBlock,
+  BlockDocumentStatefulBlockBlock,
+  BlockDocumentTodoBlock,
+  blockDocumentBlockToNode,
+  blockDocumentContentToBlocks,
+  blockDocumentNodeToBlock,
+  createEmptyBlockDocumentContent,
+  type BlockDocumentBlock as BlockDocumentBlockType,
+  type BlockDocument as BlockDocumentType,
+  type BlockDocumentContent as BlockDocumentContentType,
+  type BlockDocumentMark as BlockDocumentMarkType,
+  type BlockDocumentNode as BlockDocumentNodeType,
+  type BlockDocumentsSliceConfig as BlockDocumentsSliceConfigType,
+} from './BlockDocumentSliceConfig';
 export {
-  createBlocksDocumentsSlice,
-  createDefaultBlocksDocumentsConfig,
-  type BlocksDocumentOwnedStatefulBlockCreateContext,
-  type BlocksDocumentOwnedStatefulBlockDeleteContext,
-  type BlocksDocumentOwnedStatefulBlockRenameContext,
-  type BlocksDocumentOwnedStatefulBlockReference,
-  type BlocksDocumentMutationMetadata,
-  type BlocksDocumentMutationOrigin,
-  type BlocksDocumentStatefulBlockReference,
-  type BlocksDocumentSyncMetadata,
-  type BlocksDocumentsSliceState,
-  type CreateBlocksDocumentsSliceProps,
-} from './BlocksDocumentsSlice';
+  createBlockDocumentsSlice,
+  createDefaultBlockDocumentsConfig,
+  type BlockDocumentOwnedStatefulBlockCreateContext,
+  type BlockDocumentOwnedStatefulBlockDeleteContext,
+  type BlockDocumentOwnedStatefulBlockRenameContext,
+  type BlockDocumentOwnedStatefulBlockReference,
+  type BlockDocumentMutationMetadata,
+  type BlockDocumentMutationOrigin,
+  type BlockDocumentStatefulBlockReference,
+  type BlockDocumentSyncMetadata,
+  type BlockDocumentsSliceState,
+  type CreateBlockDocumentsSliceProps,
+} from './BlockDocumentsSlice';
 export {
-  BlocksDocumentChartRendererProvider,
-  useBlocksDocumentChartRenderer,
-  type BlocksDocumentChartRenderer,
-  type BlocksDocumentChartRendererProps,
-  type BlocksDocumentChartRendererProviderProps,
-} from './BlocksDocumentChartRendererContext';
+  BlockDocumentChartRendererProvider,
+  useBlockDocumentChartRenderer,
+  type BlockDocumentChartRenderer,
+  type BlockDocumentChartRendererProps,
+  type BlockDocumentChartRendererProviderProps,
+} from './BlockDocumentChartRendererContext';
 export {
-  BlocksDocumentStatefulBlockRendererProvider,
-  useBlocksDocumentStatefulBlockRenderer,
-  useBlocksDocumentStatefulBlockTypes,
-  type BlocksDocumentStatefulBlockRenderer,
-  type BlocksDocumentStatefulBlockRendererProps,
-  type BlocksDocumentStatefulBlockRendererProviderProps,
-  type BlocksDocumentStatefulBlockRenderers,
-  type BlocksDocumentStatefulBlockType,
-} from './BlocksDocumentStatefulBlockRendererContext';
+  BlockDocumentStatefulBlockRendererProvider,
+  useBlockDocumentStatefulBlockRenderer,
+  useBlockDocumentStatefulBlockTypes,
+  type BlockDocumentStatefulBlockRenderer,
+  type BlockDocumentStatefulBlockRendererProps,
+  type BlockDocumentStatefulBlockRendererProviderProps,
+  type BlockDocumentStatefulBlockRenderers,
+  type BlockDocumentStatefulBlockType,
+} from './BlockDocumentStatefulBlockRendererContext';
 export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
@@ -81,42 +81,42 @@ export {
   DOCUMENT_AI_INSTRUCTIONS,
 } from './documentCommands';
 export {
-  BLOCKS_DOCUMENT_COMMAND_SUFFIXES,
-  createBlocksDocumentCommandIds,
-  createBlocksDocumentCommands,
-  type BlocksDocumentStatefulBlockCommandContext,
-  type BlocksDocumentStatefulBlockCommandType,
-  type BlocksDocumentCommandSuffix,
-  type CreateBlocksDocumentCommandsOptions,
-} from './BlocksDocumentCommands';
+  BLOCK_DOCUMENT_COMMAND_SUFFIXES,
+  createBlockDocumentCommandIds,
+  createBlockDocumentCommands,
+  type BlockDocumentStatefulBlockCommandContext,
+  type BlockDocumentStatefulBlockCommandType,
+  type BlockDocumentCommandSuffix,
+  type CreateBlockDocumentCommandsOptions,
+} from './BlockDocumentCommands';
 export {
-  BLOCKS_DOCUMENT_AGENT_TOOL_NAME,
-  createBlocksDocumentAiInstructions,
-  createBlocksDocumentAuthoringInstructions,
-  type BlocksDocumentAgentPlanStep,
-  type BlocksDocumentAgentResult,
-  type CreateBlocksDocumentAuthoringInstructionsOptions,
-} from './BlocksDocumentAi';
-export {BlocksDocumentEditor} from './BlocksDocumentEditor';
+  BLOCK_DOCUMENT_AGENT_TOOL_NAME,
+  createBlockDocumentAiInstructions,
+  createBlockDocumentAuthoringInstructions,
+  type BlockDocumentAgentPlanStep,
+  type BlockDocumentAgentResult,
+  type CreateBlockDocumentAuthoringInstructionsOptions,
+} from './BlockDocumentAi';
+export {BlockDocumentEditor} from './BlockDocumentEditor';
 export {
-  BlocksDocumentEditorRoot,
-  type BlocksDocumentEditorRootProps,
-} from './BlocksDocumentEditor/BlocksDocumentEditorRoot';
+  BlockDocumentEditorRoot,
+  type BlockDocumentEditorRootProps,
+} from './BlockDocumentEditor/BlockDocumentEditorRoot';
 export {
-  BlocksDocumentEditorContent,
-  type BlocksDocumentEditorContentProps,
-} from './BlocksDocumentEditor/BlocksDocumentEditorContent';
+  BlockDocumentEditorContent,
+  type BlockDocumentEditorContentProps,
+} from './BlockDocumentEditor/BlockDocumentEditorContent';
 export {
-  BlocksDocumentToolbar,
-  type BlocksDocumentToolbarProps,
-} from './BlocksDocumentEditor/BlocksDocumentToolbar';
+  BlockDocumentToolbar,
+  type BlockDocumentToolbarProps,
+} from './BlockDocumentEditor/BlockDocumentToolbar';
 export {
-  createDefaultBlocksDocumentBlockId,
-  normalizeBlocksDocumentContent,
-  useBlocksDocumentEditorContext,
-  type BlocksDocumentEditorContextValue,
-} from './BlocksDocumentEditor/BlocksDocumentEditorContext';
-export {BlocksDocumentArtifact} from './BlocksDocumentArtifact';
+  createDefaultBlockDocumentBlockId,
+  normalizeBlockDocumentContent,
+  useBlockDocumentEditorContext,
+  type BlockDocumentEditorContextValue,
+} from './BlockDocumentEditor/BlockDocumentEditorContext';
+export {BlockDocumentArtifact} from './BlockDocumentArtifact';
 export {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 export {
   MarkdownDocumentEditorRoot,
@@ -137,7 +137,7 @@ export {
   type CreateMarkdownDocumentBlockDefinitionOptions,
   type MarkdownDocumentBlockRenderProps,
 } from './MarkdownDocumentBlock';
-export {useStoreWithBlocksDocuments} from './useStoreWithBlocksDocuments';
+export {useStoreWithBlockDocuments} from './useStoreWithBlockDocuments';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {
   buildKnowledgeIndex,

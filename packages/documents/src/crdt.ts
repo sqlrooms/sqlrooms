@@ -7,10 +7,10 @@ import {
 import type {CrdtMirror} from '@sqlrooms/crdt';
 import {schema} from 'loro-mirror';
 import {
-  BlocksDocumentsSliceConfig,
-  type BlocksDocumentsSliceConfig as BlocksDocumentsSliceConfigType,
-} from './BlocksDocumentSliceConfig';
-import type {BlocksDocumentsSliceState} from './BlocksDocumentsSlice';
+  BlockDocumentsSliceConfig,
+  type BlockDocumentsSliceConfig as BlockDocumentsSliceConfigType,
+} from './BlockDocumentSliceConfig';
+import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
 import {
   DocumentsSliceConfig,
   type DocumentAsset,
@@ -19,7 +19,7 @@ import {
 import type {DocumentsSliceState} from './DocumentsSlice';
 
 type DocumentCrdtState = DocumentsSliceState &
-  BlocksDocumentsSliceState &
+  BlockDocumentsSliceState &
   ArtifactsSliceState;
 type OmitAssetMetadata<T extends DocumentAsset> = Omit<
   T,
@@ -41,8 +41,8 @@ type IncomingDocument = Omit<
 > & {
   assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
 };
-type IncomingBlocksDocument = Omit<
-  BlocksDocumentsSliceConfigType['artifacts'][string],
+type IncomingBlockDocument = Omit<
+  BlockDocumentsSliceConfigType['artifacts'][string],
   'assets'
 > & {
   assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
@@ -79,7 +79,7 @@ export const documentsMirrorSchema = schema.LoroMap({
     }),
     (document) => document.id,
   ),
-  blocksDocuments: schema.LoroList(
+  blockDocuments: schema.LoroList(
     schema.LoroMap({
       id: schema.String(),
       content: schema.Any(),
@@ -100,7 +100,7 @@ export const documentsMirrorSchema = schema.LoroMap({
       ),
       updatedAt: schema.Number(),
     }),
-    (blocksDocument) => blocksDocument.id,
+    (blockDocument) => blockDocument.id,
   ),
   artifacts: schema.LoroList(
     schema.LoroMap({
@@ -119,23 +119,23 @@ export type DocumentsMirrorSchema = typeof documentsMirrorSchema;
 
 export const documentsMirrorInitialState = {
   documents: [],
-  blocksDocuments: [],
+  blockDocuments: [],
   artifacts: [],
   artifactOrder: [],
 };
 
 export type CreateDocumentsCrdtMirrorOptions = {
   /**
-   * Artifact types backed by the blocks document slice.
+   * Artifact types backed by the block document slice.
    *
    * Apps can use their own user-facing artifact names while reusing the generic
-   * blocks document storage and CRDT mirror.
+   * block document storage and CRDT mirror.
    */
-  blocksDocumentArtifactTypes?: string[];
+  blockDocumentArtifactTypes?: string[];
 };
 
 /**
- * Creates a CRDT mirror for Markdown documents, blocks documents, and their
+ * Creates a CRDT mirror for Markdown documents, block documents, and their
  * artifact metadata.
  *
  * The room's current artifact selection is intentionally kept local.
@@ -150,12 +150,12 @@ export function createDocumentsCrdtMirror<
 >(
   options: CreateDocumentsCrdtMirrorOptions = {},
 ): CrdtMirror<S, typeof documentsMirrorSchema> {
-  const blocksDocumentArtifactTypes = new Set(
-    options.blocksDocumentArtifactTypes ?? ['blocks-document'],
+  const blockDocumentArtifactTypes = new Set(
+    options.blockDocumentArtifactTypes ?? ['block-document'],
   );
   const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
     artifact.type === 'document' ||
-    blocksDocumentArtifactTypes.has(artifact.type) ||
+    blockDocumentArtifactTypes.has(artifact.type) ||
     artifact.visibility === 'embedded';
   const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
     !isSyncedArtifact(artifact);
@@ -167,8 +167,8 @@ export function createDocumentsCrdtMirror<
       const artifactValues = Object.values(
         state.artifacts.config.artifactsById,
       ) as ArtifactMetadataType[];
-      const syncedArtifacts = artifactValues.filter(
-        (artifact) => isSyncedArtifact(artifact),
+      const syncedArtifacts = artifactValues.filter((artifact) =>
+        isSyncedArtifact(artifact),
       );
       const syncedArtifactIds = new Set(
         syncedArtifacts.map((artifact) => artifact.id),
@@ -194,12 +194,12 @@ export function createDocumentsCrdtMirror<
             updatedAt: document.updatedAt,
           }),
         ),
-        blocksDocuments: Object.values(
-          state.blocksDocuments.config.artifacts,
-        ).map((blocksDocument) => ({
-          id: blocksDocument.id,
-          content: blocksDocument.content,
-          assets: Object.values(blocksDocument.assets).map((asset) => ({
+        blockDocuments: Object.values(
+          state.blockDocuments.config.artifacts,
+        ).map((blockDocument) => ({
+          id: blockDocument.id,
+          content: blockDocument.content,
+          assets: Object.values(blockDocument.assets).map((asset) => ({
             id: asset.id,
             mediaType: asset.mediaType,
             encoding: asset.encoding,
@@ -211,7 +211,7 @@ export function createDocumentsCrdtMirror<
             createdAt: asset.createdAt,
             updatedAt: asset.updatedAt,
           })),
-          updatedAt: blocksDocument.updatedAt,
+          updatedAt: blockDocument.updatedAt,
         })),
         artifacts: syncedArtifacts.map((artifact) => ({
           id: artifact.id,
@@ -227,8 +227,8 @@ export function createDocumentsCrdtMirror<
       const incomingArtifacts = (value?.artifacts ?? []) as IncomingArtifact[];
       const incomingDocuments = (value?.documents ??
         []) as unknown as IncomingDocument[];
-      const incomingBlocksDocuments = (value?.blocksDocuments ??
-        []) as unknown as IncomingBlocksDocument[];
+      const incomingBlockDocuments = (value?.blockDocuments ??
+        []) as unknown as IncomingBlockDocument[];
       const incomingArtifactOrder = (value?.artifactOrder ?? []) as string[];
       const syncedArtifacts: Record<string, ArtifactMetadataType> =
         Object.fromEntries(
@@ -244,8 +244,8 @@ export function createDocumentsCrdtMirror<
           ]),
         );
       const documents = documentsArrayToRecord(incomingDocuments);
-      const blocksDocuments = blocksDocumentsArrayToRecord(
-        incomingBlocksDocuments,
+      const blockDocuments = blockDocumentsArrayToRecord(
+        incomingBlockDocuments,
       );
       const currentArtifactsConfig = get().artifacts.config;
       const currentArtifactsById =
@@ -255,8 +255,8 @@ export function createDocumentsCrdtMirror<
         >;
       const nonSyncedArtifacts: Record<string, ArtifactMetadataType> =
         Object.fromEntries(
-          Object.entries(currentArtifactsById).filter(
-            ([, artifact]) => isNonSyncedArtifact(artifact),
+          Object.entries(currentArtifactsById).filter(([, artifact]) =>
+            isNonSyncedArtifact(artifact),
           ),
         );
       const artifactsById: Record<string, ArtifactMetadataType> = {
@@ -305,10 +305,10 @@ export function createDocumentsCrdtMirror<
           ...state.documents,
           config: DocumentsSliceConfig.parse({artifacts: documents}),
         },
-        blocksDocuments: {
-          ...state.blocksDocuments,
-          config: BlocksDocumentsSliceConfig.parse({
-            artifacts: blocksDocuments,
+        blockDocuments: {
+          ...state.blockDocuments,
+          config: BlockDocumentsSliceConfig.parse({
+            artifacts: blockDocuments,
           }),
         },
       }));
@@ -331,7 +331,7 @@ function documentsArrayToRecord(documents: IncomingDocument[]) {
 }
 
 function assetsArrayToRecord(
-  assets: IncomingDocument['assets'] | IncomingBlocksDocument['assets'],
+  assets: IncomingDocument['assets'] | IncomingBlockDocument['assets'],
 ) {
   if (!assets) return {};
   const assetArray = Array.isArray(assets) ? assets : Object.values(assets);
@@ -354,17 +354,15 @@ function assetsArrayToRecord(
   );
 }
 
-function blocksDocumentsArrayToRecord(
-  blocksDocuments: IncomingBlocksDocument[],
-) {
+function blockDocumentsArrayToRecord(blockDocuments: IncomingBlockDocument[]) {
   return Object.fromEntries(
-    blocksDocuments.map((blocksDocument) => [
-      blocksDocument.id,
+    blockDocuments.map((blockDocument) => [
+      blockDocument.id,
       {
-        id: blocksDocument.id,
-        content: blocksDocument.content,
-        assets: assetsArrayToRecord(blocksDocument.assets),
-        updatedAt: blocksDocument.updatedAt,
+        id: blockDocument.id,
+        content: blockDocument.content,
+        assets: assetsArrayToRecord(blockDocument.assets),
+        updatedAt: blockDocument.updatedAt,
       },
     ]),
   );

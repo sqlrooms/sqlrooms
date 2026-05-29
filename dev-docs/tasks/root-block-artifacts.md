@@ -2,7 +2,7 @@
 
 Status: superseded by `dev-docs/tasks/stateful-blocks-artifact-shells.md`.
 The current decision is to keep artifacts as workspace shells, use direct
-stateful blocks inside blocks documents, and not reintroduce artifact embed
+stateful blocks inside block documents, and not reintroduce artifact embed
 blocks unless a future explicit reference-block design is needed.
 
 ## Todo Checklist
@@ -29,7 +29,7 @@ Cell = executable block inside a notebook/root resource
 ```
 
 The "root block" idea is still valuable as internal architecture language: it
-explains why a dashboard, notebook, document, or blocks document can be embedded
+explains why a dashboard, notebook, document, or block document can be embedded
 inside another document while keeping independent state and lifecycle.
 
 However, the public/package term `artifact` is still useful today. It describes
@@ -65,15 +65,15 @@ hooks, and AI context tools better than the overloaded word `block`.
 - `@sqlrooms/artifacts/ai` exposes context tools and depends on host-provided
   payload readers.
 
-### Blocks Documents
+### Block Documents
 
-- `@sqlrooms/documents` owns `BlocksDocument` state and Tiptap block rendering.
-- Blocks document content has content blocks for text, images, charts, and
+- `@sqlrooms/documents` owns `BlockDocument` state and Tiptap block rendering.
+- Block document content has content blocks for text, images, charts, and
   embeds.
 - Embed blocks currently reference artifact metadata by
   `{artifactId, artifactType}`.
 - Embedded dashboards are artifacts with `visibility: 'embedded'` and
-  `parentArtifactId` set to the owning blocks document id.
+  `parentArtifactId` set to the owning block document id.
 - This is already the practical model we want: an embed block references an
   addressable resource by id.
 
@@ -82,7 +82,7 @@ hooks, and AI context tools better than the overloaded word `block`.
 - See `dev-docs/tasks/cells-blocks-convergence.md`.
 - Cells are best understood as executable blocks inside a notebook resource.
 - Notebook DAG state should remain notebook-owned, not folded into
-  `BlocksDocument`.
+  `BlockDocument`.
 
 ## Proposed Approach
 
@@ -233,7 +233,7 @@ Tests/checks:
 
 ### Stage 4: Block Embed Resource Vocabulary
 
-Improve blocks document embed terminology so it is clear that embeds reference
+Improve block document embed terminology so it is clear that embeds reference
 resources/artifacts instead of owning inline state.
 
 Implementation notes:
@@ -258,10 +258,10 @@ Acceptance criteria:
 
 Likely files/modules:
 
-- `packages/documents/src/BlocksDocumentSliceConfig.ts`
-- `packages/documents/src/BlocksDocumentEmbedRendererContext.tsx`
-- `packages/documents/src/BlocksDocumentCommands.ts`
-- `packages/documents/src/BlocksDocumentAi.ts`
+- `packages/documents/src/BlockDocumentSliceConfig.ts`
+- `packages/documents/src/BlockDocumentEmbedRendererContext.tsx`
+- `packages/documents/src/BlockDocumentCommands.ts`
+- `packages/documents/src/BlockDocumentAi.ts`
 - `apps/sqlrooms-cli-ui/src/workspace/AnalysisArtifact.tsx`
 - `apps/sqlrooms-cli-ui/src/workspace/AnalysisDashboardEmbedRenderer.tsx`
 
@@ -299,8 +299,8 @@ Acceptance criteria:
 Likely files/modules:
 
 - `packages/artifacts/src/ai.ts`
-- `packages/documents/src/BlocksDocumentAi.ts`
-- `packages/documents/src/BlocksDocumentCommands.ts`
+- `packages/documents/src/BlockDocumentAi.ts`
+- `packages/documents/src/BlockDocumentCommands.ts`
 - `apps/sqlrooms-cli-ui/src/createArtifactContextAiTools.ts`
 - `apps/sqlrooms-cli-ui/src/store.ts`
 

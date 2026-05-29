@@ -11,23 +11,23 @@ import {
 } from '@sqlrooms/room-store';
 import {createStore} from 'zustand';
 import {
-  createBlocksDocumentCommands,
-  createBlocksDocumentsSlice,
-  type BlocksDocumentsSliceState,
+  createBlockDocumentCommands,
+  createBlockDocumentsSlice,
+  type BlockDocumentsSliceState,
 } from '../src';
 
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
-  BlocksDocumentsSliceState &
+  BlockDocumentsSliceState &
   CommandSliceState<any>;
 
 function createTestStore() {
   let timestamp = 100;
   const now = () => timestamp++;
   const artifactTypes = defineArtifactTypes({
-    'blocks-document': {
-      label: 'Blocks Document',
-      defaultTitle: 'Blocks Document',
+    'block-document': {
+      label: 'Block Document',
+      defaultTitle: 'Block Document',
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
     document: {label: 'Document', defaultTitle: 'Document'},
@@ -37,12 +37,12 @@ function createTestStore() {
     ...createBaseRoomSlice()(...args),
     ...createCommandSlice<TestRoomState>()(...args),
     ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
-    ...createBlocksDocumentsSlice<TestRoomState>({now})(...args),
+    ...createBlockDocumentsSlice<TestRoomState>({now})(...args),
   }));
 
   store.getState().commands.registerCommands(
-    '@sqlrooms/documents/blocks-document',
-    createBlocksDocumentCommands<TestRoomState>({
+    '@sqlrooms/documents/block-document',
+    createBlockDocumentCommands<TestRoomState>({
       statefulBlockTypes: [
         {
           blockType: 'dashboard',
@@ -63,13 +63,13 @@ function createTestStore() {
   return store;
 }
 
-describe('blocks document commands', () => {
-  it('creates, lists, and reads blocks document artifacts', async () => {
+describe('block document commands', () => {
+  it('creates, lists, and reads block document artifacts', async () => {
     const store = createTestStore();
 
     const createResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.create', {
+      .commands.invokeCommand('block-document.create', {
         title: 'Findings',
         blocks: [{id: 'heading', type: 'heading', level: 1, text: 'Findings'}],
       });
@@ -78,16 +78,16 @@ describe('blocks document commands', () => {
     const artifactId = (createResult.data as any).artifactId as string;
     expect(store.getState().artifacts.getArtifact(artifactId)).toMatchObject({
       id: artifactId,
-      type: 'blocks-document',
+      type: 'block-document',
       title: 'Findings',
     });
-    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
     ]);
 
     const listResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.list');
+      .commands.invokeCommand('block-document.list');
     expect((listResult.data as any).documents).toEqual([
       {
         artifactId,
@@ -100,7 +100,7 @@ describe('blocks document commands', () => {
 
     const getResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.get', {artifactId});
+      .commands.invokeCommand('block-document.get', {artifactId});
     expect(getResult.data).toMatchObject({
       artifactId,
       title: 'Findings',
@@ -110,48 +110,46 @@ describe('blocks document commands', () => {
     });
   });
 
-  it('mutates blocks document blocks by command', async () => {
+  it('mutates block document blocks by command', async () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     await store
       .getState()
-      .commands.invokeCommand('blocks-document.append-blocks', {
+      .commands.invokeCommand('block-document.append-blocks', {
         artifactId,
         blocks: [{id: 'p1', type: 'paragraph', text: 'First'}],
       });
     await store
       .getState()
-      .commands.invokeCommand('blocks-document.insert-blocks', {
+      .commands.invokeCommand('block-document.insert-blocks', {
         artifactId,
         index: 0,
         blocks: [{id: 'h1', type: 'heading', level: 2, text: 'Overview'}],
       });
     await store
       .getState()
-      .commands.invokeCommand('blocks-document.update-block', {
+      .commands.invokeCommand('block-document.update-block', {
         artifactId,
         blockId: 'p1',
         block: {id: 'ignored', type: 'paragraph', text: 'Updated'},
       });
+    await store.getState().commands.invokeCommand('block-document.move-block', {
+      artifactId,
+      blockId: 'p1',
+      toIndex: 0,
+    });
     await store
       .getState()
-      .commands.invokeCommand('blocks-document.move-block', {
-        artifactId,
-        blockId: 'p1',
-        toIndex: 0,
-      });
-    await store
-      .getState()
-      .commands.invokeCommand('blocks-document.remove-block', {
+      .commands.invokeCommand('block-document.remove-block', {
         artifactId,
         blockId: 'h1',
       });
 
-    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {id: 'p1', type: 'paragraph', text: 'Updated'},
     ]);
   });
@@ -160,12 +158,12 @@ describe('blocks document commands', () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     await store
       .getState()
-      .commands.invokeCommand('blocks-document.create-chart-block', {
+      .commands.invokeCommand('block-document.create-chart-block', {
         artifactId,
         blockId: 'chart-1',
         tableName: 'sales',
@@ -173,7 +171,7 @@ describe('blocks document commands', () => {
         selectionGroupId: 'overview',
         caption: 'Revenue',
       });
-    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'chart-1',
         type: 'chart',
@@ -189,12 +187,12 @@ describe('blocks document commands', () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     const statefulBlockResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.create-stateful-block', {
+      .commands.invokeCommand('block-document.create-stateful-block', {
         artifactId,
         blockId: 'dashboard-block',
         blockType: 'dashboard',
@@ -203,7 +201,7 @@ describe('blocks document commands', () => {
       });
 
     expect(statefulBlockResult.success).toBe(true);
-    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'dashboard-block',
         type: 'statefulBlock',
@@ -228,13 +226,13 @@ describe('blocks document commands', () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('blocks-document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     await expect(
       store
         .getState()
-        .commands.invokeCommand('blocks-document.create-stateful-block', {
+        .commands.invokeCommand('block-document.create-stateful-block', {
           artifactId,
           blockType: 'notebook',
         }),
@@ -252,7 +250,7 @@ describe('blocks document commands', () => {
     });
 
     await expect(
-      store.getState().commands.invokeCommand('blocks-document.get', {
+      store.getState().commands.invokeCommand('block-document.get', {
         artifactId: 'missing',
       }),
     ).resolves.toMatchObject({
@@ -260,12 +258,12 @@ describe('blocks document commands', () => {
       error: 'Unknown artifact "missing".',
     });
     await expect(
-      store.getState().commands.invokeCommand('blocks-document.get', {
+      store.getState().commands.invokeCommand('block-document.get', {
         artifactId: documentId,
       }),
     ).resolves.toMatchObject({
       success: false,
-      error: `Artifact "${documentId}" is not a Blocks Document artifact.`,
+      error: `Artifact "${documentId}" is not a Block Document artifact.`,
     });
   });
 });

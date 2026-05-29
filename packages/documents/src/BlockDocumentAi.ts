@@ -1,21 +1,21 @@
-import {createBlocksDocumentCommandIds} from './BlocksDocumentCommands';
+import {createBlockDocumentCommandIds} from './BlockDocumentCommands';
 
-export const BLOCKS_DOCUMENT_AGENT_TOOL_NAME = 'blocks_document_agent';
+export const BLOCK_DOCUMENT_AGENT_TOOL_NAME = 'block_document_agent';
 
-export type CreateBlocksDocumentAuthoringInstructionsOptions = {
+export type CreateBlockDocumentAuthoringInstructionsOptions = {
   commandNamespace?: string;
   artifactLabel?: string;
   commandToolName?: string;
-  blocksDocumentAgentToolName?: string;
+  blockDocumentAgentToolName?: string;
 };
 
-export function createBlocksDocumentAuthoringInstructions({
-  commandNamespace = 'blocks-document',
-  artifactLabel = 'Blocks Document',
+export function createBlockDocumentAuthoringInstructions({
+  commandNamespace = 'block-document',
+  artifactLabel = 'Block Document',
   commandToolName = 'execute_command',
-  blocksDocumentAgentToolName = BLOCKS_DOCUMENT_AGENT_TOOL_NAME,
-}: CreateBlocksDocumentAuthoringInstructionsOptions = {}) {
-  const commandIds = createBlocksDocumentCommandIds(commandNamespace);
+  blockDocumentAgentToolName = BLOCK_DOCUMENT_AGENT_TOOL_NAME,
+}: CreateBlockDocumentAuthoringInstructionsOptions = {}) {
+  const commandIds = createBlockDocumentCommandIds(commandNamespace);
   const artifactLabelLower = artifactLabel.toLocaleLowerCase();
   return `
 ${artifactLabel} authoring:
@@ -25,15 +25,15 @@ ${artifactLabel} authoring:
 - Use host-specific stateful block tools when available for dashboards, pivots, or other interactive surfaces that need backing feature state.
 - Use ${commandNamespace}.create-stateful-block when the host has registered a stateful block type such as dashboard, pivot, or document.
 - Give independent standalone chart blocks separate selection groups by default. Reuse selectionGroupId only when the charts should crossfilter together.
-- If ${blocksDocumentAgentToolName} is available, use it for multi-step ${artifactLabelLower} authoring plans that combine narrative blocks, standalone charts, and hosted stateful blocks.
+- If ${blockDocumentAgentToolName} is available, use it for multi-step ${artifactLabelLower} authoring plans that combine narrative blocks, standalone charts, and hosted stateful blocks.
 `.trim();
 }
 
-export function createBlocksDocumentAiInstructions({
-  commandNamespace = 'blocks-document',
-  artifactLabel = 'Blocks Document',
+export function createBlockDocumentAiInstructions({
+  commandNamespace = 'block-document',
+  artifactLabel = 'Block Document',
 }: Pick<
-  CreateBlocksDocumentAuthoringInstructionsOptions,
+  CreateBlockDocumentAuthoringInstructionsOptions,
   'artifactLabel' | 'commandNamespace'
 > = {}) {
   return `
@@ -46,9 +46,9 @@ ${artifactLabel} artifacts:
 `.trim();
 }
 
-export type BlocksDocumentAgentPlanStep =
+export type BlockDocumentAgentPlanStep =
   | {
-      type: 'create-blocks-document';
+      type: 'create-block-document';
       title?: string;
     }
   | {
@@ -69,10 +69,10 @@ export type BlocksDocumentAgentPlanStep =
       blockInstanceId?: string;
     };
 
-export type BlocksDocumentAgentResult = {
+export type BlockDocumentAgentResult = {
   success: boolean;
   artifactId?: string;
-  stepsExecuted: BlocksDocumentAgentPlanStep[];
+  stepsExecuted: BlockDocumentAgentPlanStep[];
   details?: string;
   errorMessage?: string;
 };

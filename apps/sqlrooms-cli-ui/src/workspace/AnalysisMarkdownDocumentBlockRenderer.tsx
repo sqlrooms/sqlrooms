@@ -1,6 +1,6 @@
 import {
   MarkdownDocument,
-  type BlocksDocumentStatefulBlockRendererProps,
+  type BlockDocumentStatefulBlockRendererProps,
 } from '@sqlrooms/documents';
 import {useEffect} from 'react';
 import {useRoomStore} from '../store';
@@ -9,7 +9,7 @@ export const AnalysisMarkdownDocumentBlockRenderer = ({
   blockInstanceId,
   blockType,
   caption,
-}: BlocksDocumentStatefulBlockRendererProps) => {
+}: BlockDocumentStatefulBlockRendererProps) => {
   const ensureDocument = useRoomStore(
     (state) => state.documents.ensureDocument,
   );

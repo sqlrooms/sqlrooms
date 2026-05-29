@@ -24,10 +24,10 @@ The target mental model:
 Block
   - content block: paragraph, image, chart, embed
   - executable block: sql cell, input cell, vega cell
-  - root block: notebook, dashboard, blocks document
+  - root block: notebook, dashboard, block document
 
 Container
-  - ordered/tree container: blocks document
+  - ordered/tree container: block document
   - graph-aware ordered container: notebook
 ```
 
@@ -37,7 +37,7 @@ schema namespaces, and dependency invalidation are central.
 
 ## Non-Goals
 
-- Do not rebuild notebook DAG execution inside `BlocksDocument` in the core
+- Do not rebuild notebook DAG execution inside `BlockDocument` in the core
   convergence stages.
 - Do not make every content block executable.
 - Do not make every executable cell editable as a Tiptap node.
@@ -76,15 +76,15 @@ schema namespaces, and dependency invalidation are central.
   dependency tracking.
 - Cell result data is runtime/cache state outside persisted config.
 
-### Blocks Documents
+### Block Documents
 
-- `@sqlrooms/documents` stores `BlocksDocument` content as Tiptap/ProseMirror
+- `@sqlrooms/documents` stores `BlockDocument` content as Tiptap/ProseMirror
   JSON.
-- Blocks document DTOs expose content blocks such as text, image, chart, and
+- Block document DTOs expose content blocks such as text, image, chart, and
   root-resource embeds.
 - Standalone document chart blocks already aim to reuse Mosaic/vgplot chart
   implementations without becoming dashboard panels.
-- Blocks documents are currently ordered/tree content containers, not execution
+- Block documents are currently ordered/tree content containers, not execution
   DAG containers.
 
 ### Root Blocks / Artifacts
@@ -108,7 +108,7 @@ Converge in the core model first:
 
 Only after that, add interoperability:
 
-1. Embed whole notebooks in blocks documents as root blocks.
+1. Embed whole notebooks in block documents as root blocks.
 2. Share chart/text/input render/config primitives across cells and document
    blocks.
 3. Add cross-container references where a document block can read notebook
@@ -130,7 +130,7 @@ Implementation notes:
   - root block
   - ordered block container
   - graph-aware block container
-- State explicitly that a notebook is not "just" a blocks document with edges;
+- State explicitly that a notebook is not "just" a block document with edges;
   it owns execution, status, result cache, and relation cleanup.
 - State that whole-notebook embedding is the preferred first interoperability
   path.
@@ -193,7 +193,7 @@ export type GraphBlockContainer = OrderedBlockContainer & {
 Acceptance criteria:
 
 - Shared contract types exist and are exported from a deliberate location.
-- Cells and blocks document DTOs can be described in terms of the contract
+- Cells and block document DTOs can be described in terms of the contract
   without changing their persisted representation.
 - Typecheck passes with no runtime behavior change.
 
@@ -201,7 +201,7 @@ Likely files/modules:
 
 - New shared type module, package TBD
 - `packages/cells/src/types.ts`
-- `packages/documents/src/BlocksDocumentSliceConfig.ts`
+- `packages/documents/src/BlockDocumentSliceConfig.ts`
 - Package README for whichever package exports the contract
 
 Tests/checks:
@@ -289,7 +289,7 @@ Tests/checks:
 
 ### Stage 5: Registry Capability Model
 
-Extract common vocabulary from cell registries, blocks document renderers, and
+Extract common vocabulary from cell registries, block document renderers, and
 root block/artifact type definitions.
 
 Implementation notes:
@@ -321,13 +321,13 @@ Acceptance criteria:
   blocks.
 - Cell registry items can expose capabilities without changing how notebooks
   execute.
-- Blocks document renderers are not forced to implement execution hooks.
+- Block document renderers are not forced to implement execution hooks.
 
 Likely files/modules:
 
 - Shared type module or package README
 - `packages/cells/src/types.ts`
-- `packages/documents/src/BlocksDocument*`
+- `packages/documents/src/BlockDocument*`
 - `packages/artifacts/src/ArtifactTypes.ts`
 
 Tests/checks:
@@ -379,7 +379,7 @@ to touch product behavior and should be treated as follow-up features.
 
 ### Stage 7: Whole-Resource Embeds
 
-Allow blocks documents to embed whole notebooks as root blocks.
+Allow block documents to embed whole notebooks as root blocks.
 
 Implementation notes:
 
@@ -391,14 +391,14 @@ Implementation notes:
 
 Acceptance criteria:
 
-- A blocks document can embed a notebook root block.
+- A block document can embed a notebook root block.
 - Multiple embedded notebooks in one document run independently.
 - Deleting the owning document handles embedded notebook lifecycle according to
   the chosen root-block ownership rules.
 
 Likely files/modules:
 
-- `packages/documents/src/BlocksDocumentEmbedRendererContext.tsx`
+- `packages/documents/src/BlockDocumentEmbedRendererContext.tsx`
 - Notebook renderer/component package
 - CLI artifact type configuration
 - Root-block/artifact lifecycle helpers
@@ -436,7 +436,7 @@ Acceptance criteria:
 Likely files/modules:
 
 - `packages/cells/src/components/*`
-- `packages/documents/src/BlocksDocumentEditor/*`
+- `packages/documents/src/BlockDocumentEditor/*`
 - `packages/mosaic` chart primitives if chart reuse is better located there
 - CLI chart renderer adapters
 

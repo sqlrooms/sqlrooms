@@ -1,4 +1,4 @@
-import type {BlocksDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
+import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {MosaicDashboard} from '@sqlrooms/mosaic';
 import {useEffect} from 'react';
 import {useRoomStore} from '../store';
@@ -8,7 +8,7 @@ export const AnalysisDashboardBlockRenderer = ({
   blockType,
   title,
   caption,
-}: BlocksDocumentStatefulBlockRendererProps) => {
+}: BlockDocumentStatefulBlockRendererProps) => {
   const ensureDashboard = useRoomStore(
     (state) => state.mosaicDashboard.ensureDashboard,
   );
