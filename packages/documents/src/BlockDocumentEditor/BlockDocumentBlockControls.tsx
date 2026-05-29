@@ -76,6 +76,9 @@ type BlockMenuItem = {
 
 type InsertPlacement = 'before' | 'after';
 
+const BLOCK_CONTROLS_STACK_HEIGHT = 80;
+const BLOCK_CONTROLS_TOP_INSET = 4;
+
 function labelFromArtifactType(artifactType: string) {
   return artifactType
     .split(/[-_\s]+/)
@@ -121,6 +124,17 @@ function getBlockPos(editor: Editor, element: HTMLElement) {
 function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
+function getBlockControlsTop(elementRect: DOMRect, scrollElement: HTMLElement) {
+  const scrollRect = scrollElement.getBoundingClientRect();
+  const blockTop =
+    elementRect.top - scrollRect.top + scrollElement.scrollTop;
+  const centeredOffset = elementRect.height / 2;
+  const topAlignedOffset =
+    BLOCK_CONTROLS_STACK_HEIGHT / 2 + BLOCK_CONTROLS_TOP_INSET;
+
+  return blockTop + Math.min(centeredOffset, topAlignedOffset);
 }
 
 function getNodeId(node: DraggableNode, generateBlockId: () => string) {
@@ -396,15 +410,10 @@ export const BlockDocumentBlockControls: FC<
       }
       cancelHide();
       const elementRect = element.getBoundingClientRect();
-      const scrollRect = scrollElement.getBoundingClientRect();
       setActiveBlock({
         element,
         pos,
-        top:
-          elementRect.top -
-          scrollRect.top +
-          scrollElement.scrollTop +
-          elementRect.height / 2,
+        top: getBlockControlsTop(elementRect, scrollElement),
       });
     },
     [cancelHide, editor, menuOpen, scheduleHide, scrollElement],
