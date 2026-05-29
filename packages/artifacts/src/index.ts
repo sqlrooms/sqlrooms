@@ -16,7 +16,10 @@ export type {
   ArtifactVisibility as ArtifactVisibilityType,
 } from './ArtifactsSliceConfig';
 
-export {defineArtifactTypes} from './ArtifactTypes';
+export {
+  createArtifactTypeFromStatefulBlock,
+  defineArtifactTypes,
+} from './ArtifactTypes';
 export type {
   ArtifactLifecycleContext,
   ArtifactRenameLifecycleContext,

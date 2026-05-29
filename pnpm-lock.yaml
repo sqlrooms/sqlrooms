@@ -2590,6 +2590,9 @@ importers:
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
@@ -2624,6 +2627,16 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.13(@types/react@19.2.7)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+
+  packages/blocks:
+    dependencies:
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
 
   packages/canvas:
     dependencies:

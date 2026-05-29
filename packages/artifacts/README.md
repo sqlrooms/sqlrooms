@@ -17,6 +17,7 @@ they stay in the artifact registry for lifecycle and persistence, but
 import {
   ArtifactTabs,
   ArtifactsSliceConfig,
+  createArtifactTypeFromStatefulBlock,
   createArtifactPanelDefinition,
   createArtifactsSlice,
   defineArtifactTypes,
@@ -128,6 +129,22 @@ parent artifact lifecycle hook.
   titles, icons, and components from the runtime type registry.
 
 Type definitions are runtime configuration and are not persisted.
+
+## Stateful Block Bridge
+
+Feature packages can expose reusable stateful block definitions from
+`@sqlrooms/blocks`. Use `createArtifactTypeFromStatefulBlock()` when a
+stateful block should also be available as a top-level artifact shell:
+
+```tsx
+const artifactTypes = defineArtifactTypes({
+  dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
+});
+```
+
+The artifact shell still owns workspace metadata such as id, title, visibility,
+tabs, current selection, and AI context. The stateful block definition owns the
+feature-specific rendering and backing-state lifecycle.
 
 ## AI Context Tools
 

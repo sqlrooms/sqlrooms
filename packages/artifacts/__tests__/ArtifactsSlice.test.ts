@@ -5,6 +5,7 @@ import {
 } from '@sqlrooms/room-store';
 import {
   ArtifactsSliceConfig,
+  createArtifactTypeFromStatefulBlock,
   createArtifactLayoutNode,
   createArtifactPanelDefinition,
   createArtifactsSlice,
@@ -220,6 +221,57 @@ describe('ArtifactsSlice', () => {
     expect(() =>
       store.getState().artifacts.createArtifact({type: 'unknown'}),
     ).toThrow('Unknown artifact type "unknown".');
+  });
+
+  it('bridges stateful block definitions into artifact type lifecycle hooks', () => {
+    const events: string[] = [];
+    const artifactTypes = defineArtifactTypes({
+      dashboard: createArtifactTypeFromStatefulBlock<TestRoomState>({
+        type: 'dashboard-block',
+        label: 'Dashboard',
+        defaultTitle: 'Dashboard',
+        render: () => null,
+        ensureState: ({blockId, blockType, title, getState}) => {
+          events.push(
+            `ensure:${blockId}:${blockType}:${title}:${Boolean(getState().artifacts)}`,
+          );
+        },
+        rename: ({blockId, previousTitle, title}) => {
+          events.push(`rename:${blockId}:${previousTitle}:${title}`);
+        },
+        close: ({blockId}) => {
+          events.push(`close:${blockId}`);
+        },
+        deleteState: ({blockId}) => {
+          events.push(`delete:${blockId}`);
+        },
+      }),
+    });
+    const store = createStore<TestRoomState>()((...args) => ({
+      ...createBaseRoomSlice()(...args),
+      ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
+    }));
+
+    store.getState().artifacts.createArtifact({
+      id: 'dashboard-1',
+      type: 'dashboard',
+    });
+    store.getState().artifacts.ensureArtifact('dashboard-1', {
+      type: 'dashboard',
+      title: 'Dashboard',
+    });
+    store.getState().artifacts.renameArtifact('dashboard-1', 'Renamed');
+    store.getState().artifacts.closeArtifact('dashboard-1');
+    store.getState().artifacts.deleteArtifact('dashboard-1');
+
+    expect(events).toEqual([
+      'ensure:dashboard-1:dashboard-block:Dashboard:true',
+      'ensure:dashboard-1:dashboard-block:Dashboard:true',
+      'rename:dashboard-1:Dashboard:Renamed',
+      'close:dashboard-1',
+      'close:dashboard-1',
+      'delete:dashboard-1',
+    ]);
   });
 
   it('creates artifact layout nodes and panel definitions', () => {

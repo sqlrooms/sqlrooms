@@ -1,6 +1,11 @@
+import type {
+  StatefulBlockContext,
+  StatefulBlockDefinition,
+  StatefulBlockRenameContext,
+} from '@sqlrooms/blocks';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import type {BaseRoomStoreState} from '@sqlrooms/room-store';
-import type {ComponentType} from 'react';
+import {createElement, type ComponentType} from 'react';
 import type {StoreApi} from 'zustand';
 import type {ArtifactMetadata as ArtifactMetadataType} from './ArtifactsSliceConfig';
 
@@ -94,4 +99,71 @@ export function defineArtifactTypes<
   const TArtifactTypes extends ArtifactTypeDefinitions<any>,
 >(artifactTypes: TArtifactTypes): TArtifactTypes {
   return artifactTypes;
+}
+
+function createStatefulBlockContext<
+  TRoomState extends BaseRoomStoreState = BaseRoomStoreState,
+>(
+  context: ArtifactLifecycleContext<TRoomState>,
+  blockType: string,
+): StatefulBlockContext<TRoomState> {
+  return {
+    blockId: context.artifactId,
+    blockType,
+    title: context.artifact.title,
+    getState: () => context.store.getState(),
+  };
+}
+
+function createStatefulBlockRenameContext<
+  TRoomState extends BaseRoomStoreState = BaseRoomStoreState,
+>(
+  context: ArtifactRenameLifecycleContext<TRoomState>,
+  blockType: string,
+): StatefulBlockRenameContext<TRoomState> {
+  return {
+    ...createStatefulBlockContext(context, blockType),
+    previousTitle: context.previousTitle,
+    title: context.artifact.title,
+  };
+}
+
+export function createArtifactTypeFromStatefulBlock<
+  TRoomState extends BaseRoomStoreState = BaseRoomStoreState,
+>(
+  definition: StatefulBlockDefinition<TRoomState>,
+): ArtifactTypeDefinition<TRoomState> {
+  const component: RoomPanelComponent = ({meta, panelInfo}) => {
+    const blockId = typeof meta?.artifactId === 'string' ? meta.artifactId : '';
+    return createElement(definition.render, {
+      blockId,
+      blockType: definition.type,
+      title: panelInfo.title,
+    });
+  };
+
+  return {
+    label: definition.label,
+    defaultTitle: definition.defaultTitle ?? definition.label,
+    icon: definition.icon,
+    component,
+    onCreate: (context) =>
+      definition.ensureState?.(
+        createStatefulBlockContext(context, definition.type),
+      ),
+    onEnsure: (context) =>
+      definition.ensureState?.(
+        createStatefulBlockContext(context, definition.type),
+      ),
+    onRename: (context) =>
+      definition.rename?.(
+        createStatefulBlockRenameContext(context, definition.type),
+      ),
+    onClose: (context) =>
+      definition.close?.(createStatefulBlockContext(context, definition.type)),
+    onDelete: (context) =>
+      definition.deleteState?.(
+        createStatefulBlockContext(context, definition.type),
+      ),
+  };
 }
