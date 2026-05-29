@@ -756,6 +756,18 @@ Recommended next step:
 - Start Stage 6 only for the remaining straightforward artifact types, or pause
   to review the bridge ergonomics now that dashboard and pivot both use it.
 
+Follow-up bridge cleanup:
+
+- Dashboard and pivot now share a CLI-level stateful block artifact config for
+  labels, default titles, embedded titles, embedded descriptions, and backing
+  state ensure behavior.
+- The top-level artifact type registry and the Analysis document insert menu
+  both read from that config, so adding another stateful block artifact has one
+  fewer split registration path.
+- Analysis embed renderers are typechecked against the stateful block artifact
+  config keys, so adding a new embeddable stateful artifact requires adding its
+  renderer.
+
 ## Progress Log
 
 - 2026-05-29: Created staged plan for stateful block implementations with
@@ -777,3 +789,6 @@ Recommended next step:
   `createPivotBlockDefinition(...)` in `@sqlrooms/pivot`, mounting/persisting
   the pivot slice in the CLI app, and exposing pivot tables as a CLI
   artifact/block type through the single-block shell bridge.
+- 2026-05-29: Added a CLI-level stateful block artifact config shared by
+  top-level artifact registration and Analysis document embed menu registration
+  for dashboard and pivot.

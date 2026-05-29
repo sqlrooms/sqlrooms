@@ -13,6 +13,7 @@ import {
   ScrollTextIcon,
 } from 'lucide-react';
 import type {RoomState} from './store-types';
+import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
 import {AnalysisArtifact} from './workspace/AnalysisArtifact';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
@@ -33,10 +34,15 @@ export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
 const dashboardBlockDefinition =
   createMosaicDashboardBlockDefinition<RoomState>({
+    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.dashboard.label,
+    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.dashboard.defaultTitle,
     render: DashboardArtifact,
   });
 
-const pivotBlockDefinition = createPivotBlockDefinition<RoomState>();
+const pivotBlockDefinition = createPivotBlockDefinition<RoomState>({
+  label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.pivot.label,
+  defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.pivot.defaultTitle,
+});
 
 export const ARTIFACT_TYPES = defineArtifactTypes({
   analysis: {
