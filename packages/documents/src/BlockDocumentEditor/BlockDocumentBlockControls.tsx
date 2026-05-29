@@ -64,6 +64,19 @@ type BlockDocumentBlockControlsProps = {
   scrollElement: HTMLElement | null;
 };
 
+type BlockDropTarget = {
+  element: HTMLElement;
+  pos: number;
+  node: DraggableNode;
+  insertAfter: boolean;
+};
+
+type BlockDropIndicator = {
+  top: number;
+  left: number;
+  width: number;
+};
+
 type BlockMenuItem = {
   label: string;
   description: string;
@@ -124,6 +137,98 @@ function getBlockPos(editor: Editor, element: HTMLElement) {
 function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
+function getBlockDropTarget(
+  editor: Editor,
+  editorElement: HTMLElement,
+  event: globalThis.DragEvent,
+): BlockDropTarget | null {
+  const toDropTarget = (
+    element: HTMLElement,
+    insertAfter?: boolean,
+  ): BlockDropTarget | null => {
+    const pos = getBlockPos(editor, element);
+    const node = pos == null ? null : getNodeAt(editor, pos);
+    if (pos == null || !node || isTitleNode(node)) return null;
+
+    const rect = element.getBoundingClientRect();
+    return {
+      element,
+      pos,
+      node,
+      insertAfter:
+        insertAfter ?? event.clientY > rect.top + rect.height / 2,
+    };
+  };
+
+  const directTargetElement = directEditorChild(editorElement, event.target);
+  const directTarget = directTargetElement
+    ? toDropTarget(directTargetElement)
+    : null;
+  if (directTarget) return directTarget;
+
+  const blockTargets = Array.from(editorElement.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .map((element) => {
+      const target = toDropTarget(element);
+      return target ? {target, rect: element.getBoundingClientRect()} : null;
+    })
+    .filter(
+      (target): target is {target: BlockDropTarget; rect: DOMRect} =>
+        target != null,
+    );
+
+  for (const {target, rect} of blockTargets) {
+    if (event.clientY < rect.top) return {...target, insertAfter: false};
+    if (event.clientY <= rect.bottom) {
+      return {
+        ...target,
+        insertAfter: event.clientY > rect.top + rect.height / 2,
+      };
+    }
+  }
+
+  const lastTarget = blockTargets.at(-1)?.target;
+  return lastTarget ? {...lastTarget, insertAfter: true} : null;
+}
+
+function getMoveInsertPos(
+  source: {pos: number; node: DraggableNode},
+  target: BlockDropTarget,
+) {
+  let insertPos =
+    target.pos + (target.insertAfter ? target.node.nodeSize : 0);
+  if (insertPos > source.pos) {
+    insertPos -= source.node.nodeSize;
+  }
+  return insertPos;
+}
+
+function isNoopMove(
+  source: {pos: number; node: DraggableNode},
+  insertPos: number,
+) {
+  return (
+    insertPos === source.pos || insertPos === source.pos + source.node.nodeSize
+  );
+}
+
+function getDropIndicator(
+  target: BlockDropTarget,
+  editorElement: HTMLElement,
+  scrollElement: HTMLElement,
+): BlockDropIndicator {
+  const targetRect = target.element.getBoundingClientRect();
+  const editorRect = editorElement.getBoundingClientRect();
+  const scrollRect = scrollElement.getBoundingClientRect();
+  const topInViewport = target.insertAfter ? targetRect.bottom : targetRect.top;
+
+  return {
+    top: topInViewport - scrollRect.top + scrollElement.scrollTop,
+    left: editorRect.left - scrollRect.left + scrollElement.scrollLeft + 64,
+    width: Math.max(0, editorRect.width - 88),
+  };
 }
 
 function getBlockControlsTop(elementRect: DOMRect, scrollElement: HTMLElement) {
@@ -371,7 +476,10 @@ export const BlockDocumentBlockControls: FC<
   const [insertMenuOpen, setInsertMenuOpen] =
     useState<InsertPlacement | null>(null);
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
+  const [dropIndicator, setDropIndicator] =
+    useState<BlockDropIndicator | null>(null);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
+  const suppressHandleClickRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
@@ -541,15 +649,26 @@ export const BlockDocumentBlockControls: FC<
   };
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
-    if (!editor || !activeBlock) return;
+    if (!editor || !activeBlock || !event.dataTransfer) return;
     const node = getNodeAt(editor, activeBlock.pos);
-    if (!node) return;
+    if (!node || isTitleNode(node)) return;
     dragSourceRef.current = {pos: activeBlock.pos, node};
+    suppressHandleClickRef.current = true;
+    setHandleMenuOpen(false);
+    cancelHide();
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData(
       'application/x-sqlrooms-block-document-block',
       'move',
     );
+  };
+
+  const handleHandleClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (suppressHandleClickRef.current) {
+      event.preventDefault();
+      return;
+    }
+    setHandleMenuOpen((open) => !open);
   };
 
   const renderMenuItem = (item: BlockMenuItem, onSelect: () => void) => (
@@ -639,131 +758,188 @@ export const BlockDocumentBlockControls: FC<
     const editorElement = editor.view.dom as HTMLElement;
 
     const handleDragOver = (event: globalThis.DragEvent) => {
-      if (!dragSourceRef.current) return;
+      const source = dragSourceRef.current;
+      if (!source) return;
       event.preventDefault();
-      event.dataTransfer!.dropEffect = 'move';
+      event.stopPropagation();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+
+      const target = getBlockDropTarget(editor, editorElement, event);
+      const insertPos = target ? getMoveInsertPos(source, target) : null;
+      if (!target || insertPos == null || isNoopMove(source, insertPos)) {
+        setDropIndicator(null);
+        return;
+      }
+      const nextIndicator = getDropIndicator(
+        target,
+        editorElement,
+        scrollElement,
+      );
+      setDropIndicator((current) =>
+        current &&
+        current.top === nextIndicator.top &&
+        current.left === nextIndicator.left &&
+        current.width === nextIndicator.width
+          ? current
+          : nextIndicator,
+      );
     };
 
     const handleDrop = (event: globalThis.DragEvent) => {
       const source = dragSourceRef.current;
       if (!source) return;
       event.preventDefault();
+      event.stopPropagation();
 
-      const targetElement = directEditorChild(editorElement, event.target);
-      const targetPos = targetElement
-        ? getBlockPos(editor, targetElement)
-        : null;
-      const targetNode =
-        targetPos == null ? null : getNodeAt(editor, targetPos);
-      if (targetPos == null || !targetNode || isTitleNode(targetNode)) {
+      const target = getBlockDropTarget(editor, editorElement, event);
+      if (!target) {
         dragSourceRef.current = null;
+        setDropIndicator(null);
         return;
       }
 
-      const targetRect = targetElement!.getBoundingClientRect();
-      const insertAfter =
-        event.clientY > targetRect.top + targetRect.height / 2;
-      let insertPos = targetPos + (insertAfter ? targetNode.nodeSize : 0);
-      if (insertPos > source.pos) {
-        insertPos -= source.node.nodeSize;
-      }
+      const insertPos = getMoveInsertPos(source, target);
 
-      if (insertPos !== source.pos) {
+      if (!isNoopMove(source, insertPos)) {
         const tr = editor.state.tr
           .delete(source.pos, source.pos + source.node.nodeSize)
           .insert(insertPos, source.node);
         editor.view.dispatch(tr.scrollIntoView());
+        editor.commands.focus();
       }
       dragSourceRef.current = null;
+      setDropIndicator(null);
     };
 
     const handleDragEnd = () => {
       dragSourceRef.current = null;
+      setDropIndicator(null);
+      window.setTimeout(() => {
+        suppressHandleClickRef.current = false;
+      }, 200);
     };
 
-    editorElement.addEventListener('dragover', handleDragOver);
-    editorElement.addEventListener('drop', handleDrop);
+    const handleDragLeave = (event: globalThis.DragEvent) => {
+      if (!dragSourceRef.current) return;
+      if (
+        event.relatedTarget instanceof Node &&
+        scrollElement.contains(event.relatedTarget)
+      ) {
+        return;
+      }
+      setDropIndicator(null);
+    };
+
+    scrollElement.addEventListener('dragover', handleDragOver, true);
+    scrollElement.addEventListener('dragleave', handleDragLeave, true);
+    scrollElement.addEventListener('drop', handleDrop, true);
     window.addEventListener('dragend', handleDragEnd);
 
     return () => {
-      editorElement.removeEventListener('dragover', handleDragOver);
-      editorElement.removeEventListener('drop', handleDrop);
+      scrollElement.removeEventListener('dragover', handleDragOver, true);
+      scrollElement.removeEventListener('dragleave', handleDragLeave, true);
+      scrollElement.removeEventListener('drop', handleDrop, true);
       window.removeEventListener('dragend', handleDragEnd);
     };
   }, [editor, readOnly, scrollElement]);
 
-  if (!editor || readOnly || !activeBlock) {
+  if (!editor || readOnly) {
     return null;
   }
 
   return (
-    <div
-      ref={controlsRef}
-      className="pointer-events-none absolute left-3 z-20 flex w-7 -translate-y-1/2 flex-col items-center gap-0.5"
-      style={{top: activeBlock.top}}
-    >
-      <TooltipProvider>
-        {renderAddButton('before')}
-        <DropdownMenu open={handleMenuOpen} onOpenChange={setHandleMenuOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  draggable
-                  className={cn(
-                    'pointer-events-auto flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-md opacity-70',
-                    'hover:bg-accent hover:text-accent-foreground hover:opacity-100 active:cursor-grabbing',
-                  )}
-                  aria-label="Block options"
-                  onMouseDown={handlePlusMouseDown}
-                  onDragStart={handleDragStart}
+    <>
+      {dropIndicator ? (
+        <div
+          className="bg-primary pointer-events-none absolute z-30 h-0.5 rounded-full"
+          style={{
+            top: dropIndicator.top,
+            left: dropIndicator.left,
+            width: dropIndicator.width,
+          }}
+        />
+      ) : null}
+      {activeBlock ? (
+        <div
+          ref={controlsRef}
+          className="pointer-events-none absolute left-3 z-20 flex w-7 -translate-y-1/2 flex-col items-center gap-0.5"
+          style={{top: activeBlock.top}}
+        >
+          <TooltipProvider>
+            {renderAddButton('before')}
+            <DropdownMenu
+              open={handleMenuOpen}
+              onOpenChange={setHandleMenuOpen}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="pointer-events-auto relative flex h-7 w-7 shrink-0">
+                    <DropdownMenuTrigger asChild>
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0"
+                      />
+                    </DropdownMenuTrigger>
+                    <button
+                      type="button"
+                      draggable
+                      className={cn(
+                        'flex h-7 w-7 cursor-grab items-center justify-center rounded-md opacity-70',
+                        'hover:bg-accent hover:text-accent-foreground hover:opacity-100 active:cursor-grabbing',
+                      )}
+                      aria-label="Block options"
+                      onClick={handleHandleClick}
+                      onDragStart={handleDragStart}
+                    >
+                      <GripVerticalIcon className="h-4 w-4" />
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent
+                  align="start"
+                  side="bottom"
+                  className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-center text-xs shadow-md"
                 >
-                  <GripVerticalIcon className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent
-              align="start"
-              side="bottom"
-              className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-center text-xs shadow-md"
-            >
-              <div>
-                <span className="font-medium">Drag</span>{' '}
-                <span className="text-muted-foreground">to move</span>
-              </div>
-              <div>
-                <span className="font-medium">Click</span>{' '}
-                <span className="text-muted-foreground">to open menu</span>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" side="right" className="w-44">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="gap-2">
-                <Rows3Icon className="h-4 w-4" />
-                Turn into
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-60">
-                <DropdownMenuLabel>Turn into</DropdownMenuLabel>
+                  <div>
+                    <span className="font-medium">Drag</span>{' '}
+                    <span className="text-muted-foreground">to move</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Click</span>{' '}
+                    <span className="text-muted-foreground">to open menu</span>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="start" side="right" className="w-44">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="gap-2">
+                    <Rows3Icon className="h-4 w-4" />
+                    Turn into
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-60">
+                    <DropdownMenuLabel>Turn into</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {renderBlockTypeMenuItems((item) =>
+                      turnActiveBlockInto(item.createNode),
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                {renderBlockTypeMenuItems((item) =>
-                  turnActiveBlockInto(item.createNode),
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onSelect={deleteActiveBlock}
-            >
-              <Trash2Icon className="h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {renderAddButton('after')}
-      </TooltipProvider>
-    </div>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={deleteActiveBlock}
+                >
+                  <Trash2Icon className="h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {renderAddButton('after')}
+          </TooltipProvider>
+        </div>
+      ) : null}
+    </>
   );
 };
