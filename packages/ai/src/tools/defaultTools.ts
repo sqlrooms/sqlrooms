@@ -51,8 +51,16 @@ export type DefaultTableTools = {
  */
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
+  options: DefaultToolsOptions & {commands: false; tables: false},
+): {query: QueryTool};
+export function createDefaultAiTools(
+  store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options: DefaultToolsOptions & {commands: false},
 ): {query: QueryTool} & DefaultTableTools;
+export function createDefaultAiTools(
+  store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
+  options: DefaultToolsOptions & {tables: false},
+): {query: QueryTool} & DefaultCommandTools;
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,

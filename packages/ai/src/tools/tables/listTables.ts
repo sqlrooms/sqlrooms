@@ -50,10 +50,25 @@ export type ListTablesOutput = {
 /**
  * Converts SQL LIKE pattern to a JavaScript RegExp.
  * Supports % (any characters) and _ (single character) wildcards.
+ * Guards against ReDoS by validating and normalizing input.
  */
 function likePatternToRegex(pattern: string): RegExp {
+  // Guard against ReDoS: limit pattern length and wildcard count
+  if (pattern.length > 200) {
+    throw new Error('Pattern too long (max 200 characters)');
+  }
+
+  // Count wildcards
+  const wildcardCount = (pattern.match(/[%_]/g) || []).length;
+  if (wildcardCount > 20) {
+    throw new Error('Too many wildcards in pattern (max 20)');
+  }
+
+  // Collapse consecutive % into single % to prevent multiple .* groups
+  const normalized = pattern.replace(/%+/g, '%');
+
   // Escape regex special characters except for % and _
-  const escaped = pattern
+  const escaped = normalized
     .replace(/[.+^${}()|[\]\\]/g, '\\$&')
     .replace(/%/g, '.*')
     .replace(/_/g, '.');
@@ -63,7 +78,7 @@ function likePatternToRegex(pattern: string): RegExp {
 export function createListTablesTool(store: StoreApi<DuckDbSliceState>) {
   return tool({
     description:
-      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas.',
+      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas. Lists tables and views visible in the SQLRooms schema tree. Internal SQLRooms schemas/tables may be hidden; use this for user-facing data discovery, not exhaustive DuckDB catalog inspection.',
     inputSchema: ListTablesInput,
     execute: async (input) => {
       const state = store.getState();

@@ -64,14 +64,14 @@ function formatTableContextInstructions(
     const typeLabel = item.type === 'view' ? 'view' : 'table';
     const rowInfo =
       rowCount !== undefined ? `, ${rowCount.toLocaleString()} rows` : '';
-    return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columnCount} columns${rowInfo})`;
+    return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columnCount} columns${rowInfo}) → qualified name: ${item.id}`;
   });
 
   return [
     '',
     `Current table context (${tableItems.length} ${tableItems.length === 1 ? 'table' : 'tables'}):`,
     ...tableDetails,
-    '- Use these tables in your queries. Query with their qualified names for clarity.',
+    '- Use the qualified names shown above when querying these tables.',
   ];
 }
 
