@@ -26,6 +26,7 @@ export {
   BlocksDocumentListBlock,
   BlocksDocumentParagraphBlock,
   BlocksDocumentRichTextBlock,
+  BlocksDocumentStatefulBlockBlock,
   BlocksDocumentTodoBlock,
   blocksDocumentBlockToNode,
   blocksDocumentContentToBlocks,
@@ -64,6 +65,16 @@ export {
   type BlocksDocumentArtifactEmbedRenderers,
   type BlocksDocumentEmbedRendererProviderProps,
 } from './BlocksDocumentEmbedRendererContext';
+export {
+  BlocksDocumentStatefulBlockRendererProvider,
+  useBlocksDocumentStatefulBlockRenderer,
+  useBlocksDocumentStatefulBlockTypes,
+  type BlocksDocumentStatefulBlockRenderer,
+  type BlocksDocumentStatefulBlockRendererProps,
+  type BlocksDocumentStatefulBlockRendererProviderProps,
+  type BlocksDocumentStatefulBlockRenderers,
+  type BlocksDocumentStatefulBlockType,
+} from './BlocksDocumentStatefulBlockRendererContext';
 export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
@@ -125,6 +136,11 @@ export {
   type MarkdownDocumentEditorContentProps,
 } from './MarkdownDocumentEditor/MarkdownDocumentEditorContent';
 export {MarkdownDocument} from './MarkdownDocument';
+export {
+  createMarkdownDocumentBlockDefinition,
+  type CreateMarkdownDocumentBlockDefinitionOptions,
+  type MarkdownDocumentBlockRenderProps,
+} from './MarkdownDocumentBlock';
 export {useStoreWithBlocksDocuments} from './useStoreWithBlocksDocuments';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {

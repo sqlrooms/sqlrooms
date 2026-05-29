@@ -1,4 +1,4 @@
-import type {BlocksDocumentArtifactEmbedType} from '@sqlrooms/documents';
+import type {BlocksDocumentStatefulBlockType} from '@sqlrooms/documents';
 import type {RoomState} from './store-types';
 
 export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
@@ -22,8 +22,8 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     defaultTitle: 'Dashboard',
     embeddedTitle: 'Embedded Dashboard',
     embeddedDescription: 'Embedded dashboard',
-    ensureState: (state, artifactId) => {
-      state.dashboard.ensureDashboardArtifact(artifactId);
+    ensureState: (state, artifactId, title) => {
+      state.mosaicDashboard.ensureDashboard(artifactId, title);
     },
   },
   pivot: {
@@ -36,6 +36,16 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.pivot.ensurePivot(artifactId, {title});
     },
   },
+  document: {
+    artifactType: 'document',
+    label: 'Document',
+    defaultTitle: 'Document',
+    embeddedTitle: 'Embedded Document',
+    embeddedDescription: 'Embedded Markdown document',
+    ensureState: (state, artifactId) => {
+      state.documents.ensureDocument(artifactId);
+    },
+  },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
 
 export type StatefulBlockArtifactType =
@@ -45,39 +55,28 @@ export const STATEFUL_BLOCK_ARTIFACT_TYPES = Object.keys(
   STATEFUL_BLOCK_ARTIFACT_CONFIGS,
 ) as StatefulBlockArtifactType[];
 
-export function createStatefulBlockArtifactEmbedTypes({
-  parentArtifactId,
+export function createStatefulBlockTypes({
   getState,
 }: {
-  parentArtifactId: string;
   getState: () => RoomState;
-}): BlocksDocumentArtifactEmbedType[] {
+}): BlocksDocumentStatefulBlockType[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
     const config = STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
     return {
-      artifactType: config.artifactType,
+      blockType: config.artifactType,
       label: config.label,
       description: config.embeddedDescription,
       createNode: (blockId) => {
         const state = getState();
-        const embeddedArtifactId = state.artifacts.createArtifact({
-          type: config.artifactType,
-          title: config.embeddedTitle,
-          visibility: 'embedded',
-          parentArtifactId,
-        });
-        const embeddedArtifact = state.artifacts.getArtifact(embeddedArtifactId);
-        config.ensureState(
-          state,
-          embeddedArtifactId,
-          embeddedArtifact?.title ?? config.embeddedTitle,
-        );
+        config.ensureState(state, blockId, config.embeddedTitle);
         return {
-          type: 'blocksDocumentArtifactEmbed',
+          type: 'blocksDocumentStatefulBlock',
           attrs: {
             id: blockId,
-            artifactId: embeddedArtifactId,
-            artifactType: config.artifactType,
+            blockType: config.artifactType,
+            blockInstanceId: blockId,
+            ownership: 'owned',
+            title: config.embeddedTitle,
             caption: '',
           },
         };

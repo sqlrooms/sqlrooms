@@ -25,6 +25,7 @@ import {BlocksDocumentChartImageNode} from './extensions/BlocksDocumentChartImag
 import {BlocksDocumentChartNode} from './extensions/BlocksDocumentChartNode';
 import {BlocksDocumentImageNode} from './extensions/BlocksDocumentImageNode';
 import {BlocksDocumentRichTextNode} from './extensions/BlocksDocumentRichTextNode';
+import {BlocksDocumentStatefulBlockNode} from './extensions/BlocksDocumentStatefulBlockNode';
 import {
   BlocksDocumentEditorContext,
   type BlocksDocumentEditorChangeHandler,
@@ -110,6 +111,7 @@ export const BlocksDocumentEditorRoot: FC<
       BlocksDocumentChartImageNode,
       BlocksDocumentChartNode,
       BlocksDocumentArtifactEmbedNode,
+      BlocksDocumentStatefulBlockNode,
     ];
     return [
       BlocksDocumentBlockIdExtension.configure({

@@ -42,6 +42,10 @@ import {
   type BlocksDocumentArtifactEmbedType,
   useBlocksDocumentArtifactEmbedTypes,
 } from '../BlocksDocumentEmbedRendererContext';
+import {
+  type BlocksDocumentStatefulBlockType,
+  useBlocksDocumentStatefulBlockTypes,
+} from '../BlocksDocumentStatefulBlockRendererContext';
 import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
 
 type BlockControlState = {
@@ -69,6 +73,10 @@ function labelFromArtifactType(artifactType: string) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function labelFromBlockType(blockType: string) {
+  return labelFromArtifactType(blockType);
 }
 
 function directEditorChild(
@@ -127,8 +135,35 @@ function buildEmbedMenuItems(
   });
 }
 
+function buildStatefulBlockMenuItems(
+  blockTypes: BlocksDocumentStatefulBlockType[],
+): BlockMenuItem[] {
+  return blockTypes.map((blockType) => {
+    const label = blockType.label ?? labelFromBlockType(blockType.blockType);
+    return {
+      label,
+      description: blockType.description ?? `Insert ${label}`,
+      icon: Rows3Icon,
+      createNode:
+        blockType.createNode ??
+        ((id: string) => ({
+          type: 'blocksDocumentStatefulBlock',
+          attrs: {
+            id,
+            blockType: blockType.blockType,
+            blockInstanceId: id,
+            ownership: 'owned',
+            title: label,
+            caption: '',
+          },
+        })),
+    };
+  });
+}
+
 function buildBlockMenuItems(
   artifactTypes: BlocksDocumentArtifactEmbedType[],
+  statefulBlockTypes: BlocksDocumentStatefulBlockType[],
 ): BlockMenuItem[] {
   return [
     {
@@ -227,6 +262,7 @@ function buildBlockMenuItems(
         attrs: {id, tableName: '', config: {}, caption: ''},
       }),
     },
+    ...buildStatefulBlockMenuItems(statefulBlockTypes),
     ...buildEmbedMenuItems(artifactTypes),
   ];
 }
@@ -237,6 +273,7 @@ export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> =
   const {editor, readOnly, generateBlockId} =
     useBlocksDocumentEditorContext();
   const artifactTypes = useBlocksDocumentArtifactEmbedTypes();
+  const statefulBlockTypes = useBlocksDocumentStatefulBlockTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
@@ -246,8 +283,8 @@ export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> =
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const blockMenuItems = useMemo(
-    () => buildBlockMenuItems(artifactTypes),
-    [artifactTypes],
+    () => buildBlockMenuItems(artifactTypes, statefulBlockTypes),
+    [artifactTypes, statefulBlockTypes],
   );
   const menuOpen = insertMenuOpen || handleMenuOpen;
 

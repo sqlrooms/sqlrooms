@@ -3153,6 +3153,9 @@ importers:
       '@sqlrooms/artifacts':
         specifier: workspace:*
         version: link:../artifacts
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror

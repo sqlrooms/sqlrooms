@@ -7,8 +7,8 @@
 - [x] [Stage 3: Single-Block Artifact Shell Spike](#stage-3-single-block-artifact-shell-spike)
 - [x] [Stage 4: Dashboard Block Adapter](#stage-4-dashboard-block-adapter)
 - [x] [Stage 5: Pivot Block Adapter](#stage-5-pivot-block-adapter)
-- [ ] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
-- [ ] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
+- [x] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
+- [x] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
 - [ ] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
 - [ ] [Stage 9: AI and Command Integration](#stage-9-ai-and-command-integration)
 - [ ] [Stage 10: Migration and Package Boundary Decision](#stage-10-migration-and-package-boundary-decision)
@@ -51,7 +51,7 @@ The desired end state is one mapping source:
 const ARTIFACT_TYPES = defineArtifactTypes({
   dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
   notebook: createArtifactTypeFromStatefulBlock(notebookBlockDefinition),
-  analysis: createArtifactTypeFromStatefulBlock(blocksDocumentBlockDefinition),
+  analysis: createBlocksDocumentArtifactType(blocksDocumentDefinition),
   document: createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
   canvas: createArtifactTypeFromStatefulBlock(canvasBlockDefinition),
   app: createArtifactTypeFromStatefulBlock(appBlockDefinition),
@@ -60,6 +60,8 @@ const ARTIFACT_TYPES = defineArtifactTypes({
 
 Feature packages define stateful block behavior once. The artifact shell bridge
 turns that definition into a top-level workspace resource when needed.
+Blocks-document containers such as `analysis` can stay as container artifacts
+when their main purpose is hosting and composing other blocks.
 
 ## Non-Goals
 
@@ -403,17 +405,21 @@ Tests/checks:
 
 ### Stage 6: Convert Current Artifact Types
 
-Convert current artifact type definitions to be generated from stateful block
-definitions where practical.
+Convert current single-surface artifact type definitions to be generated from
+stateful block definitions where practical.
 
 Implementation notes:
 
-- Convert straightforward artifact types first:
+- Convert straightforward single-surface artifact types first:
   - `dashboard`
-  - `analysis` / blocks document
+  - `pivot`
   - `document` / Markdown document
+- Keep `analysis` as a BlocksDocument container artifact, not a reusable
+  stateful block implementation.
+- Defer container/runtime-heavy artifact types until their contracts are clearer:
   - `notebook`
   - `canvas`
+  - `app`
 - Convert `app` later if the bridge can express generated files, previews, and
   WebContainer lifecycle clearly.
 - Each feature package should export one stateful block definition that owns:
@@ -429,12 +435,13 @@ Implementation notes:
 
 Acceptance criteria:
 
-- At least two existing artifact types are generated from stateful block
+- At least three existing artifact types are generated from stateful block
   definitions.
 - There is no duplicated lifecycle mapping for converted types.
 - Existing top-level artifact behavior is unchanged.
-- The app artifact is explicitly classified as converted, deferred, or needing
-  a richer adapter.
+- `analysis` is explicitly retained as a container artifact.
+- `notebook`, `canvas`, and `app` are explicitly classified as deferred or
+  needing richer adapters.
 
 Likely files/modules:
 
@@ -449,8 +456,14 @@ Likely files/modules:
 Tests/checks:
 
 - Focused typechecks for converted packages.
+- `pnpm --filter @sqlrooms/documents typecheck`
+- `pnpm --filter @sqlrooms/documents build`
+- `pnpm --filter @sqlrooms/documents lint`
+- `pnpm --filter @sqlrooms/documents test`
 - `pnpm --filter sqlrooms-cli-app typecheck`
 - `pnpm --filter sqlrooms-cli-app build`
+- `pnpm --filter sqlrooms-cli-app lint`
+- `pnpm build`
 - Manual browser smoke checks for each converted top-level artifact type.
 
 ### Stage 7: Blocks Document Stateful Block Host
@@ -503,8 +516,13 @@ Tests/checks:
 
 - `pnpm --filter @sqlrooms/documents typecheck`
 - `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/documents build`
+- `pnpm --filter @sqlrooms/documents lint`
 - Candidate feature package typecheck
 - `pnpm --filter sqlrooms-cli-app typecheck`
+- `pnpm --filter sqlrooms-cli-app build`
+- `pnpm --filter sqlrooms-cli-app lint`
+- `pnpm build`
 - Manual browser check for creating/rendering/removing hosted stateful blocks.
 
 ### Stage 8: Lifecycle and Ownership Semantics
@@ -768,6 +786,74 @@ Follow-up bridge cleanup:
   config keys, so adding a new embeddable stateful artifact requires adding its
   renderer.
 
+## Evaluation After Stage 6
+
+Result: continue, but keep the conversion boundary narrower than "every
+artifact becomes a stateful block."
+
+What worked:
+
+- Dashboard, pivot, and Markdown document are all representable as stateful
+  block definitions and can be wrapped as top-level artifacts through the same
+  bridge.
+- Markdown document is a useful third data point because it is a report-like
+  text surface that may also be useful inside a blocks document.
+- The CLI `document` artifact no longer needs its own hand-written lifecycle
+  mapping; it is generated from `createMarkdownDocumentBlockDefinition(...)`.
+- The Analysis insert menu can expose `Document` as a direct hosted stateful
+  block alongside dashboard and pivot.
+
+What changed in the model:
+
+- `analysis` should remain a BlocksDocument container artifact. It is meant to
+  host and compose blocks, not to be embedded as a reusable single-surface block.
+- `notebook`, `canvas`, and `app` remain deferred until their ownership,
+  execution, or runtime lifecycles are clearer.
+- Artifact embeds are still needed as an explicit compatibility/reference path,
+  even as new dashboard/pivot/document placements can use direct stateful block
+  hosting.
+
+Recommended next step:
+
+- Implement Stage 8 ownership semantics before converting runtime-heavy types.
+  Delete, copy/paste, duplicate, and title synchronization behavior should be
+  explicit before notebook/app/canvas are considered.
+
+## Evaluation After Stage 7
+
+Result: the direct stateful block host is viable, but lifecycle ownership now
+needs to become the next design focus.
+
+What worked:
+
+- Blocks documents now have a `statefulBlock` DTO and a
+  `blocksDocumentStatefulBlock` Tiptap node for direct stateful block hosting.
+- Dashboard, pivot, and Markdown document can be inserted into Analysis
+  documents as direct stateful blocks without creating hidden embedded artifact
+  shells.
+- Existing `artifactEmbed` blocks remain renderable as a compatibility path for
+  previously persisted documents and for explicit artifact references.
+- The Analysis insert menu now uses direct stateful block menu entries for
+  dashboard, pivot, and document, while artifact embed menu entries are
+  suppressed.
+
+What still needs proof:
+
+- Owned stateful block delete cleanup is not implemented yet. The current
+  editor content persistence path does not emit precise per-node lifecycle
+  events, so deleting a hosted dashboard/pivot/document block can leave backing
+  slice state behind until Stage 8 defines ownership cleanup.
+- Duplicating a block will duplicate the same `blockInstanceId` unless a later
+  copy/paste normalization step rewrites ids and ownership metadata.
+- AI commands still create dashboard embeds through the compatibility command;
+  Stage 9 should switch new AI-authored dashboard/pivot/document blocks to the
+  direct stateful-block path.
+
+Recommended next step:
+
+- Implement Stage 8 before broadening to more stateful block types. Ownership,
+  copy/delete cleanup, and title synchronization are now the highest-risk parts.
+
 ## Progress Log
 
 - 2026-05-29: Created staged plan for stateful block implementations with
@@ -792,3 +878,11 @@ Follow-up bridge cleanup:
 - 2026-05-29: Added a CLI-level stateful block artifact config shared by
   top-level artifact registration and Analysis document embed menu registration
   for dashboard and pivot.
+- 2026-05-29: Completed Stage 6 by adding
+  `createMarkdownDocumentBlockDefinition(...)`, converting the CLI Markdown
+  document artifact to the single-block shell bridge, and intentionally keeping
+  `analysis` as a BlocksDocument container artifact.
+- 2026-05-29: Completed Stage 7 by adding a direct
+  `blocksDocumentStatefulBlock` host node, renderer registry, DTO conversion,
+  and Analysis document dashboard/pivot/document stateful block renderers while
+  keeping artifact embeds as compatibility renderers.

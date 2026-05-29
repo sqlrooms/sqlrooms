@@ -2,23 +2,42 @@ import {
   BlocksDocumentChartRendererProvider,
   BlocksDocumentArtifact,
   BlocksDocumentEmbedRendererProvider,
+  BlocksDocumentStatefulBlockRendererProvider,
   type BlocksDocumentArtifactEmbedRenderer,
+  type BlocksDocumentStatefulBlockRenderer,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {
-  createStatefulBlockArtifactEmbedTypes,
+  createStatefulBlockTypes,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 import {AnalysisChartRenderer} from './AnalysisChartRenderer';
+import {AnalysisDashboardBlockRenderer} from './AnalysisDashboardBlockRenderer';
 import {AnalysisDashboardEmbedRenderer} from './AnalysisDashboardEmbedRenderer';
+import {AnalysisMarkdownDocumentBlockRenderer} from './AnalysisMarkdownDocumentBlockRenderer';
+import {AnalysisPivotBlockRenderer} from './AnalysisPivotBlockRenderer';
 import {AnalysisPivotEmbedRenderer} from './AnalysisPivotEmbedRenderer';
+
+type ArtifactEmbedCompatibilityType = 'dashboard' | 'pivot';
 
 const ANALYSIS_EMBED_RENDERERS = {
   dashboard: AnalysisDashboardEmbedRenderer,
   pivot: AnalysisPivotEmbedRenderer,
-} satisfies Record<StatefulBlockArtifactType, BlocksDocumentArtifactEmbedRenderer>;
+} satisfies Record<
+  ArtifactEmbedCompatibilityType,
+  BlocksDocumentArtifactEmbedRenderer
+>;
+
+const ANALYSIS_STATEFUL_BLOCK_RENDERERS = {
+  dashboard: AnalysisDashboardBlockRenderer,
+  pivot: AnalysisPivotBlockRenderer,
+  document: AnalysisMarkdownDocumentBlockRenderer,
+} satisfies Record<
+  StatefulBlockArtifactType,
+  BlocksDocumentStatefulBlockRenderer
+>;
 
 export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
@@ -35,13 +54,12 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
     }
   }, [artifact?.type, artifactId, ensureBlocksDocument]);
 
-  const artifactTypes = useMemo(
+  const statefulBlockTypes = useMemo(
     () =>
-      createStatefulBlockArtifactEmbedTypes({
-        parentArtifactId: artifactId,
+      createStatefulBlockTypes({
         getState: useRoomStore.getState,
       }),
-    [artifactId],
+    [],
   );
 
   if (!artifact || artifact.type !== 'analysis') {
@@ -50,12 +68,17 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
 
   return (
     <BlocksDocumentChartRendererProvider renderer={AnalysisChartRenderer}>
-      <BlocksDocumentEmbedRendererProvider
-        renderers={ANALYSIS_EMBED_RENDERERS}
-        artifactTypes={artifactTypes}
+      <BlocksDocumentStatefulBlockRendererProvider
+        renderers={ANALYSIS_STATEFUL_BLOCK_RENDERERS}
+        blockTypes={statefulBlockTypes}
       >
-        <BlocksDocumentArtifact artifactId={artifactId} />
-      </BlocksDocumentEmbedRendererProvider>
+        <BlocksDocumentEmbedRendererProvider
+          renderers={ANALYSIS_EMBED_RENDERERS}
+          artifactTypes={[]}
+        >
+          <BlocksDocumentArtifact artifactId={artifactId} />
+        </BlocksDocumentEmbedRendererProvider>
+      </BlocksDocumentStatefulBlockRendererProvider>
     </BlocksDocumentChartRendererProvider>
   );
 };

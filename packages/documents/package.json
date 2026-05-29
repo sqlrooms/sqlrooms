@@ -38,6 +38,7 @@
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
     "@sqlrooms/artifacts": "workspace:*",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",

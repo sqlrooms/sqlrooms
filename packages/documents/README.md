@@ -11,7 +11,6 @@ import {
   BlocksDocumentChartRendererProvider,
   BlocksDocumentEmbedRendererProvider,
   DocumentsSliceConfig,
-  MarkdownDocument,
   buildKnowledgeIndex,
   createBlocksDocumentCommands,
   createBlocksDocumentAiInstructions,
@@ -19,25 +18,18 @@ import {
   createBlocksDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
+  createMarkdownDocumentBlockDefinition,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
-import {defineArtifactTypes} from '@sqlrooms/artifacts';
+import {
+  createArtifactTypeFromStatefulBlock,
+  defineArtifactTypes,
+} from '@sqlrooms/artifacts';
+
+const documentBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
-  document: {
-    label: 'Document',
-    defaultTitle: 'Document',
-    component: MarkdownDocument,
-    onCreate: ({artifactId, store}) => {
-      store.getState().documents.ensureDocument(artifactId);
-    },
-    onEnsure: ({artifactId, store}) => {
-      store.getState().documents.ensureDocument(artifactId);
-    },
-    onDelete: ({artifactId, store}) => {
-      store.getState().documents.removeDocument(artifactId);
-    },
-  },
+  document: createArtifactTypeFromStatefulBlock(documentBlockDefinition),
   'blocks-document': {
     label: 'Blocks Document',
     defaultTitle: 'Blocks Document',
@@ -145,7 +137,7 @@ const roomStore = createRoomStore(
 The slice can create blocks documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, rich text, lists, todos, images, chart images,
-standalone chart blocks, and artifact embeds.
+standalone chart blocks, direct stateful blocks, and artifact embeds.
 
 `BlocksDocumentArtifact` and `BlocksDocumentEditor` provide the first rich
 editor surface for this structured state. The editor owns Tiptap nodes for
@@ -184,6 +176,48 @@ If no renderer is registered, chart and embed blocks render a clear unsupported
 state while preserving their Tiptap JSON attributes. `artifactTypes` is optional;
 when omitted, the editor derives plus-menu embed entries from the renderer keys
 and inserts a block with only `artifactType` prefilled.
+
+### Stateful Blocks
+
+Use a `statefulBlock` block when the document should host a stateful SQLRooms
+surface directly, without wrapping it in an artifact shell:
+
+```ts
+blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
+  {
+    id: 'pivot-block',
+    type: 'statefulBlock',
+    blockType: 'pivot',
+    blockInstanceId: 'pivot-instance-1',
+    ownership: 'owned',
+    title: 'Embedded Pivot Table',
+  },
+]);
+```
+
+Hosts provide renderers through `BlocksDocumentStatefulBlockRendererProvider`:
+
+```tsx
+<BlocksDocumentStatefulBlockRendererProvider
+  renderers={{
+    pivot: PivotBlockRenderer,
+    dashboard: DashboardBlockRenderer,
+  }}
+  blockTypes={[
+    {
+      blockType: 'pivot',
+      label: 'Pivot Table',
+      description: 'Embedded pivot table',
+    },
+  ]}
+>
+  <BlocksDocumentArtifact artifactId={blocksDocumentArtifactId} />
+</BlocksDocumentStatefulBlockRendererProvider>
+```
+
+Artifact embeds remain supported for compatibility and for explicit references
+to existing top-level artifacts. New dashboard/pivot-style document blocks
+should generally prefer `statefulBlock`.
 
 ### Standalone Chart Blocks
 

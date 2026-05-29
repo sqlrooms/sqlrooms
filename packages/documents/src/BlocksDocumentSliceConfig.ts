@@ -145,6 +145,16 @@ export const BlocksDocumentArtifactEmbedBlock = z.object({
   caption: z.string().optional(),
 });
 
+export const BlocksDocumentStatefulBlockBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
+  type: z.literal('statefulBlock'),
+  blockType: z.string(),
+  blockInstanceId: z.string(),
+  ownership: z.enum(['owned', 'shared', 'external']).optional(),
+  title: z.string().optional(),
+  caption: z.string().optional(),
+});
+
 export const BlocksDocumentBlock = z.discriminatedUnion('type', [
   BlocksDocumentHeadingBlock,
   BlocksDocumentParagraphBlock,
@@ -155,6 +165,7 @@ export const BlocksDocumentBlock = z.discriminatedUnion('type', [
   BlocksDocumentChartImageBlock,
   BlocksDocumentChartBlock,
   BlocksDocumentArtifactEmbedBlock,
+  BlocksDocumentStatefulBlockBlock,
 ]);
 export type BlocksDocumentBlock = z.infer<typeof BlocksDocumentBlock>;
 
@@ -273,6 +284,18 @@ export function blocksDocumentBlockToNode(
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
       };
+    case 'statefulBlock':
+      return {
+        type: 'blocksDocumentStatefulBlock',
+        attrs: {
+          id: block.id,
+          blockType: block.blockType,
+          blockInstanceId: block.blockInstanceId,
+          ...(block.ownership !== undefined ? {ownership: block.ownership} : {}),
+          ...(block.title !== undefined ? {title: block.title} : {}),
+          ...(block.caption !== undefined ? {caption: block.caption} : {}),
+        },
+      };
   }
 }
 
@@ -348,6 +371,16 @@ export function blocksDocumentNodeToBlock(
         type: 'artifactEmbed',
         artifactId: node.attrs?.artifactId,
         artifactType: node.attrs?.artifactType,
+        caption: optionalString(node.attrs?.caption),
+      });
+    case 'blocksDocumentStatefulBlock':
+      return BlocksDocumentStatefulBlockBlock.parse({
+        id,
+        type: 'statefulBlock',
+        blockType: node.attrs?.blockType,
+        blockInstanceId: node.attrs?.blockInstanceId,
+        ownership: node.attrs?.ownership,
+        title: optionalString(node.attrs?.title),
         caption: optionalString(node.attrs?.caption),
       });
     default:

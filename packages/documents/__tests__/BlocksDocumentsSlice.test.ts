@@ -265,6 +265,15 @@ describe('BlocksDocumentsSlice', () => {
         artifactType: 'dashboard',
         caption: 'Dashboard',
       },
+      {
+        id: 'pivot-block',
+        type: 'statefulBlock',
+        blockType: 'pivot',
+        blockInstanceId: 'pivot-instance-1',
+        ownership: 'owned',
+        title: 'Embedded Pivot Table',
+        caption: 'Pivot',
+      },
     ];
     const content = {
       type: 'doc' as const,
