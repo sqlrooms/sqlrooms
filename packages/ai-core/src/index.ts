@@ -14,14 +14,17 @@ export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
 export {Chat, type LocalAgentChatRootProps} from './components/Chat';
+export {ContextSelector} from './components/context/ContextSelector';
 export {
-  CHAT_CONTEXT_SELECTOR_SLOT,
-  ContextSelector,
-} from './components/ContextSelector';
+  toggleContextSelectorItem,
+  promoteContextSelectorItem,
+  reorderContextSelectorItems,
+} from './components/context/utils';
+export {CHAT_CONTEXT_SELECTOR_SLOT} from './components/context/types';
 export type {
   ContextSelectorItem,
   ContextSelectorRootProps,
-} from './components/ContextSelector';
+} from './components/context/types';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';

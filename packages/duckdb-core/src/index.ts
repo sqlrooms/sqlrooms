@@ -50,6 +50,10 @@ export {
 } from './schema-tree/typeCategories';
 
 export {createDbSchemaTrees} from './schema-tree/schemaTree';
+export {
+  getAllTablesFromSchemaTrees,
+  findTableInSchemaTrees,
+} from './schema-tree/schemaTreeUtils';
 
 export {
   type DbSchemaNode,

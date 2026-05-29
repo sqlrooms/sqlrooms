@@ -3,14 +3,11 @@ import {
   AiSettingsSliceConfig,
   AiSliceConfig,
   getAiRunContextPrimaryItem,
-  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
-  type AiRunContext,
-  type AiRunContextItem,
 } from '@sqlrooms/ai';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
@@ -82,7 +79,9 @@ import {
   getDashboardAiInstructions,
 } from './createDashboardAiTools';
 import {dashboardAgentTool} from './createDashboardAgent';
-import {createArtifactContextAiTools} from './createArtifactContextAiTools';
+import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
+import {formatRunContextInstructions} from './context/formatRunContextInstructions';
+import {getRunContext} from './context/getRunContext';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
@@ -534,50 +533,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
-            getRunContext: () => {
-              const state = store.getState();
-              const {artifactsById} = state.artifacts.config;
-              const items = Array.from(new Set(state.aiContextItemIds))
-                .map((artifactId): AiRunContextItem | undefined => {
-                  const artifact = artifactsById[artifactId];
-                  if (!artifact) return undefined;
-                  return {
-                    kind: 'artifact',
-                    id: artifact.id,
-                    type: artifact.type,
-                    title: artifact.title,
-                  };
-                })
-                .filter(Boolean) as AiRunContextItem[];
-              if (items.length === 0) return undefined;
-              return {
-                items,
-                primaryItemId: items[0]?.id,
-                capturedAt: Date.now(),
-              } satisfies AiRunContext;
-            },
-            formatRunContextInstructions: ({runContext}) => {
-              const artifactItems = getAiRunContextItems(runContext).filter(
-                (item) => item.kind === 'artifact',
-              );
-              if (artifactItems.length === 0) return '';
-              const mainItem =
-                getAiRunContextPrimaryItem(runContext) ?? artifactItems[0];
-              if (!mainItem) return '';
-              const additionalItems = artifactItems.filter(
-                (item) => item.id !== mainItem.id,
-              );
-              const artifactType = mainItem.type ?? 'artifact';
-              return [
-                'Current artifact context:',
-                `- Primary target: ${artifactType} "${mainItem.title}" (id: ${mainItem.id}). Pass this id as artifactId when using a tool that should modify it.`,
-                ...additionalItems.map(
-                  (item) =>
-                    `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
-                ),
-                '- Additional context items are reference-only by default; tools will not implicitly target them. Use set_primary_context_artifact before modifying a reference artifact.',
-              ].join('\n');
-            },
+            getRunContext: () => getRunContext(store),
+            formatRunContextInstructions: ({runContext}) =>
+              formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),

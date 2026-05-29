@@ -6,7 +6,6 @@ import {
   useChatRuntime,
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
-import {ContextSelector} from './ContextSelector';
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
@@ -25,6 +24,7 @@ import {QueryControls} from './QueryControls';
 import {SessionChatManager} from './SessionChatManager';
 import {SessionControls} from './SessionControls';
 import {ChatSearch, ChatSearchProvider} from './ChatSearch';
+import {ContextSelector} from './context/ContextSelector';
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;

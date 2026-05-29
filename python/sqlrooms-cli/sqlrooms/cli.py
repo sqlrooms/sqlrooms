@@ -205,7 +205,9 @@ def _load_ai_runtime_config(
     custom_models: list[dict[str, Any]] = []
     for idx, item in enumerate(custom_models_raw):
         if not isinstance(item, dict):
-            raise RuntimeError(f"AI custom model entry at index {idx} must be an object.")
+            raise RuntimeError(
+                f"AI custom model entry at index {idx} must be an object."
+            )
         model_name = _normalize_config_string(
             item.get("model_name") or item.get("modelName")
         )
@@ -224,7 +226,9 @@ def _load_ai_runtime_config(
 
     model_parameters_raw = ai.get("model_parameters") or {}
     if not isinstance(model_parameters_raw, dict):
-        raise RuntimeError("'ai.model_parameters' must be an object in SQLRooms config.")
+        raise RuntimeError(
+            "'ai.model_parameters' must be an object in SQLRooms config."
+        )
     model_parameters: dict[str, Any] = {}
     if "max_steps" in model_parameters_raw:
         max_steps = model_parameters_raw.get("max_steps")
@@ -238,7 +242,11 @@ def _load_ai_runtime_config(
     if isinstance(additional_instruction, str):
         model_parameters["additionalInstruction"] = additional_instruction
 
-    if default_provider and default_provider not in providers and default_provider != "custom":
+    if (
+        default_provider
+        and default_provider not in providers
+        and default_provider != "custom"
+    ):
         raise RuntimeError(
             f"AI default_provider '{default_provider}' is not defined under ai.providers."
         )

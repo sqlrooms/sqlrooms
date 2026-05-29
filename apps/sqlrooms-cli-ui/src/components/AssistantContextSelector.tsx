@@ -37,8 +37,8 @@ export const AssistantContextSelector: FC = () => {
     >
       <Chat.ContextSelector.Badge tooltip="Add context" />
       <Chat.ContextSelector.SearchDropdown
-        searchPlaceholder="Search artifacts..."
-        emptyLabel="No artifact found."
+        searchPlaceholder="Search context..."
+        emptyLabel="No context items found."
       />
     </Chat.ContextSelector>
   );
