@@ -148,6 +148,7 @@ function CliArtifactAddMenu() {
           (artifactType) => artifactType !== 'dashboard',
         ).map((artifactType) => {
           const type = ARTIFACT_TYPES[artifactType];
+          const Icon = type.icon;
           return (
             <DropdownMenuItem
               key={artifactType}
@@ -157,7 +158,7 @@ function CliArtifactAddMenu() {
                 )
               }
             >
-              <type.icon /> {`New ${type.label}`}
+              {Icon ? <Icon /> : null} {`New ${type.label}`}
             </DropdownMenuItem>
           );
         })}

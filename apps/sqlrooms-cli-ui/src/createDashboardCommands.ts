@@ -7,6 +7,7 @@ import {RoomState} from './store-types';
 type CliArtifactType =
   | 'analysis'
   | 'dashboard'
+  | 'pivot'
   | 'notebook'
   | 'document'
   | 'canvas'
@@ -93,6 +94,8 @@ function createArtifactCommand(
         state.documents.ensureDocument(artifactId);
       } else if (artifactType === 'canvas') {
         state.canvas.ensureArtifact(artifactId);
+      } else if (artifactType === 'pivot') {
+        state.pivot.ensurePivot(artifactId, {title: title ?? group});
       }
       state.artifacts.setCurrentArtifact(artifactId);
       return {
@@ -198,6 +201,9 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         if (artifact.type === 'dashboard') {
           state.dashboard.ensureDashboardArtifact(artifactId);
         }
+        if (artifact.type === 'pivot') {
+          state.pivot.ensurePivot(artifactId, {title: artifact.title});
+        }
         return {
           success: true,
           commandId: 'artifact.select',
@@ -208,6 +214,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
 
     // Per-type create commands
     createArtifactCommand('analysis', 'Analysis'),
+    createArtifactCommand('pivot', 'Pivot Table'),
     createArtifactCommand('notebook', 'Notebook'),
     createArtifactCommand('document', 'Document'),
     createArtifactCommand('canvas', 'Canvas'),

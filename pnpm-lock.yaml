@@ -199,6 +199,9 @@ importers:
       '@sqlrooms/notebook':
         specifier: workspace:*
         version: link:../../packages/notebook
+      '@sqlrooms/pivot':
+        specifier: workspace:*
+        version: link:../../packages/pivot
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -3686,6 +3689,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.3.0
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../cells

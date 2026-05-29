@@ -37,6 +37,7 @@ import {
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
+import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -208,6 +209,7 @@ const sliceConfigSchemas = {
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
+  pivot: PivotSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
@@ -499,6 +501,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),
+
+        ...createPivotSlice()(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
 

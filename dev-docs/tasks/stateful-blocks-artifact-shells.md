@@ -6,7 +6,7 @@
 - [x] [Stage 2: Create `@sqlrooms/blocks` Contract Package](#stage-2-create-sqlroomsblocks-contract-package)
 - [x] [Stage 3: Single-Block Artifact Shell Spike](#stage-3-single-block-artifact-shell-spike)
 - [x] [Stage 4: Dashboard Block Adapter](#stage-4-dashboard-block-adapter)
-- [ ] [Stage 5: Pivot Block Adapter](#stage-5-pivot-block-adapter)
+- [x] [Stage 5: Pivot Block Adapter](#stage-5-pivot-block-adapter)
 - [ ] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
 - [ ] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
 - [ ] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
@@ -393,8 +393,13 @@ Likely files/modules:
 Tests/checks:
 
 - `pnpm --filter @sqlrooms/pivot typecheck`
+- `pnpm --filter @sqlrooms/pivot build`
 - `pnpm --filter @sqlrooms/pivot test`
+- `pnpm --filter @sqlrooms/pivot lint`
 - `pnpm --filter sqlrooms-cli-app typecheck` if integrated in the CLI.
+- `pnpm --filter sqlrooms-cli-app build` if integrated in the CLI.
+- `pnpm --filter sqlrooms-cli-app lint` if integrated in the CLI.
+- `pnpm build`
 
 ### Stage 6: Convert Current Artifact Types
 
@@ -719,6 +724,38 @@ Recommended next step:
 - Implement Stage 5 for pivot before converting more artifact types. If pivot
   also fits the contract cleanly, Stage 6 becomes much more credible.
 
+## Evaluation After Stage 5
+
+Result: continue. Pivot gives a useful second data point because it has runtime
+stores and generated DuckDB relations, not just view/layout state.
+
+What worked:
+
+- The same `StatefulBlockDefinition` shape can express pivot creation, rename,
+  render, and delete behavior without changing pivot persistence.
+- The CLI can now expose pivot tables as a top-level artifact/block type using
+  the same `createArtifactTypeFromStatefulBlock(...)` bridge.
+- Mounting `createPivotSlice` in the CLI made the previously declared
+  `PivotSliceState` real and persistable.
+- Pivot relation cleanup remains owned by `pivot.removePivot`, so the block
+  adapter does not duplicate generated-relation lifecycle logic.
+
+What still needs proof:
+
+- There is still no non-destructive pivot runtime eviction hook equivalent to
+  dashboard runtime close behavior; Stage 8 should decide whether pivot needs
+  one.
+- Pivot as a hosted document block will need ownership semantics for generated
+  relations when a containing block is duplicated or deleted.
+- Interop with notebook/cell execution is still unresolved: pivot already has a
+  cell adapter, and later stages should avoid creating competing pivot-cell and
+  pivot-block lifecycles.
+
+Recommended next step:
+
+- Start Stage 6 only for the remaining straightforward artifact types, or pause
+  to review the bridge ergonomics now that dashboard and pivot both use it.
+
 ## Progress Log
 
 - 2026-05-29: Created staged plan for stateful block implementations with
@@ -736,3 +773,7 @@ Recommended next step:
   `createMosaicDashboardBlockDefinition(...)` in `@sqlrooms/mosaic`, converting
   the CLI dashboard artifact registration to the single-block shell bridge, and
   documenting the new Mosaic API.
+- 2026-05-29: Completed Stage 5 by adding
+  `createPivotBlockDefinition(...)` in `@sqlrooms/pivot`, mounting/persisting
+  the pivot slice in the CLI app, and exposing pivot tables as a CLI
+  artifact/block type through the single-block shell bridge.

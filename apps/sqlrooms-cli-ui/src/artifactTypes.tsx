@@ -4,6 +4,7 @@ import {
   type ArtifactTypeDefinition,
 } from '@sqlrooms/artifacts';
 import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
+import {createPivotBlockDefinition} from '@sqlrooms/pivot';
 import {
   AppWindow,
   FileText,
@@ -22,6 +23,7 @@ import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 export const CLI_ARTIFACT_TYPES = [
   'analysis',
   'dashboard',
+  'pivot',
   'notebook',
   'document',
   'canvas',
@@ -33,6 +35,8 @@ const dashboardBlockDefinition =
   createMosaicDashboardBlockDefinition<RoomState>({
     render: DashboardArtifact,
   });
+
+const pivotBlockDefinition = createPivotBlockDefinition<RoomState>();
 
 export const ARTIFACT_TYPES = defineArtifactTypes({
   analysis: {
@@ -51,6 +55,7 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
     },
   },
   dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
+  pivot: createArtifactTypeFromStatefulBlock(pivotBlockDefinition),
   notebook: {
     label: 'Notebook',
     defaultTitle: 'Notebook',

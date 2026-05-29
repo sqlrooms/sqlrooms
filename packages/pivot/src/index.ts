@@ -15,6 +15,11 @@ export {
 } from './PivotCoreSlice';
 export {PivotEditor} from './PivotEditor';
 export {PivotView} from './PivotView';
+export {
+  createPivotBlockDefinition,
+  type CreatePivotBlockDefinitionOptions,
+  type PivotBlockRenderProps,
+} from './PivotBlock';
 export {PivotResults} from './PivotResults';
 export {
   createOrReplacePivotRelations,

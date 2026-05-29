@@ -9,6 +9,7 @@ import {useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {AnalysisChartRenderer} from './AnalysisChartRenderer';
 import {AnalysisDashboardEmbedRenderer} from './AnalysisDashboardEmbedRenderer';
+import {AnalysisPivotEmbedRenderer} from './AnalysisPivotEmbedRenderer';
 
 export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
@@ -51,6 +52,32 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
           };
         },
       },
+      {
+        artifactType: 'pivot',
+        label: 'Pivot Table',
+        description: 'Embedded pivot table',
+        createNode: (blockId) => {
+          const state = useRoomStore.getState();
+          const pivotArtifactId = state.artifacts.createArtifact({
+            type: 'pivot',
+            title: 'Embedded Pivot Table',
+            visibility: 'embedded',
+            parentArtifactId: artifactId,
+          });
+          state.pivot.ensurePivot(pivotArtifactId, {
+            title: 'Embedded Pivot Table',
+          });
+          return {
+            type: 'blocksDocumentArtifactEmbed',
+            attrs: {
+              id: blockId,
+              artifactId: pivotArtifactId,
+              artifactType: 'pivot',
+              caption: '',
+            },
+          };
+        },
+      },
     ],
     [artifactId],
   );
@@ -62,7 +89,10 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   return (
     <BlocksDocumentChartRendererProvider renderer={AnalysisChartRenderer}>
       <BlocksDocumentEmbedRendererProvider
-        renderers={{dashboard: AnalysisDashboardEmbedRenderer}}
+        renderers={{
+          dashboard: AnalysisDashboardEmbedRenderer,
+          pivot: AnalysisPivotEmbedRenderer,
+        }}
         artifactTypes={artifactTypes}
       >
         <BlocksDocumentArtifact artifactId={artifactId} />
