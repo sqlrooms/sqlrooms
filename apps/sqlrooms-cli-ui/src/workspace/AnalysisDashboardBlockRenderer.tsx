@@ -28,7 +28,7 @@ export const AnalysisDashboardBlockRenderer = ({
   }
 
   return (
-    <div className="flex h-[560px] min-h-[420px] flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {caption ? (
         <div className="border-border shrink-0 border-b px-3 py-2 text-sm font-medium">
           {caption}

@@ -44,6 +44,7 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
   label?: string;
   description?: string;
   defaultTitle?: string;
+  defaultHeight?: number;
   ensureState?: (
     context: BlockDocumentStatefulBlockCommandContext<TRoomState>,
   ) => void;
@@ -167,6 +168,11 @@ const BlockDocumentCreateStatefulBlockInput = z.object({
     .describe('State ownership mode. Defaults to owned.'),
   title: z.string().optional().describe('Optional stateful block title.'),
   caption: z.string().optional().describe('Optional document-local caption.'),
+  height: z
+    .number()
+    .positive()
+    .optional()
+    .describe('Optional persisted block height in pixels.'),
   index: z
     .number()
     .int()
@@ -551,6 +557,7 @@ export function createBlockDocumentCommands<
           ownership = 'owned',
           title,
           caption,
+          height,
           index,
         } = input as z.infer<typeof BlockDocumentCreateStatefulBlockInput>;
         const resolved = resolveBlockDocumentArtifact(
@@ -602,6 +609,7 @@ export function createBlockDocumentCommands<
           ownership,
           title: blockTitle,
           caption,
+          height: height ?? blockConfig?.defaultHeight,
         });
         insertOrAppendBlocks(state, artifactId, [block], index);
         return blockMutationSuccess(

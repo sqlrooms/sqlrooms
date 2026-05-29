@@ -397,6 +397,9 @@ function buildStatefulBlockMenuItems(
             ownership: 'owned',
             title: label,
             caption: '',
+            ...(blockType.resizableHeight
+              ? {height: blockType.defaultHeight ?? 560}
+              : {}),
           },
         })),
     };

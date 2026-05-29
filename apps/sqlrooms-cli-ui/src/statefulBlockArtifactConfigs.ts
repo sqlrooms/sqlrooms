@@ -12,6 +12,10 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     defaultTitle: string;
     embeddedTitle: string;
     embeddedDescription: string;
+    resizableHeight?: boolean;
+    defaultHeight?: number;
+    minHeight?: number;
+    maxHeight?: number;
     ensureState: (
       state: RoomState,
       artifactId: string,
@@ -29,6 +33,10 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     defaultTitle: 'Dashboard',
     embeddedTitle: 'Embedded Dashboard',
     embeddedDescription: 'Embedded dashboard',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 360,
+    maxHeight: 1600,
     ensureState: (state, artifactId, title) => {
       state.mosaicDashboard.ensureDashboard(artifactId, title);
     },
@@ -88,6 +96,10 @@ export function createStatefulBlockTypes({
       blockType: config.artifactType,
       label: config.label,
       description: config.embeddedDescription,
+      resizableHeight: config.resizableHeight,
+      defaultHeight: config.defaultHeight,
+      minHeight: config.minHeight,
+      maxHeight: config.maxHeight,
       createNode: (blockId, options) => {
         const state = getState();
         config.ensureState(state, blockId, config.embeddedTitle, options);
@@ -100,6 +112,9 @@ export function createStatefulBlockTypes({
             ownership: 'owned',
             title: config.embeddedTitle,
             caption: '',
+            ...(config.resizableHeight
+              ? {height: config.defaultHeight ?? 560}
+              : {}),
           },
         };
       },
@@ -115,6 +130,7 @@ export function createStatefulBlockCommandTypes(): BlockDocumentStatefulBlockCom
       label: config.label,
       description: config.embeddedDescription,
       defaultTitle: config.embeddedTitle,
+      defaultHeight: config.defaultHeight,
       ensureState: ({state, blockInstanceId, title}) => {
         config.ensureState(state, blockInstanceId, title);
       },

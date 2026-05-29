@@ -199,6 +199,10 @@ controls the host-specific entries shown in the plus menu.
 When a block is converted through the handle menu, custom `createNode`
 callbacks receive an optional `{initialText}` value with the source block text;
 hosts can use it to seed stateful blocks such as embedded Markdown documents.
+Stateful block types can opt into persisted vertical resizing with
+`resizableHeight`, `defaultHeight`, `minHeight`, and `maxHeight`; the editor
+stores the resulting `height` on the block node and renders a bottom resize
+handle for writable documents.
 
 ### Stateful Blocks
 

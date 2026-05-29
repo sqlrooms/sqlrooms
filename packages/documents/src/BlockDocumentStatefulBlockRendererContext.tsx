@@ -13,6 +13,7 @@ export type BlockDocumentStatefulBlockRendererProps = {
   ownership?: string;
   title?: string;
   caption?: string;
+  height?: number;
   readOnly?: boolean;
   onCaptionChange?: (caption: string | undefined) => void;
 };
@@ -33,6 +34,10 @@ export type BlockDocumentStatefulBlockType = {
   blockType: string;
   label?: string;
   description?: string;
+  resizableHeight?: boolean;
+  defaultHeight?: number;
+  minHeight?: number;
+  maxHeight?: number;
   createNode?: (
     blockId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,

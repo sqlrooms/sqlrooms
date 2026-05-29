@@ -144,6 +144,7 @@ export const BlockDocumentStatefulBlockBlock = z.object({
   ownership: z.enum(['owned', 'shared', 'external']).optional(),
   title: z.string().optional(),
   caption: z.string().optional(),
+  height: z.number().optional(),
 });
 
 export const BlockDocumentBlock = z.discriminatedUnion('type', [
@@ -175,6 +176,12 @@ function nodeId(node: BlockDocumentNode): string {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 export function createEmptyBlockDocumentContent(): BlockDocumentContent {
@@ -276,6 +283,7 @@ export function blockDocumentBlockToNode(
             : {}),
           ...(block.title !== undefined ? {title: block.title} : {}),
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
+          ...(block.height !== undefined ? {height: block.height} : {}),
         },
       };
   }
@@ -356,6 +364,7 @@ export function blockDocumentNodeToBlock(
         ownership: node.attrs?.ownership,
         title: optionalString(node.attrs?.title),
         caption: optionalString(node.attrs?.caption),
+        height: optionalNumber(node.attrs?.height),
       });
     default:
       return undefined;
