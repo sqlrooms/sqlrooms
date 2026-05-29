@@ -1,10 +1,11 @@
 import {
+  createArtifactTypeFromStatefulBlock,
   defineArtifactTypes,
   type ArtifactTypeDefinition,
 } from '@sqlrooms/artifacts';
+import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
 import {
   AppWindow,
-  BarChart3,
   FileText,
   FileStackIcon,
   LayoutDashboardIcon,
@@ -28,6 +29,11 @@ export const CLI_ARTIFACT_TYPES = [
 ] as const;
 export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
+const dashboardBlockDefinition =
+  createMosaicDashboardBlockDefinition<RoomState>({
+    render: DashboardArtifact,
+  });
+
 export const ARTIFACT_TYPES = defineArtifactTypes({
   analysis: {
     label: 'Analysis',
@@ -44,23 +50,7 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
       store.getState().blocksDocuments.removeBlocksDocument(artifactId);
     },
   },
-  dashboard: {
-    label: 'Dashboard',
-    defaultTitle: 'Dashboard',
-    icon: BarChart3,
-    component: DashboardArtifact,
-    onEnsure: ({artifactId, store}) => {
-      store.getState().dashboard.ensureDashboardArtifact(artifactId);
-    },
-    onClose: ({artifactId, store}) => {
-      store.getState().mosaicDashboard.evictDashboardRuntime(artifactId, {
-        resetSelection: true,
-      });
-    },
-    onDelete: ({artifactId, store}) => {
-      store.getState().mosaicDashboard.removeDashboard(artifactId);
-    },
-  },
+  dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
   notebook: {
     label: 'Notebook',
     defaultTitle: 'Notebook',

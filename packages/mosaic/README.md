@@ -226,6 +226,30 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### Dashboard Stateful Block Adapter
+
+`createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful
+block implementations. This lets host packages render the same dashboard
+implementation either inside a block host or through an artifact shell created
+with `@sqlrooms/artifacts`.
+
+```tsx
+import {createArtifactTypeFromStatefulBlock} from '@sqlrooms/artifacts';
+import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
+
+const dashboardBlockDefinition = createMosaicDashboardBlockDefinition({
+  render: DashboardArtifact,
+});
+
+export const dashboardArtifactType = createArtifactTypeFromStatefulBlock(
+  dashboardBlockDefinition,
+);
+```
+
+The adapter preserves existing dashboard state in
+`mosaicDashboard.config.dashboardsById` and delegates lifecycle work to the
+dashboard slice.
+
 ### Dashboard AI Tools
 
 `@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,

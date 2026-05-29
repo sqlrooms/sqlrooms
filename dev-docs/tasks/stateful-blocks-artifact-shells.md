@@ -5,7 +5,7 @@
 - [x] [Stage 1: Vocabulary and Architecture Note](#stage-1-vocabulary-and-architecture-note)
 - [x] [Stage 2: Create `@sqlrooms/blocks` Contract Package](#stage-2-create-sqlroomsblocks-contract-package)
 - [x] [Stage 3: Single-Block Artifact Shell Spike](#stage-3-single-block-artifact-shell-spike)
-- [ ] [Stage 4: Dashboard Block Adapter](#stage-4-dashboard-block-adapter)
+- [x] [Stage 4: Dashboard Block Adapter](#stage-4-dashboard-block-adapter)
 - [ ] [Stage 5: Pivot Block Adapter](#stage-5-pivot-block-adapter)
 - [ ] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
 - [ ] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
@@ -345,9 +345,17 @@ Likely files/modules:
 
 Tests/checks:
 
+- `pnpm --filter @sqlrooms/artifacts typecheck`
+- `pnpm --filter @sqlrooms/artifacts build`
+- `pnpm --filter @sqlrooms/artifacts test`
+- `pnpm --filter @sqlrooms/artifacts lint`
 - `pnpm --filter @sqlrooms/mosaic typecheck`
+- `pnpm --filter @sqlrooms/mosaic build`
+- `pnpm --filter @sqlrooms/mosaic lint`
 - `pnpm --filter sqlrooms-cli-app typecheck`
 - `pnpm --filter sqlrooms-cli-app build`
+- `pnpm --filter sqlrooms-cli-app lint`
+- `pnpm build`
 - Manual browser check: dashboard artifact opens, charts render, delete cleanup
   still works.
 
@@ -679,6 +687,38 @@ Recommended next step:
 - Implement Stage 4 for dashboard or a similarly well-understood stateful
   feature. Do not convert all artifact types yet.
 
+## Evaluation After Stage 4
+
+Result: continue, with the same deliberately incremental posture.
+
+What worked:
+
+- The dashboard adapter fits the shared `StatefulBlockDefinition` contract
+  without changing Mosaic dashboard persistence.
+- The CLI dashboard artifact can now be generated from the single
+  `createArtifactTypeFromStatefulBlock(...)` bridge instead of repeating the
+  artifact lifecycle mapping by hand.
+- The bridge still allows the CLI to provide its richer dashboard artifact
+  renderer for app-specific AI behavior while Mosaic owns the generic dashboard
+  stateful block definition.
+- The adapter keeps selections and runtime caches keyed by dashboard id, so
+  independent dashboard instances should remain isolated as long as they use
+  distinct block/artifact ids.
+
+What still needs proof:
+
+- A successful manual browser smoke is still pending. The attempted in-app
+  browser check was blocked by local navigation policy before the app loaded.
+- Pivot should be adapted next to test a less dashboard-shaped lifecycle with
+  generated relations, runtime stores, and stale status.
+- The current render props are intentionally small. Hosted stateful blocks may
+  later need attrs, read-only mode, ownership metadata, or host command context.
+
+Recommended next step:
+
+- Implement Stage 5 for pivot before converting more artifact types. If pivot
+  also fits the contract cleanly, Stage 6 becomes much more credible.
+
 ## Progress Log
 
 - 2026-05-29: Created staged plan for stateful block implementations with
@@ -692,3 +732,7 @@ Recommended next step:
 - 2026-05-29: Completed Stage 3 by adding
   `createArtifactTypeFromStatefulBlock(...)` in `@sqlrooms/artifacts` with
   lifecycle tests.
+- 2026-05-29: Completed Stage 4 by adding
+  `createMosaicDashboardBlockDefinition(...)` in `@sqlrooms/mosaic`, converting
+  the CLI dashboard artifact registration to the single-block shell bridge, and
+  documenting the new Mosaic API.

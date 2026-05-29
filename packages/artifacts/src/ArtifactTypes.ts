@@ -133,8 +133,9 @@ export function createArtifactTypeFromStatefulBlock<
 >(
   definition: StatefulBlockDefinition<TRoomState>,
 ): ArtifactTypeDefinition<TRoomState> {
-  const component: RoomPanelComponent = ({meta, panelInfo}) => {
-    const blockId = typeof meta?.artifactId === 'string' ? meta.artifactId : '';
+  const component: RoomPanelComponent = ({meta, panelId, panelInfo}) => {
+    const blockId =
+      typeof meta?.artifactId === 'string' ? meta.artifactId : (panelId ?? '');
     return createElement(definition.render, {
       blockId,
       blockType: definition.type,

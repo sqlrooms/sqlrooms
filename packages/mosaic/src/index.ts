@@ -19,6 +19,11 @@ export {
   type MosaicDashboardProps,
   type MosaicDashboardRootProps,
 } from './dashboard/MosaicDashboard';
+export {
+  createMosaicDashboardBlockDefinition,
+  type CreateMosaicDashboardBlockDefinitionOptions,
+  type MosaicDashboardBlockRenderProps,
+} from './dashboard/MosaicDashboardBlock';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
