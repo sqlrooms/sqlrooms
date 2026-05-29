@@ -38,13 +38,13 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     minHeight: 360,
     maxHeight: 1600,
     ensureState: (state, artifactId, title) => {
-      state.mosaicDashboard.ensureDashboard(artifactId, title);
+      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
     },
     deleteState: (state, artifactId) => {
       state.mosaicDashboard.removeDashboard(artifactId);
     },
     renameState: (state, artifactId, title) => {
-      state.mosaicDashboard.ensureDashboard(artifactId, title);
+      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
     },
   },
   pivot: {

@@ -99,6 +99,22 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(dashboard.layout?.id).toBe(getMosaicDashboardGridId(dashboardId));
   });
 
+  it('upgrades an empty default dock dashboard when grid is explicitly requested', () => {
+    const store = createTestStore();
+    const dashboardId = 'dashboard-from-artifact-lifecycle';
+
+    store.getState().mosaicDashboard.ensureDashboard(dashboardId, 'Dashboard');
+    store
+      .getState()
+      .mosaicDashboard.ensureDashboard(dashboardId, 'Dashboard', 'grid');
+
+    const dashboard =
+      store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
+    expect(dashboard.layoutType).toBe('grid');
+    expect(dashboard.layout?.type).toBe('grid');
+    expect(dashboard.layout?.id).toBe(getMosaicDashboardGridId(dashboardId));
+  });
+
   it('adds and removes grid dashboard panels with persisted grid layouts', () => {
     const store = createTestStore();
     const dashboardId = store

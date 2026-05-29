@@ -834,6 +834,15 @@ export function createMosaicDashboardSlice(
                   existing.title = title;
                   existing.updatedAt = Date.now();
                 }
+                if (
+                  layoutType === 'grid' &&
+                  existing.layoutType === 'dock' &&
+                  existing.panels.length === 0
+                ) {
+                  existing.layoutType = 'grid';
+                  existing.layout = createDashboardGridLayout(dashboardId);
+                  existing.updatedAt = Date.now();
+                }
                 return;
               }
               draft.mosaicDashboard.config.dashboardsById[dashboardId] = {
