@@ -6,6 +6,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
   cn,
 } from '@sqlrooms/ui';
 import type {Editor} from '@tiptap/react';
@@ -238,12 +242,9 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   );
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
-  const [handleTooltipOpen, setHandleTooltipOpen] = useState(false);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
-  const handleButtonRef = useRef<HTMLButtonElement>(null);
   const hideTimerRef = useRef<number | null>(null);
-  const tooltipTimerRef = useRef<number | null>(null);
   const blockMenuItems = useMemo(
     () => buildBlockMenuItems(artifactTypes),
     [artifactTypes],
@@ -255,28 +256,6 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     window.clearTimeout(hideTimerRef.current);
     hideTimerRef.current = null;
   }, []);
-
-  const cancelTooltip = useCallback(() => {
-    if (tooltipTimerRef.current != null) {
-      window.clearTimeout(tooltipTimerRef.current);
-      tooltipTimerRef.current = null;
-    }
-    setHandleTooltipOpen(false);
-  }, []);
-
-  const scheduleTooltip = useCallback(() => {
-    if (
-      handleMenuOpen ||
-      handleTooltipOpen ||
-      tooltipTimerRef.current != null
-    ) {
-      return;
-    }
-    tooltipTimerRef.current = window.setTimeout(() => {
-      setHandleTooltipOpen(true);
-      tooltipTimerRef.current = null;
-    }, 500);
-  }, [handleMenuOpen, handleTooltipOpen]);
 
   const scheduleHide = useCallback(() => {
     if (menuOpen) return;
@@ -320,17 +299,8 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
         controlsRef.current?.contains(event.target)
       ) {
         cancelHide();
-        if (
-          !handleMenuOpen &&
-          handleButtonRef.current?.contains(event.target)
-        ) {
-          scheduleTooltip();
-        } else {
-          cancelTooltip();
-        }
         return;
       }
-      cancelTooltip();
       const hoveredBlock = directEditorChild(editorElement, event.target);
       if (hoveredBlock) {
         updateActiveBlock(hoveredBlock);
@@ -342,10 +312,7 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
       }
       updateActiveBlock(null);
     };
-    const handleMouseLeave = () => {
-      cancelTooltip();
-      scheduleHide();
-    };
+    const handleMouseLeave = () => scheduleHide();
     const handleScroll = () => {
       if (activeBlock) updateActiveBlock(activeBlock.element);
     };
@@ -357,7 +324,6 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
 
     return () => {
       cancelHide();
-      cancelTooltip();
       scrollElement.removeEventListener('mousemove', handleMouseMove);
       scrollElement.removeEventListener('mouseleave', handleMouseLeave);
       scrollElement.removeEventListener('scroll', handleScroll);
@@ -366,13 +332,10 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   }, [
     activeBlock,
     cancelHide,
-    cancelTooltip,
     editor,
-    handleMenuOpen,
     menuOpen,
     readOnly,
     scheduleHide,
-    scheduleTooltip,
     scrollElement,
     updateActiveBlock,
   ]);
@@ -420,7 +383,6 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     if (!editor || !activeBlock) return;
     const node = getNodeAt(editor, activeBlock.pos);
     if (!node) return;
-    cancelTooltip();
     dragSourceRef.current = {pos: activeBlock.pos, node};
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('application/x-sqlrooms-analysis-block', 'move');
@@ -491,92 +453,77 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
   return (
     <div
       ref={controlsRef}
-      className="pointer-events-none absolute left-2 z-20 flex w-12 items-center justify-end gap-1"
+      className="pointer-events-none absolute left-2 z-20 flex w-16 items-center justify-end gap-1"
       style={{top: activeBlock.top}}
     >
-      <DropdownMenu open={insertMenuOpen} onOpenChange={setInsertMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="pointer-events-auto h-7 w-7 rounded-md opacity-70 hover:opacity-100"
-            aria-label="Add block"
-            title="Add block"
-            onMouseDown={handlePlusMouseDown}
-          >
-            <PlusIcon className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="right" className="w-56">
-          <DropdownMenuLabel>Insert block</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {blockMenuItems.map((item) => (
-            <DropdownMenuItem
-              key={item.label}
-              className="items-start gap-2"
-              onSelect={() => insertBlockAfterActive(item.createNode)}
+      <TooltipProvider>
+        <DropdownMenu open={insertMenuOpen} onOpenChange={setInsertMenuOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="pointer-events-auto h-7 w-7 shrink-0 rounded-md opacity-70 hover:opacity-100"
+                  aria-label="Add block"
+                  onMouseDown={handlePlusMouseDown}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent
+              align="start"
+              side="bottom"
+              className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-xs shadow-md"
             >
-              <item.icon className="mt-0.5 h-4 w-4" />
-              <span className="grid gap-0.5">
-                <span>{item.label}</span>
-                <span className="text-muted-foreground text-xs">
-                  {item.description}
+              Add block
+            </TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="start" side="right" className="w-56">
+            <DropdownMenuLabel>Insert block</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {blockMenuItems.map((item) => (
+              <DropdownMenuItem
+                key={item.label}
+                className="items-start gap-2"
+                onSelect={() => insertBlockAfterActive(item.createNode)}
+              >
+                <item.icon className="mt-0.5 h-4 w-4" />
+                <span className="grid gap-0.5">
+                  <span>{item.label}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {item.description}
+                  </span>
                 </span>
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <DropdownMenu
-        open={handleMenuOpen}
-        onOpenChange={(open) => {
-          setHandleMenuOpen(open);
-          if (open) cancelTooltip();
-        }}
-      >
-        <div className="pointer-events-auto relative">
-          <DropdownMenuTrigger asChild>
-            <button
-              ref={handleButtonRef}
-              type="button"
-              draggable
-              className={cn(
-                'flex h-7 w-7 cursor-grab items-center justify-center rounded-md opacity-70',
-                'hover:bg-accent hover:text-accent-foreground hover:opacity-100 active:cursor-grabbing',
-              )}
-              aria-label="Block options"
-              aria-describedby={
-                handleTooltipOpen ? 'analysis-block-handle-tooltip' : undefined
-              }
-              onFocus={() => {
-                scheduleTooltip();
-              }}
-              onBlur={cancelTooltip}
-              onPointerEnter={() => {
-                scheduleTooltip();
-              }}
-              onMouseEnter={() => {
-                scheduleTooltip();
-              }}
-              onPointerMove={() => {
-                scheduleTooltip();
-              }}
-              onMouseMove={() => {
-                scheduleTooltip();
-              }}
-              onPointerLeave={cancelTooltip}
-              onMouseDown={handlePlusMouseDown}
-              onDragStart={handleDragStart}
-            >
-              <GripVerticalIcon className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          {handleTooltipOpen ? (
-            <div
-              id="analysis-block-handle-tooltip"
-              role="tooltip"
-              className="bg-popover text-popover-foreground border-border pointer-events-none absolute top-9 left-0 z-50 w-max rounded-md border px-2.5 py-1.5 text-center text-xs shadow-md"
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu open={handleMenuOpen} onOpenChange={setHandleMenuOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  draggable
+                  className={cn(
+                    'pointer-events-auto flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-md opacity-70',
+                    'hover:bg-accent hover:text-accent-foreground hover:opacity-100 active:cursor-grabbing',
+                  )}
+                  aria-label="Block options"
+                  onMouseDown={handlePlusMouseDown}
+                  onDragStart={handleDragStart}
+                >
+                  <GripVerticalIcon className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent
+              align="start"
+              side="bottom"
+              className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-center text-xs shadow-md"
             >
               <div>
                 <span className="font-medium">Drag</span>{' '}
@@ -586,19 +533,19 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
                 <span className="font-medium">Click</span>{' '}
                 <span className="text-muted-foreground">to open menu</span>
               </div>
-            </div>
-          ) : null}
-        </div>
-        <DropdownMenuContent align="start" side="right" className="w-44">
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onSelect={deleteActiveBlock}
-          >
-            <Trash2Icon className="h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="start" side="right" className="w-44">
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={deleteActiveBlock}
+            >
+              <Trash2Icon className="h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TooltipProvider>
     </div>
   );
 };
