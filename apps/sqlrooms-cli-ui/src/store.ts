@@ -105,6 +105,7 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
+import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
 
 export type {RoomState} from './store-types';
 
@@ -508,7 +509,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createDocumentsSlice()(set, get, store),
 
-        ...createBlocksDocumentsSlice<RoomState>()(set, get, store),
+        ...createBlocksDocumentsSlice<RoomState>({
+          onDeleteOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+          }) => {
+            const config =
+              STATEFUL_BLOCK_ARTIFACT_CONFIGS[
+                blockType as keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS
+              ];
+            config?.deleteState(getState(), blockInstanceId);
+          },
+          onRenameOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            const config =
+              STATEFUL_BLOCK_ARTIFACT_CONFIGS[
+                blockType as keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS
+              ];
+            if (config && 'renameState' in config) {
+              config.renameState(getState(), blockInstanceId, title);
+            }
+          },
+        })(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({

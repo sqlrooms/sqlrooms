@@ -41,8 +41,12 @@ export {
 export {
   createBlocksDocumentsSlice,
   createDefaultBlocksDocumentsConfig,
+  type BlocksDocumentOwnedStatefulBlockDeleteContext,
+  type BlocksDocumentOwnedStatefulBlockRenameContext,
+  type BlocksDocumentOwnedStatefulBlockReference,
   type BlocksDocumentMutationMetadata,
   type BlocksDocumentMutationOrigin,
+  type BlocksDocumentStatefulBlockReference,
   type BlocksDocumentSyncMetadata,
   type BlocksDocumentsSliceState,
   type CreateBlocksDocumentsSliceProps,

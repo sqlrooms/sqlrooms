@@ -57,7 +57,17 @@ const roomStore = createRoomStore(
     },
     (set, get, store) => ({
       ...createDocumentsSlice()(set, get, store),
-      ...createBlocksDocumentsSlice()(set, get, store),
+      ...createBlocksDocumentsSlice({
+        onDeleteOwnedStatefulBlock: ({
+          blockType,
+          blockInstanceId,
+          getState,
+        }) => {
+          if (blockType === 'dashboard') {
+            getState().mosaicDashboard.removeDashboard(blockInstanceId);
+          }
+        },
+      })(set, get, store),
     }),
   ),
 );
@@ -147,7 +157,9 @@ host-provided so `@sqlrooms/documents` does not import Mosaic, pivot, or other
 feature packages:
 
 ```tsx
-<BlocksDocumentChartRendererProvider renderer={MosaicBlocksDocumentChartRenderer}>
+<BlocksDocumentChartRendererProvider
+  renderer={MosaicBlocksDocumentChartRenderer}
+>
   <BlocksDocumentStatefulBlockRendererProvider
     renderers={{
       dashboard: DashboardBlockRenderer,
@@ -222,6 +234,15 @@ Hosts provide renderers through `BlocksDocumentStatefulBlockRendererProvider`:
 Top-level artifacts should wrap stateful blocks or block containers at the
 workspace/tab layer. Blocks documents host the stateful block directly instead
 of embedding an artifact shell.
+
+Owned stateful blocks are lifecycle-managed by the host app. Pass
+`onDeleteOwnedStatefulBlock` to `createBlocksDocumentsSlice()` to clean up
+feature state when an owned block is removed from a document or when its owning
+blocks document is deleted. Blocks with `ownership: 'shared'` or
+`ownership: 'external'` are not cleaned up by the documents slice.
+Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
+changes into the backing feature state. Captions stay local to the blocks
+document.
 
 ### Standalone Chart Blocks
 

@@ -12,17 +12,20 @@ import {
   normalizeBlocksDocumentContent,
   type BlocksDocumentBlockType,
   type BlocksDocumentsSliceState,
+  type CreateBlocksDocumentsSliceProps,
 } from '../src';
 
 type TestRoomState = BaseRoomStoreState & BlocksDocumentsSliceState;
 
-function createTestStore() {
+function createTestStore(
+  props: Omit<CreateBlocksDocumentsSliceProps<TestRoomState>, 'now'> = {},
+) {
   let timestamp = 100;
   const now = () => timestamp++;
 
   return createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createBlocksDocumentsSlice<TestRoomState>({now})(...args),
+    ...createBlocksDocumentsSlice<TestRoomState>({now, ...props})(...args),
   }));
 }
 
@@ -229,11 +232,204 @@ describe('BlocksDocumentsSlice', () => {
         .blocksDocuments.updateBlock('blocks-document-1', 'missing', block),
     ).toBe(false);
     expect(
-      store.getState().blocksDocuments.removeBlock('blocks-document-1', 'missing'),
+      store
+        .getState()
+        .blocksDocuments.removeBlock('blocks-document-1', 'missing'),
     ).toBe(false);
     expect(
-      store.getState().blocksDocuments.moveBlock('blocks-document-1', 'missing', 0),
+      store
+        .getState()
+        .blocksDocuments.moveBlock('blocks-document-1', 'missing', 0),
     ).toBe(false);
+  });
+
+  it('cleans up removed owned stateful block references', () => {
+    const deletedBlocks: Array<{
+      documentId: string;
+      blockId: string;
+      blockType: string;
+      blockInstanceId: string;
+    }> = [];
+    const store = createTestStore({
+      onDeleteOwnedStatefulBlock: ({
+        documentId,
+        blockId,
+        blockType,
+        blockInstanceId,
+      }) => {
+        deletedBlocks.push({
+          documentId,
+          blockId,
+          blockType,
+          blockInstanceId,
+        });
+      },
+    });
+
+    store.getState().blocksDocuments.appendBlocks('blocks-document-1', [
+      {
+        id: 'owned-dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        ownership: 'owned',
+      },
+      {
+        id: 'shared-dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-2',
+        ownership: 'shared',
+      },
+    ]);
+
+    expect(
+      store
+        .getState()
+        .blocksDocuments.removeBlock('blocks-document-1', 'owned-dashboard'),
+    ).toBe(true);
+    expect(
+      store
+        .getState()
+        .blocksDocuments.removeBlock('blocks-document-1', 'shared-dashboard'),
+    ).toBe(true);
+
+    expect(deletedBlocks).toEqual([
+      {
+        documentId: 'blocks-document-1',
+        blockId: 'owned-dashboard',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+      },
+    ]);
+  });
+
+  it('cleans up owned stateful block references removed by content replacement', () => {
+    const deletedBlockIds: string[] = [];
+    const store = createTestStore({
+      onDeleteOwnedStatefulBlock: ({blockInstanceId}) => {
+        deletedBlockIds.push(blockInstanceId);
+      },
+    });
+
+    store.getState().blocksDocuments.appendBlocks('blocks-document-1', [
+      {
+        id: 'pivot-block',
+        type: 'statefulBlock',
+        blockType: 'pivot',
+        blockInstanceId: 'pivot-1',
+        ownership: 'owned',
+      },
+    ]);
+    store.getState().blocksDocuments.setContent('blocks-document-1', {
+      type: 'doc',
+      content: [
+        blocksDocumentBlockToNode({
+          id: 'paragraph',
+          type: 'paragraph',
+          text: 'Replacement',
+        }),
+      ],
+    });
+
+    expect(deletedBlockIds).toEqual(['pivot-1']);
+  });
+
+  it('keeps owned stateful block state while another owned reference remains', () => {
+    const deletedBlockIds: string[] = [];
+    const store = createTestStore({
+      onDeleteOwnedStatefulBlock: ({blockInstanceId}) => {
+        deletedBlockIds.push(blockInstanceId);
+      },
+    });
+
+    store.getState().blocksDocuments.appendBlocks('blocks-document-1', [
+      {
+        id: 'dashboard-a',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        ownership: 'owned',
+      },
+      {
+        id: 'dashboard-b',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        ownership: 'owned',
+      },
+    ]);
+
+    store
+      .getState()
+      .blocksDocuments.removeBlock('blocks-document-1', 'dashboard-a');
+    expect(deletedBlockIds).toEqual([]);
+
+    store.getState().blocksDocuments.removeBlocksDocument('blocks-document-1');
+    expect(deletedBlockIds).toEqual(['dashboard-1']);
+  });
+
+  it('renames owned stateful block references when title changes', () => {
+    const renamedBlocks: Array<{
+      blockInstanceId: string;
+      previousTitle: string;
+      title: string;
+    }> = [];
+    const store = createTestStore({
+      onRenameOwnedStatefulBlock: ({blockInstanceId, previousTitle, title}) => {
+        renamedBlocks.push({blockInstanceId, previousTitle, title});
+      },
+    });
+
+    store.getState().blocksDocuments.appendBlocks('blocks-document-1', [
+      {
+        id: 'pivot-block',
+        type: 'statefulBlock',
+        blockType: 'pivot',
+        blockInstanceId: 'pivot-1',
+        ownership: 'owned',
+        title: 'Original Pivot',
+      },
+      {
+        id: 'shared-pivot-block',
+        type: 'statefulBlock',
+        blockType: 'pivot',
+        blockInstanceId: 'pivot-2',
+        ownership: 'shared',
+        title: 'Original Shared Pivot',
+      },
+    ]);
+
+    expect(
+      store
+        .getState()
+        .blocksDocuments.updateBlock('blocks-document-1', 'pivot-block', {
+          id: 'ignored',
+          type: 'statefulBlock',
+          blockType: 'pivot',
+          blockInstanceId: 'pivot-1',
+          ownership: 'owned',
+          title: 'Renamed Pivot',
+        }),
+    ).toBe(true);
+    store
+      .getState()
+      .blocksDocuments.updateBlock('blocks-document-1', 'shared-pivot-block', {
+        id: 'ignored',
+        type: 'statefulBlock',
+        blockType: 'pivot',
+        blockInstanceId: 'pivot-2',
+        ownership: 'shared',
+        title: 'Renamed Shared Pivot',
+      });
+
+    expect(renamedBlocks).toEqual([
+      {
+        blockInstanceId: 'pivot-1',
+        previousTitle: 'Original Pivot',
+        title: 'Renamed Pivot',
+      },
+    ]);
   });
 
   it('round-trips supported block DTOs through Tiptap JSON nodes', () => {

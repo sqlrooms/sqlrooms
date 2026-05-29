@@ -9,7 +9,7 @@
 - [x] [Stage 5: Pivot Block Adapter](#stage-5-pivot-block-adapter)
 - [x] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
 - [x] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
-- [ ] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
+- [x] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
 - [ ] [Stage 9: AI and Command Integration](#stage-9-ai-and-command-integration)
 - [ ] [Stage 10: Migration and Package Boundary Decision](#stage-10-migration-and-package-boundary-decision)
 
@@ -52,7 +52,9 @@ const ARTIFACT_TYPES = defineArtifactTypes({
   dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
   notebook: createArtifactTypeFromStatefulBlock(notebookBlockDefinition),
   analysis: createBlocksDocumentArtifactType(blocksDocumentDefinition),
-  document: createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
+  document: createArtifactTypeFromStatefulBlock(
+    markdownDocumentBlockDefinition,
+  ),
   canvas: createArtifactTypeFromStatefulBlock(canvasBlockDefinition),
   app: createArtifactTypeFromStatefulBlock(appBlockDefinition),
 });
@@ -854,6 +856,37 @@ Recommended next step:
 - Implement Stage 8 before broadening to more stateful block types. Ownership,
   copy/delete cleanup, and title synchronization are now the highest-risk parts.
 
+## Evaluation After Stage 8
+
+Result: continue to AI/command integration. Owned direct stateful blocks now
+have enough lifecycle semantics for normal create, rename, and delete flows.
+
+What worked:
+
+- `createBlocksDocumentsSlice()` now accepts host callbacks for owned stateful
+  block delete and rename events.
+- Removing an owned dashboard/pivot/document block, replacing document content,
+  or deleting the containing blocks document can clean up backing feature state.
+- `shared` and `external` stateful block references are intentionally not
+  deleted by the documents slice.
+- Block `title` changes can be synchronized into backing state through a host
+  callback; block `caption` remains document-local.
+- The CLI wires the callbacks to dashboard, pivot, and Markdown document
+  cleanup/rename behavior.
+
+What still needs proof:
+
+- Copy/paste or duplicate normalization still needs a later pass so copied
+  owned blocks get new `blockInstanceId` values instead of accidentally sharing
+  state.
+- AI still needs host-level tools for creating dashboard/pivot/document
+  stateful blocks with backing state.
+
+Recommended next step:
+
+- Implement Stage 9 host command/AI integration for creating direct stateful
+  blocks in Analysis documents.
+
 ## Progress Log
 
 - 2026-05-29: Created staged plan for stateful block implementations with
@@ -887,3 +920,6 @@ Recommended next step:
   and Analysis document dashboard/pivot/document stateful block renderers.
 - 2026-05-29: Removed blocks document artifact embeds from the target model and
   implementation so documents compose direct blocks only.
+- 2026-05-29: Completed Stage 8 by adding owned stateful block delete and rename
+  lifecycle callbacks to `@sqlrooms/documents`, wiring CLI dashboard/pivot/
+  document cleanup, and documenting ownership behavior.

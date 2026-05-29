@@ -8,11 +8,9 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     defaultTitle: string;
     embeddedTitle: string;
     embeddedDescription: string;
-    ensureState: (
-      state: RoomState,
-      artifactId: string,
-      title: string,
-    ) => void;
+    ensureState: (state: RoomState, artifactId: string, title: string) => void;
+    deleteState: (state: RoomState, artifactId: string) => void;
+    renameState?: (state: RoomState, artifactId: string, title: string) => void;
   };
 
 export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
@@ -25,6 +23,12 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     ensureState: (state, artifactId, title) => {
       state.mosaicDashboard.ensureDashboard(artifactId, title);
     },
+    deleteState: (state, artifactId) => {
+      state.mosaicDashboard.removeDashboard(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.mosaicDashboard.ensureDashboard(artifactId, title);
+    },
   },
   pivot: {
     artifactType: 'pivot',
@@ -35,6 +39,12 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     ensureState: (state, artifactId, title) => {
       state.pivot.ensurePivot(artifactId, {title});
     },
+    deleteState: (state, artifactId) => {
+      state.pivot.removePivot(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.pivot.renamePivot(artifactId, title);
+    },
   },
   document: {
     artifactType: 'document',
@@ -44,6 +54,9 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedDescription: 'Embedded Markdown document',
     ensureState: (state, artifactId) => {
       state.documents.ensureDocument(artifactId);
+    },
+    deleteState: (state, artifactId) => {
+      state.documents.removeDocument(artifactId);
     },
   },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
