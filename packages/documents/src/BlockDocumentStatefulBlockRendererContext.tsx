@@ -38,6 +38,8 @@ export type BlockDocumentStatefulBlockType = {
   defaultHeight?: number;
   minHeight?: number;
   maxHeight?: number;
+  requireScrollModifier?: boolean;
+  scrollHintLabel?: string;
   createNode?: (
     blockId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,

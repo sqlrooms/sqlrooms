@@ -15,7 +15,7 @@ export const AnalysisDashboardBlockRenderer = ({
 
   useEffect(() => {
     if (blockType === 'dashboard' && blockInstanceId) {
-      ensureDashboard(blockInstanceId, title ?? 'Embedded Dashboard');
+      ensureDashboard(blockInstanceId, title ?? 'Embedded Dashboard', 'grid');
     }
   }, [blockInstanceId, blockType, ensureDashboard, title]);
 

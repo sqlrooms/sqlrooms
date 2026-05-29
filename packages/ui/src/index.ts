@@ -147,6 +147,11 @@ export {Input} from './components/input';
 export {Label} from './components/label';
 
 export {
+  ModifierScrollOverlay,
+  type ModifierScrollOverlayProps,
+} from './components/modifier-scroll-overlay';
+
+export {
   Menubar,
   MenubarCheckboxItem,
   MenubarContent,

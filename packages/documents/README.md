@@ -202,7 +202,11 @@ hosts can use it to seed stateful blocks such as embedded Markdown documents.
 Stateful block types can opt into persisted vertical resizing with
 `resizableHeight`, `defaultHeight`, `minHeight`, and `maxHeight`; the editor
 stores the resulting `height` on the block node and renders a bottom resize
-handle for writable documents.
+handle for writable documents. Interactive blocks can also opt into
+`requireScrollModifier`; ordinary wheel gestures then keep scrolling the
+document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
+elsewhere scrolls nested overflow regions inside the block. Use
+`scrollHintLabel` to customize the hint target text.
 
 ### Stateful Blocks
 

@@ -16,6 +16,8 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     defaultHeight?: number;
     minHeight?: number;
     maxHeight?: number;
+    requireScrollModifier?: boolean;
+    scrollHintLabel?: string;
     ensureState: (
       state: RoomState,
       artifactId: string,
@@ -37,6 +39,8 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     defaultHeight: 560,
     minHeight: 360,
     maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this dashboard',
     ensureState: (state, artifactId, title) => {
       state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
     },
@@ -100,6 +104,8 @@ export function createStatefulBlockTypes({
       defaultHeight: config.defaultHeight,
       minHeight: config.minHeight,
       maxHeight: config.maxHeight,
+      requireScrollModifier: config.requireScrollModifier,
+      scrollHintLabel: config.scrollHintLabel,
       createNode: (blockId, options) => {
         const state = getState();
         config.ensureState(state, blockId, config.embeddedTitle, options);
