@@ -71,7 +71,7 @@ export function getBlockNodeExtensionNames(extensions: readonly unknown[]) {
  *
  * Tiptap drops unknown attrs when serializing nodes. Without this extension,
  * built-in nodes such as paragraphs and headings would lose `attrs.id` after an
- * edit. The Analysis normalizer would then generate replacement ids, the
+ * edit. The blocks document normalizer would then generate replacement ids, the
  * external document value would appear different, and the editor would be
  * forced through `setContent`, which can move the selection to the end of the
  * document.

@@ -100,7 +100,7 @@ export const documentsMirrorSchema = schema.LoroMap({
       ),
       updatedAt: schema.Number(),
     }),
-    (analysisDocument) => analysisDocument.id,
+    (blocksDocument) => blocksDocument.id,
   ),
   artifacts: schema.LoroList(
     schema.LoroMap({
@@ -124,8 +124,18 @@ export const documentsMirrorInitialState = {
   artifactOrder: [],
 };
 
+export type CreateDocumentsCrdtMirrorOptions = {
+  /**
+   * Artifact types backed by the blocks document slice.
+   *
+   * Apps can use their own user-facing artifact names while reusing the generic
+   * blocks document storage and CRDT mirror.
+   */
+  blocksDocumentArtifactTypes?: string[];
+};
+
 /**
- * Creates a CRDT mirror for Markdown documents, Analysis documents, and their
+ * Creates a CRDT mirror for Markdown documents, blocks documents, and their
  * artifact metadata.
  *
  * The room's current artifact selection is intentionally kept local.
@@ -137,7 +147,19 @@ export const documentsMirrorInitialState = {
  */
 export function createDocumentsCrdtMirror<
   S extends DocumentCrdtState = DocumentCrdtState,
->(): CrdtMirror<S, typeof documentsMirrorSchema> {
+>(
+  options: CreateDocumentsCrdtMirrorOptions = {},
+): CrdtMirror<S, typeof documentsMirrorSchema> {
+  const blocksDocumentArtifactTypes = new Set(
+    options.blocksDocumentArtifactTypes ?? ['blocks-document'],
+  );
+  const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
+    artifact.type === 'document' ||
+    blocksDocumentArtifactTypes.has(artifact.type) ||
+    artifact.visibility === 'embedded';
+  const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
+    !isSyncedArtifact(artifact);
+
   return {
     schema: documentsMirrorSchema,
     initialState: documentsMirrorInitialState,
@@ -146,10 +168,7 @@ export function createDocumentsCrdtMirror<
         state.artifacts.config.artifactsById,
       ) as ArtifactMetadataType[];
       const syncedArtifacts = artifactValues.filter(
-        (artifact) =>
-          artifact.type === 'document' ||
-          artifact.type === 'analysis' ||
-          artifact.visibility === 'embedded',
+        (artifact) => isSyncedArtifact(artifact),
       );
       const syncedArtifactIds = new Set(
         syncedArtifacts.map((artifact) => artifact.id),
@@ -177,10 +196,10 @@ export function createDocumentsCrdtMirror<
         ),
         blocksDocuments: Object.values(
           state.blocksDocuments.config.artifacts,
-        ).map((analysisDocument) => ({
-          id: analysisDocument.id,
-          content: analysisDocument.content,
-          assets: Object.values(analysisDocument.assets).map((asset) => ({
+        ).map((blocksDocument) => ({
+          id: blocksDocument.id,
+          content: blocksDocument.content,
+          assets: Object.values(blocksDocument.assets).map((asset) => ({
             id: asset.id,
             mediaType: asset.mediaType,
             encoding: asset.encoding,
@@ -192,7 +211,7 @@ export function createDocumentsCrdtMirror<
             createdAt: asset.createdAt,
             updatedAt: asset.updatedAt,
           })),
-          updatedAt: analysisDocument.updatedAt,
+          updatedAt: blocksDocument.updatedAt,
         })),
         artifacts: syncedArtifacts.map((artifact) => ({
           id: artifact.id,
@@ -237,10 +256,7 @@ export function createDocumentsCrdtMirror<
       const nonSyncedArtifacts: Record<string, ArtifactMetadataType> =
         Object.fromEntries(
           Object.entries(currentArtifactsById).filter(
-            ([, artifact]) =>
-              artifact.type !== 'document' &&
-              artifact.type !== 'analysis' &&
-              artifact.visibility !== 'embedded',
+            ([, artifact]) => isNonSyncedArtifact(artifact),
           ),
         );
       const artifactsById: Record<string, ArtifactMetadataType> = {
@@ -263,12 +279,7 @@ export function createDocumentsCrdtMirror<
       );
       const nonSyncedOrder = currentArtifactOrder.filter((id) => {
         const artifact = artifactsById[id];
-        return (
-          artifact != null &&
-          artifact.type !== 'document' &&
-          artifact.type !== 'analysis' &&
-          artifact.visibility !== 'embedded'
-        );
+        return artifact != null && isNonSyncedArtifact(artifact);
       });
       const artifactOrder = [
         ...nonSyncedOrder,
@@ -347,13 +358,13 @@ function blocksDocumentsArrayToRecord(
   blocksDocuments: IncomingBlocksDocument[],
 ) {
   return Object.fromEntries(
-    blocksDocuments.map((analysisDocument) => [
-      analysisDocument.id,
+    blocksDocuments.map((blocksDocument) => [
+      blocksDocument.id,
       {
-        id: analysisDocument.id,
-        content: analysisDocument.content,
-        assets: assetsArrayToRecord(analysisDocument.assets),
-        updatedAt: analysisDocument.updatedAt,
+        id: blocksDocument.id,
+        content: blocksDocument.content,
+        assets: assetsArrayToRecord(blocksDocument.assets),
+        updatedAt: blocksDocument.updatedAt,
       },
     ]),
   );

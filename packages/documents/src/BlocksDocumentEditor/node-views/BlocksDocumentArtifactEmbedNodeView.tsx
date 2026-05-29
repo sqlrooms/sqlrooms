@@ -1,18 +1,18 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import {createElement, type FC} from 'react';
-import {useAnalysisArtifactEmbedRenderer} from '../../AnalysisEmbedRendererContext';
+import {useBlocksDocumentArtifactEmbedRenderer} from '../../BlocksDocumentEmbedRendererContext';
 import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
-type AnalysisArtifactEmbedNodeViewProps = {
+type BlocksDocumentArtifactEmbedNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
-export const AnalysisArtifactEmbedNodeView: FC<
-  AnalysisArtifactEmbedNodeViewProps
+export const BlocksDocumentArtifactEmbedNodeView: FC<
+  BlocksDocumentArtifactEmbedNodeViewProps
 > = ({node, selected, updateAttributes}) => {
   const {documentId, readOnly} = useBlocksDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
@@ -20,7 +20,7 @@ export const AnalysisArtifactEmbedNodeView: FC<
   const artifactId = optionalString(attrs.artifactId) ?? '';
   const artifactType = optionalString(attrs.artifactType) ?? '';
   const caption = optionalString(attrs.caption);
-  const Renderer = useAnalysisArtifactEmbedRenderer(artifactType);
+  const Renderer = useBlocksDocumentArtifactEmbedRenderer(artifactType);
 
   return (
     <NodeViewWrapper

@@ -198,7 +198,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'richText':
       return {
-        type: 'analysisRichText',
+        type: 'blocksDocumentRichText',
         attrs: {id: block.id, markdown: block.markdown},
       };
     case 'list':
@@ -234,7 +234,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'image':
       return {
-        type: 'analysisImage',
+        type: 'blocksDocumentImage',
         attrs: {
           id: block.id,
           assetId: block.assetId,
@@ -243,7 +243,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'chartImage':
       return {
-        type: 'analysisChartImage',
+        type: 'blocksDocumentChartImage',
         attrs: {
           id: block.id,
           assetId: block.assetId,
@@ -252,7 +252,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'chart':
       return {
-        type: 'analysisChart',
+        type: 'blocksDocumentChart',
         attrs: {
           id: block.id,
           tableName: block.tableName,
@@ -265,7 +265,7 @@ export function blocksDocumentBlockToNode(
       };
     case 'artifactEmbed':
       return {
-        type: 'analysisArtifactEmbed',
+        type: 'blocksDocumentArtifactEmbed',
         attrs: {
           id: block.id,
           artifactId: block.artifactId,
@@ -294,7 +294,7 @@ export function blocksDocumentNodeToBlock(
     }
     case 'paragraph':
       return {id, type: 'paragraph', text: textFromNode(node)};
-    case 'analysisRichText':
+    case 'blocksDocumentRichText':
       return {
         id,
         type: 'richText',
@@ -319,21 +319,21 @@ export function blocksDocumentNodeToBlock(
         text: textFromNode(item?.content?.[0]),
       };
     }
-    case 'analysisImage':
+    case 'blocksDocumentImage':
       return BlocksDocumentImageBlock.parse({
         id,
         type: 'image',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
-    case 'analysisChartImage':
+    case 'blocksDocumentChartImage':
       return BlocksDocumentChartImageBlock.parse({
         id,
         type: 'chartImage',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
-    case 'analysisChart':
+    case 'blocksDocumentChart':
       return BlocksDocumentChartBlock.parse({
         id,
         type: 'chart',
@@ -342,7 +342,7 @@ export function blocksDocumentNodeToBlock(
         selectionGroupId: optionalString(node.attrs?.selectionGroupId),
         caption: optionalString(node.attrs?.caption),
       });
-    case 'analysisArtifactEmbed':
+    case 'blocksDocumentArtifactEmbed':
       return BlocksDocumentArtifactEmbedBlock.parse({
         id,
         type: 'artifactEmbed',

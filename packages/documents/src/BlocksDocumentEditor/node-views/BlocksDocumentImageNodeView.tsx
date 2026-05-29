@@ -8,17 +8,17 @@ import {
   unknownRecord,
 } from './nodeViewUtils';
 
-type AnalysisNodeViewProps = {
+type BlocksDocumentNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
-type AnalysisImageNodeViewProps = AnalysisNodeViewProps & {
+type BlocksDocumentImageNodeViewProps = BlocksDocumentNodeViewProps & {
   label?: string;
 };
 
-export const AnalysisImageNodeView: FC<AnalysisImageNodeViewProps> = ({
+export const BlocksDocumentImageNodeView: FC<BlocksDocumentImageNodeViewProps> = ({
   node,
   selected,
   updateAttributes,

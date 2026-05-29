@@ -66,10 +66,10 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
-  ANALYSIS_AI_INSTRUCTIONS,
+  createBlocksDocumentAiInstructions,
   BlocksDocumentsSliceConfig,
-  createAnalysisCommands,
-  createAnalysisAuthoringInstructions,
+  createBlocksDocumentCommands,
+  createBlocksDocumentAuthoringInstructions,
   createBlocksDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
@@ -110,6 +110,14 @@ export type {RoomState} from './store-types';
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const ANALYSIS_COMMAND_OWNER = '@sqlrooms/documents/analysis';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
+const ANALYSIS_BLOCKS_DOCUMENT_OPTIONS = {
+  artifactType: 'analysis',
+  artifactLabel: 'Analysis',
+  commandNamespace: 'analysis',
+  commandGroup: 'Analysis',
+  defaultTitle: 'Analysis',
+  blocksDocumentAgentToolName: 'analysis_agent',
+} as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
@@ -279,7 +287,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           registerCommandsForOwner(
             store,
             ANALYSIS_COMMAND_OWNER,
-            createAnalysisCommands<RoomState>(),
+            createBlocksDocumentCommands<RoomState>(
+              ANALYSIS_BLOCKS_DOCUMENT_OPTIONS,
+            ),
           );
         },
         destroy: async () => {
@@ -501,7 +511,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createDocumentsCrdtMirror<RoomState>(),
+                documentState: createDocumentsCrdtMirror<RoomState>({
+                  blocksDocumentArtifactTypes: ['analysis'],
+                }),
               },
             })(set, get, store)
           : createDisabledCrdtState()),
@@ -547,7 +559,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${ANALYSIS_AI_INSTRUCTIONS}\n\n${createAnalysisAuthoringInstructions()}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlocksDocumentAiInstructions(ANALYSIS_BLOCKS_DOCUMENT_OPTIONS)}\n\n${createBlocksDocumentAuthoringInstructions(ANALYSIS_BLOCKS_DOCUMENT_OPTIONS)}`,
             getRunContext: () => getRunContext(store),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

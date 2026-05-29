@@ -34,7 +34,10 @@ function createTestStore(doc: LoroDoc) {
       },
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
-    analysis: {label: 'Analysis', defaultTitle: 'Analysis'},
+    'blocks-document': {
+      label: 'Blocks Document',
+      defaultTitle: 'Blocks Document',
+    },
   });
 
   return createStore<TestRoomState>()((set, get, store) => ({
@@ -179,24 +182,24 @@ describe('documents CRDT mirrors', () => {
     ]);
   });
 
-  it('mirrors analysis documents and embedded child artifact metadata', async () => {
+  it('mirrors blocks documents and embedded child artifact metadata', async () => {
     const docA = new LoroDoc();
     const storeA = createTestStore(docA);
     await storeA.getState().crdt.initialize();
 
-    const analysisId = storeA.getState().artifacts.createArtifact({
-      id: 'analysis-1',
-      type: 'analysis',
-      title: 'Analysis',
+    const blocksDocumentId = storeA.getState().artifacts.createArtifact({
+      id: 'blocks-document-1',
+      type: 'blocks-document',
+      title: 'Blocks Document',
     });
     const dashboardId = storeA.getState().artifacts.createArtifact({
       id: 'dashboard-embedded-1',
       type: 'dashboard',
       title: 'Embedded Dashboard',
       visibility: 'embedded',
-      parentArtifactId: analysisId,
+      parentArtifactId: blocksDocumentId,
     });
-    storeA.getState().blocksDocuments.appendBlocks(analysisId, [
+    storeA.getState().blocksDocuments.appendBlocks(blocksDocumentId, [
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
       {
         id: 'chart',
@@ -226,13 +229,15 @@ describe('documents CRDT mirrors', () => {
     const storeB = createTestStore(docB);
     await storeB.getState().crdt.initialize();
     await waitForCondition(() =>
-      Boolean(storeB.getState().artifacts.getArtifact(analysisId)),
+      Boolean(storeB.getState().artifacts.getArtifact(blocksDocumentId)),
     );
 
-    expect(storeB.getState().artifacts.getArtifact(analysisId)).toMatchObject({
-      id: analysisId,
-      type: 'analysis',
-      title: 'Analysis',
+    expect(
+      storeB.getState().artifacts.getArtifact(blocksDocumentId),
+    ).toMatchObject({
+      id: blocksDocumentId,
+      type: 'blocks-document',
+      title: 'Blocks Document',
       visibility: 'workspace',
     });
     expect(storeB.getState().artifacts.getArtifact(dashboardId)).toMatchObject({
@@ -240,9 +245,11 @@ describe('documents CRDT mirrors', () => {
       type: 'dashboard',
       title: 'Embedded Dashboard',
       visibility: 'embedded',
-      parentArtifactId: analysisId,
+      parentArtifactId: blocksDocumentId,
     });
-    expect(storeB.getState().blocksDocuments.getBlocks(analysisId)).toEqual([
+    expect(
+      storeB.getState().blocksDocuments.getBlocks(blocksDocumentId),
+    ).toEqual([
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
       {
         id: 'chart',

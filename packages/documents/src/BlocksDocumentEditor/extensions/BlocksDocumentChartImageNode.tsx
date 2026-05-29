@@ -1,8 +1,8 @@
 import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
-import {AnalysisImageNodeView} from '../node-views/AnalysisImageNodeView';
+import {BlocksDocumentImageNodeView} from '../node-views/BlocksDocumentImageNodeView';
 
-export const AnalysisChartImageNode = Node.create({
-  name: 'analysisChartImage',
+export const BlocksDocumentChartImageNode = Node.create({
+  name: 'blocksDocumentChartImage',
   group: 'block',
   atom: true,
   selectable: true,
@@ -18,19 +18,19 @@ export const AnalysisChartImageNode = Node.create({
   },
 
   parseHTML() {
-    return [{tag: 'figure[data-type="analysis-chart-image"]'}];
+    return [{tag: 'figure[data-type="blocks-document-chart-image"]'}];
   },
 
   renderHTML({HTMLAttributes}) {
     return [
       'figure',
-      mergeAttributes(HTMLAttributes, {'data-type': 'analysis-chart-image'}),
+      mergeAttributes(HTMLAttributes, {'data-type': 'blocks-document-chart-image'}),
     ];
   },
 
   addNodeView() {
     return ReactNodeViewRenderer((props) => (
-      <AnalysisImageNodeView {...props} label="Chart image" />
+      <BlocksDocumentImageNodeView {...props} label="Chart image" />
     ));
   },
 });

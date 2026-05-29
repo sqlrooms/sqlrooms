@@ -27,20 +27,20 @@ function createTestStore() {
 }
 
 describe('BlocksDocumentsSlice', () => {
-  it('creates, updates, and removes artifact-scoped analysis documents', () => {
+  it('creates, updates, and removes artifact-scoped blocks documents', () => {
     const store = createTestStore();
 
-    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1');
+    store.getState().blocksDocuments.ensureBlocksDocument('blocks-document-1');
     expect(
-      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('blocks-document-1'),
     ).toEqual({
-      id: 'analysis-1',
+      id: 'blocks-document-1',
       content: {type: 'doc', content: []},
       assets: {},
       updatedAt: 100,
     });
 
-    store.getState().blocksDocuments.setContent('analysis-1', {
+    store.getState().blocksDocuments.setContent('blocks-document-1', {
       type: 'doc',
       content: [
         blocksDocumentBlockToNode({
@@ -52,9 +52,9 @@ describe('BlocksDocumentsSlice', () => {
     });
 
     expect(
-      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('blocks-document-1'),
     ).toMatchObject({
-      id: 'analysis-1',
+      id: 'blocks-document-1',
       updatedAt: 101,
       content: {
         type: 'doc',
@@ -68,16 +68,16 @@ describe('BlocksDocumentsSlice', () => {
       },
     });
 
-    store.getState().blocksDocuments.removeBlocksDocument('analysis-1');
+    store.getState().blocksDocuments.removeBlocksDocument('blocks-document-1');
     expect(
-      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('blocks-document-1'),
     ).toBeUndefined();
   });
 
-  it('preserves existing content when ensuring an existing analysis', () => {
+  it('preserves existing content when ensuring an existing blocks document', () => {
     const store = createTestStore();
 
-    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1', {
+    store.getState().blocksDocuments.ensureBlocksDocument('blocks-document-1', {
       type: 'doc',
       content: [
         blocksDocumentBlockToNode({
@@ -88,7 +88,7 @@ describe('BlocksDocumentsSlice', () => {
         }),
       ],
     });
-    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1', {
+    store.getState().blocksDocuments.ensureBlocksDocument('blocks-document-1', {
       type: 'doc',
       content: [
         blocksDocumentBlockToNode({
@@ -100,19 +100,19 @@ describe('BlocksDocumentsSlice', () => {
       ],
     });
 
-    expect(store.getState().blocksDocuments.getBlocks('analysis-1')).toEqual([
-      {id: 'block-1', type: 'heading', level: 2, text: 'Original'},
-    ]);
+    expect(
+      store.getState().blocksDocuments.getBlocks('blocks-document-1'),
+    ).toEqual([{id: 'block-1', type: 'heading', level: 2, text: 'Original'}]);
   });
 
   it('appends, inserts, updates, removes, and moves top-level blocks', () => {
     const store = createTestStore();
 
-    store.getState().blocksDocuments.appendBlocks('analysis-1', [
+    store.getState().blocksDocuments.appendBlocks('blocks-document-1', [
       {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
       {id: 'paragraph', type: 'paragraph', text: 'First note'},
     ]);
-    store.getState().blocksDocuments.insertBlocks('analysis-1', 1, [
+    store.getState().blocksDocuments.insertBlocks('blocks-document-1', 1, [
       {
         id: 'chart',
         type: 'chart',
@@ -122,7 +122,9 @@ describe('BlocksDocumentsSlice', () => {
       },
     ]);
 
-    expect(store.getState().blocksDocuments.getBlocks('analysis-1')).toEqual([
+    expect(
+      store.getState().blocksDocuments.getBlocks('blocks-document-1'),
+    ).toEqual([
       {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
       {
         id: 'chart',
@@ -137,7 +139,7 @@ describe('BlocksDocumentsSlice', () => {
     expect(
       store
         .getState()
-        .blocksDocuments.updateBlock('analysis-1', 'paragraph', {
+        .blocksDocuments.updateBlock('blocks-document-1', 'paragraph', {
           id: 'ignored-id',
           type: 'paragraph',
           text: 'Updated note',
@@ -146,13 +148,17 @@ describe('BlocksDocumentsSlice', () => {
     expect(
       store
         .getState()
-        .blocksDocuments.moveBlock('analysis-1', 'paragraph', 0),
+        .blocksDocuments.moveBlock('blocks-document-1', 'paragraph', 0),
     ).toBe(true);
     expect(
-      store.getState().blocksDocuments.removeBlock('analysis-1', 'heading'),
+      store
+        .getState()
+        .blocksDocuments.removeBlock('blocks-document-1', 'heading'),
     ).toBe(true);
 
-    expect(store.getState().blocksDocuments.getBlocks('analysis-1')).toEqual([
+    expect(
+      store.getState().blocksDocuments.getBlocks('blocks-document-1'),
+    ).toEqual([
       {id: 'paragraph', type: 'paragraph', text: 'Updated note'},
       {
         id: 'chart',
@@ -164,11 +170,11 @@ describe('BlocksDocumentsSlice', () => {
     ]);
   });
 
-  it('tracks local sync metadata separately from persisted analysis content', () => {
+  it('tracks local sync metadata separately from persisted blocks document content', () => {
     const store = createTestStore();
 
     store.getState().blocksDocuments.setContent(
-      'analysis-1',
+      'blocks-document-1',
       {
         type: 'doc',
         content: [
@@ -183,24 +189,24 @@ describe('BlocksDocumentsSlice', () => {
     );
 
     expect(
-      store.getState().blocksDocuments.getSyncMetadata('analysis-1'),
+      store.getState().blocksDocuments.getSyncMetadata('blocks-document-1'),
     ).toEqual({
       revision: 1,
       origin: 'editor',
       sourceId: 'editor-1',
     });
     expect(
-      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('blocks-document-1'),
     ).not.toHaveProperty('syncMetadata');
 
     store
       .getState()
-      .blocksDocuments.appendBlocks('analysis-1', [
+      .blocksDocuments.appendBlocks('blocks-document-1', [
         {id: 'heading', type: 'heading', level: 1, text: 'External edit'},
       ]);
 
     expect(
-      store.getState().blocksDocuments.getSyncMetadata('analysis-1'),
+      store.getState().blocksDocuments.getSyncMetadata('blocks-document-1'),
     ).toEqual({
       revision: 2,
       origin: 'external',
@@ -209,7 +215,7 @@ describe('BlocksDocumentsSlice', () => {
 
   it('returns false for missing block mutations', () => {
     const store = createTestStore();
-    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1');
+    store.getState().blocksDocuments.ensureBlocksDocument('blocks-document-1');
 
     const block: BlocksDocumentBlockType = {
       id: 'missing',
@@ -220,13 +226,13 @@ describe('BlocksDocumentsSlice', () => {
     expect(
       store
         .getState()
-        .blocksDocuments.updateBlock('analysis-1', 'missing', block),
+        .blocksDocuments.updateBlock('blocks-document-1', 'missing', block),
     ).toBe(false);
     expect(
-      store.getState().blocksDocuments.removeBlock('analysis-1', 'missing'),
+      store.getState().blocksDocuments.removeBlock('blocks-document-1', 'missing'),
     ).toBe(false);
     expect(
-      store.getState().blocksDocuments.moveBlock('analysis-1', 'missing', 0),
+      store.getState().blocksDocuments.moveBlock('blocks-document-1', 'missing', 0),
     ).toBe(false);
   });
 
@@ -276,7 +282,7 @@ describe('BlocksDocumentsSlice', () => {
         content: [
           {type: 'paragraph', content: [{type: 'text', text: 'Missing id'}]},
           {
-            type: 'analysisChart',
+            type: 'blocksDocumentChart',
             attrs: {id: 'chart-1', tableName: 'sales', config: {}},
           },
         ],
@@ -291,36 +297,36 @@ describe('BlocksDocumentsSlice', () => {
         content: [{type: 'text', text: 'Missing id'}],
       },
       {
-        type: 'analysisChart',
+        type: 'blocksDocumentChart',
         attrs: {id: 'chart-1', tableName: 'sales', config: {}},
       },
     ]);
   });
 
-  it('defaults content for legacy analysis records', () => {
+  it('defaults content for legacy blocks document records', () => {
     const result = BlocksDocumentsSliceConfig.parse({
       artifacts: {
-        'analysis-1': {id: 'analysis-1', updatedAt: 1},
+        'blocks-document-1': {id: 'blocks-document-1', updatedAt: 1},
       },
     });
 
-    expect(result.artifacts['analysis-1']?.content).toEqual(
+    expect(result.artifacts['blocks-document-1']?.content).toEqual(
       createEmptyBlocksDocumentContent(),
     );
   });
 
-  it('rejects analysis records keyed by a different ID', () => {
+  it('rejects blocks document records keyed by a different ID', () => {
     const result = BlocksDocumentsSliceConfig.safeParse({
       artifacts: {
-        'analysis-key': {id: 'analysis-value', updatedAt: 1},
+        'blocks-document-key': {id: 'blocks-document-value', updatedAt: 1},
       },
     });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]).toMatchObject({
-      path: ['artifacts', 'analysis-key', 'id'],
+      path: ['artifacts', 'blocks-document-key', 'id'],
       message:
-        'Blocks document key "analysis-key" does not match document id "analysis-value"',
+        'Blocks document key "blocks-document-key" does not match document id "blocks-document-value"',
     });
   });
 });

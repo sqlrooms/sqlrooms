@@ -1,8 +1,8 @@
 import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
-import {AnalysisArtifactEmbedNodeView} from '../node-views/AnalysisArtifactEmbedNodeView';
+import {BlocksDocumentArtifactEmbedNodeView} from '../node-views/BlocksDocumentArtifactEmbedNodeView';
 
-export const AnalysisArtifactEmbedNode = Node.create({
-  name: 'analysisArtifactEmbed',
+export const BlocksDocumentArtifactEmbedNode = Node.create({
+  name: 'blocksDocumentArtifactEmbed',
   group: 'block',
   atom: true,
   selectable: true,
@@ -19,19 +19,19 @@ export const AnalysisArtifactEmbedNode = Node.create({
   },
 
   parseHTML() {
-    return [{tag: 'div[data-type="analysis-artifact-embed"]'}];
+    return [{tag: 'div[data-type="blocks-document-artifact-embed"]'}];
   },
 
   renderHTML({HTMLAttributes}) {
     return [
       'div',
       mergeAttributes(HTMLAttributes, {
-        'data-type': 'analysis-artifact-embed',
+        'data-type': 'blocks-document-artifact-embed',
       }),
     ];
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(AnalysisArtifactEmbedNodeView);
+    return ReactNodeViewRenderer(BlocksDocumentArtifactEmbedNodeView);
   },
 });

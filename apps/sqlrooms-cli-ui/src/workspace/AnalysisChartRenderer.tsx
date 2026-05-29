@@ -1,4 +1,4 @@
-import type {AnalysisChartRendererProps} from '@sqlrooms/documents';
+import type {BlocksDocumentChartRendererProps} from '@sqlrooms/documents';
 import {
   MosaicChartSettingsPanel,
   MosaicChartView,
@@ -12,23 +12,23 @@ import {useCallback, useEffect, useMemo, useRef} from 'react';
 import {parseAnalysisChartConfig} from './analysisChartConfig';
 
 function getBlocksDocumentChartSelectionName({
-  analysisId,
+  documentId,
   blockId,
   selectionGroupId,
 }: Pick<
-  AnalysisChartRendererProps,
-  'analysisId' | 'blockId' | 'selectionGroupId'
+  BlocksDocumentChartRendererProps,
+  'documentId' | 'blockId' | 'selectionGroupId'
 >) {
   return selectionGroupId
-    ? `analysis:${analysisId}:chart-group:${selectionGroupId}:brush`
-    : `analysis:${analysisId}:chart-block:${blockId}:brush`;
+    ? `analysis:${documentId}:chart-group:${selectionGroupId}:brush`
+    : `analysis:${documentId}:chart-block:${blockId}:brush`;
 }
 
 function getBlocksDocumentChartRuntimeKey({
-  analysisId,
+  documentId,
   blockId,
-}: Pick<AnalysisChartRendererProps, 'analysisId' | 'blockId'>) {
-  return `analysis:${analysisId}:chart-block:${blockId}`;
+}: Pick<BlocksDocumentChartRendererProps, 'documentId' | 'blockId'>) {
+  return `analysis:${documentId}:chart-block:${blockId}`;
 }
 
 function stableStringify(value: unknown) {
@@ -36,7 +36,7 @@ function stableStringify(value: unknown) {
 }
 
 export const AnalysisChartRenderer = ({
-  analysisId,
+  documentId,
   blockId,
   tableName,
   config,
@@ -46,7 +46,7 @@ export const AnalysisChartRenderer = ({
   onTableNameChange,
   onConfigChange,
   onCaptionChange,
-}: AnalysisChartRendererProps) => {
+}: BlocksDocumentChartRendererProps) => {
   const onTableNameChangeRef = useRef(onTableNameChange);
   const onConfigChangeRef = useRef(onConfigChange);
 
@@ -76,11 +76,11 @@ export const AnalysisChartRenderer = ({
   const configKey = stableStringify(config);
   const chartConfig = parsedConfig.success ? parsedConfig.config : undefined;
   const selectionName = getBlocksDocumentChartSelectionName({
-    analysisId,
+    documentId,
     blockId,
     selectionGroupId,
   });
-  const runtimeKey = getBlocksDocumentChartRuntimeKey({analysisId, blockId});
+  const runtimeKey = getBlocksDocumentChartRuntimeKey({documentId, blockId});
 
   const handleSettingsOpenChange = useCallback(
     (settingsOpen: boolean) => {

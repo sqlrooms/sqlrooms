@@ -48,22 +48,22 @@ export {
   type CreateBlocksDocumentsSliceProps,
 } from './BlocksDocumentsSlice';
 export {
-  AnalysisChartRendererProvider,
-  useAnalysisChartRenderer,
-  type AnalysisChartRenderer,
-  type AnalysisChartRendererProps,
-  type AnalysisChartRendererProviderProps,
-} from './AnalysisChartRendererContext';
+  BlocksDocumentChartRendererProvider,
+  useBlocksDocumentChartRenderer,
+  type BlocksDocumentChartRenderer,
+  type BlocksDocumentChartRendererProps,
+  type BlocksDocumentChartRendererProviderProps,
+} from './BlocksDocumentChartRendererContext';
 export {
-  AnalysisEmbedRendererProvider,
-  useAnalysisArtifactEmbedRenderer,
-  useAnalysisArtifactEmbedTypes,
-  type AnalysisArtifactEmbedType,
-  type AnalysisArtifactEmbedRenderer,
-  type AnalysisArtifactEmbedRendererProps,
-  type AnalysisArtifactEmbedRenderers,
-  type AnalysisEmbedRendererProviderProps,
-} from './AnalysisEmbedRendererContext';
+  BlocksDocumentEmbedRendererProvider,
+  useBlocksDocumentArtifactEmbedRenderer,
+  useBlocksDocumentArtifactEmbedTypes,
+  type BlocksDocumentArtifactEmbedType,
+  type BlocksDocumentArtifactEmbedRenderer,
+  type BlocksDocumentArtifactEmbedRendererProps,
+  type BlocksDocumentArtifactEmbedRenderers,
+  type BlocksDocumentEmbedRendererProviderProps,
+} from './BlocksDocumentEmbedRendererContext';
 export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
@@ -76,18 +76,20 @@ export {
   DOCUMENT_AI_INSTRUCTIONS,
 } from './documentCommands';
 export {
-  ANALYSIS_AI_INSTRUCTIONS,
-  createAnalysisCommands,
-} from './analysisCommands';
+  BLOCKS_DOCUMENT_COMMAND_SUFFIXES,
+  createBlocksDocumentCommandIds,
+  createBlocksDocumentCommands,
+  type BlocksDocumentCommandSuffix,
+  type CreateBlocksDocumentCommandsOptions,
+} from './BlocksDocumentCommands';
 export {
-  ANALYSIS_AGENT_COMMAND_IDS,
-  ANALYSIS_AGENT_TOOL_NAME,
-  createAnalysisAuthoringInstructions,
-  type AnalysisAgentCommandId,
-  type AnalysisAgentPlanStep,
-  type AnalysisAgentResult,
-  type CreateAnalysisAuthoringInstructionsOptions,
-} from './analysisAi';
+  BLOCKS_DOCUMENT_AGENT_TOOL_NAME,
+  createBlocksDocumentAiInstructions,
+  createBlocksDocumentAuthoringInstructions,
+  type BlocksDocumentAgentPlanStep,
+  type BlocksDocumentAgentResult,
+  type CreateBlocksDocumentAuthoringInstructionsOptions,
+} from './BlocksDocumentAi';
 export {BlocksDocumentEditor} from './BlocksDocumentEditor';
 export {
   BlocksDocumentEditorRoot,

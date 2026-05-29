@@ -6,16 +6,16 @@ knowledge-index utilities for SQLRooms.
 ```tsx
 import {
   DOCUMENT_AI_INSTRUCTIONS,
-  ANALYSIS_AI_INSTRUCTIONS,
   BlocksDocumentArtifact,
   BlocksDocumentsSliceConfig,
-  AnalysisChartRendererProvider,
-  AnalysisEmbedRendererProvider,
+  BlocksDocumentChartRendererProvider,
+  BlocksDocumentEmbedRendererProvider,
   DocumentsSliceConfig,
   MarkdownDocument,
   buildKnowledgeIndex,
-  createAnalysisCommands,
-  createAnalysisAuthoringInstructions,
+  createBlocksDocumentCommands,
+  createBlocksDocumentAiInstructions,
+  createBlocksDocumentAuthoringInstructions,
   createBlocksDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
@@ -38,9 +38,9 @@ const artifactTypes = defineArtifactTypes({
       store.getState().documents.removeDocument(artifactId);
     },
   },
-  analysis: {
-    label: 'Analysis',
-    defaultTitle: 'Analysis',
+  'blocks-document': {
+    label: 'Blocks Document',
+    defaultTitle: 'Blocks Document',
     component: BlocksDocumentArtifact,
     onCreate: ({artifactId, store}) => {
       store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
@@ -114,10 +114,9 @@ managing image assets alongside Markdown content. SVG assets may use `utf8` or
 
 ## Blocks Documents
 
-`createBlocksDocumentsSlice()` exposes structured state for the `analysis`
-artifact type. Use Analysis artifacts for narrative analytical writeups made of
-composable blocks: rich text, lists, images, standalone Mosaic/vgplot charts,
-and embedded artifacts such as dashboards.
+`createBlocksDocumentsSlice()` exposes structured state for artifact types
+backed by composable blocks: rich text, lists, images, standalone Mosaic/vgplot
+charts, and embedded artifacts such as dashboards.
 
 Blocks documents persist Tiptap/ProseMirror JSON as their canonical content
 and provide block DTO helpers for command and AI authoring surfaces:
@@ -154,8 +153,8 @@ SQLRooms custom blocks, but chart rendering and artifact embeds are
 host-provided so `@sqlrooms/documents` does not import Mosaic:
 
 ```tsx
-<AnalysisChartRendererProvider renderer={MosaicAnalysisChartRenderer}>
-  <AnalysisEmbedRendererProvider
+<BlocksDocumentChartRendererProvider renderer={MosaicBlocksDocumentChartRenderer}>
+  <BlocksDocumentEmbedRendererProvider
     renderers={{
       dashboard: EmbeddedDashboardRenderer,
     }}
@@ -165,7 +164,7 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
         label: 'Dashboard',
         description: 'Embedded dashboard',
         createNode: (blockId) => ({
-          type: 'analysisArtifactEmbed',
+          type: 'blocksDocumentArtifactEmbed',
           attrs: {
             id: blockId,
             artifactId: createEmbeddedDashboardArtifact(),
@@ -176,9 +175,9 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
       },
     ]}
   >
-    <BlocksDocumentArtifact artifactId={analysisArtifactId} />
-  </AnalysisEmbedRendererProvider>
-</AnalysisChartRendererProvider>
+    <BlocksDocumentArtifact artifactId={blocksDocumentArtifactId} />
+  </BlocksDocumentEmbedRendererProvider>
+</BlocksDocumentChartRendererProvider>
 ```
 
 If no renderer is registered, chart and embed blocks render a clear unsupported
@@ -193,7 +192,7 @@ the target `tableName`, a Mosaic `ChartConfig`, an optional caption, and an
 optional `selectionGroupId`:
 
 ```ts
-blocksDocuments.appendBlocks(analysisArtifactId, [
+blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
   {
     id: 'revenue-histogram',
     type: 'chart',
@@ -210,9 +209,9 @@ blocksDocuments.appendBlocks(analysisArtifactId, [
 
 Hosts can render these blocks with the same Mosaic/vgplot chart implementation
 and settings UI used inside dashboard panels, without embedding a full
-dashboard. Charts with the same `selectionGroupId` in one Analysis share a
-crossfilter selection. Charts without a group get independent
-analysis/block-scoped selections.
+dashboard. Charts with the same `selectionGroupId` in one blocks document share
+a crossfilter selection. Charts without a group get independent
+document/block-scoped selections.
 
 ### Dashboard Embeds
 
@@ -220,7 +219,7 @@ Use an `artifactEmbed` block when the document needs a multi-panel interactive
 dashboard:
 
 ```ts
-blocksDocuments.appendBlocks(analysisArtifactId, [
+blocksDocuments.appendBlocks(blocksDocumentArtifactId, [
   {
     id: 'regional-dashboard',
     type: 'artifactEmbed',
@@ -232,9 +231,10 @@ blocksDocuments.appendBlocks(analysisArtifactId, [
 ```
 
 Embedded dashboards should be created as normal dashboard artifacts with
-`visibility: 'embedded'` and `parentArtifactId` set to the owning Analysis id.
+`visibility: 'embedded'` and `parentArtifactId` set to the owning blocks
+document id.
 Each embedded dashboard keeps its own dashboard id, Mosaic runtime keys, and
-selection name, so multiple dashboards inside one Analysis crossfilter
+selection name, so multiple dashboards inside one blocks document crossfilter
 independently.
 
 Standalone chart blocks are best for one chart with local context. Dashboard
@@ -256,27 +256,30 @@ Register the commands with your room command slice and include
 `DOCUMENT_AI_INSTRUCTIONS` in your AI system prompt when exposing
 `list_commands` and `execute_command` tools.
 
-`createAnalysisCommands()` registers commands for structured Analysis
-artifacts:
+`createBlocksDocumentCommands()` registers commands for structured blocks
+document artifacts. By default the command IDs are:
 
-- `analysis.list`
-- `analysis.get`
-- `analysis.create`
-- `analysis.append-blocks`
-- `analysis.insert-blocks`
-- `analysis.update-block`
-- `analysis.remove-block`
-- `analysis.move-block`
-- `analysis.create-chart-block`
-- `analysis.embed-dashboard`
+- `blocks-document.list`
+- `blocks-document.get`
+- `blocks-document.create`
+- `blocks-document.append-blocks`
+- `blocks-document.insert-blocks`
+- `blocks-document.update-block`
+- `blocks-document.remove-block`
+- `blocks-document.move-block`
+- `blocks-document.create-chart-block`
+- `blocks-document.embed-dashboard`
 
-Register these commands alongside `ANALYSIS_AI_INSTRUCTIONS` when exposing
-Analysis artifacts to an assistant.
+Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
+to expose the same command surface under product-specific names while keeping
+the package API generic. Register these commands alongside
+`createBlocksDocumentAiInstructions()` when exposing blocks document artifacts
+to an assistant.
 
-`createAnalysisAuthoringInstructions()` adds a higher-level authoring contract
-for assistants or host-provided sub-agents. It names the analysis command set,
-explains when to use standalone chart blocks versus dashboard embeds, and keeps
-selection-group behavior explicit.
+`createBlocksDocumentAuthoringInstructions()` adds a higher-level authoring
+contract for assistants or host-provided sub-agents. It names the configured
+command set, explains when to use standalone chart blocks versus dashboard
+embeds, and keeps selection-group behavior explicit.
 
 ## CRDT
 
@@ -292,8 +295,18 @@ createCrdtSlice({
 
 `createDocumentsCrdtMirror()` syncs Markdown document bodies, blocks document
 Tiptap JSON content, document-owned assets, standalone chart block configs,
-Analysis/document artifact metadata, embedded child artifact metadata, and
+blocks document/document artifact metadata, embedded child artifact metadata, and
 document artifact tab order. The current artifact selection is kept local.
+
+By default, the mirror treats `blocks-document` artifacts as blocks documents.
+Hosts with their own artifact type names can pass
+`blocksDocumentArtifactTypes`, for example:
+
+```ts
+createDocumentsCrdtMirror({
+  blocksDocumentArtifactTypes: ['report'],
+});
+```
 
 Embedded dashboard artifact metadata syncs through this mirror, but Mosaic
 dashboard backing state does not. Dashboard state should continue to use the

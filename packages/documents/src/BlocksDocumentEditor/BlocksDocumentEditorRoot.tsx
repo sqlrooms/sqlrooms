@@ -16,15 +16,15 @@ import {
 } from 'react';
 import type {BlocksDocumentContent} from '../BlocksDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
-import {AnalysisArtifactEmbedNode} from './extensions/AnalysisArtifactEmbedNode';
+import {BlocksDocumentArtifactEmbedNode} from './extensions/BlocksDocumentArtifactEmbedNode';
 import {
   BlocksDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
 } from './extensions/BlocksDocumentBlockIdExtension';
-import {AnalysisChartImageNode} from './extensions/AnalysisChartImageNode';
-import {AnalysisChartNode} from './extensions/AnalysisChartNode';
-import {AnalysisImageNode} from './extensions/AnalysisImageNode';
-import {AnalysisRichTextNode} from './extensions/AnalysisRichTextNode';
+import {BlocksDocumentChartImageNode} from './extensions/BlocksDocumentChartImageNode';
+import {BlocksDocumentChartNode} from './extensions/BlocksDocumentChartNode';
+import {BlocksDocumentImageNode} from './extensions/BlocksDocumentImageNode';
+import {BlocksDocumentRichTextNode} from './extensions/BlocksDocumentRichTextNode';
 import {
   BlocksDocumentEditorContext,
   type BlocksDocumentEditorChangeHandler,
@@ -105,11 +105,11 @@ export const BlocksDocumentEditorRoot: FC<
       TableRow,
       TableHeader,
       TableCell,
-      AnalysisRichTextNode,
-      AnalysisImageNode,
-      AnalysisChartImageNode,
-      AnalysisChartNode,
-      AnalysisArtifactEmbedNode,
+      BlocksDocumentRichTextNode,
+      BlocksDocumentImageNode,
+      BlocksDocumentChartImageNode,
+      BlocksDocumentChartNode,
+      BlocksDocumentArtifactEmbedNode,
     ];
     return [
       BlocksDocumentBlockIdExtension.configure({

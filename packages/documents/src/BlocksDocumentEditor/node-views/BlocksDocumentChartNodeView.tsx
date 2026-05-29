@@ -1,23 +1,23 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import {createElement, useCallback, type FC} from 'react';
-import {useAnalysisChartRenderer} from '../../AnalysisChartRendererContext';
+import {useBlocksDocumentChartRenderer} from '../../BlocksDocumentChartRendererContext';
 import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
-type AnalysisChartNodeViewProps = {
+type BlocksDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
-export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
+export const BlocksDocumentChartNodeView: FC<BlocksDocumentChartNodeViewProps> = ({
   node,
   selected,
   updateAttributes,
 }) => {
   const {documentId, readOnly} = useBlocksDocumentEditorContext();
-  const Renderer = useAnalysisChartRenderer();
+  const Renderer = useBlocksDocumentChartRenderer();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const tableName = optionalString(attrs.tableName) ?? '';
@@ -48,7 +48,7 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
     >
       {Renderer ? (
         createElement(Renderer, {
-          analysisId: documentId,
+          documentId,
           blockId,
           tableName,
           config,
@@ -63,7 +63,7 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
         <div className="p-4">
           <div className="text-sm font-medium">Chart block</div>
           <div className="text-muted-foreground mt-1 text-sm">
-            No analysis chart renderer is registered.
+            No blocks document chart renderer is registered.
           </div>
           <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
             <span>Table: {tableName || 'Unconfigured'}</span>

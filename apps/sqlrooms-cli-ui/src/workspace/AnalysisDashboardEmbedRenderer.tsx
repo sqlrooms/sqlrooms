@@ -1,4 +1,4 @@
-import type {AnalysisArtifactEmbedRendererProps} from '@sqlrooms/documents';
+import type {BlocksDocumentArtifactEmbedRendererProps} from '@sqlrooms/documents';
 import {MosaicDashboard} from '@sqlrooms/mosaic';
 import {useEffect} from 'react';
 import {useRoomStore} from '../store';
@@ -7,7 +7,7 @@ export const AnalysisDashboardEmbedRenderer = ({
   artifactId,
   artifactType,
   caption,
-}: AnalysisArtifactEmbedRendererProps) => {
+}: BlocksDocumentArtifactEmbedRendererProps) => {
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
   );

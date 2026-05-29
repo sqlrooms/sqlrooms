@@ -1,8 +1,8 @@
 import {
-  AnalysisChartRendererProvider,
+  BlocksDocumentChartRendererProvider,
   BlocksDocumentArtifact,
-  AnalysisEmbedRendererProvider,
-  type AnalysisArtifactEmbedType,
+  BlocksDocumentEmbedRendererProvider,
+  type BlocksDocumentArtifactEmbedType,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect, useMemo} from 'react';
@@ -25,7 +25,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
     }
   }, [artifact?.type, artifactId, ensureBlocksDocument]);
 
-  const artifactTypes = useMemo<AnalysisArtifactEmbedType[]>(
+  const artifactTypes = useMemo<BlocksDocumentArtifactEmbedType[]>(
     () => [
       {
         artifactType: 'dashboard',
@@ -41,7 +41,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
           });
           state.dashboard.ensureDashboardArtifact(dashboardArtifactId);
           return {
-            type: 'analysisArtifactEmbed',
+            type: 'blocksDocumentArtifactEmbed',
             attrs: {
               id: blockId,
               artifactId: dashboardArtifactId,
@@ -60,13 +60,13 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   }
 
   return (
-    <AnalysisChartRendererProvider renderer={AnalysisChartRenderer}>
-      <AnalysisEmbedRendererProvider
+    <BlocksDocumentChartRendererProvider renderer={AnalysisChartRenderer}>
+      <BlocksDocumentEmbedRendererProvider
         renderers={{dashboard: AnalysisDashboardEmbedRenderer}}
         artifactTypes={artifactTypes}
       >
         <BlocksDocumentArtifact artifactId={artifactId} />
-      </AnalysisEmbedRendererProvider>
-    </AnalysisChartRendererProvider>
+      </BlocksDocumentEmbedRendererProvider>
+    </BlocksDocumentChartRendererProvider>
   );
 };

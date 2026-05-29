@@ -39,9 +39,9 @@ import {
   useState,
 } from 'react';
 import {
-  type AnalysisArtifactEmbedType,
-  useAnalysisArtifactEmbedTypes,
-} from '../AnalysisEmbedRendererContext';
+  type BlocksDocumentArtifactEmbedType,
+  useBlocksDocumentArtifactEmbedTypes,
+} from '../BlocksDocumentEmbedRendererContext';
 import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
 
 type BlockControlState = {
@@ -103,7 +103,7 @@ function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
 }
 
 function buildEmbedMenuItems(
-  artifactTypes: AnalysisArtifactEmbedType[],
+  artifactTypes: BlocksDocumentArtifactEmbedType[],
 ): BlockMenuItem[] {
   return artifactTypes.map((artifactType) => {
     const label =
@@ -115,7 +115,7 @@ function buildEmbedMenuItems(
       createNode:
         artifactType.createNode ??
         ((id: string) => ({
-          type: 'analysisArtifactEmbed',
+          type: 'blocksDocumentArtifactEmbed',
           attrs: {
             id,
             artifactId: '',
@@ -128,7 +128,7 @@ function buildEmbedMenuItems(
 }
 
 function buildBlockMenuItems(
-  artifactTypes: AnalysisArtifactEmbedType[],
+  artifactTypes: BlocksDocumentArtifactEmbedType[],
 ): BlockMenuItem[] {
   return [
     {
@@ -214,7 +214,7 @@ function buildBlockMenuItems(
       description: 'Document image block',
       icon: ImageIcon,
       createNode: (id) => ({
-        type: 'analysisImage',
+        type: 'blocksDocumentImage',
         attrs: {id, assetId: '', caption: ''},
       }),
     },
@@ -223,7 +223,7 @@ function buildBlockMenuItems(
       description: 'Standalone chart block',
       icon: BarChart3Icon,
       createNode: (id) => ({
-        type: 'analysisChart',
+        type: 'blocksDocumentChart',
         attrs: {id, tableName: '', config: {}, caption: ''},
       }),
     },
@@ -236,7 +236,7 @@ export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> =
 }) => {
   const {editor, readOnly, generateBlockId} =
     useBlocksDocumentEditorContext();
-  const artifactTypes = useAnalysisArtifactEmbedTypes();
+  const artifactTypes = useBlocksDocumentArtifactEmbedTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );

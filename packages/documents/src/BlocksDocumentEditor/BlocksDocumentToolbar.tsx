@@ -69,7 +69,7 @@ export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
         title="Insert image block"
         aria-label="Insert image block"
         onClick={() =>
-          insertAtomBlock('analysisImage', {assetId: '', caption: ''})
+          insertAtomBlock('blocksDocumentImage', {assetId: '', caption: ''})
         }
       >
         <ImageIcon className="h-4 w-4" />
@@ -83,7 +83,7 @@ export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
         title="Insert chart block"
         aria-label="Insert chart block"
         onClick={() =>
-          insertAtomBlock('analysisChart', {
+          insertAtomBlock('blocksDocumentChart', {
             tableName: '',
             config: {},
             caption: '',
@@ -101,7 +101,7 @@ export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
         title="Insert artifact embed"
         aria-label="Insert artifact embed"
         onClick={() =>
-          insertAtomBlock('analysisArtifactEmbed', {
+          insertAtomBlock('blocksDocumentArtifactEmbed', {
             artifactId: '',
             artifactType: '',
             caption: '',
