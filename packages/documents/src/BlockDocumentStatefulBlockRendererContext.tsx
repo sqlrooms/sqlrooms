@@ -25,11 +25,18 @@ export type BlockDocumentStatefulBlockRenderers = Record<
   BlockDocumentStatefulBlockRenderer
 >;
 
+export type BlockDocumentStatefulBlockCreateNodeOptions = {
+  initialText?: string;
+};
+
 export type BlockDocumentStatefulBlockType = {
   blockType: string;
   label?: string;
   description?: string;
-  createNode?: (blockId: string) => Record<string, unknown>;
+  createNode?: (
+    blockId: string,
+    options?: BlockDocumentStatefulBlockCreateNodeOptions,
+  ) => Record<string, unknown>;
 };
 
 type BlockDocumentStatefulBlockRendererContextValue = {

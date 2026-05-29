@@ -45,9 +45,11 @@ import {
   useState,
 } from 'react';
 import {
+  type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockType,
   useBlockDocumentStatefulBlockTypes,
 } from '../BlockDocumentStatefulBlockRendererContext';
+import {BLOCK_DOCUMENT_TITLE_NODE_NAME} from './extensions/BlockDocumentTitleNode';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
 
 type BlockControlState = {
@@ -66,7 +68,10 @@ type BlockMenuItem = {
   label: string;
   description: string;
   icon: FC<{className?: string}>;
-  createNode: (id: string) => Record<string, unknown>;
+  createNode: (
+    id: string,
+    options?: BlockDocumentStatefulBlockCreateNodeOptions,
+  ) => Record<string, unknown>;
 };
 
 type InsertPlacement = 'before' | 'after';
@@ -99,6 +104,10 @@ function getNodeAt(editor: Editor, pos: number) {
   return editor.state.doc.nodeAt(pos);
 }
 
+function isTitleNode(node: ReturnType<typeof getNodeAt>) {
+  return node?.type.name === BLOCK_DOCUMENT_TITLE_NODE_NAME;
+}
+
 function getBlockPos(editor: Editor, element: HTMLElement) {
   try {
     const pos = editor.view.posAtDOM(element, 0);
@@ -112,6 +121,59 @@ function getBlockPos(editor: Editor, element: HTMLElement) {
 function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
+function getNodeId(node: DraggableNode, generateBlockId: () => string) {
+  const id = node.attrs.id;
+  return typeof id === 'string' ? id : generateBlockId();
+}
+
+function textContent(text: string) {
+  return text ? [{type: 'text', text}] : undefined;
+}
+
+function paragraphContent(text: string) {
+  return [{type: 'paragraph', content: textContent(text)}];
+}
+
+function preserveTextInNode(
+  node: Record<string, unknown>,
+  text: string,
+): Record<string, unknown> {
+  if (!text) return node;
+
+  switch (node.type) {
+    case 'paragraph':
+    case 'heading':
+    case 'codeBlock':
+      return {...node, content: textContent(text)};
+    case 'bulletList':
+    case 'orderedList':
+      return {
+        ...node,
+        content: [
+          {
+            type: 'listItem',
+            content: paragraphContent(text),
+          },
+        ],
+      };
+    case 'taskList':
+      return {
+        ...node,
+        content: [
+          {
+            type: 'taskItem',
+            attrs: {checked: false},
+            content: paragraphContent(text),
+          },
+        ],
+      };
+    case 'blockquote':
+      return {...node, content: paragraphContent(text)};
+    default:
+      return node;
+  }
 }
 
 function buildStatefulBlockMenuItems(
@@ -327,7 +389,8 @@ export const BlockDocumentBlockControls: FC<
         return;
       }
       const pos = getBlockPos(editor, element);
-      if (pos == null || !getNodeAt(editor, pos)) {
+      const node = pos == null ? null : getNodeAt(editor, pos);
+      if (pos == null || !node || isTitleNode(node)) {
         if (!menuOpen) scheduleHide();
         return;
       }
@@ -417,6 +480,35 @@ export const BlockDocumentBlockControls: FC<
     [activeBlock, editor, generateBlockId],
   );
 
+  const turnActiveBlockInto = useCallback(
+    (createNode: BlockMenuItem['createNode']) => {
+      if (!editor || !activeBlock) return;
+      const node = getNodeAt(editor, activeBlock.pos);
+      if (!node || isTitleNode(node)) return;
+
+      const replacement = preserveTextInNode(
+        createNode(getNodeId(node, generateBlockId), {
+          initialText: node.textContent,
+        }),
+        node.textContent,
+      );
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(
+          {
+            from: activeBlock.pos,
+            to: activeBlock.pos + node.nodeSize,
+          },
+          replacement,
+        )
+        .run();
+      setHandleMenuOpen(false);
+      setActiveBlock(null);
+    },
+    [activeBlock, editor, generateBlockId],
+  );
+
   const deleteActiveBlock = useCallback(() => {
     if (!editor || !activeBlock) return;
     const node = getNodeAt(editor, activeBlock.pos);
@@ -451,14 +543,11 @@ export const BlockDocumentBlockControls: FC<
     );
   };
 
-  const renderMenuItem = (
-    item: BlockMenuItem,
-    placement: InsertPlacement,
-  ) => (
+  const renderMenuItem = (item: BlockMenuItem, onSelect: () => void) => (
     <DropdownMenuItem
       key={item.label}
       className="items-start gap-2"
-      onSelect={() => insertBlockRelativeToActive(item.createNode, placement)}
+      onSelect={onSelect}
     >
       <item.icon className="mt-0.5 h-4 w-4" />
       <span className="grid gap-0.5">
@@ -470,23 +559,35 @@ export const BlockDocumentBlockControls: FC<
     </DropdownMenuItem>
   );
 
-  const renderInsertMenuContent = (placement: InsertPlacement) => (
-    <DropdownMenuContent align="center" side="right" className="w-60">
-      <DropdownMenuLabel>
-        Insert {placement === 'before' ? 'above' : 'below'}
-      </DropdownMenuLabel>
-      <DropdownMenuSeparator />
+  const renderBlockTypeMenuItems = (
+    onSelect: (item: BlockMenuItem) => void,
+  ) => (
+    <>
       <DropdownMenuSub>
         <DropdownMenuSubTrigger className="gap-2">
           <PilcrowIcon className="h-4 w-4" />
           Text
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="w-60">
-          {textMenuItems.map((item) => renderMenuItem(item, placement))}
+          {textMenuItems.map((item) =>
+            renderMenuItem(item, () => onSelect(item)),
+          )}
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSeparator />
-      {mediaMenuItems.map((item) => renderMenuItem(item, placement))}
+      {mediaMenuItems.map((item) => renderMenuItem(item, () => onSelect(item)))}
+    </>
+  );
+
+  const renderInsertMenuContent = (placement: InsertPlacement) => (
+    <DropdownMenuContent align="center" side="right" className="w-60">
+      <DropdownMenuLabel>
+        Insert {placement === 'before' ? 'above' : 'below'}
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {renderBlockTypeMenuItems((item) =>
+        insertBlockRelativeToActive(item.createNode, placement),
+      )}
     </DropdownMenuContent>
   );
 
@@ -545,7 +646,7 @@ export const BlockDocumentBlockControls: FC<
         : null;
       const targetNode =
         targetPos == null ? null : getNodeAt(editor, targetPos);
-      if (targetPos == null || !targetNode) {
+      if (targetPos == null || !targetNode || isTitleNode(targetNode)) {
         dragSourceRef.current = null;
         return;
       }
@@ -629,6 +730,20 @@ export const BlockDocumentBlockControls: FC<
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="start" side="right" className="w-44">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2">
+                <Rows3Icon className="h-4 w-4" />
+                Turn into
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-60">
+                <DropdownMenuLabel>Turn into</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {renderBlockTypeMenuItems((item) =>
+                  turnActiveBlockInto(item.createNode),
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onSelect={deleteActiveBlock}

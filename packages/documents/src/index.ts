@@ -63,6 +63,7 @@ export {
   BlockDocumentStatefulBlockRendererProvider,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockTypes,
+  type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
   type BlockDocumentStatefulBlockRendererProviderProps,
@@ -116,7 +117,10 @@ export {
   useBlockDocumentEditorContext,
   type BlockDocumentEditorContextValue,
 } from './BlockDocumentEditor/BlockDocumentEditorContext';
-export {BlockDocumentArtifact} from './BlockDocumentArtifact';
+export {
+  BlockDocumentArtifact,
+  type BlockDocumentArtifactProps,
+} from './BlockDocumentArtifact';
 export {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 export {
   MarkdownDocumentEditorRoot,

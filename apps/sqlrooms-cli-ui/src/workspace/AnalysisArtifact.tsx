@@ -5,7 +5,7 @@ import {
   type BlockDocumentStatefulBlockRenderer,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
@@ -33,6 +33,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const ensureBlockDocument = useRoomStore(
     (state) => state.blockDocuments.ensureBlockDocument,
   );
+  const renameArtifact = useRoomStore((state) => state.artifacts.renameArtifact);
 
   useEffect(() => {
     if (artifact?.type === 'analysis') {
@@ -48,6 +49,13 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [],
   );
 
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      renameArtifact(artifactId, title);
+    },
+    [artifactId, renameArtifact],
+  );
+
   if (!artifact || artifact.type !== 'analysis') {
     return null;
   }
@@ -58,7 +66,11 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
         renderers={ANALYSIS_STATEFUL_BLOCK_RENDERERS}
         blockTypes={statefulBlockTypes}
       >
-        <BlockDocumentArtifact artifactId={artifactId} />
+        <BlockDocumentArtifact
+          artifactId={artifactId}
+          title={artifact.title}
+          onTitleChange={handleTitleChange}
+        />
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>
   );

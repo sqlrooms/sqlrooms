@@ -6,8 +6,16 @@ import type {BlockDocumentMutationMetadata} from './BlockDocumentsSlice';
 import {createEmptyBlockDocumentContent} from './BlockDocumentSliceConfig';
 import {useStoreWithBlockDocuments} from './useStoreWithBlockDocuments';
 
-export const BlockDocumentArtifact: React.FC<{artifactId: string}> = ({
+export type BlockDocumentArtifactProps = {
+  artifactId: string;
+  title?: string;
+  onTitleChange?: (title: string) => void;
+};
+
+export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
   artifactId,
+  title = 'Untitled',
+  onTitleChange,
 }) => {
   const {blockDocument, ensureBlockDocument, setContent, syncMetadata} =
     useStoreWithBlockDocuments(
@@ -43,6 +51,8 @@ export const BlockDocumentArtifact: React.FC<{artifactId: string}> = ({
       syncRevision={syncMetadata?.revision}
       syncSourceId={syncMetadata?.sourceId}
       onChange={handleChange}
+      title={title}
+      onTitleChange={onTitleChange}
     >
       <BlockDocumentEditor.Content />
     </BlockDocumentEditor>

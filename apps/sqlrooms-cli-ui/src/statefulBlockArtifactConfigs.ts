@@ -1,4 +1,5 @@
 import type {
+  BlockDocumentStatefulBlockCreateNodeOptions,
   BlockDocumentStatefulBlockCommandType,
   BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
@@ -11,7 +12,12 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     defaultTitle: string;
     embeddedTitle: string;
     embeddedDescription: string;
-    ensureState: (state: RoomState, artifactId: string, title: string) => void;
+    ensureState: (
+      state: RoomState,
+      artifactId: string,
+      title: string,
+      options?: BlockDocumentStatefulBlockCreateNodeOptions,
+    ) => void;
     deleteState: (state: RoomState, artifactId: string) => void;
     renameState?: (state: RoomState, artifactId: string, title: string) => void;
   };
@@ -55,8 +61,8 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     defaultTitle: 'Document',
     embeddedTitle: 'Embedded Document',
     embeddedDescription: 'Embedded Markdown document',
-    ensureState: (state, artifactId) => {
-      state.documents.ensureDocument(artifactId);
+    ensureState: (state, artifactId, _title, options) => {
+      state.documents.ensureDocument(artifactId, options?.initialText);
     },
     deleteState: (state, artifactId) => {
       state.documents.removeDocument(artifactId);
@@ -82,9 +88,9 @@ export function createStatefulBlockTypes({
       blockType: config.artifactType,
       label: config.label,
       description: config.embeddedDescription,
-      createNode: (blockId) => {
+      createNode: (blockId, options) => {
         const state = getState();
-        config.ensureState(state, blockId, config.embeddedTitle);
+        config.ensureState(state, blockId, config.embeddedTitle, options);
         return {
           type: 'blockDocumentStatefulBlock',
           attrs: {

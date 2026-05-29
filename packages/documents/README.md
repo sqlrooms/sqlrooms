@@ -151,10 +151,12 @@ include headings, paragraphs, rich text, lists, todos, images, chart images,
 standalone chart blocks, and direct stateful blocks.
 
 `BlockDocumentArtifact` and `BlockDocumentEditor` provide the first rich
-editor surface for this structured state. The editor owns Tiptap nodes for
-SQLRooms custom blocks, but chart and stateful block rendering are
-host-provided so `@sqlrooms/documents` does not import Mosaic, pivot, or other
-feature packages:
+editor surface for this structured state. `BlockDocumentArtifact` injects an
+editable, non-movable title node into the Tiptap document and reports title
+changes through `onTitleChange`, so hosts can keep artifact metadata and tab
+labels in sync. The editor owns Tiptap nodes for SQLRooms custom blocks, but
+chart and stateful block rendering are host-provided so `@sqlrooms/documents`
+does not import Mosaic, pivot, or other feature packages:
 
 ```tsx
 <BlockDocumentChartRendererProvider renderer={MosaicBlockDocumentChartRenderer}>
@@ -182,7 +184,11 @@ feature packages:
       },
     ]}
   >
-    <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+    <BlockDocumentArtifact
+      artifactId={blockDocumentArtifactId}
+      title="Analysis"
+      onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
+    />
   </BlockDocumentStatefulBlockRendererProvider>
 </BlockDocumentChartRendererProvider>
 ```
@@ -190,6 +196,9 @@ feature packages:
 If no renderer is registered, chart and stateful blocks render a clear
 unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
 controls the host-specific entries shown in the plus menu.
+When a block is converted through the handle menu, custom `createNode`
+callbacks receive an optional `{initialText}` value with the source block text;
+hosts can use it to seed stateful blocks such as embedded Markdown documents.
 
 ### Stateful Blocks
 
@@ -225,7 +234,11 @@ Hosts provide renderers through `BlockDocumentStatefulBlockRendererProvider`:
     },
   ]}
 >
-  <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+  <BlockDocumentArtifact
+    artifactId={blockDocumentArtifactId}
+    title="Embedded Report"
+    onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
+  />
 </BlockDocumentStatefulBlockRendererProvider>
 ```
 
