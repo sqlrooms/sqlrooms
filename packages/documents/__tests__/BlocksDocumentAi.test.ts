@@ -14,6 +14,9 @@ describe('blocks document AI helpers', () => {
     expect(createBlocksDocumentCommandIds()).toContain(
       'blocks-document.create-chart-block',
     );
+    expect(createBlocksDocumentCommandIds()).toContain(
+      'blocks-document.create-stateful-block',
+    );
     expect(createBlocksDocumentCommandIds()).not.toContain(
       'blocks-document.embed-dashboard',
     );
@@ -28,6 +31,7 @@ describe('blocks document AI helpers', () => {
     expect(instructions).toContain('run_command');
     expect(instructions).toContain('blocks_document_writer');
     expect(instructions).toContain('blocks-document.create-chart-block');
+    expect(instructions).toContain('blocks-document.create-stateful-block');
     expect(instructions).toContain('selectionGroupId');
   });
 

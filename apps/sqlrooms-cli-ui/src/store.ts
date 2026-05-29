@@ -105,7 +105,10 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
-import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
+import {
+  createStatefulBlockCommandTypes,
+  STATEFUL_BLOCK_ARTIFACT_CONFIGS,
+} from './statefulBlockArtifactConfigs';
 
 export type {RoomState} from './store-types';
 
@@ -290,9 +293,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           registerCommandsForOwner(
             store,
             ANALYSIS_COMMAND_OWNER,
-            createBlocksDocumentCommands<RoomState>(
-              ANALYSIS_BLOCKS_DOCUMENT_OPTIONS,
-            ),
+            createBlocksDocumentCommands<RoomState>({
+              ...ANALYSIS_BLOCKS_DOCUMENT_OPTIONS,
+              statefulBlockTypes: createStatefulBlockCommandTypes(),
+            }),
           );
         },
         destroy: async () => {

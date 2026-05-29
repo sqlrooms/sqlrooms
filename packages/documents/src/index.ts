@@ -83,6 +83,8 @@ export {
   BLOCKS_DOCUMENT_COMMAND_SUFFIXES,
   createBlocksDocumentCommandIds,
   createBlocksDocumentCommands,
+  type BlocksDocumentStatefulBlockCommandContext,
+  type BlocksDocumentStatefulBlockCommandType,
   type BlocksDocumentCommandSuffix,
   type CreateBlocksDocumentCommandsOptions,
 } from './BlocksDocumentCommands';

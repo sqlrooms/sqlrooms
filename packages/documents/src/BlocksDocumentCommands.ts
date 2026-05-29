@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {
   BlocksDocumentBlock,
   BlocksDocumentChartBlock,
+  BlocksDocumentStatefulBlockBlock,
   BlocksDocumentContent,
   blocksDocumentBlockToNode,
   createEmptyBlocksDocumentContent,
@@ -21,17 +22,42 @@ export const BLOCKS_DOCUMENT_COMMAND_SUFFIXES = [
   'remove-block',
   'move-block',
   'create-chart-block',
+  'create-stateful-block',
 ] as const;
 
 export type BlocksDocumentCommandSuffix =
   (typeof BLOCKS_DOCUMENT_COMMAND_SUFFIXES)[number];
 
-export type CreateBlocksDocumentCommandsOptions = {
+export type BlocksDocumentStatefulBlockCommandContext<TRoomState> = {
+  state: TRoomState;
+  artifactId: string;
+  blockId: string;
+  blockType: string;
+  blockInstanceId: string;
+  ownership: 'owned' | 'shared' | 'external';
+  title: string;
+  caption?: string;
+};
+
+export type BlocksDocumentStatefulBlockCommandType<TRoomState> = {
+  blockType: string;
+  label?: string;
+  description?: string;
+  defaultTitle?: string;
+  ensureState?: (
+    context: BlocksDocumentStatefulBlockCommandContext<TRoomState>,
+  ) => void;
+};
+
+export type CreateBlocksDocumentCommandsOptions<
+  TRoomState extends BlocksDocumentCommandState = BlocksDocumentCommandState,
+> = {
   artifactType?: string;
   artifactLabel?: string;
   commandNamespace?: string;
   commandGroup?: string;
   defaultTitle?: string;
+  statefulBlockTypes?: BlocksDocumentStatefulBlockCommandType<TRoomState>[];
 };
 
 type BlocksDocumentCommandState = BaseRoomStoreState & {
@@ -120,8 +146,44 @@ const BlocksDocumentCreateChartBlockInput = z.object({
     .describe('Optional top-level insertion index. Defaults to append.'),
 });
 
+const BlocksDocumentCreateStatefulBlockInput = z.object({
+  artifactId: z.string().describe('Target blocks document artifact ID.'),
+  blockType: z
+    .string()
+    .describe('Stateful block type to create, for example dashboard or pivot.'),
+  blockId: z
+    .string()
+    .optional()
+    .describe('Optional explicit document block ID.'),
+  blockInstanceId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional explicit backing state instance ID. Defaults to blockId.',
+    ),
+  ownership: z
+    .enum(['owned', 'shared', 'external'])
+    .optional()
+    .describe('State ownership mode. Defaults to owned.'),
+  title: z.string().optional().describe('Optional stateful block title.'),
+  caption: z.string().optional().describe('Optional document-local caption.'),
+  index: z
+    .number()
+    .int()
+    .optional()
+    .describe('Optional top-level insertion index. Defaults to append.'),
+});
+
 function lowerLabel(label: string) {
   return label.toLocaleLowerCase();
+}
+
+function labelFromBlockType(blockType: string) {
+  return blockType
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 export function createBlocksDocumentCommandIds(
@@ -140,11 +202,15 @@ export function createBlocksDocumentCommands<
   commandNamespace = 'blocks-document',
   commandGroup = artifactLabel,
   defaultTitle = artifactLabel,
-}: CreateBlocksDocumentCommandsOptions = {}): RoomCommand<TRoomState>[] {
+  statefulBlockTypes = [],
+}: CreateBlocksDocumentCommandsOptions<TRoomState> = {}): RoomCommand<TRoomState>[] {
   const label = artifactLabel;
   const labelLower = lowerLabel(label);
   const commandId = (suffix: BlocksDocumentCommandSuffix) =>
     `${commandNamespace}.${suffix}`;
+  const statefulBlockTypesByType = new Map(
+    statefulBlockTypes.map((blockType) => [blockType.blockType, blockType]),
+  );
 
   const commandsBySuffix = {
     list: {
@@ -222,9 +288,8 @@ export function createBlocksDocumentCommands<
           title,
           blocks = [],
           select = true,
-        } =
-          (input as z.infer<typeof BlocksDocumentCreateInput> | undefined) ??
-          {};
+        } = (input as z.infer<typeof BlocksDocumentCreateInput> | undefined) ??
+        {};
         const state = getState();
         const previousArtifactId = state.artifacts.config.currentArtifactId;
         const artifactId = state.artifacts.createArtifact({
@@ -461,6 +526,87 @@ export function createBlocksDocumentCommands<
         return blockMutationSuccess(
           state,
           commandId('create-chart-block'),
+          artifactId,
+          labelLower,
+          {block},
+        );
+      },
+    },
+    'create-stateful-block': {
+      id: commandId('create-stateful-block'),
+      name: `Create ${labelLower} stateful block`,
+      description:
+        'Create a hosted stateful block such as a dashboard, pivot table, or document block',
+      group: commandGroup,
+      keywords: [labelLower, 'stateful', 'block', 'dashboard', 'pivot'],
+      inputSchema: BlocksDocumentCreateStatefulBlockInput,
+      inputDescription: `${label} artifact ID, blockType, and optional title/caption/index.`,
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {
+          artifactId,
+          blockType,
+          blockId = createBlocksDocumentBlockId(),
+          ownership = 'owned',
+          title,
+          caption,
+          index,
+        } = input as z.infer<typeof BlocksDocumentCreateStatefulBlockInput>;
+        const resolved = resolveBlocksDocumentArtifact(
+          state,
+          artifactId,
+          commandId('create-stateful-block'),
+          artifactType,
+          label,
+          labelLower,
+        );
+        if (!resolved.success) return resolved;
+
+        const blockConfig = statefulBlockTypesByType.get(blockType);
+        if (statefulBlockTypes.length > 0 && !blockConfig) {
+          return {
+            success: false,
+            commandId: commandId('create-stateful-block'),
+            error: `Unsupported stateful block type "${blockType}".`,
+          };
+        }
+
+        const blockInstanceId =
+          (input as z.infer<typeof BlocksDocumentCreateStatefulBlockInput>)
+            .blockInstanceId ?? blockId;
+        const blockTitle =
+          title ??
+          blockConfig?.defaultTitle ??
+          blockConfig?.label ??
+          labelFromBlockType(blockType);
+
+        if (ownership === 'owned') {
+          blockConfig?.ensureState?.({
+            state,
+            artifactId,
+            blockId,
+            blockType,
+            blockInstanceId,
+            ownership,
+            title: blockTitle,
+            caption,
+          });
+        }
+
+        const block = BlocksDocumentStatefulBlockBlock.parse({
+          id: blockId,
+          type: 'statefulBlock',
+          blockType,
+          blockInstanceId,
+          ownership,
+          title: blockTitle,
+          caption,
+        });
+        insertOrAppendBlocks(state, artifactId, [block], index);
+        return blockMutationSuccess(
+          state,
+          commandId('create-stateful-block'),
           artifactId,
           labelLower,
           {block},

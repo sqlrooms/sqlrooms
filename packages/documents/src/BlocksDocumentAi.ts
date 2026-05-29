@@ -22,8 +22,9 @@ ${artifactLabel} authoring:
 - Prefer a ${artifactLabel} artifact when the user asks for a narrative, report, notebook-like document, or mixed text/chart output.
 - Use ${commandToolName} with ${artifactLabelLower} commands for deterministic edits. The supported command IDs are: ${commandIds.join(', ')}.
 - Use ${commandNamespace}.create-chart-block for focused standalone charts that should live directly in the document.
-- Give independent standalone chart blocks separate selection groups by default. Reuse selectionGroupId only when the charts should crossfilter together.
 - Use host-specific stateful block tools when available for dashboards, pivots, or other interactive surfaces that need backing feature state.
+- Use ${commandNamespace}.create-stateful-block when the host has registered a stateful block type such as dashboard, pivot, or document.
+- Give independent standalone chart blocks separate selection groups by default. Reuse selectionGroupId only when the charts should crossfilter together.
 - If ${blocksDocumentAgentToolName} is available, use it for multi-step ${artifactLabelLower} authoring plans that combine narrative blocks, standalone charts, and hosted stateful blocks.
 `.trim();
 }
@@ -41,7 +42,7 @@ ${artifactLabel} artifacts:
 - Use ${commandNamespace}.create to create a new ${artifactLabel.toLocaleLowerCase()} artifact.
 - Use ${commandNamespace}.append-blocks, ${commandNamespace}.insert-blocks, ${commandNamespace}.update-block, ${commandNamespace}.remove-block, and ${commandNamespace}.move-block for deterministic block edits.
 - Use ${commandNamespace}.create-chart-block for standalone Mosaic/vgplot chart blocks.
-- Use host-specific stateful block tools for dashboards, pivots, documents, or other feature-backed blocks.
+- Use ${commandNamespace}.create-stateful-block for host-registered dashboards, pivots, documents, or other feature-backed blocks.
 `.trim();
 }
 

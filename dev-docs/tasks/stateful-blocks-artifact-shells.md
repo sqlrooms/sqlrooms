@@ -10,7 +10,7 @@
 - [x] [Stage 6: Convert Current Artifact Types](#stage-6-convert-current-artifact-types)
 - [x] [Stage 7: Blocks Document Stateful Block Host](#stage-7-blocks-document-stateful-block-host)
 - [x] [Stage 8: Lifecycle and Ownership Semantics](#stage-8-lifecycle-and-ownership-semantics)
-- [ ] [Stage 9: AI and Command Integration](#stage-9-ai-and-command-integration)
+- [x] [Stage 9: AI and Command Integration](#stage-9-ai-and-command-integration)
 - [ ] [Stage 10: Migration and Package Boundary Decision](#stage-10-migration-and-package-boundary-decision)
 
 ## Goal
@@ -589,7 +589,7 @@ Implementation notes:
   - create dashboard/pivot as hosted stateful block
   - wrap dashboard/pivot as artifact shell when the user asks for a top-level
     artifact
-  - embed/reference existing stateful block instances
+  - create direct owned stateful block instances with backing state
 - AI instructions should explain:
   - use hosted stateful blocks for local composition
   - use artifact shells for top-level workspace resources
@@ -887,6 +887,37 @@ Recommended next step:
 - Implement Stage 9 host command/AI integration for creating direct stateful
   blocks in Analysis documents.
 
+## Evaluation After Stage 9
+
+Result: continue to the package boundary decision. The assistant now has a
+direct command path for hosted stateful blocks, so artifact embeds are no longer
+needed for AI-authored dashboard/pivot/document content.
+
+What worked:
+
+- `createBlocksDocumentCommands()` now exposes
+  `create-stateful-block`.
+- Hosts can register supported stateful block command types with default
+  titles and backing-state creation hooks.
+- The CLI registers dashboard, pivot, and Markdown document as supported
+  Analysis stateful block command types.
+- AI instructions now point assistants at `create-stateful-block` for
+  host-registered feature-backed blocks.
+- Command tests cover creating hosted stateful blocks and rejecting unsupported
+  block types when a host registry is provided.
+
+What still needs proof:
+
+- AI-authored dashboards still rely on separate dashboard-specific tools for
+  filling the newly created dashboard with panels.
+- Copy/paste or duplicate normalization remains a separate lifecycle follow-up.
+
+Recommended next step:
+
+- Complete Stage 10 by recording the package-boundary decision and whether the
+  migration to stateful blocks is worth continuing beyond dashboard, pivot, and
+  Markdown document.
+
 ## Progress Log
 
 - 2026-05-29: Created staged plan for stateful block implementations with
@@ -923,3 +954,7 @@ Recommended next step:
 - 2026-05-29: Completed Stage 8 by adding owned stateful block delete and rename
   lifecycle callbacks to `@sqlrooms/documents`, wiring CLI dashboard/pivot/
   document cleanup, and documenting ownership behavior.
+- 2026-05-29: Completed Stage 9 by adding a generic
+  `create-stateful-block` command, host-registered stateful block command
+  types, CLI Analysis registration for dashboard/pivot/document, and updated AI
+  instructions.

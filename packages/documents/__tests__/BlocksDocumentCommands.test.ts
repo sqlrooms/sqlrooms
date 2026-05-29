@@ -40,12 +40,26 @@ function createTestStore() {
     ...createBlocksDocumentsSlice<TestRoomState>({now})(...args),
   }));
 
-  store
-    .getState()
-    .commands.registerCommands(
-      '@sqlrooms/documents/blocks-document',
-      createBlocksDocumentCommands<TestRoomState>(),
-    );
+  store.getState().commands.registerCommands(
+    '@sqlrooms/documents/blocks-document',
+    createBlocksDocumentCommands<TestRoomState>({
+      statefulBlockTypes: [
+        {
+          blockType: 'dashboard',
+          label: 'Dashboard',
+          defaultTitle: 'Embedded Dashboard',
+          ensureState: ({state, blockInstanceId, title}) => {
+            state.artifacts.createArtifact({
+              id: blockInstanceId,
+              type: 'dashboard',
+              title,
+              visibility: 'embedded',
+            });
+          },
+        },
+      ],
+    }),
+  );
   return store;
 }
 
@@ -169,6 +183,65 @@ describe('blocks document commands', () => {
         caption: 'Revenue',
       },
     ]);
+  });
+
+  it('creates hosted stateful blocks', async () => {
+    const store = createTestStore();
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('blocks-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+
+    const statefulBlockResult = await store
+      .getState()
+      .commands.invokeCommand('blocks-document.create-stateful-block', {
+        artifactId,
+        blockId: 'dashboard-block',
+        blockType: 'dashboard',
+        title: 'Regional Dashboard',
+        caption: 'Regions',
+      });
+
+    expect(statefulBlockResult.success).toBe(true);
+    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
+      {
+        id: 'dashboard-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-block',
+        ownership: 'owned',
+        title: 'Regional Dashboard',
+        caption: 'Regions',
+      },
+    ]);
+    expect(
+      store.getState().artifacts.getArtifact('dashboard-block'),
+    ).toMatchObject({
+      id: 'dashboard-block',
+      type: 'dashboard',
+      title: 'Regional Dashboard',
+      visibility: 'embedded',
+    });
+  });
+
+  it('rejects unsupported hosted stateful block types when configured', async () => {
+    const store = createTestStore();
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('blocks-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+
+    await expect(
+      store
+        .getState()
+        .commands.invokeCommand('blocks-document.create-stateful-block', {
+          artifactId,
+          blockType: 'notebook',
+        }),
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Unsupported stateful block type "notebook".',
+    });
   });
 
   it('fails clearly for invalid targets', async () => {

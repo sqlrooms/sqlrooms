@@ -310,12 +310,16 @@ document artifacts. By default the command IDs are:
 - `blocks-document.remove-block`
 - `blocks-document.move-block`
 - `blocks-document.create-chart-block`
+- `blocks-document.create-stateful-block`
 
 Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
 to expose the same command surface under product-specific names while keeping
 the package API generic. Register these commands alongside
 `createBlocksDocumentAiInstructions()` when exposing blocks document artifacts
 to an assistant.
+
+Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
+types to `blocks-document.create-stateful-block`.
 
 `createBlocksDocumentAuthoringInstructions()` adds a higher-level authoring
 contract for assistants or host-provided sub-agents. It names the configured
