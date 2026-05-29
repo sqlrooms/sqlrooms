@@ -91,6 +91,7 @@ type InsertPlacement = 'before' | 'after';
 
 const BLOCK_CONTROLS_STACK_HEIGHT = 80;
 const BLOCK_CONTROLS_TOP_INSET = 4;
+const BLOCK_CONTROLS_GUTTER_HOVER_WIDTH = 72;
 
 function labelFromArtifactType(artifactType: string) {
   return artifactType
@@ -137,6 +138,52 @@ function getBlockPos(editor: Editor, element: HTMLElement) {
 function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
+function isPointerInEditorGutter(event: MouseEvent, editorElement: HTMLElement) {
+  const editorRect = editorElement.getBoundingClientRect();
+  return (
+    event.clientX >= editorRect.left &&
+    event.clientX <= editorRect.left + BLOCK_CONTROLS_GUTTER_HOVER_WIDTH &&
+    event.clientY >= editorRect.top &&
+    event.clientY <= editorRect.bottom
+  );
+}
+
+function getBlockElementAtY(
+  editor: Editor,
+  editorElement: HTMLElement,
+  clientY: number,
+) {
+  const blockRows = Array.from(editorElement.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .map((element) => {
+      const pos = getBlockPos(editor, element);
+      const node = pos == null ? null : getNodeAt(editor, pos);
+      return pos != null && node && !isTitleNode(node)
+        ? {element, rect: element.getBoundingClientRect()}
+        : null;
+    })
+    .filter(
+      (row): row is {element: HTMLElement; rect: DOMRect} => row != null,
+    );
+
+  for (let index = 0; index < blockRows.length; index += 1) {
+    const row = blockRows[index]!;
+    const previousRow = blockRows[index - 1];
+    const nextRow = blockRows[index + 1];
+    const topBoundary = previousRow
+      ? (previousRow.rect.bottom + row.rect.top) / 2
+      : row.rect.top;
+    const bottomBoundary = nextRow
+      ? (row.rect.bottom + nextRow.rect.top) / 2
+      : row.rect.bottom;
+    if (clientY >= topBoundary && clientY <= bottomBoundary) {
+      return row.element;
+    }
+  }
+
+  return null;
 }
 
 function getBlockDropTarget(
@@ -544,6 +591,12 @@ export const BlockDocumentBlockControls: FC<
         updateActiveBlock(hoveredBlock);
         return;
       }
+      if (isPointerInEditorGutter(event, editorElement)) {
+        updateActiveBlock(
+          getBlockElementAtY(editor, editorElement, event.clientY),
+        );
+        return;
+      }
       if (activeBlock && isPointerInElementRow(event, activeBlock.element)) {
         updateActiveBlock(activeBlock.element);
         return;
@@ -898,8 +951,8 @@ export const BlockDocumentBlockControls: FC<
                   </span>
                 </TooltipTrigger>
                 <TooltipContent
-                  align="start"
-                  side="bottom"
+                  align="center"
+                  side="right"
                   className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-center text-xs shadow-md"
                 >
                   <div>
