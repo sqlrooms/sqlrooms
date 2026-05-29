@@ -4,17 +4,17 @@ import {
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
 import {
-  AnalysisDocumentsSliceConfig,
-  analysisBlockToNode,
-  analysisContentToBlocks,
-  createAnalysisDocumentsSlice,
-  createEmptyAnalysisDocumentContent,
-  normalizeAnalysisDocumentContent,
-  type AnalysisBlockType,
-  type AnalysisDocumentsSliceState,
+  BlocksDocumentsSliceConfig,
+  blocksDocumentBlockToNode,
+  blocksDocumentContentToBlocks,
+  createBlocksDocumentsSlice,
+  createEmptyBlocksDocumentContent,
+  normalizeBlocksDocumentContent,
+  type BlocksDocumentBlockType,
+  type BlocksDocumentsSliceState,
 } from '../src';
 
-type TestRoomState = BaseRoomStoreState & AnalysisDocumentsSliceState;
+type TestRoomState = BaseRoomStoreState & BlocksDocumentsSliceState;
 
 function createTestStore() {
   let timestamp = 100;
@@ -22,17 +22,17 @@ function createTestStore() {
 
   return createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createAnalysisDocumentsSlice<TestRoomState>({now})(...args),
+    ...createBlocksDocumentsSlice<TestRoomState>({now})(...args),
   }));
 }
 
-describe('AnalysisDocumentsSlice', () => {
+describe('BlocksDocumentsSlice', () => {
   it('creates, updates, and removes artifact-scoped analysis documents', () => {
     const store = createTestStore();
 
-    store.getState().analysisDocuments.ensureAnalysis('analysis-1');
+    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1');
     expect(
-      store.getState().analysisDocuments.getAnalysis('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
     ).toEqual({
       id: 'analysis-1',
       content: {type: 'doc', content: []},
@@ -40,10 +40,10 @@ describe('AnalysisDocumentsSlice', () => {
       updatedAt: 100,
     });
 
-    store.getState().analysisDocuments.setContent('analysis-1', {
+    store.getState().blocksDocuments.setContent('analysis-1', {
       type: 'doc',
       content: [
-        analysisBlockToNode({
+        blocksDocumentBlockToNode({
           id: 'block-1',
           type: 'paragraph',
           text: 'Hello',
@@ -52,7 +52,7 @@ describe('AnalysisDocumentsSlice', () => {
     });
 
     expect(
-      store.getState().analysisDocuments.getAnalysis('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
     ).toMatchObject({
       id: 'analysis-1',
       updatedAt: 101,
@@ -68,19 +68,19 @@ describe('AnalysisDocumentsSlice', () => {
       },
     });
 
-    store.getState().analysisDocuments.removeAnalysis('analysis-1');
+    store.getState().blocksDocuments.removeBlocksDocument('analysis-1');
     expect(
-      store.getState().analysisDocuments.getAnalysis('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
     ).toBeUndefined();
   });
 
   it('preserves existing content when ensuring an existing analysis', () => {
     const store = createTestStore();
 
-    store.getState().analysisDocuments.ensureAnalysis('analysis-1', {
+    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1', {
       type: 'doc',
       content: [
-        analysisBlockToNode({
+        blocksDocumentBlockToNode({
           id: 'block-1',
           type: 'heading',
           level: 2,
@@ -88,10 +88,10 @@ describe('AnalysisDocumentsSlice', () => {
         }),
       ],
     });
-    store.getState().analysisDocuments.ensureAnalysis('analysis-1', {
+    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1', {
       type: 'doc',
       content: [
-        analysisBlockToNode({
+        blocksDocumentBlockToNode({
           id: 'block-2',
           type: 'heading',
           level: 2,
@@ -100,7 +100,7 @@ describe('AnalysisDocumentsSlice', () => {
       ],
     });
 
-    expect(store.getState().analysisDocuments.getBlocks('analysis-1')).toEqual([
+    expect(store.getState().blocksDocuments.getBlocks('analysis-1')).toEqual([
       {id: 'block-1', type: 'heading', level: 2, text: 'Original'},
     ]);
   });
@@ -108,11 +108,11 @@ describe('AnalysisDocumentsSlice', () => {
   it('appends, inserts, updates, removes, and moves top-level blocks', () => {
     const store = createTestStore();
 
-    store.getState().analysisDocuments.appendBlocks('analysis-1', [
+    store.getState().blocksDocuments.appendBlocks('analysis-1', [
       {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
       {id: 'paragraph', type: 'paragraph', text: 'First note'},
     ]);
-    store.getState().analysisDocuments.insertBlocks('analysis-1', 1, [
+    store.getState().blocksDocuments.insertBlocks('analysis-1', 1, [
       {
         id: 'chart',
         type: 'chart',
@@ -122,7 +122,7 @@ describe('AnalysisDocumentsSlice', () => {
       },
     ]);
 
-    expect(store.getState().analysisDocuments.getBlocks('analysis-1')).toEqual([
+    expect(store.getState().blocksDocuments.getBlocks('analysis-1')).toEqual([
       {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
       {
         id: 'chart',
@@ -137,7 +137,7 @@ describe('AnalysisDocumentsSlice', () => {
     expect(
       store
         .getState()
-        .analysisDocuments.updateBlock('analysis-1', 'paragraph', {
+        .blocksDocuments.updateBlock('analysis-1', 'paragraph', {
           id: 'ignored-id',
           type: 'paragraph',
           text: 'Updated note',
@@ -146,13 +146,13 @@ describe('AnalysisDocumentsSlice', () => {
     expect(
       store
         .getState()
-        .analysisDocuments.moveBlock('analysis-1', 'paragraph', 0),
+        .blocksDocuments.moveBlock('analysis-1', 'paragraph', 0),
     ).toBe(true);
     expect(
-      store.getState().analysisDocuments.removeBlock('analysis-1', 'heading'),
+      store.getState().blocksDocuments.removeBlock('analysis-1', 'heading'),
     ).toBe(true);
 
-    expect(store.getState().analysisDocuments.getBlocks('analysis-1')).toEqual([
+    expect(store.getState().blocksDocuments.getBlocks('analysis-1')).toEqual([
       {id: 'paragraph', type: 'paragraph', text: 'Updated note'},
       {
         id: 'chart',
@@ -167,12 +167,12 @@ describe('AnalysisDocumentsSlice', () => {
   it('tracks local sync metadata separately from persisted analysis content', () => {
     const store = createTestStore();
 
-    store.getState().analysisDocuments.setContent(
+    store.getState().blocksDocuments.setContent(
       'analysis-1',
       {
         type: 'doc',
         content: [
-          analysisBlockToNode({
+          blocksDocumentBlockToNode({
             id: 'paragraph',
             type: 'paragraph',
             text: 'Draft',
@@ -183,24 +183,24 @@ describe('AnalysisDocumentsSlice', () => {
     );
 
     expect(
-      store.getState().analysisDocuments.getSyncMetadata('analysis-1'),
+      store.getState().blocksDocuments.getSyncMetadata('analysis-1'),
     ).toEqual({
       revision: 1,
       origin: 'editor',
       sourceId: 'editor-1',
     });
     expect(
-      store.getState().analysisDocuments.getAnalysis('analysis-1'),
+      store.getState().blocksDocuments.getBlocksDocument('analysis-1'),
     ).not.toHaveProperty('syncMetadata');
 
     store
       .getState()
-      .analysisDocuments.appendBlocks('analysis-1', [
+      .blocksDocuments.appendBlocks('analysis-1', [
         {id: 'heading', type: 'heading', level: 1, text: 'External edit'},
       ]);
 
     expect(
-      store.getState().analysisDocuments.getSyncMetadata('analysis-1'),
+      store.getState().blocksDocuments.getSyncMetadata('analysis-1'),
     ).toEqual({
       revision: 2,
       origin: 'external',
@@ -209,9 +209,9 @@ describe('AnalysisDocumentsSlice', () => {
 
   it('returns false for missing block mutations', () => {
     const store = createTestStore();
-    store.getState().analysisDocuments.ensureAnalysis('analysis-1');
+    store.getState().blocksDocuments.ensureBlocksDocument('analysis-1');
 
-    const block: AnalysisBlockType = {
+    const block: BlocksDocumentBlockType = {
       id: 'missing',
       type: 'paragraph',
       text: 'Nope',
@@ -220,18 +220,18 @@ describe('AnalysisDocumentsSlice', () => {
     expect(
       store
         .getState()
-        .analysisDocuments.updateBlock('analysis-1', 'missing', block),
+        .blocksDocuments.updateBlock('analysis-1', 'missing', block),
     ).toBe(false);
     expect(
-      store.getState().analysisDocuments.removeBlock('analysis-1', 'missing'),
+      store.getState().blocksDocuments.removeBlock('analysis-1', 'missing'),
     ).toBe(false);
     expect(
-      store.getState().analysisDocuments.moveBlock('analysis-1', 'missing', 0),
+      store.getState().blocksDocuments.moveBlock('analysis-1', 'missing', 0),
     ).toBe(false);
   });
 
   it('round-trips supported block DTOs through Tiptap JSON nodes', () => {
-    const blocks: AnalysisBlockType[] = [
+    const blocks: BlocksDocumentBlockType[] = [
       {id: 'heading', type: 'heading', level: 3, text: 'Findings'},
       {id: 'paragraph', type: 'paragraph', text: 'A note'},
       {id: 'rich', type: 'richText', markdown: '**Bold** note'},
@@ -262,15 +262,15 @@ describe('AnalysisDocumentsSlice', () => {
     ];
     const content = {
       type: 'doc' as const,
-      content: blocks.map(analysisBlockToNode),
+      content: blocks.map(blocksDocumentBlockToNode),
     };
 
-    expect(analysisContentToBlocks(content)).toEqual(blocks);
+    expect(blocksDocumentContentToBlocks(content)).toEqual(blocks);
   });
 
   it('backfills missing top-level block IDs for editor content', () => {
     let nextId = 1;
-    const result = normalizeAnalysisDocumentContent(
+    const result = normalizeBlocksDocumentContent(
       {
         type: 'doc',
         content: [
@@ -298,19 +298,19 @@ describe('AnalysisDocumentsSlice', () => {
   });
 
   it('defaults content for legacy analysis records', () => {
-    const result = AnalysisDocumentsSliceConfig.parse({
+    const result = BlocksDocumentsSliceConfig.parse({
       artifacts: {
         'analysis-1': {id: 'analysis-1', updatedAt: 1},
       },
     });
 
     expect(result.artifacts['analysis-1']?.content).toEqual(
-      createEmptyAnalysisDocumentContent(),
+      createEmptyBlocksDocumentContent(),
     );
   });
 
   it('rejects analysis records keyed by a different ID', () => {
-    const result = AnalysisDocumentsSliceConfig.safeParse({
+    const result = BlocksDocumentsSliceConfig.safeParse({
       artifacts: {
         'analysis-key': {id: 'analysis-value', updatedAt: 1},
       },
@@ -320,7 +320,7 @@ describe('AnalysisDocumentsSlice', () => {
     expect(result.error?.issues[0]).toMatchObject({
       path: ['artifacts', 'analysis-key', 'id'],
       message:
-        'Analysis artifact key "analysis-key" does not match artifact id "analysis-value"',
+        'Blocks document key "analysis-key" does not match document id "analysis-value"',
     });
   });
 });

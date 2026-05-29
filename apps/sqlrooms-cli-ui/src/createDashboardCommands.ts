@@ -88,7 +88,7 @@ function createArtifactCommand(
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
       } else if (artifactType === 'analysis') {
-        state.analysisDocuments.ensureAnalysis(artifactId);
+        state.blocksDocuments.ensureBlocksDocument(artifactId);
       } else if (artifactType === 'document') {
         state.documents.ensureDocument(artifactId);
       } else if (artifactType === 'canvas') {
@@ -187,7 +187,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
           state.notebook.ensureArtifact(artifactId);
         }
         if (artifact.type === 'analysis') {
-          state.analysisDocuments.ensureAnalysis(artifactId);
+          state.blocksDocuments.ensureBlocksDocument(artifactId);
         }
         if (artifact.type === 'document') {
           state.documents.ensureDocument(artifactId);

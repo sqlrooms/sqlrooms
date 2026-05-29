@@ -50,7 +50,7 @@ function readCliArtifact({
   }
 
   if (artifact.type === 'analysis') {
-    const analysis = state.analysisDocuments.getAnalysis(artifactId);
+    const analysis = state.blocksDocuments.getBlocksDocument(artifactId);
     return {
       success: true as const,
       artifact: {
@@ -60,7 +60,7 @@ function readCliArtifact({
       },
       payload: {
         kind: 'analysis',
-        blocks: state.analysisDocuments.getBlocks(artifactId),
+        blocks: state.blocksDocuments.getBlocks(artifactId),
         assets: Object.values(analysis?.assets ?? {}).map((asset) => ({
           id: asset.id,
           filename: asset.filename,

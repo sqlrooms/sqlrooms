@@ -2,7 +2,7 @@ import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import {createElement, useCallback, type FC} from 'react';
 import {useAnalysisChartRenderer} from '../../AnalysisChartRendererContext';
-import {useAnalysisDocumentEditorContext} from '../AnalysisDocumentEditorContext';
+import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
 type AnalysisChartNodeViewProps = {
@@ -16,7 +16,7 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
   selected,
   updateAttributes,
 }) => {
-  const {analysisId, readOnly} = useAnalysisDocumentEditorContext();
+  const {documentId, readOnly} = useBlocksDocumentEditorContext();
   const Renderer = useAnalysisChartRenderer();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
@@ -48,7 +48,7 @@ export const AnalysisChartNodeView: FC<AnalysisChartNodeViewProps> = ({
     >
       {Renderer ? (
         createElement(Renderer, {
-          analysisId,
+          analysisId: documentId,
           blockId,
           tableName,
           config,

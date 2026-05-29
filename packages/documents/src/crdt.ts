@@ -7,10 +7,10 @@ import {
 import type {CrdtMirror} from '@sqlrooms/crdt';
 import {schema} from 'loro-mirror';
 import {
-  AnalysisDocumentsSliceConfig,
-  type AnalysisDocumentsSliceConfig as AnalysisDocumentsSliceConfigType,
-} from './AnalysisDocumentSliceConfig';
-import type {AnalysisDocumentsSliceState} from './AnalysisDocumentsSlice';
+  BlocksDocumentsSliceConfig,
+  type BlocksDocumentsSliceConfig as BlocksDocumentsSliceConfigType,
+} from './BlocksDocumentSliceConfig';
+import type {BlocksDocumentsSliceState} from './BlocksDocumentsSlice';
 import {
   DocumentsSliceConfig,
   type DocumentAsset,
@@ -19,7 +19,7 @@ import {
 import type {DocumentsSliceState} from './DocumentsSlice';
 
 type DocumentCrdtState = DocumentsSliceState &
-  AnalysisDocumentsSliceState &
+  BlocksDocumentsSliceState &
   ArtifactsSliceState;
 type OmitAssetMetadata<T extends DocumentAsset> = Omit<
   T,
@@ -41,8 +41,8 @@ type IncomingDocument = Omit<
 > & {
   assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
 };
-type IncomingAnalysisDocument = Omit<
-  AnalysisDocumentsSliceConfigType['artifacts'][string],
+type IncomingBlocksDocument = Omit<
+  BlocksDocumentsSliceConfigType['artifacts'][string],
   'assets'
 > & {
   assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
@@ -79,7 +79,7 @@ export const documentsMirrorSchema = schema.LoroMap({
     }),
     (document) => document.id,
   ),
-  analysisDocuments: schema.LoroList(
+  blocksDocuments: schema.LoroList(
     schema.LoroMap({
       id: schema.String(),
       content: schema.Any(),
@@ -119,7 +119,7 @@ export type DocumentsMirrorSchema = typeof documentsMirrorSchema;
 
 export const documentsMirrorInitialState = {
   documents: [],
-  analysisDocuments: [],
+  blocksDocuments: [],
   artifacts: [],
   artifactOrder: [],
 };
@@ -175,8 +175,8 @@ export function createDocumentsCrdtMirror<
             updatedAt: document.updatedAt,
           }),
         ),
-        analysisDocuments: Object.values(
-          state.analysisDocuments.config.artifacts,
+        blocksDocuments: Object.values(
+          state.blocksDocuments.config.artifacts,
         ).map((analysisDocument) => ({
           id: analysisDocument.id,
           content: analysisDocument.content,
@@ -208,8 +208,8 @@ export function createDocumentsCrdtMirror<
       const incomingArtifacts = (value?.artifacts ?? []) as IncomingArtifact[];
       const incomingDocuments = (value?.documents ??
         []) as unknown as IncomingDocument[];
-      const incomingAnalysisDocuments = (value?.analysisDocuments ??
-        []) as unknown as IncomingAnalysisDocument[];
+      const incomingBlocksDocuments = (value?.blocksDocuments ??
+        []) as unknown as IncomingBlocksDocument[];
       const incomingArtifactOrder = (value?.artifactOrder ?? []) as string[];
       const syncedArtifacts: Record<string, ArtifactMetadataType> =
         Object.fromEntries(
@@ -225,8 +225,8 @@ export function createDocumentsCrdtMirror<
           ]),
         );
       const documents = documentsArrayToRecord(incomingDocuments);
-      const analysisDocuments = analysisDocumentsArrayToRecord(
-        incomingAnalysisDocuments,
+      const blocksDocuments = blocksDocumentsArrayToRecord(
+        incomingBlocksDocuments,
       );
       const currentArtifactsConfig = get().artifacts.config;
       const currentArtifactsById =
@@ -294,10 +294,10 @@ export function createDocumentsCrdtMirror<
           ...state.documents,
           config: DocumentsSliceConfig.parse({artifacts: documents}),
         },
-        analysisDocuments: {
-          ...state.analysisDocuments,
-          config: AnalysisDocumentsSliceConfig.parse({
-            artifacts: analysisDocuments,
+        blocksDocuments: {
+          ...state.blocksDocuments,
+          config: BlocksDocumentsSliceConfig.parse({
+            artifacts: blocksDocuments,
           }),
         },
       }));
@@ -320,7 +320,7 @@ function documentsArrayToRecord(documents: IncomingDocument[]) {
 }
 
 function assetsArrayToRecord(
-  assets: IncomingDocument['assets'] | IncomingAnalysisDocument['assets'],
+  assets: IncomingDocument['assets'] | IncomingBlocksDocument['assets'],
 ) {
   if (!assets) return {};
   const assetArray = Array.isArray(assets) ? assets : Object.values(assets);
@@ -343,11 +343,11 @@ function assetsArrayToRecord(
   );
 }
 
-function analysisDocumentsArrayToRecord(
-  analysisDocuments: IncomingAnalysisDocument[],
+function blocksDocumentsArrayToRecord(
+  blocksDocuments: IncomingBlocksDocument[],
 ) {
   return Object.fromEntries(
-    analysisDocuments.map((analysisDocument) => [
+    blocksDocuments.map((analysisDocument) => [
       analysisDocument.id,
       {
         id: analysisDocument.id,

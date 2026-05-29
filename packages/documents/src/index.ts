@@ -12,41 +12,41 @@ export {
   type DocumentsSliceConfig as DocumentsSliceConfigType,
 } from './DocumentsSliceConfig';
 export {
-  AnalysisArtifactEmbedBlock,
-  AnalysisBlock,
-  AnalysisChartBlock,
-  AnalysisChartImageBlock,
-  AnalysisDocument,
-  AnalysisDocumentContent,
-  AnalysisDocumentMark,
-  AnalysisDocumentNode,
-  AnalysisDocumentsSliceConfig,
-  AnalysisHeadingBlock,
-  AnalysisImageBlock,
-  AnalysisListBlock,
-  AnalysisParagraphBlock,
-  AnalysisRichTextBlock,
-  AnalysisTodoBlock,
-  analysisBlockToNode,
-  analysisContentToBlocks,
-  analysisNodeToBlock,
-  createEmptyAnalysisDocumentContent,
-  type AnalysisBlock as AnalysisBlockType,
-  type AnalysisDocument as AnalysisDocumentType,
-  type AnalysisDocumentContent as AnalysisDocumentContentType,
-  type AnalysisDocumentMark as AnalysisDocumentMarkType,
-  type AnalysisDocumentNode as AnalysisDocumentNodeType,
-  type AnalysisDocumentsSliceConfig as AnalysisDocumentsSliceConfigType,
-} from './AnalysisDocumentSliceConfig';
+  BlocksDocumentArtifactEmbedBlock,
+  BlocksDocumentBlock,
+  BlocksDocumentChartBlock,
+  BlocksDocumentChartImageBlock,
+  BlocksDocument,
+  BlocksDocumentContent,
+  BlocksDocumentMark,
+  BlocksDocumentNode,
+  BlocksDocumentsSliceConfig,
+  BlocksDocumentHeadingBlock,
+  BlocksDocumentImageBlock,
+  BlocksDocumentListBlock,
+  BlocksDocumentParagraphBlock,
+  BlocksDocumentRichTextBlock,
+  BlocksDocumentTodoBlock,
+  blocksDocumentBlockToNode,
+  blocksDocumentContentToBlocks,
+  blocksDocumentNodeToBlock,
+  createEmptyBlocksDocumentContent,
+  type BlocksDocumentBlock as BlocksDocumentBlockType,
+  type BlocksDocument as BlocksDocumentType,
+  type BlocksDocumentContent as BlocksDocumentContentType,
+  type BlocksDocumentMark as BlocksDocumentMarkType,
+  type BlocksDocumentNode as BlocksDocumentNodeType,
+  type BlocksDocumentsSliceConfig as BlocksDocumentsSliceConfigType,
+} from './BlocksDocumentSliceConfig';
 export {
-  createAnalysisDocumentsSlice,
-  createDefaultAnalysisDocumentsConfig,
-  type AnalysisDocumentMutationMetadata,
-  type AnalysisDocumentMutationOrigin,
-  type AnalysisDocumentSyncMetadata,
-  type AnalysisDocumentsSliceState,
-  type CreateAnalysisDocumentsSliceProps,
-} from './AnalysisDocumentsSlice';
+  createBlocksDocumentsSlice,
+  createDefaultBlocksDocumentsConfig,
+  type BlocksDocumentMutationMetadata,
+  type BlocksDocumentMutationOrigin,
+  type BlocksDocumentSyncMetadata,
+  type BlocksDocumentsSliceState,
+  type CreateBlocksDocumentsSliceProps,
+} from './BlocksDocumentsSlice';
 export {
   AnalysisChartRendererProvider,
   useAnalysisChartRenderer,
@@ -88,26 +88,26 @@ export {
   type AnalysisAgentResult,
   type CreateAnalysisAuthoringInstructionsOptions,
 } from './analysisAi';
-export {AnalysisDocumentEditor} from './AnalysisDocumentEditor';
+export {BlocksDocumentEditor} from './BlocksDocumentEditor';
 export {
-  AnalysisDocumentEditorRoot,
-  type AnalysisDocumentEditorRootProps,
-} from './AnalysisDocumentEditor/AnalysisDocumentEditorRoot';
+  BlocksDocumentEditorRoot,
+  type BlocksDocumentEditorRootProps,
+} from './BlocksDocumentEditor/BlocksDocumentEditorRoot';
 export {
-  AnalysisDocumentEditorContent,
-  type AnalysisDocumentEditorContentProps,
-} from './AnalysisDocumentEditor/AnalysisDocumentEditorContent';
+  BlocksDocumentEditorContent,
+  type BlocksDocumentEditorContentProps,
+} from './BlocksDocumentEditor/BlocksDocumentEditorContent';
 export {
-  AnalysisDocumentToolbar,
-  type AnalysisDocumentToolbarProps,
-} from './AnalysisDocumentEditor/AnalysisDocumentToolbar';
+  BlocksDocumentToolbar,
+  type BlocksDocumentToolbarProps,
+} from './BlocksDocumentEditor/BlocksDocumentToolbar';
 export {
-  createDefaultAnalysisBlockId,
-  normalizeAnalysisDocumentContent,
-  useAnalysisDocumentEditorContext,
-  type AnalysisDocumentEditorContextValue,
-} from './AnalysisDocumentEditor/AnalysisDocumentEditorContext';
-export {AnalysisDocumentArtifact} from './AnalysisDocument';
+  createDefaultBlocksDocumentBlockId,
+  normalizeBlocksDocumentContent,
+  useBlocksDocumentEditorContext,
+  type BlocksDocumentEditorContextValue,
+} from './BlocksDocumentEditor/BlocksDocumentEditorContext';
+export {BlocksDocumentArtifact} from './BlocksDocumentArtifact';
 export {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 export {
   MarkdownDocumentEditorRoot,
@@ -123,7 +123,7 @@ export {
   type MarkdownDocumentEditorContentProps,
 } from './MarkdownDocumentEditor/MarkdownDocumentEditorContent';
 export {MarkdownDocument} from './MarkdownDocument';
-export {useStoreWithAnalysisDocuments} from './useStoreWithAnalysisDocuments';
+export {useStoreWithBlocksDocuments} from './useStoreWithBlocksDocuments';
 export {useStoreWithDocuments} from './useStoreWithDocuments';
 export {
   buildKnowledgeIndex,

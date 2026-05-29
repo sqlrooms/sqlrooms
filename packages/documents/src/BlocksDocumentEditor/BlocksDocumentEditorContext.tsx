@@ -1,35 +1,35 @@
 import type {Editor} from '@tiptap/react';
 import {createContext, useContext} from 'react';
 import type {
-  AnalysisDocumentContent,
-  AnalysisDocumentNode,
-} from '../AnalysisDocumentSliceConfig';
-import type {AnalysisDocumentMutationMetadata} from '../AnalysisDocumentsSlice';
+  BlocksDocumentContent,
+  BlocksDocumentNode,
+} from '../BlocksDocumentSliceConfig';
+import type {BlocksDocumentMutationMetadata} from '../BlocksDocumentsSlice';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
 
-export type AnalysisDocumentEditorChangeHandler = (
-  value: AnalysisDocumentContent,
-  metadata?: AnalysisDocumentMutationMetadata,
+export type BlocksDocumentEditorChangeHandler = (
+  value: BlocksDocumentContent,
+  metadata?: BlocksDocumentMutationMetadata,
 ) => void;
 
-export type AnalysisDocumentEditorContextValue = {
+export type BlocksDocumentEditorContextValue = {
   editor: Editor | null;
-  analysisId: string;
-  value: AnalysisDocumentContent;
+  documentId: string;
+  value: BlocksDocumentContent;
   assets: Record<string, DocumentAsset>;
-  onChange: AnalysisDocumentEditorChangeHandler;
+  onChange: BlocksDocumentEditorChangeHandler;
   readOnly: boolean;
   generateBlockId: () => string;
 };
 
-export const AnalysisDocumentEditorContext =
-  createContext<AnalysisDocumentEditorContextValue | null>(null);
+export const BlocksDocumentEditorContext =
+  createContext<BlocksDocumentEditorContextValue | null>(null);
 
-export function useAnalysisDocumentEditorContext() {
-  const context = useContext(AnalysisDocumentEditorContext);
+export function useBlocksDocumentEditorContext() {
+  const context = useContext(BlocksDocumentEditorContext);
   if (!context) {
     throw new Error(
-      'AnalysisDocumentEditor compound components must be used within AnalysisDocumentEditor.Root',
+      'BlocksDocumentEditor compound components must be used within BlocksDocumentEditor.Root',
     );
   }
   return context;
@@ -40,13 +40,15 @@ function defaultGenerateBlockId() {
   if (randomUUID) {
     return randomUUID.call(globalThis.crypto);
   }
-  return `analysis-block-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `blocks-document-block-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
 }
 
 function cloneNodeWithId(
-  node: AnalysisDocumentNode,
+  node: BlocksDocumentNode,
   generateBlockId: () => string,
-): AnalysisDocumentNode {
+): BlocksDocumentNode {
   const content = node.content?.map((child) => ({...child}));
   const id = node.attrs?.id;
   if (typeof id === 'string') {
@@ -62,10 +64,10 @@ function cloneNodeWithId(
   };
 }
 
-export function normalizeAnalysisDocumentContent(
-  value: AnalysisDocumentContent,
+export function normalizeBlocksDocumentContent(
+  value: BlocksDocumentContent,
   generateBlockId: () => string = defaultGenerateBlockId,
-): AnalysisDocumentContent {
+): BlocksDocumentContent {
   return {
     ...value,
     type: 'doc',
@@ -75,6 +77,6 @@ export function normalizeAnalysisDocumentContent(
   };
 }
 
-export function createDefaultAnalysisBlockId() {
+export function createDefaultBlocksDocumentBlockId() {
   return defaultGenerateBlockId();
 }

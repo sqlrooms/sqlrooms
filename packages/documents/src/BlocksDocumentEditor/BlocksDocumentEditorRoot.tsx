@@ -14,29 +14,29 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import type {AnalysisDocumentContent} from '../AnalysisDocumentSliceConfig';
+import type {BlocksDocumentContent} from '../BlocksDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
 import {AnalysisArtifactEmbedNode} from './extensions/AnalysisArtifactEmbedNode';
 import {
-  AnalysisBlockIdExtension,
+  BlocksDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
-} from './extensions/AnalysisBlockIdExtension';
+} from './extensions/BlocksDocumentBlockIdExtension';
 import {AnalysisChartImageNode} from './extensions/AnalysisChartImageNode';
 import {AnalysisChartNode} from './extensions/AnalysisChartNode';
 import {AnalysisImageNode} from './extensions/AnalysisImageNode';
 import {AnalysisRichTextNode} from './extensions/AnalysisRichTextNode';
 import {
-  AnalysisDocumentEditorContext,
-  type AnalysisDocumentEditorChangeHandler,
-  createDefaultAnalysisBlockId,
-  normalizeAnalysisDocumentContent,
-  type AnalysisDocumentEditorContextValue,
-} from './AnalysisDocumentEditorContext';
+  BlocksDocumentEditorContext,
+  type BlocksDocumentEditorChangeHandler,
+  createDefaultBlocksDocumentBlockId,
+  normalizeBlocksDocumentContent,
+  type BlocksDocumentEditorContextValue,
+} from './BlocksDocumentEditorContext';
 
-export type AnalysisDocumentEditorRootProps = PropsWithChildren<{
-  analysisId: string;
-  value: AnalysisDocumentContent;
-  onChange: AnalysisDocumentEditorChangeHandler;
+export type BlocksDocumentEditorRootProps = PropsWithChildren<{
+  documentId: string;
+  value: BlocksDocumentContent;
+  onChange: BlocksDocumentEditorChangeHandler;
   assets?: Record<string, DocumentAsset>;
   syncRevision?: number;
   syncSourceId?: string;
@@ -48,29 +48,31 @@ function stableStringify(value: unknown) {
   return JSON.stringify(value);
 }
 
-function hasMissingTopLevelBlockIds(value: AnalysisDocumentContent) {
+function hasMissingTopLevelBlockIds(value: BlocksDocumentContent) {
   return value.content.some((node) => typeof node.attrs?.id !== 'string');
 }
 
 function createEditorSourceId() {
   const randomUUID = globalThis.crypto?.randomUUID;
   if (randomUUID) {
-    return `analysis-editor:${randomUUID.call(globalThis.crypto)}`;
+    return `blocks-document-editor:${randomUUID.call(globalThis.crypto)}`;
   }
-  return `analysis-editor:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  return `blocks-document-editor:${Date.now()}:${Math.random()
+    .toString(36)
+    .slice(2)}`;
 }
 
-export const AnalysisDocumentEditorRoot: FC<
-  AnalysisDocumentEditorRootProps
+export const BlocksDocumentEditorRoot: FC<
+  BlocksDocumentEditorRootProps
 > = ({
-  analysisId,
+  documentId,
   value,
   onChange,
   assets = {},
   syncRevision,
   syncSourceId,
   readOnly = false,
-  generateBlockId = createDefaultAnalysisBlockId,
+  generateBlockId = createDefaultBlocksDocumentBlockId,
   children,
 }) => {
   const onChangeRef = useRef(onChange);
@@ -88,7 +90,7 @@ export const AnalysisDocumentEditorRoot: FC<
 
   const valueKey = stableStringify(value);
   const normalizedValue = useMemo(
-    () => normalizeAnalysisDocumentContent(value, generateBlockId),
+    () => normalizeBlocksDocumentContent(value, generateBlockId),
     [generateBlockId, value],
   );
   const normalizedValueKey = stableStringify(normalizedValue);
@@ -110,7 +112,7 @@ export const AnalysisDocumentEditorRoot: FC<
       AnalysisArtifactEmbedNode,
     ];
     return [
-      AnalysisBlockIdExtension.configure({
+      BlocksDocumentBlockIdExtension.configure({
         types: getBlockNodeExtensionNames(documentExtensions),
       }),
       ...documentExtensions,
@@ -123,8 +125,8 @@ export const AnalysisDocumentEditorRoot: FC<
     editable: !readOnly,
     immediatelyRender: false,
     onUpdate: ({editor}) => {
-      const nextContent = normalizeAnalysisDocumentContent(
-        editor.getJSON() as AnalysisDocumentContent,
+      const nextContent = normalizeBlocksDocumentContent(
+        editor.getJSON() as BlocksDocumentContent,
         () => generateBlockIdRef.current(),
       );
       lastEmittedContentKeyRef.current = stableStringify(nextContent);
@@ -151,7 +153,7 @@ export const AnalysisDocumentEditorRoot: FC<
     if (!editor) {
       return;
     }
-    const editorContent = editor.getJSON() as AnalysisDocumentContent;
+    const editorContent = editor.getJSON() as BlocksDocumentContent;
     if (stableStringify(editorContent) === normalizedValueKey) {
       return;
     }
@@ -178,9 +180,9 @@ export const AnalysisDocumentEditorRoot: FC<
     editor?.setEditable(!readOnly);
   }, [editor, readOnly]);
 
-  const contextValue: AnalysisDocumentEditorContextValue = {
+  const contextValue: BlocksDocumentEditorContextValue = {
     editor,
-    analysisId,
+    documentId,
     value: normalizedValue,
     assets,
     onChange,
@@ -189,8 +191,8 @@ export const AnalysisDocumentEditorRoot: FC<
   };
 
   return (
-    <AnalysisDocumentEditorContext.Provider value={contextValue}>
+    <BlocksDocumentEditorContext.Provider value={contextValue}>
       <div className="flex h-full min-h-0 flex-col">{children}</div>
-    </AnalysisDocumentEditorContext.Provider>
+    </BlocksDocumentEditorContext.Provider>
   );
 };

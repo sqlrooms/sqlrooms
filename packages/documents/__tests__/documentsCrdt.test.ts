@@ -11,9 +11,9 @@ import {createCrdtSlice, type CrdtSliceState} from '@sqlrooms/crdt';
 import {LoroDoc} from 'loro-crdt';
 import {createStore} from 'zustand';
 import {
-  createAnalysisDocumentsSlice,
+  createBlocksDocumentsSlice,
   createDocumentsSlice,
-  type AnalysisDocumentsSliceState,
+  type BlocksDocumentsSliceState,
   type DocumentsSliceState,
 } from '../src';
 import {createDocumentsCrdtMirror} from '../src/crdt';
@@ -21,7 +21,7 @@ import {createDocumentsCrdtMirror} from '../src/crdt';
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
   DocumentsSliceState &
-  AnalysisDocumentsSliceState &
+  BlocksDocumentsSliceState &
   CrdtSliceState;
 
 function createTestStore(doc: LoroDoc) {
@@ -41,7 +41,7 @@ function createTestStore(doc: LoroDoc) {
     ...createBaseRoomSlice()(set, get, store),
     ...createArtifactsSlice<TestRoomState>({artifactTypes})(set, get, store),
     ...createDocumentsSlice<TestRoomState>({now: () => 123})(set, get, store),
-    ...createAnalysisDocumentsSlice<TestRoomState>({now: () => 456})(
+    ...createBlocksDocumentsSlice<TestRoomState>({now: () => 456})(
       set,
       get,
       store,
@@ -196,7 +196,7 @@ describe('documents CRDT mirrors', () => {
       visibility: 'embedded',
       parentArtifactId: analysisId,
     });
-    storeA.getState().analysisDocuments.appendBlocks(analysisId, [
+    storeA.getState().blocksDocuments.appendBlocks(analysisId, [
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
       {
         id: 'chart',
@@ -242,7 +242,7 @@ describe('documents CRDT mirrors', () => {
       visibility: 'embedded',
       parentArtifactId: analysisId,
     });
-    expect(storeB.getState().analysisDocuments.getBlocks(analysisId)).toEqual([
+    expect(storeB.getState().blocksDocuments.getBlocks(analysisId)).toEqual([
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
       {
         id: 'chart',

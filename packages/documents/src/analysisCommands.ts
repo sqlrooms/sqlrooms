@@ -2,14 +2,14 @@ import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
 import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import {
-  AnalysisBlock,
-  AnalysisChartBlock,
-  AnalysisDocumentContent,
-  analysisBlockToNode,
-  createEmptyAnalysisDocumentContent,
-  type AnalysisBlock as AnalysisBlockType,
-} from './AnalysisDocumentSliceConfig';
-import type {AnalysisDocumentsSliceState} from './AnalysisDocumentsSlice';
+  BlocksDocumentBlock,
+  BlocksDocumentChartBlock,
+  BlocksDocumentContent,
+  blocksDocumentBlockToNode,
+  createEmptyBlocksDocumentContent,
+  type BlocksDocumentBlock as BlocksDocumentBlockType,
+} from './BlocksDocumentSliceConfig';
+import type {BlocksDocumentsSliceState} from './BlocksDocumentsSlice';
 
 export const ANALYSIS_AI_INSTRUCTIONS = `
 Analysis artifacts:
@@ -36,7 +36,7 @@ type AnalysisCommandState = BaseRoomStoreState & {
       currentArtifactId?: string;
     };
   };
-} & AnalysisDocumentsSliceState;
+} & BlocksDocumentsSliceState;
 
 const AnalysisIdInput = z
   .object({
@@ -48,7 +48,7 @@ const AnalysisCreateInput = z
   .object({
     title: z.string().optional().describe('Optional analysis title.'),
     blocks: z
-      .array(AnalysisBlock)
+      .array(BlocksDocumentBlock)
       .optional()
       .describe('Initial top-level blocks.'),
     select: z
@@ -58,27 +58,27 @@ const AnalysisCreateInput = z
   })
   .default({});
 
-const AnalysisBlocksInput = z.object({
+const BlocksDocumentBlocksInput = z.object({
   artifactId: z.string().describe('Target analysis artifact ID.'),
-  blocks: z.array(AnalysisBlock).describe('Blocks to add.'),
+  blocks: z.array(BlocksDocumentBlock).describe('Blocks to add.'),
 });
 
-const AnalysisInsertBlocksInput = AnalysisBlocksInput.extend({
+const AnalysisInsertBlocksInput = BlocksDocumentBlocksInput.extend({
   index: z.number().int().describe('Top-level insertion index.'),
 });
 
 const AnalysisUpdateBlockInput = z.object({
   artifactId: z.string().describe('Target analysis artifact ID.'),
   blockId: z.string().describe('Block ID to update.'),
-  block: AnalysisBlock.describe('Replacement block. Its id is ignored.'),
+  block: BlocksDocumentBlock.describe('Replacement block. Its id is ignored.'),
 });
 
-const AnalysisBlockIdInput = z.object({
+const BlocksDocumentBlockIdInput = z.object({
   artifactId: z.string().describe('Target analysis artifact ID.'),
   blockId: z.string().describe('Target block ID.'),
 });
 
-const AnalysisMoveBlockInput = AnalysisBlockIdInput.extend({
+const AnalysisMoveBlockInput = BlocksDocumentBlockIdInput.extend({
   toIndex: z.number().int().describe('Destination top-level block index.'),
 });
 
@@ -138,7 +138,7 @@ export function createAnalysisCommands<
         const analyses = Object.values(state.artifacts.config.artifactsById)
           .filter((artifact) => artifact.type === 'analysis')
           .map((artifact) => {
-            const analysis = state.analysisDocuments.getAnalysis(artifact.id);
+            const analysis = state.blocksDocuments.getBlocksDocument(artifact.id);
             return {
               artifactId: artifact.id,
               title: artifact.title,
@@ -173,7 +173,7 @@ export function createAnalysisCommands<
           'analysis.get',
         );
         if (!resolved.success) return resolved;
-        const analysis = state.analysisDocuments.getAnalysis(
+        const analysis = state.blocksDocuments.getBlocksDocument(
           resolved.artifact.id,
         );
         return {
@@ -182,8 +182,8 @@ export function createAnalysisCommands<
           data: {
             artifactId: resolved.artifact.id,
             title: resolved.artifact.title,
-            blocks: state.analysisDocuments.getBlocks(resolved.artifact.id),
-            content: analysis?.content ?? createEmptyAnalysisDocumentContent(),
+            blocks: state.blocksDocuments.getBlocks(resolved.artifact.id),
+            content: analysis?.content ?? createEmptyBlocksDocumentContent(),
             assets: Object.values(analysis?.assets ?? {}).map(
               analysisAssetMetadata,
             ),
@@ -213,11 +213,11 @@ export function createAnalysisCommands<
           type: 'analysis',
           title: title ?? 'Analysis',
         });
-        state.analysisDocuments.ensureAnalysis(artifactId);
+        state.blocksDocuments.ensureBlocksDocument(artifactId);
         if (blocks.length) {
-          state.analysisDocuments.setContent(artifactId, {
+          state.blocksDocuments.setContent(artifactId, {
             type: 'doc',
-            content: blocks.map((block) => analysisBlockToNode(block)),
+            content: blocks.map((block) => blocksDocumentBlockToNode(block)),
           });
         }
         if (select) {
@@ -239,13 +239,13 @@ export function createAnalysisCommands<
       description: 'Append top-level blocks to an Analysis artifact',
       group: 'Analysis',
       keywords: ['analysis', 'append', 'blocks'],
-      inputSchema: AnalysisBlocksInput,
+      inputSchema: BlocksDocumentBlocksInput,
       inputDescription: 'Analysis artifact ID and blocks to append.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
         const {artifactId, blocks} = input as z.infer<
-          typeof AnalysisBlocksInput
+          typeof BlocksDocumentBlocksInput
         >;
         const resolved = resolveAnalysisArtifact(
           state,
@@ -253,7 +253,7 @@ export function createAnalysisCommands<
           'analysis.append-blocks',
         );
         if (!resolved.success) return resolved;
-        state.analysisDocuments.appendBlocks(artifactId, blocks);
+        state.blocksDocuments.appendBlocks(artifactId, blocks);
         return blockMutationSuccess(
           state,
           'analysis.append-blocks',
@@ -281,7 +281,7 @@ export function createAnalysisCommands<
           'analysis.insert-blocks',
         );
         if (!resolved.success) return resolved;
-        state.analysisDocuments.insertBlocks(artifactId, index, blocks);
+        state.blocksDocuments.insertBlocks(artifactId, index, blocks);
         return blockMutationSuccess(
           state,
           'analysis.insert-blocks',
@@ -310,7 +310,7 @@ export function createAnalysisCommands<
           'analysis.update-block',
         );
         if (!resolved.success) return resolved;
-        const updated = state.analysisDocuments.updateBlock(
+        const updated = state.blocksDocuments.updateBlock(
           artifactId,
           blockId,
           block,
@@ -325,13 +325,13 @@ export function createAnalysisCommands<
       description: 'Remove one top-level Analysis block by block ID',
       group: 'Analysis',
       keywords: ['analysis', 'remove', 'delete', 'block'],
-      inputSchema: AnalysisBlockIdInput,
+      inputSchema: BlocksDocumentBlockIdInput,
       inputDescription: 'Analysis artifact ID and block ID.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
         const {artifactId, blockId} = input as z.infer<
-          typeof AnalysisBlockIdInput
+          typeof BlocksDocumentBlockIdInput
         >;
         const resolved = resolveAnalysisArtifact(
           state,
@@ -339,7 +339,7 @@ export function createAnalysisCommands<
           'analysis.remove-block',
         );
         if (!resolved.success) return resolved;
-        const removed = state.analysisDocuments.removeBlock(
+        const removed = state.blocksDocuments.removeBlock(
           artifactId,
           blockId,
         );
@@ -368,7 +368,7 @@ export function createAnalysisCommands<
           'analysis.move-block',
         );
         if (!resolved.success) return resolved;
-        const moved = state.analysisDocuments.moveBlock(
+        const moved = state.blocksDocuments.moveBlock(
           artifactId,
           blockId,
           toIndex,
@@ -391,7 +391,7 @@ export function createAnalysisCommands<
         const state = getState();
         const {
           artifactId,
-          blockId = createAnalysisBlockId(),
+          blockId = createBlocksDocumentBlockId(),
           tableName,
           config,
           selectionGroupId,
@@ -404,7 +404,7 @@ export function createAnalysisCommands<
           'analysis.create-chart-block',
         );
         if (!resolved.success) return resolved;
-        const block = AnalysisChartBlock.parse({
+        const block = BlocksDocumentChartBlock.parse({
           id: blockId,
           type: 'chart',
           tableName,
@@ -436,7 +436,7 @@ export function createAnalysisCommands<
         const state = getState();
         const {
           artifactId,
-          blockId = createAnalysisBlockId(),
+          blockId = createBlocksDocumentBlockId(),
           dashboardArtifactId,
           dashboardTitle = 'Embedded Dashboard',
           caption,
@@ -472,7 +472,7 @@ export function createAnalysisCommands<
             error: `Artifact "${embeddedDashboardId}" is not a dashboard artifact.`,
           };
         }
-        const block: AnalysisBlockType = {
+        const block: BlocksDocumentBlockType = {
           id: blockId,
           type: 'artifactEmbed',
           artifactId: embeddedDashboardId,
@@ -522,40 +522,44 @@ function resolveAnalysisArtifact(
   return {success: true as const, artifact};
 }
 
-function createAnalysisBlockId() {
+function createBlocksDocumentBlockId() {
   const randomUUID = globalThis.crypto?.randomUUID;
   if (randomUUID) {
     return randomUUID.call(globalThis.crypto);
   }
-  return `analysis-block-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `blocks-document-block-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
 }
 
 function insertOrAppendBlocks(
   state: AnalysisCommandState,
   artifactId: string,
-  blocks: AnalysisBlockType[],
+  blocks: BlocksDocumentBlockType[],
   index: number | undefined,
 ) {
   if (typeof index === 'number') {
-    state.analysisDocuments.insertBlocks(artifactId, index, blocks);
+    state.blocksDocuments.insertBlocks(artifactId, index, blocks);
   } else {
-    state.analysisDocuments.appendBlocks(artifactId, blocks);
+    state.blocksDocuments.appendBlocks(artifactId, blocks);
   }
 }
 
 function readAnalysisData(state: AnalysisCommandState, artifactId: string) {
   const artifact = state.artifacts.getArtifact(artifactId);
-  const analysis = state.analysisDocuments.getAnalysis(artifactId);
-  const content = AnalysisDocumentContent.parse(
-    analysis?.content ?? createEmptyAnalysisDocumentContent(),
+  const blocksDocument = state.blocksDocuments.getBlocksDocument(artifactId);
+  const content = BlocksDocumentContent.parse(
+    blocksDocument?.content ?? createEmptyBlocksDocumentContent(),
   );
   return {
     artifactId,
     title: artifact?.title,
-    blocks: state.analysisDocuments.getBlocks(artifactId),
+    blocks: state.blocksDocuments.getBlocks(artifactId),
     content,
-    assets: Object.values(analysis?.assets ?? {}).map(analysisAssetMetadata),
-    updatedAt: analysis?.updatedAt,
+    assets: Object.values(blocksDocument?.assets ?? {}).map(
+      analysisAssetMetadata,
+    ),
+    updatedAt: blocksDocument?.updatedAt,
   };
 }
 

@@ -2,7 +2,7 @@ import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import {createElement, type FC} from 'react';
 import {useAnalysisArtifactEmbedRenderer} from '../../AnalysisEmbedRendererContext';
-import {useAnalysisDocumentEditorContext} from '../AnalysisDocumentEditorContext';
+import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
 type AnalysisArtifactEmbedNodeViewProps = {
@@ -14,7 +14,7 @@ type AnalysisArtifactEmbedNodeViewProps = {
 export const AnalysisArtifactEmbedNodeView: FC<
   AnalysisArtifactEmbedNodeViewProps
 > = ({node, selected, updateAttributes}) => {
-  const {analysisId, readOnly} = useAnalysisDocumentEditorContext();
+  const {documentId, readOnly} = useBlocksDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const artifactId = optionalString(attrs.artifactId) ?? '';
@@ -32,7 +32,7 @@ export const AnalysisArtifactEmbedNodeView: FC<
     >
       {Renderer ? (
         createElement(Renderer, {
-          parentArtifactId: analysisId,
+          parentArtifactId: documentId,
           blockId,
           artifactId,
           artifactType,

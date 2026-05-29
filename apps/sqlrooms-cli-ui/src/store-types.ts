@@ -4,7 +4,7 @@ import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
 import {CrdtSliceState} from '@sqlrooms/crdt';
 import {
-  AnalysisDocumentsSliceState,
+  BlocksDocumentsSliceState,
   DocumentsSliceState,
 } from '@sqlrooms/documents';
 import type {
@@ -48,7 +48,7 @@ export type RoomState = RoomShellSliceState &
   NotebookSliceState &
   CanvasSliceState &
   DocumentsSliceState &
-  AnalysisDocumentsSliceState &
+  BlocksDocumentsSliceState &
   CrdtSliceState &
   WebContainerSliceState &
   DbSettingsSliceState & {

@@ -11,7 +11,7 @@ import {Settings2Icon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import {parseAnalysisChartConfig} from './analysisChartConfig';
 
-function getAnalysisChartSelectionName({
+function getBlocksDocumentChartSelectionName({
   analysisId,
   blockId,
   selectionGroupId,
@@ -24,7 +24,7 @@ function getAnalysisChartSelectionName({
     : `analysis:${analysisId}:chart-block:${blockId}:brush`;
 }
 
-function getAnalysisChartRuntimeKey({
+function getBlocksDocumentChartRuntimeKey({
   analysisId,
   blockId,
 }: Pick<AnalysisChartRendererProps, 'analysisId' | 'blockId'>) {
@@ -75,12 +75,12 @@ export const AnalysisChartRenderer = ({
   );
   const configKey = stableStringify(config);
   const chartConfig = parsedConfig.success ? parsedConfig.config : undefined;
-  const selectionName = getAnalysisChartSelectionName({
+  const selectionName = getBlocksDocumentChartSelectionName({
     analysisId,
     blockId,
     selectionGroupId,
   });
-  const runtimeKey = getAnalysisChartRuntimeKey({analysisId, blockId});
+  const runtimeKey = getBlocksDocumentChartRuntimeKey({analysisId, blockId});
 
   const handleSettingsOpenChange = useCallback(
     (settingsOpen: boolean) => {

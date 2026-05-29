@@ -12,13 +12,13 @@ import {
 import {createStore} from 'zustand';
 import {
   createAnalysisCommands,
-  createAnalysisDocumentsSlice,
-  type AnalysisDocumentsSliceState,
+  createBlocksDocumentsSlice,
+  type BlocksDocumentsSliceState,
 } from '../src';
 
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
-  AnalysisDocumentsSliceState &
+  BlocksDocumentsSliceState &
   CommandSliceState<any>;
 
 function createTestStore() {
@@ -34,7 +34,7 @@ function createTestStore() {
     ...createBaseRoomSlice()(...args),
     ...createCommandSlice<TestRoomState>()(...args),
     ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
-    ...createAnalysisDocumentsSlice<TestRoomState>({now})(...args),
+    ...createBlocksDocumentsSlice<TestRoomState>({now})(...args),
   }));
 
   store
@@ -64,7 +64,7 @@ describe('analysis commands', () => {
       type: 'analysis',
       title: 'Findings',
     });
-    expect(store.getState().analysisDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
       {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
     ]);
 
@@ -124,7 +124,7 @@ describe('analysis commands', () => {
       blockId: 'h1',
     });
 
-    expect(store.getState().analysisDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
       {id: 'p1', type: 'paragraph', text: 'Updated'},
     ]);
   });
@@ -165,7 +165,7 @@ describe('analysis commands', () => {
       visibility: 'embedded',
       parentArtifactId: artifactId,
     });
-    expect(store.getState().analysisDocuments.getBlocks(artifactId)).toEqual([
+    expect(store.getState().blocksDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'chart-1',
         type: 'chart',

@@ -35,13 +35,13 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
     icon: FileStackIcon,
     component: AnalysisArtifact,
     onCreate: ({artifactId, store}) => {
-      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
     },
     onEnsure: ({artifactId, store}) => {
-      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
     },
     onDelete: ({artifactId, store}) => {
-      store.getState().analysisDocuments.removeAnalysis(artifactId);
+      store.getState().blocksDocuments.removeBlocksDocument(artifactId);
     },
   },
   dashboard: {

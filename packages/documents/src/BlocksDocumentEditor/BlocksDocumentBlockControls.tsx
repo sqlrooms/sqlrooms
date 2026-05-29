@@ -42,7 +42,7 @@ import {
   type AnalysisArtifactEmbedType,
   useAnalysisArtifactEmbedTypes,
 } from '../AnalysisEmbedRendererContext';
-import {useAnalysisDocumentEditorContext} from './AnalysisDocumentEditorContext';
+import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
 
 type BlockControlState = {
   element: HTMLElement;
@@ -52,7 +52,7 @@ type BlockControlState = {
 
 type DraggableNode = NonNullable<ReturnType<Editor['state']['doc']['nodeAt']>>;
 
-type AnalysisBlockControlsProps = {
+type BlocksDocumentBlockControlsProps = {
   scrollElement: HTMLElement | null;
 };
 
@@ -231,11 +231,11 @@ function buildBlockMenuItems(
   ];
 }
 
-export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
+export const BlocksDocumentBlockControls: FC<BlocksDocumentBlockControlsProps> = ({
   scrollElement,
 }) => {
   const {editor, readOnly, generateBlockId} =
-    useAnalysisDocumentEditorContext();
+    useBlocksDocumentEditorContext();
   const artifactTypes = useAnalysisArtifactEmbedTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
@@ -385,7 +385,10 @@ export const AnalysisBlockControls: FC<AnalysisBlockControlsProps> = ({
     if (!node) return;
     dragSourceRef.current = {pos: activeBlock.pos, node};
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('application/x-sqlrooms-analysis-block', 'move');
+    event.dataTransfer.setData(
+      'application/x-sqlrooms-blocks-document-block',
+      'move',
+    );
   };
 
   useEffect(() => {

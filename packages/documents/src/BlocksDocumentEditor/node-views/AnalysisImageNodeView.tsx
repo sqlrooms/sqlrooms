@@ -1,7 +1,7 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
 import type {FC} from 'react';
-import {useAnalysisDocumentEditorContext} from '../AnalysisDocumentEditorContext';
+import {useBlocksDocumentEditorContext} from '../BlocksDocumentEditorContext';
 import {
   documentAssetToDataUrl,
   optionalString,
@@ -24,7 +24,7 @@ export const AnalysisImageNodeView: FC<AnalysisImageNodeViewProps> = ({
   updateAttributes,
   label = 'Image',
 }) => {
-  const {assets, readOnly} = useAnalysisDocumentEditorContext();
+  const {assets, readOnly} = useBlocksDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
   const assetId = optionalString(attrs.assetId);
   const caption = optionalString(attrs.caption);

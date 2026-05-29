@@ -1,6 +1,6 @@
 import {
   AnalysisChartRendererProvider,
-  AnalysisDocumentArtifact,
+  BlocksDocumentArtifact,
   AnalysisEmbedRendererProvider,
   type AnalysisArtifactEmbedType,
 } from '@sqlrooms/documents';
@@ -15,15 +15,15 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
   );
-  const ensureAnalysis = useRoomStore(
-    (state) => state.analysisDocuments.ensureAnalysis,
+  const ensureBlocksDocument = useRoomStore(
+    (state) => state.blocksDocuments.ensureBlocksDocument,
   );
 
   useEffect(() => {
     if (artifact?.type === 'analysis') {
-      ensureAnalysis(artifactId);
+      ensureBlocksDocument(artifactId);
     }
-  }, [artifact?.type, artifactId, ensureAnalysis]);
+  }, [artifact?.type, artifactId, ensureBlocksDocument]);
 
   const artifactTypes = useMemo<AnalysisArtifactEmbedType[]>(
     () => [
@@ -65,7 +65,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
         renderers={{dashboard: AnalysisDashboardEmbedRenderer}}
         artifactTypes={artifactTypes}
       >
-        <AnalysisDocumentArtifact artifactId={artifactId} />
+        <BlocksDocumentArtifact artifactId={artifactId} />
       </AnalysisEmbedRendererProvider>
     </AnalysisChartRendererProvider>
   );

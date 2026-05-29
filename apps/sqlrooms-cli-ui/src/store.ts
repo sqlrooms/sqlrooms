@@ -67,10 +67,10 @@ import {
 } from '@sqlrooms/db-settings';
 import {
   ANALYSIS_AI_INSTRUCTIONS,
-  AnalysisDocumentsSliceConfig,
+  BlocksDocumentsSliceConfig,
   createAnalysisCommands,
   createAnalysisAuthoringInstructions,
-  createAnalysisDocumentsSlice,
+  createBlocksDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DOCUMENT_AI_INSTRUCTIONS,
@@ -196,7 +196,7 @@ const sliceConfigSchemas = {
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
   documents: DocumentsSliceConfig,
-  analysisDocuments: AnalysisDocumentsSliceConfig,
+  blocksDocuments: BlocksDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -494,7 +494,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createDocumentsSlice()(set, get, store),
 
-        ...createAnalysisDocumentsSlice<RoomState>()(set, get, store),
+        ...createBlocksDocumentsSlice<RoomState>()(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({

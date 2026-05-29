@@ -7,17 +7,17 @@ import {
 } from 'lucide-react';
 import type {FC} from 'react';
 import {RichToolbar} from '../MarkdownDocumentEditor/RichToolbar';
-import {useAnalysisDocumentEditorContext} from './AnalysisDocumentEditorContext';
+import {useBlocksDocumentEditorContext} from './BlocksDocumentEditorContext';
 
-export type AnalysisDocumentToolbarProps = {
+export type BlocksDocumentToolbarProps = {
   className?: string;
 };
 
-export const AnalysisDocumentToolbar: FC<AnalysisDocumentToolbarProps> = ({
+export const BlocksDocumentToolbar: FC<BlocksDocumentToolbarProps> = ({
   className,
 }) => {
   const {editor, readOnly, generateBlockId} =
-    useAnalysisDocumentEditorContext();
+    useBlocksDocumentEditorContext();
 
   const insertAtomBlock = (type: string, attrs: Record<string, unknown>) => {
     editor

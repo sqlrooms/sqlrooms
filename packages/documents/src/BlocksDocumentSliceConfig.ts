@@ -1,60 +1,60 @@
 import {z} from 'zod';
 import {DocumentAsset} from './DocumentsSliceConfig';
 
-export type AnalysisDocumentMark = {
+export type BlocksDocumentMark = {
   type: string;
   attrs?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
-export type AnalysisDocumentNode = {
+export type BlocksDocumentNode = {
   type: string;
   attrs?: Record<string, unknown>;
-  content?: AnalysisDocumentNode[];
-  marks?: AnalysisDocumentMark[];
+  content?: BlocksDocumentNode[];
+  marks?: BlocksDocumentMark[];
   text?: string;
   [key: string]: unknown;
 };
 
-export const AnalysisDocumentMark: z.ZodType<AnalysisDocumentMark> = z
+export const BlocksDocumentMark: z.ZodType<BlocksDocumentMark> = z
   .object({
     type: z.string(),
     attrs: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
-export const AnalysisDocumentNode: z.ZodType<AnalysisDocumentNode> = z.lazy(
+export const BlocksDocumentNode: z.ZodType<BlocksDocumentNode> = z.lazy(
   () =>
     z
       .object({
         type: z.string(),
         attrs: z.record(z.string(), z.unknown()).optional(),
-        content: z.array(AnalysisDocumentNode).optional(),
-        marks: z.array(AnalysisDocumentMark).optional(),
+        content: z.array(BlocksDocumentNode).optional(),
+        marks: z.array(BlocksDocumentMark).optional(),
         text: z.string().optional(),
       })
       .passthrough(),
 );
 
-export const AnalysisDocumentContent = z
+export const BlocksDocumentContent = z
   .object({
     type: z.literal('doc'),
-    content: z.array(AnalysisDocumentNode).default([]),
+    content: z.array(BlocksDocumentNode).default([]),
   })
   .passthrough();
-export type AnalysisDocumentContent = z.infer<typeof AnalysisDocumentContent>;
+export type BlocksDocumentContent = z.infer<typeof BlocksDocumentContent>;
 
-export const AnalysisDocument = z.object({
+export const BlocksDocument = z.object({
   id: z.string(),
-  content: AnalysisDocumentContent.default({type: 'doc', content: []}),
+  content: BlocksDocumentContent.default({type: 'doc', content: []}),
   assets: z.record(z.string(), DocumentAsset).default({}),
   updatedAt: z.number().default(0),
 });
-export type AnalysisDocument = z.infer<typeof AnalysisDocument>;
+export type BlocksDocument = z.infer<typeof BlocksDocument>;
 
-export const AnalysisDocumentsSliceConfig = z.object({
+export const BlocksDocumentsSliceConfig = z.object({
   artifacts: z
-    .record(z.string(), AnalysisDocument)
+    .record(z.string(), BlocksDocument)
     .default({})
     .superRefine((artifacts, ctx) => {
       for (const [key, artifact] of Object.entries(artifacts)) {
@@ -62,14 +62,14 @@ export const AnalysisDocumentsSliceConfig = z.object({
           ctx.addIssue({
             code: 'custom',
             path: [key, 'id'],
-            message: `Analysis artifact key "${key}" does not match artifact id "${artifact.id}"`,
+            message: `Blocks document key "${key}" does not match document id "${artifact.id}"`,
           });
         }
       }
     }),
 });
-export type AnalysisDocumentsSliceConfig = z.infer<
-  typeof AnalysisDocumentsSliceConfig
+export type BlocksDocumentsSliceConfig = z.infer<
+  typeof BlocksDocumentsSliceConfig
 >;
 
 type TextContent = Array<{
@@ -77,59 +77,59 @@ type TextContent = Array<{
   text: string;
 }>;
 
-const AnalysisTextBlockBase = {
+const BlocksDocumentTextBlockBase = {
   id: z.string(),
 };
 
-export const AnalysisHeadingBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentHeadingBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('heading'),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   text: z.string(),
 });
 
-export const AnalysisParagraphBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentParagraphBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('paragraph'),
   text: z.string(),
 });
 
-export const AnalysisRichTextBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentRichTextBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('richText'),
   markdown: z.string(),
 });
 
-export const AnalysisListBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentListBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('list'),
   ordered: z.boolean().optional(),
   items: z.array(z.string()),
 });
 
-export const AnalysisTodoBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentTodoBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('todo'),
   checked: z.boolean(),
   text: z.string(),
 });
 
-export const AnalysisImageBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentImageBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('image'),
   assetId: z.string(),
   caption: z.string().optional(),
 });
 
-export const AnalysisChartImageBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentChartImageBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('chartImage'),
   assetId: z.string(),
   caption: z.string().optional(),
 });
 
-export const AnalysisChartBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentChartBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('chart'),
   tableName: z.string(),
   config: z.unknown(),
@@ -137,37 +137,37 @@ export const AnalysisChartBlock = z.object({
   caption: z.string().optional(),
 });
 
-export const AnalysisArtifactEmbedBlock = z.object({
-  ...AnalysisTextBlockBase,
+export const BlocksDocumentArtifactEmbedBlock = z.object({
+  ...BlocksDocumentTextBlockBase,
   type: z.literal('artifactEmbed'),
   artifactId: z.string(),
   artifactType: z.string(),
   caption: z.string().optional(),
 });
 
-export const AnalysisBlock = z.discriminatedUnion('type', [
-  AnalysisHeadingBlock,
-  AnalysisParagraphBlock,
-  AnalysisRichTextBlock,
-  AnalysisListBlock,
-  AnalysisTodoBlock,
-  AnalysisImageBlock,
-  AnalysisChartImageBlock,
-  AnalysisChartBlock,
-  AnalysisArtifactEmbedBlock,
+export const BlocksDocumentBlock = z.discriminatedUnion('type', [
+  BlocksDocumentHeadingBlock,
+  BlocksDocumentParagraphBlock,
+  BlocksDocumentRichTextBlock,
+  BlocksDocumentListBlock,
+  BlocksDocumentTodoBlock,
+  BlocksDocumentImageBlock,
+  BlocksDocumentChartImageBlock,
+  BlocksDocumentChartBlock,
+  BlocksDocumentArtifactEmbedBlock,
 ]);
-export type AnalysisBlock = z.infer<typeof AnalysisBlock>;
+export type BlocksDocumentBlock = z.infer<typeof BlocksDocumentBlock>;
 
 function textContent(text: string): TextContent | undefined {
   return text ? [{type: 'text', text}] : undefined;
 }
 
-function textFromNode(node: AnalysisDocumentNode | undefined): string {
+function textFromNode(node: BlocksDocumentNode | undefined): string {
   if (!node?.content) return node?.text ?? '';
   return node.content.map((child) => textFromNode(child)).join('');
 }
 
-function nodeId(node: AnalysisDocumentNode): string {
+function nodeId(node: BlocksDocumentNode): string {
   const id = node.attrs?.id;
   return typeof id === 'string' ? id : '';
 }
@@ -176,13 +176,13 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-export function createEmptyAnalysisDocumentContent(): AnalysisDocumentContent {
+export function createEmptyBlocksDocumentContent(): BlocksDocumentContent {
   return {type: 'doc', content: []};
 }
 
-export function analysisBlockToNode(
-  block: AnalysisBlock,
-): AnalysisDocumentNode {
+export function blocksDocumentBlockToNode(
+  block: BlocksDocumentBlock,
+): BlocksDocumentNode {
   switch (block.type) {
     case 'heading':
       return {
@@ -276,16 +276,16 @@ export function analysisBlockToNode(
   }
 }
 
-export function analysisNodeToBlock(
-  node: AnalysisDocumentNode,
-): AnalysisBlock | undefined {
+export function blocksDocumentNodeToBlock(
+  node: BlocksDocumentNode,
+): BlocksDocumentBlock | undefined {
   const id = nodeId(node);
   if (!id) return undefined;
 
   switch (node.type) {
     case 'heading': {
       const level = node.attrs?.level;
-      return AnalysisHeadingBlock.parse({
+      return BlocksDocumentHeadingBlock.parse({
         id,
         type: 'heading',
         level: level === 1 || level === 2 || level === 3 ? level : 1,
@@ -320,21 +320,21 @@ export function analysisNodeToBlock(
       };
     }
     case 'analysisImage':
-      return AnalysisImageBlock.parse({
+      return BlocksDocumentImageBlock.parse({
         id,
         type: 'image',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
     case 'analysisChartImage':
-      return AnalysisChartImageBlock.parse({
+      return BlocksDocumentChartImageBlock.parse({
         id,
         type: 'chartImage',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
     case 'analysisChart':
-      return AnalysisChartBlock.parse({
+      return BlocksDocumentChartBlock.parse({
         id,
         type: 'chart',
         tableName: node.attrs?.tableName,
@@ -343,7 +343,7 @@ export function analysisNodeToBlock(
         caption: optionalString(node.attrs?.caption),
       });
     case 'analysisArtifactEmbed':
-      return AnalysisArtifactEmbedBlock.parse({
+      return BlocksDocumentArtifactEmbedBlock.parse({
         id,
         type: 'artifactEmbed',
         artifactId: node.attrs?.artifactId,
@@ -355,10 +355,10 @@ export function analysisNodeToBlock(
   }
 }
 
-export function analysisContentToBlocks(
-  content: AnalysisDocumentContent,
-): AnalysisBlock[] {
+export function blocksDocumentContentToBlocks(
+  content: BlocksDocumentContent,
+): BlocksDocumentBlock[] {
   return content.content
-    .map((node) => analysisNodeToBlock(node))
-    .filter((block): block is AnalysisBlock => Boolean(block));
+    .map((node) => blocksDocumentNodeToBlock(node))
+    .filter((block): block is BlocksDocumentBlock => Boolean(block));
 }

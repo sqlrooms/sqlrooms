@@ -1,4 +1,4 @@
-Artifact-scoped Markdown documents, structured Analysis artifacts, and
+Artifact-scoped Markdown documents, structured blocks documents, and
 knowledge-index utilities for SQLRooms.
 
 ## Usage
@@ -7,8 +7,8 @@ knowledge-index utilities for SQLRooms.
 import {
   DOCUMENT_AI_INSTRUCTIONS,
   ANALYSIS_AI_INSTRUCTIONS,
-  AnalysisDocumentArtifact,
-  AnalysisDocumentsSliceConfig,
+  BlocksDocumentArtifact,
+  BlocksDocumentsSliceConfig,
   AnalysisChartRendererProvider,
   AnalysisEmbedRendererProvider,
   DocumentsSliceConfig,
@@ -16,7 +16,7 @@ import {
   buildKnowledgeIndex,
   createAnalysisCommands,
   createAnalysisAuthoringInstructions,
-  createAnalysisDocumentsSlice,
+  createBlocksDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
 } from '@sqlrooms/documents';
@@ -41,15 +41,15 @@ const artifactTypes = defineArtifactTypes({
   analysis: {
     label: 'Analysis',
     defaultTitle: 'Analysis',
-    component: AnalysisDocumentArtifact,
+    component: BlocksDocumentArtifact,
     onCreate: ({artifactId, store}) => {
-      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
     },
     onEnsure: ({artifactId, store}) => {
-      store.getState().analysisDocuments.ensureAnalysis(artifactId);
+      store.getState().blocksDocuments.ensureBlocksDocument(artifactId);
     },
     onDelete: ({artifactId, store}) => {
-      store.getState().analysisDocuments.removeAnalysis(artifactId);
+      store.getState().blocksDocuments.removeBlocksDocument(artifactId);
     },
   },
 });
@@ -60,12 +60,12 @@ const roomStore = createRoomStore(
       name: 'my-room',
       sliceConfigSchemas: {
         documents: DocumentsSliceConfig,
-        analysisDocuments: AnalysisDocumentsSliceConfig,
+        blocksDocuments: BlocksDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
       ...createDocumentsSlice()(set, get, store),
-      ...createAnalysisDocumentsSlice()(set, get, store),
+      ...createBlocksDocumentsSlice()(set, get, store),
     }),
   ),
 );
@@ -112,20 +112,20 @@ The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
 managing image assets alongside Markdown content. SVG assets may use `utf8` or
 `base64` encoding; PNG assets must use `base64` encoding.
 
-## Analysis Documents
+## Blocks Documents
 
-`createAnalysisDocumentsSlice()` exposes structured state for the `analysis`
+`createBlocksDocumentsSlice()` exposes structured state for the `analysis`
 artifact type. Use Analysis artifacts for narrative analytical writeups made of
 composable blocks: rich text, lists, images, standalone Mosaic/vgplot charts,
 and embedded artifacts such as dashboards.
 
-Analysis documents persist Tiptap/ProseMirror JSON as their canonical content
+Blocks documents persist Tiptap/ProseMirror JSON as their canonical content
 and provide block DTO helpers for command and AI authoring surfaces:
 
 ```tsx
 import {
-  AnalysisDocumentsSliceConfig,
-  createAnalysisDocumentsSlice,
+  BlocksDocumentsSliceConfig,
+  createBlocksDocumentsSlice,
 } from '@sqlrooms/documents';
 
 const roomStore = createRoomStore(
@@ -133,22 +133,22 @@ const roomStore = createRoomStore(
     {
       name: 'my-room',
       sliceConfigSchemas: {
-        analysisDocuments: AnalysisDocumentsSliceConfig,
+        blocksDocuments: BlocksDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
-      ...createAnalysisDocumentsSlice()(set, get, store),
+      ...createBlocksDocumentsSlice()(set, get, store),
     }),
   ),
 );
 ```
 
-The slice can create analysis documents, replace the Tiptap JSON body, and
+The slice can create blocks documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, rich text, lists, todos, images, chart images,
 standalone chart blocks, and artifact embeds.
 
-`AnalysisDocumentArtifact` and `AnalysisDocumentEditor` provide the first rich
+`BlocksDocumentArtifact` and `BlocksDocumentEditor` provide the first rich
 editor surface for this structured state. The editor owns Tiptap nodes for
 SQLRooms custom blocks, but chart rendering and artifact embeds are
 host-provided so `@sqlrooms/documents` does not import Mosaic:
@@ -176,7 +176,7 @@ host-provided so `@sqlrooms/documents` does not import Mosaic:
       },
     ]}
   >
-    <AnalysisDocumentArtifact artifactId={analysisArtifactId} />
+    <BlocksDocumentArtifact artifactId={analysisArtifactId} />
   </AnalysisEmbedRendererProvider>
 </AnalysisChartRendererProvider>
 ```
@@ -193,7 +193,7 @@ the target `tableName`, a Mosaic `ChartConfig`, an optional caption, and an
 optional `selectionGroupId`:
 
 ```ts
-analysisDocuments.appendBlocks(analysisArtifactId, [
+blocksDocuments.appendBlocks(analysisArtifactId, [
   {
     id: 'revenue-histogram',
     type: 'chart',
@@ -220,7 +220,7 @@ Use an `artifactEmbed` block when the document needs a multi-panel interactive
 dashboard:
 
 ```ts
-analysisDocuments.appendBlocks(analysisArtifactId, [
+blocksDocuments.appendBlocks(analysisArtifactId, [
   {
     id: 'regional-dashboard',
     type: 'artifactEmbed',
@@ -290,7 +290,7 @@ createCrdtSlice({
 });
 ```
 
-`createDocumentsCrdtMirror()` syncs Markdown document bodies, Analysis document
+`createDocumentsCrdtMirror()` syncs Markdown document bodies, blocks document
 Tiptap JSON content, document-owned assets, standalone chart block configs,
 Analysis/document artifact metadata, embedded child artifact metadata, and
 document artifact tab order. The current artifact selection is kept local.
