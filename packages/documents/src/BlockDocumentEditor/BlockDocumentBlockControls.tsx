@@ -5,6 +5,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   Tooltip,
   TooltipContent,
@@ -19,8 +22,11 @@ import {
   Code2Icon,
   GripVerticalIcon,
   Heading1Icon,
+  Heading2Icon,
+  Heading3Icon,
   ImageIcon,
   ListIcon,
+  ListOrderedIcon,
   MinusIcon,
   PilcrowIcon,
   PlusIcon,
@@ -62,6 +68,8 @@ type BlockMenuItem = {
   icon: FC<{className?: string}>;
   createNode: (id: string) => Record<string, unknown>;
 };
+
+type InsertPlacement = 'before' | 'after';
 
 function labelFromArtifactType(artifactType: string) {
   return artifactType
@@ -132,13 +140,11 @@ function buildStatefulBlockMenuItems(
   });
 }
 
-function buildBlockMenuItems(
-  statefulBlockTypes: BlockDocumentStatefulBlockType[],
-): BlockMenuItem[] {
+function buildTextBlockMenuItems(): BlockMenuItem[] {
   return [
     {
-      label: 'Text',
-      description: 'Plain paragraph',
+      label: 'Paragraph',
+      description: 'Plain text',
       icon: PilcrowIcon,
       createNode: (id) => ({
         type: 'paragraph',
@@ -146,12 +152,32 @@ function buildBlockMenuItems(
       }),
     },
     {
-      label: 'Heading',
-      description: 'Section heading',
+      label: 'Heading 1',
+      description: 'Large section heading',
       icon: Heading1Icon,
       createNode: (id) => ({
         type: 'heading',
         attrs: {id, level: 1},
+        content: [{type: 'text', text: 'Heading'}],
+      }),
+    },
+    {
+      label: 'Heading 2',
+      description: 'Medium section heading',
+      icon: Heading2Icon,
+      createNode: (id) => ({
+        type: 'heading',
+        attrs: {id, level: 2},
+        content: [{type: 'text', text: 'Heading'}],
+      }),
+    },
+    {
+      label: 'Heading 3',
+      description: 'Small section heading',
+      icon: Heading3Icon,
+      createNode: (id) => ({
+        type: 'heading',
+        attrs: {id, level: 3},
         content: [{type: 'text', text: 'Heading'}],
       }),
     },
@@ -161,6 +187,21 @@ function buildBlockMenuItems(
       icon: ListIcon,
       createNode: (id) => ({
         type: 'bulletList',
+        attrs: {id},
+        content: [
+          {
+            type: 'listItem',
+            content: [{type: 'paragraph'}],
+          },
+        ],
+      }),
+    },
+    {
+      label: 'Numbered list',
+      description: 'Ordered items',
+      icon: ListOrderedIcon,
+      createNode: (id) => ({
+        type: 'orderedList',
         attrs: {id},
         content: [
           {
@@ -205,6 +246,13 @@ function buildBlockMenuItems(
         attrs: {id},
       }),
     },
+  ];
+}
+
+function buildMediaBlockMenuItems(
+  statefulBlockTypes: BlockDocumentStatefulBlockType[],
+): BlockMenuItem[] {
+  return [
     {
       label: 'Divider',
       description: 'Horizontal rule',
@@ -244,16 +292,18 @@ export const BlockDocumentBlockControls: FC<
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
-  const [insertMenuOpen, setInsertMenuOpen] = useState(false);
+  const [insertMenuOpen, setInsertMenuOpen] =
+    useState<InsertPlacement | null>(null);
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
-  const blockMenuItems = useMemo(
-    () => buildBlockMenuItems(statefulBlockTypes),
+  const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
+  const mediaMenuItems = useMemo(
+    () => buildMediaBlockMenuItems(statefulBlockTypes),
     [statefulBlockTypes],
   );
-  const menuOpen = insertMenuOpen || handleMenuOpen;
+  const menuOpen = insertMenuOpen != null || handleMenuOpen;
 
   const cancelHide = useCallback(() => {
     if (hideTimerRef.current == null) return;
@@ -287,7 +337,11 @@ export const BlockDocumentBlockControls: FC<
       setActiveBlock({
         element,
         pos,
-        top: elementRect.top - scrollRect.top + scrollElement.scrollTop,
+        top:
+          elementRect.top -
+          scrollRect.top +
+          scrollElement.scrollTop +
+          elementRect.height / 2,
       });
     },
     [cancelHide, editor, menuOpen, scheduleHide, scrollElement],
@@ -344,19 +398,21 @@ export const BlockDocumentBlockControls: FC<
     updateActiveBlock,
   ]);
 
-  const insertBlockAfterActive = useCallback(
-    (createNode: BlockMenuItem['createNode']) => {
+  const insertBlockRelativeToActive = useCallback(
+    (createNode: BlockMenuItem['createNode'], placement: InsertPlacement) => {
       if (!editor || !activeBlock) return;
       const node = getNodeAt(editor, activeBlock.pos);
       if (!node) return;
+      const insertPos =
+        placement === 'before'
+          ? activeBlock.pos
+          : activeBlock.pos + node.nodeSize;
       editor
         .chain()
         .focus()
-        .insertContentAt(
-          activeBlock.pos + node.nodeSize,
-          createNode(generateBlockId()),
-        )
+        .insertContentAt(insertPos, createNode(generateBlockId()))
         .run();
+      setInsertMenuOpen(null);
     },
     [activeBlock, editor, generateBlockId],
   );
@@ -394,6 +450,79 @@ export const BlockDocumentBlockControls: FC<
       'move',
     );
   };
+
+  const renderMenuItem = (
+    item: BlockMenuItem,
+    placement: InsertPlacement,
+  ) => (
+    <DropdownMenuItem
+      key={item.label}
+      className="items-start gap-2"
+      onSelect={() => insertBlockRelativeToActive(item.createNode, placement)}
+    >
+      <item.icon className="mt-0.5 h-4 w-4" />
+      <span className="grid gap-0.5">
+        <span>{item.label}</span>
+        <span className="text-muted-foreground text-xs">
+          {item.description}
+        </span>
+      </span>
+    </DropdownMenuItem>
+  );
+
+  const renderInsertMenuContent = (placement: InsertPlacement) => (
+    <DropdownMenuContent align="center" side="right" className="w-60">
+      <DropdownMenuLabel>
+        Insert {placement === 'before' ? 'above' : 'below'}
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="gap-2">
+          <PilcrowIcon className="h-4 w-4" />
+          Text
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-60">
+          {textMenuItems.map((item) => renderMenuItem(item, placement))}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      {mediaMenuItems.map((item) => renderMenuItem(item, placement))}
+    </DropdownMenuContent>
+  );
+
+  const renderAddButton = (placement: InsertPlacement) => (
+    <DropdownMenu
+      open={insertMenuOpen === placement}
+      onOpenChange={(open) => setInsertMenuOpen(open ? placement : null)}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="pointer-events-auto h-6 w-6 shrink-0 rounded-md opacity-70 hover:opacity-100"
+              aria-label={
+                placement === 'before' ? 'Add block above' : 'Add block below'
+              }
+              onMouseDown={handlePlusMouseDown}
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent
+          align="center"
+          side="right"
+          className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-xs shadow-md"
+        >
+          {placement === 'before' ? 'Add above' : 'Add below'}
+        </TooltipContent>
+      </Tooltip>
+      {renderInsertMenuContent(placement)}
+    </DropdownMenu>
+  );
 
   useEffect(() => {
     if (!editor || !scrollElement || readOnly) return;
@@ -460,54 +589,11 @@ export const BlockDocumentBlockControls: FC<
   return (
     <div
       ref={controlsRef}
-      className="pointer-events-none absolute left-2 z-20 flex w-16 items-center justify-end gap-1"
+      className="pointer-events-none absolute left-3 z-20 flex w-7 -translate-y-1/2 flex-col items-center gap-0.5"
       style={{top: activeBlock.top}}
     >
       <TooltipProvider>
-        <DropdownMenu open={insertMenuOpen} onOpenChange={setInsertMenuOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="pointer-events-auto h-7 w-7 shrink-0 rounded-md opacity-70 hover:opacity-100"
-                  aria-label="Add block"
-                  onMouseDown={handlePlusMouseDown}
-                >
-                  <PlusIcon className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent
-              align="start"
-              side="bottom"
-              className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-xs shadow-md"
-            >
-              Add block
-            </TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" side="right" className="w-56">
-            <DropdownMenuLabel>Insert block</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {blockMenuItems.map((item) => (
-              <DropdownMenuItem
-                key={item.label}
-                className="items-start gap-2"
-                onSelect={() => insertBlockAfterActive(item.createNode)}
-              >
-                <item.icon className="mt-0.5 h-4 w-4" />
-                <span className="grid gap-0.5">
-                  <span>{item.label}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {item.description}
-                  </span>
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {renderAddButton('before')}
         <DropdownMenu open={handleMenuOpen} onOpenChange={setHandleMenuOpen}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -552,6 +638,7 @@ export const BlockDocumentBlockControls: FC<
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {renderAddButton('after')}
       </TooltipProvider>
     </div>
   );

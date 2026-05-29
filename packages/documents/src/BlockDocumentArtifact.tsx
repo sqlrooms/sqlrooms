@@ -44,7 +44,6 @@ export const BlockDocumentArtifact: React.FC<{artifactId: string}> = ({
       syncSourceId={syncMetadata?.sourceId}
       onChange={handleChange}
     >
-      <BlockDocumentEditor.Toolbar />
       <BlockDocumentEditor.Content />
     </BlockDocumentEditor>
   );
