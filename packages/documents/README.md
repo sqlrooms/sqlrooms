@@ -236,13 +236,18 @@ workspace/tab layer. Blocks documents host the stateful block directly instead
 of embedding an artifact shell.
 
 Owned stateful blocks are lifecycle-managed by the host app. Pass
-`onDeleteOwnedStatefulBlock` to `createBlocksDocumentsSlice()` to clean up
-feature state when an owned block is removed from a document or when its owning
-blocks document is deleted. Blocks with `ownership: 'shared'` or
-`ownership: 'external'` are not cleaned up by the documents slice.
+`onCreateOwnedStatefulBlock` to initialize feature state when a new owned block
+reference appears, and `onDeleteOwnedStatefulBlock` to clean it up when an owned
+block is removed from a document or when its owning blocks document is deleted.
+Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
+by the documents slice.
 Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
 changes into the backing feature state. Captions stay local to the blocks
 document.
+
+The editor normalizes pasted or duplicated owned stateful blocks by assigning
+fresh top-level block IDs and fresh `blockInstanceId` values when a duplicate
+owned instance would otherwise point at the same backing state.
 
 ### Standalone Chart Blocks
 

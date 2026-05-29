@@ -304,6 +304,62 @@ describe('BlocksDocumentsSlice', () => {
     ]);
   });
 
+  it('initializes newly added owned stateful block references', () => {
+    const createdBlocks: Array<{
+      documentId: string;
+      blockId: string;
+      blockType: string;
+      blockInstanceId: string;
+      title?: string;
+    }> = [];
+    const store = createTestStore({
+      onCreateOwnedStatefulBlock: ({
+        documentId,
+        blockId,
+        blockType,
+        blockInstanceId,
+        title,
+      }) => {
+        createdBlocks.push({
+          documentId,
+          blockId,
+          blockType,
+          blockInstanceId,
+          title,
+        });
+      },
+    });
+
+    store.getState().blocksDocuments.appendBlocks('blocks-document-1', [
+      {
+        id: 'owned-dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        ownership: 'owned',
+        title: 'Dashboard',
+      },
+      {
+        id: 'shared-dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-2',
+        ownership: 'shared',
+        title: 'Shared Dashboard',
+      },
+    ]);
+
+    expect(createdBlocks).toEqual([
+      {
+        documentId: 'blocks-document-1',
+        blockId: 'owned-dashboard',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        title: 'Dashboard',
+      },
+    ]);
+  });
+
   it('cleans up owned stateful block references removed by content replacement', () => {
     const deletedBlockIds: string[] = [];
     const store = createTestStore({
@@ -497,6 +553,79 @@ describe('BlocksDocumentsSlice', () => {
       {
         type: 'blocksDocumentChart',
         attrs: {id: 'chart-1', tableName: 'sales', config: {}},
+      },
+    ]);
+  });
+
+  it('rewrites duplicate block and owned stateful instance IDs for editor content', () => {
+    let nextId = 1;
+    const result = normalizeBlocksDocumentContent(
+      {
+        type: 'doc',
+        content: [
+          {
+            type: 'blocksDocumentStatefulBlock',
+            attrs: {
+              id: 'dashboard-block',
+              blockType: 'dashboard',
+              blockInstanceId: 'dashboard-1',
+              ownership: 'owned',
+              title: 'Dashboard',
+            },
+          },
+          {
+            type: 'blocksDocumentStatefulBlock',
+            attrs: {
+              id: 'dashboard-block',
+              blockType: 'dashboard',
+              blockInstanceId: 'dashboard-1',
+              ownership: 'owned',
+              title: 'Dashboard copy',
+            },
+          },
+          {
+            type: 'blocksDocumentStatefulBlock',
+            attrs: {
+              id: 'shared-dashboard-block',
+              blockType: 'dashboard',
+              blockInstanceId: 'dashboard-1',
+              ownership: 'shared',
+            },
+          },
+        ],
+      },
+      () => `block-${nextId++}`,
+    );
+
+    expect(result.content).toEqual([
+      {
+        type: 'blocksDocumentStatefulBlock',
+        attrs: {
+          id: 'dashboard-block',
+          blockType: 'dashboard',
+          blockInstanceId: 'dashboard-1',
+          ownership: 'owned',
+          title: 'Dashboard',
+        },
+      },
+      {
+        type: 'blocksDocumentStatefulBlock',
+        attrs: {
+          id: 'block-1',
+          blockType: 'dashboard',
+          blockInstanceId: 'block-1',
+          ownership: 'owned',
+          title: 'Dashboard copy',
+        },
+      },
+      {
+        type: 'blocksDocumentStatefulBlock',
+        attrs: {
+          id: 'shared-dashboard-block',
+          blockType: 'dashboard',
+          blockInstanceId: 'dashboard-1',
+          ownership: 'shared',
+        },
       },
     ]);
   });

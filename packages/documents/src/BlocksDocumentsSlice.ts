@@ -49,6 +49,11 @@ export type BlocksDocumentOwnedStatefulBlockDeleteContext<TRoomState> =
     getState: () => TRoomState;
   };
 
+export type BlocksDocumentOwnedStatefulBlockCreateContext<TRoomState> =
+  BlocksDocumentOwnedStatefulBlockReference & {
+    getState: () => TRoomState;
+  };
+
 export type BlocksDocumentOwnedStatefulBlockRenameContext<TRoomState> =
   BlocksDocumentOwnedStatefulBlockReference & {
     previousTitle: string;
@@ -107,6 +112,9 @@ export type CreateBlocksDocumentsSliceProps<
   now?: () => number;
   onDeleteOwnedStatefulBlock?: (
     context: BlocksDocumentOwnedStatefulBlockDeleteContext<TRoomState>,
+  ) => void;
+  onCreateOwnedStatefulBlock?: (
+    context: BlocksDocumentOwnedStatefulBlockCreateContext<TRoomState>,
   ) => void;
   onRenameOwnedStatefulBlock?: (
     context: BlocksDocumentOwnedStatefulBlockRenameContext<TRoomState>,
@@ -197,6 +205,26 @@ function findRemovedOwnedStatefulBlockReferences(
   return removedReferences;
 }
 
+function findAddedOwnedStatefulBlockReferences(
+  previousConfig: BlocksDocumentsSliceConfigType,
+  nextConfig: BlocksDocumentsSliceConfigType,
+): BlocksDocumentOwnedStatefulBlockReference[] {
+  const previousReferenceKeys = new Set<string>();
+  for (const reference of getOwnedStatefulBlockReferences(previousConfig)) {
+    previousReferenceKeys.add(statefulBlockReferenceKey(reference));
+  }
+
+  const addedReferences: BlocksDocumentOwnedStatefulBlockReference[] = [];
+  const addedReferenceKeys = new Set<string>();
+  for (const reference of getOwnedStatefulBlockReferences(nextConfig)) {
+    const key = statefulBlockReferenceKey(reference);
+    if (previousReferenceKeys.has(key) || addedReferenceKeys.has(key)) continue;
+    addedReferences.push(reference);
+    addedReferenceKeys.add(key);
+  }
+  return addedReferences;
+}
+
 function findRenamedOwnedStatefulBlockReferences(
   previousConfig: BlocksDocumentsSliceConfigType,
   nextConfig: BlocksDocumentsSliceConfigType,
@@ -248,6 +276,23 @@ export function createBlocksDocumentsSlice<
   TRoomState extends BaseRoomStoreState & BlocksDocumentsSliceState,
 >(props: CreateBlocksDocumentsSliceProps<TRoomState> = {}) {
   const now = props.now ?? Date.now;
+
+  const runOwnedStatefulBlockCreate = (
+    previousConfig: BlocksDocumentsSliceConfigType,
+    getState: () => TRoomState,
+  ) => {
+    if (!props.onCreateOwnedStatefulBlock) return;
+    const addedReferences = findAddedOwnedStatefulBlockReferences(
+      previousConfig,
+      getState().blocksDocuments.config,
+    );
+    for (const reference of addedReferences) {
+      props.onCreateOwnedStatefulBlock({
+        ...reference,
+        getState,
+      });
+    }
+  };
 
   const runOwnedStatefulBlockCleanup = (
     previousConfig: BlocksDocumentsSliceConfigType,
@@ -311,11 +356,14 @@ export function createBlocksDocumentsSlice<
             }
           }),
         );
+        runOwnedStatefulBlockCreate(previousConfig, get);
         runOwnedStatefulBlockRename(previousConfig, get);
         runOwnedStatefulBlockCleanup(previousConfig, get);
       },
 
       ensureBlocksDocument(artifactId, content) {
+        const previousConfig = get().blocksDocuments.config;
+        let created = false;
         set((state) =>
           produce(state, (draft) => {
             if (draft.blocksDocuments.config.artifacts[artifactId]) return;
@@ -328,8 +376,12 @@ export function createBlocksDocumentsSlice<
             draft.blocksDocuments.syncMetadata[artifactId] = nextSyncMetadata(
               draft.blocksDocuments.syncMetadata[artifactId],
             );
+            created = true;
           }),
         );
+        if (created) {
+          runOwnedStatefulBlockCreate(previousConfig, get);
+        }
       },
 
       removeBlocksDocument(artifactId) {
@@ -371,6 +423,7 @@ export function createBlocksDocumentsSlice<
             );
           }),
         );
+        runOwnedStatefulBlockCreate(previousConfig, get);
         runOwnedStatefulBlockRename(previousConfig, get);
         runOwnedStatefulBlockCleanup(previousConfig, get);
       },
@@ -385,6 +438,7 @@ export function createBlocksDocumentsSlice<
 
       insertBlocks(artifactId, index, blocks) {
         const nodes = nodesFromBlocks(blocks);
+        const previousConfig = get().blocksDocuments.config;
         set((state) =>
           produce(state, (draft) => {
             const existing = draft.blocksDocuments.config.artifacts[artifactId];
@@ -415,6 +469,7 @@ export function createBlocksDocumentsSlice<
             );
           }),
         );
+        runOwnedStatefulBlockCreate(previousConfig, get);
       },
 
       updateBlock(artifactId, blockId, block) {
@@ -439,6 +494,7 @@ export function createBlocksDocumentsSlice<
           }),
         );
         if (updated) {
+          runOwnedStatefulBlockCreate(previousConfig, get);
           runOwnedStatefulBlockRename(previousConfig, get);
           runOwnedStatefulBlockCleanup(previousConfig, get);
         }

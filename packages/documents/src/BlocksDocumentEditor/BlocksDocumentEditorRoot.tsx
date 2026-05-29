@@ -29,6 +29,7 @@ import {
   BlocksDocumentEditorContext,
   type BlocksDocumentEditorChangeHandler,
   createDefaultBlocksDocumentBlockId,
+  hasUnnormalizedBlocksDocumentIds,
   normalizeBlocksDocumentContent,
   type BlocksDocumentEditorContextValue,
 } from './BlocksDocumentEditorContext';
@@ -48,10 +49,6 @@ function stableStringify(value: unknown) {
   return JSON.stringify(value);
 }
 
-function hasMissingTopLevelBlockIds(value: BlocksDocumentContent) {
-  return value.content.some((node) => typeof node.attrs?.id !== 'string');
-}
-
 function createEditorSourceId() {
   const randomUUID = globalThis.crypto?.randomUUID;
   if (randomUUID) {
@@ -62,9 +59,7 @@ function createEditorSourceId() {
     .slice(2)}`;
 }
 
-export const BlocksDocumentEditorRoot: FC<
-  BlocksDocumentEditorRootProps
-> = ({
+export const BlocksDocumentEditorRoot: FC<BlocksDocumentEditorRootProps> = ({
   documentId,
   value,
   onChange,
@@ -161,7 +156,7 @@ export const BlocksDocumentEditorRoot: FC<
       syncSourceId === editorSourceIdRef.current &&
       lastEmittedContentKeyRef.current === normalizedValueKey;
     const shouldBackfillEditorIds =
-      isOwnStoreEcho && hasMissingTopLevelBlockIds(editorContent);
+      isOwnStoreEcho && hasUnnormalizedBlocksDocumentIds(editorContent);
     if (isOwnStoreEcho && !shouldBackfillEditorIds) {
       return;
     }

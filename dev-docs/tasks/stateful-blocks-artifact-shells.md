@@ -702,8 +702,6 @@ Migration decision:
 
 Follow-up parking lot:
 
-- Normalize copy/paste and duplicate flows so owned stateful blocks get fresh
-  `blockInstanceId` values.
 - Add richer host tools for populating dashboard/pivot state after
   `create-stateful-block`.
 - Revisit notebooks after the cells/blocks convergence plan reaches its core
@@ -1005,3 +1003,6 @@ Recommended next step:
 - 2026-05-29: Completed Stage 10 by recording the package-boundary decision:
   continue stateful blocks for reusable implementations, keep artifacts as
   workspace shells, and defer broader package migration.
+- 2026-05-29: Hardened owned stateful block lifecycle by normalizing
+  copy/paste/duplicate flows to fresh block and instance ids, and by adding an
+  owned stateful block create callback for backing-state initialization.

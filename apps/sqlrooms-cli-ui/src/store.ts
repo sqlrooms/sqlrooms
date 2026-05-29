@@ -514,6 +514,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDocumentsSlice()(set, get, store),
 
         ...createBlocksDocumentsSlice<RoomState>({
+          onCreateOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            const config =
+              STATEFUL_BLOCK_ARTIFACT_CONFIGS[
+                blockType as keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS
+              ];
+            config?.ensureState(
+              getState(),
+              blockInstanceId,
+              title ?? config.embeddedTitle,
+            );
+          },
           onDeleteOwnedStatefulBlock: ({
             blockInstanceId,
             blockType,
