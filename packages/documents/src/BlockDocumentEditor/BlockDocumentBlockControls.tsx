@@ -92,6 +92,8 @@ type InsertPlacement = 'before' | 'after';
 const BLOCK_CONTROLS_STACK_HEIGHT = 80;
 const BLOCK_CONTROLS_TOP_INSET = 4;
 const BLOCK_CONTROLS_GUTTER_HOVER_WIDTH = 72;
+const DRAG_SCROLL_EDGE_THRESHOLD = 80;
+const DRAG_SCROLL_MAX_STEP = 28;
 
 function labelFromArtifactType(artifactType: string) {
   return artifactType
@@ -276,6 +278,39 @@ function getDropIndicator(
     left: editorRect.left - scrollRect.left + scrollElement.scrollLeft + 64,
     width: Math.max(0, editorRect.width - 88),
   };
+}
+
+function autoScrollOnDragOver(
+  scrollElement: HTMLElement,
+  event: globalThis.DragEvent,
+) {
+  const scrollRect = scrollElement.getBoundingClientRect();
+  const distanceFromTop = event.clientY - scrollRect.top;
+  const distanceFromBottom = scrollRect.bottom - event.clientY;
+
+  if (
+    distanceFromTop >= DRAG_SCROLL_EDGE_THRESHOLD &&
+    distanceFromBottom >= DRAG_SCROLL_EDGE_THRESHOLD
+  ) {
+    return;
+  }
+
+  const topPressure =
+    distanceFromTop < DRAG_SCROLL_EDGE_THRESHOLD
+      ? (DRAG_SCROLL_EDGE_THRESHOLD - distanceFromTop) /
+        DRAG_SCROLL_EDGE_THRESHOLD
+      : 0;
+  const bottomPressure =
+    distanceFromBottom < DRAG_SCROLL_EDGE_THRESHOLD
+      ? (DRAG_SCROLL_EDGE_THRESHOLD - distanceFromBottom) /
+        DRAG_SCROLL_EDGE_THRESHOLD
+      : 0;
+  const delta =
+    Math.round((bottomPressure - topPressure) * DRAG_SCROLL_MAX_STEP) || 0;
+
+  if (delta !== 0) {
+    scrollElement.scrollTop += delta;
+  }
 }
 
 function getBlockControlsTop(elementRect: DOMRect, scrollElement: HTMLElement) {
@@ -818,6 +853,7 @@ export const BlockDocumentBlockControls: FC<
       if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'move';
       }
+      autoScrollOnDragOver(scrollElement, event);
 
       const target = getBlockDropTarget(editor, editorElement, event);
       const insertPos = target ? getMoveInsertPos(source, target) : null;
