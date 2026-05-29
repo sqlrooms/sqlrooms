@@ -80,7 +80,6 @@ import {
 } from './createDashboardAiTools';
 import {dashboardAgentTool} from './createDashboardAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
-import {createTableContextAiTools} from './createTableContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
 import {getRunContext} from './context/getRunContext';
 import {
@@ -540,7 +539,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
-              ...createTableContextAiTools(store),
               ...createDashboardAiTools(store),
               dashboard_agent: dashboardAgentTool(store),
               ...webContainerToolkit.tools,
