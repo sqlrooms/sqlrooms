@@ -17,11 +17,11 @@ export type UseGenerateSpecResult =
 export function useGenerateSpec(
   tableName: string,
   settings: ChartSettings,
-  chartTypeDefinition: ChartTypeDefinition,
+  chartTypeDefinition: ChartTypeDefinition | undefined,
 ): UseGenerateSpecResult {
   return useMemo(() => {
     try {
-      if (!isSpecChartType(chartTypeDefinition)) {
+      if (!chartTypeDefinition || !isSpecChartType(chartTypeDefinition)) {
         return {
           error: new ChartSpecError('Invalid chart type definition'),
         };

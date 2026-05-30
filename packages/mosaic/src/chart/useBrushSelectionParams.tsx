@@ -4,10 +4,10 @@ import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 import {BrushSelectionParams} from '../chart-types/base-types';
 
 export function useBrushSelectionParams(
-  selectionName: string,
+  selectionName: string | undefined,
 ): BrushSelectionParams | undefined {
-  const brushSelection = useStoreWithMosaicDashboard(
-    (state) => state.mosaic.selections[selectionName],
+  const brushSelection = useStoreWithMosaicDashboard((state) =>
+    selectionName ? state.mosaic.selections[selectionName] : undefined,
   );
 
   const getSelection = useStoreWithMosaicDashboard(
@@ -15,7 +15,7 @@ export function useBrushSelectionParams(
   );
 
   useEffect(() => {
-    if (!brushSelection) {
+    if (selectionName && !brushSelection) {
       getSelection(selectionName, 'crossfilter');
     }
   }, [brushSelection, getSelection, selectionName]);

@@ -8,7 +8,7 @@ import TaskList from '@tiptap/extension-task-list';
 import {Markdown} from '@tiptap/markdown';
 import {useEditor} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import {FC, PropsWithChildren, useEffect, useRef, useState} from 'react';
+import {FC, PropsWithChildren, useEffect, useMemo, useRef, useState} from 'react';
 import {
   MarkdownDocumentEditorContext,
   type MarkdownDocumentEditorContextValue,
@@ -55,36 +55,42 @@ export const MarkdownDocumentEditorRoot: FC<
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const extensions = [
-    StarterKit.configure({link: false}),
-    Link.configure({openOnClick: false}),
-    TaskList,
-    TaskItem.configure({nested: true}),
-    Table.configure({resizable: true}),
-    TableRow,
-    TableHeader,
-    TableCell,
-    Markdown.configure({
-      markedOptions: {gfm: true},
-    }),
-  ];
+  const extensions = useMemo(
+    () => [
+      StarterKit.configure({link: false}),
+      Link.configure({openOnClick: false}),
+      TaskList,
+      TaskItem.configure({nested: true}),
+      Table.configure({resizable: true}),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Markdown.configure({
+        markedOptions: {gfm: true},
+      }),
+    ],
+    [],
+  );
 
-  const editor = useEditor({
-    extensions,
-    content: value,
-    contentType: 'markdown',
-    editable: !readOnly,
-    immediatelyRender: false,
-    onUpdate: ({editor}) => {
-      onChangeRef.current(editor.getMarkdown());
-    },
-    editorProps: {
-      attributes: {
-        class:
-          'prose prose-sm dark:prose-invert prose-a:text-primary prose-a:underline-offset-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:leading-6 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground prose-pre:my-3 prose-pre:rounded-md prose-pre:px-3 prose-pre:py-2 [&_li>p]:my-0 max-w-none min-h-full px-6 py-5 focus:outline-none',
+  const editor = useEditor(
+    {
+      extensions,
+      content: value,
+      contentType: 'markdown',
+      editable: !readOnly,
+      immediatelyRender: false,
+      onUpdate: ({editor}) => {
+        onChangeRef.current(editor.getMarkdown());
+      },
+      editorProps: {
+        attributes: {
+          class:
+            'prose prose-sm dark:prose-invert prose-a:text-primary prose-a:underline-offset-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:leading-6 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground prose-pre:my-3 prose-pre:rounded-md prose-pre:px-3 prose-pre:py-2 [&_li>p]:my-0 max-w-none min-h-full px-6 py-5 focus:outline-none',
+        },
       },
     },
-  });
+    [],
+  );
 
   useEffect(() => {
     if (!editor || editor.getMarkdown() === value) {

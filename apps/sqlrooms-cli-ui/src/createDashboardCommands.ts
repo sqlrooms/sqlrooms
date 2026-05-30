@@ -4,7 +4,14 @@ import {z} from 'zod';
 
 import {RoomState} from './store-types';
 
-type CliArtifactType = 'dashboard' | 'notebook' | 'document' | 'canvas' | 'app';
+type CliArtifactType =
+  | 'worksheet'
+  | 'dashboard'
+  | 'pivot'
+  | 'notebook'
+  | 'document'
+  | 'canvas'
+  | 'app';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
 
@@ -75,16 +82,21 @@ function createArtifactCommand(
     execute: ({getState}, input) => {
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
+      const uniqueTitle = getUniqueArtifactTitle(state, title ?? group);
       const artifactId = state.artifacts.createArtifact({
         type: artifactType,
-        title: getUniqueArtifactTitle(state, title ?? group),
+        title: uniqueTitle,
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
+      } else if (artifactType === 'worksheet') {
+        state.blockDocuments.ensureBlockDocument(artifactId);
       } else if (artifactType === 'document') {
         state.documents.ensureDocument(artifactId);
       } else if (artifactType === 'canvas') {
         state.canvas.ensureArtifact(artifactId);
+      } else if (artifactType === 'pivot') {
+        state.pivot.ensurePivot(artifactId, {title: uniqueTitle});
       }
       state.artifacts.setCurrentArtifact(artifactId);
       return {
@@ -178,6 +190,9 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
+        if (artifact.type === 'worksheet') {
+          state.blockDocuments.ensureBlockDocument(artifactId);
+        }
         if (artifact.type === 'document') {
           state.documents.ensureDocument(artifactId);
         }
@@ -186,6 +201,9 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         }
         if (artifact.type === 'dashboard') {
           state.dashboard.ensureDashboardArtifact(artifactId);
+        }
+        if (artifact.type === 'pivot') {
+          state.pivot.ensurePivot(artifactId, {title: artifact.title});
         }
         return {
           success: true,
@@ -196,6 +214,8 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
     },
 
     // Per-type create commands
+    createArtifactCommand('worksheet', 'Worksheet'),
+    createArtifactCommand('pivot', 'Pivot Table'),
     createArtifactCommand('notebook', 'Notebook'),
     createArtifactCommand('document', 'Document'),
     createArtifactCommand('canvas', 'Canvas'),

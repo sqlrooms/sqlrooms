@@ -37,6 +37,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/ai-config": "workspace:*",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

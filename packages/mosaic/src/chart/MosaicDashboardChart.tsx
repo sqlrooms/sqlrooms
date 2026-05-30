@@ -1,5 +1,4 @@
 import {type FC, useCallback} from 'react';
-import {ChartSettingsContent} from './chart-settings/ChartSettingsContent';
 import {MosaicDashboardPanelLayout} from '../dashboard/MosaicDashboardPanelLayout';
 import type {ChartPanelConfig} from '../dashboard/dashboard-types';
 import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
@@ -7,6 +6,8 @@ import {useGenerateSpec} from './useGenerateSpec';
 import {MosaicReadyConnection} from '../MosaicSlice';
 import {ChartTypeDefinition} from '../chart-types/base-types';
 import {MosaicDashboardChartContent} from './MosaicDashboardChartContent';
+import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
+import type {ChartConfig} from '../chart-types/chart-config';
 
 export type MosaicDashboardChartProps = {
   dashboardId: string;
@@ -40,14 +41,21 @@ export const MosaicDashboardChart: FC<MosaicDashboardChartProps> = ({
     [dashboardId, panel.config, panel.id, updatePanel],
   );
 
+  const handleConfigChange = useCallback(
+    (config: ChartConfig) => {
+      updatePanel(dashboardId, panel.id, {config});
+    },
+    [dashboardId, panel.id, updatePanel],
+  );
+
   const spec = useGenerateSpec(tableName, panel.config.settings, chartTypeDef);
 
   const settingsContent = (
-    <ChartSettingsContent
-      dashboardId={dashboardId}
-      panel={panel}
+    <MosaicChartSettingsPanel
       spec={spec.spec}
       tableName={tableName}
+      config={panel.config}
+      onChange={handleConfigChange}
       onClose={() => handleOpenChange(false)}
     />
   );
@@ -60,8 +68,6 @@ export const MosaicDashboardChart: FC<MosaicDashboardChartProps> = ({
         selectionName={selectionName}
         chartTypeDefinition={chartTypeDef}
         tableName={tableName}
-        connection={connection}
-        spec={spec}
       />
     </div>
   );

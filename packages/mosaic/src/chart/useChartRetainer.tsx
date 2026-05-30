@@ -7,20 +7,33 @@ export function useChartRetainer(
   dashboardId: string,
   panelId: string,
 ): ChartRetainer {
+  return useChartRetainerByKey(
+    `dashboard:${dashboardId}:panel:${panelId}`,
+  ) as ChartRetainer;
+}
+
+export function useChartRetainerByKey(
+  retentionKey: string | undefined,
+): ChartRetainer | undefined {
   const retainedChart = useStoreWithMosaicDashboard((state) =>
-    state.mosaicDashboard.getRetainedChart(dashboardId, panelId),
+    retentionKey
+      ? state.mosaicDashboard.getRetainedChartByKey(retentionKey)
+      : undefined,
   );
 
   const setRetainedChart = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.setRetainedChart,
+    (state) => state.mosaicDashboard.setRetainedChartByKey,
   );
 
   return useMemo(
-    () => ({
-      chart: retainedChart,
-      setChart: (chart: RetainedVgPlotChart) =>
-        setRetainedChart(dashboardId, panelId, chart),
-    }),
-    [dashboardId, panelId, retainedChart, setRetainedChart],
+    () =>
+      retentionKey
+        ? {
+            chart: retainedChart,
+            setChart: (chart: RetainedVgPlotChart) =>
+              setRetainedChart(retentionKey, chart),
+          }
+        : undefined,
+    [retainedChart, retentionKey, setRetainedChart],
   );
 }

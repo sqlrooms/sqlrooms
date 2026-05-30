@@ -38,10 +38,12 @@
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
     "@sqlrooms/artifacts": "workspace:*",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@tiptap/core": "^3.23.1",
     "@tiptap/extension-link": "^3.23.1",
     "@tiptap/extension-table": "^3.23.1",
     "@tiptap/extension-table-cell": "^3.23.1",

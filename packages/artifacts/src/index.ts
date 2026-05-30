@@ -7,14 +7,19 @@ export {
   ArtifactMetadata,
   ArtifactsSliceConfig,
   ArtifactType,
+  ArtifactVisibility,
 } from './ArtifactsSliceConfig';
 export type {
   ArtifactMetadata as ArtifactMetadataType,
   ArtifactsSliceConfig as ArtifactsSliceConfigType,
   ArtifactType as ArtifactTypeType,
+  ArtifactVisibility as ArtifactVisibilityType,
 } from './ArtifactsSliceConfig';
 
-export {defineArtifactTypes} from './ArtifactTypes';
+export {
+  createArtifactTypeFromStatefulBlock,
+  defineArtifactTypes,
+} from './ArtifactTypes';
 export type {
   ArtifactLifecycleContext,
   ArtifactRenameLifecycleContext,
@@ -38,6 +43,7 @@ export {
   ArtifactTabs,
   createArtifactLayoutNode,
   createArtifactPanelDefinition,
+  isArtifactVisibleInTabs,
   useArtifactTabs,
 } from './artifactTabs';
 export type {

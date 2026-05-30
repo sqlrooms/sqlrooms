@@ -99,6 +99,22 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(dashboard.layout?.id).toBe(getMosaicDashboardGridId(dashboardId));
   });
 
+  it('upgrades an empty default dock dashboard when grid is explicitly requested', () => {
+    const store = createTestStore();
+    const dashboardId = 'dashboard-from-artifact-lifecycle';
+
+    store.getState().mosaicDashboard.ensureDashboard(dashboardId, 'Dashboard');
+    store
+      .getState()
+      .mosaicDashboard.ensureDashboard(dashboardId, 'Dashboard', 'grid');
+
+    const dashboard =
+      store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
+    expect(dashboard.layoutType).toBe('grid');
+    expect(dashboard.layout?.type).toBe('grid');
+    expect(dashboard.layout?.id).toBe(getMosaicDashboardGridId(dashboardId));
+  });
+
   it('adds and removes grid dashboard panels with persisted grid layouts', () => {
     const store = createTestStore();
     const dashboardId = store
@@ -466,6 +482,44 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(secondRuntime.destroy).toHaveBeenCalledTimes(1);
     expect(
       store.getState().mosaicDashboard.getRetainedChart(dashboardId, panel.id),
+    ).toBeUndefined();
+  });
+
+  it('tracks retained charts and runtime issues by caller-provided keys', () => {
+    const store = createTestStore();
+    const runtime = createRuntimeChart();
+    const runtimeKey = 'worksheet:worksheet-1:chart-block:chart-1';
+
+    store
+      .getState()
+      .mosaicDashboard.setRetainedChartByKey(runtimeKey, runtime.chart);
+    store.getState().mosaicDashboard.reportPanelIssueByKey(runtimeKey, {
+      kind: 'too-much-data',
+      panelId: runtimeKey,
+      chartType: 'histogram',
+      message: 'Limited result set',
+      recoverable: true,
+    });
+
+    expect(
+      store.getState().mosaicDashboard.getRetainedChartByKey(runtimeKey),
+    ).toBe(runtime.chart);
+    expect(
+      store.getState().mosaicDashboard.getPanelIssueByKey(runtimeKey),
+    ).toMatchObject({
+      kind: 'too-much-data',
+      panelId: runtimeKey,
+      chartType: 'histogram',
+    });
+
+    store.getState().mosaicDashboard.evictPanelRuntimeByKey(runtimeKey);
+
+    expect(runtime.destroy).toHaveBeenCalledTimes(1);
+    expect(
+      store.getState().mosaicDashboard.getRetainedChartByKey(runtimeKey),
+    ).toBeUndefined();
+    expect(
+      store.getState().mosaicDashboard.getPanelIssueByKey(runtimeKey),
     ).toBeUndefined();
   });
 

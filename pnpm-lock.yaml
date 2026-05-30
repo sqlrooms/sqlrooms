@@ -199,6 +199,9 @@ importers:
       '@sqlrooms/notebook':
         specifier: workspace:*
         version: link:../../packages/notebook
+      '@sqlrooms/pivot':
+        specifier: workspace:*
+        version: link:../../packages/pivot
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -2590,6 +2593,9 @@ importers:
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
@@ -2624,6 +2630,16 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.13(@types/react@19.2.7)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+
+  packages/blocks:
+    dependencies:
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
 
   packages/canvas:
     dependencies:
@@ -3137,6 +3153,9 @@ importers:
       '@sqlrooms/artifacts':
         specifier: workspace:*
         version: link:../artifacts
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror
@@ -3149,6 +3168,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@tiptap/core':
+        specifier: ^3.23.1
+        version: 3.23.1(@tiptap/pm@3.23.1)
       '@tiptap/extension-link':
         specifier: ^3.23.1
         version: 3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))(@tiptap/pm@3.23.1)
@@ -3516,6 +3538,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.3.0
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror
@@ -3670,6 +3695,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.3.0
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/cells':
         specifier: workspace:*
         version: link:../cells

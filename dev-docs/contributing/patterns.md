@@ -39,6 +39,14 @@ const {db} = useRoomStore();
 - Clean up resources (subscriptions, timers) in the slice's `destroy()` method
 - DuckDB connector is auto-created during initialization — don't create it manually
 
+## Stateful Block Lifecycle
+
+Owned stateful blocks need explicit lifecycle hooks. When a `BlockDocument` creates, deletes, or renames an owned stateful block, the host app should create, delete, or rename the corresponding backing state in the feature slice.
+
+Do not rely on React mount/unmount to create or clean up backing state. Rendering can remount for UI reasons, while block lifecycle should follow document mutations.
+
+Keep the mapping typed and visible. Prefer feature-owned block definitions and a small host registration layer over hard-coded string checks spread across editors, commands, and AI tools.
+
 ## Query Cancellation
 
 `QueryHandle` supports `AbortSignal`:

@@ -37,6 +37,7 @@ import {
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
+import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -66,6 +67,11 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
+  createBlockDocumentAiInstructions,
+  BlockDocumentsSliceConfig,
+  createBlockDocumentCommands,
+  createBlockDocumentAuthoringInstructions,
+  createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DOCUMENT_AI_INSTRUCTIONS,
@@ -99,11 +105,25 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
+import {
+  createStatefulBlockCommandTypes,
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
+} from './statefulBlockArtifactConfigs';
 
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
+const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
+  artifactType: 'worksheet',
+  artifactLabel: 'Worksheet',
+  commandNamespace: 'worksheet',
+  commandGroup: 'Worksheet',
+  defaultTitle: 'Worksheet',
+  blockDocumentAgentToolName: 'worksheet_agent',
+} as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
@@ -190,9 +210,11 @@ const sliceConfigSchemas = {
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
   documents: DocumentsSliceConfig,
+  blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
+  pivot: PivotSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
@@ -269,10 +291,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DOCUMENT_COMMAND_OWNER,
             createDocumentCommands<RoomState>(),
           );
+          registerCommandsForOwner(
+            store,
+            WORKSHEET_COMMAND_OWNER,
+            createBlockDocumentCommands<RoomState>({
+              ...WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
+              statefulBlockTypes: createStatefulBlockCommandTypes(),
+            }),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -477,16 +508,78 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createNotebookSlice()(set, get, store),
 
+        ...createPivotSlice()(set, get, store),
+
         ...createCanvasSlice()(set, get, store),
 
         ...createDocumentsSlice()(set, get, store),
+
+        ...createBlockDocumentsSlice<RoomState>({
+          onCreateOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on create', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.ensureState(
+              getState(),
+              blockInstanceId,
+              title ?? config.embeddedTitle,
+            );
+          },
+          onDeleteOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on delete', {
+                blockType,
+                blockInstanceId,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.deleteState(getState(), blockInstanceId);
+          },
+          onRenameOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on rename', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            if (config.renameState) {
+              config.renameState(getState(), blockInstanceId, title);
+            }
+          },
+        })(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createDocumentsCrdtMirror<RoomState>(),
+                documentState: createDocumentsCrdtMirror<RoomState>({
+                  blockDocumentArtifactTypes: ['worksheet'],
+                }),
               },
             })(set, get, store)
           : createDisabledCrdtState()),
@@ -532,7 +625,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
             getRunContext: () => getRunContext(store),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

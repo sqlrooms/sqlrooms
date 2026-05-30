@@ -39,18 +39,6 @@ export const MarkdownDocumentEditorContent: FC<
     }
   }, [sourcePanelOpen]);
 
-  const onResize = () => {
-    const isCollapsed = panelRef.current?.isCollapsed();
-
-    if (isCollapsed && sourcePanelOpen) {
-      setSourcePanelOpen(false);
-    }
-
-    if (!isCollapsed && !sourcePanelOpen) {
-      setSourcePanelOpen(true);
-    }
-  };
-
   return (
     <div className={cn('flex min-h-0 flex-1', className)}>
       <ResizablePanelGroup orientation="horizontal" className="h-full">
@@ -65,7 +53,6 @@ export const MarkdownDocumentEditorContent: FC<
           collapsible={true}
           collapsedSize={0}
           className="overflow-auto"
-          onResize={onResize}
         >
           <div className="flex h-full flex-col">
             <div className="border-border flex h-10 shrink-0 items-center gap-2 border-b px-3">

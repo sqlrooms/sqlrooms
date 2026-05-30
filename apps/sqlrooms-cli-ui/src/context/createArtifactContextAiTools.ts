@@ -49,6 +49,33 @@ function readCliArtifact({
     };
   }
 
+  if (artifact.type === 'worksheet') {
+    const worksheet = state.blockDocuments.getBlockDocument(artifactId);
+    return {
+      success: true as const,
+      artifact: {
+        artifactId,
+        title: artifact.title,
+        type: artifact.type,
+      },
+      payload: {
+        kind: 'worksheet',
+        blocks: state.blockDocuments.getBlocks(artifactId),
+        assets: Object.values(worksheet?.assets ?? {}).map((asset) => ({
+          id: asset.id,
+          filename: asset.filename,
+          mediaType: asset.mediaType,
+          encoding: asset.encoding,
+          alt: asset.alt,
+          title: asset.title,
+          createdAt: asset.createdAt,
+          updatedAt: asset.updatedAt,
+        })),
+        updatedAt: worksheet?.updatedAt,
+      },
+    };
+  }
+
   if (artifact.type === 'dashboard') {
     state.dashboard.ensureDashboardArtifact(artifactId);
     const dashboard = state.mosaicDashboard.getDashboard(artifactId);
@@ -85,7 +112,7 @@ function readCliArtifact({
       kind: 'metadata-only',
       unsupportedPayload: true,
       details:
-        'This artifact type is available as context, but read_context_artifact only returns full payloads for document and dashboard artifacts in v1.',
+        'This artifact type is available as context, but read_context_artifact only returns full payloads for worksheet, document, and dashboard artifacts in v1.',
     },
   };
 }

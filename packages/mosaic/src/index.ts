@@ -19,6 +19,11 @@ export {
   type MosaicDashboardProps,
   type MosaicDashboardRootProps,
 } from './dashboard/MosaicDashboard';
+export {
+  createMosaicDashboardBlockDefinition,
+  type CreateMosaicDashboardBlockDefinitionOptions,
+  type MosaicDashboardBlockRenderProps,
+} from './dashboard/MosaicDashboardBlock';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
@@ -97,6 +102,19 @@ export {
   type TrackedClient,
 } from './MosaicSlice';
 export {DataPointLimitError} from './DataPointLimitError';
+export {
+  MosaicChartView,
+  type MosaicChartViewProps,
+} from './chart/MosaicChartView';
+export {
+  MosaicChartSettingsPanel,
+  type MosaicChartSettingsPanelProps,
+} from './chart/MosaicChartSettingsPanel';
+export {useBrushSelectionParams} from './chart/useBrushSelectionParams';
+export {
+  useChartRetainer,
+  useChartRetainerByKey,
+} from './chart/useChartRetainer';
 export {
   DEFAULT_CHART_MAX_DATA_POINTS,
   assertChartDataPolicy,

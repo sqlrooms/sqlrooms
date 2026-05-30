@@ -1,10 +1,13 @@
-import {MosaicDashboard} from '@sqlrooms/mosaic';
-import type {RoomPanelComponent} from '@sqlrooms/layout';
+import {
+  MosaicDashboard,
+  type MosaicDashboardBlockRenderProps,
+} from '@sqlrooms/mosaic';
 import {useCallback, useEffect} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore, type RoomState} from '../../store';
 
-export const DashboardArtifact: RoomPanelComponent = ({panelId, meta}) => {
-  const artifactId = (meta?.artifactId as string) ?? panelId;
+export const DashboardArtifact = ({
+  blockId: artifactId,
+}: MosaicDashboardBlockRenderProps<RoomState>) => {
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
   );

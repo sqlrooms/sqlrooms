@@ -1,6 +1,6 @@
 import {Param, Selection} from '@uwdata/mosaic-core';
 import {astToDOM, parseSpec, Spec} from '@uwdata/mosaic-spec';
-import {useEffect, useRef} from 'react';
+import {useLayoutEffect, useRef} from 'react';
 import {PlotSize} from './ResponsivePlot';
 import {RetainedVgPlotChart} from './useVgPlotChartRetention';
 import {
@@ -64,6 +64,16 @@ async function createSpecChartElement(
 
 function asPlotDomElement(element: object): PlotDomElement {
   return element as PlotDomElement;
+}
+
+function attachPlotElement(
+  container: HTMLElement,
+  element: PlotDomElement,
+) {
+  if (container.childNodes.length === 1 && container.firstChild === element) {
+    return;
+  }
+  container.replaceChildren(element);
 }
 
 function wrapMarkHandlers(
@@ -161,16 +171,17 @@ export function useVgPlotChartRender({
 }: UseVgPlotChartRenderParams) {
   const renderVersionRef = useRef(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container || !containerSize) {
+    if (!container) {
       return;
     }
 
-    // Use cached chart if available
     if (cachedChart) {
-      container.replaceChildren(asPlotDomElement(cachedChart.element));
-      resizeChartElement(cachedChart.element, containerSize);
+      attachPlotElement(container, asPlotDomElement(cachedChart.element));
+      if (containerSize) {
+        resizeChartElement(cachedChart.element, containerSize);
+      }
 
       // Re-wrap mark handlers with fresh closures for dataPolicy/runtimeIssue reporting
       wrapMarkHandlers(
@@ -186,6 +197,10 @@ export function useVgPlotChartRender({
         onError(cachedChart.error);
       }
 
+      return;
+    }
+
+    if (!containerSize) {
       return;
     }
 
@@ -210,7 +225,7 @@ export function useVgPlotChartRender({
         };
 
         onChartCreated(nextChart);
-        containerRef.current.replaceChildren(element);
+        attachPlotElement(containerRef.current, element);
 
         // Wrap marks with runtime handlers
         wrapMarkHandlers(
