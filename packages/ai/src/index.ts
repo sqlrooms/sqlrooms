@@ -41,6 +41,60 @@ export {
   formatTablesForLLM,
 } from './tools/defaultInstructions';
 
+// Skills
+export {
+  SkillError,
+  SkillManifestError,
+  SkillNotFoundError,
+  SkillRootReadOnlyError,
+  SkillConflictError,
+} from './skills';
+export type {SkillErrorCode, SkillErrorContext} from './skills';
+export {
+  SkillManifestSchema,
+  parseSkillManifest,
+  serializeSkillManifest,
+  loadSkillFromFiles,
+  CompositeSkillStorage,
+} from './skills';
+export type {SkillManifest} from './skills';
+export type {
+  SkillStorage,
+  SkillRoot,
+  SkillRef,
+  SkillFile,
+  SkillRecord,
+  SkillListing,
+  SkillWriteContent,
+} from './skills';
+
+// Skills - authoring
+export {
+  createSkillDraftStore,
+  createSkillAuthoringAgent,
+  SKILL_AUTHORING_TOOL_NAMES,
+  createWriteManifestTool,
+  createWriteInstructionsTool,
+  createSaveSkillTool,
+  buildSkillAuthoringSystemPrompt,
+  containsForbidden,
+  DEFAULT_SKILL_AUTHORING_STOP_STEPS,
+  SkillDraftPreview,
+  SkillAuthoringPanel,
+  DefaultSkillAuthoringPanelHeader,
+} from './skills';
+export type {
+  SkillAuthoringContext,
+  SkillDraft,
+  SkillDraftState,
+  SkillDraftStatus,
+  SkillDraftStore,
+  SaveSkillCallback,
+  CreateSkillAuthoringAgentOptions,
+  SkillDraftPreviewProps,
+  SkillAuthoringPanelProps,
+} from './skills';
+
 // From @sqlrooms/ai-core - State/Logic
 export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';
@@ -48,11 +102,13 @@ export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
-export {processAgentStream} from '@sqlrooms/ai-core';
+export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
-  AgentStreamResult,
-  UIMessageChunk,
+  AddToolOutput,
+  AiToolExecutionContext,
+  AgentStreamOutput,
   AgentToolCall,
+  AgentToolCallAdditionalData,
   ToolRenderers,
   ToolRenderer,
   ToolRendererProps,
@@ -81,18 +137,35 @@ export {SessionTitle} from '@sqlrooms/ai-core';
 export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
-export {ReasoningBox} from '@sqlrooms/ai-core';
+export {ShowToolCallDetailsProvider} from '@sqlrooms/ai-core';
+export type {
+  ToolRenderBehavior,
+  ToolStructureBehavior,
+  ToolDisplayBehavior,
+  LocalAgentChatRootProps,
+} from '@sqlrooms/ai-core';
 export {Chat} from '@sqlrooms/ai-core';
+export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
+export type {
+  ContextSelectorItem,
+  ContextSelectorRootProps,
+} from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-config
 export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
   AiSliceConfig,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
+  getAiRunContextPrimaryItem,
+  getAiRunContextItems,
+  setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

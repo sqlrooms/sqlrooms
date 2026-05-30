@@ -2,7 +2,7 @@ import {getCoreDuckDbConnectionId} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {useCellsStore} from '../hooks';
 import type {
   CellContainerProps,
@@ -33,9 +33,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const runCell = useCellsStore((s) => s.cells.runCell);
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
   const getDownstream = useCellsStore((s) => s.cells.getDownstream);
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
+  const artifactId = useCellsStore((s) => s.cells.getArtifactIdForCell(id));
   const cellsData = useCellsStore((s) => s.cells.config.data);
-  const sheets = useCellsStore((s) => s.cells.config.sheets);
+  const artifacts = useCellsStore((s) => s.cells.config.artifacts);
   const cellStatus = useCellsStore((s) => s.cells.status[id]);
   const resultVersion = useCellsStore((s) => s.cells.resultVersion?.[id] ?? 0);
   const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
@@ -81,9 +81,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           }
         }),
       );
-      handleRunRef.current();
+      runCell(id);
     },
-    [id, storeApi],
+    [id, runCell, storeApi],
   );
 
   const handleConnectorChange = useCallback(
@@ -134,11 +134,6 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
 
   const isRunning = status?.state === 'running';
 
-  const handleRunRef = useRef(handleRun);
-  useEffect(() => {
-    handleRunRef.current = handleRun;
-  }, [handleRun]);
-
   const content = (
     <div className="flex flex-col">
       <SqlCellEditor
@@ -165,9 +160,9 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
       <CornerDownRightIcon className="h-3 w-3" />
       <SqlCellDependentsMenu
         cellId={id}
-        currentSheetId={currentSheetId}
+        artifactId={artifactId}
         cellsData={cellsData}
-        sheets={sheets}
+        artifacts={artifacts}
         getDownstream={getDownstream}
       />
       <SqlCellResultNameEditor

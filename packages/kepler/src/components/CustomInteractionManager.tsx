@@ -38,7 +38,10 @@ const TooltipPanel: React.FC<{
   isDark: boolean;
   handleConfigChange: (configId: string, newConfig: any) => void;
   handleCoordinateToggle: () => void;
-  setColumnDisplayFormat: (format: any) => void;
+  setColumnDisplayFormat: (
+    dataId: string,
+    formats: {[key: string]: string},
+  ) => void;
 }> = ({
   tooltipConfig,
   coordinateConfig,
@@ -53,6 +56,13 @@ const TooltipPanel: React.FC<{
       handleConfigChange('tooltip', {config: newConfig});
     },
     [handleConfigChange],
+  );
+
+  const handleDisplayFormatChange = useCallback(
+    (dataId: string, column: string, displayFormat: string) => {
+      setColumnDisplayFormat(dataId, {[column]: displayFormat});
+    },
+    [setColumnDisplayFormat],
   );
 
   if (!tooltipConfig) return null;
@@ -80,7 +90,7 @@ const TooltipPanel: React.FC<{
             datasets={datasets}
             config={tooltipConfig.config}
             onChange={handleTooltipConfigChange}
-            onDisplayFormatChange={setColumnDisplayFormat}
+            onDisplayFormatChange={handleDisplayFormatChange}
             isDark={isDark}
           />
         </div>

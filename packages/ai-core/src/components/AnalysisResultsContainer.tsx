@@ -10,15 +10,13 @@ import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-  enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
-  excludeFromGrouping?: string[];
+  hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
-  enableReasoningBox = false,
   customMarkdownComponents,
-  excludeFromGrouping: excludeFromGrouping,
+  hoistedRenderers,
   ErrorMessageComponent,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -34,10 +32,8 @@ export const AnalysisResultsContainer: React.FC<{
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
-    endRef,
     dataToObserve: uiMessages,
   });
 
@@ -48,27 +44,36 @@ export const AnalysisResultsContainer: React.FC<{
     }
   }, [isRunning, scrollToBottom]);
 
+  // Scroll to bottom when switching chat tabs (sessions)
+  useEffect(() => {
+    if (!sessionId) return;
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [sessionId]);
+
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        {/* Render analysis results */}
-        {currentAnalysisResults?.map((analysisResult) => (
-          <AnalysisResult
-            key={analysisResult.id}
-            analysisResult={analysisResult}
-            enableReasoningBox={enableReasoningBox}
-            customMarkdownComponents={customMarkdownComponents}
-            excludeFromGrouping={excludeFromGrouping}
-            ErrorMessageComponent={ErrorMessageComponent}
-          />
-        ))}
-        {isRunning && <AiThinkingDots className="text-muted-foreground p-4" />}
-        <div ref={endRef} className="h-10 w-full shrink-0" />
+        <div className="pr-3">
+          {currentAnalysisResults?.map((analysisResult) => (
+            <AnalysisResult
+              key={analysisResult.id}
+              analysisResult={analysisResult}
+              customMarkdownComponents={customMarkdownComponents}
+              hoistedRenderers={hoistedRenderers}
+              ErrorMessageComponent={ErrorMessageComponent}
+            />
+          ))}
+          {isRunning && (
+            <AiThinkingDots className="text-muted-foreground p-4" />
+          )}
+          <div className="h-10 w-full shrink-0" />
+        </div>
         <ScrollBar orientation="vertical" />
-        <ScrollBar orientation="horizontal" />
       </ScrollArea>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button

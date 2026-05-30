@@ -19,6 +19,7 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `tools` – an AI SDK `ToolSet` (created via the `tool()` helper from `ai`)
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
+- `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
@@ -83,6 +84,24 @@ export function AiPanel() {
 }
 ```
 
+## Local Agent Chat
+
+Use `Chat.LocalAgentRoot` when a transient surface should be driven by a
+pre-constructed `ToolLoopAgent` instead of the session-backed AI slice. The
+message and composer components stay under the same `Chat` compound API.
+
+```tsx
+<Chat.LocalAgentRoot
+  agent={agent}
+  initialSuggestions={['Get started', 'Show me an example']}
+  onMessagesChange={(msgs) => console.log(msgs)}
+>
+  <Chat.Messages />
+  <Chat.PromptSuggestions />
+  <Chat.Composer placeholder="Ask anything..." />
+</Chat.LocalAgentRoot>
+```
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`
@@ -92,7 +111,7 @@ export function AiPanel() {
 - Tool/agent utilities:
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
-  - `processAgentStream`
+  - `streamSubAgent`
 
 ## Related packages
 

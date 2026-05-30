@@ -104,17 +104,33 @@ title = "Anthropic"
 kind = "builtin"
 base_url = "https://api.anthropic.com"
 default_auth_method = "manual_api_key"
+api_key = "anthropic-key"
 models = ["claude-opus-4-6"]
 
 [[ai.providers.auth_methods]]
 id = "manual_api_key"
 type = "api_key"
 label = "Manually enter API Key"
+
+[[ai.custom_models]]
+model_name = "local-qwen"
+base_url = "http://localhost:11434/v1"
+api_key = "local-key"
+
+[ai.model_parameters]
+max_steps = 9
+additional_instruction = "Prefer short answers."
 """.strip(),
         encoding="utf-8",
     )
 
-    default_provider, default_model, providers = _load_ai_runtime_config(config_path)
+    (
+        default_provider,
+        default_model,
+        providers,
+        custom_models,
+        model_parameters,
+    ) = _load_ai_runtime_config(config_path)
     assert default_provider == "openai"
     assert default_model == "gpt-5"
     assert providers["openai"]["baseUrl"] == "/api/ai/proxy/openai/v1"
@@ -123,6 +139,10 @@ label = "Manually enter API Key"
     assert providers["openai"]["status"]["selectedAuthMethod"] == "env_api_key"
     assert providers["anthropic"]["baseUrl"] == "/api/ai/proxy/anthropic"
     assert providers["anthropic"]["status"]["hasCredentials"] is False
+    assert custom_models[0]["modelName"] == "local-qwen"
+    assert custom_models[0]["apiKey"] == "local-key"
+    assert model_parameters["maxSteps"] == 9
+    assert model_parameters["additionalInstruction"] == "Prefer short answers."
 
 
 def test_load_connector_config_rejects_duplicate_ids(tmp_path):

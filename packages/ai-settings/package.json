@@ -1,9 +1,17 @@
 {
   "name": "@sqlrooms/ai-settings",
-  "version": "0.29.0-rc.1",
+  "version": "0.29.0-rc.6",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -11,19 +19,15 @@
       "default": "./dist/index.js"
     }
   },
-  "type": "module",
-  "sideEffects": false,
-  "author": "SQLRooms Contributors",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/sqlrooms/sqlrooms.git"
-  },
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "access": "public"
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
   },
   "dependencies": {
     "@sqlrooms/ai-config": "workspace:*",
@@ -39,11 +43,7 @@
     "react": ">=18",
     "react-dom": ">=18"
   },
-  "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+  "publishConfig": {
+    "access": "public"
   }
 }

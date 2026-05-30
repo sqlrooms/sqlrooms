@@ -121,22 +121,25 @@ const FilterList: React.FC<FilterListProps> = ({
 
   return (
     <>
-      {[...filtersByIndex].reverse().map(({filter, idx}) => (
-        <FilterPanel
-          key={`${filter.id}-${idx}`}
-          idx={idx}
-          filters={filters}
-          filter={filter}
-          datasets={datasets}
-          layers={layers}
-          isAnyFilterAnimating={isAnyFilterAnimating}
-          removeFilter={filterPanelProps[filter.id]?.removeFilter}
-          setFilterView={filterPanelProps[filter.id]?.setFilterView}
-          toggleAnimation={filterPanelProps[filter.id]?.toggleAnimation}
-          toggleFilterFeature={filterPanelProps[filter.id]?.toggleFilterFeature}
-          {...keplerActions.visStateActions}
-        />
-      ))}
+      {[...filtersByIndex].reverse().map(({filter, idx}) => {
+        const callbacks = filterPanelProps[filter.id];
+        return (
+          <FilterPanel
+            key={`${filter.id}-${idx}`}
+            idx={idx}
+            filters={filters}
+            filter={filter}
+            datasets={datasets}
+            layers={layers}
+            isAnyFilterAnimating={isAnyFilterAnimating}
+            {...keplerActions.visStateActions}
+            removeFilter={() => callbacks?.removeFilter?.()}
+            enlargeFilter={() => callbacks?.setFilterView?.('')}
+            toggleAnimation={() => callbacks?.toggleAnimation?.()}
+            toggleFilterFeature={() => callbacks?.toggleFilterFeature?.()}
+          />
+        );
+      })}
     </>
   );
 };

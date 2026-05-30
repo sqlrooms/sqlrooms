@@ -3,13 +3,13 @@ import {Spec} from '@sqlrooms/mosaic';
 const backgroundColor = '#f5d9a6';
 const foregroundColor = '#e67f5f';
 
-export interface ChartConfig {
+export interface FilterChartItem {
   id: string;
   title: string;
   spec: Spec;
 }
 
-export const magChartConfig: ChartConfig = {
+export const magChartConfig: FilterChartItem = {
   id: 'magnitude',
   title: 'Distribution by Magnitude',
   spec: {
@@ -42,7 +42,7 @@ export const magChartConfig: ChartConfig = {
   } as Spec,
 };
 
-export const timeChartConfig: ChartConfig = {
+export const timeChartConfig: FilterChartItem = {
   id: 'timeline',
   title: 'Temporal Frequency',
   spec: {
@@ -76,7 +76,7 @@ export const timeChartConfig: ChartConfig = {
   } as Spec,
 };
 
-export const depthChartConfig: ChartConfig = {
+export const depthChartConfig: FilterChartItem = {
   id: 'depth',
   title: 'Depth vs Magnitude',
   spec: {
@@ -104,7 +104,7 @@ export const depthChartConfig: ChartConfig = {
   } as Spec,
 };
 
-export const defaultChartConfigs: ChartConfig[] = [
+export const defaultChartConfigs: FilterChartItem[] = [
   magChartConfig,
   timeChartConfig,
   depthChartConfig,

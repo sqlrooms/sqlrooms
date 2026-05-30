@@ -1,17 +1,19 @@
 {
   "name": "canvas-example",
-  "private": true,
   "version": "0.24.14",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
@@ -29,6 +31,6 @@
     "@vitejs/plugin-react": "^5.0.3",
     "tailwindcss": "^4.1.18",
     "typescript": "5.9.2",
-    "vite": "^7.1.9"
+    "vite": "^8.0.5"
   }
 }

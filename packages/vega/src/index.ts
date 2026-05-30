@@ -16,11 +16,20 @@ export type {SignalListenerHandler, SignalValue} from 'vega';
 
 export {
   createVegaChartTool,
+  createSqlValidator,
   VegaChartToolParameters,
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
 
 export type {VegaChartToolOptions, VegaChartToolOutput} from './VegaChartTool';
+export {
+  createChartImageForMarkdownTool,
+  ChartImageForMarkdownToolParameters,
+} from './ChartImageForMarkdownTool';
+export type {
+  ChartImageForMarkdownToolOutput,
+  ChartImageForMarkdownToolParameters as ChartImageForMarkdownToolParametersType,
+} from './ChartImageForMarkdownTool';
 
 /**
  * Composable Vega-Lite chart component with editing capabilities.

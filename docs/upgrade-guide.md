@@ -10,6 +10,251 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
+
+The concept of "sheets" has been replaced with "artifacts" to better represent the variety of content types (app builders, charts, maps, etc.) that can be created and managed.
+
+#### API Changes
+
+**Store namespace:**
+
+- `state.sheets` → `state.artifacts`
+- `createSheetsSlice` → `createArtifactsSlice`
+- `SheetsSlice` → `ArtifactsSlice`
+
+**Component renames:**
+
+- `Sheets` → `Artifacts`
+- `SheetsTabs` → `ArtifactTabs`
+- `SheetsPanel` → `ArtifactsPanel`
+
+**Type renames:**
+
+- `Sheet` → `Artifact`
+- `SheetType` → `ArtifactType`
+
+#### Migration Example
+
+Before:
+
+```tsx
+import {createSheetsSlice, SheetsSlice} from '@sqlrooms/sheets';
+
+type RoomState = SheetsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createSheetsSlice()(set, get, store),
+}));
+
+const sheets = useRoomStore((state) => state.sheets.items);
+```
+
+After:
+
+```tsx
+import {createArtifactsSlice, ArtifactsSlice} from '@sqlrooms/artifacts';
+
+type RoomState = ArtifactsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createArtifactsSlice()(set, get, store),
+}));
+
+const artifacts = useRoomStore((state) => state.artifacts.items);
+```
+
+### `@sqlrooms/kepler`: map tabs moved to `@sqlrooms/artifacts` (breaking)
+
+Kepler no longer owns host-level tab selection. If your app supports multiple
+user-managed maps, model each map as an artifact and let `ArtifactTabs` own the
+selected tab, ordering, close/reopen, rename, and delete lifecycle.
+
+#### API Changes
+
+- `KeplerSliceConfig.currentMapId` was removed.
+- Legacy Kepler tab state such as `openTabs` should move to layout/artifact tab
+  state.
+- `state.kepler.getCurrentMap()` and `state.kepler.setCurrentMapId(...)` were
+  removed. Pass explicit map ids to Kepler APIs instead.
+- `KeplerMapContainer`, `KeplerPlotContainer`, `KeplerSidePanels`, and Kepler
+  slice actions should receive a `mapId` derived from the artifact panel or
+  current artifact selection.
+
+#### Migration Helper
+
+Use `migrateKeplerTabsToArtifacts` when loading persisted Kepler configs that
+still contain `maps`, `openTabs`, and `currentMapId`.
+
+```ts
+import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
+import {
+  KeplerSliceConfig,
+  migrateKeplerTabsToArtifacts,
+} from '@sqlrooms/kepler-config';
+
+const migrated = migrateKeplerTabsToArtifacts(rawKeplerConfig, {
+  artifactType: 'kepler-map',
+});
+
+const keplerConfig = KeplerSliceConfig.parse(migrated.keplerConfig);
+const artifactsConfig = ArtifactsSliceConfig.parse(migrated.artifactsConfig);
+```
+
+Then initialize the slices with the migrated configs and apply
+`migrated.hiddenArtifactIds` to the artifact tabs layout node if you need to
+preserve maps that were closed under the old Kepler tab model.
+
+#### Before
+
+```ts
+const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
+
+<KeplerMapContainer mapId={currentMap?.id ?? ''} />;
+```
+
+#### After
+
+```tsx
+const mapId = artifactIdFromPanelMeta;
+
+<KeplerMapContainer mapId={mapId} />;
+```
+
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
+
+#### Removed APIs
+
+- **`getPanelByPath`**: Path-based panel lookup function removed
+- **`useGetPanelByPath`**: Hook for path-based panel lookup removed
+- **`useGetPanelInfoByPath`**: Hook for path-based panel info removed
+- **`draggable` property**: Removed from split and tabs nodes
+- **`pathSegment` property**: Removed from split and tabs nodes
+
+### `@sqlrooms/duckdb-core`, `@sqlrooms/duckdb`: schema catalog loader and `createDbSchemaTrees()` input changed (breaking)
+
+`createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`, and the loader pair changed:
+
+- `loadSchemasWithTables()` → replaced by `loadSchemaCatalog()` (single metadata query, preserves empty schemas and empty `main` schemas of attached databases)
+- Filter API: instead of a single `(QualifiedTableName) => boolean` invoked with a fake `table === ''` for schemas, the new `loadSchemaCatalogFilter` receives a typed `SchemaCatalogFilterEntry` discriminated union (`{type: 'database' | 'schema' | 'table', ...}`)
+- `DuckDbSlice` accepts a new `loadSchemaCatalogFilter` prop alongside `loadTableSchemasFilter`. If you only set `loadTableSchemasFilter`, it is bridged for `entry.type === 'table'` only — schemas/databases fall through to `defaultLoadSchemaCatalogFilter`, so any reserved schemas/databases you previously hid via the table filter must move to a `loadSchemaCatalogFilter`.
+
+#### Signature change
+
+```ts
+// Before
+function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[];
+
+// After
+function createDbSchemaTrees(schemas: SchemaWithTables[]): DbSchemaNode[];
+
+type SchemaWithTables = {
+  database: string;
+  schema: string;
+  tables: DataTable[];
+};
+```
+
+`SchemaWithTables` is exported from both `@sqlrooms/duckdb-core` and `@sqlrooms/duckdb`.
+
+#### Before
+
+```ts
+import {createDbSchemaTrees, type DataTable} from '@sqlrooms/duckdb-core';
+
+const tables: DataTable[] = await loadTableSchemas(connector);
+const trees = createDbSchemaTrees(tables);
+```
+
+#### After
+
+Use the new `loadSchemaCatalog()` from `@sqlrooms/duckdb`, which returns `SchemaWithTables[]` directly:
+
+```ts
+import {createDbSchemaTrees} from '@sqlrooms/duckdb-core';
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const schemas = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
+});
+const trees = createDbSchemaTrees(schemas);
+```
+
+If you only have a flat `DataTable[]`, group it before passing to `createDbSchemaTrees`:
+
+```ts
+const grouped = new Map<string, SchemaWithTables>();
+for (const t of tables) {
+  const key = `${t.database}\x00${t.schema}`;
+  let g = grouped.get(key);
+  if (!g) {
+    g = {database: t.database ?? '', schema: t.schema, tables: []};
+    grouped.set(key, g);
+  }
+  g.tables.push(t);
+}
+const trees = createDbSchemaTrees(Array.from(grouped.values()));
+```
+
+### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
+
+The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
+
+#### Sub-agent composition
+
+The tool-as-agent pattern now uses `ToolLoopAgent` + `streamSubAgent`:
+
+```ts
+// Before (v5)
+const result = await streamText({
+  model,
+  system: instructions,
+  messages: [{role: 'user', content: prompt}],
+  tools,
+  maxSteps: 10,
+});
+
+// After (v6)
+import {ToolLoopAgent, stepCountIs} from 'ai';
+import {streamSubAgent} from '@sqlrooms/ai';
+
+const agent = new ToolLoopAgent({
+  model,
+  instructions,
+  tools,
+  stopWhen: stepCountIs(10),
+  temperature: 0,
+});
+const resultText = await streamSubAgent(agent, prompt, abortSignal);
+```
+
+#### `addToolResult` → `addToolOutput`
+
+```ts
+// Before
+addToolResult({toolCallId, result: {...}});
+
+// After — note: `tool` is a new required field in v6
+addToolOutput({tool: toolName, toolCallId, output: {...}});
+```
+
+#### `ToolRendererProps` new states
+
+Tool renderers may now receive three additional states for approval workflows: `approval-requested`, `approval-responded`, and `output-denied`. Update any exhaustive switch/if-else on `state` in custom renderers.
+
+#### Remote transport
+
+If you use `createRemoteChatTransportFactory`, your server-side route must migrate from `streamText` to `ToolLoopAgent` + `createAgentUIStreamResponse`. The transport now sends `instructions`, `maxSteps`, and `temperature` in the request body.
+
+> **Note:** The [`ai-nextjs` example](https://github.com/sqlrooms/sqlrooms/blob/main/examples/ai-nextjs/src/app/api/chat/route.ts) shows a reference implementation that intentionally ignores these client-supplied fields and uses server-controlled defaults for security. Production endpoints should decide whether to trust client-supplied values for `instructions`, `maxSteps`, and `temperature` based on their security model.
+
 ### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
 
 `createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
@@ -124,7 +369,7 @@ const myTool = tool({
     processed: text,
   }),
   // optional: control what the LLM sees (defaults to full JSON)
-  toModelOutput: (output) => ({type: 'text', value: output.details}),
+  toModelOutput: ({output}) => ({type: 'text', value: output.details}),
 });
 // renderer is registered separately — see toolRenderers below
 ```
@@ -290,11 +535,15 @@ result.pipeThrough(
 
 #### After
 
-Remove the `onChunk` handler. The AI SDK's `toUIMessageStream()` now embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
+Remove the `onChunk` handler. `createAgentUIStreamResponse` embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
 
 ```ts
-// app/api/chat/route.ts
-writer.merge(result.toUIMessageStream({originalMessages: messages}));
+// chatTransport.ts — inside the local transport factory
+return createAgentUIStreamResponse({
+  agent,
+  uiMessages: sanitizeMessagesForLLM(fixIncompleteToolCalls(messagesCopy)),
+  abortSignal,
+});
 ```
 
 **Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.
@@ -304,6 +553,223 @@ writer.merge(result.toUIMessageStream({originalMessages: messages}));
 - `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
+
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles all layout rendering.
+
+**Limited automatic migration:** The Zod schema uses `z.preprocess` to detect and convert **only** legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays.
+
+**Manual migration required for:**
+
+- The outer `{ type: 'mosaic', nodes: ... }` wrapper (must be removed)
+- N-ary `splitPercentages` arrays on nodes that already use `children` arrays (must be converted to per-child `defaultSize`)
+- Any other v1 layout formats not in binary tree shape
+
+#### Layout config: remove the outer wrapper
+
+The `{ type: 'mosaic', nodes: ... }` wrapper and `LayoutTypes` enum are no longer needed.
+
+##### Before
+
+```ts
+import {LayoutTypes} from '@sqlrooms/layout-config';
+
+const layout = {
+  type: LayoutTypes.enum.mosaic,
+  nodes: {
+    type: 'split',
+    direction: 'row',
+    children: ['data', 'main'],
+    splitPercentages: [30, 70],
+  },
+};
+```
+
+##### After
+
+```ts
+import {LayoutConfig} from '@sqlrooms/layout-config';
+
+const layout: LayoutConfig = {
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
+};
+```
+
+#### `splitPercentages` replaced by per-node sizing
+
+`splitPercentages` and `savedPercentages` on split nodes have been removed. Sizing is now specified on individual child nodes via `defaultSize`, `minSize`, `maxSize`, `collapsedSize`, and `collapsible`.
+
+##### Before
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: ['sidebar', 'main'],
+  splitPercentages: [25, 75],
+}
+```
+
+##### After
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'sidebar', defaultSize: '25%', minSize: '150px'},
+    'main',
+  ],
+}
+```
+
+Size values accept CSS units (`'200px'`, `'25%'`, `'1rem'`). A plain string without a unit suffix is treated as a percentage.
+
+#### New `type: 'panel'` leaf node
+
+A new `panel` node type allows specifying sizing constraints on individual panels:
+
+```ts
+{
+  type: 'panel',
+  id: 'sidebar',
+  defaultSize: '25%',
+  minSize: '150px',
+  maxSize: '50%',
+  collapsedSize: '0px',
+  collapsible: true,
+}
+```
+
+Plain string keys (e.g. `'main'`) still work as leaf nodes without sizing constraints.
+
+#### Type renames
+
+All `MosaicLayout*` types have been renamed to `Layout*`. The old names are still exported as deprecated aliases.
+
+| Old name                      | New name                |
+| ----------------------------- | ----------------------- |
+| `MosaicLayoutConfig`          | `LayoutConfig`          |
+| `MosaicLayoutNode`            | `LayoutNode`            |
+| `MosaicLayoutSplitNode`       | `LayoutSplitNode`       |
+| `MosaicLayoutTabsNode`        | `LayoutTabsNode`        |
+| `MosaicLayoutMosaicNode`      | `LayoutMosaicNode`      |
+| `MosaicLayoutParent`          | `LayoutSplitNode`       |
+| `MosaicLayoutDirection`       | `LayoutDirection`       |
+| `MosaicLayoutNodeKey`         | `LayoutNodeKey`         |
+| `isMosaicLayoutParent()`      | `isLayoutSplitNode()`   |
+| `isMosaicLayoutSplitNode()`   | `isLayoutSplitNode()`   |
+| `isMosaicLayoutTabsNode()`    | `isLayoutTabsNode()`    |
+| `isMosaicLayoutMosaicNode()`  | `isLayoutMosaicNode()`  |
+| `createDefaultMosaicLayout()` | `createDefaultLayout()` |
+| `DEFAULT_MOSAIC_LAYOUT`       | _(removed)_             |
+| `LayoutTypes`                 | _(removed)_             |
+
+Deprecated helper renames in `@sqlrooms/layout`:
+
+| Old name                       | New name                  |
+| ------------------------------ | ------------------------- |
+| `makeMosaicStack`              | `makeLayoutStack`         |
+| `visitMosaicLeafNodes`         | `visitLayoutLeafNodes`    |
+| `getVisibleMosaicLayoutPanels` | `getVisibleLayoutPanels`  |
+| `findMosaicNodePathByKey`      | `findLayoutNodePathByKey` |
+| `removeMosaicNodeByKey`        | `removeLayoutNodeByKey`   |
+
+#### Panel `placement` is deprecated
+
+The `placement` property on panel info (`'sidebar'`, `'main'`, etc.) is deprecated and no longer used. Panel location is now determined entirely by the layout tree structure, not by a property on the panel definition.
+
+##### Before
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel, placement: 'sidebar'},
+}
+```
+
+##### After
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel},
+}
+```
+
+Panel location is controlled by the layout configuration structure (e.g., which `split`, `tabs`, or `panel` node references the panel key).
+
+#### New `LayoutRenderer` component
+
+`LayoutRenderer` is the new top-level renderer that handles all node types (`split`, `tabs`, `mosaic`, `panel`, and string leaves). `MosaicLayout` is still available for rendering mosaic-only sub-trees.
+
+#### Render callbacks API
+
+`createLayoutSlice` now accepts `renderPanel` and `renderTabStrip` callbacks for custom rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
+  },
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to use default
+  },
+  renderTabStrip: (context) => {
+    // Return custom tab strip JSX or undefined for default
+  },
+});
+```
+
+#### Panel padding removed from `LeafLayoutPanel` (breaking)
+
+`LeafLayoutPanel` no longer applies `p-2` padding by default. Panel components must now add their own padding.
+
+##### Before
+
+Panel content inherited `p-2` padding from `LeafLayoutPanel`:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div>My content</div>;
+};
+```
+
+##### After
+
+Add `p-2` to your panel component:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div className="p-2">My content</div>;
+};
+```
+
+#### Area-based panel management
+
+Named `tabs` nodes (with an `id`) act as areas with new management methods:
+
+```ts
+state.layout.setActivePanel(areaId, panelId);
+state.layout.addPanelToArea(areaId, panelId);
+state.layout.removePanelFromArea(areaId, panelId);
+state.layout.setAreaCollapsed(areaId, collapsed);
+state.layout.toggleAreaCollapsed(areaId);
+state.layout.getAreaPanels(areaId);
+state.layout.getActivePanel(areaId);
+state.layout.isAreaCollapsed(areaId);
+```
+
+#### `react-mosaic-component` removed
+
+`react-mosaic-component` has been removed and replaced with `react-resizable-panels` for all layout rendering. The layout tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`). Binary tree layouts are migrated automatically via `z.preprocess`, but other formats require manual migration (see above).
 
 ## 0.28.0
 
@@ -512,10 +978,9 @@ function MyComponent() {
 
 ```tsx
 import {Query, useMosaicClient} from '@sqlrooms/mosaic';
-import {Table} from 'apache-arrow';
 
 function MapView() {
-  const {data, isLoading, client} = useMosaicClient<Table>({
+  const {data, isLoading, client} = useMosaicClient({
     selectionName: 'brush',
     query: (filter: any) => {
       return Query.from('earthquakes')

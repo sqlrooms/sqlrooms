@@ -6,6 +6,9 @@ import wasm from 'vite-plugin-wasm';
 
 export default defineConfig({
   plugins: [react(), topLevelAwait(), wasm(), tailwindcss()],
+  build: {
+    target: 'esnext',
+  },
   server: {
     port: 4273,
   },

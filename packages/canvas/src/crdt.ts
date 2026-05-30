@@ -7,7 +7,7 @@ import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
  */
 export const canvasMirrorSchema = schema.LoroMap({
   config: schema.LoroMap({
-    sheets: schema.LoroList(
+    artifacts: schema.LoroList(
       schema.LoroMap({
         id: schema.String(),
         nodes: schema.LoroList(
@@ -27,7 +27,7 @@ export const canvasMirrorSchema = schema.LoroMap({
           // viewport is kept local (unsynced)
         }),
       }),
-      (sheet) => sheet.id,
+      (artifact) => artifact.id,
     ),
   }),
 });
@@ -39,7 +39,7 @@ export type CanvasMirrorSchema = typeof canvasMirrorSchema;
  */
 export const canvasMirrorInitialState = {
   config: {
-    sheets: [],
+    artifacts: [],
   },
 };
 
@@ -54,25 +54,27 @@ export function createCanvasCrdtMirror<
     initialState: canvasMirrorInitialState,
     select: (state) => ({
       config: {
-        sheets: Object.values(state.canvas.config.sheets).map((sheet) => ({
-          id: sheet.id,
-          nodes: Object.values(sheet.nodes),
-          meta: {
-            nodeOrder: sheet.meta.nodeOrder,
-          },
-        })),
+        artifacts: Object.values(state.canvas.config.artifacts).map(
+          (artifact) => ({
+            id: artifact.id,
+            nodes: Object.values(artifact.nodes),
+            meta: {
+              nodeOrder: artifact.meta.nodeOrder,
+            },
+          }),
+        ),
       },
     }),
     apply: (value, set, get) => {
       if (!value?.config) return;
       const currentConfig = get().canvas.config;
 
-      const newSheets: Record<string, any> = {};
-      for (const sheetValue of value.config.sheets || []) {
-        const localSheet = currentConfig.sheets[sheetValue.id];
-        newSheets[sheetValue.id] = {
-          id: sheetValue.id,
-          nodes: (sheetValue.nodes || []).reduce(
+      const newArtifacts: Record<string, any> = {};
+      for (const artifactValue of value.config.artifacts || []) {
+        const localArtifact = currentConfig.artifacts[artifactValue.id];
+        newArtifacts[artifactValue.id] = {
+          id: artifactValue.id,
+          nodes: (artifactValue.nodes || []).reduce(
             (acc: Record<string, any>, node: any) => {
               acc[node.id] = node;
               return acc;
@@ -80,9 +82,9 @@ export function createCanvasCrdtMirror<
             {},
           ),
           meta: {
-            ...sheetValue.meta,
+            ...artifactValue.meta,
             // Keep local viewport or use default
-            viewport: localSheet?.meta.viewport ?? {x: 0, y: 0, zoom: 1},
+            viewport: localArtifact?.meta.viewport ?? {x: 0, y: 0, zoom: 1},
           },
         };
       }
@@ -93,7 +95,7 @@ export function createCanvasCrdtMirror<
           ...state.canvas,
           config: CanvasSliceConfig.parse({
             ...currentConfig,
-            sheets: newSheets,
+            artifacts: newArtifacts,
           }),
         },
       }));

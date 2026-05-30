@@ -7,32 +7,37 @@ import {
   LayerLegendContentFactory,
   LayerLegendHeaderFactory,
 } from '@kepler.gl/components';
-import {MapLegendProps} from '@kepler.gl/components/dist/map/map-legend';
+import {
+  MapLegendIcons,
+  MapLegendProps,
+} from '@kepler.gl/components/dist/map/map-legend';
 import {DIMENSIONS} from '@kepler.gl/constants';
 import {Layer} from '@kepler.gl/layers';
 import {Button} from '@sqlrooms/ui';
 import {
-  ArrowDown,
-  ArrowRight,
   ChevronDownIcon,
   ChevronRightIcon,
   EyeIcon,
   EyeOffIcon,
   XIcon,
 } from 'lucide-react';
-import {
-  MouseEventHandler,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-} from 'react';
+import {useCallback, useContext, useRef, useState} from 'react';
+import type {Context, MouseEventHandler} from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
+import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 const defaultActionIcons = {
-  expanded: ArrowDown,
-  collapsed: ArrowRight,
+  expanded: ChevronDownIcon as unknown as MapLegendIcons['expanded'],
+  collapsed: ChevronRightIcon as unknown as MapLegendIcons['collapsed'],
+} satisfies MapLegendIcons;
+
+type KeplerGlContextValue = {
+  selector: (state: any) => any;
+  id: string;
 };
+
+const keplerGlContext =
+  KeplerGlContext as unknown as Context<KeplerGlContextValue>;
 
 CustomMapLegendFactory.deps = [
   LayerLegendHeaderFactory,
@@ -43,21 +48,43 @@ export function CustomMapLegendFactory(
   LayerLegendHeader: ReturnType<typeof LayerLegendHeaderFactory>,
   LayerLegendContent: ReturnType<typeof LayerLegendContentFactory>,
 ) {
-  const MapLegend: React.FC<MapLegendProps> = ({
+  const MapLegend: React.FC<
+    MapLegendProps & {mapIndex?: number; onClose?: () => void}
+  > = ({
     layers = [],
     width,
     isExport,
+    mapIndex: mapIndexProp,
+    onClose,
     ...restProps
   }) => {
     const containerW = width || DIMENSIONS.mapControl.width;
-    const mapId = useContext(KeplerGlContext).id;
+    const mapId = useContext(keplerGlContext).id;
+    const splitMapIndex = useContext(SplitMapIndexContext);
+    const mapIndex = mapIndexProp ?? splitMapIndex;
     const dispatchAction = useStoreWithKepler(
       (state) => state.kepler.dispatchAction,
     );
+    const splitMaps = useStoreWithKepler(
+      (state) => state.kepler.map[mapId]?.visState?.splitMaps,
+    );
     const handleClose = (evt: React.MouseEvent<HTMLButtonElement>) => {
       evt.stopPropagation();
-      dispatchAction(mapId, toggleMapControl('mapLegend', 0));
+      if (onClose) {
+        onClose();
+      } else {
+        dispatchAction(mapId, toggleMapControl('mapLegend', 0));
+      }
     };
+
+    const isSplit = splitMaps && splitMaps.length > 1;
+    const panelLayers =
+      isSplit && mapIndex != null ? splitMaps[mapIndex]?.layers : undefined;
+
+    const visibleLayers = layers.filter(
+      (layer) =>
+        layer.config.isVisible && (!panelLayers || panelLayers[layer.id]),
+    );
 
     return (
       <div
@@ -79,19 +106,17 @@ export function CustomMapLegendFactory(
             </div>
           )}
           <div className="flex w-full flex-1 flex-col items-center">
-            {layers
-              .filter((layer) => layer.config.isVisible)
-              .map((layer, index) => {
-                return (
-                  <LayerLegendItem
-                    key={index}
-                    layer={layer}
-                    containerW={containerW}
-                    isExport={isExport}
-                    {...restProps}
-                  />
-                );
-              })}
+            {visibleLayers.map((layer, index) => {
+              return (
+                <LayerLegendItem
+                  key={index}
+                  layer={layer}
+                  containerW={containerW}
+                  isExport={isExport}
+                  {...restProps}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
@@ -130,7 +155,7 @@ export function CustomMapLegendFactory(
       }
     };
 
-    const mapId = useContext(KeplerGlContext).id;
+    const mapId = useContext(keplerGlContext).id;
     const containerRef = useRef<HTMLDivElement>(null);
 
     if (!layer.isValidToSave() || layer.config.hidden) {
@@ -146,7 +171,6 @@ export function CustomMapLegendFactory(
         ref={containerRef}
         className="border-muted flex w-full flex-col items-center border-b"
       >
-        <style>{`.legend--layer__item .panel--header__action { display: none !important; }`}</style>
         <div
           className="flex w-full flex-row items-center gap-2"
           onClick={handleToggleExpanded}
@@ -172,7 +196,24 @@ export function CustomMapLegendFactory(
         </div>
 
         {isExpanded && (
-          <div className="w-full px-[8px] py-[5px] text-xs">
+          <div className="legend-content-wrapper w-full px-[8px] py-[5px] text-xs">
+            <style>{`
+              .legend-content-wrapper .legend--layer_size-title-row { display: flex; align-items: center; gap: 4px; }
+              .legend-content-wrapper .panel--header__action {
+                margin-left: 0;
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 6px;
+                cursor: pointer;
+              }
+              .legend-content-wrapper .panel--header__action:hover {
+                background-color: hsl(var(--accent));
+                color: hsl(var(--accent-foreground));
+              }
+            `}</style>
             <LayerLegendContent
               containerW={containerW}
               layer={layer}

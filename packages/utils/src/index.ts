@@ -11,12 +11,14 @@ export {
   NUMBER_FORMAT,
   formatNumber,
   formatDateTime,
+  formatDateTimeSimple,
   formatDate,
   formatTimeOfDay,
   formatTimeRelative,
   formatTimestampForFilename,
-  getErrorMessageForDisplay,
-} from './helpers';
+  formatShortDuration,
+} from './time';
+export {getErrorMessageForDisplay} from './errors';
 
 export {isMacOS} from './browser';
 

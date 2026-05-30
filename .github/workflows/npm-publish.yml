@@ -34,10 +34,17 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
     # only run publish if run manually or if commit starts with one of "feat|fix"
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat:') || startsWith(github.event.head_commit.message, 'fix:')}}
     steps:
@@ -68,13 +75,18 @@ jobs:
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
 
+      - name: Cache for Turbo
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-turbo-
+
       - name: Configure NPM
         run: |
-          # Configure npm for the organization scope
           npm config set @sqlrooms:registry https://registry.npmjs.org/
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-          # Ensure packages are published as public
           echo "access=public" >> .npmrc
+          echo "provenance=true" >> .npmrc
 
       - name: Build packages
         run: pnpm build
@@ -90,7 +102,7 @@ jobs:
           else
             cmd="prerelease"
           fi
-          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push
+          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push --no-granular-pathspec
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
@@ -101,9 +113,9 @@ jobs:
         run: |
           version_input=${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
           if [ "$version_input" = "auto" ]; then
-            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push
+            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push --no-granular-pathspec
           else
-            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push
+            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push --no-granular-pathspec
           fi
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -119,8 +131,6 @@ jobs:
       - name: Push version commit and tags
         if: ${{ success() }}
         # CI already validated quality gates earlier; avoid local husky pre-push checks here.
-        env:
-          HUSKY: 0
         run: |
           git push origin HEAD:${{ github.ref_name }}
           git push origin --tags

@@ -29,6 +29,7 @@ export interface AiModelsSettingsProps {
   showCustomModels?: boolean;
   allowEditProviderModels?: boolean;
   allowCustomModels?: boolean;
+  showTitle?: boolean;
   className?: string;
 }
 
@@ -36,6 +37,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
   className = '',
   allowEditProviderModels = true,
   allowCustomModels = true,
+  showTitle = true,
 }) => {
   const aiConfig = useStoreWithAiSettings((s) => s.aiSettings.config);
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
@@ -271,10 +273,12 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="text-md flex items-center gap-2 pb-4 font-medium">
-        <Blocks className="h-4 w-4" />
-        Models
-      </label>
+      {showTitle && (
+        <label className="text-md flex items-center gap-2 pb-4 font-medium">
+          <Blocks className="h-4 w-4" />
+          Models
+        </label>
+      )}
 
       {/* Providers and their models */}
       <div className="w-full space-y-4">

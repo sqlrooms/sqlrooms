@@ -1,15 +1,22 @@
-import {cn, CopyButton} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {truncate} from '@sqlrooms/utils';
 import {BrainIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
 import Markdown, {Components} from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+import type {PluggableList} from 'unified';
+import {
+  createChatSearchRehypePlugin,
+  useOptionalChatSearch,
+} from './ChatSearch';
+import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
   content: string;
   isAnswer: boolean;
+  searchBlockId?: string;
   customMarkdownComponents?: Partial<Components>;
 };
 
@@ -24,13 +31,10 @@ const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
 
-const sanitizeThinkTags = (value: string): string =>
-  value.replace(COMPLETE_THINK_REGEX, '').replace(INCOMPLETE_THINK_REGEX, '');
-
 /**
  * Processes content and extracts think content in one pass
  */
-const processContent = (
+export const processAnalysisAnswerContent = (
   originalContent: string,
 ): {
   processedContent: string;
@@ -133,11 +137,9 @@ ThinkBlock.displayName = 'ThinkBlock';
 export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   props: AnalysisAnswerProps,
 ) {
-  const {content, isAnswer, customMarkdownComponents} = props;
+  const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
+  const search = useOptionalChatSearch();
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const copyableText = useMemo(() => sanitizeThinkTags(content), [content]);
-  const hasTextContent = copyableText.trim().length > 0;
-
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
       const newExpanded = new Set(prev);
@@ -152,9 +154,28 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 
   // Memoize content processing to avoid recalculation on every render
   const {processedContent, thinkContents} = useMemo(
-    () => processContent(content),
+    () => processAnalysisAnswerContent(content),
     [content],
   );
+
+  const searchMatches = useMemo(
+    () =>
+      searchBlockId ? (search?.getMatchesForBlock(searchBlockId) ?? []) : [],
+    [search, searchBlockId],
+  );
+  const rehypePlugins = useMemo<PluggableList>(() => {
+    const plugins: PluggableList = [rehypeRaw];
+    if (searchBlockId && searchMatches.length > 0) {
+      plugins.push(
+        createChatSearchRehypePlugin({
+          blockId: searchBlockId,
+          matches: searchMatches,
+          activeMatchId: search?.activeMatchId,
+        }),
+      );
+    }
+    return plugins;
+  }, [search?.activeMatchId, searchBlockId, searchMatches]);
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(
@@ -184,6 +205,15 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     },
     [thinkContents, expandedThink, toggleThinkExpansion],
   );
+  const markdownComponents = useMemo(
+    () =>
+      ({
+        table: markdownTableComponent,
+        'think-block': thinkBlockComponent,
+        ...customMarkdownComponents,
+      }) as Partial<Components>,
+    [customMarkdownComponents, thinkBlockComponent],
+  );
 
   return (
     <MessageContainer
@@ -191,16 +221,11 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       type={isAnswer ? 'answer' : 'thinking'}
       content={{content, isAnswer}}
     >
-      <div className="prose dark:prose-invert text-foreground max-w-none text-sm">
+      <div className="text-foreground prose dark:prose-invert max-w-none min-w-0 overflow-hidden text-sm [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:wrap-break-word [&_pre]:whitespace-pre-wrap [&_pre_code]:wrap-break-word [&_pre_code]:whitespace-pre-wrap">
         <Markdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={
-            {
-              'think-block': thinkBlockComponent,
-              ...customMarkdownComponents,
-            } as Partial<Components>
-          }
+          rehypePlugins={rehypePlugins}
+          components={markdownComponents}
         >
           {processedContent}
         </Markdown>

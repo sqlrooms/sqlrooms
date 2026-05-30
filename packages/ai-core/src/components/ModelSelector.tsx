@@ -127,11 +127,12 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   return (
     <div className={className}>
-      <Select value={currentSelectValue} onValueChange={handleModelChange}>
+      <Select
+        value={currentModelDetails ? currentSelectValue : ''}
+        onValueChange={handleModelChange}
+      >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select AI Model">
-            {currentModelDetails?.label ?? ''}
-          </SelectValue>
+          <SelectValue placeholder="Select model" />
         </SelectTrigger>
         <SelectContent>
           {Object.entries(modelsByProvider).map(

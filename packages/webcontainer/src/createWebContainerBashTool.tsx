@@ -59,14 +59,6 @@ export type WebContainerWriteFileToolOutput = {
   errorMessage?: string;
 };
 
-type ToolResultRendererProps = {
-  toolCallId: string;
-  input: Record<string, unknown>;
-  output: unknown;
-  state: ToolResultState;
-  errorText?: string;
-};
-
 export type WebContainerToolkitResult = {
   bash: Tool<WebContainerBashToolParameters, WebContainerBashToolOutput>;
   readFile: Tool<
@@ -78,7 +70,25 @@ export type WebContainerToolkitResult = {
     WebContainerWriteFileToolOutput
   >;
   tools: Record<string, Tool>;
-  toolRenderers: Record<string, ComponentType<ToolResultRendererProps>>;
+  toolRenderers: Record<string, ComponentType<ToolRendererProps>>;
+};
+
+type ToolCallState =
+  | 'input-streaming'
+  | 'input-available'
+  | 'output-available'
+  | 'output-error'
+  | 'approval-requested'
+  | 'approval-responded'
+  | 'output-denied';
+
+type ToolRendererProps = {
+  toolCallId: string;
+  input: unknown;
+  output: unknown;
+  state: ToolCallState;
+  errorText?: string;
+  approvalId?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -176,11 +186,11 @@ export function createWebContainerToolkit(
     writeFile,
     tools: {bash, readFile, writeFile},
     toolRenderers: {
-      bash: WebContainerBashToolResult as ComponentType<ToolResultRendererProps>,
+      bash: WebContainerBashToolResult as ComponentType<ToolRendererProps>,
       readFile:
-        WebContainerReadFileToolResult as ComponentType<ToolResultRendererProps>,
+        WebContainerReadFileToolResult as ComponentType<ToolRendererProps>,
       writeFile:
-        WebContainerWriteFileToolResult as ComponentType<ToolResultRendererProps>,
+        WebContainerWriteFileToolResult as ComponentType<ToolRendererProps>,
     },
   };
 }
@@ -201,11 +211,7 @@ export function createWebContainerBashTool(store: WebContainerStoreLike) {
 // Tool result renderers
 // ---------------------------------------------------------------------------
 
-type ToolResultState =
-  | 'input-streaming'
-  | 'input-available'
-  | 'output-available'
-  | 'output-error';
+type ToolResultState = ToolCallState;
 
 type WebContainerBashToolResultProps = {
   toolCallId: string;

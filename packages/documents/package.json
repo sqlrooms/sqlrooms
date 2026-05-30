@@ -1,0 +1,75 @@
+{
+  "name": "@sqlrooms/documents",
+  "version": "0.29.0-rc.6",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./crdt": {
+      "types": "./dist/crdt.d.ts",
+      "import": "./dist/crdt.js"
+    }
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "dependencies": {
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@sqlrooms/artifacts": "workspace:*",
+    "@sqlrooms/blocks": "workspace:*",
+    "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/crdt": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@tiptap/core": "^3.23.1",
+    "@tiptap/extension-link": "^3.23.1",
+    "@tiptap/extension-table": "^3.23.1",
+    "@tiptap/extension-table-cell": "^3.23.1",
+    "@tiptap/extension-table-header": "^3.23.1",
+    "@tiptap/extension-table-row": "^3.23.1",
+    "@tiptap/extension-task-item": "^3.23.1",
+    "@tiptap/extension-task-list": "^3.23.1",
+    "@tiptap/markdown": "^3.23.1",
+    "@tiptap/react": "^3.23.1",
+    "@tiptap/starter-kit": "^3.23.1",
+    "immer": "^11.0.1",
+    "loro-mirror": "^1.1.2",
+    "lucide-react": "^0.555.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.1.13",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "loro-crdt": "^1.10.3",
+    "ts-jest": "^29.4.4"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

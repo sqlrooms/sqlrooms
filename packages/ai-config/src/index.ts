@@ -7,8 +7,21 @@ export {
   AiSettingsSliceConfig,
 } from './AiSettingsSliceConfig';
 export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
+  getAiRunContextPrimaryItem,
+  getAiRunContextItems,
+  setAiRunContextPrimaryItem,
 } from './schema/AnalysisSessionSchema';
-export type {ToolUIPart, UIMessagePart} from './schema/UIMessageSchema';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+} from './schema/AnalysisSessionSchema';
+export type {
+  DynamicToolUIPart,
+  ToolUIPart,
+  UIMessagePart,
+} from './schema/UIMessageSchema';

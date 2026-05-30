@@ -236,6 +236,29 @@ function QualifiedTableOps() {
 }
 ```
 
+### Loading the Schema Catalog
+
+Use `loadSchemaCatalog()` when you need the database/schema/table hierarchy,
+including empty schemas and attached databases whose `main` schema has no
+tables yet. The catalog filter receives typed entries for databases, schemas,
+and tables, so schema visibility does not depend on fake table names.
+Related option and filter types are exported for callers that wrap these
+helpers in their own APIs.
+
+```ts
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const catalog = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
+});
+```
+
 ## Loading Data from Files
 
 ### Using Load Functions Directly

@@ -35,6 +35,7 @@ export type {
   KeplerFactoryRecipeMode,
 } from './components/KeplerInjector';
 export {KeplerMapContainer} from './components/KeplerMapContainer';
+export {SplitMapIndexContext} from './components/SplitMapIndexContext';
 export {KeplerPlotContainer} from './components/KeplerPlotContainer';
 export {KeplerProvider} from './components/KeplerProvider';
 export {KeplerS3Browser} from './components/KeplerS3Browser';
@@ -44,7 +45,12 @@ export {useKeplerStateActions} from './hooks/useKeplerStateActions';
 
 // Re-export from @sqlrooms/kepler-config
 // Values also export their corresponding types automatically (Zod pattern)
-export {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
+export {
+  KeplerMapSchema,
+  KeplerSliceConfig,
+  migrateKeplerTabsToArtifacts,
+} from '@sqlrooms/kepler-config';
+export type {KeplerTabsArtifactsMigrationOptions} from '@sqlrooms/kepler-config';
 
 export {CustomDndContextFactory} from './components/CustomDndContext';
 export {CustomFilterPanelHeaderFactory} from './components/CustomFilterPanelHeader';

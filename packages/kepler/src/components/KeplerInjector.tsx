@@ -7,6 +7,7 @@ import {
   FilterPanelHeaderFactory,
   flattenDeps,
   MapControlTooltipFactory,
+  MapDrawPanelFactory,
   MapLegendFactory,
   MapLegendPanelFactory,
   PanelTitleFactory,
@@ -17,6 +18,7 @@ import React, {PropsWithChildren} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
 import {CustomFilterPanelHeaderFactory} from './CustomFilterPanelHeader';
 import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
+import {CustomMapDrawPanelFactory} from './CustomMapDrawPanel';
 import {CustomMapLegendFactory} from './CustomMapLegend';
 import {CustomMapLegendPanelFactory} from './CustomMapLegendPanel';
 
@@ -44,6 +46,7 @@ const defaultRecipes: KeplerFactoryRecipe[] = [
   [MapLegendPanelFactory, CustomMapLegendPanelFactory],
   [MapLegendFactory, CustomMapLegendFactory],
   [MapControlTooltipFactory, CustomMapControlTooltipFactory],
+  [MapDrawPanelFactory, CustomMapDrawPanelFactory],
 ];
 
 let customRecipes: KeplerFactoryRecipe[] = [];
