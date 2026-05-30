@@ -4,6 +4,16 @@ export type RuntimeConfig = {
   llmProvider?: string;
   llmModel?: string;
   apiKey?: string;
+  loginTargets?: Array<{
+    id: string;
+    label: string;
+    providerId: string;
+    authMethodId: string;
+    description?: string;
+    experimental?: boolean;
+    hidden?: boolean;
+    priority?: number;
+  }>;
   aiProviders?: Record<
     string,
     {

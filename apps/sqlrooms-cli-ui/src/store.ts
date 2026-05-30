@@ -2,11 +2,14 @@ import {createAnthropic} from '@ai-sdk/anthropic';
 import {
   HttpAiAuthClient,
   AiConnectSliceState,
+  AiLoginTarget,
+  AiQuickLoginSliceState,
   AiSettingsSliceConfig,
   AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
   createAiConnectSlice,
+  createAiQuickLoginSlice,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
@@ -111,6 +114,7 @@ export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiConnectSliceState &
+  AiQuickLoginSliceState &
   AiSettingsSliceState &
   CellsSliceState &
   NotebookSliceState &
@@ -152,6 +156,8 @@ export const runtimeConfig = await fetchRuntimeConfig();
 type RuntimeAiProviders = NonNullable<typeof runtimeConfig.aiProviders>;
 const runtimeAiProviders = (runtimeConfig.aiProviders ||
   {}) as RuntimeAiProviders;
+const runtimeLoginTargets = (runtimeConfig.loginTargets ||
+  []) as AiLoginTarget[];
 const defaultProviderFromConfig =
   runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
 const defaultModelFromProvider =
@@ -398,13 +404,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           authClient: aiAuthClient,
         })(set, get, store),
 
+        ...createAiQuickLoginSlice({
+          loginTargets: runtimeLoginTargets,
+        })(set, get, store),
+
         ...(() => {
           const webContainerToolkit = createWebContainerToolkit(store);
           return createAiSlice({
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
-            getProviderRuntime: ({provider, modelId}) => {
+            getProviderRuntime: ({provider, modelId: _modelId}) => {
               const providerConfig = runtimeAiProviders[provider];
               const settingsProvider =
                 get().aiSettings.config.providers[provider];

@@ -28,6 +28,26 @@ else:
 DEFAULT_AUTH_PATH = _config_base / "auth.toml"
 
 
+DEFAULT_LOGIN_TARGETS = [
+    {
+        "id": "anthropic-subscription",
+        "label": "Anthropic (Claude Pro/Max)",
+        "providerId": "anthropic",
+        "authMethodId": "claude_pro",
+        "experimental": True,
+        "priority": 100,
+    },
+    {
+        "id": "openai-codex-subscription",
+        "label": "ChatGPT Plus/Pro (Codex Subscription)",
+        "providerId": "openai",
+        "authMethodId": "codex_browser",
+        "experimental": True,
+        "priority": 200,
+    },
+]
+
+
 def _read_toml(path: Path) -> dict[str, Any]:
     try:
         import tomllib  # type: ignore[attr-defined]
@@ -550,6 +570,40 @@ def build_runtime_ai_providers(
             safe_only=True,
         )
     return config.get("defaultProvider"), config.get("defaultModel"), providers
+
+
+def build_runtime_login_targets(
+    config_path: Path | None, auth_path: Path | None, api_base_url: str
+) -> list[dict[str, Any]]:
+    config = load_ai_settings_config(config_path)
+    auth_store = load_auth_store(auth_path)
+    providers = {}
+    for provider_id, provider in config["providers"].items():
+        providers[provider_id] = _browser_provider(
+            provider_id,
+            provider,
+            auth_store.get(provider_id),
+            api_base_url,
+            safe_only=True,
+        )
+
+    visible_targets: list[dict[str, Any]] = []
+    for target in DEFAULT_LOGIN_TARGETS:
+        provider = providers.get(target["providerId"])
+        if not provider:
+            continue
+        methods = provider.get("authMethods") or []
+        if not any(method.get("id") == target["authMethodId"] for method in methods):
+            continue
+        visible_targets.append(dict(target))
+
+    visible_targets.sort(
+        key=lambda item: (
+            int(item.get("priority") or 999999),
+            str(item.get("label") or ""),
+        )
+    )
+    return visible_targets
 
 
 def _extract_openai_account_id(tokens: dict[str, Any]) -> str | None:
@@ -1174,6 +1228,13 @@ class AiAuthManager:
         self, api_base_url: str
     ) -> tuple[str | None, str | None, dict[str, dict[str, Any]]]:
         return build_runtime_ai_providers(
+            self.config_path,
+            self.auth_path,
+            api_base_url,
+        )
+
+    def get_runtime_login_targets(self, api_base_url: str) -> list[dict[str, Any]]:
+        return build_runtime_login_targets(
             self.config_path,
             self.auth_path,
             api_base_url,

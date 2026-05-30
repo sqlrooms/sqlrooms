@@ -25,7 +25,7 @@ export type AiConnectSliceState = {
     error: string | null;
     apiKeyDraft: string;
     codeDraft: string;
-    openConnect: (providerId?: string) => void;
+    openConnect: (providerId?: string, methodId?: string) => void;
     closeConnect: () => void;
     selectProvider: (providerId: string) => void;
     selectMethod: (methodId: string) => void;
@@ -88,7 +88,7 @@ export function createAiConnectSlice(
       apiKeyDraft: '',
       codeDraft: '',
 
-      openConnect: (providerId) => {
+      openConnect: (providerId, methodId) => {
         set((state) =>
           produce(state, (draft) => {
             const provider = providerId
@@ -98,6 +98,7 @@ export function createAiConnectSlice(
             draft.aiConnect.currentProviderId =
               providerId || draft.aiConnect.currentProviderId;
             draft.aiConnect.currentMethodId =
+              methodId ||
               provider?.status?.selectedAuthMethod ||
               provider?.defaultAuthMethod ||
               provider?.authMethods?.[0]?.id;

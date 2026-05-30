@@ -29,6 +29,10 @@ def test_api_config(server):
     assert "dbPath" in data
     assert "dbBridge" in data
     assert "aiProviders" in data
+    assert "loginTargets" in data
+    assert len(data["loginTargets"]) == 2
+    assert data["loginTargets"][0]["providerId"] == "anthropic"
+    assert data["loginTargets"][1]["providerId"] == "openai"
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
@@ -61,6 +65,7 @@ def test_api_config_with_ai_provider_metadata(tmp_path):
     assert data["llmProvider"] == "openai"
     assert data["llmModel"] == "gpt-5"
     assert "openai" in data["aiProviders"]
+    assert data["loginTargets"] == []
 
 
 def test_ai_settings_routes_and_manual_auth(tmp_path):

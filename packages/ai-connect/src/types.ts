@@ -123,3 +123,16 @@ export type AiProviderRuntimeResolver = (args: {
   modelId: string;
   baseUrl?: string;
 }) => Promise<ProviderRuntime | undefined> | ProviderRuntime | undefined;
+
+export type AiLoginTarget = {
+  id: string;
+  label: string;
+  providerId: string;
+  authMethodId: string;
+  description?: string;
+  experimental?: boolean;
+  hidden?: boolean;
+  priority?: number;
+};
+
+export type AiQuickLoginMode = 'login';

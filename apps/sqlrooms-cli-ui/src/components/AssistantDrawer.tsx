@@ -1,9 +1,12 @@
 import {
   AiConnectDialog,
+  AiQuickLoginButton,
+  AiQuickLoginDialog,
   AiProviderConnectButton,
   AiProviderStatusList,
   AiSettingsPanel,
   Chat,
+  resolveLoginTargetsFromProviders,
 } from '@sqlrooms/ai';
 import {
   Button,
@@ -49,6 +52,13 @@ export const AssistantDrawer: React.FC<{
       s.aiSettings.config.providers[providerId]?.status?.hasCredentials,
     );
   });
+  const quickLoginTargets = useRoomStore((s) => s.aiQuickLogin.loginTargets);
+  const aiProviders = useRoomStore((s) => s.aiSettings.config.providers);
+  const quickLoginTargetCount = React.useMemo(
+    () =>
+      resolveLoginTargetsFromProviders(aiProviders, quickLoginTargets).length,
+    [aiProviders, quickLoginTargets],
+  );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const settingsPanelOpen = useDisclosure();
   const isAssistantOpen = useRoomStore((state) => state.isAssistantOpen);
@@ -80,76 +90,86 @@ export const AssistantDrawer: React.FC<{
             </DrawerClose>
           </DrawerHeader>
           <Chat.Root>
+            <AiQuickLoginDialog />
             <AiConnectDialog />
             <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-4">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <Chat.Sessions className="w-full" />
                 {currentSessionId && (
-                  <Dialog
-                    open={settingsPanelOpen.isOpen}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        settingsPanelOpen.onOpen();
-                      } else {
-                        settingsPanelOpen.onClose();
-                      }
-                    }}
-                  >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="hover:bg-accent flex items-center justify-center transition-colors"
-                        title="Configuration"
-                        size="sm"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="flex h-[80vh] w-[90vw] max-w-3xl flex-col overflow-hidden">
-                      <DialogHeader>
-                        <DialogTitle>AI Assistant Settings</DialogTitle>
-                      </DialogHeader>
-                      <Tabs
-                        defaultValue="connect"
-                        className="flex min-h-0 flex-1 flex-col"
-                      >
-                        <TabsList className="grid w-full shrink-0 grid-cols-4">
-                          <TabsTrigger value="connect">Connect</TabsTrigger>
-                          <TabsTrigger value="providers">Providers</TabsTrigger>
-                          <TabsTrigger value="models">Models</TabsTrigger>
-                          <TabsTrigger value="parameters">
-                            Parameters
-                          </TabsTrigger>
-                        </TabsList>
-                        <TabsContent
-                          value="connect"
-                          className="flex-1 overflow-y-auto"
+                  <div className="flex items-center gap-2">
+                    {quickLoginTargetCount > 0 && (
+                      <AiQuickLoginButton variant="outline" size="sm">
+                        Login
+                      </AiQuickLoginButton>
+                    )}
+                    <Dialog
+                      open={settingsPanelOpen.isOpen}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          settingsPanelOpen.onOpen();
+                        } else {
+                          settingsPanelOpen.onClose();
+                        }
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="hover:bg-accent flex items-center justify-center transition-colors"
+                          title="Configuration"
+                          size="sm"
                         >
-                          <AiProviderStatusList />
-                        </TabsContent>
-                        <TabsContent
-                          value="providers"
-                          className="flex-1 overflow-y-auto"
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="flex h-[80vh] w-[90vw] max-w-3xl flex-col overflow-hidden">
+                        <DialogHeader>
+                          <DialogTitle>AI Assistant Settings</DialogTitle>
+                        </DialogHeader>
+                        <Tabs
+                          defaultValue="connect"
+                          className="flex min-h-0 flex-1 flex-col"
                         >
-                          <AiSettingsPanel.ProvidersSettings
-                            apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
-                          />
-                        </TabsContent>
-                        <TabsContent
-                          value="models"
-                          className="flex-1 overflow-y-auto"
-                        >
-                          <AiSettingsPanel.ModelsSettings />
-                        </TabsContent>
-                        <TabsContent
-                          value="parameters"
-                          className="flex-1 overflow-y-auto"
-                        >
-                          <AiSettingsPanel.ModelParametersSettings />
-                        </TabsContent>
-                      </Tabs>
-                    </DialogContent>
-                  </Dialog>
+                          <TabsList className="grid w-full shrink-0 grid-cols-4">
+                            <TabsTrigger value="connect">Connect</TabsTrigger>
+                            <TabsTrigger value="providers">
+                              Providers
+                            </TabsTrigger>
+                            <TabsTrigger value="models">Models</TabsTrigger>
+                            <TabsTrigger value="parameters">
+                              Parameters
+                            </TabsTrigger>
+                          </TabsList>
+                          <TabsContent
+                            value="connect"
+                            className="flex-1 overflow-y-auto"
+                          >
+                            <AiProviderStatusList />
+                          </TabsContent>
+                          <TabsContent
+                            value="providers"
+                            className="flex-1 overflow-y-auto"
+                          >
+                            <AiSettingsPanel.ProvidersSettings
+                              apiBaseUrl={runtimeConfig.apiBaseUrl || ''}
+                            />
+                          </TabsContent>
+                          <TabsContent
+                            value="models"
+                            className="flex-1 overflow-y-auto"
+                          >
+                            <AiSettingsPanel.ModelsSettings />
+                          </TabsContent>
+                          <TabsContent
+                            value="parameters"
+                            className="flex-1 overflow-y-auto"
+                          >
+                            <AiSettingsPanel.ModelParametersSettings />
+                          </TabsContent>
+                        </Tabs>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 )}
               </div>
               <div className="print-container grow overflow-auto">
@@ -187,16 +207,20 @@ export const AssistantDrawer: React.FC<{
                 <div className="border-border bg-muted/30 mt-3 rounded-md border p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">Connect a provider</p>
+                      <p className="text-sm font-medium">Login to a provider</p>
                       <p className="text-muted-foreground text-sm">
                         The assistant needs credentials for{' '}
                         <span className="font-mono">{currentProviderId}</span>{' '}
                         before it can chat.
                       </p>
                     </div>
-                    <AiProviderConnectButton
-                      providerId={currentProviderId || undefined}
-                    />
+                    {quickLoginTargetCount > 0 ? (
+                      <AiQuickLoginButton>Quick Login</AiQuickLoginButton>
+                    ) : (
+                      <AiProviderConnectButton
+                        providerId={currentProviderId || undefined}
+                      />
+                    )}
                   </div>
                   <div className="mt-3 flex items-center justify-end gap-2">
                     <Chat.PromptSuggestions.VisibilityToggle />

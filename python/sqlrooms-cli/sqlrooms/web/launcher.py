@@ -355,12 +355,18 @@ class SqlroomsHttpServer:
 
     def _runtime_config(self) -> Dict[str, Any]:
         llm_provider, llm_model, ai_providers = self._runtime_ai_config()
+        login_targets = []
+        if not self._legacy_ai_config:
+            login_targets = self.ai_auth_manager.get_runtime_login_targets(
+                self._api_base_url()
+            )
         return {
             "wsUrl": f"ws://{self._public_host()}:{self.ws_port}",
             "apiBaseUrl": "",
             "llmProvider": llm_provider,
             "llmModel": llm_model,
             "apiKey": self.api_key or "",
+            "loginTargets": login_targets,
             "aiProviders": ai_providers,
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
