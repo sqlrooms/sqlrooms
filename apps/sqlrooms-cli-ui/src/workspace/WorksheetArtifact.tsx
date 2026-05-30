@@ -5,6 +5,7 @@ import {
   type BlockDocumentStatefulBlockRenderer,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
+import {DataTableBlockRenderer} from '@sqlrooms/mosaic';
 import {useCallback, useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {
@@ -19,6 +20,7 @@ import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
   pivot: WorksheetPivotBlockRenderer,
+  'data-table': DataTableBlockRenderer,
   document: WorksheetMarkdownDocumentBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,

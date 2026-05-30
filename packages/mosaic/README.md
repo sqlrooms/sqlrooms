@@ -167,6 +167,11 @@ For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfile
 is still available when you need direct access to the profiler state for custom
 layout, sizing, or advanced composition.
 
+`DataTableBlockRenderer` wraps the same profiler UI as a stateful block
+renderer for `@sqlrooms/documents` block documents. Register it with a
+host-provided stateful block type such as `data-table` when a document or
+worksheet surface should embed an interactive profiler directly.
+
 ### Mosaic Dashboard Panels
 
 `MosaicDashboard` is a compound dashboard surface backed by generic dashboard

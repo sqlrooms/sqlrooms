@@ -137,6 +137,7 @@ export {
   type MosaicProfilerProps,
   type MosaicProfilerRootProps,
 } from './profiler/MosaicProfiler';
+export {DataTableBlockRenderer} from './profiler/DataTableBlockRenderer';
 export {
   MosaicProfilerHeader,
   type MosaicProfilerHeaderProps,

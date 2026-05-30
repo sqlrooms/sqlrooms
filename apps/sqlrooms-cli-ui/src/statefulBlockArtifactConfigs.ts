@@ -67,6 +67,21 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.pivot.renamePivot(artifactId, title);
     },
   },
+  'data-table': {
+    artifactType: 'data-table',
+    label: 'Data Table',
+    defaultTitle: 'Data Table',
+    embeddedTitle: 'Data Table',
+    embeddedDescription: 'Embedded Mosaic data table profiler',
+    resizableHeight: true,
+    defaultHeight: 640,
+    minHeight: 360,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this data table',
+    ensureState: () => {},
+    deleteState: () => {},
+  },
   document: {
     artifactType: 'document',
     label: 'Document',

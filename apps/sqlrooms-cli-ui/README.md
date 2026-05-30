@@ -72,8 +72,8 @@ or profiler flows use `grid`.
 
 Worksheet artifacts are block-composed documents for active analytical work.
 They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
-direct stateful blocks such as dashboards, pivot tables, and Markdown
-documents.
+direct stateful blocks such as dashboards, pivot tables, Data Table profilers,
+and Markdown documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
