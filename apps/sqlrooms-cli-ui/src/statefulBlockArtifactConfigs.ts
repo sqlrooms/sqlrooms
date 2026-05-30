@@ -72,7 +72,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     label: 'Data Table',
     defaultTitle: 'Data Table',
     embeddedTitle: 'Data Table',
-    embeddedDescription: 'Embedded Mosaic data table profiler',
+    embeddedDescription: 'Embedded Mosaic Data Table Explorer',
     resizableHeight: true,
     defaultHeight: 640,
     minHeight: 360,

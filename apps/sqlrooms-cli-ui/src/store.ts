@@ -30,10 +30,10 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
@@ -312,7 +312,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
         },
-        addProfilerForTable: (tableName) => {
+        addDataTableExplorerForTable: (tableName) => {
           const existingDashboardArtifactId =
             get().dashboard.getCurrentDashboardArtifactId();
           const artifactId =
@@ -329,15 +329,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().mosaicDashboard.setSelectedTable(artifactId, tableName);
           }
 
-          const hasProfilerForTable = dashboard.panels.some(
-            (panel) => panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+          const hasDataTableExplorerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
           );
 
-          if (!hasProfilerForTable) {
+          if (!hasDataTableExplorerForTable) {
             get().mosaicDashboard.addPanel(
               artifactId,
-              createMosaicDashboardProfilerPanelConfig({
-                title: `${tableName} profiler`,
+              createMosaicDashboardDataTableExplorerPanelConfig({
+                title: `${tableName} explorer`,
               }),
             );
           }

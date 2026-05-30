@@ -1,21 +1,21 @@
 import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import type {MosaicProfilerUnsupportedSummary} from './types';
+import type {DataTableExplorerUnsupportedSummary} from './types';
 import {buildDistinctCountQuery, readCountData} from './utils';
 
 type UnsupportedSummaryClientOptions = {
   field: arrow.Field;
-  onStateChange: (summary: MosaicProfilerUnsupportedSummary) => void;
+  onStateChange: (summary: DataTableExplorerUnsupportedSummary) => void;
   selection: Selection;
   tableName: string;
 };
 
-export class ProfilerUnsupportedSummaryClient extends MosaicClient {
+export class DataTableExplorerUnsupportedSummaryClient extends MosaicClient {
   private count = 0;
   private readonly field: arrow.Field;
   private readonly onStateChange: (
-    summary: MosaicProfilerUnsupportedSummary,
+    summary: DataTableExplorerUnsupportedSummary,
   ) => void;
   private readonly tableName: string;
 

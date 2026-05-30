@@ -2,23 +2,26 @@ import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
 import {queryFieldInfo} from '@uwdata/mosaic-core';
 import type * as arrow from 'apache-arrow';
 import {
-  ProfilerCategoryClient,
-  ProfilerCategoryTotalClient,
-} from './ProfilerCategoryClient';
-import {ProfilerCountClient} from './ProfilerCountClient';
+  DataTableExplorerCategoryClient,
+  DataTableExplorerCategoryTotalClient,
+} from './DataTableExplorerCategoryClient';
+import {DataTableExplorerCountClient} from './DataTableExplorerCountClient';
 import {
-  ProfilerHistogramClient,
-  ProfilerHistogramTotalClient,
-} from './ProfilerHistogramClient';
-import {ProfilerPageClient} from './ProfilerPageClient';
-import {ProfilerUnsupportedSummaryClient} from './ProfilerUnsupportedSummaryClient';
-import type {MosaicProfilerSummaryState, MosaicProfilerSorting} from './types';
-import type {ProfilerStore} from './createProfilerStore';
+  DataTableExplorerHistogramClient,
+  DataTableExplorerHistogramTotalClient,
+} from './DataTableExplorerHistogramClient';
+import {DataTableExplorerPageClient} from './DataTableExplorerPageClient';
+import {DataTableExplorerUnsupportedSummaryClient} from './DataTableExplorerUnsupportedSummaryClient';
+import type {
+  DataTableExplorerSummaryState,
+  DataTableExplorerSorting,
+} from './types';
+import type {DataTableExplorerStore} from './createDataTableExplorerStore';
 import {
-  fieldInfoToProfilerField,
-  getProfilerValueType,
-  isProfilerHistogramType,
-  isProfilerUnsupportedSummaryType,
+  fieldInfoToDataTableExplorerField,
+  getDataTableExplorerValueType,
+  isDataTableExplorerHistogramType,
+  isDataTableExplorerUnsupportedSummaryType,
 } from './utils';
 
 function toError(error: unknown): Error {
@@ -26,13 +29,13 @@ function toError(error: unknown): Error {
 }
 
 /**
- * Loads field metadata for the profiler table and writes the normalized field
- * definitions into the profiler store.
+ * Loads field metadata for the dataTableExplorer table and writes the normalized field
+ * definitions into the dataTableExplorer store.
  */
-export async function loadProfilerSchema(options: {
+export async function loadDataTableExplorerSchema(options: {
   columns?: string[];
   coordinator: Parameters<typeof queryFieldInfo>[0];
-  store: ProfilerStore;
+  store: DataTableExplorerStore;
   tableName: string;
 }) {
   const {columns, coordinator, store, tableName} = options;
@@ -45,7 +48,9 @@ export async function loadProfilerSchema(options: {
         ? columns.map((column) => ({column, table: tableName}))
         : [{column: '*', table: tableName}],
     );
-    store.getState().setSchemaSuccess(fieldInfo.map(fieldInfoToProfilerField));
+    store
+      .getState()
+      .setSchemaSuccess(fieldInfo.map(fieldInfoToDataTableExplorerField));
   } catch (error: unknown) {
     store.getState().setSchemaSuccess([]);
     store.getState().setSchemaError(toError(error));
@@ -60,19 +65,19 @@ type ReadyConnection = {
 };
 
 /**
- * Connects the paged row client for the current profiler page and disconnects
+ * Connects the paged row client for the current dataTableExplorer page and disconnects
  * it when the caller tears down the lifecycle.
  */
-export function connectProfilerPageClient(options: {
+export function connectDataTableExplorerPageClient(options: {
   connection: ReadyConnection;
   fieldNames: string[];
   filter?: ReturnType<Selection['predicate']>;
   pagination: {pageIndex: number; pageSize: number};
-  sorting: MosaicProfilerSorting;
-  store: ProfilerStore;
+  sorting: DataTableExplorerSorting;
+  store: DataTableExplorerStore;
   tableName: string;
 }) {
-  const client = new ProfilerPageClient({
+  const client = new DataTableExplorerPageClient({
     columns: options.fieldNames,
     filter: options.filter,
     onStateChange: (state) => options.store.getState().setPage(state),
@@ -92,11 +97,11 @@ export function connectProfilerPageClient(options: {
  * Connects either the filtered or total count client and routes updates into
  * the corresponding store slice.
  */
-export function connectProfilerCountClient(options: {
+export function connectDataTableExplorerCountClient(options: {
   connection: ReadyConnection;
   filterStable?: boolean;
   selection?: Selection;
-  store: ProfilerStore;
+  store: DataTableExplorerStore;
   tableName: string;
   target: 'filtered' | 'total';
 }) {
@@ -105,7 +110,7 @@ export function connectProfilerCountClient(options: {
       ? options.store.getState().setFilteredCount
       : options.store.getState().setTotalCount;
 
-  const client = new ProfilerCountClient({
+  const client = new DataTableExplorerCountClient({
     filterStable: options.filterStable,
     onStateChange: setCountState,
     selection: options.selection,
@@ -121,14 +126,14 @@ export function connectProfilerCountClient(options: {
 
 /**
  * Connects all per-column summary clients for the active schema and initializes
- * matching empty summary state in the profiler store.
+ * matching empty summary state in the dataTableExplorer store.
  */
-export function connectProfilerSummaryClients(options: {
+export function connectDataTableExplorerSummaryClients(options: {
   categoryLimit: number;
   connection: ReadyConnection;
   fields: arrow.Field[];
   selection: Selection;
-  store: ProfilerStore;
+  store: DataTableExplorerStore;
   summaryBins: number;
   tableName: string;
 }) {
@@ -145,13 +150,13 @@ export function connectProfilerSummaryClients(options: {
   store.getState().initializeSummaries(fields);
 
   const clients: MosaicClient[] = fields.flatMap((field): MosaicClient[] => {
-    const update = (summary: MosaicProfilerSummaryState) => {
+    const update = (summary: DataTableExplorerSummaryState) => {
       store.getState().setSummary(field.name, summary);
     };
 
-    if (isProfilerUnsupportedSummaryType(field.type)) {
+    if (isDataTableExplorerUnsupportedSummaryType(field.type)) {
       return [
-        new ProfilerUnsupportedSummaryClient({
+        new DataTableExplorerUnsupportedSummaryClient({
           field,
           onStateChange: update,
           selection,
@@ -160,26 +165,28 @@ export function connectProfilerSummaryClients(options: {
       ];
     }
 
-    if (isProfilerHistogramType(field.type)) {
-      const summaryClient = new ProfilerHistogramClient({
+    if (isDataTableExplorerHistogramType(field.type)) {
+      const summaryClient = new DataTableExplorerHistogramClient({
         field,
         onStateChange: update,
         selection,
         steps: summaryBins,
         tableName,
         valueType:
-          getProfilerValueType(field.type) === 'date' ? 'date' : 'number',
+          getDataTableExplorerValueType(field.type) === 'date'
+            ? 'date'
+            : 'number',
       });
 
       return [
         summaryClient,
-        new ProfilerHistogramTotalClient({
+        new DataTableExplorerHistogramTotalClient({
           summaryClient,
         }),
       ];
     }
 
-    const summaryClient = new ProfilerCategoryClient({
+    const summaryClient = new DataTableExplorerCategoryClient({
       categoryLimit,
       field,
       onStateChange: update,
@@ -189,7 +196,7 @@ export function connectProfilerSummaryClients(options: {
 
     return [
       summaryClient,
-      new ProfilerCategoryTotalClient({
+      new DataTableExplorerCategoryTotalClient({
         summaryClient,
       }),
     ];

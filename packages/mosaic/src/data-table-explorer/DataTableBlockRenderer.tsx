@@ -3,7 +3,10 @@ import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents'
 import {SpinnerPane} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useStoreWithMosaic} from '../MosaicSlice';
-import {MosaicProfiler, type MosaicProfilerProps} from './MosaicProfiler';
+import {
+  DataTableExplorer,
+  type DataTableExplorerProps,
+} from './DataTableExplorer';
 
 function findTableByName(
   tables: DataTable[],
@@ -69,14 +72,14 @@ export const DataTableBlockRenderer = ({
     );
   }
 
-  const profilerProps = {
+  const dataTableExplorerProps = {
     tableName,
     pageSize: 25,
     selectionName,
-  } satisfies MosaicProfilerProps;
+  } satisfies DataTableExplorerProps;
 
   return (
-    <MosaicProfiler {...profilerProps}>
+    <DataTableExplorer {...dataTableExplorerProps}>
       <div className="flex h-full min-h-0 flex-col">
         {caption ? (
           <div className="border-border shrink-0 border-b px-3 py-2 text-sm font-medium">
@@ -84,13 +87,13 @@ export const DataTableBlockRenderer = ({
           </div>
         ) : null}
         <div className="min-h-0 flex-1 overflow-auto">
-          <MosaicProfiler.Table>
-            <MosaicProfiler.Header />
-            <MosaicProfiler.Rows />
-          </MosaicProfiler.Table>
+          <DataTableExplorer.Table>
+            <DataTableExplorer.Header />
+            <DataTableExplorer.Rows />
+          </DataTableExplorer.Table>
         </div>
-        <MosaicProfiler.StatusBar />
+        <DataTableExplorer.StatusBar />
       </div>
-    </MosaicProfiler>
+    </DataTableExplorer>
   );
 };

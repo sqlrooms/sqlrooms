@@ -5,7 +5,7 @@ import {Field} from '../../chart-builders/Field';
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {
   useStoreWithMosaicDashboard,
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
 } from '../MosaicDashboardSlice';
 
 export interface BuildDashboardManuallyPanelProps {
@@ -38,14 +38,15 @@ export const BuildDashboardManuallyPanel: React.FC<
       // Find the table info to get the proper title
       const tableInfo = tables.find((t) => t.table.table === tableName);
       const title = tableInfo
-        ? `${tableInfo.table.table} profiler`
-        : `${tableName} profiler`;
+        ? `${tableInfo.table.table} explorer`
+        : `${tableName} explorer`;
 
-      // Create and add a profiler panel
-      const profilerPanel = createMosaicDashboardProfilerPanelConfig({
-        title,
-      });
-      addPanel(dashboardId, profilerPanel);
+      // Create and add a Data Table Explorer panel.
+      const dataTableExplorerPanel =
+        createMosaicDashboardDataTableExplorerPanelConfig({
+          title,
+        });
+      addPanel(dashboardId, dataTableExplorerPanel);
     } finally {
       onStartingChange(false);
     }
@@ -64,7 +65,7 @@ export const BuildDashboardManuallyPanel: React.FC<
       <div>
         <h3 className="mb-1 font-medium">Create Manually</h3>
         <p className="text-muted-foreground text-sm">
-          Start with a data profiler and build your dashboard step by step
+          Start with a Data Table Explorer and build your dashboard step by step
         </p>
       </div>
       <div className="flex flex-1 flex-col gap-3">
@@ -78,7 +79,7 @@ export const BuildDashboardManuallyPanel: React.FC<
         <div className="text-muted-foreground flex-1 space-y-2 text-sm">
           <p>This will create a dashboard with:</p>
           <ul className="ml-4 list-disc space-y-1">
-            <li>Data profiler for exploring your table</li>
+            <li>Data Table Explorer for exploring your table</li>
             <li>Quick stats and column information</li>
             <li>Ability to add charts and visualizations</li>
           </ul>

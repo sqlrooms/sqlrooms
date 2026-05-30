@@ -2,13 +2,13 @@ import {ArrowCellValue, isNumericArrowType} from '@sqlrooms/data-table';
 import {cn, TableBody, TableCell, TableRow} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {memo} from 'react';
-import type {UseMosaicProfilerReturn} from './types';
-import {isProfilerUnsupportedSummaryType} from './utils';
+import type {UseDataTableExplorerReturn} from './types';
+import {isDataTableExplorerUnsupportedSummaryType} from './utils';
 
-export type MosaicProfilerRowsProps = {
+export type DataTableExplorerRowsProps = {
   className?: string;
-  profiler: Pick<
-    UseMosaicProfilerReturn,
+  explorer: Pick<
+    UseDataTableExplorerReturn,
     'columns' | 'pageTable' | 'pagination' | 'tableError'
   >;
 };
@@ -18,19 +18,23 @@ const ROW_NUMBER_CLASS =
   'bg-background text-muted-foreground sticky left-0 z-10 w-[40px] max-w-[40px] min-w-[40px] border-r px-1 text-center';
 
 function getColumnWidthClass(field: arrow.Field) {
-  return isProfilerUnsupportedSummaryType(field.type)
+  return isDataTableExplorerUnsupportedSummaryType(field.type)
     ? 'min-w-[104px] w-[104px] max-w-[104px]'
     : COLUMN_WIDTH_CLASS;
 }
 
-function formatProfilerValue(type: arrow.DataType, value: unknown) {
+function formatDataTableExplorerValue(type: arrow.DataType, value: unknown) {
   if (arrow.DataType.isBinary(type) && value instanceof Uint8Array) {
     return `${value.byteLength} bytes`;
   }
   return undefined;
 }
 
-function SizingRow({columns}: {columns: UseMosaicProfilerReturn['columns']}) {
+function SizingRow({
+  columns,
+}: {
+  columns: UseDataTableExplorerReturn['columns'];
+}) {
   return (
     <TableRow
       aria-hidden="true"
@@ -52,7 +56,7 @@ function EmptyStateRow({
   message,
   tone = 'muted',
 }: {
-  columns: UseMosaicProfilerReturn['columns'];
+  columns: UseDataTableExplorerReturn['columns'];
   message: string;
   tone?: 'error' | 'muted';
 }) {
@@ -75,10 +79,10 @@ function EmptyStateRow({
 }
 
 type DataRowProps = {
-  columns: UseMosaicProfilerReturn['columns'];
+  columns: UseDataTableExplorerReturn['columns'];
   pageIndex: number;
   pageSize: number;
-  pageTable: NonNullable<UseMosaicProfilerReturn['pageTable']>;
+  pageTable: NonNullable<UseDataTableExplorerReturn['pageTable']>;
   rowIndex: number;
 };
 
@@ -110,7 +114,7 @@ const DataRow = memo(function DataRow({
               <ArrowCellValue
                 fieldName={column.name}
                 fontSizeClass="text-xs"
-                formatValue={formatProfilerValue}
+                formatValue={formatDataTableExplorerValue}
                 type={column.field.type}
                 value={value}
               />
@@ -122,46 +126,46 @@ const DataRow = memo(function DataRow({
   );
 });
 
-function MosaicProfilerRowsImpl({
+function DataTableExplorerRowsImpl({
   className,
-  profiler,
-}: MosaicProfilerRowsProps) {
-  if (profiler.tableError) {
+  explorer,
+}: DataTableExplorerRowsProps) {
+  if (explorer.tableError) {
     return (
       <TableBody className={className}>
-        <SizingRow columns={profiler.columns} />
+        <SizingRow columns={explorer.columns} />
         <EmptyStateRow
-          columns={profiler.columns}
-          message={profiler.tableError.message}
+          columns={explorer.columns}
+          message={explorer.tableError.message}
           tone="error"
         />
       </TableBody>
     );
   }
 
-  if (!profiler.pageTable || profiler.pageTable.numRows === 0) {
+  if (!explorer.pageTable || explorer.pageTable.numRows === 0) {
     return (
       <TableBody className={className}>
-        <SizingRow columns={profiler.columns} />
-        <EmptyStateRow columns={profiler.columns} message="No rows" />
+        <SizingRow columns={explorer.columns} />
+        <EmptyStateRow columns={explorer.columns} message="No rows" />
       </TableBody>
     );
   }
 
   const rows = Array.from(
-    {length: profiler.pageTable.numRows},
+    {length: explorer.pageTable.numRows},
     (_, index) => index,
   );
-  const pageTable = profiler.pageTable;
+  const pageTable = explorer.pageTable;
 
   return (
     <TableBody className={className}>
       {rows.map((rowIndex) => (
         <DataRow
           key={rowIndex}
-          columns={profiler.columns}
-          pageIndex={profiler.pagination.pageIndex}
-          pageSize={profiler.pagination.pageSize}
+          columns={explorer.columns}
+          pageIndex={explorer.pagination.pageIndex}
+          pageSize={explorer.pagination.pageSize}
           pageTable={pageTable}
           rowIndex={rowIndex}
         />
@@ -171,8 +175,8 @@ function MosaicProfilerRowsImpl({
 }
 
 function areRowColumnsEqual(
-  left: UseMosaicProfilerReturn['columns'],
-  right: UseMosaicProfilerReturn['columns'],
+  left: UseDataTableExplorerReturn['columns'],
+  right: UseDataTableExplorerReturn['columns'],
 ) {
   if (left.length !== right.length) {
     return false;
@@ -188,15 +192,15 @@ function areRowColumnsEqual(
   });
 }
 
-export const MosaicProfilerRows = memo(
-  MosaicProfilerRowsImpl,
+export const DataTableExplorerRows = memo(
+  DataTableExplorerRowsImpl,
   (previous, next) =>
     previous.className === next.className &&
-    previous.profiler.pageTable === next.profiler.pageTable &&
-    previous.profiler.tableError === next.profiler.tableError &&
-    previous.profiler.pagination.pageIndex ===
-      next.profiler.pagination.pageIndex &&
-    previous.profiler.pagination.pageSize ===
-      next.profiler.pagination.pageSize &&
-    areRowColumnsEqual(previous.profiler.columns, next.profiler.columns),
+    previous.explorer.pageTable === next.explorer.pageTable &&
+    previous.explorer.tableError === next.explorer.tableError &&
+    previous.explorer.pagination.pageIndex ===
+      next.explorer.pagination.pageIndex &&
+    previous.explorer.pagination.pageSize ===
+      next.explorer.pagination.pageSize &&
+    areRowColumnsEqual(previous.explorer.columns, next.explorer.columns),
 );

@@ -1,12 +1,12 @@
 import type {ReactNode} from 'react';
 import {Button, cn} from '@sqlrooms/ui';
 import {ChevronLeftIcon, ChevronRightIcon} from 'lucide-react';
-import type {UseMosaicProfilerReturn} from './types';
+import type {UseDataTableExplorerReturn} from './types';
 
-export type MosaicProfilerStatusBarProps = {
+export type DataTableExplorerStatusBarProps = {
   className?: string;
-  profiler: Pick<
-    UseMosaicProfilerReturn,
+  explorer: Pick<
+    UseDataTableExplorerReturn,
     | 'filteredRowCount'
     | 'hasFilters'
     | 'pagination'
@@ -18,22 +18,22 @@ export type MosaicProfilerStatusBarProps = {
   renderActions?: (sql: string) => ReactNode;
 };
 
-export function MosaicProfilerStatusBar({
+export function DataTableExplorerStatusBar({
   className,
-  profiler,
+  explorer,
   renderActions,
-}: MosaicProfilerStatusBarProps) {
-  const actions = renderActions?.(profiler.sql);
+}: DataTableExplorerStatusBarProps) {
+  const actions = renderActions?.(explorer.sql);
   const totalPages =
-    profiler.filteredRowCount !== undefined
+    explorer.filteredRowCount !== undefined
       ? Math.max(
           1,
-          Math.ceil(profiler.filteredRowCount / profiler.pagination.pageSize),
+          Math.ceil(explorer.filteredRowCount / explorer.pagination.pageSize),
         )
       : undefined;
-  const canGoPrevious = profiler.pagination.pageIndex > 0;
+  const canGoPrevious = explorer.pagination.pageIndex > 0;
   const canGoNext =
-    totalPages !== undefined && profiler.pagination.pageIndex < totalPages - 1;
+    totalPages !== undefined && explorer.pagination.pageIndex < totalPages - 1;
   const showPaginationLabel = totalPages !== undefined;
 
   return (
@@ -52,7 +52,7 @@ export function MosaicProfilerStatusBar({
             aria-label="Previous page"
             disabled={!canGoPrevious}
             onClick={() => {
-              profiler.setPagination((prev) => ({
+              explorer.setPagination((prev) => ({
                 ...prev,
                 pageIndex: Math.max(0, prev.pageIndex - 1),
               }));
@@ -62,7 +62,7 @@ export function MosaicProfilerStatusBar({
           </Button>
           {showPaginationLabel ? (
             <span className="text-muted-foreground min-w-14 text-center text-[11px]">
-              {profiler.pagination.pageIndex + 1} / {totalPages}
+              {explorer.pagination.pageIndex + 1} / {totalPages}
             </span>
           ) : null}
           <Button
@@ -72,7 +72,7 @@ export function MosaicProfilerStatusBar({
             aria-label="Next page"
             disabled={!canGoNext}
             onClick={() => {
-              profiler.setPagination((prev) => ({
+              explorer.setPagination((prev) => ({
                 ...prev,
                 pageIndex:
                   totalPages === undefined
@@ -89,15 +89,15 @@ export function MosaicProfilerStatusBar({
             variant="link"
             size="sm"
             className="h-auto px-0"
-            disabled={!profiler.hasFilters}
-            onClick={profiler.reset}
+            disabled={!explorer.hasFilters}
+            onClick={explorer.reset}
           >
             Reset
           </Button>
           <span className="text-muted-foreground text-xs">
-            {profiler.filteredRowCount?.toLocaleString() ?? '0'}
-            {profiler.totalRowCount !== undefined
-              ? ` of ${profiler.totalRowCount.toLocaleString()} rows`
+            {explorer.filteredRowCount?.toLocaleString() ?? '0'}
+            {explorer.totalRowCount !== undefined
+              ? ` of ${explorer.totalRowCount.toLocaleString()} rows`
               : ' rows'}
           </span>
         </div>

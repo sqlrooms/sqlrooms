@@ -1,18 +1,21 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {TablePropertiesIcon} from 'lucide-react';
-import {MosaicProfiler, type MosaicProfilerProps} from './MosaicProfiler';
-import type {ProfilerPanel} from '../dashboard/dashboard-types';
+import {
+  DataTableExplorer,
+  type DataTableExplorerProps,
+} from './DataTableExplorer';
+import type {DataTableExplorerPanel} from '../dashboard/dashboard-types';
 import {
   type MosaicDashboardPanelRenderer,
-  type ProfilerPanelRendererProps,
+  type DataTableExplorerPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from '../dashboard/MosaicDashboardSlice';
 
-function MosaicDashboardProfilerRenderer({
+function MosaicDashboardDataTableExplorerRenderer({
   panel,
   dashboard,
   selectionName,
-}: ProfilerPanelRendererProps) {
+}: DataTableExplorerPanelRendererProps) {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
@@ -42,29 +45,29 @@ function MosaicDashboardProfilerRenderer({
     );
   }
 
-  const profilerProps = {
+  const dataTableExplorerProps = {
     tableName,
     pageSize: pageSize ?? 10,
     selectionName,
-  } satisfies MosaicProfilerProps;
+  } satisfies DataTableExplorerProps;
 
   return (
-    <MosaicProfiler {...profilerProps}>
+    <DataTableExplorer {...dataTableExplorerProps}>
       <div className="flex h-full min-h-0 flex-col">
         <div className="min-h-0 flex-1 overflow-auto">
-          <MosaicProfiler.Table>
-            <MosaicProfiler.Header />
-            <MosaicProfiler.Rows />
-          </MosaicProfiler.Table>
+          <DataTableExplorer.Table>
+            <DataTableExplorer.Header />
+            <DataTableExplorer.Rows />
+          </DataTableExplorer.Table>
         </div>
-        <MosaicProfiler.StatusBar />
+        <DataTableExplorer.StatusBar />
       </div>
-    </MosaicProfiler>
+    </DataTableExplorer>
   );
 }
 
-export const mosaicDashboardProfilerPanelRenderer: MosaicDashboardPanelRenderer<ProfilerPanel> =
+export const mosaicDashboardDataTableExplorerPanelRenderer: MosaicDashboardPanelRenderer<DataTableExplorerPanel> =
   {
-    component: MosaicDashboardProfilerRenderer,
+    component: MosaicDashboardDataTableExplorerRenderer,
     icon: TablePropertiesIcon,
   };

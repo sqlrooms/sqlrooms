@@ -4,11 +4,11 @@
 /// <reference types="@testing-library/jest-dom" />
 import {jest} from '@jest/globals';
 import {render, screen} from '@testing-library/react';
-import {MosaicProfilerStatusBar} from '../src/profiler/MosaicProfilerStatusBar';
-import type {UseMosaicProfilerReturn} from '../src/profiler/types';
+import {DataTableExplorerStatusBar} from '../src/data-table-explorer/DataTableExplorerStatusBar';
+import type {UseDataTableExplorerReturn} from '../src/data-table-explorer/types';
 
-type ProfilerOverrides = Pick<
-  UseMosaicProfilerReturn,
+type DataTableExplorerOverrides = Pick<
+  UseDataTableExplorerReturn,
   | 'filteredRowCount'
   | 'hasFilters'
   | 'pagination'
@@ -18,9 +18,9 @@ type ProfilerOverrides = Pick<
   | 'totalRowCount'
 >;
 
-function createProfilerOverrides(
-  overrides: Partial<ProfilerOverrides> = {},
-): ProfilerOverrides {
+function createDataTableExplorerOverrides(
+  overrides: Partial<DataTableExplorerOverrides> = {},
+): DataTableExplorerOverrides {
   return {
     filteredRowCount: 25,
     hasFilters: false,
@@ -33,10 +33,10 @@ function createProfilerOverrides(
   };
 }
 
-describe('MosaicProfilerStatusBar', () => {
+describe('DataTableExplorerStatusBar', () => {
   it('shows compact pagination and disables previous on the first page', () => {
-    const profiler = createProfilerOverrides();
-    render(<MosaicProfilerStatusBar profiler={profiler} />);
+    const explorer = createDataTableExplorerOverrides();
+    render(<DataTableExplorerStatusBar explorer={explorer} />);
 
     expect(screen.getByText(/1 \/ 3/)).toBeInTheDocument();
     expect(screen.getByLabelText('Previous page')).toBeDisabled();
@@ -44,24 +44,24 @@ describe('MosaicProfilerStatusBar', () => {
   });
 
   it('enables reset from the explicit filter flag instead of count comparison', () => {
-    const profiler = createProfilerOverrides({
+    const explorer = createDataTableExplorerOverrides({
       filteredRowCount: 100,
       hasFilters: true,
       totalRowCount: 100,
     });
-    render(<MosaicProfilerStatusBar profiler={profiler} />);
+    render(<DataTableExplorerStatusBar explorer={explorer} />);
 
     expect(screen.getByText('Reset')).not.toBeDisabled();
   });
 
   it('disables next on the last page and updates page index when clicked', () => {
     const setPagination = jest.fn();
-    const profiler = createProfilerOverrides({
+    const explorer = createDataTableExplorerOverrides({
       filteredRowCount: 26,
       pagination: {pageIndex: 1, pageSize: 13},
       setPagination,
     });
-    render(<MosaicProfilerStatusBar profiler={profiler} />);
+    render(<DataTableExplorerStatusBar explorer={explorer} />);
 
     expect(screen.getByText(/2 \/ 2/)).toBeInTheDocument();
     expect(screen.getByLabelText('Next page')).toBeDisabled();
@@ -82,11 +82,11 @@ describe('MosaicProfilerStatusBar', () => {
   });
 
   it('hides the page label and disables navigation while counts are unavailable', () => {
-    const profiler = createProfilerOverrides({
+    const explorer = createDataTableExplorerOverrides({
       filteredRowCount: undefined,
       totalRowCount: undefined,
     });
-    render(<MosaicProfilerStatusBar profiler={profiler} />);
+    render(<DataTableExplorerStatusBar explorer={explorer} />);
 
     expect(screen.queryByText(/\//)).not.toBeInTheDocument();
     expect(screen.getByLabelText('Previous page')).toBeDisabled();

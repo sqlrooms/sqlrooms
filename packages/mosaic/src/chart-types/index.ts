@@ -55,7 +55,7 @@ export * from './count-plot/tool';
 export * from './heatmap/tool';
 export * from './bubble-chart/tool';
 export * from './box-plot/tool';
-export * from './profiler-tool';
+export * from './data-table-explorer-tool';
 export * from './text-panel-tool';
 export * from './list-panels-tool';
 export * from './remove-panel-tool';

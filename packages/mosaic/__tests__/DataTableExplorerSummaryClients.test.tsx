@@ -1,13 +1,13 @@
 import {Selection} from '@uwdata/mosaic-core';
-import {ProfilerCategoryClient} from '../src/profiler/ProfilerCategoryClient';
-import {ProfilerHistogramClient} from '../src/profiler/ProfilerHistogramClient';
-import {serializeCategoryBucketKey} from '../src/profiler/utils';
+import {DataTableExplorerCategoryClient} from '../src/data-table-explorer/DataTableExplorerCategoryClient';
+import {DataTableExplorerHistogramClient} from '../src/data-table-explorer/DataTableExplorerHistogramClient';
+import {serializeCategoryBucketKey} from '../src/data-table-explorer/utils';
 
-describe('profiler summary clients', () => {
+describe('dataTableExplorer summary clients', () => {
   it('updates category selections and resets local state', () => {
     const selection = Selection.crossfilter();
     let latest: any;
-    const client = new ProfilerCategoryClient({
+    const client = new DataTableExplorerCategoryClient({
       categoryLimit: 5,
       field: {name: 'MagType', type: {toString: () => 'Utf8'}} as any,
       onStateChange: (summary) => {
@@ -39,14 +39,14 @@ describe('profiler summary clients', () => {
 
   it('marks only histogram summaries as filter-stable', () => {
     const selection = Selection.crossfilter();
-    const category = new ProfilerCategoryClient({
+    const category = new DataTableExplorerCategoryClient({
       categoryLimit: 5,
       field: {name: 'MagType', type: {toString: () => 'Utf8'}} as any,
       onStateChange: () => {},
       selection,
       tableName: 'earthquakes',
     });
-    const histogram = new ProfilerHistogramClient({
+    const histogram = new DataTableExplorerHistogramClient({
       field: {name: 'Magnitude', type: {toString: () => 'Float64'}} as any,
       onStateChange: () => {},
       selection,
@@ -62,7 +62,7 @@ describe('profiler summary clients', () => {
   it('publishes histogram interval selections through the shared selection', () => {
     const selection = Selection.crossfilter();
     let latest: any;
-    const client = new ProfilerHistogramClient({
+    const client = new DataTableExplorerHistogramClient({
       field: {name: 'Magnitude', type: {toString: () => 'Float64'}} as any,
       onStateChange: (summary) => {
         latest = summary;
@@ -104,7 +104,7 @@ describe('profiler summary clients', () => {
   it('keeps the previous filtered histogram bins while a new query is pending', () => {
     const selection = Selection.crossfilter();
     let latest: any;
-    const client = new ProfilerHistogramClient({
+    const client = new DataTableExplorerHistogramClient({
       field: {name: 'Magnitude', type: {toString: () => 'Float64'}} as any,
       onStateChange: (summary) => {
         latest = summary;
@@ -136,7 +136,7 @@ describe('profiler summary clients', () => {
 
   it('builds histogram SQL by grouping on bin expressions, not aliases', () => {
     const selection = Selection.crossfilter();
-    const client = new ProfilerHistogramClient({
+    const client = new DataTableExplorerHistogramClient({
       field: {name: 'Gap', type: {toString: () => 'Float64'}} as any,
       onStateChange: () => {},
       selection,
@@ -163,7 +163,7 @@ describe('profiler summary clients', () => {
   it('avoids mixing filtered category counts with stale total rows while pending', () => {
     const selection = Selection.crossfilter();
     let latest: any;
-    const client = new ProfilerCategoryClient({
+    const client = new DataTableExplorerCategoryClient({
       categoryLimit: 5,
       field: {name: 'MagType', type: {toString: () => 'Utf8'}} as any,
       onStateChange: (summary) => {

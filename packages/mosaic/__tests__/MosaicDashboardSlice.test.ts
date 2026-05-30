@@ -10,12 +10,12 @@ import {createMosaicSlice} from '../src/MosaicSlice';
 import {createMosaicDashboardSlice} from '../src/dashboard/MosaicDashboardSlice';
 import {
   createDefaultMosaicDashboardPanelRenderers,
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
   getMosaicDashboardGridId,
   getMosaicDashboardPanelId,
   getMosaicDashboardSelectionName,
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MosaicDashboardEntry,
   type CreateMosaicDashboardSliceProps,
@@ -124,7 +124,7 @@ describe('MosaicDashboardSlice generic panels', () => {
       chartType: 'histogram',
       settings: {field: 'amount'},
     });
-    const second = createMosaicDashboardProfilerPanelConfig({
+    const second = createMosaicDashboardDataTableExplorerPanelConfig({
       source: {tableName: 'earthquakes'},
     });
 
@@ -158,7 +158,7 @@ describe('MosaicDashboardSlice generic panels', () => {
     ).toEqual([expect.objectContaining({i: secondLayoutId})]);
   });
 
-  it('sizes new grid chart and map panels to half rows and profilers to full rows', () => {
+  it('sizes new grid chart and map panels to half rows and dataTableExplorers to full rows', () => {
     const store = createTestStore();
     const dashboardId = store
       .getState()
@@ -173,19 +173,20 @@ describe('MosaicDashboardSlice generic panels', () => {
       title: 'Map',
       config: {},
     };
-    const profiler = createMosaicDashboardProfilerPanelConfig();
+    const dataTableExplorer =
+      createMosaicDashboardDataTableExplorerPanelConfig();
 
     store.getState().mosaicDashboard.addPanel(dashboardId, chart);
     store.getState().mosaicDashboard.addPanel(dashboardId, map);
-    store.getState().mosaicDashboard.addPanel(dashboardId, profiler);
+    store.getState().mosaicDashboard.addPanel(dashboardId, dataTableExplorer);
 
     const dashboard =
       store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
     const chartLayoutId = getMosaicDashboardPanelId(dashboardId, chart.id);
     const mapLayoutId = getMosaicDashboardPanelId(dashboardId, map.id);
-    const profilerLayoutId = getMosaicDashboardPanelId(
+    const dataTableExplorerLayoutId = getMosaicDashboardPanelId(
       dashboardId,
-      profiler.id,
+      dataTableExplorer.id,
     );
 
     expect(
@@ -193,14 +194,26 @@ describe('MosaicDashboardSlice generic panels', () => {
     ).toEqual([
       expect.objectContaining({i: chartLayoutId, x: 0, y: 0, w: 6, h: 2}),
       expect.objectContaining({i: mapLayoutId, x: 6, y: 0, w: 6, h: 2}),
-      expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 12, h: 2}),
+      expect.objectContaining({
+        i: dataTableExplorerLayoutId,
+        x: 0,
+        y: 2,
+        w: 12,
+        h: 2,
+      }),
     ]);
     expect(
       dashboard.layout?.type === 'grid' ? dashboard.layout.layouts?.sm : [],
     ).toEqual([
       expect.objectContaining({i: chartLayoutId, x: 0, y: 0, w: 3, h: 2}),
       expect.objectContaining({i: mapLayoutId, x: 3, y: 0, w: 3, h: 2}),
-      expect.objectContaining({i: profilerLayoutId, x: 0, y: 2, w: 6, h: 2}),
+      expect.objectContaining({
+        i: dataTableExplorerLayoutId,
+        x: 0,
+        y: 2,
+        w: 6,
+        h: 2,
+      }),
     ]);
   });
 
@@ -209,8 +222,8 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = store
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
-    const first = createMosaicDashboardProfilerPanelConfig();
-    const second = createMosaicDashboardProfilerPanelConfig();
+    const first = createMosaicDashboardDataTableExplorerPanelConfig();
+    const second = createMosaicDashboardDataTableExplorerPanelConfig();
 
     store.getState().mosaicDashboard.addPanel(dashboardId, first);
     store.getState().mosaicDashboard.addPanel(dashboardId, second);
@@ -263,8 +276,8 @@ describe('MosaicDashboardSlice generic panels', () => {
     const dashboardId = store
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
-    const first = createMosaicDashboardProfilerPanelConfig();
-    const second = createMosaicDashboardProfilerPanelConfig();
+    const first = createMosaicDashboardDataTableExplorerPanelConfig();
+    const second = createMosaicDashboardDataTableExplorerPanelConfig();
     const firstLayoutId = getMosaicDashboardPanelId(dashboardId, first.id);
     const secondLayoutId = getMosaicDashboardPanelId(dashboardId, second.id);
 
@@ -309,7 +322,7 @@ describe('MosaicDashboardSlice generic panels', () => {
         field: 'amount',
       },
     });
-    const second = createMosaicDashboardProfilerPanelConfig({
+    const second = createMosaicDashboardDataTableExplorerPanelConfig({
       source: {tableName: 'earthquakes'},
     });
 
@@ -365,8 +378,8 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('preserves missing dashboard panels when setting layout', () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-2';
-    const first = createMosaicDashboardProfilerPanelConfig();
-    const second = createMosaicDashboardProfilerPanelConfig();
+    const first = createMosaicDashboardDataTableExplorerPanelConfig();
+    const second = createMosaicDashboardDataTableExplorerPanelConfig();
 
     store.getState().mosaicDashboard.addPanel(dashboardId, first);
     store.getState().mosaicDashboard.addPanel(dashboardId, second);
@@ -386,13 +399,13 @@ describe('MosaicDashboardSlice generic panels', () => {
     const component = () => null;
     const store = createTestStore({
       panelRenderers: {
-        [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: {component},
+        [MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE]: {component},
       },
     });
 
     expect(
       store.getState().mosaicDashboard.panelRenderers[
-        MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE
+        MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE
       ]?.component,
     ).toBe(component);
     expect(store.getState().mosaicDashboard.config).not.toHaveProperty(
@@ -402,11 +415,11 @@ describe('MosaicDashboardSlice generic panels', () => {
     store
       .getState()
       .mosaicDashboard.unregisterPanelRenderer(
-        MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+        MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
       );
     expect(
       store.getState().mosaicDashboard.panelRenderers[
-        MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE
+        MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE
       ],
     ).toBeUndefined();
   });

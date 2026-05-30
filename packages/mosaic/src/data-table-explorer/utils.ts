@@ -2,11 +2,11 @@ import type {FieldInfo} from '@uwdata/mosaic-core';
 import {asc, column, count, desc, Query, sql, sum} from '@uwdata/mosaic-sql';
 import * as arrow from 'apache-arrow';
 import type {
-  MosaicProfilerBin,
-  MosaicProfilerCategoryBucket,
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
-  MosaicProfilerSummaryState,
+  DataTableExplorerBin,
+  DataTableExplorerCategoryBucket,
+  DataTableExplorerPaginationState,
+  DataTableExplorerSorting,
+  DataTableExplorerSummaryState,
 } from './types';
 
 export type CategoryCountRow = {
@@ -17,7 +17,9 @@ export type CategoryCountRow = {
 
 type QueryWhereInput = Parameters<ReturnType<typeof Query.from>['where']>[0];
 
-export function isProfilerHistogramType(type: arrow.DataType): boolean {
+export function isDataTableExplorerHistogramType(
+  type: arrow.DataType,
+): boolean {
   return (
     arrow.DataType.isDate(type) ||
     arrow.DataType.isTimestamp(type) ||
@@ -27,7 +29,7 @@ export function isProfilerHistogramType(type: arrow.DataType): boolean {
   );
 }
 
-export function isProfilerUnsupportedSummaryType(
+export function isDataTableExplorerUnsupportedSummaryType(
   type: arrow.DataType,
 ): boolean {
   return (
@@ -36,7 +38,7 @@ export function isProfilerUnsupportedSummaryType(
   );
 }
 
-export function getProfilerValueType(
+export function getDataTableExplorerValueType(
   type: arrow.DataType,
 ): 'date' | 'number' | 'string' {
   if (arrow.DataType.isDate(type) || arrow.DataType.isTimestamp(type)) {
@@ -61,7 +63,7 @@ export function buildSchemaQuery(
     .limit(1);
 }
 
-function createProfilerArrowType(sqlType: string): arrow.DataType {
+function createDataTableExplorerArrowType(sqlType: string): arrow.DataType {
   const type = sqlType.toLowerCase();
 
   if (/^bool(ean)?/.test(type)) {
@@ -107,18 +109,20 @@ function createProfilerArrowType(sqlType: string): arrow.DataType {
   return new arrow.Utf8();
 }
 
-export function fieldInfoToProfilerField(info: FieldInfo): arrow.Field {
+export function fieldInfoToDataTableExplorerField(
+  info: FieldInfo,
+): arrow.Field {
   return new arrow.Field(
     info.column,
-    createProfilerArrowType(info.sqlType),
+    createDataTableExplorerArrowType(info.sqlType),
     info.nullable,
   );
 }
 
-export function buildProfilerBaseQuery(args: {
+export function buildDataTableExplorerBaseQuery(args: {
   columns?: string[];
   filter?: QueryWhereInput;
-  sorting?: MosaicProfilerSorting;
+  sorting?: DataTableExplorerSorting;
   tableName: string;
 }) {
   const {columns, filter, sorting, tableName} = args;
@@ -135,11 +139,12 @@ export function buildProfilerBaseQuery(args: {
   return query;
 }
 
-export function buildProfilerPageQuery(
-  baseQuery: ReturnType<typeof buildProfilerBaseQuery>,
-  pagination: MosaicProfilerPaginationState,
+export function buildDataTableExplorerPageQuery(
+  baseQuery: ReturnType<typeof buildDataTableExplorerBaseQuery>,
+  pagination: DataTableExplorerPaginationState,
 ) {
-  const {pageIndex, pageSize} = normalizeProfilerPagination(pagination);
+  const {pageIndex, pageSize} =
+    normalizeDataTableExplorerPagination(pagination);
 
   return baseQuery
     .clone()
@@ -147,9 +152,9 @@ export function buildProfilerPageQuery(
     .offset(pageIndex * pageSize);
 }
 
-export function normalizeProfilerPagination(
-  pagination: Partial<MosaicProfilerPaginationState> | undefined,
-): MosaicProfilerPaginationState {
+export function normalizeDataTableExplorerPagination(
+  pagination: Partial<DataTableExplorerPaginationState> | undefined,
+): DataTableExplorerPaginationState {
   const pageSize = Math.min(
     1000,
     Math.max(1, Math.trunc(Number(pagination?.pageSize) || 0) || 100),
@@ -260,13 +265,13 @@ export function buildCategorySummaryQuery(
 
 export function splitHistogramBins(
   rows: Array<{
-    x1: MosaicProfilerBin['x0'] | null;
-    x2: MosaicProfilerBin['x1'] | null;
+    x1: DataTableExplorerBin['x0'] | null;
+    x2: DataTableExplorerBin['x1'] | null;
     y: number;
   }>,
 ) {
   let nullCount = 0;
-  const bins: MosaicProfilerBin[] = [];
+  const bins: DataTableExplorerBin[] = [];
 
   for (const row of rows) {
     if (row.x1 == null || row.x2 == null) {
@@ -313,7 +318,7 @@ export function buildCategoryBuckets(
 
   const visibleRows = baseRows.slice(0, categoryLimit);
   const overflowRows = baseRows.slice(categoryLimit);
-  const buckets: MosaicProfilerCategoryBucket[] = visibleRows.map((row) => ({
+  const buckets: DataTableExplorerCategoryBucket[] = visibleRows.map((row) => ({
     filteredCount: filteredByKey.get(serializeCategoryBucketKey(row)) ?? 0,
     key: serializeCategoryBucketKey(row),
     kind: 'value',
@@ -476,8 +481,8 @@ export function parseCategoryBucketKey(key: string):
 
 export function createEmptySummaryState(
   field: arrow.Field,
-): MosaicProfilerSummaryState {
-  if (isProfilerUnsupportedSummaryType(field.type)) {
+): DataTableExplorerSummaryState {
+  if (isDataTableExplorerUnsupportedSummaryType(field.type)) {
     return {
       isLoading: false,
       kind: 'unsupported',
@@ -485,7 +490,7 @@ export function createEmptySummaryState(
     };
   }
 
-  return isProfilerHistogramType(field.type)
+  return isDataTableExplorerHistogramType(field.type)
     ? {
         filteredBins: [],
         filteredNullCount: 0,
@@ -495,7 +500,9 @@ export function createEmptySummaryState(
         totalBins: [],
         totalNullCount: 0,
         valueType:
-          getProfilerValueType(field.type) === 'date' ? 'date' : 'number',
+          getDataTableExplorerValueType(field.type) === 'date'
+            ? 'date'
+            : 'number',
       }
     : {
         bucketCount: 0,

@@ -1,7 +1,7 @@
 import {MosaicClient, clausePoint, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import type {MosaicProfilerCategorySummary} from './types';
+import type {DataTableExplorerCategorySummary} from './types';
 import {
   buildCategoryBuckets,
   buildCategorySummaryQuery,
@@ -14,18 +14,18 @@ import {
 type CategoryClientOptions = {
   categoryLimit: number;
   field: arrow.Field;
-  onStateChange: (summary: MosaicProfilerCategorySummary) => void;
+  onStateChange: (summary: DataTableExplorerCategorySummary) => void;
   selection: Selection;
   tableName: string;
 };
 
-export class ProfilerCategoryClient extends MosaicClient {
+export class DataTableExplorerCategoryClient extends MosaicClient {
   private readonly categoryLimit: number;
   private filteredError?: Error;
   private filteredLoading = true;
   private readonly field: arrow.Field;
   private readonly onStateChange: (
-    summary: MosaicProfilerCategorySummary,
+    summary: DataTableExplorerCategorySummary,
   ) => void;
   private selectedKey?: string;
   private filteredRows?: CategoryCountRow[];
@@ -151,14 +151,14 @@ export class ProfilerCategoryClient extends MosaicClient {
   }
 }
 
-type ProfilerCategoryTotalClientOptions = {
-  summaryClient: ProfilerCategoryClient;
+type DataTableExplorerCategoryTotalClientOptions = {
+  summaryClient: DataTableExplorerCategoryClient;
 };
 
-export class ProfilerCategoryTotalClient extends MosaicClient {
-  private readonly summaryClient: ProfilerCategoryClient;
+export class DataTableExplorerCategoryTotalClient extends MosaicClient {
+  private readonly summaryClient: DataTableExplorerCategoryClient;
 
-  constructor(options: ProfilerCategoryTotalClientOptions) {
+  constructor(options: DataTableExplorerCategoryTotalClientOptions) {
     super();
     this.summaryClient = options.summaryClient;
   }

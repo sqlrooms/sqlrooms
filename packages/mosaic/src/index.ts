@@ -35,11 +35,11 @@ export {
   MosaicDashboardInitialState,
   type MosaicDashboardInitialStateProps,
 } from './dashboard/initial-state/MosaicDashboardInitialState';
-export {addProfilerPanelAction} from './profiler/addProfilerPanelAction';
+export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
 export {addTextPanelAction} from './text/addTextPanelAction';
 export {addChartPanelAction} from './chart/addChartPanelAction';
 export {
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
   createMosaicDashboardTextPanelConfig,
   createDefaultMosaicDashboardConfig,
@@ -54,7 +54,7 @@ export {
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
 export {
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
   MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
@@ -83,7 +83,7 @@ export type {
 export type {
   MosaicDashboardLayoutType,
   MosaicDashboardPanelSource,
-  ProfilerPanelConfig,
+  DataTableExplorerPanelConfig,
   TextPanelConfig,
 } from './dashboard/core-types';
 export {
@@ -129,28 +129,28 @@ export {
   type ChartRuntimeIssueReporter,
 } from './chart-runtime';
 export {
-  MosaicProfiler,
-  type MosaicProfilerCompoundHeaderProps,
-  type MosaicProfilerCompoundRowsProps,
-  type MosaicProfilerCompoundStatusBarProps,
-  type MosaicProfilerCompoundTableProps,
-  type MosaicProfilerProps,
-  type MosaicProfilerRootProps,
-} from './profiler/MosaicProfiler';
-export {DataTableBlockRenderer} from './profiler/DataTableBlockRenderer';
+  DataTableExplorer,
+  type DataTableExplorerCompoundHeaderProps,
+  type DataTableExplorerCompoundRowsProps,
+  type DataTableExplorerCompoundStatusBarProps,
+  type DataTableExplorerCompoundTableProps,
+  type DataTableExplorerProps,
+  type DataTableExplorerRootProps,
+} from './data-table-explorer/DataTableExplorer';
+export {DataTableBlockRenderer} from './data-table-explorer/DataTableBlockRenderer';
 export {
-  MosaicProfilerHeader,
-  type MosaicProfilerHeaderProps,
-} from './profiler/MosaicProfilerHeader';
+  DataTableExplorerHeader,
+  type DataTableExplorerHeaderProps,
+} from './data-table-explorer/DataTableExplorerHeader';
 export {
-  MosaicProfilerRows,
-  type MosaicProfilerRowsProps,
-} from './profiler/MosaicProfilerRows';
+  DataTableExplorerRows,
+  type DataTableExplorerRowsProps,
+} from './data-table-explorer/DataTableExplorerRows';
 export {
-  MosaicProfilerStatusBar,
-  type MosaicProfilerStatusBarProps,
-} from './profiler/MosaicProfilerStatusBar';
-export {useMosaicProfiler} from './profiler/useMosaicProfiler';
+  DataTableExplorerStatusBar,
+  type DataTableExplorerStatusBarProps,
+} from './data-table-explorer/DataTableExplorerStatusBar';
+export {useDataTableExplorer} from './data-table-explorer/useDataTableExplorer';
 export {
   ResponsivePlot,
   type PlotSize,
@@ -204,23 +204,23 @@ export type {
   UseMosaicChartEditorReturn,
 } from './editor/types';
 export {
-  getProfilerTableWidth,
-  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
-  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
-  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
-} from './profiler/layout';
+  getDataTableExplorerTableWidth,
+  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './data-table-explorer/layout';
 export type {
-  MosaicProfilerCategoryBucket,
-  MosaicProfilerCategorySummary,
-  MosaicProfilerColumnKind,
-  MosaicProfilerColumnState,
-  MosaicProfilerHistogramSummary,
-  MosaicProfilerOptions,
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
-  MosaicProfilerSummaryState,
-  UseMosaicProfilerReturn,
-} from './profiler/types';
+  DataTableExplorerCategoryBucket,
+  DataTableExplorerCategorySummary,
+  DataTableExplorerColumnKind,
+  DataTableExplorerColumnState,
+  DataTableExplorerHistogramSummary,
+  DataTableExplorerOptions,
+  DataTableExplorerPaginationState,
+  DataTableExplorerSorting,
+  DataTableExplorerSummaryState,
+  UseDataTableExplorerReturn,
+} from './data-table-explorer/types';
 
 // Chart builder components
 export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
@@ -293,11 +293,11 @@ export {
   createBoxPlotAiTool,
   createChartTools,
   // New panel and dashboard tools
-  createProfilerTool,
+  createDataTableExplorerTool,
   createTextPanelTool,
   createListPanelsTool,
   createRemovePanelTool,
-  ProfilerToolParameters,
+  DataTableExplorerToolParameters,
   TextPanelToolParameters,
   ListPanelsToolParameters,
   RemovePanelToolParameters,
@@ -316,7 +316,7 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
-  ProfilerToolParams,
+  DataTableExplorerToolParams,
   TextPanelToolParams,
   ListPanelsToolParams,
   RemovePanelToolParams,

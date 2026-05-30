@@ -241,7 +241,7 @@ describe('dashboard AI tools', () => {
     ).toThrow('cannot override built-in tool "create_dashboard_artifact"');
   });
 
-  it('creates and updates chart, profiler, and text panels', async () => {
+  it('creates and updates chart, Data Table Explorer, and text panels', async () => {
     const {store, adapter, state} = createHarness();
     const tools = createDashboardAiTools({store, adapter});
 
@@ -274,15 +274,15 @@ describe('dashboard AI tools', () => {
       state.dashboardsById[dashboardId]!.panels[0]!.config.settings.maxBins,
     ).toBe(30);
 
-    const profilerResult = await (
-      tools.create_dashboard_profiler as any
+    const dataTableExplorerResult = await (
+      tools.create_dashboard_data_table_explorer as any
     ).execute({
       artifactId: dashboardId,
       tableName: 'earthquakes',
-      title: 'Profile',
+      title: 'Explore',
       reasoning: 'test',
     });
-    expect(profilerResult.llmResult.success).toBe(true);
+    expect(dataTableExplorerResult.llmResult.success).toBe(true);
 
     const textResult = await (tools.create_dashboard_text_panel as any).execute(
       {

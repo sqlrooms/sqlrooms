@@ -12,7 +12,7 @@ import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {
-  ProfilerPanelConfig,
+  DataTableExplorerPanelConfig,
   TextPanelConfig,
 } from '../dashboard/core-types';
 import type {MosaicDashboardEntry} from '../dashboard/dashboard-types';
@@ -62,12 +62,12 @@ export interface ResolvedTable {
 
 /**
  * Partial update to apply to a dashboard panel.
- * Config can be any of the panel config types (chart, profiler, or text).
+ * Config can be any of the panel config types (chart, dataTableExplorer, or text).
  */
 export interface PanelPatch {
   title?: string;
   source?: ChartBuilderPanelSource;
-  config?: ChartConfig | ProfilerPanelConfig | TextPanelConfig;
+  config?: ChartConfig | DataTableExplorerPanelConfig | TextPanelConfig;
 }
 
 /**
