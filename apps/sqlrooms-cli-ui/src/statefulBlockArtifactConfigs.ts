@@ -89,13 +89,25 @@ export const STATEFUL_BLOCK_ARTIFACT_TYPES = Object.keys(
   STATEFUL_BLOCK_ARTIFACT_CONFIGS,
 ) as StatefulBlockArtifactType[];
 
+export function isStatefulBlockArtifactType(
+  artifactType: string,
+): artifactType is StatefulBlockArtifactType {
+  return artifactType in STATEFUL_BLOCK_ARTIFACT_CONFIGS;
+}
+
+export function getStatefulBlockArtifactConfig(
+  artifactType: StatefulBlockArtifactType,
+): StatefulBlockArtifactConfig<StatefulBlockArtifactType> {
+  return STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
+}
+
 export function createStatefulBlockTypes({
   getState,
 }: {
   getState: () => RoomState;
 }): BlockDocumentStatefulBlockType[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
-    const config = STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
+    const config = getStatefulBlockArtifactConfig(artifactType);
     return {
       blockType: config.artifactType,
       label: config.label,
@@ -130,7 +142,7 @@ export function createStatefulBlockTypes({
 
 export function createStatefulBlockCommandTypes(): BlockDocumentStatefulBlockCommandType<RoomState>[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
-    const config = STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
+    const config = getStatefulBlockArtifactConfig(artifactType);
     return {
       blockType: config.artifactType,
       label: config.label,

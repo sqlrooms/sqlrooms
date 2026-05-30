@@ -107,7 +107,8 @@ import {
 } from './store-types';
 import {
   createStatefulBlockCommandTypes,
-  STATEFUL_BLOCK_ARTIFACT_CONFIGS,
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
 
 export type {RoomState} from './store-types';
@@ -520,11 +521,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getState,
             title,
           }) => {
-            const config =
-              STATEFUL_BLOCK_ARTIFACT_CONFIGS[
-                blockType as keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS
-              ];
-            config?.ensureState(
+            if (!isStatefulBlockArtifactType(blockType)) return;
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.ensureState(
               getState(),
               blockInstanceId,
               title ?? config.embeddedTitle,
@@ -535,11 +534,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             blockType,
             getState,
           }) => {
-            const config =
-              STATEFUL_BLOCK_ARTIFACT_CONFIGS[
-                blockType as keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS
-              ];
-            config?.deleteState(getState(), blockInstanceId);
+            if (!isStatefulBlockArtifactType(blockType)) return;
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.deleteState(getState(), blockInstanceId);
           },
           onRenameOwnedStatefulBlock: ({
             blockInstanceId,
@@ -547,11 +544,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getState,
             title,
           }) => {
-            const config =
-              STATEFUL_BLOCK_ARTIFACT_CONFIGS[
-                blockType as keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS
-              ];
-            if (config && 'renameState' in config) {
+            if (!isStatefulBlockArtifactType(blockType)) return;
+            const config = getStatefulBlockArtifactConfig(blockType);
+            if (config.renameState) {
               config.renameState(getState(), blockInstanceId, title);
             }
           },

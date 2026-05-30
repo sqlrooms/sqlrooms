@@ -137,6 +137,12 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
   );
 }
 
+function isCliArtifactType(
+  artifactType: string,
+): artifactType is keyof typeof ARTIFACT_TYPES {
+  return artifactType in ARTIFACT_TYPES;
+}
+
 function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const artifactTabs = ArtifactTabs.useActions();
   const invokeCreateArtifactCommand = useCreateCliArtifactCommand();
@@ -221,7 +227,9 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
             </h3>
             <div className="border-border divide-border overflow-hidden rounded-md border">
               {recentArtifacts.map((tab) => {
-                const type = ARTIFACT_TYPES[tab.type];
+                const type = isCliArtifactType(tab.type)
+                  ? ARTIFACT_TYPES[tab.type]
+                  : undefined;
                 const Icon = type?.icon;
                 return (
                   <button
