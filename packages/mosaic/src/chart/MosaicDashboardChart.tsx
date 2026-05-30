@@ -68,8 +68,6 @@ export const MosaicDashboardChart: FC<MosaicDashboardChartProps> = ({
         selectionName={selectionName}
         chartTypeDefinition={chartTypeDef}
         tableName={tableName}
-        connection={connection}
-        spec={spec}
       />
     </div>
   );

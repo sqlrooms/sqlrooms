@@ -32,7 +32,28 @@ function getBlockDocumentChartRuntimeKey({
 }
 
 function stableStringify(value: unknown) {
-  return JSON.stringify(value);
+  return JSON.stringify(normalizeForStableStringify(value));
+}
+
+function normalizeForStableStringify(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeForStableStringify);
+  }
+  if (
+    value &&
+    typeof value === 'object' &&
+    Object.getPrototypeOf(value) === Object.prototype
+  ) {
+    return Object.fromEntries(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((key) => [
+          key,
+          normalizeForStableStringify((value as Record<string, unknown>)[key]),
+        ]),
+    );
+  }
+  return value;
 }
 
 export const WorksheetChartRenderer = ({
@@ -118,7 +139,8 @@ export const WorksheetChartRenderer = ({
       <div className="p-4">
         <div className="text-sm font-medium">Invalid chart configuration</div>
         <div className="text-muted-foreground mt-1 text-sm">
-          This worksheet chart block could not be parsed as a Mosaic ChartConfig.
+          This worksheet chart block could not be parsed as a Mosaic
+          ChartConfig.
         </div>
         {!parsedConfig.success ? (
           <div className="text-muted-foreground mt-2 text-xs">

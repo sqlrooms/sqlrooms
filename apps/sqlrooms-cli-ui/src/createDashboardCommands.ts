@@ -82,9 +82,10 @@ function createArtifactCommand(
     execute: ({getState}, input) => {
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
+      const uniqueTitle = getUniqueArtifactTitle(state, title ?? group);
       const artifactId = state.artifacts.createArtifact({
         type: artifactType,
-        title: getUniqueArtifactTitle(state, title ?? group),
+        title: uniqueTitle,
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
@@ -95,7 +96,7 @@ function createArtifactCommand(
       } else if (artifactType === 'canvas') {
         state.canvas.ensureArtifact(artifactId);
       } else if (artifactType === 'pivot') {
-        state.pivot.ensurePivot(artifactId, {title: title ?? group});
+        state.pivot.ensurePivot(artifactId, {title: uniqueTitle});
       }
       state.artifacts.setCurrentArtifact(artifactId);
       return {

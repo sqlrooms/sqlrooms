@@ -5,14 +5,11 @@ The current decision is to keep artifacts as workspace shells, use direct
 stateful blocks inside block documents, and not reintroduce artifact embed
 blocks unless a future explicit reference-block design is needed.
 
-## Todo Checklist
+## Archival Note
 
-- [ ] [Stage 1: Vocabulary and Invariants](#stage-1-vocabulary-and-invariants)
-- [ ] [Stage 2: Resource Metadata Alias Exploration](#stage-2-resource-metadata-alias-exploration)
-- [ ] [Stage 3: Resource Registry Facade Spike](#stage-3-resource-registry-facade-spike)
-- [ ] [Stage 4: Block Embed Resource Vocabulary](#stage-4-block-embed-resource-vocabulary)
-- [ ] [Stage 5: AI and Command Vocabulary Cleanup](#stage-5-ai-and-command-vocabulary-cleanup)
-- [ ] [Stage 6: Decision Record and Follow-Up Parking Lot](#stage-6-decision-record-and-follow-up-parking-lot)
+See `dev-docs/tasks/stateful-blocks-artifact-shells.md` for the current plan.
+This document is retained only for historical context and should not be used as
+an active task checklist.
 
 ## Goal
 

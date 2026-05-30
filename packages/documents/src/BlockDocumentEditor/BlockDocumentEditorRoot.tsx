@@ -287,15 +287,18 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     editor?.setEditable(!readOnly);
   }, [editor, readOnly]);
 
-  const contextValue: BlockDocumentEditorContextValue = {
-    editor,
-    documentId,
-    value: normalizedValue,
-    assets,
-    onChange,
-    readOnly,
-    generateBlockId: () => generateBlockIdRef.current(),
-  };
+  const contextValue: BlockDocumentEditorContextValue = useMemo(
+    () => ({
+      editor,
+      documentId,
+      value: normalizedValue,
+      assets,
+      onChange,
+      readOnly,
+      generateBlockId: () => generateBlockIdRef.current(),
+    }),
+    [assets, documentId, editor, normalizedValue, onChange, readOnly],
+  );
 
   return (
     <BlockDocumentEditorContext.Provider value={contextValue}>

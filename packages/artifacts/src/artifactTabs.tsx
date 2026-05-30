@@ -595,6 +595,13 @@ function ArtifactTabsRoot({
     panelKey,
     includeEmbedded,
   });
+  const handleSelect = useCallback(
+    (artifactId: string) => {
+      artifactTabs.selectArtifact(artifactId);
+      onSelectArtifact?.(artifactId);
+    },
+    [artifactTabs.selectArtifact, onSelectArtifact],
+  );
 
   return (
     <ArtifactTabsContext.Provider value={artifactTabs}>
@@ -607,10 +614,7 @@ function ArtifactTabsRoot({
         preventCloseLastTab={preventCloseLastTab}
         onOpenTabsChange={artifactTabs.handleOpenTabsChange}
         onActivate={onActivateArtifact}
-        onSelect={(artifactId) => {
-          artifactTabs.selectArtifact(artifactId);
-          onSelectArtifact?.(artifactId);
-        }}
+        onSelect={handleSelect}
         onClose={artifactTabs.closeArtifact}
         onRename={artifactTabs.renameArtifact}
         renderTabMenu={

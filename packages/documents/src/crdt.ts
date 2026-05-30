@@ -43,8 +43,12 @@ type IncomingDocument = Omit<
 };
 type IncomingBlockDocument = Omit<
   BlockDocumentsSliceConfigType['artifacts'][string],
-  'assets'
+  'assets' | 'content'
 > & {
+  content: {
+    type: string;
+    body: BlockDocumentsSliceConfigType['artifacts'][string]['content'];
+  };
   assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
 };
 type IncomingArtifact = {
@@ -82,7 +86,12 @@ export const documentsMirrorSchema = schema.LoroMap({
   blockDocuments: schema.LoroList(
     schema.LoroMap({
       id: schema.String(),
-      content: schema.Any(),
+      // TODO: Replace this JSON body with a loro-prosemirror schema once the
+      // editor collaboration model is ready.
+      content: schema.LoroMap({
+        type: schema.String(),
+        body: schema.Any(),
+      }),
       assets: schema.LoroList(
         schema.LoroMap({
           id: schema.String(),
@@ -198,7 +207,10 @@ export function createDocumentsCrdtMirror<
           state.blockDocuments.config.artifacts,
         ).map((blockDocument) => ({
           id: blockDocument.id,
-          content: blockDocument.content,
+          content: {
+            type: 'prosemirror-json',
+            body: blockDocument.content,
+          },
           assets: Object.values(blockDocument.assets).map((asset) => ({
             id: asset.id,
             mediaType: asset.mediaType,
@@ -360,7 +372,7 @@ function blockDocumentsArrayToRecord(blockDocuments: IncomingBlockDocument[]) {
       blockDocument.id,
       {
         id: blockDocument.id,
-        content: blockDocument.content,
+        content: blockDocument.content.body,
         assets: assetsArrayToRecord(blockDocument.assets),
         updatedAt: blockDocument.updatedAt,
       },

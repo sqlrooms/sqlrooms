@@ -181,7 +181,7 @@ const BlockDocumentCreateStatefulBlockInput = z.object({
 });
 
 function lowerLabel(label: string) {
-  return label.toLocaleLowerCase();
+  return label.toLowerCase();
 }
 
 function labelFromBlockType(blockType: string) {

@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useMemo,
   type FC,
   type PropsWithChildren,
 } from 'react';
@@ -66,16 +67,24 @@ export type BlockDocumentStatefulBlockRendererProviderProps =
 export const BlockDocumentStatefulBlockRendererProvider: FC<
   BlockDocumentStatefulBlockRendererProviderProps
 > = ({renderers = {}, blockTypes, children}) => {
-  const supportedBlockTypes =
-    blockTypes ??
-    Object.keys(renderers).map((blockType) => ({
-      blockType,
-    }));
+  const supportedBlockTypes = useMemo(
+    () =>
+      blockTypes ??
+      Object.keys(renderers).map((blockType) => ({
+        blockType,
+      })),
+    [blockTypes, renderers],
+  );
+  const contextValue = useMemo(
+    () => ({
+      renderers,
+      blockTypes: supportedBlockTypes,
+    }),
+    [renderers, supportedBlockTypes],
+  );
 
   return (
-    <BlockDocumentStatefulBlockRendererContext.Provider
-      value={{renderers, blockTypes: supportedBlockTypes}}
-    >
+    <BlockDocumentStatefulBlockRendererContext.Provider value={contextValue}>
       {children}
     </BlockDocumentStatefulBlockRendererContext.Provider>
   );

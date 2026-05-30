@@ -95,10 +95,7 @@ function findScrollableAncestor({
 function findDocumentScrollParent(element: HTMLElement) {
   let parent = element.parentElement;
   while (parent) {
-    if (
-      canScrollElement(parent, 'y', 1) ||
-      canScrollElement(parent, 'y', -1)
-    ) {
+    if (canScrollElement(parent, 'y', 1) || canScrollElement(parent, 'y', -1)) {
       return parent;
     }
     parent = parent.parentElement;
@@ -120,6 +117,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const hideScrollHintTimeoutRef = useRef<number | undefined>(undefined);
   const scrollHintTargetRef = useRef<HTMLElement | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
@@ -138,9 +136,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const minHeight = blockTypeConfig?.minHeight ?? 320;
   const maxHeight = blockTypeConfig?.maxHeight;
   const defaultHeight = blockTypeConfig?.defaultHeight ?? 560;
-  const requireScrollModifier = Boolean(
-    blockTypeConfig?.requireScrollModifier,
-  );
+  const requireScrollModifier = Boolean(blockTypeConfig?.requireScrollModifier);
   const scrollHintLabel = blockTypeConfig?.scrollHintLabel ?? 'this block';
   const isMac = useMemo(() => isMacOS(), []);
   const scrollModifierLabel = isMac ? 'Cmd' : 'Ctrl';
@@ -158,6 +154,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       if (hideScrollHintTimeoutRef.current !== undefined) {
         window.clearTimeout(hideScrollHintTimeoutRef.current);
       }
+      resizeCleanupRef.current?.();
     };
   }, []);
 
@@ -267,15 +264,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     };
   }, [hideScrollHint, isMac, requireScrollModifier, showScrollHint]);
 
-  const handleResizeMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement>,
-  ) => {
+  const handleResizeMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (readOnly || !resizableHeight || !persistedHeight) return;
     event.preventDefault();
     event.stopPropagation();
 
     const startY = event.clientY;
     const startHeight = persistedHeight;
+    resizeCleanupRef.current?.();
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const nextHeight = clampHeight(
@@ -294,10 +290,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       );
       setResizingHeight(null);
       updateAttributes({height: nextHeight});
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      resizeCleanupRef.current?.();
     };
 
+    resizeCleanupRef.current = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      resizeCleanupRef.current = null;
+    };
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
   };

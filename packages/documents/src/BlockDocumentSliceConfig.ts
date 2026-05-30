@@ -16,31 +16,25 @@ export type BlockDocumentNode = {
   [key: string]: unknown;
 };
 
-export const BlockDocumentMark: z.ZodType<BlockDocumentMark> = z
-  .object({
-    type: z.string(),
-    attrs: z.record(z.string(), z.unknown()).optional(),
-  })
-  .passthrough();
+export const BlockDocumentMark: z.ZodType<BlockDocumentMark> = z.looseObject({
+  type: z.string(),
+  attrs: z.record(z.string(), z.unknown()).optional(),
+});
 
 export const BlockDocumentNode: z.ZodType<BlockDocumentNode> = z.lazy(() =>
-  z
-    .object({
-      type: z.string(),
-      attrs: z.record(z.string(), z.unknown()).optional(),
-      content: z.array(BlockDocumentNode).optional(),
-      marks: z.array(BlockDocumentMark).optional(),
-      text: z.string().optional(),
-    })
-    .passthrough(),
+  z.looseObject({
+    type: z.string(),
+    attrs: z.record(z.string(), z.unknown()).optional(),
+    content: z.array(BlockDocumentNode).optional(),
+    marks: z.array(BlockDocumentMark).optional(),
+    text: z.string().optional(),
+  }),
 );
 
-export const BlockDocumentContent = z
-  .object({
-    type: z.literal('doc'),
-    content: z.array(BlockDocumentNode).default([]),
-  })
-  .passthrough();
+export const BlockDocumentContent = z.looseObject({
+  type: z.literal('doc'),
+  content: z.array(BlockDocumentNode).default([]),
+});
 export type BlockDocumentContent = z.infer<typeof BlockDocumentContent>;
 
 export const BlockDocument = z.object({
@@ -332,22 +326,26 @@ export function blockDocumentNodeToBlock(
         text: textFromNode(item?.content?.[0]),
       };
     }
-    case 'blockDocumentImage':
-      return BlockDocumentImageBlock.parse({
+    case 'blockDocumentImage': {
+      const result = BlockDocumentImageBlock.safeParse({
         id,
         type: 'image',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
-    case 'blockDocumentChartImage':
-      return BlockDocumentChartImageBlock.parse({
+      return result.success ? result.data : undefined;
+    }
+    case 'blockDocumentChartImage': {
+      const result = BlockDocumentChartImageBlock.safeParse({
         id,
         type: 'chartImage',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
       });
-    case 'blockDocumentChart':
-      return BlockDocumentChartBlock.parse({
+      return result.success ? result.data : undefined;
+    }
+    case 'blockDocumentChart': {
+      const result = BlockDocumentChartBlock.safeParse({
         id,
         type: 'chart',
         tableName: node.attrs?.tableName,
@@ -355,8 +353,10 @@ export function blockDocumentNodeToBlock(
         selectionGroupId: optionalString(node.attrs?.selectionGroupId),
         caption: optionalString(node.attrs?.caption),
       });
-    case 'blockDocumentStatefulBlock':
-      return BlockDocumentStatefulBlockBlock.parse({
+      return result.success ? result.data : undefined;
+    }
+    case 'blockDocumentStatefulBlock': {
+      const result = BlockDocumentStatefulBlockBlock.safeParse({
         id,
         type: 'statefulBlock',
         blockType: node.attrs?.blockType,
@@ -366,6 +366,8 @@ export function blockDocumentNodeToBlock(
         caption: optionalString(node.attrs?.caption),
         height: optionalNumber(node.attrs?.height),
       });
+      return result.success ? result.data : undefined;
+    }
     default:
       return undefined;
   }

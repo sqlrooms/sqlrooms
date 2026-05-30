@@ -16,7 +16,7 @@ export function createBlockDocumentAuthoringInstructions({
   blockDocumentAgentToolName = BLOCK_DOCUMENT_AGENT_TOOL_NAME,
 }: CreateBlockDocumentAuthoringInstructionsOptions = {}) {
   const commandIds = createBlockDocumentCommandIds(commandNamespace);
-  const artifactLabelLower = artifactLabel.toLocaleLowerCase();
+  const artifactLabelLower = artifactLabel.toLowerCase();
   return `
 ${artifactLabel} authoring:
 - Prefer a ${artifactLabel} artifact when the user asks for a narrative, report, notebook-like document, or mixed text/chart output.
@@ -39,7 +39,7 @@ export function createBlockDocumentAiInstructions({
   return `
 ${artifactLabel} artifacts:
 - Use ${commandNamespace}.list and ${commandNamespace}.get to inspect block-composed documents.
-- Use ${commandNamespace}.create to create a new ${artifactLabel.toLocaleLowerCase()} artifact.
+- Use ${commandNamespace}.create to create a new ${artifactLabel.toLowerCase()} artifact.
 - Use ${commandNamespace}.append-blocks, ${commandNamespace}.insert-blocks, ${commandNamespace}.update-block, ${commandNamespace}.remove-block, and ${commandNamespace}.move-block for deterministic block edits.
 - Use ${commandNamespace}.create-chart-block for standalone Mosaic/vgplot chart blocks.
 - Use ${commandNamespace}.create-stateful-block for host-registered dashboards, pivots, documents, or other feature-backed blocks.

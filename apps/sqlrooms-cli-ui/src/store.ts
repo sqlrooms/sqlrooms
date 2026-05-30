@@ -521,7 +521,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getState,
             title,
           }) => {
-            if (!isStatefulBlockArtifactType(blockType)) return;
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on create', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
             const config = getStatefulBlockArtifactConfig(blockType);
             config.ensureState(
               getState(),
@@ -534,7 +541,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             blockType,
             getState,
           }) => {
-            if (!isStatefulBlockArtifactType(blockType)) return;
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on delete', {
+                blockType,
+                blockInstanceId,
+              });
+              return;
+            }
             const config = getStatefulBlockArtifactConfig(blockType);
             config.deleteState(getState(), blockInstanceId);
           },
@@ -544,7 +557,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getState,
             title,
           }) => {
-            if (!isStatefulBlockArtifactType(blockType)) return;
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on rename', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
             const config = getStatefulBlockArtifactConfig(blockType);
             if (config.renameState) {
               config.renameState(getState(), blockInstanceId, title);

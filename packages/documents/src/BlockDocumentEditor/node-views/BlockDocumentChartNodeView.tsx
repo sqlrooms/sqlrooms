@@ -23,17 +23,25 @@ export const BlockDocumentChartNodeView: FC<
   const caption = optionalString(attrs.caption);
   const config = attrs.config ?? {};
   const handleTableNameChange = useCallback(
-    (nextTableName: string) => updateAttributes({tableName: nextTableName}),
-    [updateAttributes],
+    (nextTableName: string) => {
+      if (readOnly) return;
+      updateAttributes({tableName: nextTableName});
+    },
+    [readOnly, updateAttributes],
   );
   const handleConfigChange = useCallback(
-    (nextConfig: unknown) => updateAttributes({config: nextConfig}),
-    [updateAttributes],
+    (nextConfig: unknown) => {
+      if (readOnly) return;
+      updateAttributes({config: nextConfig});
+    },
+    [readOnly, updateAttributes],
   );
   const handleCaptionChange = useCallback(
-    (nextCaption: string | undefined) =>
-      updateAttributes({caption: nextCaption}),
-    [updateAttributes],
+    (nextCaption: string | undefined) => {
+      if (readOnly) return;
+      updateAttributes({caption: nextCaption});
+    },
+    [readOnly, updateAttributes],
   );
 
   return (
