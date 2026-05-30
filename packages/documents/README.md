@@ -121,6 +121,11 @@ backed by composable blocks: rich text, lists, images, standalone Mosaic/vgplot
 charts, and direct stateful blocks such as dashboards, pivots, or Markdown
 documents.
 
+The shared block vocabulary lives in [`@sqlrooms/blocks`](../blocks).
+`@sqlrooms/documents` builds on those contracts with the concrete
+Tiptap-backed `BlockDocument` editor, persistence slice, commands, and AI
+authoring helpers.
+
 Block documents persist Tiptap/ProseMirror JSON as their canonical content
 and provide block DTO helpers for command and AI authoring surfaces:
 
