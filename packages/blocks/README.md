@@ -37,7 +37,8 @@ remain owned by `@sqlrooms/documents`.
 ## Block Documents
 
 The first rich ordered block container in SQLRooms is
-[`BlockDocument`](../documents#block-documents) from `@sqlrooms/documents`.
+[`BlockDocument`](../documents/README.md#block-documents) from
+`@sqlrooms/documents`.
 `BlockDocument` uses these shared contracts to host text, images, charts, and
 stateful blocks while keeping the editor/document runtime in the documents
 package.
