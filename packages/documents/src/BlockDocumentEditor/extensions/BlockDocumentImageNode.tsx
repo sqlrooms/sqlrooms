@@ -5,8 +5,8 @@ export const BlockDocumentImageNode = Node.create({
   name: 'blockDocumentImage',
   group: 'block',
   atom: true,
-  selectable: true,
-  draggable: true,
+  selectable: false,
+  draggable: false,
   isolating: true,
 
   addAttributes() {

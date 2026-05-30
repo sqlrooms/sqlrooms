@@ -5,8 +5,8 @@ export const BlockDocumentChartImageNode = Node.create({
   name: 'blockDocumentChartImage',
   group: 'block',
   atom: true,
-  selectable: true,
-  draggable: true,
+  selectable: false,
+  draggable: false,
   isolating: true,
 
   addAttributes() {

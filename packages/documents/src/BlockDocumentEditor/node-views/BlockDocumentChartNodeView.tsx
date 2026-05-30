@@ -43,6 +43,7 @@ export const BlockDocumentChartNodeView: FC<
         selected && 'ring-ring ring-2',
       )}
       contentEditable={false}
+      data-block-document-widget-node-view=""
     >
       {Renderer ? (
         createElement(Renderer, {

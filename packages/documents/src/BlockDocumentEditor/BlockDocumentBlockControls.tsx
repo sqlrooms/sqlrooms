@@ -799,7 +799,12 @@ export const BlockDocumentBlockControls: FC<
   );
 
   const renderInsertMenuContent = (placement: InsertPlacement) => (
-    <DropdownMenuContent align="center" side="right" className="w-60">
+    <DropdownMenuContent
+      align="center"
+      side="right"
+      className="w-60"
+      onCloseAutoFocus={(event) => event.preventDefault()}
+    >
       <DropdownMenuLabel>
         Insert {placement === 'before' ? 'above' : 'below'}
       </DropdownMenuLabel>
@@ -812,6 +817,7 @@ export const BlockDocumentBlockControls: FC<
 
   const renderAddButton = (placement: InsertPlacement) => (
     <DropdownMenu
+      modal={false}
       open={insertMenuOpen === placement}
       onOpenChange={(open) => setInsertMenuOpen(open ? placement : null)}
     >
@@ -962,6 +968,7 @@ export const BlockDocumentBlockControls: FC<
           <TooltipProvider>
             {renderAddButton('before')}
             <DropdownMenu
+              modal={false}
               open={handleMenuOpen}
               onOpenChange={setHandleMenuOpen}
             >
@@ -1004,7 +1011,12 @@ export const BlockDocumentBlockControls: FC<
                   </div>
                 </TooltipContent>
               </Tooltip>
-              <DropdownMenuContent align="start" side="right" className="w-44">
+              <DropdownMenuContent
+                align="start"
+                side="right"
+                className="w-44"
+                onCloseAutoFocus={(event) => event.preventDefault()}
+              >
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="gap-2">
                     <Rows3Icon className="h-4 w-4" />

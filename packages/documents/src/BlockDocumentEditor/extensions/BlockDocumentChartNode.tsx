@@ -1,12 +1,13 @@
 import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
 import {BlockDocumentChartNodeView} from '../node-views/BlockDocumentChartNodeView';
+import {stopWidgetNodeViewEvent} from './nodeViewEvents';
 
 export const BlockDocumentChartNode = Node.create({
   name: 'blockDocumentChart',
   group: 'block',
   atom: true,
-  selectable: true,
-  draggable: true,
+  selectable: false,
+  draggable: false,
   isolating: true,
 
   addAttributes() {
@@ -31,6 +32,8 @@ export const BlockDocumentChartNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(BlockDocumentChartNodeView);
+    return ReactNodeViewRenderer(BlockDocumentChartNodeView, {
+      stopEvent: stopWidgetNodeViewEvent,
+    });
   },
 });

@@ -1,12 +1,13 @@
 import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
 import {BlockDocumentStatefulBlockNodeView} from '../node-views/BlockDocumentStatefulBlockNodeView';
+import {stopWidgetNodeViewEvent} from './nodeViewEvents';
 
 export const BlockDocumentStatefulBlockNode = Node.create({
   name: 'blockDocumentStatefulBlock',
   group: 'block',
   atom: true,
-  selectable: true,
-  draggable: true,
+  selectable: false,
+  draggable: false,
   isolating: true,
 
   addAttributes() {
@@ -35,6 +36,8 @@ export const BlockDocumentStatefulBlockNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(BlockDocumentStatefulBlockNodeView);
+    return ReactNodeViewRenderer(BlockDocumentStatefulBlockNodeView, {
+      stopEvent: stopWidgetNodeViewEvent,
+    });
   },
 });

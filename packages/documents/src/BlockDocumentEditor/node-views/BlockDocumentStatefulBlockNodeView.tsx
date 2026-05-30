@@ -309,6 +309,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
         selected && 'ring-ring ring-2',
       )}
       contentEditable={false}
+      data-block-document-widget-node-view=""
       style={wrapperStyle}
     >
       <div

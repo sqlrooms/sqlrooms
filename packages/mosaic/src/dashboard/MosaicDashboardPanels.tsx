@@ -23,9 +23,6 @@ export const MosaicDashboardPanels: React.FC = () => {
   const registerPanel = useStoreWithMosaicDashboard(
     (state) => state.layout.registerPanel,
   );
-  const unregisterPanel = useStoreWithMosaicDashboard(
-    (state) => state.layout.unregisterPanel,
-  );
   const setLayout = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setLayout,
   );
@@ -45,15 +42,16 @@ export const MosaicDashboardPanels: React.FC = () => {
   );
 
   useEffect(() => {
+    // This renderer is shared by every Mosaic dashboard panel in the room.
+    // Dashboard blocks can be transiently unmounted by the surrounding editor,
+    // so unregistering on instance cleanup can leave still-mounted dashboards
+    // with layout panel shells but no chart renderer.
     registerPanel(MOSAIC_DASHBOARD_PANEL, () => ({
       title: 'Dashboard panel',
       component: MosaicDashboardPanel,
       dragOverlay: MosaicDashboardPanelDragOverlay,
     }));
-    return () => {
-      unregisterPanel(MOSAIC_DASHBOARD_PANEL);
-    };
-  }, [registerPanel, unregisterPanel]);
+  }, [registerPanel]);
 
   const rootLayout: LayoutNode | null = useMemo(() => {
     if (!dashboardLayout) return null;
