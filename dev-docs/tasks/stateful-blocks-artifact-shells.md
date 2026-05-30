@@ -180,7 +180,7 @@ Likely files/modules:
 
 - `dev-docs/tasks/stateful-blocks-artifact-shells.md`
 - `dev-docs/tasks/root-block-artifacts.md`
-- `contributing/architecture.md`
+- `dev-docs/contributing/architecture.md`
 
 Tests/checks:
 

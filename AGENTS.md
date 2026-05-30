@@ -105,11 +105,11 @@ SQLRooms is a local-first, modular analytics workspace built around DuckDB, Reac
 
 Load these only when you need them:
 
-- [Architecture & core concepts](contributing/architecture.md)
-- [State patterns (produce, selectors, lifecycle)](contributing/patterns.md)
-- [Typescript and React guidelines](contributing/typescript.md)
-- [Adding features (packages, visualizations, schema)](contributing/adding-features.md)
-- [Troubleshooting](contributing/troubleshooting.md)
-- [Python workspace](contributing/python.md)
-- [Cursor Cloud setup](contributing/cursor-cloud.md)
+- [Architecture & core concepts](dev-docs/contributing/architecture.md)
+- [State patterns (produce, selectors, lifecycle)](dev-docs/contributing/patterns.md)
+- [Typescript and React guidelines](dev-docs/contributing/typescript.md)
+- [Adding features (packages, visualizations, schema)](dev-docs/contributing/adding-features.md)
+- [Troubleshooting](dev-docs/contributing/troubleshooting.md)
+- [Python workspace](dev-docs/contributing/python.md)
+- [Cursor Cloud setup](dev-docs/contributing/cursor-cloud.md)
 - [Contributing guidelines](CONTRIBUTING.md) _(human contributor process: PRs, code of conduct)_

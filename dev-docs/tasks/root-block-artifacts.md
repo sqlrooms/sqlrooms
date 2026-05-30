@@ -128,7 +128,7 @@ Acceptance criteria:
 
 Likely files/modules:
 
-- `contributing/architecture.md`
+- `dev-docs/contributing/architecture.md`
 - `dev-docs/tasks/root-block-artifacts.md`
 - Possibly `packages/artifacts/README.md`
 - Possibly `packages/documents/README.md`
