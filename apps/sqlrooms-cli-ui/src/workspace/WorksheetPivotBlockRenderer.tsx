@@ -1,26 +1,23 @@
-import {
-  MarkdownDocument,
-  type BlockDocumentStatefulBlockRendererProps,
-} from '@sqlrooms/documents';
+import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
+import {PivotView} from '@sqlrooms/pivot';
 import {useEffect} from 'react';
 import {useRoomStore} from '../store';
 
-export const AnalysisMarkdownDocumentBlockRenderer = ({
+export const WorksheetPivotBlockRenderer = ({
   blockInstanceId,
   blockType,
+  title,
   caption,
 }: BlockDocumentStatefulBlockRendererProps) => {
-  const ensureDocument = useRoomStore(
-    (state) => state.documents.ensureDocument,
-  );
+  const ensurePivot = useRoomStore((state) => state.pivot.ensurePivot);
 
   useEffect(() => {
-    if (blockType === 'document' && blockInstanceId) {
-      ensureDocument(blockInstanceId);
+    if (blockType === 'pivot' && blockInstanceId) {
+      ensurePivot(blockInstanceId, {title: title ?? 'Embedded Pivot Table'});
     }
-  }, [blockInstanceId, blockType, ensureDocument]);
+  }, [blockInstanceId, blockType, ensurePivot, title]);
 
-  if (!blockInstanceId || blockType !== 'document') {
+  if (!blockInstanceId || blockType !== 'pivot') {
     return (
       <div className="text-muted-foreground p-4 text-sm">
         Unsupported stateful block type: {blockType || 'Unconfigured'}
@@ -36,7 +33,7 @@ export const AnalysisMarkdownDocumentBlockRenderer = ({
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <MarkdownDocument artifactId={blockInstanceId} />
+        <PivotView pivotId={blockInstanceId} />
       </div>
     </div>
   );

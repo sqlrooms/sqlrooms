@@ -11,21 +11,21 @@ import {
   createStatefulBlockTypes,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
-import {AnalysisChartRenderer} from './AnalysisChartRenderer';
-import {AnalysisDashboardBlockRenderer} from './AnalysisDashboardBlockRenderer';
-import {AnalysisMarkdownDocumentBlockRenderer} from './AnalysisMarkdownDocumentBlockRenderer';
-import {AnalysisPivotBlockRenderer} from './AnalysisPivotBlockRenderer';
+import {WorksheetChartRenderer} from './WorksheetChartRenderer';
+import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
+import {WorksheetMarkdownDocumentBlockRenderer} from './WorksheetMarkdownDocumentBlockRenderer';
+import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
 
-const ANALYSIS_STATEFUL_BLOCK_RENDERERS = {
-  dashboard: AnalysisDashboardBlockRenderer,
-  pivot: AnalysisPivotBlockRenderer,
-  document: AnalysisMarkdownDocumentBlockRenderer,
+const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
+  dashboard: WorksheetDashboardBlockRenderer,
+  pivot: WorksheetPivotBlockRenderer,
+  document: WorksheetMarkdownDocumentBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer
 >;
 
-export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
+export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
@@ -36,7 +36,7 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const renameArtifact = useRoomStore((state) => state.artifacts.renameArtifact);
 
   useEffect(() => {
-    if (artifact?.type === 'analysis') {
+    if (artifact?.type === 'worksheet') {
       ensureBlockDocument(artifactId);
     }
   }, [artifact?.type, artifactId, ensureBlockDocument]);
@@ -56,14 +56,14 @@ export const AnalysisArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [artifactId, renameArtifact],
   );
 
-  if (!artifact || artifact.type !== 'analysis') {
+  if (!artifact || artifact.type !== 'worksheet') {
     return null;
   }
 
   return (
-    <BlockDocumentChartRendererProvider renderer={AnalysisChartRenderer}>
+    <BlockDocumentChartRendererProvider renderer={WorksheetChartRenderer}>
       <BlockDocumentStatefulBlockRendererProvider
-        renderers={ANALYSIS_STATEFUL_BLOCK_RENDERERS}
+        renderers={WORKSHEET_STATEFUL_BLOCK_RENDERERS}
         blockTypes={statefulBlockTypes}
       >
         <BlockDocumentArtifact

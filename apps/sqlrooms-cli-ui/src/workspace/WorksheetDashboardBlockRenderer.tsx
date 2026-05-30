@@ -3,7 +3,7 @@ import {MosaicDashboard} from '@sqlrooms/mosaic';
 import {useEffect} from 'react';
 import {useRoomStore} from '../store';
 
-export const AnalysisDashboardBlockRenderer = ({
+export const WorksheetDashboardBlockRenderer = ({
   blockInstanceId,
   blockType,
   title,

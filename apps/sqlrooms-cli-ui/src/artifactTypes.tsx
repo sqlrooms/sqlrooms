@@ -14,14 +14,14 @@ import {
 } from 'lucide-react';
 import type {RoomState} from './store-types';
 import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
-import {AnalysisArtifact} from './workspace/AnalysisArtifact';
+import {WorksheetArtifact} from './workspace/WorksheetArtifact';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 
 export const CLI_ARTIFACT_TYPES = [
-  'analysis',
+  'worksheet',
   'dashboard',
   'pivot',
   'notebook',
@@ -50,11 +50,11 @@ const markdownDocumentBlockDefinition =
   });
 
 export const ARTIFACT_TYPES = defineArtifactTypes({
-  analysis: {
-    label: 'Analysis',
-    defaultTitle: 'Analysis',
+  worksheet: {
+    label: 'Worksheet',
+    defaultTitle: 'Worksheet',
     icon: FileStackIcon,
-    component: AnalysisArtifact,
+    component: WorksheetArtifact,
     onCreate: ({artifactId, store}) => {
       store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },

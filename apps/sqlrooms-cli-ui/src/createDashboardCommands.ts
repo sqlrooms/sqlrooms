@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {RoomState} from './store-types';
 
 type CliArtifactType =
-  | 'analysis'
+  | 'worksheet'
   | 'dashboard'
   | 'pivot'
   | 'notebook'
@@ -88,7 +88,7 @@ function createArtifactCommand(
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
-      } else if (artifactType === 'analysis') {
+      } else if (artifactType === 'worksheet') {
         state.blockDocuments.ensureBlockDocument(artifactId);
       } else if (artifactType === 'document') {
         state.documents.ensureDocument(artifactId);
@@ -189,7 +189,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
-        if (artifact.type === 'analysis') {
+        if (artifact.type === 'worksheet') {
           state.blockDocuments.ensureBlockDocument(artifactId);
         }
         if (artifact.type === 'document') {
@@ -213,7 +213,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
     },
 
     // Per-type create commands
-    createArtifactCommand('analysis', 'Analysis'),
+    createArtifactCommand('worksheet', 'Worksheet'),
     createArtifactCommand('pivot', 'Pivot Table'),
     createArtifactCommand('notebook', 'Notebook'),
     createArtifactCommand('document', 'Document'),

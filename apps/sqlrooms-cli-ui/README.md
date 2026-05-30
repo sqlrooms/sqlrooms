@@ -68,20 +68,20 @@ layout. Explicit dashboard creation commands and AI tools require `layoutType`
 so the choice is made once at creation time; auto-created dashboards from chart
 or profiler flows use `grid`.
 
-## Analysis Artifacts
+## Worksheet Artifacts
 
-Analysis artifacts are block-composed documents for narrative analytical work.
+Worksheet artifacts are block-composed documents for active analytical work.
 They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, and Markdown
 documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
-dashboard charts. Charts with the same `selectionGroupId` in one Analysis share
+dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
 a crossfilter selection; charts without a group are independent.
 
 Hosted dashboards are stored as direct stateful blocks keyed by their block
 instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
-selection scope, so multiple dashboards in one Analysis crossfilter
+selection scope, so multiple dashboards in one Worksheet crossfilter
 independently.
 
 ## AI Artifact Context

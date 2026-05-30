@@ -49,8 +49,8 @@ function readCliArtifact({
     };
   }
 
-  if (artifact.type === 'analysis') {
-    const analysis = state.blockDocuments.getBlockDocument(artifactId);
+  if (artifact.type === 'worksheet') {
+    const worksheet = state.blockDocuments.getBlockDocument(artifactId);
     return {
       success: true as const,
       artifact: {
@@ -59,9 +59,9 @@ function readCliArtifact({
         type: artifact.type,
       },
       payload: {
-        kind: 'analysis',
+        kind: 'worksheet',
         blocks: state.blockDocuments.getBlocks(artifactId),
-        assets: Object.values(analysis?.assets ?? {}).map((asset) => ({
+        assets: Object.values(worksheet?.assets ?? {}).map((asset) => ({
           id: asset.id,
           filename: asset.filename,
           mediaType: asset.mediaType,
@@ -71,7 +71,7 @@ function readCliArtifact({
           createdAt: asset.createdAt,
           updatedAt: asset.updatedAt,
         })),
-        updatedAt: analysis?.updatedAt,
+        updatedAt: worksheet?.updatedAt,
       },
     };
   }
@@ -112,7 +112,7 @@ function readCliArtifact({
       kind: 'metadata-only',
       unsupportedPayload: true,
       details:
-        'This artifact type is available as context, but read_context_artifact only returns full payloads for analysis, document, and dashboard artifacts in v1.',
+        'This artifact type is available as context, but read_context_artifact only returns full payloads for worksheet, document, and dashboard artifacts in v1.',
     },
   };
 }

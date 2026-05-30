@@ -9,7 +9,7 @@ import {
 import {Button, cn} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
-import {parseAnalysisChartConfig} from './analysisChartConfig';
+import {parseWorksheetChartConfig} from './worksheetChartConfig';
 
 function getBlockDocumentChartSelectionName({
   documentId,
@@ -20,22 +20,22 @@ function getBlockDocumentChartSelectionName({
   'documentId' | 'blockId' | 'selectionGroupId'
 >) {
   return selectionGroupId
-    ? `analysis:${documentId}:chart-group:${selectionGroupId}:brush`
-    : `analysis:${documentId}:chart-block:${blockId}:brush`;
+    ? `worksheet:${documentId}:chart-group:${selectionGroupId}:brush`
+    : `worksheet:${documentId}:chart-block:${blockId}:brush`;
 }
 
 function getBlockDocumentChartRuntimeKey({
   documentId,
   blockId,
 }: Pick<BlockDocumentChartRendererProps, 'documentId' | 'blockId'>) {
-  return `analysis:${documentId}:chart-block:${blockId}`;
+  return `worksheet:${documentId}:chart-block:${blockId}`;
 }
 
 function stableStringify(value: unknown) {
   return JSON.stringify(value);
 }
 
-export const AnalysisChartRenderer = ({
+export const WorksheetChartRenderer = ({
   documentId,
   blockId,
   tableName,
@@ -70,7 +70,7 @@ export const AnalysisChartRenderer = ({
     };
   }, [fallbackField]);
   const parsedConfig = useMemo(
-    () => parseAnalysisChartConfig(config, defaultConfig),
+    () => parseWorksheetChartConfig(config, defaultConfig),
     [config, defaultConfig],
   );
   const configKey = stableStringify(config);
@@ -118,7 +118,7 @@ export const AnalysisChartRenderer = ({
       <div className="p-4">
         <div className="text-sm font-medium">Invalid chart configuration</div>
         <div className="text-muted-foreground mt-1 text-sm">
-          This analysis chart block could not be parsed as a Mosaic ChartConfig.
+          This worksheet chart block could not be parsed as a Mosaic ChartConfig.
         </div>
         {!parsedConfig.success ? (
           <div className="text-muted-foreground mt-2 text-xs">

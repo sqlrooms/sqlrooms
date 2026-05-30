@@ -113,15 +113,15 @@ import {
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
-const ANALYSIS_COMMAND_OWNER = '@sqlrooms/documents/analysis';
+const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
-const ANALYSIS_BLOCK_DOCUMENT_OPTIONS = {
-  artifactType: 'analysis',
-  artifactLabel: 'Analysis',
-  commandNamespace: 'analysis',
-  commandGroup: 'Analysis',
-  defaultTitle: 'Analysis',
-  blockDocumentAgentToolName: 'analysis_agent',
+const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
+  artifactType: 'worksheet',
+  artifactLabel: 'Worksheet',
+  commandNamespace: 'worksheet',
+  commandGroup: 'Worksheet',
+  defaultTitle: 'Worksheet',
+  blockDocumentAgentToolName: 'worksheet_agent',
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -292,9 +292,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           );
           registerCommandsForOwner(
             store,
-            ANALYSIS_COMMAND_OWNER,
+            WORKSHEET_COMMAND_OWNER,
             createBlockDocumentCommands<RoomState>({
-              ...ANALYSIS_BLOCK_DOCUMENT_OPTIONS,
+              ...WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
               statefulBlockTypes: createStatefulBlockCommandTypes(),
             }),
           );
@@ -302,7 +302,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, ANALYSIS_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -563,7 +563,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               sync: createCliCrdtSyncConnector(),
               mirrors: {
                 documentState: createDocumentsCrdtMirror<RoomState>({
-                  blockDocumentArtifactTypes: ['analysis'],
+                  blockDocumentArtifactTypes: ['worksheet'],
                 }),
               },
             })(set, get, store)
@@ -610,7 +610,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(ANALYSIS_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(ANALYSIS_BLOCK_DOCUMENT_OPTIONS)}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
             getRunContext: () => getRunContext(store),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

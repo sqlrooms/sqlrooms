@@ -186,7 +186,7 @@ does not import Mosaic, pivot, or other feature packages:
   >
     <BlockDocumentArtifact
       artifactId={blockDocumentArtifactId}
-      title="Analysis"
+      title="Worksheet"
       onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
     />
   </BlockDocumentStatefulBlockRendererProvider>
