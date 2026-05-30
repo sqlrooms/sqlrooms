@@ -547,6 +547,16 @@ export type ArtifactTabsProps = Omit<
       tab: ArtifactTabDescriptor,
       actions: UseArtifactTabsResult,
     ) => React.ReactNode;
+    /**
+     * Called when an artifact tab is activated by the user, including clicks on
+     * the already-selected tab. Use this for transient UI that should dismiss
+     * whenever the user returns attention to an artifact tab.
+     */
+    onActivateArtifact?: (artifactId: string) => void;
+    /**
+     * Called when artifact selection changes through the tab strip.
+     */
+    onSelectArtifact?: (artifactId: string) => void;
     emptyContent?: React.ReactNode;
     content?: React.ReactNode;
     /**
@@ -568,6 +578,8 @@ function ArtifactTabsRoot({
   includeEmbedded,
   renderTabMenu,
   renderSearchItemActions,
+  onActivateArtifact,
+  onSelectArtifact,
   emptyContent,
   content,
   forceMountContent = false,
@@ -594,7 +606,11 @@ function ArtifactTabsRoot({
         closeable={closeable}
         preventCloseLastTab={preventCloseLastTab}
         onOpenTabsChange={artifactTabs.handleOpenTabsChange}
-        onSelect={artifactTabs.selectArtifact}
+        onActivate={onActivateArtifact}
+        onSelect={(artifactId) => {
+          artifactTabs.selectArtifact(artifactId);
+          onSelectArtifact?.(artifactId);
+        }}
         onClose={artifactTabs.closeArtifact}
         onRename={artifactTabs.renameArtifact}
         renderTabMenu={
@@ -631,10 +647,15 @@ function ArtifactTabsRoot({
           </>
         )}
       </TabStrip>
-      <TabsLayout.TabContentContainer>
-        {content ?? <TabsLayout.TabContent forceMount={forceMountContent} />}
-        {artifactTabs.tabs.length === 0 ? emptyContent : null}
-      </TabsLayout.TabContentContainer>
+      {artifactTabs.openTabs.length === 0 && emptyContent ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {emptyContent}
+        </div>
+      ) : (
+        <TabsLayout.TabContentContainer>
+          {content ?? <TabsLayout.TabContent forceMount={forceMountContent} />}
+        </TabsLayout.TabContentContainer>
+      )}
       {typeof overlay === 'function' ? overlay(artifactTabs) : overlay}
     </ArtifactTabsContext.Provider>
   );
