@@ -3,6 +3,11 @@ import {isMacOS} from '@sqlrooms/utils';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
+/**
+ * @deprecated Prefer `SqlQuery.Actions` for newly composed single-query
+ * surfaces. This component remains for compatibility with the legacy tabbed
+ * query panel.
+ */
 export const QueryEditorPanelActions: React.FC<{
   className?: string;
   queryId?: string;

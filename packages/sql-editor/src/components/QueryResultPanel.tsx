@@ -93,6 +93,12 @@ export interface QueryResultPanelProps {
   formatValue?: ArrowDataTableValueFormatter;
 }
 
+/**
+ * Result table for a SQL editor query.
+ *
+ * Prefer `SqlQuery.Results` when composing a complete single-query surface. Use
+ * this component directly when only the result panel is needed.
+ */
 const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   className,
   queryId,

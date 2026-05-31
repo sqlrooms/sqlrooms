@@ -9,6 +9,11 @@ const CODEMIRROR_OPTIONS = {
   highlightActiveLine: true,
 };
 
+/**
+ * @deprecated Prefer `SqlQuery.Editor` for newly composed single-query
+ * surfaces. This component remains for compatibility with the legacy tabbed
+ * query panel.
+ */
 export const QueryEditorPanelEditor: React.FC<{
   className?: string;
   queryId: string;
