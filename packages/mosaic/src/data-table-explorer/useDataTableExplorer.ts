@@ -93,7 +93,7 @@ function useDataTableExplorerSelection(
 ): DataTableExplorerSelectionState {
   const {selection: providedSelection, selectionName} = options;
   const generatedSelectionName = useMemo(
-    () => `mosaic-dataTableExplorer-${createId()}`,
+    () => `mosaic-data-table-explorer-${createId()}`,
     [],
   );
   const selectionKey = selectionName ?? generatedSelectionName;

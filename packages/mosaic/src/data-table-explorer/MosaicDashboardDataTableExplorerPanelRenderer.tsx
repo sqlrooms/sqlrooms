@@ -28,7 +28,7 @@ function MosaicDashboardDataTableExplorerRenderer({
   if (!tableName) {
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Data Table panels require a table source.
+        Data Table Explorer panels require a table source.
       </div>
     );
   }
