@@ -328,6 +328,8 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             caption,
             height: resolvedHeight,
             readOnly,
+            onTitleChange: (nextTitle: string | undefined) =>
+              updateAttributes({title: nextTitle || undefined}),
             onCaptionChange: (nextCaption: string | undefined) =>
               updateAttributes({caption: nextCaption}),
           })

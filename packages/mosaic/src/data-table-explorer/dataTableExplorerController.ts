@@ -39,7 +39,7 @@ export async function loadDataTableExplorerSchema(options: {
   tableName: string;
 }) {
   const {columns, coordinator, store, tableName} = options;
-  store.getState().setSchemaLoading(true);
+  store.getState().setSchemaLoading(true, tableName);
 
   try {
     const fieldInfo = await queryFieldInfo(
@@ -50,10 +50,13 @@ export async function loadDataTableExplorerSchema(options: {
     );
     store
       .getState()
-      .setSchemaSuccess(fieldInfo.map(fieldInfoToDataTableExplorerField));
+      .setSchemaSuccess(
+        fieldInfo.map(fieldInfoToDataTableExplorerField),
+        tableName,
+      );
   } catch (error: unknown) {
-    store.getState().setSchemaSuccess([]);
-    store.getState().setSchemaError(toError(error));
+    store.getState().setSchemaSuccess([], tableName);
+    store.getState().setSchemaError(toError(error), tableName);
   }
 }
 
@@ -89,7 +92,7 @@ export function connectDataTableExplorerPageClient(options: {
   options.connection.coordinator.connect(client);
 
   return () => {
-    options.connection.coordinator.disconnect(client);
+    client.destroy();
   };
 }
 
@@ -120,7 +123,7 @@ export function connectDataTableExplorerCountClient(options: {
   options.connection.coordinator.connect(client);
 
   return () => {
-    options.connection.coordinator.disconnect(client);
+    client.destroy();
   };
 }
 
@@ -205,7 +208,7 @@ export function connectDataTableExplorerSummaryClients(options: {
   clients.forEach((client) => connection.coordinator.connect(client));
 
   return () => {
-    clients.forEach((client) => connection.coordinator.disconnect(client));
+    clients.forEach((client) => client.destroy());
     store.getState().clearSummaries();
   };
 }

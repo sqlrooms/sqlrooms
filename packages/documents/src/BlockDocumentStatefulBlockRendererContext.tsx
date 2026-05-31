@@ -16,6 +16,7 @@ export type BlockDocumentStatefulBlockRendererProps = {
   caption?: string;
   height?: number;
   readOnly?: boolean;
+  onTitleChange?: (title: string | undefined) => void;
   onCaptionChange?: (caption: string | undefined) => void;
 };
 

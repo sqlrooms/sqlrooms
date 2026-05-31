@@ -7,6 +7,7 @@ import {
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -259,10 +260,17 @@ function useDataTableExplorerLifecycles(options: {
     summaryBins,
     tableName,
   } = options;
+  const previousTableNameRef = useRef(tableName);
 
   useEffect(() => {
     dataTableExplorerStore.getState().syncPageSize(pageSize);
   }, [pageSize, dataTableExplorerStore]);
+
+  useEffect(() => {
+    if (previousTableNameRef.current === tableName) return;
+    selection.reset();
+    previousTableNameRef.current = tableName;
+  }, [selection, tableName]);
 
   useEffect(() => {
     dataTableExplorerStore.getState().resetPageIndex();
@@ -492,7 +500,7 @@ export function useDataTableExplorer(
     page,
     pagination,
     dataTableExplorerStore,
-    schema,
+    schema: rawSchema,
     setPagination,
     setSorting,
     sorting,
@@ -502,6 +510,10 @@ export function useDataTableExplorer(
     initialSorting,
     pageSize,
   });
+  const schema =
+    rawSchema.tableName === tableName
+      ? rawSchema
+      : {...rawSchema, fields: [], isLoading: true};
   const {
     baseQuery,
     datasetId,

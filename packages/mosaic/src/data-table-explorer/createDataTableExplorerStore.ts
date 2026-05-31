@@ -34,13 +34,14 @@ export type DataTableExplorerStoreState = {
     error?: Error;
     fields: arrow.Field[];
     isLoading: boolean;
+    tableName?: string;
   };
   setFilteredCount: (state: DataTableExplorerCountState) => void;
   setPage: (state: DataTableExplorerPageState) => void;
   setPagination: Dispatch<SetStateAction<DataTableExplorerPaginationState>>;
-  setSchemaError: (error?: Error) => void;
-  setSchemaLoading: (isLoading: boolean) => void;
-  setSchemaSuccess: (fields: arrow.Field[]) => void;
+  setSchemaError: (error?: Error, tableName?: string) => void;
+  setSchemaLoading: (isLoading: boolean, tableName?: string) => void;
+  setSchemaSuccess: (fields: arrow.Field[], tableName?: string) => void;
   setSorting: Dispatch<SetStateAction<DataTableExplorerSorting>>;
   setSummary: (
     fieldName: string,
@@ -112,30 +113,36 @@ export function createDataTableExplorerStore(options: {
         }),
       );
     },
-    setSchemaError: (error) => {
+    setSchemaError: (error, tableName) => {
       set((state) =>
         produce(state, (draft) => {
           draft.schema.error = error;
           draft.schema.isLoading = false;
+          draft.schema.tableName = tableName;
         }),
       );
     },
-    setSchemaLoading: (isLoading) => {
+    setSchemaLoading: (isLoading, tableName) => {
       set((state) =>
         produce(state, (draft) => {
+          if (tableName !== undefined && draft.schema.tableName !== tableName) {
+            draft.schema.fields = [];
+          }
           draft.schema.isLoading = isLoading;
+          draft.schema.tableName = tableName;
           if (isLoading) {
             draft.schema.error = undefined;
           }
         }),
       );
     },
-    setSchemaSuccess: (fields) => {
+    setSchemaSuccess: (fields, tableName) => {
       set((state) =>
         produce(state, (draft) => {
           draft.schema.error = undefined;
           draft.schema.fields = fields;
           draft.schema.isLoading = false;
+          draft.schema.tableName = tableName;
         }),
       );
     },

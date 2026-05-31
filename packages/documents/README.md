@@ -267,7 +267,9 @@ Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
 by the documents slice.
 Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
 changes into the backing feature state. Captions stay local to the blocks
-document.
+document. Stateful block renderers receive `onTitleChange` and
+`onCaptionChange` callbacks when a writable document lets the embedded surface
+edit its own block metadata.
 
 The editor normalizes pasted or duplicated owned stateful blocks by assigning
 fresh top-level block IDs and fresh `blockInstanceId` values when a duplicate

@@ -1,12 +1,17 @@
 import type {DataTable} from '@sqlrooms/db';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {SpinnerPane} from '@sqlrooms/ui';
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStoreWithMosaic} from '../MosaicSlice';
 import {
   DataTableExplorer,
   type DataTableExplorerProps,
 } from './DataTableExplorer';
+import {
+  DataTableSelector,
+  DataTableSelectorEmptyState,
+  getDataTableSelectorReference,
+} from './DataTableSelector';
 
 function findTableByName(
   tables: DataTable[],
@@ -16,14 +21,11 @@ function findTableByName(
 
   return tables.find(
     (table) =>
+      getDataTableSelectorReference(table) === tableName ||
       table.table.table === tableName ||
       table.tableName === tableName ||
       table.table.toString() === tableName,
   );
-}
-
-function getFirstUsableTable(tables: DataTable[]): DataTable | undefined {
-  return tables.find((table) => table.columns.length > 0);
 }
 
 export const DataTableBlockRenderer = ({
@@ -32,17 +34,45 @@ export const DataTableBlockRenderer = ({
   blockType,
   caption,
   documentId,
+  onTitleChange,
+  readOnly,
   title,
 }: BlockDocumentStatefulBlockRendererProps) => {
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const tables = useStoreWithMosaic((state) => state.db.tables);
+  const selectableTables = useMemo(
+    () => tables.filter((table) => table.columns.length > 0),
+    [tables],
+  );
 
   const selectedTable = useMemo(
-    () => findTableByName(tables, title) ?? getFirstUsableTable(tables),
-    [tables, title],
+    () => findTableByName(selectableTables, title),
+    [selectableTables, title],
   );
-  const tableName = selectedTable?.table.table;
+  const tableName = selectedTable
+    ? getDataTableSelectorReference(selectedTable)
+    : undefined;
   const selectionName = `block-document:${documentId}:data-table:${blockId}:brush`;
+  const selection = useStoreWithMosaic(
+    (state) => state.mosaic.selections[selectionName],
+  );
+  const getSelection = useStoreWithMosaic((state) => state.mosaic.getSelection);
+  const handleTableNameChange = useCallback(
+    (nextTableName: string) => {
+      (selection ?? getSelection(selectionName, 'crossfilter')).reset();
+      onTitleChange?.(nextTableName);
+    },
+    [getSelection, onTitleChange, selection, selectionName],
+  );
+  const tableSelector = (
+    <DataTableSelector
+      className="max-w-full"
+      disabled={readOnly || !onTitleChange}
+      onChange={handleTableNameChange}
+      tables={selectableTables}
+      value={tableName}
+    />
+  );
 
   if (!blockInstanceId || blockType !== 'data-table') {
     return (
@@ -54,20 +84,45 @@ export const DataTableBlockRenderer = ({
 
   if (!tableName) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Data Table blocks require a table source.
-      </div>
+      <DataTableSelectorEmptyState
+        disabled={readOnly || !onTitleChange}
+        onChange={handleTableNameChange}
+        tables={selectableTables}
+        value={tableName}
+      />
     );
   }
 
   if (connection.status === 'loading') {
-    return <SpinnerPane className="h-full w-full" />;
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
+          {tableSelector}
+          {caption ? (
+            <div className="min-w-0 truncate text-sm font-medium">
+              {caption}
+            </div>
+          ) : null}
+        </div>
+        <SpinnerPane className="min-h-0 flex-1" />
+      </div>
+    );
   }
 
   if (connection.status !== 'ready') {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Mosaic connection is not ready.
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
+          {tableSelector}
+          {caption ? (
+            <div className="min-w-0 truncate text-sm font-medium">
+              {caption}
+            </div>
+          ) : null}
+        </div>
+        <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center p-4 text-sm">
+          Mosaic connection is not ready.
+        </div>
       </div>
     );
   }
@@ -81,11 +136,14 @@ export const DataTableBlockRenderer = ({
   return (
     <DataTableExplorer {...dataTableExplorerProps}>
       <div className="flex h-full min-h-0 flex-col">
-        {caption ? (
-          <div className="border-border shrink-0 border-b px-3 py-2 text-sm font-medium">
-            {caption}
-          </div>
-        ) : null}
+        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
+          {tableSelector}
+          {caption ? (
+            <div className="min-w-0 truncate text-sm font-medium">
+              {caption}
+            </div>
+          ) : null}
+        </div>
         <div className="min-h-0 flex-1 overflow-auto">
           <DataTableExplorer.Table>
             <DataTableExplorer.Header />

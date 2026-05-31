@@ -3,6 +3,7 @@ import {
   BlockDocumentArtifact,
   BlockDocumentStatefulBlockRendererProvider,
   type BlockDocumentStatefulBlockRenderer,
+  type BlockDocumentStatefulBlockRendererProps,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {DataTableBlockRenderer} from '@sqlrooms/mosaic';
@@ -17,10 +18,57 @@ import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer
 import {WorksheetMarkdownDocumentBlockRenderer} from './WorksheetMarkdownDocumentBlockRenderer';
 import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
 
+function normalizeStatefulBlockOwnership(ownership: string | undefined) {
+  return ownership === 'owned' ||
+    ownership === 'shared' ||
+    ownership === 'external'
+    ? ownership
+    : undefined;
+}
+
+const WorksheetDataTableBlockRenderer = (
+  props: BlockDocumentStatefulBlockRendererProps,
+) => {
+  const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
+
+  const handleTitleChange = useCallback(
+    (title: string | undefined) => {
+      if (props.onTitleChange) {
+        props.onTitleChange(title);
+        return;
+      }
+
+      updateBlock(props.documentId, props.blockId, {
+        id: props.blockId,
+        type: 'statefulBlock',
+        blockType: props.blockType,
+        blockInstanceId: props.blockInstanceId,
+        ownership: normalizeStatefulBlockOwnership(props.ownership),
+        title: title || undefined,
+        caption: props.caption,
+        height: props.height,
+      });
+    },
+    [
+      props.blockId,
+      props.blockInstanceId,
+      props.blockType,
+      props.caption,
+      props.documentId,
+      props.height,
+      props.onTitleChange,
+      props.ownership,
+      updateBlock,
+    ],
+  );
+
+  return <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />;
+};
+
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
   pivot: WorksheetPivotBlockRenderer,
-  'data-table': DataTableBlockRenderer,
+  'data-table': WorksheetDataTableBlockRenderer,
   document: WorksheetMarkdownDocumentBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
