@@ -2,6 +2,11 @@ import {ArrowCellValue, isNumericArrowType} from '@sqlrooms/data-table';
 import {cn, TableBody, TableCell, TableRow} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {memo} from 'react';
+import {
+  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_CLASS,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS,
+  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_CLASS,
+} from './layout';
 import type {UseDataTableExplorerReturn} from './types';
 import {isDataTableExplorerUnsupportedSummaryType} from './utils';
 
@@ -13,14 +18,15 @@ export type DataTableExplorerRowsProps = {
   >;
 };
 
-const COLUMN_WIDTH_CLASS = 'min-w-[140px] w-[140px] max-w-[140px]';
-const ROW_NUMBER_CLASS =
-  'bg-background text-muted-foreground sticky left-0 z-10 w-[40px] max-w-[40px] min-w-[40px] border-r px-1 text-center';
+const ROW_NUMBER_CLASS = cn(
+  'bg-background text-muted-foreground sticky left-0 z-10 border-r px-1 text-center',
+  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS,
+);
 
 function getColumnWidthClass(field: arrow.Field) {
   return isDataTableExplorerUnsupportedSummaryType(field.type)
-    ? 'min-w-[104px] w-[104px] max-w-[104px]'
-    : COLUMN_WIDTH_CLASS;
+    ? DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_CLASS
+    : DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_CLASS;
 }
 
 function formatDataTableExplorerValue(type: arrow.DataType, value: unknown) {
@@ -40,7 +46,9 @@ function SizingRow({
       aria-hidden="true"
       className="pointer-events-none h-0 border-0 opacity-0 hover:bg-transparent"
     >
-      <TableCell className="w-[40px] max-w-[40px] min-w-[40px] border-r p-0" />
+      <TableCell
+        className={cn(DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS, 'border-r p-0')}
+      />
       {columns.map((column) => (
         <TableCell
           key={column.name}

@@ -2,10 +2,11 @@ import {Badge, cn, TableHead, TableHeader, TableRow} from '@sqlrooms/ui';
 import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {
-  getDataTableExplorerColumnWidthPx,
-  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_CLASS,
   DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX,
-  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS,
+  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_CLASS,
+  getDataTableExplorerColumnWidthPx,
 } from './layout';
 import type {
   DataTableExplorerCategorySummary,
@@ -24,15 +25,17 @@ export type DataTableExplorerHeaderProps = {
   >;
 };
 
-const COLUMN_WIDTH_CLASS = `min-w-[${DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_PX}px] w-[${DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_PX}px] max-w-[${DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_PX}px]`;
-const STICKY_ROW_NUMBER_CLASS = `bg-background sticky left-0 top-0 z-40 min-w-[${DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX}px] w-[${DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX}px] max-w-[${DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX}px] border-r px-1 text-center`;
+const STICKY_ROW_NUMBER_CLASS = cn(
+  'bg-background sticky left-0 top-0 z-40 border-r px-1 text-center',
+  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS,
+);
 const STICKY_COLUMN_HEADER_CLASS =
   'bg-background sticky top-0 z-30 align-top whitespace-nowrap shadow-[inset_0_-1px_0_hsl(var(--border))]';
 
 function getColumnWidthClass(column: DataTableExplorerColumnState) {
   return isDataTableExplorerUnsupportedSummaryType(column.field.type)
-    ? `min-w-[${DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_PX}px] w-[${DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_PX}px] max-w-[${DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_PX}px]`
-    : COLUMN_WIDTH_CLASS;
+    ? DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_CLASS
+    : DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_CLASS;
 }
 
 function setNextSortState(
