@@ -49,6 +49,8 @@ function arrowTableToExplainText(result: any): string {
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
   className?: string;
+  /** Query id to render results for. Defaults to the selected query tab. */
+  queryId?: string;
   /** Custom actions to render in the query result panel */
   renderActions?: (query: string) => React.ReactNode;
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
@@ -93,6 +95,7 @@ export interface QueryResultPanelProps {
 
 const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   className,
+  queryId,
   renderActions,
   fontSize = 'text-xs',
   onRowClick,
@@ -105,12 +108,16 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   formatValue,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => {
-    const selectedId = s.sqlEditor.config.selectedQueryId;
-    return s.sqlEditor.queryResultsById[selectedId];
+    const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[resolvedQueryId];
   });
-  const getCurrentQuery = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.getCurrentQuery,
-  );
+  const currentQuery = useStoreWithSqlEditor((s) => {
+    if (!queryId) return s.sqlEditor.getCurrentQuery();
+    return (
+      s.sqlEditor.config.queries.find((query) => query.id === queryId)?.query ??
+      ''
+    );
+  });
   const setQueryResultLimit = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setQueryResultLimit,
   );
@@ -137,11 +144,10 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
 
   const handleAskAiAboutError = React.useCallback(() => {
     if (queryResult?.status === 'error' && onAskAiAboutError) {
-      const currentQuery = getCurrentQuery();
       const errorText = queryResult.error;
       onAskAiAboutError?.(currentQuery, errorText);
     }
-  }, [queryResult, getCurrentQuery, onAskAiAboutError]);
+  }, [queryResult, currentQuery, onAskAiAboutError]);
 
   if (!queryResult) {
     return null;
@@ -274,6 +280,8 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
 };
 
 export interface QueryResultPanelAskAiProps {
+  /** Query id to read the error/query from. Defaults to the selected query tab. */
+  queryId?: string;
   /** Called when clicked with the current query and error message */
   onClick?: (query: string, error: string) => void;
   /** Custom icon (defaults to MessageCircleQuestion) */
@@ -287,20 +295,28 @@ export interface QueryResultPanelAskAiProps {
 const QueryResultPanelAskAi = React.forwardRef<
   HTMLButtonElement,
   QueryResultPanelAskAiProps
->(({onClick, icon, className, tooltipContent = 'Ask AI for help'}, ref) => {
+>(
+  (
+    {queryId, onClick, icon, className, tooltipContent = 'Ask AI for help'},
+    ref,
+  ) => {
   const queryResult = useStoreWithSqlEditor((s) => {
-    const selectedId = s.sqlEditor.config.selectedQueryId;
-    return s.sqlEditor.queryResultsById[selectedId];
+    const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[resolvedQueryId];
   });
-  const getCurrentQuery = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.getCurrentQuery,
-  );
+  const currentQuery = useStoreWithSqlEditor((s) => {
+    if (!queryId) return s.sqlEditor.getCurrentQuery();
+    return (
+      s.sqlEditor.config.queries.find((query) => query.id === queryId)?.query ??
+      ''
+    );
+  });
 
   // Only render in error state
   if (queryResult?.status !== 'error') return null;
 
   const handleClick = () => {
-    onClick?.(getCurrentQuery(), queryResult.error);
+    onClick?.(currentQuery, queryResult.error);
   };
 
   return (
@@ -323,7 +339,8 @@ const QueryResultPanelAskAi = React.forwardRef<
       </Tooltip>
     </TooltipProvider>
   );
-});
+  },
+);
 QueryResultPanelAskAi.displayName = 'QueryResultPanel.AskAi';
 
 export const QueryResultPanel = Object.assign(QueryResultPanelRoot, {

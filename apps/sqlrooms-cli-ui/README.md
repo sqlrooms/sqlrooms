@@ -73,7 +73,7 @@ or Data Table Explorer flows use `grid`.
 Worksheet artifacts are block-composed documents for active analytical work.
 They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
-and Markdown documents.
+SQL queries, and Markdown documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
@@ -83,6 +83,9 @@ Hosted dashboards are stored as direct stateful blocks keyed by their block
 instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
 selection scope, so multiple dashboards in one Worksheet crossfilter
 independently.
+
+Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
+The same query block can also be opened as a top-level SQL Query artifact tab.
 
 ## AI Artifact Context
 

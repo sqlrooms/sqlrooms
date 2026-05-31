@@ -12,9 +12,10 @@ const CODEMIRROR_OPTIONS = {
 export const QueryEditorPanelEditor: React.FC<{
   className?: string;
   queryId: string;
-}> = ({className, queryId}) => {
+  readOnly?: boolean;
+}> = ({className, queryId, readOnly}) => {
   const tableSchemas = useStoreWithSqlEditor((s) => s.db.tables);
-  const runQuery = useStoreWithSqlEditor((s) => s.sqlEditor.parseAndRunQuery);
+  const runQueryById = useStoreWithSqlEditor((s) => s.sqlEditor.runQueryById);
   const connector = useStoreWithSqlEditor((s) => s.db.connector);
 
   const queryText = useStoreWithSqlEditor(
@@ -36,9 +37,9 @@ export const QueryEditorPanelEditor: React.FC<{
   // Handle query execution via keyboard shortcut
   const handleRunQuery = useCallback(
     (query: string) => {
-      runQuery(query);
+      runQueryById(queryId, query);
     },
-    [runQuery],
+    [queryId, runQueryById],
   );
 
   return (
@@ -51,6 +52,7 @@ export const QueryEditorPanelEditor: React.FC<{
       options={CODEMIRROR_OPTIONS}
       onRunQuery={handleRunQuery}
       tableSchemas={tableSchemas}
+      readOnly={readOnly}
     />
   );
 };

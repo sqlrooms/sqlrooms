@@ -33,6 +33,7 @@
     "@marimo-team/codemirror-sql": "^0.2.0",
     "@monaco-editor/react": "^4.7.0",
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",

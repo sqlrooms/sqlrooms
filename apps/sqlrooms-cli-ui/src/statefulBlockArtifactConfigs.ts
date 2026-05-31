@@ -95,6 +95,31 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.documents.removeDocument(artifactId);
     },
   },
+  'sql-query': {
+    artifactType: 'sql-query',
+    label: 'SQL Query',
+    defaultTitle: 'SQL Query',
+    embeddedTitle: 'Embedded SQL Query',
+    embeddedDescription: 'Embedded SQL query editor and result table',
+    resizableHeight: true,
+    defaultHeight: 720,
+    minHeight: 420,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this SQL query',
+    ensureState: (state, artifactId, title, options) => {
+      state.sqlEditor.ensureQuery(artifactId, {
+        name: title,
+        query: options?.initialText,
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.sqlEditor.removeQuery(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.sqlEditor.renameQuery(artifactId, title);
+    },
+  },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
 
 export type StatefulBlockArtifactType =

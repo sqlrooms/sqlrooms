@@ -29,6 +29,15 @@ import {z} from 'zod';
 
 const SQL_EDITOR_COMMAND_OWNER = '@sqlrooms/sql-editor';
 
+export type SqlEditorQuery = SqlEditorSliceConfig['queries'][number];
+
+export type EnsureSqlQueryOptions = {
+  name?: string;
+  query?: string;
+  open?: boolean;
+  select?: boolean;
+};
+
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
   | {status: 'aborted'}
@@ -86,6 +95,32 @@ export type SqlEditorSliceState = {
      * Set the config for the sql editor slice.
      */
     setConfig(config: SqlEditorSliceConfig): void;
+
+    /**
+     * Ensure an id-addressable query exists without requiring it to be an open
+     * workbench tab.
+     */
+    ensureQuery(queryId: string, options?: EnsureSqlQueryOptions): SqlEditorQuery;
+
+    /**
+     * Remove an id-addressable query and its runtime result.
+     */
+    removeQuery(queryId: string): void;
+
+    /**
+     * Rename an id-addressable query.
+     */
+    renameQuery(queryId: string, name: string): void;
+
+    /**
+     * Run a query by id, optionally overriding its stored SQL text first.
+     */
+    runQueryById(queryId: string, query?: string): Promise<void>;
+
+    /**
+     * Abort a running query by id.
+     */
+    abortQueryById(queryId: string): void;
 
     /**
      * Run the currently selected query.
@@ -216,6 +251,104 @@ export function createSqlEditorSlice({
           );
         },
 
+        ensureQuery: (queryId, options = {}) => {
+          const now = Date.now();
+          const existingQuery = get().sqlEditor.config.queries.find(
+            (query) => query.id === queryId,
+          );
+          const shouldOpen = Boolean(options.open || options.select);
+          const nextQuery: SqlEditorQuery = existingQuery
+            ? {
+                ...existingQuery,
+                ...(options.name !== undefined ? {name: options.name} : {}),
+                ...(options.query !== undefined ? {query: options.query} : {}),
+                ...(options.select ? {lastOpenedAt: now} : {}),
+              }
+            : {
+                id: queryId,
+                name: options.name ?? 'SQL Query',
+                query: options.query ?? '',
+                ...(options.select ? {lastOpenedAt: now} : {}),
+              };
+
+          set((state) =>
+            produce(state, (draft) => {
+              const config = draft.sqlEditor.config;
+              const index = config.queries.findIndex(
+                (query) => query.id === queryId,
+              );
+              if (index >= 0) {
+                config.queries[index] = nextQuery;
+              } else {
+                config.queries.push(nextQuery);
+              }
+              if (shouldOpen && !config.openTabs.includes(queryId)) {
+                config.openTabs.push(queryId);
+              }
+              if (options.select) {
+                config.selectedQueryId = queryId;
+              }
+            }),
+          );
+
+          return nextQuery;
+        },
+
+        removeQuery: (queryId) => {
+          const currentResult = get().sqlEditor.queryResultsById[queryId];
+          if (currentResult?.status === 'loading') {
+            currentResult.controller.abort();
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              const config = draft.sqlEditor.config;
+              const wasSelected = config.selectedQueryId === queryId;
+              config.queries = config.queries.filter(
+                (query) => query.id !== queryId,
+              );
+              config.openTabs = config.openTabs.filter((id) => id !== queryId);
+              delete draft.sqlEditor.queryResultsById[queryId];
+
+              if (config.queries.length === 0) {
+                config.queries.push({
+                  id: 'default',
+                  name: 'SQL',
+                  query: '',
+                  lastOpenedAt: Date.now(),
+                });
+                config.openTabs = ['default'];
+                config.selectedQueryId = 'default';
+                return;
+              }
+
+              if (wasSelected) {
+                const nextSelectedId =
+                  config.openTabs[0] ?? config.queries[0]?.id;
+                if (nextSelectedId) {
+                  config.selectedQueryId = nextSelectedId;
+                  if (!config.openTabs.includes(nextSelectedId)) {
+                    config.openTabs.push(nextSelectedId);
+                  }
+                }
+              }
+            }),
+          );
+        },
+
+        renameQuery: (queryId, name) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const query = draft.sqlEditor.config.queries.find(
+                (candidate) => candidate.id === queryId,
+              );
+              if (query) {
+                query.name = name || query.name;
+              }
+            }),
+          );
+        },
+
         exportResultsToCsv: (results, filename) => {
           if (!results) return;
           const blob = new Blob([csvFormat(results.toArray())], {
@@ -307,16 +440,7 @@ export function createSqlEditorSlice({
         },
 
         renameQueryTab: (queryId, newName) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const query = draft.sqlEditor.config.queries.find(
-                (q) => q.id === queryId,
-              );
-              if (query) {
-                query.name = newName || query.name;
-              }
-            }),
-          );
+          get().sqlEditor.renameQuery(queryId, newName);
         },
 
         closeQueryTab: (queryId) => {
@@ -407,24 +531,10 @@ export function createSqlEditorSlice({
         },
 
         parseAndRunCurrentQuery: async (): Promise<void> =>
-          get().sqlEditor.parseAndRunQuery(get().sqlEditor.getCurrentQuery()),
+          get().sqlEditor.runQueryById(get().sqlEditor.config.selectedQueryId),
 
         abortCurrentQuery: () => {
-          const selectedQueryId = get().sqlEditor.config.selectedQueryId;
-          const currentResult =
-            get().sqlEditor.queryResultsById[selectedQueryId];
-          if (currentResult?.status === 'loading' && currentResult.controller) {
-            currentResult.controller.abort();
-          }
-
-          set((state) =>
-            produce(state, (draft) => {
-              const result = draft.sqlEditor.queryResultsById[selectedQueryId];
-              if (result?.status === 'loading') {
-                result.isBeingAborted = true;
-              }
-            }),
-          );
+          get().sqlEditor.abortQueryById(get().sqlEditor.config.selectedQueryId);
         },
 
         setQueryResultLimit: (limit) => {
@@ -435,16 +545,43 @@ export function createSqlEditorSlice({
           );
         },
 
-        parseAndRunQuery: async (query): Promise<void> => {
-          const selectedQueryId = get().sqlEditor.config.selectedQueryId;
+        abortQueryById: (queryId) => {
+          const currentResult = get().sqlEditor.queryResultsById[queryId];
+          if (currentResult?.status === 'loading' && currentResult.controller) {
+            currentResult.controller.abort();
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              const result = draft.sqlEditor.queryResultsById[queryId];
+              if (result?.status === 'loading') {
+                result.isBeingAborted = true;
+              }
+            }),
+          );
+        },
+
+        parseAndRunQuery: async (query): Promise<void> =>
+          get().sqlEditor.runQueryById(
+            get().sqlEditor.config.selectedQueryId,
+            query,
+          ),
+
+        runQueryById: async (queryId, queryOverride): Promise<void> => {
+          const storedQuery = get().sqlEditor.config.queries.find(
+            (query) => query.id === queryId,
+          );
+          const query = queryOverride ?? storedQuery?.query ?? '';
           const existingResult =
-            get().sqlEditor.queryResultsById[selectedQueryId];
+            get().sqlEditor.queryResultsById[queryId];
           if (existingResult?.status === 'loading') {
             throw new Error('Query already running');
           }
           if (!query.trim()) {
             return;
           }
+
+          get().sqlEditor.ensureQuery(queryId, {query});
 
           // Create abort controller for this query execution
           const queryController = new AbortController();
@@ -453,7 +590,7 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.selectedTable = undefined;
-              draft.sqlEditor.queryResultsById[selectedQueryId] = {
+              draft.sqlEditor.queryResultsById[queryId] = {
                 status: 'loading',
                 isBeingAborted: false,
                 controller: queryController,
@@ -589,16 +726,30 @@ export function createSqlEditorSlice({
           }
 
           // Update state without Immer since Arrow Tables don't play well with drafts.
-          set((state) => ({
-            ...state,
-            sqlEditor: {
-              ...state.sqlEditor,
-              queryResultsById: {
-                ...state.sqlEditor.queryResultsById,
-                [selectedQueryId]: queryResult,
+          set((state) => {
+            const currentResult = state.sqlEditor.queryResultsById[queryId];
+            const queryStillExists = state.sqlEditor.config.queries.some(
+              (candidate) => candidate.id === queryId,
+            );
+            if (
+              !queryStillExists ||
+              currentResult?.status !== 'loading' ||
+              currentResult.controller !== queryController
+            ) {
+              return state;
+            }
+
+            return {
+              ...state,
+              sqlEditor: {
+                ...state.sqlEditor,
+                queryResultsById: {
+                  ...state.sqlEditor.queryResultsById,
+                  [queryId]: queryResult,
+                },
               },
-            },
-          }));
+            };
+          });
         },
       },
     } satisfies SqlEditorSliceState;

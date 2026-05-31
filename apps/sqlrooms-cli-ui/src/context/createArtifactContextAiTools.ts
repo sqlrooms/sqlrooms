@@ -101,6 +101,29 @@ function readCliArtifact({
     };
   }
 
+  if (artifact.type === 'sql-query') {
+    const query = state.sqlEditor.config.queries.find(
+      (candidate) => candidate.id === artifactId,
+    );
+    const result = state.sqlEditor.queryResultsById[artifactId];
+    return {
+      success: true as const,
+      artifact: {
+        artifactId,
+        title: artifact.title,
+        type: artifact.type,
+      },
+      payload: {
+        kind: 'sql-query',
+        name: query?.name ?? artifact.title,
+        query: query?.query ?? '',
+        resultStatus: result?.status,
+        lastQueryStatement:
+          result?.status === 'success' ? result.lastQueryStatement : undefined,
+      },
+    };
+  }
+
   return {
     success: true as const,
     artifact: {
