@@ -73,6 +73,14 @@ export const DataTableBlockRenderer = ({
       value={tableName}
     />
   );
+  const header = (
+    <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
+      {tableSelector}
+      {caption ? (
+        <div className="min-w-0 truncate text-sm font-medium">{caption}</div>
+      ) : null}
+    </div>
+  );
 
   if (!blockInstanceId || blockType !== 'data-table') {
     return (
@@ -96,14 +104,7 @@ export const DataTableBlockRenderer = ({
   if (connection.status === 'loading') {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
-          {tableSelector}
-          {caption ? (
-            <div className="min-w-0 truncate text-sm font-medium">
-              {caption}
-            </div>
-          ) : null}
-        </div>
+        {header}
         <SpinnerPane className="min-h-0 flex-1" />
       </div>
     );
@@ -112,14 +113,7 @@ export const DataTableBlockRenderer = ({
   if (connection.status !== 'ready') {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
-          {tableSelector}
-          {caption ? (
-            <div className="min-w-0 truncate text-sm font-medium">
-              {caption}
-            </div>
-          ) : null}
-        </div>
+        {header}
         <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center p-4 text-sm">
           Mosaic connection is not ready.
         </div>
@@ -136,14 +130,7 @@ export const DataTableBlockRenderer = ({
   return (
     <DataTableExplorer {...dataTableExplorerProps}>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
-          {tableSelector}
-          {caption ? (
-            <div className="min-w-0 truncate text-sm font-medium">
-              {caption}
-            </div>
-          ) : null}
-        </div>
+        {header}
         <div className="min-h-0 flex-1 overflow-auto">
           <DataTableExplorer.Table>
             <DataTableExplorer.Header />

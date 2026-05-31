@@ -3,9 +3,9 @@ import {cn, TableBody, TableCell, TableRow} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {memo} from 'react';
 import {
-  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_CLASS,
-  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS,
-  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_CLASS,
+  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_STYLE,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_STYLE,
+  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_STYLE,
 } from './layout';
 import type {UseDataTableExplorerReturn} from './types';
 import {isDataTableExplorerUnsupportedSummaryType} from './utils';
@@ -18,15 +18,13 @@ export type DataTableExplorerRowsProps = {
   >;
 };
 
-const ROW_NUMBER_CLASS = cn(
-  'bg-background text-muted-foreground sticky left-0 z-10 border-r px-1 text-center',
-  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS,
-);
+const ROW_NUMBER_CLASS =
+  'bg-background text-muted-foreground sticky left-0 z-10 border-r px-1 text-center';
 
-function getColumnWidthClass(field: arrow.Field) {
+function getColumnWidthStyle(field: arrow.Field) {
   return isDataTableExplorerUnsupportedSummaryType(field.type)
-    ? DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_CLASS
-    : DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_CLASS;
+    ? DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_STYLE
+    : DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_STYLE;
 }
 
 function formatDataTableExplorerValue(type: arrow.DataType, value: unknown) {
@@ -47,12 +45,14 @@ function SizingRow({
       className="pointer-events-none h-0 border-0 opacity-0 hover:bg-transparent"
     >
       <TableCell
-        className={cn(DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_CLASS, 'border-r p-0')}
+        className="border-r p-0"
+        style={DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_STYLE}
       />
       {columns.map((column) => (
         <TableCell
           key={column.name}
-          className={cn(getColumnWidthClass(column.field), 'border-r p-0')}
+          className="border-r p-0"
+          style={getColumnWidthStyle(column.field)}
         />
       ))}
     </TableRow>
@@ -70,7 +70,10 @@ function EmptyStateRow({
 }) {
   return (
     <TableRow>
-      <TableCell className={ROW_NUMBER_CLASS} />
+      <TableCell
+        className={ROW_NUMBER_CLASS}
+        style={DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_STYLE}
+      />
       <TableCell
         colSpan={Math.max(columns.length, 1)}
         className={cn(
@@ -103,7 +106,10 @@ const DataRow = memo(function DataRow({
 }: DataRowProps) {
   return (
     <TableRow>
-      <TableCell className={ROW_NUMBER_CLASS}>
+      <TableCell
+        className={ROW_NUMBER_CLASS}
+        style={DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_STYLE}
+      >
         {pageIndex * pageSize + rowIndex + 1}
       </TableCell>
       {columns.map((column) => {
@@ -113,10 +119,10 @@ const DataRow = memo(function DataRow({
           <TableCell
             key={column.name}
             className={cn(
-              getColumnWidthClass(column.field),
               'max-w-[240px] overflow-hidden border-r align-top font-mono text-xs',
               isNumericArrowType(column.field.type) && 'text-right',
             )}
+            style={getColumnWidthStyle(column.field)}
           >
             <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
               <ArrowCellValue

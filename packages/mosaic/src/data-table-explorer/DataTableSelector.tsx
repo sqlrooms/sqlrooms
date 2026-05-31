@@ -15,6 +15,10 @@ import {
 import {Check, ChevronsUpDown, TableIcon} from 'lucide-react';
 import {useMemo, useState} from 'react';
 
+/**
+ * Props for table selector components. `value` and `onChange` use the dotted
+ * table reference format `database.schema.table`.
+ */
 export type DataTableSelectorProps = {
   className?: string;
   disabled?: boolean;
@@ -116,6 +120,9 @@ function DataTableSelectorCommand({
   );
 }
 
+/**
+ * Searchable table selector grouped by database and schema.
+ */
 export function DataTableSelector({
   className,
   disabled,
@@ -161,6 +168,9 @@ export function DataTableSelector({
   );
 }
 
+/**
+ * Presentational empty-state wrapper that renders the same searchable selector.
+ */
 export function DataTableSelectorEmptyState(props: DataTableSelectorProps) {
   return (
     <div className="flex h-full items-center justify-center p-4">
@@ -171,6 +181,9 @@ export function DataTableSelectorEmptyState(props: DataTableSelectorProps) {
   );
 }
 
+/**
+ * Returns the dotted table reference used by DataTableSelector values.
+ */
 export function getDataTableSelectorReference(table: DataTable): string {
   return getTableReference(table);
 }
