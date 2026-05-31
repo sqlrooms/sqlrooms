@@ -1,9 +1,9 @@
 import * as arrow from 'apache-arrow';
-import {createProfilerStore} from '../src/profiler/createProfilerStore';
+import {createDataTableExplorerStore} from '../src/data-table-explorer/createDataTableExplorerStore';
 
-describe('createProfilerStore', () => {
+describe('createDataTableExplorerStore', () => {
   it('syncs page size by resetting the page index', () => {
-    const store = createProfilerStore({
+    const store = createDataTableExplorerStore({
       initialSorting: [],
       pageSize: 100,
     });
@@ -21,7 +21,7 @@ describe('createProfilerStore', () => {
   });
 
   it('resets the page index when sorting changes', () => {
-    const store = createProfilerStore({
+    const store = createDataTableExplorerStore({
       initialSorting: [],
       pageSize: 100,
     });
@@ -36,7 +36,7 @@ describe('createProfilerStore', () => {
   });
 
   it('normalizes pagination values before exposing them from the store', () => {
-    const store = createProfilerStore({
+    const store = createDataTableExplorerStore({
       initialSorting: [],
       pageSize: 0,
     });
@@ -58,7 +58,7 @@ describe('createProfilerStore', () => {
   });
 
   it('initializes empty summary state from fields', () => {
-    const store = createProfilerStore({
+    const store = createDataTableExplorerStore({
       initialSorting: [],
       pageSize: 100,
     });

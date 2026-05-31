@@ -1,10 +1,10 @@
 import {type MosaicDashboardAddPanelAction} from './action-types';
 import {addTextPanelAction} from '../text/addTextPanelAction';
-import {addProfilerPanelAction} from '../profiler/addProfilerPanelAction';
+import {addDataTableExplorerPanelAction} from '../data-table-explorer/addDataTableExplorerPanelAction';
 import {addChartPanelAction} from '../chart/addChartPanelAction';
 
 export const defaultAddPanelActions: MosaicDashboardAddPanelAction[] = [
-  addProfilerPanelAction,
+  addDataTableExplorerPanelAction,
   addTextPanelAction,
   addChartPanelAction,
 ];

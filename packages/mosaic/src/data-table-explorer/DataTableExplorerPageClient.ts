@@ -2,39 +2,42 @@ import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import type {Table} from 'apache-arrow';
 import type {
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
+  DataTableExplorerPaginationState,
+  DataTableExplorerSorting,
 } from './types';
-import {buildProfilerBaseQuery, buildProfilerPageQuery} from './utils';
+import {
+  buildDataTableExplorerBaseQuery,
+  buildDataTableExplorerPageQuery,
+} from './utils';
 
-export type ProfilerPageState = {
+export type DataTableExplorerPageState = {
   datasetId?: string;
   error?: Error;
   isLoading: boolean;
   pageTable?: Table;
 };
 
-type ProfilerPageClientOptions = {
+type DataTableExplorerPageClientOptions = {
   columns: string[];
   filter?: ReturnType<Selection['predicate']>;
-  onStateChange: (state: ProfilerPageState) => void;
-  pagination: MosaicProfilerPaginationState;
-  sorting: MosaicProfilerSorting;
+  onStateChange: (state: DataTableExplorerPageState) => void;
+  pagination: DataTableExplorerPaginationState;
+  sorting: DataTableExplorerSorting;
   tableName: string;
 };
 
-export class ProfilerPageClient extends MosaicClient {
+export class DataTableExplorerPageClient extends MosaicClient {
   private readonly columns: string[];
   private readonly datasetId: string;
   private error?: Error;
   private readonly filter?: ReturnType<Selection['predicate']>;
-  private readonly onStateChange: (state: ProfilerPageState) => void;
-  private readonly pagination: MosaicProfilerPaginationState;
+  private readonly onStateChange: (state: DataTableExplorerPageState) => void;
+  private readonly pagination: DataTableExplorerPaginationState;
   private pageTable?: Table;
-  private readonly sorting: MosaicProfilerSorting;
+  private readonly sorting: DataTableExplorerSorting;
   private readonly tableName: string;
 
-  constructor(options: ProfilerPageClientOptions) {
+  constructor(options: DataTableExplorerPageClientOptions) {
     super();
     this.columns = options.columns;
     this.datasetId = [options.tableName, ...options.columns].join('\u0001');
@@ -61,8 +64,8 @@ export class ProfilerPageClient extends MosaicClient {
 
   override query(filter: Array<ExprNode> = []): Query {
     const resolvedFilter = this.filter ?? filter;
-    return buildProfilerPageQuery(
-      buildProfilerBaseQuery({
+    return buildDataTableExplorerPageQuery(
+      buildDataTableExplorerBaseQuery({
         columns: this.columns,
         filter: resolvedFilter,
         sorting: this.sorting,

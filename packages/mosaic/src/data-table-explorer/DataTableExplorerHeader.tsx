@@ -2,40 +2,44 @@ import {Badge, cn, TableHead, TableHeader, TableRow} from '@sqlrooms/ui';
 import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {
-  getProfilerColumnWidthPx,
-  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
-  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
-  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_STYLE,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_STYLE,
+  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_STYLE,
+  getDataTableExplorerColumnWidthPx,
 } from './layout';
 import type {
-  MosaicProfilerCategorySummary,
-  MosaicProfilerColumnState,
-  MosaicProfilerHistogramSummary,
-  MosaicProfilerSorting,
-  UseMosaicProfilerReturn,
+  DataTableExplorerCategorySummary,
+  DataTableExplorerColumnState,
+  DataTableExplorerHistogramSummary,
+  DataTableExplorerSorting,
+  UseDataTableExplorerReturn,
 } from './types';
-import {isProfilerUnsupportedSummaryType} from './utils';
+import {isDataTableExplorerUnsupportedSummaryType} from './utils';
 
-export type MosaicProfilerHeaderProps = {
+export type DataTableExplorerHeaderProps = {
   className?: string;
-  profiler: Pick<UseMosaicProfilerReturn, 'columns' | 'setSorting' | 'sorting'>;
+  explorer: Pick<
+    UseDataTableExplorerReturn,
+    'columns' | 'setSorting' | 'sorting'
+  >;
 };
 
-const COLUMN_WIDTH_CLASS = `min-w-[${PROFILER_DEFAULT_COLUMN_WIDTH_PX}px] w-[${PROFILER_DEFAULT_COLUMN_WIDTH_PX}px] max-w-[${PROFILER_DEFAULT_COLUMN_WIDTH_PX}px]`;
-const STICKY_ROW_NUMBER_CLASS = `bg-background sticky left-0 top-0 z-40 min-w-[${PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}px] w-[${PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}px] max-w-[${PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}px] border-r px-1 text-center`;
+const STICKY_ROW_NUMBER_CLASS =
+  'bg-background sticky left-0 top-0 z-40 border-r px-1 text-center';
 const STICKY_COLUMN_HEADER_CLASS =
   'bg-background sticky top-0 z-30 align-top whitespace-nowrap shadow-[inset_0_-1px_0_hsl(var(--border))]';
 
-function getColumnWidthClass(column: MosaicProfilerColumnState) {
-  return isProfilerUnsupportedSummaryType(column.field.type)
-    ? `min-w-[${PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX}px] w-[${PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX}px] max-w-[${PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX}px]`
-    : COLUMN_WIDTH_CLASS;
+function getColumnWidthStyle(column: DataTableExplorerColumnState) {
+  return isDataTableExplorerUnsupportedSummaryType(column.field.type)
+    ? DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_STYLE
+    : DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_STYLE;
 }
 
 function setNextSortState(
-  currentSorting: MosaicProfilerSorting,
+  currentSorting: DataTableExplorerSorting,
   columnId: string,
-  setSorting: UseMosaicProfilerReturn['setSorting'],
+  setSorting: UseDataTableExplorerReturn['setSorting'],
 ) {
   const current = currentSorting.find((entry) => entry.id === columnId);
   if (!current) {
@@ -60,7 +64,7 @@ function formatPercentOfTotal(value: number) {
 function CategorySummaryCell({
   summary,
 }: {
-  summary: MosaicProfilerCategorySummary;
+  summary: DataTableExplorerCategorySummary;
 }) {
   const [hoveredKey, setHoveredKey] = useState<string>();
   const totalCount = summary.buckets.reduce(
@@ -185,7 +189,7 @@ function formatDomainValue(value: number | Date, valueType: 'date' | 'number') {
 function HistogramSummaryCell({
   summary,
 }: {
-  summary: MosaicProfilerHistogramSummary;
+  summary: DataTableExplorerHistogramSummary;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const brushRootRef = useRef<SVGGElement>(null);
@@ -389,7 +393,7 @@ function HistogramSummaryCell({
   );
 }
 
-function SummaryCell({column}: {column: MosaicProfilerColumnState}) {
+function SummaryCell({column}: {column: DataTableExplorerColumnState}) {
   if (column.summary.kind === 'histogram') {
     return <HistogramSummaryCell summary={column.summary} />;
   }
@@ -403,35 +407,38 @@ function SummaryCell({column}: {column: MosaicProfilerColumnState}) {
   );
 }
 
-export function MosaicProfilerHeader({
+export function DataTableExplorerHeader({
   className,
-  profiler,
-}: MosaicProfilerHeaderProps) {
+  explorer,
+}: DataTableExplorerHeaderProps) {
   return (
     <>
       <colgroup>
-        <col style={{width: PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX}} />
-        {profiler.columns.map((column) => (
+        <col style={{width: DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX}} />
+        {explorer.columns.map((column) => (
           <col
             key={column.name}
-            style={{width: getProfilerColumnWidthPx(column)}}
+            style={{width: getDataTableExplorerColumnWidthPx(column)}}
           />
         ))}
       </colgroup>
       <TableHeader className={cn('sticky top-0 z-30', className)}>
         <TableRow>
-          <TableHead className={STICKY_ROW_NUMBER_CLASS}>#</TableHead>
-          {profiler.columns.map((column) => {
-            const sortState = profiler.sorting.find(
+          <TableHead
+            className={STICKY_ROW_NUMBER_CLASS}
+            style={DATA_TABLE_EXPLORER_ROW_NUMBER_WIDTH_STYLE}
+          >
+            #
+          </TableHead>
+          {explorer.columns.map((column) => {
+            const sortState = explorer.sorting.find(
               (entry) => entry.id === column.name,
             );
             return (
               <TableHead
                 key={column.name}
-                className={cn(
-                  getColumnWidthClass(column),
-                  STICKY_COLUMN_HEADER_CLASS,
-                )}
+                className={STICKY_COLUMN_HEADER_CLASS}
+                style={getColumnWidthStyle(column)}
               >
                 <div className="min-w-0">
                   <button
@@ -439,9 +446,9 @@ export function MosaicProfilerHeader({
                     className="group relative flex w-full items-start gap-1.5 pr-4 text-left"
                     onClick={() =>
                       setNextSortState(
-                        profiler.sorting,
+                        explorer.sorting,
                         column.name,
-                        profiler.setSorting,
+                        explorer.setSorting,
                       )
                     }
                   >

@@ -19,7 +19,7 @@ import {
   createChartTools,
   createDefaultChartTypes,
   createListPanelsTool,
-  createProfilerTool,
+  createDataTableExplorerTool,
   createRemovePanelTool,
   createTextPanelTool,
   type ChartBuilderColumn,
@@ -200,7 +200,7 @@ export const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent t
 
 ## Your Role
 
-You analyze data and create insightful dashboards with multiple visualizations (charts, profilers, text annotations). You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
+You analyze data and create insightful dashboards with multiple visualizations (charts, Data Table Explorers, text annotations). You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
 
 ## Available Tools
 
@@ -213,7 +213,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 - create_dashboard_heatmap - density/patterns across two dimensions (preferred for large datasets)
 
 **Panel Tools:**
-- create_dashboard_profiler - table statistics and column summaries
+- create_dashboard_data_table_explorer - table statistics and column summaries
 - create_dashboard_text_panel - markdown annotations and insights
 - ${MAP_TOOL_KEY} - native Deck JSON geospatial map panel (if provided by the host app)
 
@@ -548,7 +548,7 @@ export function createDashboardAiTools<TState>({
       },
     }),
     ...chartTools,
-    create_dashboard_profiler: createProfilerTool(deps),
+    create_dashboard_data_table_explorer: createDataTableExplorerTool(deps),
     create_dashboard_text_panel: createTextPanelTool(deps),
     list_dashboard_panels: createListPanelsTool(deps),
     remove_dashboard_panel: createRemovePanelTool(deps),
@@ -657,7 +657,7 @@ export function createDashboardAgentTool<TState>(
 
 Use this for exploratory data analysis tasks like "analyze the earthquakes dataset" or "create insights dashboard for sales data".
 
-The agent will query the data, discover patterns, and create charts, profilers, and text panels with findings.
+The agent will query the data, discover patterns, and create charts, Data Table Explorers, and text panels with findings.
 
 For simple tasks like "create a histogram of magnitude", use the individual chart tools instead.
 

@@ -1,10 +1,10 @@
 import {jest} from '@jest/globals';
 import * as arrow from 'apache-arrow';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MosaicProfiler} from '../src/profiler/MosaicProfiler';
-import type {UseMosaicProfilerReturn} from '../src/profiler/types';
+import {DataTableExplorer} from '../src/data-table-explorer/DataTableExplorer';
+import type {UseDataTableExplorerReturn} from '../src/data-table-explorer/types';
 
-function createProfiler(): UseMosaicProfilerReturn {
+function createDataTableExplorer(): UseDataTableExplorerReturn {
   return {
     columns: [],
     filteredRowCount: 25,
@@ -14,7 +14,7 @@ function createProfiler(): UseMosaicProfilerReturn {
     pageTable: undefined,
     pagination: {pageIndex: 0, pageSize: 10},
     reset: jest.fn(),
-    selection: {} as UseMosaicProfilerReturn['selection'],
+    selection: {} as UseDataTableExplorerReturn['selection'],
     setPagination: jest.fn(),
     setSorting: jest.fn(),
     sorting: [],
@@ -24,15 +24,15 @@ function createProfiler(): UseMosaicProfilerReturn {
   };
 }
 
-describe('MosaicProfiler compound API', () => {
-  it('provides profiler context to compound subcomponents', () => {
+describe('DataTableExplorer compound API', () => {
+  it('provides explorer context to compound subcomponents', () => {
     const markup = renderToStaticMarkup(
-      <MosaicProfiler.Root profiler={createProfiler()}>
+      <DataTableExplorer.Root explorer={createDataTableExplorer()}>
         <table>
-          <MosaicProfiler.Rows />
+          <DataTableExplorer.Rows />
         </table>
-        <MosaicProfiler.StatusBar />
-      </MosaicProfiler.Root>,
+        <DataTableExplorer.StatusBar />
+      </DataTableExplorer.Root>,
     );
 
     expect(markup).toContain('No rows');
@@ -42,14 +42,14 @@ describe('MosaicProfiler compound API', () => {
   });
 
   it('throws when a compound subcomponent renders without a provider', () => {
-    expect(() => renderToStaticMarkup(<MosaicProfiler.StatusBar />)).toThrow(
-      /MosaicProfiler compound components must be rendered inside/,
+    expect(() => renderToStaticMarkup(<DataTableExplorer.StatusBar />)).toThrow(
+      /DataTableExplorer compound components must be rendered inside/,
     );
   });
 
   it('renders header through the compound provider', () => {
-    const profiler = createProfiler();
-    profiler.columns = [
+    const explorer = createDataTableExplorer();
+    explorer.columns = [
       {
         field: new arrow.Field('Magnitude', new arrow.Float64(), true),
         kind: 'histogram',
@@ -69,18 +69,18 @@ describe('MosaicProfiler compound API', () => {
 
     const markup = renderToStaticMarkup(
       <table>
-        <MosaicProfiler.Root profiler={profiler}>
-          <MosaicProfiler.Header />
-        </MosaicProfiler.Root>
+        <DataTableExplorer.Root explorer={explorer}>
+          <DataTableExplorer.Header />
+        </DataTableExplorer.Root>
       </table>,
     );
 
     expect(markup).toContain('Magnitude');
   });
 
-  it('renders the compound table with profiler sizing defaults', () => {
-    const profiler = createProfiler();
-    profiler.columns = [
+  it('renders the compound table with explorer sizing defaults', () => {
+    const explorer = createDataTableExplorer();
+    explorer.columns = [
       {
         field: new arrow.Field('Magnitude', new arrow.Float64(), true),
         kind: 'histogram',
@@ -99,11 +99,11 @@ describe('MosaicProfiler compound API', () => {
     ];
 
     const markup = renderToStaticMarkup(
-      <MosaicProfiler.Root profiler={profiler}>
-        <MosaicProfiler.Table>
+      <DataTableExplorer.Root explorer={explorer}>
+        <DataTableExplorer.Table>
           <tbody />
-        </MosaicProfiler.Table>
-      </MosaicProfiler.Root>,
+        </DataTableExplorer.Table>
+      </DataTableExplorer.Root>,
     );
 
     expect(markup).toContain('table-fixed');

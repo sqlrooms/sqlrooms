@@ -5,11 +5,13 @@
 
 import {z} from 'zod';
 
-// Profiler panel config
-export const ProfilerPanelConfig = z.object({
+// DataTableExplorer panel config
+export const DataTableExplorerPanelConfig = z.object({
   pageSize: z.number().optional(),
 });
-export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
+export type DataTableExplorerPanelConfig = z.infer<
+  typeof DataTableExplorerPanelConfig
+>;
 
 // Text panel config
 export const TextPanelConfig = z.object({

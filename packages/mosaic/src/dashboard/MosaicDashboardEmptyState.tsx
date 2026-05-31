@@ -12,7 +12,8 @@ export const MosaicDashboardEmptyState: React.FC = () => {
     <div className="m-4 flex min-h-[240px] items-center justify-center rounded-md border border-dashed p-8">
       <div className="flex flex-col items-center gap-4">
         <p className="text-muted-foreground text-sm">
-          Add a chart, profiler, map, or text to start building this dashboard
+          Add a chart, Data Table Explorer, map, or text to start building this
+          dashboard
         </p>
         <div className="flex gap-3">
           {actions.map((action) => {

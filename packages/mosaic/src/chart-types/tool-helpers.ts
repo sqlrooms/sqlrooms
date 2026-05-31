@@ -1,12 +1,12 @@
 import type {DashboardToolDeps} from './base-types';
 import {
   createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardTextPanelConfig,
 } from '../dashboard/MosaicDashboardSlice';
 import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
 import type {
-  ProfilerPanelConfig,
+  DataTableExplorerPanelConfig,
   TextPanelConfig,
 } from '../dashboard/core-types';
 import type {ChartConfig} from './chart-config';
@@ -15,7 +15,7 @@ export interface PanelResult {
   panelId: string;
   artifactId: string;
   title: string;
-  config: ChartConfig | ProfilerPanelConfig | TextPanelConfig;
+  config: ChartConfig | DataTableExplorerPanelConfig | TextPanelConfig;
 }
 
 export interface CreateOrUpdateChartPanelParams {
@@ -26,12 +26,12 @@ export interface CreateOrUpdateChartPanelParams {
   config: ChartConfig;
 }
 
-export interface CreateOrUpdateProfilerPanelParams {
+export interface CreateOrUpdateDataTableExplorerPanelParams {
   panelId?: string;
   dashboardId: string;
   tableName: string;
   title: string;
-  config: ProfilerPanelConfig;
+  config: DataTableExplorerPanelConfig;
 }
 
 export interface CreateOrUpdateTextPanelParams {
@@ -120,11 +120,11 @@ export function createOrUpdateChartPanel(
 }
 
 /**
- * Universal helper to create or update a profiler panel.
+ * Universal helper to create or update a dataTableExplorer panel.
  */
-export function createOrUpdateProfilerPanel(
+export function createOrUpdateDataTableExplorerPanel(
   deps: DashboardToolDeps,
-  params: CreateOrUpdateProfilerPanelParams,
+  params: CreateOrUpdateDataTableExplorerPanelParams,
 ): PanelResult {
   if (params.panelId) {
     // Validate panel exists before attempting update
@@ -145,7 +145,7 @@ export function createOrUpdateProfilerPanel(
     };
   } else {
     // Create new panel - create full panel config
-    const panel = createMosaicDashboardProfilerPanelConfig({
+    const panel = createMosaicDashboardDataTableExplorerPanelConfig({
       title: params.title,
       config: params.config,
     });

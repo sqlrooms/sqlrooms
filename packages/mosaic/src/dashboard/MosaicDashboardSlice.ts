@@ -43,7 +43,8 @@ import type {ChartRuntimeIssue} from '../chart-runtime';
  */
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
-export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
+export const MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE =
+  'data-table-explorer';
 export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
@@ -51,11 +52,13 @@ export type MosaicDashboardLayoutType = z.infer<
   typeof MosaicDashboardLayoutType
 >;
 
-// Profiler panel config
-export const ProfilerPanelConfig = z.object({
+// DataTableExplorer panel config
+export const DataTableExplorerPanelConfig = z.object({
   pageSize: z.number().optional(),
 });
-export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
+export type DataTableExplorerPanelConfig = z.infer<
+  typeof DataTableExplorerPanelConfig
+>;
 
 // Text panel config
 export const TextPanelConfig = z.object({
@@ -74,13 +77,13 @@ export const ChartPanelConfig = z.object({
 });
 export type ChartPanelConfig = z.infer<typeof ChartPanelConfig>;
 
-export const ProfilerPanel = z.object({
+export const DataTableExplorerPanel = z.object({
   id: z.string(),
-  type: z.literal(MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE),
+  type: z.literal(MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE),
   title: z.string().default('Panel'),
-  config: ProfilerPanelConfig,
+  config: DataTableExplorerPanelConfig,
 });
-export type ProfilerPanel = z.infer<typeof ProfilerPanel>;
+export type DataTableExplorerPanel = z.infer<typeof DataTableExplorerPanel>;
 
 export const TextPanel = z.object({
   id: z.string(),
@@ -101,7 +104,11 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [ChartPanelConfig, ProfilerPanel, TextPanel])
+  .discriminatedUnion('type', [
+    ChartPanelConfig,
+    DataTableExplorerPanel,
+    TextPanel,
+  ])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
@@ -118,8 +125,8 @@ export type MosaicDashboardPanelRendererProps<
 
 export type ChartPanelRendererProps =
   MosaicDashboardPanelRendererProps<ChartPanelConfig>;
-export type ProfilerPanelRendererProps =
-  MosaicDashboardPanelRendererProps<ProfilerPanel>;
+export type DataTableExplorerPanelRendererProps =
+  MosaicDashboardPanelRendererProps<DataTableExplorerPanel>;
 export type TextPanelRendererProps =
   MosaicDashboardPanelRendererProps<TextPanel>;
 
@@ -141,7 +148,7 @@ export type AnyPanelRenderer = {
 // Map of panel type string to panel config type
 export type PanelTypeMap = {
   [MOSAIC_DASHBOARD_CHART_PANEL_TYPE]: ChartPanelConfig;
-  [MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE]: ProfilerPanel;
+  [MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE]: DataTableExplorerPanel;
   [MOSAIC_DASHBOARD_TEXT_PANEL_TYPE]: TextPanel;
 };
 
@@ -160,16 +167,16 @@ export function createMosaicDashboardChartPanelConfig(
   };
 }
 
-export function createMosaicDashboardProfilerPanelConfig(
+export function createMosaicDashboardDataTableExplorerPanelConfig(
   options: {
     title?: string;
-    config?: ProfilerPanelConfig;
+    config?: DataTableExplorerPanelConfig;
   } = {},
-): ProfilerPanel {
+): DataTableExplorerPanel {
   return {
     id: createId(),
-    type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-    title: options.title ?? 'Profiler',
+    type: MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
+    title: options.title ?? 'Data Table Explorer',
     config: options.config ?? {},
   };
 }
@@ -387,7 +394,7 @@ function createDashboardGridItem(
 ): LayoutGridItem {
   const effectiveCols = Math.max(1, cols);
   const w =
-    panelType === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE ||
+    panelType === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE ||
     panelType === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE
       ? effectiveCols
       : Math.max(1, Math.ceil(effectiveCols / 2));

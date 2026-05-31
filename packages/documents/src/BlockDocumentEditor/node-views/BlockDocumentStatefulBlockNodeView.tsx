@@ -188,7 +188,11 @@ export const BlockDocumentStatefulBlockNodeView: FC<
 
       const hasScrollModifier = isMac ? event.metaKey : event.ctrlKey;
       const axis = getScrollAxis(event);
-      const delta = axis === 'y' ? event.deltaY : event.deltaX;
+      if (axis === 'x') {
+        hideScrollHint();
+        return;
+      }
+      const delta = event.deltaY;
       const internalScrollElement =
         findScrollableAncestor({
           target: event.target,
@@ -328,6 +332,8 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             caption,
             height: resolvedHeight,
             readOnly,
+            onTitleChange: (nextTitle: string | undefined) =>
+              updateAttributes({title: nextTitle || undefined}),
             onCaptionChange: (nextCaption: string | undefined) =>
               updateAttributes({caption: nextCaption}),
           })

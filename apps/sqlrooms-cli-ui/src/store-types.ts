@@ -82,7 +82,7 @@ export type RoomState = RoomShellSliceState &
       initialize?: () => Promise<void>;
       destroy?: () => Promise<void>;
       ensureDashboardArtifact: (artifactId: string) => void;
-      addProfilerForTable: (tableName: string) => string | undefined;
+      addDataTableExplorerForTable: (tableName: string) => string | undefined;
       getCurrentDashboardArtifactId: () => string | undefined;
       createDashboardArtifact: (
         title?: string,

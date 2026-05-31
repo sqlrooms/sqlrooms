@@ -2,71 +2,80 @@ import {castDraft, produce} from 'immer';
 import type * as arrow from 'apache-arrow';
 import type {Dispatch, SetStateAction} from 'react';
 import {createStore} from 'zustand/vanilla';
-import type {ProfilerCountState} from './ProfilerCountClient';
-import type {ProfilerPageState} from './ProfilerPageClient';
+import type {DataTableExplorerCountState} from './DataTableExplorerCountClient';
+import type {DataTableExplorerPageState} from './DataTableExplorerPageClient';
 import type {
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
-  MosaicProfilerSummaryState,
+  DataTableExplorerPaginationState,
+  DataTableExplorerSorting,
+  DataTableExplorerSummaryState,
 } from './types';
-import {createEmptySummaryState, normalizeProfilerPagination} from './utils';
+import {
+  createEmptySummaryState,
+  normalizeDataTableExplorerPagination,
+} from './utils';
 
 function resolveSetStateAction<T>(next: SetStateAction<T>, previous: T): T {
   // Preserve React-style setter semantics so hook callers can pass either
-  // a concrete value or an updater function to the local profiler store.
+  // a concrete value or an updater function to the local dataTableExplorer store.
   return typeof next === 'function'
     ? (next as (value: T) => T)(previous)
     : next;
 }
 
-export type ProfilerStoreState = {
-  filteredCount: ProfilerCountState;
+export type DataTableExplorerStoreState = {
+  filteredCount: DataTableExplorerCountState;
   lastNonEmptyPageTable?: {
     datasetId: string;
     pageTable: arrow.Table;
   };
-  page: ProfilerPageState;
-  pagination: MosaicProfilerPaginationState;
+  page: DataTableExplorerPageState;
+  pagination: DataTableExplorerPaginationState;
   schema: {
     error?: Error;
     fields: arrow.Field[];
     isLoading: boolean;
+    tableName?: string;
   };
-  setFilteredCount: (state: ProfilerCountState) => void;
-  setPage: (state: ProfilerPageState) => void;
-  setPagination: Dispatch<SetStateAction<MosaicProfilerPaginationState>>;
-  setSchemaError: (error?: Error) => void;
-  setSchemaLoading: (isLoading: boolean) => void;
-  setSchemaSuccess: (fields: arrow.Field[]) => void;
-  setSorting: Dispatch<SetStateAction<MosaicProfilerSorting>>;
-  setSummary: (fieldName: string, summary: MosaicProfilerSummaryState) => void;
-  setTotalCount: (state: ProfilerCountState) => void;
-  sorting: MosaicProfilerSorting;
-  summaries: Record<string, MosaicProfilerSummaryState>;
+  setFilteredCount: (state: DataTableExplorerCountState) => void;
+  setPage: (state: DataTableExplorerPageState) => void;
+  setPagination: Dispatch<SetStateAction<DataTableExplorerPaginationState>>;
+  setSchemaError: (error?: Error, tableName?: string) => void;
+  setSchemaLoading: (isLoading: boolean, tableName?: string) => void;
+  setSchemaSuccess: (fields: arrow.Field[], tableName?: string) => void;
+  setSorting: Dispatch<SetStateAction<DataTableExplorerSorting>>;
+  setSummary: (
+    fieldName: string,
+    summary: DataTableExplorerSummaryState,
+  ) => void;
+  setTotalCount: (state: DataTableExplorerCountState) => void;
+  sorting: DataTableExplorerSorting;
+  summaries: Record<string, DataTableExplorerSummaryState>;
   syncPageSize: (pageSize: number) => void;
-  totalCount: ProfilerCountState;
+  totalCount: DataTableExplorerCountState;
   clearSummaries: () => void;
   initializeSummaries: (fields: arrow.Field[]) => void;
   resetPageIndex: () => void;
 };
 
-export type ProfilerStore = ReturnType<typeof createProfilerStore>;
+export type DataTableExplorerStore = ReturnType<
+  typeof createDataTableExplorerStore
+>;
 
 /**
- * Creates a profiler-local vanilla Zustand store that aggregates schema, row,
- * count, and summary state for a single `useMosaicProfiler()` instance.
+ * Creates a dataTableExplorer-local vanilla Zustand store that aggregates schema, row,
+ * count, and summary state for a single `useDataTableExplorer()` instance.
  */
-export function createProfilerStore(options: {
-  initialSorting?: MosaicProfilerSorting;
+export function createDataTableExplorerStore(options: {
+  initialSorting?: DataTableExplorerSorting;
   pageSize: number;
 }) {
   const {initialSorting = [], pageSize} = options;
 
-  return createStore<ProfilerStoreState>((set) => ({
+  return createStore<DataTableExplorerStoreState>((set) => ({
     filteredCount: {isLoading: false},
     lastNonEmptyPageTable: undefined,
     page: {isLoading: false},
-    pagination: normalizeProfilerPagination({pageIndex: 0, pageSize}),
+    pagination: normalizeDataTableExplorerPagination({pageIndex: 0, pageSize}),
     schema: {
       fields: [],
       isLoading: false,
@@ -98,36 +107,42 @@ export function createProfilerStore(options: {
     setPagination: (next) => {
       set((state) =>
         produce(state, (draft) => {
-          draft.pagination = normalizeProfilerPagination(
+          draft.pagination = normalizeDataTableExplorerPagination(
             resolveSetStateAction(next, state.pagination),
           );
         }),
       );
     },
-    setSchemaError: (error) => {
+    setSchemaError: (error, tableName) => {
       set((state) =>
         produce(state, (draft) => {
           draft.schema.error = error;
           draft.schema.isLoading = false;
+          draft.schema.tableName = tableName;
         }),
       );
     },
-    setSchemaLoading: (isLoading) => {
+    setSchemaLoading: (isLoading, tableName) => {
       set((state) =>
         produce(state, (draft) => {
+          if (tableName !== undefined && draft.schema.tableName !== tableName) {
+            draft.schema.fields = [];
+          }
           draft.schema.isLoading = isLoading;
+          draft.schema.tableName = tableName;
           if (isLoading) {
             draft.schema.error = undefined;
           }
         }),
       );
     },
-    setSchemaSuccess: (fields) => {
+    setSchemaSuccess: (fields, tableName) => {
       set((state) =>
         produce(state, (draft) => {
           draft.schema.error = undefined;
           draft.schema.fields = fields;
           draft.schema.isLoading = false;
+          draft.schema.tableName = tableName;
         }),
       );
     },
@@ -161,7 +176,7 @@ export function createProfilerStore(options: {
           if (draft.pagination.pageSize === nextPageSize) {
             return;
           }
-          draft.pagination = normalizeProfilerPagination({
+          draft.pagination = normalizeDataTableExplorerPagination({
             pageIndex: 0,
             pageSize: nextPageSize,
           });
@@ -188,7 +203,7 @@ export function createProfilerStore(options: {
     resetPageIndex: () => {
       set((state) =>
         produce(state, (draft) => {
-          draft.pagination = normalizeProfilerPagination({
+          draft.pagination = normalizeDataTableExplorerPagination({
             ...draft.pagination,
             pageIndex: 0,
           });

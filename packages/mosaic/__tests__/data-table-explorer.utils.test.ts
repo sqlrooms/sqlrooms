@@ -3,17 +3,17 @@ import {
   buildCategoryBuckets,
   buildCategorySummaryQuery,
   buildDistinctCountQuery,
-  buildProfilerBaseQuery,
-  buildProfilerPageQuery,
-  normalizeProfilerPagination,
+  buildDataTableExplorerBaseQuery,
+  buildDataTableExplorerPageQuery,
+  normalizeDataTableExplorerPagination,
   serializeCategoryBucketKey,
   rowsFromQueryResult,
   splitHistogramBins,
-} from '../src/profiler/utils';
+} from '../src/data-table-explorer/utils';
 
-describe('profiler utils', () => {
+describe('dataTableExplorer utils', () => {
   it('builds base SQL without pagination and page SQL with limit/offset', () => {
-    const base = buildProfilerBaseQuery({
+    const base = buildDataTableExplorerBaseQuery({
       columns: ['Magnitude', 'Depth'],
       filter: sql`"Magnitude" > 4`,
       sorting: [{desc: true, id: 'Magnitude'}],
@@ -25,18 +25,21 @@ describe('profiler utils', () => {
     expect(base.toString()).toContain('ORDER BY "Magnitude" DESC');
     expect(base.toString()).not.toContain('LIMIT');
 
-    const page = buildProfilerPageQuery(base, {pageIndex: 2, pageSize: 25});
+    const page = buildDataTableExplorerPageQuery(base, {
+      pageIndex: 2,
+      pageSize: 25,
+    });
     expect(page.toString()).toContain('LIMIT 25');
     expect(page.toString()).toContain('OFFSET 50');
   });
 
   it('sanitizes invalid pagination values before generating LIMIT/OFFSET', () => {
-    const base = buildProfilerBaseQuery({
+    const base = buildDataTableExplorerBaseQuery({
       columns: ['Magnitude'],
       tableName: 'earthquakes',
     });
 
-    const page = buildProfilerPageQuery(base, {
+    const page = buildDataTableExplorerPageQuery(base, {
       pageIndex: -4,
       pageSize: Number.NaN as unknown as number,
     });
@@ -46,7 +49,7 @@ describe('profiler utils', () => {
 
   it('normalizes pagination values for store/query consumers', () => {
     expect(
-      normalizeProfilerPagination({
+      normalizeDataTableExplorerPagination({
         pageIndex: -3,
         pageSize: Number.NaN,
       }),
@@ -55,7 +58,7 @@ describe('profiler utils', () => {
       pageSize: 100,
     });
     expect(
-      normalizeProfilerPagination({
+      normalizeDataTableExplorerPagination({
         pageIndex: 2.9,
         pageSize: 5000,
       }),

@@ -66,14 +66,14 @@ pnpm build:ui
 Dashboard artifacts are created with either a `dock` or `grid` Mosaic dashboard
 layout. Explicit dashboard creation commands and AI tools require `layoutType`
 so the choice is made once at creation time; auto-created dashboards from chart
-or profiler flows use `grid`.
+or Data Table Explorer flows use `grid`.
 
 ## Worksheet Artifacts
 
 Worksheet artifacts are block-composed documents for active analytical work.
 They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
-direct stateful blocks such as dashboards, pivot tables, and Markdown
-documents.
+direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
+and Markdown documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share

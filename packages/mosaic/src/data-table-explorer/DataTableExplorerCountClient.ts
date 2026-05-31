@@ -2,27 +2,27 @@ import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import {buildCountQuery, readCountData} from './utils';
 
-export type ProfilerCountState = {
+export type DataTableExplorerCountState = {
   count?: number;
   error?: Error;
   isLoading: boolean;
 };
 
-type ProfilerCountClientOptions = {
+type DataTableExplorerCountClientOptions = {
   filterStable?: boolean;
-  onStateChange: (state: ProfilerCountState) => void;
+  onStateChange: (state: DataTableExplorerCountState) => void;
   selection?: Selection;
   tableName: string;
 };
 
-export class ProfilerCountClient extends MosaicClient {
+export class DataTableExplorerCountClient extends MosaicClient {
   private count?: number;
   private error?: Error;
   private readonly isFilterStable: boolean;
-  private readonly onStateChange: (state: ProfilerCountState) => void;
+  private readonly onStateChange: (state: DataTableExplorerCountState) => void;
   private readonly tableName: string;
 
-  constructor(options: ProfilerCountClientOptions) {
+  constructor(options: DataTableExplorerCountClientOptions) {
     super(options.selection);
     this.isFilterStable = options.filterStable ?? false;
     this.onStateChange = options.onStateChange;

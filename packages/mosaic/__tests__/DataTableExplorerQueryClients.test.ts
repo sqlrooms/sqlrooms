@@ -1,11 +1,11 @@
 import {Selection, clausePoint} from '@uwdata/mosaic-core';
-import {ProfilerCountClient} from '../src/profiler/ProfilerCountClient';
-import {ProfilerPageClient} from '../src/profiler/ProfilerPageClient';
-import {ProfilerUnsupportedSummaryClient} from '../src/profiler/ProfilerUnsupportedSummaryClient';
+import {DataTableExplorerCountClient} from '../src/data-table-explorer/DataTableExplorerCountClient';
+import {DataTableExplorerPageClient} from '../src/data-table-explorer/DataTableExplorerPageClient';
+import {DataTableExplorerUnsupportedSummaryClient} from '../src/data-table-explorer/DataTableExplorerUnsupportedSummaryClient';
 
-describe('profiler query clients', () => {
+describe('dataTableExplorer query clients', () => {
   it('builds paged row SQL with sorting, limit, and offset', () => {
-    const client = new ProfilerPageClient({
+    const client = new DataTableExplorerPageClient({
       columns: ['id', 'status'],
       onStateChange: () => {},
       pagination: {pageIndex: 2, pageSize: 25},
@@ -23,7 +23,7 @@ describe('profiler query clients', () => {
   it('keeps the previous page table while a new row query is pending', () => {
     let latest: any;
     const previousPageTable = {numRows: 10};
-    const client = new ProfilerPageClient({
+    const client = new DataTableExplorerPageClient({
       columns: ['id'],
       onStateChange: (state) => {
         latest = state;
@@ -44,7 +44,7 @@ describe('profiler query clients', () => {
     const selection = Selection.crossfilter();
     selection.update(clausePoint('status', 'open', {source: {}}));
 
-    const client = new ProfilerCountClient({
+    const client = new DataTableExplorerCountClient({
       filterStable: true,
       onStateChange: () => {},
       selection,
@@ -59,7 +59,7 @@ describe('profiler query clients', () => {
   });
 
   it('keeps the total count query unfiltered', () => {
-    const client = new ProfilerCountClient({
+    const client = new DataTableExplorerCountClient({
       onStateChange: () => {},
       tableName: 'issues',
     });
@@ -74,7 +74,7 @@ describe('profiler query clients', () => {
     const selection = Selection.crossfilter();
     selection.update(clausePoint('status', 'open', {source: {}}));
 
-    const client = new ProfilerUnsupportedSummaryClient({
+    const client = new DataTableExplorerUnsupportedSummaryClient({
       field: {
         name: 'payload',
         type: {
@@ -94,27 +94,27 @@ describe('profiler query clients', () => {
     expect(sql).toContain('open');
   });
 
-  it('marks only the safe profiler query clients as filter-stable', () => {
+  it('marks only the safe dataTableExplorer query clients as filter-stable', () => {
     const selection = Selection.crossfilter();
 
-    const page = new ProfilerPageClient({
+    const page = new DataTableExplorerPageClient({
       columns: ['id'],
       onStateChange: () => {},
       pagination: {pageIndex: 0, pageSize: 10},
       sorting: [],
       tableName: 'issues',
     });
-    const filteredCount = new ProfilerCountClient({
+    const filteredCount = new DataTableExplorerCountClient({
       filterStable: true,
       onStateChange: () => {},
       selection,
       tableName: 'issues',
     });
-    const totalCount = new ProfilerCountClient({
+    const totalCount = new DataTableExplorerCountClient({
       onStateChange: () => {},
       tableName: 'issues',
     });
-    const unsupported = new ProfilerUnsupportedSummaryClient({
+    const unsupported = new DataTableExplorerUnsupportedSummaryClient({
       field: {
         name: 'payload',
         type: {

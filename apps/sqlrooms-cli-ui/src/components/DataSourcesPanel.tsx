@@ -10,8 +10,8 @@ export const DataSourcesPanel = () => {
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const addProfilerForTable = useRoomStore(
-    (state) => state.dashboard.addProfilerForTable,
+  const addDataTableExplorerForTable = useRoomStore(
+    (state) => state.dashboard.addDataTableExplorerForTable,
   );
 
   return (
@@ -42,7 +42,7 @@ export const DataSourcesPanel = () => {
           }
           await refreshTableSchemas();
           for (const tableName of createdTableNames) {
-            addProfilerForTable(tableName);
+            addDataTableExplorerForTable(tableName);
           }
         }}
       >

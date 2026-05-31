@@ -7,6 +7,7 @@ import {
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -14,55 +15,55 @@ import {
 import {useStore} from 'zustand';
 import {useStoreWithMosaic, type MosaicSliceState} from '../MosaicSlice';
 import {
-  createProfilerStore,
-  type ProfilerStore,
-  type ProfilerStoreState,
-} from './createProfilerStore';
+  createDataTableExplorerStore,
+  type DataTableExplorerStore,
+  type DataTableExplorerStoreState,
+} from './createDataTableExplorerStore';
 import {
-  connectProfilerCountClient,
-  connectProfilerPageClient,
-  connectProfilerSummaryClients,
-  loadProfilerSchema,
-} from './profilerController';
+  connectDataTableExplorerCountClient,
+  connectDataTableExplorerPageClient,
+  connectDataTableExplorerSummaryClients,
+  loadDataTableExplorerSchema,
+} from './dataTableExplorerController';
 import type {
-  MosaicProfilerColumnState,
-  MosaicProfilerOptions,
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
-  UseMosaicProfilerReturn,
+  DataTableExplorerColumnState,
+  DataTableExplorerOptions,
+  DataTableExplorerPaginationState,
+  DataTableExplorerSorting,
+  UseDataTableExplorerReturn,
 } from './types';
 import {
-  buildProfilerBaseQuery,
-  buildProfilerPageQuery,
+  buildDataTableExplorerBaseQuery,
+  buildDataTableExplorerPageQuery,
   createEmptySummaryState,
-  isProfilerHistogramType,
-  isProfilerUnsupportedSummaryType,
+  isDataTableExplorerHistogramType,
+  isDataTableExplorerUnsupportedSummaryType,
 } from './utils';
 
-type ProfilerSelectionState = {
+type DataTableExplorerSelectionState = {
   selection: Selection;
   selectionVersion: number;
 };
 
-type ProfilerStoreSlice = {
-  filteredCount: ProfilerStoreState['filteredCount'];
-  lastNonEmptyPageTable: ProfilerStoreState['lastNonEmptyPageTable'];
-  page: ProfilerStoreState['page'];
-  pagination: MosaicProfilerPaginationState;
-  profilerStore: ProfilerStore;
-  schema: ProfilerStoreState['schema'];
-  setPagination: Dispatch<SetStateAction<MosaicProfilerPaginationState>>;
-  setSorting: Dispatch<SetStateAction<MosaicProfilerSorting>>;
-  sorting: MosaicProfilerSorting;
-  summaries: ProfilerStoreState['summaries'];
-  totalCount: ProfilerStoreState['totalCount'];
+type DataTableExplorerStoreSlice = {
+  filteredCount: DataTableExplorerStoreState['filteredCount'];
+  lastNonEmptyPageTable: DataTableExplorerStoreState['lastNonEmptyPageTable'];
+  page: DataTableExplorerStoreState['page'];
+  pagination: DataTableExplorerPaginationState;
+  dataTableExplorerStore: DataTableExplorerStore;
+  schema: DataTableExplorerStoreState['schema'];
+  setPagination: Dispatch<SetStateAction<DataTableExplorerPaginationState>>;
+  setSorting: Dispatch<SetStateAction<DataTableExplorerSorting>>;
+  sorting: DataTableExplorerSorting;
+  summaries: DataTableExplorerStoreState['summaries'];
+  totalCount: DataTableExplorerStoreState['totalCount'];
 };
 
-type ProfilerQueryState = {
-  baseQuery: ReturnType<typeof buildProfilerBaseQuery>;
+type DataTableExplorerQueryState = {
+  baseQuery: ReturnType<typeof buildDataTableExplorerBaseQuery>;
   datasetId: string;
   fieldNames: string[];
-  fields: ProfilerStoreState['schema']['fields'];
+  fields: DataTableExplorerStoreState['schema']['fields'];
   hasFilters: boolean;
   pageQuery: string;
   rowFilter: ReturnType<Selection['predicate']>;
@@ -85,15 +86,15 @@ function useSelectionVersion(selection: Selection) {
 }
 
 /**
- * Resolves the profiler selection, creating a crossfilter selection when the
+ * Resolves the dataTableExplorer selection, creating a crossfilter selection when the
  * caller does not supply one, and exposes a version that changes with it.
  */
-function useProfilerSelection(
-  options: Pick<MosaicProfilerOptions, 'selection' | 'selectionName'>,
-): ProfilerSelectionState {
+function useDataTableExplorerSelection(
+  options: Pick<DataTableExplorerOptions, 'selection' | 'selectionName'>,
+): DataTableExplorerSelectionState {
   const {selection: providedSelection, selectionName} = options;
   const generatedSelectionName = useMemo(
-    () => `mosaic-profiler-${createId()}`,
+    () => `mosaic-data-table-explorer-${createId()}`,
     [],
   );
   const selectionKey = selectionName ?? generatedSelectionName;
@@ -118,51 +119,57 @@ function useProfilerSelection(
 }
 
 /**
- * Creates the per-profiler local store and subscribes to the raw state slices
- * that the public profiler hook exposes.
+ * Creates the per-dataTableExplorer local store and subscribes to the raw state slices
+ * that the public dataTableExplorer hook exposes.
  */
-function useProfilerStoreState(options: {
-  initialSorting: MosaicProfilerSorting;
+function useDataTableExplorerStoreState(options: {
+  initialSorting: DataTableExplorerSorting;
   pageSize: number;
-}): ProfilerStoreSlice {
-  const [profilerStore] = useState(() =>
-    createProfilerStore({
+}): DataTableExplorerStoreSlice {
+  const [dataTableExplorerStore] = useState(() =>
+    createDataTableExplorerStore({
       initialSorting: options.initialSorting,
       pageSize: options.pageSize,
     }),
   );
 
   return {
-    filteredCount: useStore(profilerStore, (state) => state.filteredCount),
+    filteredCount: useStore(
+      dataTableExplorerStore,
+      (state) => state.filteredCount,
+    ),
     lastNonEmptyPageTable: useStore(
-      profilerStore,
+      dataTableExplorerStore,
       (state) => state.lastNonEmptyPageTable,
     ),
-    page: useStore(profilerStore, (state) => state.page),
-    pagination: useStore(profilerStore, (state) => state.pagination),
-    profilerStore,
-    schema: useStore(profilerStore, (state) => state.schema),
-    setPagination: useStore(profilerStore, (state) => state.setPagination),
-    setSorting: useStore(profilerStore, (state) => state.setSorting),
-    sorting: useStore(profilerStore, (state) => state.sorting),
-    summaries: useStore(profilerStore, (state) => state.summaries),
-    totalCount: useStore(profilerStore, (state) => state.totalCount),
+    page: useStore(dataTableExplorerStore, (state) => state.page),
+    pagination: useStore(dataTableExplorerStore, (state) => state.pagination),
+    dataTableExplorerStore,
+    schema: useStore(dataTableExplorerStore, (state) => state.schema),
+    setPagination: useStore(
+      dataTableExplorerStore,
+      (state) => state.setPagination,
+    ),
+    setSorting: useStore(dataTableExplorerStore, (state) => state.setSorting),
+    sorting: useStore(dataTableExplorerStore, (state) => state.sorting),
+    summaries: useStore(dataTableExplorerStore, (state) => state.summaries),
+    totalCount: useStore(dataTableExplorerStore, (state) => state.totalCount),
   };
 }
 
 /**
- * Derives the profiler's field and SQL state from the current schema,
+ * Derives the dataTableExplorer's field and SQL state from the current schema,
  * selection, sorting, and pagination state.
  */
-function useProfilerQueryState(options: {
-  pagination: MosaicProfilerPaginationState;
+function useDataTableExplorerQueryState(options: {
+  pagination: DataTableExplorerPaginationState;
   rowSelectionVersion: number;
-  schema: ProfilerStoreState['schema'];
+  schema: DataTableExplorerStoreState['schema'];
   selection: Selection;
   selectionVersion: number;
-  sorting: MosaicProfilerSorting;
+  sorting: DataTableExplorerSorting;
   tableName: string;
-}): ProfilerQueryState {
+}): DataTableExplorerQueryState {
   const {
     pagination,
     rowSelectionVersion,
@@ -184,7 +191,7 @@ function useProfilerQueryState(options: {
   }, [rowSelectionVersion, selection]);
   const baseQuery = useMemo(
     () =>
-      buildProfilerBaseQuery({
+      buildDataTableExplorerBaseQuery({
         columns: fieldNames,
         filter,
         sorting,
@@ -194,7 +201,7 @@ function useProfilerQueryState(options: {
   );
   const pageBaseQuery = useMemo(
     () =>
-      buildProfilerBaseQuery({
+      buildDataTableExplorerBaseQuery({
         columns: fieldNames,
         filter: rowFilter,
         sorting,
@@ -209,28 +216,31 @@ function useProfilerQueryState(options: {
     fieldNames,
     fields,
     hasFilters: Array.isArray(filter) ? filter.length > 0 : Boolean(filter),
-    pageQuery: buildProfilerPageQuery(pageBaseQuery, pagination).toString(),
+    pageQuery: buildDataTableExplorerPageQuery(
+      pageBaseQuery,
+      pagination,
+    ).toString(),
     rowFilter,
   };
 }
 
 /**
  * Owns the coordinator-backed schema, row, count, and summary client
- * lifecycles for a profiler instance.
+ * lifecycles for a dataTableExplorer instance.
  */
-function useProfilerLifecycles(options: {
+function useDataTableExplorerLifecycles(options: {
   categoryLimit: number;
   columns?: string[];
   connection: MosaicSliceState['mosaic']['connection'];
   fieldNames: string[];
-  fields: ProfilerStoreState['schema']['fields'];
+  fields: DataTableExplorerStoreState['schema']['fields'];
   pageSize: number;
-  pagination: MosaicProfilerPaginationState;
-  profilerStore: ProfilerStore;
+  pagination: DataTableExplorerPaginationState;
+  dataTableExplorerStore: DataTableExplorerStore;
   rowFilter: ReturnType<Selection['predicate']>;
   selection: Selection;
   selectionVersion: number;
-  sorting: MosaicProfilerSorting;
+  sorting: DataTableExplorerSorting;
   summaryBins: number;
   tableName: string;
 }) {
@@ -242,7 +252,7 @@ function useProfilerLifecycles(options: {
     fields,
     pageSize,
     pagination,
-    profilerStore,
+    dataTableExplorerStore,
     rowFilter,
     selection,
     selectionVersion,
@@ -250,53 +260,60 @@ function useProfilerLifecycles(options: {
     summaryBins,
     tableName,
   } = options;
+  const previousTableNameRef = useRef(tableName);
 
   useEffect(() => {
-    profilerStore.getState().syncPageSize(pageSize);
-  }, [pageSize, profilerStore]);
+    dataTableExplorerStore.getState().syncPageSize(pageSize);
+  }, [pageSize, dataTableExplorerStore]);
 
   useEffect(() => {
-    profilerStore.getState().resetPageIndex();
-  }, [profilerStore, selectionVersion, tableName]);
+    if (previousTableNameRef.current === tableName) return;
+    selection.reset();
+    previousTableNameRef.current = tableName;
+  }, [selection, tableName]);
+
+  useEffect(() => {
+    dataTableExplorerStore.getState().resetPageIndex();
+  }, [dataTableExplorerStore, selectionVersion, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
-      profilerStore.getState().setSchemaSuccess([]);
-      profilerStore.getState().setSchemaError(undefined);
-      profilerStore
+      dataTableExplorerStore.getState().setSchemaSuccess([]);
+      dataTableExplorerStore.getState().setSchemaError(undefined);
+      dataTableExplorerStore
         .getState()
         .setSchemaLoading(connection.status === 'loading');
       return;
     }
 
-    void loadProfilerSchema({
+    void loadDataTableExplorerSchema({
       columns,
       coordinator: connection.coordinator,
-      store: profilerStore,
+      store: dataTableExplorerStore,
       tableName,
     });
-  }, [columns, connection, profilerStore, tableName]);
+  }, [columns, connection, dataTableExplorerStore, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName || !fieldNames.length) {
-      profilerStore.getState().setPage({isLoading: false});
+      dataTableExplorerStore.getState().setPage({isLoading: false});
       return;
     }
 
-    return connectProfilerPageClient({
+    return connectDataTableExplorerPageClient({
       connection,
       fieldNames,
       filter: rowFilter,
       pagination,
       sorting,
-      store: profilerStore,
+      store: dataTableExplorerStore,
       tableName,
     });
   }, [
     connection,
     fieldNames,
     pagination,
-    profilerStore,
+    dataTableExplorerStore,
     rowFilter,
     sorting,
     tableName,
@@ -304,46 +321,46 @@ function useProfilerLifecycles(options: {
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
-      profilerStore.getState().setFilteredCount({isLoading: false});
+      dataTableExplorerStore.getState().setFilteredCount({isLoading: false});
       return;
     }
 
-    return connectProfilerCountClient({
+    return connectDataTableExplorerCountClient({
       connection,
       filterStable: true,
       selection,
-      store: profilerStore,
+      store: dataTableExplorerStore,
       tableName,
       target: 'filtered',
     });
-  }, [connection, profilerStore, selection, tableName]);
+  }, [connection, dataTableExplorerStore, selection, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
-      profilerStore.getState().setTotalCount({isLoading: false});
+      dataTableExplorerStore.getState().setTotalCount({isLoading: false});
       return;
     }
 
-    return connectProfilerCountClient({
+    return connectDataTableExplorerCountClient({
       connection,
-      store: profilerStore,
+      store: dataTableExplorerStore,
       tableName,
       target: 'total',
     });
-  }, [connection, profilerStore, tableName]);
+  }, [connection, dataTableExplorerStore, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !fields.length) {
-      profilerStore.getState().clearSummaries();
+      dataTableExplorerStore.getState().clearSummaries();
       return;
     }
 
-    return connectProfilerSummaryClients({
+    return connectDataTableExplorerSummaryClients({
       categoryLimit,
       connection,
       fields,
       selection,
-      store: profilerStore,
+      store: dataTableExplorerStore,
       summaryBins,
       tableName,
     });
@@ -351,7 +368,7 @@ function useProfilerLifecycles(options: {
     categoryLimit,
     connection,
     fields,
-    profilerStore,
+    dataTableExplorerStore,
     selection,
     summaryBins,
     tableName,
@@ -360,21 +377,21 @@ function useProfilerLifecycles(options: {
 
 /**
  * Maps the schema fields and summary state into the column model consumed by
- * the profiler header and summary cells.
+ * the dataTableExplorer header and summary cells.
  */
-function useProfilerColumns(options: {
-  fields: ProfilerStoreState['schema']['fields'];
-  summaries: ProfilerStoreState['summaries'];
+function useDataTableExplorerColumns(options: {
+  fields: DataTableExplorerStoreState['schema']['fields'];
+  summaries: DataTableExplorerStoreState['summaries'];
 }) {
   const {fields, summaries} = options;
 
-  return useMemo<MosaicProfilerColumnState[]>(
+  return useMemo<DataTableExplorerColumnState[]>(
     () =>
       fields.map((field) => ({
         field,
-        kind: isProfilerUnsupportedSummaryType(field.type)
+        kind: isDataTableExplorerUnsupportedSummaryType(field.type)
           ? 'unsupported'
-          : isProfilerHistogramType(field.type)
+          : isDataTableExplorerHistogramType(field.type)
             ? 'histogram'
             : 'category',
         name: field.name,
@@ -385,16 +402,16 @@ function useProfilerColumns(options: {
 }
 
 /**
- * Collapses the aggregated profiler client state into the loading and error
+ * Collapses the aggregated dataTableExplorer client state into the loading and error
  * signals exposed from the public hook.
  */
-function useProfilerStatus(options: {
-  filteredCount: ProfilerStoreState['filteredCount'];
-  fields: ProfilerStoreState['schema']['fields'];
-  page: ProfilerStoreState['page'];
-  schema: ProfilerStoreState['schema'];
-  summaries: ProfilerStoreState['summaries'];
-  totalCount: ProfilerStoreState['totalCount'];
+function useDataTableExplorerStatus(options: {
+  filteredCount: DataTableExplorerStoreState['filteredCount'];
+  fields: DataTableExplorerStoreState['schema']['fields'];
+  page: DataTableExplorerStoreState['page'];
+  schema: DataTableExplorerStoreState['schema'];
+  summaries: DataTableExplorerStoreState['summaries'];
+  totalCount: DataTableExplorerStoreState['totalCount'];
 }) {
   const {fields, filteredCount, page, schema, summaries, totalCount} = options;
   const hasPendingSummaryInitialization =
@@ -421,10 +438,10 @@ function useProfilerStatus(options: {
  * Keeps the last non-empty page result visible while live brushing has moved
  * ahead of the deferred row query, avoiding transient "No rows" flashes.
  */
-function useProfilerVisiblePageState(options: {
-  lastNonEmptyPageTable: ProfilerStoreState['lastNonEmptyPageTable'];
+function useDataTableExplorerVisiblePageState(options: {
+  lastNonEmptyPageTable: DataTableExplorerStoreState['lastNonEmptyPageTable'];
   pageDatasetId: string;
-  page: ProfilerStoreState['page'];
+  page: DataTableExplorerStoreState['page'];
   rowSelectionVersion: number;
   selectionVersion: number;
 }) {
@@ -455,11 +472,11 @@ function useProfilerVisiblePageState(options: {
 
 /**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
- * public profiler API consumed by the React table UI.
+ * public dataTableExplorer API consumed by the React table UI.
  */
-export function useMosaicProfiler(
-  options: MosaicProfilerOptions,
-): UseMosaicProfilerReturn {
+export function useDataTableExplorer(
+  options: DataTableExplorerOptions,
+): UseDataTableExplorerReturn {
   const {
     categoryLimit = 20,
     columns,
@@ -472,7 +489,7 @@ export function useMosaicProfiler(
   } = options;
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
-  const {selection, selectionVersion} = useProfilerSelection({
+  const {selection, selectionVersion} = useDataTableExplorerSelection({
     selection: providedSelection,
     selectionName,
   });
@@ -482,17 +499,21 @@ export function useMosaicProfiler(
     lastNonEmptyPageTable,
     page,
     pagination,
-    profilerStore,
-    schema,
+    dataTableExplorerStore,
+    schema: rawSchema,
     setPagination,
     setSorting,
     sorting,
     summaries,
     totalCount,
-  } = useProfilerStoreState({
+  } = useDataTableExplorerStoreState({
     initialSorting,
     pageSize,
   });
+  const schema =
+    rawSchema.tableName === tableName
+      ? rawSchema
+      : {...rawSchema, fields: [], isLoading: true};
   const {
     baseQuery,
     datasetId,
@@ -501,7 +522,7 @@ export function useMosaicProfiler(
     hasFilters,
     pageQuery,
     rowFilter,
-  } = useProfilerQueryState({
+  } = useDataTableExplorerQueryState({
     pagination,
     rowSelectionVersion,
     schema,
@@ -510,7 +531,7 @@ export function useMosaicProfiler(
     sorting,
     tableName,
   });
-  useProfilerLifecycles({
+  useDataTableExplorerLifecycles({
     categoryLimit,
     columns,
     connection,
@@ -518,7 +539,7 @@ export function useMosaicProfiler(
     fields,
     pageSize,
     pagination,
-    profilerStore,
+    dataTableExplorerStore,
     rowFilter,
     selection,
     selectionVersion,
@@ -526,8 +547,11 @@ export function useMosaicProfiler(
     summaryBins,
     tableName,
   });
-  const profilerColumns = useProfilerColumns({fields, summaries});
-  const {isLoading, tableError} = useProfilerStatus({
+  const dataTableExplorerColumns = useDataTableExplorerColumns({
+    fields,
+    summaries,
+  });
+  const {isLoading, tableError} = useDataTableExplorerStatus({
     fields,
     filteredCount,
     page,
@@ -535,7 +559,7 @@ export function useMosaicProfiler(
     summaries,
     totalCount,
   });
-  const visiblePage = useProfilerVisiblePageState({
+  const visiblePage = useDataTableExplorerVisiblePageState({
     lastNonEmptyPageTable,
     page,
     pageDatasetId: datasetId,
@@ -544,7 +568,7 @@ export function useMosaicProfiler(
   });
 
   return {
-    columns: profilerColumns,
+    columns: dataTableExplorerColumns,
     filteredRowCount: filteredCount.count,
     hasFilters,
     isLoading,

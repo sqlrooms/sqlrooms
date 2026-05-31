@@ -7,10 +7,12 @@ import {
 import {Interval1D, bin} from '@uwdata/mosaic-plot';
 import {count, type ExprNode, Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import type {MosaicProfilerHistogramSummary} from './types';
+import type {DataTableExplorerHistogramSummary} from './types';
 import {rowsFromQueryResult, splitHistogramBins} from './utils';
 
-type HistogramStateChange = (summary: MosaicProfilerHistogramSummary) => void;
+type HistogramStateChange = (
+  summary: DataTableExplorerHistogramSummary,
+) => void;
 
 type HistogramClientOptions = {
   field: arrow.Field;
@@ -27,7 +29,7 @@ type HistogramRow = {
   y: number;
 };
 
-export class ProfilerHistogramClient extends MosaicClient {
+export class DataTableExplorerHistogramClient extends MosaicClient {
   readonly type = 'rectY';
   private filteredError?: Error;
   private filteredLoading = true;
@@ -190,7 +192,7 @@ export class ProfilerHistogramClient extends MosaicClient {
 
   channelField(channel: string) {
     if (channel !== 'x') {
-      throw new Error('ProfilerHistogramClient only supports x bins');
+      throw new Error('DataTableExplorerHistogramClient only supports x bins');
     }
     if (!this.fieldInfo) {
       throw new Error('Field info is required before histogram binning');
@@ -200,7 +202,7 @@ export class ProfilerHistogramClient extends MosaicClient {
 
   get plot(): {
     getAttribute(name: string): undefined;
-    markSet: Set<ProfilerHistogramClient>;
+    markSet: Set<DataTableExplorerHistogramClient>;
   } {
     const markSet = new Set([this]);
     return {
@@ -212,14 +214,14 @@ export class ProfilerHistogramClient extends MosaicClient {
   }
 }
 
-type ProfilerHistogramTotalClientOptions = {
-  summaryClient: ProfilerHistogramClient;
+type DataTableExplorerHistogramTotalClientOptions = {
+  summaryClient: DataTableExplorerHistogramClient;
 };
 
-export class ProfilerHistogramTotalClient extends MosaicClient {
-  private readonly summaryClient: ProfilerHistogramClient;
+export class DataTableExplorerHistogramTotalClient extends MosaicClient {
+  private readonly summaryClient: DataTableExplorerHistogramClient;
 
-  constructor(options: ProfilerHistogramTotalClientOptions) {
+  constructor(options: DataTableExplorerHistogramTotalClientOptions) {
     super();
     this.summaryClient = options.summaryClient;
   }
