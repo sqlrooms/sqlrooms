@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sqlrooms-web-app",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server-entry.ts",
+  "r2_buckets": [
+    {
+      "binding": "USER_FILES_BUCKET",
+      "bucket_name": "sqlrooms-user-files",
+      "preview_bucket_name": "sqlrooms-user-files-preview",
+    },
+  ],
+  "vars": {
+    "APP_BASE_URL": "http://localhost:3000",
+    "OPENROUTER_APP_NAME": "SQLRooms",
+    "OPENROUTER_SITE_URL": "http://localhost:3000",
+  },
+}
