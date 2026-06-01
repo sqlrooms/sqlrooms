@@ -162,6 +162,28 @@ input {
   padding-left: 24px;
 }
 
+.schema-table {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  color: var(--shell-subtle);
+}
+
+.schema-table-name {
+  overflow: hidden;
+  color: var(--shell-text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schema-table-meta {
+  color: var(--shell-subtle);
+  font-size: 11px;
+}
+
 .sqlrooms-workspace {
   min-width: 0;
   min-height: 100vh;
