@@ -99,15 +99,67 @@ input {
     );
 }
 
-.workspace-name-field input {
-  height: 34px;
+.brand-button {
+  min-height: 58px;
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.workspace-selector {
+  width: 100%;
+  height: 48px;
+  justify-content: flex-start;
+  gap: 10px;
+  border: 1px solid var(--shell-border);
+  border-radius: 8px;
+  background: hsl(var(--accent) / 58%);
+  color: var(--shell-text);
+  padding: 0 12px;
+}
+
+.workspace-menu {
+  width: 300px;
   border-color: var(--shell-border);
-  background: var(--shell-input-background);
+  background: var(--shell-menu-background);
   color: var(--shell-text);
 }
 
-.workspace-name-field input:disabled {
-  opacity: 0.8;
+.add-file-button {
+  min-height: 38px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.add-file-button:hover {
+  background: hsl(var(--primary) / 86%);
+  color: hsl(var(--primary-foreground));
+}
+
+.schema-tree {
+  display: grid;
+  gap: 7px;
+  margin: 10px 2px 0;
+  border-left: 1px solid var(--shell-border);
+  padding-left: 12px;
+}
+
+.schema-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--shell-text);
+  font-size: 13px;
+}
+
+.schema-empty {
+  color: var(--shell-subtle);
+  font-size: 12px;
+  padding-left: 24px;
 }
 
 .sqlrooms-workspace {
@@ -144,6 +196,14 @@ input {
   gap: 4px;
 }
 
+.topbar-left {
+  flex: 1 1 auto;
+}
+
+.topbar-right {
+  flex: 0 0 auto;
+}
+
 .topbar-divider {
   width: 1px;
   height: 20px;
@@ -161,6 +221,40 @@ input {
   gap: 7px;
   height: 30px;
   color: var(--shell-subtle);
+}
+
+.workspace-title-input {
+  width: min(520px, 100%);
+  height: 36px;
+  border-color: transparent;
+  background: hsl(var(--background) / 28%);
+  color: var(--shell-text);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.workspace-title-input:hover,
+.workspace-title-input:focus {
+  border-color: var(--shell-border);
+  background: var(--shell-input-background);
+}
+
+.workspace-title-input:disabled {
+  opacity: 0.85;
+}
+
+.save-workspace-button {
+  height: 36px;
+  gap: 8px;
+  border-radius: 8px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0 14px;
+}
+
+.save-workspace-button:hover {
+  background: hsl(var(--primary) / 88%);
+  color: hsl(var(--primary-foreground));
 }
 
 .runtime-pill {
