@@ -116,15 +116,23 @@ const SqlQueryActions: FC<SqlQueryActionsProps> = ({className}) => {
 
 export type SqlQueryEditorProps = {
   className?: string;
+  autoHeight?: boolean;
+  compact?: boolean;
 };
 
-const SqlQueryEditor: FC<SqlQueryEditorProps> = ({className}) => {
+const SqlQueryEditor: FC<SqlQueryEditorProps> = ({
+  className,
+  autoHeight,
+  compact,
+}) => {
   const {queryId, readOnly} = useSqlQueryContext();
   return (
     <QueryEditorPanelEditor
       queryId={queryId}
       readOnly={readOnly}
       className={className}
+      autoHeight={autoHeight}
+      compact={compact}
     />
   );
 };

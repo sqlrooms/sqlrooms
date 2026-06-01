@@ -23,7 +23,7 @@ export const WorksheetSqlQueryBlockRenderer = ({
       queryId={blockInstanceId}
       title={title ?? 'SQL Query'}
       readOnly={readOnly}
-      className="h-full"
+      compact
     />
   );
 };

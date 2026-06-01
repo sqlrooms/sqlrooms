@@ -101,12 +101,6 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     defaultTitle: 'SQL Query',
     embeddedTitle: 'Embedded SQL Query',
     embeddedDescription: 'Embedded SQL query editor and result table',
-    resizableHeight: true,
-    defaultHeight: 720,
-    minHeight: 420,
-    maxHeight: 1600,
-    requireScrollModifier: true,
-    scrollHintLabel: 'this SQL query',
     ensureState: (state, artifactId, title, options) => {
       state.sqlEditor.ensureQuery(artifactId, {
         name: title,

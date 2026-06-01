@@ -39,21 +39,30 @@ export type EnsureSqlQueryOptions = {
 };
 
 export type QueryResult =
-  | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
-  | {status: 'aborted'}
-  | {status: 'error'; error: string}
+  | {
+      status: 'loading';
+      isBeingAborted?: boolean;
+      controller: AbortController;
+      startedAt?: number;
+    }
+  | {status: 'aborted'; durationMs?: number; completedAt?: number}
+  | {status: 'error'; error: string; durationMs?: number; completedAt?: number}
   | {
       status: 'success';
       type: 'pragma' | 'explain' | 'select';
       result: arrow.Table | undefined;
       query: string;
       lastQueryStatement: string;
+      durationMs?: number;
+      completedAt?: number;
     }
   | {
       status: 'success';
       type: 'exec';
       query: string;
       lastQueryStatement: string;
+      durationMs?: number;
+      completedAt?: number;
     };
 
 export function isQueryWithResult(
@@ -121,6 +130,11 @@ export type SqlEditorSliceState = {
      * Abort a running query by id.
      */
     abortQueryById(queryId: string): void;
+
+    /**
+     * Clear the runtime result for a query id.
+     */
+    clearQueryResult(queryId: string): void;
 
     /**
      * Run the currently selected query.
@@ -561,6 +575,18 @@ export function createSqlEditorSlice({
           );
         },
 
+        clearQueryResult: (queryId) => {
+          const currentResult = get().sqlEditor.queryResultsById[queryId];
+          if (currentResult?.status === 'loading') {
+            currentResult.controller.abort();
+          }
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.sqlEditor.queryResultsById[queryId];
+            }),
+          );
+        },
+
         parseAndRunQuery: async (query): Promise<void> =>
           get().sqlEditor.runQueryById(
             get().sqlEditor.config.selectedQueryId,
@@ -585,6 +611,7 @@ export function createSqlEditorSlice({
 
           // Create abort controller for this query execution
           const queryController = new AbortController();
+          const startedAt = Date.now();
 
           // First update loading state and clear results
           set((state) =>
@@ -594,6 +621,7 @@ export function createSqlEditorSlice({
                 status: 'loading',
                 isBeingAborted: false,
                 controller: queryController,
+                startedAt,
               };
             }),
           );
@@ -646,6 +674,7 @@ export function createSqlEditorSlice({
                 query,
                 lastQueryStatement,
                 result,
+                durationMs: Date.now() - startedAt,
               };
             } else {
               // Run the complete query as it is
@@ -680,6 +709,7 @@ export function createSqlEditorSlice({
                   query,
                   lastQueryStatement,
                   result,
+                  durationMs: Date.now() - startedAt,
                 };
               } else if (/^(PRAGMA)/i.test(lastQueryStatement)) {
                 queryResult = {
@@ -688,6 +718,7 @@ export function createSqlEditorSlice({
                   query,
                   lastQueryStatement,
                   result,
+                  durationMs: Date.now() - startedAt,
                 };
               } else {
                 queryResult = {
@@ -695,6 +726,7 @@ export function createSqlEditorSlice({
                   type: 'exec',
                   query,
                   lastQueryStatement,
+                  durationMs: Date.now() - startedAt,
                 };
               }
             }
@@ -716,14 +748,19 @@ export function createSqlEditorSlice({
               errorMessage === 'Query aborted' ||
               queryController.signal.aborted
             ) {
-              queryResult = {status: 'aborted'};
+              queryResult = {
+                status: 'aborted',
+                durationMs: Date.now() - startedAt,
+              };
             } else {
               queryResult = {
                 status: 'error',
                 error: errorMessage,
+                durationMs: Date.now() - startedAt,
               };
             }
           }
+          queryResult = {...queryResult, completedAt: Date.now()};
 
           // Update state without Immer since Arrow Tables don't play well with drafts.
           set((state) => {
