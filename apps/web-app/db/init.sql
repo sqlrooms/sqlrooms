@@ -1,0 +1,1 @@
+-- Seed script placeholder for Neon Launchpad-compatible local setup.
