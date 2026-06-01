@@ -3363,9 +3363,6 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.3.0
-      '@sqlrooms/cells':
-        specifier: workspace:*
-        version: link:../cells
       '@sqlrooms/duckdb-core':
         specifier: workspace:*
         version: link:../duckdb-core

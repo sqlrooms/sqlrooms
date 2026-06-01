@@ -65,7 +65,7 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
-import {getUnqualifiedSqlIdentifier} from '@sqlrooms/cells';
+import {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb-core';
 
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 

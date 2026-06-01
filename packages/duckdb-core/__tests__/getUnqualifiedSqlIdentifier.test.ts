@@ -1,4 +1,4 @@
-import {getUnqualifiedSqlIdentifier} from '../src/helpers';
+import {getUnqualifiedSqlIdentifier} from '../src/duckdb-utils';
 
 describe('getUnqualifiedSqlIdentifier', () => {
   it('returns undefined for empty input', () => {
