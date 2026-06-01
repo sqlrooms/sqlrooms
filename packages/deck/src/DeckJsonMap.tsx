@@ -138,10 +138,24 @@ function DeckOverlayControl({
   interleaved,
   ...deckProps
 }: {interleaved: boolean} & Record<string, unknown>) {
-  const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({interleaved}),
-  );
+  const overlayRef = useRef<MapboxOverlay | null>(null);
+  const overlay = useControl<MapboxOverlay>(() => {
+    const instance = new MapboxOverlay({interleaved});
+    overlayRef.current = instance;
+    return instance;
+  });
   overlay.setProps(deckProps);
+
+  // Force a redraw when layers change so filtered data renders immediately
+  // without requiring user interaction.
+  const layers = deckProps.layers;
+  useEffect(() => {
+    const deck = (overlayRef.current as any)?._deck;
+    if (deck?.isInitialized) {
+      deck.redraw();
+    }
+  }, [layers]);
+
   return null;
 }
 
@@ -247,6 +261,15 @@ export function DeckJsonMap({
     layers: mergedLayers,
   };
 
+  // MapboxOverlay ignores viewState/initialViewState/controller — separate them
+  // so they don't cause unnecessary setProps churn on the overlay.
+  const {
+    initialViewState,
+    viewState: _viewState,
+    controller: _controller,
+    ...overlayDeckProps
+  } = mergedDeckProps as Record<string, unknown>;
+
   const {resolvedTheme} = useTheme();
 
   const mergedMapProps = {
@@ -278,9 +301,12 @@ export function DeckJsonMap({
 
       <Map
         {...(mergedMapProps as object)}
+        {...(initialViewState
+          ? {initialViewState: initialViewState as object}
+          : {})}
         style={{width: '100%', height: '100%', ...mapProps?.style}}
       >
-        <DeckOverlayControl interleaved={interleaved} {...mergedDeckProps} />
+        <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
         {children}
       </Map>
 
