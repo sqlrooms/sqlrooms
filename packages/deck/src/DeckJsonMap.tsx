@@ -248,7 +248,7 @@ export function DeckJsonMap({
   };
 
   // MapboxOverlay ignores viewState/initialViewState/controller — separate them
-  // so they don't cause unnecessary setProps churn on the overlay.
+  // so they don't cause unnecessary setProps on the overlay.
   const {
     initialViewState,
     viewState,
