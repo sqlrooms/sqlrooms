@@ -93,6 +93,8 @@ export interface QueryResultPanelProps {
   formatValue?: ArrowDataTableValueFormatter;
   /** Additional content rendered in the result footer next to the row count. */
   footerDetails?: React.ReactNode;
+  /** Custom class name for the inner paginated data table. */
+  dataTableClassName?: string;
 }
 
 /**
@@ -115,6 +117,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   onRowSelectionChange,
   formatValue,
   footerDetails,
+  dataTableClassName,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => {
     const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
@@ -220,7 +223,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
             <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight wrap-break-word whitespace-pre-wrap">
               {explainText}
             </pre>
-            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+            <div className="bg-background flex w-full items-center gap-2 border-t px-4 py-1">
               <div className="font-mono text-xs">EXPLAIN</div>
               <div className="flex-1" />
               {renderActions
@@ -240,7 +243,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
             <DataTablePaginated
               data={arrowTableData?.data}
               columns={arrowTableData?.columns}
-              className="grow overflow-hidden"
+              className={cn('grow overflow-hidden', dataTableClassName)}
               fontSize={fontSize}
               isFetching={false}
               onRowClick={onRowClick}
@@ -249,7 +252,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
               rowSelection={rowSelection}
               onRowSelectionChange={onRowSelectionChange}
             />
-            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+            <div className="bg-background flex w-full items-center gap-2 border-t px-4 py-1">
               {queryResult.result ? (
                 <>
                   <div className="font-mono text-xs">

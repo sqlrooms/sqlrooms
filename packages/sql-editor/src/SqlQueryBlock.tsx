@@ -192,7 +192,7 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
       name={title ?? 'SQL Query'}
       readOnly={readOnly}
       className={cn(
-        'bg-background relative min-h-0 overflow-visible rounded-md',
+        'bg-background relative min-h-0 overflow-visible rounded-md [&_.cm-editor]:rounded-t-md',
         className,
       )}
     >
@@ -320,11 +320,12 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
             </div>
           ) : (
             <div
-              className="relative min-h-32"
+              className="relative min-h-32 overflow-hidden rounded-b-md"
               style={{height: resultHeight}}
             >
               <SqlQuery.Results
                 className="h-full"
+                dataTableClassName="border-0"
                 footerDetails={
                   resultTooltip ? (
                     <CompactResultTimestampTooltip
