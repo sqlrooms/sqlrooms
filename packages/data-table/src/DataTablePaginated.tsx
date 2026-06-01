@@ -230,7 +230,7 @@ export function DataTablePaginated<Data extends object>({
                   key={row.id}
                   data-state={row.getIsSelected() ? 'selected' : undefined}
                   className={cn(
-                    'hover:bg-muted bg-background last:border-b-0 last:[&>td]:border-b-0',
+                    'hover:bg-muted bg-background [&>td]:border-b last:[&>td]:border-b-0',
                     row.getIsSelected() && 'bg-muted',
                   )}
                   onClick={
