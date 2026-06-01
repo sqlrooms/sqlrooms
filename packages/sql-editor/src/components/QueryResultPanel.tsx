@@ -91,6 +91,8 @@ export interface QueryResultPanelProps {
   onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
   /** Custom value formatter for arrow data */
   formatValue?: ArrowDataTableValueFormatter;
+  /** Additional content rendered in the result footer next to the row count. */
+  footerDetails?: React.ReactNode;
 }
 
 /**
@@ -112,6 +114,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   rowSelection,
   onRowSelectionChange,
   formatValue,
+  footerDetails,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => {
     const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
@@ -263,6 +266,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
                 </>
               ) : null}
               <div className="flex-1" />
+              {footerDetails}
               {renderActions
                 ? renderActions(queryResult.lastQueryStatement)
                 : undefined}

@@ -13,7 +13,13 @@ import {
   cn,
   Spinner,
 } from '@sqlrooms/ui';
-import {Code2Icon, PlayIcon, SquareIcon, XIcon} from 'lucide-react';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  Code2Icon,
+  PlayIcon,
+  SquareIcon,
+} from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -118,9 +124,6 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
   const abortQueryById = useStoreWithSqlEditor(
     (state) => state.sqlEditor.abortQueryById,
   );
-  const clearQueryResult = useStoreWithSqlEditor(
-    (state) => state.sqlEditor.clearQueryResult,
-  );
   const queryResult = useStoreWithSqlEditor(
     (state) => state.sqlEditor.queryResultsById[queryId],
   );
@@ -131,6 +134,8 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
   const displayNow = Math.max(now, resultCompletedAt ?? now);
   const resultLabel = getCompactResultLabel(queryResult, displayNow);
   const resultTooltip = getCompactResultTooltip(queryResult, displayNow);
+  const [isQueryCollapsed, setIsQueryCollapsed] = useState(false);
+  const [isResultCollapsed, setIsResultCollapsed] = useState(false);
   const [resultHeight, setResultHeight] = useState(256);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
 
@@ -187,21 +192,46 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
       name={title ?? 'SQL Query'}
       readOnly={readOnly}
       className={cn(
-        'bg-background min-h-0 overflow-hidden rounded-md',
+        'bg-background relative min-h-0 overflow-visible rounded-md',
         className,
       )}
     >
-      <div className="flex items-start gap-2 py-2 pr-2 pl-0">
-        <div className="min-w-0 flex-1">
-          <SqlQuery.Editor
-            autoHeight
-            compact
-            className={cn(
-              'text-sm [&_.cm-content]:pl-0 [&_.cm-line]:pl-0',
-              editorClassName,
-            )}
-          />
-        </div>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute top-2 -left-6 h-5 w-5 shrink-0 p-0"
+        onClick={() => setIsQueryCollapsed((collapsed) => !collapsed)}
+        aria-expanded={!isQueryCollapsed}
+        aria-label={isQueryCollapsed ? 'Expand query' : 'Collapse query'}
+      >
+        {isQueryCollapsed ? (
+          <ChevronRightIcon className="h-3 w-3" />
+        ) : (
+          <ChevronDownIcon className="h-3 w-3" />
+        )}
+      </Button>
+      <div
+        className={cn(
+          'flex items-start gap-2 pr-2 pl-0',
+          isQueryCollapsed ? 'py-1' : 'py-2',
+        )}
+      >
+        {isQueryCollapsed ? (
+          <div className="text-muted-foreground min-w-0 flex-1 py-1 pl-4 text-xs italic">
+            Query collapsed
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <SqlQuery.Editor
+              autoHeight
+              compact
+              className={cn(
+                'text-sm [&_.cm-content]:pl-0 [&_.cm-line]:pl-0',
+                editorClassName,
+              )}
+            />
+          </div>
+        )}
         {readOnly ? null : (
           <TooltipProvider delayDuration={200}>
             <Tooltip>
@@ -209,7 +239,10 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
                 <Button
                   size="icon"
                   variant={isLoading ? 'destructive' : 'secondary'}
-                  className="mt-1 h-6 w-6 shrink-0 rounded-md p-0"
+                  className={cn(
+                    'shrink-0 rounded-md p-0',
+                    isQueryCollapsed ? 'mt-0.5 h-5 w-5' : 'mt-1 h-6 w-6',
+                  )}
                   onClick={() =>
                     isLoading
                       ? abortQueryById(queryId)
@@ -219,11 +252,20 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
                   aria-label={isLoading ? 'Cancel query' : 'Run query'}
                 >
                   {isCancelling ? (
-                    <Spinner className="h-3 w-3 text-current" />
+                    <Spinner
+                      className={cn(
+                        'text-current',
+                        isQueryCollapsed ? 'h-2.5 w-2.5' : 'h-3 w-3',
+                      )}
+                    />
                   ) : isLoading ? (
-                    <SquareIcon className="h-3 w-3" />
+                    <SquareIcon
+                      className={isQueryCollapsed ? 'h-2.5 w-2.5' : 'h-3 w-3'}
+                    />
                   ) : (
-                    <PlayIcon className="h-3 w-3" />
+                    <PlayIcon
+                      className={isQueryCollapsed ? 'h-2.5 w-2.5' : 'h-3 w-3'}
+                    />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -235,58 +277,108 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
         )}
       </div>
       {queryResult ? (
-        <div className={cn('border-border border-t', resultsClassName)}>
-          <div className="bg-background flex items-center gap-2 px-2 py-1">
-            {resultTooltip ? (
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="text-muted-foreground flex-1 cursor-default text-xs">
-                      {resultLabel}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent align="start" className="space-y-1 text-xs">
-                    {resultTooltip.map((line) => (
-                      <div key={line}>{line}</div>
-                    ))}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <div className="text-muted-foreground flex-1 text-xs">
-                {resultLabel}
-              </div>
-            )}
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6"
-              onClick={() => clearQueryResult(queryId)}
-              title="Close result"
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <div
-            className="relative min-h-32 overflow-auto"
-            style={{height: resultHeight}}
+        <div className={cn('border-border relative border-t', resultsClassName)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-2 -left-6 h-5 w-5 shrink-0 p-0"
+            onClick={() => setIsResultCollapsed((collapsed) => !collapsed)}
+            aria-expanded={!isResultCollapsed}
+            aria-label={isResultCollapsed ? 'Expand result' : 'Collapse result'}
           >
-            <SqlQuery.Results className="h-full" />
-            <div
-              className="absolute right-0 bottom-0 left-0 flex h-3 cursor-row-resize items-end justify-center"
-              onMouseDown={handleResizeMouseDown}
-              role="separator"
-              aria-orientation="horizontal"
-              aria-label="Resize query result height"
-            >
-              <div className="bg-muted-foreground/50 mb-1 h-1 w-10 rounded-full" />
+            {isResultCollapsed ? (
+              <ChevronRightIcon className="h-3 w-3" />
+            ) : (
+              <ChevronDownIcon className="h-3 w-3" />
+            )}
+          </Button>
+          {isResultCollapsed ? (
+            <div className="bg-background flex items-center gap-2 py-2 pr-4 pl-4">
+              <div className="text-muted-foreground min-w-0 flex-1 text-xs italic">
+                Result collapsed
+              </div>
+              {resultTooltip ? (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-muted-foreground cursor-default text-right text-xs">
+                        {resultLabel}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent align="start" className="space-y-1 text-xs">
+                      {resultTooltip.map((line) => (
+                        <div key={line}>{line}</div>
+                      ))}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <div className="text-muted-foreground text-right text-xs">
+                  {resultLabel}
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <div
+              className="relative min-h-32"
+              style={{height: resultHeight}}
+            >
+              <SqlQuery.Results
+                className="h-full"
+                footerDetails={
+                  resultTooltip ? (
+                    <CompactResultTimestampTooltip
+                      label={resultLabel}
+                      lines={resultTooltip}
+                    />
+                  ) : (
+                    <span className="text-muted-foreground text-xs">
+                      {resultLabel}
+                    </span>
+                  )
+                }
+              />
+              <div
+                className="absolute right-0 -bottom-4 left-0 z-10 flex h-3 cursor-row-resize items-start justify-center"
+                onMouseDown={handleResizeMouseDown}
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Resize query result height"
+              >
+                <div className="bg-muted-foreground/50 mt-0.5 h-1 w-10 rounded-full" />
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
     </SqlQuery.Root>
   );
 };
+
+function CompactResultTimestampTooltip({
+  label,
+  lines,
+}: {
+  label: string;
+  lines: string[];
+}) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-muted-foreground cursor-default text-xs">
+            {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent align="start" className="space-y-1 text-xs">
+          {lines.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 function getCompactResultLabel(queryResult: QueryResult | undefined, now: number) {
   if (!queryResult) return '';

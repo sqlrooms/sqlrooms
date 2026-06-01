@@ -128,6 +128,9 @@ export function QueryBlock() {
 }
 ```
 
+`SqlQuery.Results` accepts the same props as `QueryResultPanel`, including
+`footerDetails` for small metadata rendered at the end of the result footer.
+
 Use `createSqlQueryBlockDefinition()` when a SQL query should be both embeddable
 as a stateful block and openable as an artifact shell.
 
