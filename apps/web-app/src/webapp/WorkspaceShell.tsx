@@ -2,6 +2,11 @@ import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {Link, useNavigate} from '@tanstack/react-router';
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -77,6 +82,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const {data: session} = authClient.useSession();
   const [localWorkspaceName, setLocalWorkspaceName] =
     useState('Untitled Workspace');
+  const [isSignInToSaveOpen, setIsSignInToSaveOpen] = useState(false);
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
       id: 'default-worksheet',
@@ -139,7 +145,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
 
   const handleSaveWorkspace = async () => {
     if (!token) {
-      await handleSignIn();
+      setIsSignInToSaveOpen(true);
       return;
     }
 
@@ -393,6 +399,27 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>
+
+      <Dialog open={isSignInToSaveOpen} onOpenChange={setIsSignInToSaveOpen}>
+        <DialogContent className="sign-in-dialog">
+          <DialogHeader className="sign-in-dialog-header">
+            <DialogTitle className="sign-in-dialog-title">
+              Sign in to save
+            </DialogTitle>
+            <DialogDescription className="sign-in-dialog-description">
+              Save this workspace to your account and keep working from any
+              browser.
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            className="google-sign-in-button"
+            type="button"
+            onClick={() => void handleSignIn()}
+          >
+            Continue with Google
+          </Button>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

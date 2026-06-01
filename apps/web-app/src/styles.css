@@ -422,6 +422,46 @@ input {
   padding: 10px 11px;
 }
 
+.sign-in-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-width: 680px;
+  gap: 24px;
+  border-color: var(--shell-border-strong);
+  border-radius: 10px;
+  background: hsl(var(--background));
+  color: var(--shell-text);
+  padding: 30px;
+}
+
+.sign-in-dialog-header {
+  text-align: left;
+}
+
+.sign-in-dialog-title {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.sign-in-dialog-description {
+  max-width: 560px;
+  color: var(--shell-subtle);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.google-sign-in-button {
+  height: 56px;
+  border-radius: 8px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 17px;
+}
+
+.google-sign-in-button:hover {
+  background: hsl(var(--primary) / 88%);
+  color: hsl(var(--primary-foreground));
+}
+
 @media (max-width: 980px) {
   .workspace-panels {
     grid-template-columns: minmax(0, 1fr);
