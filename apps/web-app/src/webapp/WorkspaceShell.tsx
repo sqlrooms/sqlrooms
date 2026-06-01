@@ -48,13 +48,14 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import type React from 'react';
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
   listCloudWorkspaces,
+  renameCloudWorkspace,
 } from './workspace/cloudWorkspaces';
 import {createDefaultWorksheetContent} from './worksheet/defaultBlockDocument';
 
@@ -82,6 +83,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const {data: session} = authClient.useSession();
   const [localWorkspaceName, setLocalWorkspaceName] =
     useState('Untitled Workspace');
+  const [savedWorkspaceNameDraft, setSavedWorkspaceNameDraft] = useState('');
   const [isSignInToSaveOpen, setIsSignInToSaveOpen] = useState(false);
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
@@ -125,6 +127,22 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     },
   });
 
+  const renameWorkspaceMutation = useMutation({
+    mutationFn: renameCloudWorkspace,
+    onSuccess: async (workspace) => {
+      if (workspace) {
+        setSavedWorkspaceNameDraft(workspace.name);
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey}),
+        queryClient.invalidateQueries({
+          queryKey: ['cloudWorkspace', props.mode, props.workspaceId, token],
+        }),
+      ]);
+    },
+  });
+
   const currentWorkspace =
     props.mode === 'saved' ? savedWorkspaceQuery.data : null;
   const worksheets = useMemo(() => {
@@ -132,6 +150,12 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     return localWorksheets;
   }, [currentWorkspace, localWorksheets]);
   const selectedWorksheet = worksheets[0];
+
+  useEffect(() => {
+    if (currentWorkspace?.name) {
+      setSavedWorkspaceNameDraft(currentWorkspace.name);
+    }
+  }, [currentWorkspace?.name]);
 
   const handleSignIn = async () => {
     const result = await authClient.signIn.social({
@@ -159,9 +183,55 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     });
   };
 
+  const handleWorkspaceTitleChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (props.mode === 'saved') {
+      setSavedWorkspaceNameDraft(event.target.value);
+      return;
+    }
+
+    setLocalWorkspaceName(event.target.value);
+  };
+
+  const handleWorkspaceTitleCommit = async () => {
+    if (props.mode === 'unsaved') {
+      setLocalWorkspaceName(localWorkspaceName.trim() || 'Untitled Workspace');
+      return;
+    }
+
+    const currentName = currentWorkspace?.name;
+    const nextName = savedWorkspaceNameDraft.trim();
+    if (!token || !currentName || !nextName || nextName === currentName) {
+      if (!nextName && currentName) {
+        setSavedWorkspaceNameDraft(currentName);
+      }
+      return;
+    }
+
+    await renameWorkspaceMutation.mutateAsync({
+      data: {
+        token,
+        workspaceId: props.workspaceId,
+        name: nextName,
+      },
+    });
+  };
+
+  const handleWorkspaceTitleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur();
+    }
+  };
+
   const workspaceTitle =
-    currentWorkspace?.name ??
-    (props.mode === 'saved' ? 'Loading workspace...' : localWorkspaceName);
+    props.mode === 'saved'
+      ? savedWorkspaceNameDraft ||
+        currentWorkspace?.name ||
+        'Loading workspace...'
+      : localWorkspaceName;
 
   return (
     <main className="dark app-background sqlrooms-web-root">
@@ -304,10 +374,13 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   name="workspaceTitle"
                   className="workspace-title-input"
                   value={workspaceTitle}
-                  disabled={props.mode === 'saved'}
-                  onChange={(event) =>
-                    setLocalWorkspaceName(event.target.value)
+                  disabled={
+                    props.mode === 'saved' &&
+                    (!currentWorkspace || renameWorkspaceMutation.isPending)
                   }
+                  onBlur={() => void handleWorkspaceTitleCommit()}
+                  onChange={handleWorkspaceTitleChange}
+                  onKeyDown={handleWorkspaceTitleKeyDown}
                   aria-label="Workspace title"
                 />
               </div>
