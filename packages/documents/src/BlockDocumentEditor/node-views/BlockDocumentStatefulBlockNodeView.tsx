@@ -352,13 +352,13 @@ export const BlockDocumentStatefulBlockNodeView: FC<
         )}
         {resizableHeight && !readOnly ? (
           <div
-            className="absolute right-0 bottom-0 left-0 flex h-3 cursor-row-resize items-end justify-center opacity-0 transition-opacity group-hover/stateful-block:opacity-100"
+            className="absolute right-0 -bottom-4 left-0 z-10 flex h-3 cursor-row-resize items-start justify-center opacity-0 transition-opacity group-hover/stateful-block:opacity-100"
             onMouseDown={handleResizeMouseDown}
             role="separator"
             aria-orientation="horizontal"
             aria-label="Resize block height"
           >
-            <div className="bg-muted-foreground/50 mb-1 h-1 w-10 rounded-full" />
+            <div className="bg-muted-foreground/50 mt-0.5 h-1 w-10 rounded-full" />
           </div>
         ) : null}
         <ModifierScrollOverlay
