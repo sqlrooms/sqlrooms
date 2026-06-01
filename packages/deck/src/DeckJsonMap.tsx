@@ -145,7 +145,6 @@ function DeckOverlayControl({
     return instance;
   });
   overlay.setProps(deckProps);
-
   return null;
 }
 
