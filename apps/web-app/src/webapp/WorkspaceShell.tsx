@@ -2,6 +2,12 @@ import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {Link, useNavigate} from '@tanstack/react-router';
 import {
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
   Sidebar,
   SidebarContent,
@@ -23,17 +29,14 @@ import {
   BarChart3,
   Bot,
   ChevronDown,
-  CircleDot,
-  Cloud,
-  Command,
   Database,
   FileSpreadsheet,
+  FolderKanban,
   LayoutDashboard,
   LogIn,
   LogOut,
   Plus,
   Save,
-  Search,
   Settings,
   Sparkles,
   Table2,
@@ -162,33 +165,55 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
             <SidebarHeader className="gap-3">
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="h-auto gap-3 py-2">
-                    <Database className="size-5" aria-hidden />
+                  <SidebarMenuButton className="brand-button h-auto gap-3 py-2">
+                    <img className="brand-logo" src="/logo.png" alt="" />
                     <div className="min-w-0 text-left">
                       <div className="truncate text-sm font-semibold">
                         SQLRooms
                       </div>
-                      <div className="truncate text-xs text-shell-subtle">
+                      <div className="text-shell-subtle truncate text-xs">
                         {props.mode === 'saved' ? 'Saved' : 'Unsaved'}
                       </div>
                     </div>
-                    <ChevronDown className="ml-auto size-4 text-shell-subtle" />
+                    <ChevronDown className="text-shell-subtle ml-auto size-4" />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
 
-              <div className="workspace-name-field group-data-[collapsible=icon]:hidden">
-                <Input
-                  id="workspace-name"
-                  name="workspaceName"
-                  value={workspaceTitle}
-                  disabled={props.mode === 'saved'}
-                  onChange={(event) =>
-                    setLocalWorkspaceName(event.target.value)
-                  }
-                  aria-label="Workspace name"
-                />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="workspace-selector group-data-[collapsible=icon]:hidden"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <FolderKanban className="size-4" aria-hidden />
+                    <span className="truncate">{workspaceTitle}</span>
+                    <ChevronDown className="ml-auto size-4" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="workspace-menu" align="start">
+                  <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+                  {(workspacesQuery.data ?? []).map((workspace) => (
+                    <DropdownMenuItem key={workspace.id} asChild>
+                      <Link
+                        to="/workspaces/$workspaceId"
+                        params={{workspaceId: workspace.id}}
+                      >
+                        <FolderKanban className="size-4" aria-hidden />
+                        {workspace.name}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/">
+                      <Plus className="size-4" aria-hidden />
+                      New Workspace
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarHeader>
 
             <SidebarContent>
@@ -199,18 +224,19 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton>
+                      <SidebarMenuButton className="add-file-button">
                         <UploadCloud className="size-4" aria-hidden />
-                        <span>Upload file</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton>
-                        <Database className="size-4" aria-hidden />
-                        <span>DuckDB</span>
+                        <span>Add file</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
+                  <div className="schema-tree group-data-[collapsible=icon]:hidden">
+                    <div className="schema-node">
+                      <Database className="size-4" aria-hidden />
+                      <span>main</span>
+                    </div>
+                    <div className="schema-empty">No tables</div>
+                  </div>
                 </SidebarGroupContent>
               </SidebarGroup>
 
@@ -237,44 +263,10 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
-
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-shell-subtle">
-                  Workspaces
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {(workspacesQuery.data ?? []).map((workspace) => (
-                      <SidebarMenuItem key={workspace.id}>
-                        <SidebarMenuButton asChild>
-                          <Link
-                            to="/workspaces/$workspaceId"
-                            params={{workspaceId: workspace.id}}
-                          >
-                            <CircleDot className="size-4" aria-hidden />
-                            <span>{workspace.name}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter>
               <SidebarMenu>
-                {props.mode === 'unsaved' ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      onClick={() => void handleSaveWorkspace()}
-                      disabled={createWorkspaceMutation.isPending}
-                    >
-                      <Save className="size-4" aria-hidden />
-                      <span>Save Workspace</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() =>
@@ -301,20 +293,30 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
               <div className="topbar-left">
                 <SidebarTrigger className="topbar-icon" />
                 <div className="topbar-divider" />
-                <Button variant="ghost" size="sm" className="topbar-button">
-                  <Search className="size-4" aria-hidden />
-                  Search
-                </Button>
-                <Button variant="ghost" size="icon" className="topbar-icon">
-                  <Command className="size-4" aria-hidden />
-                  <span className="sr-only">Command palette</span>
-                </Button>
+                <Input
+                  id="workspace-title"
+                  name="workspaceTitle"
+                  className="workspace-title-input"
+                  value={workspaceTitle}
+                  disabled={props.mode === 'saved'}
+                  onChange={(event) =>
+                    setLocalWorkspaceName(event.target.value)
+                  }
+                  aria-label="Workspace title"
+                />
               </div>
               <div className="topbar-right">
-                <div className="runtime-pill">
-                  <Cloud className="size-3.5" aria-hidden />
-                  {props.mode === 'saved' ? 'Neon' : 'Local'}
-                </div>
+                {props.mode === 'unsaved' ? (
+                  <Button
+                    className="save-workspace-button"
+                    type="button"
+                    onClick={() => void handleSaveWorkspace()}
+                    disabled={createWorkspaceMutation.isPending}
+                  >
+                    <Save className="size-4" aria-hidden />
+                    Save Workspace
+                  </Button>
+                ) : null}
                 <Button variant="ghost" size="icon" className="topbar-icon">
                   <Settings className="size-4" aria-hidden />
                   <span className="sr-only">Settings</span>
@@ -382,7 +384,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   </Button>
                 </div>
                 <div className="assistant-thread">
-                  <div className="assistant-message">Ask about this workspace.</div>
+                  <div className="assistant-message">
+                    Ask about this workspace.
+                  </div>
                 </div>
               </aside>
             </div>
