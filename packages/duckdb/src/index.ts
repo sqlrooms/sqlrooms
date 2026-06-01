@@ -77,7 +77,6 @@ export {
   findTableInSchemaTrees,
   getAllTablesFromSchemaTrees,
   getArrowColumnTypeCategory,
-  getTableNameFromQualified,
   getColValAsNumber,
   getDuckDbTypeCategory,
   getSqlErrorWithPointer,

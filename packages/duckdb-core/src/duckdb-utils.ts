@@ -38,21 +38,6 @@ export function makeQualifiedTableName({
 }
 
 /**
- * Extract the bare table name from a (possibly quoted, possibly fully-qualified)
- * DuckDB identifier by stripping all double-quotes and returning the segment
- * after the last `.`.
- *
- * @example
- * getTableNameFromQualified('users')                          // 'users'
- * getTableNameFromQualified('main.users')                     // 'users'
- * getTableNameFromQualified('mydb.public.users')              // 'users'
- * getTableNameFromQualified('"mydb"."public"."users"')        // 'users'
- */
-export function getTableNameFromQualified(tableName: string): string {
-  return tableName.replace(/"/g, '').split('.').pop() ?? tableName;
-}
-
-/**
  * Escapes a value for use in DuckDB SQL queries by wrapping it in single quotes
  * and escaping any existing single quotes by doubling them.
  *
