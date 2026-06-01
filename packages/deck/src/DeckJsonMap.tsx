@@ -138,12 +138,9 @@ function DeckOverlayControl({
   interleaved,
   ...deckProps
 }: {interleaved: boolean} & Record<string, unknown>) {
-  const overlayRef = useRef<MapboxOverlay | null>(null);
-  const overlay = useControl<MapboxOverlay>(() => {
-    const instance = new MapboxOverlay({interleaved});
-    overlayRef.current = instance;
-    return instance;
-  });
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({interleaved}),
+  );
   overlay.setProps(deckProps);
   return null;
 }
