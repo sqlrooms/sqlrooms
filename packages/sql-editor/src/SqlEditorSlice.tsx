@@ -324,18 +324,6 @@ export function createSqlEditorSlice({
               config.openTabs = config.openTabs.filter((id) => id !== queryId);
               delete draft.sqlEditor.queryResultsById[queryId];
 
-              if (config.queries.length === 0) {
-                config.queries.push({
-                  id: 'default',
-                  name: 'SQL',
-                  query: '',
-                  lastOpenedAt: Date.now(),
-                });
-                config.openTabs = ['default'];
-                config.selectedQueryId = 'default';
-                return;
-              }
-
               if (wasSelected) {
                 const nextSelectedId =
                   config.openTabs[0] ?? config.queries[0]?.id;
@@ -344,6 +332,8 @@ export function createSqlEditorSlice({
                   if (!config.openTabs.includes(nextSelectedId)) {
                     config.openTabs.push(nextSelectedId);
                   }
+                } else {
+                  config.selectedQueryId = '';
                 }
               }
             }),

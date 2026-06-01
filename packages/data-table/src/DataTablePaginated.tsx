@@ -170,9 +170,9 @@ export function DataTablePaginated<Data extends object>({
       >
         <ScrollArea className="h-full overflow-auto">
           <Table disableWrapper className="border-separate border-spacing-0">
-            <TableHeader className="[&_tr]:!border-b-0">
+            <TableHeader className="[&_tr]:border-b-0!">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="!border-b-0">
+                <TableRow key={headerGroup.id} className="border-b-0!">
                   <TableHead className="bg-background sticky top-0 left-0 z-10 h-auto w-auto min-w-[40px] border-r border-b py-[3px] text-center whitespace-nowrap">
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />

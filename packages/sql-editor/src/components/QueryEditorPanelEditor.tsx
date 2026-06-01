@@ -51,9 +51,13 @@ export const QueryEditorPanelEditor: React.FC<{
   const editorOptions = useMemo(
     () => ({
       ...CODEMIRROR_OPTIONS,
-      lineNumbers: compact ? false : undefined,
-      foldGutter: compact ? false : undefined,
-      highlightActiveLine: compact ? false : undefined,
+      ...(compact
+        ? {
+            lineNumbers: false,
+            foldGutter: false,
+            highlightActiveLine: false,
+          }
+        : {}),
     }),
     [compact],
   );

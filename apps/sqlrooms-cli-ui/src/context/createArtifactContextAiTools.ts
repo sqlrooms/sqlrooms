@@ -10,9 +10,11 @@ import type {RoomState} from '../store-types';
 function readCliArtifact({
   state,
   artifactId,
+  store,
 }: {
   state: RoomState;
   artifactId: string;
+  store: StoreApi<RoomState>;
 }) {
   const artifact = state.artifacts.config.artifactsById[artifactId];
   if (!artifact) {
@@ -102,10 +104,21 @@ function readCliArtifact({
   }
 
   if (artifact.type === 'sql-query') {
-    const query = state.sqlEditor.config.queries.find(
+    let query = state.sqlEditor.config.queries.find(
       (candidate) => candidate.id === artifactId,
     );
-    const result = state.sqlEditor.queryResultsById[artifactId];
+    let result = state.sqlEditor.queryResultsById[artifactId];
+    if (!query) {
+      const ensuredQuery = state.sqlEditor.ensureQuery(artifactId, {
+        name: artifact.title,
+      });
+      const nextState = store.getState();
+      query =
+        nextState.sqlEditor.config.queries.find(
+          (candidate) => candidate.id === artifactId,
+        ) ?? ensuredQuery;
+      result = nextState.sqlEditor.queryResultsById[artifactId];
+    }
     return {
       success: true as const,
       artifact: {
@@ -168,7 +181,8 @@ function createArtifactContextOptions(
         'manual',
       );
     },
-    readArtifact: ({state, artifactId}) => readCliArtifact({state, artifactId}),
+    readArtifact: ({state, artifactId}) =>
+      readCliArtifact({state, artifactId, store}),
   };
 }
 
