@@ -254,10 +254,16 @@ export function DeckJsonMap({
   // so they don't cause unnecessary setProps churn on the overlay.
   const {
     initialViewState,
-    viewState: _viewState,
+    viewState,
     controller: _controller,
+    onViewStateChange,
     ...overlayDeckProps
-  } = mergedDeckProps as Record<string, unknown>;
+  } = mergedDeckProps as Record<string, unknown> & {
+    initialViewState?: Record<string, unknown>;
+    viewState?: Record<string, unknown>;
+    controller?: unknown;
+    onViewStateChange?: (info: {viewState: unknown}) => void;
+  };
 
   const {resolvedTheme} = useTheme();
 
@@ -290,9 +296,11 @@ export function DeckJsonMap({
 
       <Map
         {...(mergedMapProps as object)}
-        {...(initialViewState
-          ? {initialViewState: initialViewState as object}
-          : {})}
+        {...(viewState
+          ? {...(viewState as object), onMove: onViewStateChange}
+          : initialViewState
+            ? {initialViewState: initialViewState as object}
+            : {})}
         style={{width: '100%', height: '100%', ...mapProps?.style}}
       >
         <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
