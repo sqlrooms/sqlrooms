@@ -146,16 +146,6 @@ function DeckOverlayControl({
   });
   overlay.setProps(deckProps);
 
-  // Force a redraw when layers change so filtered data renders immediately
-  // without requiring user interaction.
-  const layers = deckProps.layers;
-  useEffect(() => {
-    const deck = (overlayRef.current as any)?._deck;
-    if (deck?.isInitialized) {
-      deck.redraw();
-    }
-  }, [layers]);
-
   return null;
 }
 
