@@ -48,9 +48,10 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import type React from 'react';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
+import {listWorkspaceFiles} from './workspace/files';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
@@ -75,16 +76,26 @@ type LocalWorksheet = {
   content: JsonObject;
 };
 
+type LocalSelectedFile = {
+  id: string;
+  name: string;
+  size: number;
+};
+
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const {data: session} = authClient.useSession();
   const [localWorkspaceName, setLocalWorkspaceName] =
     useState('Untitled Workspace');
   const [savedWorkspaceNameDraft, setSavedWorkspaceNameDraft] = useState('');
   const [isSignInToSaveOpen, setIsSignInToSaveOpen] = useState(false);
+  const [selectedLocalFiles, setSelectedLocalFiles] = useState<
+    LocalSelectedFile[]
+  >([]);
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
       id: 'default-worksheet',
@@ -111,6 +122,15 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     queryKey: ['cloudWorkspace', props.mode, props.workspaceId, token],
     queryFn: () =>
       getCloudWorkspace({
+        data: {token: token!, workspaceId: props.workspaceId!},
+      }),
+    enabled: Boolean(token && props.mode === 'saved'),
+  });
+
+  const workspaceFilesQuery = useQuery({
+    queryKey: ['workspaceFiles', props.mode, props.workspaceId, token],
+    queryFn: () =>
+      listWorkspaceFiles({
         data: {token: token!, workspaceId: props.workspaceId!},
       }),
     enabled: Boolean(token && props.mode === 'saved'),
@@ -226,6 +246,33 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     }
   };
 
+  const handleAddFile = async () => {
+    if (props.mode === 'unsaved') {
+      await handleSaveWorkspace();
+      return;
+    }
+
+    if (!token) {
+      setIsSignInToSaveOpen(true);
+      return;
+    }
+
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextFiles = Array.from(event.target.files ?? []).map((file) => ({
+      id: `${file.name}:${file.size}:${file.lastModified}`,
+      name: file.name,
+      size: file.size,
+    }));
+
+    setSelectedLocalFiles(nextFiles);
+    event.target.value = '';
+  };
+
   const workspaceTitle =
     props.mode === 'saved'
       ? savedWorkspaceNameDraft ||
@@ -300,18 +347,56 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="add-file-button">
+                      <SidebarMenuButton
+                        className="add-file-button"
+                        onClick={() => void handleAddFile()}
+                      >
                         <UploadCloud className="size-4" aria-hidden />
                         <span>Add file</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
+                  <input
+                    ref={fileInputRef}
+                    className="sr-only"
+                    type="file"
+                    multiple
+                    onChange={handleFileInputChange}
+                    tabIndex={-1}
+                  />
                   <div className="schema-tree group-data-[collapsible=icon]:hidden">
                     <div className="schema-node">
                       <Database className="size-4" aria-hidden />
                       <span>main</span>
                     </div>
-                    <div className="schema-empty">No tables</div>
+                    {(workspaceFilesQuery.data ?? []).map((file) => (
+                      <div className="schema-table" key={file.id}>
+                        <Table2 className="size-4" aria-hidden />
+                        <div className="min-w-0">
+                          <div className="schema-table-name">
+                            {file.tableName}
+                          </div>
+                          <div className="schema-table-meta">
+                            {formatBytes(file.sizeBytes)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedLocalFiles.map((file) => (
+                      <div className="schema-table" key={file.id}>
+                        <Table2 className="size-4" aria-hidden />
+                        <div className="min-w-0">
+                          <div className="schema-table-name">{file.name}</div>
+                          <div className="schema-table-meta">
+                            {formatBytes(file.size)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {!workspaceFilesQuery.data?.length &&
+                    selectedLocalFiles.length === 0 ? (
+                      <div className="schema-empty">No tables</div>
+                    ) : null}
                   </div>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -510,4 +595,18 @@ function BlockTypePreview({
       <span>{label}</span>
     </button>
   );
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+
+  const units = ['B', 'KB', 'MB', 'GB'] as const;
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }
