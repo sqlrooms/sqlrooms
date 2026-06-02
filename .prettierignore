@@ -2,3 +2,4 @@ docs/api/
 .venv/
 .pytest_cache/
 CHANGELOG.md
+apps/web-app/src/routeTree.gen.ts
