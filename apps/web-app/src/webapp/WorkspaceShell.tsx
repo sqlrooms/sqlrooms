@@ -59,6 +59,7 @@ import {
   renameCloudWorkspace,
 } from './workspace/cloudWorkspaces';
 import {createDefaultWorksheetContent} from './worksheet/defaultBlockDocument';
+import {useWorkspaceDuckDbRuntime} from './worksheet/useWorkspaceDuckDbRuntime';
 
 type WorkspaceShellProps =
   | {
@@ -103,6 +104,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       content: createDefaultWorksheetContent(),
     },
   ]);
+  const activeWorkspaceId =
+    props.mode === 'saved' ? props.workspaceId : 'unsaved-default';
+  const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
 
   const isSignedIn = Boolean(session?.user);
   const tokenQuery = useQuery({
@@ -382,6 +386,18 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                         </div>
                       </div>
                     ))}
+                    {duckDbRuntime.tableNames.map((tableName) => (
+                      <div
+                        className="schema-table"
+                        key={`runtime:${tableName}`}
+                      >
+                        <Table2 className="size-4" aria-hidden />
+                        <div className="min-w-0">
+                          <div className="schema-table-name">{tableName}</div>
+                          <div className="schema-table-meta">In memory</div>
+                        </div>
+                      </div>
+                    ))}
                     {selectedLocalFiles.map((file) => (
                       <div className="schema-table" key={file.id}>
                         <Table2 className="size-4" aria-hidden />
@@ -394,8 +410,13 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                       </div>
                     ))}
                     {!workspaceFilesQuery.data?.length &&
+                    duckDbRuntime.tableNames.length === 0 &&
                     selectedLocalFiles.length === 0 ? (
-                      <div className="schema-empty">No tables</div>
+                      <div className="schema-empty">
+                        {duckDbRuntime.status === 'initializing'
+                          ? 'Preparing runtime'
+                          : 'No tables'}
+                      </div>
                     ) : null}
                   </div>
                 </SidebarGroupContent>
