@@ -6,6 +6,7 @@ import {files, workspaceMembers} from '#/db/schema';
 import {verifyAuthToken} from '#/lib/auth-token';
 import {
   createFileUploadIntent as createStorageFileUploadIntent,
+  deleteFile as deleteStorageFile,
   finalizeFileUpload as finalizeStorageFileUpload,
 } from '../files/fileStorage.server';
 
@@ -81,6 +82,23 @@ export const finalizeFileUpload = createServerFn({method: 'POST'})
       sourceSizeBytes: data.sourceSizeBytes,
       rowCount: data.rowCount,
       contentHash: data.contentHash,
+    });
+
+    return serializeFile(file);
+  });
+
+export const deleteWorkspaceFile = createServerFn({method: 'POST'})
+  .inputValidator(
+    workspaceFilesInput.extend({
+      fileId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({data}) => {
+    const {userId} = await verifyAuthToken(data.token);
+    const file = await deleteStorageFile({
+      userId,
+      workspaceId: data.workspaceId,
+      fileId: data.fileId,
     });
 
     return serializeFile(file);

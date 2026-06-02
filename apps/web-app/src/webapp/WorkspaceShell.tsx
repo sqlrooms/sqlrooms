@@ -30,6 +30,7 @@ import {
   SidebarTrigger,
   TooltipProvider,
 } from '@sqlrooms/ui';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {
   ChevronDown,
   Database,
@@ -49,13 +50,15 @@ import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
 import {AssistantPanel} from './assistant/AssistantPanel';
 import {
+  createTableName,
+  dropWorkspaceTable,
   loadSavedWorkspaceFile,
   prepareWorkspaceFile,
   uploadPreparedWorkspaceFile,
   type PreparedWorkspaceFile,
 } from './files/fileIngestion';
 import {WorksheetSurface} from './WorksheetSurface';
-import {listWorkspaceFiles} from './workspace/files';
+import {deleteWorkspaceFile, listWorkspaceFiles} from './workspace/files';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
@@ -81,6 +84,18 @@ type LocalWorksheet = {
   content: JsonObject;
 };
 
+type FileConflictResolution =
+  | {action: 'replace'}
+  | {action: 'keep-both'; tableName: string}
+  | {action: 'cancel'};
+
+type FileNameConflict = {
+  fileName: string;
+  tableName: string;
+  uniqueTableName: string;
+  resolve: (resolution: FileConflictResolution) => void;
+};
+
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
@@ -98,6 +113,8 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const [fileIngestionStatus, setFileIngestionStatus] = useState<string | null>(
     null,
   );
+  const [fileNameConflict, setFileNameConflict] =
+    useState<FileNameConflict | null>(null);
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
       id: 'default-worksheet',
@@ -366,6 +383,29 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     void ingestFiles(files);
   };
 
+  const askFileNameConflict = ({
+    fileName,
+    tableName,
+    existingNames,
+  }: {
+    fileName: string;
+    tableName: string;
+    existingNames: string[];
+  }) =>
+    new Promise<FileConflictResolution>((resolve) => {
+      setFileNameConflict({
+        fileName,
+        tableName,
+        uniqueTableName: generateUniqueName(tableName, existingNames),
+        resolve,
+      });
+    });
+
+  const resolveFileNameConflict = (resolution: FileConflictResolution) => {
+    fileNameConflict?.resolve(resolution);
+    setFileNameConflict(null);
+  };
+
   const ingestFiles = async (files: File[]) => {
     if (!duckDbRuntime.runtime) return;
 
@@ -373,13 +413,64 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     try {
       const nextPreparedFiles: PreparedWorkspaceFile[] = [];
       for (const file of files) {
+        let tableName = createTableName(file.name);
+        let savedFilesToReplace: {id: string; tableName: string}[] = [];
+        const existingTableNames = [
+          ...workspaceTableNames,
+          ...nextPreparedFiles.map((preparedFile) => preparedFile.tableName),
+        ];
+
+        if (hasTableName(existingTableNames, tableName)) {
+          const resolution = await askFileNameConflict({
+            fileName: file.name,
+            tableName,
+            existingNames: existingTableNames,
+          });
+
+          if (resolution.action === 'cancel') {
+            continue;
+          }
+
+          if (resolution.action === 'keep-both') {
+            tableName = resolution.tableName;
+          } else {
+            await dropWorkspaceTable({
+              runtime: duckDbRuntime.runtime,
+              tableName,
+            });
+            removePreparedFilesByTableName(nextPreparedFiles, tableName);
+            setPreparedLocalFiles((currentFiles) =>
+              currentFiles.filter(
+                (currentFile) => currentFile.tableName !== tableName,
+              ),
+            );
+
+            if (props.mode === 'saved' && token) {
+              savedFilesToReplace = (workspaceFilesQuery.data ?? []).filter(
+                (workspaceFile) => workspaceFile.tableName === tableName,
+              );
+            }
+          }
+        }
+
         const preparedFile = await prepareWorkspaceFile({
           runtime: duckDbRuntime.runtime,
           file,
+          tableName,
         });
         nextPreparedFiles.push(preparedFile);
 
         if (props.mode === 'saved' && token) {
+          for (const workspaceFile of savedFilesToReplace) {
+            await deleteWorkspaceFile({
+              data: {
+                token,
+                workspaceId: props.workspaceId,
+                fileId: workspaceFile.id,
+              },
+            });
+          }
+
           await uploadPreparedWorkspaceFile({
             token,
             workspaceId: props.workspaceId,
@@ -398,6 +489,11 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         ]);
       }
       await duckDbRuntime.refreshTables();
+      if (props.mode === 'saved' && token) {
+        await queryClient.invalidateQueries({
+          queryKey: ['workspaceFiles', props.mode, props.workspaceId, token],
+        });
+      }
       setFileIngestionStatus(null);
     } catch (error) {
       setFileIngestionStatus(
@@ -702,8 +798,79 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
           </Button>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={Boolean(fileNameConflict)}
+        onOpenChange={(open) => {
+          if (!open && fileNameConflict) {
+            resolveFileNameConflict({action: 'cancel'});
+          }
+        }}
+      >
+        <DialogContent className="file-conflict-dialog">
+          <DialogHeader className="sign-in-dialog-header">
+            <DialogTitle className="sign-in-dialog-title">
+              Table already exists
+            </DialogTitle>
+            <DialogDescription className="sign-in-dialog-description">
+              {fileNameConflict
+                ? `"${fileNameConflict.tableName}" already exists. How should SQLRooms add "${fileNameConflict.fileName}"?`
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="file-conflict-actions">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => resolveFileNameConflict({action: 'cancel'})}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() =>
+                fileNameConflict
+                  ? resolveFileNameConflict({
+                      action: 'keep-both',
+                      tableName: fileNameConflict.uniqueTableName,
+                    })
+                  : undefined
+              }
+            >
+              {fileNameConflict
+                ? `Keep both (${fileNameConflict.uniqueTableName})`
+                : 'Keep both'}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => resolveFileNameConflict({action: 'replace'})}
+            >
+              Replace
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
+}
+
+function hasTableName(tableNames: string[], tableName: string) {
+  return tableNames.some(
+    (existingTableName) =>
+      existingTableName.toLowerCase() === tableName.toLowerCase(),
+  );
+}
+
+function removePreparedFilesByTableName(
+  files: PreparedWorkspaceFile[],
+  tableName: string,
+) {
+  for (let index = files.length - 1; index >= 0; index -= 1) {
+    if (files[index].tableName === tableName) {
+      files.splice(index, 1);
+    }
+  }
 }
 
 function formatBytes(bytes: number) {

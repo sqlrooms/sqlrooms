@@ -15,14 +15,16 @@ export type PreparedWorkspaceFile = {
 export async function prepareWorkspaceFile({
   runtime,
   file,
+  tableName,
 }: {
   runtime: WorkspaceDuckDbRuntime;
   file: File;
+  tableName?: string;
 }): Promise<PreparedWorkspaceFile> {
-  const tableName = createTableName(file.name);
-  await runtime.connector.loadFile(file, tableName);
-  const rowCount = await getTableRowCount(runtime, tableName);
-  const parquetBlob = await exportTableToParquet(runtime, tableName);
+  const targetTableName = tableName ?? createTableName(file.name);
+  await runtime.connector.loadFile(file, targetTableName);
+  const rowCount = await getTableRowCount(runtime, targetTableName);
+  const parquetBlob = await exportTableToParquet(runtime, targetTableName);
   if (parquetBlob.size > PARQUET_UPLOAD_LIMIT_BYTES) {
     throw new Error('Exported Parquet file is too large to upload.');
   }
@@ -30,7 +32,7 @@ export async function prepareWorkspaceFile({
   return {
     id: crypto.randomUUID(),
     originalName: file.name,
-    tableName,
+    tableName: targetTableName,
     sourceSizeBytes: file.size,
     parquetBlob,
     parquetSizeBytes: parquetBlob.size,
@@ -115,6 +117,18 @@ export async function loadSavedWorkspaceFile({
   );
 }
 
+export async function dropWorkspaceTable({
+  runtime,
+  tableName,
+}: {
+  runtime: WorkspaceDuckDbRuntime;
+  tableName: string;
+}) {
+  await runtime.connector.execute(
+    `drop table if exists ${escapeIdentifier(tableName)}`,
+  );
+}
+
 async function getTableRowCount(
   runtime: WorkspaceDuckDbRuntime,
   tableName: string,
@@ -158,9 +172,9 @@ export function createTableName(fileName: string) {
   const sanitized = withoutExtension
     .replace(/[^a-zA-Z0-9_]+/g, '_')
     .replace(/^_+|_+$/g, '')
-    .slice(0, 48);
+    .slice(0, 63);
   const baseName = sanitized || 'uploaded_file';
-  return `${baseName}_${crypto.randomUUID().slice(0, 8)}`;
+  return /^\d/.test(baseName) ? `_${baseName}` : baseName;
 }
 
 function escapeIdentifier(identifier: string) {
