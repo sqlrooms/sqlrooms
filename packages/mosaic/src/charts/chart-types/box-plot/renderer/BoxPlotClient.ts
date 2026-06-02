@@ -135,7 +135,7 @@ type BuildBoxPlotQueryArgs = {
   y: string;
 };
 
-function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
+export function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
   const table = quoteTableReference(args.tableName);
   const x = quoteIdentifier(args.x);
   const y = quoteIdentifier(args.y);
