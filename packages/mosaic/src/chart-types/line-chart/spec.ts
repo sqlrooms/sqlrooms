@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {LineChartSettings} from './schema';
-import {SpecGenerationError} from '../errors';
+import {ChartSpecError} from '../errors';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -27,12 +27,10 @@ export function createLineChartSpec(
   {x, yFields, xInterval}: LineChartSettings,
 ): Spec {
   if (!x) {
-    throw new SpecGenerationError('X field is required for line chart');
+    throw new ChartSpecError('X field is required for line chart');
   }
   if (!yFields || yFields.length === 0) {
-    throw new SpecGenerationError(
-      'At least one Y field is required for line chart',
-    );
+    throw new ChartSpecError('At least one Y field is required for line chart');
   }
 
   const plotMarks: any[] = [];

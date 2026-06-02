@@ -1,59 +1,25 @@
 import {SpinnerPane, cn} from '@sqlrooms/ui';
 import {type FC, createElement, useMemo} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
-import type {
-  ChartRuntimeIssue,
-  ChartRuntimeIssueContext,
-} from '../chart-runtime';
-import {resolveChartDataPolicy} from '../chart-runtime';
-import {
-  isComponentChartType,
-  isSpecChartType,
-  type ChartTypeDefinition,
-} from '../chart-types/base-types';
+import type {ChartRuntimeIssueContext} from '../chart-runtime';
 import type {ChartConfig} from '../chart-types/chart-config';
-import {useChartTypeDefinition} from '../chart-types/useChartTypeDefinition';
 import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 import {ChartRuntimeIssuePanel} from './ChartRuntimeIssuePanel';
-import {MosaicDashboardVgPlotError} from './MosaicDashboardVgPlotError';
+import {MosaicChartError} from './MosaicChartError';
 import {useBrushSelectionParams} from './useBrushSelectionParams';
+import {useChartDataPolicy} from './useChartDataPolicy';
 import {useChartRetainerByKey} from './useChartRetainer';
-import {useGenerateSpec} from './useGenerateSpec';
+import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
+import {useRuntimeIssueReporter} from './useRuntimeIssueReporter';
 
 export type MosaicChartViewProps = {
-  tableName: string;
+  tableName?: string;
   config: ChartConfig;
   selectionName?: string;
   retentionKey?: string;
   runtimeIssueKey?: string;
-  chartTypeDefinition?: ChartTypeDefinition;
   className?: string;
 };
-
-function useRuntimeIssueReporter(runtimeIssueKey: string | undefined) {
-  const reportPanelIssueByKey = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.reportPanelIssueByKey,
-  );
-  const clearPanelIssueByKey = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.clearPanelIssueByKey,
-  );
-
-  return useMemo(
-    () => ({
-      reportIssue: (issueToReport: ChartRuntimeIssue) => {
-        if (runtimeIssueKey) {
-          reportPanelIssueByKey(runtimeIssueKey, issueToReport);
-        }
-      },
-      clearIssue: () => {
-        if (runtimeIssueKey) {
-          clearPanelIssueByKey(runtimeIssueKey);
-        }
-      },
-    }),
-    [clearPanelIssueByKey, reportPanelIssueByKey, runtimeIssueKey],
-  );
-}
 
 export const MosaicChartView: FC<MosaicChartViewProps> = ({
   tableName,
@@ -61,30 +27,18 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
   selectionName,
   retentionKey,
   runtimeIssueKey,
-  chartTypeDefinition,
   className,
 }) => {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
-  const registeredChartTypeDefinition = useChartTypeDefinition(
-    config.chartType,
-  );
-  const resolvedChartTypeDefinition =
-    chartTypeDefinition ?? registeredChartTypeDefinition;
-  const spec = useGenerateSpec(
-    tableName,
-    config.settings,
-    resolvedChartTypeDefinition,
-  );
+
   const retention = useChartRetainerByKey(retentionKey);
   const params = useBrushSelectionParams(selectionName);
-  const issue = useStoreWithMosaicDashboard((state) =>
-    runtimeIssueKey
-      ? state.mosaicDashboard.getPanelIssueByKey(runtimeIssueKey)
-      : undefined,
-  );
+  const dataPolicy = useChartDataPolicy(tableName, config);
+
   const runtimeIssueReporter = useRuntimeIssueReporter(runtimeIssueKey);
+
   const runtimeIssueContext: ChartRuntimeIssueContext = useMemo(
     () => ({
       panelId: runtimeIssueKey ?? retentionKey ?? config.chartType,
@@ -92,27 +46,14 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     }),
     [config.chartType, retentionKey, runtimeIssueKey],
   );
-  const dataPolicy = useMemo(() => {
-    const defaultPolicy =
-      resolvedChartTypeDefinition?.getDataPolicy?.({tableName, config}) ?? null;
-    return resolveChartDataPolicy(defaultPolicy, config.dataPolicy);
-  }, [config, resolvedChartTypeDefinition, tableName]);
 
-  if (!resolvedChartTypeDefinition) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Unknown chart type: {config.chartType}
-      </div>
-    );
-  }
+  const issue = useStoreWithMosaicDashboard((state) =>
+    runtimeIssueKey
+      ? state.mosaicDashboard.getPanelIssueByKey(runtimeIssueKey)
+      : undefined,
+  );
 
-  if (!tableName) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Please select a data table first
-      </div>
-    );
-  }
+  const renderContext = useMosaicChartRenderContext(tableName, config);
 
   if (connection.status === 'loading' || connection.status === 'idle') {
     return <SpinnerPane className="h-full w-full" />;
@@ -130,19 +71,27 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     return <ChartRuntimeIssuePanel issue={issue} />;
   }
 
-  if (isSpecChartType(resolvedChartTypeDefinition)) {
-    if (spec.error) {
-      return (
-        <div className="flex h-full flex-col items-center justify-center">
-          <MosaicDashboardVgPlotError error={spec.error} />
-        </div>
-      );
-    }
+  if (renderContext.type === 'error') {
+    return (
+      <div
+        className={cn(
+          'flex h-full flex-col items-center justify-center',
+          className,
+        )}
+      >
+        <MosaicChartError
+          title={renderContext.title}
+          message={renderContext.message}
+        />
+      </div>
+    );
+  }
 
+  if (renderContext.type === 'spec') {
     return (
       <div className={cn('h-full w-full', className)}>
         <VgPlotChart
-          spec={spec.spec}
+          spec={renderContext.spec}
           params={params}
           retention={retention}
           dataPolicy={dataPolicy}
@@ -153,11 +102,11 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     );
   }
 
-  if (isComponentChartType(resolvedChartTypeDefinition)) {
+  if (renderContext.type === 'component') {
     return (
       <div className={cn('h-full w-full', className)}>
-        {createElement(resolvedChartTypeDefinition.renderer, {
-          tableName,
+        {createElement(renderContext.renderer, {
+          tableName: renderContext.tableName,
           config,
           coordinator: connection.coordinator,
           params,
@@ -170,5 +119,5 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     );
   }
 
-  throw new Error('Unsupported chart type definition');
+  return null;
 };

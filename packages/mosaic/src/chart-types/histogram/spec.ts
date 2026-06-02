@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HistogramChartSettings, DEFAULT_BINS_COUNT} from './schema';
-import {SpecGenerationError} from '../errors';
+import {ChartSpecError} from '../errors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
@@ -10,7 +10,7 @@ export function createHistogramSpec(
   {field, maxBins = DEFAULT_BINS_COUNT}: HistogramChartSettings,
 ): Spec {
   if (!field) {
-    throw new SpecGenerationError('Field is required for histogram');
+    throw new ChartSpecError('Field is required for histogram');
   }
 
   return {

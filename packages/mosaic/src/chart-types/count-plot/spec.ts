@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {CountPlotChartSettings} from './schema';
-import {SpecGenerationError} from '../errors';
+import {ChartSpecError} from '../errors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
@@ -10,7 +10,7 @@ export function createCountPlotSpec(
   {field}: CountPlotChartSettings,
 ): Spec {
   if (!field) {
-    throw new SpecGenerationError('Field is required for count plot');
+    throw new ChartSpecError('Field is required for count plot');
   }
 
   // Count plot shows categorical frequency as horizontal bars

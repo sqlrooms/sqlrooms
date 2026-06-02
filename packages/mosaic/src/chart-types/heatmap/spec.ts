@@ -1,16 +1,16 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HeatmapChartSettings} from './schema';
-import {SpecGenerationError} from '../errors';
+import {ChartSpecError} from '../errors';
 
 export function createHeatmapSpec(
   tableName: string,
   {x, y}: HeatmapChartSettings,
 ): Spec {
   if (!x) {
-    throw new SpecGenerationError('X field is required for heatmap');
+    throw new ChartSpecError('X field is required for heatmap');
   }
   if (!y) {
-    throw new SpecGenerationError('Y field is required for heatmap');
+    throw new ChartSpecError('Y field is required for heatmap');
   }
   return {
     plot: [

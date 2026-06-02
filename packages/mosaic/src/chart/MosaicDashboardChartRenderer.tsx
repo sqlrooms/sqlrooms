@@ -1,4 +1,3 @@
-import {SpinnerPane} from '@sqlrooms/ui';
 import {BarChart3Icon} from 'lucide-react';
 import {useCallback, type FC} from 'react';
 import {MosaicDashboardChartHeaderActions} from './MosaicDashboardChartHeaderActions';
@@ -18,10 +17,6 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   dashboard,
   selectionName,
 }) => {
-  const connection = useStoreWithMosaicDashboard(
-    (state) => state.mosaic.connection,
-  );
-
   const tableName = dashboard.selectedTable;
 
   const updatePanel = useStoreWithMosaicDashboard(
@@ -36,26 +31,6 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
     },
     [dashboardId, panel.id, updatePanel],
   );
-
-  if (!tableName) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Please select a data table first
-      </div>
-    );
-  }
-
-  if (connection.status === 'loading' || connection.status === 'idle') {
-    return <SpinnerPane className="h-full w-full" />;
-  }
-
-  if (connection.status === 'error') {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Mosaic connection failed
-      </div>
-    );
-  }
 
   return (
     <MosaicDashboardChart

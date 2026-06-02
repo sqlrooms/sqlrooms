@@ -1,14 +1,13 @@
 import {type FC, useCallback, useState} from 'react';
-import {type Spec} from '@uwdata/mosaic-spec';
 import {ChartSettings} from './chart-settings/ChartSettings';
 import {ChartSpecViewerPanel} from './chart-settings/ChartSpecViewerPanel';
 import {useTableColumns} from './chart-settings/useTableColumns';
 import {type ChartConfig} from '../chart-types/chart-config';
+import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
 
 export type MosaicChartSettingsPanelProps = {
-  tableName: string;
+  tableName?: string;
   config: ChartConfig;
-  spec?: Spec;
   onChange: (config: ChartConfig) => void;
   onClose?: () => void;
 };
@@ -16,12 +15,13 @@ export type MosaicChartSettingsPanelProps = {
 export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
   tableName,
   config,
-  spec,
   onChange,
   onClose,
 }) => {
   const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
   const columns = useTableColumns(tableName);
+
+  const renderContext = useMosaicChartRenderContext(tableName, config);
 
   const handleViewSpec = useCallback(() => {
     setViewMode('spec');
@@ -31,8 +31,13 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     setViewMode('settings');
   }, []);
 
-  if (spec && viewMode === 'spec') {
-    return <ChartSpecViewerPanel spec={spec} onBack={handleBackToSettings} />;
+  if (renderContext.type === 'spec' && viewMode === 'spec') {
+    return (
+      <ChartSpecViewerPanel
+        spec={renderContext.spec}
+        onBack={handleBackToSettings}
+      />
+    );
   }
 
   return (
@@ -45,7 +50,9 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
       <ChartSettings.Header>
         <div className="flex items-center">Chart settings</div>
         <div className="flex items-center gap-1">
-          {spec && <ChartSettings.ViewSpecButton onClick={handleViewSpec} />}
+          {renderContext.type === 'spec' && (
+            <ChartSettings.ViewSpecButton onClick={handleViewSpec} />
+          )}
           {onClose && <ChartSettings.CloseButton onClick={onClose} />}
         </div>
       </ChartSettings.Header>

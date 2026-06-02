@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {BubbleChartSettings} from './schema';
-import {SpecGenerationError} from '../errors';
+import {ChartSpecError} from '../errors';
 
 const FG_COLOR = 'var(--color-chart-1)';
 
@@ -9,10 +9,10 @@ export function createBubbleChartSpec(
   {x, y}: BubbleChartSettings,
 ): Spec {
   if (!x) {
-    throw new SpecGenerationError('X field is required for bubble chart');
+    throw new ChartSpecError('X field is required for bubble chart');
   }
   if (!y) {
-    throw new SpecGenerationError('Y field is required for bubble chart');
+    throw new ChartSpecError('Y field is required for bubble chart');
   }
   return {
     plot: [
