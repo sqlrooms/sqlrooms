@@ -1,5 +1,5 @@
 {
-  "id": "5ff23cd3-4b9b-46be-8dc3-9fddba024540",
+  "id": "c7d13b2b-eaaa-46b7-8b29-1cb043b9222e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -354,101 +354,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.worksheets": {
-      "name": "worksheets",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{\"type\":\"doc\",\"content\":[]}'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "worksheets_workspace_updated_at_idx": {
-          "name": "worksheets_workspace_updated_at_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "worksheets_workspace_id_workspaces_id_fk": {
-          "name": "worksheets_workspace_id_workspaces_id_fk",
-          "tableFrom": "worksheets",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.workspace_members": {
       "name": "workspace_members",
       "schema": "",
@@ -553,6 +458,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"artifacts\":{\"artifactsById\":{\"default-worksheet\":{\"id\":\"default-worksheet\",\"type\":\"worksheet\",\"title\":\"Worksheet\",\"visibility\":\"workspace\"}},\"artifactOrder\":[\"default-worksheet\"],\"currentArtifactId\":\"default-worksheet\"},\"blockDocuments\":{\"artifacts\":{\"default-worksheet\":{\"id\":\"default-worksheet\",\"content\":{\"type\":\"doc\",\"content\":[]},\"assets\":{},\"updatedAt\":0}}},\"sqlEditor\":{\"queries\":[],\"selectedQueryId\":\"\",\"openTabs\":[]},\"mosaicDashboard\":{\"dashboardsById\":{}}}'::jsonb"
+        },
+        "ai_config": {
+          "name": "ai_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"sessions\":[],\"openSessionTabs\":[]}'::jsonb"
         },
         "layout": {
           "name": "layout",

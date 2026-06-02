@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1780392231079,
-      "tag": "0000_cheerful_alice",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1780393114132,
-      "tag": "0001_silent_loners",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1780396850817,
-      "tag": "0002_slippery_mongoose",
+      "when": 1780403386917,
+      "tag": "0000_elite_madrox",
       "breakpoints": true
     }
   ]

@@ -42,16 +42,6 @@ CREATE TABLE "users_profile" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "worksheets" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"workspace_id" uuid NOT NULL,
-	"owner_id" text NOT NULL,
-	"title" text NOT NULL,
-	"content" jsonb DEFAULT '{"type":"doc","content":[]}'::jsonb NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "workspace_members" (
 	"workspace_id" uuid NOT NULL,
 	"user_id" text NOT NULL,
@@ -65,6 +55,8 @@ CREATE TABLE "workspaces" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"owner_id" text NOT NULL,
 	"name" text NOT NULL,
+	"content" jsonb DEFAULT '{"artifacts":{"artifactsById":{"default-worksheet":{"id":"default-worksheet","type":"worksheet","title":"Worksheet","visibility":"workspace"}},"artifactOrder":["default-worksheet"],"currentArtifactId":"default-worksheet"},"blockDocuments":{"artifacts":{"default-worksheet":{"id":"default-worksheet","content":{"type":"doc","content":[]},"assets":{},"updatedAt":0}}},"sqlEditor":{"queries":[],"selectedQueryId":"","openTabs":[]},"mosaicDashboard":{"dashboardsById":{}}}'::jsonb NOT NULL,
+	"ai_config" jsonb DEFAULT '{"sessions":[],"openSessionTabs":[]}'::jsonb NOT NULL,
 	"layout" jsonb DEFAULT '{"type":"split","id":"workspace-root-layout","direction":"row","children":[{"type":"panel","id":"assistant-panel","panel":"assistant","defaultSize":"320px","minSize":"260px","maxSize":"560px","collapsible":true,"collapsedSize":0},{"type":"panel","id":"worksheet-panel","panel":"worksheet","defaultSize":"75%","minSize":"360px"}]}'::jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -72,12 +64,10 @@ CREATE TABLE "workspaces" (
 );
 --> statement-breakpoint
 ALTER TABLE "files" ADD CONSTRAINT "files_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "worksheets" ADD CONSTRAINT "worksheets_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workspace_members" ADD CONSTRAINT "workspace_members_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "ai_usage_events_user_created_at_idx" ON "ai_usage_events" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "files_object_key_idx" ON "files" USING btree ("object_key");--> statement-breakpoint
 CREATE INDEX "files_workspace_created_at_idx" ON "files" USING btree ("workspace_id","created_at");--> statement-breakpoint
 CREATE INDEX "files_owner_created_at_idx" ON "files" USING btree ("owner_id","created_at");--> statement-breakpoint
-CREATE INDEX "worksheets_workspace_updated_at_idx" ON "worksheets" USING btree ("workspace_id","updated_at");--> statement-breakpoint
 CREATE INDEX "workspace_members_user_idx" ON "workspace_members" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "workspaces_owner_updated_at_idx" ON "workspaces" USING btree ("owner_id","updated_at");

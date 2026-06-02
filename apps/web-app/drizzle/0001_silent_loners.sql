@@ -1,1 +1,0 @@
-ALTER TABLE "workspaces" ADD COLUMN "ai_config" jsonb DEFAULT '{"sessions":[],"openSessionTabs":[]}'::jsonb NOT NULL;
