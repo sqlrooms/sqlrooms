@@ -1,7 +1,4 @@
-import type {
-  BoxPlotOutlierRow,
-  BoxPlotSummaryRow,
-} from '../../../boxplot/BoxPlotClient';
+import type {BoxPlotOutlierRow, BoxPlotSummaryRow} from './BoxPlotClient';
 
 export const BOX_FILL = 'var(--color-chart-1)';
 export const BOX_STROKE = 'var(--color-chart-1)';

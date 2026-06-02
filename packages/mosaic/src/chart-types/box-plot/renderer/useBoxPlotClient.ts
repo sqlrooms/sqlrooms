@@ -1,6 +1,6 @@
 import {Coordinator, Selection} from '@uwdata/mosaic-core';
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {BoxPlotClient, type BoxPlotState} from '../../../boxplot/BoxPlotClient';
+import {BoxPlotClient, type BoxPlotState} from './BoxPlotClient';
 import type {BrushSelectionParams} from '../../base-types';
 import type {
   ChartDataPolicy,

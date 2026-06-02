@@ -1,7 +1,4 @@
-import type {
-  BoxPlotOutlierRow,
-  BoxPlotSummaryRow,
-} from '../../../boxplot/BoxPlotClient';
+import type {BoxPlotOutlierRow, BoxPlotSummaryRow} from './BoxPlotClient';
 import type {PlotSize} from '../../../ResponsivePlot';
 import {MARGINS} from './constants';
 

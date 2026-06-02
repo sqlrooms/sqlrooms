@@ -10,7 +10,7 @@ import {
   type ChartDataPolicy,
   type ChartRuntimeIssueContext,
   type ChartRuntimeIssueReporter,
-} from '../chart-runtime';
+} from '../../../chart-runtime';
 
 export type BoxPlotSummaryRow = {
   category: unknown;
@@ -128,12 +128,14 @@ function numericValue(value: unknown): number | undefined {
   return Number.isFinite(numeric) ? numeric : undefined;
 }
 
-export function buildBoxPlotQuery(args: {
+type BuildBoxPlotQueryArgs = {
   filter?: FilterExpr | null;
   tableName: string;
   x: string;
   y: string;
-}): string {
+};
+
+function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
   const table = quoteTableReference(args.tableName);
   const x = quoteIdentifier(args.x);
   const y = quoteIdentifier(args.y);
