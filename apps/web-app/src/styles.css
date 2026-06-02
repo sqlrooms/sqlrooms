@@ -505,19 +505,61 @@ input {
   display: flex;
   flex: 1;
   min-height: 0;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
   padding: 10px;
 }
 
 .assistant-message {
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   border: 1px solid var(--shell-border);
   border-radius: 7px;
   background: var(--shell-control-background);
   color: var(--shell-subtle);
   font-size: 13px;
   line-height: 1.4;
+  white-space: pre-wrap;
   padding: 10px 11px;
+}
+
+.assistant-message.user {
+  align-self: flex-end;
+  background: hsl(198 32% 34% / 78%);
+  color: var(--shell-text);
+}
+
+.assistant-status {
+  align-self: stretch;
+  color: var(--shell-subtle);
+  font-size: 12px;
+  padding: 0 2px;
+}
+
+.assistant-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 8px;
+  border-top: 1px solid var(--shell-border);
+  padding: 10px;
+}
+
+.assistant-composer textarea {
+  min-height: 70px;
+  max-height: 150px;
+  resize: vertical;
+  border: 1px solid var(--shell-border);
+  border-radius: 7px;
+  background: var(--shell-input-background);
+  color: var(--shell-text);
+  font-size: 13px;
+  line-height: 1.35;
+  padding: 9px 10px;
+}
+
+.assistant-composer button {
+  align-self: end;
 }
 
 .sign-in-dialog {

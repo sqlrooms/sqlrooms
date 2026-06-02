@@ -31,7 +31,6 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {
-  Bot,
   ChevronDown,
   Database,
   FileSpreadsheet,
@@ -41,7 +40,6 @@ import {
   Plus,
   Save,
   Settings,
-  Sparkles,
   UploadCloud,
   Table2,
 } from 'lucide-react';
@@ -49,6 +47,7 @@ import type React from 'react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
+import {AssistantPanel} from './assistant/AssistantPanel';
 import {
   loadSavedWorkspaceFile,
   prepareWorkspaceFile,
@@ -169,6 +168,21 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     return localWorksheets;
   }, [currentWorkspace, localWorksheets]);
   const selectedWorksheet = worksheets[0];
+  const workspaceTableNames = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...(workspaceFilesQuery.data ?? []).map((file) => file.tableName),
+          ...duckDbRuntime.tableNames,
+          ...preparedLocalFiles.map((file) => file.tableName),
+        ]),
+      ),
+    [duckDbRuntime.tableNames, preparedLocalFiles, workspaceFilesQuery.data],
+  );
+  const worksheetTitles = useMemo(
+    () => worksheets.map((worksheet) => worksheet.title),
+    [worksheets],
+  );
 
   useEffect(() => {
     if (currentWorkspace?.name) {
@@ -641,23 +655,13 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                 </div>
               </section>
 
-              <aside className="assistant-panel">
-                <div className="assistant-header">
-                  <div className="assistant-title">
-                    <Bot className="size-4" aria-hidden />
-                    Assistant
-                  </div>
-                  <Button variant="ghost" size="icon" className="topbar-icon">
-                    <Sparkles className="size-4" aria-hidden />
-                    <span className="sr-only">New assistant thread</span>
-                  </Button>
-                </div>
-                <div className="assistant-thread">
-                  <div className="assistant-message">
-                    Ask about this workspace.
-                  </div>
-                </div>
-              </aside>
+              <AssistantPanel
+                token={token}
+                workspaceTitle={workspaceTitle}
+                worksheetTitles={worksheetTitles}
+                tableNames={workspaceTableNames}
+                onSignInRequired={() => setIsSignInToSaveOpen(true)}
+              />
             </div>
           </SidebarInset>
         </SidebarProvider>
