@@ -1,19 +1,19 @@
 import {
-  BlockDocumentChartRendererProvider,
-  BlockDocumentEditor,
-  BlockDocumentStatefulBlockRendererProvider,
   createEmptyBlockDocumentContent,
-  type BlockDocumentChartRenderer,
   type BlockDocumentContent,
-  type BlockDocumentStatefulBlockRenderer,
-  type BlockDocumentStatefulBlockRendererProps,
-  type BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
 import {useMutation} from '@tanstack/react-query';
-import {BarChart3, Database, LayoutDashboard, Table2} from 'lucide-react';
-import type React from 'react';
 import {useEffect, useMemo, useState} from 'react';
 import type {JsonObject} from '#/lib/json';
+import type {WorkspaceDuckDbRuntimeState} from './worksheet/useWorkspaceDuckDbRuntime';
+import {
+  createWebWorksheetRoomStore,
+  normalizeWorksheetBlockDocumentContent,
+  useRefreshWorksheetDbSchemas,
+  useSerializedWorksheetContent,
+  WebWorksheetRoomProvider,
+  WorksheetBlockDocument,
+} from './worksheet/worksheetRoomStore';
 
 type WorksheetSurfaceProps = {
   worksheet: {
@@ -23,22 +23,72 @@ type WorksheetSurfaceProps = {
   };
   token: string | null;
   workspaceId: string | null;
+  duckDbRuntime: WorkspaceDuckDbRuntimeState;
 };
 
 export function WorksheetSurface({
   worksheet,
   token,
   workspaceId,
+  duckDbRuntime,
 }: WorksheetSurfaceProps) {
-  const [title, setTitle] = useState(worksheet.title);
-  const [content, setContent] = useState<BlockDocumentContent>(() =>
-    toBlockDocumentContent(worksheet.content),
+  const runtime = duckDbRuntime.runtime;
+  const content = useMemo(
+    () => toBlockDocumentContent(worksheet.content),
+    [worksheet.content],
   );
+  const roomStore = useMemo(() => {
+    if (!runtime) return null;
+    return createWebWorksheetRoomStore({
+      connector: runtime.connector,
+      content,
+      worksheetId: worksheet.id,
+    });
+  }, [content, runtime, worksheet.id]);
+
+  if (!roomStore) {
+    return (
+      <div className="worksheet-document-surface">
+        <div className="worksheet-block-placeholder">
+          {duckDbRuntime.status === 'error'
+            ? duckDbRuntime.error ?? 'Could not prepare the workspace runtime.'
+            : 'Preparing workspace'}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <WebWorksheetRoomProvider roomStore={roomStore}>
+      <WorksheetSurfaceContent
+        tableNames={duckDbRuntime.tableNames}
+        token={token}
+        worksheet={worksheet}
+        workspaceId={workspaceId}
+      />
+    </WebWorksheetRoomProvider>
+  );
+}
+
+function WorksheetSurfaceContent({
+  tableNames,
+  token,
+  worksheet,
+  workspaceId,
+}: {
+  tableNames: string[];
+  token: string | null;
+  worksheet: WorksheetSurfaceProps['worksheet'];
+  workspaceId: string | null;
+}) {
+  const [title, setTitle] = useState(worksheet.title);
+  const content = useSerializedWorksheetContent(worksheet.id);
+
+  useRefreshWorksheetDbSchemas(tableNames);
 
   useEffect(() => {
     setTitle(worksheet.title);
-    setContent(toBlockDocumentContent(worksheet.content));
-  }, [worksheet.content, worksheet.id, worksheet.title]);
+  }, [worksheet.id, worksheet.title]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload: {
@@ -64,7 +114,7 @@ export function WorksheetSurface({
           workspaceId,
           worksheetId: worksheet.id,
           title,
-          content: content as unknown as JsonObject,
+          content,
         },
       });
     }, 800);
@@ -72,181 +122,22 @@ export function WorksheetSurface({
     return () => window.clearTimeout(timeout);
   }, [content, saveMutation, title, token, workspaceId, worksheet.id]);
 
-  const blockTypes = useMemo(() => createWorksheetBlockTypes(), []);
-
   return (
     <div className="worksheet-document-surface">
-      <BlockDocumentChartRendererProvider renderer={WorksheetChartBlock}>
-        <BlockDocumentStatefulBlockRendererProvider
-          blockTypes={blockTypes}
-          renderers={WORKSHEET_BLOCK_RENDERERS}
-        >
-          <BlockDocumentEditor
-            documentId={worksheet.id}
-            value={content}
-            title={title}
-            onChange={setContent}
-            onTitleChange={setTitle}
-          >
-            <BlockDocumentEditor.Content />
-          </BlockDocumentEditor>
-        </BlockDocumentStatefulBlockRendererProvider>
-      </BlockDocumentChartRendererProvider>
-    </div>
-  );
-}
-
-const WORKSHEET_BLOCK_RENDERERS = {
-  query: QueryBlock,
-  dashboard: DashboardBlock,
-  'data-table': DataTableBlock,
-  chart: ChartStatefulBlock,
-} satisfies Record<string, BlockDocumentStatefulBlockRenderer>;
-
-function createWorksheetBlockTypes(): BlockDocumentStatefulBlockType[] {
-  return [
-    createWorksheetBlockType({
-      blockType: 'query',
-      label: 'Query',
-      title: 'Query',
-      defaultHeight: 320,
-    }),
-    createWorksheetBlockType({
-      blockType: 'dashboard',
-      label: 'Dashboard',
-      title: 'Dashboard',
-      defaultHeight: 520,
-    }),
-    createWorksheetBlockType({
-      blockType: 'data-table',
-      label: 'Data Table',
-      title: 'Data Table',
-      defaultHeight: 420,
-    }),
-    createWorksheetBlockType({
-      blockType: 'chart',
-      label: 'Chart',
-      title: 'Chart',
-      defaultHeight: 420,
-    }),
-  ];
-}
-
-function createWorksheetBlockType({
-  blockType,
-  label,
-  title,
-  defaultHeight,
-}: {
-  blockType: string;
-  label: string;
-  title: string;
-  defaultHeight: number;
-}): BlockDocumentStatefulBlockType {
-  return {
-    blockType,
-    label,
-    resizableHeight: true,
-    defaultHeight,
-    minHeight: 220,
-    maxHeight: 1200,
-    createNode: (blockId, options) => ({
-      type: 'blockDocumentStatefulBlock',
-      attrs: {
-        id: blockId,
-        blockType,
-        blockInstanceId: blockId,
-        ownership: 'owned',
-        title,
-        caption: options?.initialText ?? '',
-        height: defaultHeight,
-      },
-    }),
-  };
-}
-
-function QueryBlock(props: BlockDocumentStatefulBlockRendererProps) {
-  return (
-    <WorksheetBlockFrame icon={<Database className="size-4" />} title="Query">
-      <textarea
-        className="worksheet-block-textarea"
-        value={props.caption ?? ''}
-        onChange={(event) => props.onCaptionChange?.(event.target.value)}
-        spellCheck={false}
+      <WorksheetBlockDocument
+        worksheetId={worksheet.id}
+        title={title}
+        onTitleChange={setTitle}
       />
-    </WorksheetBlockFrame>
-  );
-}
-
-function DashboardBlock() {
-  return (
-    <WorksheetBlockFrame
-      icon={<LayoutDashboard className="size-4" />}
-      title="Dashboard"
-    >
-      <div className="worksheet-block-placeholder">No panels</div>
-    </WorksheetBlockFrame>
-  );
-}
-
-function DataTableBlock(props: BlockDocumentStatefulBlockRendererProps) {
-  return (
-    <WorksheetBlockFrame
-      icon={<Table2 className="size-4" />}
-      title="Data Table"
-    >
-      <input
-        className="worksheet-block-input"
-        value={props.caption ?? ''}
-        onChange={(event) => props.onCaptionChange?.(event.target.value)}
-      />
-    </WorksheetBlockFrame>
-  );
-}
-
-function ChartStatefulBlock(props: BlockDocumentStatefulBlockRendererProps) {
-  return (
-    <WorksheetBlockFrame icon={<BarChart3 className="size-4" />} title="Chart">
-      <input
-        className="worksheet-block-input"
-        value={props.caption ?? ''}
-        onChange={(event) => props.onCaptionChange?.(event.target.value)}
-      />
-    </WorksheetBlockFrame>
-  );
-}
-
-const WorksheetChartBlock: BlockDocumentChartRenderer = () => {
-  return (
-    <WorksheetBlockFrame icon={<BarChart3 className="size-4" />} title="Chart">
-      <div className="worksheet-block-placeholder">No chart</div>
-    </WorksheetBlockFrame>
-  );
-};
-
-function WorksheetBlockFrame({
-  icon,
-  title,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="worksheet-block-frame">
-      <div className="worksheet-block-header">
-        {icon}
-        <span>{title}</span>
-      </div>
-      {children}
     </div>
   );
 }
 
 function toBlockDocumentContent(content: JsonObject): BlockDocumentContent {
   if (content.type === 'doc' && Array.isArray(content.content)) {
-    return content as unknown as BlockDocumentContent;
+    return normalizeWorksheetBlockDocumentContent(
+      content as unknown as BlockDocumentContent,
+    );
   }
   return createEmptyBlockDocumentContent();
 }

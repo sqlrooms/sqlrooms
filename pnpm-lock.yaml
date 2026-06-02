@@ -296,6 +296,9 @@ importers:
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../../packages/data-table
+      '@sqlrooms/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@sqlrooms/documents':
         specifier: workspace:*
         version: link:../../packages/documents
@@ -305,12 +308,18 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../../packages/layout
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../../packages/mosaic
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../../packages/room-store
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
