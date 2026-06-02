@@ -10,10 +10,9 @@ export const Route = createFileRoute('/api/chat')({
 
 async function handleAssistantChatRequest(request: Request) {
   try {
-    const body = await request.json();
     const {runAssistantChat} =
       await import('#/webapp/assistant/assistant.server');
-    return Response.json(await runAssistantChat(body));
+    return await runAssistantChat(request);
   } catch (error) {
     if (isAssistantError(error)) {
       return Response.json(
