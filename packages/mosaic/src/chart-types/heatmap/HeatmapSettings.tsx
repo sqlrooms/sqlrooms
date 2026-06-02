@@ -1,10 +1,10 @@
 import {type FC} from 'react';
 import {Field} from '../../chart-builders/Field';
 import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
+import {useMosaicChartSettingsContext} from '../../chart/chart-settings/MosaicChartSettingsContext';
 
 export const HeatmapSettingsComponent: FC = () => {
-  const {onChangeConfig, config} = useChartSettingsContext('heatmap');
+  const {onChangeConfig, config} = useMosaicChartSettingsContext('heatmap');
 
   return (
     <div className="space-y-4">

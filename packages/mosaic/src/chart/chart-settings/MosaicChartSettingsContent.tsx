@@ -1,10 +1,10 @@
 import {FC, useCallback, useState} from 'react';
-import {ChartSpecViewerPanel} from './ChartSpecViewerPanel';
+import {MosaicChartSpecViewerPanel} from './MosaicChartSpecViewerPanel';
 import type {ChartPanelConfig} from '../../dashboard/dashboard-types';
 import {Spec} from '@uwdata/mosaic-spec';
-import {ChartSettingsPanel} from './ChartSettingsPanel';
+import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
 
-interface ChartSettingsContentProps {
+interface MosaicChartSettingsContentProps {
   dashboardId: string;
   tableName: string;
   spec?: Spec;
@@ -12,13 +12,9 @@ interface ChartSettingsContentProps {
   onClose?: () => void;
 }
 
-export const ChartSettingsContent: FC<ChartSettingsContentProps> = ({
-  dashboardId,
-  panel,
-  tableName,
-  spec,
-  onClose,
-}) => {
+export const MosaicChartSettingsContent: FC<
+  MosaicChartSettingsContentProps
+> = ({dashboardId, panel, tableName, spec, onClose}) => {
   const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
 
   const handleViewSpec = useCallback(() => {
@@ -30,11 +26,13 @@ export const ChartSettingsContent: FC<ChartSettingsContentProps> = ({
   }, []);
 
   if (spec && viewMode === 'spec') {
-    return <ChartSpecViewerPanel spec={spec} onBack={handleBackToSettings} />;
+    return (
+      <MosaicChartSpecViewerPanel spec={spec} onBack={handleBackToSettings} />
+    );
   }
 
   return (
-    <ChartSettingsPanel
+    <MosaicChartSettingsPanel
       dashboardId={dashboardId}
       panel={panel}
       tableName={tableName}

@@ -4,7 +4,7 @@ import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
-import {ChartSettingsProvider} from '../chart/chart-settings/ChartSettingsContext';
+import {MosaicChartSettingsProvider} from '../chart/chart-settings/MosaicChartSettingsContext';
 import type {ChartConfig} from '../chart-types';
 
 export interface ChartBuilderFieldsProps {
@@ -59,13 +59,13 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
   const SettingsComponent = chartTypeDefinition.settingsComponent;
   return (
     <div className={cn('flex flex-col gap-4 py-2', className)}>
-      <ChartSettingsProvider
+      <MosaicChartSettingsProvider
         config={config}
         columns={columns}
         onChange={handleChange}
       >
         <SettingsComponent />
-      </ChartSettingsProvider>
+      </MosaicChartSettingsProvider>
     </div>
   );
 };

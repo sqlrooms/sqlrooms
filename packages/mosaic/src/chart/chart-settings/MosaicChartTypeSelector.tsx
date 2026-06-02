@@ -10,12 +10,12 @@ import {ChartNoAxesCombined} from 'lucide-react';
 import {type ChartType} from '../../chart-types/base-types';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 
-interface ChartTypeSelectorProps {
+interface MosaicChartTypeSelectorProps {
   value: ChartType;
   onChange: (chartType: ChartType) => void;
 }
 
-export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
+export const MosaicChartTypeSelector: FC<MosaicChartTypeSelectorProps> = memo(
   ({value, onChange}) => {
     const chartTypes = useStoreWithMosaicDashboard(
       (state) => state.mosaicDashboard.chartTypes,
@@ -59,4 +59,4 @@ export const ChartTypeSelector: FC<ChartTypeSelectorProps> = memo(
   },
 );
 
-ChartTypeSelector.displayName = 'ChartTypeSelector';
+MosaicChartTypeSelector.displayName = 'MosaicChartTypeSelector';

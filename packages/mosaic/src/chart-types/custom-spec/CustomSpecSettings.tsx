@@ -1,5 +1,5 @@
 import {type FC, useCallback, useMemo} from 'react';
-import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
+import {useMosaicChartSettingsContext} from '../../chart/chart-settings/MosaicChartSettingsContext';
 import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {Field} from '../../chart-builders/Field';
 
@@ -8,7 +8,7 @@ import {Field} from '../../chart-builders/Field';
  * Shows a full editor for the vgplot spec.
  */
 export const CustomSpecSettingsComponent: FC = () => {
-  const {config, onChangeConfig} = useChartSettingsContext('custom-spec');
+  const {config, onChangeConfig} = useMosaicChartSettingsContext('custom-spec');
 
   const vgplotValue = config.settings.vgPlotSpec;
 

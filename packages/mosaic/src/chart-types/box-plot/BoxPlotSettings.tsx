@@ -1,10 +1,10 @@
 import {type FC} from 'react';
 import {Field} from '../../chart-builders/Field';
 import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
+import {useMosaicChartSettingsContext} from '../../chart/chart-settings/MosaicChartSettingsContext';
 
 export const BoxPlotSettingsComponent: FC = () => {
-  const {onChangeConfig, config} = useChartSettingsContext('box-plot');
+  const {onChangeConfig, config} = useMosaicChartSettingsContext('box-plot');
 
   return (
     <div className="space-y-4">

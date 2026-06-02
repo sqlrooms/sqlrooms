@@ -6,7 +6,7 @@ import {ColumnsProvider} from '../../chart-builders/ColumnsContext';
 
 type ChartSetting<T extends ChartConfig = ChartConfig> = T['settings'];
 
-interface ChartSettingsContextValue<T extends ChartConfig = ChartConfig> {
+interface MosaicChartSettingsContextValue<T extends ChartConfig = ChartConfig> {
   config: T;
   onChange: (config: T) => void;
   onChangeConfig: <K extends keyof ChartSetting<T>>(
@@ -15,9 +15,8 @@ interface ChartSettingsContextValue<T extends ChartConfig = ChartConfig> {
   ) => void;
 }
 
-const ChartSettingsContext = createContext<ChartSettingsContextValue | null>(
-  null,
-);
+const MosaicChartSettingsContext =
+  createContext<MosaicChartSettingsContextValue | null>(null);
 
 // Extract specific config type from the discriminated union by chartType
 type ExtractChartConfig<T extends ChartType> = Extract<
@@ -25,25 +24,25 @@ type ExtractChartConfig<T extends ChartType> = Extract<
   {chartType: T}
 >;
 
-export function useChartSettingsContext(): ChartSettingsContextValue<ChartConfig>;
-export function useChartSettingsContext<T extends ChartType>(
+export function useMosaicChartSettingsContext(): MosaicChartSettingsContextValue<ChartConfig>;
+export function useMosaicChartSettingsContext<T extends ChartType>(
   chartType: T,
-): ChartSettingsContextValue<ExtractChartConfig<T>>;
-export function useChartSettingsContext<T extends ChartType>(
+): MosaicChartSettingsContextValue<ExtractChartConfig<T>>;
+export function useMosaicChartSettingsContext<T extends ChartType>(
   chartType?: T,
 ):
-  | ChartSettingsContextValue<ExtractChartConfig<T>>
-  | ChartSettingsContextValue<ChartConfig> {
-  const context = useContext(ChartSettingsContext);
+  | MosaicChartSettingsContextValue<ExtractChartConfig<T>>
+  | MosaicChartSettingsContextValue<ChartConfig> {
+  const context = useContext(MosaicChartSettingsContext);
 
   if (!context) {
     throw new Error(
-      'ChartSettings compound components must be used within ChartSettings.Root',
+      'MosaicChartSettings compound components must be used within MosaicChartSettings.Root',
     );
   }
 
   if (!chartType) {
-    return context as unknown as ChartSettingsContextValue<ChartConfig>;
+    return context as unknown as MosaicChartSettingsContextValue<ChartConfig>;
   }
 
   if (context.config.chartType !== chartType) {
@@ -52,10 +51,12 @@ export function useChartSettingsContext<T extends ChartType>(
     );
   }
 
-  return context as unknown as ChartSettingsContextValue<ExtractChartConfig<T>>;
+  return context as unknown as MosaicChartSettingsContextValue<
+    ExtractChartConfig<T>
+  >;
 }
 
-interface ChartSettingsProviderProps {
+interface MosaicChartSettingsProviderProps {
   tableName?: string;
   config: ChartConfig;
   columns: TableColumn[];
@@ -63,13 +64,13 @@ interface ChartSettingsProviderProps {
   children: ReactNode;
 }
 
-export function ChartSettingsProvider({
+export function MosaicChartSettingsProvider({
   tableName,
   config,
   columns,
   onChange,
   children,
-}: ChartSettingsProviderProps) {
+}: MosaicChartSettingsProviderProps) {
   const onChangeConfig = useCallback(
     function <K extends keyof ChartSetting>(key: K, value: ChartSetting) {
       onChange({
@@ -85,7 +86,7 @@ export function ChartSettingsProvider({
 
   return (
     <ColumnsProvider columns={columns} tableName={tableName}>
-      <ChartSettingsContext.Provider
+      <MosaicChartSettingsContext.Provider
         value={{
           config,
           onChange,
@@ -93,7 +94,7 @@ export function ChartSettingsProvider({
         }}
       >
         {children}
-      </ChartSettingsContext.Provider>
+      </MosaicChartSettingsContext.Provider>
     </ColumnsProvider>
   );
 }

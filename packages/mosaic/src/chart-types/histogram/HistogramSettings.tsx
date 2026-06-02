@@ -2,11 +2,11 @@ import {type FC} from 'react';
 import {Input} from '@sqlrooms/ui';
 import {Field} from '../../chart-builders/Field';
 import {ColumnSelector} from '../../chart-builders/ColumnSelector';
-import {useChartSettingsContext} from '../../chart/chart-settings/ChartSettingsContext';
+import {useMosaicChartSettingsContext} from '../../chart/chart-settings/MosaicChartSettingsContext';
 import {MIN_BINS_COUNT, MAX_BINS_COUNT, DEFAULT_BINS_COUNT} from './schema';
 
 export const HistogramSettingsComponent: FC = () => {
-  const {onChangeConfig, config} = useChartSettingsContext('histogram');
+  const {onChangeConfig, config} = useMosaicChartSettingsContext('histogram');
 
   return (
     <div className="space-y-4">

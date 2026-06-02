@@ -3,23 +3,23 @@
  *
  * @example
  * ```tsx
- * <ChartSettings.Root
+ * <MosaicChartSettings.Root
  *   tableName={tableName}
  *   config={config}
  *   columns={columns}
  *   onChange={handleChange}
  * >
- *   <ChartSettings.TypeSelector />
- *   <ChartSettings.Fields />
- * </ChartSettings.Root>
+ *   <MosaicChartSettings.TypeSelector />
+ *   <MosaicChartSettings.Fields />
+ * </MosaicChartSettings.Root>
  * ```
  */
 import {type FC, type PropsWithChildren, createElement} from 'react';
-import {ChartTypeSelector} from './ChartTypeSelector';
+import {MosaicChartTypeSelector} from './MosaicChartTypeSelector';
 import {
-  ChartSettingsProvider,
-  useChartSettingsContext,
-} from './ChartSettingsContext';
+  MosaicChartSettingsProvider,
+  useMosaicChartSettingsContext,
+} from './MosaicChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/duckdb';
 import {type ChartConfig, type ChartType} from '../../chart-types';
 import {Button} from '@sqlrooms/ui';
@@ -28,33 +28,31 @@ import {useChartTypeDefinition} from '../../chart-types/useChartTypeDefinition';
 import {Field} from '../../chart-builders/Field';
 import {useColumnsContext} from '../../chart-builders/ColumnsContext';
 
-interface ChartSettingsRootProps {
+interface MosaicChartSettingsRootProps {
   tableName?: string;
   config: ChartConfig;
   columns: TableColumn[];
   onChange: (config: ChartConfig) => void;
 }
 
-const ChartSettingsRoot: FC<PropsWithChildren<ChartSettingsRootProps>> = ({
-  tableName,
-  config,
-  columns,
-  onChange,
-  children,
-}) => {
+const MosaicChartSettingsRoot: FC<
+  PropsWithChildren<MosaicChartSettingsRootProps>
+> = ({tableName, config, columns, onChange, children}) => {
   return (
-    <ChartSettingsProvider
+    <MosaicChartSettingsProvider
       tableName={tableName}
       config={config}
       columns={columns}
       onChange={onChange}
     >
       {children}
-    </ChartSettingsProvider>
+    </MosaicChartSettingsProvider>
   );
 };
 
-const ChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({onClick}) => {
+const MosaicChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({
+  onClick,
+}) => {
   return (
     <Button
       variant="ghost"
@@ -69,7 +67,9 @@ const ChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({onClick}) => {
   );
 };
 
-const ChartSettingsCloseButton: FC<{onClick: () => void}> = ({onClick}) => {
+const MosaicChartSettingsCloseButton: FC<{onClick: () => void}> = ({
+  onClick,
+}) => {
   return (
     <Button
       variant="ghost"
@@ -83,7 +83,7 @@ const ChartSettingsCloseButton: FC<{onClick: () => void}> = ({onClick}) => {
   );
 };
 
-const ChartSettingsHeader: FC<PropsWithChildren> = ({children}) => {
+const MosaicChartSettingsHeader: FC<PropsWithChildren> = ({children}) => {
   return (
     <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
       {children}
@@ -91,12 +91,12 @@ const ChartSettingsHeader: FC<PropsWithChildren> = ({children}) => {
   );
 };
 
-const ChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
+const MosaicChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
   return <div className="flex flex-col gap-2 p-2">{children}</div>;
 };
 
-const ChartSettingsTypeSelector: FC = () => {
-  const {config, onChange} = useChartSettingsContext();
+const MosaicChartSettingsTypeSelector: FC = () => {
+  const {config, onChange} = useMosaicChartSettingsContext();
 
   const handleChartTypeChange = (newChartType: ChartType) => {
     // When changing chart type, clear settings
@@ -109,7 +109,7 @@ const ChartSettingsTypeSelector: FC = () => {
 
   return (
     <Field label="Chart type" required>
-      <ChartTypeSelector
+      <MosaicChartTypeSelector
         value={config.chartType}
         onChange={handleChartTypeChange}
       />
@@ -117,8 +117,8 @@ const ChartSettingsTypeSelector: FC = () => {
   );
 };
 
-const ChartSettingsFields: FC = () => {
-  const {config} = useChartSettingsContext();
+const MosaicChartSettingsFields: FC = () => {
+  const {config} = useMosaicChartSettingsContext();
   const {columns} = useColumnsContext();
 
   const chartTypeDef = useChartTypeDefinition(config.chartType);
@@ -146,12 +146,12 @@ const ChartSettingsFields: FC = () => {
   return createElement(chartTypeDef.settingsComponent);
 };
 
-export const ChartSettings = {
-  Root: ChartSettingsRoot,
-  Header: ChartSettingsHeader,
-  Content: ChartSettingsContent,
-  TypeSelector: ChartSettingsTypeSelector,
-  Fields: ChartSettingsFields,
-  ViewSpecButton: ChartSettingsViewSpecButton,
-  CloseButton: ChartSettingsCloseButton,
+export const MosaicChartSettings = {
+  Root: MosaicChartSettingsRoot,
+  Header: MosaicChartSettingsHeader,
+  Content: MosaicChartSettingsContent,
+  TypeSelector: MosaicChartSettingsTypeSelector,
+  Fields: MosaicChartSettingsFields,
+  ViewSpecButton: MosaicChartSettingsViewSpecButton,
+  CloseButton: MosaicChartSettingsCloseButton,
 };

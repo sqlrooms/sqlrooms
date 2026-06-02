@@ -1,6 +1,6 @@
 import {type FC, useCallback, useState} from 'react';
-import {ChartSettings} from './chart-settings/ChartSettings';
-import {ChartSpecViewerPanel} from './chart-settings/ChartSpecViewerPanel';
+import {MosaicChartSettings} from './chart-settings/MosaicChartSettings';
+import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
 import {useTableColumns} from './chart-settings/useTableColumns';
 import {type ChartConfig} from '../chart-types/chart-config';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
@@ -33,7 +33,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
 
   if (renderContext.type === 'spec' && viewMode === 'spec') {
     return (
-      <ChartSpecViewerPanel
+      <MosaicChartSpecViewerPanel
         spec={renderContext.spec}
         onBack={handleBackToSettings}
       />
@@ -41,25 +41,25 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
   }
 
   return (
-    <ChartSettings.Root
+    <MosaicChartSettings.Root
       tableName={tableName}
       config={config}
       columns={columns}
       onChange={onChange}
     >
-      <ChartSettings.Header>
+      <MosaicChartSettings.Header>
         <div className="flex items-center">Chart settings</div>
         <div className="flex items-center gap-1">
           {renderContext.type === 'spec' && (
-            <ChartSettings.ViewSpecButton onClick={handleViewSpec} />
+            <MosaicChartSettings.ViewSpecButton onClick={handleViewSpec} />
           )}
-          {onClose && <ChartSettings.CloseButton onClick={onClose} />}
+          {onClose && <MosaicChartSettings.CloseButton onClick={onClose} />}
         </div>
-      </ChartSettings.Header>
-      <ChartSettings.Content>
-        <ChartSettings.TypeSelector />
-        <ChartSettings.Fields />
-      </ChartSettings.Content>
-    </ChartSettings.Root>
+      </MosaicChartSettings.Header>
+      <MosaicChartSettings.Content>
+        <MosaicChartSettings.TypeSelector />
+        <MosaicChartSettings.Fields />
+      </MosaicChartSettings.Content>
+    </MosaicChartSettings.Root>
   );
 };
