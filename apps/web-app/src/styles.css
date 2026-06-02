@@ -338,7 +338,6 @@ input {
 
 .topbar-left,
 .topbar-right,
-.artifact-tab,
 .runtime-pill,
 .assistant-title,
 .block-type-button,
@@ -427,14 +426,20 @@ input {
 }
 
 .workspace-panels {
-  display: grid;
   height: calc(100vh - 44px);
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
   min-width: 0;
+  min-height: 0;
+}
+
+.workspace-layout-renderer {
+  height: 100%;
+  min-height: 0;
+  background: hsl(var(--background) / 92%);
 }
 
 .worksheet-panel,
 .assistant-panel {
+  height: 100%;
   min-width: 0;
   border-color: var(--shell-border);
 }
@@ -442,52 +447,8 @@ input {
 .worksheet-panel {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--shell-border);
 }
 
-.artifact-tab-strip {
-  display: flex;
-  height: 38px;
-  align-items: end;
-  gap: 2px;
-  border-bottom: 1px solid var(--shell-border);
-  background: hsl(var(--background) / 82%);
-  padding: 0 8px;
-}
-
-.artifact-tab,
-.artifact-tab-add {
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--shell-subtle);
-  cursor: pointer;
-}
-
-.artifact-tab {
-  height: 31px;
-  max-width: 240px;
-  gap: 7px;
-  border-radius: 7px 7px 0 0;
-  padding: 0 12px;
-  font-size: 13px;
-}
-
-.artifact-tab.active {
-  border-color: var(--shell-border);
-  border-bottom-color: hsl(200 45% 11%);
-  background: hsl(200 45% 11%);
-  color: var(--shell-text);
-}
-
-.artifact-tab-add {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 7px;
-}
-
-.artifact-tab-add:hover,
 .block-type-button:hover {
   background: var(--shell-button-hover);
   color: var(--shell-text);
@@ -808,16 +769,6 @@ input {
 .google-sign-in-button:hover {
   background: hsl(var(--primary) / 88%);
   color: hsl(var(--primary-foreground));
-}
-
-@media (max-width: 980px) {
-  .workspace-panels {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .assistant-panel {
-    display: none;
-  }
 }
 
 @media (max-width: 680px) {

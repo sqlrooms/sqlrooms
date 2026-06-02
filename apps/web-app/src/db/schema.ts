@@ -31,6 +31,32 @@ export const workspaces = pgTable(
     id: uuid().defaultRandom().primaryKey(),
     ownerId: text('owner_id').notNull(),
     name: text().notNull(),
+    layout: jsonb()
+      .notNull()
+      .default({
+        type: 'split',
+        id: 'workspace-root-layout',
+        direction: 'row',
+        children: [
+          {
+            type: 'panel',
+            id: 'assistant-panel',
+            panel: 'assistant',
+            defaultSize: '320px',
+            minSize: '260px',
+            maxSize: '560px',
+            collapsible: true,
+            collapsedSize: 0,
+          },
+          {
+            type: 'panel',
+            id: 'worksheet-panel',
+            panel: 'worksheet',
+            defaultSize: '75%',
+            minSize: '360px',
+          },
+        ],
+      }),
     createdAt: timestamp('created_at', {withTimezone: true})
       .defaultNow()
       .notNull(),
@@ -40,10 +66,7 @@ export const workspaces = pgTable(
     lastOpenedAt: timestamp('last_opened_at', {withTimezone: true}),
   },
   (table) => [
-    index('workspaces_owner_updated_at_idx').on(
-      table.ownerId,
-      table.updatedAt,
-    ),
+    index('workspaces_owner_updated_at_idx').on(table.ownerId, table.updatedAt),
   ],
 );
 
@@ -108,7 +131,9 @@ export const files = pgTable(
     originalName: text('original_name').notNull(),
     tableName: text('table_name').notNull(),
     objectKey: text('object_key').notNull(),
-    mimeType: text('mime_type').default('application/vnd.apache.parquet').notNull(),
+    mimeType: text('mime_type')
+      .default('application/vnd.apache.parquet')
+      .notNull(),
     sizeBytes: integer('size_bytes').notNull(),
     sourceSizeBytes: integer('source_size_bytes'),
     rowCount: integer('row_count'),

@@ -15,10 +15,12 @@ const workspaceInput = authInput.extend({
 });
 
 const blockDocumentContentInput = z.custom<JsonObject>(isJsonObject);
+const workspaceLayoutInput = z.custom<JsonObject>(isJsonObject);
 
 const serializeWorkspace = (workspace: typeof workspaces.$inferSelect) => ({
   id: workspace.id,
   name: workspace.name,
+  layout: workspace.layout as JsonObject,
   createdAt: workspace.createdAt.getTime(),
   updatedAt: workspace.updatedAt.getTime(),
   lastOpenedAt: workspace.lastOpenedAt?.getTime(),
@@ -83,6 +85,7 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
   .inputValidator(
     authInput.extend({
       name: z.string().trim().min(1).max(120),
+      layout: workspaceLayoutInput.optional(),
       worksheetTitle: z.string().trim().min(1).max(120).default('Worksheet'),
       worksheetContent: blockDocumentContentInput.default({
         type: 'doc',
@@ -99,6 +102,7 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
       .values({
         ownerId: userId,
         name: data.name,
+        layout: data.layout,
         lastOpenedAt: now,
       })
       .returning();
@@ -125,6 +129,25 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
       ...serializeWorkspace(workspace),
       worksheets: worksheetRows.map(serializeWorksheet),
     };
+  });
+
+export const saveWorkspaceLayout = createServerFn({method: 'POST'})
+  .inputValidator(
+    workspaceInput.extend({
+      layout: workspaceLayoutInput,
+    }),
+  )
+  .handler(async ({data}) => {
+    const {userId} = await verifyAuthToken(data.token);
+    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
+
+    const rows = await db
+      .update(workspaces)
+      .set({layout: data.layout, updatedAt: new Date()})
+      .where(eq(workspaces.id, data.workspaceId))
+      .returning();
+
+    return rows[0] ? serializeWorkspace(rows[0]) : null;
   });
 
 export const renameCloudWorkspace = createServerFn({method: 'POST'})

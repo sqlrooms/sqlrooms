@@ -29,9 +29,26 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  Tooltip,
+  TooltipContent,
   TooltipProvider,
+  TooltipTrigger,
   useSidebar,
 } from '@sqlrooms/ui';
+import {
+  LayoutRenderer,
+  createLayoutSlice,
+  type LayoutNode,
+  type LayoutSliceState,
+  type Panels,
+} from '@sqlrooms/layout';
+import {
+  RoomStateProvider,
+  createBaseRoomSlice,
+  createRoomStoreCreator,
+  type BaseRoomStoreState,
+  type StoreApi,
+} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {
   ChevronDown,
@@ -44,11 +61,12 @@ import {
   Plus,
   Save,
   Settings,
+  Sparkles,
   UploadCloud,
   Table2,
 } from 'lucide-react';
 import type React from 'react';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
 import {AssistantPanel} from './assistant/AssistantPanel';
@@ -67,6 +85,7 @@ import {
   getCloudWorkspace,
   listCloudWorkspaces,
   renameCloudWorkspace,
+  saveWorkspaceLayout,
 } from './workspace/cloudWorkspaces';
 import {createDefaultWorksheetContent} from './worksheet/defaultBlockDocument';
 import {useWorkspaceDuckDbRuntime} from './worksheet/useWorkspaceDuckDbRuntime';
@@ -114,6 +133,36 @@ type TablePreview = {
 };
 
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
+const ASSISTANT_PANEL_ID = 'assistant-panel';
+
+type WorkspaceLayoutRoomState = BaseRoomStoreState & LayoutSliceState;
+
+function createDefaultWorkspaceLayout(): LayoutNode {
+  return {
+    type: 'split',
+    id: 'workspace-root-layout',
+    direction: 'row',
+    children: [
+      {
+        type: 'panel',
+        id: ASSISTANT_PANEL_ID,
+        panel: 'assistant',
+        defaultSize: '320px',
+        minSize: '260px',
+        maxSize: '560px',
+        collapsible: true,
+        collapsedSize: 0,
+      },
+      {
+        type: 'panel',
+        id: 'worksheet-panel',
+        panel: 'worksheet',
+        defaultSize: '75%',
+        minSize: '360px',
+      },
+    ],
+  };
+}
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
   const navigate = useNavigate();
@@ -134,6 +183,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     useState<FileNameConflict | null>(null);
   const [selectedWorksheetId, setSelectedWorksheetId] = useState<string | null>(
     null,
+  );
+  const [workspaceLayout, setWorkspaceLayout] = useState<LayoutNode>(() =>
+    createDefaultWorkspaceLayout(),
   );
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
@@ -196,6 +248,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         }),
       ]);
     },
+  });
+  const saveWorkspaceLayoutMutation = useMutation({
+    mutationFn: saveWorkspaceLayout,
   });
 
   const currentWorkspace =
@@ -281,6 +336,19 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   }, [currentWorkspace?.name]);
 
   useEffect(() => {
+    if (props.mode === 'saved') {
+      setWorkspaceLayout(
+        currentWorkspace?.layout
+          ? (currentWorkspace.layout as unknown as LayoutNode)
+          : createDefaultWorkspaceLayout(),
+      );
+      return;
+    }
+
+    setWorkspaceLayout(createDefaultWorkspaceLayout());
+  }, [currentWorkspace?.id, currentWorkspace?.layout, props.mode]);
+
+  useEffect(() => {
     if (
       props.mode !== 'saved' ||
       !savedWorkspaceId ||
@@ -353,6 +421,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       data: {
         token,
         name: localWorkspaceName,
+        layout: workspaceLayout as unknown as JsonObject,
         worksheetTitle: localWorksheets[0].title,
         worksheetContent: localWorksheets[0].content,
       },
@@ -417,6 +486,41 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     }
   };
 
+  const workspaceIdForLayoutSave =
+    props.mode === 'saved' ? props.workspaceId : null;
+  const handleWorkspaceLayoutChange = useCallback(
+    (nextLayout: LayoutNode | null) => {
+      const layout = nextLayout ?? createDefaultWorkspaceLayout();
+      setWorkspaceLayout(layout);
+
+      if (workspaceIdForLayoutSave && token) {
+        saveWorkspaceLayoutMutation.mutate({
+          data: {
+            token,
+            workspaceId: workspaceIdForLayoutSave,
+            layout: layout as unknown as JsonObject,
+          },
+        });
+      }
+    },
+    [saveWorkspaceLayoutMutation, token, workspaceIdForLayoutSave],
+  );
+
+  const isAssistantPanelCollapsed = useMemo(
+    () => isLayoutNodeCollapsed(workspaceLayout, ASSISTANT_PANEL_ID),
+    [workspaceLayout],
+  );
+
+  const handleToggleAssistantPanel = () => {
+    handleWorkspaceLayoutChange(
+      setLayoutNodeCollapsed(
+        workspaceLayout,
+        ASSISTANT_PANEL_ID,
+        !isAssistantPanelCollapsed,
+      ),
+    );
+  };
+
   const handleAddFile = () => {
     if (!duckDbRuntime.runtime) {
       setFileIngestionStatus('Preparing runtime');
@@ -449,9 +553,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       );
       setTablePreview({
         tableName,
-        columns: Array.from(
-          new Set(rows.flatMap((row) => Object.keys(row))),
-        ),
+        columns: Array.from(new Set(rows.flatMap((row) => Object.keys(row)))),
         rows,
         status: 'ready',
       });
@@ -682,7 +784,36 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
           <SidebarInset className="sqlrooms-workspace">
             <header className="workspace-topbar">
               <div className="topbar-left">
-                <SidebarTrigger className="topbar-icon" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarTrigger className="topbar-icon" />
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle sidebar</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="topbar-icon"
+                      type="button"
+                      aria-pressed={!isAssistantPanelCollapsed}
+                      onClick={handleToggleAssistantPanel}
+                    >
+                      <Sparkles className="size-4" aria-hidden />
+                      <span className="sr-only">
+                        {isAssistantPanelCollapsed
+                          ? 'Show assistant'
+                          : 'Hide assistant'}
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isAssistantPanelCollapsed
+                      ? 'Show assistant'
+                      : 'Hide assistant'}
+                  </TooltipContent>
+                </Tooltip>
                 <div className="topbar-divider" />
                 <Input
                   id="workspace-title"
@@ -718,42 +849,19 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
               </div>
             </header>
 
-            <div className="workspace-panels">
-              <section className="worksheet-panel">
-                <div className="artifact-tab-strip">
-                  <button className="artifact-tab active" type="button">
-                    <FileSpreadsheet className="size-4" aria-hidden />
-                    {selectedWorksheet?.title ?? 'Worksheet'}
-                  </button>
-                  <button
-                    className="artifact-tab-add"
-                    type="button"
-                    aria-label="New worksheet"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </div>
-
-                <div className="worksheet-stage">
-                  {selectedWorksheet ? (
-                    <WorksheetSurface
-                      worksheet={selectedWorksheet}
-                      token={token}
-                      workspaceId={savedWorkspaceId}
-                      duckDbRuntime={duckDbRuntime}
-                    />
-                  ) : null}
-                </div>
-              </section>
-
-              <AssistantPanel
-                token={token}
-                workspaceTitle={workspaceTitle}
-                worksheetTitles={worksheetTitles}
-                tableNames={workspaceTableNames}
-                onSignInRequired={() => setIsSignInToSaveOpen(true)}
-              />
-            </div>
+            <WorkspaceLayoutCanvas
+              workspaceKey={activeWorkspaceId}
+              layout={workspaceLayout}
+              selectedWorksheet={selectedWorksheet}
+              token={token}
+              savedWorkspaceId={savedWorkspaceId}
+              duckDbRuntime={duckDbRuntime}
+              workspaceTitle={workspaceTitle}
+              worksheetTitles={worksheetTitles}
+              tableNames={workspaceTableNames}
+              onLayoutChange={handleWorkspaceLayoutChange}
+              onSignInRequired={() => setIsSignInToSaveOpen(true)}
+            />
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>
@@ -891,6 +999,192 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   );
 }
 
+function WorkspaceLayoutCanvas({
+  workspaceKey,
+  layout,
+  selectedWorksheet,
+  token,
+  savedWorkspaceId,
+  duckDbRuntime,
+  workspaceTitle,
+  worksheetTitles,
+  tableNames,
+  onLayoutChange,
+  onSignInRequired,
+}: {
+  workspaceKey: string;
+  layout: LayoutNode;
+  selectedWorksheet: LocalWorksheet | undefined;
+  token: string | null;
+  savedWorkspaceId: string | null;
+  duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
+  workspaceTitle: string;
+  worksheetTitles: string[];
+  tableNames: string[];
+  onLayoutChange: (layout: LayoutNode | null) => void;
+  onSignInRequired: () => void;
+}) {
+  const panels = useMemo<Panels>(
+    () => ({
+      assistant: {
+        title: 'Assistant',
+        icon: Sparkles,
+        component: function WorkspaceAssistantPanel() {
+          return (
+            <AssistantPanel
+              token={token}
+              workspaceTitle={workspaceTitle}
+              worksheetId={selectedWorksheet?.id}
+              worksheetTitle={selectedWorksheet?.title}
+              worksheetTitles={worksheetTitles}
+              tableNames={tableNames}
+              onSignInRequired={onSignInRequired}
+            />
+          );
+        },
+      },
+      worksheet: {
+        title: selectedWorksheet?.title ?? 'Worksheet',
+        icon: FileSpreadsheet,
+        component: function WorkspaceWorksheetPanel() {
+          return (
+            <section className="worksheet-panel">
+              <div className="worksheet-stage">
+                {selectedWorksheet ? (
+                  <WorksheetSurface
+                    worksheet={selectedWorksheet}
+                    token={token}
+                    workspaceId={savedWorkspaceId}
+                    duckDbRuntime={duckDbRuntime}
+                  />
+                ) : null}
+              </div>
+            </section>
+          );
+        },
+      },
+    }),
+    [
+      duckDbRuntime,
+      onSignInRequired,
+      savedWorkspaceId,
+      selectedWorksheet,
+      tableNames,
+      token,
+      workspaceTitle,
+      worksheetTitles,
+    ],
+  );
+  const initialLayoutRef = useRef(layout);
+  const initialPanelsRef = useRef(panels);
+  const roomStore = useMemo(
+    () =>
+      createWorkspaceLayoutStore(
+        workspaceKey,
+        initialLayoutRef.current,
+        initialPanelsRef.current,
+      ),
+    [workspaceKey],
+  );
+
+  useEffect(() => {
+    roomStore.getState().layout.setConfig(layout);
+  }, [layout, roomStore]);
+
+  useEffect(() => {
+    for (const [panelId, panel] of Object.entries(panels)) {
+      roomStore.getState().layout.registerPanel(panelId, panel);
+    }
+  }, [panels, roomStore]);
+
+  const handleCollapse = useCallback(
+    (panelId: string) => {
+      onLayoutChange(setLayoutNodeCollapsed(layout, panelId, true));
+    },
+    [layout, onLayoutChange],
+  );
+  const handleExpand = useCallback(
+    (panelId: string) => {
+      onLayoutChange(setLayoutNodeCollapsed(layout, panelId, false));
+    },
+    [layout, onLayoutChange],
+  );
+
+  return (
+    <RoomStateProvider roomStore={roomStore}>
+      <div className="workspace-panels">
+        <LayoutRenderer
+          className="workspace-layout-renderer"
+          rootLayout={layout}
+          onLayoutChange={onLayoutChange}
+          onCollapse={handleCollapse}
+          onExpand={handleExpand}
+        />
+      </div>
+    </RoomStateProvider>
+  );
+}
+
+function createWorkspaceLayoutStore(
+  workspaceKey: string,
+  layout: LayoutNode,
+  panels: Panels,
+): StoreApi<WorkspaceLayoutRoomState> {
+  const {createRoomStore} = createRoomStoreCreator<WorkspaceLayoutRoomState>()(
+    () => (set, get, store) => ({
+      ...createBaseRoomSlice()(set, get, store),
+      ...createLayoutSlice({config: layout, panels})(set, get, store),
+    }),
+  );
+
+  return createRoomStore({storeKey: `web-workspace-layout:${workspaceKey}`});
+}
+
+function isLayoutNodeCollapsed(node: LayoutNode, nodeId: string): boolean {
+  if (typeof node === 'string') return false;
+  if (node.id === nodeId) return node.collapsed === true;
+
+  if ('children' in node) {
+    return node.children.some((child) => isLayoutNodeCollapsed(child, nodeId));
+  }
+
+  if ('root' in node) {
+    return isLayoutNodeCollapsed(node.root, nodeId);
+  }
+
+  return false;
+}
+
+function setLayoutNodeCollapsed(
+  node: LayoutNode,
+  nodeId: string,
+  collapsed: boolean,
+): LayoutNode {
+  if (typeof node === 'string') return node;
+
+  if (node.id === nodeId) {
+    return {...node, collapsed};
+  }
+
+  if ('children' in node) {
+    return {
+      ...node,
+      children: node.children.map((child) =>
+        setLayoutNodeCollapsed(child, nodeId, collapsed),
+      ),
+    };
+  }
+
+  if ('root' in node) {
+    return {
+      ...node,
+      root: setLayoutNodeCollapsed(node.root, nodeId, collapsed),
+    };
+  }
+
+  return node;
+}
+
 function hasTableName(tableNames: string[], tableName: string) {
   return tableNames.some(
     (existingTableName) =>
@@ -941,7 +1235,11 @@ function WorkspaceDropdown({
           />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="workspace-menu" align="start" side="right">
+      <DropdownMenuContent
+        className="workspace-menu"
+        align="start"
+        side="right"
+      >
         <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
         {workspaces.map((workspace) => (
           <DropdownMenuItem key={workspace.id} asChild>
@@ -1018,7 +1316,9 @@ function DatabaseSidebarSection({
           ))}
           {tables.length === 0 ? (
             <div className="schema-empty">
-              {runtimeStatus === 'initializing' ? 'Preparing runtime' : 'No tables'}
+              {runtimeStatus === 'initializing'
+                ? 'Preparing runtime'
+                : 'No tables'}
             </div>
           ) : null}
           {status ? <div className="schema-empty">{status}</div> : null}
@@ -1041,7 +1341,11 @@ function DatabaseSidebarSection({
           <ChevronDown className="sidebar-nav-chevron ml-auto size-4" />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="workspace-menu" align="start" side="right">
+      <DropdownMenuContent
+        className="workspace-menu"
+        align="start"
+        side="right"
+      >
         <DropdownMenuLabel>Tables</DropdownMenuLabel>
         {tables.map((table) => (
           <DropdownMenuItem
@@ -1058,7 +1362,9 @@ function DatabaseSidebarSection({
         ))}
         {tables.length === 0 ? (
           <DropdownMenuItem disabled>
-            {runtimeStatus === 'initializing' ? 'Preparing runtime' : 'No tables'}
+            {runtimeStatus === 'initializing'
+              ? 'Preparing runtime'
+              : 'No tables'}
           </DropdownMenuItem>
         ) : null}
         {status ? <DropdownMenuItem disabled>{status}</DropdownMenuItem> : null}
@@ -1126,7 +1432,11 @@ function WorksheetsSidebarSection({
           <ChevronDown className="sidebar-nav-chevron ml-auto size-4" />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="workspace-menu" align="start" side="right">
+      <DropdownMenuContent
+        className="workspace-menu"
+        align="start"
+        side="right"
+      >
         <DropdownMenuLabel>Worksheets</DropdownMenuLabel>
         {worksheets.map((worksheet) => (
           <DropdownMenuItem
