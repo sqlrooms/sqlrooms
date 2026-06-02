@@ -19,7 +19,7 @@ export function createDefaultWorksheetContent(): BlockDocumentContent {
         content: [
           {
             type: 'text',
-            text: 'Add files locally, then save the workspace to persist worksheets and Parquet-backed files.',
+            text: 'Add files locally, then save the workspace to persist your analysis and Parquet-backed files.',
           },
         ],
       },

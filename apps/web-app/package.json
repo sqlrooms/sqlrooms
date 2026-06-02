@@ -36,6 +36,7 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/sql-editor-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",

@@ -34,6 +34,8 @@ import {
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import type {JsonObject} from '#/lib/json';
+import {createWorkspaceBlockDocumentSliceProps} from '../worksheet/worksheetState';
+import {WORKSPACE_ARTIFACT_TYPES} from './workspaceArtifactTypes';
 
 export const ASSISTANT_PANEL_ID = 'assistant-panel';
 
@@ -103,14 +105,18 @@ export function createWorkspaceRoomStore({
         duckDb: {connector: duckDbConnector},
         config: {currentRuntime: 'browser'},
       })(set, get, store),
-      ...createArtifactsSlice<WorkspaceRoomState>()(set, get, store),
+      ...createArtifactsSlice<WorkspaceRoomState>({
+        artifactTypes: WORKSPACE_ARTIFACT_TYPES,
+      })(set, get, store),
       ...createMosaicSlice()(set, get, store),
       ...createMosaicDashboardSlice({
         addPanelActions: defaultAddPanelActions,
         panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
       })(set, get, store),
       ...createSqlEditorSlice()(set, get, store),
-      ...createBlockDocumentsSlice<WorkspaceRoomState>()(set, get, store),
+      ...createBlockDocumentsSlice<WorkspaceRoomState>(
+        createWorkspaceBlockDocumentSliceProps(),
+      )(set, get, store),
       ...createAiSlice({
         config: parseWorkspaceAiConfig(aiConfig),
         tools: {},

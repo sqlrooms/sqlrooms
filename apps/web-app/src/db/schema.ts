@@ -31,6 +31,34 @@ export const workspaces = pgTable(
     id: uuid().defaultRandom().primaryKey(),
     ownerId: text('owner_id').notNull(),
     name: text().notNull(),
+    content: jsonb()
+      .notNull()
+      .default({
+        artifacts: {
+          artifactsById: {
+            'default-worksheet': {
+              id: 'default-worksheet',
+              type: 'worksheet',
+              title: 'Worksheet',
+              visibility: 'workspace',
+            },
+          },
+          artifactOrder: ['default-worksheet'],
+          currentArtifactId: 'default-worksheet',
+        },
+        blockDocuments: {
+          artifacts: {
+            'default-worksheet': {
+              id: 'default-worksheet',
+              content: {type: 'doc', content: []},
+              assets: {},
+              updatedAt: 0,
+            },
+          },
+        },
+        sqlEditor: {queries: [], selectedQueryId: '', openTabs: []},
+        mosaicDashboard: {dashboardsById: {}},
+      }),
     aiConfig: jsonb('ai_config')
       .notNull()
       .default({sessions: [], openSessionTabs: []}),
@@ -94,31 +122,6 @@ export const workspaceMembers = pgTable(
     check(
       'workspace_members_role_check',
       sql`${table.role} in ('owner', 'editor', 'viewer')`,
-    ),
-  ],
-);
-
-export const worksheets = pgTable(
-  'worksheets',
-  {
-    id: uuid().defaultRandom().primaryKey(),
-    workspaceId: uuid('workspace_id')
-      .notNull()
-      .references(() => workspaces.id, {onDelete: 'cascade'}),
-    ownerId: text('owner_id').notNull(),
-    title: text().notNull(),
-    content: jsonb().notNull().default({type: 'doc', content: []}),
-    createdAt: timestamp('created_at', {withTimezone: true})
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp('updated_at', {withTimezone: true})
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    index('worksheets_workspace_updated_at_idx').on(
-      table.workspaceId,
-      table.updatedAt,
     ),
   ],
 );
@@ -194,15 +197,7 @@ export const aiUsageEvents = pgTable(
 
 export const workspaceRelations = relations(workspaces, ({many}) => ({
   members: many(workspaceMembers),
-  worksheets: many(worksheets),
   files: many(files),
-}));
-
-export const worksheetRelations = relations(worksheets, ({one}) => ({
-  workspace: one(workspaces, {
-    fields: [worksheets.workspaceId],
-    references: [workspaces.id],
-  }),
 }));
 
 export const fileRelations = relations(files, ({one}) => ({

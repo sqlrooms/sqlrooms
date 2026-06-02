@@ -323,6 +323,9 @@ importers:
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
+      '@sqlrooms/sql-editor-config':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
