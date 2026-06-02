@@ -1,6 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {Link, useNavigate} from '@tanstack/react-router';
-import {AiSliceConfig, createAiSlice, type AiSliceState} from '@sqlrooms/ai';
 import {
   Button,
   Dialog,
@@ -36,20 +35,8 @@ import {
   TooltipTrigger,
   useSidebar,
 } from '@sqlrooms/ui';
-import {
-  LayoutRenderer,
-  createLayoutSlice,
-  type LayoutNode,
-  type LayoutSliceState,
-  type Panels,
-} from '@sqlrooms/layout';
-import {
-  RoomStateProvider,
-  createBaseRoomSlice,
-  createRoomStoreCreator,
-  type BaseRoomStoreState,
-  type StoreApi,
-} from '@sqlrooms/room-store';
+import {LayoutRenderer, type LayoutNode, type Panels} from '@sqlrooms/layout';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {
   ChevronDown,
@@ -81,6 +68,15 @@ import {
 } from './files/fileIngestion';
 import {WorksheetSurface} from './WorksheetSurface';
 import {deleteWorkspaceFile, listWorkspaceFiles} from './workspace/files';
+import {
+  ASSISTANT_PANEL_ID,
+  createAssistantChatHeaders,
+  createDefaultWorkspaceAiConfig,
+  createDefaultWorkspaceLayout,
+  createWorkspaceRoomStore,
+  getAiConfigSyncKey,
+  parseWorkspaceAiConfig,
+} from './workspace/WorkspaceRoomStore';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
@@ -135,41 +131,6 @@ type TablePreview = {
 };
 
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
-const ASSISTANT_PANEL_ID = 'assistant-panel';
-
-type WorkspaceLayoutRoomState = BaseRoomStoreState & LayoutSliceState;
-type WorkspaceRoomState = WorkspaceLayoutRoomState & AiSliceState;
-
-function createDefaultWorkspaceLayout(): LayoutNode {
-  return {
-    type: 'split',
-    id: 'workspace-root-layout',
-    direction: 'row',
-    children: [
-      {
-        type: 'panel',
-        id: ASSISTANT_PANEL_ID,
-        panel: 'assistant',
-        defaultSize: '320px',
-        minSize: '260px',
-        maxSize: '560px',
-        collapsible: true,
-        collapsedSize: 0,
-      },
-      {
-        type: 'panel',
-        id: 'worksheet-panel',
-        panel: 'worksheet',
-        defaultSize: '75%',
-        minSize: '360px',
-      },
-    ],
-  };
-}
-
-function createDefaultWorkspaceAiConfig(): JsonObject {
-  return {sessions: [], openSessionTabs: []};
-}
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
   const navigate = useNavigate();
@@ -1104,23 +1065,27 @@ function WorkspaceLayoutCanvas({
   const initialPanelsRef = useRef(panels);
   const initialAiConfigRef = useRef(aiConfig);
   const syncedAiConfigJsonRef = useRef(getAiConfigSyncKey(aiConfig));
-  const roomStore = useMemo(
-    () =>
-      createWorkspaceStore(
-        workspaceKey,
-        initialLayoutRef.current,
-        initialAiConfigRef.current,
-        initialPanelsRef.current,
-        token,
-      ),
-    [workspaceKey],
-  );
+  const duckDbConnector = duckDbRuntime.runtime?.connector;
+  const roomStore = useMemo(() => {
+    if (!duckDbConnector) return null;
+
+    return createWorkspaceRoomStore({
+      workspaceKey,
+      layout: initialLayoutRef.current,
+      aiConfig: initialAiConfigRef.current,
+      panels: initialPanelsRef.current,
+      token,
+      duckDbConnector,
+    });
+  }, [duckDbConnector, workspaceKey]);
 
   useEffect(() => {
+    if (!roomStore) return;
     roomStore.getState().layout.setConfig(layout);
   }, [layout, roomStore]);
 
   useEffect(() => {
+    if (!roomStore) return;
     const nextAiConfigJson = getAiConfigSyncKey(aiConfig);
     if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
 
@@ -1129,6 +1094,7 @@ function WorkspaceLayoutCanvas({
   }, [aiConfig, roomStore]);
 
   useEffect(() => {
+    if (!roomStore) return;
     roomStore.setState((state) => ({
       ...state,
       ai: {
@@ -1139,12 +1105,14 @@ function WorkspaceLayoutCanvas({
   }, [roomStore, token]);
 
   useEffect(() => {
+    if (!roomStore) return;
     for (const [panelId, panel] of Object.entries(panels)) {
       roomStore.getState().layout.registerPanel(panelId, panel);
     }
   }, [panels, roomStore]);
 
   useEffect(() => {
+    if (!roomStore) return;
     return roomStore.subscribe((state, previousState) => {
       if (state.ai.config !== previousState.ai.config) {
         const nextAiConfigJson = getAiConfigSyncKey(state.ai.config);
@@ -1169,6 +1137,19 @@ function WorkspaceLayoutCanvas({
     [layout, onLayoutChange],
   );
 
+  if (!roomStore) {
+    return (
+      <div className="workspace-panels">
+        <div className="worksheet-block-placeholder">
+          {duckDbRuntime.status === 'error'
+            ? (duckDbRuntime.error ??
+              'Could not prepare the workspace runtime.')
+            : 'Preparing workspace'}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <RoomStateProvider roomStore={roomStore}>
       <div className="workspace-panels">
@@ -1182,75 +1163,6 @@ function WorkspaceLayoutCanvas({
       </div>
     </RoomStateProvider>
   );
-}
-
-function createWorkspaceStore(
-  workspaceKey: string,
-  layout: LayoutNode,
-  aiConfig: JsonObject,
-  panels: Panels,
-  token: string | null,
-): StoreApi<WorkspaceRoomState> {
-  const {createRoomStore} = createRoomStoreCreator<WorkspaceRoomState>()(
-    () => (set, get, store) => ({
-      ...createBaseRoomSlice()(set, get, store),
-      ...createLayoutSlice({config: layout, panels})(set, get, store),
-      ...createAiSlice({
-        config: parseWorkspaceAiConfig(aiConfig),
-        tools: {},
-        defaultProvider: 'openrouter',
-        defaultModel: 'openai/gpt-4o-mini',
-        getAvailableModels: () => [
-          {provider: 'openrouter', value: 'openai/gpt-4o-mini'},
-        ],
-        chatEndPoint: '/api/chat',
-        chatHeaders: createAssistantChatHeaders(token),
-        getInstructions: (args) =>
-          createAssistantInstructions(args?.runContext),
-      })(set, get, store),
-    }),
-  );
-
-  return createRoomStore({storeKey: `web-workspace-layout:${workspaceKey}`});
-}
-
-function parseWorkspaceAiConfig(aiConfig: JsonObject) {
-  return AiSliceConfig.parse(aiConfig);
-}
-
-function getAiConfigSyncKey(aiConfig: unknown) {
-  const parsedConfig = AiSliceConfig.safeParse(aiConfig);
-  if (!parsedConfig.success) return JSON.stringify(aiConfig);
-
-  return JSON.stringify({
-    ...parsedConfig.data,
-    sessions: parsedConfig.data.sessions.map((session) => ({
-      ...session,
-      prompt: '',
-    })),
-  });
-}
-
-function createAssistantChatHeaders(
-  token: string | null,
-): Record<string, string> {
-  return token ? {Authorization: `Bearer ${token}`} : {};
-}
-
-function createAssistantInstructions(runContext: unknown) {
-  const context =
-    runContext && typeof runContext === 'object' && 'items' in runContext
-      ? (runContext as {
-          items?: Array<{kind?: string; id?: string; title?: string}>;
-        })
-      : undefined;
-  const worksheet = context?.items?.find((item) => item.kind === 'worksheet');
-
-  return `You are the SQLRooms assistant for a browser-based data analysis workspace.
-Help the user reason about datasets, write SQL, plan worksheets, and design charts or dashboards.
-Be concise, practical, and explicit about assumptions. Do not claim to inspect data unless the user has provided it in the chat.
-
-Primary worksheet: ${worksheet?.title ?? 'Unknown worksheet'}`;
 }
 
 function isLayoutNodeCollapsed(node: LayoutNode, nodeId: string): boolean {
