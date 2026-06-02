@@ -2,7 +2,7 @@ import {and, desc, eq, sql} from 'drizzle-orm';
 import {createServerFn} from '@tanstack/react-start';
 import {z} from 'zod';
 import {db} from '#/db/index';
-import {workspaceMembers, workspaces, worksheets} from '#/db/schema';
+import {workspaceMembers, workspaces} from '#/db/schema';
 import {verifyAuthToken} from '#/lib/auth-token';
 import {isJsonObject, type JsonObject} from '#/lib/json';
 
@@ -14,27 +14,19 @@ const workspaceInput = authInput.extend({
   workspaceId: z.string().uuid(),
 });
 
-const blockDocumentContentInput = z.custom<JsonObject>(isJsonObject);
+const workspaceContentInput = z.custom<JsonObject>(isJsonObject);
 const workspaceLayoutInput = z.custom<JsonObject>(isJsonObject);
 const workspaceAiConfigInput = z.custom<JsonObject>(isJsonObject);
 
 const serializeWorkspace = (workspace: typeof workspaces.$inferSelect) => ({
   id: workspace.id,
   name: workspace.name,
+  content: workspace.content as JsonObject,
   aiConfig: workspace.aiConfig as JsonObject,
   layout: workspace.layout as JsonObject,
   createdAt: workspace.createdAt.getTime(),
   updatedAt: workspace.updatedAt.getTime(),
   lastOpenedAt: workspace.lastOpenedAt?.getTime(),
-});
-
-const serializeWorksheet = (worksheet: typeof worksheets.$inferSelect) => ({
-  id: worksheet.id,
-  workspaceId: worksheet.workspaceId,
-  title: worksheet.title,
-  content: worksheet.content as JsonObject,
-  createdAt: worksheet.createdAt.getTime(),
-  updatedAt: worksheet.updatedAt.getTime(),
 });
 
 export const listCloudWorkspaces = createServerFn({method: 'POST'})
@@ -71,29 +63,16 @@ export const getCloudWorkspace = createServerFn({method: 'POST'})
     const workspace = workspaceRows[0];
     if (!workspace) return null;
 
-    const worksheetRows = await db
-      .select()
-      .from(worksheets)
-      .where(eq(worksheets.workspaceId, data.workspaceId))
-      .orderBy(desc(worksheets.updatedAt));
-
-    return {
-      ...serializeWorkspace(workspace),
-      worksheets: worksheetRows.map(serializeWorksheet),
-    };
+    return serializeWorkspace(workspace);
   });
 
 export const createCloudWorkspace = createServerFn({method: 'POST'})
   .inputValidator(
     authInput.extend({
       name: z.string().trim().min(1).max(120),
+      content: workspaceContentInput,
       layout: workspaceLayoutInput.optional(),
       aiConfig: workspaceAiConfigInput.optional(),
-      worksheetTitle: z.string().trim().min(1).max(120).default('Worksheet'),
-      worksheetContent: blockDocumentContentInput.default({
-        type: 'doc',
-        content: [],
-      }),
     }),
   )
   .handler(async ({data}) => {
@@ -105,6 +84,7 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
       .values({
         ownerId: userId,
         name: data.name,
+        content: data.content,
         layout: data.layout,
         aiConfig: data.aiConfig,
         lastOpenedAt: now,
@@ -119,20 +99,26 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
       role: 'owner',
     });
 
-    const worksheetRows = await db
-      .insert(worksheets)
-      .values({
-        workspaceId: workspace.id,
-        ownerId: userId,
-        title: data.worksheetTitle,
-        content: data.worksheetContent,
-      })
+    return serializeWorkspace(workspace);
+  });
+
+export const saveWorkspaceContent = createServerFn({method: 'POST'})
+  .inputValidator(
+    workspaceInput.extend({
+      content: workspaceContentInput,
+    }),
+  )
+  .handler(async ({data}) => {
+    const {userId} = await verifyAuthToken(data.token);
+    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
+
+    const rows = await db
+      .update(workspaces)
+      .set({content: data.content, updatedAt: new Date()})
+      .where(eq(workspaces.id, data.workspaceId))
       .returning();
 
-    return {
-      ...serializeWorkspace(workspace),
-      worksheets: worksheetRows.map(serializeWorksheet),
-    };
+    return rows[0] ? serializeWorkspace(rows[0]) : null;
   });
 
 export const saveWorkspaceLayout = createServerFn({method: 'POST'})

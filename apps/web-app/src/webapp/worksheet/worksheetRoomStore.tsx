@@ -2,263 +2,70 @@ import {
   BlockDocumentArtifact,
   BlockDocumentChartRendererProvider,
   BlockDocumentStatefulBlockRendererProvider,
-  blockDocumentContentToBlocks,
-  createBlockDocumentsSlice,
   type BlockDocumentChartRenderer,
   type BlockDocumentContent,
-  type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
-  type BlockDocumentStatefulBlockType,
-  type BlockDocumentsSliceState,
 } from '@sqlrooms/documents';
-import {
-  createDbSlice,
-  type DbSliceState,
-} from '@sqlrooms/db';
-import type {DuckDbConnector} from '@sqlrooms/duckdb';
+import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {
   ChartConfig,
   DataTableBlockRenderer,
-  defaultAddPanelActions,
-  createDefaultMosaicDashboardPanelRenderers,
-  createMosaicDashboardSlice,
-  createMosaicSlice,
-  MosaicDashboardSliceConfig,
   MosaicChartSettingsPanel,
   MosaicChartView,
   MosaicDashboard,
   MosaicDashboardPanelLayout,
   useTablesWithColumns,
-  type MosaicDashboardSliceConfigType,
-  type MosaicDashboardSliceState,
-  type MosaicSliceState,
+  type MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
-import {
-  createBaseRoomSlice,
-  createCommandSlice,
-  createRoomStore,
-  RoomStateProvider,
-  useBaseRoomStore,
-  useRoomStoreApi,
-  type BaseRoomStore,
-  type BaseRoomStoreState,
-  type CommandSliceState,
-} from '@sqlrooms/room-store';
-import {
-  createSqlEditorSlice,
-  SQL_QUERY_BLOCK_TYPE,
-  SqlQueryBlock,
-  SqlEditorSliceConfig,
-  type SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {useBaseRoomStore, useRoomStoreApi} from '@sqlrooms/room-store';
+import {SQL_QUERY_BLOCK_TYPE, SqlQueryBlock} from '@sqlrooms/sql-editor';
+import type {SqlEditorSliceConfig} from '@sqlrooms/sql-editor-config';
 import {Button, cn} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
+import {useCallback, useEffect, useMemo, useRef} from 'react';
+import type {WorkspaceRoomState} from '../workspace/WorkspaceRoomStore';
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  type PropsWithChildren,
-} from 'react';
-import type {JsonObject} from '#/lib/json';
+  createEmptyPersistedSqlEditorConfig,
+  createWorksheetStatefulBlockTypes,
+  getOwnedStatefulBlockIds,
+  serializeWorksheetContent,
+} from './worksheetState';
 
 type ChartConfigType = ReturnType<typeof ChartConfig.parse>;
 
-export interface WebWorksheetRoomState
-  extends BaseRoomStoreState,
-    CommandSliceState<WebWorksheetRoomState>,
-    DbSliceState,
-    MosaicSliceState,
-    MosaicDashboardSliceState,
-    SqlEditorSliceState,
-    BlockDocumentsSliceState {}
-
-type PersistedWorksheetState = {
-  sqlEditor?: SqlEditorSliceConfig;
-  mosaicDashboard?: MosaicDashboardSliceConfigType;
-};
-
-const WORKSHEET_STATE_KEY = '__sqlroomsWorksheetState';
-
-type StatefulBlockConfig = {
-  blockType: 'dashboard' | 'data-table' | typeof SQL_QUERY_BLOCK_TYPE;
-  label: string;
-  title: string;
-  description: string;
-  resizableHeight?: boolean;
-  defaultHeight?: number;
-  minHeight?: number;
-  maxHeight?: number;
-  requireScrollModifier?: boolean;
-  scrollHintLabel?: string;
-  ensureState: (
-    state: WebWorksheetRoomState,
-    blockInstanceId: string,
-    title: string,
-    options?: BlockDocumentStatefulBlockCreateNodeOptions,
-  ) => void;
-  deleteState: (
-    state: WebWorksheetRoomState,
-    blockInstanceId: string,
-  ) => void;
-  renameState?: (
-    state: WebWorksheetRoomState,
-    blockInstanceId: string,
-    title: string,
-  ) => void;
-};
-
-const STATEFUL_BLOCK_CONFIGS: StatefulBlockConfig[] = [
-  {
-    blockType: 'dashboard',
-    label: 'Dashboard',
-    title: 'Embedded Dashboard',
-    description: 'Embedded dashboard',
-    resizableHeight: true,
-    defaultHeight: 560,
-    minHeight: 360,
-    maxHeight: 1600,
-    requireScrollModifier: true,
-    scrollHintLabel: 'this dashboard',
-    ensureState: (state, blockInstanceId, title) => {
-      state.mosaicDashboard.ensureDashboard(blockInstanceId, title, 'grid');
+export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
+  const artifactId = (meta?.artifactId as string) ?? panelId;
+  const artifact = useBaseRoomStore<WorkspaceRoomState, {title: string} | null>(
+    (state) => {
+      const candidate = state.artifacts.getArtifact(artifactId);
+      return candidate?.type === 'worksheet' ? {title: candidate.title} : null;
     },
-    deleteState: (state, blockInstanceId) => {
-      state.mosaicDashboard.removeDashboard(blockInstanceId);
-    },
-    renameState: (state, blockInstanceId, title) => {
-      state.mosaicDashboard.ensureDashboard(blockInstanceId, title, 'grid');
-    },
-  },
-  {
-    blockType: 'data-table',
-    label: 'Data Table',
-    title: 'Data Table',
-    description: 'Embedded Mosaic Data Table Explorer',
-    resizableHeight: true,
-    defaultHeight: 640,
-    minHeight: 360,
-    maxHeight: 1600,
-    requireScrollModifier: true,
-    scrollHintLabel: 'this data table',
-    ensureState: () => {},
-    deleteState: () => {},
-  },
-  {
-    blockType: SQL_QUERY_BLOCK_TYPE,
-    label: 'SQL Query',
-    title: 'Embedded SQL Query',
-    description: 'Embedded SQL query editor and result table',
-    ensureState: (state, blockInstanceId, title, options) => {
-      state.sqlEditor.ensureQuery(blockInstanceId, {
-        name: title,
-        query: options?.initialText,
-      });
-    },
-    deleteState: (state, blockInstanceId) => {
-      state.sqlEditor.removeQuery(blockInstanceId);
-    },
-    renameState: (state, blockInstanceId, title) => {
-      state.sqlEditor.renameQuery(blockInstanceId, title);
-    },
-  },
-];
+  );
+  const renameArtifact = useBaseRoomStore<
+    WorkspaceRoomState,
+    WorkspaceRoomState['artifacts']['renameArtifact']
+  >((state) => state.artifacts.renameArtifact);
 
-const STATEFUL_BLOCK_CONFIG_BY_TYPE: Record<
-  string,
-  StatefulBlockConfig | undefined
-> = Object.fromEntries(
-  STATEFUL_BLOCK_CONFIGS.map((config) => [config.blockType, config]),
-);
-
-export function createWebWorksheetRoomStore({
-  connector,
-  content,
-  worksheetId,
-}: {
-  connector: DuckDbConnector;
-  content: BlockDocumentContent;
-  worksheetId: string;
-}): BaseRoomStore<WebWorksheetRoomState> {
-  const persistedState = extractPersistedWorksheetState(content);
-  const normalizedContent = normalizeWorksheetBlockDocumentContent(content);
-
-  const {roomStore} = createRoomStore<WebWorksheetRoomState>(
-    (set, get, store) => ({
-      ...createBaseRoomSlice()(set, get, store),
-      ...createCommandSlice<WebWorksheetRoomState>()(set, get, store),
-      ...createDbSlice({
-        duckDb: {connector},
-        config: {currentRuntime: 'browser'},
-      })(set, get, store),
-      ...createSqlEditorSlice({
-        config: persistedState.sqlEditor,
-      })(set, get, store),
-      ...createMosaicSlice()(set, get, store),
-      ...createMosaicDashboardSlice({
-        config: persistedState.mosaicDashboard,
-        addPanelActions: defaultAddPanelActions,
-        panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
-      })(set, get, store),
-      ...createBlockDocumentsSlice<WebWorksheetRoomState>({
-        config: {
-          artifacts: {
-            [worksheetId]: {
-              id: worksheetId,
-              content: normalizedContent,
-              assets: {},
-              updatedAt: Date.now(),
-            },
-          },
-        },
-        onCreateOwnedStatefulBlock: ({
-          blockType,
-          blockInstanceId,
-          title,
-          caption,
-          getState,
-        }) => {
-          ensureStatefulBlockState(getState(), {
-            blockType,
-            blockInstanceId,
-            title,
-            initialText: caption,
-          });
-        },
-        onDeleteOwnedStatefulBlock: ({
-          blockType,
-          blockInstanceId,
-          getState,
-        }) => {
-          const config = STATEFUL_BLOCK_CONFIG_BY_TYPE[blockType];
-          config?.deleteState(getState(), blockInstanceId);
-        },
-        onRenameOwnedStatefulBlock: ({
-          blockType,
-          blockInstanceId,
-          title,
-          getState,
-        }) => {
-          const config = STATEFUL_BLOCK_CONFIG_BY_TYPE[blockType];
-          config?.renameState?.(getState(), blockInstanceId, title);
-        },
-      })(set, get, store),
-    }),
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      renameArtifact(artifactId, title);
+    },
+    [artifactId, renameArtifact],
   );
 
-  ensureStatefulBlocksForContent(roomStore.getState(), normalizedContent);
-  return roomStore;
-}
+  if (!artifact) return null;
 
-export function WebWorksheetRoomProvider({
-  children,
-  roomStore,
-}: PropsWithChildren<{
-  roomStore: BaseRoomStore<WebWorksheetRoomState>;
-}>) {
-  return <RoomStateProvider roomStore={roomStore}>{children}</RoomStateProvider>;
-}
+  return (
+    <div className="worksheet-document-surface">
+      <WorksheetBlockDocument
+        worksheetId={artifactId}
+        title={artifact.title}
+        onTitleChange={handleTitleChange}
+      />
+    </div>
+  );
+};
 
 export function WorksheetBlockDocument({
   title,
@@ -269,9 +76,9 @@ export function WorksheetBlockDocument({
   worksheetId: string;
   onTitleChange: (title: string) => void;
 }) {
-  const roomStore = useRoomStoreApi<WebWorksheetRoomState>();
+  const roomStore = useRoomStoreApi<WorkspaceRoomState>();
   const blockTypes = useMemo(
-    () => createWorksheetStatefulBlockTypes(roomStore.getState),
+    () => createWorksheetStatefulBlockTypes({getState: roomStore.getState}),
     [roomStore],
   );
 
@@ -292,7 +99,7 @@ export function WorksheetBlockDocument({
 }
 
 export function useSerializedWorksheetContent(worksheetId: string) {
-  const content = useBaseRoomStore<WebWorksheetRoomState, BlockDocumentContent>(
+  const content = useBaseRoomStore<WorkspaceRoomState, BlockDocumentContent>(
     (state) =>
       state.blockDocuments.config.artifacts[worksheetId]?.content ?? {
         type: 'doc',
@@ -300,67 +107,52 @@ export function useSerializedWorksheetContent(worksheetId: string) {
       },
   );
   const sqlEditorConfig = useBaseRoomStore<
-    WebWorksheetRoomState,
+    WorkspaceRoomState,
     SqlEditorSliceConfig
   >((state) => state.sqlEditor.config);
   const mosaicDashboardConfig = useBaseRoomStore<
-    WebWorksheetRoomState,
-    MosaicDashboardSliceConfigType
+    WorkspaceRoomState,
+    MosaicDashboardSliceConfig
   >((state) => state.mosaicDashboard.config);
 
-  return useMemo(
-    () =>
-      serializeWorksheetContent(content, {
-        sqlEditor: sqlEditorConfig,
-        mosaicDashboard: mosaicDashboardConfig,
-      }),
-    [content, mosaicDashboardConfig, sqlEditorConfig],
-  );
+  return useMemo(() => {
+    const ownedBlockIds = getOwnedStatefulBlockIds(content);
+
+    return serializeWorksheetContent(content, {
+      sqlEditor: {
+        ...createEmptyPersistedSqlEditorConfig(),
+        queries: sqlEditorConfig.queries.filter((query) =>
+          ownedBlockIds.has(query.id),
+        ),
+        selectedQueryId: ownedBlockIds.has(sqlEditorConfig.selectedQueryId)
+          ? sqlEditorConfig.selectedQueryId
+          : '',
+        openTabs: sqlEditorConfig.openTabs.filter((queryId) =>
+          ownedBlockIds.has(queryId),
+        ),
+        lastExecutedQuery: sqlEditorConfig.lastExecutedQuery,
+      },
+      mosaicDashboard: {
+        dashboardsById: Object.fromEntries(
+          Object.entries(mosaicDashboardConfig.dashboardsById).filter(
+            ([dashboardId]) => ownedBlockIds.has(dashboardId),
+          ),
+        ),
+      },
+    });
+  }, [content, mosaicDashboardConfig, sqlEditorConfig]);
 }
 
 export function useRefreshWorksheetDbSchemas(tableNames: string[]) {
   const refreshTableSchemas = useBaseRoomStore<
-    WebWorksheetRoomState,
-    WebWorksheetRoomState['db']['refreshTableSchemas']
+    WorkspaceRoomState,
+    WorkspaceRoomState['db']['refreshTableSchemas']
   >((state) => state.db.refreshTableSchemas);
   const tableNamesKey = tableNames.join('\0');
 
   useEffect(() => {
     void refreshTableSchemas();
   }, [refreshTableSchemas, tableNamesKey]);
-}
-
-function createWorksheetStatefulBlockTypes(
-  getState: () => WebWorksheetRoomState,
-): BlockDocumentStatefulBlockType[] {
-  return STATEFUL_BLOCK_CONFIGS.map((config) => ({
-    blockType: config.blockType,
-    label: config.label,
-    description: config.description,
-    resizableHeight: config.resizableHeight,
-    defaultHeight: config.defaultHeight,
-    minHeight: config.minHeight,
-    maxHeight: config.maxHeight,
-    requireScrollModifier: config.requireScrollModifier,
-    scrollHintLabel: config.scrollHintLabel,
-    createNode: (blockId, options) => {
-      config.ensureState(getState(), blockId, config.title, options);
-      return {
-        type: 'blockDocumentStatefulBlock',
-        attrs: {
-          id: blockId,
-          blockType: config.blockType,
-          blockInstanceId: blockId,
-          ownership: 'owned',
-          title: config.title,
-          caption: '',
-          ...(config.resizableHeight
-            ? {height: config.defaultHeight ?? 560}
-            : {}),
-        },
-      };
-    },
-  }));
 }
 
 function normalizeStatefulBlockOwnership(ownership: string | undefined) {
@@ -375,8 +167,8 @@ const WorksheetDataTableBlockRenderer = (
   props: BlockDocumentStatefulBlockRendererProps,
 ) => {
   const updateBlock = useBaseRoomStore<
-    WebWorksheetRoomState,
-    WebWorksheetRoomState['blockDocuments']['updateBlock']
+    WorkspaceRoomState,
+    WorkspaceRoomState['blockDocuments']['updateBlock']
   >((state) => state.blockDocuments.updateBlock);
 
   const handleTitleChange = useCallback(
@@ -410,7 +202,9 @@ const WorksheetDataTableBlockRenderer = (
     ],
   );
 
-  return <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />;
+  return (
+    <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />
+  );
 };
 
 const WorksheetDashboardBlockRenderer = ({
@@ -420,8 +214,8 @@ const WorksheetDashboardBlockRenderer = ({
   caption,
 }: BlockDocumentStatefulBlockRendererProps) => {
   const ensureDashboard = useBaseRoomStore<
-    WebWorksheetRoomState,
-    WebWorksheetRoomState['mosaicDashboard']['ensureDashboard']
+    WorkspaceRoomState,
+    WorkspaceRoomState['mosaicDashboard']['ensureDashboard']
   >((state) => state.mosaicDashboard.ensureDashboard);
 
   useEffect(() => {
@@ -720,118 +514,4 @@ function parseWorksheetChartConfig(
       parsed.error.issues[0]?.message ??
       'The chart block is not a valid Mosaic ChartConfig.',
   };
-}
-
-function ensureStatefulBlocksForContent(
-  state: WebWorksheetRoomState,
-  content: BlockDocumentContent,
-) {
-  for (const block of blockDocumentContentToBlocks(content)) {
-    if (block.type !== 'statefulBlock' || block.ownership === 'external') {
-      continue;
-    }
-
-    ensureStatefulBlockState(state, {
-      blockType: block.blockType,
-      blockInstanceId: block.blockInstanceId,
-      title: block.title,
-      initialText: block.caption,
-    });
-  }
-}
-
-function ensureStatefulBlockState(
-  state: WebWorksheetRoomState,
-  {
-    blockType,
-    blockInstanceId,
-    initialText,
-    title,
-  }: {
-    blockType: string;
-    blockInstanceId: string;
-    initialText?: string;
-    title?: string;
-  },
-) {
-  const config = STATEFUL_BLOCK_CONFIG_BY_TYPE[blockType];
-  config?.ensureState(state, blockInstanceId, title ?? config.title, {
-    initialText,
-  });
-}
-
-function extractPersistedWorksheetState(
-  content: BlockDocumentContent,
-): PersistedWorksheetState {
-  const candidate = (content as Record<string, unknown>)[WORKSHEET_STATE_KEY];
-  if (!candidate || typeof candidate !== 'object') return {};
-  const state = candidate as Record<string, unknown>;
-  const sqlEditor = SqlEditorSliceConfig.safeParse(state.sqlEditor);
-  const mosaicDashboard = MosaicDashboardSliceConfig.safeParse(
-    state.mosaicDashboard,
-  );
-
-  return {
-    sqlEditor: sqlEditor.success ? sqlEditor.data : undefined,
-    mosaicDashboard: mosaicDashboard.success ? mosaicDashboard.data : undefined,
-  };
-}
-
-function serializeWorksheetContent(
-  content: BlockDocumentContent,
-  state: PersistedWorksheetState,
-): JsonObject {
-  return {
-    ...(content as unknown as JsonObject),
-    [WORKSHEET_STATE_KEY]: state as unknown as JsonObject,
-  };
-}
-
-export function normalizeWorksheetBlockDocumentContent(
-  content: BlockDocumentContent,
-): BlockDocumentContent {
-  return {
-    type: 'doc',
-    content: content.content.map(normalizeWorksheetBlockDocumentNode),
-  };
-}
-
-function normalizeWorksheetBlockDocumentNode(
-  node: BlockDocumentContent['content'][number],
-): BlockDocumentContent['content'][number] {
-  if (node.type === 'blockDocumentStatefulBlock') {
-    const attrs = {...(node.attrs ?? {})};
-
-    if (attrs.blockType === 'query') {
-      return {
-        ...node,
-        attrs: {
-          ...attrs,
-          blockType: SQL_QUERY_BLOCK_TYPE,
-          title: attrs.title ?? 'Embedded SQL Query',
-        },
-      };
-    }
-
-    if (attrs.blockType === 'chart') {
-      return {
-        type: 'blockDocumentChart',
-        attrs: {
-          id: attrs.id,
-          tableName: '',
-          config: {},
-          caption: attrs.caption,
-        },
-      };
-    }
-  }
-
-  if (Array.isArray(node.content)) {
-    return {
-      ...node,
-      content: node.content.map(normalizeWorksheetBlockDocumentNode),
-    };
-  }
-
-  return node;
 }

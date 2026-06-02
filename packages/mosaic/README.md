@@ -378,6 +378,10 @@ slice used by reusable dashboard panel settings. If an app also uses block
 documents with settings, install the shared settings slice only once by using
 one feature helper plus the other feature's lower-level slice.
 
+Use `mosaicDashboard.setConfig(config)` when hydrating a persisted room or
+workspace snapshot. Runtime chart retention and panel issue state are not part
+of that persisted config.
+
 ### Reset Filters
 
 The package provides hooks and components for resetting cross-filter selections at both dashboard and panel levels:
@@ -472,7 +476,6 @@ import {ResetFiltersButton} from '@sqlrooms/mosaic';
   className="custom-class" // optional
 />;
 ```
-
 ### Dashboard Stateful Block Adapter
 
 `createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful

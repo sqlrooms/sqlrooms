@@ -69,6 +69,13 @@ import {
 import {WorksheetSurface} from './WorksheetSurface';
 import {deleteWorkspaceFile, listWorkspaceFiles} from './workspace/files';
 import {
+  createDefaultWorkspaceContent,
+  getWorkspaceContentWorksheets,
+  getWorkspaceHydrationKey,
+  hydrateWorkspaceContent,
+  serializeWorkspaceRoomContent,
+} from './workspace/workspaceContent';
+import {
   ASSISTANT_PANEL_ID,
   createAssistantChatHeaders,
   createDefaultWorkspaceAiConfig,
@@ -83,9 +90,9 @@ import {
   listCloudWorkspaces,
   renameCloudWorkspace,
   saveWorkspaceAiConfig,
+  saveWorkspaceContent,
   saveWorkspaceLayout,
 } from './workspace/cloudWorkspaces';
-import {createDefaultWorksheetContent} from './worksheet/defaultBlockDocument';
 import {useWorkspaceDuckDbRuntime} from './worksheet/useWorkspaceDuckDbRuntime';
 
 type WorkspaceShellProps =
@@ -158,13 +165,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const [workspaceAiConfig, setWorkspaceAiConfig] = useState<JsonObject>(() =>
     createDefaultWorkspaceAiConfig(),
   );
-  const [localWorksheets] = useState<LocalWorksheet[]>(() => [
-    {
-      id: 'default-worksheet',
-      title: 'Worksheet',
-      content: createDefaultWorksheetContent(),
-    },
-  ]);
+  const [workspaceContent, setWorkspaceContent] = useState<JsonObject | null>(
+    null,
+  );
   const savedWorkspaceId = props.mode === 'saved' ? props.workspaceId : null;
   const activeWorkspaceId = savedWorkspaceId ?? 'unsaved-default';
   const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
@@ -226,13 +229,17 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const saveWorkspaceAiConfigMutation = useMutation({
     mutationFn: saveWorkspaceAiConfig,
   });
+  const saveWorkspaceContentMutation = useMutation({
+    mutationFn: saveWorkspaceContent,
+  });
 
   const currentWorkspace =
     props.mode === 'saved' ? savedWorkspaceQuery.data : null;
   const worksheets = useMemo(() => {
-    if (currentWorkspace?.worksheets.length) return currentWorkspace.worksheets;
-    return localWorksheets;
-  }, [currentWorkspace, localWorksheets]);
+    return getWorkspaceContentWorksheets(
+      currentWorkspace?.content ?? workspaceContent ?? undefined,
+    );
+  }, [currentWorkspace?.content, workspaceContent]);
   const selectedWorksheet = useMemo(
     () =>
       worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
@@ -330,6 +337,15 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   }, [currentWorkspace?.aiConfig, currentWorkspace?.id, props.mode]);
 
   useEffect(() => {
+    if (props.mode === 'saved') {
+      setWorkspaceContent(currentWorkspace?.content ?? null);
+      return;
+    }
+
+    setWorkspaceContent(null);
+  }, [currentWorkspace?.content, currentWorkspace?.id, props.mode]);
+
+  useEffect(() => {
     if (
       props.mode !== 'saved' ||
       !savedWorkspaceId ||
@@ -402,10 +418,10 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       data: {
         token,
         name: localWorkspaceName,
+        content:
+          workspaceContent ?? (createDefaultWorkspaceContent() as JsonObject),
         layout: workspaceLayout as unknown as JsonObject,
         aiConfig: workspaceAiConfig,
-        worksheetTitle: localWorksheets[0].title,
-        worksheetContent: localWorksheets[0].content,
       },
     });
 
@@ -490,6 +506,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const handleWorkspaceAiConfigChange = useCallback((aiConfig: JsonObject) => {
     setWorkspaceAiConfig(aiConfig);
   }, []);
+  const handleWorkspaceContentChange = useCallback((content: JsonObject) => {
+    setWorkspaceContent(content);
+  }, []);
 
   useEffect(() => {
     if (!workspaceIdForLayoutSave || !token) return;
@@ -509,6 +528,27 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     saveWorkspaceAiConfigMutation,
     token,
     workspaceAiConfig,
+    workspaceIdForLayoutSave,
+  ]);
+
+  useEffect(() => {
+    if (!workspaceIdForLayoutSave || !token || !workspaceContent) return;
+
+    const timeoutId = window.setTimeout(() => {
+      saveWorkspaceContentMutation.mutate({
+        data: {
+          token,
+          workspaceId: workspaceIdForLayoutSave,
+          content: workspaceContent,
+        },
+      });
+    }, 900);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    saveWorkspaceContentMutation,
+    token,
+    workspaceContent,
     workspaceIdForLayoutSave,
   ]);
 
@@ -859,12 +899,14 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
               workspaceKey={activeWorkspaceId}
               layout={workspaceLayout}
               aiConfig={workspaceAiConfig}
+              workspaceContent={workspaceContent ?? currentWorkspace?.content}
               selectedWorksheet={selectedWorksheet}
               token={token}
               savedWorkspaceId={savedWorkspaceId}
               duckDbRuntime={duckDbRuntime}
               onLayoutChange={handleWorkspaceLayoutChange}
               onAiConfigChange={handleWorkspaceAiConfigChange}
+              onWorkspaceContentChange={handleWorkspaceContentChange}
             />
           </SidebarInset>
         </SidebarProvider>
@@ -1007,22 +1049,26 @@ function WorkspaceLayoutCanvas({
   workspaceKey,
   layout,
   aiConfig,
+  workspaceContent,
   selectedWorksheet,
   token,
   savedWorkspaceId,
   duckDbRuntime,
   onLayoutChange,
   onAiConfigChange,
+  onWorkspaceContentChange,
 }: {
   workspaceKey: string;
   layout: LayoutNode;
   aiConfig: JsonObject;
+  workspaceContent: JsonObject | undefined;
   selectedWorksheet: LocalWorksheet | undefined;
   token: string | null;
   savedWorkspaceId: string | null;
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
   onLayoutChange: (layout: LayoutNode | null) => void;
   onAiConfigChange: (aiConfig: JsonObject) => void;
+  onWorkspaceContentChange: (content: JsonObject) => void;
 }) {
   const panels = useMemo<Panels>(
     () => ({
@@ -1050,7 +1096,7 @@ function WorkspaceLayoutCanvas({
                     worksheet={selectedWorksheet}
                     token={token}
                     workspaceId={savedWorkspaceId}
-                    duckDbRuntime={duckDbRuntime}
+                    tableNames={duckDbRuntime.tableNames}
                   />
                 ) : null}
               </div>
@@ -1065,7 +1111,12 @@ function WorkspaceLayoutCanvas({
   const initialPanelsRef = useRef(panels);
   const initialAiConfigRef = useRef(aiConfig);
   const syncedAiConfigJsonRef = useRef(getAiConfigSyncKey(aiConfig));
+  const syncedWorkspaceContentJsonRef = useRef('');
   const duckDbConnector = duckDbRuntime.runtime?.connector;
+  const workspaceHydrationKey = useMemo(
+    () => getWorkspaceHydrationKey(workspaceContent),
+    [workspaceContent],
+  );
   const roomStore = useMemo(() => {
     if (!duckDbConnector) return null;
 
@@ -1078,6 +1129,26 @@ function WorkspaceLayoutCanvas({
       duckDbConnector,
     });
   }, [duckDbConnector, workspaceKey]);
+
+  useEffect(() => {
+    if (!roomStore) return;
+    hydrateWorkspaceContent({
+      store: roomStore,
+      content: workspaceContent,
+      currentWorksheetId: selectedWorksheet?.id,
+    });
+    const hydratedContent = serializeWorkspaceRoomContent(roomStore.getState());
+    syncedWorkspaceContentJsonRef.current = JSON.stringify(hydratedContent);
+    if (!workspaceContent) {
+      onWorkspaceContentChange(hydratedContent);
+    }
+  }, [
+    onWorkspaceContentChange,
+    roomStore,
+    selectedWorksheet?.id,
+    workspaceContent,
+    workspaceHydrationKey,
+  ]);
 
   useEffect(() => {
     if (!roomStore) return;
@@ -1123,6 +1194,27 @@ function WorkspaceLayoutCanvas({
       }
     });
   }, [onAiConfigChange, roomStore]);
+
+  useEffect(() => {
+    if (!roomStore) return;
+    return roomStore.subscribe((state, previousState) => {
+      if (
+        state.artifacts.config === previousState.artifacts.config &&
+        state.blockDocuments.config === previousState.blockDocuments.config &&
+        state.sqlEditor.config === previousState.sqlEditor.config &&
+        state.mosaicDashboard.config === previousState.mosaicDashboard.config
+      ) {
+        return;
+      }
+
+      const nextContent = serializeWorkspaceRoomContent(state);
+      const nextContentJson = JSON.stringify(nextContent);
+      if (nextContentJson === syncedWorkspaceContentJsonRef.current) return;
+
+      syncedWorkspaceContentJsonRef.current = nextContentJson;
+      onWorkspaceContentChange(nextContent);
+    });
+  }, [onWorkspaceContentChange, roomStore]);
 
   const handleCollapse = useCallback(
     (panelId: string) => {
