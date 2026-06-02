@@ -1,5 +1,10 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import {generateText, type LanguageModelUsage} from 'ai';
+import {
+  convertToModelMessages,
+  streamText,
+  type LanguageModelUsage,
+  type UIMessage,
+} from 'ai';
 import {and, count, eq, gte} from 'drizzle-orm';
 import {z} from 'zod';
 import {db} from '#/db/index';
@@ -10,29 +15,19 @@ import {requireEnv} from '#/lib/env';
 const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
 const DEFAULT_DAILY_MESSAGE_LIMIT = 60;
 
-const chatMessageInput = z.object({
-  role: z.enum(['user', 'assistant']),
-  content: z.string().trim().min(1).max(8000),
-});
-
 const assistantChatInput = z.object({
-  token: z.string().min(1),
-  messages: z.array(chatMessageInput).min(1).max(20),
-  context: z.object({
-    workspaceTitle: z.string().trim().max(160).optional(),
-    worksheetTitles: z.array(z.string().trim().max(160)).max(20).default([]),
-    tables: z.array(z.string().trim().max(160)).max(80).default([]),
-  }),
+  messages: z.array(z.custom<UIMessage>()).min(1).max(80),
+  model: z.string().trim().min(1).max(200).optional(),
+  instructions: z.string().trim().max(12000).optional(),
 });
 
-type AssistantChatInput = z.infer<typeof assistantChatInput>;
-
-export async function runAssistantChat(input: unknown) {
-  const data = assistantChatInput.parse(input);
-  const {userId} = await verifyAuthToken(data.token);
+export async function runAssistantChat(request: Request) {
+  const data = assistantChatInput.parse(await request.json());
+  const {userId} = await verifyAuthToken(readBearerToken(request));
   await assertCanUseAssistant(userId);
 
-  const modelId = process.env.OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL;
+  const modelId =
+    data.model || process.env.OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL;
   const openrouter = createOpenAICompatible({
     apiKey: requireEnv('OPENROUTER_API_KEY'),
     name: 'openrouter',
@@ -43,50 +38,40 @@ export async function runAssistantChat(input: unknown) {
     },
   });
 
-  const result = await generateText({
+  const result = streamText({
     model: openrouter.chatModel(modelId),
-    system: createSystemPrompt(data.context),
-    messages: data.messages.map((message) => ({
-      role: message.role,
-      content: message.content,
-    })),
+    system: data.instructions || createSystemPrompt(),
+    messages: await convertToModelMessages(data.messages),
     temperature: 0.2,
-  });
-
-  await recordAiUsage({
-    userId,
-    model: modelId,
-    usage: result.usage,
-  });
-
-  return {
-    message: {
-      role: 'assistant' as const,
-      content: result.text,
+    onFinish: async ({usage}) => {
+      await recordAiUsage({
+        userId,
+        model: modelId,
+        usage,
+      });
     },
-    usage: serializeUsage(result.usage),
-  };
+  });
+
+  return result.toUIMessageStreamResponse();
 }
 
-function createSystemPrompt(context: AssistantChatInput['context']) {
-  const worksheetLines = context.worksheetTitles.length
-    ? context.worksheetTitles.map((title) => `- ${title}`).join('\n')
-    : '- none';
-  const tableLines = context.tables.length
-    ? context.tables.map((table) => `- ${table}`).join('\n')
-    : '- none';
-
+function createSystemPrompt() {
   return `You are the SQLRooms assistant for a browser-based data analysis workspace.
 Help the user reason about datasets, write SQL, plan worksheets, and design charts or dashboards.
-Be concise, practical, and explicit about assumptions. Do not claim to inspect data unless the user has provided it in the chat.
+Be concise, practical, and explicit about assumptions. Do not claim to inspect data unless the user has provided it in the chat.`;
+}
 
-Workspace: ${context.workspaceTitle || 'Untitled Workspace'}
-
-Worksheets:
-${worksheetLines}
-
-Available tables:
-${tableLines}`;
+function readBearerToken(request: Request) {
+  const authorization = request.headers.get('authorization') ?? '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match?.[1]) {
+    throw new AssistantError(
+      'Sign in to use the assistant.',
+      401,
+      'ASSISTANT_AUTH_REQUIRED',
+    );
+  }
+  return match[1];
 }
 
 async function assertCanUseAssistant(userId: string) {
@@ -138,16 +123,6 @@ async function recordAiUsage({
     reasoningTokens: usage?.outputTokenDetails?.reasoningTokens,
     cachedInputTokens: usage?.inputTokenDetails?.cacheReadTokens,
   });
-}
-
-function serializeUsage(usage: LanguageModelUsage | undefined) {
-  return {
-    inputTokens: usage?.inputTokens ?? 0,
-    outputTokens: usage?.outputTokens ?? 0,
-    totalTokens: usage?.totalTokens ?? 0,
-    reasoningTokens: usage?.outputTokenDetails?.reasoningTokens ?? 0,
-    cachedInputTokens: usage?.inputTokenDetails?.cacheReadTokens ?? 0,
-  };
 }
 
 export class AssistantError extends Error {

@@ -31,6 +31,9 @@ export const workspaces = pgTable(
     id: uuid().defaultRandom().primaryKey(),
     ownerId: text('owner_id').notNull(),
     name: text().notNull(),
+    aiConfig: jsonb('ai_config')
+      .notNull()
+      .default({sessions: [], openSessionTabs: []}),
     layout: jsonb()
       .notNull()
       .default({

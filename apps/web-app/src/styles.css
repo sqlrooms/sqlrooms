@@ -577,16 +577,17 @@ input {
   display: flex;
   flex-direction: column;
   background: hsl(var(--background) / 92%);
+  overflow: hidden;
 }
 
 .assistant-header {
   display: flex;
-  height: 38px;
+  min-height: 42px;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   border-bottom: 1px solid var(--shell-border);
-  padding: 0 10px;
+  padding: 0 8px 0 10px;
 }
 
 .assistant-title {
@@ -597,65 +598,99 @@ input {
   font-weight: 600;
 }
 
-.assistant-thread {
+.assistant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.assistant-session-list {
   display: flex;
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 10px;
-  overflow: auto;
-  padding: 10px;
-}
-
-.assistant-message {
-  width: fit-content;
-  max-width: 100%;
-  border: 1px solid var(--shell-border);
-  border-radius: 7px;
-  background: var(--shell-control-background);
-  color: var(--shell-subtle);
-  font-size: 13px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  padding: 10px 11px;
-}
-
-.assistant-message.user {
-  align-self: flex-end;
-  background: hsl(198 32% 34% / 78%);
-  color: var(--shell-text);
-}
-
-.assistant-status {
-  align-self: stretch;
-  color: var(--shell-subtle);
-  font-size: 12px;
-  padding: 0 2px;
-}
-
-.assistant-composer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
   gap: 8px;
-  border-top: 1px solid var(--shell-border);
+  overflow: hidden;
   padding: 10px;
 }
 
-.assistant-composer textarea {
-  min-height: 70px;
-  max-height: 150px;
-  resize: vertical;
-  border: 1px solid var(--shell-border);
+.assistant-new-session {
+  width: 100%;
+  min-height: 38px;
+  justify-content: flex-start;
+  gap: 8px;
   border-radius: 7px;
-  background: var(--shell-input-background);
-  color: var(--shell-text);
-  font-size: 13px;
-  line-height: 1.35;
-  padding: 9px 10px;
 }
 
-.assistant-composer button {
-  align-self: end;
+.assistant-session-items {
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 0;
+}
+
+.assistant-session-item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shell-text);
+  cursor: pointer;
+  padding: 8px 4px;
+  text-align: left;
+}
+
+.assistant-session-item:hover {
+  background: var(--shell-button-hover);
+}
+
+.assistant-session-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-session-age {
+  color: var(--shell-subtle);
+  white-space: nowrap;
+}
+
+.assistant-empty-state {
+  color: var(--shell-subtle);
+  font-size: 13px;
+  padding: 14px 4px;
+}
+
+.assistant-chat {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.assistant-chat-body {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.assistant-chat-composer {
+  flex: 0 0 auto;
+}
+
+.assistant-chat [data-radix-scroll-area-viewport] {
+  max-height: 100%;
+}
+
+.assistant-chat select,
+.assistant-chat textarea {
+  color: var(--shell-text);
 }
 
 .sign-in-dialog {

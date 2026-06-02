@@ -16,10 +16,12 @@ const workspaceInput = authInput.extend({
 
 const blockDocumentContentInput = z.custom<JsonObject>(isJsonObject);
 const workspaceLayoutInput = z.custom<JsonObject>(isJsonObject);
+const workspaceAiConfigInput = z.custom<JsonObject>(isJsonObject);
 
 const serializeWorkspace = (workspace: typeof workspaces.$inferSelect) => ({
   id: workspace.id,
   name: workspace.name,
+  aiConfig: workspace.aiConfig as JsonObject,
   layout: workspace.layout as JsonObject,
   createdAt: workspace.createdAt.getTime(),
   updatedAt: workspace.updatedAt.getTime(),
@@ -86,6 +88,7 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
     authInput.extend({
       name: z.string().trim().min(1).max(120),
       layout: workspaceLayoutInput.optional(),
+      aiConfig: workspaceAiConfigInput.optional(),
       worksheetTitle: z.string().trim().min(1).max(120).default('Worksheet'),
       worksheetContent: blockDocumentContentInput.default({
         type: 'doc',
@@ -103,6 +106,7 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
         ownerId: userId,
         name: data.name,
         layout: data.layout,
+        aiConfig: data.aiConfig,
         lastOpenedAt: now,
       })
       .returning();
@@ -144,6 +148,25 @@ export const saveWorkspaceLayout = createServerFn({method: 'POST'})
     const rows = await db
       .update(workspaces)
       .set({layout: data.layout, updatedAt: new Date()})
+      .where(eq(workspaces.id, data.workspaceId))
+      .returning();
+
+    return rows[0] ? serializeWorkspace(rows[0]) : null;
+  });
+
+export const saveWorkspaceAiConfig = createServerFn({method: 'POST'})
+  .inputValidator(
+    workspaceInput.extend({
+      aiConfig: workspaceAiConfigInput,
+    }),
+  )
+  .handler(async ({data}) => {
+    const {userId} = await verifyAuthToken(data.token);
+    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
+
+    const rows = await db
+      .update(workspaces)
+      .set({aiConfig: data.aiConfig, updatedAt: new Date()})
       .where(eq(workspaces.id, data.workspaceId))
       .returning();
 
