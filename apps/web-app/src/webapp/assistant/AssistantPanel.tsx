@@ -10,6 +10,8 @@ type AssistantMessage = {
 type AssistantPanelProps = {
   token: string | null;
   workspaceTitle: string;
+  worksheetId?: string;
+  worksheetTitle?: string;
   worksheetTitles: string[];
   tableNames: string[];
   onSignInRequired: () => void;
@@ -18,6 +20,8 @@ type AssistantPanelProps = {
 export function AssistantPanel({
   token,
   workspaceTitle,
+  worksheetId,
+  worksheetTitle,
   worksheetTitles,
   tableNames,
   onSignInRequired,
@@ -29,10 +33,12 @@ export function AssistantPanel({
   const context = useMemo(
     () => ({
       workspaceTitle,
+      worksheetId,
+      worksheetTitle,
       worksheetTitles,
       tables: tableNames,
     }),
-    [tableNames, workspaceTitle, worksheetTitles],
+    [tableNames, workspaceTitle, worksheetId, worksheetTitle, worksheetTitles],
   );
 
   const handleSend = async () => {
@@ -101,7 +107,9 @@ export function AssistantPanel({
       </div>
       <div className="assistant-thread">
         {messages.length === 0 ? (
-          <div className="assistant-message">Ask about this workspace.</div>
+          <div className="assistant-message">
+            Ask about {worksheetTitle ?? 'this worksheet'}.
+          </div>
         ) : (
           messages.map((message, index) => (
             <div
