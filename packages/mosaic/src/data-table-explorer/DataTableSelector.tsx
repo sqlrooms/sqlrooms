@@ -13,7 +13,7 @@ import {
   PopoverTrigger,
 } from '@sqlrooms/ui';
 import {Check, ChevronsUpDown, TableIcon} from 'lucide-react';
-import {useMemo, useState} from 'react';
+import {FC, useMemo, useState} from 'react';
 
 /**
  * Props for table selector components. `value` and `onChange` use the dotted
@@ -71,11 +71,11 @@ function groupTables(tables: DataTable[]): GroupedTables {
   })).sort((left, right) => left.group.localeCompare(right.group));
 }
 
-function DataTableSelectorCommand({
+const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
   onChange,
   tables,
   value,
-}: DataTableSelectorProps) {
+}) => {
   const groupedTables = useMemo(() => groupTables(tables), [tables]);
 
   return (
@@ -118,20 +118,22 @@ function DataTableSelectorCommand({
       </CommandList>
     </Command>
   );
-}
+};
 
 /**
  * Searchable table selector grouped by database and schema.
  */
-export function DataTableSelector({
+export const DataTableSelector: FC<DataTableSelectorProps> = ({
   className,
   disabled,
   onChange,
   tables,
   value,
-}: DataTableSelectorProps) {
+}) => {
   const [open, setOpen] = useState(false);
-  const selectedTable = tables.find((table) => getTableReference(table) === value);
+  const selectedTable = tables.find(
+    (table) => getTableReference(table) === value,
+  );
   const selectedLabel = selectedTable?.table.table ?? value;
 
   return (
@@ -143,7 +145,10 @@ export function DataTableSelector({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn('h-8 w-48 max-w-full justify-between text-xs', className)}
+          className={cn(
+            'h-8 w-48 max-w-full justify-between text-xs',
+            className,
+          )}
         >
           <span className="flex min-w-0 items-center gap-2">
             <TableIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
@@ -166,12 +171,14 @@ export function DataTableSelector({
       </PopoverContent>
     </Popover>
   );
-}
+};
 
 /**
  * Presentational empty-state wrapper that renders the same searchable selector.
  */
-export function DataTableSelectorEmptyState(props: DataTableSelectorProps) {
+export const DataTableSelectorEmptyState: FC<DataTableSelectorProps> = (
+  props,
+) => {
   return (
     <div className="flex h-full items-center justify-center p-4">
       <div className="bg-popover text-popover-foreground w-full max-w-md rounded-md border shadow-sm">
@@ -179,7 +186,7 @@ export function DataTableSelectorEmptyState(props: DataTableSelectorProps) {
       </div>
     </div>
   );
-}
+};
 
 /**
  * Returns the dotted table reference used by DataTableSelector values.

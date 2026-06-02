@@ -66,21 +66,20 @@ export const DataTableBlockRenderer: FC<
     },
     [getSelection, onTitleChange, selection, selectionName],
   );
-  const tableSelector = (
-    <DataTableSelector
-      className="max-w-full"
-      disabled={readOnly || !onTitleChange}
-      onChange={handleTableNameChange}
-      tables={selectableTables}
-      value={tableName}
-    />
-  );
+
   const header = (
     <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
-      {tableSelector}
+      <DataTableSelector
+        className="max-w-full"
+        disabled={readOnly || !onTitleChange}
+        onChange={handleTableNameChange}
+        tables={selectableTables}
+        value={tableName}
+      />
       {caption ? (
         <div className="min-w-0 truncate text-sm font-medium">{caption}</div>
       ) : null}
+      <DataTableExplorer.ResetButton className="ml-auto" />
     </div>
   );
 

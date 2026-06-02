@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import type {FC, ReactNode} from 'react';
 import {Button, cn} from '@sqlrooms/ui';
 import {ChevronLeftIcon, ChevronRightIcon} from 'lucide-react';
 import type {UseDataTableExplorerReturn} from './types';
@@ -8,9 +8,7 @@ export type DataTableExplorerStatusBarProps = {
   explorer: Pick<
     UseDataTableExplorerReturn,
     | 'filteredRowCount'
-    | 'hasFilters'
     | 'pagination'
-    | 'reset'
     | 'setPagination'
     | 'sql'
     | 'totalRowCount'
@@ -18,11 +16,9 @@ export type DataTableExplorerStatusBarProps = {
   renderActions?: (sql: string) => ReactNode;
 };
 
-export function DataTableExplorerStatusBar({
-  className,
-  explorer,
-  renderActions,
-}: DataTableExplorerStatusBarProps) {
+export const DataTableExplorerStatusBar: FC<
+  DataTableExplorerStatusBarProps
+> = ({className, explorer, renderActions}) => {
   const actions = renderActions?.(explorer.sql);
   const totalPages =
     explorer.filteredRowCount !== undefined
@@ -84,25 +80,14 @@ export function DataTableExplorerStatusBar({
             <ChevronRightIcon size={14} />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto px-0"
-            disabled={!explorer.hasFilters}
-            onClick={explorer.reset}
-          >
-            Reset
-          </Button>
-          <span className="text-muted-foreground text-xs">
-            {explorer.filteredRowCount?.toLocaleString() ?? '0'}
-            {explorer.totalRowCount !== undefined
-              ? ` of ${explorer.totalRowCount.toLocaleString()} rows`
-              : ' rows'}
-          </span>
-        </div>
+        <span className="text-muted-foreground text-xs">
+          {explorer.filteredRowCount?.toLocaleString() ?? '0'}
+          {explorer.totalRowCount !== undefined
+            ? ` of ${explorer.totalRowCount.toLocaleString()} rows`
+            : ' rows'}
+        </span>
       </div>
       {actions ? <div>{actions}</div> : null}
     </div>
   );
-}
+};

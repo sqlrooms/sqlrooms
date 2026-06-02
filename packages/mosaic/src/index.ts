@@ -127,6 +127,7 @@ export {
 export {
   DataTableExplorer,
   type DataTableExplorerCompoundHeaderProps,
+  type DataTableExplorerCompoundResetButtonProps,
   type DataTableExplorerCompoundRowsProps,
   type DataTableExplorerCompoundStatusBarProps,
   type DataTableExplorerCompoundTableProps,
