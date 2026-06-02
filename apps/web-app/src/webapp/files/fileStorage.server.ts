@@ -193,6 +193,62 @@ export async function getFileObjectForRead({
   return {file, object, range: parsedRange};
 }
 
+export async function deleteFile({
+  userId,
+  workspaceId,
+  fileId,
+}: {
+  userId: string;
+  workspaceId: string;
+  fileId: string;
+}) {
+  await assertWorkspaceMember(userId, workspaceId);
+
+  const rows = await db
+    .select()
+    .from(files)
+    .where(
+      and(
+        eq(files.id, fileId),
+        eq(files.workspaceId, workspaceId),
+        eq(files.ownerId, userId),
+      ),
+    )
+    .limit(1);
+  const file = rows[0];
+  if (!file) {
+    throw new FileStorageError('File not found.', 404, 'NOT_FOUND');
+  }
+
+  await getUserFilesBucket().delete(file.objectKey);
+  await db
+    .delete(files)
+    .where(
+      and(
+        eq(files.id, fileId),
+        eq(files.workspaceId, workspaceId),
+        eq(files.ownerId, userId),
+      ),
+    );
+  await db
+    .insert(userStorageUsage)
+    .values({
+      userId,
+      usedBytes: 0,
+      limitBytes: USER_STORAGE_LIMIT_BYTES,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: userStorageUsage.userId,
+      set: {
+        usedBytes: sql`greatest(${userStorageUsage.usedBytes} - ${file.sizeBytes}, 0)`,
+        updatedAt: new Date(),
+      },
+    });
+
+  return file;
+}
+
 async function assertWorkspaceMember(userId: string, workspaceId: string) {
   const rows = await db
     .select({role: workspaceMembers.role})

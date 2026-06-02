@@ -589,6 +589,23 @@ input {
   line-height: 1.45;
 }
 
+.file-conflict-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: 520px;
+  gap: 20px;
+  border-color: var(--shell-border-strong);
+  border-radius: 10px;
+  background: hsl(var(--background));
+  color: var(--shell-text);
+  padding: 24px;
+}
+
+.file-conflict-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .google-sign-in-button {
   height: 56px;
   border-radius: 8px;
