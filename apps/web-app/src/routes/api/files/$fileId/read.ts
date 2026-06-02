@@ -23,16 +23,24 @@ async function handleFileReadRequest(fileId: string, request: Request) {
       import('#/webapp/files/fileStorage.server'),
     ]);
     const {userId} = await verifyAuthToken(token);
-    const {file, object} = await fileStorage.getFileObjectForRead({
+    const {file, object, range} = await fileStorage.getFileObjectForRead({
       userId,
       workspaceId,
       fileId,
+      rangeHeader: request.headers.get('range'),
     });
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set('content-type', file.mimeType);
     headers.set('cache-control', 'private, max-age=300');
     headers.set('etag', object.httpEtag ?? '');
+    if (range) {
+      const length = range.range.length ?? file.sizeBytes - range.range.offset;
+      headers.set('content-length', String(length));
+      headers.set('content-range', range.contentRange);
+      headers.set('accept-ranges', 'bytes');
+      return new Response(object.body, {headers, status: 206});
+    }
     headers.set('content-length', String(object.size));
     return new Response(object.body, {headers});
   } catch (error) {

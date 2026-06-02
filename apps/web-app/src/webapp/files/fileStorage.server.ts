@@ -7,6 +7,7 @@ import {
   USER_STORAGE_LIMIT_BYTES,
   createR2ObjectKey,
 } from './fileLimits';
+import {parseByteRangeHeader} from './fileReadRange';
 
 const PARQUET_MIME_TYPE = 'application/vnd.apache.parquet';
 const PRESIGNED_UPLOAD_EXPIRES_SECONDS = 10 * 60;
@@ -157,10 +158,12 @@ export async function getFileObjectForRead({
   userId,
   workspaceId,
   fileId,
+  rangeHeader,
 }: {
   userId: string;
   workspaceId: string;
   fileId: string;
+  rangeHeader?: string | null;
 }) {
   await assertWorkspaceMember(userId, workspaceId);
 
@@ -174,12 +177,20 @@ export async function getFileObjectForRead({
     throw new FileStorageError('File not found.', 404, 'NOT_FOUND');
   }
 
-  const object = await getUserFilesBucket().get(file.objectKey);
+  const parsedRange = parseByteRangeHeader(rangeHeader ?? null, file.sizeBytes);
+  if (rangeHeader && !parsedRange) {
+    throw new FileStorageError('Invalid file range.', 416, 'INVALID_RANGE');
+  }
+
+  const object = await getUserFilesBucket().get(
+    file.objectKey,
+    parsedRange ? {range: parsedRange.range} : undefined,
+  );
   if (!object) {
     throw new FileStorageError('Stored file not found.', 404, 'NOT_FOUND');
   }
 
-  return {file, object};
+  return {file, object, range: parsedRange};
 }
 
 async function assertWorkspaceMember(userId: string, workspaceId: string) {
