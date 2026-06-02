@@ -8,81 +8,111 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkspacesIndexRouteImport } from './routes/workspaces/index'
-import { Route as WorkspacesWorkspaceIdIndexRouteImport } from './routes/workspaces/$workspaceId/index'
+import {Route as rootRouteImport} from './routes/__root';
+import {Route as IndexRouteImport} from './routes/index';
+import {Route as WorkspacesIndexRouteImport} from './routes/workspaces/index';
+import {Route as WorkspacesWorkspaceIdIndexRouteImport} from './routes/workspaces/$workspaceId/index';
+import {Route as ApiFilesFileIdReadRouteImport} from './routes/api/files/$fileId/read';
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WorkspacesIndexRoute = WorkspacesIndexRouteImport.update({
   id: '/workspaces/',
   path: '/workspaces/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WorkspacesWorkspaceIdIndexRoute =
   WorkspacesWorkspaceIdIndexRouteImport.update({
     id: '/workspaces/$workspaceId/',
     path: '/workspaces/$workspaceId/',
     getParentRoute: () => rootRouteImport,
-  } as any)
+  } as any);
+const ApiFilesFileIdReadRoute = ApiFilesFileIdReadRouteImport.update({
+  id: '/api/files/$fileId/read',
+  path: '/api/files/$fileId/read',
+  getParentRoute: () => rootRouteImport,
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/workspaces/': typeof WorkspacesIndexRoute
-  '/workspaces/$workspaceId/': typeof WorkspacesWorkspaceIdIndexRoute
+  '/': typeof IndexRoute;
+  '/workspaces/': typeof WorkspacesIndexRoute;
+  '/workspaces/$workspaceId/': typeof WorkspacesWorkspaceIdIndexRoute;
+  '/api/files/$fileId/read': typeof ApiFilesFileIdReadRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/workspaces': typeof WorkspacesIndexRoute
-  '/workspaces/$workspaceId': typeof WorkspacesWorkspaceIdIndexRoute
+  '/': typeof IndexRoute;
+  '/workspaces': typeof WorkspacesIndexRoute;
+  '/workspaces/$workspaceId': typeof WorkspacesWorkspaceIdIndexRoute;
+  '/api/files/$fileId/read': typeof ApiFilesFileIdReadRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/workspaces/': typeof WorkspacesIndexRoute
-  '/workspaces/$workspaceId/': typeof WorkspacesWorkspaceIdIndexRoute
+  __root__: typeof rootRouteImport;
+  '/': typeof IndexRoute;
+  '/workspaces/': typeof WorkspacesIndexRoute;
+  '/workspaces/$workspaceId/': typeof WorkspacesWorkspaceIdIndexRoute;
+  '/api/files/$fileId/read': typeof ApiFilesFileIdReadRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/workspaces/' | '/workspaces/$workspaceId/'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/workspaces' | '/workspaces/$workspaceId'
-  id: '__root__' | '/' | '/workspaces/' | '/workspaces/$workspaceId/'
-  fileRoutesById: FileRoutesById
+  fileRoutesByFullPath: FileRoutesByFullPath;
+  fullPaths:
+    | '/'
+    | '/workspaces/'
+    | '/workspaces/$workspaceId/'
+    | '/api/files/$fileId/read';
+  fileRoutesByTo: FileRoutesByTo;
+  to:
+    | '/'
+    | '/workspaces'
+    | '/workspaces/$workspaceId'
+    | '/api/files/$fileId/read';
+  id:
+    | '__root__'
+    | '/'
+    | '/workspaces/'
+    | '/workspaces/$workspaceId/'
+    | '/api/files/$fileId/read';
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  WorkspacesIndexRoute: typeof WorkspacesIndexRoute
-  WorkspacesWorkspaceIdIndexRoute: typeof WorkspacesWorkspaceIdIndexRoute
+  IndexRoute: typeof IndexRoute;
+  WorkspacesIndexRoute: typeof WorkspacesIndexRoute;
+  WorkspacesWorkspaceIdIndexRoute: typeof WorkspacesWorkspaceIdIndexRoute;
+  ApiFilesFileIdReadRoute: typeof ApiFilesFileIdReadRoute;
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/';
+      path: '/';
+      fullPath: '/';
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workspaces/': {
-      id: '/workspaces/'
-      path: '/workspaces'
-      fullPath: '/workspaces/'
-      preLoaderRoute: typeof WorkspacesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/workspaces/';
+      path: '/workspaces';
+      fullPath: '/workspaces/';
+      preLoaderRoute: typeof WorkspacesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workspaces/$workspaceId/': {
-      id: '/workspaces/$workspaceId/'
-      path: '/workspaces/$workspaceId'
-      fullPath: '/workspaces/$workspaceId/'
-      preLoaderRoute: typeof WorkspacesWorkspaceIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/workspaces/$workspaceId/';
+      path: '/workspaces/$workspaceId';
+      fullPath: '/workspaces/$workspaceId/';
+      preLoaderRoute: typeof WorkspacesWorkspaceIdIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/api/files/$fileId/read': {
+      id: '/api/files/$fileId/read';
+      path: '/api/files/$fileId/read';
+      fullPath: '/api/files/$fileId/read';
+      preLoaderRoute: typeof ApiFilesFileIdReadRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -90,16 +120,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkspacesIndexRoute: WorkspacesIndexRoute,
   WorkspacesWorkspaceIdIndexRoute: WorkspacesWorkspaceIdIndexRoute,
-}
+  ApiFilesFileIdReadRoute: ApiFilesFileIdReadRoute,
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type {getRouter} from './router.tsx';
+import type {createStart} from '@tanstack/react-start';
 declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
   }
 }

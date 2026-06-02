@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   createWorkspaceDuckDbRuntime,
   type WorkspaceDuckDbRuntime,
@@ -58,13 +58,13 @@ export function useWorkspaceDuckDbRuntime(workspaceId: string) {
     };
   }, [workspaceKey]);
 
-  const refreshTables = async () => {
+  const refreshTables = useCallback(async () => {
     if (!runtime) {
       setTableNames([]);
       return;
     }
     setTableNames(await runtime.listTables());
-  };
+  }, [runtime]);
 
   return {
     runtime,
