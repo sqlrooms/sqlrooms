@@ -327,13 +327,13 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     }
   };
 
-  const handleAddFile = async () => {
-    if (props.mode === 'unsaved') {
-      await handleSaveWorkspace();
+  const handleAddFile = () => {
+    if (!duckDbRuntime.runtime) {
+      setFileIngestionStatus('Preparing runtime');
       return;
     }
 
-    if (!token) {
+    if (props.mode === 'saved' && !token) {
       setIsSignInToSaveOpen(true);
       return;
     }
