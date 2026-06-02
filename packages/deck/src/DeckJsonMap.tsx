@@ -247,20 +247,15 @@ export function DeckJsonMap({
     layers: mergedLayers,
   };
 
-  // MapboxOverlay ignores viewState/initialViewState/controller — separate them
-  // so they don't cause unnecessary setProps on the overlay.
+  // MapboxOverlay ignores viewState/initialViewState/controller — strip them
+  // so they don't cause unnecessary setProps calls on the overlay.
   const {
     initialViewState,
-    viewState,
+    viewState: _viewState,
     controller: _controller,
-    onViewStateChange,
+    onViewStateChange: _onViewStateChange,
     ...overlayDeckProps
-  } = mergedDeckProps as Record<string, unknown> & {
-    initialViewState?: Record<string, unknown>;
-    viewState?: Record<string, unknown>;
-    controller?: unknown;
-    onViewStateChange?: (info: {viewState: unknown}) => void;
-  };
+  } = mergedDeckProps as Record<string, unknown>;
 
   const {resolvedTheme} = useTheme();
 
@@ -293,11 +288,9 @@ export function DeckJsonMap({
 
       <Map
         {...(mergedMapProps as object)}
-        {...(viewState
-          ? {...(viewState as object), onMove: onViewStateChange}
-          : initialViewState
-            ? {initialViewState: initialViewState as object}
-            : {})}
+        {...(initialViewState
+          ? {initialViewState: initialViewState as object}
+          : {})}
         style={{width: '100%', height: '100%', ...mapProps?.style}}
       >
         <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
