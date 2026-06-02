@@ -4,7 +4,7 @@ import {
 } from '@sqlrooms/artifacts';
 import {FileSpreadsheet} from 'lucide-react';
 import type {WorkspaceRoomState} from './WorkspaceRoomStore';
-import {WorksheetArtifactPanel} from '../worksheet/worksheetRoomStore';
+import {WorksheetArtifactPanel} from '../worksheet/WorksheetArtifact';
 
 export const WORKSPACE_ARTIFACT_TYPES = defineArtifactTypes({
   worksheet: {
