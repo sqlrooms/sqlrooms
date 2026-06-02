@@ -179,6 +179,21 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       ),
     [duckDbRuntime.tableNames, preparedLocalFiles, workspaceFilesQuery.data],
   );
+  const fileBackedTableNames = useMemo(
+    () =>
+      new Set([
+        ...(workspaceFilesQuery.data ?? []).map((file) => file.tableName),
+        ...preparedLocalFiles.map((file) => file.tableName),
+      ]),
+    [preparedLocalFiles, workspaceFilesQuery.data],
+  );
+  const runtimeOnlyTableNames = useMemo(
+    () =>
+      duckDbRuntime.tableNames.filter(
+        (tableName) => !fileBackedTableNames.has(tableName),
+      ),
+    [duckDbRuntime.tableNames, fileBackedTableNames],
+  );
   const worksheetTitles = useMemo(
     () => worksheets.map((worksheet) => worksheet.title),
     [worksheets],
@@ -500,7 +515,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                         </div>
                       </div>
                     ))}
-                    {duckDbRuntime.tableNames.map((tableName) => (
+                    {runtimeOnlyTableNames.map((tableName) => (
                       <div
                         className="schema-table"
                         key={`runtime:${tableName}`}
@@ -526,7 +541,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                       </div>
                     ))}
                     {!workspaceFilesQuery.data?.length &&
-                    duckDbRuntime.tableNames.length === 0 &&
+                    runtimeOnlyTableNames.length === 0 &&
                     preparedLocalFiles.length === 0 ? (
                       <div className="schema-empty">
                         {duckDbRuntime.status === 'initializing'
