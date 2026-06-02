@@ -274,12 +274,78 @@ export type KeplerSliceState = {
   };
 };
 
-// Auto save will be triggered in middleware on every kepler action
-// skip these actions to avoid unnecessary save
-const SKIP_AUTO_SAVE_ACTIONS: string[] = [
-  KeplerActionTypes.LAYER_HOVER,
-  KeplerActionTypes.UPDATE_MAP,
-  KeplerActionTypes.MOUSE_MOVE,
+// Auto-save runs in middleware. Use an allowlist of actions that mutate
+// persisted config (visState/mapStyle/uiState.mapControls). Anything else —
+// transient UI events (hover, mousemove, viewport pan), mount-time
+// initialization (REGISTER_ENTRY, REQUEST_MAP_STYLES, LOAD_MAP_STYLES,
+// SET_EXPORT_IMAGE_*), and async task callbacks — is ignored. This avoids
+// re-serializing kepler's redux state during half-hydrated windows (e.g.
+// right after setConfig, while react-palm tasks are still materializing
+// layers) and accidentally wiping saved layers/filters.
+const AUTO_SAVE_ACTIONS: string[] = [
+  // Data
+  KeplerActionTypes.ADD_DATA_TO_MAP,
+  KeplerActionTypes.REPLACE_DATA_IN_MAP,
+  KeplerActionTypes.REMOVE_DATASET,
+  KeplerActionTypes.RENAME_DATASET,
+  KeplerActionTypes.UPDATE_DATASET_PROPS,
+  KeplerActionTypes.UPDATE_TABLE_COLOR,
+  // Layers
+  KeplerActionTypes.ADD_LAYER,
+  KeplerActionTypes.REMOVE_LAYER,
+  KeplerActionTypes.DUPLICATE_LAYER,
+  KeplerActionTypes.REORDER_LAYER,
+  KeplerActionTypes.LAYER_CONFIG_CHANGE,
+  KeplerActionTypes.LAYER_TYPE_CHANGE,
+  KeplerActionTypes.LAYER_VIS_CONFIG_CHANGE,
+  KeplerActionTypes.LAYER_TOGGLE_VISIBILITY,
+  KeplerActionTypes.LAYER_TEXT_LABEL_CHANGE,
+  KeplerActionTypes.LAYER_VISUAL_CHANNEL_CHANGE,
+  KeplerActionTypes.LAYER_COLOR_UI_CHANGE,
+  KeplerActionTypes.APPLY_LAYER_CONFIG,
+  KeplerActionTypes.TOGGLE_LAYER_FOR_MAP,
+  KeplerActionTypes.UPDATE_LAYER_BLENDING,
+  KeplerActionTypes.UPDATE_OVERLAY_BLENDING,
+  // Filters
+  KeplerActionTypes.ADD_FILTER,
+  KeplerActionTypes.REMOVE_FILTER,
+  KeplerActionTypes.SET_FILTER,
+  KeplerActionTypes.SET_FILTER_VIEW,
+  KeplerActionTypes.SET_FILTER_PLOT,
+  KeplerActionTypes.CREATE_OR_UPDATE_FILTER,
+  KeplerActionTypes.APPLY_FILTER_CONFIG,
+  KeplerActionTypes.SET_FILTER_ANIMATION_TIME,
+  KeplerActionTypes.SET_FILTER_ANIMATION_WINDOW,
+  KeplerActionTypes.TOGGLE_FILTER_ANIMATION,
+  KeplerActionTypes.UPDATE_FILTER_ANIMATION_SPEED,
+  // Interaction / tooltip
+  KeplerActionTypes.INTERACTION_CONFIG_CHANGE,
+  // Map style
+  KeplerActionTypes.MAP_STYLE_CHANGE,
+  KeplerActionTypes.MAP_CONFIG_CHANGE,
+  KeplerActionTypes.SET_BACKGROUND_COLOR,
+  KeplerActionTypes.ADD_CUSTOM_MAP_STYLE,
+  KeplerActionTypes.EDIT_CUSTOM_MAP_STYLE,
+  KeplerActionTypes.REMOVE_CUSTOM_MAP_STYLE,
+  // Map state (viewport persisted via mapState)
+  KeplerActionTypes.FIT_BOUNDS,
+  KeplerActionTypes.TOGGLE_PERSPECTIVE,
+  KeplerActionTypes.TOGGLE_SPLIT_MAP,
+  KeplerActionTypes.TOGGLE_SPLIT_MAP_VIEWPORT,
+  // Effects
+  KeplerActionTypes.ADD_EFFECT,
+  KeplerActionTypes.REMOVE_EFFECT,
+  KeplerActionTypes.REORDER_EFFECT,
+  KeplerActionTypes.UPDATE_EFFECT,
+  // Animation
+  KeplerActionTypes.SET_LAYER_ANIMATION_TIME,
+  KeplerActionTypes.UPDATE_LAYER_ANIMATION_SPEED,
+  KeplerActionTypes.SET_ANIMATION_CONFIG,
+  KeplerActionTypes.TOGGLE_LAYER_ANIMATION,
+  // Editor / features
+  KeplerActionTypes.SET_FEATURES,
+  KeplerActionTypes.DELETE_FEATURE,
+  KeplerActionTypes.SET_POLYGON_FILTER_LAYER,
 ];
 
 export function createKeplerSlice({
@@ -303,6 +369,14 @@ export function createKeplerSlice({
   // active run to loop once more with a fresh snapshot after it finishes, so
   // late mutations are never silently dropped.
   let pendingKeplerSync = false;
+  // While restoring saved configs (setConfig / initialize -> updateMapConfigs),
+  // addConfigToMap dispatches ADD_DATA_TO_MAP with the saved config. That
+  // action is in AUTO_SAVE_ACTIONS (we DO want real ADD_DATA_TO_MAP saves),
+  // but during restore the dispatch fires before kepler's react-palm tasks
+  // materialize layers — serializing then would write back an empty visState
+  // and wipe each tab's saved layers. Suppress middleware writes during the
+  // restore window.
+  let isRestoringConfig = false;
   const updateMapLastOpenedAt = (
     maps: KeplerSliceConfig['maps'],
     mapId: string,
@@ -397,8 +471,25 @@ export function createKeplerSlice({
           );
           updateMapReduxStates();
           updateForwardDispatch();
-          get().kepler.syncKeplerDatasets();
-          updateMapConfigs();
+          // Datasets must be loaded BEFORE applying saved configs: kepler's
+          // addDataToMap reducer drops layers referencing dataIds not yet in
+          // visState. Hold isRestoringConfig across both sync and config
+          // apply so middleware doesn't overwrite each map's saved config
+          // with the half-hydrated redux state.
+          isRestoringConfig = true;
+          void get()
+            .kepler.syncKeplerDatasets()
+            .then(() => {
+              updateMapConfigs();
+            })
+            .finally(() => {
+              // Release on a microtask so any same-tick dispatches that
+              // followed updateMapConfigs (e.g. taskMiddleware-spawned
+              // followups) finish under the flag.
+              queueMicrotask(() => {
+                isRestoringConfig = false;
+              });
+            });
         },
 
         async initialize() {
@@ -437,7 +528,14 @@ export function createKeplerSlice({
           });
           updateForwardDispatch();
           await get().kepler.syncKeplerDatasets();
-          updateMapConfigs();
+          isRestoringConfig = true;
+          try {
+            updateMapConfigs();
+          } finally {
+            queueMicrotask(() => {
+              isRestoringConfig = false;
+            });
+          }
           for (const mapId of Object.keys(get().kepler.map)) {
             requestMapStyle(mapId);
           }
@@ -872,7 +970,11 @@ export function createKeplerSlice({
           const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
           if (!mapId) throw new Error('Map ID not found in action payload');
           const result = next(action);
-          if (!SKIP_AUTO_SAVE_ACTIONS.includes(action.type) && mapId) {
+          if (
+            AUTO_SAVE_ACTIONS.includes(action.type) &&
+            mapId &&
+            !isRestoringConfig
+          ) {
             // save kepler config to store
             set((state) =>
               produce(state, (draft) => {
