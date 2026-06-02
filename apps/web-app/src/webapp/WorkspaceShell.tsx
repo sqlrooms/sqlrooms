@@ -51,6 +51,12 @@ import type React from 'react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
+import {
+  loadSavedWorkspaceFile,
+  prepareWorkspaceFile,
+  uploadPreparedWorkspaceFile,
+  type PreparedWorkspaceFile,
+} from './files/fileIngestion';
 import {listWorkspaceFiles} from './workspace/files';
 import {
   createCloudWorkspace,
@@ -77,12 +83,6 @@ type LocalWorksheet = {
   content: JsonObject;
 };
 
-type LocalSelectedFile = {
-  id: string;
-  name: string;
-  size: number;
-};
-
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
@@ -94,9 +94,12 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     useState('Untitled Workspace');
   const [savedWorkspaceNameDraft, setSavedWorkspaceNameDraft] = useState('');
   const [isSignInToSaveOpen, setIsSignInToSaveOpen] = useState(false);
-  const [selectedLocalFiles, setSelectedLocalFiles] = useState<
-    LocalSelectedFile[]
+  const [preparedLocalFiles, setPreparedLocalFiles] = useState<
+    PreparedWorkspaceFile[]
   >([]);
+  const [fileIngestionStatus, setFileIngestionStatus] = useState<string | null>(
+    null,
+  );
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
       id: 'default-worksheet',
@@ -104,8 +107,8 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       content: createDefaultWorksheetContent(),
     },
   ]);
-  const activeWorkspaceId =
-    props.mode === 'saved' ? props.workspaceId : 'unsaved-default';
+  const savedWorkspaceId = props.mode === 'saved' ? props.workspaceId : null;
+  const activeWorkspaceId = savedWorkspaceId ?? 'unsaved-default';
   const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
 
   const isSignedIn = Boolean(session?.user);
@@ -142,13 +145,6 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
 
   const createWorkspaceMutation = useMutation({
     mutationFn: createCloudWorkspace,
-    onSuccess: async (workspace) => {
-      await queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey});
-      await navigate({
-        to: '/workspaces/$workspaceId',
-        params: {workspaceId: workspace.id},
-      });
-    },
   });
 
   const renameWorkspaceMutation = useMutation({
@@ -181,6 +177,59 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     }
   }, [currentWorkspace?.name]);
 
+  useEffect(() => {
+    if (
+      props.mode !== 'saved' ||
+      !savedWorkspaceId ||
+      !token ||
+      !duckDbRuntime.runtime ||
+      !workspaceFilesQuery.data?.length
+    ) {
+      return;
+    }
+
+    let isCurrent = true;
+    const runtime = duckDbRuntime.runtime;
+    const loadedTables = new Set(duckDbRuntime.tableNames);
+
+    Promise.all(
+      workspaceFilesQuery.data
+        .filter((file) => !loadedTables.has(file.tableName))
+        .map((file) =>
+          loadSavedWorkspaceFile({
+            runtime,
+            token,
+            workspaceId: savedWorkspaceId,
+            fileId: file.id,
+            tableName: file.tableName,
+          }),
+        ),
+    )
+      .then(() => {
+        if (isCurrent) return duckDbRuntime.refreshTables();
+      })
+      .catch((error: unknown) => {
+        if (!isCurrent) return;
+        setFileIngestionStatus(
+          error instanceof Error
+            ? error.message
+            : 'Could not load saved files.',
+        );
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [
+    duckDbRuntime.refreshTables,
+    duckDbRuntime.runtime,
+    duckDbRuntime.tableNames,
+    props.mode,
+    savedWorkspaceId,
+    token,
+    workspaceFilesQuery.data,
+  ]);
+
   const handleSignIn = async () => {
     const result = await authClient.signIn.social({
       provider: 'google',
@@ -197,13 +246,28 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       return;
     }
 
-    await createWorkspaceMutation.mutateAsync({
+    const workspace = await createWorkspaceMutation.mutateAsync({
       data: {
         token,
         name: localWorkspaceName,
         worksheetTitle: localWorksheets[0].title,
         worksheetContent: localWorksheets[0].content,
       },
+    });
+
+    for (const preparedFile of preparedLocalFiles) {
+      await uploadPreparedWorkspaceFile({
+        token,
+        workspaceId: workspace.id,
+        preparedFile,
+      });
+    }
+    setPreparedLocalFiles([]);
+
+    await queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey});
+    await navigate({
+      to: '/workspaces/$workspaceId',
+      params: {workspaceId: workspace.id},
     });
   };
 
@@ -267,14 +331,51 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const nextFiles = Array.from(event.target.files ?? []).map((file) => ({
-      id: `${file.name}:${file.size}:${file.lastModified}`,
-      name: file.name,
-      size: file.size,
-    }));
-
-    setSelectedLocalFiles(nextFiles);
+    const files = Array.from(event.target.files ?? []);
     event.target.value = '';
+    if (!duckDbRuntime.runtime || files.length === 0) return;
+
+    void ingestFiles(files);
+  };
+
+  const ingestFiles = async (files: File[]) => {
+    if (!duckDbRuntime.runtime) return;
+
+    setFileIngestionStatus('Loading file');
+    try {
+      const nextPreparedFiles: PreparedWorkspaceFile[] = [];
+      for (const file of files) {
+        const preparedFile = await prepareWorkspaceFile({
+          runtime: duckDbRuntime.runtime,
+          file,
+        });
+        nextPreparedFiles.push(preparedFile);
+
+        if (props.mode === 'saved' && token) {
+          await uploadPreparedWorkspaceFile({
+            token,
+            workspaceId: props.workspaceId,
+            preparedFile,
+          });
+          await queryClient.invalidateQueries({
+            queryKey: ['workspaceFiles', props.mode, props.workspaceId, token],
+          });
+        }
+      }
+
+      if (props.mode === 'unsaved' || !token) {
+        setPreparedLocalFiles((currentFiles) => [
+          ...currentFiles,
+          ...nextPreparedFiles,
+        ]);
+      }
+      await duckDbRuntime.refreshTables();
+      setFileIngestionStatus(null);
+    } catch (error) {
+      setFileIngestionStatus(
+        error instanceof Error ? error.message : 'Could not add file.',
+      );
+    }
   };
 
   const workspaceTitle =
@@ -398,25 +499,30 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                         </div>
                       </div>
                     ))}
-                    {selectedLocalFiles.map((file) => (
+                    {preparedLocalFiles.map((file) => (
                       <div className="schema-table" key={file.id}>
                         <Table2 className="size-4" aria-hidden />
                         <div className="min-w-0">
-                          <div className="schema-table-name">{file.name}</div>
+                          <div className="schema-table-name">
+                            {file.tableName}
+                          </div>
                           <div className="schema-table-meta">
-                            {formatBytes(file.size)}
+                            {formatBytes(file.parquetSizeBytes)}
                           </div>
                         </div>
                       </div>
                     ))}
                     {!workspaceFilesQuery.data?.length &&
                     duckDbRuntime.tableNames.length === 0 &&
-                    selectedLocalFiles.length === 0 ? (
+                    preparedLocalFiles.length === 0 ? (
                       <div className="schema-empty">
                         {duckDbRuntime.status === 'initializing'
                           ? 'Preparing runtime'
                           : 'No tables'}
                       </div>
+                    ) : null}
+                    {fileIngestionStatus ? (
+                      <div className="schema-empty">{fileIngestionStatus}</div>
                     ) : null}
                   </div>
                 </SidebarGroupContent>
