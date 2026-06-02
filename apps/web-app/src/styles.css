@@ -600,6 +600,12 @@ input {
   padding: 24px;
 }
 
+.file-conflict-detail {
+  margin: -8px 0 0;
+  color: var(--shell-text-muted);
+  overflow-wrap: anywhere;
+}
+
 .file-conflict-actions {
   display: flex;
   justify-content: flex-end;

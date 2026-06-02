@@ -818,6 +818,12 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                 : null}
             </DialogDescription>
           </DialogHeader>
+          {fileNameConflict ? (
+            <p className="file-conflict-detail">
+              Keeping both will add the new table as "
+              {fileNameConflict.uniqueTableName}".
+            </p>
+          ) : null}
           <div className="file-conflict-actions">
             <Button
               variant="ghost"
@@ -838,9 +844,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   : undefined
               }
             >
-              {fileNameConflict
-                ? `Keep both (${fileNameConflict.uniqueTableName})`
-                : 'Keep both'}
+              Keep both
             </Button>
             <Button
               type="button"
