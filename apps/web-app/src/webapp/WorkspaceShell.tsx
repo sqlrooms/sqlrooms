@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DropdownMenu,
@@ -29,11 +30,13 @@ import {
   SidebarRail,
   SidebarTrigger,
   TooltipProvider,
+  useSidebar,
 } from '@sqlrooms/ui';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {
   ChevronDown,
   Database,
+  Eye,
   FileSpreadsheet,
   FolderKanban,
   LogIn,
@@ -96,6 +99,20 @@ type FileNameConflict = {
   resolve: (resolution: FileConflictResolution) => void;
 };
 
+type SchemaTableItem = {
+  key: string;
+  name: string;
+  meta: string;
+};
+
+type TablePreview = {
+  tableName: string;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  status: 'loading' | 'ready' | 'error';
+  error?: string;
+};
+
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
@@ -115,6 +132,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   );
   const [fileNameConflict, setFileNameConflict] =
     useState<FileNameConflict | null>(null);
+  const [selectedWorksheetId, setSelectedWorksheetId] = useState<string | null>(
+    null,
+  );
   const [localWorksheets] = useState<LocalWorksheet[]>(() => [
     {
       id: 'default-worksheet',
@@ -184,7 +204,12 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     if (currentWorkspace?.worksheets.length) return currentWorkspace.worksheets;
     return localWorksheets;
   }, [currentWorkspace, localWorksheets]);
-  const selectedWorksheet = worksheets[0];
+  const selectedWorksheet = useMemo(
+    () =>
+      worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
+      worksheets[0],
+    [selectedWorksheetId, worksheets],
+  );
   const workspaceTableNames = useMemo(
     () =>
       Array.from(
@@ -211,10 +236,43 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       ),
     [duckDbRuntime.tableNames, fileBackedTableNames],
   );
+  const schemaTableItems = useMemo<SchemaTableItem[]>(
+    () => [
+      ...(workspaceFilesQuery.data ?? []).map((file) => ({
+        key: `saved:${file.id}`,
+        name: file.tableName,
+        meta: formatBytes(file.sizeBytes),
+      })),
+      ...runtimeOnlyTableNames.map((tableName) => ({
+        key: `runtime:${tableName}`,
+        name: tableName,
+        meta: 'In memory',
+      })),
+      ...preparedLocalFiles.map((file) => ({
+        key: `prepared:${file.id}`,
+        name: file.tableName,
+        meta: formatBytes(file.parquetSizeBytes),
+      })),
+    ],
+    [preparedLocalFiles, runtimeOnlyTableNames, workspaceFilesQuery.data],
+  );
   const worksheetTitles = useMemo(
     () => worksheets.map((worksheet) => worksheet.title),
     [worksheets],
   );
+  const [tablePreview, setTablePreview] = useState<TablePreview | null>(null);
+
+  useEffect(() => {
+    if (!worksheets.length) return;
+    if (
+      selectedWorksheetId &&
+      worksheets.some((worksheet) => worksheet.id === selectedWorksheetId)
+    ) {
+      return;
+    }
+
+    setSelectedWorksheetId(worksheets[0].id);
+  }, [selectedWorksheetId, worksheets]);
 
   useEffect(() => {
     if (currentWorkspace?.name) {
@@ -373,6 +431,42 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     fileInputRef.current?.click();
   };
 
+  const handlePreviewTable = async (tableName: string) => {
+    if (!duckDbRuntime.runtime) return;
+
+    setTablePreview({
+      tableName,
+      columns: [],
+      rows: [],
+      status: 'loading',
+    });
+
+    try {
+      const rows = Array.from(
+        await duckDbRuntime.runtime.connector.queryJson<
+          Record<string, unknown>
+        >(`select * from ${escapeIdentifier(tableName)} limit 25`),
+      );
+      setTablePreview({
+        tableName,
+        columns: Array.from(
+          new Set(rows.flatMap((row) => Object.keys(row))),
+        ),
+        rows,
+        status: 'ready',
+      });
+    } catch (error) {
+      setTablePreview({
+        tableName,
+        columns: [],
+        rows: [],
+        status: 'error',
+        error:
+          error instanceof Error ? error.message : 'Could not preview table.',
+      });
+    }
+  };
+
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -515,57 +609,11 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         <SidebarProvider defaultOpen>
           <Sidebar collapsible="icon" className="sqlrooms-sidebar">
             <SidebarHeader className="gap-3">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton className="brand-button h-auto gap-3 py-2">
-                    <img className="brand-logo" src="/logo.png" alt="" />
-                    <div className="min-w-0 text-left">
-                      <div className="truncate text-sm font-semibold">
-                        SQLRooms
-                      </div>
-                      <div className="text-shell-subtle truncate text-xs">
-                        {props.mode === 'saved' ? 'Saved' : 'Unsaved'}
-                      </div>
-                    </div>
-                    <ChevronDown className="text-shell-subtle ml-auto size-4" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    className="workspace-selector group-data-[collapsible=icon]:hidden"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <FolderKanban className="size-4" aria-hidden />
-                    <span className="truncate">{workspaceTitle}</span>
-                    <ChevronDown className="ml-auto size-4" aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="workspace-menu" align="start">
-                  <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-                  {(workspacesQuery.data ?? []).map((workspace) => (
-                    <DropdownMenuItem key={workspace.id} asChild>
-                      <Link
-                        to="/workspaces/$workspaceId"
-                        params={{workspaceId: workspace.id}}
-                      >
-                        <FolderKanban className="size-4" aria-hidden />
-                        {workspace.name}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/">
-                      <Plus className="size-4" aria-hidden />
-                      New Workspace
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <SidebarBrand />
+              <WorkspaceDropdown
+                workspaceTitle={workspaceTitle}
+                workspaces={workspacesQuery.data ?? []}
+              />
             </SidebarHeader>
 
             <SidebarContent>
@@ -574,17 +622,15 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   Data
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="add-file-button"
-                        onClick={() => void handleAddFile()}
-                      >
-                        <UploadCloud className="size-4" aria-hidden />
-                        <span>Add file</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
+                  <DatabaseSidebarSection
+                    tables={schemaTableItems}
+                    status={fileIngestionStatus}
+                    runtimeStatus={duckDbRuntime.status}
+                    onAddFile={handleAddFile}
+                    onPreviewTable={(tableName) =>
+                      void handlePreviewTable(tableName)
+                    }
+                  />
                   <input
                     ref={fileInputRef}
                     className="sr-only"
@@ -593,86 +639,19 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                     onChange={handleFileInputChange}
                     tabIndex={-1}
                   />
-                  <div className="schema-tree group-data-[collapsible=icon]:hidden">
-                    <div className="schema-node">
-                      <Database className="size-4" aria-hidden />
-                      <span>main</span>
-                    </div>
-                    {(workspaceFilesQuery.data ?? []).map((file) => (
-                      <div className="schema-table" key={file.id}>
-                        <Table2 className="size-4" aria-hidden />
-                        <div className="min-w-0">
-                          <div className="schema-table-name">
-                            {file.tableName}
-                          </div>
-                          <div className="schema-table-meta">
-                            {formatBytes(file.sizeBytes)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {runtimeOnlyTableNames.map((tableName) => (
-                      <div
-                        className="schema-table"
-                        key={`runtime:${tableName}`}
-                      >
-                        <Table2 className="size-4" aria-hidden />
-                        <div className="min-w-0">
-                          <div className="schema-table-name">{tableName}</div>
-                          <div className="schema-table-meta">In memory</div>
-                        </div>
-                      </div>
-                    ))}
-                    {preparedLocalFiles.map((file) => (
-                      <div className="schema-table" key={file.id}>
-                        <Table2 className="size-4" aria-hidden />
-                        <div className="min-w-0">
-                          <div className="schema-table-name">
-                            {file.tableName}
-                          </div>
-                          <div className="schema-table-meta">
-                            {formatBytes(file.parquetSizeBytes)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {!workspaceFilesQuery.data?.length &&
-                    runtimeOnlyTableNames.length === 0 &&
-                    preparedLocalFiles.length === 0 ? (
-                      <div className="schema-empty">
-                        {duckDbRuntime.status === 'initializing'
-                          ? 'Preparing runtime'
-                          : 'No tables'}
-                      </div>
-                    ) : null}
-                    {fileIngestionStatus ? (
-                      <div className="schema-empty">{fileIngestionStatus}</div>
-                    ) : null}
-                  </div>
                 </SidebarGroupContent>
               </SidebarGroup>
 
               <SidebarGroup>
                 <SidebarGroupLabel className="text-shell-subtle">
-                  Workspace Items
+                  Worksheets
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
-                  <SidebarMenu>
-                    {worksheets.map((worksheet) => (
-                      <SidebarMenuItem key={worksheet.id}>
-                        <SidebarMenuButton isActive>
-                          <FileSpreadsheet className="size-4" aria-hidden />
-                          <span>{worksheet.title}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                    <SidebarMenuItem>
-                      <SidebarMenuButton>
-                        <Plus className="size-4" aria-hidden />
-                        <span>New Worksheet</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
+                  <WorksheetsSidebarSection
+                    worksheets={worksheets}
+                    selectedWorksheetId={selectedWorksheet?.id}
+                    onSelectWorksheet={setSelectedWorksheetId}
+                  />
                 </SidebarGroupContent>
               </SidebarGroup>
             </SidebarContent>
@@ -761,6 +740,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                       worksheet={selectedWorksheet}
                       token={token}
                       workspaceId={savedWorkspaceId}
+                      duckDbRuntime={duckDbRuntime}
                     />
                   ) : null}
                 </div>
@@ -796,6 +776,58 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
           >
             Continue with Google
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(tablePreview)}
+        onOpenChange={(open) => {
+          if (!open) setTablePreview(null);
+        }}
+      >
+        <DialogContent className="table-preview-dialog">
+          <DialogHeader>
+            <DialogTitle>{tablePreview?.tableName ?? 'Table'}</DialogTitle>
+            <DialogDescription>Preview of the first 25 rows.</DialogDescription>
+          </DialogHeader>
+          <div className="table-preview-body">
+            {tablePreview?.status === 'loading' ? (
+              <div className="table-preview-empty">Loading preview</div>
+            ) : null}
+            {tablePreview?.status === 'error' ? (
+              <div className="table-preview-empty">{tablePreview.error}</div>
+            ) : null}
+            {tablePreview?.status === 'ready' &&
+            tablePreview.rows.length === 0 ? (
+              <div className="table-preview-empty">No rows</div>
+            ) : null}
+            {tablePreview?.status === 'ready' &&
+            tablePreview.rows.length > 0 ? (
+              <table className="table-preview-grid">
+                <thead>
+                  <tr>
+                    {tablePreview.columns.map((column) => (
+                      <th key={column}>{column}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tablePreview.rows.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {tablePreview.columns.map((column) => (
+                        <td key={column}>{formatPreviewCell(row[column])}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setTablePreview(null)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -866,6 +898,255 @@ function hasTableName(tableNames: string[], tableName: string) {
   );
 }
 
+function SidebarBrand() {
+  const {setOpen} = useSidebar();
+
+  return (
+    <button
+      className="brand-button"
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label="Open sidebar"
+    >
+      <img className="brand-logo" src="/logo.png" alt="" />
+      <div className="brand-copy">
+        <div className="brand-title">SQLRooms</div>
+        <div className="brand-subtitle">Analytics workspaces</div>
+      </div>
+    </button>
+  );
+}
+
+function WorkspaceDropdown({
+  workspaceTitle,
+  workspaces,
+}: {
+  workspaceTitle: string;
+  workspaces: Array<{id: string; name: string}>;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton
+          className="workspace-selector"
+          type="button"
+          size="lg"
+          tooltip="Workspaces"
+        >
+          <FolderKanban className="size-4" aria-hidden />
+          <span className="truncate">{workspaceTitle}</span>
+          <ChevronDown
+            className="workspace-selector-chevron ml-auto size-4"
+            aria-hidden
+          />
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="workspace-menu" align="start" side="right">
+        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+        {workspaces.map((workspace) => (
+          <DropdownMenuItem key={workspace.id} asChild>
+            <Link
+              to="/workspaces/$workspaceId"
+              params={{workspaceId: workspace.id}}
+            >
+              <FolderKanban className="size-4" aria-hidden />
+              {workspace.name}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/">
+            <Plus className="size-4" aria-hidden />
+            New Workspace
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function DatabaseSidebarSection({
+  tables,
+  status,
+  runtimeStatus,
+  onAddFile,
+  onPreviewTable,
+}: {
+  tables: SchemaTableItem[];
+  status: string | null;
+  runtimeStatus: string;
+  onAddFile: () => void;
+  onPreviewTable: (tableName: string) => void;
+}) {
+  const {state} = useSidebar();
+
+  if (state === 'expanded') {
+    return (
+      <div className="sidebar-inline-panel">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="add-file-button"
+              onClick={onAddFile}
+              type="button"
+            >
+              <UploadCloud className="size-4" aria-hidden />
+              <span>Add file</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <div className="schema-tree">
+          <div className="schema-node">
+            <Database className="size-4" aria-hidden />
+            <span>main</span>
+          </div>
+          {tables.map((table) => (
+            <button
+              className="schema-table"
+              key={table.key}
+              type="button"
+              onClick={() => onPreviewTable(table.name)}
+            >
+              <Table2 className="size-4" aria-hidden />
+              <div className="min-w-0">
+                <div className="schema-table-name">{table.name}</div>
+                <div className="schema-table-meta">{table.meta}</div>
+              </div>
+              <Eye className="schema-table-preview-icon size-3.5" aria-hidden />
+            </button>
+          ))}
+          {tables.length === 0 ? (
+            <div className="schema-empty">
+              {runtimeStatus === 'initializing' ? 'Preparing runtime' : 'No tables'}
+            </div>
+          ) : null}
+          {status ? <div className="schema-empty">{status}</div> : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton
+          className="sidebar-nav-button"
+          type="button"
+          size="lg"
+          tooltip="Database"
+        >
+          <Database className="size-4" aria-hidden />
+          <span>Database</span>
+          <ChevronDown className="sidebar-nav-chevron ml-auto size-4" />
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="workspace-menu" align="start" side="right">
+        <DropdownMenuLabel>Tables</DropdownMenuLabel>
+        {tables.map((table) => (
+          <DropdownMenuItem
+            key={table.key}
+            onClick={() => onPreviewTable(table.name)}
+          >
+            <Table2 className="size-4" aria-hidden />
+            <div className="dropdown-table-item">
+              <span>{table.name}</span>
+              <small>{table.meta}</small>
+            </div>
+            <Eye className="ml-auto size-3.5" aria-hidden />
+          </DropdownMenuItem>
+        ))}
+        {tables.length === 0 ? (
+          <DropdownMenuItem disabled>
+            {runtimeStatus === 'initializing' ? 'Preparing runtime' : 'No tables'}
+          </DropdownMenuItem>
+        ) : null}
+        {status ? <DropdownMenuItem disabled>{status}</DropdownMenuItem> : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onAddFile}>
+          <UploadCloud className="size-4" aria-hidden />
+          Add table
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function WorksheetsSidebarSection({
+  worksheets,
+  selectedWorksheetId,
+  onSelectWorksheet,
+}: {
+  worksheets: LocalWorksheet[];
+  selectedWorksheetId: string | undefined;
+  onSelectWorksheet: (worksheetId: string) => void;
+}) {
+  const activeWorksheet = worksheets.find(
+    (worksheet) => worksheet.id === selectedWorksheetId,
+  );
+  const {state} = useSidebar();
+
+  if (state === 'expanded') {
+    return (
+      <SidebarMenu>
+        {worksheets.map((worksheet) => (
+          <SidebarMenuItem key={worksheet.id}>
+            <SidebarMenuButton
+              isActive={worksheet.id === selectedWorksheetId}
+              onClick={() => onSelectWorksheet(worksheet.id)}
+              type="button"
+            >
+              <FileSpreadsheet className="size-4" aria-hidden />
+              <span>{worksheet.title}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+        <SidebarMenuItem>
+          <SidebarMenuButton type="button">
+            <Plus className="size-4" aria-hidden />
+            <span>New Worksheet</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton
+          className="sidebar-nav-button"
+          type="button"
+          size="lg"
+          tooltip="Worksheets"
+          isActive
+        >
+          <FileSpreadsheet className="size-4" aria-hidden />
+          <span>{activeWorksheet?.title ?? 'Worksheets'}</span>
+          <ChevronDown className="sidebar-nav-chevron ml-auto size-4" />
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="workspace-menu" align="start" side="right">
+        <DropdownMenuLabel>Worksheets</DropdownMenuLabel>
+        {worksheets.map((worksheet) => (
+          <DropdownMenuItem
+            key={worksheet.id}
+            onClick={() => onSelectWorksheet(worksheet.id)}
+          >
+            <FileSpreadsheet className="size-4" aria-hidden />
+            {worksheet.title}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <Plus className="size-4" aria-hidden />
+          New Worksheet
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function removePreparedFilesByTableName(
   files: PreparedWorkspaceFile[],
   tableName: string,
@@ -875,6 +1156,18 @@ function removePreparedFilesByTableName(
       files.splice(index, 1);
     }
   }
+}
+
+function escapeIdentifier(identifier: string) {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function formatPreviewCell(value: unknown) {
+  if (value == null) return '';
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
 }
 
 function formatBytes(bytes: number) {
