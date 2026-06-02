@@ -31,21 +31,19 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {
-  BarChart3,
   Bot,
   ChevronDown,
   Database,
   FileSpreadsheet,
   FolderKanban,
-  LayoutDashboard,
   LogIn,
   LogOut,
   Plus,
   Save,
   Settings,
   Sparkles,
-  Table2,
   UploadCloud,
+  Table2,
 } from 'lucide-react';
 import type React from 'react';
 import {useEffect, useMemo, useRef, useState} from 'react';
@@ -57,6 +55,7 @@ import {
   uploadPreparedWorkspaceFile,
   type PreparedWorkspaceFile,
 } from './files/fileIngestion';
+import {WorksheetSurface} from './WorksheetSurface';
 import {listWorkspaceFiles} from './workspace/files';
 import {
   createCloudWorkspace,
@@ -632,34 +631,13 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                 </div>
 
                 <div className="worksheet-stage">
-                  <div className="worksheet-start">
-                    <Button className="new-worksheet-button" type="button">
-                      <Plus className="size-4" aria-hidden />
-                      New Worksheet
-                    </Button>
-
-                    <div
-                      className="block-toolbar"
-                      aria-label="Worksheet block types"
-                    >
-                      <BlockTypePreview
-                        icon={<Database className="size-4" />}
-                        label="Query"
-                      />
-                      <BlockTypePreview
-                        icon={<LayoutDashboard className="size-4" />}
-                        label="Dashboard"
-                      />
-                      <BlockTypePreview
-                        icon={<Table2 className="size-4" />}
-                        label="Data Table"
-                      />
-                      <BlockTypePreview
-                        icon={<BarChart3 className="size-4" />}
-                        label="Chart"
-                      />
-                    </div>
-                  </div>
+                  {selectedWorksheet ? (
+                    <WorksheetSurface
+                      worksheet={selectedWorksheet}
+                      token={token}
+                      workspaceId={savedWorkspaceId}
+                    />
+                  ) : null}
                 </div>
               </section>
 
@@ -706,21 +684,6 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         </DialogContent>
       </Dialog>
     </main>
-  );
-}
-
-function BlockTypePreview({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button className="block-type-button" type="button">
-      {icon}
-      <span>{label}</span>
-    </button>
   );
 }
 
