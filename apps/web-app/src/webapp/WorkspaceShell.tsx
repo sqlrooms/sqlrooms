@@ -898,7 +898,6 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
               workspaceContent={workspaceContent ?? currentWorkspace?.content}
               selectedWorksheet={selectedWorksheet}
               token={token}
-              savedWorkspaceId={savedWorkspaceId}
               duckDbRuntime={duckDbRuntime}
               onLayoutChange={handleWorkspaceLayoutChange}
               onAiConfigChange={handleWorkspaceAiConfigChange}
@@ -1048,7 +1047,6 @@ function WorkspaceLayoutCanvas({
   workspaceContent,
   selectedWorksheet,
   token,
-  savedWorkspaceId,
   duckDbRuntime,
   onLayoutChange,
   onAiConfigChange,
@@ -1060,7 +1058,6 @@ function WorkspaceLayoutCanvas({
   workspaceContent: JsonObject | undefined;
   selectedWorksheet: LocalWorksheet | undefined;
   token: string | null;
-  savedWorkspaceId: string | null;
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
   onLayoutChange: (layout: LayoutNode | null) => void;
   onAiConfigChange: (aiConfig: JsonObject) => void;
@@ -1090,8 +1087,6 @@ function WorkspaceLayoutCanvas({
                 {selectedWorksheet ? (
                   <WorksheetSurface
                     worksheet={selectedWorksheet}
-                    token={token}
-                    workspaceId={savedWorkspaceId}
                     tableNames={duckDbRuntime.tableNames}
                   />
                 ) : null}
@@ -1101,7 +1096,7 @@ function WorkspaceLayoutCanvas({
         },
       },
     }),
-    [duckDbRuntime, savedWorkspaceId, selectedWorksheet],
+    [duckDbRuntime, selectedWorksheet],
   );
   const initialLayoutRef = useRef(layout);
   const initialPanelsRef = useRef(panels);

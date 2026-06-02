@@ -4,7 +4,7 @@ import type {WorkspaceRoomState} from './workspace/WorkspaceRoomStore';
 import {
   useRefreshWorksheetDbSchemas,
   WorksheetBlockDocument,
-} from './worksheet/worksheetRoomStore';
+} from './worksheet/WorksheetArtifact';
 
 type WorksheetSurfaceProps = {
   worksheet: {
@@ -12,8 +12,6 @@ type WorksheetSurfaceProps = {
     title: string;
     content: JsonObject;
   };
-  token: string | null;
-  workspaceId: string | null;
   tableNames: string[];
 };
 
