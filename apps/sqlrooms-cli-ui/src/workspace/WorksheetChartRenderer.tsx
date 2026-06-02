@@ -1,6 +1,6 @@
 import type {BlockDocumentChartRendererProps} from '@sqlrooms/documents';
 import {
-  MosaicDashboardChart,
+  MosaicChart,
   useParseChartConfig,
   useTablesWithColumns,
   type ChartConfig,
@@ -114,7 +114,7 @@ export const WorksheetChartRenderer: FC<BlockDocumentChartRendererProps> = ({
         </Button>
       </div>
       <div className="min-h-0 flex-1">
-        <MosaicDashboardChart
+        <MosaicChart
           tableName={effectiveTableName}
           selectionName={selectionName}
           config={chartConfig}

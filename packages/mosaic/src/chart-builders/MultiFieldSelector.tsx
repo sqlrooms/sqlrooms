@@ -3,14 +3,14 @@ import {Trash2} from 'lucide-react';
 import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
 import {AggregationSelector} from './AggregationSelector';
-import type {AggregateFunction} from '../chart-types/line-chart/schema';
+import type {AggregateFunction} from '../charts/chart-types/line-chart/schema';
 import {ColumnsProvider, useColumnsContext} from './ColumnsContext';
 import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from './constants';
-import type {YFieldConfig} from '../chart-types/line-chart/schema';
+import type {YFieldConfig} from '../charts/chart-types/line-chart/schema';
 
 export interface MultiFieldSelectorProps {
   types?: string[];

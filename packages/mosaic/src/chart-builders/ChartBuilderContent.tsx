@@ -1,6 +1,6 @@
 import {cn} from '@sqlrooms/ui';
 import React from 'react';
-import type {ChartConfig} from '../chart-types';
+import type {ChartConfig} from '../charts/chart-types';
 import {ChartBuilderActions} from './ChartBuilderActions';
 import {useChartBuilderContext} from './ChartBuilderContext';
 import {ChartBuilderFields} from './ChartBuilderFields';
@@ -9,7 +9,7 @@ import {ChartBuilderTypeGrid} from './ChartBuilderTypeGrid';
 import type {
   ChartBuilderColumn,
   ChartTypeDefinition,
-} from '../chart-types/base-types';
+} from '../charts/chart-types/base-types';
 
 type StandaloneChartBuilderContentProps = {
   /** Table name to use in generated specs */

@@ -8,15 +8,15 @@ import {
 } from 'react';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
-import {MosaicDashboardPanels} from './MosaicDashboardPanels';
+import {MosaicDashboardPanels} from './panel/MosaicDashboardPanels';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
-import {ChartBuilderColumn} from '../chart-types/base-types';
-import {ChartConfig} from '../chart-types/chart-config';
+import {ChartBuilderColumn} from '../charts/chart-types/base-types';
+import {ChartConfig} from '../charts/chart-types/chart-config';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
 import type {MosaicDashboardInitialStateProps} from './initial-state/MosaicDashboardInitialState';
 

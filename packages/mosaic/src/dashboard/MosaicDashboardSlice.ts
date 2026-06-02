@@ -25,8 +25,8 @@ import {
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
-import type {ChartTypeDefinition} from '../chart-types/base-types';
-import {ChartConfig} from '../chart-types/chart-config';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
+import {ChartConfig} from '../charts/chart-types/chart-config';
 import {type MosaicSliceState} from '../MosaicSlice';
 import {
   destroyRetainedVgPlotChart,

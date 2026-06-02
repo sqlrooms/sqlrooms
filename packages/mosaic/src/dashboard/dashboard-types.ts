@@ -4,7 +4,7 @@
 
 import {LayoutNode as LayoutNodeSchema} from '@sqlrooms/layout-config';
 import {z} from 'zod';
-import {ChartConfig} from '../chart-types/chart-config';
+import {ChartConfig} from '../charts/chart-types/chart-config';
 import {
   DataTableExplorerPanelConfig,
   MosaicDashboardLayoutType,

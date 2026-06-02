@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import type {AggregateFunction} from '../chart-types/line-chart/schema';
+import type {AggregateFunction} from '../charts/chart-types/line-chart/schema';
 
 export interface AggregationSelectorProps {
   value: AggregateFunction;

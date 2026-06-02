@@ -4,8 +4,8 @@ import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
-import {MosaicChartSettingsProvider} from '../chart/chart-settings/MosaicChartSettingsContext';
-import type {ChartConfig} from '../chart-types';
+import {MosaicChartSettingsProvider} from '../charts/chart-settings/MosaicChartSettingsContext';
+import type {ChartConfig} from '../charts/chart-types';
 
 export interface ChartBuilderFieldsProps {
   className?: string;

@@ -23,20 +23,21 @@ export {
   createMosaicDashboardBlockDefinition,
   type CreateMosaicDashboardBlockDefinitionOptions,
   type MosaicDashboardBlockRenderProps,
-} from './dashboard/MosaicDashboardBlock';
+} from './dashboard/createMosaicDashboardBlockDefinition';
+export {DefaultMosaicDashboardBlock} from './dashboard/DefaultMosaicDashboardBlock';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
-export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
-export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
+export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboardPanelErrorBoundary';
+export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/createDefaultMosaicDashboardPanelRenderers';
 export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
 export {useTablesWithColumns} from './dashboard/useTablesWithColumns';
-export {MosaicDashboardPanelLayout} from './dashboard/MosaicDashboardPanelLayout';
+export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
 export {
   MosaicDashboardInitialState,
   type MosaicDashboardInitialStateProps,
 } from './dashboard/initial-state/MosaicDashboardInitialState';
 export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
-export {addChartPanelAction} from './chart/addChartPanelAction';
+export {addChartPanelAction} from './charts/addChartPanelAction';
 export {
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
@@ -100,16 +101,16 @@ export {DataPointLimitError} from './DataPointLimitError';
 export {
   MosaicChartView,
   type MosaicChartViewProps,
-} from './chart/MosaicChartView';
+} from './charts/MosaicChartView';
 export {
   MosaicChartSettingsPanel,
   type MosaicChartSettingsPanelProps,
-} from './chart/MosaicChartSettingsPanel';
-export {useBrushSelectionParams} from './chart/useBrushSelectionParams';
+} from './charts/MosaicChartSettingsPanel';
+export {useBrushSelectionParams} from './charts/useBrushSelectionParams';
 export {
   useChartRetainer,
   useChartRetainerByKey,
-} from './chart/useChartRetainer';
+} from './charts/useChartRetainer';
 export {
   DEFAULT_CHART_MAX_DATA_POINTS,
   assertChartDataPolicy,
@@ -158,7 +159,7 @@ export {
   MAP_TOOL_KEY,
   createDashboardAgentTool,
   createDashboardAiTools,
-} from './ai';
+} from './ai/ai';
 export type {
   CreateDashboardAgentToolOptions,
   CreateDashboardAiToolsOptions,
@@ -169,10 +170,10 @@ export type {
   DashboardAiStore,
   DashboardAiTable,
   CreateDashboardToolDepsOptions,
-} from './ai';
+} from './ai/ai';
 
 // Compound components
-export {MosaicChart} from './MosaicChart';
+export {MosaicSpecChart} from './MosaicChart';
 export {MosaicChartBuilder} from './MosaicChartBuilder';
 
 // Editor hooks and context
@@ -294,7 +295,7 @@ export {
   DataTableExplorerToolParameters,
   ListPanelsToolParameters,
   RemovePanelToolParameters,
-} from './chart-types';
+} from './charts/chart-types';
 export type {
   ChartSettings,
   ChartType,
@@ -312,7 +313,7 @@ export type {
   DataTableExplorerToolParams,
   ListPanelsToolParams,
   RemovePanelToolParams,
-} from './chart-types';
+} from './charts/chart-types';
 export {
   buildChartTypeTitle,
   canCreateChartFromType,
@@ -327,10 +328,10 @@ export type {
   ChartBuilderField,
   ChartSpec,
   ChartTypeDefinition,
-} from './chart-types/base-types';
+} from './charts/chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
 
 // Dashboard agent
 
-export {MosaicDashboardChart} from './chart/MosaicDashboardChart';
-export {useParseChartConfig} from './chart-types/useParseChartConfig';
+export {MosaicChart} from './charts/MosaicChart';
+export {useParseChartConfig} from './charts/useParseChartConfig';

@@ -6,7 +6,7 @@ import {
   MAP_TOOL_KEY,
   type DashboardAiAdapter,
   type DashboardAiTable,
-} from '../src/ai';
+} from '../src/ai/ai';
 import type {
   MosaicDashboardEntry,
   MosaicDashboardLayoutType,

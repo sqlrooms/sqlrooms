@@ -13,7 +13,10 @@ import {
 } from '@sqlrooms/ui';
 import {Check, ChevronsUpDown} from 'lucide-react';
 import React, {useState} from 'react';
-import {ChartBuilderColumn, ChartBuilderField} from '../chart-types/base-types';
+import {
+  ChartBuilderColumn,
+  ChartBuilderField,
+} from '../charts/chart-types/base-types';
 
 export interface FieldSelectorInputProps {
   field: ChartBuilderField;

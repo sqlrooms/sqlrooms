@@ -1,7 +1,7 @@
 import type {DataTable} from '@sqlrooms/db';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {SpinnerPane} from '@sqlrooms/ui';
-import {useCallback, useMemo} from 'react';
+import {FC, useCallback, useMemo} from 'react';
 import {useStoreWithMosaic} from '../MosaicSlice';
 import {
   DataTableExplorer,
@@ -28,7 +28,9 @@ function findTableByName(
   );
 }
 
-export const DataTableBlockRenderer = ({
+export const DataTableBlockRenderer: FC<
+  BlockDocumentStatefulBlockRendererProps
+> = ({
   blockId,
   blockInstanceId,
   blockType,
@@ -37,7 +39,7 @@ export const DataTableBlockRenderer = ({
   onTitleChange,
   readOnly,
   title,
-}: BlockDocumentStatefulBlockRendererProps) => {
+}) => {
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const tables = useStoreWithMosaic((state) => state.db.tables);
   const selectableTables = useMemo(
