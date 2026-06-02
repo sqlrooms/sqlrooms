@@ -460,7 +460,7 @@ input {
   background:
     linear-gradient(hsl(200 45% 11% / 92%), hsl(200 45% 11% / 92%)),
     radial-gradient(circle at top left, hsl(198 32% 26% / 28%), transparent 38%);
-  overflow: auto;
+  overflow: hidden;
   padding: 0;
 }
 
