@@ -4,16 +4,30 @@ import {
   type BlockDocumentContent,
   type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockType,
+  type BlockDocumentsSliceState,
   type CreateBlockDocumentsSliceProps,
 } from '@sqlrooms/documents';
-import {MosaicDashboardSliceConfig} from '@sqlrooms/mosaic';
-import {SQL_QUERY_BLOCK_TYPE} from '@sqlrooms/sql-editor';
+import {
+  MosaicDashboardSliceConfig,
+  type MosaicDashboardSliceState,
+} from '@sqlrooms/mosaic';
+import {
+  SQL_QUERY_BLOCK_TYPE,
+  type SqlEditorSliceState,
+} from '@sqlrooms/sql-editor';
+import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import {
   createDefaultSqlEditorConfig,
   SqlEditorSliceConfig,
 } from '@sqlrooms/sql-editor-config';
 import type {JsonObject} from '#/lib/json';
-import type {WorkspaceRoomState} from '../workspace/WorkspaceRoomStore';
+
+type WorksheetStatefulBlockRoomState = MosaicDashboardSliceState &
+  SqlEditorSliceState;
+
+type WorkspaceBlockDocumentRoomState = BaseRoomStoreState &
+  BlockDocumentsSliceState &
+  WorksheetStatefulBlockRoomState;
 
 export type PersistedWorksheetState = {
   sqlEditor?: SqlEditorSliceConfig;
@@ -32,14 +46,17 @@ type StatefulBlockConfig = {
   requireScrollModifier?: boolean;
   scrollHintLabel?: string;
   ensureState: (
-    state: WorkspaceRoomState,
+    state: WorksheetStatefulBlockRoomState,
     blockInstanceId: string,
     title: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
   ) => void;
-  deleteState: (state: WorkspaceRoomState, blockInstanceId: string) => void;
+  deleteState: (
+    state: WorksheetStatefulBlockRoomState,
+    blockInstanceId: string,
+  ) => void;
   renameState?: (
-    state: WorkspaceRoomState,
+    state: WorksheetStatefulBlockRoomState,
     blockInstanceId: string,
     title: string,
   ) => void;
@@ -110,7 +127,10 @@ const STATEFUL_BLOCK_CONFIG_BY_TYPE: Record<
   STATEFUL_BLOCK_CONFIGS.map((config) => [config.blockType, config]),
 );
 
-export function createWorkspaceBlockDocumentSliceProps(): CreateBlockDocumentsSliceProps<WorkspaceRoomState> {
+export function createWorkspaceBlockDocumentSliceProps<
+  TRoomState extends WorkspaceBlockDocumentRoomState =
+    WorkspaceBlockDocumentRoomState,
+>(): CreateBlockDocumentsSliceProps<TRoomState> {
   return {
     onCreateOwnedStatefulBlock: ({
       blockType,
@@ -145,7 +165,7 @@ export function createWorkspaceBlockDocumentSliceProps(): CreateBlockDocumentsSl
 export function createWorksheetStatefulBlockTypes({
   getState,
 }: {
-  getState: () => WorkspaceRoomState;
+  getState: () => WorksheetStatefulBlockRoomState;
 }): BlockDocumentStatefulBlockType[] {
   return STATEFUL_BLOCK_CONFIGS.map((config) => ({
     blockType: config.blockType,
@@ -225,7 +245,7 @@ export function toBlockDocumentContent(
 }
 
 export function ensureStatefulBlocksForContent(
-  state: WorkspaceRoomState,
+  state: WorksheetStatefulBlockRoomState,
   content: BlockDocumentContent,
 ) {
   for (const block of blockDocumentContentToBlocks(content)) {
@@ -260,7 +280,7 @@ export function createEmptyPersistedSqlEditorConfig(): SqlEditorSliceConfig {
 }
 
 function ensureStatefulBlockState(
-  state: WorkspaceRoomState,
+  state: WorksheetStatefulBlockRoomState,
   {
     blockType,
     blockInstanceId,
