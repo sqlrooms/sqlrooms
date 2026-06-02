@@ -1103,7 +1103,7 @@ function WorkspaceLayoutCanvas({
   const initialLayoutRef = useRef(layout);
   const initialPanelsRef = useRef(panels);
   const initialAiConfigRef = useRef(aiConfig);
-  const syncedAiConfigJsonRef = useRef(JSON.stringify(aiConfig));
+  const syncedAiConfigJsonRef = useRef(getAiConfigSyncKey(aiConfig));
   const roomStore = useMemo(
     () =>
       createWorkspaceStore(
@@ -1121,7 +1121,7 @@ function WorkspaceLayoutCanvas({
   }, [layout, roomStore]);
 
   useEffect(() => {
-    const nextAiConfigJson = JSON.stringify(aiConfig);
+    const nextAiConfigJson = getAiConfigSyncKey(aiConfig);
     if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
 
     syncedAiConfigJsonRef.current = nextAiConfigJson;
@@ -1147,7 +1147,7 @@ function WorkspaceLayoutCanvas({
   useEffect(() => {
     return roomStore.subscribe((state, previousState) => {
       if (state.ai.config !== previousState.ai.config) {
-        const nextAiConfigJson = JSON.stringify(state.ai.config);
+        const nextAiConfigJson = getAiConfigSyncKey(state.ai.config);
         if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
 
         syncedAiConfigJsonRef.current = nextAiConfigJson;
@@ -1216,6 +1216,19 @@ function createWorkspaceStore(
 
 function parseWorkspaceAiConfig(aiConfig: JsonObject) {
   return AiSliceConfig.parse(aiConfig);
+}
+
+function getAiConfigSyncKey(aiConfig: unknown) {
+  const parsedConfig = AiSliceConfig.safeParse(aiConfig);
+  if (!parsedConfig.success) return JSON.stringify(aiConfig);
+
+  return JSON.stringify({
+    ...parsedConfig.data,
+    sessions: parsedConfig.data.sessions.map((session) => ({
+      ...session,
+      prompt: '',
+    })),
+  });
 }
 
 function createAssistantChatHeaders(
