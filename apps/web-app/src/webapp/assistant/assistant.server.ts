@@ -11,13 +11,17 @@ import {db} from '#/db/index';
 import {aiUsageEvents} from '#/db/schema';
 import {verifyAuthToken} from '#/lib/auth-token';
 import {requireEnv} from '#/lib/env';
+import type {AssistantModelMode} from './modelModes';
 
-const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
+const OPENROUTER_MODELS_BY_MODE = {
+  fast: 'deepseek/deepseek-v4-flash',
+  deep: 'deepseek/deepseek-v4-pro',
+} satisfies Record<AssistantModelMode, string>;
 const DEFAULT_DAILY_MESSAGE_LIMIT = 60;
 
 const assistantChatInput = z.object({
   messages: z.array(z.custom<UIMessage>()).min(1).max(80),
-  model: z.string().trim().min(1).max(200).optional(),
+  model: z.enum(['fast', 'deep']).optional(),
   instructions: z.string().trim().max(12000).optional(),
 });
 
@@ -26,8 +30,7 @@ export async function runAssistantChat(request: Request) {
   const {userId} = await verifyAuthToken(readBearerToken(request));
   await assertCanUseAssistant(userId);
 
-  const modelId =
-    data.model || process.env.OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL;
+  const modelId = resolveOpenRouterModel(data.model);
   const openrouter = createOpenAICompatible({
     apiKey: requireEnv('OPENROUTER_API_KEY'),
     name: 'openrouter',
@@ -53,6 +56,10 @@ export async function runAssistantChat(request: Request) {
   });
 
   return result.toUIMessageStreamResponse();
+}
+
+function resolveOpenRouterModel(modelMode: AssistantModelMode = 'fast') {
+  return OPENROUTER_MODELS_BY_MODE[modelMode];
 }
 
 function createSystemPrompt() {

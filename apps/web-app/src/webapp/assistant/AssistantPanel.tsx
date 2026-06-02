@@ -8,6 +8,11 @@ import {useRoomStoreApi, type BaseRoomStoreState} from '@sqlrooms/room-store';
 import {Button} from '@sqlrooms/ui';
 import {ArrowLeft, Bot, MessageSquarePlus, Sparkles} from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  ASSISTANT_MODEL_MODES,
+  ASSISTANT_MODEL_PROVIDER,
+  DEFAULT_ASSISTANT_MODEL_MODE,
+} from './modelModes';
 
 type AssistantPanelProps = {
   worksheetId?: string;
@@ -15,13 +20,6 @@ type AssistantPanelProps = {
 };
 
 const WORKSHEET_CONTEXT_KIND = 'worksheet';
-const OPENROUTER_MODELS = [
-  {
-    provider: 'openrouter',
-    label: 'GPT-4o mini',
-    value: 'openai/gpt-4o-mini',
-  },
-];
 type AssistantRoomState = BaseRoomStoreState & AiSliceState;
 
 export function AssistantPanel({
@@ -80,7 +78,11 @@ export function AssistantPanel({
 
   const startSession = () => {
     if (!worksheetContextItem) return;
-    createSession('New session', 'openrouter', OPENROUTER_MODELS[0].value);
+    createSession(
+      'New session',
+      ASSISTANT_MODEL_PROVIDER,
+      DEFAULT_ASSISTANT_MODEL_MODE,
+    );
     const sessionId = roomStore.getState().ai.getCurrentSession()?.id;
     if (!sessionId) return;
     setSessionRunContext(sessionId, {
@@ -172,7 +174,7 @@ function AssistantSessionView({
         className="assistant-chat-composer"
         placeholder={`Ask about ${worksheetTitle ?? 'this worksheet'}`}
       >
-        <Chat.ModelSelector models={OPENROUTER_MODELS} />
+        <Chat.ModelSelector models={[...ASSISTANT_MODEL_MODES]} />
       </Chat.Composer>
     </div>
   );
