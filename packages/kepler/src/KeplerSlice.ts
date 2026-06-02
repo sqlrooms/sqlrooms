@@ -303,6 +303,12 @@ export function createKeplerSlice({
   // active run to loop once more with a fresh snapshot after it finishes, so
   // late mutations are never silently dropped.
   let pendingKeplerSync = false;
+  // While restoring saved configs (setConfig -> updateMapConfigs), the
+  // addConfigToMap dispatches would otherwise trip saveKeplerConfigMiddleware
+  // and overwrite each map's saved config with a serialization of the not-yet-
+  // hydrated redux state — wiping layers/filters for every non-active tab.
+  // Suppress the auto-save while restoration is in progress.
+  let isRestoringConfig = false;
   const updateMapLastOpenedAt = (
     maps: KeplerSliceConfig['maps'],
     mapId: string,
@@ -397,8 +403,20 @@ export function createKeplerSlice({
           );
           updateMapReduxStates();
           updateForwardDispatch();
-          get().kepler.syncKeplerDatasets();
-          updateMapConfigs();
+          // Datasets must be loaded BEFORE applying saved configs: kepler's
+          // addDataToMap reducer silently drops layers referencing dataIds
+          // that aren't already in visState. Keep isRestoringConfig set across
+          // the entire restore (sync + config apply) so middleware doesn't
+          // overwrite each map's saved config with the half-hydrated state.
+          isRestoringConfig = true;
+          void get()
+            .kepler.syncKeplerDatasets()
+            .then(() => {
+              updateMapConfigs();
+            })
+            .finally(() => {
+              isRestoringConfig = false;
+            });
         },
 
         async initialize() {
@@ -437,7 +455,12 @@ export function createKeplerSlice({
           });
           updateForwardDispatch();
           await get().kepler.syncKeplerDatasets();
-          updateMapConfigs();
+          isRestoringConfig = true;
+          try {
+            updateMapConfigs();
+          } finally {
+            isRestoringConfig = false;
+          }
           for (const mapId of Object.keys(get().kepler.map)) {
             requestMapStyle(mapId);
           }
@@ -872,7 +895,11 @@ export function createKeplerSlice({
           const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
           if (!mapId) throw new Error('Map ID not found in action payload');
           const result = next(action);
-          if (!SKIP_AUTO_SAVE_ACTIONS.includes(action.type) && mapId) {
+          if (
+            !SKIP_AUTO_SAVE_ACTIONS.includes(action.type) &&
+            mapId &&
+            !isRestoringConfig
+          ) {
             // save kepler config to store
             set((state) =>
               produce(state, (draft) => {
@@ -880,9 +907,33 @@ export function createKeplerSlice({
                   (map) => map.id === mapId,
                 );
                 if (mapToSave && state.kepler.map?.[mapId]) {
-                  mapToSave.config = KeplerGLSchemaManager.getConfigToSave(
+                  const newConfig = KeplerGLSchemaManager.getConfigToSave(
                     state.kepler.map[mapId],
                   ) as any;
+                  // Defensive: kepler hydrates layers asynchronously via
+                  // react-palm tasks. Mount-time actions (mapStyle requests,
+                  // dimension changes, etc.) can fire before those tasks
+                  // finish, producing a serialization with 0 layers. Refuse
+                  // to overwrite a non-empty saved config with an empty one —
+                  // this only blocks accidental wipes; real layer
+                  // edits/removals replay through the same path with
+                  // datasets present.
+                  const existingLayers =
+                    (mapToSave.config?.config?.visState as any)?.layers
+                      ?.length ?? 0;
+                  const newLayers =
+                    (newConfig?.config?.visState as any)?.layers?.length ?? 0;
+                  const newDatasets = Object.keys(
+                    state.kepler.map[mapId].visState?.datasets ?? {},
+                  ).length;
+                  if (
+                    existingLayers > 0 &&
+                    newLayers === 0 &&
+                    newDatasets === 0
+                  ) {
+                    return;
+                  }
+                  mapToSave.config = newConfig;
                 }
               }),
             );
