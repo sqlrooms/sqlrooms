@@ -72,8 +72,6 @@ import {
   createDefaultWorkspaceContent,
   getWorkspaceContentWorksheets,
   getWorkspaceHydrationKey,
-  hydrateWorkspaceContent,
-  serializeWorkspaceRoomContent,
 } from './workspace/workspaceContent';
 import {
   ASSISTANT_PANEL_ID,
@@ -1132,12 +1130,9 @@ function WorkspaceLayoutCanvas({
 
   useEffect(() => {
     if (!roomStore) return;
-    hydrateWorkspaceContent({
-      store: roomStore,
-      content: workspaceContent,
-      currentWorksheetId: selectedWorksheet?.id,
-    });
-    const hydratedContent = serializeWorkspaceRoomContent(roomStore.getState());
+    const hydratedContent = roomStore
+      .getState()
+      .workspace.hydrateContent(workspaceContent);
     syncedWorkspaceContentJsonRef.current = JSON.stringify(hydratedContent);
     if (!workspaceContent) {
       onWorkspaceContentChange(hydratedContent);
@@ -1145,10 +1140,14 @@ function WorkspaceLayoutCanvas({
   }, [
     onWorkspaceContentChange,
     roomStore,
-    selectedWorksheet?.id,
     workspaceContent,
     workspaceHydrationKey,
   ]);
+
+  useEffect(() => {
+    if (!roomStore) return;
+    roomStore.getState().workspace.setCurrentWorksheet(selectedWorksheet?.id);
+  }, [roomStore, selectedWorksheet?.id]);
 
   useEffect(() => {
     if (!roomStore) return;
@@ -1207,7 +1206,7 @@ function WorkspaceLayoutCanvas({
         return;
       }
 
-      const nextContent = serializeWorkspaceRoomContent(state);
+      const nextContent = state.workspace.serializeContent();
       const nextContentJson = JSON.stringify(nextContent);
       if (nextContentJson === syncedWorkspaceContentJsonRef.current) return;
 

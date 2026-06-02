@@ -1,19 +1,22 @@
 import {
   ArtifactsSliceConfig,
+  type ArtifactsSliceState,
   type ArtifactsSliceConfig as ArtifactsSliceConfigType,
 } from '@sqlrooms/artifacts';
 import {
   BlockDocumentsSliceConfig,
   type BlockDocumentContent,
+  type BlockDocumentsSliceState,
   type BlockDocumentsSliceConfig as BlockDocumentsSliceConfigType,
 } from '@sqlrooms/documents';
 import {
   MosaicDashboardSliceConfig,
+  type MosaicDashboardSliceState,
   type MosaicDashboardSliceConfig as MosaicDashboardSliceConfigType,
 } from '@sqlrooms/mosaic';
+import type {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor-config';
 import type {JsonObject} from '#/lib/json';
-import type {WorkspaceRoomState} from './WorkspaceRoomStore';
 import {createDefaultWorksheetContent} from '../worksheet/defaultBlockDocument';
 import {
   createEmptyPersistedSqlEditorConfig,
@@ -33,6 +36,11 @@ export type WorkspaceContent = {
   mosaicDashboard: MosaicDashboardSliceConfigType;
 };
 
+export type WorkspaceContentRoomState = ArtifactsSliceState &
+  BlockDocumentsSliceState &
+  SqlEditorSliceState &
+  MosaicDashboardSliceState;
+
 const DEFAULT_WORKSHEET_ID = 'default-worksheet';
 
 export function hydrateWorkspaceContent({
@@ -42,7 +50,7 @@ export function hydrateWorkspaceContent({
 }: {
   content: JsonObject | undefined;
   currentWorksheetId?: string;
-  store: {getState: () => WorkspaceRoomState};
+  store: {getState: () => WorkspaceContentRoomState};
 }) {
   const parsedContent =
     parseWorkspaceContent(content) ?? createDefaultWorkspaceContent();
@@ -67,7 +75,7 @@ export function hydrateWorkspaceContent({
 }
 
 export function serializeWorkspaceRoomContent(
-  state: WorkspaceRoomState,
+  state: WorkspaceContentRoomState,
 ): JsonObject {
   return {
     artifacts: state.artifacts.config,

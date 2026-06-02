@@ -36,6 +36,7 @@ import {
 import type {JsonObject} from '#/lib/json';
 import {createWorkspaceBlockDocumentSliceProps} from '../worksheet/worksheetState';
 import {WORKSPACE_ARTIFACT_TYPES} from './workspaceArtifactTypes';
+import {createWorkspaceSlice, type WorkspaceSliceState} from './workspaceSlice';
 
 export const ASSISTANT_PANEL_ID = 'assistant-panel';
 
@@ -47,7 +48,8 @@ export type WorkspaceRoomState = BaseRoomStoreState &
   MosaicSliceState &
   MosaicDashboardSliceState &
   SqlEditorSliceState &
-  BlockDocumentsSliceState;
+  BlockDocumentsSliceState &
+  WorkspaceSliceState;
 
 export type CreateWorkspaceRoomStoreOptions = {
   workspaceKey: string;
@@ -117,6 +119,7 @@ export function createWorkspaceRoomStore({
       ...createBlockDocumentsSlice<WorkspaceRoomState>(
         createWorkspaceBlockDocumentSliceProps(),
       )(set, get, store),
+      ...createWorkspaceSlice()(set, get, store),
       ...createAiSlice({
         config: parseWorkspaceAiConfig(aiConfig),
         tools: {},
