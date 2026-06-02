@@ -46,7 +46,7 @@ export function useBoxPlotClient(args: {
   }, [params]);
 
   useEffect(() => {
-    if (!config) {
+    if (!config || !config.x || !config.y) {
       clientRef.current = null;
       return;
     }

@@ -1,15 +1,13 @@
 import type {BlockDocumentChartRendererProps} from '@sqlrooms/documents';
 import {
-  MosaicChartSettingsPanel,
-  MosaicChartView,
-  MosaicDashboardPanelLayout,
+  MosaicDashboardChart,
+  useParseChartConfig,
   useTablesWithColumns,
   type ChartConfig,
 } from '@sqlrooms/mosaic';
 import {Button, cn} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef} from 'react';
-import {parseWorksheetChartConfig} from './worksheetChartConfig';
+import {FC, useCallback} from 'react';
 
 function getBlockDocumentChartSelectionName({
   documentId,
@@ -31,32 +29,7 @@ function getBlockDocumentChartRuntimeKey({
   return `worksheet:${documentId}:chart-block:${blockId}`;
 }
 
-function stableStringify(value: unknown) {
-  return JSON.stringify(normalizeForStableStringify(value));
-}
-
-function normalizeForStableStringify(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(normalizeForStableStringify);
-  }
-  if (
-    value &&
-    typeof value === 'object' &&
-    Object.getPrototypeOf(value) === Object.prototype
-  ) {
-    return Object.fromEntries(
-      Object.keys(value as Record<string, unknown>)
-        .sort()
-        .map((key) => [
-          key,
-          normalizeForStableStringify((value as Record<string, unknown>)[key]),
-        ]),
-    );
-  }
-  return value;
-}
-
-export const WorksheetChartRenderer = ({
+export const WorksheetChartRenderer: FC<BlockDocumentChartRendererProps> = ({
   documentId,
   blockId,
   tableName,
@@ -67,48 +40,29 @@ export const WorksheetChartRenderer = ({
   onTableNameChange,
   onConfigChange,
   onCaptionChange,
-}: BlockDocumentChartRendererProps) => {
-  const onTableNameChangeRef = useRef(onTableNameChange);
-  const onConfigChangeRef = useRef(onConfigChange);
-
-  useEffect(() => {
-    onTableNameChangeRef.current = onTableNameChange;
-  }, [onTableNameChange]);
-
-  useEffect(() => {
-    onConfigChangeRef.current = onConfigChange;
-  }, [onConfigChange]);
-
+}) => {
   const tables = useTablesWithColumns();
   const fallbackTable = tables[0];
-  const fallbackField = fallbackTable?.columns?.[0]?.name;
+  // const fallbackField = fallbackTable?.columns?.[0]?.name;
   const effectiveTableName = tableName || fallbackTable?.table.table || '';
-  const defaultConfig = useMemo<ChartConfig>(() => {
-    return {
-      chartType: 'count-plot',
-      settings: fallbackField ? {field: fallbackField} : {},
-      settingsOpen: true,
-    };
-  }, [fallbackField]);
-  const parsedConfig = useMemo(
-    () => parseWorksheetChartConfig(config, defaultConfig),
-    [config, defaultConfig],
-  );
-  const configKey = stableStringify(config);
-  const chartConfig = parsedConfig.success ? parsedConfig.config : undefined;
+
+  const parseChartConfigResult = useParseChartConfig(config);
+
   const selectionName = getBlockDocumentChartSelectionName({
     documentId,
     blockId,
     selectionGroupId,
   });
+
   const runtimeKey = getBlockDocumentChartRuntimeKey({documentId, blockId});
 
   const handleSettingsOpenChange = useCallback(
     (settingsOpen: boolean) => {
-      if (!chartConfig) return;
-      onConfigChange?.({...chartConfig, settingsOpen});
+      if (parseChartConfigResult.success) {
+        onConfigChange?.({...parseChartConfigResult.config, settingsOpen});
+      }
     },
-    [chartConfig, onConfigChange],
+    [parseChartConfigResult, onConfigChange],
   );
 
   const handleConfigChange = useCallback(
@@ -118,62 +72,18 @@ export const WorksheetChartRenderer = ({
     [onConfigChange],
   );
 
-  useEffect(() => {
-    if (
-      parsedConfig.success &&
-      parsedConfig.normalized &&
-      configKey !== stableStringify(parsedConfig.config)
-    ) {
-      onConfigChangeRef.current?.(parsedConfig.config);
-    }
-  }, [configKey, parsedConfig]);
-
-  useEffect(() => {
-    if (!tableName && effectiveTableName) {
-      onTableNameChangeRef.current?.(effectiveTableName);
-    }
-  }, [effectiveTableName, tableName]);
-
-  if (!chartConfig) {
+  if (!parseChartConfigResult.success) {
     return (
-      <div className="p-4">
-        <div className="text-sm font-medium">Invalid chart configuration</div>
-        <div className="text-muted-foreground mt-1 text-sm">
-          This worksheet chart block could not be parsed as a Mosaic
-          ChartConfig.
-        </div>
-        {!parsedConfig.success ? (
-          <div className="text-muted-foreground mt-2 text-xs">
-            {parsedConfig.error}
-          </div>
-        ) : null}
+      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+        Invalid chart configuration: {parseChartConfigResult.error}
       </div>
     );
   }
 
-  const settings = (
-    <MosaicChartSettingsPanel
-      tableName={effectiveTableName}
-      config={chartConfig}
-      onChange={handleConfigChange}
-      onClose={() => handleSettingsOpenChange(false)}
-    />
-  );
-  const content = (
-    <div className="h-full overflow-auto p-2">
-      <MosaicChartView
-        tableName={effectiveTableName}
-        config={chartConfig}
-        selectionName={selectionName}
-        retentionKey={runtimeKey}
-        runtimeIssueKey={runtimeKey}
-        className="h-full"
-      />
-    </div>
-  );
+  const chartConfig = parseChartConfigResult.config;
 
   return (
-    <div className="flex h-[420px] min-h-[320px] flex-col">
+    <div className="flex h-105 min-h-80 flex-col">
       <div className="border-border flex min-h-10 items-center gap-2 border-b px-3 py-2">
         {readOnly ? (
           <div className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -204,11 +114,12 @@ export const WorksheetChartRenderer = ({
         </Button>
       </div>
       <div className="min-h-0 flex-1">
-        <MosaicDashboardPanelLayout
-          isOpen={Boolean(chartConfig.settingsOpen)}
-          onIsOpenChange={handleSettingsOpenChange}
-          settings={settings}
-          content={content}
+        <MosaicDashboardChart
+          tableName={effectiveTableName}
+          selectionName={selectionName}
+          config={chartConfig}
+          runtimeKey={runtimeKey}
+          onConfigChange={handleConfigChange}
         />
       </div>
     </div>

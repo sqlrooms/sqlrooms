@@ -1,14 +1,15 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {BarChart3Icon} from 'lucide-react';
-import {type FC} from 'react';
+import {useCallback, type FC} from 'react';
 import {MosaicDashboardChartHeaderActions} from './MosaicDashboardChartHeaderActions';
 import type {ChartPanelConfig} from '../dashboard/dashboard-types';
 import {
   type MosaicDashboardPanelRenderer,
   type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
+  getMosaicDashboardPanelId,
 } from '../dashboard/MosaicDashboardSlice';
-import {useChartTypeDefinition} from '../chart-types/useChartTypeDefinition';
+import {ChartConfig} from '../chart-types/chart-config';
 import {MosaicDashboardChart} from './MosaicDashboardChart';
 
 const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
@@ -21,16 +22,20 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
     (state) => state.mosaic.connection,
   );
 
-  const chartTypeDef = useChartTypeDefinition(panel.config.chartType);
   const tableName = dashboard.selectedTable;
 
-  if (!chartTypeDef) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Unknown chart type: {panel.config.chartType}
-      </div>
-    );
-  }
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
+
+  const runtimeKey = getMosaicDashboardPanelId(dashboardId, panel.id);
+
+  const handleConfigChange = useCallback(
+    (config: ChartConfig) => {
+      updatePanel(dashboardId, panel.id, {config});
+    },
+    [dashboardId, panel.id, updatePanel],
+  );
 
   if (!tableName) {
     return (
@@ -54,12 +59,11 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
 
   return (
     <MosaicDashboardChart
-      dashboardId={dashboardId}
-      selectionName={selectionName}
-      panel={panel}
-      chartTypeDef={chartTypeDef}
       tableName={tableName}
-      connection={connection}
+      selectionName={selectionName}
+      config={panel.config}
+      runtimeKey={runtimeKey}
+      onConfigChange={handleConfigChange}
     />
   );
 };

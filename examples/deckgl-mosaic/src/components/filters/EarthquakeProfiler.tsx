@@ -1,9 +1,13 @@
-import {MosaicProfiler} from '@sqlrooms/mosaic';
+import {DataTableExplorer} from '@sqlrooms/mosaic';
 import {cn} from '@sqlrooms/ui';
-import {useMemo} from 'react';
+import {FC, useMemo} from 'react';
 import {useRoomStore} from '../../store';
 
-export function EarthquakeProfiler({className}: {className?: string}) {
+type EarthquakeProfilerProps = {className?: string};
+
+export const EarthquakeProfiler: FC = ({
+  className,
+}: EarthquakeProfilerProps) => {
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
 
@@ -11,7 +15,11 @@ export function EarthquakeProfiler({className}: {className?: string}) {
     <section
       className={cn('bg-background flex min-h-0 flex-col border-t', className)}
     >
-      <MosaicProfiler pageSize={25} selection={brush} tableName="earthquakes">
+      <DataTableExplorer
+        pageSize={25}
+        selection={brush}
+        tableName="earthquakes"
+      >
         <div className="flex items-center justify-between gap-4 px-3 py-2">
           <div>
             <h2 className="text-sm font-semibold">Earthquake Profiler</h2>
@@ -23,15 +31,15 @@ export function EarthquakeProfiler({className}: {className?: string}) {
 
         <div className="min-h-0 flex-1 overflow-hidden">
           <div className="h-full w-full overflow-auto">
-            <MosaicProfiler.Table>
-              <MosaicProfiler.Header />
-              <MosaicProfiler.Rows />
-            </MosaicProfiler.Table>
+            <DataTableExplorer.Table>
+              <DataTableExplorer.Header />
+              <DataTableExplorer.Rows />
+            </DataTableExplorer.Table>
           </div>
         </div>
 
-        <MosaicProfiler.StatusBar />
-      </MosaicProfiler>
+        <DataTableExplorer.StatusBar />
+      </DataTableExplorer>
     </section>
   );
-}
+};

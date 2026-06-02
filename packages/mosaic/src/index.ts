@@ -339,3 +339,6 @@ export type {
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
 
 // Dashboard agent
+
+export {MosaicDashboardChart} from './chart/MosaicDashboardChart';
+export {useParseChartConfig} from './chart-types/useParseChartConfig';

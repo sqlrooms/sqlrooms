@@ -29,15 +29,9 @@ const KNOWN_CHART_CONFIGS = [
   CustomSpecChartConfig,
 ] as const;
 
-const KNOWN_CHART_TYPES: string[] = [
-  HistogramChartConfig,
-  CountPlotChartConfig,
-  LineChartConfig,
-  BubbleChartConfig,
-  HeatmapChartConfig,
-  BoxPlotChartConfig,
-  CustomSpecChartConfig,
-].map((config) => config.shape.chartType.value);
+const KNOWN_CHART_TYPES: string[] = KNOWN_CHART_CONFIGS.map(
+  (config) => config.shape.chartType.value,
+);
 
 export const CustomChartConfig = z.object({
   chartType: z.string().refine((val) => !KNOWN_CHART_TYPES.includes(val), {
