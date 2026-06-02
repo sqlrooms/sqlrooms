@@ -241,7 +241,7 @@ describe('dashboard AI tools', () => {
     ).toThrow('cannot override built-in tool "create_dashboard_artifact"');
   });
 
-  it('creates and updates chart, Data Table Explorer, and text panels', async () => {
+  it('creates and updates chart and Data Table Explorer panels', async () => {
     const {store, adapter, state} = createHarness();
     const tools = createDashboardAiTools({store, adapter});
 
@@ -283,17 +283,7 @@ describe('dashboard AI tools', () => {
       reasoning: 'test',
     });
     expect(dataTableExplorerResult.llmResult.success).toBe(true);
-
-    const textResult = await (tools.create_dashboard_text_panel as any).execute(
-      {
-        artifactId: dashboardId,
-        title: 'Notes',
-        content: 'Findings',
-        reasoning: 'test',
-      },
-    );
-    expect(textResult.llmResult.success).toBe(true);
-    expect(state.dashboardsById[dashboardId]!.panels).toHaveLength(3);
+    expect(state.dashboardsById[dashboardId]!.panels).toHaveLength(2);
   });
 
   it('fails when updating or removing an unknown panel', async () => {
@@ -310,12 +300,12 @@ describe('dashboard AI tools', () => {
     const tools = createDashboardAiTools({store, adapter});
 
     const updateResult = await (
-      tools.create_dashboard_text_panel as any
+      tools.create_dashboard_histogram as any
     ).execute({
       artifactId: dashboardId,
       panelId: 'missing-panel',
-      title: 'Notes',
-      content: 'Findings',
+      tableName: 'earthquakes',
+      settings: {field: 'magnitude'},
       reasoning: 'test',
     });
     const removeResult = await (tools.remove_dashboard_panel as any).execute({

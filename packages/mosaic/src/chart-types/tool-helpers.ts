@@ -2,20 +2,16 @@ import type {DashboardToolDeps} from './base-types';
 import {
   createMosaicDashboardChartPanelConfig,
   createMosaicDashboardDataTableExplorerPanelConfig,
-  createMosaicDashboardTextPanelConfig,
 } from '../dashboard/MosaicDashboardSlice';
 import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
-import type {
-  DataTableExplorerPanelConfig,
-  TextPanelConfig,
-} from '../dashboard/core-types';
+import type {DataTableExplorerPanelConfig} from '../dashboard/core-types';
 import type {ChartConfig} from './chart-config';
 
 export interface PanelResult {
   panelId: string;
   artifactId: string;
   title: string;
-  config: ChartConfig | DataTableExplorerPanelConfig | TextPanelConfig;
+  config: ChartConfig | DataTableExplorerPanelConfig;
 }
 
 export interface CreateOrUpdateChartPanelParams {
@@ -32,13 +28,6 @@ export interface CreateOrUpdateDataTableExplorerPanelParams {
   tableName: string;
   title: string;
   config: DataTableExplorerPanelConfig;
-}
-
-export interface CreateOrUpdateTextPanelParams {
-  panelId?: string;
-  dashboardId: string;
-  title: string;
-  config: TextPanelConfig;
 }
 
 /**
@@ -146,49 +135,6 @@ export function createOrUpdateDataTableExplorerPanel(
   } else {
     // Create new panel - create full panel config
     const panel = createMosaicDashboardDataTableExplorerPanelConfig({
-      title: params.title,
-      config: params.config,
-    });
-
-    const panelId = deps.addPanel(params.dashboardId, panel);
-    deps.setCurrentArtifact(params.dashboardId);
-
-    return {
-      panelId,
-      artifactId: params.dashboardId,
-      title: panel.title,
-      config: panel.config,
-    };
-  }
-}
-
-/**
- * Universal helper to create or update a text panel.
- */
-export function createOrUpdateTextPanel(
-  deps: DashboardToolDeps,
-  params: CreateOrUpdateTextPanelParams,
-): PanelResult {
-  if (params.panelId) {
-    // Validate panel exists before attempting update
-    const dashboard = ensureDashboard(deps, params.dashboardId);
-    ensurePanel(dashboard, params.dashboardId, params.panelId);
-
-    // Update existing panel
-    deps.updatePanel(params.dashboardId, params.panelId, {
-      title: params.title,
-      config: params.config,
-    });
-
-    return {
-      panelId: params.panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  } else {
-    // Create new panel - create full panel config
-    const panel = createMosaicDashboardTextPanelConfig({
       title: params.title,
       config: params.config,
     });

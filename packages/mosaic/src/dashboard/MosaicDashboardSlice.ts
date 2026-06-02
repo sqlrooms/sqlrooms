@@ -45,7 +45,6 @@ export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
 export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE =
   'data-table-explorer';
-export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
@@ -59,14 +58,6 @@ export const DataTableExplorerPanelConfig = z.object({
 export type DataTableExplorerPanelConfig = z.infer<
   typeof DataTableExplorerPanelConfig
 >;
-
-// Text panel config
-export const TextPanelConfig = z.object({
-  content: z.string().default(''),
-  toolbarOpen: z.boolean().default(false),
-  sourcePanelOpen: z.boolean().default(false),
-});
-export type TextPanelConfig = z.infer<typeof TextPanelConfig>;
 
 // Panel configs discriminated by type
 export const ChartPanelConfig = z.object({
@@ -85,14 +76,6 @@ export const DataTableExplorerPanel = z.object({
 });
 export type DataTableExplorerPanel = z.infer<typeof DataTableExplorerPanel>;
 
-export const TextPanel = z.object({
-  id: z.string(),
-  type: z.literal(MOSAIC_DASHBOARD_TEXT_PANEL_TYPE),
-  title: z.string().default('Text'),
-  config: TextPanelConfig,
-});
-export type TextPanel = z.infer<typeof TextPanel>;
-
 // Legacy panel for backward compatibility
 export const LegacyPanelConfig = z.object({
   id: z.string(),
@@ -104,11 +87,7 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [
-    ChartPanelConfig,
-    DataTableExplorerPanel,
-    TextPanel,
-  ])
+  .discriminatedUnion('type', [ChartPanelConfig, DataTableExplorerPanel])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
@@ -127,8 +106,6 @@ export type ChartPanelRendererProps =
   MosaicDashboardPanelRendererProps<ChartPanelConfig>;
 export type DataTableExplorerPanelRendererProps =
   MosaicDashboardPanelRendererProps<DataTableExplorerPanel>;
-export type TextPanelRendererProps =
-  MosaicDashboardPanelRendererProps<TextPanel>;
 
 export type MosaicDashboardPanelRenderer<
   TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
@@ -149,7 +126,6 @@ export type AnyPanelRenderer = {
 export type PanelTypeMap = {
   [MOSAIC_DASHBOARD_CHART_PANEL_TYPE]: ChartPanelConfig;
   [MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE]: DataTableExplorerPanel;
-  [MOSAIC_DASHBOARD_TEXT_PANEL_TYPE]: TextPanel;
 };
 
 // Panel renderers record - use type-erased renderers for runtime compatibility
@@ -178,24 +154,6 @@ export function createMosaicDashboardDataTableExplorerPanelConfig(
     type: MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
     title: options.title ?? 'Data Table Explorer',
     config: options.config ?? {},
-  };
-}
-
-export function createMosaicDashboardTextPanelConfig(
-  options: {
-    title?: string;
-    config?: TextPanelConfig;
-  } = {},
-): TextPanel {
-  return {
-    id: createId(),
-    type: MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
-    title: options.title ?? 'Text',
-    config: options.config ?? {
-      toolbarOpen: false,
-      sourcePanelOpen: false,
-      content: '',
-    },
   };
 }
 
@@ -394,8 +352,7 @@ function createDashboardGridItem(
 ): LayoutGridItem {
   const effectiveCols = Math.max(1, cols);
   const w =
-    panelType === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE ||
-    panelType === MOSAIC_DASHBOARD_TEXT_PANEL_TYPE
+    panelType === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE
       ? effectiveCols
       : Math.max(1, Math.ceil(effectiveCols / 2));
   const h = 2;

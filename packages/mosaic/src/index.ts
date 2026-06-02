@@ -36,12 +36,10 @@ export {
   type MosaicDashboardInitialStateProps,
 } from './dashboard/initial-state/MosaicDashboardInitialState';
 export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
-export {addTextPanelAction} from './text/addTextPanelAction';
 export {addChartPanelAction} from './chart/addChartPanelAction';
 export {
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardTextPanelConfig,
   createDefaultMosaicDashboardConfig,
   createMosaicDashboardSlice,
   getMosaicDashboardDockId,
@@ -57,7 +55,6 @@ export {
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
-  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
@@ -78,13 +75,11 @@ export type {
   MosaicDashboardEntry as MosaicDashboardEntryType,
   MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
   ChartPanelConfig,
-  TextPanel,
 } from './dashboard/dashboard-types';
 export type {
   MosaicDashboardLayoutType,
   MosaicDashboardPanelSource,
   DataTableExplorerPanelConfig,
-  TextPanelConfig,
 } from './dashboard/core-types';
 export {
   createMosaicColorLegendPlot,
@@ -294,11 +289,9 @@ export {
   createChartTools,
   // New panel and dashboard tools
   createDataTableExplorerTool,
-  createTextPanelTool,
   createListPanelsTool,
   createRemovePanelTool,
   DataTableExplorerToolParameters,
-  TextPanelToolParameters,
   ListPanelsToolParameters,
   RemovePanelToolParameters,
 } from './chart-types';
@@ -317,7 +310,6 @@ export type {
   BubbleChartToolParams,
   BoxPlotToolParams,
   DataTableExplorerToolParams,
-  TextPanelToolParams,
   ListPanelsToolParams,
   RemovePanelToolParams,
 } from './chart-types';

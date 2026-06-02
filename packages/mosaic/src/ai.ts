@@ -21,7 +21,6 @@ import {
   createListPanelsTool,
   createDataTableExplorerTool,
   createRemovePanelTool,
-  createTextPanelTool,
   type ChartBuilderColumn,
   type ChartToolExecutionContext,
   type DashboardToolDeps,
@@ -200,7 +199,7 @@ export const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent t
 
 ## Your Role
 
-You analyze data and create insightful dashboards with multiple visualizations (charts, Data Table Explorers, text annotations). You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
+You analyze data and create insightful dashboards with multiple visualizations (charts, Data Table Explorers). You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
 
 ## Available Tools
 
@@ -214,7 +213,6 @@ You analyze data and create insightful dashboards with multiple visualizations (
 
 **Panel Tools:**
 - create_dashboard_data_table_explorer - table statistics and column summaries
-- create_dashboard_text_panel - markdown annotations and insights
 - ${MAP_TOOL_KEY} - native Deck JSON geospatial map panel (if provided by the host app)
 
 **Data Tools:**
@@ -245,26 +243,7 @@ When user asks to discover insights:
 2. Create targeted charts based on discoveries:
    - If dataset has >10k rows: avoid bubble charts and unaggregated line charts
    - Use histogram, count plot, heatmap, or aggregated visualizations instead
-3. **ALWAYS create ONE text panel** with a concise summary of ALL key findings
-4. Stop when dashboard tells coherent story
-
-**CRITICAL:**
-- Create exactly ONE text panel with insights summary (can be first, last, or in between)
-- Insights should be concise but USEFUL - each bullet should provide actionable or interesting information
-- Include specific numbers, percentages, and comparisons that tell the story
-- Use query tool to discover actual patterns, don't make vague statements
-- Focus on 3-5 most important findings that answer "what's interesting about this data?"
-- Do NOT create additional text panels unless absolutely necessary
-
-**Good insight examples:**
-- "Peak activity between 4-5 magnitude (62% of events)" - specific, actionable
-- "Strong correlation (0.73) between depth and magnitude suggests tectonic pattern" - specific with interpretation
-- "California accounts for 3,234/5,234 events (62%), followed by Japan (18%)" - specific comparison
-
-**Bad insight examples:**
-- "Dataset has data" - useless
-- "Various magnitudes observed" - vague
-- "Interesting patterns found" - not specific
+3. Stop when dashboard tells coherent story
 
 ### Update Requests
 To update existing panels:
@@ -287,10 +266,6 @@ To update existing panels:
 
 ## Best Practices
 
-- **ONE text panel for exploratory requests:** Always create exactly ONE text panel with insights summary when exploring data. It can be created at any point in the workflow.
-- **Make insights useful, not just concise:** Each bullet should include specific numbers, percentages, or patterns discovered through queries. Avoid vague statements.
-- **Use queries to find real insights:** Run queries to discover actual patterns (correlations, distributions, outliers, top values). Don't make assumptions.
-- **No additional text panels:** Do NOT create multiple text panels. All insights go in the single summary panel.
 - **Avoid unaggregated charts for large datasets:** For datasets >10k rows, DO NOT use bubble charts or line charts without aggregations. Use aggregated alternatives instead:
   - For scatter/bubble plots: use heatmap or binned aggregations
   - For line charts: use GROUP BY with time buckets or aggregations
@@ -298,8 +273,7 @@ To update existing panels:
 - **Check before update:** Always call list_dashboard_panels before updating/removing panels
 - **Repair broken charts:** list_dashboard_panels may return an \`issue\` per panel. For \`too-much-data\`, switch to an aggregated chart or add aggregation. For \`sql-error\`, inspect available columns/types and update the broken panel in place.
 - **Validate columns:** Query tools will validate column existence and types
-- **Handle errors gracefully:** If a query or chart creation fails, try alternative approach
-- **Use markdown formatting:** Use headings (##), bullet lists (-), and **bold** in text panels for readability`;
+- **Handle errors gracefully:** If a query or chart creation fails, try alternative approach`;
 
 const DashboardCreateArtifactToolParameters = z.object({
   title: z.string().optional(),
@@ -549,7 +523,6 @@ export function createDashboardAiTools<TState>({
     }),
     ...chartTools,
     create_dashboard_data_table_explorer: createDataTableExplorerTool(deps),
-    create_dashboard_text_panel: createTextPanelTool(deps),
     list_dashboard_panels: createListPanelsTool(deps),
     remove_dashboard_panel: createRemovePanelTool(deps),
   };
@@ -657,7 +630,7 @@ export function createDashboardAgentTool<TState>(
 
 Use this for exploratory data analysis tasks like "analyze the earthquakes dataset" or "create insights dashboard for sales data".
 
-The agent will query the data, discover patterns, and create charts, Data Table Explorers, and text panels with findings.
+The agent will query the data, discover patterns, and create charts and Data Table Explorers with findings.
 
 For simple tasks like "create a histogram of magnitude", use the individual chart tools instead.
 

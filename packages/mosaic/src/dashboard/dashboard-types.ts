@@ -7,7 +7,6 @@ import {z} from 'zod';
 import {ChartConfig} from '../chart-types/chart-config';
 import {
   DataTableExplorerPanelConfig,
-  TextPanelConfig,
   MosaicDashboardLayoutType,
   MosaicDashboardPanelSource,
 } from './core-types';
@@ -15,7 +14,6 @@ import {
 export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
 export const MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE =
   'data-table-explorer';
-export const MOSAIC_DASHBOARD_TEXT_PANEL_TYPE = 'text';
 
 // Panel configs discriminated by type
 export const ChartPanelConfig = z.object({
@@ -36,15 +34,6 @@ export const DataTableExplorerPanel = z.object({
 });
 export type DataTableExplorerPanel = z.infer<typeof DataTableExplorerPanel>;
 
-export const TextPanel = z.object({
-  id: z.string(),
-  type: z.literal(MOSAIC_DASHBOARD_TEXT_PANEL_TYPE),
-  title: z.string().default('Text'),
-  source: MosaicDashboardPanelSource.optional(),
-  config: TextPanelConfig,
-});
-export type TextPanel = z.infer<typeof TextPanel>;
-
 // Legacy panel for backward compatibility
 export const LegacyPanelConfig = z.object({
   id: z.string(),
@@ -57,11 +46,7 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 
 // Discriminated union of all panel types
 export const MosaicDashboardPanelConfig = z
-  .discriminatedUnion('type', [
-    ChartPanelConfig,
-    DataTableExplorerPanel,
-    TextPanel,
-  ])
+  .discriminatedUnion('type', [ChartPanelConfig, DataTableExplorerPanel])
   .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig

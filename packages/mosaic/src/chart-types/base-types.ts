@@ -11,10 +11,7 @@ import type * as z from 'zod';
 import {ChartConfig, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
-import type {
-  DataTableExplorerPanelConfig,
-  TextPanelConfig,
-} from '../dashboard/core-types';
+import type {DataTableExplorerPanelConfig} from '../dashboard/core-types';
 import type {MosaicDashboardEntry} from '../dashboard/dashboard-types';
 import type {
   ChartDataPolicy,
@@ -62,12 +59,12 @@ export interface ResolvedTable {
 
 /**
  * Partial update to apply to a dashboard panel.
- * Config can be any of the panel config types (chart, dataTableExplorer, or text).
+ * Config can be any of the panel config types (chart, dataTableExplorer).
  */
 export interface PanelPatch {
   title?: string;
   source?: ChartBuilderPanelSource;
-  config?: ChartConfig | DataTableExplorerPanelConfig | TextPanelConfig;
+  config?: ChartConfig | DataTableExplorerPanelConfig;
 }
 
 /**
