@@ -75,13 +75,11 @@ import {
 } from './workspace/workspaceContent';
 import {
   ASSISTANT_PANEL_ID,
-  createAssistantChatHeaders,
   createDefaultWorkspaceAiConfig,
   createDefaultWorkspaceLayout,
   createWorkspaceRoomStore,
-  getAiConfigSyncKey,
-  parseWorkspaceAiConfig,
 } from './workspace/WorkspaceRoomStore';
+import {getAiConfigSyncKey} from './workspace/workspaceAi';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
@@ -1151,7 +1149,7 @@ function WorkspaceLayoutCanvas({
 
   useEffect(() => {
     if (!roomStore) return;
-    roomStore.getState().layout.setConfig(layout);
+    roomStore.getState().workspace.hydrateLayout(layout);
   }, [layout, roomStore]);
 
   useEffect(() => {
@@ -1160,18 +1158,12 @@ function WorkspaceLayoutCanvas({
     if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
 
     syncedAiConfigJsonRef.current = nextAiConfigJson;
-    roomStore.getState().ai.setConfig(parseWorkspaceAiConfig(aiConfig));
+    roomStore.getState().workspace.hydrateAiConfig(aiConfig);
   }, [aiConfig, roomStore]);
 
   useEffect(() => {
     if (!roomStore) return;
-    roomStore.setState((state) => ({
-      ...state,
-      ai: {
-        ...state.ai,
-        chatHeaders: createAssistantChatHeaders(token),
-      },
-    }));
+    roomStore.getState().workspace.setAssistantToken(token);
   }, [roomStore, token]);
 
   useEffect(() => {
@@ -1189,7 +1181,7 @@ function WorkspaceLayoutCanvas({
         if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
 
         syncedAiConfigJsonRef.current = nextAiConfigJson;
-        onAiConfigChange(state.ai.config as unknown as JsonObject);
+        onAiConfigChange(state.workspace.serializeAiConfig());
       }
     });
   }, [onAiConfigChange, roomStore]);
