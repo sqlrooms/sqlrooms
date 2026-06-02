@@ -40,6 +40,11 @@ import {
   createAssistantInstructions,
   parseWorkspaceAiConfig,
 } from './workspaceAi';
+import {
+  ASSISTANT_MODEL_MODES,
+  ASSISTANT_MODEL_PROVIDER,
+  DEFAULT_ASSISTANT_MODEL_MODE,
+} from '../assistant/modelModes';
 import {WORKSPACE_ARTIFACT_TYPES} from './workspaceArtifactTypes';
 import {createWorkspaceSlice, type WorkspaceSliceState} from './workspaceSlice';
 
@@ -128,11 +133,9 @@ export function createWorkspaceRoomStore({
       ...createAiSlice({
         config: parseWorkspaceAiConfig(aiConfig),
         tools: {},
-        defaultProvider: 'openrouter',
-        defaultModel: 'openai/gpt-4o-mini',
-        getAvailableModels: () => [
-          {provider: 'openrouter', value: 'openai/gpt-4o-mini'},
-        ],
+        defaultProvider: ASSISTANT_MODEL_PROVIDER,
+        defaultModel: DEFAULT_ASSISTANT_MODEL_MODE,
+        getAvailableModels: () => [...ASSISTANT_MODEL_MODES],
         chatEndPoint: '/api/chat',
         chatHeaders: createAssistantChatHeaders(token),
         getInstructions: (args) =>
