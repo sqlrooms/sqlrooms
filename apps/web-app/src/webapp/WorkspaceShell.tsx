@@ -29,6 +29,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  ScrollArea,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -1083,14 +1084,14 @@ function WorkspaceLayoutCanvas({
         component: function WorkspaceWorksheetPanel() {
           return (
             <section className="worksheet-panel">
-              <div className="worksheet-stage">
+              <ScrollArea className="worksheet-stage">
                 {selectedWorksheet ? (
                   <WorksheetSurface
                     worksheet={selectedWorksheet}
                     tableNames={duckDbRuntime.tableNames}
                   />
                 ) : null}
-              </div>
+              </ScrollArea>
             </section>
           );
         },

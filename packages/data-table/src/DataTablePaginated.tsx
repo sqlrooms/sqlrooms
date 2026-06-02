@@ -168,7 +168,7 @@ export function DataTablePaginated<Data extends object>({
           isFetching && 'pointer-events-none opacity-50',
         )}
       >
-        <ScrollArea className="h-full overflow-auto">
+        <ScrollArea className="h-full">
           <Table disableWrapper className="border-separate border-spacing-0">
             <TableHeader className="[&_tr]:border-b-0!">
               {table.getHeaderGroups().map((headerGroup) => (
@@ -292,7 +292,6 @@ export function DataTablePaginated<Data extends object>({
               ))}
             </TableBody>
           </Table>
-          <ScrollBar orientation="vertical" className="z-50" />
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
