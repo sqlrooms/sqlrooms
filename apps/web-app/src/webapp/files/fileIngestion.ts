@@ -1,5 +1,4 @@
 import {PARQUET_UPLOAD_LIMIT_BYTES} from './fileLimits';
-import {createFileUploadIntent, finalizeFileUpload} from '../workspace/files';
 import type {WorkspaceDuckDbRuntime} from '../worksheet/duckdbRuntime';
 
 export type PreparedWorkspaceFile = {
@@ -49,6 +48,8 @@ export async function uploadPreparedWorkspaceFile({
   workspaceId: string;
   preparedFile: PreparedWorkspaceFile;
 }) {
+  const {createFileUploadIntent, finalizeFileUpload} =
+    await import('../workspace/files');
   const intent = await createFileUploadIntent({
     data: {
       token,
@@ -152,7 +153,7 @@ async function hashBlob(blob: Blob) {
   ).join('');
 }
 
-function createTableName(fileName: string) {
+export function createTableName(fileName: string) {
   const withoutExtension = fileName.replace(/\.[^.]+$/, '');
   const sanitized = withoutExtension
     .replace(/[^a-zA-Z0-9_]+/g, '_')
