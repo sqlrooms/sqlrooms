@@ -126,7 +126,7 @@ describe('createPersistenceController', () => {
     expect(controller.getState().dirty).toBe(false);
   });
 
-  it('sets an explicit baseline without saving', async () => {
+  it('sets an explicit saved snapshot without saving', async () => {
     const saved: string[] = [];
     const controller = createPersistenceController<string>({
       adapter: {
@@ -138,7 +138,7 @@ describe('createPersistenceController', () => {
     });
 
     controller.setSnapshot('draft', 'setItem');
-    controller.setBaseline('draft');
+    controller.markSnapshotSaved('draft');
     await controller.flush();
 
     expect(saved).toEqual([]);

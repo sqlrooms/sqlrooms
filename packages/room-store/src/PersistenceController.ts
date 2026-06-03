@@ -21,13 +21,35 @@ export type PersistenceAdapter<TSnapshot> = {
 };
 
 export type PersistenceControllerState = {
+  /** True while the adapter is loading a snapshot into memory. */
   hydrating: boolean;
+  /**
+   * True when the controller has a snapshot that differs from the saved
+   * snapshot and should be persisted by autosave, `saveNow`, or `flush`.
+   */
   dirty: boolean;
+  /** True while an adapter `save` call is in flight. */
   saving: boolean;
+  /** Last adapter load/save error, or null after a successful save/snapshot mark. */
   error: unknown;
+  /** Last reason passed to a save or dirty-marking operation. */
   lastSaveReason: PersistenceSaveReason | null;
+  /** Unix timestamp, in milliseconds, of the last successful adapter save. */
   lastSavedAt: number | null;
-  baselineVersion: number;
+  /**
+   * Monotonic counter for changes to the saved snapshot.
+   *
+   * This is the snapshot the controller currently considers clean: either the
+   * snapshot loaded during hydration, the snapshot passed to `markSnapshotSaved`,
+   * or the latest snapshot successfully written by the adapter.
+   * Consumers can watch this value to know that the clean saved state changed
+   * without reading or comparing the snapshot itself.
+   */
+  savedSnapshotVersion: number;
+  /**
+   * True when a save was requested while another save was already in flight.
+   * The controller will coalesce those requests and persist the latest snapshot.
+   */
   pendingSave: boolean;
 };
 
@@ -36,14 +58,42 @@ export type PersistenceControllerListener = (
 ) => void;
 
 export type PersistenceController<TSnapshot> = {
+  /**
+   * Loads the adapter snapshot and treats it as the saved snapshot.
+   *
+   * Hydration does not mark the controller dirty. Hosts should merge the loaded
+   * snapshot into their runtime store, then call `markSnapshotSaved` if the merged
+   * runtime shape differs from the raw loaded snapshot.
+   */
   hydrate: () => Promise<TSnapshot | null>;
-  setBaseline: (snapshot: TSnapshot | null) => void;
+  /**
+   * Marks a snapshot as clean without writing it.
+   *
+   * Use this after hydration or other trusted reconciliation work once runtime
+   * state reflects durable storage and should not be interpreted as a user edit.
+   */
+  markSnapshotSaved: (snapshot: TSnapshot | null) => void;
+  /**
+   * Provides the latest snapshot to save and marks it dirty when it differs
+   * from the saved snapshot.
+   */
   setSnapshot: (snapshot: TSnapshot, reason?: PersistenceSaveReason) => void;
+  /** Marks the current `getSnapshot` result dirty without providing it eagerly. */
   markDirty: (reason?: PersistenceSaveReason) => void;
+  /** Saves the dirty snapshot immediately, bypassing autosave delay. */
   saveNow: (reason?: PersistenceSaveReason) => Promise<void>;
+  /** Flushes pending dirty state before unload, close, or project switch. */
   flush: (reason?: PersistenceSaveReason) => Promise<void>;
+  /**
+   * Runs work while dirty marking and snapshot updates are ignored.
+   *
+   * Use this around hydration or programmatic restore flows that should not be
+   * treated as user edits.
+   */
   pause: <TResult>(fn: () => TResult | Promise<TResult>) => Promise<TResult>;
+  /** Returns a copy of the current observable controller state. */
   getState: () => PersistenceControllerState;
+  /** Subscribes to observable controller state changes. */
   subscribe: (listener: PersistenceControllerListener) => () => void;
 };
 
@@ -66,7 +116,9 @@ export function createPersistenceController<TSnapshot>({
   autosaveDelayMs = null,
   now = () => Date.now(),
 }: CreatePersistenceControllerOptions<TSnapshot>): PersistenceController<TSnapshot> {
-  let baselineSnapshot: TSnapshot | null = null;
+  // Snapshot last known to match durable storage. A new snapshot equal to this
+  // value is clean; a different snapshot is dirty and eligible for saving.
+  let lastSavedSnapshot: TSnapshot | null = null;
   let pendingSnapshot: TSnapshot | undefined;
   let pauseDepth = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -79,7 +131,7 @@ export function createPersistenceController<TSnapshot>({
     error: null,
     lastSaveReason: null,
     lastSavedAt: null,
-    baselineVersion: 0,
+    savedSnapshotVersion: 0,
     pendingSave: false,
   };
 
@@ -139,14 +191,14 @@ export function createPersistenceController<TSnapshot>({
           }
           pendingSnapshot = undefined;
           await adapter.save(snapshot, {reason});
-          baselineSnapshot = snapshot;
+          lastSavedSnapshot = snapshot;
           const hasNewSnapshot = pendingSnapshot !== undefined;
           setState({
             dirty: hasNewSnapshot || state.pendingSave,
             error: null,
             lastSaveReason: reason,
             lastSavedAt: now(),
-            baselineVersion: state.baselineVersion + 1,
+            savedSnapshotVersion: state.savedSnapshotVersion + 1,
           });
         } while (state.pendingSave || pendingSnapshot !== undefined);
       } catch (error) {
@@ -170,12 +222,12 @@ export function createPersistenceController<TSnapshot>({
       setState({hydrating: true, error: null});
       try {
         const snapshot = await adapter.load();
-        baselineSnapshot = snapshot;
+        lastSavedSnapshot = snapshot;
         pendingSnapshot = undefined;
         setState({
           dirty: false,
           hydrating: false,
-          baselineVersion: state.baselineVersion + 1,
+          savedSnapshotVersion: state.savedSnapshotVersion + 1,
         });
         return snapshot;
       } catch (error) {
@@ -184,22 +236,22 @@ export function createPersistenceController<TSnapshot>({
       }
     },
 
-    setBaseline: (snapshot) => {
+    markSnapshotSaved: (snapshot) => {
       clearTimer();
-      baselineSnapshot = snapshot;
+      lastSavedSnapshot = snapshot;
       pendingSnapshot = undefined;
       setState({
         dirty: false,
         pendingSave: false,
         error: null,
-        baselineVersion: state.baselineVersion + 1,
+        savedSnapshotVersion: state.savedSnapshotVersion + 1,
       });
     },
 
     setSnapshot: (snapshot, reason = 'setItem') => {
       if (!canPersistChange()) return;
-      if (snapshot === baselineSnapshot) {
-        controller.setBaseline(snapshot);
+      if (snapshot === lastSavedSnapshot) {
+        controller.markSnapshotSaved(snapshot);
         return;
       }
       pendingSnapshot = snapshot;

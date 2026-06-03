@@ -16,7 +16,7 @@ const PERSIST_DEBOUNCE_MS = 300;
 export type DuckDbPersistStorage = PersistStorage<any> & {
   controller: PersistenceController<string>;
   flush: () => Promise<void>;
-  setBaselineFromState: (state: unknown) => void;
+  markStateSnapshotSaved: (state: unknown) => void;
 };
 
 function sanitizeIdent(ident: string): string {
@@ -109,8 +109,8 @@ export function createDuckDbPersistStorage(
   return {
     controller,
     flush: () => controller.flush('flush'),
-    setBaselineFromState: (state: unknown) => {
-      controller.setBaseline(JSON.stringify(state));
+    markStateSnapshotSaved: (state: unknown) => {
+      controller.markSnapshotSaved(JSON.stringify(state));
     },
     getItem: async (_name: string): Promise<StorageValue<any> | null> => {
       const body = await controller.hydrate();
@@ -133,7 +133,7 @@ export function createDuckDbPersistStorage(
 
     removeItem: async (_name: string): Promise<void> => {
       await controller.flush('remove');
-      controller.setBaseline(null);
+      controller.markSnapshotSaved(null);
       await controller.pause(async () => {
         await ensure();
         const ns = nsRef(namespace);

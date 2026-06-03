@@ -268,7 +268,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        cliUiPersistStorage.setBaselineFromState(
+        cliUiPersistStorage.markStateSnapshotSaved(
           persistHelpers.partialize(state),
         );
       },

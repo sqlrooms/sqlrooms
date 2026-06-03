@@ -128,7 +128,7 @@ const controller = createPersistenceController({
 });
 
 const snapshot = await controller.hydrate();
-controller.setBaseline(snapshot);
+controller.markSnapshotSaved(snapshot);
 controller.setSnapshot(nextSnapshot, 'setItem');
 await controller.flush('final-flush');
 ```
