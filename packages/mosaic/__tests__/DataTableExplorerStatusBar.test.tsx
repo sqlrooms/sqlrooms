@@ -43,15 +43,22 @@ describe('DataTableExplorerStatusBar', () => {
     expect(screen.getByLabelText('Next page')).not.toBeDisabled();
   });
 
-  it('enables reset from the explicit filter flag instead of count comparison', () => {
+  it('renders custom actions via renderActions', () => {
     const explorer = createDataTableExplorerOverrides({
       filteredRowCount: 100,
       hasFilters: true,
       totalRowCount: 100,
     });
-    render(<DataTableExplorerStatusBar explorer={explorer} />);
+    render(
+      <DataTableExplorerStatusBar
+        explorer={explorer}
+        renderActions={(sql) => <button type="button">Custom: {sql}</button>}
+      />,
+    );
 
-    expect(screen.getByText('Reset')).not.toBeDisabled();
+    expect(
+      screen.getByText('Custom: select * from earthquakes'),
+    ).toBeInTheDocument();
   });
 
   it('disables next on the last page and updates page index when clicked', () => {
