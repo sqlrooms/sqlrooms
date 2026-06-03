@@ -1,6 +1,6 @@
 import {Button, Textarea} from '@sqlrooms/ui';
 import {useCallback, useState} from 'react';
-import {Field} from '../../chart-builders/Field';
+import {Field} from '../../components/Field';
 
 export interface BuildDashboardWithAIPanelProps {
   onStart?: (prompt: string) => void | Promise<void>;

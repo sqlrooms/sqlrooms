@@ -1,12 +1,12 @@
 import {type FC} from 'react';
-import {Field} from '../../../chart-builders/Field';
-import {ColumnSelector} from '../../../chart-builders/ColumnSelector';
+import {Field} from '../../../components/Field';
+import {ColumnSelector} from '../../../components/ColumnSelector';
 
-import {TemporalGranularitySelector} from '../../../chart-builders/TemporalGranularitySelector';
+import {TemporalGranularitySelector} from '../../../components/TemporalGranularitySelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
-import {MultiFieldSelector} from '../../../chart-builders/MultiFieldSelector';
-import {isTemporalType} from '../../../chart-builders/constants';
-import {useColumnsContext} from '../../../chart-builders/ColumnsContext';
+import {MultiFieldSelector} from '../../../components/MultiFieldSelector';
+import {isTemporalType} from '../../../column-types-utils';
+import {useColumnsContext} from '../../../components/ColumnsContext';
 
 /**
  * Explicit settings component for line chart.

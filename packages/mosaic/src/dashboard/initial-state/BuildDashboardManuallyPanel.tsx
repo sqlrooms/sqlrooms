@@ -1,7 +1,7 @@
 import {Button} from '@sqlrooms/ui';
 import {useCallback, useState} from 'react';
-import {TableSelector} from '../../chart-builders/TableSelector';
-import {Field} from '../../chart-builders/Field';
+import {TableSelector} from '../../components/TableSelector';
+import {Field} from '../../components/Field';
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {
   useStoreWithMosaicDashboard,

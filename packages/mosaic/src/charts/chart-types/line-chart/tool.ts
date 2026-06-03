@@ -1,6 +1,7 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {LineChartSettings, AggregateFunction, TemporalInterval} from './schema';
+import {LineChartSettings} from './schema';
+import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
@@ -8,7 +9,7 @@ import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
-} from '../../../chart-builders/constants';
+} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;

@@ -1,22 +1,6 @@
 import {z} from 'zod';
 import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
-
-// Temporal interval enum
-export const TemporalInterval = z.enum([
-  'year',
-  'quarter',
-  'month',
-  'week',
-  'day',
-  'hour',
-  'minute',
-  'second',
-]);
-export type TemporalInterval = z.infer<typeof TemporalInterval>;
-
-// Aggregate function enum
-export const AggregateFunction = z.enum(['sum', 'avg', 'min', 'max']);
-export type AggregateFunction = z.infer<typeof AggregateFunction>;
+import {TemporalInterval, AggregateFunction} from '../../../schemas';
 
 // Y-field configuration
 export const YFieldConfig = z.object({

@@ -242,15 +242,15 @@ export type {ChartBuilderRootProps} from './chart-builders/ChartBuilderRoot';
 export {ChartBuilderRoot} from './chart-builders/ChartBuilderRoot';
 export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
 export {ChartBuilderFields} from './chart-builders/ChartBuilderFields';
-export {Field} from './chart-builders/Field';
-export {TableSelector} from './chart-builders/TableSelector';
-export {ColumnSelector} from './chart-builders/ColumnSelector';
-export {MultiFieldSelector} from './chart-builders/MultiFieldSelector';
+export {Field} from './components/Field';
+export {TableSelector} from './components/TableSelector';
+export {ColumnSelector} from './components/ColumnSelector';
+export {MultiFieldSelector} from './components/MultiFieldSelector';
 export {
   ColumnsProvider,
   useColumnsContext,
   type ColumnsContextValue,
-} from './chart-builders/ColumnsContext';
+} from './components/ColumnsContext';
 export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
 export {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
@@ -318,11 +318,13 @@ export type {
 export {
   buildChartTypeTitle,
   canCreateChartFromType,
+} from './chart-builders/chartTypeUtils';
+export {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
-} from './chart-builders/chartTypeUtils';
-export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
+} from './column-types-utils';
+export type {FieldSelectorInputProps} from './components/FieldSelectorInput';
 export type {
   ChartBuilderColumn,
   ChartBuilderDashboardPanelOutput,

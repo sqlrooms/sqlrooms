@@ -4,7 +4,7 @@ import {HeatmapChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
-import {NUMERIC_COLUMN_TYPES} from '../../../chart-builders/constants';
+import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({

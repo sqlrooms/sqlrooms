@@ -9,7 +9,7 @@ import {
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
-import {QUANTITATIVE_COLUMN_TYPES} from '../../../chart-builders/constants';
+import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({

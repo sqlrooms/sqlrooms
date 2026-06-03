@@ -25,8 +25,8 @@ import {type ChartConfig, type ChartType} from '../chart-types';
 import {Button} from '@sqlrooms/ui';
 import {CodeIcon, XIcon} from 'lucide-react';
 import {useChartTypeDefinition} from '../useChartTypeDefinition';
-import {Field} from '../../chart-builders/Field';
-import {useColumnsContext} from '../../chart-builders/ColumnsContext';
+import {Field} from '../../components/Field';
+import {useColumnsContext} from '../../components/ColumnsContext';
 
 interface MosaicChartSettingsRootProps {
   config: ChartConfig;

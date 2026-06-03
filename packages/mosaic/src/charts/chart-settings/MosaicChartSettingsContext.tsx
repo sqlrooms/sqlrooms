@@ -2,7 +2,7 @@ import {createContext, type ReactNode, useCallback, useContext} from 'react';
 import type {TableColumn} from '@sqlrooms/db';
 import type {ChartConfig} from '../chart-types/chart-config';
 import type {ChartType} from '../chart-types/base-types';
-import {ColumnsProvider} from '../../chart-builders/ColumnsContext';
+import {ColumnsProvider} from '../../components/ColumnsContext';
 
 type ChartSetting<T extends ChartConfig = ChartConfig> = T['settings'];
 

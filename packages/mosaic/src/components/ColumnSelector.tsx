@@ -4,7 +4,7 @@ import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
-} from './constants';
+} from '../column-types-utils';
 import {useColumnsContext} from './ColumnsContext';
 
 export interface ColumnSelectorProps {

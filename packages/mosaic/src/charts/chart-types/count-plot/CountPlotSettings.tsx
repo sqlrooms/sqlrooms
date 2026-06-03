@@ -1,6 +1,6 @@
 import {type FC} from 'react';
-import {Field} from '../../../chart-builders/Field';
-import {ColumnSelector} from '../../../chart-builders/ColumnSelector';
+import {Field} from '../../../components/Field';
+import {ColumnSelector} from '../../../components/ColumnSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 
 export const CountPlotSettingsComponent: FC = () => {

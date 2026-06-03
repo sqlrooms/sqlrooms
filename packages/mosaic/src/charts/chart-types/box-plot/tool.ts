@@ -7,7 +7,7 @@ import {validateColumnExists} from '../../../ai/tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
-} from '../../../chart-builders/constants';
+} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({

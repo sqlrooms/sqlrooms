@@ -1,7 +1,7 @@
 import {type FC, useCallback, useMemo} from 'react';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {MosaicCodeMirrorEditor} from '../../../editor/MosaicCodeMirrorEditor';
-import {Field} from '../../../chart-builders/Field';
+import {Field} from '../../../components/Field';
 
 /**
  * Settings component for custom spec chart type.

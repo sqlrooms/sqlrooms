@@ -4,7 +4,7 @@ import {CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
-import {CATEGORICAL_COLUMN_TYPES} from '../../../chart-builders/constants';
+import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
