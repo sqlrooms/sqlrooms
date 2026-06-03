@@ -224,7 +224,6 @@ export function createRoomStorePersistence<
     adapter: {
       load,
       save,
-      ...(remove ? {remove} : {}),
     },
   });
 

@@ -397,18 +397,22 @@ export function createKeplerSlice({
         forwardDispatch: {},
 
         setConfig: (config: KeplerSliceConfig) => {
-          void get().kepler.withConfigPersistencePaused(async () => {
-            const nextConfig = KeplerSliceConfig.parse(config);
-            set((state) =>
-              produce(state, (draft) => {
-                draft.kepler.config = nextConfig;
-              }),
-            );
-            updateMapReduxStates();
-            updateForwardDispatch();
-            updateMapConfigs();
-            await get().kepler.syncKeplerDatasets();
-          });
+          void get()
+            .kepler.withConfigPersistencePaused(async () => {
+              const nextConfig = KeplerSliceConfig.parse(config);
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.kepler.config = nextConfig;
+                }),
+              );
+              updateMapReduxStates();
+              updateForwardDispatch();
+              updateMapConfigs();
+              await get().kepler.syncKeplerDatasets();
+            })
+            .catch((error) => {
+              console.error('setConfig: failed to restore Kepler config', error);
+            });
         },
 
         async initialize() {
@@ -875,7 +879,7 @@ export function createKeplerSlice({
 
         waitForConfigRestore: async () => {
           while (configRestorePromises.size > 0) {
-            await Promise.all(Array.from(configRestorePromises));
+            await Promise.allSettled(Array.from(configRestorePromises));
           }
         },
 

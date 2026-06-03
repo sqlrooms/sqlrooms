@@ -113,6 +113,47 @@ describe('createPersistenceController', () => {
     });
   });
 
+  it('persists a revert to the last saved snapshot while another save is in flight', async () => {
+    const saved: string[] = [];
+    let releaseFirstSave: (() => void) | undefined;
+    let resolveFirstSaveStarted: (() => void) | undefined;
+    const firstSaveStarted = new Promise<void>((resolve) => {
+      resolveFirstSaveStarted = resolve;
+    });
+    const controller = createPersistenceController<string>({
+      adapter: {
+        load: async () => 'saved',
+        save: async (snapshot) => {
+          saved.push(snapshot);
+          resolveFirstSaveStarted?.();
+          if (snapshot === 'draft') {
+            await new Promise<void>((release) => {
+              releaseFirstSave = release;
+            });
+          }
+        },
+      },
+    });
+
+    await controller.hydrate();
+    controller.setSnapshot('draft', 'setItem');
+    const savePromise = controller.saveNow('manual');
+    await firstSaveStarted;
+
+    controller.setSnapshot('saved', 'setItem');
+    const flushPromise = controller.flush('flush');
+    releaseFirstSave?.();
+    await savePromise;
+    await flushPromise;
+
+    expect(saved).toEqual(['draft', 'saved']);
+    expect(controller.getState()).toMatchObject({
+      dirty: false,
+      saving: false,
+      lastSaveReason: 'flush',
+    });
+  });
+
   it('autosaves dirty snapshots after the configured delay', async () => {
     const saved: string[] = [];
     let resolveSaved: (() => void) | undefined;
@@ -136,6 +177,34 @@ describe('createPersistenceController', () => {
 
     expect(saved).toEqual(['autosaved']);
     expect(controller.getState().dirty).toBe(false);
+  });
+
+  it('records autosave errors without leaving unhandled timer rejections', async () => {
+    const saveError = new Error('autosave failed');
+    let resolveSaveAttempted: (() => void) | undefined;
+    const saveAttempted = new Promise<void>((resolve) => {
+      resolveSaveAttempted = resolve;
+    });
+    const controller = createPersistenceController<string>({
+      autosaveDelayMs: 0,
+      adapter: {
+        load: async () => null,
+        save: async () => {
+          resolveSaveAttempted?.();
+          throw saveError;
+        },
+      },
+    });
+
+    controller.setSnapshot('autosaved', 'setItem');
+    await saveAttempted;
+    await nextMacrotask();
+
+    expect(controller.getState()).toMatchObject({
+      dirty: true,
+      saving: false,
+      error: saveError,
+    });
   });
 
   it('reschedules autosave when the outermost pause exits', async () => {

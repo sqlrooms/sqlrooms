@@ -16,7 +16,6 @@ export type PersistenceAdapter<TSnapshot> = {
     snapshot: TSnapshot,
     metadata?: PersistenceSaveMetadata,
   ) => Promise<void>;
-  remove?: () => Promise<void>;
   revision?: unknown;
 };
 
@@ -124,6 +123,7 @@ export function createPersistenceController<TSnapshot>({
   // value is clean; a different snapshot is dirty and eligible for saving.
   let lastSavedSnapshot: TSnapshot | null = null;
   let pendingSnapshot: TSnapshot | undefined;
+  let inFlightSnapshot: TSnapshot | undefined;
   let pauseDepth = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let saveInFlight: Promise<void> | null = null;
@@ -168,7 +168,10 @@ export function createPersistenceController<TSnapshot>({
     clearTimer();
     timer = setTimeout(() => {
       timer = null;
-      void controller.saveNow('autosave');
+      void controller.saveNow('autosave').catch(() => {
+        // saveNow records the adapter error in controller state; suppress the
+        // timer task rejection so autosave failures do not become unhandled.
+      });
     }, autosaveDelayMs);
   };
 
@@ -209,7 +212,12 @@ export function createPersistenceController<TSnapshot>({
             continue;
           }
           pendingSnapshot = undefined;
-          await adapter.save(snapshot, {reason: activeReason});
+          inFlightSnapshot = snapshot;
+          try {
+            await adapter.save(snapshot, {reason: activeReason});
+          } finally {
+            inFlightSnapshot = undefined;
+          }
           lastSavedSnapshot = snapshot;
           const hasNewSnapshot = pendingSnapshot !== undefined;
           setState({
@@ -270,7 +278,10 @@ export function createPersistenceController<TSnapshot>({
 
     setSnapshot: (snapshot, reason = 'setItem') => {
       if (!canPersistChange()) return;
-      if (snapshot === lastSavedSnapshot) {
+      const hasConflictingSaveInFlight =
+        inFlightSnapshot !== undefined &&
+        inFlightSnapshot !== lastSavedSnapshot;
+      if (snapshot === lastSavedSnapshot && !hasConflictingSaveInFlight) {
         controller.markSnapshotSaved(snapshot);
         return;
       }
