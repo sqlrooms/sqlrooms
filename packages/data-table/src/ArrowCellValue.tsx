@@ -19,14 +19,17 @@ function parseArrowTemporalValue(
     return undefined;
   }
 
+  // Arrow JS Vector.get() returns epoch milliseconds for dates and
+  // timestamps regardless of their storage unit.
   if (arrow.DataType.isDate(type)) {
-    const unit = (type as arrow.Date_).unit;
-    return unit === arrow.DateUnit.DAY
-      ? numericValue * 86_400_000
-      : numericValue;
+    return numericValue;
   }
 
-  const unit = (type as arrow.Timestamp | arrow.Time).unit;
+  if (arrow.DataType.isTimestamp(type)) {
+    return numericValue;
+  }
+
+  const unit = (type as arrow.Time).unit;
   switch (unit) {
     case arrow.TimeUnit.SECOND:
       return numericValue * 1000;
