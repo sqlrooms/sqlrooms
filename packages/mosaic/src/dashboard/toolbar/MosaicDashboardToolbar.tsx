@@ -1,18 +1,34 @@
-import React from 'react';
+import React, {useCallback} from 'react';
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
+import {DataTableSelector} from '../../components/DataTableSelector';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
+import {useDataTable} from '../../hooks/useDataTable';
+import type {DataTable} from '@sqlrooms/db';
 
 export const MosaicDashboardToolbar: React.FC = () => {
   const {dashboardId} = useMosaicDashboardContext();
-  const hasPanels = useStoreWithMosaicDashboard(
+
+  const tables = useTablesWithColumns();
+  const selectedTableName = useStoreWithMosaicDashboard(
     (state) =>
-      (state.mosaicDashboard.config.dashboardsById[dashboardId]?.panels
-        ?.length ?? 0) > 0,
+      state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
+  );
+  const selectedTable = useDataTable(selectedTableName);
+  const setSelectedTable = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.setSelectedTable,
   );
 
-  if (!hasPanels) {
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      setSelectedTable(dashboardId, table.table.toString());
+    },
+    [dashboardId, setSelectedTable],
+  );
+
+  if (!selectedTableName) {
     return null;
   }
 
@@ -22,6 +38,14 @@ export const MosaicDashboardToolbar: React.FC = () => {
         <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
       </div>
       <div className="flex items-center gap-2">
+        {selectedTable && (
+          <DataTableSelector
+            className="w-48"
+            onChange={handleTableChange}
+            tables={tables}
+            value={selectedTable}
+          />
+        )}
         <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
       </div>
     </div>

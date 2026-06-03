@@ -1,3 +1,4 @@
+import {DataTable} from '@sqlrooms/db';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {Interval1D} from '@uwdata/mosaic-plot';
 import type {Field, Table} from 'apache-arrow';
@@ -83,7 +84,7 @@ export type DataTableExplorerOptions = {
   selection?: Selection;
   selectionName?: string;
   summaryBins?: number;
-  tableName: string;
+  tableName: DataTable;
 };
 
 export type UseDataTableExplorerReturn = {

@@ -1,10 +1,10 @@
 import {describe, expect, it, jest, beforeEach, afterEach} from '@jest/globals';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ChartSettings} from '../src/chart/chart-settings/ChartSettings';
-import type {ChartConfig} from '../src/chart-types';
+import {MosaicChartSettings} from '../src/charts/chart-settings/MosaicChartSettings';
+import type {ChartConfig} from '../src/charts/chart-types';
 import type {TableColumn} from '@sqlrooms/duckdb';
 
-describe('ChartSettings Compound Components', () => {
+describe('MosaicChartSettings Compound Components', () => {
   const mockColumns: TableColumn[] = [
     {name: 'id', type: 'INTEGER'},
     {name: 'name', type: 'VARCHAR'},
@@ -21,7 +21,7 @@ describe('ChartSettings Compound Components', () => {
     jest.restoreAllMocks();
   });
 
-  describe('ChartSettings.Root', () => {
+  describe('MosaicChartSettings.Root', () => {
     it('provides context to children', () => {
       const config: ChartConfig = {
         chartType: 'histogram',
@@ -29,14 +29,14 @@ describe('ChartSettings Compound Components', () => {
       };
 
       const markup = renderToStaticMarkup(
-        <ChartSettings.Root
+        <MosaicChartSettings.Root
           tableName="test_table"
           config={config}
           columns={mockColumns}
           onChange={mockOnChange}
         >
           <div>Child content</div>
-        </ChartSettings.Root>,
+        </MosaicChartSettings.Root>,
       );
 
       expect(markup).toContain('Child content');
@@ -59,14 +59,14 @@ describe('ChartSettings Compound Components', () => {
         };
 
         const markup = renderToStaticMarkup(
-          <ChartSettings.Root
+          <MosaicChartSettings.Root
             tableName="test_table"
             config={config}
             columns={mockColumns}
             onChange={mockOnChange}
           >
             <div>Test content</div>
-          </ChartSettings.Root>,
+          </MosaicChartSettings.Root>,
         );
 
         expect(markup).toContain('Test content');
@@ -80,14 +80,14 @@ describe('ChartSettings Compound Components', () => {
       };
 
       const markup = renderToStaticMarkup(
-        <ChartSettings.Root
+        <MosaicChartSettings.Root
           tableName="test_table"
           config={config}
           columns={[]}
           onChange={mockOnChange}
         >
           <div>Empty columns test</div>
-        </ChartSettings.Root>,
+        </MosaicChartSettings.Root>,
       );
 
       expect(markup).toContain('Empty columns test');
