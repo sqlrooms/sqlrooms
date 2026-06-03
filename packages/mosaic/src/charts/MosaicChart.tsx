@@ -3,9 +3,10 @@ import {MosaicDashboardPanelLayout} from '../dashboard/panel/MosaicDashboardPane
 import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
 import type {ChartConfig} from './chart-types/chart-config';
 import {MosaicChartView} from './MosaicChartView';
+import {DataTable} from '@sqlrooms/db';
 
 export type MosaicChartProps = {
-  tableName?: string;
+  dataTable?: DataTable;
   selectionName: string;
   config: ChartConfig;
   runtimeKey: string;
@@ -13,7 +14,7 @@ export type MosaicChartProps = {
 };
 
 export const MosaicChart: FC<MosaicChartProps> = ({
-  tableName,
+  dataTable,
   selectionName,
   config,
   runtimeKey,
@@ -31,7 +32,7 @@ export const MosaicChart: FC<MosaicChartProps> = ({
 
   const settingsContent = (
     <MosaicChartSettingsPanel
-      tableName={tableName}
+      dataTable={dataTable}
       config={config}
       onChange={handleConfigChange}
       onClose={() => handleOpenChange(false)}
@@ -41,7 +42,7 @@ export const MosaicChart: FC<MosaicChartProps> = ({
   const chartContent = (
     <div className="h-full overflow-auto p-2">
       <MosaicChartView
-        tableName={tableName}
+        dataTable={dataTable}
         config={config}
         selectionName={selectionName}
         retentionKey={runtimeKey}

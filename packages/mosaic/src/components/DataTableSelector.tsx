@@ -16,15 +16,15 @@ import {Check, ChevronsUpDown, TableIcon} from 'lucide-react';
 import {FC, useMemo, useState} from 'react';
 
 /**
- * Props for table selector components. `value` and `onChange` use the dotted
- * table reference format `database.schema.table`.
+ * Props for table selector components.
+ * Both `value` and `onChange` use DataTable objects.
  */
 export type DataTableSelectorProps = {
   className?: string;
   disabled?: boolean;
-  onChange?: (tableName: string) => void;
+  onChange?: (table: DataTable) => void;
   tables: DataTable[];
-  value?: string;
+  value?: DataTable;
 };
 
 type GroupedTables = Array<{
@@ -32,21 +32,21 @@ type GroupedTables = Array<{
   tables: DataTable[];
 }>;
 
-function getTableReference(table: DataTable): string {
-  return [table.table.database, table.table.schema, table.table.table]
-    .filter((part): part is string => Boolean(part))
-    .join('.');
-}
-
+/**
+ * Returns the group label for the table (database.schema).
+ */
 function getTableGroupLabel(table: DataTable): string {
   return [table.table.database, table.table.schema]
     .filter((part): part is string => Boolean(part))
     .join('.');
 }
 
+/**
+ * Returns searchable values for the table (all name components).
+ */
 function getTableSearchValue(table: DataTable): string {
   return [
-    getTableReference(table),
+    table.table.toString(),
     table.table.table,
     table.table.schema,
     table.table.database,
@@ -78,6 +78,8 @@ const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
 }) => {
   const groupedTables = useMemo(() => groupTables(tables), [tables]);
 
+  const selectedTableReference = value?.table.toString();
+
   return (
     <Command>
       <CommandInput placeholder="Search tables..." className="text-xs" />
@@ -86,8 +88,11 @@ const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
         {groupedTables.map((group) => (
           <CommandGroup key={group.group} heading={group.group}>
             {group.tables.map((table) => {
-              const tableReference = getTableReference(table);
-              const selectTable = () => onChange?.(tableReference);
+              const tableReference = table.table.toString();
+              const selectTable = () => onChange?.(table);
+
+              const isSelected = selectedTableReference === tableReference;
+
               return (
                 <CommandItem
                   key={tableReference}
@@ -99,7 +104,7 @@ const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
                   <Check
                     className={cn(
                       'mr-2 h-3.5 w-3.5 shrink-0',
-                      value === tableReference ? 'opacity-100' : 'opacity-0',
+                      isSelected ? 'opacity-100' : 'opacity-0',
                     )}
                   />
                   <span className="min-w-0 flex-1 truncate font-mono">
@@ -131,10 +136,14 @@ export const DataTableSelector: FC<DataTableSelectorProps> = ({
   value,
 }) => {
   const [open, setOpen] = useState(false);
+
+  const selectedTableReference = value?.table.toString();
+
   const selectedTable = tables.find(
-    (table) => getTableReference(table) === value,
+    (table) => selectedTableReference === table.table.toString(),
   );
-  const selectedLabel = selectedTable?.table.table ?? value;
+
+  const selectedLabel = selectedTable?.table.table ?? value?.table.table;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -187,10 +196,3 @@ export const DataTableSelectorEmptyState: FC<DataTableSelectorProps> = (
     </div>
   );
 };
-
-/**
- * Returns the dotted table reference used by DataTableSelector values.
- */
-export function getDataTableSelectorReference(table: DataTable): string {
-  return getTableReference(table);
-}

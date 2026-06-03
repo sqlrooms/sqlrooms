@@ -1,31 +1,30 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {TablePropertiesIcon} from 'lucide-react';
-import {
-  DataTableExplorer,
-  type DataTableExplorerProps,
-} from './DataTableExplorer';
-import type {DataTableExplorerPanel} from '../dashboard/dashboard-types';
+import {DataTableExplorer} from '../DataTableExplorer';
+import type {DataTableExplorerPanel} from '../../dashboard/dashboard-types';
 import {
   type MosaicDashboardPanelRenderer,
   type DataTableExplorerPanelRendererProps,
   useStoreWithMosaicDashboard,
-} from '../dashboard/MosaicDashboardSlice';
+} from '../../dashboard/MosaicDashboardSlice';
+import {FC} from 'react';
+import {useDataTable} from '../../hooks/useDataTable';
 
-function MosaicDashboardDataTableExplorerRenderer({
-  panel,
-  dashboard,
-  selectionName,
-}: DataTableExplorerPanelRendererProps) {
+const MosaicDashboardDataTableExplorerRenderer: FC<
+  DataTableExplorerPanelRendererProps
+> = ({panel, dashboard, selectionName}) => {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
-  const tableName = dashboard.selectedTable;
+
+  const selectedTable = useDataTable(dashboard.selectedTable);
+
   const pageSize =
     typeof panel.config.pageSize === 'number'
       ? panel.config.pageSize
       : undefined;
 
-  if (!tableName) {
+  if (!selectedTable) {
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
         Data Table Explorer panels require a table source.
@@ -45,14 +44,12 @@ function MosaicDashboardDataTableExplorerRenderer({
     );
   }
 
-  const dataTableExplorerProps = {
-    tableName,
-    pageSize: pageSize ?? 10,
-    selectionName,
-  } satisfies DataTableExplorerProps;
-
   return (
-    <DataTableExplorer {...dataTableExplorerProps}>
+    <DataTableExplorer
+      tableName={selectedTable}
+      pageSize={pageSize ?? 10}
+      selectionName={selectionName}
+    >
       <div className="flex h-full min-h-0 flex-col">
         <div className="min-h-0 flex-1 overflow-auto">
           <DataTableExplorer.Table>
@@ -64,7 +61,7 @@ function MosaicDashboardDataTableExplorerRenderer({
       </div>
     </DataTableExplorer>
   );
-}
+};
 
 export const mosaicDashboardDataTableExplorerPanelRenderer: MosaicDashboardPanelRenderer<DataTableExplorerPanel> =
   {

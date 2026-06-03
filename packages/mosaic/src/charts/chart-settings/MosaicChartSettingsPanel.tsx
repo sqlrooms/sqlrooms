@@ -1,10 +1,10 @@
 import {FC, useCallback} from 'react';
 import {MosaicChartSettings} from './MosaicChartSettings';
 import {type ChartConfig} from '../chart-types/chart-config';
-import {useTableColumns} from './useTableColumns';
 import type {ChartPanelConfig} from '../../dashboard/dashboard-types';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 import {Spec} from '@uwdata/mosaic-spec';
+import {useDataTable} from '../../hooks/useDataTable';
 
 interface MosaicChartSettingsPanelProps {
   dashboardId: string;
@@ -29,7 +29,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     (state) => state.mosaicDashboard.updatePanel,
   );
 
-  const columns = useTableColumns(tableName);
+  const dataTable = useDataTable(tableName);
 
   const handleSettingsChange = useCallback(
     (config: ChartConfig) => {
@@ -42,9 +42,8 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
 
   return (
     <MosaicChartSettings.Root
-      tableName={tableName}
       config={config}
-      columns={columns}
+      columns={dataTable?.columns || []}
       onChange={handleSettingsChange}
     >
       <MosaicChartSettings.Header>

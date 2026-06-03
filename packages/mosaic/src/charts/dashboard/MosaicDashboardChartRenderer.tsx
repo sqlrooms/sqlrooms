@@ -10,6 +10,7 @@ import {
 } from '../../dashboard/MosaicDashboardSlice';
 import {ChartConfig} from '../chart-types/chart-config';
 import {MosaicChart} from '../MosaicChart';
+import {useDataTable} from '../../hooks/useDataTable';
 
 const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   panel,
@@ -18,6 +19,7 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   selectionName,
 }) => {
   const tableName = dashboard.selectedTable;
+  const dataTable = useDataTable(tableName);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -34,7 +36,7 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
 
   return (
     <MosaicChart
-      tableName={tableName}
+      dataTable={dataTable}
       selectionName={selectionName}
       config={panel.config}
       runtimeKey={runtimeKey}

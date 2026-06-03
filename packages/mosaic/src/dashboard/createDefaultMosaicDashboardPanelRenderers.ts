@@ -6,7 +6,7 @@ import {
   type AnyPanelRenderer,
   type PanelRenderersRecord,
 } from './MosaicDashboardSlice';
-import {mosaicDashboardDataTableExplorerPanelRenderer} from '../data-table-explorer/MosaicDashboardDataTableExplorerPanelRenderer';
+import {mosaicDashboardDataTableExplorerPanelRenderer} from '../data-table-explorer/dashboard/MosaicDashboardDataTableExplorerPanelRenderer';
 import {mosaicDashboardChartRenderer} from '../charts/dashboard/MosaicDashboardChartRenderer';
 
 export function createDefaultMosaicDashboardPanelRenderers(

@@ -6,14 +6,13 @@ import {
   type BlockDocumentStatefulBlockRendererProps,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {DataTableBlockRenderer} from '@sqlrooms/mosaic';
-import {useCallback, useEffect, useMemo} from 'react';
+import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
+import {FC, useCallback, useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
-import {WorksheetChartRenderer} from './WorksheetChartRenderer';
 import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
 import {WorksheetMarkdownDocumentBlockRenderer} from './WorksheetMarkdownDocumentBlockRenderer';
 import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
@@ -26,9 +25,9 @@ function normalizeStatefulBlockOwnership(ownership: string | undefined) {
     : undefined;
 }
 
-const WorksheetDataTableBlockRenderer = (
-  props: BlockDocumentStatefulBlockRendererProps,
-) => {
+const WorksheetDataTableBlockRenderer: FC<
+  BlockDocumentStatefulBlockRendererProps
+> = (props) => {
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
 
   const handleTitleChange = useCallback(
@@ -62,7 +61,9 @@ const WorksheetDataTableBlockRenderer = (
     ],
   );
 
-  return <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />;
+  return (
+    <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />
+  );
 };
 
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
@@ -83,7 +84,9 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const ensureBlockDocument = useRoomStore(
     (state) => state.blockDocuments.ensureBlockDocument,
   );
-  const renameArtifact = useRoomStore((state) => state.artifacts.renameArtifact);
+  const renameArtifact = useRoomStore(
+    (state) => state.artifacts.renameArtifact,
+  );
 
   useEffect(() => {
     if (artifact?.type === 'worksheet') {
@@ -111,7 +114,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   }
 
   return (
-    <BlockDocumentChartRendererProvider renderer={WorksheetChartRenderer}>
+    <BlockDocumentChartRendererProvider renderer={ChartBlockRenderer}>
       <BlockDocumentStatefulBlockRendererProvider
         renderers={WORKSHEET_STATEFUL_BLOCK_RENDERERS}
         blockTypes={statefulBlockTypes}

@@ -12,7 +12,7 @@ import {
   PopoverTrigger,
 } from '@sqlrooms/ui';
 import {Check, ChevronsUpDown} from 'lucide-react';
-import {useTablesWithColumns} from '../dashboard/useTablesWithColumns';
+import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 
 export interface TableSelectorProps {
   value: string | undefined;

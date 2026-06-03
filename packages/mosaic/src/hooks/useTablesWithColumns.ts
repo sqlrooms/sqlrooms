@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {type DataTable} from '@sqlrooms/db';
-import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
+import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
 
 /**
  * Returns all tables that have columns defined.

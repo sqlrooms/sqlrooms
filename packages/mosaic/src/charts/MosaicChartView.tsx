@@ -11,9 +11,10 @@ import {useChartDataPolicy} from './useChartDataPolicy';
 import {useChartRetainerByKey} from './useChartRetainer';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
 import {useRuntimeIssueReporter} from './useRuntimeIssueReporter';
+import {DataTable} from '@sqlrooms/db';
 
 export type MosaicChartViewProps = {
-  tableName?: string;
+  dataTable?: DataTable;
   config: ChartConfig;
   selectionName?: string;
   retentionKey?: string;
@@ -22,7 +23,7 @@ export type MosaicChartViewProps = {
 };
 
 export const MosaicChartView: FC<MosaicChartViewProps> = ({
-  tableName,
+  dataTable,
   config,
   selectionName,
   retentionKey,
@@ -35,7 +36,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
 
   const retention = useChartRetainerByKey(retentionKey);
   const params = useBrushSelectionParams(selectionName);
-  const dataPolicy = useChartDataPolicy(tableName, config);
+  const dataPolicy = useChartDataPolicy(dataTable, config);
 
   const runtimeIssueReporter = useRuntimeIssueReporter(runtimeIssueKey);
 
@@ -53,7 +54,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
       : undefined,
   );
 
-  const renderContext = useMosaicChartRenderContext(tableName, config);
+  const renderContext = useMosaicChartRenderContext(dataTable, config);
 
   if (connection.status === 'loading' || connection.status === 'idle') {
     return <SpinnerPane className="h-full w-full" />;
@@ -106,7 +107,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     return (
       <div className={cn('h-full w-full', className)}>
         {createElement(renderContext.renderer, {
-          tableName: renderContext.tableName,
+          tableName: renderContext.dataTable.table.table,
           config,
           coordinator: connection.coordinator,
           params,

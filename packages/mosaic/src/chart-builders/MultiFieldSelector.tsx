@@ -35,7 +35,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   onChange,
   showAggregation = false,
 }) => {
-  const {columns, tableName} = useColumnsContext();
+  const {columns} = useColumnsContext();
 
   const selectedFieldNames = useMemo(() => value.map((v) => v.field), [value]);
 
@@ -111,7 +111,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
         );
       })}
 
-      <ColumnsProvider columns={availableColumns} tableName={tableName}>
+      <ColumnsProvider columns={availableColumns}>
         <ColumnSelector
           types={types}
           value={undefined}

@@ -9,11 +9,12 @@ import {
   SpecChartTypeDefinition,
 } from './chart-types/base-types';
 import {useChartTypeDefinition} from './useChartTypeDefinition';
+import {DataTable} from '@sqlrooms/db';
 
 export type MosaicComponentChartRenderContext = {
   type: 'component';
   renderer: ComponentChartTypeDefinition['renderer'];
-  tableName: string;
+  dataTable: DataTable;
 };
 
 export type MosaicSpecChartRenderContext = {
@@ -33,7 +34,7 @@ export type MosaicChartRenderContext =
   | MosaicChartRenderErrorContext;
 
 export function useMosaicChartRenderContext(
-  tableName: string | undefined,
+  dataTable: DataTable | undefined,
   config: ChartConfig,
 ): MosaicChartRenderContext {
   const chartTypeDefinition = useChartTypeDefinition(config.chartType);
@@ -47,7 +48,7 @@ export function useMosaicChartRenderContext(
       };
     }
 
-    if (!tableName) {
+    if (!dataTable) {
       return {
         type: 'error',
         title: 'Ooops! Something went wrong',
@@ -58,7 +59,7 @@ export function useMosaicChartRenderContext(
     if (isSpecChartType(chartTypeDefinition)) {
       return createMosaicSpecChartRenderContext(
         chartTypeDefinition,
-        tableName,
+        dataTable,
         config.settings,
       );
     }
@@ -67,7 +68,7 @@ export function useMosaicChartRenderContext(
       return {
         type: 'component',
         renderer: chartTypeDefinition.renderer,
-        tableName,
+        dataTable,
       };
     }
 
@@ -76,16 +77,19 @@ export function useMosaicChartRenderContext(
       title: 'Ooops! Something went wrong',
       message: 'Unsupported chart type definition',
     };
-  }, [chartTypeDefinition, tableName, config]);
+  }, [chartTypeDefinition, dataTable, config]);
 }
 
 function createMosaicSpecChartRenderContext<TConfig extends ChartConfig>(
   chartTypeDefinition: SpecChartTypeDefinition<TConfig>,
-  tableName: string,
+  dataTable: DataTable,
   settings: ChartSettings,
 ): MosaicSpecChartRenderContext | MosaicChartRenderErrorContext {
   try {
-    const spec = chartTypeDefinition.createSpec(tableName, settings);
+    const spec = chartTypeDefinition.createSpec(
+      dataTable.table.table,
+      settings,
+    );
 
     return {
       type: 'spec',

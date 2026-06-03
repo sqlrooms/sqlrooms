@@ -1,5 +1,5 @@
 import {createContext, type ReactNode, useCallback, useContext} from 'react';
-import type {TableColumn} from '@sqlrooms/duckdb';
+import type {TableColumn} from '@sqlrooms/db';
 import type {ChartConfig} from '../chart-types/chart-config';
 import type {ChartType} from '../chart-types/base-types';
 import {ColumnsProvider} from '../../chart-builders/ColumnsContext';
@@ -57,7 +57,6 @@ export function useMosaicChartSettingsContext<T extends ChartType>(
 }
 
 interface MosaicChartSettingsProviderProps {
-  tableName?: string;
   config: ChartConfig;
   columns: TableColumn[];
   onChange: (config: ChartConfig) => void;
@@ -65,7 +64,6 @@ interface MosaicChartSettingsProviderProps {
 }
 
 export function MosaicChartSettingsProvider({
-  tableName,
   config,
   columns,
   onChange,
@@ -85,7 +83,7 @@ export function MosaicChartSettingsProvider({
   );
 
   return (
-    <ColumnsProvider columns={columns} tableName={tableName}>
+    <ColumnsProvider columns={columns}>
       <MosaicChartSettingsContext.Provider
         value={{
           config,

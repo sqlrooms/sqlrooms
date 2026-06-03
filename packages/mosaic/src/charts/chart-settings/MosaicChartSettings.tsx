@@ -20,7 +20,7 @@ import {
   MosaicChartSettingsProvider,
   useMosaicChartSettingsContext,
 } from './MosaicChartSettingsContext';
-import type {TableColumn} from '@sqlrooms/duckdb';
+import type {TableColumn} from '@sqlrooms/db';
 import {type ChartConfig, type ChartType} from '../chart-types';
 import {Button} from '@sqlrooms/ui';
 import {CodeIcon, XIcon} from 'lucide-react';
@@ -29,7 +29,6 @@ import {Field} from '../../chart-builders/Field';
 import {useColumnsContext} from '../../chart-builders/ColumnsContext';
 
 interface MosaicChartSettingsRootProps {
-  tableName?: string;
   config: ChartConfig;
   columns: TableColumn[];
   onChange: (config: ChartConfig) => void;
@@ -37,10 +36,9 @@ interface MosaicChartSettingsRootProps {
 
 const MosaicChartSettingsRoot: FC<
   PropsWithChildren<MosaicChartSettingsRootProps>
-> = ({tableName, config, columns, onChange, children}) => {
+> = ({config, columns, onChange, children}) => {
   return (
     <MosaicChartSettingsProvider
-      tableName={tableName}
       config={config}
       columns={columns}
       onChange={onChange}
@@ -154,4 +152,4 @@ export const MosaicChartSettings = {
   Fields: MosaicChartSettingsFields,
   ViewSpecButton: MosaicChartSettingsViewSpecButton,
   CloseButton: MosaicChartSettingsCloseButton,
-};
+} as const;

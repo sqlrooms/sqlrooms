@@ -1,13 +1,15 @@
+import type {DataTable} from '@sqlrooms/db';
 import type {BlockDocumentChartRendererProps} from '@sqlrooms/documents';
 import {
   MosaicChart,
   useParseChartConfig,
-  useTablesWithColumns,
   type ChartConfig,
 } from '@sqlrooms/mosaic';
-import {Button, cn} from '@sqlrooms/ui';
-import {Settings2Icon} from 'lucide-react';
 import {FC, useCallback} from 'react';
+import {useDataTable} from '../../hooks/useDataTable';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
+import {ChartBlockHeader} from './ChartBlockHeader';
+import {ChartSelectorEmptyState} from './ChartSelectorEmptyState';
 
 function getBlockDocumentChartSelectionName({
   documentId,
@@ -29,7 +31,7 @@ function getBlockDocumentChartRuntimeKey({
   return `worksheet:${documentId}:chart-block:${blockId}`;
 }
 
-export const WorksheetChartRenderer: FC<BlockDocumentChartRendererProps> = ({
+export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   documentId,
   blockId,
   tableName,
@@ -42,9 +44,7 @@ export const WorksheetChartRenderer: FC<BlockDocumentChartRendererProps> = ({
   onCaptionChange,
 }) => {
   const tables = useTablesWithColumns();
-  const fallbackTable = tables[0];
-  // const fallbackField = fallbackTable?.columns?.[0]?.name;
-  const effectiveTableName = tableName || fallbackTable?.table.table || '';
+  const selectedTable = useDataTable(tableName);
 
   const parseChartConfigResult = useParseChartConfig(config);
 
@@ -72,6 +72,23 @@ export const WorksheetChartRenderer: FC<BlockDocumentChartRendererProps> = ({
     [onConfigChange],
   );
 
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      onTableNameChange?.(table.table.toString());
+    },
+    [onTableNameChange],
+  );
+
+  if (!selectedTable) {
+    return (
+      <ChartSelectorEmptyState
+        disabled={readOnly || !onTableNameChange}
+        onChange={handleTableChange}
+        tables={tables}
+      />
+    );
+  }
+
   if (!parseChartConfigResult.success) {
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
@@ -84,38 +101,19 @@ export const WorksheetChartRenderer: FC<BlockDocumentChartRendererProps> = ({
 
   return (
     <div className="flex h-105 min-h-80 flex-col">
-      <div className="border-border flex min-h-10 items-center gap-2 border-b px-3 py-2">
-        {readOnly ? (
-          <div className="min-w-0 flex-1 truncate text-sm font-medium">
-            {caption || effectiveTableName || 'Chart'}
-          </div>
-        ) : (
-          <input
-            className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
-            value={caption ?? ''}
-            placeholder={effectiveTableName || 'Chart caption'}
-            aria-label="Chart caption"
-            onChange={(event) =>
-              onCaptionChange?.(event.target.value || undefined)
-            }
-          />
-        )}
-        <Button
-          type="button"
-          size="icon"
-          variant={chartConfig.settingsOpen ? 'secondary' : 'ghost'}
-          className={cn('h-7 w-7', readOnly && 'hidden')}
-          aria-label="Chart settings"
-          title="Chart settings"
-          aria-pressed={chartConfig.settingsOpen}
-          onClick={() => handleSettingsOpenChange(!chartConfig.settingsOpen)}
-        >
-          <Settings2Icon className="h-4 w-4" />
-        </Button>
-      </div>
+      <ChartBlockHeader
+        caption={caption}
+        chartConfig={chartConfig}
+        selectedTable={selectedTable}
+        onCaptionChange={onCaptionChange}
+        onSettingsOpenChange={handleSettingsOpenChange}
+        onTableChange={handleTableChange}
+        readOnly={readOnly}
+        tables={tables}
+      />
       <div className="min-h-0 flex-1">
         <MosaicChart
-          tableName={effectiveTableName}
+          dataTable={selectedTable}
           selectionName={selectionName}
           config={chartConfig}
           runtimeKey={runtimeKey}

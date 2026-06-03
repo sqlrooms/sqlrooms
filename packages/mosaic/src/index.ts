@@ -30,7 +30,7 @@ export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboa
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/createDefaultMosaicDashboardPanelRenderers';
 export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
-export {useTablesWithColumns} from './dashboard/useTablesWithColumns';
+export {useTablesWithColumns} from './hooks/useTablesWithColumns';
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
 export {
   MosaicDashboardInitialState,
@@ -134,7 +134,7 @@ export {
   type DataTableExplorerProps,
   type DataTableExplorerRootProps,
 } from './data-table-explorer/DataTableExplorer';
-export {DataTableBlockRenderer} from './data-table-explorer/DataTableBlockRenderer';
+export {DataTableBlockRenderer} from './data-table-explorer/worksheet/DataTableBlockRenderer';
 export {
   DataTableExplorerHeader,
   type DataTableExplorerHeaderProps,
@@ -336,3 +336,4 @@ export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
 
 export {MosaicChart} from './charts/MosaicChart';
 export {useParseChartConfig} from './charts/useParseChartConfig';
+export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';

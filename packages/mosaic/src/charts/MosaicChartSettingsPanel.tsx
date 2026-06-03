@@ -1,27 +1,26 @@
 import {type FC, useCallback, useState} from 'react';
 import {MosaicChartSettings} from './chart-settings/MosaicChartSettings';
 import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
-import {useTableColumns} from './chart-settings/useTableColumns';
 import {type ChartConfig} from './chart-types/chart-config';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
+import {DataTable} from '@sqlrooms/db';
 
 export type MosaicChartSettingsPanelProps = {
-  tableName?: string;
+  dataTable?: DataTable;
   config: ChartConfig;
   onChange: (config: ChartConfig) => void;
   onClose?: () => void;
 };
 
 export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
-  tableName,
+  dataTable,
   config,
   onChange,
   onClose,
 }) => {
   const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
-  const columns = useTableColumns(tableName);
 
-  const renderContext = useMosaicChartRenderContext(tableName, config);
+  const renderContext = useMosaicChartRenderContext(dataTable, config);
 
   const handleViewSpec = useCallback(() => {
     setViewMode('spec');
@@ -40,9 +39,10 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     );
   }
 
+  const columns = dataTable?.columns || [];
+
   return (
     <MosaicChartSettings.Root
-      tableName={tableName}
       config={config}
       columns={columns}
       onChange={onChange}

@@ -9,7 +9,6 @@ import type {TableColumn} from '@sqlrooms/duckdb';
 
 export interface ColumnsContextValue {
   columns: TableColumn[];
-  tableName?: string;
 }
 
 const ColumnsContext = createContext<ColumnsContextValue | null>(null);
@@ -25,15 +24,13 @@ export function useColumnsContext(): ColumnsContextValue {
 
 export interface ColumnsProviderProps extends PropsWithChildren {
   columns: TableColumn[];
-  tableName?: string;
 }
 
 export const ColumnsProvider: FC<ColumnsProviderProps> = ({
   columns,
-  tableName,
   children,
 }) => {
-  const value = useMemo(() => ({columns, tableName}), [columns, tableName]);
+  const value = useMemo(() => ({columns}), [columns]);
 
   return (
     <ColumnsContext.Provider value={value}>{children}</ColumnsContext.Provider>
