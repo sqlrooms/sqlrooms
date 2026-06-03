@@ -80,5 +80,14 @@ export function useBoxPlotClient(args: {
     tableName,
   ]);
 
-  return {clientRef, state};
+  const effectiveState =
+    !config || !config.x || !config.y
+      ? {
+          isLoading: false,
+          outliers: [],
+          summaries: [],
+        }
+      : state;
+
+  return {clientRef, state: effectiveState};
 }
