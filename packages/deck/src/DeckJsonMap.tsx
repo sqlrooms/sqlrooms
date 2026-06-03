@@ -247,8 +247,7 @@ export function DeckJsonMap({
     layers: mergedLayers,
   };
 
-  // MapboxOverlay ignores viewState/initialViewState/controller — strip them
-  // so they don't cause unnecessary setProps calls on the overlay.
+  // overlayDeckProps should not contain viewState/initialViewState
   const {
     initialViewState,
     viewState: _viewState,
