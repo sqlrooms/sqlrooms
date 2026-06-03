@@ -4066,6 +4066,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^3.0.0
         version: 3.3.0
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@sqlrooms/codemirror':
         specifier: workspace:*
         version: link:../codemirror

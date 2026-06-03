@@ -16,6 +16,7 @@ import {
 import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
 import {WorksheetMarkdownDocumentBlockRenderer} from './WorksheetMarkdownDocumentBlockRenderer';
 import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
+import {WorksheetSqlQueryBlockRenderer} from './WorksheetSqlQueryBlockRenderer';
 
 function normalizeStatefulBlockOwnership(ownership: string | undefined) {
   return ownership === 'owned' ||
@@ -71,6 +72,7 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   pivot: WorksheetPivotBlockRenderer,
   'data-table': WorksheetDataTableBlockRenderer,
   document: WorksheetMarkdownDocumentBlockRenderer,
+  'sql-query': WorksheetSqlQueryBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer
