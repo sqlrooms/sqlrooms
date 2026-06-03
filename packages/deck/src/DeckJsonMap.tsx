@@ -252,8 +252,6 @@ export function DeckJsonMap({
   const {
     initialViewState,
     viewState: _viewState,
-    controller: _controller,
-    onViewStateChange: _onViewStateChange,
     ...overlayDeckProps
   } = mergedDeckProps as Record<string, unknown>;
 
