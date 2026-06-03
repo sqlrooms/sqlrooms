@@ -14,7 +14,9 @@ import {
   MOSAIC_DASHBOARD_PANEL,
   useStoreWithMosaicDashboard,
 } from '../MosaicDashboardSlice';
-import {MosaicDashboardInitialState} from '../initial-state/MosaicDashboardInitialState';
+import {DataTableSelectorEmptyState} from '../../components/DataTableSelector';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
+import type {DataTable} from '@sqlrooms/db';
 
 const EMPTY_DASHBOARD_PANELS: MosaicDashboardPanelConfig[] = [];
 
@@ -39,6 +41,22 @@ export const MosaicDashboardPanels: React.FC = () => {
     (state) =>
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.layoutType ??
       'dock',
+  );
+
+  const tables = useTablesWithColumns();
+  const selectedTable = useStoreWithMosaicDashboard(
+    (state) =>
+      state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
+  );
+  const setSelectedTable = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.setSelectedTable,
+  );
+
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      setSelectedTable(dashboardId, table.table.toString());
+    },
+    [dashboardId, setSelectedTable],
   );
 
   useEffect(() => {
@@ -76,10 +94,23 @@ export const MosaicDashboardPanels: React.FC = () => {
     [dashboardId, setLayout],
   );
 
-  const {onStart} = useMosaicDashboardContext();
+  if (!selectedTable) {
+    return (
+      <DataTableSelectorEmptyState
+        onChange={handleTableChange}
+        tables={tables}
+      />
+    );
+  }
 
   if (!panels.length || !rootLayout) {
-    return <MosaicDashboardInitialState onStart={onStart} />;
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <div className="text-muted-foreground text-sm">
+          Dashboard is empty. Add a panel to get started.
+        </div>
+      </div>
+    );
   }
 
   return (

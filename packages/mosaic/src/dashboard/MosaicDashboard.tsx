@@ -18,17 +18,14 @@ import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
 import {ChartBuilderColumn} from '../charts/chart-types/base-types';
 import {ChartConfig} from '../charts/chart-types/chart-config';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
-import type {MosaicDashboardInitialStateProps} from './initial-state/MosaicDashboardInitialState';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
-  onStart?: MosaicDashboardInitialStateProps['onStart'];
 }>;
 
 export function MosaicDashboardRoot({
   children,
   dashboardId,
-  onStart,
 }: MosaicDashboardRootProps) {
   const ensureDashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.ensureDashboard,
@@ -95,7 +92,6 @@ export function MosaicDashboardRoot({
       closeBuilder: () => setBuilderOpen(false),
       setBuilderOpen,
       addDefaultChart: handleAddDefaultChart,
-      onStart,
     }),
     [
       dashboardId,
@@ -104,7 +100,6 @@ export function MosaicDashboardRoot({
       panelRenderers,
       chartTypes?.length,
       handleAddDefaultChart,
-      onStart,
     ],
   );
 
@@ -129,15 +124,13 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
-  onStart?: MosaicDashboardInitialStateProps['onStart'];
 };
 
 function MosaicDashboardComponent({
   dashboardId,
-  onStart,
 }: MosaicDashboardProps): ReactElement {
   return (
-    <MosaicDashboardRoot dashboardId={dashboardId} onStart={onStart}>
+    <MosaicDashboardRoot dashboardId={dashboardId}>
       <div className="flex h-full flex-col">
         <MosaicDashboardToolbar />
         <div className="h-full overflow-y-auto">

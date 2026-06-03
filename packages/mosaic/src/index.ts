@@ -32,10 +32,6 @@ export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
 export {useTablesWithColumns} from './hooks/useTablesWithColumns';
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
-export {
-  MosaicDashboardInitialState,
-  type MosaicDashboardInitialStateProps,
-} from './dashboard/initial-state/MosaicDashboardInitialState';
 export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
 export {addChartPanelAction} from './charts/addChartPanelAction';
 export {
