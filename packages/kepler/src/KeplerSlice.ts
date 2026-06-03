@@ -255,6 +255,11 @@ export type KeplerSliceState = {
       autoCreateLayers: boolean,
     ) => void;
     addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
+    isRestoringConfig: boolean;
+    withConfigPersistencePaused: <TResult>(
+      fn: () => TResult | Promise<TResult>,
+    ) => Promise<TResult>;
+    waitForConfigRestore: () => Promise<void>;
     removeDatasetFromMaps: (datasetId: string) => void;
     dispatchAction: (mapId: string, action: KeplerAction) => void;
     ensureMap: (mapId: string, name?: string) => void;
@@ -297,6 +302,8 @@ export function createKeplerSlice({
     ...applicationConfig,
   });
   let syncKeplerPromise: Promise<void> | null = null;
+  let configRestoreDepth = 0;
+  const configRestorePromises = new Set<Promise<unknown>>();
   // When a caller arrives while a sync is already in-flight, the in-flight run
   // may have captured a stale snapshot of db.tables/kepler.map (missing maps or
   // tables added by createMap, duplicateMap, etc.). Setting this flag tells the
@@ -384,21 +391,24 @@ export function createKeplerSlice({
         config: initialConfig,
         basicKeplerProps,
         map: {},
+        isRestoringConfig: false,
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
         forwardDispatch: {},
 
         setConfig: (config: KeplerSliceConfig) => {
-          const nextConfig = KeplerSliceConfig.parse(config);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.kepler.config = nextConfig;
-            }),
-          );
-          updateMapReduxStates();
-          updateForwardDispatch();
-          get().kepler.syncKeplerDatasets();
-          updateMapConfigs();
+          void get().kepler.withConfigPersistencePaused(async () => {
+            const nextConfig = KeplerSliceConfig.parse(config);
+            set((state) =>
+              produce(state, (draft) => {
+                draft.kepler.config = nextConfig;
+              }),
+            );
+            updateMapReduxStates();
+            updateForwardDispatch();
+            updateMapConfigs();
+            await get().kepler.syncKeplerDatasets();
+          });
         },
 
         async initialize() {
@@ -433,6 +443,7 @@ export function createKeplerSlice({
                 // @ts-expect-error - Symbol.observable is not defined in the Redux type definitions
                 [Symbol.observable]: () => {},
               },
+              isRestoringConfig: get().kepler.isRestoringConfig,
             },
           });
           updateForwardDispatch();
@@ -824,6 +835,50 @@ export function createKeplerSlice({
           );
         },
 
+        withConfigPersistencePaused: async (fn) => {
+          configRestoreDepth += 1;
+          if (configRestoreDepth === 1) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.kepler.isRestoringConfig = true;
+              }),
+            );
+          }
+
+          const restorePromise = (async () => {
+            try {
+              return await fn();
+            } finally {
+              // Kepler restore actions can enqueue follow-up work through
+              // react-palm; let those actions settle before persisted config
+              // writes are allowed again.
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              configRestoreDepth -= 1;
+              if (configRestoreDepth === 0) {
+                set((state) =>
+                  produce(state, (draft) => {
+                    draft.kepler.isRestoringConfig = false;
+                  }),
+                );
+              }
+            }
+          })();
+
+          configRestorePromises.add(restorePromise);
+          try {
+            return await restorePromise;
+          } finally {
+            configRestorePromises.delete(restorePromise);
+          }
+        },
+
+        waitForConfigRestore: async () => {
+          while (configRestorePromises.size > 0) {
+            await Promise.all(Array.from(configRestorePromises));
+          }
+        },
+
         registerKeplerMapIfNotExists(mapId: string) {
           if (!get().kepler.map[mapId]) {
             set({
@@ -872,7 +927,12 @@ export function createKeplerSlice({
           const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
           if (!mapId) throw new Error('Map ID not found in action payload');
           const result = next(action);
-          if (!SKIP_AUTO_SAVE_ACTIONS.includes(action.type) && mapId) {
+          if (
+            configRestoreDepth === 0 &&
+            !get().kepler.isRestoringConfig &&
+            !SKIP_AUTO_SAVE_ACTIONS.includes(action.type) &&
+            mapId
+          ) {
             // save kepler config to store
             set((state) =>
               produce(state, (draft) => {
