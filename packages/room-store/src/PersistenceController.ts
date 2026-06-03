@@ -104,6 +104,10 @@ export type CreatePersistenceControllerOptions<TSnapshot> = {
   now?: () => number;
 };
 
+const MissingSnapshotSourceError = new Error(
+  'Persistence controller cannot mark dirty without a pending snapshot or getSnapshot option.',
+);
+
 function cloneState(
   state: PersistenceControllerState,
 ): PersistenceControllerState {
@@ -123,6 +127,7 @@ export function createPersistenceController<TSnapshot>({
   let pauseDepth = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let saveInFlight: Promise<void> | null = null;
+  let pendingSaveReason: PersistenceSaveReason | null = null;
   const listeners = new Set<PersistenceControllerListener>();
   const state: PersistenceControllerState = {
     hydrating: false,
@@ -154,6 +159,9 @@ export function createPersistenceController<TSnapshot>({
 
   const canPersistChange = () => !state.hydrating && pauseDepth === 0;
 
+  const hasSnapshotSource = () =>
+    pendingSnapshot !== undefined || getSnapshot !== undefined;
+
   const scheduleAutosave = () => {
     if (autosaveDelayMs === null || autosaveDelayMs === undefined) return;
     if (!state.dirty || !canPersistChange()) return;
@@ -176,27 +184,38 @@ export function createPersistenceController<TSnapshot>({
 
   const runSaveLoop = async (reason: PersistenceSaveReason) => {
     if (saveInFlight) {
+      pendingSaveReason = reason;
       setState({pendingSave: true});
       return saveInFlight;
     }
 
     saveInFlight = (async () => {
+      let activeReason = reason;
       setState({saving: true, pendingSave: false});
       try {
         do {
+          activeReason = pendingSaveReason ?? activeReason;
+          pendingSaveReason = null;
           setState({pendingSave: false});
           const snapshot = await resolveSnapshot();
           if (snapshot === undefined || !state.dirty) {
+            if (state.dirty) {
+              setState({
+                dirty: false,
+                error: MissingSnapshotSourceError,
+                pendingSave: false,
+              });
+            }
             continue;
           }
           pendingSnapshot = undefined;
-          await adapter.save(snapshot, {reason});
+          await adapter.save(snapshot, {reason: activeReason});
           lastSavedSnapshot = snapshot;
           const hasNewSnapshot = pendingSnapshot !== undefined;
           setState({
             dirty: hasNewSnapshot || state.pendingSave,
             error: null,
-            lastSaveReason: reason,
+            lastSaveReason: activeReason,
             lastSavedAt: now(),
             savedSnapshotVersion: state.savedSnapshotVersion + 1,
           });
@@ -207,6 +226,7 @@ export function createPersistenceController<TSnapshot>({
       } finally {
         setState({saving: false});
         saveInFlight = null;
+        pendingSaveReason = null;
         if (state.dirty && state.pendingSave) {
           scheduleAutosave();
         }
@@ -255,8 +275,12 @@ export function createPersistenceController<TSnapshot>({
         return;
       }
       pendingSnapshot = snapshot;
+      if (state.saving) {
+        pendingSaveReason = reason;
+      }
       setState({
         dirty: true,
+        error: null,
         lastSaveReason: reason,
         pendingSave: state.pendingSave || state.saving,
       });
@@ -265,9 +289,22 @@ export function createPersistenceController<TSnapshot>({
 
     markDirty: (reason = 'manual') => {
       if (!canPersistChange()) return;
+      if (!hasSnapshotSource()) {
+        setState({
+          dirty: false,
+          error: MissingSnapshotSourceError,
+          lastSaveReason: reason,
+        });
+        return;
+      }
+      if (state.saving) {
+        pendingSaveReason = reason;
+      }
       setState({
         dirty: true,
+        error: null,
         lastSaveReason: reason,
+        pendingSave: state.pendingSave || state.saving,
       });
       scheduleAutosave();
     },
@@ -282,15 +319,25 @@ export function createPersistenceController<TSnapshot>({
       clearTimer();
       if (!state.dirty && !saveInFlight) return;
       if (state.hydrating || pauseDepth > 0) return;
+      if (!state.dirty && saveInFlight) {
+        await saveInFlight;
+        return;
+      }
       await runSaveLoop(reason);
     },
 
     pause: async (fn) => {
+      if (pauseDepth === 0) {
+        clearTimer();
+      }
       pauseDepth += 1;
       try {
         return await fn();
       } finally {
         pauseDepth -= 1;
+        if (pauseDepth === 0 && state.dirty) {
+          scheduleAutosave();
+        }
       }
     },
 

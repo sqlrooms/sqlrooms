@@ -1,8 +1,8 @@
 import {describe, expect, it} from '@jest/globals';
 import {createPersistenceController} from '../src/PersistenceController';
 
-function wait(ms = 0) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function nextMacrotask() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe('createPersistenceController', () => {
@@ -72,7 +72,7 @@ describe('createPersistenceController', () => {
   });
 
   it('coalesces in-flight saves and persists the latest pending snapshot', async () => {
-    const saved: string[] = [];
+    const saved: {snapshot: string; reason: string | undefined}[] = [];
     let releaseFirstSave: (() => void) | undefined;
     let resolveFirstSaveStarted: (() => void) | undefined;
     const firstSaveStarted = new Promise<void>((resolve) => {
@@ -81,8 +81,8 @@ describe('createPersistenceController', () => {
     const controller = createPersistenceController<string>({
       adapter: {
         load: async () => null,
-        save: async (snapshot) => {
-          saved.push(snapshot);
+        save: async (snapshot, metadata) => {
+          saved.push({snapshot, reason: metadata?.reason});
           resolveFirstSaveStarted?.();
           if (snapshot === 'first') {
             await new Promise<void>((release) => {
@@ -94,23 +94,83 @@ describe('createPersistenceController', () => {
     });
 
     controller.setSnapshot('first', 'setItem');
-    const flushPromise = controller.flush();
+    const flushPromise = controller.saveNow('autosave');
     await firstSaveStarted;
     controller.setSnapshot('second', 'setItem');
+    const coalescedFlushPromise = controller.flush('flush');
     releaseFirstSave?.();
     await flushPromise;
+    await coalescedFlushPromise;
 
-    expect(saved).toEqual(['first', 'second']);
+    expect(saved).toEqual([
+      {snapshot: 'first', reason: 'autosave'},
+      {snapshot: 'second', reason: 'flush'},
+    ]);
     expect(controller.getState()).toMatchObject({
       dirty: false,
       saving: false,
+      lastSaveReason: 'flush',
     });
   });
 
   it('autosaves dirty snapshots after the configured delay', async () => {
     const saved: string[] = [];
+    let resolveSaved: (() => void) | undefined;
+    const savedSnapshot = new Promise<void>((resolve) => {
+      resolveSaved = resolve;
+    });
     const controller = createPersistenceController<string>({
       autosaveDelayMs: 1,
+      adapter: {
+        load: async () => null,
+        save: async (snapshot) => {
+          saved.push(snapshot);
+          resolveSaved?.();
+        },
+      },
+    });
+
+    controller.setSnapshot('autosaved', 'setItem');
+    await savedSnapshot;
+    await Promise.resolve();
+
+    expect(saved).toEqual(['autosaved']);
+    expect(controller.getState().dirty).toBe(false);
+  });
+
+  it('reschedules autosave when the outermost pause exits', async () => {
+    const saved: string[] = [];
+    let resolveSaved: (() => void) | undefined;
+    const savedSnapshot = new Promise<void>((resolve) => {
+      resolveSaved = resolve;
+    });
+    const controller = createPersistenceController<string>({
+      autosaveDelayMs: 0,
+      adapter: {
+        load: async () => null,
+        save: async (snapshot) => {
+          saved.push(snapshot);
+          resolveSaved?.();
+        },
+      },
+    });
+
+    controller.setSnapshot('before-pause', 'setItem');
+    await controller.pause(async () => {
+      await nextMacrotask();
+      expect(saved).toEqual([]);
+    });
+
+    await savedSnapshot;
+    await Promise.resolve();
+
+    expect(saved).toEqual(['before-pause']);
+    expect(controller.getState().dirty).toBe(false);
+  });
+
+  it('surfaces an error when markDirty has no snapshot source', async () => {
+    const saved: string[] = [];
+    const controller = createPersistenceController<string>({
       adapter: {
         load: async () => null,
         save: async (snapshot) => {
@@ -119,11 +179,12 @@ describe('createPersistenceController', () => {
       },
     });
 
-    controller.setSnapshot('autosaved', 'setItem');
-    await wait(10);
+    controller.markDirty('manual');
+    await controller.flush();
 
-    expect(saved).toEqual(['autosaved']);
+    expect(saved).toEqual([]);
     expect(controller.getState().dirty).toBe(false);
+    expect(controller.getState().error).toBeInstanceOf(Error);
   });
 
   it('sets an explicit saved snapshot without saving', async () => {

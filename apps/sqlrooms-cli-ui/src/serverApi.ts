@@ -132,6 +132,7 @@ export function createDuckDbPersistStorage(
     },
 
     removeItem: async (_name: string): Promise<void> => {
+      controller.markSnapshotSaved(null);
       await controller.flush('remove');
       controller.markSnapshotSaved(null);
       await controller.pause(async () => {
