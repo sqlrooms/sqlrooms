@@ -150,7 +150,7 @@ export type CreateDashboardAgentToolOptions<TState> =
     getModel: (args: {state: TState}) => LanguageModel;
     createQueryTools?: (args: {store: DashboardAiStore<TState>}) => {
       query: Tool;
-    };
+    } & Record<string, Tool>;
     runSubAgent: (args: {
       agent: ToolLoopAgent<any, any, any>;
       prompt: string;
@@ -578,7 +578,11 @@ function buildAgentPrompt<TState>(
     .getTables(state)
     .find((candidate) => candidate.tableName === tableName);
   const columnNames =
-    table?.columns?.map((column) => column.name).join(', ') || 'unknown';
+    table?.columns
+      ?.map((column) =>
+        column.type ? `${column.name} (${column.type})` : column.name,
+      )
+      .join(', ') || 'unknown';
   const rowInfo =
     table?.rowCount !== undefined ? `Approximate rows: ${table.rowCount}` : '';
 
@@ -684,7 +688,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
         const dashboardAgent = new ToolLoopAgent({
           model: options.getModel({state}),
           tools: {
-            ...(queryTools ? {query: queryTools.query} : {}),
+            ...(queryTools ?? {}),
             ...createDashboardAiTools({
               store,
               adapter,

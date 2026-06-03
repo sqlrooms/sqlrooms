@@ -12,44 +12,61 @@ import type {ToolRenderer} from '@sqlrooms/ai-core';
 import {createCommandTools} from './commandTools';
 import type {CommandToolsOptions, DefaultCommandTools} from './commandTools';
 import {QueryToolResult} from './query/QueryToolResult';
+import {createTableSchemaTools} from './tableSchemaTools';
+import type {DefaultTableSchemaTools} from './tableSchemaTools';
 
 export type DefaultToolsOptions = {
   query?: QueryToolOptions;
   commands?: CommandToolsOptions | false;
+  tables?: false;
 };
 
 type QueryTool = Tool<QueryToolParameters, QueryToolOutput>;
+type QueryToolSet = {query: QueryTool};
 
 /**
  * Default tools available to the AI assistant for data analysis.
  * Includes:
  * - query: Executes SQL queries against DuckDB
+ * - list_tables / describe_table_schema: Discover available table metadata
  * - list_commands / execute_command: Bridge to room command registry
  *
  * Pass `commands: false` to opt out of the command tools (e.g. in rooms
  * without a command registry).
+ * Pass `tables: false` to opt out of the table schema tools.
  */
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
+  options: DefaultToolsOptions & {commands: false; tables: false},
+): QueryToolSet;
+export function createDefaultAiTools(
+  store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
+  options: DefaultToolsOptions & {tables: false},
+): QueryToolSet & DefaultCommandTools;
+export function createDefaultAiTools(
+  store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options: DefaultToolsOptions & {commands: false},
-): {query: QueryTool};
+): QueryToolSet & DefaultTableSchemaTools;
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,
-): {query: QueryTool} & DefaultCommandTools;
+): QueryToolSet & DefaultTableSchemaTools & DefaultCommandTools;
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,
 ): ToolSet {
-  const {query, commands} = options || {};
+  const {query, commands, tables} = options || {};
   const commandTools =
     commands === false
       ? {}
       : commands != null
         ? createCommandTools(store, commands)
         : createCommandTools(store);
+  const tableSchemaTools =
+    tables === false ? {} : createTableSchemaTools(store);
   return {
     query: createQueryTool(store, query),
+    ...tableSchemaTools,
     ...commandTools,
   };
 }

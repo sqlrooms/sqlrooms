@@ -5,9 +5,20 @@ This package combines:
 - AI slice state/logic (`@sqlrooms/ai-core`)
 - AI settings UI/state (`@sqlrooms/ai-settings`)
 - AI config schemas (`@sqlrooms/ai-config`)
-- SQL query tool helpers (`createDefaultAiTools`, `createQueryTool`)
+- SQL query and schema discovery tool helpers (`createDefaultAiTools`, `createQueryTool`, `createTableSchemaTools`)
 
 Use this package when you want AI chat + tool execution in a SQLRooms app without wiring low-level pieces manually.
+
+`createDefaultAiInstructions` includes a hybrid DuckDB table context: small
+current-database `main` catalogs include full schemas for every table, while
+larger catalogs include a few full schemas, additional table names with row
+counts, and instructions to call
+`describe_table_schema` before querying tables whose columns are not shown.
+`createDefaultAiTools` registers `list_tables` and `describe_table_schema` by
+default so apps can expose the same table discovery workflow. These tools
+search the current database `main` schema by default, and accept broader
+`scope`, `schema`, and `database` parameters for other visible schemas or
+attached databases.
 
 ## Installation
 

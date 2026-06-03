@@ -40,6 +40,37 @@ export {
   createDefaultAiInstructions,
   formatTablesForLLM,
 } from './tools/defaultInstructions';
+export {
+  DEFAULT_TABLE_SCHEMA_CONTEXT_LIMITS,
+  formatOtherTableScopesForAi,
+  formatTableSchemaForAi,
+  formatTableSummaryForAi,
+  getAiTableScopeSummary,
+  getAiTableSchemaContextLimits,
+  getDatabaseNameForAi,
+  getFullTableNameForAi,
+  getSchemaNameForAi,
+  getTablesForAiScope,
+  getTableNameForAi,
+} from './tools/tableSchemaContext';
+export type {
+  AiTableScope,
+  AiTableScopeOptions,
+  TableSchemaContextLimits,
+} from './tools/tableSchemaContext';
+export {
+  DescribeTableSchemaToolParameters,
+  ListTablesToolParameters,
+  createTableSchemaTools,
+} from './tools/tableSchemaTools';
+export type {
+  DefaultTableSchemaTools,
+  DescribeTableSchemaToolOutput,
+  ListTablesToolOutput,
+  TableSchemaToolColumn,
+  TableSchemaToolSchema,
+  TableSchemaToolTable,
+} from './tools/tableSchemaTools';
 
 // Skills
 export {
