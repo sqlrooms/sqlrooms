@@ -31,12 +31,14 @@ describe('DataTableExplorer compound API', () => {
         <table>
           <DataTableExplorer.Rows />
         </table>
-        <DataTableExplorer.StatusBar />
+        <DataTableExplorer.StatusBar
+          renderActions={() => <DataTableExplorer.ResetButton />}
+        />
       </DataTableExplorer.Root>,
     );
 
     expect(markup).toContain('No rows');
-    expect(markup).toContain('Reset');
+    expect(markup).toContain('Reset filters');
     expect(markup).toContain('25');
     expect(markup).toContain('100 rows');
   });
