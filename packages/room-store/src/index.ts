@@ -34,6 +34,12 @@ export {
   createPersistHelpers,
   persistSliceConfigs,
 } from './createPersistHelpers';
+export {createRoomStorePersistence} from './createRoomStorePersistence';
+export type {
+  CreateRoomStorePersistenceOptions,
+  RoomStorePersistence,
+  RoomStorePersistenceSnapshotCodec,
+} from './createRoomStorePersistence';
 export {createPersistenceController} from './PersistenceController';
 export type {
   CreatePersistenceControllerOptions,

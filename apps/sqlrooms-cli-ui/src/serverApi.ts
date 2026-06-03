@@ -1,8 +1,8 @@
 import {
-  createPersistenceController,
+  createRoomStorePersistence,
   type PersistenceController,
 } from '@sqlrooms/room-shell';
-import {PersistStorage, StorageValue} from 'zustand/middleware';
+import {PersistStorage} from 'zustand/middleware';
 import {RuntimeConfig} from './runtimeConfig';
 import type {AiSettingsSliceConfig} from '@sqlrooms/ai';
 
@@ -61,42 +61,49 @@ export function createDuckDbPersistStorage(
     ensured = ensured ?? ensureUiStateTable(connector, namespace);
     return ensured;
   };
-  const controller = createPersistenceController<string>({
+  const persistence = createRoomStorePersistence<any, any, string>({
+    partialize: (state) => state,
+    serialize: (state) => JSON.stringify(state),
+    deserialize: (snapshot) => {
+      try {
+        return JSON.parse(snapshot);
+      } catch {
+        return snapshot;
+      }
+    },
     autosaveDelayMs: PERSIST_DEBOUNCE_MS,
-    adapter: {
-      load: async () => {
-        await ensure();
-        const ns = nsRef(namespace);
-        const result: any = await connector.query(
-          `SELECT payload_json FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}' LIMIT 1`,
-        );
-        const rows = result?.toArray ? result.toArray() : [];
-        const payload = rows?.[0]?.payload_json;
-        if (payload === undefined) return null;
-        return typeof payload === 'string' ? payload : JSON.stringify(payload);
-      },
-      save: async (body) => {
-        await ensure();
-        const escaped = escapeLiteral(body);
-        const ns = nsRef(namespace);
-        await connector.query(
-          `INSERT OR REPLACE INTO ${ns}.ui_state (key, payload_json, updated_at) VALUES ('${UI_STATE_KEY}', CAST('${escaped}' AS JSON), now())`,
-        );
-      },
-      remove: async () => {
-        await ensure();
-        const ns = nsRef(namespace);
-        await connector.query(
-          `DELETE FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}'`,
-        );
-      },
+    load: async () => {
+      await ensure();
+      const ns = nsRef(namespace);
+      const result: any = await connector.query(
+        `SELECT payload_json FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}' LIMIT 1`,
+      );
+      const rows = result?.toArray ? result.toArray() : [];
+      const payload = rows?.[0]?.payload_json;
+      if (payload === undefined) return null;
+      return typeof payload === 'string' ? payload : JSON.stringify(payload);
+    },
+    save: async (body) => {
+      await ensure();
+      const escaped = escapeLiteral(body);
+      const ns = nsRef(namespace);
+      await connector.query(
+        `INSERT OR REPLACE INTO ${ns}.ui_state (key, payload_json, updated_at) VALUES ('${UI_STATE_KEY}', CAST('${escaped}' AS JSON), now())`,
+      );
+    },
+    remove: async () => {
+      await ensure();
+      const ns = nsRef(namespace);
+      await connector.query(
+        `DELETE FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}'`,
+      );
     },
   });
   const registerFlushHandlers = () => {
     if (handlersRegistered || typeof window === 'undefined') return;
     handlersRegistered = true;
     const flushNow = () => {
-      void controller.flush('final-flush');
+      void persistence.flush('final-flush');
     };
     window.addEventListener('beforeunload', flushNow);
     document.addEventListener('visibilitychange', () => {
@@ -107,41 +114,14 @@ export function createDuckDbPersistStorage(
   };
 
   return {
-    controller,
-    flush: () => controller.flush('flush'),
-    markStateSnapshotSaved: (state: unknown) => {
-      controller.markSnapshotSaved(JSON.stringify(state));
-    },
-    getItem: async (_name: string): Promise<StorageValue<any> | null> => {
-      const body = await controller.hydrate();
-      if (body === null) return null;
-      let parsed: unknown = body;
-      if (typeof body === 'string') {
-        try {
-          parsed = JSON.parse(body);
-        } catch {
-          parsed = body;
-        }
-      }
-      return {state: parsed, version: 0};
-    },
+    ...persistence.storage,
+    controller: persistence.controller,
+    flush: persistence.flush,
+    markStateSnapshotSaved: persistence.markStateSnapshotSaved,
 
-    setItem: async (_name: string, value: StorageValue<any>): Promise<void> => {
+    setItem: async (...args) => {
       registerFlushHandlers();
-      controller.setSnapshot(JSON.stringify(value.state ?? value), 'setItem');
-    },
-
-    removeItem: async (_name: string): Promise<void> => {
-      controller.markSnapshotSaved(null);
-      await controller.flush('remove');
-      controller.markSnapshotSaved(null);
-      await controller.pause(async () => {
-        await ensure();
-        const ns = nsRef(namespace);
-        await connector.query(
-          `DELETE FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}'`,
-        );
-      });
+      return persistence.storage.setItem(...args);
     },
   };
 }

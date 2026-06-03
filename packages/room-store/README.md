@@ -16,6 +16,7 @@ npm install @sqlrooms/room-store
 - generic slice helper: `createSlice()`
 - React context/hooks: `RoomStateProvider`, `useBaseRoomStore`, `useRoomStoreApi`
 - persistence helpers: `persistSliceConfigs()`, `createPersistHelpers()`
+- room-store persistence glue: `createRoomStorePersistence()`
 - persistence controller: `createPersistenceController()`
 
 ## Quick start
@@ -114,23 +115,24 @@ coalescing, and observable save status.
 rehydrate merging. Compose it with the controller when a Zustand room store needs
 both schema-safe snapshots and explicit save policy.
 
-```ts
-import {createPersistenceController} from '@sqlrooms/room-store';
+For room stores, prefer `createRoomStorePersistence()` before hand-writing that
+composition. It provides controller-backed Zustand persist storage, rehydrate
+saved-snapshot marking, optional room-store subscription, and final flush helpers.
 
-const controller = createPersistenceController({
+```ts
+import {createRoomStorePersistence} from '@sqlrooms/room-store';
+
+const persistence = createRoomStorePersistence({
+  partialize: (state) => ({room: state.room.config}),
   autosaveDelayMs: 300,
-  adapter: {
-    load: async () => loadProjectSnapshot(),
-    save: async (snapshot, metadata) => {
-      await saveProjectSnapshot(snapshot, metadata?.reason);
-    },
+  load: async () => loadProjectSnapshot(),
+  save: async (snapshot, metadata) => {
+    await saveProjectSnapshot(snapshot, metadata?.reason);
   },
 });
 
-const snapshot = await controller.hydrate();
-controller.markSnapshotSaved(snapshot);
-controller.setSnapshot(nextSnapshot, 'setItem');
-await controller.flush('final-flush');
+await persistence.hydrate();
+await persistence.flush('final-flush');
 ```
 
 Inside components, `useRoomStoreApi()` gives you the raw store API:
