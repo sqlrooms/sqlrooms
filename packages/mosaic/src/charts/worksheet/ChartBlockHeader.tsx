@@ -1,5 +1,5 @@
 import type {DataTable} from '@sqlrooms/db';
-import type {ChartConfig} from '@sqlrooms/mosaic';
+import type {ChartConfig} from '../chart-types/chart-config';
 import {Button, cn} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
 import {FC} from 'react';

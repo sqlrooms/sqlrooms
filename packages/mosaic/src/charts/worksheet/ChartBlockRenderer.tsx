@@ -1,11 +1,9 @@
 import type {DataTable} from '@sqlrooms/db';
 import type {BlockDocumentChartRendererProps} from '@sqlrooms/documents';
-import {
-  MosaicChart,
-  useParseChartConfig,
-  type ChartConfig,
-} from '@sqlrooms/mosaic';
 import {FC, useCallback} from 'react';
+import type {ChartConfig} from '../chart-types/chart-config';
+import {MosaicChart} from '../MosaicChart';
+import {useParseChartConfig} from '../useParseChartConfig';
 import {useDataTable} from '../../hooks/useDataTable';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {ChartBlockHeader} from './ChartBlockHeader';
