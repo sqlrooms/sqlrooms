@@ -38,6 +38,7 @@ export {createRoomStorePersistence} from './createRoomStorePersistence';
 export type {
   CreateRoomStorePersistenceOptions,
   RoomStorePersistence,
+  RoomStorePersistenceSnapshotEquivalence,
   RoomStorePersistenceSnapshotCodec,
 } from './createRoomStorePersistence';
 export {createPersistenceController} from './PersistenceController';

@@ -77,6 +77,104 @@ describe('createRoomStorePersistence', () => {
     });
   });
 
+  it('uses snapshot comparison when subscribed structured snapshots are equivalent', async () => {
+    const saved: Array<{count: number}> = [];
+    const store = createStore<TestState>(() => ({
+      count: 1,
+      transient: 'a',
+    }));
+    const persistence = createRoomStorePersistence<
+      TestState,
+      Pick<TestState, 'count'>,
+      {count: number}
+    >({
+      store,
+      partialize: (state) => ({count: state.count}),
+      serialize: (state) => ({...state}),
+      deserialize: (snapshot) => snapshot,
+      compareSnapshots: (next, previous) => next.count === previous.count,
+      load: async () => null,
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+
+    store.setState({transient: 'b'});
+    await persistence.flush();
+    store.setState({count: 2});
+    await persistence.flush();
+
+    expect(saved).toEqual([{count: 2}]);
+  });
+
+  it('uses snapshot revisions when subscribed structured snapshots are equivalent', async () => {
+    const saved: Array<{revision: number; payload: {count: number}}> = [];
+    const store = createStore<TestState>(() => ({
+      count: 1,
+      transient: 'a',
+    }));
+    const persistence = createRoomStorePersistence<
+      TestState,
+      Pick<TestState, 'count'>,
+      {revision: number; payload: {count: number}}
+    >({
+      store,
+      partialize: (state) => ({count: state.count}),
+      serialize: (state) => ({revision: state.count, payload: {...state}}),
+      deserialize: (snapshot) => snapshot.payload,
+      getSnapshotRevision: (snapshot) => snapshot.revision,
+      load: async () => null,
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+
+    store.setState({transient: 'b'});
+    await persistence.flush();
+    store.setState({count: 2});
+    await persistence.flush();
+
+    expect(saved).toEqual([{revision: 2, payload: {count: 2}}]);
+  });
+
+  it('only marks removed snapshots saved after deletion succeeds', async () => {
+    const saved: string[] = [];
+    const persistence = createRoomStorePersistence<TestState>({
+      partialize: (state) => ({count: state.count}),
+      load: async () => '{"count":1}',
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+      remove: async () => {
+        throw new Error('remove failed');
+      },
+    });
+
+    await persistence.storage.getItem('test');
+
+    await expect(persistence.storage.removeItem('test')).rejects.toThrow(
+      'remove failed',
+    );
+
+    await persistence.storage.setItem('test', {state: {count: 1}});
+    await persistence.flush();
+
+    expect(saved).toEqual([]);
+    expect(persistence.controller.getState().dirty).toBe(false);
+  });
+
+  it('rejects removal when no remove implementation is configured', async () => {
+    const persistence = createRoomStorePersistence<TestState>({
+      partialize: (state) => ({count: state.count}),
+      load: async () => null,
+      save: async () => {},
+    });
+
+    await expect(persistence.storage.removeItem('test')).rejects.toThrow(
+      'remove option',
+    );
+  });
+
   it('hydrates and applies snapshots while persistence is paused', async () => {
     const saved: string[] = [];
     const store = createStore<TestState>(() => ({

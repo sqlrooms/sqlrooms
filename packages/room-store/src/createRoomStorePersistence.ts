@@ -25,6 +25,22 @@ export type RoomStorePersistenceSnapshotCodec<TPersisted, TSnapshot> = {
   deserialize?: (snapshot: TSnapshot) => TPersisted;
 };
 
+export type RoomStorePersistenceSnapshotEquivalence<TSnapshot> = {
+  /**
+   * Returns true when two serialized snapshots should be treated as equivalent.
+   *
+   * Defaults to referential equality, which preserves existing behavior for
+   * primitive string snapshots.
+   */
+  compareSnapshots?: (next: TSnapshot, previous: TSnapshot) => boolean;
+  /**
+   * Extracts a stable revision from a snapshot for equivalence checks.
+   *
+   * Ignored when `compareSnapshots` is provided.
+   */
+  getSnapshotRevision?: (snapshot: TSnapshot) => unknown;
+};
+
 /**
  * Options for creating controller-backed persistence for a room store.
  *
@@ -40,61 +56,62 @@ export type CreateRoomStorePersistenceOptions<
   TState,
   TPersisted = Partial<TState>,
   TSnapshot = string,
-> = RoomStorePersistenceSnapshotCodec<TPersisted, TSnapshot> & {
-  /**
-   * Selects the portion of full room-store state that should be persisted.
-   *
-   * When using Zustand's `persist` middleware, pass the same function to its
-   * `partialize` option so the storage receives the same `TPersisted` shape.
-   */
-  partialize: (state: TState) => TPersisted;
-  /** Loads the latest durable snapshot, or `null` when none exists. */
-  load: () => Promise<TSnapshot | null>;
-  /**
-   * Writes a durable snapshot.
-   *
-   * Metadata carries the save reason, such as `setItem`, `store-change`,
-   * `autosave`, or `final-flush`, for adapters that want observability.
-   */
-  save: (
-    snapshot: TSnapshot,
-    metadata?: PersistenceSaveMetadata,
-  ) => Promise<void>;
-  /** Removes the durable snapshot when Zustand clears persistence. */
-  remove?: () => Promise<void>;
-  /**
-   * Optional Zustand store to observe directly.
-   *
-   * Provide this when persistence should track store changes independently of
-   * Zustand persist's `setItem` calls.
-   */
-  store?: StoreApi<TState>;
-  /**
-   * Applies a deserialized snapshot to runtime state during `hydrate()`.
-   *
-   * The helper runs this callback while persistence is paused, so restoring
-   * state does not mark the controller dirty.
-   */
-  applySnapshot?: (
-    persisted: TPersisted,
-    context: {store?: StoreApi<TState>},
-  ) => void | Promise<void>;
-  /** Debounce delay for autosaves, or `null` to disable autosave. */
-  autosaveDelayMs?: number | null;
-  /** Version returned from `storage.getItem()` for Zustand persist migrations. */
-  version?: number;
-  /** Clock used by the underlying controller, mostly useful for tests. */
-  now?: () => number;
-  /**
-   * Whether an initially-bound store snapshot should be treated as already saved.
-   *
-   * Defaults to `true`, which avoids treating the current runtime state as a
-   * user edit immediately after binding.
-   */
-  markInitialSnapshotSaved?: boolean;
-  /** Save reason used when `bindStore()` detects a changed partialized snapshot. */
-  subscribeReason?: PersistenceSaveReason;
-};
+> = RoomStorePersistenceSnapshotCodec<TPersisted, TSnapshot> &
+  RoomStorePersistenceSnapshotEquivalence<TSnapshot> & {
+    /**
+     * Selects the portion of full room-store state that should be persisted.
+     *
+     * When using Zustand's `persist` middleware, pass the same function to its
+     * `partialize` option so the storage receives the same `TPersisted` shape.
+     */
+    partialize: (state: TState) => TPersisted;
+    /** Loads the latest durable snapshot, or `null` when none exists. */
+    load: () => Promise<TSnapshot | null>;
+    /**
+     * Writes a durable snapshot.
+     *
+     * Metadata carries the save reason, such as `setItem`, `store-change`,
+     * `autosave`, or `final-flush`, for adapters that want observability.
+     */
+    save: (
+      snapshot: TSnapshot,
+      metadata?: PersistenceSaveMetadata,
+    ) => Promise<void>;
+    /** Removes the durable snapshot when Zustand clears persistence. */
+    remove?: (name: string) => Promise<void>;
+    /**
+     * Optional Zustand store to observe directly.
+     *
+     * Provide this when persistence should track store changes independently of
+     * Zustand persist's `setItem` calls.
+     */
+    store?: StoreApi<TState>;
+    /**
+     * Applies a deserialized snapshot to runtime state during `hydrate()`.
+     *
+     * The helper runs this callback while persistence is paused, so restoring
+     * state does not mark the controller dirty.
+     */
+    applySnapshot?: (
+      persisted: TPersisted,
+      context: {store?: StoreApi<TState>},
+    ) => void | Promise<void>;
+    /** Debounce delay for autosaves, or `null` to disable autosave. */
+    autosaveDelayMs?: number | null;
+    /** Version returned from `storage.getItem()` for Zustand persist migrations. */
+    version?: number;
+    /** Clock used by the underlying controller, mostly useful for tests. */
+    now?: () => number;
+    /**
+     * Whether an initially-bound store snapshot should be treated as already saved.
+     *
+     * Defaults to `true`, which avoids treating the current runtime state as a
+     * user edit immediately after binding.
+     */
+    markInitialSnapshotSaved?: boolean;
+    /** Save reason used when `bindStore()` detects a changed partialized snapshot. */
+    subscribeReason?: PersistenceSaveReason;
+  };
 
 /**
  * Controller-backed persistence utilities for a room store.
@@ -133,7 +150,9 @@ export type RoomStorePersistence<TState, TPersisted, TSnapshot> = {
    */
   bindStore: (
     store: StoreApi<TState>,
-    options?: {markInitialSnapshotSaved?: boolean},
+    options?: {
+      markInitialSnapshotSaved?: boolean;
+    } & RoomStorePersistenceSnapshotEquivalence<TSnapshot>,
   ) => () => void;
 };
 
@@ -209,6 +228,8 @@ export function createRoomStorePersistence<
   now,
   serialize = defaultSerialize<TPersisted, TSnapshot>,
   deserialize = defaultDeserialize<TPersisted, TSnapshot>,
+  compareSnapshots,
+  getSnapshotRevision,
   markInitialSnapshotSaved = true,
   subscribeReason = 'store-change',
 }: CreateRoomStorePersistenceOptions<
@@ -217,6 +238,21 @@ export function createRoomStorePersistence<
   TSnapshot
 >): RoomStorePersistence<TState, TPersisted, TSnapshot> {
   const toSnapshot = (state: TState) => serialize(partialize(state));
+  const areSnapshotsEquivalent = (
+    next: TSnapshot,
+    previous: TSnapshot,
+    options: RoomStorePersistenceSnapshotEquivalence<TSnapshot> = {},
+  ) => {
+    const compare = options.compareSnapshots ?? compareSnapshots;
+    if (compare) {
+      return compare(next, previous);
+    }
+    const getRevision = options.getSnapshotRevision ?? getSnapshotRevision;
+    if (getRevision) {
+      return getRevision(next) === getRevision(previous);
+    }
+    return next === previous;
+  };
   const controller = createPersistenceController<TSnapshot>({
     autosaveDelayMs,
     now,
@@ -249,11 +285,13 @@ export function createRoomStorePersistence<
       controller.setSnapshot(serialize(value.state), 'setItem');
     },
     removeItem: async (name: string): Promise<void> => {
-      void name;
-      controller.markSnapshotSaved(null);
+      if (!remove) {
+        throw new Error(
+          'Persistence storage cannot remove item without remove option.',
+        );
+      }
       await controller.flush('remove');
-      if (!remove) return;
-      await controller.pause(remove);
+      await controller.pause(() => remove(name));
       controller.markSnapshotSaved(null);
     },
   };
@@ -272,7 +310,9 @@ export function createRoomStorePersistence<
 
     return storeToBind.subscribe((state) => {
       const snapshot = toSnapshot(state);
-      if (snapshot === lastObservedSnapshot) return;
+      if (areSnapshotsEquivalent(snapshot, lastObservedSnapshot, options)) {
+        return;
+      }
       lastObservedSnapshot = snapshot;
       controller.setSnapshot(snapshot, subscribeReason);
     });
