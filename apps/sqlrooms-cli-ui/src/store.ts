@@ -218,9 +218,13 @@ const sliceConfigSchemas = {
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
-const cliUiPersistStorage = createDuckDbPersistStorage(connector, {
-  namespace: runtimeConfig.metaNamespace || '__sqlrooms',
-});
+type PersistedRoomState = ReturnType<typeof persistHelpers.partialize>;
+const cliUiPersistStorage = createDuckDbPersistStorage<PersistedRoomState>(
+  connector,
+  {
+    namespace: runtimeConfig.metaNamespace || '__sqlrooms',
+  },
+);
 export const uiStatePersistenceController = cliUiPersistStorage.controller;
 
 function getAvailableAiModels(config: AiSettingsSliceConfig) {
@@ -239,7 +243,7 @@ function getAvailableAiModels(config: AiSettingsSliceConfig) {
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs<RoomState>(
+  persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas,

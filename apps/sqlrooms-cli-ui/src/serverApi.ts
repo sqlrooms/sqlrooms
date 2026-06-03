@@ -13,10 +13,10 @@ type DuckDbLikeConnector = {
 const UI_STATE_KEY = 'default';
 const PERSIST_DEBOUNCE_MS = 300;
 
-export type DuckDbPersistStorage = PersistStorage<any> & {
+export type DuckDbPersistStorage<TPersisted> = PersistStorage<TPersisted> & {
   controller: PersistenceController<string>;
   flush: () => Promise<void>;
-  markStateSnapshotSaved: (state: unknown) => void;
+  markStateSnapshotSaved: (state: TPersisted) => void;
 };
 
 function sanitizeIdent(ident: string): string {
@@ -50,10 +50,10 @@ function escapeLiteral(json: string) {
   return json.replace(/'/g, "''");
 }
 
-export function createDuckDbPersistStorage(
+export function createDuckDbPersistStorage<TPersisted>(
   connector: DuckDbLikeConnector,
   options?: {namespace?: string},
-): DuckDbPersistStorage {
+): DuckDbPersistStorage<TPersisted> {
   const namespace = options?.namespace || '__sqlrooms';
   let ensured: Promise<void> | null = null;
   let handlersRegistered = false;
@@ -61,14 +61,18 @@ export function createDuckDbPersistStorage(
     ensured = ensured ?? ensureUiStateTable(connector, namespace);
     return ensured;
   };
-  const persistence = createRoomStorePersistence<any, any, string>({
+  const persistence = createRoomStorePersistence<
+    TPersisted,
+    TPersisted,
+    string
+  >({
     partialize: (state) => state,
     serialize: (state) => JSON.stringify(state),
     deserialize: (snapshot) => {
       try {
-        return JSON.parse(snapshot);
+        return JSON.parse(snapshot) as TPersisted;
       } catch {
-        return snapshot;
+        return snapshot as TPersisted;
       }
     },
     autosaveDelayMs: PERSIST_DEBOUNCE_MS,

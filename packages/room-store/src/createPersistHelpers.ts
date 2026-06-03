@@ -2,15 +2,19 @@ import z from 'zod';
 import {persist, PersistOptions} from 'zustand/middleware';
 import {StateCreator} from './BaseRoomStore';
 
+type PersistedSliceConfigs<T extends Record<string, z.ZodType>> = {
+  [K in keyof T]: z.infer<T[K]>;
+};
+
 /**
  * Wraps a Zustand persist storage so that `setItem` silently drops writes
  * whose serialised payload exceeds the engine's string-length limit (or any
  * other serialisation error).  This prevents `RangeError: Invalid string
  * length` from crashing the app when the state grows unexpectedly large.
  */
-function createSafeStorage<S>(
-  base: PersistOptions<S>['storage'],
-): PersistOptions<S>['storage'] {
+function createSafeStorage<S, PersistedState>(
+  base: PersistOptions<S, PersistedState>['storage'],
+): PersistOptions<S, PersistedState>['storage'] {
   if (!base) return base;
   const originalSetItem = base.setItem?.bind(base);
   if (!originalSetItem) return base;
@@ -99,11 +103,13 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
   sliceConfigs: T,
 ) {
   return {
-    partialize: (state: any) => {
-      const result: Record<string, any> = {};
+    partialize: (state: any): PersistedSliceConfigs<T> => {
+      const result = {} as PersistedSliceConfigs<T>;
       for (const [key, schema] of Object.entries(sliceConfigs)) {
         try {
-          result[key] = schema.parse(state[key]?.config);
+          (result as Record<string, unknown>)[key] = schema.parse(
+            state[key]?.config,
+          );
         } catch (error) {
           throw new Error(`Error parsing config key "${key}"`, {
             cause: error,
@@ -217,12 +223,16 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  * );
  * ```
  */
-export function persistSliceConfigs<S>(
+export function persistSliceConfigs<
+  S,
+  TSliceConfigs extends Record<string, z.ZodType> = Record<string, z.ZodType>,
+  PersistedState = PersistedSliceConfigs<TSliceConfigs>,
+>(
   options: {
-    sliceConfigSchemas: Record<string, z.ZodType>;
-    partialize?: (state: S) => Partial<S>;
+    sliceConfigSchemas: TSliceConfigs;
+    partialize?: (state: S) => PersistedState;
     merge?: (persistedState: unknown, currentState: S) => S;
-  } & Omit<PersistOptions<S>, 'partialize' | 'merge'>,
+  } & Omit<PersistOptions<S, PersistedState>, 'partialize' | 'merge'>,
   stateCreator: StateCreator<S>,
 ): StateCreator<S> {
   const {sliceConfigSchemas, partialize, merge, storage, ...persistOptions} =
@@ -231,10 +241,10 @@ export function persistSliceConfigs<S>(
 
   const safeStorage = createSafeStorage(storage);
 
-  return persist<S>(stateCreator, {
+  return persist<S, [], [], PersistedState>(stateCreator, {
     ...persistOptions,
     ...(safeStorage ? {storage: safeStorage} : {}),
     partialize: partialize || helpers.partialize,
     merge: merge || helpers.merge,
-  } as PersistOptions<S>) as StateCreator<S>;
+  } as PersistOptions<S, PersistedState>) as StateCreator<S>;
 }
