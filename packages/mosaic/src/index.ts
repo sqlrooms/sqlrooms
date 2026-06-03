@@ -337,3 +337,4 @@ export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
 export {MosaicChart} from './charts/MosaicChart';
 export {useParseChartConfig} from './charts/useParseChartConfig';
 export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';
+export {useDataTable} from './hooks/useDataTable';
