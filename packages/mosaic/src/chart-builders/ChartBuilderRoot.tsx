@@ -6,13 +6,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type {ChartConfig} from '../chart-types';
+import type {ChartConfig} from '../charts/chart-types';
 import {ChartBuilderContext} from './ChartBuilderContext';
 import {createChartBuilderStore} from './createChartBuilderStore';
 import type {
   ChartBuilderColumn,
   ChartTypeDefinition,
-} from '../chart-types/base-types';
+} from '../charts/chart-types/base-types';
 
 export type ChartBuilderRootProps = PropsWithChildren<{
   /** Table name to use in generated specs */

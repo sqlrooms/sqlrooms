@@ -9,14 +9,14 @@ import {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
  *
  * @example
  * ```tsx
- * <MosaicChart.Container spec={mySpec} onSpecChange={save}>
- *   <MosaicChart.Display />
- *   <MosaicChart.SpecEditor />
- *   <MosaicChart.Actions />
- * </MosaicChart.Container>
+ * <MosaicSpecChart.Container spec={mySpec} onSpecChange={save}>
+ *   <MosaicSpecChart.Display />
+ *   <MosaicSpecChart.SpecEditor />
+ *   <MosaicSpecChart.Actions />
+ * </MosaicSpecChart.Container>
  * ```
  */
-export const MosaicChart = {
+export const MosaicSpecChart = {
   Container: MosaicChartContainer,
   Display: MosaicChartDisplay,
   SpecEditor: MosaicSpecEditorPanel,

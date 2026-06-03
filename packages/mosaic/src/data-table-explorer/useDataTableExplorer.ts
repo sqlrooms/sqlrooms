@@ -39,6 +39,7 @@ import {
   isDataTableExplorerHistogramType,
   isDataTableExplorerUnsupportedSummaryType,
 } from './utils';
+import {DataTable} from '@sqlrooms/db';
 
 type DataTableExplorerSelectionState = {
   selection: Selection;
@@ -470,6 +471,12 @@ function useDataTableExplorerVisiblePageState(options: {
   return showStableEmpty ? page.pageTable : lastNonEmptyPageTable.pageTable;
 }
 
+function getTableReference(table: DataTable): string {
+  return [table.table.database, table.table.schema, table.table.table]
+    .filter((part): part is string => Boolean(part))
+    .join('.');
+}
+
 /**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
  * public dataTableExplorer API consumed by the React table UI.
@@ -485,8 +492,10 @@ export function useDataTableExplorer(
     selection: providedSelection,
     selectionName,
     summaryBins = 18,
-    tableName,
+    tableName: table,
   } = options;
+
+  const tableName = getTableReference(table);
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const {selection, selectionVersion} = useDataTableExplorerSelection({

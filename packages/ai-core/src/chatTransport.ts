@@ -356,6 +356,7 @@ export function createLocalChatTransportFactory({
         agent,
         uiMessages: sanitizeMessagesForLLM(
           fixIncompleteToolCalls(messagesCopy),
+          Object.keys(tools),
         ),
         abortSignal,
         messageMetadata: ({part}: {part: TextStreamPart<ToolSet>}) => {

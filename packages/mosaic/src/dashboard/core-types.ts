@@ -13,14 +13,6 @@ export type DataTableExplorerPanelConfig = z.infer<
   typeof DataTableExplorerPanelConfig
 >;
 
-// Text panel config
-export const TextPanelConfig = z.object({
-  content: z.string().default(''),
-  toolbarOpen: z.boolean().default(false),
-  sourcePanelOpen: z.boolean().default(false),
-});
-export type TextPanelConfig = z.infer<typeof TextPanelConfig>;
-
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
   typeof MosaicDashboardLayoutType
