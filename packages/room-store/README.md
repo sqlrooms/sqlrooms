@@ -16,6 +16,7 @@ npm install @sqlrooms/room-store
 - generic slice helper: `createSlice()`
 - React context/hooks: `RoomStateProvider`, `useBaseRoomStore`, `useRoomStoreApi`
 - persistence helpers: `persistSliceConfigs()`, `createPersistHelpers()`
+- persistence controller: `createPersistenceController()`
 
 ## Quick start
 
@@ -99,6 +100,37 @@ export function incrementLater() {
     roomStore.getState().counter.increment();
   }, 500);
 }
+```
+
+## Persistence Controller
+
+Use `createPersistenceController()` when persistence policy should be explicit
+instead of hidden inside a storage adapter. The controller is storage-agnostic:
+hosts provide `load()` and `save()` adapter functions, while SQLRooms handles
+hydration state, dirty tracking, scheduled saves, final flush, in-flight save
+coalescing, and observable save status.
+
+`createPersistHelpers()` still only handles schema-based partialization and
+rehydrate merging. Compose it with the controller when a Zustand room store needs
+both schema-safe snapshots and explicit save policy.
+
+```ts
+import {createPersistenceController} from '@sqlrooms/room-store';
+
+const controller = createPersistenceController({
+  autosaveDelayMs: 300,
+  adapter: {
+    load: async () => loadProjectSnapshot(),
+    save: async (snapshot, metadata) => {
+      await saveProjectSnapshot(snapshot, metadata?.reason);
+    },
+  },
+});
+
+const snapshot = await controller.hydrate();
+controller.setBaseline(snapshot);
+controller.setSnapshot(nextSnapshot, 'setItem');
+await controller.flush('final-flush');
 ```
 
 Inside components, `useRoomStoreApi()` gives you the raw store API:

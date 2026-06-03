@@ -156,6 +156,10 @@ createRoomStore(
 );
 ```
 
+For host-owned storage such as DuckDB-backed project files, use
+`createPersistenceController` alongside these schema helpers to make hydration,
+dirty tracking, save scheduling, final flush, and save status explicit.
+
 ## Related packages
 
 - `@sqlrooms/sql-editor`

@@ -34,6 +34,16 @@ export {
   createPersistHelpers,
   persistSliceConfigs,
 } from './createPersistHelpers';
+export {createPersistenceController} from './PersistenceController';
+export type {
+  CreatePersistenceControllerOptions,
+  PersistenceAdapter,
+  PersistenceController,
+  PersistenceControllerListener,
+  PersistenceControllerState,
+  PersistenceSaveMetadata,
+  PersistenceSaveReason,
+} from './PersistenceController';
 
 export {
   createCommandSlice,
