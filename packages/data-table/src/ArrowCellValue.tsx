@@ -1,5 +1,11 @@
 import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror';
-import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
+import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  ScrollArea,
+} from '@sqlrooms/ui';
 import {safeJsonParse, shorten, toDecimalString} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {ClipboardIcon} from 'lucide-react';
@@ -182,9 +188,10 @@ export function ArrowCellValue({
             <span className="text-muted-foreground shrink-0">{`(${type})`}</span>
           </div>
 
-          <div className="max-h-[300px] min-h-[100px] overflow-auto">
+          <ScrollArea className="h-[300px] max-h-[60vh] min-h-[100px] rounded-sm">
             {isJsonValue && parsedJson !== undefined ? (
               <JsonCodeMirrorEditor
+                className="h-auto min-h-full pr-3 [&_.cm-editor]:h-auto [&_.cm-editor]:min-h-full [&_.cm-scroller]:overflow-visible"
                 value={parsedJson === null ? 'null' : parsedJson}
                 readOnly={true}
                 options={{
@@ -193,11 +200,11 @@ export function ArrowCellValue({
                 }}
               />
             ) : (
-              <div className="font-mono text-xs wrap-break-word whitespace-pre-wrap">
+              <div className="pr-3 font-mono text-xs wrap-break-word whitespace-pre-wrap">
                 {valueStr}
               </div>
             )}
-          </div>
+          </ScrollArea>
 
           <div className="mt-2 flex justify-end">
             <Button
