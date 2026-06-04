@@ -103,21 +103,25 @@ export function incrementLater() {
 }
 ```
 
-## Persistence Controller
+## Persistence
 
-Use `createPersistenceController()` when persistence policy should be explicit
-instead of hidden inside a storage adapter. The controller is storage-agnostic:
-hosts provide `load()` and `save()` adapter functions, while SQLRooms handles
-hydration state, dirty tracking, scheduled saves, final flush, in-flight save
-coalescing, and observable save status.
+For a Zustand room store with host-owned storage, prefer
+`createRoomStorePersistence()`. It composes `createPersistHelpers()` with a
+controller-backed `PersistStorage`, rehydrate saved-snapshot marking, optional
+room-store subscription, autosave, and final flush helpers. This is the default
+entry point for SQLRooms apps that persist room state to DuckDB, files, or another
+project-owned store.
+
+Use the lower-level `createPersistenceController()` only when you need the same
+persistence policy outside a room store or Zustand persist. The controller is
+storage-agnostic: hosts provide `load()` and `save()` adapter functions, while
+SQLRooms handles hydration state, dirty tracking, scheduled saves, final flush,
+in-flight save coalescing, and observable save status.
 
 `createPersistHelpers()` still only handles schema-based partialization and
-rehydrate merging. Compose it with the controller when a Zustand room store needs
-both schema-safe snapshots and explicit save policy.
-
-For room stores, prefer `createRoomStorePersistence()` before hand-writing that
-composition. It provides controller-backed Zustand persist storage, rehydrate
-saved-snapshot marking, optional room-store subscription, and final flush helpers.
+rehydrate merging. Let `createRoomStorePersistence()` combine those helpers with
+save policy unless you have a custom integration that does not fit the room-store
+helper.
 
 ```ts
 import {createRoomStorePersistence} from '@sqlrooms/room-store';

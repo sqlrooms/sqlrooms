@@ -113,6 +113,44 @@ describe('createPersistenceController', () => {
     });
   });
 
+  it('waits for an in-flight flush without reporting a missing snapshot source', async () => {
+    const saved: {snapshot: string; reason: string | undefined}[] = [];
+    let releaseFirstSave: (() => void) | undefined;
+    let resolveFirstSaveStarted: (() => void) | undefined;
+    const firstSaveStarted = new Promise<void>((resolve) => {
+      resolveFirstSaveStarted = resolve;
+    });
+    const controller = createPersistenceController<string>({
+      adapter: {
+        load: async () => null,
+        save: async (snapshot, metadata) => {
+          saved.push({snapshot, reason: metadata?.reason});
+          resolveFirstSaveStarted?.();
+          await new Promise<void>((release) => {
+            releaseFirstSave = release;
+          });
+        },
+      },
+    });
+
+    controller.setSnapshot('first', 'setItem');
+    const savePromise = controller.saveNow('autosave');
+    await firstSaveStarted;
+    const flushPromise = controller.flush('flush');
+
+    releaseFirstSave?.();
+    await savePromise;
+    await flushPromise;
+
+    expect(saved).toEqual([{snapshot: 'first', reason: 'autosave'}]);
+    expect(controller.getState()).toMatchObject({
+      dirty: false,
+      error: null,
+      saving: false,
+      lastSaveReason: 'autosave',
+    });
+  });
+
   it('persists a revert to the last saved snapshot while another save is in flight', async () => {
     const saved: string[] = [];
     let releaseFirstSave: (() => void) | undefined;

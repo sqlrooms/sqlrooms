@@ -335,7 +335,6 @@ export function createRoomStorePersistence<
       controller.markSnapshotSaved(lastObservedSnapshot);
     } else {
       controller.setSnapshot(lastObservedSnapshot, subscribeReason);
-      void controller.flush(subscribeReason).catch(() => undefined);
     }
 
     return storeToBind.subscribe((state, previousState) => {
