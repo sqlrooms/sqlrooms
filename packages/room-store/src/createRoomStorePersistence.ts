@@ -306,6 +306,9 @@ export function createRoomStorePersistence<
       options.markInitialSnapshotSaved ?? markInitialSnapshotSaved;
     if (shouldMarkInitial) {
       controller.markSnapshotSaved(lastObservedSnapshot);
+    } else {
+      controller.setSnapshot(lastObservedSnapshot, subscribeReason);
+      void controller.flush(subscribeReason).catch(() => undefined);
     }
 
     return storeToBind.subscribe((state) => {
@@ -332,9 +335,9 @@ export function createRoomStorePersistence<
       const persisted = deserialize(snapshot);
       if (applySnapshot) {
         await controller.pause(() => applySnapshot(persisted, {store}));
-      }
-      if (store) {
-        markStateSnapshotSaved(store.getState());
+        if (store) {
+          markStateSnapshotSaved(store.getState());
+        }
       }
       return persisted;
     },
