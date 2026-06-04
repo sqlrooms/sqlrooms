@@ -24,10 +24,10 @@ glue.
 flowchart TD
   Store["Zustand room store"]
   Helpers["createPersistHelpers()\npartialize + merge"]
-  RoomPersistence["createRoomStorePersistence()\nZustand storage + controller glue"]
+  RoomPersistence["createRoomStorePersistence()\nstorage + controller"]
   Controller["createPersistenceController()\ndirty state + autosave + flush"]
   Adapter["Host adapter\nload/save/remove"]
-  Durable["Durable workspace storage\nDuckDB, file, IndexedDB, server"]
+  Durable["Durable storage\nfiles, DBs, or servers"]
 
   Store --> Helpers
   Helpers --> RoomPersistence
