@@ -93,7 +93,7 @@ import {
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {createLayout} from './layout';
+import {createLayout, migrateCliLayoutConfig} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {
   createDuckDbPersistStorage,
@@ -266,6 +266,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...persistedRecord,
             artifacts: persistedArtifacts,
             cells: persistedCells,
+            layout: persistedRecord.layout
+              ? migrateCliLayoutConfig(persistedRecord.layout as LayoutConfig)
+              : persistedRecord.layout,
           },
           currentState,
         );

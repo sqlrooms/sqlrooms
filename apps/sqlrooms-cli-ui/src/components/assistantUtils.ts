@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {CLI_ARTIFACT_TYPES} from '../artifactTypes';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../store';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);

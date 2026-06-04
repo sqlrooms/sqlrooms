@@ -18,7 +18,8 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import {useCallback, useMemo, useState} from 'react';
-import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {

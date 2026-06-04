@@ -1,10 +1,14 @@
 import {createArtifactPanelDefinition} from '@sqlrooms/artifacts';
-import {CreateLayoutSliceProps} from '@sqlrooms/layout';
-import {DatabaseIcon, FolderIcon, SparklesIcon} from 'lucide-react';
+import {
+  CreateLayoutSliceProps,
+  getLayoutNodeId,
+  isLayoutSplitNode,
+  type LayoutConfig,
+} from '@sqlrooms/layout';
+import {FolderIcon, SparklesIcon} from 'lucide-react';
 import {StoreApi} from 'zustand';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {AssistantPanel} from './components/AssistantPanel';
-import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {RoomState} from './store-types';
 import {ArtifactsContainerPanel} from './workspace/ArtifactsContainerPanel';
 
@@ -18,17 +22,6 @@ export const createLayout = ({
     type: 'split',
     direction: 'row',
     children: [
-      {
-        type: 'tabs',
-        id: 'left-sidebar',
-        defaultSize: '30%',
-        minSize: 250,
-        maxSize: 400,
-        children: ['data-sources'],
-        activeTabIndex: 0,
-        collapsible: true,
-        collapsedSize: 0,
-      },
       {
         type: 'tabs',
         id: 'workspace',
@@ -52,11 +45,6 @@ export const createLayout = ({
     ],
   },
   panels: {
-    'data-sources': {
-      title: 'Data',
-      icon: DatabaseIcon,
-      component: DataSourcesPanel,
-    },
     assistant: {
       component: AssistantPanel,
       title: 'AI Assistant',
@@ -70,3 +58,16 @@ export const createLayout = ({
     artifact: createArtifactPanelDefinition(ARTIFACT_TYPES, store),
   },
 });
+
+export function migrateCliLayoutConfig(config: LayoutConfig): LayoutConfig {
+  if (!isLayoutSplitNode(config)) {
+    return config;
+  }
+
+  return {
+    ...config,
+    children: config.children.filter(
+      (child) => getLayoutNodeId(child) !== 'left-sidebar',
+    ),
+  };
+}
