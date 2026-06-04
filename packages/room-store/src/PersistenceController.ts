@@ -16,7 +16,6 @@ export type PersistenceAdapter<TSnapshot> = {
     snapshot: TSnapshot,
     metadata?: PersistenceSaveMetadata,
   ) => Promise<void>;
-  revision?: unknown;
 };
 
 export type PersistenceControllerState = {
@@ -187,8 +186,10 @@ export function createPersistenceController<TSnapshot>({
 
   const runSaveLoop = async (reason: PersistenceSaveReason) => {
     if (saveInFlight) {
-      pendingSaveReason = reason;
-      setState({pendingSave: true});
+      if (pendingSnapshot !== undefined || state.pendingSave) {
+        pendingSaveReason = reason;
+        setState({pendingSave: true});
+      }
       return saveInFlight;
     }
 

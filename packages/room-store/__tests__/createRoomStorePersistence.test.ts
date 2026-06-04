@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals';
-import {createStore} from 'zustand';
+import {createStore, type StoreApi} from 'zustand';
 import {createRoomStorePersistence} from '../src/createRoomStorePersistence';
 
 type TestState = {
@@ -75,6 +75,28 @@ describe('createRoomStorePersistence', () => {
       dirty: false,
       lastSaveReason: 'flush',
     });
+  });
+
+  it('persists the initial bound snapshot when it is not marked saved', async () => {
+    const saved: string[] = [];
+    const store = createStore<TestState>(() => ({
+      count: 1,
+      transient: 'a',
+    }));
+    const persistence = createRoomStorePersistence<TestState>({
+      partialize: (state) => ({count: state.count}),
+      load: async () => null,
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+
+    persistence.bindStore(store, {markInitialSnapshotSaved: false});
+    await persistence.flush();
+    await persistence.flush();
+
+    expect(saved).toEqual(['{"count":1}']);
+    expect(persistence.controller.getState().dirty).toBe(false);
   });
 
   it('uses snapshot comparison when subscribed structured snapshots are equivalent', async () => {
@@ -167,6 +189,34 @@ describe('createRoomStorePersistence', () => {
     expect(saved).toEqual(['{"count":3}']);
   });
 
+  it('can bind with an explicit initial state before getState is ready', async () => {
+    const saved: string[] = [];
+    const persistence = createRoomStorePersistence<TestState>({
+      partialize: (state) => ({count: state.count}),
+      load: async () => null,
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+    const store = {
+      getState: () => {
+        throw new Error('state is not ready');
+      },
+      subscribe: () => () => {},
+    } as unknown as StoreApi<TestState>;
+
+    expect(() =>
+      persistence.bindStore(store, {
+        initialState: {count: 1, transient: 'initial'},
+      }),
+    ).not.toThrow();
+
+    await persistence.flush();
+
+    expect(saved).toEqual([]);
+    expect(persistence.controller.getState().dirty).toBe(false);
+  });
+
   it('only marks removed snapshots saved after deletion succeeds', async () => {
     const saved: string[] = [];
     const persistence = createRoomStorePersistence<TestState>({
@@ -230,6 +280,30 @@ describe('createRoomStorePersistence', () => {
 
     expect(snapshot).toEqual({count: 5});
     expect(store.getState().count).toBe(5);
+    expect(saved).toEqual([]);
+    expect(persistence.controller.getState().dirty).toBe(false);
+  });
+
+  it('does not mark the current store snapshot saved when hydrate does not apply it', async () => {
+    const saved: string[] = [];
+    const store = createStore<TestState>(() => ({
+      count: 1,
+      transient: 'a',
+    }));
+    const persistence = createRoomStorePersistence<TestState>({
+      store,
+      partialize: (state) => ({count: state.count}),
+      load: async () => '{"count":5}',
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+
+    const snapshot = await persistence.hydrate();
+    store.setState({count: 5});
+    await persistence.flush();
+
+    expect(snapshot).toEqual({count: 5});
     expect(saved).toEqual([]);
     expect(persistence.controller.getState().dirty).toBe(false);
   });
