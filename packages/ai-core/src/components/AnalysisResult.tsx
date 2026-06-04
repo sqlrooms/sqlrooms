@@ -10,6 +10,7 @@ import {SquareTerminalIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
+import {TOOL_CALL_CANCELLED} from '../constants';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {
   isDynamicToolPart,
@@ -392,6 +393,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             return null;
           })}
           {analysisResult.errorMessage &&
+            !analysisResult.errorMessage.error.startsWith(
+              TOOL_CALL_CANCELLED,
+            ) &&
             (ErrorMessageComponent ? (
               <ErrorMessageComponent
                 errorMessage={analysisResult.errorMessage.error}
