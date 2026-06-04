@@ -186,52 +186,20 @@ const ParentSummaryLine: React.FC<{
   startedAt?: number;
   completedAt?: number;
   toolCall?: AgentToolCall;
-}> = ({toolCallId, toolName, isComplete, startedAt, completedAt, toolCall}) => {
-  const showDetails = useShowToolCallDetails();
-  const {getToolDisplayName} = useToolRenderBehavior();
-  const timing = useStoreWithAi((s) => s.ai.toolTimings[toolCallId]);
-  const effectiveStartedAt = timing?.startedAt ?? startedAt;
-  const effectiveCompletedAt = timing?.completedAt ?? completedAt;
-  const elapsed = useElapsedTime(
-    !isComplete,
-    effectiveStartedAt,
-    effectiveCompletedAt,
-  );
-  const displayName =
-    (toolCall && getToolDisplayName
-      ? getToolDisplayName(toolCall)
-      : undefined) ?? toolName;
+}> = ({toolCall}) => {
+  const inputObj =
+    toolCall?.input && typeof toolCall.input === 'object'
+      ? (toolCall.input as Record<string, unknown>)
+      : undefined;
+  const reasoning = inputObj?.reasoning as string | undefined;
+
+  if (!reasoning) {
+    return null;
+  }
 
   return (
-    <div
-      className={cn(
-        'grid min-w-0 items-start gap-x-2 py-1 text-xs',
-        showDetails
-          ? 'grid-cols-[16px_minmax(0,1fr)_auto_auto]'
-          : 'grid-cols-[16px_minmax(0,1fr)_auto]',
-      )}
-    >
-      <span className="flex h-4 w-4 items-center justify-center">
-        {!isComplete ? (
-          <Loader2 className="text-muted-foreground/50 h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <CircleIcon className="text-muted-foreground/30 h-2 w-2 fill-current" />
-        )}
-      </span>
-      <span className="min-w-0 leading-4 font-medium">{displayName}</span>
-      {elapsed ? (
-        <span className="text-muted-foreground/50 shrink-0 text-[11px] tabular-nums">
-          {elapsed}
-        </span>
-      ) : effectiveStartedAt != null && effectiveCompletedAt != null ? (
-        <span className="text-muted-foreground/50 shrink-0 text-[11px] tabular-nums">
-          {formatShortDuration(effectiveCompletedAt - effectiveStartedAt)}
-        </span>
-      ) : (
-        <span />
-      )}
-      {showDetails &&
-        (toolCall ? <ToolCallDetailHover toolCall={toolCall} /> : <span />)}
+    <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
+      {reasoning}
     </div>
   );
 };
