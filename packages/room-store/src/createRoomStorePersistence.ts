@@ -117,6 +117,13 @@ export type CreateRoomStorePersistenceOptions<
     /** Clock used by the underlying controller, mostly useful for tests. */
     now?: () => number;
     /**
+     * Initial state to snapshot when binding `store` immediately.
+     *
+     * Useful when the host creates persistence inside a Zustand state creator,
+     * before `store.getState()` returns the completed initial state.
+     */
+    initialState?: TState;
+    /**
      * Whether an initially-bound store snapshot should be treated as already saved.
      *
      * Defaults to `true`, which avoids treating the current runtime state as a
@@ -165,6 +172,7 @@ export type RoomStorePersistence<TState, TPersisted, TSnapshot> = {
   bindStore: (
     store: StoreApi<TState>,
     options?: {
+      initialState?: TState;
       markInitialSnapshotSaved?: boolean;
       shouldPersistChange?: RoomStorePersistenceChangePredicate<TState>;
     } & RoomStorePersistenceSnapshotEquivalence<TSnapshot>,
@@ -246,6 +254,7 @@ export function createRoomStorePersistence<
   compareSnapshots,
   getSnapshotRevision,
   shouldPersistChange,
+  initialState,
   markInitialSnapshotSaved = true,
   subscribeReason = 'store-change',
 }: CreateRoomStorePersistenceOptions<
@@ -317,7 +326,9 @@ export function createRoomStorePersistence<
     TPersisted,
     TSnapshot
   >['bindStore'] = (storeToBind, options = {}) => {
-    let lastObservedSnapshot = toSnapshot(storeToBind.getState());
+    let lastObservedSnapshot = toSnapshot(
+      options.initialState ?? storeToBind.getState(),
+    );
     const shouldMarkInitial =
       options.markInitialSnapshotSaved ?? markInitialSnapshotSaved;
     if (shouldMarkInitial) {
@@ -342,7 +353,11 @@ export function createRoomStorePersistence<
   };
 
   if (store) {
-    bindStore(store, {markInitialSnapshotSaved, shouldPersistChange});
+    bindStore(store, {
+      initialState,
+      markInitialSnapshotSaved,
+      shouldPersistChange,
+    });
   }
 
   return {

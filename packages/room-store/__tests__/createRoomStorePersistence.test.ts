@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals';
-import {createStore} from 'zustand';
+import {createStore, type StoreApi} from 'zustand';
 import {createRoomStorePersistence} from '../src/createRoomStorePersistence';
 
 type TestState = {
@@ -187,6 +187,34 @@ describe('createRoomStorePersistence', () => {
     await persistence.flush();
 
     expect(saved).toEqual(['{"count":3}']);
+  });
+
+  it('can bind with an explicit initial state before getState is ready', async () => {
+    const saved: string[] = [];
+    const persistence = createRoomStorePersistence<TestState>({
+      partialize: (state) => ({count: state.count}),
+      load: async () => null,
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+    const store = {
+      getState: () => {
+        throw new Error('state is not ready');
+      },
+      subscribe: () => () => {},
+    } as unknown as StoreApi<TestState>;
+
+    expect(() =>
+      persistence.bindStore(store, {
+        initialState: {count: 1, transient: 'initial'},
+      }),
+    ).not.toThrow();
+
+    await persistence.flush();
+
+    expect(saved).toEqual([]);
+    expect(persistence.controller.getState().dirty).toBe(false);
   });
 
   it('only marks removed snapshots saved after deletion succeeds', async () => {
