@@ -7,7 +7,7 @@ import {DataTable} from '@sqlrooms/db';
 
 export type MosaicChartProps = {
   dataTable?: DataTable;
-  selectionName: string;
+  selectionName?: string;
   config: ChartConfig;
   runtimeKey: string;
   onConfigChange?: (config: ChartConfig) => void;

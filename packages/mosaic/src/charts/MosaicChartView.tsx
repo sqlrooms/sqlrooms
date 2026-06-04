@@ -64,7 +64,11 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
       : undefined,
   );
 
-  const renderContext = useMosaicChartRenderContext(dataTable, config);
+  const renderContext = useMosaicChartRenderContext(
+    dataTable,
+    config,
+    selectionName,
+  );
 
   if (connection.status === 'loading' || connection.status === 'idle') {
     return <SpinnerPane className="h-full w-full" />;
