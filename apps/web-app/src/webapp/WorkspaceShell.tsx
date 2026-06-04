@@ -37,7 +37,7 @@ import {
   useSidebar,
 } from '@sqlrooms/ui';
 import {LayoutRenderer, type LayoutNode, type Panels} from '@sqlrooms/layout';
-import {RoomStateProvider} from '@sqlrooms/room-store';
+import {RoomStateProvider, type StoreApi} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {
   ChevronDown,
@@ -55,7 +55,14 @@ import {
   Table2,
 } from 'lucide-react';
 import type React from 'react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
 import {AssistantPanel} from './assistant/AssistantPanel';
@@ -78,17 +85,19 @@ import {
   ASSISTANT_PANEL_ID,
   createDefaultWorkspaceAiConfig,
   createDefaultWorkspaceLayout,
+  createWorkspaceRoomPersistence,
+  createWorkspaceRoomSnapshot,
   createWorkspaceRoomStore,
+  type WorkspaceRoomPersistence,
+  type WorkspaceRoomState,
+  type WorkspaceRoomSnapshot,
 } from './workspace/WorkspaceRoomStore';
-import {getAiConfigSyncKey} from './workspace/workspaceAi';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
   listCloudWorkspaces,
   renameCloudWorkspace,
-  saveWorkspaceAiConfig,
-  saveWorkspaceContent,
-  saveWorkspaceLayout,
+  saveWorkspaceSnapshot,
 } from './workspace/cloudWorkspaces';
 import {useWorkspaceDuckDbRuntime} from './worksheet/useWorkspaceDuckDbRuntime';
 
@@ -134,7 +143,12 @@ type TablePreview = {
   error?: string;
 };
 
+type SaveWorkspaceRoomSnapshot = (
+  snapshot: WorkspaceRoomSnapshot,
+) => Promise<void>;
+
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
+const DEFAULT_WORKSPACE_LAYOUT = createDefaultWorkspaceLayout();
 
 export function WorkspaceShell(props: WorkspaceShellProps) {
   const navigate = useNavigate();
@@ -153,18 +167,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   );
   const [fileNameConflict, setFileNameConflict] =
     useState<FileNameConflict | null>(null);
-  const [selectedWorksheetId, setSelectedWorksheetId] = useState<string | null>(
-    null,
-  );
-  const [workspaceLayout, setWorkspaceLayout] = useState<LayoutNode>(() =>
-    createDefaultWorkspaceLayout(),
-  );
-  const [workspaceAiConfig, setWorkspaceAiConfig] = useState<JsonObject>(() =>
-    createDefaultWorkspaceAiConfig(),
-  );
-  const [workspaceContent, setWorkspaceContent] = useState<JsonObject | null>(
-    null,
-  );
+  const [workspaceRoomStore, setWorkspaceRoomStore] =
+    useState<StoreApi<WorkspaceRoomState> | null>(null);
+  const workspaceRoomState = useWorkspaceRoomState(workspaceRoomStore);
   const savedWorkspaceId = props.mode === 'saved' ? props.workspaceId : null;
   const activeWorkspaceId = savedWorkspaceId ?? 'unsaved-default';
   const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
@@ -220,23 +225,37 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       ]);
     },
   });
-  const saveWorkspaceLayoutMutation = useMutation({
-    mutationFn: saveWorkspaceLayout,
-  });
-  const saveWorkspaceAiConfigMutation = useMutation({
-    mutationFn: saveWorkspaceAiConfig,
-  });
-  const saveWorkspaceContentMutation = useMutation({
-    mutationFn: saveWorkspaceContent,
-  });
-
   const currentWorkspace =
     props.mode === 'saved' ? savedWorkspaceQuery.data : null;
-  const worksheets = useMemo(() => {
-    return getWorkspaceContentWorksheets(
-      currentWorkspace?.content ?? workspaceContent ?? undefined,
-    );
-  }, [currentWorkspace?.content, workspaceContent]);
+  const canPersistWorkspace = Boolean(currentWorkspace);
+  const saveWorkspaceRoomSnapshot = useMemo<SaveWorkspaceRoomSnapshot | null>(() => {
+    if (props.mode !== 'saved' || !token || !canPersistWorkspace) return null;
+
+    return async (snapshot) => {
+      await saveWorkspaceSnapshot({
+        data: {
+          token,
+          workspaceId: props.workspaceId,
+          content: snapshot.content,
+          layout: snapshot.layout as unknown as JsonObject,
+          aiConfig: snapshot.aiConfig,
+        },
+      });
+    };
+  }, [canPersistWorkspace, props.mode, props.workspaceId, token]);
+  const workspaceContentSnapshot = useMemo(
+    () =>
+      workspaceRoomState
+        ? workspaceRoomState.workspace.serializeContent()
+        : currentWorkspace?.content,
+    [currentWorkspace?.content, workspaceRoomState],
+  );
+  const worksheets = useMemo(
+    () => getWorkspaceContentWorksheets(workspaceContentSnapshot),
+    [workspaceContentSnapshot],
+  );
+  const selectedWorksheetId =
+    workspaceRoomState?.artifacts.config.currentArtifactId;
   const selectedWorksheet = useMemo(
     () =>
       worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
@@ -292,55 +311,26 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const [tablePreview, setTablePreview] = useState<TablePreview | null>(null);
 
   useEffect(() => {
-    if (!worksheets.length) return;
-    if (
-      selectedWorksheetId &&
-      worksheets.some((worksheet) => worksheet.id === selectedWorksheetId)
-    ) {
-      return;
-    }
-
-    setSelectedWorksheetId(worksheets[0].id);
-  }, [selectedWorksheetId, worksheets]);
-
-  useEffect(() => {
     if (currentWorkspace?.name) {
       setSavedWorkspaceNameDraft(currentWorkspace.name);
     }
   }, [currentWorkspace?.name]);
 
-  useEffect(() => {
-    if (props.mode === 'saved') {
-      setWorkspaceLayout(
-        currentWorkspace?.layout
-          ? (currentWorkspace.layout as unknown as LayoutNode)
-          : createDefaultWorkspaceLayout(),
-      );
-      return;
-    }
+  const initialWorkspaceLayout = useMemo(
+    () =>
+      props.mode === 'saved' && currentWorkspace?.layout
+        ? (currentWorkspace.layout as unknown as LayoutNode)
+        : createDefaultWorkspaceLayout(),
+    [currentWorkspace?.layout, props.mode],
+  );
 
-    setWorkspaceLayout(createDefaultWorkspaceLayout());
-  }, [currentWorkspace?.id, currentWorkspace?.layout, props.mode]);
-
-  useEffect(() => {
-    if (props.mode === 'saved') {
-      setWorkspaceAiConfig(
-        currentWorkspace?.aiConfig ?? createDefaultWorkspaceAiConfig(),
-      );
-      return;
-    }
-
-    setWorkspaceAiConfig(createDefaultWorkspaceAiConfig());
-  }, [currentWorkspace?.aiConfig, currentWorkspace?.id, props.mode]);
-
-  useEffect(() => {
-    if (props.mode === 'saved') {
-      setWorkspaceContent(currentWorkspace?.content ?? null);
-      return;
-    }
-
-    setWorkspaceContent(null);
-  }, [currentWorkspace?.content, currentWorkspace?.id, props.mode]);
+  const initialWorkspaceAiConfig = useMemo(
+    () =>
+      props.mode === 'saved'
+        ? (currentWorkspace?.aiConfig ?? createDefaultWorkspaceAiConfig())
+        : createDefaultWorkspaceAiConfig(),
+    [currentWorkspace?.aiConfig, props.mode],
+  );
 
   useEffect(() => {
     if (
@@ -410,15 +400,20 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       setIsSignInToSaveOpen(true);
       return;
     }
+    const roomSnapshot = workspaceRoomStore
+      ? createWorkspaceRoomSnapshot(workspaceRoomStore.getState())
+      : null;
 
     const workspace = await createWorkspaceMutation.mutateAsync({
       data: {
         token,
         name: localWorkspaceName,
         content:
-          workspaceContent ?? (createDefaultWorkspaceContent() as JsonObject),
-        layout: workspaceLayout as unknown as JsonObject,
-        aiConfig: workspaceAiConfig,
+          roomSnapshot?.content ??
+          workspaceContentSnapshot ??
+          (createDefaultWorkspaceContent() as JsonObject),
+        layout: (roomSnapshot?.layout ?? initialWorkspaceLayout) as unknown as JsonObject,
+        aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
       },
     });
 
@@ -479,89 +474,6 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     if (event.key === 'Enter') {
       event.currentTarget.blur();
     }
-  };
-
-  const workspaceIdForLayoutSave =
-    props.mode === 'saved' ? props.workspaceId : null;
-  const handleWorkspaceLayoutChange = useCallback(
-    (nextLayout: LayoutNode | null) => {
-      const layout = nextLayout ?? createDefaultWorkspaceLayout();
-      setWorkspaceLayout(layout);
-
-      if (workspaceIdForLayoutSave && token) {
-        saveWorkspaceLayoutMutation.mutate({
-          data: {
-            token,
-            workspaceId: workspaceIdForLayoutSave,
-            layout: layout as unknown as JsonObject,
-          },
-        });
-      }
-    },
-    [saveWorkspaceLayoutMutation, token, workspaceIdForLayoutSave],
-  );
-  const handleWorkspaceAiConfigChange = useCallback((aiConfig: JsonObject) => {
-    setWorkspaceAiConfig(aiConfig);
-  }, []);
-  const handleWorkspaceContentChange = useCallback((content: JsonObject) => {
-    setWorkspaceContent(content);
-  }, []);
-
-  useEffect(() => {
-    if (!workspaceIdForLayoutSave || !token) return;
-
-    const timeoutId = window.setTimeout(() => {
-      saveWorkspaceAiConfigMutation.mutate({
-        data: {
-          token,
-          workspaceId: workspaceIdForLayoutSave,
-          aiConfig: workspaceAiConfig,
-        },
-      });
-    }, 900);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    saveWorkspaceAiConfigMutation,
-    token,
-    workspaceAiConfig,
-    workspaceIdForLayoutSave,
-  ]);
-
-  useEffect(() => {
-    if (!workspaceIdForLayoutSave || !token || !workspaceContent) return;
-
-    const timeoutId = window.setTimeout(() => {
-      saveWorkspaceContentMutation.mutate({
-        data: {
-          token,
-          workspaceId: workspaceIdForLayoutSave,
-          content: workspaceContent,
-        },
-      });
-    }, 900);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    saveWorkspaceContentMutation,
-    token,
-    workspaceContent,
-    workspaceIdForLayoutSave,
-  ]);
-
-  const isAssistantPanelCollapsed = useMemo(
-    () => isLayoutNodeCollapsed(workspaceLayout, ASSISTANT_PANEL_ID),
-    [workspaceLayout],
-  );
-
-  const handleToggleAssistantPanel = () => {
-    handleWorkspaceLayoutChange(
-      setLayoutNodeCollapsed(
-        workspaceLayout,
-        ASSISTANT_PANEL_ID,
-        !isAssistantPanelCollapsed,
-      ),
-    );
   };
 
   const handleAddFile = () => {
@@ -795,7 +707,11 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   <WorksheetsSidebarSection
                     worksheets={worksheets}
                     selectedWorksheetId={selectedWorksheet?.id}
-                    onSelectWorksheet={setSelectedWorksheetId}
+                    onSelectWorksheet={(worksheetId) =>
+                      workspaceRoomStore
+                        ?.getState()
+                        .workspace.setCurrentWorksheet(worksheetId)
+                    }
                   />
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -833,30 +749,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   </TooltipTrigger>
                   <TooltipContent>Toggle sidebar</TooltipContent>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="topbar-icon"
-                      type="button"
-                      aria-pressed={!isAssistantPanelCollapsed}
-                      onClick={handleToggleAssistantPanel}
-                    >
-                      <Sparkles className="size-4" aria-hidden />
-                      <span className="sr-only">
-                        {isAssistantPanelCollapsed
-                          ? 'Show assistant'
-                          : 'Hide assistant'}
-                      </span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {isAssistantPanelCollapsed
-                      ? 'Show assistant'
-                      : 'Hide assistant'}
-                  </TooltipContent>
-                </Tooltip>
+                <AssistantPanelToggle roomStore={workspaceRoomStore} />
                 <div className="topbar-divider" />
                 <Input
                   id="workspace-title"
@@ -894,15 +787,14 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
 
             <WorkspaceLayoutCanvas
               workspaceKey={activeWorkspaceId}
-              layout={workspaceLayout}
-              aiConfig={workspaceAiConfig}
-              workspaceContent={workspaceContent ?? currentWorkspace?.content}
+              layout={initialWorkspaceLayout}
+              aiConfig={initialWorkspaceAiConfig}
+              workspaceContent={currentWorkspace?.content}
               selectedWorksheet={selectedWorksheet}
               token={token}
               duckDbRuntime={duckDbRuntime}
-              onLayoutChange={handleWorkspaceLayoutChange}
-              onAiConfigChange={handleWorkspaceAiConfigChange}
-              onWorkspaceContentChange={handleWorkspaceContentChange}
+              onRoomStoreChange={setWorkspaceRoomStore}
+              saveRoomSnapshot={saveWorkspaceRoomSnapshot}
             />
           </SidebarInset>
         </SidebarProvider>
@@ -1049,9 +941,8 @@ function WorkspaceLayoutCanvas({
   selectedWorksheet,
   token,
   duckDbRuntime,
-  onLayoutChange,
-  onAiConfigChange,
-  onWorkspaceContentChange,
+  onRoomStoreChange,
+  saveRoomSnapshot,
 }: {
   workspaceKey: string;
   layout: LayoutNode;
@@ -1060,9 +951,8 @@ function WorkspaceLayoutCanvas({
   selectedWorksheet: LocalWorksheet | undefined;
   token: string | null;
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
-  onLayoutChange: (layout: LayoutNode | null) => void;
-  onAiConfigChange: (aiConfig: JsonObject) => void;
-  onWorkspaceContentChange: (content: JsonObject) => void;
+  onRoomStoreChange: (roomStore: StoreApi<WorkspaceRoomState> | null) => void;
+  saveRoomSnapshot: SaveWorkspaceRoomSnapshot | null;
 }) {
   const panels = useMemo<Panels>(
     () => ({
@@ -1102,8 +992,10 @@ function WorkspaceLayoutCanvas({
   const initialLayoutRef = useRef(layout);
   const initialPanelsRef = useRef(panels);
   const initialAiConfigRef = useRef(aiConfig);
-  const syncedAiConfigJsonRef = useRef(getAiConfigSyncKey(aiConfig));
-  const syncedWorkspaceContentJsonRef = useRef('');
+  const hydratedRoomStoreRef = useRef<StoreApi<WorkspaceRoomState> | null>(
+    null,
+  );
+  const hydratedPersistenceRef = useRef<WorkspaceRoomPersistence | null>(null);
   const duckDbConnector = duckDbRuntime.runtime?.connector;
   const workspaceHydrationKey = useMemo(
     () => getWorkspaceHydrationKey(workspaceContent),
@@ -1123,17 +1015,60 @@ function WorkspaceLayoutCanvas({
   }, [duckDbConnector, workspaceKey]);
 
   useEffect(() => {
+    onRoomStoreChange(roomStore);
+    return () => onRoomStoreChange(null);
+  }, [onRoomStoreChange, roomStore]);
+
+  const roomPersistence = useMemo<WorkspaceRoomPersistence | null>(() => {
+    if (!roomStore || !saveRoomSnapshot) return null;
+
+    return createWorkspaceRoomPersistence({
+      roomStore,
+      save: saveRoomSnapshot,
+    });
+  }, [roomStore, saveRoomSnapshot]);
+
+  useEffect(() => {
     if (!roomStore) return;
-    const hydratedContent = roomStore
-      .getState()
-      .workspace.hydrateContent(workspaceContent);
-    syncedWorkspaceContentJsonRef.current = JSON.stringify(hydratedContent);
-    if (!workspaceContent) {
-      onWorkspaceContentChange(hydratedContent);
+    const hydrateFromProps = () => {
+      roomStore.getState().workspace.hydrateContent(workspaceContent);
+
+      roomStore.getState().workspace.hydrateLayout(layout);
+
+      roomStore.getState().workspace.hydrateAiConfig(aiConfig);
+    };
+
+    const shouldHydrateRoomStore =
+      hydratedRoomStoreRef.current !== roomStore ||
+      Boolean(
+        roomPersistence && hydratedPersistenceRef.current !== roomPersistence,
+      );
+
+    if (!shouldHydrateRoomStore) {
+      return;
     }
+
+    if (!roomPersistence) {
+      hydrateFromProps();
+      hydratedRoomStoreRef.current = roomStore;
+      return;
+    }
+
+    void roomPersistence.controller
+      .pause(hydrateFromProps)
+      .then(() => {
+        hydratedRoomStoreRef.current = roomStore;
+        hydratedPersistenceRef.current = roomPersistence;
+        roomPersistence.markStateSnapshotSaved(roomStore.getState());
+      })
+      .catch((error: unknown) => {
+        roomStore.getState().room.captureException(error);
+      });
   }, [
-    onWorkspaceContentChange,
+    aiConfig,
+    layout,
     roomStore,
+    roomPersistence,
     workspaceContent,
     workspaceHydrationKey,
   ]);
@@ -1145,22 +1080,33 @@ function WorkspaceLayoutCanvas({
 
   useEffect(() => {
     if (!roomStore) return;
-    roomStore.getState().workspace.hydrateLayout(layout);
-  }, [layout, roomStore]);
-
-  useEffect(() => {
-    if (!roomStore) return;
-    const nextAiConfigJson = getAiConfigSyncKey(aiConfig);
-    if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
-
-    syncedAiConfigJsonRef.current = nextAiConfigJson;
-    roomStore.getState().workspace.hydrateAiConfig(aiConfig);
-  }, [aiConfig, roomStore]);
-
-  useEffect(() => {
-    if (!roomStore) return;
     roomStore.getState().workspace.setAssistantToken(token);
   }, [roomStore, token]);
+
+  useEffect(() => {
+    if (!roomPersistence) return;
+
+    const flushNow = () => {
+      void roomPersistence.flush('final-flush').catch((error: unknown) => {
+        roomStore?.getState().room.captureException(error);
+      });
+    };
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        flushNow();
+      }
+    };
+    window.addEventListener('beforeunload', flushNow);
+    document.addEventListener('visibilitychange', flushWhenHidden);
+
+    return () => {
+      window.removeEventListener('beforeunload', flushNow);
+      document.removeEventListener('visibilitychange', flushWhenHidden);
+      void roomPersistence.flush('final-flush').catch((error: unknown) => {
+        roomStore?.getState().room.captureException(error);
+      });
+    };
+  }, [roomPersistence, roomStore]);
 
   useEffect(() => {
     if (!roomStore) return;
@@ -1168,53 +1114,6 @@ function WorkspaceLayoutCanvas({
       roomStore.getState().layout.registerPanel(panelId, panel);
     }
   }, [panels, roomStore]);
-
-  useEffect(() => {
-    if (!roomStore) return;
-    return roomStore.subscribe((state, previousState) => {
-      if (state.ai.config !== previousState.ai.config) {
-        const nextAiConfigJson = getAiConfigSyncKey(state.ai.config);
-        if (nextAiConfigJson === syncedAiConfigJsonRef.current) return;
-
-        syncedAiConfigJsonRef.current = nextAiConfigJson;
-        onAiConfigChange(state.workspace.serializeAiConfig());
-      }
-    });
-  }, [onAiConfigChange, roomStore]);
-
-  useEffect(() => {
-    if (!roomStore) return;
-    return roomStore.subscribe((state, previousState) => {
-      if (
-        state.artifacts.config === previousState.artifacts.config &&
-        state.blockDocuments.config === previousState.blockDocuments.config &&
-        state.sqlEditor.config === previousState.sqlEditor.config &&
-        state.mosaicDashboard.config === previousState.mosaicDashboard.config
-      ) {
-        return;
-      }
-
-      const nextContent = state.workspace.serializeContent();
-      const nextContentJson = JSON.stringify(nextContent);
-      if (nextContentJson === syncedWorkspaceContentJsonRef.current) return;
-
-      syncedWorkspaceContentJsonRef.current = nextContentJson;
-      onWorkspaceContentChange(nextContent);
-    });
-  }, [onWorkspaceContentChange, roomStore]);
-
-  const handleCollapse = useCallback(
-    (panelId: string) => {
-      onLayoutChange(setLayoutNodeCollapsed(layout, panelId, true));
-    },
-    [layout, onLayoutChange],
-  );
-  const handleExpand = useCallback(
-    (panelId: string) => {
-      onLayoutChange(setLayoutNodeCollapsed(layout, panelId, false));
-    },
-    [layout, onLayoutChange],
-  );
 
   if (!roomStore) {
     return (
@@ -1232,15 +1131,145 @@ function WorkspaceLayoutCanvas({
   return (
     <RoomStateProvider roomStore={roomStore}>
       <div className="workspace-panels">
-        <LayoutRenderer
-          className="workspace-layout-renderer"
-          rootLayout={layout}
-          onLayoutChange={onLayoutChange}
-          onCollapse={handleCollapse}
-          onExpand={handleExpand}
-        />
+        <WorkspaceRoomLayoutRenderer roomStore={roomStore} />
       </div>
     </RoomStateProvider>
+  );
+}
+
+function WorkspaceRoomLayoutRenderer({
+  roomStore,
+}: {
+  roomStore: StoreApi<WorkspaceRoomState>;
+}) {
+  const layout = useWorkspaceRoomLayout(roomStore);
+  const setLayout = useCallback(
+    (nextLayout: LayoutNode | null) => {
+      roomStore
+        .getState()
+        .layout.setConfig(nextLayout ?? createDefaultWorkspaceLayout());
+    },
+    [roomStore],
+  );
+  const handleCollapse = useCallback(
+    (panelId: string) => {
+      setLayout(setLayoutNodeCollapsed(layout, panelId, true));
+    },
+    [layout, setLayout],
+  );
+  const handleExpand = useCallback(
+    (panelId: string) => {
+      setLayout(setLayoutNodeCollapsed(layout, panelId, false));
+    },
+    [layout, setLayout],
+  );
+
+  return (
+    <LayoutRenderer
+      className="workspace-layout-renderer"
+      rootLayout={layout}
+      onLayoutChange={setLayout}
+      onCollapse={handleCollapse}
+      onExpand={handleExpand}
+    />
+  );
+}
+
+function AssistantPanelToggle({
+  roomStore,
+}: {
+  roomStore: StoreApi<WorkspaceRoomState> | null;
+}) {
+  if (!roomStore) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="topbar-icon"
+            type="button"
+            disabled
+          >
+            <Sparkles className="size-4" aria-hidden />
+            <span className="sr-only">Show assistant</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Show assistant</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return <AssistantPanelToggleReady roomStore={roomStore} />;
+}
+
+function AssistantPanelToggleReady({
+  roomStore,
+}: {
+  roomStore: StoreApi<WorkspaceRoomState>;
+}) {
+  const layout = useWorkspaceRoomLayout(roomStore);
+  const isAssistantPanelCollapsed = useMemo(
+    () => isLayoutNodeCollapsed(layout, ASSISTANT_PANEL_ID),
+    [layout],
+  );
+  const handleToggleAssistantPanel = useCallback(() => {
+    roomStore
+      .getState()
+      .layout.setConfig(
+        setLayoutNodeCollapsed(
+          layout,
+          ASSISTANT_PANEL_ID,
+          !isAssistantPanelCollapsed,
+        ),
+      );
+  }, [isAssistantPanelCollapsed, layout, roomStore]);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="topbar-icon"
+          type="button"
+          aria-pressed={!isAssistantPanelCollapsed}
+          onClick={handleToggleAssistantPanel}
+        >
+          <Sparkles className="size-4" aria-hidden />
+          <span className="sr-only">
+            {isAssistantPanelCollapsed ? 'Show assistant' : 'Hide assistant'}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {isAssistantPanelCollapsed ? 'Show assistant' : 'Hide assistant'}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function useWorkspaceRoomLayout(roomStore: StoreApi<WorkspaceRoomState>) {
+  return useSyncExternalStore(
+    roomStore.subscribe,
+    () => roomStore.getState().layout.config ?? DEFAULT_WORKSPACE_LAYOUT,
+    () => DEFAULT_WORKSPACE_LAYOUT,
+  );
+}
+
+function useWorkspaceRoomState(
+  roomStore: StoreApi<WorkspaceRoomState> | null,
+) {
+  const subscribe = useCallback(
+    (onStoreChange: () => void) =>
+      roomStore ? roomStore.subscribe(onStoreChange) : () => {},
+    [roomStore],
+  );
+
+  return useSyncExternalStore(
+    subscribe,
+    () => roomStore?.getState() ?? null,
+    () => null,
   );
 }
 
