@@ -101,6 +101,7 @@ export type {
   PersistenceSaveReason,
   RegisteredRoomCommand,
   RoomStorePersistence,
+  RoomStorePersistenceChangePredicate,
   RoomStorePersistenceSnapshotEquivalence,
   RoomStorePersistenceSnapshotCodec,
   RoomCommand,
