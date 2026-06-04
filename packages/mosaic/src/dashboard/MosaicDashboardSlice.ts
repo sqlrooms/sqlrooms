@@ -213,6 +213,7 @@ export type MosaicDashboardSliceState = {
     ) => void;
     removeDashboard: (dashboardId: string) => void;
     getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
+    setDashboardTitle: (dashboardId: string, title: string) => void;
     setSelectedTable: (dashboardId: string, tableName: string) => void;
     setLastSelectedTable: (dashboardId: string, tableName: string) => void;
     panelRenderers: PanelRenderersRecord;
@@ -862,6 +863,19 @@ export function createMosaicDashboardSlice(
           set((state) =>
             produce(state, (draft) => {
               draft.mosaicDashboard.config = config;
+            }),
+          );
+        },
+
+        setDashboardTitle(dashboardId, title) {
+          get().mosaicDashboard.ensureDashboard(dashboardId);
+          set((state) =>
+            produce(state, (draft) => {
+              const dashboard =
+                draft.mosaicDashboard.config.dashboardsById[dashboardId];
+              if (!dashboard) return;
+              dashboard.title = title;
+              dashboard.updatedAt = Date.now();
             }),
           );
         },
