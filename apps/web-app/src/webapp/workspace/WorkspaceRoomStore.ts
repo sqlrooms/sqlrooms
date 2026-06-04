@@ -25,8 +25,11 @@ import {
 } from '@sqlrooms/mosaic';
 import {
   createBaseRoomSlice,
+  createRoomStorePersistence,
   createRoomStoreCreator,
   type BaseRoomStoreState,
+  type PersistenceSaveMetadata,
+  type RoomStorePersistence,
   type StoreApi,
 } from '@sqlrooms/room-store';
 import {
@@ -70,6 +73,28 @@ export type CreateWorkspaceRoomStoreOptions = {
   duckDbConnector: DuckDbConnector;
 };
 
+export type WorkspaceRoomSnapshot = {
+  content: JsonObject;
+  layout: LayoutNode;
+  aiConfig: JsonObject;
+};
+
+export type WorkspaceRoomPersistence = RoomStorePersistence<
+  WorkspaceRoomState,
+  WorkspaceRoomSnapshot,
+  string
+>;
+
+export type CreateWorkspaceRoomPersistenceOptions = {
+  roomStore: StoreApi<WorkspaceRoomState>;
+  load?: () => Promise<WorkspaceRoomSnapshot | null>;
+  save: (
+    snapshot: WorkspaceRoomSnapshot,
+    metadata?: PersistenceSaveMetadata,
+  ) => Promise<void>;
+  autosaveDelayMs?: number | null;
+};
+
 export function createDefaultWorkspaceLayout(): LayoutNode {
   return {
     type: 'split',
@@ -99,6 +124,44 @@ export function createDefaultWorkspaceLayout(): LayoutNode {
 
 export function createDefaultWorkspaceAiConfig(): JsonObject {
   return {sessions: [], openSessionTabs: []};
+}
+
+export function createWorkspaceRoomSnapshot(
+  state: WorkspaceRoomState,
+): WorkspaceRoomSnapshot {
+  return {
+    content: state.workspace.serializeContent(),
+    layout: state.layout.config ?? createDefaultWorkspaceLayout(),
+    aiConfig: state.workspace.serializeAiConfig(),
+  };
+}
+
+export function createWorkspaceRoomPersistence({
+  roomStore,
+  load = async () => null,
+  save,
+  autosaveDelayMs = 900,
+}: CreateWorkspaceRoomPersistenceOptions): WorkspaceRoomPersistence {
+  return createRoomStorePersistence<
+    WorkspaceRoomState,
+    WorkspaceRoomSnapshot,
+    string
+  >({
+    store: roomStore,
+    partialize: createWorkspaceRoomSnapshot,
+    serialize: (snapshot) => JSON.stringify(snapshot),
+    deserialize: (snapshot) => JSON.parse(snapshot) as WorkspaceRoomSnapshot,
+    autosaveDelayMs,
+    markInitialSnapshotSaved: false,
+    shouldPersistChange: didWorkspacePersistedStateChange,
+    load: async () => {
+      const snapshot = await load();
+      return snapshot ? JSON.stringify(snapshot) : null;
+    },
+    save: async (snapshot, metadata) => {
+      await save(JSON.parse(snapshot) as WorkspaceRoomSnapshot, metadata);
+    },
+  });
 }
 
 export function createWorkspaceRoomStore({
@@ -145,4 +208,18 @@ export function createWorkspaceRoomStore({
   );
 
   return createRoomStore({storeKey: `workspace-room:${workspaceKey}`});
+}
+
+function didWorkspacePersistedStateChange(
+  state: WorkspaceRoomState,
+  previousState: WorkspaceRoomState,
+) {
+  return (
+    state.layout.config !== previousState.layout.config ||
+    state.ai.config !== previousState.ai.config ||
+    state.artifacts.config !== previousState.artifacts.config ||
+    state.blockDocuments.config !== previousState.blockDocuments.config ||
+    state.sqlEditor.config !== previousState.sqlEditor.config ||
+    state.mosaicDashboard.config !== previousState.mosaicDashboard.config
+  );
 }

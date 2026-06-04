@@ -102,47 +102,11 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
     return serializeWorkspace(workspace);
   });
 
-export const saveWorkspaceContent = createServerFn({method: 'POST'})
+export const saveWorkspaceSnapshot = createServerFn({method: 'POST'})
   .inputValidator(
     workspaceInput.extend({
       content: workspaceContentInput,
-    }),
-  )
-  .handler(async ({data}) => {
-    const {userId} = await verifyAuthToken(data.token);
-    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
-
-    const rows = await db
-      .update(workspaces)
-      .set({content: data.content, updatedAt: new Date()})
-      .where(eq(workspaces.id, data.workspaceId))
-      .returning();
-
-    return rows[0] ? serializeWorkspace(rows[0]) : null;
-  });
-
-export const saveWorkspaceLayout = createServerFn({method: 'POST'})
-  .inputValidator(
-    workspaceInput.extend({
       layout: workspaceLayoutInput,
-    }),
-  )
-  .handler(async ({data}) => {
-    const {userId} = await verifyAuthToken(data.token);
-    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
-
-    const rows = await db
-      .update(workspaces)
-      .set({layout: data.layout, updatedAt: new Date()})
-      .where(eq(workspaces.id, data.workspaceId))
-      .returning();
-
-    return rows[0] ? serializeWorkspace(rows[0]) : null;
-  });
-
-export const saveWorkspaceAiConfig = createServerFn({method: 'POST'})
-  .inputValidator(
-    workspaceInput.extend({
       aiConfig: workspaceAiConfigInput,
     }),
   )
@@ -152,7 +116,12 @@ export const saveWorkspaceAiConfig = createServerFn({method: 'POST'})
 
     const rows = await db
       .update(workspaces)
-      .set({aiConfig: data.aiConfig, updatedAt: new Date()})
+      .set({
+        content: data.content,
+        layout: data.layout,
+        aiConfig: data.aiConfig,
+        updatedAt: new Date(),
+      })
       .where(eq(workspaces.id, data.workspaceId))
       .returning();
 
