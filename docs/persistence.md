@@ -14,10 +14,10 @@ The persistence API separates three concerns:
 - How durable snapshots are loaded, saved, and removed.
 - When a changed snapshot should be treated as dirty and flushed.
 
-Zustand is relevant because SQLRooms room state is built from composable slices
-on top of a [Zustand room store](/state-management#why-zustand). Persistence
-uses the same store and slice model: slice configs define the durable shape, and
-the persistence helpers connect that shape to host-owned storage.
+SQLRooms room state is built from composable slices on top of a
+[Zustand room store](/state-management#why-zustand). Persistence uses the same
+store and slice model: slice configs define the durable shape, and the
+persistence helpers connect that shape to host-owned storage.
 
 Most apps should start with `createRoomStorePersistence()`. It composes the
 lower-level controller with
