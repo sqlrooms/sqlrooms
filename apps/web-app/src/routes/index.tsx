@@ -1,10 +1,6 @@
-import {createFileRoute} from '@tanstack/react-router';
-import {WorkspaceShell} from '#/webapp/WorkspaceShell';
+import {createFileRoute, lazyRouteComponent} from '@tanstack/react-router';
 
 export const Route = createFileRoute('/')({
-  component: IndexRoute,
+  ssr: false,
+  component: lazyRouteComponent(() => import('./-index.lazy'), 'IndexRoute'),
 });
-
-function IndexRoute() {
-  return <WorkspaceShell mode="unsaved" />;
-}
