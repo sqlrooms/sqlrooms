@@ -60,7 +60,7 @@ export function CliWorkspaceSidebar() {
         <CliSidebarBrand />
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
+        <SidebarGroup className="border-b border-sidebar-border pb-4">
           <SidebarGroupLabel>Data</SidebarGroupLabel>
           <SidebarGroupContent>
             <CliDataSidebarSection />
@@ -68,7 +68,6 @@ export function CliWorkspaceSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Artifacts</SidebarGroupLabel>
           <SidebarGroupContent>
             <CliArtifactsSidebarSection />
           </SidebarGroupContent>
@@ -191,7 +190,7 @@ function CliDataSidebarSection() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="min-h-10 bg-primary text-base text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                className="min-h-10 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                 onClick={addData}
                 type="button"
                 size="lg"
@@ -271,30 +270,42 @@ function CliArtifactsSidebarSection() {
 
   if (state === 'expanded') {
     return (
-      <SidebarMenu>
-        {artifactTabs.tabs.map((artifact) => {
-          const type = artifactTabs.artifactTypes[artifact.type];
-          const Icon = type?.icon ?? FileStackIcon;
-          return (
-            <SidebarMenuItem key={artifact.id}>
-              <SidebarMenuButton
-                isActive={artifact.id === artifactTabs.selectedTabId}
-                onClick={() => artifactTabs.selectArtifact(artifact.id)}
-                type="button"
-              >
-                <Icon className="h-4 w-4" aria-hidden />
-                <span>{artifact.name}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          );
-        })}
-        <SidebarMenuItem>
-          <SidebarMenuButton type="button" onClick={() => void createWorksheet()}>
-            <Plus className="h-4 w-4" aria-hidden />
-            <span>New Worksheet</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+      <>
+        <div className="mb-2 flex h-8 items-center justify-between px-2">
+          <div className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            Artifacts
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="h-7 gap-1 px-2 text-primary hover:bg-primary/10 hover:text-primary"
+            onClick={() => void createWorksheet()}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            New
+          </Button>
+        </div>
+        <SidebarMenu>
+          {artifactTabs.tabs.map((artifact) => {
+            const type = artifactTabs.artifactTypes[artifact.type];
+            const Icon = type?.icon ?? FileStackIcon;
+            return (
+              <SidebarMenuItem key={artifact.id}>
+                <SidebarMenuButton
+                  className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary"
+                  isActive={artifact.id === artifactTabs.selectedTabId}
+                  onClick={() => artifactTabs.selectArtifact(artifact.id)}
+                  type="button"
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  <span>{artifact.name}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </>
     );
   }
 
