@@ -1,5 +1,9 @@
 import {LayoutRenderer, type LayoutNode, type Panels} from '@sqlrooms/layout';
-import {RoomStateProvider, type StoreApi} from '@sqlrooms/room-store';
+import {
+  RoomStateProvider,
+  useBaseRoomStore,
+  type StoreApi,
+} from '@sqlrooms/room-store';
 import {
   Button,
   ScrollArea,
@@ -8,7 +12,14 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {FileSpreadsheet, Sparkles} from 'lucide-react';
-import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 import type {JsonObject} from '#/lib/json';
 import {AssistantPanel} from '../assistant/AssistantPanel';
 import {WorksheetSurface} from '../WorksheetSurface';
@@ -24,6 +35,22 @@ import {
 } from './WorkspaceRoomProvider';
 
 const DEFAULT_WORKSPACE_LAYOUT = createDefaultWorkspaceLayout();
+const WorkspaceLayoutRuntimeContext = createContext<{tableNames: string[]}>({
+  tableNames: [],
+});
+
+const WORKSPACE_PANELS: Panels = {
+  assistant: {
+    title: 'Assistant',
+    icon: Sparkles,
+    component: WorkspaceAssistantPanel,
+  },
+  worksheet: {
+    title: 'Worksheet',
+    icon: FileSpreadsheet,
+    component: WorkspaceWorksheetPanel,
+  },
+};
 
 export type WorkspaceLayoutWorksheet = {
   id: string;
@@ -52,49 +79,13 @@ export function WorkspaceLayoutSurface({
   onRoomStoreChange: (roomStore: StoreApi<WorkspaceRoomState> | null) => void;
   saveRoomSnapshot: SaveWorkspaceRoomSnapshot | null;
 }) {
-  const panels = useMemo<Panels>(
-    () => ({
-      assistant: {
-        title: 'Assistant',
-        icon: Sparkles,
-        component: function WorkspaceAssistantPanel() {
-          return (
-            <AssistantPanel
-              worksheetId={selectedWorksheet?.id}
-              worksheetTitle={selectedWorksheet?.title}
-            />
-          );
-        },
-      },
-      worksheet: {
-        title: selectedWorksheet?.title ?? 'Worksheet',
-        icon: FileSpreadsheet,
-        component: function WorkspaceWorksheetPanel() {
-          return (
-            <section className="worksheet-panel">
-              <ScrollArea className="worksheet-stage">
-                {selectedWorksheet ? (
-                  <WorksheetSurface
-                    worksheet={selectedWorksheet}
-                    tableNames={duckDbRuntime.tableNames}
-                  />
-                ) : null}
-              </ScrollArea>
-            </section>
-          );
-        },
-      },
-    }),
-    [duckDbRuntime.tableNames, selectedWorksheet],
-  );
-
   return (
     <WorkspaceRoomProvider
       workspaceKey={workspaceKey}
       layout={layout}
       aiConfig={aiConfig}
       content={workspaceContent}
-      panels={panels}
+      panels={WORKSPACE_PANELS}
       token={token}
       duckDbRuntime={duckDbRuntime}
       onRoomStoreChange={onRoomStoreChange}
@@ -103,7 +94,7 @@ export function WorkspaceLayoutSurface({
       {(roomStore) => (
         <WorkspaceLayoutSurfaceContent
           roomStore={roomStore}
-          panels={panels}
+          panels={WORKSPACE_PANELS}
           selectedWorksheetId={selectedWorksheet?.id}
           duckDbRuntime={duckDbRuntime}
         />
@@ -123,6 +114,11 @@ function WorkspaceLayoutSurfaceContent({
   selectedWorksheetId: string | undefined;
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
 }) {
+  const runtimeContextValue = useMemo(
+    () => ({tableNames: duckDbRuntime.tableNames}),
+    [duckDbRuntime.tableNames],
+  );
+
   useEffect(() => {
     if (!roomStore) return;
     roomStore.getState().workspace.setCurrentWorksheet(selectedWorksheetId);
@@ -152,11 +148,59 @@ function WorkspaceLayoutSurfaceContent({
 
   return (
     <RoomStateProvider roomStore={roomStore}>
-      <div className="workspace-panels">
-        <WorkspaceRoomLayoutRenderer roomStore={roomStore} />
-      </div>
+      <WorkspaceLayoutRuntimeContext.Provider value={runtimeContextValue}>
+        <div className="workspace-panels">
+          <WorkspaceRoomLayoutRenderer roomStore={roomStore} />
+        </div>
+      </WorkspaceLayoutRuntimeContext.Provider>
     </RoomStateProvider>
   );
+}
+
+function WorkspaceAssistantPanel() {
+  const worksheetId = useCurrentWorksheetId();
+  const worksheetTitle = useCurrentWorksheetTitle(worksheetId);
+
+  return (
+    <AssistantPanel worksheetId={worksheetId} worksheetTitle={worksheetTitle} />
+  );
+}
+
+function WorkspaceWorksheetPanel() {
+  const worksheetId = useCurrentWorksheetId();
+  const worksheetTitle = useCurrentWorksheetTitle(worksheetId);
+  const {tableNames} = useContext(WorkspaceLayoutRuntimeContext);
+  const worksheet = useMemo(
+    () =>
+      worksheetId
+        ? {id: worksheetId, title: worksheetTitle, content: {} as JsonObject}
+        : undefined,
+    [worksheetId, worksheetTitle],
+  );
+
+  return (
+    <section className="worksheet-panel">
+      <ScrollArea className="worksheet-stage">
+        {worksheet ? (
+          <WorksheetSurface worksheet={worksheet} tableNames={tableNames} />
+        ) : null}
+      </ScrollArea>
+    </section>
+  );
+}
+
+function useCurrentWorksheetId() {
+  return useBaseRoomStore<WorkspaceRoomState, string | undefined>(
+    (state) => state.artifacts.config.currentArtifactId,
+  );
+}
+
+function useCurrentWorksheetTitle(worksheetId: string | undefined) {
+  return useBaseRoomStore<WorkspaceRoomState, string>((state) => {
+    if (!worksheetId) return 'Worksheet';
+    const artifact = state.artifacts.config.artifactsById[worksheetId];
+    return artifact?.title || 'Worksheet';
+  });
 }
 
 function WorkspaceRoomLayoutRenderer({
