@@ -41,6 +41,11 @@ export type RoomStorePersistenceSnapshotEquivalence<TSnapshot> = {
   getSnapshotRevision?: (snapshot: TSnapshot) => unknown;
 };
 
+export type RoomStorePersistenceChangePredicate<TState> = (
+  state: TState,
+  previousState: TState,
+) => boolean;
+
 /**
  * Options for creating controller-backed persistence for a room store.
  *
@@ -86,6 +91,15 @@ export type CreateRoomStorePersistenceOptions<
      * Zustand persist's `setItem` calls.
      */
     store?: StoreApi<TState>;
+    /**
+     * Returns true when a changed partialized snapshot should mark persistence
+     * dirty.
+     *
+     * Use this for host lifecycle guards, such as skipping restore-time updates
+     * or failed initialization states. Skipped snapshots are still recorded as
+     * observed so they are not saved later by an unrelated state change.
+     */
+    shouldPersistChange?: RoomStorePersistenceChangePredicate<TState>;
     /**
      * Applies a deserialized snapshot to runtime state during `hydrate()`.
      *
@@ -152,6 +166,7 @@ export type RoomStorePersistence<TState, TPersisted, TSnapshot> = {
     store: StoreApi<TState>,
     options?: {
       markInitialSnapshotSaved?: boolean;
+      shouldPersistChange?: RoomStorePersistenceChangePredicate<TState>;
     } & RoomStorePersistenceSnapshotEquivalence<TSnapshot>,
   ) => () => void;
 };
@@ -230,6 +245,7 @@ export function createRoomStorePersistence<
   deserialize = defaultDeserialize<TPersisted, TSnapshot>,
   compareSnapshots,
   getSnapshotRevision,
+  shouldPersistChange,
   markInitialSnapshotSaved = true,
   subscribeReason = 'store-change',
 }: CreateRoomStorePersistenceOptions<
@@ -311,18 +327,22 @@ export function createRoomStorePersistence<
       void controller.flush(subscribeReason).catch(() => undefined);
     }
 
-    return storeToBind.subscribe((state) => {
+    return storeToBind.subscribe((state, previousState) => {
       const snapshot = toSnapshot(state);
       if (areSnapshotsEquivalent(snapshot, lastObservedSnapshot, options)) {
         return;
       }
       lastObservedSnapshot = snapshot;
+      const shouldPersist = options.shouldPersistChange ?? shouldPersistChange;
+      if (shouldPersist && !shouldPersist(state, previousState)) {
+        return;
+      }
       controller.setSnapshot(snapshot, subscribeReason);
     });
   };
 
   if (store) {
-    bindStore(store, {markInitialSnapshotSaved});
+    bindStore(store, {markInitialSnapshotSaved, shouldPersistChange});
   }
 
   return {

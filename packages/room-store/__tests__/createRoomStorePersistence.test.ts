@@ -159,6 +159,36 @@ describe('createRoomStorePersistence', () => {
     expect(saved).toEqual([{revision: 2, payload: {count: 2}}]);
   });
 
+  it('skips guarded store changes without saving them later', async () => {
+    const saved: string[] = [];
+    let persistEnabled = false;
+    const store = createStore<TestState>(() => ({
+      count: 1,
+      transient: 'a',
+    }));
+    const persistence = createRoomStorePersistence<TestState>({
+      store,
+      partialize: (state) => ({count: state.count}),
+      shouldPersistChange: () => persistEnabled,
+      load: async () => null,
+      save: async (snapshot) => {
+        saved.push(snapshot);
+      },
+    });
+
+    store.setState({count: 2});
+    await persistence.flush();
+
+    persistEnabled = true;
+    store.setState({transient: 'b'});
+    await persistence.flush();
+
+    store.setState({count: 3});
+    await persistence.flush();
+
+    expect(saved).toEqual(['{"count":3}']);
+  });
+
   it('only marks removed snapshots saved after deletion succeeds', async () => {
     const saved: string[] = [];
     const persistence = createRoomStorePersistence<TestState>({
