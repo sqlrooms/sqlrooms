@@ -34,6 +34,7 @@ import {
 } from '../VgPlotChart';
 import type {MosaicDashboardAddPanelAction} from './action-types';
 import type {ChartRuntimeIssue} from '../chart-runtime';
+import type {MosaicClient} from '@uwdata/mosaic-core';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -193,6 +194,11 @@ export type MosaicDashboardSliceState = {
        * These are live diagnostics for UI and AI tools, not persisted config.
        */
       panelIssuesByPanelId: Record<string, ChartRuntimeIssue>;
+      /**
+       * Tracks Mosaic clients by panel ID for reset filter functionality.
+       * Key is `getMosaicDashboardPanelId(dashboardId, panelId)`.
+       */
+      panelClients: Record<string, MosaicClient[]>;
     };
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
@@ -262,6 +268,17 @@ export type MosaicDashboardSliceState = {
     ) => void;
     clearAllDashboardRuntime: () => void;
     setLayout: (dashboardId: string, layout: LayoutNode | null) => void;
+    registerPanelClient: (
+      dashboardId: string,
+      panelId: string,
+      client: MosaicClient,
+    ) => void;
+    unregisterPanelClient: (
+      dashboardId: string,
+      panelId: string,
+      client: MosaicClient,
+    ) => void;
+    getPanelClients: (dashboardId: string, panelId: string) => MosaicClient[];
   };
 };
 
@@ -777,6 +794,7 @@ export function createMosaicDashboardSlice(
         runtime: {
           retainedChartsByPanelId: {},
           panelIssuesByPanelId: {},
+          panelClients: {},
         },
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
@@ -948,6 +966,14 @@ export function createMosaicDashboardSlice(
         },
 
         removePanel(dashboardId, panelId) {
+          // Clean up panel clients
+          const key = getMosaicDashboardPanelId(dashboardId, panelId);
+          set(
+            produce((state: MosaicDashboardSliceState) => {
+              delete state.mosaicDashboard.runtime.panelClients[key];
+            }),
+          );
+
           get().mosaicDashboard.evictPanelRuntime(dashboardId, panelId);
           set((state) =>
             produce(state, (draft) => {
@@ -1185,6 +1211,47 @@ export function createMosaicDashboardSlice(
               dashboard.updatedAt = Date.now();
             }),
           );
+        },
+
+        registerPanelClient: (dashboardId, panelId, client) => {
+          set(
+            produce((state: MosaicDashboardSliceState) => {
+              const key = getMosaicDashboardPanelId(dashboardId, panelId);
+              if (!state.mosaicDashboard.runtime.panelClients[key]) {
+                state.mosaicDashboard.runtime.panelClients[key] = [];
+              }
+              if (
+                !state.mosaicDashboard.runtime.panelClients[key]!.includes(
+                  client,
+                )
+              ) {
+                state.mosaicDashboard.runtime.panelClients[key]!.push(client);
+              }
+            }),
+          );
+        },
+
+        unregisterPanelClient: (dashboardId, panelId, client) => {
+          set(
+            produce((state: MosaicDashboardSliceState) => {
+              const key = getMosaicDashboardPanelId(dashboardId, panelId);
+              const clients = state.mosaicDashboard.runtime.panelClients[key];
+              if (clients) {
+                const index = clients.indexOf(client);
+                if (index > -1) {
+                  clients.splice(index, 1);
+                }
+                if (clients.length === 0) {
+                  delete state.mosaicDashboard.runtime.panelClients[key];
+                }
+              }
+            }),
+          );
+        },
+
+        getPanelClients: (dashboardId, panelId) => {
+          const key = getMosaicDashboardPanelId(dashboardId, panelId);
+          return get().mosaicDashboard.runtime.panelClients[key] ?? [];
         },
       },
     }),

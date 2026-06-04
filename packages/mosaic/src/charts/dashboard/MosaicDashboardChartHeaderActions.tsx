@@ -5,10 +5,12 @@ import {
   type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from '../../dashboard/MosaicDashboardSlice';
+import {MosaicDashboardPanelResetButton} from '../../dashboard/panel/MosaicDashboardPanelResetButton';
 
 export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
   dashboardId,
   panel,
+  selectionName,
 }) => {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -24,6 +26,11 @@ export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
 
   return (
     <>
+      <MosaicDashboardPanelResetButton
+        dashboardId={dashboardId}
+        panelId={panel.id}
+        selectionName={selectionName}
+      />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

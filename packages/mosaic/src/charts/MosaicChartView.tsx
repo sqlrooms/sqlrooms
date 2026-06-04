@@ -4,6 +4,8 @@ import {VgPlotChart} from '../VgPlotChart';
 import type {ChartRuntimeIssueContext} from '../chart-runtime';
 import type {ChartConfig} from './chart-types/chart-config';
 import {useStoreWithMosaicDashboard} from '../dashboard/MosaicDashboardSlice';
+import {usePanelClientRegistration} from '../dashboard/usePanelClientRegistration';
+import {useChartPanelClients} from './useChartPanelClients';
 import {MosaicChartRuntimeIssuePanel} from './MosaicChartRuntimeIssuePanel';
 import {MosaicChartError} from './MosaicChartError';
 import {useBrushSelectionParams} from './useBrushSelectionParams';
@@ -20,6 +22,8 @@ export type MosaicChartViewProps = {
   retentionKey?: string;
   runtimeIssueKey?: string;
   className?: string;
+  dashboardId?: string;
+  panelId?: string;
 };
 
 export const MosaicChartView: FC<MosaicChartViewProps> = ({
@@ -29,12 +33,18 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
   retentionKey,
   runtimeIssueKey,
   className,
+  dashboardId,
+  panelId,
 }) => {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
 
   const retention = useChartRetainerByKey(retentionKey);
+  const chartClients = useChartPanelClients(retention);
+
+  usePanelClientRegistration(dashboardId, panelId, chartClients);
+
   const params = useBrushSelectionParams(selectionName);
   const dataPolicy = useChartDataPolicy(dataTable, config);
 

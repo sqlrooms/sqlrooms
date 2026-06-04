@@ -21,6 +21,8 @@ import {
   type ChartRuntimeIssueReporter,
   useMosaicClient,
   useStoreWithMosaicDashboard,
+  MosaicDashboardPanelResetButton,
+  usePanelClientRegistration,
 } from '@sqlrooms/mosaic';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
@@ -121,6 +123,9 @@ function DeckMapDashboardDatasetClient({
     runtimeIssueContext,
     runtimeIssueReporter,
   });
+
+  // Register client for panel reset button
+  usePanelClientRegistration(dashboard.id, panel.id, client ? [client] : []);
 
   useEffect(() => {
     onDatasetState(datasetId, {
@@ -294,6 +299,7 @@ function createInitialDeckMapDashboardFitState(
 function DeckMapDashboardHeaderActions({
   dashboardId,
   panel,
+  selectionName,
 }: MosaicDashboardPanelRendererProps) {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -320,6 +326,11 @@ function DeckMapDashboardHeaderActions({
 
   return (
     <div className="flex items-center gap-0.5">
+      <MosaicDashboardPanelResetButton
+        dashboardId={dashboardId}
+        panelId={panel.id}
+        selectionName={selectionName}
+      />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

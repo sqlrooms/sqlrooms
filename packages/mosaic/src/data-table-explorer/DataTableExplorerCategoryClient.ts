@@ -61,6 +61,7 @@ export class DataTableExplorerCategoryClient extends MosaicClient {
     this.onStateChange({
       bucketCount,
       buckets,
+      client: this,
       error: this.filteredError ?? this.totalError,
       isLoading: this.filteredLoading || this.totalLoading,
       kind: 'category',

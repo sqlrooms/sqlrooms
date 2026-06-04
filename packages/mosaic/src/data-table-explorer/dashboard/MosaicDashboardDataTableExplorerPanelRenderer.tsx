@@ -7,8 +7,12 @@ import {
   type DataTableExplorerPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from '../../dashboard/MosaicDashboardSlice';
+import {usePanelClientRegistration} from '../../dashboard/usePanelClientRegistration';
+import {useDataTableExplorerPanelClients} from './useDataTableExplorerPanelClients';
 import {FC} from 'react';
 import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTableExplorer} from '../useDataTableExplorer';
+import {MosaicDashboardDataTableExplorerHeaderActions} from './MosaicDashboardDataTableExplorerHeaderActions';
 
 const MosaicDashboardDataTableExplorerRenderer: FC<
   DataTableExplorerPanelRendererProps
@@ -23,6 +27,20 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
     typeof panel.config.pageSize === 'number'
       ? panel.config.pageSize
       : undefined;
+
+  const explorer = useDataTableExplorer({
+    tableName: selectedTable!,
+    pageSize: pageSize ?? 10,
+    selectionName,
+  });
+
+  const explorerClients = useDataTableExplorerPanelClients(
+    explorer,
+    selectedTable,
+    connection.status,
+  );
+
+  usePanelClientRegistration(dashboard.id, panel.id, explorerClients);
 
   if (!selectedTable) {
     return (
@@ -45,11 +63,7 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
   }
 
   return (
-    <DataTableExplorer
-      tableName={selectedTable}
-      pageSize={pageSize ?? 10}
-      selectionName={selectionName}
-    >
+    <DataTableExplorer.Root explorer={explorer}>
       <div className="flex h-full min-h-0 flex-col">
         <div className="min-h-0 flex-1 overflow-auto">
           <DataTableExplorer.Table>
@@ -59,12 +73,13 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
         </div>
         <DataTableExplorer.StatusBar />
       </div>
-    </DataTableExplorer>
+    </DataTableExplorer.Root>
   );
 };
 
 export const mosaicDashboardDataTableExplorerPanelRenderer: MosaicDashboardPanelRenderer<DataTableExplorerPanel> =
   {
     component: MosaicDashboardDataTableExplorerRenderer,
+    headerActions: MosaicDashboardDataTableExplorerHeaderActions,
     icon: TablePropertiesIcon,
   };

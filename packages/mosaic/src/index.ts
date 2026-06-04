@@ -32,6 +32,12 @@ export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
 export {useTablesWithColumns} from './hooks/useTablesWithColumns';
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
+export {
+  MosaicDashboardPanelResetButton,
+  type MosaicDashboardPanelResetButtonProps,
+} from './dashboard/panel/MosaicDashboardPanelResetButton';
+export {usePanelClientRegistration} from './dashboard/usePanelClientRegistration';
+export {usePanelClients} from './dashboard/usePanelClients';
 export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
 export {addChartPanelAction} from './charts/addChartPanelAction';
 export {
