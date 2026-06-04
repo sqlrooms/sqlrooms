@@ -147,6 +147,14 @@ type SaveWorkspaceRoomSnapshot = (
   snapshot: WorkspaceRoomSnapshot,
 ) => Promise<void>;
 
+type WorkspaceRoomShellSnapshot = {
+  artifactsConfig: WorkspaceRoomState['artifacts']['config'];
+  blockDocumentsConfig: WorkspaceRoomState['blockDocuments']['config'];
+  sqlEditorConfig: WorkspaceRoomState['sqlEditor']['config'];
+  mosaicDashboardConfig: WorkspaceRoomState['mosaicDashboard']['config'];
+  currentArtifactId: string | undefined;
+};
+
 const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
 const DEFAULT_WORKSPACE_LAYOUT = createDefaultWorkspaceLayout();
 
@@ -169,7 +177,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     useState<FileNameConflict | null>(null);
   const [workspaceRoomStore, setWorkspaceRoomStore] =
     useState<StoreApi<WorkspaceRoomState> | null>(null);
-  const workspaceRoomState = useWorkspaceRoomState(workspaceRoomStore);
+  const workspaceRoomSnapshot = useWorkspaceRoomShellSnapshot(
+    workspaceRoomStore,
+  );
   const savedWorkspaceId = props.mode === 'saved' ? props.workspaceId : null;
   const activeWorkspaceId = savedWorkspaceId ?? 'unsaved-default';
   const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
@@ -244,18 +254,23 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     };
   }, [canPersistWorkspace, props.mode, props.workspaceId, token]);
   const workspaceContentSnapshot = useMemo(
-    () =>
-      workspaceRoomState
-        ? workspaceRoomState.workspace.serializeContent()
-        : currentWorkspace?.content,
-    [currentWorkspace?.content, workspaceRoomState],
+    () => {
+      if (!workspaceRoomSnapshot) return currentWorkspace?.content;
+      return {
+        artifacts: workspaceRoomSnapshot.artifactsConfig,
+        blockDocuments: workspaceRoomSnapshot.blockDocumentsConfig,
+        sqlEditor: workspaceRoomSnapshot.sqlEditorConfig,
+        mosaicDashboard: workspaceRoomSnapshot.mosaicDashboardConfig,
+      } as unknown as JsonObject;
+    },
+    [currentWorkspace?.content, workspaceRoomSnapshot],
   );
   const worksheets = useMemo(
     () => getWorkspaceContentWorksheets(workspaceContentSnapshot),
     [workspaceContentSnapshot],
   );
   const selectedWorksheetId =
-    workspaceRoomState?.artifacts.config.currentArtifactId;
+    workspaceRoomSnapshot?.currentArtifactId;
   const selectedWorksheet = useMemo(
     () =>
       worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
@@ -987,7 +1002,7 @@ function WorkspaceLayoutCanvas({
         },
       },
     }),
-    [duckDbRuntime, selectedWorksheet],
+    [duckDbRuntime.tableNames, selectedWorksheet],
   );
   const initialLayoutRef = useRef(layout);
   const initialPanelsRef = useRef(panels);
@@ -1110,6 +1125,8 @@ function WorkspaceLayoutCanvas({
 
   useEffect(() => {
     if (!roomStore) return;
+    if (arePanelsEqual(roomStore.getState().layout.panels, panels)) return;
+
     for (const [panelId, panel] of Object.entries(panels)) {
       roomStore.getState().layout.registerPanel(panelId, panel);
     }
@@ -1257,19 +1274,61 @@ function useWorkspaceRoomLayout(roomStore: StoreApi<WorkspaceRoomState>) {
   );
 }
 
-function useWorkspaceRoomState(
+function useWorkspaceRoomShellSnapshot(
   roomStore: StoreApi<WorkspaceRoomState> | null,
 ) {
-  const subscribe = useCallback(
-    (onStoreChange: () => void) =>
-      roomStore ? roomStore.subscribe(onStoreChange) : () => {},
-    [roomStore],
-  );
+  const [snapshot, setSnapshot] =
+    useState<WorkspaceRoomShellSnapshot | null>(() =>
+      roomStore ? getWorkspaceRoomShellSnapshot(roomStore) : null,
+    );
 
-  return useSyncExternalStore(
-    subscribe,
-    () => roomStore?.getState() ?? null,
-    () => null,
+  useEffect(() => {
+    if (!roomStore) {
+      setSnapshot(null);
+      return;
+    }
+
+    setSnapshot(getWorkspaceRoomShellSnapshot(roomStore));
+    return roomStore.subscribe((state, previousState) => {
+      if (
+        state.artifacts.config === previousState.artifacts.config &&
+        state.blockDocuments.config === previousState.blockDocuments.config &&
+        state.sqlEditor.config === previousState.sqlEditor.config &&
+        state.mosaicDashboard.config ===
+          previousState.mosaicDashboard.config
+      ) {
+        return;
+      }
+
+      setSnapshot(getWorkspaceRoomShellSnapshot(roomStore));
+    });
+  }, [roomStore]);
+
+  return snapshot;
+}
+
+function getWorkspaceRoomShellSnapshot(
+  roomStore: StoreApi<WorkspaceRoomState>,
+): WorkspaceRoomShellSnapshot {
+  const state = roomStore.getState();
+  return {
+    artifactsConfig: state.artifacts.config,
+    blockDocumentsConfig: state.blockDocuments.config,
+    sqlEditorConfig: state.sqlEditor.config,
+    mosaicDashboardConfig: state.mosaicDashboard.config,
+    currentArtifactId: state.artifacts.config.currentArtifactId,
+  };
+}
+
+function arePanelsEqual(left: Panels, right: Panels) {
+  const leftEntries = Object.entries(left);
+  const rightEntries = Object.entries(right);
+  if (leftEntries.length !== rightEntries.length) return false;
+
+  return leftEntries.every(
+    ([panelId, panel]) =>
+      Object.prototype.hasOwnProperty.call(right, panelId) &&
+      right[panelId] === panel,
   );
 }
 
