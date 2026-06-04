@@ -1,6 +1,14 @@
 import * as arrow from 'apache-arrow';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
-import type {VegaBrushSelectionRanges} from '../VegaLiteArrowChart';
+
+/**
+ * Brush selection ranges emitted by the Vega signal listener.
+ * Keys are field names; values are either numeric ranges or categorical arrays.
+ */
+export type VegaBrushSelectionRanges = Record<
+  string,
+  [number, number] | string[]
+>;
 
 /**
  * Editor mode determines which editors are shown

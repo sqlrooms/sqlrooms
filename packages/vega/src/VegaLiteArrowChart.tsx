@@ -18,15 +18,9 @@ import {VegaChartActions} from './VegaChartActions';
 import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaEditAction} from './VegaEditAction';
 import {VegaExportAction} from './VegaExportAction';
+import type {VegaBrushSelectionRanges} from './editor/types';
 
-/**
- * Brush selection ranges emitted by the Vega signal listener.
- * Keys are field names; values are either numeric ranges or categorical arrays.
- */
-export type VegaBrushSelectionRanges = Record<
-  string,
-  [number, number] | string[]
->;
+export type {VegaBrushSelectionRanges};
 
 export type VegaLiteArrowChartProps = {
   className?: string;

@@ -2,9 +2,13 @@ import * as arrow from 'apache-arrow';
 import React from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
 import {cn} from '@sqlrooms/ui';
-import type {VegaBrushSelectionRanges} from '../VegaLiteArrowChart';
 import {VegaEditorContext} from './VegaEditorContext';
-import {OnSpecChange, OnSqlChange, VegaEditorContextValue} from './types';
+import {
+  OnSpecChange,
+  OnSqlChange,
+  VegaBrushSelectionRanges,
+  VegaEditorContextValue,
+} from './types';
 import {useVegaChartEditor} from './useVegaChartEditor';
 
 export interface VegaChartContainerProps {
