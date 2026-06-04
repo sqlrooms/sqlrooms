@@ -36,7 +36,6 @@ describe('DataTableExplorer compound API', () => {
     );
 
     expect(markup).toContain('No rows');
-    expect(markup).toContain('Reset');
     expect(markup).toContain('25');
     expect(markup).toContain('100 rows');
   });

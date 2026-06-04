@@ -2,7 +2,7 @@ import {useMemo} from 'react';
 import {type MosaicDashboardAddPanelActionContext} from './action-types';
 import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
-import {useTablesWithColumns} from './useTablesWithColumns';
+import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 
 export function useMosaicDashboardAddPanelActionContext(
   dashboardId: string,

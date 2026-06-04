@@ -314,23 +314,54 @@ function stripAgentToolCalls(output: unknown): unknown {
 /**
  * Sanitizes UIMessages before sending to LLM APIs to prevent errors from malformed content.
  *
- * This handles issues that can occur when conversations are interrupted mid-stream:
+ * This handles issues that can occur when conversations are interrupted mid-stream
+ * or when the model produced an invalid tool call:
  * - Empty text parts (causes Bedrock error: "text field in ContentBlock is blank")
  * - Assistant messages with no meaningful content after cleanup
  * - Nested `agentToolCalls` in tool outputs that bloat the LLM context
+ * - Tool parts that reference an unavailable/hallucinated tool name (e.g. the
+ *   model called `agent-spatial_utilities` instead of `agent-spatial-utilities`).
+ *   These get persisted as `output-error` parts with only `rawInput`, and the AI
+ *   SDK's `validateUIMessages` throws "No tool schema found ... input: Value:
+ *   undefined" on every subsequent send. Such parts are dropped here so the
+ *   poisoned session can continue.
  *
  * @param messages - The messages to sanitize
+ * @param availableToolNames - Optional set of tool names that the current agent
+ *   exposes. When provided, tool parts whose tool name is not in this set are
+ *   removed. When omitted, no tool-name filtering is performed.
  * @returns Sanitized messages safe to send to LLM APIs
  */
-export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
+export function sanitizeMessagesForLLM(
+  messages: UIMessage[],
+  availableToolNames?: Iterable<string>,
+): UIMessage[] {
+  const knownTools =
+    availableToolNames !== undefined ? new Set(availableToolNames) : undefined;
+
+  const isUnavailableToolPart = (part: UIMessagePart): boolean => {
+    if (knownTools === undefined) return false;
+    if (typeof part.type !== 'string') return false;
+    if (part.type === 'dynamic-tool') {
+      const toolName = (part as Record<string, unknown>).toolName;
+      return typeof toolName === 'string' && !knownTools.has(toolName);
+    }
+    if (part.type.startsWith('tool-')) {
+      const toolName = part.type.slice('tool-'.length);
+      return !knownTools.has(toolName);
+    }
+    return false;
+  };
+
   return messages
     .map((message) => {
       if (!message.parts || message.parts.length === 0) {
         return message;
       }
 
-      // Filter out empty text parts and empty reasoning parts,
-      // and strip agentToolCalls from tool outputs
+      // Filter out empty text parts and empty reasoning parts, and drop tool
+      // parts that reference an unavailable tool. Also strip agentToolCalls
+      // from tool outputs.
       const sanitizedParts = message.parts
         .filter((part) => {
           if (part.type === 'text') {
@@ -340,6 +371,9 @@ export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
           if (part.type === 'reasoning') {
             const reasoningPart = part as {type: 'reasoning'; text: string};
             return reasoningPart.text && reasoningPart.text.trim().length > 0;
+          }
+          if (isUnavailableToolPart(part)) {
+            return false;
           }
           return true;
         })
@@ -474,12 +508,23 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       if (!isToolPart(current)) {
         continue;
       }
-      const toolPart = current as ToolPart;
+      const toolPart = current as ToolPart & {rawInput?: unknown};
       const isCompleted =
         toolPart.state?.startsWith('output') ||
         toolPart.state === 'approval-requested' ||
         toolPart.state === 'approval-responded';
       if (isCompleted) {
+        // An `output-error` part produced from a failed tool-input parse (e.g.
+        // schema validation failure or hallucinated tool name) carries only
+        // `rawInput`, not `input`. The AI SDK's `validateUIMessages` requires
+        // `input` to be defined, so backfill it from `rawInput` to avoid
+        // "Type validation failed ... input: Value: undefined" on later sends.
+        if (toolPart.state === 'output-error' && toolPart.input === undefined) {
+          updatedParts[i] = {
+            ...updatedParts[i],
+            input: toolPart.rawInput ?? {},
+          } as (typeof message.parts)[number];
+        }
         // Completed tool; continue checking earlier parts just in case
         continue;
       }

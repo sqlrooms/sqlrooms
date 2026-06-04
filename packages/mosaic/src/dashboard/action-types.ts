@@ -4,7 +4,7 @@
 
 import type {ComponentType} from 'react';
 import type {DataTable} from '@sqlrooms/db';
-import type {ChartTypeDefinition} from '../chart-types/base-types';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
 import type {
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,

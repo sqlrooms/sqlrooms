@@ -29,7 +29,6 @@
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
-  "dependencies": {},
   "devDependencies": {
     "@types/react": "*"
   },

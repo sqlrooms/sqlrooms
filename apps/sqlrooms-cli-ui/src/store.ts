@@ -218,6 +218,14 @@ const sliceConfigSchemas = {
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+type PersistedRoomState = ReturnType<typeof persistHelpers.partialize>;
+const cliUiPersistStorage = createDuckDbPersistStorage<PersistedRoomState>(
+  connector,
+  {
+    namespace: runtimeConfig.metaNamespace || '__sqlrooms',
+  },
+);
+export const uiStatePersistenceController = cliUiPersistStorage.controller;
 
 function getAvailableAiModels(config: AiSettingsSliceConfig) {
   return [
@@ -235,13 +243,12 @@ function getAvailableAiModels(config: AiSettingsSliceConfig) {
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs<RoomState>(
+  persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas,
-      storage: createDuckDbPersistStorage(connector, {
-        namespace: runtimeConfig.metaNamespace || '__sqlrooms',
-      }),
+      storage: cliUiPersistStorage,
+      partialize: persistHelpers.partialize,
       merge: (persistedState, currentState) => {
         const persistedRecord = (persistedState ?? {}) as Record<
           string,
@@ -261,6 +268,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             cells: persistedCells,
           },
           currentState,
+        );
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        cliUiPersistStorage.markStateSnapshotSaved(
+          persistHelpers.partialize(state),
         );
       },
     },

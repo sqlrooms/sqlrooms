@@ -1,12 +1,12 @@
-import {FC, useCallback, useMemo, useState} from 'react';
+import {FC, useCallback, useState} from 'react';
 import {
   Field,
   ColumnSelector,
   ColumnsProvider,
   useStoreWithMosaicDashboard,
+  useDataTable,
 } from '@sqlrooms/mosaic';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
-import {useStoreWithDuckDb} from '@sqlrooms/duckdb';
 import {
   binnedNumericSchemes,
   categoricalSchemes,
@@ -72,18 +72,18 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const [layerIndex, setLayerIndex] = useState(0);
   const [colorAccessor, setColorAccessor] =
     useState<DeckMapLayerColorAccessor>('getFillColor');
-  const tables = useStoreWithDuckDb((state) => state.db.tables);
+
   const tableName = useStoreWithMosaicDashboard(
     (state) =>
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
   );
+
+  const dataTable = useDataTable(tableName);
+
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
-  const currentTable = useMemo(
-    () => tables.find((t) => t.table.table === tableName),
-    [tables, tableName],
-  );
+
   const mapConfig = panel.config as DeckMapDashboardPanelConfig;
   const layers = getDeckMapLayerRecords(mapConfig);
   const activeLayerIndex = Math.min(layerIndex, Math.max(layers.length - 1, 0));
@@ -106,7 +106,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     : undefined;
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
-  const firstColumnName = currentTable?.columns[0]?.name;
+  const firstColumnName = dataTable?.columns[0]?.name;
   const maxRows =
     mapConfig.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
 
@@ -259,11 +259,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 </Field>
               )}
 
-              {colorScale && currentTable && (
-                <ColumnsProvider
-                  columns={currentTable.columns}
-                  tableName={tableName}
-                >
+              {colorScale && dataTable && (
+                <ColumnsProvider columns={dataTable.columns}>
                   <Field label="Color field" required>
                     {colorScaleType === 'categorical' ? (
                       <ColumnSelector.Categorical
@@ -329,8 +326,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </div>
         )}
 
-        {currentTable && showGeometryColumnSetting && (
-          <ColumnsProvider columns={currentTable.columns} tableName={tableName}>
+        {dataTable && showGeometryColumnSetting && (
+          <ColumnsProvider columns={dataTable.columns}>
             <Field label="Geometry column" required>
               <ColumnSelector
                 value={activeLayerDataset?.geometryColumn}
@@ -349,20 +346,20 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
-        {currentTable && !showGeometryColumnSetting && (
-          <ColumnsProvider columns={currentTable.columns} tableName={tableName}>
+        {dataTable && !showGeometryColumnSetting && (
+          <ColumnsProvider columns={dataTable.columns}>
             <Field label="Latitude column" required>
               <LatitudeSelector
                 dashboardId={dashboardId}
                 panel={panel}
-                currentTable={currentTable}
+                currentTable={dataTable}
               />
             </Field>
             <Field label="Longitude column" required>
               <LongitudeSelector
                 dashboardId={dashboardId}
                 panel={panel}
-                currentTable={currentTable}
+                currentTable={dataTable}
               />
             </Field>
           </ColumnsProvider>

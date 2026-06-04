@@ -5,7 +5,8 @@ import {
   type PropsWithChildren,
   type ReactElement,
 } from 'react';
-import {Table} from '@sqlrooms/ui';
+import {Button, cn, Table} from '@sqlrooms/ui';
+import {FilterX} from 'lucide-react';
 import {getDataTableExplorerTableWidth} from './layout';
 import {
   DataTableExplorerHeader,
@@ -135,10 +136,47 @@ function DataTableExplorerCompoundTable({
   );
 }
 
+export type DataTableExplorerCompoundResetButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  'onClick'
+> & {
+  onClick?: () => void;
+};
+
+function DataTableExplorerCompoundResetButton({
+  className,
+  disabled: disabledProp,
+  onClick,
+  ...props
+}: DataTableExplorerCompoundResetButtonProps) {
+  const explorer = useDataTableExplorerCompoundContext();
+  const disabled = disabledProp ?? !explorer.hasFilters;
+
+  return (
+    <Button
+      type="button"
+      size="icon"
+      variant="ghost"
+      className={cn('h-7 w-7', className)}
+      aria-label="Reset filters"
+      title="Reset filters"
+      disabled={disabled}
+      onClick={() => {
+        explorer.reset();
+        onClick?.();
+      }}
+      {...props}
+    >
+      <FilterX className="h-4 w-4" />
+    </Button>
+  );
+}
+
 type DataTableExplorerCompoundComponent = ((
   props: DataTableExplorerProps,
 ) => ReactElement) & {
   Header: typeof DataTableExplorerCompoundHeader;
+  ResetButton: typeof DataTableExplorerCompoundResetButton;
   Root: typeof DataTableExplorerRoot;
   Rows: typeof DataTableExplorerCompoundRows;
   StatusBar: typeof DataTableExplorerCompoundStatusBar;
@@ -148,6 +186,7 @@ type DataTableExplorerCompoundComponent = ((
 export const DataTableExplorer: DataTableExplorerCompoundComponent =
   Object.assign(DataTableExplorerComponent, {
     Header: DataTableExplorerCompoundHeader,
+    ResetButton: DataTableExplorerCompoundResetButton,
     Root: DataTableExplorerRoot,
     Rows: DataTableExplorerCompoundRows,
     StatusBar: DataTableExplorerCompoundStatusBar,

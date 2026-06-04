@@ -10,9 +10,6 @@ export const DataSourcesPanel = () => {
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const addDataTableExplorerForTable = useRoomStore(
-    (state) => state.dashboard.addDataTableExplorerForTable,
-  );
 
   return (
     <div className="flex h-full flex-col p-2">
@@ -41,9 +38,6 @@ export const DataSourcesPanel = () => {
             }
           }
           await refreshTableSchemas();
-          for (const tableName of createdTableNames) {
-            addDataTableExplorerForTable(tableName);
-          }
         }}
       >
         <div className="text-muted-foreground text-xs">
