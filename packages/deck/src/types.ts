@@ -1,7 +1,9 @@
-import type {DeckProps} from '@deck.gl/core';
 import type * as arrow from 'apache-arrow';
-import type {ReactNode} from 'react';
+import type {ComponentProps, ReactNode} from 'react';
+import type DeckGLReact from '@deck.gl/react';
 import type {MapProps} from 'react-map-gl/maplibre';
+
+type DeckProps = ComponentProps<typeof DeckGLReact>;
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
 
 export type {
@@ -62,11 +64,21 @@ export type DeckJsonMapProps = {
   spec: string | Record<string, unknown>;
   datasets: Record<string, DeckDatasetInput>;
   mapStyle?: string;
+  /**
+   * When true, deck.gl layers are inserted into MapLibre's layer stack sharing
+   * the same WebGL2 context. This allows rendering deck layers between basemap
+   * layers (e.g. under labels). Requires WebGL2 (MapLibre GL v3+).
+   * Defaults to false (deck renders in a separate overlay canvas on top).
+   */
+  interleaved?: boolean;
   deckProps?: Partial<DeckProps>;
   mapProps?: Partial<MapProps>;
   showLegends?: boolean;
   className?: string;
   children?: ReactNode;
+  onDatasetStatesChange?: (
+    states: Record<string, PreparedDeckDatasetState>,
+  ) => void;
 };
 
 export function isSqlDatasetInput(

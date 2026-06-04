@@ -169,11 +169,11 @@ export function DataTablePaginated<Data extends object>({
         )}
       >
         <ScrollArea className="h-full overflow-auto">
-          <Table disableWrapper>
-            <TableHeader>
+          <Table disableWrapper className="border-separate border-spacing-0">
+            <TableHeader className="[&_tr]:border-b-0!">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  <TableHead className="bg-background sticky -top-px left-0 z-10 w-auto min-w-[40px] border-r py-2 text-center whitespace-nowrap">
+                <TableRow key={headerGroup.id} className="border-b-0!">
+                  <TableHead className="bg-background sticky top-0 left-0 z-10 h-auto w-auto min-w-[40px] border-r border-b py-[3px] text-center whitespace-nowrap">
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                     ) : null}
@@ -186,7 +186,7 @@ export function DataTablePaginated<Data extends object>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={cn(
-                          'bg-background hover:bg-muted sticky -top-px z-10 w-auto border-r py-2 whitespace-nowrap',
+                          'bg-background hover:bg-muted sticky top-0 z-10 h-auto w-auto border-r border-b py-[3px] whitespace-nowrap',
                           pagination ? 'cursor-pointer' : '',
                           meta?.isNumeric ? 'text-right' : 'text-left',
                           fontSizeClass,
@@ -220,7 +220,7 @@ export function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky -top-px w-full border-t border-r py-2 whitespace-nowrap" />
+                  <TableHead className="bg-background sticky top-0 h-auto w-full border-b py-[3px] whitespace-nowrap" />
                 </TableRow>
               ))}
             </TableHeader>
@@ -230,7 +230,7 @@ export function DataTablePaginated<Data extends object>({
                   key={row.id}
                   data-state={row.getIsSelected() ? 'selected' : undefined}
                   className={cn(
-                    'hover:bg-muted bg-background',
+                    'hover:bg-muted bg-background [&>td]:border-b last:[&>td]:border-b-0',
                     row.getIsSelected() && 'bg-muted',
                   )}
                   onClick={

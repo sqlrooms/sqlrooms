@@ -1,11 +1,11 @@
 {
   "name": "canvas-sync-example",
-  "private": true,
   "version": "0.24.14",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -14,6 +14,7 @@
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

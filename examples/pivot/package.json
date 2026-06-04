@@ -1,16 +1,21 @@
 {
   "name": "pivot-example",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
+  "overrides": {
+    "@duckdb/duckdb-wasm": "1.32.0"
+  },
   "dependencies": {
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
@@ -28,8 +33,5 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite": "^8.0.5"
-  },
-  "overrides": {
-    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }

@@ -1,8 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import UploadFile
+from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
+from sqlrooms.web.launcher import _write_upload_to_path
 from pathlib import Path
 
 
@@ -32,6 +36,7 @@ def test_api_config(server):
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
+    assert "wsAuthToken" in data
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):
@@ -76,6 +81,66 @@ def test_api_upload(server, tmp_path):
     assert "path" in data
     assert Path(data["path"]).name == "test.txt"
     assert Path(data["path"]).read_bytes() == file_content
+
+
+def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):
+    app = server._build_app()
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    client = TestClient(app)
+    with open(source, "rb") as f:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("large.bin", f, "application/octet-stream")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    uploaded = Path(data["path"])
+    assert uploaded.name == "large.bin"
+    assert uploaded.stat().st_size == source_size
+
+
+@pytest.mark.asyncio
+async def test_write_upload_to_path_streams_files_larger_than_previous_cap(tmp_path):
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    target = tmp_path / "uploaded.bin"
+    with open(source, "rb") as f:
+        bytes_written = await _write_upload_to_path(
+            UploadFile(file=f, filename="large.bin"),
+            target,
+        )
+
+    assert bytes_written == source_size
+    assert target.stat().st_size == source_size
+
+
+def test_no_ui_keeps_api_but_does_not_mount_static_ui(tmp_path):
+    db_path = tmp_path / "test.db"
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<h1>SQLRooms UI</h1>", encoding="utf-8")
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+        serve_ui=False,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    assert client.get("/api/config").status_code == 200
+    assert client.get("/").status_code == 404
 
 
 def test_api_config_with_postgres_connector(tmp_path):
@@ -307,3 +372,182 @@ schema = "PUBLIC"
     assert "account" not in entry
     assert "warehouse" not in entry
     assert "schema" not in entry
+
+
+def test_write_ai_settings_to_toml_preserves_api_key_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-secret")
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[other]
+value = "preserved"
+
+[ai]
+default_provider = "openai"
+default_model = "gpt-4.1"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-4.1"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    _write_ai_settings_to_toml(
+        config_path,
+        {
+            "defaultProvider": "openai",
+            "defaultModel": "gpt-5",
+            "settings": {
+                "providers": {
+                    "openai": {
+                        "baseUrl": "https://api.openai.com/v1",
+                        "apiKey": "env-secret",
+                        "models": [{"modelName": "gpt-5"}],
+                    }
+                },
+                "customModels": [
+                    {
+                        "modelName": "local-qwen",
+                        "baseUrl": "http://localhost:11434/v1",
+                        "apiKey": "local-key",
+                    }
+                ],
+                "modelParameters": {
+                    "maxSteps": 12,
+                    "additionalInstruction": "Be concise.",
+                },
+            },
+        },
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["other"]["value"] == "preserved"
+    assert doc["ai"]["default_model"] == "gpt-5"
+    provider = doc["ai"]["providers"][0]
+    assert provider["api_key_env"] == "OPENAI_API_KEY"
+    assert "api_key" not in provider
+    assert provider["models"] == ["gpt-5"]
+    assert doc["ai"]["custom_models"][0]["model_name"] == "local-qwen"
+    assert doc["ai"]["model_parameters"]["max_steps"] == 12
+
+
+def test_api_put_ai_settings_writes_config(tmp_path):
+    config_path = tmp_path / "config.toml"
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/ai/settings",
+        json={
+            "defaultProvider": "anthropic",
+            "defaultModel": "claude-4-sonnet",
+            "settings": {
+                "providers": {
+                    "anthropic": {
+                        "baseUrl": "https://api.anthropic.com",
+                        "apiKey": "anthropic-key",
+                        "models": [{"modelName": "claude-4-sonnet"}],
+                    }
+                },
+                "customModels": [],
+                "modelParameters": {
+                    "maxSteps": 8,
+                    "additionalInstruction": "",
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["ai"]["default_provider"] == "anthropic"
+    assert doc["ai"]["default_model"] == "claude-4-sonnet"
+    assert doc["ai"]["providers"][0]["api_key"] == "anthropic-key"
+    assert doc["ai"]["model_parameters"]["max_steps"] == 8
+    assert doc["ai"]["model_parameters"]["additional_instruction"] == ""
+    assert server.llm_provider == "anthropic"
+    assert server.llm_model == "claude-4-sonnet"
+    assert server.ai_model_parameters["maxSteps"] == 8
+    assert server.ai_model_parameters["additionalInstruction"] == ""
+
+
+def test_api_put_ai_settings_rejects_fractional_max_steps(tmp_path):
+    config_path = tmp_path / "config.toml"
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/ai/settings",
+        json={
+            "defaultProvider": "anthropic",
+            "defaultModel": "claude-4-sonnet",
+            "settings": {
+                "providers": {},
+                "modelParameters": {
+                    "maxSteps": 8.5,
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert "maxSteps" in response.json()["error"]
+    assert not config_path.exists()
+    assert server.llm_provider is None
+
+
+def test_api_auth_allows_loopback_without_token(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is True
+
+
+def test_api_auth_requires_token_for_non_loopback(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("10.0.0.2", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is False

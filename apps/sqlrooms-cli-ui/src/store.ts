@@ -1,160 +1,185 @@
+import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   AiSettingsSliceConfig,
-  AiSettingsSliceState,
   AiSliceConfig,
-  AiSliceState,
+  getAiRunContextPrimaryItem,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {
-  CanvasSliceConfig,
-  CanvasSliceState,
-  createCanvasSlice,
-} from '@sqlrooms/canvas';
+import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
   CellsSliceConfig,
-  CellsSliceState,
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import type {MosaicSliceState} from '@sqlrooms/mosaic';
-import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
 import {
-  createNotebookSlice,
-  NotebookSliceConfig,
-  NotebookSliceState,
-} from '@sqlrooms/notebook';
+  createDefaultLoadTableSchemasFilter,
+  createWebSocketDuckDbConnector,
+  defaultLoadSchemaCatalogFilter,
+  QualifiedTableName,
+  type SchemaCatalogFilterEntry,
+} from '@sqlrooms/duckdb';
+import {
+  CrdtSliceState,
+  createCrdtSlice,
+  createIndexedDbDocStorage,
+  createWebSocketSyncConnector,
+} from '@sqlrooms/crdt';
+import {
+  createMosaicDashboardDataTableExplorerPanelConfig,
+  createMosaicDashboardSlice,
+  createMosaicSlice,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
+  MosaicDashboardSliceConfig,
+} from '@sqlrooms/mosaic';
+import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
+import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
-  RoomShellSliceState,
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
+import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {
-  createSqlEditorSlice,
-  SqlEditorSliceConfig,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+  createChartImageForMarkdownTool,
+  createVegaChartTool,
+  VegaChartToolResult,
+} from '@sqlrooms/vega';
 import {
   createWebContainerSlice,
   createWebContainerToolkit,
   WebContainerPersistConfig,
-  WebContainerSliceState,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
-import {z} from 'zod';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
   createDbSettingsSlice,
-  DbSettingsSliceState,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
+  createBlockDocumentAiInstructions,
+  BlockDocumentsSliceConfig,
+  createBlockDocumentCommands,
+  createBlockDocumentAuthoringInstructions,
+  createBlockDocumentsSlice,
+  createDocumentCommands,
+  createDocumentsSlice,
+  DOCUMENT_AI_INSTRUCTIONS,
+  DocumentsSliceConfig,
+} from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
+import {toast} from '@sqlrooms/ui';
+import {ARTIFACT_TYPES} from './artifactTypes';
+import {
   createDashboardAiTools,
-  DASHBOARD_AI_INSTRUCTIONS,
+  getDashboardAiInstructions,
 } from './createDashboardAiTools';
+import {dashboardAgentTool} from './createDashboardAgent';
+import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
+import {formatRunContextInstructions} from './context/formatRunContextInstructions';
+import {getRunContext} from './context/getRunContext';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {LAYOUT} from './layout';
+import {createLayout} from './layout';
 import {fetchRuntimeConfig} from './runtimeConfig';
-import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {DEFAULT_DASHBOARD_VGPLOT_SPEC, parseVgPlotSpecString} from './vgplot';
+import {
+  createDuckDbPersistStorage,
+  saveAiSettingsToServer,
+  uploadFileToServer,
+} from './serverApi';
+import {
+  AppBuilderProjectConfig,
+  AppBuilderProjectConfigSchema,
+  RoomState,
+} from './store-types';
+import {
+  createStatefulBlockCommandTypes,
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
+} from './statefulBlockArtifactConfigs';
 
-export const AppBuilderProjectConfig = z.object({
-  appsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        name: z.string().default('Untitled App'),
-        prompt: z.string().default(''),
-        template: z.string().default('mosaic-dashboard'),
-        files: z.record(z.string(), z.string()).default({}),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
+export type {RoomState} from './store-types';
 
-export const DashboardProjectConfig = z.object({
-  dashboardsBySheetId: z
-    .record(
-      z.string(),
-      z.object({
-        vgplot: z.string().default(DEFAULT_DASHBOARD_VGPLOT_SPEC),
-        updatedAt: z.number().default(0),
-      }),
-    )
-    .default({}),
-});
-export type DashboardProjectConfig = z.infer<typeof DashboardProjectConfig>;
-
-export type RoomState = RoomShellSliceState &
-  MosaicSliceState &
-  AiSliceState &
-  SqlEditorSliceState &
-  AiSettingsSliceState &
-  CellsSliceState &
-  NotebookSliceState &
-  CanvasSliceState &
-  WebContainerSliceState &
-  DbSettingsSliceState & {
-    appProject: {
-      config: AppBuilderProjectConfig;
-      upsertSheetApp: (
-        sheetId: string,
-        app: Partial<AppBuilderProjectConfig['appsBySheetId'][string]> & {
-          name: string;
-        },
-      ) => void;
-      updateSheetAppFiles: (
-        sheetId: string,
-        files: Record<string, string>,
-      ) => void;
-      getSheetApp: (
-        sheetId: string,
-      ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
-    };
-    dashboard: {
-      initialize?: () => Promise<void>;
-      destroy?: () => Promise<void>;
-      config: DashboardProjectConfig;
-      ensureSheetDashboard: (sheetId: string) => void;
-      setSheetVgPlot: (sheetId: string, vgplot: string) => void;
-      getSheetVgPlot: (sheetId: string) => string | undefined;
-      getCurrentDashboardSheetId: () => string | undefined;
-      createDashboardSheet: (title?: string) => string;
-      setCurrentSheetVgPlot: (vgplot: string) => string;
-    };
-    isAssistantOpen: boolean;
-    setAssistantOpen: (isAssistantOpen: boolean) => void;
-  };
+const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
+const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
+const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
+  artifactType: 'worksheet',
+  artifactLabel: 'Worksheet',
+  commandNamespace: 'worksheet',
+  commandGroup: 'Worksheet',
+  defaultTitle: 'Worksheet',
+  blockDocumentAgentToolName: 'worksheet_agent',
+} as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
-  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) || {};
+  (runtimeAiSettings.providers as AiSettingsSliceConfig['providers']) ||
+  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) ||
+  {};
 const defaultProviderFromConfig =
   runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
 const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
+const MOSAIC_PREAGG_SCHEMA = 'mosaic';
+const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CRDT_STORAGE_KEY = [
+  'sqlrooms-cli',
+  runtimeConfig.metaNamespace || '__sqlrooms',
+  runtimeConfig.dbPath || 'memory',
+  'documents',
+].join(':');
+const AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS = 500;
+
+function createCliCrdtSyncConnector() {
+  if (!runtimeConfig.syncEnabled) return undefined;
+  return createWebSocketSyncConnector({
+    url:
+      runtimeConfig.crdtWsUrl || runtimeConfig.wsUrl || 'ws://localhost:4000',
+    roomId:
+      runtimeConfig.crdtRoomId ||
+      `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    sendSnapshotOnConnect: false,
+  });
+}
+
+function createDisabledCrdtState(): CrdtSliceState {
+  return {
+    crdt: {
+      status: 'idle',
+      connectionStatus: 'idle',
+      setConnectionStatus: () => {},
+      initialize: async () => {},
+      destroy: async () => {},
+    },
+  };
+}
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
+  initializationQuery: [
+    'INSTALL spatial',
+    'LOAD spatial',
+    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
+    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
+  ].join('; '),
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
@@ -174,32 +199,85 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
+const sliceConfigSchemas = {
+  room: BaseRoomConfig,
+  layout: LayoutConfig,
+  ai: AiSliceConfig,
+  aiSettings: AiSettingsSliceConfig,
+  sqlEditor: SqlEditorSliceConfig,
+  artifacts: ArtifactsSliceConfig,
+  cells: CellsSliceConfig,
+  notebook: NotebookSliceConfig,
+  canvas: CanvasSliceConfig,
+  documents: DocumentsSliceConfig,
+  blockDocuments: BlockDocumentsSliceConfig,
+  webContainer: WebContainerPersistConfig,
+  appProject: AppBuilderProjectConfigSchema,
+  mosaicDashboard: MosaicDashboardSliceConfig,
+  pivot: PivotSliceConfig,
+} as const;
+
+const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+
+function getAvailableAiModels(config: AiSettingsSliceConfig) {
+  return [
+    ...Object.entries(config.providers).flatMap(([provider, providerConfig]) =>
+      providerConfig.models.map((model) => ({
+        provider,
+        value: model.modelName,
+      })),
+    ),
+    ...config.customModels.map((model) => ({
+      provider: 'custom',
+      value: model.modelName,
+    })),
+  ];
+}
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState>(
     {
       name: 'sqlrooms-cli-app-state',
-      sliceConfigSchemas: {
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        ai: AiSliceConfig,
-        // aiSettings: AiSettingsSliceConfig,
-        sqlEditor: SqlEditorSliceConfig,
-        cells: CellsSliceConfig,
-        notebook: NotebookSliceConfig,
-        canvas: CanvasSliceConfig,
-        webContainer: WebContainerPersistConfig,
-        appProject: AppBuilderProjectConfig,
-        dashboard: DashboardProjectConfig,
-      },
+      sliceConfigSchemas,
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
+      merge: (persistedState, currentState) => {
+        const persistedRecord = (persistedState ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const persistedCells = CellsSliceConfig.parse(
+          persistedRecord.cells ?? currentState.cells.config,
+        );
+        const persistedArtifacts = ArtifactsSliceConfig.parse(
+          persistedRecord.artifacts ?? currentState.artifacts.config,
+        );
+
+        return persistHelpers.merge(
+          {
+            ...persistedRecord,
+            artifacts: persistedArtifacts,
+            cells: persistedCells,
+          },
+          currentState,
+        );
+      },
     },
     (set, get, store) => {
-      const getFirstDashboardSheetId = () =>
-        Object.values(get().cells.config.sheets).find(
-          (sheet) => sheet.type === 'dashboard',
+      const getFirstDashboardArtifactId = () =>
+        Object.values(get().artifacts.config.artifactsById).find(
+          (artifact) => artifact.type === 'dashboard',
         )?.id;
+      const getRunContextDashboardArtifactId = () => {
+        const currentSession = get().ai.getCurrentSession();
+        const primaryItem = getAiRunContextPrimaryItem(
+          currentSession?.runContext,
+        );
+        if (!primaryItem) return undefined;
+        const artifact = get().artifacts.config.artifactsById[primaryItem.id];
+        return artifact?.type === 'dashboard' ? primaryItem.id : undefined;
+      };
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
@@ -208,82 +286,101 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
+          registerCommandsForOwner(
+            store,
+            DOCUMENT_COMMAND_OWNER,
+            createDocumentCommands<RoomState>(),
+          );
+          registerCommandsForOwner(
+            store,
+            WORKSHEET_COMMAND_OWNER,
+            createBlockDocumentCommands<RoomState>({
+              ...WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
+              statefulBlockTypes: createStatefulBlockCommandTypes(),
+            }),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
         },
-        config: DashboardProjectConfig.parse({}),
-        ensureSheetDashboard: (sheetId) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet || sheet.type !== 'dashboard') {
+        ensureDashboardArtifact: (artifactId) => {
+          const artifact = get().artifacts.getArtifact(artifactId);
+          if (!artifact || artifact.type !== 'dashboard') {
             return;
           }
-          set((state) =>
-            produce(state, (draft) => {
-              if (draft.dashboard.config.dashboardsBySheetId[sheetId]) {
-                return;
-              }
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: DEFAULT_DASHBOARD_VGPLOT_SPEC,
-                updatedAt: Date.now(),
-              };
-            }),
-          );
+          get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
         },
-        setSheetVgPlot: (sheetId, vgplot) => {
-          const sheet = get().cells.config.sheets[sheetId];
-          if (!sheet) {
-            throw new Error(`Unknown sheet "${sheetId}".`);
+        addDataTableExplorerForTable: (tableName) => {
+          const existingDashboardArtifactId =
+            get().dashboard.getCurrentDashboardArtifactId();
+          const artifactId =
+            existingDashboardArtifactId ??
+            get().dashboard.createDashboardArtifact('Dashboard', 'grid');
+          if (!existingDashboardArtifactId) {
+            get().artifacts.setCurrentArtifact(artifactId);
           }
-          if (sheet.type !== 'dashboard') {
-            throw new Error(`Sheet "${sheetId}" is not a dashboard sheet.`);
+          get().dashboard.ensureDashboardArtifact(artifactId);
+          const dashboard = get().mosaicDashboard.getDashboard(artifactId);
+          if (!dashboard) return artifactId;
+
+          if (!dashboard.selectedTable) {
+            get().mosaicDashboard.setSelectedTable(artifactId, tableName);
           }
-          const {formatted} = parseVgPlotSpecString(vgplot);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dashboard.config.dashboardsBySheetId[sheetId] = {
-                vgplot: formatted,
-                updatedAt: Date.now(),
-              };
-            }),
+
+          const hasDataTableExplorerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
           );
+
+          if (!hasDataTableExplorerForTable) {
+            get().mosaicDashboard.addPanel(
+              artifactId,
+              createMosaicDashboardDataTableExplorerPanelConfig({
+                title: `${tableName} explorer`,
+              }),
+            );
+          }
+
+          return artifactId;
         },
-        getSheetVgPlot: (sheetId) =>
-          get().dashboard.config.dashboardsBySheetId[sheetId]?.vgplot,
-        getCurrentDashboardSheetId: () => {
-          const currentSheetId = get().cells.config.currentSheetId;
-          const currentSheet = currentSheetId
-            ? get().cells.config.sheets[currentSheetId]
+        getCurrentDashboardArtifactId: () => {
+          const contextDashboardArtifactId = getRunContextDashboardArtifactId();
+          if (contextDashboardArtifactId) {
+            return contextDashboardArtifactId;
+          }
+          const currentArtifactId = get().artifacts.config.currentArtifactId;
+          const currentArtifact = currentArtifactId
+            ? get().artifacts.config.artifactsById[currentArtifactId]
             : undefined;
-          if (currentSheet?.type === 'dashboard') {
-            return currentSheetId;
+          if (currentArtifact?.type === 'dashboard') {
+            return currentArtifactId;
           }
-          return getFirstDashboardSheetId();
+          return getFirstDashboardArtifactId();
         },
-        createDashboardSheet: (title) => {
-          const sheetId = get().cells.addSheet(title, 'dashboard');
-          get().dashboard.ensureSheetDashboard(sheetId);
-          return sheetId;
-        },
-        setCurrentSheetVgPlot: (vgplot) => {
-          const state = get();
-          const targetSheetId =
-            state.dashboard.getCurrentDashboardSheetId() ??
-            state.dashboard.createDashboardSheet();
-          state.dashboard.setSheetVgPlot(targetSheetId, vgplot);
-          state.cells.setCurrentSheet(targetSheetId);
-          return targetSheetId;
+        createDashboardArtifact: (title, layoutType = 'grid') => {
+          const artifactId = get().artifacts.createArtifact({
+            type: 'dashboard',
+            title: title ?? 'Dashboard',
+          });
+          get().mosaicDashboard.ensureDashboard(
+            artifactId,
+            title ?? 'Dashboard',
+            layoutType,
+          );
+          return artifactId;
         },
       };
 
       return {
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
-          upsertSheetApp: (sheetId, app) => {
-            set(
-              produce((draft: RoomState) => {
-                const current = draft.appProject.config.appsBySheetId[
-                  sheetId
+          upsertArtifactApp: (artifactId, app) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                const current = draft.appProject.config.appsByArtifactId[
+                  artifactId
                 ] ?? {
                   name: app.name,
                   prompt: '',
@@ -291,7 +388,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   files: {},
                   updatedAt: 0,
                 };
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   ...app,
                   updatedAt: Date.now(),
@@ -299,12 +396,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          updateSheetAppFiles: (sheetId, files) => {
+          updateArtifactAppFiles: (artifactId, files) => {
             set((state) =>
               produce(state, (draft) => {
-                const current = draft.appProject.config.appsBySheetId[sheetId];
+                const current =
+                  draft.appProject.config.appsByArtifactId[artifactId];
                 if (!current) return;
-                draft.appProject.config.appsBySheetId[sheetId] = {
+                draft.appProject.config.appsByArtifactId[artifactId] = {
                   ...current,
                   files,
                   updatedAt: Date.now(),
@@ -312,14 +410,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             );
           },
-          getSheetApp: (sheetId) =>
-            get().appProject.config.appsBySheetId[sheetId],
+          removeArtifactApp: (artifactId) => {
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.appProject.config.appsByArtifactId[artifactId];
+              }),
+            );
+          },
+          getArtifactApp: (artifactId) =>
+            get().appProject.config.appsByArtifactId[artifactId],
         },
         dashboard: dashboardSlice,
-        isAssistantOpen: false,
-        setAssistantOpen: (isAssistantOpen: boolean) => {
-          set({isAssistantOpen});
-        },
 
         ...createDbSettingsSlice({
           config: {
@@ -345,21 +446,144 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createRoomShellSlice({
           connector,
           config: {dataSources: []},
-          layout: LAYOUT,
+          layout: createLayout({store}),
+          createDbProps: {
+            duckDb: {
+              loadTableSchemasFilter: (() => {
+                const filter = createDefaultLoadTableSchemasFilter();
+                return (table: QualifiedTableName) => {
+                  return (
+                    filter(table) &&
+                    !(
+                      table.database === get().db.currentDatabase &&
+                      table.schema === 'mosaic'
+                    )
+                  );
+                };
+              })(),
+              loadSchemaCatalogFilter: (entry: SchemaCatalogFilterEntry) => {
+                if (!defaultLoadSchemaCatalogFilter(entry)) {
+                  return false;
+                }
+                if (
+                  entry.type === 'schema' &&
+                  entry.database === get().db.currentDatabase &&
+                  entry.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                if (
+                  entry.type === 'table' &&
+                  entry.table.database === get().db.currentDatabase &&
+                  entry.table.schema === 'mosaic'
+                ) {
+                  return false;
+                }
+                return true;
+              },
+            },
+          },
         })(set, get, store),
 
-        ...createMosaicSlice()(set, get, store),
+        ...createArtifactsSlice<RoomState>({
+          artifactTypes: ARTIFACT_TYPES,
+        })(set, get, store),
+
+        ...createMosaicSlice({
+          preagg: {
+            schema: MOSAIC_PREAGG_SCHEMA_REF,
+          },
+        })(set, get, store),
+
+        ...createMosaicDashboardSlice(createDeckMapDashboardSliceOptions())(
+          set,
+          get,
+          store,
+        ),
 
         ...createSqlEditorSlice()(set, get, store),
 
         ...createCellsSlice({
           cellRegistry: createDefaultCellRegistry(),
-          supportedSheetTypes: ['notebook', 'canvas', 'app', 'dashboard'],
         })(set, get, store),
 
         ...createNotebookSlice()(set, get, store),
 
+        ...createPivotSlice()(set, get, store),
+
         ...createCanvasSlice()(set, get, store),
+
+        ...createDocumentsSlice()(set, get, store),
+
+        ...createBlockDocumentsSlice<RoomState>({
+          onCreateOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on create', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.ensureState(
+              getState(),
+              blockInstanceId,
+              title ?? config.embeddedTitle,
+            );
+          },
+          onDeleteOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on delete', {
+                blockType,
+                blockInstanceId,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.deleteState(getState(), blockInstanceId);
+          },
+          onRenameOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on rename', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            if (config.renameState) {
+              config.renameState(getState(), blockInstanceId, title);
+            }
+          },
+        })(set, get, store),
+
+        ...(runtimeConfig.syncEnabled
+          ? createCrdtSlice<RoomState>({
+              storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
+              sync: createCliCrdtSyncConnector(),
+              mirrors: {
+                documentState: createDocumentsCrdtMirror<RoomState>({
+                  blockDocumentArtifactTypes: ['worksheet'],
+                }),
+              },
+            })(set, get, store)
+          : createDisabledCrdtState()),
 
         ...createWebContainerSlice({
           autoInitialize: false,
@@ -370,7 +594,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createAiSettingsSlice({
-          config: {providers: runtimeAiProviders},
+          config: {
+            providers: runtimeAiProviders,
+            ...(runtimeAiSettings.customModels
+              ? {customModels: runtimeAiSettings.customModels}
+              : {}),
+            ...(runtimeAiSettings.modelParameters
+              ? {
+                  modelParameters: {
+                    maxSteps: runtimeAiSettings.modelParameters.maxSteps ?? 50,
+                    additionalInstruction:
+                      runtimeAiSettings.modelParameters.additionalInstruction ??
+                      '',
+                  },
+                }
+              : {}),
+          },
         })(set, get, store),
 
         ...(() => {
@@ -379,18 +618,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
             defaultModel: defaultModelFromConfig,
+            getAvailableModels: () =>
+              getAvailableAiModels(get().aiSettings.config),
             getApiKey: (provider) =>
-              runtimeAiProviders[provider]?.apiKey ||
+              get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${DASHBOARD_AI_INSTRUCTIONS}`,
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
+            getRunContext: () => getRunContext(store),
+            formatRunContextInstructions: ({runContext}) =>
+              formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
+              ...createArtifactContextAiTools(store),
               ...createDashboardAiTools(store),
+              dashboard_agent: dashboardAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
+              chart_image_for_markdown: createChartImageForMarkdownTool(store),
             },
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
@@ -399,6 +646,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
+        aiContextMode: 'auto',
+        aiContextItemIds: [],
+        setAiContextItemIds: (artifactIds, mode) => {
+          set({
+            aiContextItemIds: Array.from(new Set(artifactIds)),
+            ...(mode ? {aiContextMode: mode} : {}),
+          });
+        },
+        replaceAiContextWithArtifact: (artifactId) => {
+          set({aiContextItemIds: [artifactId]});
+        },
       };
     },
   ),
@@ -413,3 +671,54 @@ if (bridgeConfig) {
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
 syncConnectionsToDb(roomStore);
+
+function getAiSettingsTomlPayload(state: RoomState) {
+  const currentSession = state.ai.getCurrentSession();
+  return {
+    settings: state.aiSettings.config,
+    defaultProvider: currentSession?.modelProvider || defaultProviderFromConfig,
+    defaultModel: currentSession?.model || defaultModelFromConfig,
+  };
+}
+
+function startAiSettingsTomlAutosave() {
+  if (!runtimeConfig.configWritable) return;
+
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let latestSaveRequestId = 0;
+  let lastSnapshot = JSON.stringify(
+    getAiSettingsTomlPayload(roomStore.getState()),
+  );
+
+  roomStore.subscribe((state) => {
+    const snapshot = JSON.stringify(getAiSettingsTomlPayload(state));
+    if (snapshot === lastSnapshot) return;
+
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+    }
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      const saveRequestId = ++latestSaveRequestId;
+      void saveAiSettingsToServer(
+        runtimeConfig,
+        JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
+      )
+        .then(() => {
+          if (saveRequestId !== latestSaveRequestId) return;
+          lastSnapshot = snapshot;
+        })
+        .catch((error) => {
+          if (saveRequestId !== latestSaveRequestId) return;
+          console.warn('Failed to save AI settings to SQLRooms config', error);
+          toast.error('Failed to save AI settings', {
+            id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
+            description:
+              'Your changes are still in this session, but could not be written to the SQLRooms config file.',
+          });
+        });
+    }, AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS);
+  });
+}
+
+startAiSettingsTomlAutosave();

@@ -16,9 +16,9 @@ export type {NotebookSliceState} from './NotebookStateTypes';
 export {
   InputTypes,
   NotebookSliceConfig,
-  NotebookTab,
+  NotebookArtifactView,
   InputCell,
   NotebookCell,
-  NotebookSheet,
-  NotebookSheetMeta,
+  NotebookArtifact,
+  NotebookArtifactMeta,
 } from './cellSchemas';

@@ -55,7 +55,10 @@ describe('prepareDeckDataset', () => {
 
   it('promotes WKT points for GeoArrow point layers and caches the result', () => {
     const table = new Table({
-      geom: vectorFromArray(['POINT (7.4386 46.9511)', 'POINT (8.5417 47.3769)']),
+      geom: vectorFromArray([
+        'POINT (7.4386 46.9511)',
+        'POINT (8.5417 47.3769)',
+      ]),
       magnitude: vectorFromArray([3.2, 4.4]),
     });
 
@@ -72,7 +75,9 @@ describe('prepareDeckDataset', () => {
       JSON.stringify(promoted.table.getChild('geom')),
     );
     expect(prepared.getGeoArrowLayerData()).toBe(promoted);
-    expect(prepared.getGeoJsonBinaryData()).toBe(prepared.getGeoJsonBinaryData());
+    expect(prepared.getGeoJsonBinaryData()).toBe(
+      prepared.getGeoJsonBinaryData(),
+    );
   });
 
   it('can promote an empty WKT table for point layers', () => {

@@ -3,18 +3,31 @@ import {isMacOS} from '@sqlrooms/utils';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
-export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
-  className,
-}) => {
+/**
+ * @deprecated Prefer `SqlQuery.Actions` for newly composed single-query
+ * surfaces. This component remains for compatibility with the legacy tabbed
+ * query panel.
+ */
+export const QueryEditorPanelActions: React.FC<{
+  className?: string;
+  queryId?: string;
+}> = ({className, queryId}) => {
   const runCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.parseAndRunCurrentQuery,
   );
   const abortCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.abortCurrentQuery,
   );
+  const runQueryById = useStoreWithSqlEditor((s) => s.sqlEditor.runQueryById);
+  const abortQueryById = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.abortQueryById,
+  );
+  const selectedQueryId = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.config.selectedQueryId,
+  );
   const selectedQueryResult = useStoreWithSqlEditor((s) => {
-    const selectedId = s.sqlEditor.config.selectedQueryId;
-    return s.sqlEditor.queryResultsById[selectedId];
+    const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[resolvedQueryId];
   });
   const isMac = isMacOS();
 
@@ -31,8 +44,14 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
         <div>
           <RunButton
             state={state}
-            onRun={runCurrentQuery}
-            onCancel={abortCurrentQuery}
+            onRun={
+              queryId ? () => runQueryById(queryId) : () => runCurrentQuery()
+            }
+            onCancel={
+              queryId
+                ? () => abortQueryById(queryId)
+                : () => abortCurrentQuery()
+            }
             variant="default"
             cancelVariant="default"
             className={className}
@@ -42,7 +61,9 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
       <TooltipContent align="end">
         {isLoading
           ? 'Cancel the running query'
-          : `Run query (${isMac ? 'Cmd' : 'Ctrl'}+Enter)`}
+          : `Run ${
+              queryId && queryId !== selectedQueryId ? 'this ' : ''
+            }query (${isMac ? 'Cmd' : 'Ctrl'}+Enter)`}
       </TooltipContent>
     </Tooltip>
   );

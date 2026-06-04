@@ -140,11 +140,20 @@ if (alreadySetUp.length) {
 
 if (notFound.length) {
   console.log(`\n  ✗ Not found on npm (${notFound.length}):`);
-  console.log(`    Publish manually first, then re-run this script:\n`);
+  console.log(
+    `    Bootstrap each package manually, configure trusted publishing,` +
+      ` then verify it:\n`,
+  );
   notFound.forEach(({name, version, dir}) => {
     const isPrerelease = version.includes('-');
     const tagFlag = isPrerelease ? ' --tag next' : '';
+    console.log(`    # ${name}`);
     console.log(`    cd packages/${dir} && npm publish --access public${tagFlag}`);
+    console.log(
+      `    npm trust github ${name} --repo ${REPO} --file ${WORKFLOW_FILE} --yes`,
+    );
+    console.log(`    npm trust list ${name}`);
+    console.log();
   });
 }
 

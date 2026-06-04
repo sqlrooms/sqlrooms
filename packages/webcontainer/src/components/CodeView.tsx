@@ -75,7 +75,7 @@ export function CodeView({className}: {className?: string}) {
           selectedTabId={activeFilePath}
           onSelect={setActiveFile}
           onClose={closeFile}
-          renderTabTitle={(tab) => (
+          renderTabLabel={(tab) => (
             <span className="truncate text-sm">
               {tabs.find((t) => t.id === tab.id)?.dirty ? '* ' : ''}
               {tab.name}

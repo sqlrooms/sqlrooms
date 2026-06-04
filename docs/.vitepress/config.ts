@@ -2,34 +2,61 @@ import {defineConfig} from 'vitepress';
 import llmstxt from 'vitepress-plugin-llms';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
+const SITE_URL = 'https://sqlrooms.org';
+
+function publicUrl(relativePath?: string) {
+  const normalizedRelativePath = (relativePath || '').replace(/^\/+/, '');
+
+  return `${SITE_URL}/${normalizedRelativePath}`
+    .replace(/index\.md$/, '')
+    .replace(/\.md$/, '.html');
+}
+
 const PACKAGE_CATEGORIES = {
   'Core Packages': [
     'ai',
-    'core',
+    'ai-core',
+    'artifacts',
+    'db',
     'room-shell',
     'room-store',
     'duckdb',
+    'duckdb-core',
     'ui',
     'layout',
   ],
   'Feature Packages': [
-    'ai-rag',
     'ai-settings',
-    'canvas',
+    'blocks',
+    'cells',
+    'codemirror',
+    'color-scales',
     'cosmos',
     'data-table',
-    'discuss',
+    'db-settings',
+    'deck',
+    'documents',
     'dropzone',
     'kepler',
     'monaco-editor',
     'mosaic',
     'motherduck',
     'recharts',
+    's3-browser',
     'schema-tree',
     'sql-editor',
     'vega',
   ],
-  'Utility Packages': ['utils'],
+  Experimental: [
+    'ai-rag',
+    'canvas',
+    'crdt',
+    'discuss',
+    'notebook',
+    'pivot',
+    'webcontainer',
+  ],
+  'Utility Packages': ['duckdb-node', 'utils'],
 };
 
 // https://vitepress.dev/reference/site-config
@@ -38,24 +65,36 @@ export default defineConfig({
     plugins: [
       // @ts-ignore
       llmstxt({
-        domain: 'https://sqlrooms.org',
-        // Keep package-level API docs in llms.txt, but omit symbol-level API pages
-        // (functions/types/variables/etc.) to reduce repetitive long link lists.
+        domain: SITE_URL,
         ignoreFiles: [
-          // Keep llms.txt focused on package-level docs.
-          // Drop symbol pages and deeply nested API internals.
-          'api/**/classes/**',
-          'api/**/functions/**',
-          'api/**/interfaces/**',
-          'api/**/type-aliases/**',
-          'api/**/variables/**',
-          'api/**/enumerations/**',
-          'api/**/namespaces/**',
+          // Omit generated media and non-reference pages from all LLM outputs.
           'api/**/_media/**',
-          // Also omit non-package top-level pages from llms.txt TOC buckets.
           'join-slack.md',
           'packages.md',
         ],
+        ignoreFilesPerOutput: {
+          // Keep summary bundles focused on package-level docs, while still
+          // generating per-symbol .md pages so package references can link to
+          // useful markdown targets.
+          llmsTxt: [
+            'api/**/classes/**',
+            'api/**/functions/**',
+            'api/**/interfaces/**',
+            'api/**/type-aliases/**',
+            'api/**/variables/**',
+            'api/**/enumerations/**',
+            'api/**/namespaces/**',
+          ],
+          llmsFullTxt: [
+            'api/**/classes/**',
+            'api/**/functions/**',
+            'api/**/interfaces/**',
+            'api/**/type-aliases/**',
+            'api/**/variables/**',
+            'api/**/enumerations/**',
+            'api/**/namespaces/**',
+          ],
+        },
         customLLMsTxtTemplate: `# {title}
 
 {description}
@@ -97,6 +136,9 @@ Canonical package combos:
   description:
     'An open source React toolkit for human + agent collaborative analytics apps',
   base: '/',
+  sitemap: {
+    hostname: SITE_URL,
+  },
   head: [
     ['link', {rel: 'icon', href: '/logo.png'}],
     [
@@ -212,7 +254,6 @@ Canonical package combos:
           ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {
             return {
               text: category,
-              link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
               items: apiSidebarConfig.filter((item) =>
                 packages.includes(item.text),
               ),
@@ -227,26 +268,24 @@ Canonical package combos:
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
   },
-  transformHead({page, siteData}: any) {
-    const url = `https://sqlrooms.org/${page.relativePath || ''}`
-      .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html');
+  transformHead({pageData, siteData}: any) {
+    const url = publicUrl(pageData.relativePath);
 
-    const frontmatter = page.frontmatter || {};
+    const frontmatter = pageData.frontmatter || {};
     const isHome =
-      frontmatter.layout === 'home' || page.relativePath === 'index.md';
+      frontmatter.layout === 'home' || pageData.relativePath === 'index.md';
 
     const hero = (frontmatter.hero as any) || {};
 
     const title = isHome
       ? `${hero.name || siteData.title} – ${hero.text || ''}`.trim()
-      : page.title || siteData.title;
+      : pageData.title || siteData.title;
 
     const description = isHome
       ? hero.tagline || siteData.description
       : frontmatter.description || siteData.description;
 
-    const image = 'https://sqlrooms.org/sqlrooms-og.webp';
+    const image = `${SITE_URL}/sqlrooms-og.webp`;
 
     return [
       ['meta', {property: 'og:type', content: 'website'}],
@@ -261,14 +300,22 @@ Canonical package combos:
     ];
   },
   transformPageData(pageData) {
-    const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
-      .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html');
+    const canonicalUrl = publicUrl(pageData.relativePath);
+    const frontmatterHead = pageData.frontmatter.head;
 
-    pageData.frontmatter.head ??= [];
-    pageData.frontmatter.head.push([
-      'link',
-      {rel: 'canonical', href: canonicalUrl},
-    ]);
+    pageData.frontmatter.head = Array.isArray(frontmatterHead)
+      ? frontmatterHead
+      : [];
+
+    const hasCanonical = pageData.frontmatter.head.some(
+      (entry) => entry[0] === 'link' && entry[1]?.rel === 'canonical',
+    );
+
+    if (!hasCanonical) {
+      pageData.frontmatter.head.push([
+        'link',
+        {rel: 'canonical', href: canonicalUrl},
+      ]);
+    }
   },
 });

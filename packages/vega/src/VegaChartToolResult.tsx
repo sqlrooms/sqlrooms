@@ -1,10 +1,10 @@
-import type {ToolRendererProps} from '@sqlrooms/ai';
+import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {cn} from '@sqlrooms/ui';
 import {ReactNode} from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import {EditorMode} from './editor/types';
 import {VegaChartContainer} from './editor/VegaChartContainer';
 import {VegaChartDisplay} from './editor/VegaChartDisplay';
-import {EditorMode} from './editor/types';
 import type {
   VegaChartToolOutput,
   VegaChartToolParameters,

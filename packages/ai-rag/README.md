@@ -442,7 +442,7 @@ python -m sqlrooms_rag.cli prepare-embeddings \
   --model BAAI/bge-small-en-v1.5
 ```
 
-See the [Python package documentation](../../python/rag/README.md) for more details.
+See the [Python package documentation](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-rag) for more details.
 
 ## Database Schema
 
@@ -514,7 +514,7 @@ try {
 
 ## Examples
 
-See the [examples/ai](../../examples/ai) directory for complete examples:
+See the [examples/ai](https://github.com/sqlrooms/sqlrooms/tree/main/examples/ai) directory for complete examples:
 
 - `src/embeddings.ts` - OpenAI embedding provider implementations
 - `src/rag-example.ts` - Comprehensive usage examples

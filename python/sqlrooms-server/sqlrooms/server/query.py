@@ -4,7 +4,6 @@ from hashlib import sha256
 from functools import partial
 from typing import Optional
 from . import db_async
-from diskcache import Lock as DiskCacheLock
 import pyarrow as pa
 import time
 
@@ -46,7 +45,7 @@ def retrieve(cache, query, get):
 
     # Prevent concurrent computes for the same key (avoids DDL races)
     lock_name = f"lock:{key}"
-    with DiskCacheLock(cache, lock_name):
+    with cache.lock(lock_name):
         result = cache.get(key)
         if result is not None:
             logger.debug("Cache hit")

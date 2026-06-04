@@ -319,8 +319,8 @@ export function createPreparedDatasetStore(
           nextEntries[cacheKey] = cloneEntryWithConsumers(entry, consumers);
         }
 
-        const {[consumerId]: _removedConsumer, ...nextConsumerKeys} =
-          state.consumerKeys;
+        const nextConsumerKeys = {...state.consumerKeys};
+        delete nextConsumerKeys[consumerId];
 
         return {
           ...state,

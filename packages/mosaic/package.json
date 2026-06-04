@@ -1,32 +1,58 @@
 {
   "name": "@sqlrooms/mosaic",
-  "version": "0.29.0-rc.2",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "module": "dist/index.js",
-  "type": "module",
-  "sideEffects": false,
-  "engines": {
-    "node": ">=22"
-  },
-  "author": "SQLRooms Contributors",
-  "license": "MIT",
+  "version": "0.29.0-rc.6",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
   },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "import": "./dist/ai.js",
+      "default": "./dist/ai.js"
+    },
+    "./dist/*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "access": "public"
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
   },
   "dependencies": {
+    "@observablehq/plot": "^0.6.17",
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
@@ -36,26 +62,28 @@
     "@uwdata/mosaic-spec": "^0.21.0",
     "@uwdata/mosaic-sql": "^0.21.0",
     "@uwdata/vgplot": "^0.21.0",
+    "ai": "^6.0.159",
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^29.1.1",
+    "ts-jest": "^29.4.4"
+  },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
   },
-  "devDependencies": {
-    "@jest/globals": "^30.3.0",
-    "ts-jest": "^29.4.4"
+  "engines": {
+    "node": ">=22"
   },
-  "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc",
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+  "publishConfig": {
+    "access": "public"
   }
 }

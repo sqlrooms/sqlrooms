@@ -30,6 +30,7 @@ What happens:
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
+- `--no-ui`: Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 
@@ -44,7 +45,9 @@ Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/confi
 
 ## Config file
 
-`sqlrooms` reads AI provider and connector settings from a TOML config file:
+`sqlrooms` reads AI provider and connector settings from a TOML config file.
+AI settings changed in the CLI UI are saved back to this file automatically
+when config loading is enabled and the config file is writable:
 
 - macOS / Linux: `~/.config/sqlrooms/config.toml`
 - Windows: `%APPDATA%\sqlrooms\config.toml`
@@ -69,6 +72,15 @@ id = "anthropic"
 base_url = "https://api.anthropic.com"
 api_key_env = "ANTHROPIC_API_KEY"
 models = ["claude-4-sonnet"]
+
+[[ai.custom_models]]
+model_name = "local-qwen"
+base_url = "http://localhost:11434/v1"
+api_key = "local-key"
+
+[ai.model_parameters]
+max_steps = 12
+additional_instruction = "Prefer short answers."
 
 [[db.connectors]]
 id = "postgres-local"
@@ -169,22 +181,25 @@ pnpm --filter sqlrooms-cli-app build
 # build outputs directly to python/sqlrooms-cli/sqlrooms/web/static
 ```
 
-2. Dev the Python CLI (from repo root or package dir):
+2. Dev the Python CLI app from the repo root:
 
 ```bash
-cd python/sqlrooms-cli
-pnpm dev  # starts uv server and Vite dev UI together
+pnpm dev cli
 ```
 
-3. Hot reload UI on its own (optional):
+This starts the Python API server on `http://127.0.0.1:4173` with `--no-ui`
+and the Vite UI on `http://localhost:4174`.
+
+3. Run the Python API server on its own (optional):
 
 ```bash
 cd python/sqlrooms-cli
-pnpm dev:ui -- --host --port 4174
+pnpm dev
 ```
 
 Tips:
 
 - Use `--no-open-browser` if you don’t want the static bundle auto-opened.
+- Use `--no-ui` when pairing the Python API server with the Vite UI dev server.
 - Rebuild the UI (`pnpm --filter sqlrooms-cli-app build`) when you want the Python server to serve new static assets.
 - `/api/config` reflects runtime config (AI providers/default model, DB bridge metadata, WS URL).

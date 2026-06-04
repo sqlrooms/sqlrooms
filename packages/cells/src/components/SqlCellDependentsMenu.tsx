@@ -11,27 +11,27 @@ import type {CellsSliceConfig} from '../types';
 
 export type SqlCellDependentsMenuProps = {
   cellId: string;
-  currentSheetId: string | undefined;
+  artifactId: string | undefined;
   cellsData: CellsSliceConfig['data'];
-  sheets: CellsSliceConfig['sheets'];
-  getDownstream: (sheetId: string, cellId: string) => string[];
+  artifacts: CellsSliceConfig['artifacts'];
+  getDownstream: (artifactId: string, cellId: string) => string[];
 };
 
 export const SqlCellDependentsMenu: React.FC<SqlCellDependentsMenuProps> = ({
   cellId,
-  currentSheetId,
+  artifactId,
   cellsData,
-  sheets,
+  artifacts,
   getDownstream,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const downstreamCellIds = useMemo(() => {
-    if (!currentSheetId) return [];
-    return getDownstream(currentSheetId, cellId);
+    if (!artifactId) return [];
+    return getDownstream(artifactId, cellId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSheetId, getDownstream, cellId, cellsData, sheets]);
+  }, [artifactId, getDownstream, cellId, cellsData, artifacts]);
 
   const downstreamCells = useMemo(
     () =>

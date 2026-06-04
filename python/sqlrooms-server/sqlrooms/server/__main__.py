@@ -6,10 +6,9 @@ import signal
 import threading
 import faulthandler
 
-from diskcache import Cache
-
 from .server import server
 from . import db_async
+from .cache import QueryCache
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -71,7 +70,7 @@ def serve(
             sys.exit(1)
         _def_initialized = True
 
-    cache = Cache()
+    cache = QueryCache()
     logger.info(f"Caching in {cache.directory}")
 
     def _graceful_shutdown(signum, frame):

@@ -1,10 +1,10 @@
 import {JSONConverter} from '@deck.gl/json';
-import DeckGL from '@deck.gl/react';
+import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {useEffect, useMemo} from 'react';
-import Map from 'react-map-gl/maplibre';
+import {useEffect, useMemo, useRef} from 'react';
+import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
@@ -104,12 +104,9 @@ function filterUnavailableLayers(
   };
 }
 
-function renderDatasetStatusOverlay(
+function renderDatasetErrorOverlay(
   datasetStates: Record<string, PreparedDeckDatasetState>,
 ) {
-  const loadingDatasets = Object.entries(datasetStates)
-    .filter(([, state]) => state.status === 'loading')
-    .map(([datasetId]) => datasetId);
   const failedDatasets = Object.entries(datasetStates).filter(
     (
       entry,
@@ -119,17 +116,12 @@ function renderDatasetStatusOverlay(
     ] => entry[1].status === 'error',
   );
 
-  if (!loadingDatasets.length && !failedDatasets.length) {
+  if (!failedDatasets.length) {
     return null;
   }
 
   return (
     <div className="pointer-events-none absolute inset-x-4 top-4 z-10 space-y-2">
-      {loadingDatasets.length > 0 ? (
-        <div className="rounded-md border border-black/10 bg-white/90 px-3 py-2 text-sm text-slate-700 shadow-sm">
-          Loading datasets: {loadingDatasets.join(', ')}
-        </div>
-      ) : null}
       {failedDatasets.map(([datasetId, state]) => (
         <div
           key={datasetId}
@@ -142,15 +134,28 @@ function renderDatasetStatusOverlay(
   );
 }
 
+function DeckOverlayControl({
+  interleaved,
+  ...deckProps
+}: {interleaved: boolean} & Record<string, unknown>) {
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({interleaved}),
+  );
+  overlay.setProps(deckProps);
+  return null;
+}
+
 export function DeckJsonMap({
   spec,
   datasets,
   mapStyle,
+  interleaved = false,
   deckProps,
   mapProps,
   showLegends = true,
   className,
   children,
+  onDatasetStatesChange,
 }: DeckJsonMapProps) {
   const normalizedDatasets = useMemo(
     () => normalizeDatasets(datasets),
@@ -161,6 +166,7 @@ export function DeckJsonMap({
     [normalizedDatasets],
   );
   const datasetStates = usePreparedDatasetStates(normalizedDatasets);
+  const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
 
   const {spec: parsedSpec, error: specError} = useMemo(
     () => parseSpec(spec),
@@ -211,6 +217,14 @@ export function DeckJsonMap({
     }
   }, [convertedDeckPropsResult.error]);
 
+  useEffect(() => {
+    onDatasetStatesChangeRef.current = onDatasetStatesChange;
+  }, [onDatasetStatesChange]);
+
+  useEffect(() => {
+    onDatasetStatesChangeRef.current?.(datasetStates);
+  }, [datasetStates]);
+
   const fallbackDeckProps = useMemo(
     () => extractFallbackDeckProps(availableSpec),
     [availableSpec],
@@ -221,15 +235,16 @@ export function DeckJsonMap({
   const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
   const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
   const hasRenderingError = Boolean(convertedDeckPropsResult.error);
+  const mergedLayers = hasRenderingError
+    ? []
+    : (deckProps?.layers ??
+      (convertedDeckProps.layers as unknown[] | undefined) ??
+      []);
 
   const mergedDeckProps = {
     ...convertedDeckProps,
     ...extraDeckProps,
-    layers: hasRenderingError
-      ? []
-      : (deckProps?.layers ??
-        (convertedDeckProps.layers as unknown[] | undefined) ??
-        []),
+    layers: mergedLayers,
   };
 
   const {resolvedTheme} = useTheme();
@@ -261,11 +276,15 @@ export function DeckJsonMap({
         </div>
       ) : null}
 
-      <DeckGL {...(mergedDeckProps as object)}>
-        <Map {...(mergedMapProps as object)}>{children}</Map>
-      </DeckGL>
+      <Map
+        {...(mergedMapProps as object)}
+        style={{width: '100%', height: '100%', ...mapProps?.style}}
+      >
+        <DeckOverlayControl interleaved={interleaved} {...mergedDeckProps} />
+        {children}
+      </Map>
 
-      {renderDatasetStatusOverlay(datasetStates)}
+      {renderDatasetErrorOverlay(datasetStates)}
       {!hasRenderingError && showLegends ? (
         <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
           <ColorScaleLegend legends={legends} />

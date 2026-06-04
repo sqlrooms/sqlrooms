@@ -3,62 +3,96 @@ import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
+import {
+  AIRPORTS_TABLE_NAME,
+  BUILDINGS_PARQUET_URL,
+  BUILDINGS_TABLE_NAME,
+} from './dataSources';
+import {z} from 'zod';
+
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    // Sql editor slice
     ...createSqlEditorSlice()(set, get, store),
-
-    // Room shell slice
     ...createRoomShellSlice({
       connector: createWasmDuckDbConnector({
-        initializationQuery: 'LOAD spatial',
+        initializationQuery: 'LOAD httpfs; LOAD spatial;',
       }),
       config: {
         ...createDefaultDiscussConfig(),
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: 'data',
-            second: 'main',
-            splitPercentage: 30,
-          },
-        },
         dataSources: [
+          {
+            type: 'url',
+            tableName: BUILDINGS_TABLE_NAME,
+            url: BUILDINGS_PARQUET_URL,
+            loadOptions: {
+              method: 'read_parquet',
+              select: [
+                'name',
+                'class',
+                'height',
+                'ST_AsWKB(geometry) AS geometry',
+              ],
+            },
+          },
           {
             type: 'url',
             // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
             url: 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_10m_airports.geojson',
-            tableName: 'airports',
+            tableName: AIRPORTS_TABLE_NAME,
             loadOptions: {
               method: 'st_read',
             },
           },
         ],
       },
-      room: {
+      layout: {
+        config: {
+          id: 'root',
+          type: 'split',
+          direction: 'row',
+          children: [
+            {
+              type: 'tabs',
+              id: RoomPanelTypes.enum.left,
+              children: [RoomPanelTypes.enum.data],
+              defaultSize: '30%',
+              maxSize: '50%',
+              minSize: '300px',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsed: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
+            },
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum.main,
+              panel: RoomPanelTypes.enum.main,
+            },
+          ],
+        } satisfies LayoutConfig,
         panels: {
-          data: {
-            title: 'Data sources',
+          [RoomPanelTypes.enum.data]: {
+            title: 'Data',
             icon: DatabaseIcon,
             component: DataPanel,
-            placement: 'sidebar',
           },
-          main: {
-            title: 'Main view',
+          [RoomPanelTypes.enum.main]: {
+            title: 'Map',
             icon: () => null,
             component: MainView,
-            placement: 'main',
           },
         },
       },

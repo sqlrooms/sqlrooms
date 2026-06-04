@@ -96,7 +96,7 @@ export function createMosaicTableFromArrowTable(
   return attachTableInterop(decodeIPC(ipcBytes) as unknown as MosaicTable, {
     ipcBytes,
     decodeArrowTable: (bytes) => arrowTableRef?.deref() ?? tableFromIPC(bytes),
-  });
+  }) as unknown as MosaicTable;
 }
 
 /**

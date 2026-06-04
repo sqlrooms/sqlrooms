@@ -93,8 +93,8 @@ function MyComponent() {
 - **Layout**: Card, Resizable, Tabs
 - **Forms**: Button, Checkbox, Input, Select, Slider, Switch, Textarea
 - **Feedback**: Alert, Progress, Spinner, Toast
-- **Navigation**: Accordion, Breadcrumb, Dropdown Menu
-- **Overlay**: Dialog, Popover, Tooltip
+- **Navigation**: Accordion, Breadcrumb, Dropdown Menu, TabStrip
+- **Overlay**: Dialog, ModifierScrollOverlay, Popover, Tooltip
 - **Data Display**: Badge, Table
 - **Utility**: Error Boundary, Theme Switch
 
@@ -104,5 +104,22 @@ function MyComponent() {
 - **Form Handling**: Integrated with React Hook Form for easy form management
 - **Custom Styling**: Extend components with custom styles using Tailwind CSS
 - **Animation**: Smooth transitions and animations for interactive elements
+
+## TabStrip
+
+`TabStrip` supports a `fontSize` prop for sizing tab labels, inline rename
+inputs, search dropdown content, and built-in subcomponents consistently:
+
+```tsx
+<TabStrip
+  tabs={tabs}
+  openTabs={openTabs}
+  selectedTabId={selectedTabId}
+  fontSize="12px"
+/>
+```
+
+Use `renderSearchItemLabel` when the search dropdown should show custom row
+content, such as a status spinner next to a tab name.
 
 For more information, visit the SQLRooms documentation.

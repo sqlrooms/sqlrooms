@@ -4,8 +4,8 @@
   "globalEnv": ["NODE_ENV"],
   "tasks": {
     "typedoc": {
-      "persistent": false,
-      "outputs": ["../../docs/api/**"]
+      "cache": false,
+      "persistent": false
     },
     "typedoc:watch": {
       "cache": false,

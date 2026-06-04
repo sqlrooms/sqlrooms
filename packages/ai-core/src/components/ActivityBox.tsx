@@ -80,7 +80,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       ro.disconnect();
       mo.disconnect();
     };
-  }, [measure, updateScrollFlags, visible]);
+  }, [measure, updateScrollFlags, visible, isRunning]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -88,7 +88,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
     const handler = () => updateScrollFlags();
     el.addEventListener('scroll', handler, {passive: true});
     return () => el.removeEventListener('scroll', handler);
-  }, [updateScrollFlags, visible]);
+  }, [updateScrollFlags, visible, isRunning]);
 
   // Auto-scroll to bottom when running and content changes
   useEffect(() => {

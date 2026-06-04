@@ -127,6 +127,75 @@ const spec = createDeckJsonSpecFromDatasets({
 });
 ```
 
+## Mosaic Dashboard Renderer
+
+`@sqlrooms/deck` can contribute a `deck-json-map` panel renderer to
+`@sqlrooms/mosaic` dashboards without making the Mosaic package depend on
+deck.gl or MapLibre. Pass the renderer when creating the Mosaic dashboard
+slice.
+
+```tsx
+import {
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  deckMapDashboardPanelRenderer,
+} from '@sqlrooms/deck';
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardSlice,
+  MosaicDashboard,
+} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice({
+  panelRenderers: createDefaultMosaicDashboardPanelRenderers({
+    [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
+  }),
+});
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="geo" />;
+}
+
+const mapPanel = createDeckMapDashboardPanelConfig({
+  title: 'Earthquakes map',
+  spec: {
+    initialViewState: {longitude: -119.5, latitude: 37, zoom: 4.5},
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        id: 'earthquakes',
+        _sqlroomsBinding: {dataset: 'earthquakes'},
+      },
+    ],
+  },
+  datasets: {
+    earthquakes: {
+      source: {
+        sqlQuery:
+          'SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM earthquakes',
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+  fitToData: {
+    dataset: 'earthquakes',
+    longitudeColumn: 'Longitude',
+    latitudeColumn: 'Latitude',
+    padding: 40,
+    maxZoom: 12,
+  },
+});
+```
+
+The dashboard renderer uses `useMosaicClient`, receives Arrow tables directly,
+and passes them to `DeckJsonMap` as Arrow-backed datasets. Dataset sources fall
+back from dataset-level source, to panel source, to the dashboard selected
+table. When `fitToData` is provided, the renderer asks DuckDB Spatial for the
+dataset extent using the declared longitude/latitude columns and fits the
+initial map view once, instead of inferring bounds from the loaded Arrow
+payload in React.
+
 ## Core Concepts
 
 ### `DeckJsonMap`
@@ -135,12 +204,22 @@ const spec = createDeckJsonSpecFromDatasets({
 
 - `spec`: a JSON-like deck.gl spec object or JSON string
 - `datasets`: a dataset registry keyed by dataset id
+- `interleaved`: when true, deck layers insert into MapLibre's layer stack (requires WebGL2). Default: `false`
 - `deckProps`: runtime-only deck props such as `getTooltip`, `onHover`, `onClick`
 - `mapProps`: runtime-only MapLibre props
 - `showLegends`: whether SQLRooms-generated color legends should render
 
 `spec` stays serializable; callbacks and runtime behavior belong in `deckProps`
 or `mapProps`.
+
+By default, MapLibre is the root and deck.gl renders in a separate overlay
+canvas via `MapboxOverlay`. MapLibre controls and attribution remain accessible.
+Set `interleaved` to `true` to insert deck layers into MapLibre's layer stack
+(e.g. render points under map labels). This requires WebGL2 (MapLibre GL v3+).
+
+```tsx
+<DeckJsonMap spec={spec} datasets={datasets} interleaved />
+```
 
 ### Dataset Registry
 
@@ -189,6 +268,17 @@ datasets={{
 For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
 data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
 that dataset as loading until a table is provided.
+
+Use `onDatasetStatesChange` when the surrounding UI needs dataset loading,
+ready, or error state:
+
+```tsx
+<DeckJsonMap
+  spec={spec}
+  datasets={datasets}
+  onDatasetStatesChange={(states) => setDatasetStates(states)}
+/>
+```
 
 ## SQLRooms Layer Bindings
 
@@ -334,9 +424,10 @@ The current curated layer set is:
 - `GeoJsonLayer`
 
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
-back to decoding and GeoJSON-binary preparation, with point promotion available
+back to decoding and GeoJSON-binary preparation, with promotion available
 for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
-`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`.
+`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus polygon promotion for
+`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`.
 
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers).

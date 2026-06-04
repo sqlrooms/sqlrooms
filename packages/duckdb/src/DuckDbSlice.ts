@@ -10,13 +10,9 @@ import {
   makeQualifiedTableName,
   QualifiedTableName,
   QueryHandle,
+  SchemaWithTables,
   separateLastStatement,
 } from '@sqlrooms/duckdb-core';
-import {
-  loadTableSchemas,
-  LoadTableSchemasFilter,
-  LoadTableSchemasFilterFunction,
-} from './loadTableSchemas';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -31,21 +27,71 @@ import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
+import {
+  loadSchemaCatalog,
+  LoadSchemaCatalogFilterFunction,
+  loadTableSchemas,
+  LoadTableSchemasFilter,
+  LoadTableSchemasFilterFunction,
+} from './loadTableSchemas';
 
 const DUCKDB_COMMAND_OWNER = '@sqlrooms/duckdb';
-const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms_';
+const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
+
+/** DuckDB's temporary database catalog; never show in the default data source tree. */
+const DUCKDB_TEMP_DATABASE = 'temp';
 
 /**
- * Default filter to exclude internal SQLRooms tables, schemas, and databases
+ * Default predicate: which tables/schemas/databases appear in the data source panel.
+ * Hides `__sqlrooms_*` names and DuckDB's `temp` database.
  */
-export const createDefaultLoadTableSchemasFilter = (
+export const defaultLoadTableSchemasFilter: LoadTableSchemasFilterFunction = (
   table: QualifiedTableName,
 ): boolean => {
-  return (
-    !table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
-    !table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
-  );
+  if (
+    table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
+    table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
+    table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
+  ) {
+    return false;
+  }
+  if (table.database === DUCKDB_TEMP_DATABASE) {
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Factory returning {@link defaultLoadTableSchemasFilter}.
+ * Hides `__sqlrooms_*` names and DuckDB's `temp` database.
+ * Apps can pass {@link CreateDuckDbSliceProps.loadTableSchemasFilter} to add more rules.
+ */
+export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
+  return defaultLoadTableSchemasFilter;
+}
+
+/**
+ * Default catalog visibility predicate for the data source panel.
+ * Hides SQLRooms internal objects and DuckDB's temporary database catalog.
+ */
+export const defaultLoadSchemaCatalogFilter: LoadSchemaCatalogFilterFunction = (
+  entry,
+): boolean => {
+  switch (entry.type) {
+    case 'database':
+      return (
+        !entry.database.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+        entry.database !== DUCKDB_TEMP_DATABASE
+      );
+    case 'schema':
+      return (
+        !entry.database.startsWith(INTERNAL_SQLROOMS_PREFIX) &&
+        entry.database !== DUCKDB_TEMP_DATABASE &&
+        !entry.schema.startsWith(INTERNAL_SQLROOMS_PREFIX)
+      );
+    case 'table':
+      return defaultLoadTableSchemasFilter(entry.table);
+  }
 };
 
 const DropTableCommandInput = z.object({
@@ -302,12 +348,16 @@ export type DuckDbSliceState = {
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
-   * Optional filter function to control which tables are included when loading schemas.
-   * By default, filters out tables/schemas/databases starting with '__sqlrooms_'.
-   * @param table - The qualified table name to evaluate
-   * @returns true to include the table, false to exclude it
+   * Optional table visibility filter.
+   * Defaults to {@link createDefaultLoadTableSchemasFilter}.
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
+  /**
+   * Optional catalog visibility filter for the data source panel.
+   * Defaults to {@link defaultLoadSchemaCatalogFilter}. When omitted, custom
+   * table filters still apply to table entries while schemas/databases use the default.
+   */
+  loadSchemaCatalogFilter?: LoadSchemaCatalogFilterFunction | null;
 };
 
 /**
@@ -315,10 +365,23 @@ export type CreateDuckDbSliceProps = {
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
-  loadTableSchemasFilter = createDefaultLoadTableSchemasFilter,
+  loadTableSchemasFilter = defaultLoadTableSchemasFilter,
+  loadSchemaCatalogFilter,
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   let refreshPromise: Promise<DataTable[]> | null = null;
   let pendingSchemaRefresh = false;
+  const effectiveSchemaCatalogFilter =
+    loadSchemaCatalogFilter ??
+    (loadTableSchemasFilter === null
+      ? null
+      : (((entry) => {
+          if (entry.type === 'table') {
+            return loadTableSchemasFilter
+              ? loadTableSchemasFilter(entry.table)
+              : true;
+          }
+          return defaultLoadSchemaCatalogFilter(entry);
+        }) satisfies LoadSchemaCatalogFilterFunction));
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
       /**
@@ -654,7 +717,7 @@ export function createDuckDbSlice({
             );
             refreshPromise = (async () => {
               try {
-                let newTables: DataTable[];
+                let schemasWithTables: SchemaWithTables[] = [];
                 do {
                   pendingSchemaRefresh = false;
                   const connector = await get().db.getConnector();
@@ -671,13 +734,24 @@ export function createDuckDbSlice({
                         ?.get(0);
                     }),
                   );
-                  newTables = await get().db.loadTableSchemas();
+                  schemasWithTables = await loadSchemaCatalog(connector, {
+                    filterFunction: effectiveSchemaCatalogFilter,
+                  });
                 } while (pendingSchemaRefresh);
-                if (!deepEquals(newTables, get().db.tables)) {
+
+                const newTables = schemasWithTables.flatMap((s) => s.tables);
+                const currentTables = get().db.tables;
+                const currentSchemaTrees = get().db.schemaTrees;
+                const newSchemaTrees = createDbSchemaTrees(schemasWithTables);
+
+                if (
+                  !deepEquals(newTables, currentTables) ||
+                  !deepEquals(newSchemaTrees, currentSchemaTrees)
+                ) {
                   set((state) =>
                     produce(state, (draft) => {
                       draft.db.tables = newTables;
-                      draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                      draft.db.schemaTrees = newSchemaTrees;
                     }),
                   );
                 }

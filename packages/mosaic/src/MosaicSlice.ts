@@ -19,7 +19,6 @@ import {
   Connector,
   Coordinator,
   coordinator,
-  decodeIPC,
   makeClient,
   Selection,
   wasmConnector,
@@ -36,6 +35,13 @@ import {
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
+export type MosaicPreAggregateOptions = {
+  /** Database schema/namespace for Mosaic pre-aggregate tables. */
+  schema?: string;
+  /** Enable or disable Mosaic's pre-aggregation optimization. */
+  enabled?: boolean;
+};
+
 // Client configuration options
 export type MosaicClientOptions = {
   /** Unique identifier for this client */
@@ -48,6 +54,8 @@ export type MosaicClientOptions = {
   query: (filter: unknown) => ReturnType<typeof Query.from>;
   /** Callback when query results are received */
   queryResult?: (result: ArrowTable) => void;
+  /** Callback when query execution fails */
+  queryError?: (error: Error) => void;
 };
 
 // Tracked client info
@@ -57,16 +65,29 @@ export type TrackedClient = {
   createdAt: number;
   isLoading: boolean;
   data: unknown | null;
+  error?: Error;
   selection?: Selection; // Track for change detection
   queryResultCallback?: (result: ArrowTable) => void; // External callback
 };
 
+export type MosaicIdleConnection = {status: 'idle'};
+export type MosaicLoadingConnection = {status: 'loading'};
+export type MosaicReadyConnection = {
+  status: 'ready';
+  connector?: Connector;
+  coordinator: Coordinator;
+};
+export type MosaicErrorConnection = {status: 'error'; error: unknown};
+
+export type MosaicConnection =
+  | MosaicIdleConnection
+  | MosaicLoadingConnection
+  | MosaicReadyConnection
+  | MosaicErrorConnection;
+
 export type MosaicSliceState = {
   mosaic: SliceFunctions & {
-    connection:
-      | {status: 'idle' | 'loading'}
-      | {status: 'ready'; connector?: Connector; coordinator: Coordinator}
-      | {status: 'error'; error: unknown};
+    connection: MosaicConnection;
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
     clients: Record<string, TrackedClient>;
@@ -85,6 +106,7 @@ export type MosaicSliceState = {
       options: MosaicClientOptions & {
         id: string;
         onQueryResult?: (result: ArrowTable) => void;
+        onQueryError?: (error: Error) => void;
       },
     ) => void;
     /** Disconnect and remove a client by id */
@@ -97,14 +119,13 @@ export type MosaicSliceState = {
 export function createDefaultMosaicConfig(
   props?: Partial<MosaicSliceConfig>,
 ): MosaicSliceConfig {
-  return {
-    ...props,
-  } as MosaicSliceConfig;
+  return {...props} as MosaicSliceConfig;
 }
 
 export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
+  preagg?: MosaicPreAggregateOptions;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
@@ -129,16 +150,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         try {
           if (props.coordinator) {
             resolvedCoordinator = props.coordinator;
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
           } else {
             const dbConnector = await get().db.getConnector();
             resolvedCoordinator = coordinator();
             mosaicConnector = isWasmDuckDbConnector(dbConnector)
               ? await wasmConnector({
-                  // @ts-expect-error - We install a different version of duckdb-wasm
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - We might be using a different version of duckdb-wasm than mosaic expects
                   duckDb: dbConnector.getDb(),
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - same version mismatch
                   connection: dbConnector.getConnection(),
                 })
               : createDuckDbMosaicConnector(dbConnector);
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
         } catch (error) {
@@ -162,6 +188,14 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
 
       async destroy() {
         get().mosaic.destroyAllClients();
+      },
+
+      setConfig(config: MosaicSliceConfig) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.mosaic.config = config;
+          }),
+        );
       },
 
       getSelection(
@@ -209,11 +243,37 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               if (tracked) {
                 tracked.data = data;
                 tracked.isLoading = false;
+                tracked.error = undefined;
               }
             }),
           );
           // Call external callback if provided
           options.queryResult?.(toArrowClientResult(data));
+        };
+        const wrappedQueryPending = () => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[id];
+              if (tracked) {
+                tracked.isLoading = true;
+                tracked.error = undefined;
+              }
+            }),
+          );
+        };
+        const wrappedQueryError = (error: Error) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[id];
+              if (tracked) {
+                tracked.isLoading = false;
+                tracked.error = error;
+              }
+            }),
+          );
+          // Disable client to prevent further queries
+          client.enabled = false;
+          options.queryError?.(error);
         };
 
         const client = makeClient({
@@ -221,6 +281,8 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           selection,
           query: options.query,
           queryResult: wrappedQueryResult,
+          queryPending: wrappedQueryPending,
+          queryError: wrappedQueryError,
         });
 
         set((state) =>
@@ -231,6 +293,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               createdAt: Date.now(),
               isLoading: true,
               data: null,
+              error: undefined,
               selection,
               queryResultCallback: options.queryResult
                 ? (result: unknown) =>
@@ -247,6 +310,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         options: MosaicClientOptions & {
           id: string;
           onQueryResult?: (result: ArrowTable) => void;
+          onQueryError?: (error: Error) => void;
         },
       ) {
         const {connection, clients} = get().mosaic;
@@ -284,6 +348,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               if (tracked) {
                 tracked.data = data;
                 tracked.isLoading = false;
+                tracked.error = undefined;
               }
             }),
           );
@@ -293,12 +358,40 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
           // Also call original queryResult if provided
           options.queryResult?.(arrowData);
         };
+        const wrappedQueryPending = () => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[options.id];
+              if (tracked) {
+                tracked.isLoading = true;
+                tracked.error = undefined;
+              }
+            }),
+          );
+        };
+        const wrappedQueryError = (error: Error) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tracked = draft.mosaic.clients[options.id];
+              if (tracked) {
+                tracked.isLoading = false;
+                tracked.error = error;
+              }
+            }),
+          );
+          // Disable client to prevent further queries
+          client.enabled = false;
+          options.onQueryError?.(error);
+          options.queryError?.(error);
+        };
 
         const client = makeClient({
           coordinator: connection.coordinator,
           selection,
           query: options.query,
           queryResult: wrappedQueryResult,
+          queryPending: wrappedQueryPending,
+          queryError: wrappedQueryError,
         });
 
         set((state) =>
@@ -309,6 +402,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               createdAt: Date.now(),
               isLoading: true,
               data: null,
+              error: undefined,
               selection,
               queryResultCallback: options.onQueryResult
                 ? (result: unknown) =>
@@ -320,13 +414,11 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyClient(id: string) {
-        const {connection, clients} = get().mosaic;
+        const {clients} = get().mosaic;
         const tracked = clients[id];
         if (!tracked) return;
 
-        if (connection.status === 'ready') {
-          connection.coordinator.disconnect(tracked.client);
-        }
+        tracked.client.destroy();
 
         set((state) =>
           produce(state, (draft) => {
@@ -336,13 +428,10 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
 
       destroyAllClients() {
-        const {connection, clients} = get().mosaic;
-
-        if (connection.status === 'ready') {
-          Object.values(clients).forEach((tracked) => {
-            connection.coordinator.disconnect(tracked.client);
-          });
-        }
+        const {clients} = get().mosaic;
+        Object.values(clients).forEach((tracked) => {
+          tracked.client.destroy();
+        });
 
         set((state) =>
           produce(state, (draft) => {
@@ -352,6 +441,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
     },
   }));
+}
+
+function applyMosaicPreAggregateOptions(
+  mosaicCoordinator: Coordinator,
+  options?: MosaicPreAggregateOptions,
+) {
+  if (!options) {
+    return;
+  }
+  if (options.schema !== undefined) {
+    mosaicCoordinator.preaggregator.schema = options.schema;
+  }
+  if (options.enabled !== undefined) {
+    mosaicCoordinator.preaggregator.enabled = options.enabled;
+  }
 }
 
 export type DuckDbSliceStateWithMosaic = DuckDbSliceState & MosaicSliceState;
