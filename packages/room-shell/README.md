@@ -156,6 +156,15 @@ createRoomStore(
 );
 ```
 
+For host-owned storage such as DuckDB-backed project files, prefer
+`createRoomStorePersistence` alongside these schema helpers. It is the default
+room-store integration for explicit hydration, dirty tracking, save scheduling,
+final flush, and save status without repeating Zustand subscription and
+saved-snapshot wiring in every app.
+
+Use `createPersistenceController` directly only for lower-level integrations that
+need the same save policy outside a Zustand room store.
+
 ## Related packages
 
 - `@sqlrooms/sql-editor`
