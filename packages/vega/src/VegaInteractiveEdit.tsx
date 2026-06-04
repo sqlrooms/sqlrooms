@@ -1,4 +1,10 @@
-import {Button, cn, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {
+  Button,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {GripVertical, Trash2, Type} from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
@@ -52,7 +58,9 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
   const {embed} = useVegaChartContext();
   const [activeMode, setActiveMode] = useState<EditMode>(null);
   const specRef = useRef(spec);
-  specRef.current = spec;
+  useEffect(() => {
+    specRef.current = spec;
+  }, [spec]);
 
   const toggleMode = useCallback((mode: EditMode) => {
     setActiveMode((prev) => (prev === mode ? null : mode));
@@ -98,7 +106,8 @@ function getChartContainer(embed: EmbedRef): HTMLElement | null {
 function getTextElement(el: Element | null): SVGTextElement | null {
   if (!el) return null;
   if (el.tagName === 'text') return el as SVGTextElement;
-  if (el.tagName === 'tspan') return el.closest('text') as SVGTextElement | null;
+  if (el.tagName === 'tspan')
+    return el.closest('text') as SVGTextElement | null;
   return null;
 }
 
@@ -216,8 +225,9 @@ const EditTitleMode: React.FC<ModeProps> = ({
     if (!container) return;
 
     // Find the nearest positioned ancestor for proper absolute positioning
-    const positionedParent = container.closest('.relative') as HTMLElement | null;
-    setPortalContainer(positionedParent ?? container);
+    const positionedParent = container.closest(
+      '.relative',
+    ) as HTMLElement | null;
 
     const handleDblClick = (e: MouseEvent) => {
       const target = e.target as Element;
@@ -233,6 +243,7 @@ const EditTitleMode: React.FC<ModeProps> = ({
       const parentEl = positionedParent ?? container;
       const parentRect = parentEl.getBoundingClientRect();
 
+      setPortalContainer(parentEl);
       setInputValue(textEl.textContent ?? '');
       setEditingPart(getTitlePart(textEl));
       setInputPosition({
@@ -272,10 +283,7 @@ const EditTitleMode: React.FC<ModeProps> = ({
 
     if (editingPart === 'subtitle') {
       // Editing the subtitle
-      if (
-        typeof currentSpec.title === 'object' &&
-        currentSpec.title !== null
-      ) {
+      if (typeof currentSpec.title === 'object' && currentSpec.title !== null) {
         newSpec = {
           ...currentSpec,
           title: {
@@ -288,7 +296,8 @@ const EditTitleMode: React.FC<ModeProps> = ({
         newSpec = {
           ...currentSpec,
           title: {
-            text: typeof currentSpec.title === 'string' ? currentSpec.title : '',
+            text:
+              typeof currentSpec.title === 'string' ? currentSpec.title : '',
             subtitle: inputValue,
           },
         } as VisualizationSpec;
@@ -346,7 +355,9 @@ const EditTitleMode: React.FC<ModeProps> = ({
         </TooltipContent>
       </Tooltip>
 
-      {editing && inputPosition && portalContainer &&
+      {editing &&
+        inputPosition &&
+        portalContainer &&
         createPortal(
           <div
             className="absolute z-50"
@@ -547,8 +558,15 @@ const DragLabelsMode: React.FC<ModeProps> = ({
     const handleMouseUp = (e: MouseEvent) => {
       if (!draggingRef.current) return;
 
-      const {element, startX, startY, origTransformX, origTransformY, ariaKey, layerIndex} =
-        draggingRef.current;
+      const {
+        element,
+        startX,
+        startY,
+        origTransformX,
+        origTransformY,
+        ariaKey,
+        layerIndex,
+      } = draggingRef.current;
       element.style.cursor = '';
 
       const deltaX = e.clientX - startX;
@@ -807,7 +825,9 @@ function removeLabelFromSpec(
         filter: buildDeleteFilter(datumFields, labelText, textField),
       });
     } else if (datumFields.length > 0) {
-      existingTransform.push({filter: buildDeleteFilter(datumFields, labelText)});
+      existingTransform.push({
+        filter: buildDeleteFilter(datumFields, labelText),
+      });
     }
     onSpecChange({...s, transform: existingTransform} as VisualizationSpec);
   }
@@ -977,7 +997,9 @@ function applyLabelOffsetToSpec(
   const usermeta = {
     ...((s.usermeta as Record<string, unknown> | undefined) ?? {}),
   };
-  const existing: LabelOffsetEntry[] = Array.isArray(usermeta[LABEL_OFFSETS_KEY])
+  const existing: LabelOffsetEntry[] = Array.isArray(
+    usermeta[LABEL_OFFSETS_KEY],
+  )
     ? [...(usermeta[LABEL_OFFSETS_KEY] as LabelOffsetEntry[])]
     : [];
 
