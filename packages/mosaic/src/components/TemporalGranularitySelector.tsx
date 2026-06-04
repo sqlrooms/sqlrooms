@@ -1,13 +1,7 @@
-import {type FC, memo} from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@sqlrooms/ui';
+import {type FC, memo, useCallback} from 'react';
 import {TEMPORAL_COLUMN_TYPES} from '../column-types-utils';
 import type {TemporalInterval} from '../schemas';
+import {Combobox} from './Combobox';
 
 interface TemporalGranularitySelectorProps {
   value?: TemporalInterval;
@@ -37,39 +31,53 @@ function isTemporalField(fieldType?: string): boolean {
 
 export const TemporalGranularitySelector: FC<TemporalGranularitySelectorProps> =
   memo(({value, onChange, xFieldType}) => {
+    // Custom onChange wrapper to handle undefined values
+    const handleChange = useCallback(
+      (newValue: string) => {
+        if (newValue === NONE) {
+          onChange(undefined);
+        } else {
+          onChange(newValue as TemporalInterval);
+        }
+      },
+      [onChange],
+    );
+
     // Only render if X field is temporal
     if (!isTemporalField(xFieldType)) {
       return null;
     }
 
-    const handleValueChange = (newValue: TemporalInterval | typeof NONE) => {
-      if (newValue === NONE) {
-        onChange(undefined);
-      } else {
-        onChange(newValue);
-      }
-    };
+    const selectedInterval = TEMPORAL_INTERVALS.find(
+      (interval) => interval.value === value,
+    );
+    const displayValue = selectedInterval?.label ?? 'None';
+    const currentValue = value || NONE;
 
     return (
-      <Select value={value || NONE} onValueChange={handleValueChange}>
-        <SelectTrigger className="h-8 text-xs shadow-none">
-          <SelectValue placeholder="None" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE} className="text-xs">
-            None
-          </SelectItem>
+      <Combobox
+        value={currentValue}
+        onChange={handleChange}
+        currentValue={currentValue}
+      >
+        <Combobox.Trigger className="shadow-none">
+          <span>{displayValue}</span>
+        </Combobox.Trigger>
+        <Combobox.Content>
+          <Combobox.Item value={NONE}>
+            <span className="text-xs">None</span>
+          </Combobox.Item>
           {TEMPORAL_INTERVALS.map((interval) => (
-            <SelectItem
+            <Combobox.Item
               key={interval.value}
               value={interval.value}
-              className="text-xs"
+              isSelected={value === interval.value}
             >
-              {interval.label}
-            </SelectItem>
+              <span className="text-xs">{interval.label}</span>
+            </Combobox.Item>
           ))}
-        </SelectContent>
-      </Select>
+        </Combobox.Content>
+      </Combobox>
     );
   });
 
