@@ -5,7 +5,9 @@ import {
   type ChartPanelRendererProps,
   useStoreWithMosaicDashboard,
 } from '../../dashboard/MosaicDashboardSlice';
-import {MosaicDashboardPanelResetButton} from '../../dashboard/panel/MosaicDashboardPanelResetButton';
+import {usePanelClients} from '../../dashboard/usePanelClients';
+import {usePanelResetFilters} from '../../dashboard/hooks/usePanelResetFilters';
+import {ResetFiltersButton} from '../../dashboard/components/ResetFiltersButton';
 
 export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
   dashboardId,
@@ -15,6 +17,11 @@ export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
+  const panelClients = usePanelClients(dashboardId, panel.id);
+  const {hasActiveFilters, reset} = usePanelResetFilters({
+    panelClients,
+    selectionName,
+  });
 
   const isSettingsOpen = Boolean(panel.config.settingsOpen);
 
@@ -26,10 +33,10 @@ export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
 
   return (
     <>
-      <MosaicDashboardPanelResetButton
-        dashboardId={dashboardId}
-        panelId={panel.id}
-        selectionName={selectionName}
+      <ResetFiltersButton
+        disabled={!hasActiveFilters}
+        onClick={reset}
+        tooltip="Reset panel filters"
       />
       <Tooltip>
         <TooltipTrigger asChild>

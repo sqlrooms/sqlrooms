@@ -34,10 +34,9 @@ export const MosaicDashboardToolbar: React.FC = () => {
 
   return (
     <div className="flex items-center justify-between border-b px-5 py-2">
+      <div className="flex items-center gap-2"></div>
       <div className="flex items-center gap-2">
-        <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
-      </div>
-      <div className="flex items-center gap-2">
+        <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
         {selectedTable && (
           <DataTableSelector
             className="w-48"
@@ -46,7 +45,7 @@ export const MosaicDashboardToolbar: React.FC = () => {
             value={selectedTable}
           />
         )}
-        <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
+        <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
       </div>
     </div>
   );

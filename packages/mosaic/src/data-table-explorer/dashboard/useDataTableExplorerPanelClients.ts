@@ -32,7 +32,7 @@ export function useDataTableExplorerPanelClients(
     explorer.columns.forEach((col) => {
       const summary = col.summary;
       if (summary.kind === 'histogram' && summary.interactor) {
-        clients.push(summary.interactor);
+        clients.push(summary.interactor as unknown as MosaicClient);
       } else if (summary.kind === 'category' && summary.client) {
         clients.push(summary.client);
       }
