@@ -29,7 +29,10 @@ import React, {
 } from 'react';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
-import type {ArtifactMetadata as ArtifactMetadataType} from './ArtifactsSliceConfig';
+import type {
+  ArtifactMetadata as ArtifactMetadataType,
+  ArtifactVisibility as ArtifactVisibilityType,
+} from './ArtifactsSliceConfig';
 import {
   useStoreWithArtifactsAndLayout,
   type ArtifactsSliceState,
@@ -46,6 +49,7 @@ export type UseArtifactTabsOptions = {
   tabsId?: string;
   types?: readonly string[];
   panelKey?: string;
+  includeEmbedded?: boolean;
 };
 
 export type UseArtifactTabsResult = {
@@ -56,7 +60,11 @@ export type UseArtifactTabsResult = {
   artifactTypes: ArtifactTypeDefinitions<any>;
   createArtifact: (
     type?: string,
-    options?: {title?: string},
+    options?: {
+      title?: string;
+      visibility?: ArtifactVisibilityType;
+      parentArtifactId?: string;
+    },
   ) => string | undefined;
   openArtifact: (artifactId: string) => void;
   closeArtifact: (artifactId: string) => void;
@@ -69,6 +77,15 @@ export type UseArtifactTabsResult = {
 
 function isManagedType(types: readonly string[] | undefined, type: string) {
   return !types || types.includes(type);
+}
+
+export function isArtifactVisibleInTabs(
+  artifact: ArtifactMetadataType,
+  options: {includeEmbedded?: boolean} = {},
+) {
+  return (
+    artifact.visibility === 'workspace' || options.includeEmbedded === true
+  );
 }
 
 function getArtifactIdsFromTabsNode(
@@ -181,6 +198,7 @@ export function useArtifactTabs(
       ? layoutContext.node.id
       : undefined);
   const panelKey = options.panelKey ?? DEFAULT_ARTIFACT_PANEL_KEY;
+  const includeEmbedded = options.includeEmbedded ?? false;
   const typesKey = options.types?.join('\u0000') ?? '';
   const managedTypes = useMemo(
     () => (options.types ? [...options.types] : undefined),
@@ -242,11 +260,16 @@ export function useArtifactTabs(
     () =>
       artifactsConfig.artifactOrder.filter((artifactId) => {
         const artifact = artifactsConfig.artifactsById[artifactId];
-        return artifact && isManagedType(managedTypes, artifact.type);
+        return (
+          artifact &&
+          isManagedType(managedTypes, artifact.type) &&
+          isArtifactVisibleInTabs(artifact, {includeEmbedded})
+        );
       }),
     [
       artifactsConfig.artifactsById,
       artifactsConfig.artifactOrder,
+      includeEmbedded,
       managedTypes,
     ],
   );
@@ -291,6 +314,8 @@ export function useArtifactTabs(
       ensureArtifact(artifactId, {
         type: artifact.type,
         title: artifact.title,
+        visibility: artifact.visibility,
+        parentArtifactId: artifact.parentArtifactId,
       });
       if (!layoutArtifactTabIds.includes(artifactId)) {
         didAddTab = true;
@@ -342,15 +367,25 @@ export function useArtifactTabs(
   ]);
 
   const createArtifact = useCallback(
-    (type?: string, createOptions?: {title?: string}) => {
+    (
+      type?: string,
+      createOptions?: {
+        title?: string;
+        visibility?: ArtifactVisibilityType;
+        parentArtifactId?: string;
+      },
+    ) => {
       const artifactType =
         type ?? managedTypes?.[0] ?? Object.keys(artifactTypes)[0];
       if (!artifactType) return undefined;
+      const visibility = createOptions?.visibility ?? 'workspace';
       const artifactId = createArtifactInStore({
         type: artifactType,
         title: createOptions?.title,
+        visibility,
+        parentArtifactId: createOptions?.parentArtifactId,
       });
-      if (tabsId) {
+      if (tabsId && (visibility === 'workspace' || includeEmbedded)) {
         addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
       }
       return artifactId;
@@ -359,6 +394,7 @@ export function useArtifactTabs(
       addTab,
       artifactTypes,
       createArtifactInStore,
+      includeEmbedded,
       managedTypes,
       panelKey,
       tabsId,
@@ -367,13 +403,21 @@ export function useArtifactTabs(
 
   const openArtifact = useCallback(
     (artifactId: string) => {
-      if (!tabsId || !artifactsConfig.artifactsById[artifactId]) return;
+      const artifact = artifactsConfig.artifactsById[artifactId];
+      if (
+        !tabsId ||
+        !artifact ||
+        !isArtifactVisibleInTabs(artifact, {includeEmbedded})
+      ) {
+        return;
+      }
       addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
       setCurrentArtifact(artifactId);
     },
     [
       addTab,
       artifactsConfig.artifactsById,
+      includeEmbedded,
       panelKey,
       setCurrentArtifact,
       tabsId,
@@ -503,8 +547,24 @@ export type ArtifactTabsProps = Omit<
       tab: ArtifactTabDescriptor,
       actions: UseArtifactTabsResult,
     ) => React.ReactNode;
+    /**
+     * Called when an artifact tab is activated by the user, including clicks on
+     * the already-selected tab. Use this for transient UI that should dismiss
+     * whenever the user returns attention to an artifact tab.
+     */
+    onActivateArtifact?: (artifactId: string) => void;
+    /**
+     * Called when artifact selection changes through the tab strip.
+     */
+    onSelectArtifact?: (artifactId: string) => void;
     emptyContent?: React.ReactNode;
     content?: React.ReactNode;
+    /**
+     * Keep visible artifact tab panels mounted and hide inactive panels.
+     *
+     * Ignored when a custom `content` renderer is provided.
+     */
+    forceMountContent?: boolean;
     overlay?:
       | React.ReactNode
       | ((actions: UseArtifactTabsResult) => React.ReactNode);
@@ -515,16 +575,33 @@ function ArtifactTabsRoot({
   types,
   tabsId,
   panelKey,
+  includeEmbedded,
   renderTabMenu,
   renderSearchItemActions,
+  onActivateArtifact,
+  onSelectArtifact,
   emptyContent,
   content,
+  forceMountContent = false,
   overlay,
   closeable = true,
   preventCloseLastTab = false,
+  getTabDragData,
   ...props
 }: ArtifactTabsProps) {
-  const artifactTabs = useArtifactTabs({types, tabsId, panelKey});
+  const artifactTabs = useArtifactTabs({
+    types,
+    tabsId,
+    panelKey,
+    includeEmbedded,
+  });
+  const handleSelect = useCallback(
+    (artifactId: string) => {
+      artifactTabs.selectArtifact(artifactId);
+      onSelectArtifact?.(artifactId);
+    },
+    [artifactTabs.selectArtifact, onSelectArtifact],
+  );
 
   return (
     <ArtifactTabsContext.Provider value={artifactTabs}>
@@ -536,7 +613,8 @@ function ArtifactTabsRoot({
         closeable={closeable}
         preventCloseLastTab={preventCloseLastTab}
         onOpenTabsChange={artifactTabs.handleOpenTabsChange}
-        onSelect={artifactTabs.selectArtifact}
+        onActivate={onActivateArtifact}
+        onSelect={handleSelect}
         onClose={artifactTabs.closeArtifact}
         onRename={artifactTabs.renameArtifact}
         renderTabMenu={
@@ -553,6 +631,17 @@ function ArtifactTabsRoot({
                 )
             : undefined
         }
+        getTabDragData={(tab) => {
+          const artifactTab = tab as ArtifactTabDescriptor;
+          const userData = getTabDragData?.(artifactTab);
+          return {
+            kind: 'artifact',
+            id: artifactTab.artifact.id,
+            type: artifactTab.artifact.type,
+            title: artifactTab.artifact.title,
+            ...userData,
+          };
+        }}
       >
         {children ?? (
           <>
@@ -562,10 +651,15 @@ function ArtifactTabsRoot({
           </>
         )}
       </TabStrip>
-      <TabsLayout.TabContentContainer>
-        {content ?? <TabsLayout.TabContent />}
-        {artifactTabs.tabs.length === 0 ? emptyContent : null}
-      </TabsLayout.TabContentContainer>
+      {artifactTabs.openTabs.length === 0 && emptyContent ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {emptyContent}
+        </div>
+      ) : (
+        <TabsLayout.TabContentContainer>
+          {content ?? <TabsLayout.TabContent forceMount={forceMountContent} />}
+        </TabsLayout.TabContentContainer>
+      )}
       {typeof overlay === 'function' ? overlay(artifactTabs) : overlay}
     </ArtifactTabsContext.Provider>
   );

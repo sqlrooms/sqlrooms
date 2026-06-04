@@ -1,3 +1,4 @@
+import {jest} from '@jest/globals';
 import {createStore} from 'zustand';
 import {z} from 'zod';
 import {createBaseRoomSlice, BaseRoomStoreState} from '../src/BaseRoomStore';

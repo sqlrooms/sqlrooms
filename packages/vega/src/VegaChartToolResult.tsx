@@ -58,6 +58,7 @@ export type VegaChartToolResultProps = ToolRendererProps<
  */
 export function VegaChartToolResult({
   className,
+  input,
   output,
   options,
   editorMode = 'both',
@@ -73,6 +74,11 @@ export function VegaChartToolResult({
 
   return (
     <div className={cn('flex max-w-full flex-col gap-2', className)}>
+      {input?.reasoning && (
+        <p className="text-tiny text-muted-foreground ml-4">
+          {input.reasoning}
+        </p>
+      )}
       <VegaChartContainer
         spec={vegaLiteSpec}
         sqlQuery={sqlQuery}

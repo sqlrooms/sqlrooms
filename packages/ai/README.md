@@ -123,6 +123,13 @@ createAiSlice({
 })(set, get, store);
 ```
 
+Tool `execute` callbacks receive hidden run-context helpers in their second
+argument. Apps can use `getRunContext` to capture selected artifacts at the
+start of a run, expose them in `formatRunContextInstructions`, and then let
+tools update the effective primary context with `setPrimaryRunContextItem`.
+Old contexts without `primaryItemId` remain valid; the first item is treated as
+primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
+
 ## Use remote endpoint mode
 
 If you want server-side model calls, set `chatEndPoint` and optional `chatHeaders`:
@@ -139,6 +146,102 @@ If you want server-side model calls, set `chatEndPoint` and optional `chatHeader
     'x-app-name': 'my-sqlrooms-app',
   },
 })(set, get, store),
+```
+
+## Skills
+
+The skills subsystem lets you define, store, and author reusable AI "skills" — named instruction sets that can be loaded into an agent at runtime.
+
+### Storage and types
+
+`SkillStorage` is the interface that abstracts where skills live (filesystem, database, cloud, etc.). Implement it to plug in your own backend:
+
+- `listRoots()` — enumerate available skill root locations
+- `listSkills(rootId)` — list all skills under a root
+- `readSkill(ref)` / `writeSkill(ref, content)` / `deleteSkill(ref)` — CRUD on individual skills
+- `resolveSkillId(id)` — resolve a bare id to its highest-priority `SkillRef`
+- `subscribe?(listener)` — _optional_; subscribe to change notifications. Returns an unsubscribe function. Implementations that don't mutate (read-only/static) may omit this method.
+
+Supporting types: `SkillRoot`, `SkillManifest`, `SkillRef`, `SkillRecord`, `SkillListing`, `SkillWriteContent`, `SkillFile`.
+
+### Composite storage
+
+`CompositeSkillStorage` priority-merges multiple `SkillStorage` instances behind a single `SkillStorage` interface. Children are passed in priority order (highest first); they win conflicts in `resolveSkillId` and appear first in `listRoots`. Each child must own a unique set of `rootId`s.
+
+`subscribe` fans out to every child that exposes the optional `subscribe?` method and aggregates the unsubscribes. If no child supports subscribe, `composite.subscribe(...)` is a noop returning a noop unsubscribe — consumers can call it unconditionally.
+
+```tsx
+import {CompositeSkillStorage} from '@sqlrooms/ai';
+
+// Higher-priority `userStorage` wins on id collisions; both contribute roots
+// and listings to the merged view.
+const storage = new CompositeSkillStorage([userStorage, builtInStorage]);
+
+const roots = await storage.listRoots(); // [user roots..., built-in roots...]
+const all = await storage.listSkills(); // union, with duplicates
+
+// Optional change notification: composite forwards from any subscribe-capable
+// child.
+const unsubscribe = storage.subscribe(() => {
+  void refreshUi();
+});
+// later: unsubscribe();
+```
+
+### Manifest utilities
+
+- `parseSkillManifest(raw)` — parse and validate a skill manifest (Zod-backed, throws `SkillManifestError` on failure)
+- `serializeSkillManifest(manifest)` — serialize a manifest back to its raw form
+- `loadSkillFromFiles(files)` — assemble a `SkillRecord` from a set of `SkillFile` objects (manifest + instruction body)
+
+### Error types
+
+All skill errors extend `SkillError` and carry a typed `SkillErrorCode`:
+
+| Class                    | When thrown                         |
+| ------------------------ | ----------------------------------- |
+| `SkillManifestError`     | Manifest parse/validation failure   |
+| `SkillNotFoundError`     | Skill ref does not exist in storage |
+| `SkillRootReadOnlyError` | Write attempted on a read-only root |
+| `SkillConflictError`     | Skill ID collision on write         |
+
+### Skill authoring
+
+A built-in agent-driven authoring flow that generates skill content through a conversational UI:
+
+- `createSkillAuthoringAgent(options)` — construct a `ToolLoopAgent` scoped to skill creation; accepts `CreateSkillAuthoringAgentOptions`
+- `createSkillDraftStore()` — Zustand store for tracking the in-progress draft (`SkillDraftStore`, `SkillDraftState`)
+- `SkillAuthoringPanel` — drop-in panel component that wires `Chat.LocalAgentRoot` to the authoring agent; accepts `SkillAuthoringPanelProps`
+- `SkillDraftPreview` — read-only preview of the current draft manifest and instructions; accepts `SkillDraftPreviewProps`
+- `DefaultSkillAuthoringPanelHeader` — default header for `SkillAuthoringPanel`
+
+Types: `SkillAuthoringContext`, `SkillDraft`, `SkillDraftStatus`, `SaveSkillCallback`, `CreateSkillAuthoringAgentOptions`.
+
+Lower-level authoring tools (exported for advanced use): `createWriteManifestTool`, `createWriteInstructionsTool`, `createSaveSkillTool`, `buildSkillAuthoringSystemPrompt`, `containsForbidden`, `DEFAULT_SKILL_AUTHORING_STOP_STEPS`.
+
+```tsx
+import {
+  createSkillAuthoringAgent,
+  createSkillDraftStore,
+  SkillAuthoringPanel,
+} from '@sqlrooms/ai';
+
+const draftStore = createSkillDraftStore();
+
+const agent = createSkillAuthoringAgent({
+  model: myLanguageModel,
+  draftStore,
+  onSave: async (skill) => {
+    await mySkillStorage.writeSkill(
+      {rootId: 'default', skillId: skill.id},
+      skill,
+    );
+  },
+});
+
+function SkillCreator() {
+  return <SkillAuthoringPanel agent={agent} draftStore={draftStore} />;
+}
 ```
 
 ## Related packages

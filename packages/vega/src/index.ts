@@ -35,6 +35,15 @@ export {
   resolveBrushToRowIndices,
 } from './brushMappingUtils';
 
+export {
+  createChartImageForMarkdownTool,
+  ChartImageForMarkdownToolParameters,
+} from './ChartImageForMarkdownTool';
+export type {
+  ChartImageForMarkdownToolOutput,
+  ChartImageForMarkdownToolParameters as ChartImageForMarkdownToolParametersType,
+} from './ChartImageForMarkdownTool';
+
 /**
  * Composable Vega-Lite chart component with editing capabilities.
  *

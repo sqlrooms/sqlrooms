@@ -1,6 +1,6 @@
 Layout slice and renderer for SQLRooms panel-based UIs.
 
-This package renders layout trees using `react-resizable-panels` for split layouts and `dnd-kit` for dockable panel rearrangement.
+This package renders layout trees using `react-resizable-panels` for split layouts, `dnd-kit` for dockable panel rearrangement, and `react-grid-layout` for scrollable grid dashboard layouts.
 
 ## Installation
 
@@ -12,6 +12,8 @@ npm install @sqlrooms/layout
 
 - `createLayoutSlice()`, `useStoreWithLayout()`
 - `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels, tabs, and generic docking
+- `useExpandGridPanel()` — expands a grid child panel horizontally to available row space
+- Grid layout defaults/helpers: `DEFAULT_GRID_COLS`, `DEFAULT_GRID_BREAKPOINTS`, `getResponsiveGridCols()`, `getGridColsForBreakpoint()`
 - Layout helpers:
   - `visitLayoutLeafNodes`
   - `getVisibleLayoutPanels`
@@ -83,6 +85,18 @@ createLayoutSlice({
     // Return custom JSX or undefined to fall back to the default renderer
   },
 });
+```
+
+## Tabs layout composition
+
+`TabsLayout.TabContent` accepts `forceMount` to keep all visible tab contents
+mounted while hiding inactive tabs. This is useful for expensive panels that
+should preserve local state or setup work during tab changes:
+
+```tsx
+<TabsLayout.TabContentContainer>
+  <TabsLayout.TabContent forceMount />
+</TabsLayout.TabContentContainer>
 ```
 
 ## Area-based panel management

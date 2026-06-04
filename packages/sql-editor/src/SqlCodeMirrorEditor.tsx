@@ -24,6 +24,8 @@ export interface SqlCodeMirrorEditorProps extends Omit<
   connector?: DuckDbConnector;
   /** Table schemas for autocompletion and hover tooltips */
   tableSchemas?: DataTable[];
+  /** Hide all editor gutters. Useful for compact embedded editors. */
+  hideGutter?: boolean;
   /** Callback to get the latest table schemas */
   getLatestSchemas?: () => {tableSchemas: DataTable[]};
   /** Callback when Cmd+Enter is pressed (selected text or full document) */
@@ -47,6 +49,7 @@ export const SqlCodeMirrorEditor: React.FC<SqlCodeMirrorEditorProps> = ({
   dialect = SqlDialects.DuckDb,
   connector,
   tableSchemas = [],
+  hideGutter,
   getLatestSchemas,
   onRunQuery,
   onMount,
@@ -72,9 +75,9 @@ export const SqlCodeMirrorEditor: React.FC<SqlCodeMirrorEditorProps> = ({
         connector,
       }),
       createSqlKeymap(onRunQuery),
-      createSqlTheme(),
+      createSqlTheme({hideGutter}),
     ];
-  }, [dialect, currentSchemas, onRunQuery, connector]);
+  }, [dialect, currentSchemas, onRunQuery, connector, hideGutter]);
 
   // Handle editor mount
   const handleEditorMount = useCallback(

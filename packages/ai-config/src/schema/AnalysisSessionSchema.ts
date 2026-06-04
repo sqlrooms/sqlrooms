@@ -26,6 +26,115 @@ export const AnalysisResultSchema = z.object({
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
 
+export const AiRunContextItemSchema = z
+  .object({
+    kind: z.string(),
+    id: z.string(),
+    title: z.string(),
+    type: z.string().optional(),
+    subtitle: z.string().optional(),
+  })
+  .passthrough();
+export type AiRunContextItem = z.infer<typeof AiRunContextItemSchema>;
+
+const AiRunContextBaseSchema = z
+  .object({
+    items: z.array(AiRunContextItemSchema),
+    primaryItemId: z.string().optional(),
+    primaryItemKind: z.string().optional(),
+    capturedAt: z.number(),
+  })
+  .passthrough();
+
+export const AiRunContextSchema = z.preprocess((data) => {
+  if (
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    'kind' in data &&
+    'id' in data &&
+    'title' in data &&
+    !('items' in data)
+  ) {
+    const legacyContext = data as {
+      kind: unknown;
+      id: unknown;
+      title: unknown;
+      type?: unknown;
+      capturedAt?: unknown;
+    };
+    const {capturedAt, ...item} = legacyContext;
+    return {
+      items: [item],
+      capturedAt: typeof capturedAt === 'number' ? capturedAt : 0,
+    };
+  }
+  return data;
+}, AiRunContextBaseSchema);
+export type AiRunContext = z.infer<typeof AiRunContextSchema>;
+
+function getStringProperty(obj: unknown, key: string): string | undefined {
+  return obj &&
+    typeof obj === 'object' &&
+    key in obj &&
+    typeof (obj as Record<string, unknown>)[key] === 'string'
+    ? (obj as Record<string, string>)[key]
+    : undefined;
+}
+
+export function getAiRunContextItems(
+  runContext: AiRunContext | unknown,
+): AiRunContextItem[] {
+  if (!runContext || typeof runContext !== 'object') return [];
+
+  if ('items' in runContext && Array.isArray(runContext.items)) {
+    return runContext.items
+      .map((item) => AiRunContextItemSchema.safeParse(item))
+      .filter((result) => result.success)
+      .map((result) => result.data);
+  }
+
+  const legacyResult = AiRunContextItemSchema.safeParse(runContext);
+  return legacyResult.success ? [legacyResult.data] : [];
+}
+
+export function getAiRunContextPrimaryItem(
+  runContext: AiRunContext | unknown,
+): AiRunContextItem | undefined {
+  const items = getAiRunContextItems(runContext);
+  if (items.length === 0) return undefined;
+
+  const primaryItemId = getStringProperty(runContext, 'primaryItemId');
+  const primaryItemKind = getStringProperty(runContext, 'primaryItemKind');
+
+  return primaryItemId && primaryItemKind
+    ? (items.find(
+        (item) => item.id === primaryItemId && item.kind === primaryItemKind,
+      ) ?? items[0])
+    : primaryItemId
+      ? (items.find((item) => item.id === primaryItemId) ?? items[0])
+      : items[0];
+}
+
+export function setAiRunContextPrimaryItem(
+  runContext: AiRunContext | unknown,
+  item: AiRunContextItem,
+): AiRunContext {
+  const parsedContext = AiRunContextSchema.safeParse(runContext);
+  const baseContext = parsedContext.success ? parsedContext.data : undefined;
+  const existingItems = getAiRunContextItems(runContext).filter(
+    (existing) => !(existing.kind === item.kind && existing.id === item.id),
+  );
+
+  return {
+    ...(baseContext ?? {}),
+    items: [item, ...existingItems],
+    primaryItemId: item.id,
+    primaryItemKind: item.kind,
+    capturedAt: baseContext?.capturedAt ?? Date.now(),
+  };
+}
+
 const AnalysisSessionBaseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -44,6 +153,8 @@ const AnalysisSessionBaseSchema = z.object({
   isRunning: z.boolean().default(false),
   /** Last time the session was opened/selected (epoch ms) */
   lastOpenedAt: z.number().optional(),
+  /** Context captured when the current run started. */
+  runContext: AiRunContextSchema.optional(),
   /** Persisted sub-agent tool call trees, keyed by parent toolCallId */
   agentProgress: z.record(z.string(), z.array(z.unknown())).optional(),
 });

@@ -1,52 +1,71 @@
 import {cn} from '@sqlrooms/ui';
-import React, {useMemo} from 'react';
+import {FC, useCallback, useMemo} from 'react';
 import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
-import {FieldSelectorInput} from './FieldSelectorInput';
+import {MosaicChartSettingsProvider} from '../charts/chart-settings/MosaicChartSettingsContext';
+import type {ChartConfig} from '../charts/chart-types';
 
 export interface ChartBuilderFieldsProps {
   className?: string;
 }
 
-export const ChartBuilderFields: React.FC<ChartBuilderFieldsProps> = ({
+export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
   className,
 }) => {
   const {columns, templates} = useChartBuilderContext();
-  const selectedTemplateId = useChartBuilderStore(
+  const chartTypeDefinitionId = useChartBuilderStore(
     (state) => state.selectedTemplateId,
   );
   const fieldValues = useChartBuilderStore((state) => state.fieldValues);
   const setFieldValue = useChartBuilderStore((state) => state.setFieldValue);
 
-  const selectedTemplate = useMemo(
-    () => templates.find((template) => template.id === selectedTemplateId),
-    [templates, selectedTemplateId],
+  const chartTypeDefinition = useMemo(
+    () => templates.find((template) => template.id === chartTypeDefinitionId),
+    [templates, chartTypeDefinitionId],
   );
 
-  if (!selectedTemplate) return null;
+  const handleChange = useCallback(
+    (config: ChartConfig) => {
+      // Update all changed values from settings
+      Object.entries(config.settings).forEach(([key, value]) => {
+        if (fieldValues[key] !== value) {
+          setFieldValue(key, value);
+        }
+      });
+    },
+    [fieldValues, setFieldValue],
+  );
 
-  if (selectedTemplate.fields.length === 0) {
-    return (
-      <p className={cn('text-muted-foreground py-2 text-sm', className)}>
-        This chart type has no configurable fields. A starter spec will be
-        created that you can edit manually.
-      </p>
-    );
+  // Create a config object for the context
+  const config: ChartConfig = useMemo(() => {
+    if (!chartTypeDefinition) {
+      return {
+        chartType: 'histogram',
+        settings: {},
+      };
+    }
+    return {
+      chartType: chartTypeDefinition.id,
+      settings: fieldValues,
+    } as ChartConfig;
+  }, [chartTypeDefinition, fieldValues]);
+
+  if (!chartTypeDefinition) {
+    return null;
   }
 
+  const SettingsComponent = chartTypeDefinition.settingsComponent;
   return (
     <div className={cn('flex flex-col gap-4 py-2', className)}>
-      {selectedTemplate.fields.map((field) => (
-        <FieldSelectorInput
-          key={field.key}
-          field={field}
-          columns={columns}
-          value={fieldValues[field.key]}
-          onChange={(value) => setFieldValue(field.key, value)}
-        />
-      ))}
+      <MosaicChartSettingsProvider
+        config={config}
+        columns={columns}
+        onChange={handleChange}
+      >
+        <SettingsComponent />
+      </MosaicChartSettingsProvider>
     </div>
   );
 };

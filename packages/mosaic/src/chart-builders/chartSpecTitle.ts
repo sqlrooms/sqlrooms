@@ -1,4 +1,4 @@
-import type {ChartTypeDefinition} from './types';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
 import {buildChartTypeTitle} from './chartTypeUtils';
 
 /**

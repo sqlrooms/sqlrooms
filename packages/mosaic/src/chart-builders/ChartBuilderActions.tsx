@@ -1,20 +1,20 @@
 import {Button, cn} from '@sqlrooms/ui';
-import React, {useMemo} from 'react';
+import {FC, useCallback, useMemo} from 'react';
 import {
   useChartBuilderContext,
   useChartBuilderStore,
 } from './ChartBuilderContext';
 import {buildChartTypeTitle, canCreateChartFromType} from './chartTypeUtils';
+import type {ChartConfig} from '../charts/chart-types';
 
 export interface ChartBuilderActionsProps {
   className?: string;
 }
 
-export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
+export const ChartBuilderActions: FC<ChartBuilderActionsProps> = ({
   className,
 }) => {
-  const {columns, onCreateChart, tableName, templates} =
-    useChartBuilderContext();
+  const {onCreateChart, templates} = useChartBuilderContext();
   const selectedTemplateId = useChartBuilderStore(
     (state) => state.selectedTemplateId,
   );
@@ -26,30 +26,38 @@ export const ChartBuilderActions: React.FC<ChartBuilderActionsProps> = ({
     [templates, selectedTemplateId],
   );
 
-  const canCreate = canCreateChartFromType(
-    selectedTemplate,
-    fieldValues,
-    columns,
-  );
+  const canCreate = canCreateChartFromType(selectedTemplate, fieldValues);
 
-  if (!selectedTemplate) return null;
+  const handleCreateChart = useCallback(() => {
+    if (!selectedTemplate || !canCreate || !selectedTemplateId) {
+      return;
+    }
+
+    const title = buildChartTypeTitle(selectedTemplate, fieldValues);
+    onCreateChart(title, {
+      chartType: selectedTemplateId,
+      settings: fieldValues,
+    } as ChartConfig);
+    reset();
+  }, [
+    selectedTemplate,
+    canCreate,
+    selectedTemplateId,
+    fieldValues,
+    onCreateChart,
+    reset,
+  ]);
+
+  if (!selectedTemplate) {
+    return null;
+  }
 
   return (
     <div className={cn('flex items-center justify-end gap-2', className)}>
       <Button variant="outline" size="sm" onClick={reset}>
         Back
       </Button>
-      <Button
-        size="sm"
-        onClick={() => {
-          if (!selectedTemplate || !canCreate) return;
-          const spec = selectedTemplate.createSpec(tableName, fieldValues);
-          const title = buildChartTypeTitle(selectedTemplate, fieldValues);
-          onCreateChart(spec, title);
-          reset();
-        }}
-        disabled={!canCreate}
-      >
+      <Button size="sm" onClick={handleCreateChart} disabled={!canCreate}>
         Create
       </Button>
     </div>

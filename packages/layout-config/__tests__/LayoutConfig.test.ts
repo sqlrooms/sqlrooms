@@ -1,9 +1,11 @@
 // In packages/layout-config/__tests__/LayoutConfig.test.ts
 import {
-  LayoutDockNode,
   LayoutNode,
   isLayoutDockNode,
+  isLayoutGridNode,
 } from '../src/LayoutConfig';
+import type {LayoutDockNode, LayoutGridNode} from '../src/LayoutConfig';
+import {getLayoutNodeId as getTabsHelperLayoutNodeId} from '../src/tabs-helpers';
 
 describe('LayoutDockNode schema', () => {
   test('accepts dock node with minimal props', () => {
@@ -85,6 +87,82 @@ describe('isLayoutDockNode type guard', () => {
     ).toBe(false);
     expect(isLayoutDockNode('panel-key')).toBe(false);
     expect(isLayoutDockNode(null)).toBe(false);
+  });
+});
+
+describe('LayoutGridNode schema', () => {
+  test('accepts grid node with minimal props', () => {
+    const node = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: {key: 'dashboard', meta: {dashboardId: 'growth'}},
+      children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
+    };
+    expect(() => LayoutNode.parse(node)).not.toThrow();
+  });
+
+  test('accepts grid node with layout props', () => {
+    const node = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: 'dashboard',
+      cols: {lg: 12, sm: 6},
+      rowHeight: 220,
+      margin: [12, 12],
+      compactType: 'vertical',
+      preventCollision: false,
+      resizeHandles: ['e', 's', 'w', 'se', 'sw'],
+      children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
+      layouts: {
+        lg: [{i: 'chart-1', x: 0, y: 0, w: 6, h: 2}],
+      },
+    };
+    expect(() => LayoutNode.parse(node)).not.toThrow();
+  });
+
+  test('accepts legacy southeast grid resize handles', () => {
+    const node = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: 'dashboard',
+      resizeHandles: ['e', 's', 'se'],
+      children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
+    };
+    expect(() => LayoutNode.parse(node)).not.toThrow();
+  });
+});
+
+describe('isLayoutGridNode type guard', () => {
+  test('returns true for grid nodes', () => {
+    const node: LayoutGridNode = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: 'dashboard',
+      children: [{type: 'panel', id: 'chart-1', panel: 'chart'}],
+    };
+
+    expect(isLayoutGridNode(node)).toBe(true);
+  });
+
+  test('returns false for other node types', () => {
+    expect(isLayoutGridNode({type: 'panel', id: 'p1', panel: 'p1'})).toBe(
+      false,
+    );
+    expect(isLayoutGridNode('panel-key')).toBe(false);
+    expect(isLayoutGridNode(null)).toBe(false);
+  });
+});
+
+describe('getLayoutNodeId', () => {
+  test('returns id for grid nodes', () => {
+    const node: LayoutGridNode = {
+      type: 'grid',
+      id: 'dashboard-grid-1',
+      panel: 'dashboard',
+      children: [],
+    };
+
+    expect(getTabsHelperLayoutNodeId(node)).toBe('dashboard-grid-1');
   });
 });
 

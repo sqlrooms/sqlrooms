@@ -4,6 +4,8 @@ This package provides:
 
 - `createSqlEditorSlice()` for query tabs, execution, and results state
 - `SqlEditor` and `SqlEditorModal` UI
+- `SqlQuery` compound components and `SqlQueryBlock` for reusable single-query
+  surfaces
 - `SqlMonacoEditor` standalone SQL editor
 - helpers/components for query results, table structure, and SQL data sources
 
@@ -94,6 +96,44 @@ function RunQueryButton() {
   return <Button onClick={() => void run()}>Run query</Button>;
 }
 ```
+
+For reusable single-query surfaces, use id-addressable query actions:
+
+```tsx
+const ensureQuery = useRoomStore((state) => state.sqlEditor.ensureQuery);
+const runQueryById = useRoomStore((state) => state.sqlEditor.runQueryById);
+
+ensureQuery('query-1', {name: 'Top Airports', query: 'SELECT * FROM airports'});
+await runQueryById('query-1');
+```
+
+## Single Query UI
+
+`SqlQuery` is a compound component for rearranging and styling a single query
+experience without the full tabbed workbench:
+
+```tsx
+import {SqlQuery} from '@sqlrooms/sql-editor';
+
+export function QueryBlock() {
+  return (
+    <SqlQuery.Root queryId="query-1" name="Top Airports">
+      <SqlQuery.Header title="Top Airports">
+        <SqlQuery.Actions />
+      </SqlQuery.Header>
+      <SqlQuery.Editor />
+      <SqlQuery.Results />
+    </SqlQuery.Root>
+  );
+}
+```
+
+`SqlQuery.Results` accepts the same props as `QueryResultPanel`, including
+`footerDetails` for small metadata rendered at the end of the result footer and
+`dataTableClassName` for styling the inner paginated table.
+
+Use `createSqlQueryBlockDefinition()` when a SQL query should be both embeddable
+as a stateful block and openable as an artifact shell.
 
 ## Standalone editor (without SQLRooms store)
 

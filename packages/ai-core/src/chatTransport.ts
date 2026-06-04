@@ -1,5 +1,9 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {
+  setAiRunContextPrimaryItem,
+  type AiRunContext,
+  type AnalysisSessionSchema,
+} from '@sqlrooms/ai-config';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {
@@ -16,13 +20,10 @@ import {
   UIMessage,
 } from 'ai';
 import {produce} from 'immer';
-import {
-  AI_DEFAULT_TEMPERATURE,
-  ANALYSIS_PENDING_ID,
-  TOOL_CALL_CANCELLED,
-} from './constants';
+import {ANALYSIS_PENDING_ID, TOOL_CALL_CANCELLED} from './constants';
 import type {
   AiSliceStateForTransport,
+  AiToolExecutionContext,
   ToolTimingEntry,
   AssistantMessageMetadata,
   MessageTokenUsage,
@@ -133,6 +134,56 @@ function getSessionById(
     .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
 }
 
+export function withRunContextTools(
+  tools: ToolSet,
+  args: AiToolExecutionContext & {
+    state: AiSliceStateForTransport;
+    getAiRunContext?: () => AiRunContext | undefined;
+    setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+  },
+): ToolSet {
+  return Object.fromEntries(
+    Object.entries(tools).map(([name, tool]) => {
+      if (!tool || typeof tool.execute !== 'function') {
+        return [name, tool];
+      }
+
+      const originalExecute = tool.execute;
+      return [
+        name,
+        {
+          ...tool,
+          execute: async (
+            input: unknown,
+            options?: Record<string, unknown>,
+          ) => {
+            const toolCallId =
+              typeof options?.toolCallId === 'string'
+                ? options.toolCallId
+                : undefined;
+            if (toolCallId && args.sessionId) {
+              args.state.ai.setToolCallSession(toolCallId, args.sessionId);
+            }
+            return originalExecute(
+              input as never,
+              {
+                ...options,
+                sessionId: args.sessionId,
+                aiRunContext: args.getAiRunContext
+                  ? args.getAiRunContext()
+                  : args.aiRunContext,
+                getAiRunContext: args.getAiRunContext,
+                setAiRunContext: args.setAiRunContext,
+                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+              } as never,
+            );
+          },
+        },
+      ];
+    }),
+  ) as ToolSet;
+}
+
 /**
  * The AI SDK stream metadata is not reliably surfaced back onto `UIMessage.metadata`
  * for our local transport setup, so persist token usage per session and stamp it
@@ -221,6 +272,11 @@ export function createLocalChatTransportFactory({
       const sessionFromBody = getSessionById(store, sessionId);
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
+      let aiRunContext = sessionFromBody?.runContext;
+      const setAiRunContext = (nextContext: AiRunContext | undefined) => {
+        aiRunContext = nextContext;
+        state.ai.setSessionRunContext(sessionId, nextContext);
+      };
 
       // Fetch API key and base URL dynamically to pick up settings changes
       const apiKey = state.ai.getApiKeyFromSettings();
@@ -248,7 +304,16 @@ export function createLocalChatTransportFactory({
       // full tool loop server-side. UI-approval tools (no execute) are paused
       // by the agent and resumed via addToolOutput from the client.
       // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
-      const tools = (state.ai.tools || {}) as ToolSet;
+      const tools = withRunContextTools((state.ai.tools || {}) as ToolSet, {
+        state,
+        sessionId,
+        aiRunContext,
+        getAiRunContext: () => aiRunContext,
+        setAiRunContext,
+        setPrimaryRunContextItem: (item) => {
+          setAiRunContext(setAiRunContextPrimaryItem(aiRunContext, item));
+        },
+      });
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
@@ -273,7 +338,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        temperature: AI_DEFAULT_TEMPERATURE,
         onFinish: ({totalUsage, usage}) => {
           const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
           rememberSessionTokenUsage(sessionId, finalUsage);
@@ -292,6 +356,7 @@ export function createLocalChatTransportFactory({
         agent,
         uiMessages: sanitizeMessagesForLLM(
           fixIncompleteToolCalls(messagesCopy),
+          Object.keys(tools),
         ),
         abortSignal,
         messageMetadata: ({part}: {part: TextStreamPart<ToolSet>}) => {
@@ -376,8 +441,8 @@ export function createRemoteChatTransportFactory(params: {
         modelProvider,
         model,
         instructions: getInstructions(),
+        runContext: sessionFromBody?.runContext,
         maxSteps: state.ai.getMaxStepsFromSettings(),
-        temperature: AI_DEFAULT_TEMPERATURE,
       };
 
       // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)

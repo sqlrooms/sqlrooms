@@ -8,6 +8,7 @@ import {
 import {renderLayoutNode} from './node-renderers/renderLayoutNode';
 import {DockingProvider} from './docking/DockingProvider';
 import {RenderNodeProvider} from './node-renderers/RenderNodeContext';
+import {RoomDndProvider} from './dnd/RoomDndProvider';
 
 export type LayoutRendererProps = {
   rootLayout: LayoutNode;
@@ -21,18 +22,20 @@ export const LayoutRenderer: FC<LayoutRendererProps> = ({
   return (
     <LayoutRendererProvider {...contextValue}>
       <RenderNodeProvider renderNode={renderLayoutNode}>
-        <DockingProvider
-          rootLayout={contextValue.rootLayout}
-          onLayoutChange={contextValue.onLayoutChange}
-        >
-          <div className={cn('h-full min-w-0 flex-1', className)}>
-            {renderLayoutNode({
-              node: contextValue.rootLayout,
-              path: [],
-              containerType: 'root',
-            })}
-          </div>
-        </DockingProvider>
+        <RoomDndProvider>
+          <DockingProvider
+            rootLayout={contextValue.rootLayout}
+            onLayoutChange={contextValue.onLayoutChange}
+          >
+            <div className={cn('h-full min-h-0 min-w-0 flex-1', className)}>
+              {renderLayoutNode({
+                node: contextValue.rootLayout,
+                path: [],
+                containerType: 'root',
+              })}
+            </div>
+          </DockingProvider>
+        </RoomDndProvider>
       </RenderNodeProvider>
     </LayoutRendererProvider>
   );

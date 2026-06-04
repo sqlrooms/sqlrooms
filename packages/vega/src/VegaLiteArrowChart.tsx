@@ -222,7 +222,6 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   const specWithData = useMemo(() => {
     const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) {
-      setChartError(new Error('Invalid Vega-Lite specification'));
       return null;
     }
     const base = {
@@ -251,9 +250,14 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
 
     return base as VisualizationSpec;
   }, [spec, data, onBrushSelection]);
+  const specError = specWithData
+    ? null
+    : new Error('Invalid Vega-Lite specification');
+  const displayError = specError ?? chartError;
 
   // Reset chart error whenever spec or data changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setChartError(null);
   }, [spec, data]);
 
@@ -352,9 +356,9 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
         className={cn('relative flex h-full w-full flex-col gap-2', className)}
       >
         <div className="peer relative">
-          {chartError ? (
+          {displayError ? (
             <ToolErrorMessage
-              error={chartError}
+              error={displayError}
               triggerLabel="Chart rendering failed"
               title="Chart error"
               align="start"

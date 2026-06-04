@@ -35,6 +35,13 @@ import {
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;
 
+export type MosaicPreAggregateOptions = {
+  /** Database schema/namespace for Mosaic pre-aggregate tables. */
+  schema?: string;
+  /** Enable or disable Mosaic's pre-aggregation optimization. */
+  enabled?: boolean;
+};
+
 // Client configuration options
 export type MosaicClientOptions = {
   /** Unique identifier for this client */
@@ -63,12 +70,24 @@ export type TrackedClient = {
   queryResultCallback?: (result: ArrowTable) => void; // External callback
 };
 
+export type MosaicIdleConnection = {status: 'idle'};
+export type MosaicLoadingConnection = {status: 'loading'};
+export type MosaicReadyConnection = {
+  status: 'ready';
+  connector?: Connector;
+  coordinator: Coordinator;
+};
+export type MosaicErrorConnection = {status: 'error'; error: unknown};
+
+export type MosaicConnection =
+  | MosaicIdleConnection
+  | MosaicLoadingConnection
+  | MosaicReadyConnection
+  | MosaicErrorConnection;
+
 export type MosaicSliceState = {
   mosaic: SliceFunctions & {
-    connection:
-      | {status: 'idle' | 'loading'}
-      | {status: 'ready'; connector?: Connector; coordinator: Coordinator}
-      | {status: 'error'; error: unknown};
+    connection: MosaicConnection;
     config: MosaicSliceConfig;
     /** Record of registered clients by id */
     clients: Record<string, TrackedClient>;
@@ -100,14 +119,13 @@ export type MosaicSliceState = {
 export function createDefaultMosaicConfig(
   props?: Partial<MosaicSliceConfig>,
 ): MosaicSliceConfig {
-  return {
-    ...props,
-  } as MosaicSliceConfig;
+  return {...props} as MosaicSliceConfig;
 }
 
 export type CreateMosaicSliceProps = {
   config?: Partial<MosaicSliceConfig>;
   coordinator?: Coordinator;
+  preagg?: MosaicPreAggregateOptions;
 };
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
@@ -132,16 +150,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
         try {
           if (props.coordinator) {
             resolvedCoordinator = props.coordinator;
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
           } else {
             const dbConnector = await get().db.getConnector();
             resolvedCoordinator = coordinator();
             mosaicConnector = isWasmDuckDbConnector(dbConnector)
               ? await wasmConnector({
-                  // @ts-expect-error - We install a different version of duckdb-wasm
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - We might be using a different version of duckdb-wasm than mosaic expects
                   duckDb: dbConnector.getDb(),
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore - same version mismatch
                   connection: dbConnector.getConnection(),
                 })
               : createDuckDbMosaicConnector(dbConnector);
+            applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
             resolvedCoordinator.databaseConnector(mosaicConnector);
           }
         } catch (error) {
@@ -248,6 +271,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
           client.enabled = false;
           options.queryError?.(error);
         };
@@ -355,6 +379,7 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
               }
             }),
           );
+          // Disable client to prevent further queries
           client.enabled = false;
           options.onQueryError?.(error);
           options.queryError?.(error);
@@ -416,6 +441,21 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
       },
     },
   }));
+}
+
+function applyMosaicPreAggregateOptions(
+  mosaicCoordinator: Coordinator,
+  options?: MosaicPreAggregateOptions,
+) {
+  if (!options) {
+    return;
+  }
+  if (options.schema !== undefined) {
+    mosaicCoordinator.preaggregator.schema = options.schema;
+  }
+  if (options.enabled !== undefined) {
+    mosaicCoordinator.preaggregator.enabled = options.enabled;
+  }
 }
 
 export type DuckDbSliceStateWithMosaic = DuckDbSliceState & MosaicSliceState;

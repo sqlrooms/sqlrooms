@@ -5,6 +5,12 @@
 
 export type LayoutPath = (string | number)[];
 
-export type PanelContainerType = 'tabs' | 'mosaic' | 'split' | 'root';
+export type PanelContainerType =
+  | 'tabs'
+  | 'mosaic'
+  | 'split'
+  | 'dock'
+  | 'grid'
+  | 'root';
 
 export type ParentDirection = 'row' | 'column';

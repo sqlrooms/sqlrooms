@@ -19,6 +19,7 @@ export {
   type DuckDbConnectorOptions,
   type DuckDbConnectorType,
   type WasmDuckDbConnector,
+  type WasmDuckDbConnectorOptions,
 } from './connectors/createDuckDbConnector';
 
 export {
@@ -31,11 +32,21 @@ export {
   createDuckDbSlice,
   useStoreWithDuckDb,
   createDefaultLoadTableSchemasFilter,
+  defaultLoadSchemaCatalogFilter,
+  defaultLoadTableSchemasFilter,
   type CreateDuckDbSliceProps,
   type DuckDbSliceState,
 } from './DuckDbSlice';
 
-export {type LoadTableSchemasFilter} from './loadTableSchemas';
+export {
+  loadSchemaCatalog,
+  type LoadSchemaCatalogFilterFunction,
+  type LoadSchemaCatalogOptions,
+  type LoadTableSchemasFilterFunction,
+  type SchemaCatalogFilterEntry,
+  type LoadTableSchemasFilter,
+  type LoadTableSchemasOptions,
+} from './loadTableSchemas';
 
 export {useExportToCsv, type UseExportToCsvReturn} from './use-export-to-csv';
 
@@ -63,6 +74,8 @@ export {
   createTypedRowAccessor,
   escapeId,
   escapeVal,
+  findTableInSchemaTrees,
+  getAllTablesFromSchemaTrees,
   getArrowColumnTypeCategory,
   getColValAsNumber,
   getDuckDbTypeCategory,
@@ -100,6 +113,7 @@ export {
   type QueryHandle,
   type QueryOptions,
   type SchemaNodeObject,
+  type SchemaWithTables,
   type SeparatedStatements,
   type TableColumn,
   type TableNodeObject,

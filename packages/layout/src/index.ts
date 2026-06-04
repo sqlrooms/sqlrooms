@@ -27,6 +27,12 @@ export type {ParentDirection} from './layout-base-types';
 export {movePanel} from './docking/dock-layout';
 export type {DockAxis, DockDirection} from './docking/docking-types-base';
 export {
+  DEFAULT_GRID_BREAKPOINTS,
+  DEFAULT_GRID_COLS,
+  getGridColsForBreakpoint,
+  getResponsiveGridCols,
+} from './grid-layout-utils';
+export {
   createLayoutId,
   findNearestDockAncestor,
   findNodeById,
@@ -40,6 +46,7 @@ export {
 // New LayoutRenderer component
 export {LayoutRenderer} from './LayoutRenderer';
 export type {LayoutRendererProps} from './LayoutRenderer';
+export {RoomDndProvider} from './dnd/RoomDndProvider';
 
 // New primary exports from @sqlrooms/layout-config
 export {
@@ -53,11 +60,13 @@ export {
   isLayoutPanelNode,
   isLayoutTabsNode,
   isLayoutDockNode,
+  isLayoutGridNode,
   isLayoutSplitNode,
   LayoutDockNode,
   LayoutConfig,
   LayoutNode,
   LayoutNodeKey,
+  LayoutGridNode,
   LayoutPanelNode,
   LayoutSplitNode,
   LayoutTabsNode,
@@ -65,6 +74,7 @@ export {
 } from '@sqlrooms/layout-config';
 
 export type {LayoutDirection} from '@sqlrooms/layout-config';
+export type {LayoutGridItem} from '@sqlrooms/layout-config';
 
 // Panel resolution utilities
 export {resolvePanelDefinition} from './resolvePanelDefinition';
@@ -77,12 +87,14 @@ export {
   getLayoutNodeContextValue,
   LayoutNodeProvider,
   useDockNodeContext,
+  useGridNodeContext,
   useLayoutNodeContext,
   useSplitNodeContext,
   useTabsNodeContext,
 } from './LayoutNodeContext';
 export type {
   LayoutNodeContextDock,
+  LayoutNodeContextGrid,
   LayoutNodeContextLeaf,
   LayoutNodeContextPanel,
   LayoutNodeContextSplit,
@@ -92,7 +104,10 @@ export type {
 
 // Node renderers
 export {LeafLayout} from './node-renderers/leaf-node-renderer/LeafLayout';
+export {useExpandGridPanel} from './node-renderers/leaf-node-renderer/useExpandGridPanel';
 export {useLeafLayoutPanelDraggable} from './node-renderers/leaf-node-renderer/LeafLayoutPanelDraggableContext';
 export {SplitLayout} from './node-renderers/split-node-renderer/SplitLayout';
 export {TabsLayout} from './node-renderers/tabs-node-renderer/TabsLayout';
+export type {TabsLayoutTabContentProps} from './node-renderers/tabs-node-renderer/TabsLayoutTabContent';
 export {DockLayout} from './node-renderers/dock-node-renderer/DockLayout';
+export {GridLayout} from './node-renderers/grid-node-renderer/GridLayout';

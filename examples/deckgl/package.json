@@ -1,11 +1,11 @@
 {
   "name": "deckgl-example",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -19,10 +19,8 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.555.0",
-    "maplibre-gl": "^5.12.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-map-gl": "^8.1.1",
     "zod": "4.1.13"
   },
   "devDependencies": {
