@@ -65,6 +65,8 @@ import {
 export interface TabDescriptor {
   id: string;
   name: string;
+  /** Optional className appended to the outer wrapper of this tab. */
+  className?: string;
   [key: string]: unknown;
 }
 
@@ -248,6 +250,7 @@ function SortableTab({
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
           'py-0 pr-1 font-normal data-[state=active]:shadow-none',
           tabClassName,
+          tab.className,
           isEditing && 'focus-visible:ring-0',
         )}
       >

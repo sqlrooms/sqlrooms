@@ -36,6 +36,7 @@ export function useTabDescriptors(): TabDescriptor[] {
         id,
         name: panelInfo?.title ?? panelId,
         icon: panelInfo?.icon,
+        className: panelInfo?.className,
       });
     }
 

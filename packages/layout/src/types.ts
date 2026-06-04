@@ -20,6 +20,8 @@ export type RoomPanelInfo = {
   placement?: string;
   component?: RoomPanelComponent;
   dragOverlay?: ComponentType<{node: LayoutNode}>;
+  /** Optional className appended to this panel's tab wrapper inside a tabs node. */
+  className?: string;
 };
 
 /**
