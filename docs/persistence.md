@@ -14,6 +14,11 @@ The persistence API separates three concerns:
 - How durable snapshots are loaded, saved, and removed.
 - When a changed snapshot should be treated as dirty and flushed.
 
+Zustand is relevant because SQLRooms room state is built from composable slices
+on top of a [Zustand room store](/state-management#why-zustand). Persistence
+uses the same store and slice model: slice configs define the durable shape, and
+the persistence helpers connect that shape to host-owned storage.
+
 Most apps should start with `createRoomStorePersistence()`. It composes the
 lower-level controller with
 [Zustand persist middleware](https://zustand.docs.pmnd.rs/reference/integrations/persisting-store-data)
@@ -306,9 +311,14 @@ It does not own:
 
 ## Remove Flow
 
-If you pass `remove`, `persistence.storage.removeItem(name)` flushes pending
-state, pauses dirty tracking, calls your remove adapter, and marks the saved
-snapshot as `null`.
+Remove flow is for deleting or clearing the durable workspace snapshot, not for
+ordinary edits. It is relevant for workflows such as deleting a project, resetting
+a saved workspace, clearing local app data, or replacing a workspace with a
+freshly imported one.
+
+If you pass `remove`, `persistence.storage.removeItem(name)` first flushes
+pending state so the host does not lose an in-flight save. It then pauses dirty
+tracking, calls your remove adapter, and marks the saved snapshot as `null`.
 
 ```ts
 const persistence = createRoomStorePersistence({
