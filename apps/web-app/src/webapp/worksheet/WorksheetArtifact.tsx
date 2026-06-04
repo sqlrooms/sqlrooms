@@ -15,6 +15,7 @@ import {
   MosaicChartView,
   MosaicDashboard,
   MosaicDashboardPanelLayout,
+  useDataTable,
   useTablesWithColumns,
   type MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
@@ -367,6 +368,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
     selectionGroupId,
   });
   const runtimeKey = getBlockDocumentChartRuntimeKey({documentId, blockId});
+  const dataTable = useDataTable(effectiveTableName);
 
   const handleSettingsOpenChange = useCallback(
     (settingsOpen: boolean) => {
@@ -418,7 +420,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
 
   const settings = (
     <MosaicChartSettingsPanel
-      tableName={effectiveTableName}
+      dataTable={dataTable}
       config={chartConfig}
       onChange={handleConfigChange}
       onClose={() => handleSettingsOpenChange(false)}
@@ -427,7 +429,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
   const content = (
     <div className="h-full overflow-auto p-2">
       <MosaicChartView
-        tableName={effectiveTableName}
+        dataTable={dataTable}
         config={chartConfig}
         selectionName={selectionName}
         retentionKey={runtimeKey}
