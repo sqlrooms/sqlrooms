@@ -201,11 +201,11 @@ function CliDataSidebarSection() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SchemaExplorer className="max-h-[min(48vh,440px)] min-h-44 border-l border-sidebar-border py-1 pr-0 pl-3">
+          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] border-l border-sidebar-border py-1 pr-0 pl-3">
             <SchemaExplorer.Header title="main">
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
-            <SchemaExplorer.Tree className="min-h-0 flex-1" />
+            <SchemaExplorer.Tree />
           </SchemaExplorer>
         </div>
       ) : (
