@@ -13,15 +13,19 @@ import {FC} from 'react';
 import {useDataTable} from '../../hooks/useDataTable';
 import {useDataTableExplorer} from '../useDataTableExplorer';
 import {MosaicDashboardDataTableExplorerHeaderActions} from './MosaicDashboardDataTableExplorerHeaderActions';
+import type {DataTable} from '@sqlrooms/db';
 
-const MosaicDashboardDataTableExplorerRenderer: FC<
-  DataTableExplorerPanelRendererProps
-> = ({panel, dashboard, selectionName}) => {
+type MosaicDashboardDataTableExplorerRendererInnerProps = Omit<
+  DataTableExplorerPanelRendererProps,
+  'dashboardId'
+> & {selectedTable: DataTable};
+
+const MosaicDashboardDataTableExplorerRendererInner: FC<
+  MosaicDashboardDataTableExplorerRendererInnerProps
+> = ({panel, dashboard, selectionName, selectedTable}) => {
   const connection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.connection,
   );
-
-  const selectedTable = useDataTable(dashboard.selectedTable);
 
   const pageSize =
     typeof panel.config.pageSize === 'number'
@@ -29,7 +33,7 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
       : undefined;
 
   const explorer = useDataTableExplorer({
-    tableName: selectedTable!,
+    tableName: selectedTable,
     pageSize: pageSize ?? 10,
     selectionName,
   });
@@ -41,14 +45,6 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
   );
 
   usePanelClientRegistration(dashboard.id, panel.id, explorerClients);
-
-  if (!selectedTable) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Data Table Explorer panels require a table source.
-      </div>
-    );
-  }
 
   if (connection.status === 'loading') {
     return <SpinnerPane className="h-full w-full" />;
@@ -74,6 +70,29 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
         <DataTableExplorer.StatusBar />
       </div>
     </DataTableExplorer.Root>
+  );
+};
+
+const MosaicDashboardDataTableExplorerRenderer: FC<
+  DataTableExplorerPanelRendererProps
+> = ({panel, dashboard, selectionName}) => {
+  const selectedTable = useDataTable(dashboard.selectedTable);
+
+  if (!selectedTable) {
+    return (
+      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+        Data Table Explorer panels require a table source.
+      </div>
+    );
+  }
+
+  return (
+    <MosaicDashboardDataTableExplorerRendererInner
+      panel={panel}
+      dashboard={dashboard}
+      selectionName={selectionName}
+      selectedTable={selectedTable}
+    />
   );
 };
 
