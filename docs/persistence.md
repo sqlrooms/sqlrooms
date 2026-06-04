@@ -15,8 +15,9 @@ The persistence API separates three concerns:
 - When a changed snapshot should be treated as dirty and flushed.
 
 Most apps should start with `createRoomStorePersistence()`. It composes the
-lower-level controller with Zustand persist storage and room-store subscription
-glue.
+lower-level controller with
+[Zustand persist middleware](https://zustand.docs.pmnd.rs/reference/integrations/persisting-store-data)
+storage and room-store subscription glue.
 
 ## API Layers
 
