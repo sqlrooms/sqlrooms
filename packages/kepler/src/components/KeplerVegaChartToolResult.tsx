@@ -10,7 +10,7 @@ import {
   extractTableNameFromSql,
   resolveBrushToRowIndices,
 } from '@sqlrooms/vega';
-import {ReactNode, useCallback, useEffect, useMemo, useRef} from 'react';
+import {ReactNode, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
 import type {DbSliceState} from '@sqlrooms/room-shell';
 
@@ -56,14 +56,34 @@ export function KeplerVegaChartToolResult(
   const {mapId, ...toolResultProps} = props;
   const sqlQuery = toolResultProps.output?.sqlQuery ?? '';
 
-  const datasetName = useMemo(
-    () => extractTableNameFromSql(sqlQuery),
-    [sqlQuery],
-  );
-
   const getConnector = useStoreWithKepler(
     (state: DbSliceState) => state.db.getConnector,
   );
+
+  // `datasetName` is resolved asynchronously because table-name extraction now
+  // parses the SQL via DuckDB (`json_serialize_sql`) rather than a regex.
+  const [datasetName, setDatasetName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!sqlQuery) {
+        if (!cancelled) setDatasetName(null);
+        return;
+      }
+      try {
+        const connector = await getConnector();
+        const name = await extractTableNameFromSql(connector, sqlQuery);
+        if (!cancelled) setDatasetName(name);
+      } catch (e) {
+        console.warn('Failed to extract table name from chart SQL:', e);
+        if (!cancelled) setDatasetName(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sqlQuery, getConnector]);
+
   const keplerMap = useStoreWithKepler((state) => state.kepler.map[mapId]);
   const dispatchAction = useStoreWithKepler(
     (state) => state.kepler.dispatchAction,

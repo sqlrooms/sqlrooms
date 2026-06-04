@@ -3,123 +3,194 @@ import type {BrushFieldMapping} from './VegaChartTool';
 import type {VegaBrushSelectionRanges} from './VegaLiteArrowChart';
 
 // ---------------------------------------------------------------------------
-// SQL parsing helpers
+// SQL parsing helpers (DuckDB AST via json_serialize_sql)
 // ---------------------------------------------------------------------------
 
-const AGGREGATE_PATTERN =
-  /^(?:COUNT|SUM|AVG|MIN|MAX|STDDEV|VARIANCE|MEDIAN|APPROX_COUNT_DISTINCT|LIST|ARRAY_AGG|STRING_AGG|GROUP_CONCAT|FIRST|LAST|ANY_VALUE)\s*\(/i;
-
 /**
- * Extract the first table name referenced in a SQL query.
- * Handles `FROM table`, `FROM "quoted"`, and `FROM schema.table`.
+ * Minimal shape of a parsed expression node from DuckDB's
+ * `json_serialize_sql`. Only the fields we rely on are typed; the full node
+ * carries many more properties that we pass through opaquely.
  */
-export function extractTableNameFromSql(sql: string): string | null {
-  const match = sql.match(/\bFROM\s+(?:"([^"]+)"|`([^`]+)`|(\w+(?:\.\w+)?))/i);
-  if (!match) return null;
-  const raw = match[1] ?? match[2] ?? match[3] ?? null;
-  if (!raw) return null;
-  const parts = raw.split('.');
-  return parts[parts.length - 1] ?? null;
+type ParsedExpr = {
+  class?: string;
+  type?: string;
+  alias?: string;
+  function_name?: string;
+  column_names?: string[];
+  children?: ParsedExpr[];
+  [key: string]: unknown;
+};
+
+/** Minimal shape of a parsed table reference from `json_serialize_sql`. */
+type ParsedTableRef = {
+  type?: string;
+  table_name?: string;
+  left?: ParsedTableRef;
+  right?: ParsedTableRef;
+  [key: string]: unknown;
+};
+
+/** Minimal shape of a parsed SELECT statement from `json_serialize_sql`. */
+type ParsedSelectStatement = {
+  node: {
+    type?: string;
+    from_table?: ParsedTableRef;
+    select_list?: ParsedExpr[];
+    where_clause?: unknown;
+    group_expressions?: unknown;
+    group_sets?: unknown;
+    qualify?: unknown;
+    having?: unknown;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+type ParsedSql =
+  | {error: true; [key: string]: unknown}
+  | {error: false; statements: ParsedSelectStatement[]};
+
+function escapeSqlLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
 }
 
 /**
- * Extract the body between `SELECT` and the top-level `FROM`, respecting
- * nesting of parenthesized subqueries and CASE expressions.
+ * Parse a single SQL SELECT statement into DuckDB's JSON AST. Returns `null`
+ * when the SQL is invalid or does not contain a SELECT statement.
  */
-function extractTopLevelSelectBody(sql: string): string | null {
-  const upper = sql.toUpperCase();
-  const selectIdx = upper.search(/\bSELECT\b/);
-  if (selectIdx < 0) return null;
-
-  let start = selectIdx + 'SELECT'.length;
-  if (upper.substring(start).match(/^\s+DISTINCT\b/i)) {
-    start += upper.substring(start).indexOf('DISTINCT') + 'DISTINCT'.length;
+async function parseSelectStatement(
+  connector: DuckDbConnector,
+  sql: string,
+): Promise<ParsedSelectStatement | null> {
+  let parsed: ParsedSql;
+  try {
+    const result = await connector.query(
+      `SELECT json_serialize_sql(${escapeSqlLiteral(sql)}) AS ast`,
+    );
+    const raw = result?.getChildAt(0)?.get(0);
+    if (raw == null) return null;
+    parsed = JSON.parse(String(raw)) as ParsedSql;
+  } catch {
+    return null;
   }
+  if (parsed.error) return null;
+  const statement = parsed.statements?.[0];
+  if (!statement || statement.node?.type !== 'SELECT_NODE') return null;
+  return statement;
+}
 
-  let depth = 0;
-  let caseDepth = 0;
-  for (let i = start; i < sql.length; i++) {
-    const ch = sql[i];
-    if (ch === '(' || ch === '[') {
-      depth++;
-    } else if (ch === ')' || ch === ']') {
-      depth--;
-    } else if (depth === 0) {
-      const remaining = upper.substring(i);
-      if (remaining.startsWith('CASE') && /^CASE\b/.test(remaining)) {
-        caseDepth++;
-      } else if (remaining.startsWith('END') && /^END\b/.test(remaining)) {
-        caseDepth = Math.max(0, caseDepth - 1);
-      } else if (
-        caseDepth === 0 &&
-        remaining.startsWith('FROM') &&
-        /^FROM\b/.test(remaining)
-      ) {
-        return sql.substring(start, i);
+/**
+ * Descend a (possibly joined/subqueried) table reference to the leftmost
+ * base table and return its unqualified name.
+ */
+function findBaseTableName(ref: ParsedTableRef | undefined): string | null {
+  if (!ref) return null;
+  if (ref.type === 'BASE_TABLE' && typeof ref.table_name === 'string') {
+    return ref.table_name;
+  }
+  // JOIN nodes nest into left/right; follow the left side first.
+  return findBaseTableName(ref.left) ?? findBaseTableName(ref.right);
+}
+
+/**
+ * Load the set of aggregate function names known to the connected DuckDB
+ * instance (lowercased). Cached per connector since the catalog is stable.
+ */
+const aggregateNameCache = new WeakMap<DuckDbConnector, Promise<Set<string>>>();
+
+function getAggregateFunctionNames(
+  connector: DuckDbConnector,
+): Promise<Set<string>> {
+  let cached = aggregateNameCache.get(connector);
+  if (!cached) {
+    cached = (async () => {
+      try {
+        const result = await connector.query(
+          `SELECT DISTINCT lower(function_name) AS n
+             FROM duckdb_functions()
+            WHERE function_type = 'aggregate'`,
+        );
+        const rows = arrowTableToJson(result);
+        return new Set(rows.map((r) => String(r['n'])));
+      } catch {
+        return new Set<string>();
       }
-    }
+    })();
+    aggregateNameCache.set(connector, cached);
+  }
+  return cached;
+}
+
+/**
+ * Whether a parsed expression contains an aggregate anywhere in its tree
+ * (e.g. `SUM(x)`, `COUNT(*)`, or `SUM(x) + 1`).
+ */
+function exprContainsAggregate(
+  expr: ParsedExpr,
+  aggregateNames: Set<string>,
+): boolean {
+  if (
+    expr.class === 'FUNCTION' &&
+    typeof expr.function_name === 'string' &&
+    aggregateNames.has(expr.function_name.toLowerCase())
+  ) {
+    return true;
+  }
+  if (Array.isArray(expr.children)) {
+    return expr.children.some((child) =>
+      exprContainsAggregate(child, aggregateNames),
+    );
+  }
+  return false;
+}
+
+/**
+ * Derive the output field name for a select-list item: its explicit alias,
+ * or the (unqualified) column name for a bare column reference.
+ */
+function selectItemFieldName(expr: ParsedExpr): string | null {
+  if (typeof expr.alias === 'string' && expr.alias.length > 0) {
+    return expr.alias;
+  }
+  if (expr.class === 'COLUMN_REF' && Array.isArray(expr.column_names)) {
+    const last = expr.column_names[expr.column_names.length - 1];
+    return last ?? null;
   }
   return null;
 }
 
 /**
- * Split a SELECT clause into individual items, respecting nested parens
- * and function calls.
+ * Build an AST for `row_number() OVER () - 1 AS __row_idx` by parsing it
+ * through the connector, so it matches the connected DuckDB version exactly.
  */
-function splitSelectItems(selectBody: string): string[] {
-  const items: string[] = [];
-  let depth = 0;
-  let current = '';
-  for (const ch of selectBody) {
-    if (ch === '(' || ch === '[') depth++;
-    else if (ch === ')' || ch === ']') depth--;
-    else if (ch === ',' && depth === 0) {
-      items.push(current);
-      current = '';
-      continue;
-    }
-    current += ch;
-  }
-  if (current.trim()) items.push(current);
-  return items;
+async function buildRowIndexExpr(
+  connector: DuckDbConnector,
+): Promise<ParsedExpr | null> {
+  const statement = await parseSelectStatement(
+    connector,
+    'SELECT row_number() OVER () - 1 AS __row_idx',
+  );
+  return statement?.node.select_list?.[0] ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Public helpers
+// ---------------------------------------------------------------------------
+
 /**
- * Extract alias -> expression mappings from a SQL SELECT clause.
- * Returns only non-aggregate expressions (skips COUNT, SUM, etc.).
+ * Extract the primary base table referenced by a SQL SELECT query by parsing
+ * it through DuckDB (`json_serialize_sql`). For joins, returns the leftmost
+ * base table; for subqueries/CTEs without a base table, returns `null`.
  *
- * Handles three forms:
- *   - `expr AS alias`        → alias maps to expr
- *   - `column_name`          → column_name maps to itself
- *   - `table.column_name`    → column_name maps to itself (qualified)
- *   - `*` or aggregates      → skipped
+ * This is async because it relies on the DuckDB parser via {@link connector}.
  */
-function parseNonAggregateAliases(sql: string): Map<string, string> {
-  const result = new Map<string, string>();
-  const selectBody = extractTopLevelSelectBody(sql);
-  if (!selectBody) return result;
-
-  for (const item of splitSelectItems(selectBody)) {
-    const trimmed = item.trim();
-    if (trimmed === '*') continue;
-
-    const asMatch = trimmed.match(/^([\s\S]+?)\s+AS\s+(\w+)\s*$/i);
-    if (asMatch) {
-      const expr = asMatch[1]!.trim();
-      const alias = asMatch[2]!;
-      if (AGGREGATE_PATTERN.test(expr)) continue;
-      result.set(alias, expr);
-      continue;
-    }
-
-    // Bare column: `col` or `table.col` or `"quoted_col"`
-    const bareMatch = trimmed.match(/^(?:\w+\.)?(?:"([^"]+)"|(\w+))$/);
-    if (bareMatch) {
-      const colName = bareMatch[1] ?? bareMatch[2]!;
-      result.set(colName, trimmed);
-    }
-  }
-  return result;
+export async function extractTableNameFromSql(
+  connector: DuckDbConnector,
+  sql: string,
+): Promise<string | null> {
+  const statement = await parseSelectStatement(connector, sql);
+  if (!statement) return null;
+  return findBaseTableName(statement.node.from_table);
 }
 
 // ---------------------------------------------------------------------------
@@ -131,39 +202,78 @@ const MAX_BRUSH_MAPPING_ROWS = 100_000;
 /**
  * Computes a {@link BrushFieldMapping} for the given chart SQL by querying
  * the source table. Evaluates non-aggregate field expressions against every
- * row and groups source row indices by each expression's value.
+ * source row and groups source row indices by each expression's value.
+ *
+ * The chart SQL is parsed via DuckDB's AST (`json_serialize_sql`) to identify
+ * the source table and the non-aggregate select-list expressions. The query
+ * used to build the mapping reuses the original `FROM` clause exactly (joins,
+ * subqueries, schema-qualified names) but drops `WHERE`/`GROUP BY`/`HAVING`/
+ * `QUALIFY` so that every source row is evaluated.
  *
  * Returns `null` when the source table exceeds
- * {@link MAX_BRUSH_MAPPING_ROWS} rows to avoid expensive scans.
+ * {@link MAX_BRUSH_MAPPING_ROWS} rows to avoid expensive scans, when the SQL
+ * cannot be parsed, or when there are no non-aggregate fields to map.
  */
 export async function computeBrushMapping(
   connector: DuckDbConnector,
   chartSql: string,
 ): Promise<BrushFieldMapping | null> {
-  const tableName = extractTableNameFromSql(chartSql);
+  const statement = await parseSelectStatement(connector, chartSql);
+  if (!statement) return null;
+
+  const tableName = findBaseTableName(statement.node.from_table);
   if (!tableName) return null;
 
-  const aliasToExpr = parseNonAggregateAliases(chartSql);
-  if (aliasToExpr.size === 0) return null;
+  const aggregateNames = await getAggregateFunctionNames(connector);
+  const selectList = statement.node.select_list ?? [];
+
+  const fieldItems: ParsedExpr[] = [];
+  const aliases: string[] = [];
+  const seen = new Set<string>();
+  for (const item of selectList) {
+    if (item.class === 'STAR') continue;
+    if (exprContainsAggregate(item, aggregateNames)) continue;
+    const field = selectItemFieldName(item);
+    if (!field || seen.has(field)) continue;
+    seen.add(field);
+    // Force the output field name to a deterministic alias so we can read it
+    // back regardless of how DuckDB would auto-name the column.
+    fieldItems.push({...item, alias: field});
+    aliases.push(field);
+  }
+  if (fieldItems.length === 0) return null;
 
   const escapedTable = `"${tableName.replace(/"/g, '""')}"`;
-
   const countResult = await connector.query(
     `SELECT COUNT(*) AS cnt FROM ${escapedTable}`,
   );
   const rowCount = Number(countResult?.getChildAt(0)?.get(0) ?? 0);
   if (rowCount > MAX_BRUSH_MAPPING_ROWS) return null;
 
-  const selectParts = [`row_number() OVER () - 1 AS __row_idx`];
-  const aliases: string[] = [];
-  for (const [alias, expr] of aliasToExpr) {
-    const escapedAlias = `"${alias.replace(/"/g, '""')}"`;
-    selectParts.push(`(${expr}) AS ${escapedAlias}`);
-    aliases.push(alias);
-  }
+  const rowIndexExpr = await buildRowIndexExpr(connector);
+  if (!rowIndexExpr) return null;
 
-  const sql = `SELECT ${selectParts.join(', ')} FROM ${escapedTable}`;
-  const result = await connector.query(sql);
+  // Mutate the parsed statement: keep only the row index + non-aggregate
+  // fields, and strip clauses that would filter/reduce rows. Deserializing
+  // back to SQL lets DuckDB regenerate a correct query (quoting, joins, etc.).
+  const projectStatement = JSON.parse(
+    JSON.stringify(statement),
+  ) as ParsedSelectStatement;
+  projectStatement.node.select_list = [rowIndexExpr, ...fieldItems];
+  projectStatement.node.where_clause = null;
+  projectStatement.node.group_expressions = [];
+  projectStatement.node.group_sets = [];
+  projectStatement.node.having = null;
+  projectStatement.node.qualify = null;
+
+  const serialized = JSON.stringify({error: false, statements: [projectStatement]});
+  const deserializeResult = await connector.query(
+    `SELECT json_deserialize_sql(${escapeSqlLiteral(serialized)}) AS sql`,
+  );
+  const projectionSql = deserializeResult?.getChildAt(0)?.get(0);
+  if (projectionSql == null) return null;
+
+  const result = await connector.query(String(projectionSql));
   if (!result || result.numRows === 0) return null;
 
   const rows = arrowTableToJson(result);
