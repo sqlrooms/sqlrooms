@@ -1,8 +1,13 @@
 import {
   DndContext,
   DragEndEvent,
+  DragMoveEvent,
+  DragOverEvent,
+  DragStartEvent,
+  DragOverlay,
   PointerSensor,
   closestCenter,
+  useDndMonitor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -28,6 +33,7 @@ import React, {
   useContext,
   useEffect,
   useLayoutEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -62,6 +68,15 @@ export interface TabDescriptor {
   [key: string]: unknown;
 }
 
+export type TabStripDndMode = 'internal' | 'shared';
+
+/**
+ * Extra payload attached to tab drags. `TabStrip` always preserves `tabId` and
+ * `tabStripId`; callers may intentionally override `kind` for cross-component
+ * drags such as artifact tabs.
+ */
+export type TabStripDragData = Record<string, unknown>;
+
 // -----------------------------------------------------------------------------
 // Context
 // -----------------------------------------------------------------------------
@@ -80,15 +95,20 @@ interface TabStripContextValue {
   preventCloseLastTab: boolean;
   closeable: boolean;
   getLastOpenedAt: (tabId: string) => number | undefined;
+  dndMode: TabStripDndMode;
+  dndScopeId: string;
+  getTabDragData?: (tab: TabDescriptor) => TabStripDragData | undefined;
+  fontSize?: React.CSSProperties['fontSize'];
 
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
   onSelect?: (tabId: string) => void;
+  onActivate?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
-  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  renderSearchItemLabel?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 
   // Internal handlers
@@ -109,6 +129,25 @@ function useTabStripContext() {
   return context;
 }
 
+function useOptionalTabStripContext() {
+  return useContext(TabStripContext);
+}
+
+function getFontSizeStyle(fontSize?: React.CSSProperties['fontSize']) {
+  return fontSize === undefined
+    ? undefined
+    : ({fontSize} as React.CSSProperties);
+}
+
+function mergeFontSizeStyle(
+  fontSize: React.CSSProperties['fontSize'] | undefined,
+  style: React.CSSProperties | undefined,
+) {
+  if (fontSize === undefined) return style;
+  if (style === undefined) return {fontSize};
+  return {...style, fontSize: style?.fontSize ?? fontSize};
+}
+
 // -----------------------------------------------------------------------------
 // Subcomponents
 // -----------------------------------------------------------------------------
@@ -121,17 +160,23 @@ interface TabStripTabsProps {
 
 interface SortableTabProps {
   tab: TabDescriptor;
+  sortableId: string;
   tabClassName?: string;
   editingTabId: string | null;
   closeable?: boolean;
   onClose: (tabId: string) => void;
+  onActivate: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
-  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
+  dndScopeId: string;
+  getTabDragData?: (tab: TabDescriptor) => TabStripDragData | undefined;
+  fontSize?: React.CSSProperties['fontSize'];
 }
+
+const DEFAULT_TAB_DRAG_KIND = 'sqlrooms.tab';
 
 const TAB_STRIP_BUTTON_CLASSNAMES = [
   'flex h-full min-w-0 min-h-7 items-center',
@@ -144,19 +189,34 @@ const TAB_STRIP_BUTTON_CLASSNAMES = [
  */
 function SortableTab({
   tab,
+  sortableId,
   tabClassName,
   editingTabId,
   closeable = true,
   onClose,
+  onActivate,
   onStartEditing,
   onStopEditing,
   onInlineRename,
-  renderTabTitle,
   renderTabMenu,
   renderTabLabel,
+  dndScopeId,
+  getTabDragData,
+  fontSize,
 }: SortableTabProps) {
+  const tabDragData = getTabDragData?.(tab);
+  const isEditing = editingTabId === tab.id;
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
-    useSortable({id: tab.id});
+    useSortable({
+      id: sortableId,
+      disabled: isEditing,
+      data: {
+        kind: DEFAULT_TAB_DRAG_KIND,
+        ...tabDragData,
+        tabId: tab.id,
+        tabStripId: dndScopeId,
+      },
+    });
 
   const style: React.CSSProperties = {
     // Use Translate instead of Transform to avoid scale changes that squeeze the tab
@@ -168,6 +228,7 @@ function SortableTab({
   };
 
   const menuContent = renderTabMenu?.(tab);
+  const fontSizeStyle = getFontSizeStyle(fontSize);
 
   return (
     <div
@@ -175,43 +236,47 @@ function SortableTab({
       className="h-full shrink-0"
       style={style}
       data-tab-id={tab.id}
-      {...attributes}
-      {...listeners}
+      {...(isEditing ? {} : attributes)}
+      {...(isEditing ? {} : listeners)}
       tabIndex={-1}
     >
       <div
-        data-state={editingTabId === tab.id ? 'editing' : undefined}
+        data-state={isEditing ? 'editing' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
-          'group flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
+          'group/tab flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
-          'py-0 pr-1 pl-4 font-normal data-[state=active]:shadow-none',
+          'py-0 pr-1 font-normal data-[state=active]:shadow-none',
           tabClassName,
-          editingTabId === tab.id && 'focus-visible:ring-0',
+          isEditing && 'focus-visible:ring-0',
         )}
       >
         <div className="relative flex h-full min-w-0 flex-1 items-center">
           <TabsTrigger
             value={tab.id}
-            tabIndex={editingTabId === tab.id ? -1 : undefined}
-            data-editing={editingTabId === tab.id ? '' : undefined}
+            tabIndex={isEditing ? -1 : undefined}
+            data-editing={isEditing ? '' : undefined}
             className={cn(
               ...TAB_STRIP_BUTTON_CLASSNAMES,
-              'flex-1 justify-start gap-1',
+              'flex-1 gap-1',
+              isEditing ? 'justify-start' : 'justify-center text-center',
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
-              editingTabId === tab.id && 'focus-visible:ring-0',
+              isEditing && 'focus-visible:ring-0',
             )}
+            style={fontSizeStyle}
+            onClick={() => onActivate(tab.id)}
             onDoubleClick={() => onStartEditing(tab.id)}
           >
-            {editingTabId !== tab.id ? (
-              <div className="truncate text-sm">
+            {!isEditing ? (
+              <div className="min-w-0 flex-1 truncate text-center">
                 {renderTabLabel ? renderTabLabel(tab) : tab.name}
               </div>
             ) : (
               <EditableText
                 value={tab.name}
                 onChange={(newName) => onInlineRename(tab.id, newName)}
-                className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
+                className="h-6 min-w-0 flex-1 truncate shadow-none"
+                style={fontSizeStyle}
                 isEditing
                 autoFocus
                 selectOnFocus
@@ -232,7 +297,7 @@ function SortableTab({
                   <button
                     type="button"
                     aria-label="Tab options"
-                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
+                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
                     onMouseDown={(event) => {
                       event.stopPropagation();
                       event.preventDefault();
@@ -244,7 +309,7 @@ function SortableTab({
                     <EllipsisVerticalIcon className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
+                <DropdownMenuContent align="start" style={fontSizeStyle}>
                   {menuContent}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -254,7 +319,7 @@ function SortableTab({
               <button
                 type="button"
                 aria-label="Close tab"
-                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
+                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
                 onMouseDown={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
@@ -297,6 +362,8 @@ function TabStripMenuItem({
   className,
   disabled,
 }: TabStripMenuItemProps) {
+  const {fontSize} = useTabStripContext();
+
   return (
     <DropdownMenuItem
       disabled={disabled}
@@ -308,6 +375,7 @@ function TabStripMenuItem({
         variant === 'destructive' && 'text-destructive focus:text-destructive',
         className,
       )}
+      style={getFontSizeStyle(fontSize)}
     >
       {children}
     </DropdownMenuItem>
@@ -369,15 +437,19 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     editingTabId,
     scrollContainerRef,
     onOpenTabsChange,
-    renderTabTitle,
+    dndMode,
+    dndScopeId,
+    getTabDragData,
     renderTabMenu,
     renderTabLabel,
     preventCloseLastTab,
     closeable,
+    fontSize,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
     handleClose,
+    onActivate,
   } = useTabStripContext();
 
   const sensors = useSensors(
@@ -387,13 +459,65 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
       },
     }),
   );
+  const [activeDraggedTabId, setActiveDraggedTabId] = useState<string | null>(
+    null,
+  );
+  const [hideSharedDragOverlay, setHideSharedDragOverlay] = useState(false);
+
+  const isDragInsideTabStrip = (
+    event: DragMoveEvent | DragOverEvent | DragStartEvent,
+  ) => {
+    const rect =
+      event.active.rect.current.translated ?? event.active.rect.current.initial;
+    const tabStripRect = scrollContainerRef.current?.getBoundingClientRect();
+    if (!rect || !tabStripRect) return false;
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    return (
+      centerX >= tabStripRect.left &&
+      centerX <= tabStripRect.right &&
+      centerY >= tabStripRect.top &&
+      centerY <= tabStripRect.bottom
+    );
+  };
+
+  const shouldHideSharedDragOverlay = (
+    event: DragMoveEvent | DragOverEvent | DragStartEvent,
+  ) => {
+    if (isDragInsideTabStrip(event)) {
+      return true;
+    }
+    if ('over' in event) {
+      return event.over?.data.current?.tabStripId === dndScopeId;
+    }
+    return false;
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const {active, over} = event;
     if (!over || active.id === over.id || !onOpenTabsChange) return;
 
-    const oldIndex = openTabItems.findIndex((tab) => tab.id === active.id);
-    const newIndex = openTabItems.findIndex((tab) => tab.id === over.id);
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    const activeTabId =
+      typeof activeData?.tabId === 'string'
+        ? activeData.tabId
+        : String(active.id);
+    const overTabId =
+      typeof overData?.tabId === 'string' ? overData.tabId : String(over.id);
+
+    if (
+      dndMode === 'shared' &&
+      (activeData?.tabStripId !== dndScopeId ||
+        overData?.tabStripId !== dndScopeId)
+    ) {
+      return;
+    }
+
+    const oldIndex = openTabItems.findIndex((tab) => tab.id === activeTabId);
+    const newIndex = openTabItems.findIndex((tab) => tab.id === overTabId);
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const newOrder = arrayMove(
@@ -405,7 +529,82 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     }
   };
 
-  const tabIds = useMemo(() => openTabItems.map((t) => t.id), [openTabItems]);
+  const getSortableId = (tabId: string) =>
+    dndMode === 'shared' ? `${dndScopeId}:${tabId}` : tabId;
+
+  const tabIds = useMemo(
+    () => openTabItems.map((t) => getSortableId(t.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [openTabItems, dndMode, dndScopeId],
+  );
+
+  const content = (
+    <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
+      <ScrollableRow
+        className="h-full min-w-0 shrink overflow-hidden"
+        scrollRef={scrollContainerRef}
+        scrollClassName={cn(
+          'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible',
+          'pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
+          className,
+        )}
+        arrowVisibility="always"
+        arrowClassName="w-7"
+        arrowIconClassName="h-4 w-4 opacity-60"
+      >
+        {openTabItems.map((tab) => (
+          <SortableTab
+            key={tab.id}
+            tab={tab}
+            sortableId={getSortableId(tab.id)}
+            tabClassName={tabClassName}
+            editingTabId={editingTabId}
+            closeable={
+              closeable && !(preventCloseLastTab && openTabItems.length === 1)
+            }
+            onClose={handleClose}
+            onActivate={onActivate ?? (() => undefined)}
+            onStartEditing={handleStartEditing}
+            onStopEditing={handleStopEditing}
+            onInlineRename={handleInlineRename}
+            renderTabMenu={renderTabMenu}
+            renderTabLabel={renderTabLabel}
+            dndScopeId={dndScopeId}
+            getTabDragData={getTabDragData}
+            fontSize={fontSize}
+          />
+        ))}
+      </ScrollableRow>
+    </SortableContext>
+  );
+
+  if (dndMode === 'shared') {
+    const activeDraggedTab = activeDraggedTabId
+      ? openTabItems.find((tab) => tab.id === activeDraggedTabId)
+      : undefined;
+
+    return (
+      <>
+        <SharedTabStripDndMonitor
+          dndScopeId={dndScopeId}
+          handleDragEnd={handleDragEnd}
+          setActiveDraggedTabId={setActiveDraggedTabId}
+          setHideSharedDragOverlay={setHideSharedDragOverlay}
+          shouldHideSharedDragOverlay={shouldHideSharedDragOverlay}
+        />
+        {content}
+        <DragOverlay dropAnimation={null}>
+          {activeDraggedTab && !hideSharedDragOverlay ? (
+            <TabDragOverlay
+              tab={activeDraggedTab}
+              renderTabLabel={renderTabLabel}
+              fontSize={fontSize}
+            />
+          ) : null}
+        </DragOverlay>
+      </>
+    );
+  }
 
   return (
     <DndContext
@@ -415,40 +614,86 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
       autoScroll={true}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
-        <ScrollableRow
-          className="h-full min-w-0 shrink overflow-hidden"
-          scrollRef={scrollContainerRef}
-          scrollClassName={cn(
-            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible',
-            'pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
-            className,
-          )}
-          arrowVisibility="always"
-          arrowClassName="w-7"
-          arrowIconClassName="h-4 w-4 opacity-60"
-        >
-          {openTabItems.map((tab) => (
-            <SortableTab
-              key={tab.id}
-              tab={tab}
-              tabClassName={tabClassName}
-              editingTabId={editingTabId}
-              closeable={
-                closeable && !(preventCloseLastTab && openTabItems.length === 1)
-              }
-              onClose={handleClose}
-              onStartEditing={handleStartEditing}
-              onStopEditing={handleStopEditing}
-              onInlineRename={handleInlineRename}
-              renderTabTitle={renderTabTitle}
-              renderTabMenu={renderTabMenu}
-              renderTabLabel={renderTabLabel}
-            />
-          ))}
-        </ScrollableRow>
-      </SortableContext>
+      {content}
     </DndContext>
+  );
+}
+
+function SharedTabStripDndMonitor({
+  dndScopeId,
+  handleDragEnd,
+  setActiveDraggedTabId,
+  setHideSharedDragOverlay,
+  shouldHideSharedDragOverlay,
+}: {
+  dndScopeId: string;
+  handleDragEnd: (event: DragEndEvent) => void;
+  setActiveDraggedTabId: React.Dispatch<React.SetStateAction<string | null>>;
+  setHideSharedDragOverlay: React.Dispatch<React.SetStateAction<boolean>>;
+  shouldHideSharedDragOverlay: (
+    event: DragMoveEvent | DragOverEvent | DragStartEvent,
+  ) => boolean;
+}) {
+  const isOwnTabDrag = (
+    event: DragStartEvent | DragMoveEvent | DragOverEvent | DragEndEvent,
+  ) => event.active.data.current?.tabStripId === dndScopeId;
+
+  useDndMonitor({
+    onDragStart: (event) => {
+      const activeData = event.active.data.current;
+      if (!isOwnTabDrag(event)) {
+        return;
+      }
+      setActiveDraggedTabId(
+        typeof activeData?.tabId === 'string' ? activeData.tabId : null,
+      );
+      setHideSharedDragOverlay(true);
+    },
+    onDragMove: (event) => {
+      if (!isOwnTabDrag(event)) return;
+      setHideSharedDragOverlay(shouldHideSharedDragOverlay(event));
+    },
+    onDragOver: (event) => {
+      if (!isOwnTabDrag(event)) return;
+      setHideSharedDragOverlay(shouldHideSharedDragOverlay(event));
+    },
+    onDragEnd: (event) => {
+      if (!isOwnTabDrag(event)) return;
+      handleDragEnd(event);
+      setActiveDraggedTabId(null);
+      setHideSharedDragOverlay(false);
+    },
+    onDragCancel: () => {
+      setActiveDraggedTabId(null);
+      setHideSharedDragOverlay(false);
+    },
+  });
+
+  return null;
+}
+
+function TabDragOverlay({
+  tab,
+  renderTabLabel,
+  fontSize,
+}: {
+  tab: TabDescriptor;
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
+  fontSize?: React.CSSProperties['fontSize'];
+}) {
+  return (
+    <div
+      className={cn(
+        'bg-primary/15 text-foreground border-primary/50 flex h-7 max-w-[200px] min-w-[100px]',
+        'cursor-grabbing items-center justify-center gap-1 overflow-hidden rounded-md border px-6 py-1',
+        'text-sm shadow-lg',
+      )}
+      style={getFontSizeStyle(fontSize)}
+    >
+      <div className="truncate text-center">
+        {renderTabLabel ? renderTabLabel(tab) : tab.name}
+      </div>
+    </div>
   );
 }
 
@@ -501,9 +746,12 @@ function TabStripSearchDropdown({
     onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
+    renderSearchItemLabel,
     getLastOpenedAt,
     handleClose,
+    fontSize,
   } = useTabStripContext();
+  const fontSizeStyle = getFontSizeStyle(fontSize);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -585,6 +833,7 @@ function TabStripSearchDropdown({
         aria-label="Browse tabs"
         size="icon"
         className={cn(...TAB_STRIP_BUTTON_CLASSNAMES, triggerClassName)}
+        style={fontSizeStyle}
       >
         {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
       </Button>
@@ -611,6 +860,7 @@ function TabStripSearchDropdown({
           'flex max-h-[400px] max-w-[240px] flex-col overflow-x-hidden',
           className,
         )}
+        style={fontSizeStyle}
       >
         <div className="flex shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
@@ -632,6 +882,7 @@ function TabStripSearchDropdown({
             }}
             onKeyUp={(event) => event.stopPropagation()}
             className="border-none text-xs shadow-none focus-visible:ring-0"
+            style={fontSizeStyle}
             placeholder="Search..."
             aria-label="Search"
             autoFocus={autoFocus}
@@ -646,6 +897,7 @@ function TabStripSearchDropdown({
                 tabs={filteredTabs}
                 emptyMessage={searchEmptyMessage}
                 onTabClick={handleTabClick}
+                renderLabel={renderSearchItemLabel}
                 renderActions={renderSearchItemActions}
               />
             ) : (
@@ -653,17 +905,22 @@ function TabStripSearchDropdown({
                 <DropdownTabItems
                   tabs={filteredOpenTabs}
                   onTabClick={handleTabClick}
+                  renderLabel={renderSearchItemLabel}
                   renderActions={renderOpenTabActions}
                 />
                 {filteredClosedTabs.length > 0 && (
                   <>
                     {filteredOpenTabs.length > 0 && <DropdownMenuSeparator />}
-                    <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                    <DropdownMenuLabel
+                      className="text-muted-foreground py-1 text-xs font-medium"
+                      style={fontSizeStyle}
+                    >
                       {closedTabsLabel}
                     </DropdownMenuLabel>
                     <DropdownTabItems
                       tabs={filteredClosedTabs}
                       onTabClick={handleTabClick}
+                      renderLabel={renderSearchItemLabel}
                       renderActions={renderSearchItemActions}
                       getItemClassName={() => 'text-muted-foreground'}
                     />
@@ -678,17 +935,22 @@ function TabStripSearchDropdown({
                   <DropdownTabItems
                     tabs={openTabsList}
                     onTabClick={handleTabClick}
+                    renderLabel={renderSearchItemLabel}
                     renderActions={renderOpenTabActions}
                   />
                   {closedTabsList.length > 0 && (
                     <>
                       {openTabsList.length > 0 && <DropdownMenuSeparator />}
-                      <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                      <DropdownMenuLabel
+                        className="text-muted-foreground py-1 text-xs font-medium"
+                        style={fontSizeStyle}
+                      >
                         {closedTabsLabel}
                       </DropdownMenuLabel>
                       <DropdownTabItems
                         tabs={closedTabsList}
                         onTabClick={handleTabClick}
+                        renderLabel={renderSearchItemLabel}
                         renderActions={renderSearchItemActions}
                         getItemClassName={() => 'text-muted-foreground'}
                       />
@@ -700,6 +962,7 @@ function TabStripSearchDropdown({
                   tabs={[]}
                   emptyMessage={emptyMessage}
                   onTabClick={handleTabClick}
+                  renderLabel={renderSearchItemLabel}
                   renderActions={renderSearchItemActions}
                 />
               )}
@@ -715,6 +978,7 @@ interface DropdownTabItemsProps {
   tabs: TabDescriptor[];
   emptyMessage?: React.ReactNode;
   onTabClick?: (tabId: string) => void;
+  renderLabel?: (tab: TabDescriptor) => React.ReactNode;
   renderActions?: (tab: TabDescriptor) => React.ReactNode;
   getItemClassName?: (tab: TabDescriptor) => string | undefined;
 }
@@ -723,13 +987,20 @@ function DropdownTabItems({
   tabs,
   emptyMessage,
   onTabClick,
+  renderLabel,
   renderActions,
   getItemClassName,
 }: DropdownTabItemsProps) {
+  const {fontSize} = useTabStripContext();
+  const fontSizeStyle = getFontSizeStyle(fontSize);
+
   if (tabs.length === 0) {
     if (!emptyMessage) return null;
     return (
-      <DropdownMenuLabel className="items-center justify-center text-xs">
+      <DropdownMenuLabel
+        className="items-center justify-center text-xs"
+        style={fontSizeStyle}
+      >
         {emptyMessage}
       </DropdownMenuLabel>
     );
@@ -745,8 +1016,11 @@ function DropdownTabItems({
             'flex h-7 cursor-pointer items-center justify-between truncate',
             getItemClassName?.(tab),
           )}
+          style={fontSizeStyle}
         >
-          <span className="xs truncate pl-1">{tab.name}</span>
+          <div className="min-w-0 truncate pl-1 text-xs" style={fontSizeStyle}>
+            {renderLabel ? renderLabel(tab) : tab.name}
+          </div>
           {renderActions && (
             <div className="flex items-center gap-2">{renderActions(tab)}</div>
           )}
@@ -759,20 +1033,27 @@ function DropdownTabItems({
 /**
  * A general-purpose button for the tab strip.
  */
-function TabStripButton({className, ...props}: ButtonProps) {
-  return (
-    <Button
-      size="icon"
-      variant="ghost"
-      className={cn(
-        ...TAB_STRIP_BUTTON_CLASSNAMES,
-        'h-full shrink-0',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const TabStripButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  function TabStripButtonComponent({className, style, ...props}, ref) {
+    const context = useOptionalTabStripContext();
+
+    return (
+      <Button
+        ref={ref}
+        size="icon"
+        variant="ghost"
+        style={mergeFontSizeStyle(context?.fontSize, style)}
+        className={cn(
+          ...TAB_STRIP_BUTTON_CLASSNAMES,
+          'h-full shrink-0',
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
+TabStripButton.displayName = 'TabStripButton';
 type TabStripNewButtonProps = ButtonProps & {
   /** Optional tooltip content for the button. */
   tooltip?: React.ReactNode;
@@ -782,7 +1063,7 @@ type TabStripNewButtonProps = ButtonProps & {
  * Renders a button to create a new tab.
  */
 function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
-  const {onCreate} = useTabStripContext();
+  const {onCreate, fontSize} = useTabStripContext();
 
   if (!onCreate) {
     return null;
@@ -791,6 +1072,7 @@ function TabStripNewButton({tooltip, ...props}: TabStripNewButtonProps) {
   const button = (
     <TabStripButton
       {...props}
+      style={mergeFontSizeStyle(fontSize, props.style)}
       aria-label={props['aria-label'] || 'Create new tab'}
       onClick={(e) => {
         onCreate();
@@ -839,18 +1121,28 @@ export interface TabStripProps {
   onOpenTabsChange?: (tabIds: string[]) => void;
   /** Called when a tab is selected. */
   onSelect?: (tabId: string) => void;
+  /** Called when a tab trigger is clicked, including the already-selected tab. */
+  onActivate?: (tabId: string) => void;
   /** Called when a new tab should be created. */
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
   onRename?: (tabId: string, newName: string) => void;
-  /** Render function for the tab's title. */
-  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for the tab's dropdown menu. Use TabStrip.MenuItem and TabStrip.MenuSeparator. */
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  /** Render function for custom search dropdown item labels. */
+  renderSearchItemLabel?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for custom tab content. Receives the tab and returns the content to display. */
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
+  /** Font size applied to tab labels, inline editing, and TabStrip subcomponents. */
+  fontSize?: React.CSSProperties['fontSize'];
+  /** Whether this tab strip owns its dnd context or participates in a shared parent context. */
+  dndMode?: TabStripDndMode;
+  /** Unique scope for shared dnd tab ids. Defaults to a generated component id. */
+  dndScopeId?: string;
+  /** Extra drag payload attached to tab drags; may intentionally override `kind`. */
+  getTabDragData?: (tab: TabDescriptor) => TabStripDragData | undefined;
 }
 
 /**
@@ -886,13 +1178,20 @@ function TabStripRoot({
   onClose,
   onOpenTabsChange,
   onSelect,
+  onActivate,
   onCreate,
   onRename,
-  renderTabTitle,
   renderTabMenu,
   renderSearchItemActions,
+  renderSearchItemLabel,
   renderTabLabel,
+  fontSize,
+  dndMode = 'internal',
+  dndScopeId,
+  getTabDragData,
 }: TabStripProps) {
+  const generatedDndScopeId = useId();
+  const actualDndScopeId = dndScopeId ?? generatedDndScopeId;
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null!);
@@ -1065,13 +1364,18 @@ function TabStripRoot({
     preventCloseLastTab,
     closeable,
     getLastOpenedAt: (tabId) => lastOpenedAtRef.current.get(tabId),
+    dndMode,
+    dndScopeId: actualDndScopeId,
+    getTabDragData,
+    fontSize,
     onOpenTabsChange,
     onSelect,
+    onActivate,
     onCreate,
     onRename,
-    renderTabTitle,
     renderTabMenu,
     renderSearchItemActions,
+    renderSearchItemLabel,
     renderTabLabel,
     setSearch,
     handleStartEditing,
@@ -1090,6 +1394,7 @@ function TabStripRoot({
       onValueChange={handleValueChange}
       activationMode="manual"
       className={cn('bg-muted w-full min-w-0', className)}
+      style={getFontSizeStyle(fontSize)}
     >
       <TabStripContext.Provider value={contextValue}>
         <TabsList

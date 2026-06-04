@@ -69,7 +69,7 @@ export function DataTablePaginatedFooter<Data extends object>({
   };
 
   return (
-    <div className="bg-background sticky bottom-0 left-0 flex h-[45px] items-center gap-2 border-t px-2">
+    <div className="bg-background relative z-20 flex h-[45px] shrink-0 items-center gap-2 border-t px-2">
       {isFetching ? (
         <div className="ml-2 text-xs">Loading...</div>
       ) : (

@@ -1,32 +1,38 @@
 {
   "name": "@sqlrooms/deck",
-  "version": "0.29.0-rc.2",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "module": "dist/index.js",
-  "type": "module",
-  "sideEffects": [
-    "**/*.css"
-  ],
-  "author": "SQLRooms Contributors",
-  "license": "MIT",
+  "version": "0.29.0-rc.6",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
   },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "access": "public"
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
   },
   "dependencies": {
     "@deck.gl/core": "^9.3.1",
     "@deck.gl/json": "^9.3.1",
     "@deck.gl/layers": "^9.3.1",
+    "@deck.gl/mapbox": "^9.3.1",
     "@deck.gl/react": "^9.3.1",
     "@geoarrow/deck.gl-layers": "0.3.2",
-    "@loaders.gl/core": "^4.4.1",
     "@loaders.gl/geoarrow": "^4.4.1",
     "@loaders.gl/gis": "^4.4.1",
     "@loaders.gl/wkt": "^4.4.1",
@@ -37,6 +43,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@uwdata/mosaic-core": "^0.21.0",
     "@uwdata/mosaic-sql": "^0.21.0",
+    "ai": "^6.0.159",
     "lucide-react": "^0.555.0",
     "maplibre-gl": "^5.12.0",
     "react-map-gl": "^8.1.1",
@@ -55,13 +62,7 @@
     "react": ">=18",
     "react-dom": ">=18"
   },
-  "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc",
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
-    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch"
+  "publishConfig": {
+    "access": "public"
   }
 }

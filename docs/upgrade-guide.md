@@ -63,6 +63,63 @@ const store = createRoomStore<RoomState>((set, get, store) => ({
 const artifacts = useRoomStore((state) => state.artifacts.items);
 ```
 
+### `@sqlrooms/kepler`: map tabs moved to `@sqlrooms/artifacts` (breaking)
+
+Kepler no longer owns host-level tab selection. If your app supports multiple
+user-managed maps, model each map as an artifact and let `ArtifactTabs` own the
+selected tab, ordering, close/reopen, rename, and delete lifecycle.
+
+#### API Changes
+
+- `KeplerSliceConfig.currentMapId` was removed.
+- Legacy Kepler tab state such as `openTabs` should move to layout/artifact tab
+  state.
+- `state.kepler.getCurrentMap()` and `state.kepler.setCurrentMapId(...)` were
+  removed. Pass explicit map ids to Kepler APIs instead.
+- `KeplerMapContainer`, `KeplerPlotContainer`, `KeplerSidePanels`, and Kepler
+  slice actions should receive a `mapId` derived from the artifact panel or
+  current artifact selection.
+
+#### Migration Helper
+
+Use `migrateKeplerTabsToArtifacts` when loading persisted Kepler configs that
+still contain `maps`, `openTabs`, and `currentMapId`.
+
+```ts
+import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
+import {
+  KeplerSliceConfig,
+  migrateKeplerTabsToArtifacts,
+} from '@sqlrooms/kepler-config';
+
+const migrated = migrateKeplerTabsToArtifacts(rawKeplerConfig, {
+  artifactType: 'kepler-map',
+});
+
+const keplerConfig = KeplerSliceConfig.parse(migrated.keplerConfig);
+const artifactsConfig = ArtifactsSliceConfig.parse(migrated.artifactsConfig);
+```
+
+Then initialize the slices with the migrated configs and apply
+`migrated.hiddenArtifactIds` to the artifact tabs layout node if you need to
+preserve maps that were closed under the old Kepler tab model.
+
+#### Before
+
+```ts
+const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
+
+<KeplerMapContainer mapId={currentMap?.id ?? ''} />;
+```
+
+#### After
+
+```tsx
+const mapId = artifactIdFromPanelMeta;
+
+<KeplerMapContainer mapId={mapId} />;
+```
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
@@ -74,6 +131,77 @@ This release introduces explicit panel identity and dock boundaries, replacing t
 - **`useGetPanelInfoByPath`**: Hook for path-based panel info removed
 - **`draggable` property**: Removed from split and tabs nodes
 - **`pathSegment` property**: Removed from split and tabs nodes
+
+### `@sqlrooms/duckdb-core`, `@sqlrooms/duckdb`: schema catalog loader and `createDbSchemaTrees()` input changed (breaking)
+
+`createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`, and the loader pair changed:
+
+- `loadSchemasWithTables()` → replaced by `loadSchemaCatalog()` (single metadata query, preserves empty schemas and empty `main` schemas of attached databases)
+- Filter API: instead of a single `(QualifiedTableName) => boolean` invoked with a fake `table === ''` for schemas, the new `loadSchemaCatalogFilter` receives a typed `SchemaCatalogFilterEntry` discriminated union (`{type: 'database' | 'schema' | 'table', ...}`)
+- `DuckDbSlice` accepts a new `loadSchemaCatalogFilter` prop alongside `loadTableSchemasFilter`. If you only set `loadTableSchemasFilter`, it is bridged for `entry.type === 'table'` only — schemas/databases fall through to `defaultLoadSchemaCatalogFilter`, so any reserved schemas/databases you previously hid via the table filter must move to a `loadSchemaCatalogFilter`.
+
+#### Signature change
+
+```ts
+// Before
+function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[];
+
+// After
+function createDbSchemaTrees(schemas: SchemaWithTables[]): DbSchemaNode[];
+
+type SchemaWithTables = {
+  database: string;
+  schema: string;
+  tables: DataTable[];
+};
+```
+
+`SchemaWithTables` is exported from both `@sqlrooms/duckdb-core` and `@sqlrooms/duckdb`.
+
+#### Before
+
+```ts
+import {createDbSchemaTrees, type DataTable} from '@sqlrooms/duckdb-core';
+
+const tables: DataTable[] = await loadTableSchemas(connector);
+const trees = createDbSchemaTrees(tables);
+```
+
+#### After
+
+Use the new `loadSchemaCatalog()` from `@sqlrooms/duckdb`, which returns `SchemaWithTables[]` directly:
+
+```ts
+import {createDbSchemaTrees} from '@sqlrooms/duckdb-core';
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const schemas = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
+});
+const trees = createDbSchemaTrees(schemas);
+```
+
+If you only have a flat `DataTable[]`, group it before passing to `createDbSchemaTrees`:
+
+```ts
+const grouped = new Map<string, SchemaWithTables>();
+for (const t of tables) {
+  const key = `${t.database}\x00${t.schema}`;
+  let g = grouped.get(key);
+  if (!g) {
+    g = {database: t.database ?? '', schema: t.schema, tables: []};
+    grouped.set(key, g);
+  }
+  g.tables.push(t);
+}
+const trees = createDbSchemaTrees(Array.from(grouped.values()));
+```
 
 ### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
 

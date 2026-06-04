@@ -116,7 +116,6 @@ export const KeplerMapsContainer: FC = () => {
         />
       }
     >
-      <SyncCurrentKeplerMap />
       <ArtifactTabs.SearchDropdown
         sortSearchItems="recent"
         getTabLastOpenedAt={(tab) =>
@@ -131,19 +130,6 @@ export const KeplerMapsContainer: FC = () => {
     </ArtifactTabs>
   );
 };
-
-function SyncCurrentKeplerMap() {
-  const {selectedTabId} = ArtifactTabs.useActions();
-  const setCurrentMapId = useRoomStore((state) => state.kepler.setCurrentMapId);
-
-  useEffect(() => {
-    if (selectedTabId) {
-      setCurrentMapId(selectedTabId);
-    }
-  }, [selectedTabId, setCurrentMapId]);
-
-  return null;
-}
 
 function KeplerMapDialogs({
   mapToDelete,

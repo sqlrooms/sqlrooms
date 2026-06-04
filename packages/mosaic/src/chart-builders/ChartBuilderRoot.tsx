@@ -1,36 +1,33 @@
 import {Dialog} from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {
-  createChartBuilderTemplates,
-  createDefaultChartBuilders,
-} from './builders';
+import React, {
+  PropsWithChildren,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type {ChartConfig} from '../charts/chart-types';
 import {ChartBuilderContext} from './ChartBuilderContext';
 import {createChartBuilderStore} from './createChartBuilderStore';
-import {getAvailableChartTypes} from './chartTypeUtils';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../charts/chart-types/base-types';
 
-export interface ChartBuilderRootProps {
+export type ChartBuilderRootProps = PropsWithChildren<{
   /** Table name to use in generated specs */
   tableName: string;
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
-  /** Preferred shared chart-type customization surface */
+  onCreateChart: (title: string, metadata: ChartConfig) => void;
+  /** Optional chart types to show (defaults to an empty array) */
   chartTypes?: ChartTypeDefinition[];
-  /** Backward-compatible UI template customization surface */
-  builders?: ChartBuilderTemplate[];
   /** Controlled open state */
   open?: boolean;
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
-  children: React.ReactNode;
-}
+}>;
 
 /**
  * Compound-component root that provides shared chart-builder state via context
@@ -43,7 +40,6 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   columns,
   onCreateChart,
   chartTypes,
-  builders,
   open,
   onOpenChange,
   children,
@@ -52,69 +48,47 @@ export const ChartBuilderRoot: React.FC<ChartBuilderRootProps> = ({
   const [store] = useState(() => createChartBuilderStore());
   const isControlled = open !== undefined;
   const resolvedOpen = isControlled ? open : uncontrolledOpen;
-  const resolvedOnOpenChange = isControlled
-    ? (onOpenChange ?? (() => {}))
-    : setUncontrolledOpen;
 
-  const resolvedTemplates = useMemo(() => {
-    if (chartTypes) {
-      return createChartBuilderTemplates(chartTypes);
-    }
-    if (builders) {
-      return builders;
-    }
-    return createDefaultChartBuilders();
-  }, [builders, chartTypes]);
+  const resolvedOnOpenChange = useMemo(
+    () => (isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen),
+    [isControlled, onOpenChange],
+  );
 
-  const availableChartTypes = useMemo(
-    () => getAvailableChartTypes(resolvedTemplates, columns),
-    [columns, resolvedTemplates],
-  );
-  const availableTemplates = useMemo(
-    () =>
-      resolvedTemplates.filter((template) =>
-        availableChartTypes.some((chartType) => chartType.id === template.id),
-      ),
-    [availableChartTypes, resolvedTemplates],
-  );
+  // All resolved chart types are available by default
+  // (Filtering by schema compatibility was removed in favour of runtime validation)
+  const availableChartTypes = useMemo(() => chartTypes ?? [], [chartTypes]);
 
   useEffect(() => {
     const {selectedTemplateId, reset} = store.getState();
     if (
       selectedTemplateId &&
-      !availableTemplates.some((template) => template.id === selectedTemplateId)
+      !availableChartTypes.some(
+        (template) => template.id === selectedTemplateId,
+      )
     ) {
       reset();
     }
-  }, [availableTemplates, store]);
+  }, [availableChartTypes, store]);
 
-  const handleCreateChart = useCallback(
-    (spec: Spec, title: string) => {
-      onCreateChart(spec, title);
-      resolvedOnOpenChange(false);
-    },
-    [onCreateChart, resolvedOnOpenChange],
-  );
+  const handleCreateChart: (title: string, config: ChartConfig) => void =
+    useCallback(
+      (title: string, config: ChartConfig) => {
+        onCreateChart(title, config);
+        resolvedOnOpenChange(false);
+      },
+      [onCreateChart, resolvedOnOpenChange],
+    );
 
   const ctx = useMemo(
     () => ({
       tableName,
       columns,
       onCreateChart: handleCreateChart,
-      templates: resolvedTemplates,
-      availableChartTypes,
-      availableTemplates,
+      templates: availableChartTypes,
+      availableTemplates: availableChartTypes, // TODO: why we need both templates and availableTemplates? can we remove one of them?
       store,
     }),
-    [
-      availableChartTypes,
-      availableTemplates,
-      columns,
-      handleCreateChart,
-      resolvedTemplates,
-      store,
-      tableName,
-    ],
+    [availableChartTypes, columns, handleCreateChart, store, tableName],
   );
 
   return (

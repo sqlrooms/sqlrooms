@@ -6,6 +6,8 @@ import {cn} from '@sqlrooms/ui';
 import {LeafLayoutPanelDraggableProvider} from './LeafLayoutPanelDraggableContext';
 import {useIsDockablePanel} from './useIsDockable';
 
+export const LAYOUT_PANEL_DND_KIND = 'sqlrooms.layout.panel';
+
 export const LeafLayoutPanel: FC<PropsWithChildren> = ({children}) => {
   const {node} = useLayoutNodeContext();
 
@@ -21,11 +23,13 @@ export const LeafLayoutPanel: FC<PropsWithChildren> = ({children}) => {
   } = useDraggable({
     id: panelId,
     disabled: !isDockablePanel,
+    data: {kind: LAYOUT_PANEL_DND_KIND, panelId},
   });
 
   const {setNodeRef: setDroppableNodeRef} = useDroppable({
     id: panelId,
     disabled: !isDockablePanel || isDragging,
+    data: {kind: LAYOUT_PANEL_DND_KIND, panelId},
   });
 
   const setNodeRef = useCallback(

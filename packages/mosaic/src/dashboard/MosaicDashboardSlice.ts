@@ -1,14 +1,20 @@
 import {createId} from '@paralleldrive/cuid2';
 import {DbSliceState} from '@sqlrooms/db';
-import {type DataTable, type DuckDbSliceState} from '@sqlrooms/duckdb';
-import {LayoutSliceState} from '@sqlrooms/layout';
+import {type DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
-  type LayoutNode,
+  DEFAULT_GRID_COLS,
+  getGridColsForBreakpoint,
+  type LayoutSliceState,
+} from '@sqlrooms/layout';
+import {
+  type LayoutGridItem,
+  type LayoutGridNode,
+  LayoutNode,
   type LayoutPanelNode,
+  isLayoutGridNode,
   isLayoutNodeKey,
   isLayoutPanelNode,
   isLayoutSplitNode,
-  LayoutNode as LayoutNodeSchema,
 } from '@sqlrooms/layout-config';
 import {
   BaseRoomStoreState,
@@ -16,19 +22,18 @@ import {
   SliceFunctions,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {produce} from 'immer';
 import type {ComponentType} from 'react';
 import {z} from 'zod';
-import type {
-  ChartBuilderTemplate,
-  ChartTypeDefinition,
-} from '../chart-builders/types';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
+import {ChartConfig} from '../charts/chart-types/chart-config';
 import {type MosaicSliceState} from '../MosaicSlice';
 import {
   destroyRetainedVgPlotChart,
   type RetainedVgPlotChart,
 } from '../VgPlotChart';
+import type {MosaicDashboardAddPanelAction} from './action-types';
+import type {ChartRuntimeIssue} from '../chart-runtime';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -37,99 +42,129 @@ import {
  * `{ key: MOSAIC_DASHBOARD_PANEL, meta: { dashboardId, panelId } }`.
  */
 export const MOSAIC_DASHBOARD_PANEL = 'mosaic-dashboard-panel';
-export const MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE = 'vgplot';
-export const MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE = 'profiler';
+export const MOSAIC_DASHBOARD_CHART_PANEL_TYPE = 'vgplot';
+export const MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE =
+  'data-table-explorer';
 
-export const MosaicDashboardPanelSource = z.object({
-  tableName: z.string().optional(),
-  sqlQuery: z.string().optional(),
-});
-export type MosaicDashboardPanelSource = z.infer<
-  typeof MosaicDashboardPanelSource
+export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
+export type MosaicDashboardLayoutType = z.infer<
+  typeof MosaicDashboardLayoutType
 >;
 
-export const MosaicDashboardPanelConfig = z.object({
+// DataTableExplorer panel config
+export const DataTableExplorerPanelConfig = z.object({
+  pageSize: z.number().optional(),
+});
+export type DataTableExplorerPanelConfig = z.infer<
+  typeof DataTableExplorerPanelConfig
+>;
+
+// Panel configs discriminated by type
+export const ChartPanelConfig = z.object({
+  id: z.string(),
+  type: z.literal(MOSAIC_DASHBOARD_CHART_PANEL_TYPE),
+  title: z.string().default('Panel'),
+  config: ChartConfig,
+});
+export type ChartPanelConfig = z.infer<typeof ChartPanelConfig>;
+
+export const DataTableExplorerPanel = z.object({
+  id: z.string(),
+  type: z.literal(MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE),
+  title: z.string().default('Panel'),
+  config: DataTableExplorerPanelConfig,
+});
+export type DataTableExplorerPanel = z.infer<typeof DataTableExplorerPanel>;
+
+// Legacy panel for backward compatibility
+export const LegacyPanelConfig = z.object({
   id: z.string(),
   type: z.string(),
   title: z.string().default('Panel'),
-  source: MosaicDashboardPanelSource.optional(),
   config: z.record(z.string(), z.unknown()).default({}),
 });
+export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
+
+// Discriminated union of all panel types
+export const MosaicDashboardPanelConfig = z
+  .discriminatedUnion('type', [ChartPanelConfig, DataTableExplorerPanel])
+  .or(LegacyPanelConfig);
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
 >;
 
-export type MosaicDashboardPanelRendererProps = {
+export type MosaicDashboardPanelRendererProps<
+  TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
+> = {
   dashboardId: string;
   dashboard: MosaicDashboardEntry;
-  panel: MosaicDashboardPanelConfig;
+  panel: TPanel;
   selectionName: string;
-  resolvedSource?: MosaicDashboardPanelSource;
 };
 
-export type MosaicDashboardPanelRenderer = {
-  component: ComponentType<MosaicDashboardPanelRendererProps>;
-  headerActions?: ComponentType<MosaicDashboardPanelRendererProps>;
+export type ChartPanelRendererProps =
+  MosaicDashboardPanelRendererProps<ChartPanelConfig>;
+export type DataTableExplorerPanelRendererProps =
+  MosaicDashboardPanelRendererProps<DataTableExplorerPanel>;
+
+export type MosaicDashboardPanelRenderer<
+  TPanel extends MosaicDashboardPanelConfig = MosaicDashboardPanelConfig,
+> = {
+  component: ComponentType<MosaicDashboardPanelRendererProps<TPanel>>;
+  headerActions?: ComponentType<MosaicDashboardPanelRendererProps<TPanel>>;
   icon?: ComponentType<{className?: string}>;
 };
 
-export type MosaicDashboardAddPanelActionContext = {
-  dashboardId: string;
-  dashboard: MosaicDashboardEntry | undefined;
-  selectedTable: DataTable | undefined;
-  tables: DataTable[];
-};
-
-export type MosaicDashboardAddPanelAction = {
-  type: string;
-  label: string;
+// Type-erased renderer for storage (avoids circular dependency issues)
+export type AnyPanelRenderer = {
+  component: ComponentType<any>;
+  headerActions?: ComponentType<any>;
   icon?: ComponentType<{className?: string}>;
-  isEnabled?: (context: MosaicDashboardAddPanelActionContext) => boolean;
-  createPanel: (
-    context: MosaicDashboardAddPanelActionContext,
-  ) => MosaicDashboardPanelConfig | undefined;
 };
 
-export function createMosaicDashboardVgPlotPanelConfig(
-  spec: Spec | Record<string, unknown>,
+// Map of panel type string to panel config type
+export type PanelTypeMap = {
+  [MOSAIC_DASHBOARD_CHART_PANEL_TYPE]: ChartPanelConfig;
+  [MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE]: DataTableExplorerPanel;
+};
+
+// Panel renderers record - use type-erased renderers for runtime compatibility
+export type PanelRenderersRecord = Record<string, AnyPanelRenderer>;
+
+export function createMosaicDashboardChartPanelConfig(
   title: string,
-  source?: MosaicDashboardPanelSource,
-): MosaicDashboardPanelConfig {
+  config: ChartConfig,
+): ChartPanelConfig {
   return {
     id: createId(),
-    type: MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
+    type: MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
     title,
-    source,
-    config: {
-      vgplot: JSON.parse(JSON.stringify(spec)),
-    },
+    config,
   };
 }
 
-export function createMosaicDashboardProfilerPanelConfig(
+export function createMosaicDashboardDataTableExplorerPanelConfig(
   options: {
     title?: string;
-    source?: MosaicDashboardPanelSource;
-    pageSize?: number;
+    config?: DataTableExplorerPanelConfig;
   } = {},
-): MosaicDashboardPanelConfig {
+): DataTableExplorerPanel {
   return {
     id: createId(),
-    type: MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
-    title: options.title ?? 'Profiler',
-    source: options.source,
-    config: {
-      pageSize: options.pageSize ?? 10,
-    },
+    type: MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
+    title: options.title ?? 'Data Table Explorer',
+    config: options.config ?? {},
   };
 }
 
 export const MosaicDashboardEntry = z.object({
   id: z.string(),
   title: z.string().default('Dashboard'),
+  layoutType: MosaicDashboardLayoutType.default('dock'),
   selectedTable: z.string().optional(),
+  lastSelectedTable: z.string().optional(),
   panels: z.array(MosaicDashboardPanelConfig).default([]),
-  layout: LayoutNodeSchema.nullable().default(null),
+  layout: LayoutNode.nullable().default(null),
   updatedAt: z.number().default(0),
 });
 export type MosaicDashboardEntry = z.infer<typeof MosaicDashboardEntry>;
@@ -153,20 +188,29 @@ export type MosaicDashboardSliceState = {
        * config and must be evicted when their panel/dashboard lifecycle ends.
        */
       retainedChartsByPanelId: Record<string, RetainedVgPlotChart>;
+      /**
+       * Runtime-only chart issues keyed by `getMosaicDashboardPanelId`.
+       * These are live diagnostics for UI and AI tools, not persisted config.
+       */
+      panelIssuesByPanelId: Record<string, ChartRuntimeIssue>;
     };
-    chartBuilders?: ChartBuilderTemplate[];
     chartTypes?: ChartTypeDefinition[];
     addPanelActions: MosaicDashboardAddPanelAction[];
-    createDashboard: (title?: string) => string;
-    ensureDashboard: (dashboardId: string, title?: string) => void;
+    createDashboard: (
+      title?: string,
+      layoutType?: MosaicDashboardLayoutType,
+    ) => string;
+    ensureDashboard: (
+      dashboardId: string,
+      title?: string,
+      layoutType?: MosaicDashboardLayoutType,
+    ) => void;
     removeDashboard: (dashboardId: string) => void;
     getDashboard: (dashboardId: string) => MosaicDashboardEntry | undefined;
     setSelectedTable: (dashboardId: string, tableName: string) => void;
-    panelRenderers: Record<string, MosaicDashboardPanelRenderer>;
-    registerPanelRenderer: (
-      type: string,
-      renderer: MosaicDashboardPanelRenderer,
-    ) => void;
+    setLastSelectedTable: (dashboardId: string, tableName: string) => void;
+    panelRenderers: PanelRenderersRecord;
+    registerPanelRenderer: (type: string, renderer: AnyPanelRenderer) => void;
     unregisterPanelRenderer: (type: string) => void;
     addPanel: (
       dashboardId: string,
@@ -182,12 +226,36 @@ export type MosaicDashboardSliceState = {
       dashboardId: string,
       panelId: string,
     ) => RetainedVgPlotChart | undefined;
+    getRetainedChartByKey: (
+      runtimeKey: string,
+    ) => RetainedVgPlotChart | undefined;
     setRetainedChart: (
       dashboardId: string,
       panelId: string,
       chart: RetainedVgPlotChart,
     ) => void;
+    setRetainedChartByKey: (
+      runtimeKey: string,
+      chart: RetainedVgPlotChart,
+    ) => void;
+    getPanelIssue: (
+      dashboardId: string,
+      panelId: string,
+    ) => ChartRuntimeIssue | undefined;
+    getPanelIssueByKey: (runtimeKey: string) => ChartRuntimeIssue | undefined;
+    reportPanelIssue: (
+      dashboardId: string,
+      panelId: string,
+      issue: ChartRuntimeIssue,
+    ) => void;
+    reportPanelIssueByKey: (
+      runtimeKey: string,
+      issue: ChartRuntimeIssue,
+    ) => void;
+    clearPanelIssue: (dashboardId: string, panelId: string) => void;
+    clearPanelIssueByKey: (runtimeKey: string) => void;
     evictPanelRuntime: (dashboardId: string, panelId: string) => void;
+    evictPanelRuntimeByKey: (runtimeKey: string) => void;
     evictDashboardRuntime: (
       dashboardId: string,
       options?: {resetSelection?: boolean},
@@ -203,6 +271,8 @@ export type MosaicDashboardStoreState = BaseRoomStoreState &
   LayoutSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState;
+
+type DashboardPanelTypesByLayoutId = Record<string, string | undefined>;
 
 // ---------------------------------------------------------------------------
 // Layout tree helpers (operate on the new LayoutNode types)
@@ -223,6 +293,18 @@ function createDashboardPanelNode(
   };
 }
 
+function getDashboardPanelTypesByLayoutId(
+  dashboardId: string,
+  panels: MosaicDashboardPanelConfig[],
+): DashboardPanelTypesByLayoutId {
+  return Object.fromEntries(
+    panels.map((panel) => [
+      getMosaicDashboardPanelId(dashboardId, panel.id),
+      panel.type,
+    ]),
+  );
+}
+
 function appendPanelToLayout(
   layout: LayoutNode | null,
   panelNode: LayoutPanelNode,
@@ -235,6 +317,261 @@ function appendPanelToLayout(
     id: `split-${createId()}`,
     direction: 'row',
     children: [layout, panelNode],
+  };
+}
+
+function createDashboardGridLayout(
+  dashboardId: string,
+  panelNode?: LayoutPanelNode,
+): LayoutGridNode {
+  const children = panelNode ? [panelNode] : [];
+  const layouts = createDashboardGridLayoutsForChildren(children);
+  return {
+    type: 'grid',
+    id: getMosaicDashboardGridId(dashboardId),
+    children,
+    rowHeight: 150,
+    margin: [12, 12],
+    containerPadding: [0, 0],
+    compactType: 'vertical',
+    preventCollision: false,
+    resizeHandles: ['e', 's', 'w', 'se', 'sw'],
+    layouts,
+  };
+}
+
+function getLayoutChildId(node: LayoutNode): string {
+  return isLayoutNodeKey(node) ? node : node.id;
+}
+
+function createDashboardGridItem(
+  panelId: string,
+  layout: LayoutGridItem[],
+  cols = 12,
+  panelType?: string,
+): LayoutGridItem {
+  const effectiveCols = Math.max(1, cols);
+  const w =
+    panelType === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE
+      ? effectiveCols
+      : Math.max(1, Math.ceil(effectiveCols / 2));
+  const h = 2;
+  const bottom = layout.reduce(
+    (max, item) => Math.max(max, item.y + item.h),
+    0,
+  );
+
+  for (let y = 0; y <= bottom; y += 1) {
+    for (let x = 0; x <= effectiveCols - w; x += 1) {
+      const overlaps = layout.some(
+        (item) =>
+          x < item.x + item.w &&
+          x + w > item.x &&
+          y < item.y + item.h &&
+          y + h > item.y,
+      );
+      if (!overlaps) {
+        return {
+          i: panelId,
+          x,
+          y,
+          w,
+          h,
+        };
+      }
+    }
+  }
+
+  return {
+    i: panelId,
+    x: 0,
+    y: bottom,
+    w,
+    h,
+  };
+}
+
+function createDashboardGridLayoutsForChildren(
+  children: LayoutNode[],
+  sourceLayouts?: LayoutGridNode['layouts'],
+  cols?: LayoutGridNode['cols'],
+  panelTypesByLayoutId: Record<string, string | undefined> = {},
+): LayoutGridNode['layouts'] {
+  const childIds = new Set(children.map((child) => getLayoutChildId(child)));
+  const sourceEntries = new Map<string, LayoutGridItem[]>(
+    Object.keys(DEFAULT_GRID_COLS).map((breakpoint) => [breakpoint, []]),
+  );
+  for (const [breakpoint, breakpointLayout] of Object.entries(
+    sourceLayouts ?? {},
+  )) {
+    sourceEntries.set(breakpoint, breakpointLayout);
+  }
+
+  return Object.fromEntries(
+    [...sourceEntries.entries()].map(([breakpoint, breakpointLayout]) => {
+      const nextLayout = breakpointLayout.filter((item) =>
+        childIds.has(item.i),
+      );
+      const layoutItemIds = new Set(nextLayout.map((item) => item.i));
+
+      for (const child of children) {
+        const childId = getLayoutChildId(child);
+        if (!layoutItemIds.has(childId)) {
+          const item = createDashboardGridItem(
+            childId,
+            nextLayout,
+            getGridColsForBreakpoint(cols, breakpoint),
+            panelTypesByLayoutId[childId],
+          );
+          nextLayout.push(item);
+          layoutItemIds.add(childId);
+        }
+      }
+
+      return [breakpoint, nextLayout];
+    }),
+  );
+}
+
+function isExpectedDashboardPanelNode(
+  node: LayoutNode,
+  expectedPanelIds: Set<string>,
+): boolean {
+  return expectedPanelIds.has(getLayoutChildId(node));
+}
+
+function collectDashboardPanelNodes(
+  layout: LayoutNode | null,
+  expectedPanelIds: Set<string>,
+  nodes: LayoutNode[] = [],
+  seen = new Set<string>(),
+): LayoutNode[] {
+  if (!layout) return nodes;
+
+  if (isLayoutNodeKey(layout) || isLayoutPanelNode(layout)) {
+    if (isExpectedDashboardPanelNode(layout, expectedPanelIds)) {
+      const id = getLayoutChildId(layout);
+      if (!seen.has(id)) {
+        nodes.push(layout);
+        seen.add(id);
+      }
+    }
+    return nodes;
+  }
+
+  if (isLayoutSplitNode(layout) || isLayoutGridNode(layout)) {
+    for (const child of layout.children) {
+      collectDashboardPanelNodes(child, expectedPanelIds, nodes, seen);
+    }
+  }
+
+  return nodes;
+}
+
+function normalizeDashboardGridLayout(
+  layout: LayoutNode | null,
+  dashboardId: string,
+  expectedPanelIds: Set<string>,
+  panelTypesByLayoutId: DashboardPanelTypesByLayoutId = {},
+): LayoutGridNode {
+  const collectedPanelIds = collectPanelIds(layout);
+  const existingExpectedPanelIds = new Set(
+    [...expectedPanelIds].filter((panelId) => collectedPanelIds.has(panelId)),
+  );
+  const children = collectDashboardPanelNodes(layout, existingExpectedPanelIds);
+  const layouts = createDashboardGridLayoutsForChildren(
+    children,
+    isLayoutGridNode(layout) ? layout.layouts : undefined,
+    isLayoutGridNode(layout) ? layout.cols : undefined,
+    panelTypesByLayoutId,
+  );
+
+  if (isLayoutGridNode(layout)) {
+    return {
+      ...layout,
+      children,
+      layouts,
+    };
+  }
+
+  return {
+    ...createDashboardGridLayout(dashboardId),
+    children,
+    layouts,
+  };
+}
+
+function appendPanelToGridLayout(
+  layout: LayoutNode | null,
+  dashboardId: string,
+  panelNode: LayoutPanelNode,
+  panelType?: string,
+  panelTypesByLayoutId: DashboardPanelTypesByLayoutId = {},
+): LayoutGridNode {
+  const nextPanelTypesByLayoutId = {
+    ...panelTypesByLayoutId,
+    [panelNode.id]: panelType ?? panelTypesByLayoutId[panelNode.id],
+  };
+
+  if (!isLayoutGridNode(layout)) {
+    const dashboardPanelPrefix = `dashboard:${dashboardId}:panel:`;
+    const expectedPanelIds = new Set(
+      [...collectPanelIds(layout)].filter((panelId) =>
+        panelId.startsWith(dashboardPanelPrefix),
+      ),
+    );
+    expectedPanelIds.add(panelNode.id);
+    const normalizedLayout = normalizeDashboardGridLayout(
+      layout,
+      dashboardId,
+      expectedPanelIds,
+      nextPanelTypesByLayoutId,
+    );
+    return appendPanelToGridLayout(
+      normalizedLayout,
+      dashboardId,
+      panelNode,
+      panelType,
+      nextPanelTypesByLayoutId,
+    );
+  }
+
+  const hasChild = layout.children.some((child) => {
+    if (isLayoutNodeKey(child)) return child === panelNode.id;
+    return child.id === panelNode.id;
+  });
+  const children = hasChild ? layout.children : [...layout.children, panelNode];
+  const layouts = Object.fromEntries(
+    Object.entries(
+      createDashboardGridLayoutsForChildren(
+        children,
+        layout.layouts,
+        layout.cols,
+        nextPanelTypesByLayoutId,
+      ) ?? {},
+    ).map(([breakpoint, breakpointLayout]) => {
+      if (breakpointLayout.some((item) => item.i === panelNode.id)) {
+        return [breakpoint, breakpointLayout];
+      }
+      return [
+        breakpoint,
+        [
+          ...breakpointLayout,
+          createDashboardGridItem(
+            panelNode.id,
+            breakpointLayout,
+            getGridColsForBreakpoint(layout.cols, breakpoint),
+            nextPanelTypesByLayoutId[panelNode.id],
+          ),
+        ],
+      ];
+    }),
+  );
+
+  return {
+    ...layout,
+    children,
+    layouts,
   };
 }
 
@@ -263,6 +600,26 @@ function removePanelFromLayout(
     return {...layout, children: nextChildren};
   }
 
+  if (isLayoutGridNode(layout)) {
+    const nextChildren = layout.children.filter((child) => {
+      if (isLayoutNodeKey(child)) return child !== panelId;
+      return child.id !== panelId;
+    });
+    const nextLayouts = layout.layouts
+      ? Object.fromEntries(
+          Object.entries(layout.layouts).map(
+            ([breakpoint, breakpointLayout]) => [
+              breakpoint,
+              breakpointLayout.filter((item) => item.i !== panelId),
+            ],
+          ),
+        )
+      : layout.layouts;
+
+    if (nextChildren.length === 0) return null;
+    return {...layout, children: nextChildren, layouts: nextLayouts};
+  }
+
   return layout;
 }
 
@@ -284,6 +641,11 @@ function collectPanelIds(
       collectPanelIds(child, panelIds);
     }
   }
+  if (isLayoutGridNode(layout)) {
+    for (const child of layout.children) {
+      collectPanelIds(child, panelIds);
+    }
+  }
   return panelIds;
 }
 
@@ -291,22 +653,51 @@ function ensureLayoutContainsDashboardPanels(
   layout: LayoutNode | null,
   dashboardId: string,
   panelIds: string[],
+  layoutType: MosaicDashboardLayoutType = 'dock',
+  panelTypesByLayoutId: DashboardPanelTypesByLayoutId = {},
 ): LayoutNode | null {
   let nextLayout = layout;
-  const existing = collectPanelIds(layout);
 
+  if (layoutType === 'grid') {
+    const expectedPanelIds = new Set(
+      panelIds.map((panelId) =>
+        getMosaicDashboardPanelId(dashboardId, panelId),
+      ),
+    );
+    nextLayout = normalizeDashboardGridLayout(
+      nextLayout,
+      dashboardId,
+      expectedPanelIds,
+      panelTypesByLayoutId,
+    );
+  }
+
+  const existing = collectPanelIds(nextLayout);
   for (const panelId of panelIds) {
     const layoutPanelId = getMosaicDashboardPanelId(dashboardId, panelId);
     if (!existing.has(layoutPanelId)) {
-      nextLayout = appendPanelToLayout(
-        nextLayout,
-        createDashboardPanelNode(dashboardId, panelId),
-      );
+      const panelNode = createDashboardPanelNode(dashboardId, panelId);
+      nextLayout =
+        layoutType === 'grid'
+          ? appendPanelToGridLayout(
+              nextLayout,
+              dashboardId,
+              panelNode,
+              panelTypesByLayoutId[layoutPanelId],
+              panelTypesByLayoutId,
+            )
+          : appendPanelToLayout(nextLayout, panelNode);
       existing.add(layoutPanelId);
     }
   }
 
   return nextLayout;
+}
+
+export function isChartPanelConfig(
+  panel: MosaicDashboardPanelConfig,
+): panel is ChartPanelConfig {
+  return panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE;
 }
 
 export function getMosaicDashboardPanelId(
@@ -318,6 +709,10 @@ export function getMosaicDashboardPanelId(
 
 export function getMosaicDashboardDockId(dashboardId: string): string {
   return `dashboard:${dashboardId}:dock`;
+}
+
+export function getMosaicDashboardGridId(dashboardId: string): string {
+  return `dashboard:${dashboardId}:grid`;
 }
 
 export function getMosaicDashboardSelectionName(dashboardId: string): string {
@@ -348,26 +743,11 @@ function shouldEvictPanelRuntimeForPatch(
     return true;
   }
 
-  if (panel.type === MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE) {
-    return Boolean(
-      patch.config &&
-      Object.prototype.hasOwnProperty.call(patch.config, 'vgplot'),
-    );
+  if (panel.type === MOSAIC_DASHBOARD_CHART_PANEL_TYPE) {
+    return Boolean('config' in patch && patch.config);
   }
 
   return false;
-}
-
-export function resolveMosaicDashboardPanelSource(
-  dashboard: MosaicDashboardEntry,
-  panel: MosaicDashboardPanelConfig,
-): MosaicDashboardPanelSource | undefined {
-  if (panel.source?.sqlQuery || panel.source?.tableName) {
-    return panel.source;
-  }
-  return dashboard.selectedTable
-    ? {tableName: dashboard.selectedTable}
-    : undefined;
 }
 
 export function createDefaultMosaicDashboardConfig(
@@ -384,7 +764,6 @@ type CreateMosaicDashboardSliceProps = {
   panelRenderers?: Record<string, MosaicDashboardPanelRenderer>;
   addPanelActions?: MosaicDashboardAddPanelAction[];
   chartTypes?: ChartTypeDefinition[];
-  chartBuilders?: ChartBuilderTemplate[];
 };
 export type {CreateMosaicDashboardSliceProps};
 
@@ -397,19 +776,19 @@ export function createMosaicDashboardSlice(
         config: createDefaultMosaicDashboardConfig(props.config),
         runtime: {
           retainedChartsByPanelId: {},
+          panelIssuesByPanelId: {},
         },
-        chartBuilders: props.chartBuilders,
         chartTypes: props.chartTypes,
         addPanelActions: props.addPanelActions ?? [],
         panelRenderers: props.panelRenderers ?? {},
 
-        createDashboard(title) {
+        createDashboard(title, layoutType) {
           const dashboardId = createId();
-          get().mosaicDashboard.ensureDashboard(dashboardId, title);
+          get().mosaicDashboard.ensureDashboard(dashboardId, title, layoutType);
           return dashboardId;
         },
 
-        ensureDashboard(dashboardId, title) {
+        ensureDashboard(dashboardId, title, layoutType) {
           set((state) =>
             produce(state, (draft) => {
               const existing =
@@ -419,14 +798,27 @@ export function createMosaicDashboardSlice(
                   existing.title = title;
                   existing.updatedAt = Date.now();
                 }
+                if (
+                  layoutType === 'grid' &&
+                  existing.layoutType === 'dock' &&
+                  existing.panels.length === 0
+                ) {
+                  existing.layoutType = 'grid';
+                  existing.layout = createDashboardGridLayout(dashboardId);
+                  existing.updatedAt = Date.now();
+                }
                 return;
               }
               draft.mosaicDashboard.config.dashboardsById[dashboardId] = {
                 id: dashboardId,
                 title: title ?? 'Dashboard',
+                layoutType: layoutType ?? 'dock',
                 selectedTable: undefined,
                 panels: [],
-                layout: null,
+                layout:
+                  layoutType === 'grid'
+                    ? createDashboardGridLayout(dashboardId)
+                    : null,
                 updatedAt: Date.now(),
               };
             }),
@@ -469,6 +861,19 @@ export function createMosaicDashboardSlice(
           );
         },
 
+        setLastSelectedTable(dashboardId, tableName) {
+          get().mosaicDashboard.ensureDashboard(dashboardId);
+          set((state) =>
+            produce(state, (draft) => {
+              const dashboard =
+                draft.mosaicDashboard.config.dashboardsById[dashboardId];
+              if (!dashboard) return;
+              dashboard.lastSelectedTable = tableName;
+              dashboard.updatedAt = Date.now();
+            }),
+          );
+        },
+
         registerPanelRenderer(type, renderer) {
           set((state) =>
             produce(state, (draft) => {
@@ -494,10 +899,21 @@ export function createMosaicDashboardSlice(
               if (!dashboard) return;
 
               dashboard.panels.push(panel);
-              dashboard.layout = appendPanelToLayout(
-                dashboard.layout,
-                createDashboardPanelNode(dashboardId, panel.id),
+              const panelNode = createDashboardPanelNode(dashboardId, panel.id);
+              const panelTypesByLayoutId = getDashboardPanelTypesByLayoutId(
+                dashboardId,
+                dashboard.panels,
               );
+              dashboard.layout =
+                dashboard.layoutType === 'grid'
+                  ? appendPanelToGridLayout(
+                      dashboard.layout,
+                      dashboardId,
+                      panelNode,
+                      panel.type,
+                      panelTypesByLayoutId,
+                    )
+                  : appendPanelToLayout(dashboard.layout, panelNode);
               dashboard.updatedAt = Date.now();
             }),
           );
@@ -552,20 +968,27 @@ export function createMosaicDashboardSlice(
         },
 
         getRetainedChart(dashboardId, panelId) {
+          return get().mosaicDashboard.getRetainedChartByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+          );
+        },
+
+        getRetainedChartByKey(runtimeKey) {
           return get().mosaicDashboard.runtime.retainedChartsByPanelId[
-            getMosaicDashboardPanelId(dashboardId, panelId)
+            runtimeKey
           ];
         },
 
         setRetainedChart(dashboardId, panelId, chart) {
-          const runtimePanelId = getMosaicDashboardPanelId(
-            dashboardId,
-            panelId,
+          get().mosaicDashboard.setRetainedChartByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+            chart,
           );
+        },
+
+        setRetainedChartByKey(runtimeKey, chart) {
           const previous =
-            get().mosaicDashboard.runtime.retainedChartsByPanelId[
-              runtimePanelId
-            ];
+            get().mosaicDashboard.runtime.retainedChartsByPanelId[runtimeKey];
           if (previous && previous !== chart) {
             destroyDashboardRuntimeChart(previous);
           }
@@ -576,34 +999,98 @@ export function createMosaicDashboardSlice(
                 ...state.mosaicDashboard.runtime,
                 retainedChartsByPanelId: {
                   ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
-                  [runtimePanelId]: chart,
+                  [runtimeKey]: chart,
                 },
               },
             },
           }));
         },
 
-        evictPanelRuntime(dashboardId, panelId) {
-          const runtimePanelId = getMosaicDashboardPanelId(
-            dashboardId,
-            panelId,
+        getPanelIssue(dashboardId, panelId) {
+          return get().mosaicDashboard.getPanelIssueByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
           );
+        },
+
+        getPanelIssueByKey(runtimeKey) {
+          return get().mosaicDashboard.runtime.panelIssuesByPanelId[runtimeKey];
+        },
+
+        reportPanelIssue(dashboardId, panelId, issue) {
+          get().mosaicDashboard.reportPanelIssueByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+            issue,
+          );
+        },
+
+        reportPanelIssueByKey(runtimeKey, issue) {
+          set((state) => ({
+            mosaicDashboard: {
+              ...state.mosaicDashboard,
+              runtime: {
+                ...state.mosaicDashboard.runtime,
+                panelIssuesByPanelId: {
+                  ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+                  [runtimeKey]: issue,
+                },
+              },
+            },
+          }));
+        },
+
+        clearPanelIssue(dashboardId, panelId) {
+          get().mosaicDashboard.clearPanelIssueByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+          );
+        },
+
+        clearPanelIssueByKey(runtimeKey) {
+          if (!get().mosaicDashboard.runtime.panelIssuesByPanelId[runtimeKey]) {
+            return;
+          }
+          set((state) => {
+            const nextPanelIssuesByPanelId = {
+              ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+            };
+            delete nextPanelIssuesByPanelId[runtimeKey];
+            return {
+              mosaicDashboard: {
+                ...state.mosaicDashboard,
+                runtime: {
+                  ...state.mosaicDashboard.runtime,
+                  panelIssuesByPanelId: nextPanelIssuesByPanelId,
+                },
+              },
+            };
+          });
+        },
+
+        evictPanelRuntime(dashboardId, panelId) {
+          get().mosaicDashboard.evictPanelRuntimeByKey(
+            getMosaicDashboardPanelId(dashboardId, panelId),
+          );
+        },
+
+        evictPanelRuntimeByKey(runtimeKey) {
           const existing =
-            get().mosaicDashboard.runtime.retainedChartsByPanelId[
-              runtimePanelId
-            ];
+            get().mosaicDashboard.runtime.retainedChartsByPanelId[runtimeKey];
           destroyDashboardRuntimeChart(existing);
           set((state) => {
             const nextRetainedChartsByPanelId = {
               ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
             };
-            delete nextRetainedChartsByPanelId[runtimePanelId];
+            const nextPanelIssuesByPanelId = {
+              ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+            };
+            delete nextRetainedChartsByPanelId[runtimeKey];
+            delete nextPanelIssuesByPanelId[runtimeKey];
             return {
               mosaicDashboard: {
                 ...state.mosaicDashboard,
                 runtime: {
                   ...state.mosaicDashboard.runtime,
                   retainedChartsByPanelId: nextRetainedChartsByPanelId,
+                  panelIssuesByPanelId: nextPanelIssuesByPanelId,
                 },
               },
             };
@@ -615,6 +1102,11 @@ export function createMosaicDashboardSlice(
           const existingEntries = Object.entries(
             get().mosaicDashboard.runtime.retainedChartsByPanelId,
           ).filter(([runtimePanelId]) =>
+            runtimePanelId.startsWith(runtimePrefix),
+          );
+          const existingIssueEntries = Object.keys(
+            get().mosaicDashboard.runtime.panelIssuesByPanelId,
+          ).filter((runtimePanelId) =>
             runtimePanelId.startsWith(runtimePrefix),
           );
 
@@ -630,8 +1122,14 @@ export function createMosaicDashboardSlice(
             const nextRetainedChartsByPanelId = {
               ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
             };
+            const nextPanelIssuesByPanelId = {
+              ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
+            };
             for (const [runtimePanelId] of existingEntries) {
               delete nextRetainedChartsByPanelId[runtimePanelId];
+            }
+            for (const runtimePanelId of existingIssueEntries) {
+              delete nextPanelIssuesByPanelId[runtimePanelId];
             }
             return {
               mosaicDashboard: {
@@ -639,6 +1137,7 @@ export function createMosaicDashboardSlice(
                 runtime: {
                   ...state.mosaicDashboard.runtime,
                   retainedChartsByPanelId: nextRetainedChartsByPanelId,
+                  panelIssuesByPanelId: nextPanelIssuesByPanelId,
                 },
               },
             };
@@ -657,6 +1156,7 @@ export function createMosaicDashboardSlice(
               runtime: {
                 ...state.mosaicDashboard.runtime,
                 retainedChartsByPanelId: {},
+                panelIssuesByPanelId: {},
               },
             },
           }));
@@ -671,10 +1171,16 @@ export function createMosaicDashboardSlice(
               if (!dashboard) return;
 
               const panelIds = dashboard.panels.map((panel) => panel.id);
+              const panelTypesByLayoutId = getDashboardPanelTypesByLayoutId(
+                dashboardId,
+                dashboard.panels,
+              );
               dashboard.layout = ensureLayoutContainsDashboardPanels(
                 layout,
                 dashboardId,
                 panelIds,
+                dashboard.layoutType,
+                panelTypesByLayoutId,
               );
               dashboard.updatedAt = Date.now();
             }),

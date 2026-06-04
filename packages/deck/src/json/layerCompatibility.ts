@@ -118,6 +118,7 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       'getLineWidth',
       'getElevation',
     ],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowSolidPolygonLayer: {
     representation: 'geoarrow',
@@ -134,6 +135,7 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       'getFillColor',
       'getLineColor',
     ],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowArcLayer: {
     representation: 'geoarrow',

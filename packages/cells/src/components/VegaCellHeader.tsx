@@ -1,6 +1,6 @@
-import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
 import {produce} from 'immer';
-import {Filter, Settings} from 'lucide-react';
+import {Settings} from 'lucide-react';
 import {fromDataSourceCell, fromDataSourceTable} from '../helpers';
 import {CellSourceSelector} from './CellSourceSelector';
 import {useCellsStore} from '../hooks';
@@ -10,9 +10,6 @@ export type VegaCellHeaderProps = {
   selectValue: string | undefined;
   onEditToggle: () => void;
   hasDataSource: boolean;
-  crossFilterEnabled: boolean;
-  brushField: string | undefined;
-  crossFilterPredicate: string | null;
 };
 
 export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
@@ -20,9 +17,6 @@ export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
   selectValue,
   onEditToggle,
   hasDataSource,
-  crossFilterEnabled,
-  brushField,
-  crossFilterPredicate,
 }) => {
   const updateCell = useCellsStore((s) => s.cells.updateCell);
   const artifactId = useCellsStore((s) => s.cells.getArtifactIdForCell(cellId));
@@ -64,24 +58,6 @@ export const VegaCellHeader: React.FC<VegaCellHeaderProps> = ({
       >
         <Settings className="h-4 w-4" />
       </Button>
-      {crossFilterEnabled && brushField && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center">
-              <Filter
-                className={`h-3.5 w-3.5 ${crossFilterPredicate ? 'text-blue-500' : 'text-gray-400'}`}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p className="text-xs">
-              {crossFilterPredicate
-                ? `Filtered: ${crossFilterPredicate}`
-                : `Cross-filter on ${brushField}`}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      )}
     </div>
   );
 };

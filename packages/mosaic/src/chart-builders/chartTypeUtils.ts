@@ -1,96 +1,55 @@
-import type {
-  ChartBuilderColumn,
-  ChartBuilderField,
-  ChartTypeDefinition,
-} from './types';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
 
-export const NUMERIC_COLUMN_TYPES = [
-  'BIGINT',
-  'BIT',
-  'DECIMAL',
-  'DOUBLE',
-  'FLOAT',
-  'HUGEINT',
-  'INTEGER',
-  'REAL',
-  'SMALLINT',
-  'TINYINT',
-  'UBIGINT',
-  'UHUGEINT',
-  'UINTEGER',
-  'USMALLINT',
-  'UTINYINT',
-] as const;
-
-export const TEMPORAL_COLUMN_TYPES = [
-  'DATE',
-  'TIME',
-  'TIMESTAMP',
-  'TIMESTAMP_MS',
-  'TIMESTAMP_NS',
-  'TIMESTAMP_S',
-  'TIMESTAMPTZ',
-] as const;
-
-export const QUANTITATIVE_COLUMN_TYPES = [
-  ...NUMERIC_COLUMN_TYPES,
-  ...TEMPORAL_COLUMN_TYPES,
-] as const;
-
-export function columnMatchesFieldTypes(
-  column: ChartBuilderColumn,
-  field: Pick<ChartBuilderField, 'types'>,
-): boolean {
-  if (!field.types?.length) return true;
-  return field.types.some(
-    (type) => column.type.toUpperCase() === type.toUpperCase(),
+/**
+ * Type guard to check if value has a field property (e.g., YFieldConfig)
+ */
+function hasFieldProperty(value: unknown): value is {field: string} {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'field' in value &&
+    typeof value.field === 'string'
   );
 }
 
-export function getCompatibleColumns(
-  columns: ChartBuilderColumn[],
-  field: Pick<ChartBuilderField, 'types'>,
-): ChartBuilderColumn[] {
-  return columns.filter((column) => columnMatchesFieldTypes(column, field));
-}
-
-export function isChartTypeAvailable(
-  chartType: ChartTypeDefinition,
-  columns: ChartBuilderColumn[],
-): boolean {
-  if (chartType.isAvailable) {
-    return chartType.isAvailable(columns);
-  }
-
-  return chartType.fields
-    .filter((field) => field.required !== false)
-    .every((field) => getCompatibleColumns(columns, field).length > 0);
-}
-
-export function getAvailableChartTypes(
-  chartTypes: ChartTypeDefinition[],
-  columns: ChartBuilderColumn[],
-): ChartTypeDefinition[] {
-  return chartTypes.filter((chartType) =>
-    isChartTypeAvailable(chartType, columns),
-  );
-}
-
+/**
+ * Build a default chart title from description and field values
+ */
 export function buildDefaultChartTitle(
   description: string,
-  fieldValues: Record<string, string>,
+  fieldValues: Record<string, unknown>,
 ): string {
   const baseTitle = description.replace(/^Create (a |an )?/, '');
-  const selectedFields = Object.values(fieldValues).filter(Boolean);
+  const selectedFields = Object.values(fieldValues)
+    .filter(Boolean)
+    .map((value) => {
+      // Handle array values (e.g., yFields)
+      if (Array.isArray(value)) {
+        return value
+          .map((item) => (hasFieldProperty(item) ? item.field : item))
+          .filter(Boolean)
+          .join(', ');
+      }
+      return String(value);
+    })
+    .filter(Boolean);
 
   return selectedFields.length > 0
     ? `${baseTitle} - ${selectedFields.join(', ')}`
     : baseTitle;
 }
 
+/**
+ * Create a title builder function from a description string
+ */
+export function titleFromDescription(description: string) {
+  return (fieldValues: Record<string, unknown>) =>
+    buildDefaultChartTitle(description, fieldValues);
+}
+
 export function buildChartTypeTitle(
   chartType: Pick<ChartTypeDefinition, 'description' | 'buildTitle'>,
-  fieldValues: Record<string, string>,
+  fieldValues: Record<string, unknown>,
 ): string {
   return chartType.buildTitle
     ? chartType.buildTitle(fieldValues)
@@ -98,18 +57,8 @@ export function buildChartTypeTitle(
 }
 
 export function canCreateChartFromType(
-  chartType: ChartTypeDefinition | null | undefined,
-  fieldValues: Record<string, string>,
-  columns: ChartBuilderColumn[],
+  chartTypeDefinition: ChartTypeDefinition | null | undefined,
+  fieldValues: Record<string, unknown>,
 ): boolean {
-  if (!chartType) return false;
-
-  return chartType.fields
-    .filter((field) => field.required !== false)
-    .every((field) => {
-      const value = fieldValues[field.key];
-      if (!value) return false;
-      const column = columns.find((candidate) => candidate.name === value);
-      return Boolean(column && columnMatchesFieldTypes(column, field));
-    });
+  return chartTypeDefinition?.schema.safeParse(fieldValues)?.success ?? false;
 }

@@ -1,7 +1,6 @@
 import {
   type MosaicDashboardEntryType,
   type MosaicDashboardPanelConfigType,
-  type MosaicDashboardPanelSourceType,
   Query,
 } from '@sqlrooms/mosaic';
 import {createId} from '@paralleldrive/cuid2';
@@ -10,12 +9,19 @@ import type {Table as ArrowTable} from 'apache-arrow';
 import type {DeckJsonMapProps, DeckSqlDatasetInput} from './types';
 
 export const DECK_MAP_DASHBOARD_PANEL_TYPE = 'deck-json-map';
+export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 100_000;
+
+export type DeckMapDataPolicyOverride = {
+  disabled?: boolean;
+  maxRows?: number;
+  reason?: string;
+};
 
 export type DeckMapDashboardDatasetConfig = Omit<
   DeckSqlDatasetInput,
   'sqlQuery'
 > & {
-  source?: MosaicDashboardPanelSourceType;
+  source?: {tableName?: string; sqlQuery?: string};
 };
 
 export type DeckMapDashboardInteractionConfig = {
@@ -43,12 +49,13 @@ export type DeckMapDashboardPanelConfig = {
   showLegends?: boolean;
   interaction?: DeckMapDashboardInteractionConfig;
   fitToData?: DeckMapDashboardFitToDataConfig;
+  dataPolicy?: DeckMapDataPolicyOverride;
+  settingsOpen?: boolean;
 };
 
 export type CreateDeckMapDashboardPanelConfigOptions =
   DeckMapDashboardPanelConfig & {
     title?: string;
-    source?: MosaicDashboardPanelSourceType;
   };
 
 export type DeckMapDashboardDatasetClientState = {
@@ -75,13 +82,12 @@ export function asDeckJsonMapConfig(
 
 export function createDeckMapDashboardPanelConfig(
   options: CreateDeckMapDashboardPanelConfigOptions,
-): MosaicDashboardPanelConfigType {
-  const {title, source, ...config} = options;
+): any {
+  const {title, ...config} = options;
   return {
     id: createId(),
     type: DECK_MAP_DASHBOARD_PANEL_TYPE,
     title: title ?? 'Map',
-    ...(source ? {source} : {}),
     config: JSON.parse(JSON.stringify(config)) as Record<string, unknown>,
   };
 }
@@ -90,13 +96,10 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   dashboard: MosaicDashboardEntryType;
   panel: MosaicDashboardPanelConfigType;
   dataset?: DeckMapDashboardDatasetConfig;
-}): MosaicDashboardPanelSourceType | undefined {
+}): {tableName?: string; sqlQuery?: string} | undefined {
   const datasetSource = options.dataset?.source;
   if (datasetSource?.sqlQuery || datasetSource?.tableName) {
     return datasetSource;
-  }
-  if (options.panel.source?.sqlQuery || options.panel.source?.tableName) {
-    return options.panel.source;
   }
   return options.dashboard.selectedTable
     ? {tableName: options.dashboard.selectedTable}
@@ -104,7 +107,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
 }
 
 export function createDeckMapDashboardDatasetQuery(
-  source: MosaicDashboardPanelSourceType,
+  source: {tableName?: string; sqlQuery?: string},
   filter: unknown,
 ) {
   const query = source.sqlQuery

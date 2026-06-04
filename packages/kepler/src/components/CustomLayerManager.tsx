@@ -115,6 +115,8 @@ const TYPEAHEAD_CLASS = 'typeahead';
 const TYPEAHEAD_INPUT_CLASS = 'typeahead__input';
 
 type TableOption = {label: string; value: string};
+type TypeaheadListItemComponent =
+  (typeof Typeahead.defaultProps)['customListItemComponent'];
 
 const TableListItem: React.FC<{value: TableOption}> = ({value}) => (
   <ListItemWrapper>
@@ -238,7 +240,9 @@ const AddTableLayerButton: React.FC<{
             filterOption={'label'}
             searchable
             onOptionSelected={handleSelect}
-            customListItemComponent={TableListItem}
+            customListItemComponent={
+              TableListItem as unknown as TypeaheadListItemComponent
+            }
           />
         </DropdownMenu>
       )}

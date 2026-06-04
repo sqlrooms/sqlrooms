@@ -1,16 +1,19 @@
 import type {Param} from '@sqlrooms/mosaic';
 import {
   type ChartBuilderColumn,
-  MosaicChart,
+  type ChartConfig,
+  createDefaultChartTypes,
+  isSpecChartType,
+  MosaicSpecChart,
   MosaicChartBuilder,
   type Spec,
 } from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {Button, ScrollArea, SpinnerPane} from '@sqlrooms/ui';
-import {Code, X} from 'lucide-react';
-import {FC, useCallback, useMemo, useState} from 'react';
+import {Code, FilterX, X} from 'lucide-react';
+import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
-import {ChartConfig, defaultChartConfigs} from './filterPlots';
+import {type FilterChartItem, defaultChartConfigs} from './filterPlots';
 
 export const FiltersPanel: FC<{className?: string}> = ({className}) => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
@@ -37,7 +40,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   );
 
   // Chart list state
-  const [charts, setCharts] = useState<ChartConfig[]>(() => [
+  const [charts, setCharts] = useState<FilterChartItem[]>(() => [
     ...defaultChartConfigs,
   ]);
 
@@ -74,10 +77,32 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
-  const handleCreateChart = useCallback((spec: Spec, title: string) => {
-    const id = `chart-${Date.now()}`;
-    setCharts((prev) => [{id, title, spec}, ...prev]);
-  }, []);
+  // Only include spec-based chart types (filter panel doesn't support component renderers)
+  const chartTypes = useMemo(
+    () => createDefaultChartTypes().filter(isSpecChartType),
+    [],
+  );
+
+  const handleCreateChart = useCallback(
+    (title: string, config: ChartConfig) => {
+      try {
+        const id = `chart-${Date.now()}`;
+        const chartTypeDef = chartTypes.find(
+          (ct) => ct.id === config.chartType,
+        );
+        if (!chartTypeDef) {
+          console.error(`Unknown chart type: ${config.chartType}`);
+          return;
+        }
+        // chartTypes is filtered to only spec-based types, so createSpec exists
+        const spec = chartTypeDef.createSpec('earthquakes', config.settings);
+        setCharts((prev) => [{id, title, spec}, ...prev]);
+      } catch (error) {
+        console.error('Failed to create chart:', error);
+      }
+    },
+    [chartTypes],
+  );
 
   const handleRemoveChart = useCallback((chartId: string) => {
     setCharts((prev) => prev.filter((c) => c.id !== chartId));
@@ -88,18 +113,46 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
+  const handleClearAllFilters = useCallback(() => {
+    brush?.reset();
+  }, [brush]);
+
+  const [selectionVersion, setSelectionVersion] = useState(0);
+  useEffect(() => {
+    if (!brush) return;
+    const handler = () => setSelectionVersion((v) => v + 1);
+    brush.addEventListener('value', handler);
+    return () => brush.removeEventListener('value', handler);
+  }, [brush]);
+
+  const hasActiveFilters = useMemo(
+    () => Boolean(brush?.clauses.length),
+    [brush, selectionVersion],
+  );
+
   return (
     <RoomPanel showHeader={false} className={className}>
       <div className="flex h-full flex-col">
         <MosaicChartBuilder
           tableName="earthquakes"
           columns={columns}
+          chartTypes={chartTypes}
           onCreateChart={handleCreateChart}
           open={builderOpen}
           onOpenChange={setBuilderOpen}
         >
-          <div className="p-2">
-            <MosaicChartBuilder.Trigger className="w-full" />
+          <div className="flex items-center gap-2 p-2">
+            <MosaicChartBuilder.Trigger className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAllFilters}
+              disabled={!hasActiveFilters}
+              title="Clear all filters"
+            >
+              <FilterX className="h-3.5 w-3.5" />
+              <span>Clear</span>
+            </Button>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2">
@@ -143,7 +196,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                         </div>
                       </div>
                       <div className="overflow-hidden pb-4">
-                        <MosaicChart.Container
+                        <MosaicSpecChart.Container
                           spec={chart.spec}
                           params={paramsMap}
                           editable={isEditing}
@@ -151,17 +204,17 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                             handleSpecChange(chart.id, spec)
                           }
                         >
-                          <MosaicChart.Display />
+                          <MosaicSpecChart.Display className="h-64" />
                           {isEditing && (
                             <>
-                              <MosaicChart.SpecEditor
+                              <MosaicSpecChart.SpecEditor
                                 className="h-64 border-t"
                                 title=""
                               />
-                              <MosaicChart.Actions />
+                              <MosaicSpecChart.Actions />
                             </>
                           )}
-                        </MosaicChart.Container>
+                        </MosaicSpecChart.Container>
                       </div>
                     </div>
                   );

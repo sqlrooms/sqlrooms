@@ -1,23 +1,21 @@
 import {createContext, useContext} from 'react';
-import type {Spec} from '@uwdata/mosaic-spec';
 import {useStore} from 'zustand';
+import type {ChartConfig} from '../charts/chart-types';
 import type {
   ChartBuilderStore,
   ChartBuilderStoreState,
 } from './createChartBuilderStore';
 import type {
   ChartBuilderColumn,
-  ChartBuilderTemplate,
   ChartTypeDefinition,
-} from './types';
+} from '../charts/chart-types/base-types';
 
 export type ChartBuilderContextValue = {
   tableName: string;
   columns: ChartBuilderColumn[];
-  onCreateChart: (spec: Spec, title: string) => void;
-  templates: ChartBuilderTemplate[];
-  availableChartTypes: ChartTypeDefinition[];
-  availableTemplates: ChartBuilderTemplate[];
+  onCreateChart: (title: string, config: ChartConfig) => void;
+  templates: ChartTypeDefinition[];
+  availableTemplates: ChartTypeDefinition[];
   store: ChartBuilderStore;
 };
 

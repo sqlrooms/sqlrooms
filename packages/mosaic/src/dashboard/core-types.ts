@@ -1,0 +1,27 @@
+/**
+ * Core dashboard data types - no dependencies on chart-types.
+ * These types can be safely imported by chart-types without creating circular dependencies.
+ */
+
+import {z} from 'zod';
+
+// DataTableExplorer panel config
+export const DataTableExplorerPanelConfig = z.object({
+  pageSize: z.number().optional(),
+});
+export type DataTableExplorerPanelConfig = z.infer<
+  typeof DataTableExplorerPanelConfig
+>;
+
+export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
+export type MosaicDashboardLayoutType = z.infer<
+  typeof MosaicDashboardLayoutType
+>;
+
+export const MosaicDashboardPanelSource = z.object({
+  tableName: z.string().optional(),
+  sqlQuery: z.string().optional(),
+});
+export type MosaicDashboardPanelSource = z.infer<
+  typeof MosaicDashboardPanelSource
+>;

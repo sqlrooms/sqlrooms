@@ -1,9 +1,14 @@
 export type RuntimeConfig = {
   wsUrl?: string;
+  wsAuthToken?: string;
   apiBaseUrl?: string;
   llmProvider?: string;
   llmModel?: string;
   apiKey?: string;
+  configWritable?: boolean;
+  syncEnabled?: boolean;
+  crdtWsUrl?: string;
+  crdtRoomId?: string;
   aiProviders?: Record<
     string,
     {
@@ -12,6 +17,25 @@ export type RuntimeConfig = {
       models: Array<{modelName: string}>;
     }
   >;
+  aiSettings?: {
+    providers?: Record<
+      string,
+      {
+        baseUrl: string;
+        apiKey: string;
+        models: Array<{modelName: string}>;
+      }
+    >;
+    customModels?: Array<{
+      baseUrl: string;
+      apiKey: string;
+      modelName: string;
+    }>;
+    modelParameters?: {
+      maxSteps?: number;
+      additionalInstruction?: string;
+    };
+  };
   dbPath?: string;
   metaNamespace?: string;
   dbBridge?: {

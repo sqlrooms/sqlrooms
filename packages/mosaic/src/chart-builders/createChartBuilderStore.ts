@@ -1,12 +1,13 @@
 import {produce} from 'immer';
 import {createStore} from 'zustand/vanilla';
+import {ChartType} from '../charts/chart-types';
 
 export type ChartBuilderStoreState = {
-  selectedTemplateId?: string;
-  fieldValues: Record<string, string>;
+  selectedTemplateId?: ChartType;
+  fieldValues: Record<string, unknown>;
   reset: () => void;
-  selectTemplate: (templateId: string) => void;
-  setFieldValue: (fieldKey: string, value: string) => void;
+  selectTemplate: (templateId: ChartType) => void;
+  setFieldValue: (fieldKey: string, value: unknown) => void;
 };
 
 export type ChartBuilderStore = ReturnType<typeof createChartBuilderStore>;

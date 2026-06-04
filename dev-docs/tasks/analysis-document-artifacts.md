@@ -1,0 +1,993 @@
+# Block Document Artifacts
+
+## Implementation Checklist
+
+- [x] [Stage 1: Structured Block Document State](#stage-1-structured-block-document-state)
+- [x] [Stage 2: Embedded Artifact Metadata](#stage-2-embedded-artifact-metadata)
+- [x] [Stage 3: Tiptap Block Document Editor and Renderer Registry](#stage-3-tiptap-block-document-editor-and-renderer-registry)
+- [x] [Stage 4: Shared Mosaic Chart Primitive](#stage-4-shared-mosaic-chart-primitive)
+- [x] [Stage 5: Standalone Block Document Chart Blocks](#stage-5-standalone-block-document-chart-blocks)
+- [x] [Stage 6: CLI Integration and Dashboard Embeds](#stage-6-cli-integration-and-dashboard-embeds)
+- [x] [Stage 7: Block Document Commands](#stage-7-block-document-commands)
+- [x] [Stage 8: AI Authoring Tools and Agent](#stage-8-ai-authoring-tools-and-agent)
+- [x] [Stage 9: CRDT and Sync Follow-Up](#stage-9-crdt-and-sync-follow-up)
+- [x] [Stage 10: Documentation, Example, and Polish](#stage-10-documentation-example-and-polish)
+
+## Goal
+
+Introduce a new parent artifact type in `@sqlrooms/documents` for Notion-like,
+block-composed analytical documents.
+
+Recommended library/API name after the rename:
+
+- Default persisted artifact type: `block-document`
+- Default user-visible label: `Block Document`
+- Package-facing terms: `BlockDocument`, `BlockDocumentBlock`
+
+Product apps can still expose the same generic implementation under a domain
+name. The CLI app does this by configuring the artifact type, command namespace,
+and label as `analysis` / `Analysis`; `@sqlrooms/documents` itself should keep
+the reusable `BlockDocument` terminology.
+
+The new artifact should support:
+
+- Rich text blocks.
+- Headings, paragraphs, lists, todos, quotes, code, dividers, and images.
+- Standalone vgplot-based chart blocks that reuse the same chart
+  implementations and settings UI as Mosaic dashboard chart panels.
+- Chart/image blocks that can be AI-authored.
+- Embedded artifact blocks, starting with Mosaic dashboard artifacts.
+- Multiple embedded dashboards in one block document artifact, each with
+  independent backing state and runtime behavior.
+- Independent crossfilter scopes for standalone chart blocks and embedded
+  dashboards, with optional chart groups when block document chart blocks should
+  crossfilter together.
+- AI commands/tools that can create a block document, read it,
+  append/reorder/remove blocks, and create/embed dashboard blocks.
+
+## Non-Goals
+
+- Do not replace the existing Markdown `document` artifact in the first pass.
+- Do not migrate existing Markdown documents automatically.
+- Do not build a complete Notion clone: no page database, backlinks, comments,
+  permissions, templates, or arbitrary nested pages in the initial feature.
+- Do not support every artifact type as an embed in v1. Start with dashboards.
+- Do not introduce eager table/materialization conversions for chart blocks.
+- Do not make embedded dashboards share state implicitly. Sharing must be
+  explicit through the referenced artifact or data source.
+- Do not require AI to be configured for manual creation/editing.
+
+## Current Architecture Findings
+
+### Artifacts
+
+- `@sqlrooms/artifacts` owns artifact metadata and tab/layout integration.
+- `ArtifactMetadata` currently has only `id`, `type`, and `title`.
+- `createArtifactsSlice` manages `artifactsById`, `artifactOrder`, and
+  `currentArtifactId`.
+- Artifact type definitions are runtime app configuration with lifecycle hooks
+  (`onCreate`, `onEnsure`, `onRename`, `onClose`, `onDelete`).
+- `ArtifactTabs` renders artifacts from `artifactOrder` and can filter by type,
+  but there is no first-class hidden/embedded child artifact concept.
+- `createArtifactPanelDefinition` resolves artifact panels from artifact type
+  definitions, so any new top-level block document artifact should integrate cleanly.
+
+### Documents
+
+- `@sqlrooms/documents` currently implements Markdown document artifacts.
+- Document state is stored in `documents.config.artifacts[artifactId]` as
+  `{id, markdown, assets, updatedAt}`.
+- Assets are document-owned PNG/SVG payloads referenced by `asset://...`.
+- `MarkdownDocument` is a controlled Tiptap editor with Markdown as canonical
+  persisted state.
+- `createDocumentCommands()` exposes AI/palette-friendly commands:
+  `document.list`, `document.get`, `document.create`,
+  `document.set-markdown`, and `document.append-markdown`.
+- `createDocumentsCrdtMirror()` syncs only Markdown document artifacts and their
+  artifact metadata.
+- The package name is `@sqlrooms/documents`, not `@sqlrooms/document`.
+
+### Dashboards
+
+- Mosaic dashboard state lives in `mosaicDashboard.config.dashboardsById`.
+- Dashboards are already keyed by artifact/dashboard id.
+- `MosaicDashboard` accepts `dashboardId` and uses context to render a toolbar
+  and panels.
+- Dashboard runtime state is keyed by
+  `dashboard:${dashboardId}:panel:${panelId}`.
+- Selection state uses `getMosaicDashboardSelectionName(dashboardId)`, so two
+  dashboards with different ids are naturally independent.
+- `mosaicDashboard.removeDashboard` evicts retained charts and runtime issues.
+- Dashboard artifact lifecycle in the CLI UI already ensures/removes backing
+  dashboard state.
+
+### AI and Commands
+
+- `@sqlrooms/artifacts/ai` provides context-aware tools for listing/reading
+  artifacts and making an artifact primary for an AI run.
+- `@sqlrooms/mosaic/ai` provides reusable dashboard tools and
+  `dashboard_agent`.
+- The CLI UI wires document commands, dashboard commands/tools, artifact
+  context tools, and default AI tools together in `apps/sqlrooms-cli-ui`.
+- CLI artifact readers currently return full payloads for Markdown documents
+  and dashboards.
+- Command adapters in `@sqlrooms/room-store` are the preferred bridge for
+  palette/MCP/AI command execution.
+
+## Proposed Implementation Approach
+
+Add a structured block document model alongside, not inside, the existing
+Markdown document model.
+
+### Data Model
+
+Add new schemas under `@sqlrooms/documents`, likely in files such as
+`BlockDocumentSliceConfig.ts`:
+
+```ts
+type BlockDocument = {
+  id: string;
+  content: BlockDocumentContent;
+  updatedAt: number;
+};
+
+type BlockDocumentContent = {
+  type: 'doc';
+  content?: BlockDocumentNode[];
+};
+
+type BlockDocumentNode =
+  | TiptapTextBlockNode
+  | BlockDocumentChartNode
+  | BlockDocumentArtifactEmbedNode
+  | BlockDocumentImageNode;
+```
+
+The preferred canonical body for a block document should be
+Tiptap/ProseMirror JSON, not a parallel home-grown `blocks[]` array. The
+command and AI APIs can expose block-shaped DTOs, but the persisted document
+should be the same tree the rich editor edits. This avoids lossy conversion
+once users start mixing rich text, tables, captions, and custom interactive
+blocks.
+
+For command/AI readability, define a block DTO shape that maps onto top-level
+Tiptap nodes:
+
+```ts
+type BlockDocumentBlock =
+  | {id: string; type: 'heading'; level: 1 | 2 | 3; text: string}
+  | {id: string; type: 'paragraph'; text: string}
+  | {id: string; type: 'richText'; markdown: string}
+  | {id: string; type: 'list'; ordered?: boolean; items: string[]}
+  | {id: string; type: 'todo'; checked: boolean; text: string}
+  | {id: string; type: 'image'; assetId: string; caption?: string}
+  | {id: string; type: 'chartImage'; assetId: string; caption?: string}
+  | {
+      id: string;
+      type: 'chart';
+      tableName: string;
+      config: ChartConfig;
+      selectionGroupId?: string;
+      caption?: string;
+    }
+  | {
+      id: string;
+      type: 'artifactEmbed';
+      artifactId: string;
+      artifactType: string;
+    };
+```
+
+Each top-level editable block node must have a stable `id` attribute. Use the
+Tiptap `UniqueID` extension, configured with SQLRooms' id generator, to backfill
+missing ids and avoid duplicate ids after paste/collaboration merges.
+
+Keep block DTO content intentionally simple at first. For rich text exposed to
+AI, serialize individual Tiptap text blocks to Markdown strings. Internally,
+keep Tiptap JSON so manual editing has a native model for marks, tables, nested
+lists, and future custom containers.
+
+### Tiptap Rich Editor Architecture
+
+Build the block document editor as a new Tiptap editor, separate from the existing
+Markdown-controlled `MarkdownDocumentEditor`.
+
+Recommended package files:
+
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentEditorRoot.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentEditorContent.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentToolbar.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentChartNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentArtifactEmbedNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentImageNode.tsx`
+- `packages/documents/src/BlockDocumentChartRendererContext.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/blockDocumentMarkdown.ts`
+
+The editor should use:
+
+- `StarterKit` for paragraphs, headings, lists, blockquotes, code blocks,
+  history, and standard marks.
+- Existing table extensions if block documents should support rich tables in
+  v1.
+- `Link`, `TaskList`, and `TaskItem`, matching the existing Markdown document
+  editor where useful.
+- `UniqueID` for stable top-level block ids.
+- Optional `DragHandle` later for Notion-like block handles. Do not make drag
+  handles part of the first correctness milestone unless the editor UX needs it.
+
+This likely requires adding `@tiptap/extension-unique-id` to
+`@sqlrooms/documents`. Add `@tiptap/extension-drag-handle` only when drag
+handles are implemented.
+
+Use Tiptap custom nodes for SQLRooms blocks:
+
+```ts
+const BlockDocumentChartNode = Node.create({
+  name: 'blockDocumentChart',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  isolating: true,
+  addAttributes() {
+    return {
+      id: {default: null},
+      tableName: {default: null},
+      config: {default: null},
+      selectionGroupId: {default: null},
+      caption: {default: null},
+    };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(BlockDocumentChartNodeView);
+  },
+});
+```
+
+Use `ReactNodeViewRenderer` for interactive blocks. Node views should render a
+`NodeViewWrapper` and keep controls `contentEditable={false}` so ProseMirror
+does not try to edit buttons, menus, chart canvases, or dashboards. Use
+`props.updateAttributes(...)` for small attribute edits like captions,
+selected tables, chart config, or selection group changes. Use store commands
+for mutations that create or delete related artifacts.
+
+Because `@sqlrooms/mosaic` already depends on `@sqlrooms/documents`,
+`@sqlrooms/documents` must not import Mosaic chart/dashboard components. The
+block document editor should own the Tiptap node schemas and generic NodeView shells,
+then call host-provided renderer contexts:
+
+- `BlockDocumentChartRendererContext` renders `blockDocumentChart` nodes.
+- `BlockDocumentEmbedRendererContext` renders artifact embed nodes.
+
+The CLI UI can provide Mosaic-backed renderers for both standalone chart blocks
+and dashboard embeds. Other host apps can provide different renderers or render
+clear unsupported states.
+
+Use `atom: true` for blocks that should behave as one selectable unit:
+
+- standalone chart blocks
+- dashboard/artifact embed blocks
+- static image blocks if no rich caption is needed
+
+Use a non-atom node with `content` plus `NodeViewContent` only when the block
+needs editable nested rich text, for example a future callout block with rich
+body content. Avoid putting a live dashboard inside a node with editable
+`contentDOM`; that risks focus and selection interference.
+
+Custom block node attributes should store only durable configuration:
+
+- `blockDocumentChart`: `id`, `tableName`, `config`, `selectionGroupId`, `caption`
+- `blockDocumentArtifactEmbed`: `id`, `artifactId`, `artifactType`, `caption`
+- `blockDocumentImage`: `id`, `assetId`, `alt`, `caption`, optional size attrs
+
+Do not store live runtime objects in node attrs. Mosaic `Selection` instances,
+retained chart handles, dashboard runtime issues, and asset object URLs should
+remain in Zustand/runtime state keyed by stable node ids.
+
+The editor `onUpdate` should persist `editor.getJSON()` to
+`blockDocuments.config.artifacts[artifactId].content`. To avoid echo loops,
+mirror the existing Markdown editor pattern: hold `onChange` in a ref, compare
+incoming content to current editor JSON before calling `setContent`, and update
+read-only state with `editor.setEditable(...)`.
+
+### Tiptap Serialization and AI Views
+
+Manual editing should use Tiptap JSON as canonical state. AI and command tools
+should read and write through a stable DTO layer:
+
+- `block-document.get` returns top-level blocks as DTOs, including text rendered to
+  concise Markdown and custom nodes rendered as structured metadata.
+- `block-document.append-blocks` and `block-document.insert-blocks` convert DTOs to Tiptap
+  JSON nodes and insert them into the document.
+- `block-document.update-block` updates the top-level node with the matching `id`.
+- `block-document.remove-block` deletes the matching top-level node.
+
+Use `@tiptap/markdown` helpers for text-oriented blocks where possible. Tiptap
+supports custom Markdown specs such as fenced block containers and atom block
+containers. That gives us an optional Markdown/debug/export representation like:
+
+```md
+:::sqlrooms-chart {id="..." tableName="sales" selectionGroupId="overview"}
+{...ChartConfig JSON...}
+:::
+
+:::sqlrooms-embed {id="..." artifactType="dashboard" artifactId="..."} :::
+```
+
+This Markdown representation should be an import/export and AI-debug surface,
+not the primary persisted body for block documents. Keeping Tiptap JSON
+canonical preserves interactive custom blocks without requiring every SQLRooms
+block to round-trip through Markdown perfectly on day one.
+
+### Standalone Chart Blocks
+
+Block document chart blocks should reuse the Mosaic/vgplot chart definitions,
+`ChartConfig`, chart settings UI, spec generation, and `VgPlotChart` renderer
+used by dashboard chart panels. They should not depend on `mosaicDashboard`
+panel state.
+
+The target extraction is a shared chart primitive, for example:
+
+```ts
+type MosaicChartViewProps = {
+  tableName: string;
+  config: ChartConfig;
+  onConfigChange?: (config: ChartConfig) => void;
+  selectionName?: string;
+  retentionKey?: string;
+  runtimeIssueKey?: string;
+};
+```
+
+Dashboard chart panels and block document chart blocks should both wrap this shared
+primitive with their own chrome and persistence. Query-backed charts should
+still use the Mosaic connection/coordinator; the decoupling is from dashboard
+artifact/panel state, not from Mosaic's runtime.
+
+Selection scoping rules:
+
+- By default, a standalone chart block gets its own selection name, e.g.
+  `block-document:${documentId}:chart-block:${blockId}:brush`.
+- If multiple standalone chart blocks should crossfilter together, they share a
+  `selectionGroupId`, producing a name such as
+  `block-document:${documentId}:chart-group:${selectionGroupId}:brush`.
+- Embedded dashboards keep using their dashboard-scoped selection name,
+  `dashboard:${dashboardId}:brush`.
+- The vgplot param name passed to specs can remain `brush`; independence comes
+  from passing different `Selection` instances behind that param.
+
+### Artifact Ownership
+
+Extend artifact metadata with optional embedded-child metadata:
+
+```ts
+{
+  parentArtifactId?: string;
+  visibility?: 'workspace' | 'embedded';
+}
+```
+
+Default `visibility` should be `workspace` for backward compatibility. Embedded
+dashboard blocks should create normal dashboard artifacts with
+`visibility: 'embedded'` and `parentArtifactId` set to the owning blocks
+document id.
+`ArtifactTabs` should omit `embedded` artifacts by default while still allowing
+advanced callers to include them explicitly.
+
+This keeps embedded dashboards on the same artifact/dashboard lifecycle path
+without polluting the top-level workspace tabs.
+
+### Rendering
+
+Add a `BlockDocumentArtifact` React component that hosts the Tiptap editor and
+renders custom SQLRooms blocks through React NodeViews:
+
+- Text/list blocks use document package UI.
+- Image/chart image blocks reuse document asset resolution.
+- Standalone chart blocks render the shared Mosaic/vgplot chart primitive with
+  document-scoped persistence, retention, runtime issue, and selection keys.
+- `artifactEmbed` with `artifactType: 'dashboard'` renders
+  `<MosaicDashboard.Root dashboardId={artifactId}>` with dashboard toolbar and
+  panels in an embedded block shell.
+- Each embedded dashboard should pass only its own `dashboardId`, relying on
+  Mosaic's existing dashboard-scoped runtime keys for independence.
+
+To avoid making `@sqlrooms/documents` depend directly on `@sqlrooms/mosaic`,
+prefer renderer registries:
+
+```ts
+type BlockDocumentChartRenderer = React.ComponentType<{
+  documentId: string;
+  blockId: string;
+  tableName: string;
+  config: ChartConfig;
+  selectionGroupId?: string;
+  onConfigChange?: (config: ChartConfig) => void;
+}>;
+
+type BlockDocumentArtifactEmbedRenderer = {
+  artifactType: string;
+  component: React.ComponentType<{
+    artifactId: string;
+    parentArtifactId: string;
+  }>;
+};
+```
+
+The CLI UI can register the Mosaic chart renderer and dashboard embed renderer.
+This keeps the documents package generic and prevents a new package cycle.
+
+### AI and Commands
+
+Add block-document-specific commands, exported from `@sqlrooms/documents`:
+
+- `block-document.list`
+- `block-document.get`
+- `block-document.create`
+- `block-document.append-blocks`
+- `block-document.insert-blocks`
+- `block-document.update-block`
+- `block-document.remove-block`
+- `block-document.move-block`
+- `block-document.create-chart-block`
+- `block-document.embed-dashboard`
+
+Add `createBlockDocumentAiInstructions` and optionally a host-provided blocks
+document authoring agent/tool.
+The agent can orchestrate:
+
+1. Create/read/update a block document artifact.
+2. Add standalone chart blocks for focused, lightweight visualizations.
+3. Create one or more dashboard artifacts with the existing dashboard tools
+   when a multi-panel interactive workspace is useful.
+4. Embed the created dashboard artifacts as block document blocks.
+5. Add narrative summary blocks around charts and dashboard embeds.
+
+Prefer commands for deterministic mutations and a dedicated agent for
+multi-step authoring. This matches the existing split between document commands,
+dashboard tools, and `dashboard_agent`.
+
+### CRDT and Persistence
+
+Extend the existing documents CRDT mirror or add a sibling mirror for blocks
+documents. The mirror must sync:
+
+- Block document Tiptap JSON content.
+- Block document assets.
+- Block document artifact metadata.
+- Embedded child artifact metadata for dashboard blocks.
+
+Dashboard backing state is not currently synced by the documents mirror. If
+syncing embedded dashboards is required in the same feature, add or reuse a
+Mosaic dashboard mirror in a later stage. Otherwise document that embedded
+dashboards persist through the normal app persistence path and are not part of
+document-only CRDT sync yet.
+
+## Stages
+
+Each stage should be reviewable as a separate commit.
+
+### Stage 1: Structured Block Document State
+
+Status: Implemented on 2026-05-28.
+
+Implement schemas and slice methods for block documents in
+`@sqlrooms/documents`.
+
+Likely changes:
+
+- `packages/documents/src/BlockDocumentSliceConfig.ts`
+- `packages/documents/src/BlockDocumentsSlice.ts`
+- `packages/documents/src/index.ts`
+- `packages/documents/__tests__/BlockDocumentsSlice.test.ts`
+- `packages/documents/README.md`
+
+Acceptance criteria:
+
+- `BlockDocument` and Tiptap JSON content schemas parse persisted state.
+- Block DTO helpers can map top-level Tiptap nodes to/from command-friendly
+  `BlockDocumentBlock` values.
+- Slice methods can ensure/remove a block document.
+- Slice methods can append, insert, update, remove, and move blocks.
+- IDs are stable and block ordering is deterministic.
+- Existing Markdown document tests keep passing unchanged.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/documents typecheck`
+
+### Stage 2: Embedded Artifact Metadata
+
+Status: Implemented on 2026-05-28.
+
+Add embedded-child metadata to artifact records and update artifact tab behavior.
+
+Likely changes:
+
+- `packages/artifacts/src/ArtifactsSliceConfig.ts`
+- `packages/artifacts/src/ArtifactsSlice.ts`
+- `packages/artifacts/src/artifactTabs.tsx`
+- `packages/artifacts/__tests__/ArtifactsSlice.test.ts`
+- `packages/artifacts/README.md`
+
+Acceptance criteria:
+
+- Existing artifact metadata without `visibility` still parses.
+- New artifacts can be created/ensured with `visibility: 'embedded'` and
+  `parentArtifactId`.
+- `ArtifactTabs` hides embedded artifacts by default.
+- Embedded artifacts can still be opened explicitly if a caller asks for them.
+- Deleting a parent artifact does not accidentally delete unrelated artifacts.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/artifacts test`
+- `pnpm --filter @sqlrooms/artifacts typecheck`
+
+### Stage 3: Tiptap Block Document Editor and Renderer Registry
+
+Status: Implemented on 2026-05-28.
+
+Add the top-level `BlockDocument` component, Tiptap editor shell, custom
+SQLRooms block node extensions, and a generic embed renderer registry.
+
+Likely changes:
+
+- `packages/documents/src/BlockDocumentArtifact.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentEditorRoot.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentEditorContent.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentToolbar.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentChartNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentArtifactEmbedNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentImageNode.tsx`
+- `packages/documents/src/BlockDocumentChartRendererContext.tsx`
+- `packages/documents/src/BlockDocumentEmbedRendererContext.tsx`
+- `packages/documents/package.json`
+- `packages/documents/src/index.ts`
+- `packages/documents/README.md`
+
+Acceptance criteria:
+
+- A block document artifact renders editable rich text blocks through Tiptap.
+- SQLRooms custom blocks render through React NodeViews.
+- Chart and artifact NodeViews render through host-provided renderer contexts,
+  not direct Mosaic imports.
+- Unknown/missing embedded artifacts render a clear inline missing-state
+  NodeView.
+- The editor persists Tiptap JSON without echo loops when external state
+  changes.
+- The renderer registry allows host apps to provide dashboard rendering without
+  `@sqlrooms/documents` importing `@sqlrooms/mosaic`.
+- The component follows existing selector guidance: select stable raw state and
+  derive arrays with `useMemo`.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/documents typecheck`
+
+### Stage 4: Shared Mosaic Chart Primitive
+
+Status: Implemented on 2026-05-28.
+
+Extract dashboard chart internals into a reusable chart component that can be
+used by dashboard panels and standalone block document chart blocks.
+
+Likely changes:
+
+- `packages/mosaic/src/chart/MosaicChartView.tsx`
+- `packages/mosaic/src/chart/MosaicChartSettingsPanel.tsx`
+- `packages/mosaic/src/chart/useMosaicChartSelectionParams.ts`
+- `packages/mosaic/src/chart/MosaicDashboardChart.tsx`
+- `packages/mosaic/src/chart/MosaicDashboardChartContent.tsx`
+- `packages/mosaic/src/chart/useBrushSelectionParams.tsx`
+- `packages/mosaic/src/index.ts`
+- `packages/mosaic/__tests__/*`
+
+Acceptance criteria:
+
+- Dashboard chart panels render through the shared primitive with unchanged
+  behavior.
+- The shared primitive accepts a caller-provided selection name and retention
+  key rather than deriving them from `dashboardId` and `panelId`.
+- The primitive can render a chart from `tableName` and `ChartConfig` without a
+  dashboard entry.
+- Runtime issues and retained vgplot instances remain scoped to the provided
+  keys.
+- Existing dashboard chart settings UI remains available and reusable.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/mosaic test`
+- `pnpm --filter @sqlrooms/mosaic typecheck`
+
+### Stage 5: Standalone Block Document Chart Blocks
+
+Status: Implemented on 2026-05-28.
+
+Wire standalone chart blocks into the block document renderer and state.
+
+Likely changes:
+
+- `packages/documents/src/BlockDocumentSliceConfig.ts`
+- `packages/documents/src/BlockDocumentsSlice.ts`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentChartNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/node-views/BlockDocumentChartNodeView.tsx`
+- `packages/documents/src/BlockDocumentChartRendererContext.tsx`
+- `packages/documents/src/index.ts`
+- `apps/sqlrooms-cli-ui/src/workspace/AnalysisChartRenderer.tsx`
+- `apps/sqlrooms-cli-ui/src/workspace/AnalysisArtifact.tsx`
+- `apps/sqlrooms-cli-ui/src/store.ts`
+
+Acceptance criteria:
+
+- Block documents can persist `blockDocumentChart` Tiptap nodes with `tableName`,
+  `ChartConfig`, optional caption, and optional `selectionGroupId`.
+- A chart block renders using the same chart implementations and settings UI as
+  dashboard chart panels through a CLI-provided Mosaic renderer.
+- Two chart blocks without `selectionGroupId` do not crossfilter each other.
+- Two chart blocks with the same `selectionGroupId` crossfilter each other.
+- Standalone block document chart selections do not affect embedded dashboard
+  selections, and embedded dashboard selections do not affect standalone charts.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/mosaic test`
+- `pnpm --filter sqlrooms-cli-app typecheck`
+
+### Stage 6: CLI Integration and Dashboard Embeds
+
+Status: Implemented on 2026-05-28.
+
+Register the `analysis` artifact type in the CLI UI and provide a dashboard
+embed renderer.
+
+Likely changes:
+
+- `apps/sqlrooms-cli-ui/src/artifactTypes.tsx`
+- `apps/sqlrooms-cli-ui/src/store-types.ts`
+- `apps/sqlrooms-cli-ui/src/store.ts`
+- `apps/sqlrooms-cli-ui/src/workspace/AnalysisArtifact.tsx`
+- `apps/sqlrooms-cli-ui/src/workspace/dashboard/DashboardArtifact.tsx`
+- `apps/sqlrooms-cli-ui/src/createArtifactContextAiTools.ts`
+
+Acceptance criteria:
+
+- Users can create an `Analysis` artifact from the artifact menu.
+- Block document artifacts persist and reopen.
+- Analysis tabs show only the parent block document artifact; embedded
+  dashboards do not appear as top-level tabs by default.
+- An Analysis artifact can contain two dashboard blocks with different
+  dashboard ids.
+- Filters/selections/runtime issues in one embedded dashboard do not affect the
+  other embedded dashboard.
+- Reading an Analysis artifact as AI context returns block summaries and embed
+  metadata backed by the generic block document state.
+
+Checks:
+
+- `pnpm build`
+- `pnpm --filter sqlrooms-cli-app typecheck`
+- Manual smoke test in the CLI UI after build:
+  create Analysis -> add two standalone chart blocks -> add two embedded
+  dashboard blocks -> verify selection independence.
+
+### Stage 7: Block Document Commands
+
+Status: Implemented on 2026-05-28.
+
+Add command-registry operations for block documents.
+
+Likely changes:
+
+- `packages/documents/src/BlockDocumentCommands.ts`
+- `packages/documents/src/index.ts`
+- `packages/documents/__tests__/BlockDocumentCommands.test.ts`
+- `packages/documents/README.md`
+- `apps/sqlrooms-cli-ui/src/store.ts`
+
+Acceptance criteria:
+
+- Commands can list/read/create block document artifacts.
+- Commands can append/insert/update/remove/move blocks.
+- `block-document.create-chart-block` can create a standalone chart block with a
+  validated `ChartConfig`.
+- `block-document.embed-dashboard` can create an embedded dashboard artifact or embed
+  an existing dashboard artifact.
+- Command outputs omit large asset payloads by default.
+- Invalid block ids, artifact ids, and wrong artifact types return clear errors.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/documents typecheck`
+- `pnpm --filter sqlrooms-cli-app typecheck`
+
+### Stage 8: AI Authoring Tools and Agent
+
+Status: Implemented on 2026-05-28.
+
+Expose block document AI instructions and a configurable authoring-agent
+contract.
+
+Likely changes:
+
+- `packages/documents/src/BlockDocumentAi.ts`
+- `packages/documents/src/index.ts`
+- `packages/documents/__tests__/BlockDocumentAi.test.ts`
+- `apps/sqlrooms-cli-ui/src/store.ts`
+- `apps/sqlrooms-cli-ui/src/createArtifactContextAiTools.ts`
+- CLI app integration for the configured `analysis.*` command namespace
+
+Acceptance criteria:
+
+- System instructions explain when to use block documents versus dashboards
+  and Markdown documents.
+- The assistant can create a block document with narrative text blocks.
+- The assistant can create standalone chart blocks when a single focused chart
+  is enough.
+- The assistant can intentionally group standalone chart blocks with the same
+  `selectionGroupId` when crossfiltering between them is useful.
+- The assistant can call dashboard tools/agent, then embed the resulting
+  dashboard artifact as a block.
+- The assistant can append blocks to an existing primary block document artifact.
+- The assistant can read a block document artifact from run context and target it
+  without guessing ids.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter sqlrooms-cli-app typecheck`
+- Manual AI smoke test with a configured model:
+  "Create an Analysis with two linked charts, one independent chart, and a
+  dashboard for this table, then summarize the findings."
+
+### Stage 9: CRDT and Sync Follow-Up
+
+Status: Implemented on 2026-05-28.
+
+Add block document CRDT coverage and decide dashboard sync boundaries.
+
+Likely changes:
+
+- `packages/documents/src/crdt.ts`
+- `packages/documents/__tests__/documentsCrdt.test.ts`
+- `apps/sqlrooms-cli-ui/src/store.ts`
+- Possibly a new Mosaic dashboard CRDT mirror if dashboard state must sync with
+  document sync.
+
+Acceptance criteria:
+
+- Block document artifact metadata and Tiptap JSON content sync through Loro
+  snapshots.
+- Standalone chart block config and `selectionGroupId` values sync as part of
+  the block document content.
+- Existing Markdown document CRDT behavior is unchanged.
+- Embedded dashboard child artifact metadata is preserved.
+- The feature has a documented answer for whether dashboard backing state is
+  synced by this mirror or by app persistence only. The current boundary is:
+  this mirror syncs the embedded dashboard artifact metadata and blocks
+  document embed block reference, while Mosaic dashboard backing state remains
+  outside this document mirror and continues to rely on the host app's Mosaic
+  persistence or a future Mosaic-specific CRDT mirror.
+
+Checks:
+
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/documents typecheck`
+- `pnpm --filter @sqlrooms/documents lint`
+
+### Stage 10: Documentation, Example, and Polish
+
+Status: Implemented on 2026-05-28.
+
+Document the public API and add a small usage example.
+
+Likely changes:
+
+- `packages/documents/README.md`
+- `docs/packages.md`
+- `apps/sqlrooms-cli-ui/README.md`
+- Possibly a `block-document` example if the feature should be shown outside
+  the CLI UI.
+
+Acceptance criteria:
+
+- README explains `block-document` artifact registration and embed renderer
+  setup.
+- README explains standalone block document chart blocks, chart selection groups, and
+  how they differ from embedded dashboards.
+- README documents block document commands and AI instructions.
+- Docs clarify the difference between Markdown `document`, block documents,
+  CLI `analysis`, and `dashboard`.
+- A smoke path exists for manually creating an Analysis with an embedded
+  dashboard.
+
+Checks:
+
+- `pnpm build`
+- `pnpm --filter @sqlrooms/documents test`
+- `pnpm --filter @sqlrooms/documents typecheck`
+- `pnpm lint`
+
+## Files and Modules Likely to Change
+
+- `packages/documents/src/BlockDocumentSliceConfig.ts`
+- `packages/documents/src/BlockDocumentsSlice.ts`
+- `packages/documents/src/BlockDocumentArtifact.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentEditorRoot.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentEditorContent.tsx`
+- `packages/documents/src/BlockDocumentEditor/BlockDocumentToolbar.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentChartNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentArtifactEmbedNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/extensions/BlockDocumentImageNode.tsx`
+- `packages/documents/src/BlockDocumentEditor/node-views/BlockDocumentChartNodeView.tsx`
+- `packages/documents/src/BlockDocumentEditor/node-views/BlockDocumentArtifactEmbedNodeView.tsx`
+- `packages/documents/src/BlockDocumentChartRendererContext.tsx`
+- `packages/documents/src/BlockDocumentEmbedRendererContext.tsx`
+- `packages/documents/src/BlockDocumentCommands.ts`
+- `packages/documents/src/BlockDocumentAi.ts`
+- `packages/documents/src/crdt.ts`
+- `packages/documents/src/index.ts`
+- `packages/documents/README.md`
+- `packages/documents/__tests__/*`
+- `packages/artifacts/src/ArtifactsSliceConfig.ts`
+- `packages/artifacts/src/ArtifactsSlice.ts`
+- `packages/artifacts/src/artifactTabs.tsx`
+- `packages/artifacts/__tests__/*`
+- `packages/artifacts/README.md`
+- `packages/mosaic/src/chart/MosaicChartView.tsx`
+- `packages/mosaic/src/chart/useMosaicChartSelectionParams.ts`
+- `packages/mosaic/src/chart/MosaicDashboardChart.tsx`
+- `packages/mosaic/src/chart/MosaicDashboardChartContent.tsx`
+- `packages/mosaic/src/index.ts`
+- `apps/sqlrooms-cli-ui/src/artifactTypes.tsx`
+- `apps/sqlrooms-cli-ui/src/store-types.ts`
+- `apps/sqlrooms-cli-ui/src/store.ts`
+- `apps/sqlrooms-cli-ui/src/workspace/AnalysisArtifact.tsx`
+- `apps/sqlrooms-cli-ui/src/workspace/AnalysisChartRenderer.tsx`
+- `apps/sqlrooms-cli-ui/src/createArtifactContextAiTools.ts`
+- `docs/packages.md`
+
+## Risks and Open Questions
+
+- Should embedded dashboards be hidden artifacts in the global artifact registry,
+  or should block documents own dashboard-like child state directly? The
+  recommended path is hidden artifacts because it reuses lifecycle, dashboard
+  tools, and runtime cleanup.
+- Should deleting a block document cascade-delete embedded dashboard artifacts? The
+  likely default should be yes for artifacts with `parentArtifactId` equal to
+  the owning block document id and `visibility: 'embedded'`, but this needs an explicit
+  policy and tests.
+- Should users be able to promote an embedded dashboard to a top-level
+  dashboard artifact? This is useful, but can wait until after v1.
+- Should chart blocks be static image assets, live Vega specs, or embedded
+  dashboard panels? For v1, prefer live standalone Mosaic/vgplot chart blocks
+  for focused charts, image/chart asset blocks for static output, and dashboard
+  embeds for multi-panel interactive block-document.
+- Should standalone chart crossfilter groups be explicit user-facing groups or
+  inferred from adjacency/section? Prefer explicit `selectionGroupId` in state;
+  the UI can later offer friendlier grouping controls.
+- How much editing should v1 support manually? A simple block list editor is
+  lower risk than a full drag-and-drop block editor.
+- Do block document blocks need nested blocks immediately? Probably not. Add
+  `children` only after flat blocks are stable.
+- How should CRDT sync compose with dashboard persistence? Existing document
+  CRDT sync does not sync Mosaic dashboard state.
+- Should block documents live in `@sqlrooms/documents` or a new package? Start
+  in `@sqlrooms/documents` because it owns document/editor/asset concerns; split
+  later if dependencies grow.
+- Can `ArtifactMetadata` accept optional fields without breaking persisted
+  rooms? Zod defaults should preserve backward compatibility, but old clients
+  may drop unknown fields if they parse and rewrite config.
+
+## Progress Log
+
+- 2026-05-28: Plan created after repository inspection. No implementation code
+  changed.
+- 2026-05-28: Stage 1 implemented. Added block document schemas backed by
+  Tiptap/ProseMirror JSON, command-friendly block DTO conversion helpers, a
+  Zustand block document slice for ensure/remove/content/block mutations,
+  public exports, focused tests, and README coverage. Checks passed:
+  `pnpm build`, `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`, and
+  `pnpm --filter @sqlrooms/documents build`.
+- 2026-05-28: Stage 2 implemented. Added artifact `visibility` and
+  `parentArtifactId` metadata, preserved embedded metadata through artifact
+  create/ensure flows, prevented embedded artifacts from becoming the implicit
+  current artifact, hid embedded artifacts from `ArtifactTabs` by default with
+  an `includeEmbedded` opt-in, and documented the embedded-child policy.
+  Checks passed: `pnpm --filter @sqlrooms/artifacts test` and
+  `pnpm --filter @sqlrooms/artifacts typecheck`.
+- 2026-05-28: Stage 3 implemented. Added the `BlockDocumentArtifact`
+  component, controlled `BlockDocumentEditor`, custom Tiptap atom nodes and
+  React NodeViews for rich text, images, chart images, standalone
+  charts, and artifact embeds. Added host-provided chart/embed renderer
+  contexts so `@sqlrooms/documents` remains independent from Mosaic, plus a
+  top-level block id normalization pass for editor content. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`, and
+  `pnpm --filter @sqlrooms/documents build`.
+- 2026-05-28: Stage 4 implemented. Added `MosaicChartView` as the shared
+  Mosaic/vgplot chart runtime primitive and `MosaicChartSettingsPanel` as the
+  dashboard-independent settings UI. Dashboard chart panels now wrap the shared
+  chart view with dashboard-scoped selection, retention, and runtime issue
+  keys. Mosaic dashboard runtime also exposes caller-provided key APIs so
+  future block document chart blocks can keep retained chart instances and
+  runtime issues isolated from dashboard panels. Checks passed:
+  `pnpm --filter @sqlrooms/mosaic test`,
+  `pnpm --filter @sqlrooms/mosaic typecheck`,
+  `pnpm --filter @sqlrooms/mosaic lint`, and
+  `pnpm --filter @sqlrooms/mosaic build`.
+- 2026-05-28: Stage 5 implemented. Added the CLI `AnalysisChartRenderer` that
+  validates block document chart block `ChartConfig`, derives CLI
+  analysis-scoped selection/runtime keys, renders `MosaicChartView`, and reuses
+  `MosaicChartSettingsPanel` for block-level chart settings. Added an
+  `AnalysisArtifact` wrapper with the chart renderer provider and wired
+  `blockDocuments` into CLI persistence/state. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/mosaic test`,
+  `pnpm --filter sqlrooms-cli-app typecheck`, and
+  `pnpm --filter sqlrooms-cli-app lint`.
+- 2026-05-28: Stage 6 implemented. Registered `analysis` as a CLI artifact
+  type, added create/select initialization for block document artifacts, wired
+  dashboard artifact embeds through `BlockDocumentEmbedRendererProvider`, and
+  taught artifact context reads to return Analysis block summaries plus asset
+  metadata.
+  Also fixed document CRDT artifact metadata reconstruction to preserve the
+  Stage 2 `visibility` default during full builds. Checks passed:
+  `pnpm --filter sqlrooms-cli-app typecheck`,
+  `pnpm --filter sqlrooms-cli-app lint`,
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`, and `pnpm build`. Manual CLI
+  UI smoke testing remains pending.
+- 2026-05-28: Stage 7 implemented. Added `createBlockDocumentCommands()` and
+  `createBlockDocumentAiInstructions`, covering list/get/create, block
+  append/insert/update/remove/move, standalone chart block creation, and
+  dashboard embedding via embedded dashboard artifacts. Registered the commands
+  and AI instructions in the CLI app. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`,
+  `pnpm --filter sqlrooms-cli-app typecheck`, and
+  `pnpm --filter sqlrooms-cli-app lint`.
+- 2026-05-28: Stage 8 implemented. Added `BlockDocumentAi.ts` with reusable
+  authoring instructions and typed plan/result shapes for host-provided blocks
+  document authoring agents. The CLI configures these instructions for the
+  `analysis.*` command namespace. Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`,
+  `pnpm --filter sqlrooms-cli-app typecheck`, and
+  `pnpm --filter sqlrooms-cli-app lint`.
+- 2026-05-28: Stage 9 implemented. Extended the document CRDT mirror to sync
+  block document artifact metadata, structured Tiptap JSON content, assets, and
+  embedded child artifact metadata alongside existing Markdown documents. Added
+  regression coverage for block document snapshot round-trips, embedded
+  dashboard metadata, and existing Markdown preservation. Normalized optional
+  block document block attrs that can round-trip through Loro as `null`.
+  Checks passed:
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`, and
+  `pnpm --filter @sqlrooms/documents lint`.
+- 2026-05-28: Stage 10 implemented. Updated public documentation for blocks
+  document artifact registration, standalone Mosaic/vgplot chart blocks, chart
+  selection groups, embedded dashboard independence, block document AI
+  commands, and CRDT sync boundaries. Added package-list and CLI UI notes for
+  the new artifact type. Checks passed: `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents lint`, `pnpm build`, and `pnpm lint`.
+- 2026-05-29: Renamed the reusable library/API terminology from Analysis to
+  Block Document. `@sqlrooms/documents` now exposes `BlockDocument*` types,
+  commands, AI helpers, renderer contexts, editor nodes, and CRDT options.
+  The CLI app remains the product host that configures these generic APIs as
+  the `analysis` artifact type, `analysis.*` command namespace, and `Analysis`
+  label. Checks passed: `pnpm --filter @sqlrooms/documents typecheck`,
+  `pnpm --filter @sqlrooms/documents test`,
+  `pnpm --filter @sqlrooms/documents lint`,
+  `pnpm --filter sqlrooms-cli-app typecheck`,
+  `pnpm --filter sqlrooms-cli-app build`,
+  `pnpm --filter sqlrooms-cli-app lint`, and `pnpm build`.
