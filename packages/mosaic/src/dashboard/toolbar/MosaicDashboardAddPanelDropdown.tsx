@@ -31,6 +31,7 @@ export const MosaicDashboardAddPanelDropdown: FC<
               variant="outline"
               className="h-8 w-8"
               disabled={!canAddAnyPanel}
+              aria-label="Add panel"
             >
               <Plus className="h-4 w-4" />
             </Button>
