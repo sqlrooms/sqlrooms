@@ -1,11 +1,9 @@
-import {createFileRoute} from '@tanstack/react-router';
-import {WorkspaceShell} from '#/webapp/WorkspaceShell';
+import {createFileRoute, lazyRouteComponent} from '@tanstack/react-router';
 
 export const Route = createFileRoute('/workspaces/$workspaceId/')({
-  component: WorkspaceRoute,
+  ssr: false,
+  component: lazyRouteComponent(
+    () => import('./-index.lazy'),
+    'WorkspaceRoute',
+  ),
 });
-
-function WorkspaceRoute() {
-  const {workspaceId} = Route.useParams();
-  return <WorkspaceShell mode="saved" workspaceId={workspaceId} />;
-}
