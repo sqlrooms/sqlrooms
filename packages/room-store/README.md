@@ -110,7 +110,9 @@ For a Zustand room store with host-owned storage, prefer
 controller-backed `PersistStorage`, rehydrate saved-snapshot marking, optional
 room-store subscription, autosave, and final flush helpers. This is the default
 entry point for SQLRooms apps that persist room state to DuckDB, files, or another
-project-owned store.
+project-owned store. See the
+[Persistence developer guide](https://sqlrooms.org/persistence.html) for the
+full integration model, data flow, and examples.
 
 Use the lower-level `createPersistenceController()` only when you need the same
 persistence policy outside a room store or Zustand persist. The controller is

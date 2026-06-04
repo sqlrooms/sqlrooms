@@ -19,8 +19,10 @@
         "@types/*",
         "@lerna-lite/*",
         "glob",
+        "mermaid",
         "remove",
         "vitepress-plugin-llms",
+        "vitepress-plugin-mermaid",
         "typescript-language-server"
       ],
       "ignoreBinaries": ["madge", "uv"]

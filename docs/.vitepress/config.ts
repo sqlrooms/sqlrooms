@@ -1,4 +1,5 @@
 import {defineConfig} from 'vitepress';
+import {withMermaid} from 'vitepress-plugin-mermaid';
 import llmstxt from 'vitepress-plugin-llms';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
@@ -60,7 +61,7 @@ const PACKAGE_CATEGORIES = {
 };
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const config = defineConfig({
   vite: {
     plugins: [
       // @ts-ignore
@@ -212,6 +213,10 @@ Canonical package combos:
             link: '/state-management',
           },
           {
+            text: 'Persistence',
+            link: '/persistence',
+          },
+          {
             text: 'Commands',
             link: '/commands',
           },
@@ -319,3 +324,5 @@ Canonical package combos:
     }
   },
 });
+
+export default withMermaid(config);
