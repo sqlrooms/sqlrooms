@@ -8,14 +8,7 @@ import TaskList from '@tiptap/extension-task-list';
 import {Markdown} from '@tiptap/markdown';
 import {useEditor} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import {
-  FC,
-  PropsWithChildren,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import {FC, PropsWithChildren, useEffect, useMemo, useRef, useState} from 'react';
 import {
   MarkdownDocumentEditorContext,
   type MarkdownDocumentEditorContextValue,

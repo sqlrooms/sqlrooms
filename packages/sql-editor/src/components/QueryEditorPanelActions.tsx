@@ -45,7 +45,9 @@ export const QueryEditorPanelActions: React.FC<{
           <RunButton
             state={state}
             onRun={
-              queryId ? () => runQueryById(queryId) : () => runCurrentQuery()
+              queryId
+                ? () => runQueryById(queryId)
+                : () => runCurrentQuery()
             }
             onCancel={
               queryId

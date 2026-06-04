@@ -192,9 +192,7 @@ does not import Mosaic, pivot, or other feature packages:
     <BlockDocumentArtifact
       artifactId={blockDocumentArtifactId}
       title="Worksheet"
-      onTitleChange={(title) =>
-        renameBlockDocument(blockDocumentArtifactId, title)
-      }
+      onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
     />
   </BlockDocumentStatefulBlockRendererProvider>
 </BlockDocumentChartRendererProvider>
@@ -252,9 +250,7 @@ Hosts provide renderers through `BlockDocumentStatefulBlockRendererProvider`:
   <BlockDocumentArtifact
     artifactId={blockDocumentArtifactId}
     title="Embedded Report"
-    onTitleChange={(title) =>
-      renameBlockDocument(blockDocumentArtifactId, title)
-    }
+    onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
   />
 </BlockDocumentStatefulBlockRendererProvider>
 ```

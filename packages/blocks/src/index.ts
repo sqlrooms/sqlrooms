@@ -87,7 +87,9 @@ export type StatefulBlockDefinition<TRoomState = unknown> = {
   defaultTitle?: string;
   icon?: ComponentType<{className?: string}>;
   capabilities?: BlockCapabilities;
-  createInstance?: (context: StatefulBlockContext<TRoomState>) => BlockInstance;
+  createInstance?: (
+    context: StatefulBlockContext<TRoomState>,
+  ) => BlockInstance;
   ensureState?: (context: StatefulBlockContext<TRoomState>) => void;
   deleteState?: (context: StatefulBlockContext<TRoomState>) => void;
   rename?: (context: StatefulBlockRenameContext<TRoomState>) => void;

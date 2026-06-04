@@ -1,4 +1,7 @@
-import {SqlQueryBlock, SQL_QUERY_BLOCK_TYPE} from '@sqlrooms/sql-editor';
+import {
+  SqlQueryBlock,
+  SQL_QUERY_BLOCK_TYPE,
+} from '@sqlrooms/sql-editor';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 
 export const WorksheetSqlQueryBlockRenderer = ({

@@ -142,10 +142,7 @@ function isPointerInElementRow(event: MouseEvent, element: HTMLElement) {
   return event.clientY >= rect.top && event.clientY <= rect.bottom;
 }
 
-function isPointerInEditorGutter(
-  event: MouseEvent,
-  editorElement: HTMLElement,
-) {
+function isPointerInEditorGutter(event: MouseEvent, editorElement: HTMLElement) {
   const editorRect = editorElement.getBoundingClientRect();
   return (
     event.clientX >= editorRect.left &&
@@ -169,7 +166,9 @@ function getBlockElementAtY(
         ? {element, rect: element.getBoundingClientRect()}
         : null;
     })
-    .filter((row): row is {element: HTMLElement; rect: DOMRect} => row != null);
+    .filter(
+      (row): row is {element: HTMLElement; rect: DOMRect} => row != null,
+    );
 
   for (let index = 0; index < blockRows.length; index += 1) {
     const row = blockRows[index]!;
@@ -207,7 +206,8 @@ function getBlockDropTarget(
       element,
       pos,
       node,
-      insertAfter: insertAfter ?? event.clientY > rect.top + rect.height / 2,
+      insertAfter:
+        insertAfter ?? event.clientY > rect.top + rect.height / 2,
     };
   };
 
@@ -246,7 +246,8 @@ function getMoveInsertPos(
   source: {pos: number; node: DraggableNode},
   target: BlockDropTarget,
 ) {
-  let insertPos = target.pos + (target.insertAfter ? target.node.nodeSize : 0);
+  let insertPos =
+    target.pos + (target.insertAfter ? target.node.nodeSize : 0);
   if (insertPos > source.pos) {
     insertPos -= source.node.nodeSize;
   }
@@ -314,7 +315,8 @@ function autoScrollOnDragOver(
 
 function getBlockControlsTop(elementRect: DOMRect, scrollElement: HTMLElement) {
   const scrollRect = scrollElement.getBoundingClientRect();
-  const blockTop = elementRect.top - scrollRect.top + scrollElement.scrollTop;
+  const blockTop =
+    elementRect.top - scrollRect.top + scrollElement.scrollTop;
   const centeredOffset = elementRect.height / 2;
   const topAlignedOffset =
     BLOCK_CONTROLS_STACK_HEIGHT / 2 + BLOCK_CONTROLS_TOP_INSET;
@@ -556,13 +558,11 @@ export const BlockDocumentBlockControls: FC<
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
-  const [insertMenuOpen, setInsertMenuOpen] = useState<InsertPlacement | null>(
-    null,
-  );
+  const [insertMenuOpen, setInsertMenuOpen] =
+    useState<InsertPlacement | null>(null);
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
-  const [dropIndicator, setDropIndicator] = useState<BlockDropIndicator | null>(
-    null,
-  );
+  const [dropIndicator, setDropIndicator] =
+    useState<BlockDropIndicator | null>(null);
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const suppressHandleClickRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);

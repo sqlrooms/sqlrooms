@@ -313,45 +313,45 @@ const QueryResultPanelAskAi = React.forwardRef<
     {queryId, onClick, icon, className, tooltipContent = 'Ask AI for help'},
     ref,
   ) => {
-    const queryResult = useStoreWithSqlEditor((s) => {
-      const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
-      return s.sqlEditor.queryResultsById[resolvedQueryId];
-    });
-    const currentQuery = useStoreWithSqlEditor((s) => {
-      if (!queryId) return s.sqlEditor.getCurrentQuery();
-      return (
-        s.sqlEditor.config.queries.find((query) => query.id === queryId)
-          ?.query ?? ''
-      );
-    });
-
-    // Only render in error state
-    if (queryResult?.status !== 'error') return null;
-
-    const handleClick = () => {
-      onClick?.(currentQuery, queryResult.error);
-    };
-
+  const queryResult = useStoreWithSqlEditor((s) => {
+    const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[resolvedQueryId];
+  });
+  const currentQuery = useStoreWithSqlEditor((s) => {
+    if (!queryId) return s.sqlEditor.getCurrentQuery();
     return (
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              ref={ref}
-              variant="ghost"
-              size="icon"
-              className={cn('h-8 w-8', className)}
-              onClick={handleClick}
-            >
-              {icon ?? <MessageCircleQuestion className="h-4 w-4" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{tooltipContent}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      s.sqlEditor.config.queries.find((query) => query.id === queryId)?.query ??
+      ''
     );
+  });
+
+  // Only render in error state
+  if (queryResult?.status !== 'error') return null;
+
+  const handleClick = () => {
+    onClick?.(currentQuery, queryResult.error);
+  };
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            variant="ghost"
+            size="icon"
+            className={cn('h-8 w-8', className)}
+            onClick={handleClick}
+          >
+            {icon ?? <MessageCircleQuestion className="h-4 w-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltipContent}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
   },
 );
 QueryResultPanelAskAi.displayName = 'QueryResultPanel.AskAi';

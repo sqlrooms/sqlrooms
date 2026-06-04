@@ -46,7 +46,9 @@ function createColumnCompletion(column: {
         ? from - 1
         : from;
 
-    view.dispatch(insertCompletionText(view.state, escaped, replaceFrom, to));
+    view.dispatch(
+      insertCompletionText(view.state, escaped, replaceFrom, to),
+    );
   };
 
   return {

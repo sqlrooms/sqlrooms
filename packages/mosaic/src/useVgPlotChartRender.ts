@@ -66,7 +66,10 @@ function asPlotDomElement(element: object): PlotDomElement {
   return element as PlotDomElement;
 }
 
-function attachPlotElement(container: HTMLElement, element: PlotDomElement) {
+function attachPlotElement(
+  container: HTMLElement,
+  element: PlotDomElement,
+) {
   if (container.childNodes.length === 1 && container.firstChild === element) {
     return;
   }

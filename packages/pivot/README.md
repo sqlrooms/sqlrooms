@@ -20,8 +20,9 @@ import {createPivotBlockDefinition} from '@sqlrooms/pivot';
 
 const pivotBlockDefinition = createPivotBlockDefinition();
 
-export const pivotArtifactType =
-  createArtifactTypeFromStatefulBlock(pivotBlockDefinition);
+export const pivotArtifactType = createArtifactTypeFromStatefulBlock(
+  pivotBlockDefinition,
+);
 ```
 
 The adapter preserves pivot state in `pivot.config.pivots` and delegates

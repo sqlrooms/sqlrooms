@@ -163,11 +163,11 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
           size="lg"
           className="h-12 px-6 text-base"
           onClick={() => {
-            void invokeCreateArtifactCommand('worksheet.create-artifact').then(
-              (artifactId) => {
-                if (artifactId) onDone?.();
-              },
-            );
+            void invokeCreateArtifactCommand(
+              'worksheet.create-artifact',
+            ).then((artifactId) => {
+              if (artifactId) onDone?.();
+            });
           }}
         >
           {WorksheetIcon ? <WorksheetIcon className="h-5 w-5" /> : null}
@@ -244,7 +244,9 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
                     {Icon ? (
                       <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                     ) : null}
-                    <span className="min-w-0 flex-1 truncate">{tab.name}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {tab.name}
+                    </span>
                     <span className="text-muted-foreground shrink-0 text-xs">
                       {type?.label ?? tab.type}
                     </span>
