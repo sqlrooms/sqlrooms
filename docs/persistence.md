@@ -22,6 +22,7 @@ storage and room-store subscription glue.
 ## API Layers
 
 ```mermaid
+%%{init: {"themeCSS": ".nodeLabel p { margin: 0; line-height: 1.2; }"}}%%
 flowchart TD
   Store["Zustand room store"]
   Helpers["createPersistHelpers()\npartialize + merge"]
