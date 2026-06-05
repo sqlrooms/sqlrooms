@@ -38,13 +38,13 @@ function useComboboxContext() {
   return context;
 }
 
-type ComboboxRootProps<T> = PropsWithChildren<
+type ComboboxRootProps<T extends string = string> = PropsWithChildren<
   UseComboboxOptions<T> & {
     currentValue?: string;
   }
 >;
 
-function ComboboxRoot<T = string>({
+function ComboboxRoot<T extends string = string>({
   value,
   onChange,
   currentValue,

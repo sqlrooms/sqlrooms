@@ -1,6 +1,6 @@
 import {useState, useCallback} from 'react';
 
-export interface UseComboboxOptions<T> {
+export interface UseComboboxOptions<T extends string = string> {
   value: T;
   onChange: (value: T) => void;
 }
@@ -23,7 +23,7 @@ export interface UseComboboxReturn {
  * Shared combobox state and behavior for Popover-based selectors.
  * Handles open/close state and selection with auto-close.
  */
-export function useCombobox<T = string>(
+export function useCombobox<T extends string = string>(
   options: UseComboboxOptions<T>,
 ): UseComboboxReturn {
   const [open, setOpen] = useState(false);
