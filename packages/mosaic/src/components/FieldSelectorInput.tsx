@@ -1,22 +1,9 @@
-import {
-  Button,
-  cn,
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@sqlrooms/ui';
-import {Check, ChevronsUpDown} from 'lucide-react';
-import React, {useState} from 'react';
+import React from 'react';
 import {
   ChartBuilderColumn,
   ChartBuilderField,
 } from '../charts/chart-types/base-types';
+import {Combobox} from './Combobox';
 
 export interface FieldSelectorInputProps {
   field: ChartBuilderField;
@@ -36,8 +23,6 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
   onChange,
   placeholder = 'Select...',
 }) => {
-  const [open, setOpen] = useState(false);
-
   const filteredColumns = field.types
     ? columns.filter((col) =>
         field.types!.some((t) => col.type.toUpperCase() === t.toUpperCase()),
@@ -48,64 +33,36 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
 
   return (
     <div className="@container flex flex-col gap-1">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="h-8 w-full justify-between text-xs font-normal"
-          >
-            {selectedColumn ? (
-              <span className="flex min-w-0 items-baseline gap-1">
-                <span className="truncate text-xs">{selectedColumn.name}</span>
-                <span className="text-muted-foreground hidden overflow-hidden text-[8px] whitespace-nowrap @[180px]:inline">
-                  {selectedColumn.type}
-                </span>
+      <Combobox value={value ?? ''} onChange={onChange}>
+        <Combobox.Trigger className="w-full">
+          {selectedColumn ? (
+            <span className="flex min-w-0 items-baseline gap-1">
+              <span className="truncate text-xs">{selectedColumn.name}</span>
+              <span className="text-muted-foreground hidden overflow-hidden text-[8px] whitespace-nowrap @[180px]:inline">
+                {selectedColumn.type}
               </span>
-            ) : (
-              <span className="text-muted-foreground truncate text-xs">
-                {placeholder}
+            </span>
+          ) : (
+            <span className="text-muted-foreground truncate text-xs">
+              {placeholder}
+            </span>
+          )}
+        </Combobox.Trigger>
+        <Combobox.Content
+          searchable
+          searchPlaceholder="Search columns..."
+          emptyMessage="No matching column."
+        >
+          {filteredColumns.map((col) => (
+            <Combobox.Item key={col.name} value={col.name}>
+              <span className="truncate text-xs">{col.name}</span>
+              <span className="text-muted-foreground ml-auto text-[8px]">
+                {col.type}
               </span>
-            )}
-            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 text-xs">
-          <Command>
-            <CommandInput
-              placeholder={`Search columns...`}
-              className="text-xs"
-            />
-            <CommandList>
-              <CommandEmpty>No matching column.</CommandEmpty>
-              <CommandGroup>
-                {filteredColumns.map((col) => (
-                  <CommandItem
-                    key={col.name}
-                    value={col.name}
-                    onSelect={(currentValue) => {
-                      onChange(currentValue);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-3.5 w-3.5 shrink-0',
-                        value === col.name ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
-                    <span className="truncate text-xs">{col.name}</span>
-                    <span className="text-muted-foreground ml-auto text-[8px]">
-                      {col.type}
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+            </Combobox.Item>
+          ))}
+        </Combobox.Content>
+      </Combobox>
     </div>
   );
 };

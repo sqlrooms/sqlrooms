@@ -5,6 +5,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
 import {Plus} from 'lucide-react';
 import {useAddPanelActions} from '../useAddPanelActions';
@@ -21,12 +24,21 @@ export const MosaicDashboardAddPanelDropdown: FC<
 
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline" disabled={!canAddAnyPanel}>
-          <Plus className="mr-1 h-4 w-4" />
-          Add
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="h-8 w-8"
+              disabled={!canAddAnyPanel}
+              aria-label="Add panel"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Add panel</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end">
         {actions.map((action) => {
           const Icon = action.icon;

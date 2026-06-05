@@ -32,6 +32,22 @@ export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
 export {useTablesWithColumns} from './hooks/useTablesWithColumns';
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
+export {usePanelClientRegistration} from './dashboard/usePanelClientRegistration';
+export {usePanelClients} from './dashboard/usePanelClients';
+export {
+  usePanelResetFilters,
+  type UsePanelResetFiltersOptions,
+  type UsePanelResetFiltersReturn,
+} from './dashboard/hooks/usePanelResetFilters';
+export {
+  useDashboardResetFilters,
+  type UseDashboardResetFiltersOptions,
+  type UseDashboardResetFiltersReturn,
+} from './dashboard/hooks/useDashboardResetFilters';
+export {
+  ResetFiltersButton,
+  type ResetFiltersButtonProps,
+} from './dashboard/components/ResetFiltersButton';
 export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
 export {addChartPanelAction} from './charts/addChartPanelAction';
 export {

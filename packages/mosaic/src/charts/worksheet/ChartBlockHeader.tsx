@@ -1,6 +1,6 @@
 import type {DataTable} from '@sqlrooms/db';
 import type {ChartConfig} from '../chart-types/chart-config';
-import {Button, cn} from '@sqlrooms/ui';
+import {Button, cn, EditableText} from '@sqlrooms/ui';
 import {Settings2Icon} from 'lucide-react';
 import {FC} from 'react';
 import {DataTableSelector} from '../../components/DataTableSelector';
@@ -30,21 +30,13 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
 
   return (
     <div className="border-border flex min-h-10 items-center gap-2 border-b px-3 py-2">
-      {readOnly ? (
-        <div className="min-w-0 flex-1 truncate text-sm font-medium">
-          {caption || tableName || 'Chart'}
-        </div>
-      ) : (
-        <input
-          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
-          value={caption ?? ''}
-          placeholder={tableName || 'Chart caption'}
-          aria-label="Chart caption"
-          onChange={(event) =>
-            onCaptionChange?.(event.target.value || undefined)
-          }
-        />
-      )}
+      <EditableText
+        className="min-w-0 flex-1 text-sm font-medium"
+        value={caption ?? ''}
+        placeholder={tableName || 'Chart caption'}
+        isReadOnly={readOnly}
+        onChange={(value) => onCaptionChange?.(value || undefined)}
+      />
 
       <DataTableSelector
         className="w-48"

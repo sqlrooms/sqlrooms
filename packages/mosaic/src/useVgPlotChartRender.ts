@@ -66,10 +66,7 @@ function asPlotDomElement(element: object): PlotDomElement {
   return element as PlotDomElement;
 }
 
-function attachPlotElement(
-  container: HTMLElement,
-  element: PlotDomElement,
-) {
+function attachPlotElement(container: HTMLElement, element: PlotDomElement) {
   if (container.childNodes.length === 1 && container.firstChild === element) {
     return;
   }
@@ -203,6 +200,10 @@ export function useVgPlotChartRender({
     if (!containerSize) {
       return;
     }
+
+    // Clear any previous runtime issues when starting to render a new chart spec
+    // This ensures stale errors don't persist when the chart configuration changes
+    runtimeIssueReporter?.clearIssue();
 
     // Create new chart
     const renderVersion = ++renderVersionRef.current;

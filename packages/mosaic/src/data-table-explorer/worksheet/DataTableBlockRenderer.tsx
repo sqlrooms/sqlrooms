@@ -17,6 +17,7 @@ export const DataTableBlockRenderer: FC<
   blockType,
   caption,
   documentId,
+  onCaptionChange,
   onTitleChange,
   readOnly,
   title,
@@ -84,6 +85,7 @@ export const DataTableBlockRenderer: FC<
       <div className="flex h-full min-h-0 flex-col">
         <DataTableBlockHeader
           caption={caption}
+          onCaptionChange={onCaptionChange}
           selectedTable={selectedTable}
           readOnly={readOnly}
           tables={tables}

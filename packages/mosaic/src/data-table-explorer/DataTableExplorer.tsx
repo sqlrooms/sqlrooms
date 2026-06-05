@@ -5,8 +5,7 @@ import {
   type PropsWithChildren,
   type ReactElement,
 } from 'react';
-import {Button, cn, Table} from '@sqlrooms/ui';
-import {FilterX} from 'lucide-react';
+import {cn, Table} from '@sqlrooms/ui';
 import {getDataTableExplorerTableWidth} from './layout';
 import {
   DataTableExplorerHeader,
@@ -25,6 +24,7 @@ import type {
   UseDataTableExplorerReturn,
 } from './types';
 import {useDataTableExplorer} from './useDataTableExplorer';
+import {ResetFiltersButton} from '../dashboard/components/ResetFiltersButton';
 
 const explorerContext = createContext<UseDataTableExplorerReturn | null>(null);
 
@@ -137,9 +137,10 @@ function DataTableExplorerCompoundTable({
 }
 
 export type DataTableExplorerCompoundResetButtonProps = Omit<
-  ComponentProps<typeof Button>,
-  'onClick'
+  ComponentProps<typeof ResetFiltersButton>,
+  'disabled' | 'onClick'
 > & {
+  disabled?: boolean;
   onClick?: () => void;
 };
 
@@ -153,22 +154,17 @@ function DataTableExplorerCompoundResetButton({
   const disabled = disabledProp ?? !explorer.hasFilters;
 
   return (
-    <Button
-      type="button"
-      size="icon"
-      variant="ghost"
+    <ResetFiltersButton
       className={cn('h-7 w-7', className)}
-      aria-label="Reset filters"
-      title="Reset filters"
+      iconClassName="h-4 w-4"
       disabled={disabled}
       onClick={() => {
         explorer.reset();
         onClick?.();
       }}
+      tooltip="Reset filters"
       {...props}
-    >
-      <FilterX className="h-4 w-4" />
-    </Button>
+    />
   );
 }
 
