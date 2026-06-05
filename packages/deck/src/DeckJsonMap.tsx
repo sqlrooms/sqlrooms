@@ -3,7 +3,7 @@ import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {useEffect, useMemo, useRef} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
@@ -134,6 +134,11 @@ function renderDatasetErrorOverlay(
   );
 }
 
+// Workaround for deck.gl HeatmapLayer not releasing its WebGL framebuffer
+// when replaced by another layer type (e.g. switching heatmap → scatterplot).
+// We detect layer class changes and clear layers for one animation frame,
+// giving deck.gl a chance to finalize the old layer's resources before
+// initializing the new one.
 function DeckOverlayControl({
   interleaved,
   ...deckProps
@@ -141,7 +146,42 @@ function DeckOverlayControl({
   const overlay = useControl<MapboxOverlay>(
     () => new MapboxOverlay({interleaved}),
   );
-  overlay.setProps(deckProps);
+  const prevLayerKeyRef = useRef<string>('');
+  const [clearing, setClearing] = useState(false);
+
+  const layers = deckProps.layers as unknown[] | undefined;
+  const layerKey = Array.isArray(layers)
+    ? layers
+        .map((l) => {
+          if (!l || typeof l !== 'object') return '?';
+          const ctor = (l as {constructor?: {name?: string}}).constructor;
+          return ctor?.name ?? '?';
+        })
+        .join(',')
+    : '';
+
+  useEffect(() => {
+    if (
+      prevLayerKeyRef.current &&
+      prevLayerKeyRef.current !== layerKey &&
+      !clearing
+    ) {
+      setClearing(true);
+    }
+    prevLayerKeyRef.current = layerKey;
+  }, [layerKey, clearing]);
+
+  useEffect(() => {
+    if (clearing) {
+      overlay.setProps({...deckProps, layers: []});
+      requestAnimationFrame(() => setClearing(false));
+    }
+  }, [clearing, deckProps, overlay]);
+
+  if (!clearing) {
+    overlay.setProps(deckProps);
+  }
+
   return null;
 }
 
