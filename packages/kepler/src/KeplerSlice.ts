@@ -669,8 +669,15 @@ export function createKeplerSlice({
                   }
                 }
 
+                const availableTableIds = new Set(
+                  get().db.tables.map((t) => t.table.toString()),
+                );
+
                 for (const dataId of referencedDataIds) {
                   if (keplerDatasets?.[dataId]) {
+                    continue;
+                  }
+                  if (!availableTableIds.has(dataId)) {
                     continue;
                   }
                   try {
