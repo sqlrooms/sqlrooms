@@ -7,6 +7,7 @@ import {
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
+import type {z} from 'zod';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
 import type {
@@ -16,8 +17,10 @@ import type {
 import {ArtifactMetadata, ArtifactsSliceConfig} from './ArtifactsSliceConfig';
 import {normalizeOrder} from './helpers';
 
+type ArtifactsSliceConfigInput = z.input<typeof ArtifactsSliceConfig>;
+
 function createDefaultArtifactsConfig(
-  overrides?: Partial<ArtifactsSliceConfigType>,
+  overrides?: ArtifactsSliceConfigInput,
 ): ArtifactsSliceConfigType {
   return ArtifactsSliceConfig.parse(overrides ?? {});
 }
@@ -65,7 +68,7 @@ export type ArtifactsSliceState = {
 export type CreateArtifactsSliceProps<
   TRoomState extends BaseRoomStoreState = BaseRoomStoreState,
 > = {
-  config?: Partial<ArtifactsSliceConfigType>;
+  config?: ArtifactsSliceConfigInput;
   artifactTypes?: ArtifactTypeDefinitions<TRoomState>;
 };
 
