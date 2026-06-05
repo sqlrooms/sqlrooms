@@ -52,6 +52,9 @@
     "examples/*": {
       "entry": ["src/main.{ts,tsx}"]
     },
+    "apps/web-app": {
+      "ignoreDependencies": ["cloudflare"]
+    },
     "apps/*": {}
   }
 }

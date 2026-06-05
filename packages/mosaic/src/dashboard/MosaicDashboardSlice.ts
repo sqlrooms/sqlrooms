@@ -179,6 +179,7 @@ export type MosaicDashboardSliceConfig = z.infer<
 export type MosaicDashboardSliceState = {
   mosaicDashboard: SliceFunctions & {
     config: MosaicDashboardSliceConfig;
+    setConfig: (config: MosaicDashboardSliceConfig) => void;
     runtime: {
       /**
        * Live vgplot chart instances retained across transient dashboard panel

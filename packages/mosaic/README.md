@@ -231,6 +231,10 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+Use `mosaicDashboard.setConfig(config)` when hydrating a persisted room or
+workspace snapshot. Runtime chart retention and panel issue state are not part
+of that persisted config.
+
 ### Dashboard Stateful Block Adapter
 
 `createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful

@@ -411,7 +411,10 @@ export function createKeplerSlice({
               await get().kepler.syncKeplerDatasets();
             })
             .catch((error) => {
-              console.error('setConfig: failed to restore Kepler config', error);
+              console.error(
+                'setConfig: failed to restore Kepler config',
+                error,
+              );
             });
         },
 

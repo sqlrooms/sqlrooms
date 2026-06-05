@@ -1,6 +1,8 @@
 node_modules
 /dist
 .DS_Store
+.tanstack/
+.wrangler/
 build/
 dist/
 npm-debug.log*
