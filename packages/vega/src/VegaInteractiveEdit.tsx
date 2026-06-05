@@ -6,12 +6,56 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {GripVertical, Trash2, Type} from 'lucide-react';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {createPortal} from 'react-dom';
+import type {Result} from 'vega-embed';
 import {VisualizationSpec} from 'vega-embed';
 import {useVegaChartContext} from './VegaChartContext';
+import {
+  applyLabelOffsetToSpec,
+  applyTitleToSpec,
+  DATA_LABEL_TEXT_SELECTOR,
+  extractOffsetsFromSpec,
+  getLayerIndexForText,
+  getTitlePart,
+  getTranslateValues,
+  isDataLabel,
+  isTitleText,
+  type LabelOffset,
+  parseAriaLabelFields,
+  removeLabelFromSpec,
+  type TitlePart,
+} from './vegaInteractiveEditHelpers';
 
 type EditMode = 'title' | 'drag' | 'delete' | null;
+
+/** The Vega `View` exposed by vega-embed's `Result`. */
+type VegaView = Result['view'];
+
+/**
+ * Minimal structural view of the embed object we rely on. We narrow the
+ * optional `addEventListener`/`removeEventListener` hooks because they are not
+ * part of every Vega build's published typings.
+ */
+type EmbedRef = {
+  view: VegaView & {
+    addEventListener?: (
+      type: string,
+      handler: (...args: unknown[]) => void,
+    ) => void;
+    removeEventListener?: (
+      type: string,
+      handler: (...args: unknown[]) => void,
+    ) => void;
+  };
+} | null;
 
 export interface VegaInteractiveEditProps {
   /**
@@ -38,6 +82,13 @@ export interface VegaInteractiveEditProps {
  *
  * Must be used within a VegaLiteArrowChart (needs VegaChartContext).
  *
+ * Note on label drags: Vega-Lite has no per-datum pixel-offset channel, so drag
+ * offsets are stored in `spec.usermeta.__labelOffsets` and rendered by
+ * re-applying SVG `transform`s while this component is mounted. They are NOT
+ * portable: rendering the raw spec without this component (or equivalent
+ * re-apply logic) will not show the offsets. Exporting the live view does
+ * capture them, since it serializes the current SVG.
+ *
  * @example
  * ```tsx
  * <VegaLiteArrowChart spec={spec} arrowTable={data}>
@@ -62,6 +113,25 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
     specRef.current = spec;
   }, [spec]);
 
+  // Per-instance scope so injected styles and mode classes never bleed across
+  // multiple charts mounted on the same page.
+  const reactId = useId();
+  const scopeClass = useMemo(
+    () => `vega-edit-${reactId.replace(/[^a-zA-Z0-9_-]/g, '')}`,
+    [reactId],
+  );
+
+  // Apply the scope class to this chart's container so the injected,
+  // scope-prefixed CSS can target only this chart.
+  useEffect(() => {
+    const container = getChartContainer(embed);
+    if (!container) return;
+    container.classList.add(scopeClass);
+    return () => {
+      container.classList.remove(scopeClass);
+    };
+  }, [embed, scopeClass]);
+
   const toggleMode = useCallback((mode: EditMode) => {
     setActiveMode((prev) => (prev === mode ? null : mode));
   }, []);
@@ -73,6 +143,7 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
         spec={spec}
         specRef={specRef}
         onSpecChange={onSpecChange}
+        scopeClass={scopeClass}
         active={activeMode === 'title'}
         onToggle={() => toggleMode('title')}
       />
@@ -81,6 +152,7 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
         spec={spec}
         specRef={specRef}
         onSpecChange={onSpecChange}
+        scopeClass={scopeClass}
         active={activeMode === 'drag'}
         onToggle={() => toggleMode('drag')}
       />
@@ -89,6 +161,7 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
         spec={spec}
         specRef={specRef}
         onSpecChange={onSpecChange}
+        scopeClass={scopeClass}
         active={activeMode === 'delete'}
         onToggle={() => toggleMode('delete')}
       />
@@ -102,54 +175,7 @@ function getChartContainer(embed: EmbedRef): HTMLElement | null {
   return embed?.view?.container() ?? null;
 }
 
-/**
- * Find the nearest <text> element from a click target.
- * Vega often wraps text content in <tspan>, so clicking may target that.
- */
-function getTextElement(el: Element | null): SVGTextElement | null {
-  if (!el) return null;
-  if (el.tagName === 'text') return el as SVGTextElement;
-  if (el.tagName === 'tspan')
-    return el.closest('text') as SVGTextElement | null;
-  return null;
-}
-
-function isTitleText(el: Element | null): el is SVGTextElement {
-  const textEl = getTextElement(el);
-  if (!textEl) return false;
-  const group = textEl.closest('[class*="role-title"]');
-  return !!group;
-}
-
-type TitlePart = 'title' | 'subtitle';
-
-function getTitlePart(textEl: SVGTextElement): TitlePart {
-  // Vega renders the title group as:
-  //   <g class="... role-title">
-  //     <g class="... role-title-text">    <text>title</text> </g>
-  //     <g class="... role-title-subtitle"><text>subtitle</text></g>
-  //   </g>
-  // The subtitle group's class contains "role-title" too, so we must
-  // check for the subtitle-specific class first.
-  if (textEl.closest('[class*="role-title-subtitle"]')) return 'subtitle';
-  return 'title';
-}
-
-function isDataLabel(el: Element | null): el is SVGTextElement {
-  const textEl = getTextElement(el);
-  if (!textEl) return false;
-  const group = textEl.closest('g[class*="mark-text"]');
-  if (!group) return false;
-  const cls = group.getAttribute('class') ?? '';
-  if (
-    cls.includes('role-title') ||
-    cls.includes('role-axis') ||
-    cls.includes('role-legend')
-  ) {
-    return false;
-  }
-  return true;
-}
+const HIT_TEST_PADDING_PX = 4;
 
 function getTextAtPoint(
   container: HTMLElement,
@@ -171,12 +197,11 @@ function getTextAtPoint(
     }
 
     const rect = candidate.getBoundingClientRect();
-    const padding = 4;
     const contains =
-      event.clientX >= rect.left - padding &&
-      event.clientX <= rect.right + padding &&
-      event.clientY >= rect.top - padding &&
-      event.clientY <= rect.bottom + padding;
+      event.clientX >= rect.left - HIT_TEST_PADDING_PX &&
+      event.clientX <= rect.right + HIT_TEST_PADDING_PX &&
+      event.clientY >= rect.top - HIT_TEST_PADDING_PX &&
+      event.clientY <= rect.bottom + HIT_TEST_PADDING_PX;
 
     if (!contains) continue;
 
@@ -189,8 +214,6 @@ function getTextAtPoint(
   return best?.el ?? null;
 }
 
-type EmbedRef = {view: any} | null;
-
 // ─── Edit Title Mode ────────────────────────────────────────────────────────
 
 interface ModeProps {
@@ -198,6 +221,8 @@ interface ModeProps {
   spec: VisualizationSpec;
   specRef: React.RefObject<VisualizationSpec>;
   onSpecChange: (newSpec: VisualizationSpec) => void;
+  /** Per-instance class applied to this chart's container for style scoping. */
+  scopeClass: string;
   active: boolean;
   onToggle: () => void;
 }
@@ -206,6 +231,7 @@ const EditTitleMode: React.FC<ModeProps> = ({
   embed,
   specRef,
   onSpecChange,
+  scopeClass,
   active,
   onToggle,
 }) => {
@@ -258,7 +284,7 @@ const EditTitleMode: React.FC<ModeProps> = ({
       setEditing(true);
     };
 
-    // Use cursor style on all title texts via CSS class
+    // Use cursor style on all title texts via CSS class (scoped per instance)
     container.classList.add('vega-edit-title-mode');
     container.addEventListener('dblclick', handleDblClick);
 
@@ -277,55 +303,10 @@ const EditTitleMode: React.FC<ModeProps> = ({
   }, [editing]);
 
   const commitTitle = useCallback(() => {
-    if (!inputValue.trim()) {
-      setEditing(false);
-      return;
-    }
-
-    const currentSpec = specRef.current as Record<string, unknown>;
-    let newSpec: VisualizationSpec;
-
-    if (editingPart === 'subtitle') {
-      // Editing the subtitle
-      if (typeof currentSpec.title === 'object' && currentSpec.title !== null) {
-        newSpec = {
-          ...currentSpec,
-          title: {
-            ...(currentSpec.title as Record<string, unknown>),
-            subtitle: inputValue,
-          },
-        } as VisualizationSpec;
-      } else {
-        // Title was a string; promote to object to add subtitle
-        newSpec = {
-          ...currentSpec,
-          title: {
-            text:
-              typeof currentSpec.title === 'string' ? currentSpec.title : '',
-            subtitle: inputValue,
-          },
-        } as VisualizationSpec;
-      }
-    } else {
-      // Editing the title
-      if (typeof currentSpec.title === 'string') {
-        newSpec = {...currentSpec, title: inputValue} as VisualizationSpec;
-      } else if (
-        typeof currentSpec.title === 'object' &&
-        currentSpec.title !== null
-      ) {
-        newSpec = {
-          ...currentSpec,
-          title: {
-            ...(currentSpec.title as Record<string, unknown>),
-            text: inputValue,
-          },
-        } as VisualizationSpec;
-      } else {
-        newSpec = {...currentSpec, title: inputValue} as VisualizationSpec;
-      }
-    }
-
+    // Commit the trimmed value. An empty value clears the title/subtitle,
+    // which is a valid edit (the user explicitly emptied the field).
+    const value = inputValue.trim();
+    const newSpec = applyTitleToSpec(specRef.current!, editingPart, value);
     onSpecChange(newSpec);
     setEditing(false);
   }, [inputValue, editingPart, specRef, onSpecChange]);
@@ -384,10 +365,10 @@ const EditTitleMode: React.FC<ModeProps> = ({
           portalContainer,
         )}
 
-      {/* Inject cursor style for title text when mode is active */}
+      {/* Inject cursor style for title text when mode is active (scoped) */}
       {active && (
         <style>{`
-          .vega-edit-title-mode g[class*="role-title"] text {
+          .${scopeClass}.vega-edit-title-mode g[class*="role-title"] text {
             cursor: text !important;
           }
         `}</style>
@@ -398,13 +379,14 @@ const EditTitleMode: React.FC<ModeProps> = ({
 
 // ─── Drag Labels Mode ───────────────────────────────────────────────────────
 
-type LabelOffset = {dx: number; dy: number};
+const DRAG_THRESHOLD_PX = 2;
 
 const DragLabelsMode: React.FC<ModeProps> = ({
   embed,
   spec,
   specRef,
   onSpecChange,
+  scopeClass,
   active,
   onToggle,
 }) => {
@@ -415,7 +397,6 @@ const DragLabelsMode: React.FC<ModeProps> = ({
     origTransformX: number;
     origTransformY: number;
     ariaKey: string;
-    layerIndex: number | null;
   } | null>(null);
 
   // Per-label offset map keyed by aria-label (unique per datum).
@@ -433,80 +414,79 @@ const DragLabelsMode: React.FC<ModeProps> = ({
   }, [spec]);
 
   // Re-apply stored offsets after Vega re-renders the SVG.
-  // Always active (regardless of mode) so offsets survive spec changes.
-  // Vega may re-render the SVG asynchronously due to spec changes, dimension
-  // changes, or signal updates. We use multiple strategies to ensure offsets
-  // are re-applied reliably:
-  //   1. MutationObserver (childList + subtree) catches SVG replacement.
-  //   2. view.runAfter() hook re-applies after every Vega dataflow run.
-  //   3. Synchronous re-apply on mount.
+  //
+  // Offsets are rendered as SVG `transform`s (Vega-Lite has no per-datum pixel
+  // offset channel), so they must be re-applied whenever Vega touches the
+  // text marks. Vega's SVG renderer diffs in place: on a re-render it usually
+  // *reuses* the existing `<text>` nodes and overwrites their `transform`
+  // attribute with its own computed value — which silently wipes our offset.
+  // A `childList`-only observer never sees that (no node is added/removed), so
+  // it must also watch `attributes` (the `transform` we care about lives there).
+  //
+  // Re-entrancy: our own `applyStoredOffsets` sets `transform`, which would
+  // re-trigger the attribute observer. The `applying` guard suppresses that.
+  // A trailing `requestAnimationFrame` covers Vega renders that settle after
+  // the synchronous mutation batch (async dataflow / dimension changes).
   useEffect(() => {
     if (!embed) return;
     const container = getChartContainer(embed);
     if (!container) return;
 
     let cancelled = false;
+    let applying = false;
+    let rafId = 0;
 
     const reapply = () => {
-      if (cancelled) return;
-      if (offsetsRef.current.size > 0) {
+      if (cancelled || applying) return;
+      // Don't fight an in-progress drag: handleMouseMove owns the transform
+      // until mouseup commits it.
+      if (draggingRef.current) return;
+      if (offsetsRef.current.size === 0) return;
+      applying = true;
+      try {
         applyStoredOffsets(container, offsetsRef.current);
+      } finally {
+        applying = false;
       }
     };
 
-    reapply();
+    const scheduleReapply = () => {
+      reapply();
+      // Vega may finish (re)rendering after the current mutation batch; re-run
+      // on the next frame so late attribute writes don't leave us reset.
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        reapply();
+      });
+    };
+
+    scheduleReapply();
 
     const observer = new MutationObserver(() => {
-      reapply();
-      requestAnimationFrame(reapply);
+      // Ignore mutations caused by our own transform writes.
+      if (applying) return;
+      scheduleReapply();
     });
-    observer.observe(container, {childList: true, subtree: true});
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['transform'],
+    });
 
-    const view = embed.view as
-      | {
-          runAfter?: (
-            cb: (view: unknown) => void,
-            enqueue?: boolean,
-            priority?: number,
-          ) => void;
-          addEventListener?: (
-            type: string,
-            handler: (...args: unknown[]) => void,
-          ) => void;
-          removeEventListener?: (
-            type: string,
-            handler: (...args: unknown[]) => void,
-          ) => void;
-        }
-      | undefined;
-
-    const afterRender = () => {
-      reapply();
-      requestAnimationFrame(reapply);
-    };
-
+    const view = embed.view;
+    const onResize = () => scheduleReapply();
     if (typeof view?.addEventListener === 'function') {
-      view.addEventListener('resize', afterRender);
+      view.addEventListener('resize', onResize);
     }
-
-    const queueRunAfter = () => {
-      if (cancelled) return;
-      if (typeof view?.runAfter === 'function') {
-        // enqueue=true: defer to the next dataflow propagation, so we re-apply
-        // offsets after Vega completes its next render cycle.
-        view.runAfter(() => {
-          afterRender();
-          queueRunAfter();
-        }, true);
-      }
-    };
-    queueRunAfter();
 
     return () => {
       cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
       if (typeof view?.removeEventListener === 'function') {
-        view.removeEventListener('resize', afterRender);
+        view.removeEventListener('resize', onResize);
       }
     };
   }, [embed]);
@@ -540,7 +520,6 @@ const DragLabelsMode: React.FC<ModeProps> = ({
         origTransformX: existing?.dx ?? tx,
         origTransformY: existing?.dy ?? ty,
         ariaKey,
-        layerIndex: getLayerIndexForText(textEl),
       };
 
       textEl.style.cursor = 'grabbing';
@@ -570,14 +549,17 @@ const DragLabelsMode: React.FC<ModeProps> = ({
         origTransformX,
         origTransformY,
         ariaKey,
-        layerIndex,
       } = draggingRef.current;
       element.style.cursor = '';
 
       const deltaX = e.clientX - startX;
       const deltaY = e.clientY - startY;
 
-      if (Math.abs(deltaX) < 2 && Math.abs(deltaY) < 2) {
+      if (
+        Math.abs(deltaX) < DRAG_THRESHOLD_PX &&
+        Math.abs(deltaY) < DRAG_THRESHOLD_PX
+      ) {
+        // Treated as a click, not a drag: restore the prior transform.
         const existing = offsetsRef.current.get(ariaKey);
         if (existing) {
           element.setAttribute(
@@ -590,10 +572,13 @@ const DragLabelsMode: React.FC<ModeProps> = ({
       } else {
         const finalDx = origTransformX + deltaX;
         const finalDy = origTransformY + deltaY;
-        offsetsRef.current.set(ariaKey, {dx: finalDx, dy: finalDy});
         element.setAttribute('transform', `translate(${finalDx}, ${finalDy})`);
 
+        // aria-label is our datum key. Without it we cannot persist or
+        // re-apply reliably, so we leave the move as a transient visual change.
         if (ariaKey) {
+          offsetsRef.current.set(ariaKey, {dx: finalDx, dy: finalDy});
+
           const siblings = container.querySelectorAll(
             `text[aria-label="${CSS.escape(ariaKey)}"]`,
           );
@@ -605,31 +590,16 @@ const DragLabelsMode: React.FC<ModeProps> = ({
               );
             }
           }
-        }
 
-        // Persist the offset to the Vega-Lite spec via usermeta
-        const datumFields = parseAriaLabelFields(ariaKey);
-        const newSpec = applyLabelOffsetToSpec(
-          specRef.current!,
-          datumFields,
-          {dx: finalDx, dy: finalDy},
-          layerIndex,
-          ariaKey,
-        );
-        onSpecChange(newSpec);
-
-        // Vega will re-render the SVG asynchronously (after the spec change
-        // propagates and the editor's debounced parse runs). Re-apply the
-        // stored offsets across several animation frames to cover the window
-        // during which the SVG is replaced. The MutationObserver and
-        // view.runAfter hook also handle this, but this provides extra safety.
-        const reapplyAfterRender = () => {
-          if (offsetsRef.current.size > 0) {
-            applyStoredOffsets(container, offsetsRef.current);
-          }
-        };
-        for (const delay of [0, 50, 150, 350, 600]) {
-          window.setTimeout(reapplyAfterRender, delay);
+          // Persist the offset to the Vega-Lite spec via usermeta. The
+          // MutationObserver re-applies the SVG transform after Vega
+          // re-renders from the new spec.
+          const newSpec = applyLabelOffsetToSpec(
+            specRef.current!,
+            {dx: finalDx, dy: finalDy},
+            ariaKey,
+          );
+          onSpecChange(newSpec);
         }
       }
 
@@ -669,7 +639,7 @@ const DragLabelsMode: React.FC<ModeProps> = ({
 
       {active && (
         <style>{`
-          .vega-drag-labels-mode g[class*="mark-text"]:not([class*="role-title"]):not([class*="role-axis"]):not([class*="role-legend"]) text {
+          .${scopeClass}.vega-drag-labels-mode ${DATA_LABEL_TEXT_SELECTOR} {
             cursor: grab !important;
           }
         `}</style>
@@ -684,6 +654,7 @@ const DeleteLabelsMode: React.FC<ModeProps> = ({
   embed,
   specRef,
   onSpecChange,
+  scopeClass,
   active,
   onToggle,
 }) => {
@@ -711,17 +682,19 @@ const DeleteLabelsMode: React.FC<ModeProps> = ({
       );
       const layerIndex = getLayerIndexForText(textEl);
 
-      // Immediately hide for responsive UX
-      textEl.style.display = 'none';
-
-      // Update spec
-      removeLabelFromSpec(
+      const newSpec = removeLabelFromSpec(
         specRef.current!,
-        onSpecChange,
         labelText,
         datumFields,
         layerIndex,
       );
+
+      // Only hide and propagate when we produced a spec that actually filters
+      // the datum; otherwise leave the label visible to avoid a silent no-op.
+      if (newSpec !== specRef.current) {
+        textEl.style.display = 'none';
+        onSpecChange(newSpec);
+      }
     };
 
     container.addEventListener('click', handleClick);
@@ -752,10 +725,10 @@ const DeleteLabelsMode: React.FC<ModeProps> = ({
 
       {active && (
         <style>{`
-          .vega-delete-labels-mode g[class*="mark-text"]:not([class*="role-title"]):not([class*="role-axis"]):not([class*="role-legend"]) text {
+          .${scopeClass}.vega-delete-labels-mode ${DATA_LABEL_TEXT_SELECTOR} {
             cursor: pointer !important;
           }
-          .vega-delete-labels-mode g[class*="mark-text"]:not([class*="role-title"]):not([class*="role-axis"]):not([class*="role-legend"]) text:hover {
+          .${scopeClass}.vega-delete-labels-mode ${DATA_LABEL_TEXT_SELECTOR}:hover {
             opacity: 0.4;
             text-decoration: line-through;
           }
@@ -765,277 +738,34 @@ const DeleteLabelsMode: React.FC<ModeProps> = ({
   );
 };
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── DOM helpers local to this component ──────────────────────────────────────
 
-function getTranslateValues(el: SVGElement): {tx: number; ty: number} {
-  const transform = el.getAttribute('transform');
-  if (!transform) return {tx: 0, ty: 0};
-  const match = transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
-  if (!match) return {tx: 0, ty: 0};
-  return {tx: parseFloat(match[1]!), ty: parseFloat(match[2]!)};
-}
-
-function removeLabelFromSpec(
-  spec: VisualizationSpec,
-  onSpecChange: (newSpec: VisualizationSpec) => void,
-  labelText: string,
-  datumFields: AriaDatumField[],
-  preferredLayerIndex: number | null,
-) {
-  const s = spec as Record<string, unknown>;
-
-  if ('layer' in s && Array.isArray(s.layer)) {
-    const textLayerIndices = findMatchingTextLayerIndices(
-      s.layer,
-      preferredLayerIndex,
-    );
-    if (textLayerIndices.length > 0) {
-      const newLayers = [...s.layer];
-      for (const textLayerIdx of textLayerIndices) {
-        const textLayer = {
-          ...(newLayers[textLayerIdx] as Record<string, unknown>),
-        };
-        const existingTransform = Array.isArray(textLayer.transform)
-          ? [...textLayer.transform]
-          : [];
-        const textField = getTextEncodingField(textLayer);
-        existingTransform.push({
-          filter: buildDeleteFilter(datumFields, labelText, textField),
-        });
-        textLayer.transform = existingTransform;
-        newLayers[textLayerIdx] = textLayer;
-      }
-      onSpecChange({...s, layer: newLayers} as VisualizationSpec);
-      return;
-    }
-  }
-
-  // Single-layer text mark chart
-  if (
-    s.mark === 'text' ||
-    (typeof s.mark === 'object' &&
-      (s.mark as Record<string, unknown>).type === 'text')
-  ) {
-    const encoding = s.encoding as Record<string, unknown> | undefined;
-    const textField = (encoding?.text as Record<string, unknown>)?.field as
-      | string
-      | undefined;
-
-    const existingTransform = Array.isArray(s.transform)
-      ? [...(s.transform as unknown[])]
-      : [];
-
-    if (textField) {
-      existingTransform.push({
-        filter: buildDeleteFilter(datumFields, labelText, textField),
-      });
-    } else if (datumFields.length > 0) {
-      existingTransform.push({
-        filter: buildDeleteFilter(datumFields, labelText),
-      });
-    }
-    onSpecChange({...s, transform: existingTransform} as VisualizationSpec);
-  }
-}
-
-type AriaDatumField = {
-  field: string;
-  value: string;
-};
-
-function getLayerIndexForText(textEl: SVGTextElement): number | null {
-  const layerGroup = textEl.closest('g[class*="layer_"]');
-  const className = layerGroup?.getAttribute('class') ?? '';
-  const match = className.match(/\blayer_(\d+)_marks\b/);
-  return match ? Number(match[1]) : null;
-}
-
-function isTextLayer(layer: unknown): layer is Record<string, unknown> {
-  if (typeof layer !== 'object' || layer === null) return false;
-  const l = layer as Record<string, unknown>;
-  return (
-    l.mark === 'text' ||
-    (typeof l.mark === 'object' &&
-      l.mark !== null &&
-      (l.mark as Record<string, unknown>).type === 'text')
-  );
-}
-
-function findMatchingTextLayerIndices(
-  layers: unknown[],
-  preferredLayerIndex: number | null,
-): number[] {
-  if (
-    preferredLayerIndex !== null &&
-    preferredLayerIndex >= 0 &&
-    preferredLayerIndex < layers.length &&
-    isTextLayer(layers[preferredLayerIndex])
-  ) {
-    const signature = getTextLayerSignature(
-      layers[preferredLayerIndex] as Record<string, unknown>,
-    );
-    return layers
-      .map((layer, index) => ({layer, index}))
-      .filter(
-        ({layer}) =>
-          isTextLayer(layer) &&
-          getTextLayerSignature(layer as Record<string, unknown>) === signature,
-      )
-      .map(({index}) => index);
-  }
-
-  const firstTextLayerIndex = layers.findIndex(isTextLayer);
-  return firstTextLayerIndex >= 0 ? [firstTextLayerIndex] : [];
-}
-
-function getTextLayerSignature(layer: Record<string, unknown>): string {
-  return getTextEncodingField(layer) ?? '__static_text__';
-}
-
-function getTextEncodingField(layer: Record<string, unknown>): string | null {
-  const textEncoding = (layer.encoding as Record<string, unknown> | undefined)
-    ?.text as Record<string, unknown> | undefined;
-  return typeof textEncoding?.field === 'string' ? textEncoding.field : null;
-}
-
+/**
+ * Re-apply persisted offsets to the currently-rendered SVG text marks. Keyed by
+ * `aria-label`; idempotent. Lives here (not in the pure helpers module) because
+ * it reads and mutates the live DOM.
+ *
+ * Returns `true` if it actually changed any attribute. Callers rely on this to
+ * avoid a feedback loop: an attribute MutationObserver re-fires on our own
+ * writes, so we must be a no-op once the transforms already match.
+ */
 function applyStoredOffsets(
   container: HTMLElement,
   offsets: Map<string, LabelOffset>,
-) {
-  if (offsets.size === 0) return;
+): boolean {
+  if (offsets.size === 0) return false;
+  let changed = false;
   const allText = container.querySelectorAll('svg text[aria-label]');
   for (const el of allText) {
     const key = el.getAttribute('aria-label') ?? '';
+    if (!key) continue;
     const offset = offsets.get(key);
-    if (offset) {
-      (el as SVGTextElement).setAttribute(
-        'transform',
-        `translate(${offset.dx}, ${offset.dy})`,
-      );
+    if (!offset) continue;
+    const desired = `translate(${offset.dx}, ${offset.dy})`;
+    if (el.getAttribute('transform') !== desired) {
+      el.setAttribute('transform', desired);
+      changed = true;
     }
   }
-}
-
-function parseAriaLabelFields(ariaLabel: string): AriaDatumField[] {
-  const seen = new Set<string>();
-  return ariaLabel
-    .split(';')
-    .map((part) => {
-      const separatorIndex = part.indexOf(':');
-      if (separatorIndex < 0) return null;
-      const field = part.slice(0, separatorIndex).trim();
-      const value = part.slice(separatorIndex + 1).trim();
-      if (!field || !value) return null;
-      const key = field.toLowerCase();
-      if (seen.has(key)) return null;
-      seen.add(key);
-      return {field, value};
-    })
-    .filter((field): field is AriaDatumField => field !== null);
-}
-
-function buildDeleteFilter(
-  datumFields: AriaDatumField[],
-  labelText: string,
-  textField?: string | null,
-): string {
-  if (datumFields.length > 0) {
-    const comparisons = datumFields.map(({field, value}) =>
-      buildFieldComparison(field, value),
-    );
-    return `!(${comparisons.join(' && ')})`;
-  }
-
-  if (textField) {
-    return `!(${buildFieldComparison(textField, labelText)})`;
-  }
-
-  return 'true';
-}
-
-function buildFieldComparison(field: string, value: string): string {
-  const normalizedValue = normalizeDatumValue(value);
-  const escapedField = escapeExpr(field);
-  const stringComparison = `toString(datum['${escapedField}']) == '${escapeExpr(
-    normalizedValue,
-  )}'`;
-
-  if (/^-?\d+(\.\d+)?$/.test(normalizedValue)) {
-    return `(datum['${escapedField}'] == ${normalizedValue} || ${stringComparison})`;
-  }
-
-  return stringComparison;
-}
-
-function normalizeDatumValue(value: string): string {
-  return value.replace(/\u2212/g, '-');
-}
-
-function escapeExpr(str: string): string {
-  return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-}
-
-// ─── Label Offset Persistence Helpers ────────────────────────────────────────
-
-const LABEL_OFFSETS_KEY = '__labelOffsets';
-
-type LabelOffsetEntry = {
-  ariaKey: string;
-  dx: number;
-  dy: number;
-};
-
-/**
- * Persist a per-label offset into the spec's top-level `usermeta` field.
- * `usermeta` is free-form metadata that Vega-Lite preserves verbatim. We use
- * SVG-level transforms (re-applied via MutationObserver) to actually render
- * the offsets, since Vega-Lite has no native per-datum pixel offset channel.
- */
-function applyLabelOffsetToSpec(
-  spec: VisualizationSpec,
-  _datumFields: AriaDatumField[],
-  offset: LabelOffset,
-  _preferredLayerIndex: number | null,
-  ariaKey: string,
-): VisualizationSpec {
-  const s = spec as Record<string, unknown>;
-  const usermeta = {
-    ...((s.usermeta as Record<string, unknown> | undefined) ?? {}),
-  };
-  const existing: LabelOffsetEntry[] = Array.isArray(
-    usermeta[LABEL_OFFSETS_KEY],
-  )
-    ? [...(usermeta[LABEL_OFFSETS_KEY] as LabelOffsetEntry[])]
-    : [];
-
-  const idx = existing.findIndex((e) => e.ariaKey === ariaKey);
-  const entry: LabelOffsetEntry = {ariaKey, dx: offset.dx, dy: offset.dy};
-  if (idx >= 0) {
-    existing[idx] = entry;
-  } else {
-    existing.push(entry);
-  }
-
-  usermeta[LABEL_OFFSETS_KEY] = existing;
-  return {...s, usermeta} as VisualizationSpec;
-}
-
-/**
- * Extract persisted label offsets from the spec's `usermeta`.
- */
-function extractOffsetsFromSpec(
-  spec: VisualizationSpec,
-): Map<string, LabelOffset> {
-  const result = new Map<string, LabelOffset>();
-  const s = spec as Record<string, unknown>;
-  const usermeta = s.usermeta as Record<string, unknown> | undefined;
-  if (!usermeta) return result;
-
-  const entries = usermeta[LABEL_OFFSETS_KEY] as LabelOffsetEntry[] | undefined;
-  if (!Array.isArray(entries)) return result;
-
-  for (const entry of entries) {
-    result.set(entry.ariaKey, {dx: entry.dx, dy: entry.dy});
-  }
-  return result;
+  return changed;
 }

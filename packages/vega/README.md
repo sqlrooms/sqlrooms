@@ -12,6 +12,7 @@ npm install @sqlrooms/vega @sqlrooms/duckdb @sqlrooms/ui
 - `createVegaChartTool()` for AI tool workflows
 - `createChartImageForMarkdownTool()` for AI-generated Markdown document image assets
 - `VegaChartToolResult`
+- `InteractiveVegaChartToolResult` / `createInteractiveVegaChartToolResult` (opt-in WYSIWYG-editable chart tool renderer)
 - editor utilities/hooks (`useVegaChartEditor`, `useVegaEditorContext`)
 
 ## Quick start (simple chart)
@@ -104,6 +105,65 @@ These fields are supplied by the LLM when invoking the tool (not passed into
 - `sqlQuery`: SQL used to fetch chart data
 - `vegaLiteSpec`: Vega-Lite JSON string
 - `reasoning`: explanation shown to users for why this chart/spec was chosen
+
+## Interactive chart tool renderer
+
+`VegaChartToolResult` renders an AI-generated chart with read-only spec/SQL
+editors. `InteractiveVegaChartToolResult` is an **optional, opt-in** drop-in
+replacement that also enables WYSIWYG editing directly on the rendered chart:
+
+- **Edit title** — double-click the title to rename it
+- **Drag labels** — reposition data labels
+- **Delete labels** — remove individual data labels
+
+Edits update a local copy of the spec for immediate feedback and are
+debounced-persisted back into the current AI session's `uiMessages` (via the
+public `getCurrentSession` / `setSessionUiMessages` AI slice API), so they
+survive reloads and re-renders.
+
+```tsx
+import {
+  createAiSlice,
+  createDefaultAiTools,
+  createDefaultAiToolRenderers,
+} from '@sqlrooms/ai';
+import {createVegaChartTool, InteractiveVegaChartToolResult} from '@sqlrooms/vega';
+
+createAiSlice({
+  toolRenderers: {
+    ...createDefaultAiToolRenderers(),
+    // Opt in to interactive editing (otherwise keep VegaChartToolResult):
+    chart: InteractiveVegaChartToolResult,
+  },
+  tools: {
+    ...createDefaultAiTools(store),
+    chart: createVegaChartTool(),
+  },
+})(set, get, store);
+```
+
+To configure defaults once, use the factory:
+
+```tsx
+import {createInteractiveVegaChartToolResult} from '@sqlrooms/vega';
+
+createAiSlice({
+  toolRenderers: {
+    ...createDefaultAiToolRenderers(),
+    chart: createInteractiveVegaChartToolResult({
+      editorMode: 'spec',
+      persistDebounceMs: 750,
+    }),
+  },
+});
+```
+
+Props (extends `ToolRendererProps`):
+
+- `editorMode`: which editors to show in the spec/SQL popover (`'none' | 'sql' | 'spec' | 'both'`, default `'both'`)
+- `persistDebounceMs`: debounce before persisting edits to the session (default `500`)
+- `options`: Vega embed options
+- `className`: container class name
 
 ## Markdown document image assets
 

@@ -23,7 +23,11 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {
+  createVegaChartTool,
+  InteractiveVegaChartToolResult,
+  VegaChartToolResult,
+} from '@sqlrooms/vega';
 import {tool} from 'ai';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
@@ -34,6 +38,22 @@ import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
 import {createElement, lazy, Suspense} from 'react';
 import {SpinnerPane} from '@sqlrooms/ui';
+
+/**
+ * Chart tool renderer used in this example.
+ *
+ * - `InteractiveVegaChartToolResult` enables in-place WYSIWYG editing
+ *   (editable title, draggable/deletable labels) and persists edits back to
+ *   the AI session.
+ * - `VegaChartToolResult` is the read-only renderer.
+ *
+ * Interactive editing is opt-in. Set `ENABLE_INTERACTIVE_CHART_EDITING` to
+ * `false` to use the read-only renderer instead.
+ */
+const ENABLE_INTERACTIVE_CHART_EDITING = true;
+const ChartToolRenderer = ENABLE_INTERACTIVE_CHART_EDITING
+  ? InteractiveVegaChartToolResult
+  : VegaChartToolResult;
 
 // Lazy loading example to enable code splitting
 const LazyMainView = lazy(() =>
@@ -172,7 +192,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         // Tool renderers for displaying tool results in the UI
         toolRenderers: {
           ...createDefaultAiToolRenderers(),
-          chart: VegaChartToolResult,
+          chart: ChartToolRenderer,
           echo: EchoToolResult,
         },
 
