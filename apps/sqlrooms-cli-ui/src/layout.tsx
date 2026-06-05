@@ -23,14 +23,6 @@ export const createLayout = ({
     direction: 'row',
     children: [
       {
-        type: 'tabs',
-        id: 'workspace',
-        panel: 'workspace',
-        defaultSize: '70%',
-        children: [],
-        activeTabIndex: 0,
-      },
-      {
         type: 'panel',
         id: 'assistant-sidebar',
         panel: {
@@ -41,6 +33,14 @@ export const createLayout = ({
         maxSize: 600,
         collapsible: true,
         collapsedSize: 0,
+      },
+      {
+        type: 'tabs',
+        id: 'workspace',
+        panel: 'workspace',
+        defaultSize: '70%',
+        children: [],
+        activeTabIndex: 0,
       },
     ],
   },
@@ -64,10 +64,38 @@ export function migrateCliLayoutConfig(config: LayoutConfig): LayoutConfig {
     return config;
   }
 
+  const children = config.children.filter(
+    (child) => getLayoutNodeId(child) !== 'left-sidebar',
+  );
+  const assistantNode = children.find(
+    (child) => getLayoutNodeId(child) === 'assistant-sidebar',
+  );
+  if (!assistantNode) {
+    return {
+      ...config,
+      children,
+    };
+  }
+
+  const childrenWithoutAssistant = children.filter(
+    (child) => getLayoutNodeId(child) !== 'assistant-sidebar',
+  );
+  const workspaceIndex = childrenWithoutAssistant.findIndex(
+    (child) => getLayoutNodeId(child) === 'workspace',
+  );
+
+  if (workspaceIndex === -1) {
+    return {
+      ...config,
+      children,
+    };
+  }
+
+  const reorderedChildren = [...childrenWithoutAssistant];
+  reorderedChildren.splice(workspaceIndex, 0, assistantNode);
+
   return {
     ...config,
-    children: config.children.filter(
-      (child) => getLayoutNodeId(child) !== 'left-sidebar',
-    ),
+    children: reorderedChildren,
   };
 }

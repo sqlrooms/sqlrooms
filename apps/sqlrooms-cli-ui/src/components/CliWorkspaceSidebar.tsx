@@ -13,11 +13,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  EditableText,
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -32,13 +33,13 @@ import {
   toast,
 } from '@sqlrooms/ui';
 import {
+  ArrowUpFromLine,
   Database,
   FileStackIcon,
   Plus,
   SparklesIcon,
   Table2,
   TerminalIcon,
-  UploadCloud,
 } from 'lucide-react';
 import {useCallback, useMemo, useRef, type ChangeEvent} from 'react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../artifactTypeIds';
@@ -53,69 +54,73 @@ const acceptedDataFileExtensions = Object.values(LOCAL_DATA_ACCEPTED_FORMATS)
   .flat()
   .join(',');
 
-export function CliWorkspaceSidebar() {
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="gap-3 border-b border-sidebar-border">
-        <CliSidebarBrand />
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="border-b border-sidebar-border pb-4">
-          <SidebarGroupLabel>Data</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <CliDataSidebarSection />
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <CliArtifactsSidebarSection />
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarRail />
-    </Sidebar>
-  );
-}
-
-export function CliWorkspaceTopbar({
+export function CliWorkspaceSidebar({
   onToggleSqlEditor,
 }: {
   onToggleSqlEditor: () => void;
 }) {
   return (
-    <header className="grid h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-background/95 px-3">
+    <Sidebar
+      collapsible="icon"
+      className="[&_[data-sidebar=sidebar]]:border-blue-900/40 [&_[data-sidebar=sidebar]]:bg-blue-950/20"
+    >
+      <SidebarHeader className="gap-3 border-b border-blue-900/40 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1.5">
+        <CliSidebarBrand />
+      </SidebarHeader>
+      <SidebarContent className="group-data-[collapsible=icon]:gap-0">
+        <SidebarGroup className="border-b border-blue-900/40 py-4 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
+          <SidebarGroupContent>
+            <CliDataSidebarSection />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="group-data-[collapsible=icon]:py-1">
+          <SidebarGroupContent>
+            <CliArtifactsSidebarSection />
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="border-t border-blue-900/40 group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:py-1">
+        <CliSidebarFooterControls onToggleSqlEditor={onToggleSqlEditor} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+export function CliWorkspaceTopbar() {
+  const roomTitle = useRoomStore((state) => state.room.config.title);
+  const setRoomTitle = useRoomStore((state) => state.room.setRoomTitle);
+
+  const handleTitleChange = useCallback(
+    (nextTitle: string) => {
+      const trimmedTitle = nextTitle.trim();
+      if (trimmedTitle) {
+        setRoomTitle(trimmedTitle);
+      }
+    },
+    [setRoomTitle],
+  );
+
+  return (
+    <header className="border-border bg-background/95 grid h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b px-3">
       <div className="flex min-w-0 items-center gap-1.5">
         <Tooltip>
           <TooltipTrigger asChild>
-            <SidebarTrigger className="size-9 text-muted-foreground hover:text-foreground" />
+            <SidebarTrigger className="text-muted-foreground hover:text-foreground size-9" />
           </TooltipTrigger>
           <TooltipContent>Toggle sidebar</TooltipContent>
         </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-9 text-muted-foreground hover:text-foreground"
-              onClick={onToggleSqlEditor}
-            >
-              <TerminalIcon className="h-4 w-4" />
-              <span className="sr-only">SQL Editor</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>SQL Editor</TooltipContent>
-        </Tooltip>
         <CliAssistantToggleButton />
       </div>
-      <h1 className="min-w-0 truncate text-center text-2xl leading-none font-bold text-foreground">
-        Untitled Workspace
-      </h1>
-      <div className="flex min-w-0 items-center justify-end gap-1.5">
-        <RoomShell.CommandPalette.Button className="size-9 text-muted-foreground hover:text-foreground" />
-        <ThemeSwitch />
-      </div>
+      <EditableText
+        value={roomTitle}
+        onChange={handleTitleChange}
+        placeholder="Untitled Workspace"
+        selectOnFocus
+        className="text-foreground h-10 max-w-[min(48rem,60vw)] min-w-0 border-transparent text-center text-2xl leading-none font-bold shadow-none ring-0 hover:bg-blue-950/30 focus-visible:ring-1"
+      />
+      <div />
     </header>
   );
 }
@@ -125,7 +130,7 @@ function CliSidebarBrand() {
 
   return (
     <button
-      className="flex min-h-14 w-full min-w-0 items-center gap-3 rounded-md bg-transparent p-1 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:min-h-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+      className="text-sidebar-foreground hover:text-sidebar-foreground flex min-h-14 w-full min-w-0 items-center gap-3 rounded-md bg-transparent p-1 text-left group-data-[collapsible=icon]:min-h-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 hover:bg-blue-950/30"
       type="button"
       onClick={() => setOpen(true)}
       aria-label="Open sidebar"
@@ -137,7 +142,7 @@ function CliSidebarBrand() {
       />
       <div className="min-w-0 group-data-[collapsible=icon]:hidden">
         <div className="truncate text-xl leading-none font-bold">SQLRooms</div>
-        <div className="truncate text-sm leading-tight text-muted-foreground">
+        <div className="text-muted-foreground truncate text-sm leading-tight">
           Analytics workspaces
         </div>
       </div>
@@ -190,18 +195,17 @@ function CliDataSidebarSection() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="min-h-10 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                className="text-primary hover:text-primary h-10 justify-center border border-blue-800/60 bg-blue-950/30 hover:bg-blue-900/30"
                 onClick={addData}
                 type="button"
-                size="lg"
               >
-                <UploadCloud className="h-4 w-4" aria-hidden />
+                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
                 <span>Add data</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] border-l border-sidebar-border py-1 pr-0 pl-3">
-            <SchemaExplorer.Header title="main">
+          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] border-l border-blue-900/40 py-1 pr-0 pl-3">
+            <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
             <SchemaExplorer.Tree />
@@ -211,6 +215,7 @@ function CliDataSidebarSection() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
+              className="hover:bg-blue-900/30 data-[state=open]:bg-blue-900/30"
               type="button"
               size="lg"
               aria-label="Data"
@@ -219,7 +224,7 @@ function CliDataSidebarSection() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-72 bg-popover"
+            className="bg-popover w-72 border-blue-900/40 [&_[role=menuitem]]:focus:bg-blue-950/70"
             align="start"
             side="right"
             sideOffset={8}
@@ -233,7 +238,7 @@ function CliDataSidebarSection() {
                 <Table2 className="h-4 w-4" aria-hidden />
                 <div className="grid min-w-0 gap-px">
                   <span className="truncate">{table.name}</span>
-                  <small className="truncate text-xs text-muted-foreground">
+                  <small className="text-muted-foreground truncate text-xs">
                     {formatTableMeta(table)}
                   </small>
                 </div>
@@ -244,7 +249,7 @@ function CliDataSidebarSection() {
             ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={addData}>
-              <UploadCloud className="h-4 w-4" aria-hidden />
+              <ArrowUpFromLine className="h-4 w-4" aria-hidden />
               Add data
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -265,35 +270,37 @@ function CliDataSidebarSection() {
 
 function CliArtifactsSidebarSection() {
   const artifactTabs = useCliArtifactSidebarTabs();
-  const createWorksheet = useCreateWorksheetArtifact(artifactTabs.selectArtifact);
+  const createWorksheet = useCreateWorksheetArtifact(
+    artifactTabs.selectArtifact,
+  );
   const {state} = useSidebar();
 
   if (state === 'expanded') {
     return (
       <>
-        <div className="mb-2 flex h-8 items-center justify-between px-2">
-          <div className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+        <div className="mb-1 flex h-7 items-center justify-between px-2">
+          <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
             Artifacts
           </div>
           <Button
             type="button"
             variant="ghost"
             size="xs"
-            className="h-7 gap-1 px-2 text-primary hover:bg-primary/10 hover:text-primary"
+            className="text-primary hover:bg-primary/10 hover:text-primary h-6 gap-1 px-2 text-sm"
             onClick={() => void createWorksheet()}
           >
             <Plus className="h-3.5 w-3.5" aria-hidden />
             New
           </Button>
         </div>
-        <SidebarMenu>
+        <SidebarMenu className="gap-0.5">
           {artifactTabs.tabs.map((artifact) => {
             const type = artifactTabs.artifactTypes[artifact.type];
             const Icon = type?.icon ?? FileStackIcon;
             return (
               <SidebarMenuItem key={artifact.id}>
                 <SidebarMenuButton
-                  className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary"
+                  className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary h-7 gap-2 px-2 text-sm font-normal hover:bg-blue-950/40 [&>svg]:size-3.5"
                   isActive={artifact.id === artifactTabs.selectedTabId}
                   onClick={() => artifactTabs.selectArtifact(artifact.id)}
                   type="button"
@@ -309,24 +316,20 @@ function CliArtifactsSidebarSection() {
     );
   }
 
-  const activeArtifact = artifactTabs.tabs.find(
-    (artifact) => artifact.id === artifactTabs.selectedTabId,
-  );
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton
+          className="hover:bg-blue-900/30 data-[state=open]:bg-blue-900/30"
           type="button"
           size="lg"
           aria-label="Artifacts"
-          isActive={Boolean(activeArtifact)}
         >
           <FileStackIcon className="h-4 w-4" aria-hidden />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-72 bg-popover"
+        className="bg-popover w-72 border-blue-900/40 [&_[role=menuitem]]:focus:bg-blue-950/70"
         align="start"
         side="right"
         sideOffset={8}
@@ -355,6 +358,41 @@ function CliArtifactsSidebarSection() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function CliSidebarFooterControls({
+  onToggleSqlEditor,
+}: {
+  onToggleSqlEditor: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-primary size-8 hover:bg-blue-900/30"
+            onClick={onToggleSqlEditor}
+          >
+            <TerminalIcon className="h-4 w-4" />
+            <span className="sr-only">SQL Editor</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">SQL Editor</TooltipContent>
+      </Tooltip>
+      <RoomShell.CommandPalette.Button className="text-muted-foreground hover:text-primary size-8 rounded-md hover:bg-blue-900/30" />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex size-8 items-center justify-center rounded-md hover:bg-blue-900/30">
+            <ThemeSwitch className="data-[state=checked]:bg-primary/30 data-[state=unchecked]:bg-blue-950/70" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right">Toggle theme</TooltipContent>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -414,7 +452,7 @@ function CliAssistantToggleButton() {
           type="button"
           variant="ghost"
           size="icon"
-          className="size-9 text-muted-foreground hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground"
+          className="text-muted-foreground hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground size-9"
           onClick={() => toggleCollapsed('assistant-sidebar')}
           data-active={!isAssistantCollapsed}
         >
