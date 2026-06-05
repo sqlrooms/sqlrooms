@@ -4,11 +4,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Spinner,
 } from '@sqlrooms/ui';
-import {Download, FileCode, FileSpreadsheet, Image} from 'lucide-react';
+import {Download, FileCode, Image} from 'lucide-react';
 import {useState} from 'react';
 import {useVegaChartContext} from './VegaChartContext';
 
@@ -20,10 +19,10 @@ export interface VegaExportActionProps {
   pngScale?: number;
   /**
    * Custom filename generator
-   * @param format - The export format ('png', 'svg', or 'csv')
+   * @param format - The export format ('png' or 'svg')
    * @returns The filename to use for the download
    */
-  getFilename?: (format: 'png' | 'svg' | 'csv') => string;
+  getFilename?: (format: 'png' | 'svg') => string;
   /**
    * Additional CSS classes for the trigger button
    */
@@ -61,7 +60,10 @@ function inlineExternalStyles(svgEl: SVGSVGElement): void {
     }
   }
   if (!cssText) return;
-  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  const styleEl = document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'style',
+  );
   styleEl.textContent = cssText;
   svgEl.insertBefore(styleEl, svgEl.firstChild);
 }
@@ -111,26 +113,6 @@ async function svgToCanvas(
 
   URL.revokeObjectURL(url);
   return canvas;
-}
-
-function escapeCsvValue(value: unknown): string {
-  if (value == null) return '';
-  const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
-
-function rowsToCsv(rows: Record<string, unknown>[]): string {
-  if (rows.length === 0) return '';
-  const firstRow = rows[0]!;
-  const headers = Object.keys(firstRow);
-  const lines = [
-    headers.map(escapeCsvValue).join(','),
-    ...rows.map((row) => headers.map((h) => escapeCsvValue(row[h])).join(',')),
-  ];
-  return lines.join('\n');
 }
 
 /**
@@ -201,7 +183,8 @@ export const VegaExportAction: React.FC<VegaExportActionProps> = ({
         const clone = svgEl.cloneNode(true) as SVGSVGElement;
         inlineExternalStyles(clone);
         const width = svgEl.clientWidth || svgEl.getBoundingClientRect().width;
-        const height = svgEl.clientHeight || svgEl.getBoundingClientRect().height;
+        const height =
+          svgEl.clientHeight || svgEl.getBoundingClientRect().height;
         clone.setAttribute('width', String(width));
         clone.setAttribute('height', String(height));
         if (!clone.getAttribute('viewBox')) {
@@ -213,40 +196,6 @@ export const VegaExportAction: React.FC<VegaExportActionProps> = ({
       }
       const blob = new Blob([svgString], {type: 'image/svg+xml'});
       downloadBlob(blob, getFilename?.('svg') ?? `chart-${Date.now()}.svg`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportCsv = async () => {
-    if (!embed?.view) return;
-    setIsExporting(true);
-    try {
-      const view = embed.view;
-      // Vega-Lite compiles to different dataset names depending on transforms.
-      // Access the runtime data store to find the best dataset to export.
-      const runtimeData = (view as unknown as {_runtime: {data: Record<string, unknown>}})._runtime?.data;
-      let rows: Record<string, unknown>[] = [];
-      if (runtimeData) {
-        const names = Object.keys(runtimeData);
-        // Prefer source_0 (raw data) over transformed datasets
-        const preferred = ['source_0', 'data_0', ...names];
-        for (const name of preferred) {
-          try {
-            const d = view.data(name);
-            if (Array.isArray(d) && d.length > 0) {
-              rows = d as Record<string, unknown>[];
-              break;
-            }
-          } catch {
-            // dataset name not found, try next
-          }
-        }
-      }
-      if (rows.length === 0) return;
-      const csv = rowsToCsv(rows);
-      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-      downloadBlob(blob, getFilename?.('csv') ?? `chart-${Date.now()}.csv`);
     } finally {
       setIsExporting(false);
     }
@@ -279,11 +228,6 @@ export const VegaExportAction: React.FC<VegaExportActionProps> = ({
         <DropdownMenuItem onClick={handleExportSvg}>
           <FileCode className="mr-2 h-4 w-4" />
           Save as SVG
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleExportCsv}>
-          <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Save as CSV
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
