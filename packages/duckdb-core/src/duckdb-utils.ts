@@ -88,7 +88,7 @@ export function getUnqualifiedSqlIdentifier(
   const last = parts[parts.length - 1]?.trim();
   if (!last) return undefined;
   if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
-    return last.slice(1, -1).replaceAll('""', '"');
+    return last.slice(1, -1).split('""').join('"');
   }
   return last;
 }
