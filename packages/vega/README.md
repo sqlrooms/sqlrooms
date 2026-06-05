@@ -94,7 +94,7 @@ createAiSlice({
 `createVegaChartTool` constructor options:
 
 - `editable`: whether users can edit SQL/spec in the chart UI
-- `editorMode`: which editors to render (`'none' | 'sql' | 'vega' | 'both'`)
+- `editorMode`: which editors to render (`'none' | 'sql' | 'spec' | 'both'`)
 
 ### LLM invocation / Zod schema fields
 

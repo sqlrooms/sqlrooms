@@ -396,6 +396,12 @@ const DragLabelsMode: React.FC<ModeProps> = ({
     startY: number;
     origTransformX: number;
     origTransformY: number;
+    /**
+     * The element's original `transform` attribute at mousedown (or `null` if
+     * it had none). Used to restore Vega's own placement transform when a drag
+     * turns out to be a click and there is no persisted offset to fall back to.
+     */
+    origTransformAttr: string | null;
     ariaKey: string;
   } | null>(null);
 
@@ -404,13 +410,13 @@ const DragLabelsMode: React.FC<ModeProps> = ({
   const offsetsRef = useRef<Map<string, LabelOffset>>(new Map());
 
   // Sync offsetsRef from spec.usermeta whenever the spec changes,
-  // so persisted offsets (across remounts/reloads) are applied.
+  // so persisted offsets (across remounts/reloads) are applied. The spec is the
+  // source of truth, so rebuild the map rather than merging: this drops offsets
+  // for labels that were removed from spec.usermeta, otherwise stale transforms
+  // would keep getting re-applied to future matching labels.
   useEffect(() => {
     if (!spec) return;
-    const fromSpec = extractOffsetsFromSpec(spec);
-    for (const [k, v] of fromSpec) {
-      offsetsRef.current.set(k, v);
-    }
+    offsetsRef.current = extractOffsetsFromSpec(spec);
   }, [spec]);
 
   // Re-apply stored offsets after Vega re-renders the SVG.
@@ -519,6 +525,7 @@ const DragLabelsMode: React.FC<ModeProps> = ({
         startY: e.clientY,
         origTransformX: existing?.dx ?? tx,
         origTransformY: existing?.dy ?? ty,
+        origTransformAttr: textEl.getAttribute('transform'),
         ariaKey,
       };
 
@@ -548,6 +555,7 @@ const DragLabelsMode: React.FC<ModeProps> = ({
         startY,
         origTransformX,
         origTransformY,
+        origTransformAttr,
         ariaKey,
       } = draggingRef.current;
       element.style.cursor = '';
@@ -566,6 +574,10 @@ const DragLabelsMode: React.FC<ModeProps> = ({
             'transform',
             `translate(${existing.dx}, ${existing.dy})`,
           );
+        } else if (origTransformAttr !== null) {
+          // Restore Vega's original placement transform; don't strip it, or the
+          // label can visibly jump.
+          element.setAttribute('transform', origTransformAttr);
         } else {
           element.removeAttribute('transform');
         }

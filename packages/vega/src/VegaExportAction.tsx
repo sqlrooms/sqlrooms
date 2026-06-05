@@ -94,25 +94,28 @@ async function svgToCanvas(
   const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
   const url = URL.createObjectURL(blob);
 
-  const img = new window.Image();
-  img.width = width * scale;
-  img.height = height * scale;
+  try {
+    const img = new window.Image();
+    img.width = width * scale;
+    img.height = height * scale;
 
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = reject;
-    img.src = url;
-  });
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = url;
+    });
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width * scale;
-  canvas.height = height * scale;
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(scale, scale);
-  ctx.drawImage(img, 0, 0, width, height);
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0, width, height);
 
-  URL.revokeObjectURL(url);
-  return canvas;
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**

@@ -389,7 +389,12 @@ export function extractOffsetsFromSpec(
   if (!Array.isArray(entries)) return result;
 
   for (const entry of entries) {
-    if (entry && typeof entry.ariaKey === 'string') {
+    if (
+      entry &&
+      typeof entry.ariaKey === 'string' &&
+      Number.isFinite(entry.dx) &&
+      Number.isFinite(entry.dy)
+    ) {
       result.set(entry.ariaKey, {dx: entry.dx, dy: entry.dy});
     }
   }

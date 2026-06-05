@@ -116,9 +116,16 @@ export function InteractiveVegaChartToolResult({
   );
 
   // Initialize from the edit cache (if previously edited) or the tool output.
-  const [currentSpec, setCurrentSpec] = useState<VisualizationSpec | null>(
-    () => editedSpecCache.get(toolCallId) ?? vegaLiteSpec,
+  const [editedSpec, setEditedSpec] = useState<VisualizationSpec | null>(
+    () => editedSpecCache.get(toolCallId) ?? null,
   );
+
+  // The tool output may not carry `vegaLiteSpec` on the first render (e.g. while
+  // the tool call is still streaming). Derive the active spec during render so it
+  // is adopted as soon as it becomes available, without requiring a remount or an
+  // effect. A user edit (tracked in `editedSpec`) always wins over the tool output.
+  const currentSpec =
+    editedSpec ?? editedSpecCache.get(toolCallId) ?? vegaLiteSpec;
 
   // Keep a ref to the live output object so the persistence mutation can also
   // patch the in-memory message carried by useChat.
@@ -131,7 +138,7 @@ export function InteractiveVegaChartToolResult({
 
   const handleSpecChange = useCallback(
     (newSpec: VisualizationSpec) => {
-      setCurrentSpec(newSpec);
+      setEditedSpec(newSpec);
       editedSpecCache.set(toolCallId, newSpec);
 
       if (persistTimeoutRef.current) {
