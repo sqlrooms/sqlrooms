@@ -231,6 +231,101 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### Reset Filters
+
+The package provides hooks and components for resetting cross-filter selections at both dashboard and panel levels:
+
+#### Dashboard-Level Reset
+
+Use `useDashboardResetFilters` to track and reset all filters for a dashboard:
+
+```tsx
+import {useDashboardResetFilters} from '@sqlrooms/mosaic';
+
+function DashboardToolbar({dashboardId}: {dashboardId: string}) {
+  const {hasActiveFilters, reset} = useDashboardResetFilters({dashboardId});
+
+  return (
+    <button onClick={reset} disabled={!hasActiveFilters}>
+      Reset All Filters
+    </button>
+  );
+}
+```
+
+The hook returns:
+
+- `hasActiveFilters` - Boolean indicating whether any filters are active
+- `reset` - Function to clear all filters for the dashboard
+
+#### Panel-Level Reset
+
+Use `usePanelResetFilters` to track and reset only the filters originating from a specific panel:
+
+```tsx
+import {
+  usePanelResetFilters,
+  usePanelClients,
+  ResetFiltersButton,
+} from '@sqlrooms/mosaic';
+
+function ChartPanelHeader({
+  dashboardId,
+  panelId,
+  selectionName,
+}: {
+  dashboardId: string;
+  panelId: string;
+  selectionName: string;
+}) {
+  const panelClients = usePanelClients(dashboardId, panelId);
+  const {hasActiveFilters, reset} = usePanelResetFilters({
+    panelClients,
+    selectionName,
+  });
+
+  return (
+    <div className="panel-header">
+      <h3>My Chart</h3>
+      <ResetFiltersButton disabled={!hasActiveFilters} onClick={reset} />
+    </div>
+  );
+}
+```
+
+Panel-level reset requires registering the panel's Mosaic clients. Use `usePanelClientRegistration` in your panel renderer:
+
+```tsx
+import {usePanelClientRegistration} from '@sqlrooms/mosaic';
+
+function ChartPanelRenderer({dashboardId, panelId}: PanelProps) {
+  const {client} = useMosaicClient({
+    selectionName: 'brush',
+    query: /* ... */,
+  });
+
+  // Register this client so the panel reset button can track its filters
+  usePanelClientRegistration(dashboardId, panelId, [client]);
+
+  return <VgPlotChart /* ... */ />;
+}
+```
+
+#### Reset Filters Button Component
+
+The `ResetFiltersButton` is a pre-styled UI component:
+
+```tsx
+import {ResetFiltersButton} from '@sqlrooms/mosaic';
+
+<ResetFiltersButton
+  disabled={!hasActiveFilters}
+  onClick={reset}
+  tooltip="Reset filters" // optional
+  className="custom-class" // optional
+/>;
+```
+
 ### Dashboard Stateful Block Adapter
 
 `createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful
@@ -378,6 +473,45 @@ Available compound components:
 - `ChartBuilderActions` - Back/Create buttons
 
 For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
+
+### Combobox Component
+
+The package provides a reusable compound `Combobox` component for building searchable select dropdowns. This component is used internally by chart settings fields like `AggregationSelector`, `FieldSelectorInput`, and `TemporalGranularitySelector`.
+
+```tsx
+import {Combobox} from '@sqlrooms/mosaic';
+
+function MySelector() {
+  const [value, setValue] = useState('');
+
+  return (
+    <Combobox value={value} onChange={setValue}>
+      <Combobox.Trigger placeholder="Select option..." />
+      <Combobox.Content>
+        <Combobox.Search placeholder="Search..." />
+        <Combobox.Empty>No results found.</Combobox.Empty>
+        <Combobox.List>
+          <Combobox.Item value="option1">Option 1</Combobox.Item>
+          <Combobox.Item value="option2">Option 2</Combobox.Item>
+          <Combobox.Item value="option3">Option 3</Combobox.Item>
+        </Combobox.List>
+      </Combobox.Content>
+    </Combobox>
+  );
+}
+```
+
+Available compound components:
+
+- `Combobox` (root) - Manages state and provides context
+- `Combobox.Trigger` - Button to open the dropdown
+- `Combobox.Content` - Popover content wrapper
+- `Combobox.Search` - Search input field
+- `Combobox.Empty` - Empty state message
+- `Combobox.List` - Items container
+- `Combobox.Item` - Individual selectable item
+
+For advanced use cases, the underlying `useCombobox` hook is also exported.
 
 ### Working with Selections
 

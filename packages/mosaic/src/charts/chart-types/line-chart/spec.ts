@@ -1,6 +1,7 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {LineChartSettings} from './schema';
 import {ChartSpecError} from '../errors';
+import {CreateSpecOptions} from '../base-types';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -22,10 +23,11 @@ function getLineColor(
   return CHART_COLORS[index % CHART_COLORS.length]!;
 }
 
-export function createLineChartSpec(
-  tableName: string,
-  {x, yFields, xInterval}: LineChartSettings,
-): Spec {
+export function createLineChartSpec({
+  tableName,
+  settings: {x, yFields, xInterval},
+  selectionName,
+}: CreateSpecOptions<LineChartSettings>): Spec {
   if (!x) {
     throw new ChartSpecError('X field is required for line chart');
   }
@@ -33,15 +35,10 @@ export function createLineChartSpec(
     throw new ChartSpecError('At least one Y field is required for line chart');
   }
 
-  const plotMarks: any[] = [];
+  const plotMarks: unknown[] = [];
 
-  // When temporal aggregation is active, use SQL binning
-  const dataSource = xInterval
-    ? {
-        from: tableName,
-        filterBy: '$brush',
-      }
-    : {from: tableName, filterBy: '$brush'};
+  // Data source always includes filterBy for brush
+  const dataSource = {from: tableName, filterBy: '$brush'};
 
   // Generate lineY and text marks for each Y field
   yFields.forEach((fieldConfig, index) => {
@@ -93,8 +90,10 @@ export function createLineChartSpec(
     }
   });
 
-  // Add brush
-  plotMarks.push({select: 'intervalX', as: '$brush'});
+  // Add brush control only if selectionName is provided
+  if (selectionName) {
+    plotMarks.push({select: 'intervalX', as: '$brush'});
+  }
 
   return {
     plot: plotMarks,

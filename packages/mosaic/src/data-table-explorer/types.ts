@@ -1,5 +1,5 @@
 import {DataTable} from '@sqlrooms/db';
-import type {Selection} from '@uwdata/mosaic-core';
+import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
 import type {Interval1D} from '@uwdata/mosaic-plot';
 import type {Field, Table} from 'apache-arrow';
 import type {Dispatch, SetStateAction} from 'react';
@@ -48,6 +48,7 @@ export type DataTableExplorerCategorySummary =
   DataTableExplorerSummaryStatus & {
     bucketCount: number;
     buckets: DataTableExplorerCategoryBucket[];
+    client?: MosaicClient;
     kind: 'category';
     selectedKey?: string;
     toggleValue: (key: string) => void;
@@ -88,6 +89,7 @@ export type DataTableExplorerOptions = {
 };
 
 export type UseDataTableExplorerReturn = {
+  client: MosaicClient | null;
   columns: DataTableExplorerColumnState[];
   filteredRowCount?: number;
   hasFilters: boolean;

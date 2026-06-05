@@ -36,6 +36,7 @@ export type MosaicChartRenderContext =
 export function useMosaicChartRenderContext(
   dataTable: DataTable | undefined,
   config: ChartConfig,
+  selectionName?: string,
 ): MosaicChartRenderContext {
   const chartTypeDefinition = useChartTypeDefinition(config.chartType);
 
@@ -61,6 +62,7 @@ export function useMosaicChartRenderContext(
         chartTypeDefinition,
         dataTable,
         config.settings,
+        selectionName,
       );
     }
 
@@ -77,19 +79,21 @@ export function useMosaicChartRenderContext(
       title: 'Ooops! Something went wrong',
       message: 'Unsupported chart type definition',
     };
-  }, [chartTypeDefinition, dataTable, config]);
+  }, [chartTypeDefinition, dataTable, config, selectionName]);
 }
 
 function createMosaicSpecChartRenderContext<TConfig extends ChartConfig>(
   chartTypeDefinition: SpecChartTypeDefinition<TConfig>,
   dataTable: DataTable,
   settings: ChartSettings,
+  selectionName?: string,
 ): MosaicSpecChartRenderContext | MosaicChartRenderErrorContext {
   try {
-    const spec = chartTypeDefinition.createSpec(
-      dataTable.table.table,
+    const spec = chartTypeDefinition.createSpec({
+      tableName: dataTable.table.table,
       settings,
-    );
+      selectionName,
+    });
 
     return {
       type: 'spec',

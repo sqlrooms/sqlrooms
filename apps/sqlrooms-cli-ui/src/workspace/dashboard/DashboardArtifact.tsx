@@ -2,12 +2,12 @@ import {
   MosaicDashboard,
   type MosaicDashboardBlockRenderProps,
 } from '@sqlrooms/mosaic';
-import {useEffect} from 'react';
+import {FC, useEffect} from 'react';
 import {useRoomStore, type RoomState} from '../../store';
 
-export const DashboardArtifact = ({
-  blockId: artifactId,
-}: MosaicDashboardBlockRenderProps<RoomState>) => {
+export const DashboardArtifact: FC<
+  MosaicDashboardBlockRenderProps<RoomState>
+> = ({blockId: artifactId}) => {
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
   );
