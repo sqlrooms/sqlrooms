@@ -22,21 +22,37 @@ function createDefaultArtifactsConfig(
   return ArtifactsSliceConfig.parse(overrides ?? {});
 }
 
+function getFirstWorkspaceArtifactId(config: ArtifactsSliceConfigType) {
+  return config.artifactOrder.find(
+    (artifactId) =>
+      config.artifactsById[artifactId]?.visibility === 'workspace',
+  );
+}
+
+type CreateArtifactInput = Omit<
+  ArtifactMetadataType,
+  'id' | 'title' | 'visibility'
+> & {
+  id?: string;
+  title?: string;
+  visibility?: ArtifactMetadataType['visibility'];
+};
+
+type EnsureArtifactInput = Omit<
+  ArtifactMetadataType,
+  'id' | 'title' | 'visibility'
+> & {
+  title?: string;
+  visibility?: ArtifactMetadataType['visibility'];
+};
+
 export type ArtifactsSliceState = {
   artifacts: SliceFunctions & {
     config: ArtifactsSliceConfigType;
     artifactTypes: ArtifactTypeDefinitions<any>;
     setConfig: (config: ArtifactsSliceConfigType) => void;
-    createArtifact: (
-      artifact: Omit<ArtifactMetadataType, 'id' | 'title'> & {
-        id?: string;
-        title?: string;
-      },
-    ) => string;
-    ensureArtifact: (
-      id: string,
-      artifact: Omit<ArtifactMetadataType, 'id' | 'title'> & {title?: string},
-    ) => void;
+    createArtifact: (artifact: CreateArtifactInput) => string;
+    ensureArtifact: (id: string, artifact: EnsureArtifactInput) => void;
     renameArtifact: (id: string, title: string) => void;
     closeArtifact: (id: string) => void;
     deleteArtifact: (id: string) => void;
@@ -105,6 +121,7 @@ export function createArtifactsSlice<
         assertKnownArtifactType(artifactTypes, artifact.type);
         const id = artifact.id ?? createId();
         const next = ArtifactMetadata.parse({
+          ...artifact,
           id,
           type: artifact.type,
           title: getArtifactTitle(artifactTypes, artifact.type, artifact.title),
@@ -115,7 +132,9 @@ export function createArtifactsSlice<
             if (!draft.artifacts.config.artifactOrder.includes(id)) {
               draft.artifacts.config.artifactOrder.push(id);
             }
-            draft.artifacts.config.currentArtifactId = id;
+            if (next.visibility === 'workspace') {
+              draft.artifacts.config.currentArtifactId = id;
+            }
           }),
         );
         const context = {
@@ -129,10 +148,20 @@ export function createArtifactsSlice<
 
       ensureArtifact(id, artifact) {
         assertKnownArtifactType(artifactTypes, artifact.type);
+        const current = get().artifacts.config.artifactsById[id];
         const next = ArtifactMetadata.parse({
+          ...current,
+          ...artifact,
           id,
           type: artifact.type,
-          title: getArtifactTitle(artifactTypes, artifact.type, artifact.title),
+          title: getArtifactTitle(
+            artifactTypes,
+            artifact.type,
+            artifact.title ?? current?.title,
+          ),
+          visibility: artifact.visibility ?? current?.visibility,
+          parentArtifactId:
+            artifact.parentArtifactId ?? current?.parentArtifactId,
         });
         set((state) =>
           produce(state, (draft) => {
@@ -140,6 +169,8 @@ export function createArtifactsSlice<
             if (
               current?.type === next.type &&
               current.title === next.title &&
+              current.visibility === next.visibility &&
+              current.parentArtifactId === next.parentArtifactId &&
               draft.artifacts.config.artifactOrder.includes(id)
             ) {
               return;
@@ -206,7 +237,7 @@ export function createArtifactsSlice<
               );
             if (draft.artifacts.config.currentArtifactId === id) {
               draft.artifacts.config.currentArtifactId =
-                draft.artifacts.config.artifactOrder[0];
+                getFirstWorkspaceArtifactId(draft.artifacts.config);
             }
           }),
         );

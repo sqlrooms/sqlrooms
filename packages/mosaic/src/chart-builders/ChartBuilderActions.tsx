@@ -5,7 +5,7 @@ import {
   useChartBuilderStore,
 } from './ChartBuilderContext';
 import {buildChartTypeTitle, canCreateChartFromType} from './chartTypeUtils';
-import type {ChartConfig} from '../chart-types';
+import type {ChartConfig} from '../charts/chart-types';
 
 export interface ChartBuilderActionsProps {
   className?: string;

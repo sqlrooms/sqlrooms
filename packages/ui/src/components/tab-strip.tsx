@@ -103,6 +103,7 @@ interface TabStripContextValue {
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
   onSelect?: (tabId: string) => void;
+  onActivate?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
@@ -164,6 +165,7 @@ interface SortableTabProps {
   editingTabId: string | null;
   closeable?: boolean;
   onClose: (tabId: string) => void;
+  onActivate: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
@@ -192,6 +194,7 @@ function SortableTab({
   editingTabId,
   closeable = true,
   onClose,
+  onActivate,
   onStartEditing,
   onStopEditing,
   onInlineRename,
@@ -255,15 +258,17 @@ function SortableTab({
             data-editing={isEditing ? '' : undefined}
             className={cn(
               ...TAB_STRIP_BUTTON_CLASSNAMES,
-              'flex-1 justify-start gap-1',
+              'flex-1 gap-1',
+              isEditing ? 'justify-start' : 'justify-center text-center',
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
               isEditing && 'focus-visible:ring-0',
             )}
             style={fontSizeStyle}
+            onClick={() => onActivate(tab.id)}
             onDoubleClick={() => onStartEditing(tab.id)}
           >
             {!isEditing ? (
-              <div className="truncate">
+              <div className="min-w-0 flex-1 truncate text-center">
                 {renderTabLabel ? renderTabLabel(tab) : tab.name}
               </div>
             ) : (
@@ -444,6 +449,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     handleStopEditing,
     handleInlineRename,
     handleClose,
+    onActivate,
   } = useTabStripContext();
 
   const sensors = useSensors(
@@ -557,6 +563,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               closeable && !(preventCloseLastTab && openTabItems.length === 1)
             }
             onClose={handleClose}
+            onActivate={onActivate ?? (() => undefined)}
             onStartEditing={handleStartEditing}
             onStopEditing={handleStopEditing}
             onInlineRename={handleInlineRename}
@@ -1114,6 +1121,8 @@ export interface TabStripProps {
   onOpenTabsChange?: (tabIds: string[]) => void;
   /** Called when a tab is selected. */
   onSelect?: (tabId: string) => void;
+  /** Called when a tab trigger is clicked, including the already-selected tab. */
+  onActivate?: (tabId: string) => void;
   /** Called when a new tab should be created. */
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
@@ -1169,6 +1178,7 @@ function TabStripRoot({
   onClose,
   onOpenTabsChange,
   onSelect,
+  onActivate,
   onCreate,
   onRename,
   renderTabMenu,
@@ -1360,6 +1370,7 @@ function TabStripRoot({
     fontSize,
     onOpenTabsChange,
     onSelect,
+    onActivate,
     onCreate,
     onRename,
     renderTabMenu,

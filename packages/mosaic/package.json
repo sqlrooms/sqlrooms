@@ -44,6 +44,7 @@
   "dependencies": {
     "@observablehq/plot": "^0.6.17",
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",

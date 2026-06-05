@@ -55,7 +55,10 @@ const SqlEditorModal: React.FC<SqlEditorProps> = (props) => {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogOverlay className="bg-background/80" />
-      <DialogContent className="h-screen max-h-screen w-screen max-w-[100vw] p-3">
+      <DialogContent
+        className="h-screen max-h-screen w-screen max-w-[100vw] p-3"
+        showCloseButton={false}
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>SQL Editor</DialogTitle>
           <DialogDescription>

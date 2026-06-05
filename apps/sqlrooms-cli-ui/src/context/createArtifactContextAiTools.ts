@@ -10,9 +10,11 @@ import type {RoomState} from '../store-types';
 function readCliArtifact({
   state,
   artifactId,
+  store,
 }: {
   state: RoomState;
   artifactId: string;
+  store: StoreApi<RoomState>;
 }) {
   const artifact = state.artifacts.config.artifactsById[artifactId];
   if (!artifact) {
@@ -49,6 +51,33 @@ function readCliArtifact({
     };
   }
 
+  if (artifact.type === 'worksheet') {
+    const worksheet = state.blockDocuments.getBlockDocument(artifactId);
+    return {
+      success: true as const,
+      artifact: {
+        artifactId,
+        title: artifact.title,
+        type: artifact.type,
+      },
+      payload: {
+        kind: 'worksheet',
+        blocks: state.blockDocuments.getBlocks(artifactId),
+        assets: Object.values(worksheet?.assets ?? {}).map((asset) => ({
+          id: asset.id,
+          filename: asset.filename,
+          mediaType: asset.mediaType,
+          encoding: asset.encoding,
+          alt: asset.alt,
+          title: asset.title,
+          createdAt: asset.createdAt,
+          updatedAt: asset.updatedAt,
+        })),
+        updatedAt: worksheet?.updatedAt,
+      },
+    };
+  }
+
   if (artifact.type === 'dashboard') {
     state.dashboard.ensureDashboardArtifact(artifactId);
     const dashboard = state.mosaicDashboard.getDashboard(artifactId);
@@ -74,6 +103,40 @@ function readCliArtifact({
     };
   }
 
+  if (artifact.type === 'sql-query') {
+    let query = state.sqlEditor.config.queries.find(
+      (candidate) => candidate.id === artifactId,
+    );
+    let result = state.sqlEditor.queryResultsById[artifactId];
+    if (!query) {
+      const ensuredQuery = state.sqlEditor.ensureQuery(artifactId, {
+        name: artifact.title,
+      });
+      const nextState = store.getState();
+      query =
+        nextState.sqlEditor.config.queries.find(
+          (candidate) => candidate.id === artifactId,
+        ) ?? ensuredQuery;
+      result = nextState.sqlEditor.queryResultsById[artifactId];
+    }
+    return {
+      success: true as const,
+      artifact: {
+        artifactId,
+        title: artifact.title,
+        type: artifact.type,
+      },
+      payload: {
+        kind: 'sql-query',
+        name: query?.name ?? artifact.title,
+        query: query?.query ?? '',
+        resultStatus: result?.status,
+        lastQueryStatement:
+          result?.status === 'success' ? result.lastQueryStatement : undefined,
+      },
+    };
+  }
+
   return {
     success: true as const,
     artifact: {
@@ -85,7 +148,7 @@ function readCliArtifact({
       kind: 'metadata-only',
       unsupportedPayload: true,
       details:
-        'This artifact type is available as context, but read_context_artifact only returns full payloads for document and dashboard artifacts in v1.',
+        'This artifact type is available as context, but read_context_artifact only returns full payloads for worksheet, document, and dashboard artifacts in v1.',
     },
   };
 }
@@ -118,7 +181,8 @@ function createArtifactContextOptions(
         'manual',
       );
     },
-    readArtifact: ({state, artifactId}) => readCliArtifact({state, artifactId}),
+    readArtifact: ({state, artifactId}) =>
+      readCliArtifact({state, artifactId, store}),
   };
 }
 

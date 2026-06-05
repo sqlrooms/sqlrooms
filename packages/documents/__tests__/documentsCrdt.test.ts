@@ -10,12 +10,18 @@ import {
 import {createCrdtSlice, type CrdtSliceState} from '@sqlrooms/crdt';
 import {LoroDoc} from 'loro-crdt';
 import {createStore} from 'zustand';
-import {createDocumentsSlice, type DocumentsSliceState} from '../src';
+import {
+  createBlockDocumentsSlice,
+  createDocumentsSlice,
+  type BlockDocumentsSliceState,
+  type DocumentsSliceState,
+} from '../src';
 import {createDocumentsCrdtMirror} from '../src/crdt';
 
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
   DocumentsSliceState &
+  BlockDocumentsSliceState &
   CrdtSliceState;
 
 function createTestStore(doc: LoroDoc) {
@@ -28,12 +34,21 @@ function createTestStore(doc: LoroDoc) {
       },
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
+    'block-document': {
+      label: 'Block Document',
+      defaultTitle: 'Block Document',
+    },
   });
 
   return createStore<TestRoomState>()((set, get, store) => ({
     ...createBaseRoomSlice()(set, get, store),
     ...createArtifactsSlice<TestRoomState>({artifactTypes})(set, get, store),
     ...createDocumentsSlice<TestRoomState>({now: () => 123})(set, get, store),
+    ...createBlockDocumentsSlice<TestRoomState>({now: () => 456})(
+      set,
+      get,
+      store,
+    ),
     ...createCrdtSlice<TestRoomState>({
       doc,
       mirrors: {
@@ -165,6 +180,84 @@ describe('documents CRDT mirrors', () => {
       'doc-1',
       'doc-2',
     ]);
+  });
+
+  it('mirrors block documents and hosted stateful block references', async () => {
+    const docA = new LoroDoc();
+    const storeA = createTestStore(docA);
+    await storeA.getState().crdt.initialize();
+
+    const blockDocumentId = storeA.getState().artifacts.createArtifact({
+      id: 'block-document-1',
+      type: 'block-document',
+      title: 'Block Document',
+    });
+    storeA.getState().blockDocuments.appendBlocks(blockDocumentId, [
+      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'chart',
+        type: 'chart',
+        tableName: 'sales',
+        config: {
+          chartType: 'histogram',
+          settings: {field: 'revenue'},
+        },
+        selectionGroupId: 'overview',
+      },
+      {
+        id: 'dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-embedded-1',
+        ownership: 'owned',
+        title: 'Embedded Dashboard',
+      },
+    ]);
+    await waitForCondition(() =>
+      JSON.stringify(docA.toJSON()).includes('dashboard-embedded-1'),
+    );
+
+    const snapshot = docA.export({mode: 'snapshot'});
+    const docB = new LoroDoc();
+    docB.import(snapshot);
+    docB.checkoutToLatest();
+    const storeB = createTestStore(docB);
+    await storeB.getState().crdt.initialize();
+    await waitForCondition(() =>
+      Boolean(storeB.getState().artifacts.getArtifact(blockDocumentId)),
+    );
+
+    expect(
+      storeB.getState().artifacts.getArtifact(blockDocumentId),
+    ).toMatchObject({
+      id: blockDocumentId,
+      type: 'block-document',
+      title: 'Block Document',
+      visibility: 'workspace',
+    });
+    expect(storeB.getState().blockDocuments.getBlocks(blockDocumentId)).toEqual(
+      [
+        {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+        {
+          id: 'chart',
+          type: 'chart',
+          tableName: 'sales',
+          config: {
+            chartType: 'histogram',
+            settings: {field: 'revenue'},
+          },
+          selectionGroupId: 'overview',
+        },
+        {
+          id: 'dashboard',
+          type: 'statefulBlock',
+          blockType: 'dashboard',
+          blockInstanceId: 'dashboard-embedded-1',
+          ownership: 'owned',
+          title: 'Embedded Dashboard',
+        },
+      ],
+    );
   });
 
   it('preserves falsy asset metadata from incoming CRDT snapshots', () => {

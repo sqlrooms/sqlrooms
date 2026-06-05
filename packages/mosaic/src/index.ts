@@ -19,24 +19,24 @@ export {
   type MosaicDashboardProps,
   type MosaicDashboardRootProps,
 } from './dashboard/MosaicDashboard';
+export {
+  createMosaicDashboardBlockDefinition,
+  type CreateMosaicDashboardBlockDefinitionOptions,
+  type MosaicDashboardBlockRenderProps,
+} from './dashboard/createMosaicDashboardBlockDefinition';
+export {DefaultMosaicDashboardBlock} from './dashboard/DefaultMosaicDashboardBlock';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
-export {DashboardPanelErrorBoundary} from './dashboard/DashboardPanelErrorBoundary';
-export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/defaultPanelRenderers';
+export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboardPanelErrorBoundary';
+export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/createDefaultMosaicDashboardPanelRenderers';
 export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';
-export {useTablesWithColumns} from './dashboard/useTablesWithColumns';
-export {MosaicDashboardPanelLayout} from './dashboard/MosaicDashboardPanelLayout';
+export {useTablesWithColumns} from './hooks/useTablesWithColumns';
+export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
+export {addDataTableExplorerPanelAction} from './data-table-explorer/addDataTableExplorerPanelAction';
+export {addChartPanelAction} from './charts/addChartPanelAction';
 export {
-  MosaicDashboardInitialState,
-  type MosaicDashboardInitialStateProps,
-} from './dashboard/initial-state/MosaicDashboardInitialState';
-export {addProfilerPanelAction} from './profiler/addProfilerPanelAction';
-export {addTextPanelAction} from './text/addTextPanelAction';
-export {addChartPanelAction} from './chart/addChartPanelAction';
-export {
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardTextPanelConfig,
   createDefaultMosaicDashboardConfig,
   createMosaicDashboardSlice,
   getMosaicDashboardDockId,
@@ -49,10 +49,9 @@ export {
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
 export {
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
   MOSAIC_DASHBOARD_CHART_PANEL_TYPE as MOSAIC_DASHBOARD_VGPLOT_PANEL_TYPE,
-  MOSAIC_DASHBOARD_TEXT_PANEL_TYPE,
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,
 } from './dashboard/dashboard-types';
@@ -73,13 +72,11 @@ export type {
   MosaicDashboardEntry as MosaicDashboardEntryType,
   MosaicDashboardPanelConfig as MosaicDashboardPanelConfigType,
   ChartPanelConfig,
-  TextPanel,
 } from './dashboard/dashboard-types';
 export type {
   MosaicDashboardLayoutType,
   MosaicDashboardPanelSource,
-  ProfilerPanelConfig,
-  TextPanelConfig,
+  DataTableExplorerPanelConfig,
 } from './dashboard/core-types';
 export {
   createMosaicColorLegendPlot,
@@ -98,6 +95,19 @@ export {
 } from './MosaicSlice';
 export {DataPointLimitError} from './DataPointLimitError';
 export {
+  MosaicChartView,
+  type MosaicChartViewProps,
+} from './charts/MosaicChartView';
+export {
+  MosaicChartSettingsPanel,
+  type MosaicChartSettingsPanelProps,
+} from './charts/MosaicChartSettingsPanel';
+export {useBrushSelectionParams} from './charts/useBrushSelectionParams';
+export {
+  useChartRetainer,
+  useChartRetainerByKey,
+} from './charts/useChartRetainer';
+export {
   DEFAULT_CHART_MAX_DATA_POINTS,
   assertChartDataPolicy,
   createChartRuntimeIssueFromError,
@@ -111,27 +121,29 @@ export {
   type ChartRuntimeIssueReporter,
 } from './chart-runtime';
 export {
-  MosaicProfiler,
-  type MosaicProfilerCompoundHeaderProps,
-  type MosaicProfilerCompoundRowsProps,
-  type MosaicProfilerCompoundStatusBarProps,
-  type MosaicProfilerCompoundTableProps,
-  type MosaicProfilerProps,
-  type MosaicProfilerRootProps,
-} from './profiler/MosaicProfiler';
+  DataTableExplorer,
+  type DataTableExplorerCompoundHeaderProps,
+  type DataTableExplorerCompoundResetButtonProps,
+  type DataTableExplorerCompoundRowsProps,
+  type DataTableExplorerCompoundStatusBarProps,
+  type DataTableExplorerCompoundTableProps,
+  type DataTableExplorerProps,
+  type DataTableExplorerRootProps,
+} from './data-table-explorer/DataTableExplorer';
+export {DataTableBlockRenderer} from './data-table-explorer/worksheet/DataTableBlockRenderer';
 export {
-  MosaicProfilerHeader,
-  type MosaicProfilerHeaderProps,
-} from './profiler/MosaicProfilerHeader';
+  DataTableExplorerHeader,
+  type DataTableExplorerHeaderProps,
+} from './data-table-explorer/DataTableExplorerHeader';
 export {
-  MosaicProfilerRows,
-  type MosaicProfilerRowsProps,
-} from './profiler/MosaicProfilerRows';
+  DataTableExplorerRows,
+  type DataTableExplorerRowsProps,
+} from './data-table-explorer/DataTableExplorerRows';
 export {
-  MosaicProfilerStatusBar,
-  type MosaicProfilerStatusBarProps,
-} from './profiler/MosaicProfilerStatusBar';
-export {useMosaicProfiler} from './profiler/useMosaicProfiler';
+  DataTableExplorerStatusBar,
+  type DataTableExplorerStatusBarProps,
+} from './data-table-explorer/DataTableExplorerStatusBar';
+export {useDataTableExplorer} from './data-table-explorer/useDataTableExplorer';
 export {
   ResponsivePlot,
   type PlotSize,
@@ -144,7 +156,7 @@ export {
   MAP_TOOL_KEY,
   createDashboardAgentTool,
   createDashboardAiTools,
-} from './ai';
+} from './ai/ai';
 export type {
   CreateDashboardAgentToolOptions,
   CreateDashboardAiToolsOptions,
@@ -155,10 +167,10 @@ export type {
   DashboardAiStore,
   DashboardAiTable,
   CreateDashboardToolDepsOptions,
-} from './ai';
+} from './ai/ai';
 
 // Compound components
-export {MosaicChart} from './MosaicChart';
+export {MosaicSpecChart} from './MosaicChart';
 export {MosaicChartBuilder} from './MosaicChartBuilder';
 
 // Editor hooks and context
@@ -185,23 +197,23 @@ export type {
   UseMosaicChartEditorReturn,
 } from './editor/types';
 export {
-  getProfilerTableWidth,
-  PROFILER_DEFAULT_COLUMN_WIDTH_PX,
-  PROFILER_ROW_NUMBER_COLUMN_WIDTH_PX,
-  PROFILER_UNSUPPORTED_COLUMN_WIDTH_PX,
-} from './profiler/layout';
+  getDataTableExplorerTableWidth,
+  DATA_TABLE_EXPLORER_DEFAULT_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_ROW_NUMBER_COLUMN_WIDTH_PX,
+  DATA_TABLE_EXPLORER_UNSUPPORTED_COLUMN_WIDTH_PX,
+} from './data-table-explorer/layout';
 export type {
-  MosaicProfilerCategoryBucket,
-  MosaicProfilerCategorySummary,
-  MosaicProfilerColumnKind,
-  MosaicProfilerColumnState,
-  MosaicProfilerHistogramSummary,
-  MosaicProfilerOptions,
-  MosaicProfilerPaginationState,
-  MosaicProfilerSorting,
-  MosaicProfilerSummaryState,
-  UseMosaicProfilerReturn,
-} from './profiler/types';
+  DataTableExplorerCategoryBucket,
+  DataTableExplorerCategorySummary,
+  DataTableExplorerColumnKind,
+  DataTableExplorerColumnState,
+  DataTableExplorerHistogramSummary,
+  DataTableExplorerOptions,
+  DataTableExplorerPaginationState,
+  DataTableExplorerSorting,
+  DataTableExplorerSummaryState,
+  UseDataTableExplorerReturn,
+} from './data-table-explorer/types';
 
 // Chart builder components
 export type {ChartBuilderActionsProps} from './chart-builders/ChartBuilderActions';
@@ -226,15 +238,15 @@ export type {ChartBuilderRootProps} from './chart-builders/ChartBuilderRoot';
 export {ChartBuilderRoot} from './chart-builders/ChartBuilderRoot';
 export type {ChartBuilderFieldsProps} from './chart-builders/ChartBuilderFields';
 export {ChartBuilderFields} from './chart-builders/ChartBuilderFields';
-export {Field} from './chart-builders/Field';
-export {TableSelector} from './chart-builders/TableSelector';
-export {ColumnSelector} from './chart-builders/ColumnSelector';
-export {MultiFieldSelector} from './chart-builders/MultiFieldSelector';
+export {Field} from './components/Field';
+export {TableSelector} from './components/TableSelector';
+export {ColumnSelector} from './components/ColumnSelector';
+export {MultiFieldSelector} from './components/MultiFieldSelector';
 export {
   ColumnsProvider,
   useColumnsContext,
   type ColumnsContextValue,
-} from './chart-builders/ColumnsContext';
+} from './components/ColumnsContext';
 export type {ChartBuilderTypeGridProps} from './chart-builders/ChartBuilderTypeGrid';
 export {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
@@ -274,15 +286,13 @@ export {
   createBoxPlotAiTool,
   createChartTools,
   // New panel and dashboard tools
-  createProfilerTool,
-  createTextPanelTool,
+  createDataTableExplorerTool,
   createListPanelsTool,
   createRemovePanelTool,
-  ProfilerToolParameters,
-  TextPanelToolParameters,
+  DataTableExplorerToolParameters,
   ListPanelsToolParameters,
   RemovePanelToolParameters,
-} from './chart-types';
+} from './charts/chart-types';
 export type {
   ChartSettings,
   ChartType,
@@ -297,26 +307,32 @@ export type {
   HeatmapToolParams,
   BubbleChartToolParams,
   BoxPlotToolParams,
-  ProfilerToolParams,
-  TextPanelToolParams,
+  DataTableExplorerToolParams,
   ListPanelsToolParams,
   RemovePanelToolParams,
-} from './chart-types';
+} from './charts/chart-types';
 export {
   buildChartTypeTitle,
   canCreateChartFromType,
+} from './chart-builders/chartTypeUtils';
+export {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
-} from './chart-builders/chartTypeUtils';
-export type {FieldSelectorInputProps} from './chart-builders/FieldSelectorInput';
+} from './column-types-utils';
+export type {FieldSelectorInputProps} from './components/FieldSelectorInput';
 export type {
   ChartBuilderColumn,
   ChartBuilderDashboardPanelOutput,
   ChartBuilderField,
   ChartSpec,
   ChartTypeDefinition,
-} from './chart-types/base-types';
+} from './charts/chart-types/base-types';
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
 
 // Dashboard agent
+
+export {MosaicChart} from './charts/MosaicChart';
+export {useParseChartConfig} from './charts/useParseChartConfig';
+export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';
+export {useDataTable} from './hooks/useDataTable';

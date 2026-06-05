@@ -1,6 +1,5 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {memoizeOnce} from '@sqlrooms/utils';
 import {DuckDbConnector} from './DuckDbConnector';
 import {escapeVal} from './duckdb-utils';
 import {
@@ -11,7 +10,7 @@ import {
 
 const MAX_LIMIT = 10000;
 
-const getFunctionSuggestionsImpl = async (
+export const getFunctionSuggestions = async (
   connector: DuckDbConnector,
   wordBeforeCursor: string,
   limit = 100,
@@ -40,6 +39,3 @@ const getFunctionSuggestionsImpl = async (
   const functions = convertArrowResultToFunctionSuggestions(result);
   return groupFunctionsByName(functions);
 };
-
-// Memoized version of the function
-export const getFunctionSuggestions = memoizeOnce(getFunctionSuggestionsImpl);

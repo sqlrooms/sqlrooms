@@ -4,7 +4,7 @@ import {
   type ChartConfig,
   createDefaultChartTypes,
   isSpecChartType,
-  MosaicChart,
+  MosaicSpecChart,
   MosaicChartBuilder,
   type Spec,
 } from '@sqlrooms/mosaic';
@@ -196,7 +196,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                         </div>
                       </div>
                       <div className="overflow-hidden pb-4">
-                        <MosaicChart.Container
+                        <MosaicSpecChart.Container
                           spec={chart.spec}
                           params={paramsMap}
                           editable={isEditing}
@@ -204,17 +204,17 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
                             handleSpecChange(chart.id, spec)
                           }
                         >
-                          <MosaicChart.Display className="h-64" />
+                          <MosaicSpecChart.Display className="h-64" />
                           {isEditing && (
                             <>
-                              <MosaicChart.SpecEditor
+                              <MosaicSpecChart.SpecEditor
                                 className="h-64 border-t"
                                 title=""
                               />
-                              <MosaicChart.Actions />
+                              <MosaicSpecChart.Actions />
                             </>
                           )}
-                        </MosaicChart.Container>
+                        </MosaicSpecChart.Container>
                       </div>
                     </div>
                   );

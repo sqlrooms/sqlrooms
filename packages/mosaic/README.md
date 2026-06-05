@@ -132,40 +132,45 @@ The hook accepts the following options:
 - `queryResult` - Optional callback when query results are received
 - `enabled` - Whether to automatically connect when mosaic is ready (default: `true`)
 
-### Mosaic Profiler Primitives
+### Data Table Explorer Primitives
 
-The profiler primitives let you build a Quake-style cross-filtered table with
-per-column summaries on top of `MosaicSlice`.
+The Data Table Explorer primitives let you build a Quake-style cross-filtered
+table with per-column summaries on top of `MosaicSlice`.
 
 ```tsx
-import {MosaicProfiler} from '@sqlrooms/mosaic';
+import {DataTableExplorer} from '@sqlrooms/mosaic';
 import {ScrollArea} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from './store';
 
-function EarthquakeProfiler() {
+function EarthquakeExplorer() {
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
 
   return (
-    <MosaicProfiler tableName="earthquakes" selection={brush} pageSize={25}>
+    <DataTableExplorer tableName="earthquakes" selection={brush} pageSize={25}>
       <div className="flex min-h-0 flex-col border">
         <ScrollArea className="min-h-0 flex-1">
-          <MosaicProfiler.Table>
-            <MosaicProfiler.Header />
-            <MosaicProfiler.Rows />
-          </MosaicProfiler.Table>
+          <DataTableExplorer.Table>
+            <DataTableExplorer.Header />
+            <DataTableExplorer.Rows />
+          </DataTableExplorer.Table>
         </ScrollArea>
-        <MosaicProfiler.StatusBar />
+        <DataTableExplorer.StatusBar />
       </div>
-    </MosaicProfiler>
+    </DataTableExplorer>
   );
 }
 ```
 
-For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
-is still available when you need direct access to the profiler state for custom
-layout, sizing, or advanced composition.
+For the common case, prefer the compound `DataTableExplorer` API.
+`useDataTableExplorer` is still available when you need direct access to the
+explorer state for custom layout, sizing, or advanced composition.
+
+`DataTableBlockRenderer` wraps the same explorer UI as a stateful block
+renderer for `@sqlrooms/documents` block documents. Register it with a
+host-provided stateful block type such as `data-table` when a document or
+worksheet surface should embed an interactive Data Table Explorer directly.
 
 ### Mosaic Dashboard Panels
 
@@ -176,7 +181,7 @@ runtime add-panel actions when creating the dashboard slice.
 ```tsx
 import {
   createDefaultMosaicDashboardPanelRenderers,
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
   createMosaicDashboardSlice,
   MosaicDashboard,
@@ -192,10 +197,10 @@ function Dashboard() {
   return <MosaicDashboard dashboardId="main" />;
 }
 
-function addProfiler(store: RoomStore) {
+function addDataTableExplorer(store: RoomStore) {
   store.getState().mosaicDashboard.addPanel(
     'main',
-    createMosaicDashboardProfilerPanelConfig({
+    createMosaicDashboardDataTableExplorerPanelConfig({
       source: {tableName: 'earthquakes'},
     }),
   );
@@ -226,10 +231,34 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### Dashboard Stateful Block Adapter
+
+`createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful
+block implementations. This lets host packages render the same dashboard
+implementation either inside a block host or through an artifact shell created
+with `@sqlrooms/artifacts`.
+
+```tsx
+import {createArtifactTypeFromStatefulBlock} from '@sqlrooms/artifacts';
+import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
+
+const dashboardBlockDefinition = createMosaicDashboardBlockDefinition({
+  render: DashboardArtifact,
+});
+
+export const dashboardArtifactType = createArtifactTypeFromStatefulBlock(
+  dashboardBlockDefinition,
+);
+```
+
+The adapter preserves existing dashboard state in
+`mosaicDashboard.config.dashboardsById` and delegates lifecycle work to the
+dashboard slice.
+
 ### Dashboard AI Tools
 
 `@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,
-including chart tools, profiler/text panel tools, panel management tools, and an
+including chart tools, Data Table Explorer/text panel tools, panel management tools, and an
 optional exploratory `dashboard_agent`. Client apps supply a small adapter that
 maps Mosaic's generic dashboard operations to their store, artifact model, table
 metadata, and AI run context. When an AI run context is present, implicit

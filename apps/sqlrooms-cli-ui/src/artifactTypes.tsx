@@ -1,48 +1,79 @@
 import {
+  createArtifactTypeFromStatefulBlock,
   defineArtifactTypes,
   type ArtifactTypeDefinition,
 } from '@sqlrooms/artifacts';
+import {createMarkdownDocumentBlockDefinition} from '@sqlrooms/documents';
+import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
+import {createPivotBlockDefinition} from '@sqlrooms/pivot';
 import {
   AppWindow,
-  BarChart3,
   FileText,
+  FileStackIcon,
   LayoutDashboardIcon,
-  ScrollTextIcon,
 } from 'lucide-react';
+import {createSqlQueryBlockDefinition} from '@sqlrooms/sql-editor';
 import type {RoomState} from './store-types';
+import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
+import {WorksheetArtifact} from './workspace/WorksheetArtifact';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
-import {DocumentArtifact} from './workspace/DocumentArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 
 export const CLI_ARTIFACT_TYPES = [
+  'worksheet',
   'dashboard',
+  'pivot',
   'notebook',
   'document',
+  'sql-query',
   'canvas',
   'app',
 ] as const;
 export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
+const dashboardBlockDefinition =
+  createMosaicDashboardBlockDefinition<RoomState>({
+    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.dashboard.label,
+    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.dashboard.defaultTitle,
+    render: DashboardArtifact,
+  });
+
+const pivotBlockDefinition = createPivotBlockDefinition<RoomState>({
+  label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.pivot.label,
+  defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.pivot.defaultTitle,
+});
+
+const markdownDocumentBlockDefinition =
+  createMarkdownDocumentBlockDefinition<RoomState>({
+    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.label,
+    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.defaultTitle,
+  });
+
+const sqlQueryBlockDefinition = createSqlQueryBlockDefinition<RoomState>({
+  label: STATEFUL_BLOCK_ARTIFACT_CONFIGS['sql-query'].label,
+  defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS['sql-query'].defaultTitle,
+});
+
 export const ARTIFACT_TYPES = defineArtifactTypes({
-  dashboard: {
-    label: 'Dashboard',
-    defaultTitle: 'Dashboard',
-    icon: BarChart3,
-    component: DashboardArtifact,
-    onEnsure: ({artifactId, store}) => {
-      store.getState().dashboard.ensureDashboardArtifact(artifactId);
+  worksheet: {
+    label: 'Worksheet',
+    defaultTitle: 'Worksheet',
+    icon: FileStackIcon,
+    component: WorksheetArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
-    onClose: ({artifactId, store}) => {
-      store.getState().mosaicDashboard.evictDashboardRuntime(artifactId, {
-        resetSelection: true,
-      });
+    onEnsure: ({artifactId, store}) => {
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
     onDelete: ({artifactId, store}) => {
-      store.getState().mosaicDashboard.removeDashboard(artifactId);
+      store.getState().blockDocuments.removeBlockDocument(artifactId);
     },
   },
+  dashboard: createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
+  pivot: createArtifactTypeFromStatefulBlock(pivotBlockDefinition),
   notebook: {
     label: 'Notebook',
     defaultTitle: 'Notebook',
@@ -58,21 +89,10 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
       store.getState().notebook.removeArtifact(artifactId);
     },
   },
-  document: {
-    label: 'Document',
-    defaultTitle: 'Document',
-    icon: ScrollTextIcon,
-    component: DocumentArtifact,
-    onCreate: ({artifactId, store}) => {
-      store.getState().documents.ensureDocument(artifactId);
-    },
-    onEnsure: ({artifactId, store}) => {
-      store.getState().documents.ensureDocument(artifactId);
-    },
-    onDelete: ({artifactId, store}) => {
-      store.getState().documents.removeDocument(artifactId);
-    },
-  },
+  document: createArtifactTypeFromStatefulBlock(
+    markdownDocumentBlockDefinition,
+  ),
+  'sql-query': createArtifactTypeFromStatefulBlock(sqlQueryBlockDefinition),
   canvas: {
     label: 'Canvas',
     defaultTitle: 'Canvas',

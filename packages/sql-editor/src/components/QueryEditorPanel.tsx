@@ -10,6 +10,12 @@ export interface QueryEditorPanelProps {
   className?: string;
 }
 
+/**
+ * Ready-made tabbed SQL workbench editor panel.
+ *
+ * Prefer `SqlQuery.Root` with `SqlQuery.Editor`, `SqlQuery.Actions`, and
+ * `SqlQuery.Results` when composing a single-query surface or embedded block.
+ */
 export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   className,
 }) => {

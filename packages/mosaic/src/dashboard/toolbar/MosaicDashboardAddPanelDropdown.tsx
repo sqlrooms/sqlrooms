@@ -20,7 +20,7 @@ export const MosaicDashboardAddPanelDropdown: FC<
     useAddPanelActions(dashboardId);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline" disabled={!canAddAnyPanel}>
           <Plus className="mr-1 h-4 w-4" />

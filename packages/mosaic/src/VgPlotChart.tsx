@@ -4,7 +4,7 @@ import {
   FC,
   memo,
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -127,13 +127,18 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
     const cachedChart = useMemo(() => getCachedChart(), [getCachedChart]);
 
     // Handle PlotProps: directly render the provided plot element
-    useEffect(() => {
+    useLayoutEffect(() => {
       const container = containerRef.current;
       if (!container || !isPlotProps(props)) {
         return;
       }
 
-      container.replaceChildren(props.plot);
+      if (
+        container.childNodes.length !== 1 ||
+        container.firstChild !== props.plot
+      ) {
+        container.replaceChildren(props.plot);
+      }
     }, [props]);
 
     // Handle SpecProps: render from spec using hooks

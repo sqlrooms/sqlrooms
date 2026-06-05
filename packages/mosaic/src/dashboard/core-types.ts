@@ -5,19 +5,13 @@
 
 import {z} from 'zod';
 
-// Profiler panel config
-export const ProfilerPanelConfig = z.object({
+// DataTableExplorer panel config
+export const DataTableExplorerPanelConfig = z.object({
   pageSize: z.number().optional(),
 });
-export type ProfilerPanelConfig = z.infer<typeof ProfilerPanelConfig>;
-
-// Text panel config
-export const TextPanelConfig = z.object({
-  content: z.string().default(''),
-  toolbarOpen: z.boolean().default(false),
-  sourcePanelOpen: z.boolean().default(false),
-});
-export type TextPanelConfig = z.infer<typeof TextPanelConfig>;
+export type DataTableExplorerPanelConfig = z.infer<
+  typeof DataTableExplorerPanelConfig
+>;
 
 export const MosaicDashboardLayoutType = z.enum(['dock', 'grid']);
 export type MosaicDashboardLayoutType = z.infer<
