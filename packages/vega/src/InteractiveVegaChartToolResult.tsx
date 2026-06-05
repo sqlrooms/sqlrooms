@@ -111,9 +111,7 @@ export function InteractiveVegaChartToolResult({
   const vegaLiteSpec = output?.vegaLiteSpec as VisualizationSpec | null;
 
   const getCurrentSession = useStoreWithAi((s) => s.ai.getCurrentSession);
-  const setSessionUiMessages = useStoreWithAi(
-    (s) => s.ai.setSessionUiMessages,
-  );
+  const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
 
   // Initialize from the edit cache (if previously edited) or the tool output.
   const [editedSpec, setEditedSpec] = useState<VisualizationSpec | null>(
@@ -135,6 +133,17 @@ export function InteractiveVegaChartToolResult({
   }, [output]);
 
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending debounced persist on unmount so the timeout does not
+  // fire after the component is gone (leaked timer / write-after-unmount).
+  useEffect(() => {
+    return () => {
+      if (persistTimeoutRef.current) {
+        clearTimeout(persistTimeoutRef.current);
+        persistTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSpecChange = useCallback(
     (newSpec: VisualizationSpec) => {
@@ -250,4 +259,3 @@ export function createInteractiveVegaChartToolResult(
     'InteractiveVegaChartToolResult';
   return ConfiguredInteractiveVegaChartToolResult;
 }
-
