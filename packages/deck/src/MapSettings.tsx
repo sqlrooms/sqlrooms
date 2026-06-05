@@ -41,6 +41,7 @@ import {
   setDeckMapLayerColorScale,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerType,
+  updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
   usesGeometryColumnSetting,
 } from './mapLayerConfigUtils';
@@ -187,6 +188,25 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 </Select>
               </Field>
             )}
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium">Visible</span>
+              <Switch
+                checked={activeLayer?.visible !== false}
+                onCheckedChange={(checked) =>
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        visible: checked,
+                      }),
+                    ),
+                  )
+                }
+              />
+            </div>
 
             <Field label="Layer type">
               <Select

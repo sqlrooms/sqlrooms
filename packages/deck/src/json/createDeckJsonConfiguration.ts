@@ -151,6 +151,11 @@ export function createDeckJsonConfiguration(
     constants: DEFAULT_DECK_JSON_CONSTANTS,
     functions: {
       colorScale: (props: ColorScaleConfig) => createColorScaleMarker(props),
+      scale: (props: Record<string, unknown>) => {
+        const field = typeof props.field === 'string' ? props.field : undefined;
+        if (!field) return undefined;
+        return `@@=${field}`;
+      },
     },
     // TODO(geoarrow-upgrade): In 0.3.x we preserve raw `@@=` strings here because
     // `@deck.gl/json` would otherwise eagerly compile them into row-based accessors

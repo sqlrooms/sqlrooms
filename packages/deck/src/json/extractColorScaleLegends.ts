@@ -40,6 +40,11 @@ export function extractColorScaleLegends(options: {
     }
 
     const layerProps = layer as Record<string, unknown>;
+
+    if (layerProps.visible === false) {
+      continue;
+    }
+
     const resolvedColorScale = getColorScale(layerProps);
     if (!resolvedColorScale) {
       continue;
