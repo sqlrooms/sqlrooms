@@ -1149,6 +1149,11 @@ export function createMosaicDashboardSlice(
           ).filter((runtimePanelId) =>
             runtimePanelId.startsWith(runtimePrefix),
           );
+          const existingClientEntries = Object.keys(
+            get().mosaicDashboard.runtime.panelClients,
+          ).filter((runtimePanelId) =>
+            runtimePanelId.startsWith(runtimePrefix),
+          );
 
           existingEntries.forEach(([, chart]) => {
             destroyDashboardRuntimeChart(chart);
@@ -1165,11 +1170,17 @@ export function createMosaicDashboardSlice(
             const nextPanelIssuesByPanelId = {
               ...state.mosaicDashboard.runtime.panelIssuesByPanelId,
             };
+            const nextPanelClients = {
+              ...state.mosaicDashboard.runtime.panelClients,
+            };
             for (const [runtimePanelId] of existingEntries) {
               delete nextRetainedChartsByPanelId[runtimePanelId];
             }
             for (const runtimePanelId of existingIssueEntries) {
               delete nextPanelIssuesByPanelId[runtimePanelId];
+            }
+            for (const runtimePanelId of existingClientEntries) {
+              delete nextPanelClients[runtimePanelId];
             }
             return {
               mosaicDashboard: {
@@ -1178,6 +1189,7 @@ export function createMosaicDashboardSlice(
                   ...state.mosaicDashboard.runtime,
                   retainedChartsByPanelId: nextRetainedChartsByPanelId,
                   panelIssuesByPanelId: nextPanelIssuesByPanelId,
+                  panelClients: nextPanelClients,
                 },
               },
             };
@@ -1197,6 +1209,7 @@ export function createMosaicDashboardSlice(
                 ...state.mosaicDashboard.runtime,
                 retainedChartsByPanelId: {},
                 panelIssuesByPanelId: {},
+                panelClients: {},
               },
             },
           }));

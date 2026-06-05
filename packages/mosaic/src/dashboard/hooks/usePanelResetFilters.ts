@@ -30,11 +30,10 @@ export function usePanelResetFilters({
     [getSelection, selectionName],
   );
 
-  // Force rerender when selection changes
-  const [, setForceUpdate] = useState(0);
+  const [selectionVersion, setSelectionVersion] = useState(0);
 
   useEffect(() => {
-    const listener = () => setForceUpdate((n) => n + 1);
+    const listener = () => setSelectionVersion((n) => n + 1);
     selection.addEventListener('value', listener);
     return () => selection.removeEventListener('value', listener);
   }, [selection]);
@@ -53,7 +52,8 @@ export function usePanelResetFilters({
 
       return panelClients.includes(source);
     });
-  }, [panelClients, selection.clauses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelClients, selection.clauses, selectionVersion]);
 
   const reset = useCallback(() => {
     const clausesToRemove = selection.clauses.filter((clause) => {
