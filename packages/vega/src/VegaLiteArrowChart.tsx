@@ -105,17 +105,19 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     }
     const parsedRecord = parsed as Record<string, unknown>;
     // Normalize $schema to v6 to silence the version mismatch warning
-    // when the upstream spec was authored for Vega-Lite v5.
-    const $schema =
+    // when the upstream spec was authored for Vega-Lite v5. Only override
+    // when the original $schema is a v5 string; otherwise leave the spread
+    // `...parsed` value untouched to avoid re-introducing non-string types.
+    const normalizedSchema =
       typeof parsedRecord.$schema === 'string' &&
       parsedRecord.$schema.includes('vega-lite/v5')
         ? 'https://vega.github.io/schema/vega-lite/v6.json'
-        : parsedRecord.$schema;
+        : undefined;
     return {
       padding: 10,
       background: 'transparent',
       ...parsed,
-      ...($schema ? {$schema} : {}),
+      ...(normalizedSchema ? {$schema: normalizedSchema} : {}),
       data: data,
       // Override the following props to ensure the chart is responsive
       width: 'container',

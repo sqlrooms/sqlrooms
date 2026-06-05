@@ -70,6 +70,7 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
     <div className={cn('flex items-center gap-0.5', className)}>
       <EditTitleMode
         embed={embed}
+        spec={spec}
         specRef={specRef}
         onSpecChange={onSpecChange}
         active={activeMode === 'title'}
@@ -77,6 +78,7 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
       />
       <DragLabelsMode
         embed={embed}
+        spec={spec}
         specRef={specRef}
         onSpecChange={onSpecChange}
         active={activeMode === 'drag'}
@@ -84,6 +86,7 @@ export const VegaInteractiveEdit: React.FC<VegaInteractiveEditProps> = ({
       />
       <DeleteLabelsMode
         embed={embed}
+        spec={spec}
         specRef={specRef}
         onSpecChange={onSpecChange}
         active={activeMode === 'delete'}
@@ -192,6 +195,7 @@ type EmbedRef = {view: any} | null;
 
 interface ModeProps {
   embed: EmbedRef;
+  spec: VisualizationSpec;
   specRef: React.RefObject<VisualizationSpec>;
   onSpecChange: (newSpec: VisualizationSpec) => void;
   active: boolean;
@@ -398,6 +402,7 @@ type LabelOffset = {dx: number; dy: number};
 
 const DragLabelsMode: React.FC<ModeProps> = ({
   embed,
+  spec,
   specRef,
   onSpecChange,
   active,
@@ -420,12 +425,12 @@ const DragLabelsMode: React.FC<ModeProps> = ({
   // Sync offsetsRef from spec.usermeta whenever the spec changes,
   // so persisted offsets (across remounts/reloads) are applied.
   useEffect(() => {
-    if (!specRef.current) return;
-    const fromSpec = extractOffsetsFromSpec(specRef.current);
+    if (!spec) return;
+    const fromSpec = extractOffsetsFromSpec(spec);
     for (const [k, v] of fromSpec) {
       offsetsRef.current.set(k, v);
     }
-  });
+  }, [spec]);
 
   // Re-apply stored offsets after Vega re-renders the SVG.
   // Always active (regardless of mode) so offsets survive spec changes.
