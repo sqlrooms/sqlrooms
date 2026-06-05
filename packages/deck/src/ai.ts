@@ -14,6 +14,7 @@ import {
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
+import {quoteDeckMapSqlIdentifier} from './mapConfigUtils';
 
 export const DECK_MAP_AI_INSTRUCTIONS = `
 Deck map tools:
@@ -22,6 +23,8 @@ Deck map tools:
 - Use map tools when the user asks for a map, geospatial/spatial visualization, locations, longitude/latitude data, or geometry columns.
 - Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, or GeoArrowArcLayer.
 - Bind layers to datasets with _sqlroomsBinding.dataset and put tableName or sqlQuery sources in config.datasets.
+- IMPORTANT: For point data with longitude/latitude columns, the dataset source MUST use a sqlQuery that creates a geometry column, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM tableName WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the same name used in the AS clause (e.g. "__sqlrooms_geom") and geometryEncodingHint to "wkb".
+- IMPORTANT: When providing fitToData, ALWAYS include longitudeColumn and latitudeColumn with the actual column names from the data (e.g. "Longitude", "Latitude"). Missing column names will cause SQL errors.
 - For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor.
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
@@ -170,10 +173,90 @@ export type DeckMapDashboardToolParams = z.infer<
   typeof DeckMapDashboardToolParameters
 >;
 
+const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
+
+/**
+ * Normalizes an AI-generated map config to ensure dataset sources produce
+ * the expected geometry column when fitToData specifies coordinate columns
+ * but the dataset only uses a tableName without a sqlQuery.
+ */
+function normalizeAiMapConfig(
+  config: DeckMapDashboardConfigToolConfig,
+): DeckMapDashboardConfigToolConfig {
+  const datasets = config.datasets;
+  const fitToData = config.fitToData as
+    | Record<string, unknown>
+    | null
+    | undefined;
+
+  if (!datasets || typeof datasets !== 'object' || !fitToData) {
+    return config;
+  }
+
+  const lonCol = fitToData.longitudeColumn as string | undefined;
+  const latCol = fitToData.latitudeColumn as string | undefined;
+  if (!lonCol || !latCol) {
+    return config;
+  }
+
+  const targetDatasetId = fitToData.dataset as string | undefined;
+  if (!targetDatasetId) {
+    return config;
+  }
+
+  const targetDataset = datasets[targetDatasetId] as
+    | Record<string, unknown>
+    | undefined;
+  if (!targetDataset) {
+    return config;
+  }
+
+  const source = targetDataset.source as
+    | {tableName?: string; sqlQuery?: string}
+    | undefined;
+
+  // Always normalize when using tableName without sqlQuery and fitToData
+  // provides coordinate columns — the geometry must be computed from them.
+  if (!source?.tableName || source.sqlQuery) {
+    return config;
+  }
+
+  const geometryColumn =
+    (targetDataset.geometryColumn as string | undefined) ||
+    DEFAULT_AI_GEOMETRY_COLUMN;
+
+  const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
+  const quotedLat = quoteDeckMapSqlIdentifier(latCol);
+  const quotedGeom = quoteDeckMapSqlIdentifier(geometryColumn);
+  const tableParts = source.tableName
+    .split('.')
+    .map((p) => quoteDeckMapSqlIdentifier(p))
+    .join('.');
+  const sqlQuery = [
+    `SELECT *, ST_AsWKB(ST_Point(${quotedLon}, ${quotedLat})) AS ${quotedGeom}`,
+    `FROM ${tableParts}`,
+    `WHERE ${quotedLon} IS NOT NULL AND ${quotedLat} IS NOT NULL`,
+  ].join(' ');
+
+  return {
+    ...config,
+    datasets: {
+      ...datasets,
+      [targetDatasetId]: {
+        ...targetDataset,
+        source: {sqlQuery},
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+  };
+}
+
 function cloneConfig(
   config: DeckMapDashboardConfigToolConfig,
 ): DeckMapDashboardPanelConfig {
-  return JSON.parse(JSON.stringify(config)) as DeckMapDashboardPanelConfig;
+  const normalized = normalizeAiMapConfig(config);
+  return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
 }
 
 function createDeckMapPanelFromNativeConfig(

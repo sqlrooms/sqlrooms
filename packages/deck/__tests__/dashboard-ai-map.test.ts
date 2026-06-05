@@ -41,6 +41,21 @@ const scatterConfig = {
   },
 };
 
+const normalizedScatterConfig = {
+  spec: scatterConfig.spec,
+  datasets: {
+    earthquakes: {
+      source: {
+        sqlQuery:
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM "earthquakes" WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+  fitToData: scatterConfig.fitToData,
+};
+
 const multiLayerConfig = {
   spec: {
     layers: [
@@ -133,7 +148,7 @@ describe('createDeckMapConfigTool', () => {
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: scatterConfig,
+      config: normalizedScatterConfig,
     });
   });
 
@@ -213,7 +228,7 @@ describe('createDeckMapDashboardTool', () => {
     expect(deps.panels[0]).toMatchObject({
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Earthquake map',
-      config: scatterConfig,
+      config: normalizedScatterConfig,
     });
     expect(deps.currentArtifacts).toEqual(['dashboard-1']);
   });

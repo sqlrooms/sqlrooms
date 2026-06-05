@@ -78,6 +78,7 @@ function DeckMapDashboardDatasetClient({
   dataset,
   datasetId,
   dataPolicy,
+  fitToData,
   panel,
   onDatasetState,
   runtimeIssueContext,
@@ -88,6 +89,7 @@ function DeckMapDashboardDatasetClient({
   dataset: DeckMapDashboardDatasetConfig;
   datasetId: string;
   dataPolicy?: ChartDataPolicy | null;
+  fitToData?: DeckMapDashboardFitToDataConfig;
   panel: MosaicDashboardPanelConfigType;
   onDatasetState: (
     datasetId: string,
@@ -97,14 +99,19 @@ function DeckMapDashboardDatasetClient({
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selectionName: string;
 }) {
+  const datasetFitToData = useMemo(
+    () => (fitToData?.dataset === datasetId ? fitToData : undefined),
+    [datasetId, fitToData],
+  );
   const source = useMemo(
     () =>
       resolveDeckMapDashboardDatasetSource({
         dashboard,
         panel,
         dataset,
+        fitToData: datasetFitToData,
       }),
-    [dashboard, dataset, panel],
+    [dashboard, dataset, datasetFitToData, panel],
   );
   const query = useCallback(
     (filter: unknown) =>
@@ -184,11 +191,22 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
   return Boolean(info.picked || info.object || (info.index ?? -1) >= 0);
 }
 
+function isDeckMapFitToDataValid(
+  fitToData: DeckMapDashboardFitToDataConfig | null | undefined,
+): fitToData is DeckMapDashboardFitToDataConfig {
+  return Boolean(
+    fitToData && fitToData.longitudeColumn && fitToData.latitudeColumn,
+  );
+}
+
 function createDeckMapBoundsQuery(options: {
   source: {tableName?: string; sqlQuery?: string};
   fitToData: DeckMapDashboardFitToDataConfig;
 }) {
   const {source, fitToData} = options;
+  if (!isDeckMapFitToDataValid(fitToData)) {
+    return null;
+  }
   const baseSourceSql = source.sqlQuery
     ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
     : `SELECT * FROM ${(source.tableName ?? '')
@@ -551,7 +569,7 @@ function DeckMapDashboardRenderer({
   useEffect(() => {
     const hasManualFitRequest = fitRequestVersion > handledFitRequestVersion;
     if (
-      !fitToData ||
+      !isDeckMapFitToDataValid(fitToData) ||
       !fitToDataSource ||
       containerSize.width <= 0 ||
       containerSize.height <= 0 ||
@@ -564,12 +582,14 @@ function DeckMapDashboardRenderer({
 
     const fitToDataBounds = async () => {
       try {
-        const handle = await executeSql(
-          createDeckMapBoundsQuery({
-            source: fitToDataSource,
-            fitToData,
-          }),
-        );
+        const boundsQuery = createDeckMapBoundsQuery({
+          source: fitToDataSource,
+          fitToData,
+        });
+        if (!boundsQuery) {
+          return;
+        }
+        const handle = await executeSql(boundsQuery);
         const result = handle ? await handle : null;
         if (isCancelled || !result) {
           return;
@@ -745,6 +765,7 @@ function DeckMapDashboardRenderer({
           dataset={dataset}
           datasetId={datasetId}
           dataPolicy={dataPolicy}
+          fitToData={fitToData ?? undefined}
           panel={panel}
           onDatasetState={handleDatasetState}
           runtimeIssueContext={runtimeIssueContext}

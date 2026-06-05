@@ -96,14 +96,81 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   dashboard: MosaicDashboardEntryType;
   panel: MosaicDashboardPanelConfigType;
   dataset?: DeckMapDashboardDatasetConfig;
+  fitToData?: DeckMapDashboardFitToDataConfig;
 }): {tableName?: string; sqlQuery?: string} | undefined {
   const datasetSource = options.dataset?.source;
-  if (datasetSource?.sqlQuery || datasetSource?.tableName) {
-    return datasetSource;
+  const resolvedSource =
+    datasetSource?.sqlQuery || datasetSource?.tableName
+      ? datasetSource
+      : options.dashboard.selectedTable
+        ? {tableName: options.dashboard.selectedTable}
+        : undefined;
+
+  if (!resolvedSource || resolvedSource.sqlQuery || !resolvedSource.tableName) {
+    return resolvedSource;
   }
-  return options.dashboard.selectedTable
-    ? {tableName: options.dashboard.selectedTable}
-    : undefined;
+
+  // When the dataset expects a geometry column but the source is a plain
+  // tableName, generate SQL that creates the geometry from coordinate columns.
+  const geometryColumn = options.dataset?.geometryColumn;
+  if (!geometryColumn) {
+    return resolvedSource;
+  }
+
+  // Try fitToData first, then interaction config for coordinate columns.
+  const interaction = (options.panel.config as Record<string, unknown>)
+    ?.interaction as
+    | {longitudeColumn?: string; latitudeColumn?: string}
+    | undefined;
+  const lonCol =
+    options.fitToData?.longitudeColumn || interaction?.longitudeColumn;
+  const latCol =
+    options.fitToData?.latitudeColumn || interaction?.latitudeColumn;
+
+  if (lonCol && latCol) {
+    return buildGeometrySourceSql(
+      resolvedSource.tableName,
+      lonCol,
+      latCol,
+      geometryColumn,
+    );
+  }
+
+  // Last resort: when geometryEncodingHint signals synthesis ('wkb' or
+  // unspecified), try common coordinate column names using DuckDB unquoted
+  // identifiers (case-insensitive resolution). Tables that genuinely have a
+  // geometry column would typically have geometryEncodingHint as 'geoarrow'
+  // or would already have a sqlQuery/no geometryColumn configured.
+  if (options.dataset?.geometryEncodingHint !== 'geoarrow') {
+    const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
+    const tableParts = resolvedSource.tableName.split('.').map(quote).join('.');
+    return {
+      sqlQuery: [
+        `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS ${quote(geometryColumn)}`,
+        `FROM ${tableParts}`,
+        `WHERE Longitude IS NOT NULL AND Latitude IS NOT NULL`,
+      ].join(' '),
+    };
+  }
+
+  return resolvedSource;
+}
+
+function buildGeometrySourceSql(
+  tableName: string,
+  lonCol: string,
+  latCol: string,
+  geometryColumn: string,
+): {sqlQuery: string} {
+  const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
+  const tableParts = tableName.split('.').map(quote).join('.');
+  return {
+    sqlQuery: [
+      `SELECT *, ST_AsWKB(ST_Point(${quote(lonCol)}, ${quote(latCol)})) AS ${quote(geometryColumn)}`,
+      `FROM ${tableParts}`,
+      `WHERE ${quote(lonCol)} IS NOT NULL AND ${quote(latCol)} IS NOT NULL`,
+    ].join(' '),
+  };
 }
 
 export function createDeckMapDashboardDatasetQuery(

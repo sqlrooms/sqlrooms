@@ -2,7 +2,7 @@ import {
   getGeoMetadata,
   getGeometryColumnsFromSchema,
 } from '@loaders.gl/geoarrow';
-import type * as arrow from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {isDirectGeoArrowEncoding} from './geoarrow';
 import type {
   GeometryEncodingHint,
@@ -16,18 +16,94 @@ type DetectGeometryColumnOptions = {
   geometryEncodingHint?: GeometryEncodingHint;
 };
 
+const LON_NAMES = new Set(['longitude', 'lon', 'lng', 'long', 'x']);
+const LAT_NAMES = new Set(['latitude', 'lat', 'y']);
+
 function getFieldNames(table: arrow.Table) {
   return table.schema.fields.map((field) => field.name);
 }
 
-function getFieldVector(table: arrow.Table, fieldName: string) {
-  const vector = table.getChild(fieldName);
-  if (!vector) {
+function findCoordinateColumns(table: arrow.Table) {
+  const fields = table.schema.fields;
+  let lonField: string | undefined;
+  let latField: string | undefined;
+  for (const field of fields) {
+    const lower = field.name.toLowerCase();
+    if (!lonField && LON_NAMES.has(lower)) lonField = field.name;
+    if (!latField && LAT_NAMES.has(lower)) latField = field.name;
+  }
+  return lonField && latField ? {lonField, latField} : null;
+}
+
+function synthesizeGeoArrowPointColumn(
+  table: arrow.Table,
+  lonField: string,
+  latField: string,
+): {vector: arrow.Vector; encoding: ResolvedGeometryEncoding} {
+  const lonVector = table.getChild(lonField);
+  const latVector = table.getChild(latField);
+  if (!lonVector || !latVector) {
     throw new Error(
-      `Geometry column "${fieldName}" was not found in the Arrow table.`,
+      `Could not access coordinate columns "${lonField}" / "${latField}".`,
     );
   }
-  return vector;
+
+  const numRows = table.numRows;
+  const flatCoords = new Float64Array(numRows * 2);
+
+  for (let i = 0; i < numRows; i++) {
+    flatCoords[i * 2] = Number(lonVector.get(i)) || 0;
+    flatCoords[i * 2 + 1] = Number(latVector.get(i)) || 0;
+  }
+
+  const coordField = new arrow.Field('xy', new arrow.Float64(), false);
+  const pointType = new arrow.FixedSizeList(2, coordField);
+
+  const floatData = arrow.makeData({
+    type: new arrow.Float64(),
+    length: numRows * 2,
+    data: flatCoords,
+  });
+  const pointData = arrow.makeData({
+    type: pointType,
+    length: numRows,
+    child: floatData,
+  });
+
+  return {
+    vector: new arrow.Vector([pointData]),
+    encoding: 'geoarrow.point' as ResolvedGeometryEncoding,
+  };
+}
+
+function getFieldVector(table: arrow.Table, fieldName: string) {
+  const vector = table.getChild(fieldName);
+  if (vector) {
+    return {vector, synthesized: false as const};
+  }
+
+  // Fallback: if the geometry column doesn't exist but the table has
+  // recognizable longitude/latitude columns, synthesize GeoArrow point geometry.
+  const coords = findCoordinateColumns(table);
+  if (coords) {
+    const result = synthesizeGeoArrowPointColumn(
+      table,
+      coords.lonField,
+      coords.latField,
+    );
+    return {
+      vector: result.vector,
+      synthesized: true as const,
+      encoding: result.encoding,
+    };
+  }
+
+  const available = table.schema.fields.map((f) => f.name).join(', ');
+  throw new Error(
+    `Geometry column "${fieldName}" was not found in the Arrow table. Available columns: ${available}. ` +
+      `If the data has longitude/latitude columns, the dataset source SQL should create the geometry column ` +
+      `(e.g. ST_AsWKB(ST_Point(longitude, latitude)) AS "${fieldName}").`,
+  );
 }
 
 function normalizeEncoding(
@@ -109,7 +185,19 @@ export function detectGeometryColumn(
     );
   }
 
-  const vector = getFieldVector(table, detectedGeometryColumn);
+  const fieldResult = getFieldVector(table, detectedGeometryColumn);
+
+  // When geometry was synthesized from lon/lat columns, use the encoding
+  // determined during synthesis (geoarrow.point) instead of inferring from hints.
+  if (fieldResult.synthesized) {
+    return {
+      columnName: detectedGeometryColumn,
+      vector: fieldResult.vector,
+      encoding: fieldResult.encoding,
+      nativeGeoArrow: isDirectGeoArrowEncoding(fieldResult.encoding),
+    };
+  }
+
   const metadataEncoding =
     normalizeEncoding(fieldMetadata[detectedGeometryColumn]?.encoding) ??
     normalizeEncoding(geoMetadata?.columns?.[detectedGeometryColumn]?.encoding);
@@ -117,11 +205,11 @@ export function detectGeometryColumn(
   const encoding =
     inferEncodingFromHint(geometryEncodingHint) ??
     metadataEncoding ??
-    inferEncodingFromVector(vector);
+    inferEncodingFromVector(fieldResult.vector);
 
   return {
     columnName: detectedGeometryColumn,
-    vector,
+    vector: fieldResult.vector,
     encoding,
     nativeGeoArrow: isDirectGeoArrowEncoding(encoding),
   };
