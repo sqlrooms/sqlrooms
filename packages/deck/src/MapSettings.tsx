@@ -41,11 +41,13 @@ import {
   setDeckMapLayerColorScale,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerHexagonColumn,
+  setDeckMapLayerArcColumns,
   setDeckMapLayerType,
   updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
   usesGeometryColumnSetting,
   usesH3ColumnSetting,
+  usesArcColumnSetting,
 } from './mapLayerConfigUtils';
 
 interface MapSettingsPanelProps {
@@ -99,6 +101,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     activeLayer?.['@@type'],
   );
   const showH3ColumnSetting = usesH3ColumnSetting(activeLayer?.['@@type']);
+  const showArcColumnSetting = usesArcColumnSetting(activeLayer?.['@@type']);
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -392,24 +395,96 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
-        {dataTable && !showGeometryColumnSetting && !showH3ColumnSetting && (
+        {dataTable && showArcColumnSetting && (
           <ColumnsProvider columns={dataTable.columns}>
-            <Field label="Latitude column" required>
-              <LatitudeSelector
-                dashboardId={dashboardId}
-                panel={panel}
-                currentTable={dataTable}
+            <Field label="Source latitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.sourceLatitudeColumn as string | undefined
+                }
+                onChange={(sourceLatitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      sourceLatitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select source latitude..."
               />
             </Field>
-            <Field label="Longitude column" required>
-              <LongitudeSelector
-                dashboardId={dashboardId}
-                panel={panel}
-                currentTable={dataTable}
+            <Field label="Source longitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.sourceLongitudeColumn as string | undefined
+                }
+                onChange={(sourceLongitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      sourceLongitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select source longitude..."
+              />
+            </Field>
+            <Field label="Target latitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.targetLatitudeColumn as string | undefined
+                }
+                onChange={(targetLatitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      targetLatitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select target latitude..."
+              />
+            </Field>
+            <Field label="Target longitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.targetLongitudeColumn as string | undefined
+                }
+                onChange={(targetLongitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      targetLongitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select target longitude..."
               />
             </Field>
           </ColumnsProvider>
         )}
+
+        {dataTable &&
+          !showGeometryColumnSetting &&
+          !showH3ColumnSetting &&
+          !showArcColumnSetting && (
+            <ColumnsProvider columns={dataTable.columns}>
+              <Field label="Latitude column" required>
+                <LatitudeSelector
+                  dashboardId={dashboardId}
+                  panel={panel}
+                  currentTable={dataTable}
+                />
+              </Field>
+              <Field label="Longitude column" required>
+                <LongitudeSelector
+                  dashboardId={dashboardId}
+                  panel={panel}
+                  currentTable={dataTable}
+                />
+              </Field>
+            </ColumnsProvider>
+          )}
 
         <Field label="Max rows">
           <Input

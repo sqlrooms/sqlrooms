@@ -26,7 +26,7 @@ Deck map tools:
   - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowColumnLayer
   - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer
   - Line data (roads, routes, paths, rivers): GeoArrowPathLayer
-  - Arc data (origin-destination pairs): GeoArrowArcLayer
+  - Arc data (origin-destination pairs): GeoArrowArcLayer. Requires _sqlroomsBinding.sourceGeometryColumn and _sqlroomsBinding.targetGeometryColumn. The dataset source MUST use a sqlQuery that creates WKB geometry columns from lat/lon, for example: "SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom, ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom FROM tableName". Set sourceGeometryColumn to "source_geom" and targetGeometryColumn to "target_geom". Set geometryEncodingHint to "wkb".
   - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Bind to dataset with _sqlroomsBinding.dataset. Set "getHexagon": "@@=h3_column_name" where h3_column_name is the column containing H3 string indices.
   - GeoJSON files typically contain polygon or multipolygon features (boundaries, buildings, parcels); use GeoArrowPolygonLayer for these.
 - ELEVATION: For extruded layers, getElevation with @@function "scale" passes the raw field value as meters. Use elevationScale on the layer to multiply values to a useful visual height. For example, if the field is "floors" (1-10), set elevationScale to 3 (meters per floor). Do NOT use negative values for elevation. Avoid using diverging scales for elevation.
@@ -35,8 +35,9 @@ Deck map tools:
 - IMPORTANT: When providing fitToData, ALWAYS include longitudeColumn and latitudeColumn with the actual column names from the data (e.g. "Longitude", "Latitude"). Missing column names will cause SQL errors.
 - IMPORTANT: For GeoJSON or spatial files that already have a native geometry column (e.g. "geometry", "geom"), use the table directly with tableName (no sqlQuery needed), set geometryColumn to "geom", set geometryEncodingHint to "wkb", and do NOT include fitToData (since there are no separate longitude/latitude columns to reference).
 - IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use the table directly with tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Do NOT include fitToData for GeoJSON data.
-- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor.
+- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. Valid schemes: for "categorical" type use one of Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. For "sequential" use Viridis, Inferno, Magma, Plasma, Turbo, Blues, Greens, Oranges, Reds, Purples, etc. For "diverging" use RdBu, Spectral, RdYlGn, BrBG, PiYG, etc.
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
+- Create maps with a SINGLE layer unless the user explicitly asks for multiple layers.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
 `;
 
@@ -282,7 +283,7 @@ export function createDeckMapConfigTool(): Tool {
   return tool({
     description: `Deck map config: validates and returns a reusable native Deck JSON map configuration without requiring a dashboard artifact.
 
-Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map config. Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
+Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map config. Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"...", "scheme":"...", "domain":"auto"}. For categorical fields use scheme from: Tableau10, Set2, Category10, etc. For numeric fields use sequential schemes like Viridis.`,
     inputSchema: DeckMapConfigToolParameters,
     execute: async (params) => {
       try {
@@ -322,7 +323,7 @@ export function createDeckMapDashboardTool(deps: DashboardToolDeps): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
-Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
+Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"...", "scheme":"...", "domain":"auto"}. For categorical fields use scheme from: Tableau10, Set2, Category10, etc. For numeric fields use sequential schemes like Viridis.`,
     inputSchema: DeckMapDashboardToolParameters,
     execute: async (params, context) => {
       try {

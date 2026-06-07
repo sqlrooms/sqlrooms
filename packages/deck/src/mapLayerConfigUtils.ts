@@ -68,6 +68,8 @@ const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
 
 const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
 
+const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -103,6 +105,13 @@ export function usesGeometryColumnSetting(layerType: unknown) {
 export function usesH3ColumnSetting(layerType: unknown) {
   return (
     typeof layerType === 'string' && H3_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesArcColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    ARC_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 
@@ -202,6 +211,27 @@ export function setDeckMapLayerHexagonColumn(
     _sqlroomsBinding: {
       ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
       hexagonColumn,
+    },
+  }));
+}
+
+export function setDeckMapLayerArcColumns(
+  config: DeckMapDashboardPanelConfig,
+  layerIndex: number,
+  columns: {
+    sourceGeometryColumn?: string;
+    targetGeometryColumn?: string;
+    sourceLatitudeColumn?: string;
+    sourceLongitudeColumn?: string;
+    targetLatitudeColumn?: string;
+    targetLongitudeColumn?: string;
+  },
+): DeckMapDashboardPanelConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      ...columns,
     },
   }));
 }

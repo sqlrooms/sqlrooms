@@ -386,12 +386,11 @@ export function createColorScaleMapper(options: {
   const nullColor = normalizeColor(colorScale.nullColor, DEFAULT_NULL_COLOR);
 
   if (colorScale.type === 'categorical') {
-    const baseRange =
+    let baseRange =
       categoricalSchemeColors[colorScale.scheme as CategoricalScheme];
     if (!baseRange) {
-      throw new Error(
-        `Unsupported categorical color scale scheme "${colorScale.scheme}".`,
-      );
+      // Fall back to Tableau10 when the specified scheme isn't categorical
+      baseRange = categoricalSchemeColors['Tableau10'];
     }
 
     const range = colorScale.reverse
@@ -457,8 +456,11 @@ export function buildColorScaleLegend(options: {
   const resolvedTitle = resolveColorLegendTitle(colorScale, options.title);
 
   if (colorScale.type === 'categorical') {
-    const baseRange =
+    let baseRange =
       categoricalSchemeColors[colorScale.scheme as CategoricalScheme];
+    if (!baseRange) {
+      baseRange = categoricalSchemeColors['Tableau10'];
+    }
     const range = colorScale.reverse
       ? [...baseRange].reverse()
       : [...baseRange];
